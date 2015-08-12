@@ -49,6 +49,11 @@ pysar.mask.threshold = 0.7
 Save your template file and run pysar as:
 pysarApp.py YourProjectName.template
 
+pysar reads the unwrapped interferograms, refernces all of them to the same coherent pixel (a seed point point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the interferograms, calculates a parameter called "temporal_coherence" which can be used to evaluate the quality of inversion, removes ramps or surface from time-series epochs, corrects dem errors, corrects local oscilator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps and using phase-elevation approach), ... and finally estimates the velocity.
+
+use view.py to view any pysar output.
+use tsviewer.py to plot the time-series for each point (relative to the refernce point and epoch!). 
+
 ##########################################################
 
 You may need to install some more packages including, pyaps, pykml, GDAL to get full advantage of PySAR. Basic time-series analysis does not need these packages though. However you need python with numpy, scipy, h5py and matplotlib installed.
