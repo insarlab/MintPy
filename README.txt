@@ -10,6 +10,18 @@ OR:
 setenv PYTHONPATH "/nethome/hfattahi/development/PySAR" 
 set path = (/nethome/hfattahi/development/PySAR/pysar $path)
 
+Run pysarApp.py to see the examples of processing options.
+
+##########################################################
+
+The current version of PySAR is compatible with roi_pac outputs. pysar reads
+needs unwrapped interefrograms (at the same coordinate system: radar or geo) 
+and the baline files for each interefrogram. 
+
+Run pysarApp.py to see examples of processing options. 
+
+
+
 
 ##########################################################
 
