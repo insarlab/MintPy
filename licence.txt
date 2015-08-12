@@ -1,12 +1,12 @@
 ###############################################################################
 # 
 # Project: PySAR 
-# Purpose: InSAR Time-series Analysis
+# Purpose: Python Module for InSAR Time-series Analysis
 # Author: Heresh Fattahi
-# Created: July 2013
+# Created: August 2015
 #
 ###############################################################################
-# Copyright (c) 2013, Heresh Fattahi
+# Copyright (c) 2015, Heresh Fattahi
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
