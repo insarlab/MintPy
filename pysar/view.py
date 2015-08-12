@@ -13,7 +13,7 @@ import getopt
 import h5py
 import _readfile as readfile
 import _pysar_utilities as ut
-from mpl_toolkits.basemap import Basemap
+#from mpl_toolkits.basemap import Basemap
 from matplotlib.colors import LinearSegmentedColormap
 
 def add_inner_title(ax, title, loc, size=None, **kwargs):
