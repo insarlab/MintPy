@@ -29,7 +29,7 @@ When you have a stack of interferograms processed with roi_pac, make a pysar pro
 
 eg: vi YourProjectName.template
 
-and include the followng pysar processing options in your template:
+and include the following pysar processing options in your template:
 
 #**********************
 
