@@ -15,13 +15,11 @@ Run pysarApp.py to see the examples of processing options.
 ##########################################################
 
 The current version of PySAR is compatible with roi_pac outputs. pysar reads
-needs unwrapped interefrograms (at the same coordinate system: radar or geo) 
-and the baline files for each interefrogram. 
+unwrapped interefrograms (at the same coordinate system: radar or geo) and 
+the baseline files for each interefrogram. You need to give the path to where
+the interferograms are and pysar takes care of the rest!
 
 Run pysarApp.py to see examples of processing options. 
-
-
-
 
 ##########################################################
 
