@@ -1,6 +1,6 @@
-pysar is an InSAR time-series analysis package. To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path
+PySAR is an InSAR time-series package to produce three dimensional (space and time) ground displacement from InSAR data. To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path
 
-Depending on your shell you may use command such as following example to setup pysar:
+Depending on your shell you may use commands such as the following examples to setup pysar:
 
 export PYTHONPATH=/nethome/hfattahi/development/PySAR/pysar:${PYTHONPATH}
 export PATH="/nethome/hfattahi/development/PySAR:$PATH"
@@ -23,7 +23,7 @@ the interferograms are and pysar takes care of the rest!
 Run pysarApp.py to see examples of processing options. 
 
 ##########################################################
-Ho to run pysar:
+How to run pysar:
 
 When you have a stack of interferograms processed with roi_pac, make a pysar processing file (a text file) in your shell using for example vi or any other text editor:
 
