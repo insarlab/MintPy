@@ -107,4 +107,5 @@ def read_GPS_USGS(file):
 
    return east,north,up,dates,YYYYMMDD
 
-
+def read_isce_xml(file):
+   print "isce"
