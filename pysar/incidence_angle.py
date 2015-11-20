@@ -11,6 +11,7 @@ import numpy as np
 import getopt
 import h5py
 
+import pdb
 
 def Usage():
   print '''
@@ -37,52 +38,45 @@ def Usage():
 def main(argv):
   try:
     opts, args = getopt.getopt(argv,"f:h")
-
   except getopt.GetoptError:
     Usage() ; sys.exit(1)
 
-
-  if opts==[]:
-    Usage() ; sys.exit(1)
+  if  opts==[]:  Usage() ; sys.exit(1)
   for opt,arg in opts:
     if opt in ("-h","--help"):
-       Usage()
-       sys.exit()
+       Usage();  sys.exit()
     elif opt == '-f':
        File = arg
 
     h5file=h5py.File(File,'r')
-    kk=h5file.keys()
-    if 'timeseries' in kk:
-      k=['timeseries']
-    near_range=float(h5file[k[0]].attrs['STARTING_RANGE1'])
-    dR=float(h5file[k[0]].attrs['RANGE_PIXEL_SIZE'])
-    r=float(h5file[k[0]].attrs['EARTH_RADIUS'])
-    H=float(h5file[k[0]].attrs['HEIGHT'])
-    length=float(h5file[k[0]].attrs['FILE_LENGTH'])
-    width = float(h5file[k[0]].attrs['WIDTH'])
+    k=h5file.keys()
+    if 'timeseries' in k:  k=['timeseries']
+    atr = h5file[k[0]].attrs
+    near_range =float(atr['STARTING_RANGE1'])
+    dR         =float(atr['RANGE_PIXEL_SIZE'])
+    r          =float(atr['EARTH_RADIUS'])
+    H          =float(atr['HEIGHT'])
+    length     =float(atr['FILE_LENGTH'])
+    width      =float(atr['WIDTH'])
     
-    far_range=near_range+dR*width
+    far_range  =near_range+dR*width
     incidence_n=np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))
-    incidence_f=np.pi-np.arccos((r**2+far_range**2-(r+H)**2)/(2*r*far_range))
+    incidence_f=np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))
 
-    look_step=(incidence_f-incidence_n)/width
-    lookx=np.arange(incidence_n,incidence_f,look_step)
+    lookx = np.linspace(incidence_n,incidence_f,num=width,endpoint='FALSE')
+    #look_step=(incidence_f-incidence_n)/width
+    #lookx=np.arange(incidence_n,incidence_f,look_step)
     
     look_angle = np.tile(lookx,(length,1))
-    look_angle =  look_angle*(180./np.pi)
+    look_angle = look_angle*(180./np.pi)
 
-    print '*********************************************'
-    print ''
-    print 'near incidence angle : '+ str(incidence_n*180./np.pi)
-    print 'far incidence angle : '+ str(incidence_f*180./np.pi)
+    #print '*********************************************'
+    print 'near    incidence angle : '+ str(incidence_n*180./np.pi)
+    print 'far     incidence angle : '+ str(incidence_f*180./np.pi)
     print 'average incidence angle : '+ str(((incidence_f+incidence_n)/2)*180./np.pi)
-    print ''
-    print '*********************************************'
-    print ''
+    #print '*********************************************'
     print 'writing incidence_angle.h5 ...'
-    print ''
-    print '*********************************************'
+    #print '*********************************************'
 
     h5file2 = h5py.File('incidence_angle.h5','w')
     group=h5file2.create_group('mask')

@@ -30,7 +30,9 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 ############################################################################### 
-
+#
+# Yunjun, Oct 2015: Add radar_or_geo() (modifed from pysarApp.py written by Heresh)
+#                   Add glob2radar() and radar2glob() (modified from radar2geo.py written by Heresh)
 
 
 
@@ -39,14 +41,222 @@ import os
 import re
 import time
 import datetime
+import glob
 
 import numpy as np
 import h5py
 
-import _readfile as readfile
+import pysar._readfile as readfile
+import pdb
 
-######################################
-######################################
+
+
+#########################################################################
+############### Convertion from Geo to Radar coordinate #################
+def glob2radar(lat,lon,rdrRefFile='radar*.hgt',igramNum=1):
+  ## Convert geo coordinates into radar coordinates.
+  ##     If geomap*.trans file exists, use it for precise conversion;
+  ##     If not, use radar*.hgt or input reference file's 4 corners' lat/lon
+  ##          info for a simple 2D linear transformation.
+  ##
+  ## Usage: x,y,x_res,y_res = glob2radar(lat,lon [,rdrRefFile] [,igramNum])
+  ##
+  ##     lat (np.array) : Array of latitude
+  ##     lon (np.array) : Array of longitude
+  ##     rdrRefFile     : radar coded file (not subseted), optional.
+  ##                      radar*.hgt by default, support all PySAR / ROI_PAC format
+  ##     igramNum       : used interferogram number, i.e. 1 or 56, optional
+  ##
+  ##     x/y            : Array of radar coordinate - range/azimuth
+  ##     x_res/y_res    : residul/uncertainty of coordinate conversion
+  ##
+  ## Exmaple: x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]))
+  ##          x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]),'Mask.h5')
+  ##          x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]),'LoadedData.h5',1)
+
+  ########## Precise conversion using geomap.trans file, if it exists.
+  try:
+    geomapFile = glob.glob('geomap*.trans')[0]
+    atr = readfile.read_rsc_file(geomapFile+'.rsc')
+    print 'finding precise radar coordinate from '+geomapFile+' file.'
+
+    width  = int(atr['WIDTH'])
+    row = (lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']);  row = (row+0.5).astype(int)
+    col = (lon - float(atr['X_FIRST'])) / float(atr['X_STEP']);  col = (col+0.5).astype(int)
+    row_read = np.max(row)+1
+    data = np.fromfile(geomapFile,np.float32,row_read*2*width).reshape(row_read,2*width)
+    x = data[row, col];       x = (x+0.5).astype(int)
+    y = data[row, col+width]; y = (y+0.5).astype(int)
+    x_res = 2
+    y_res = 2
+
+  ########## Simple conversion using 2D linear transformation, with 4 corners' lalo info
+  except:
+    rdrRefFile = check_variable_name(rdrRefFile)
+    rdrRefFile = glob.glob(rdrRefFile)[0]
+    print 'finding approximate radar coordinate with 2D linear transformation estimation.'
+    print '    using four corner lat/lon info from '+rdrRefFile+' file.'
+
+    ext = os.path.splitext(rdrRefFile)[1]
+    if ext == '.h5':
+       h5file=h5py.File(rdrRefFile,'r')
+       k=h5file.keys()
+       if   k[0] in ('interferograms','coherence','wrapped'):
+          atr = h5file[k[0]][h5file[k[0]].keys()[igramNum-1]].attrs
+       elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
+          atr = h5file[k[0]].attrs
+    elif ext in ['.unw','.cor','.int','.hgt','.dem']:
+       atr = readfile.read_rsc_file(rdrRefFile + '.rsc')
+    else: print 'Unrecognized reference file extention: '+ext; return
+
+    LAT_REF1=float(atr['LAT_REF1'])
+    LAT_REF2=float(atr['LAT_REF2'])
+    LAT_REF3=float(atr['LAT_REF3'])
+    LAT_REF4=float(atr['LAT_REF4'])
+    LON_REF1=float(atr['LON_REF1'])
+    LON_REF2=float(atr['LON_REF2'])
+    LON_REF3=float(atr['LON_REF3'])
+    LON_REF4=float(atr['LON_REF4'])
+    W =      float(atr['WIDTH'])
+    L =      float(atr['FILE_LENGTH'])
+    if ext == '.h5':  h5file.close()
+
+    ## subset radar image has different WIDTH and FILE_LENGTH info
+    try:
+       atr['subset_x0']
+       print 'WARNING: Cannot use subset file as input! No coordinate converted.'
+       return
+    except: pass
+
+    LAT_REF = np.array([LAT_REF1,LAT_REF2,LAT_REF3,LAT_REF4]).reshape(4,1)
+    LON_REF = np.array([LON_REF1,LON_REF2,LON_REF3,LON_REF4]).reshape(4,1)
+    X = np.array([1,W,1,W]).reshape(4,1)
+    Y = np.array([1,1,L,L]).reshape(4,1)
+
+    ### estimate 2D tranformation from Lease Square
+    A = np.hstack([LAT_REF,LON_REF,np.ones((4,1))])
+    B = np.hstack([X,Y])
+    affine_par = np.linalg.lstsq(A,B)[0]
+    res = B - np.dot(A,affine_par)
+    res_mean = np.mean(np.abs(res),0)
+    x_res = (res_mean[0]+0.5).astype(int)
+    y_res = (res_mean[1]+0.5).astype(int)
+    print 'Residul - x: '+str(x_res)+', y: '+str(y_res)
+
+    ### calculate radar coordinate of inputs
+    N = len(lat)
+    A = np.hstack([lat.reshape(N,1), lon.reshape(N,1), np.ones((N,1))])
+    x = np.dot(A, affine_par[:,0]);   x = (x+0.5).astype(int)
+    y = np.dot(A, affine_par[:,1]);   y = (y+0.5).astype(int)
+
+
+  return x, y, x_res, y_res
+
+
+
+#########################################################################
+############### Convertion from Radar to Geo coordinate #################
+def radar2glob(x,y,rdrRefFile='radar*.hgt',igramNum=1):
+  ## Convert radar coordinates into geo coordinates.
+  ##     This function use radar*.hgt or input reference file's 4 corners'
+  ##     lat/lon info for a simple 2D linear transformation.
+  ##
+  ## Usage: lat,lon,lat_res,lon_res = glob2radar(x, y [,rdrRefFile] [,igramNum])
+  ##
+  ##     x (np.array)     : Array of x/range pixel number
+  ##     y (np.array)     : Array of y/azimuth pixel number
+  ##     rdrRefFile       : radar coded file (not subseted), optional.
+  ##                        radar*.hgt by default, support all PySAR / ROI_PAC format
+  ##     igramNum         : used interferogram number, i.e. 1 or 56, optional
+  ##
+  ##     lat/lon          : Array of geo coordinate
+  ##     lat_res/lon_res  : residul/uncertainty of coordinate conversion
+  ##
+  ## Exmaple: lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]))
+  ##          lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]),'Mask.h5')
+  ##          lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]),'LoadedData.h5',1)
+
+  ### find and read radar coded reference file
+  rdrRefFile = check_variable_name(rdrRefFile)  
+  rdrRefFile = glob.glob(rdrRefFile)[0]
+  ext = os.path.splitext(rdrRefFile)[1]
+  if ext == '.h5':
+     h5file=h5py.File(rdrRefFile,'r')
+     k=h5file.keys()
+     if   k[0] in ('interferograms','coherence','wrapped'):
+        atr = h5file[k[0]][h5file[k[0]].keys()[igramNum-1]].attrs
+     elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
+        atr = h5file[k[0]].attrs
+  elif ext in ['.unw','.cor','.int','.hgt','.dem']:
+     atr = readfile.read_rsc_file(rdrRefFile + '.rsc')
+  else: print 'Unrecognized file extention: '+ext; return
+
+  LAT_REF1=float(atr['LAT_REF1'])
+  LAT_REF2=float(atr['LAT_REF2'])
+  LAT_REF3=float(atr['LAT_REF3'])
+  LAT_REF4=float(atr['LAT_REF4'])
+  LON_REF1=float(atr['LON_REF1'])
+  LON_REF2=float(atr['LON_REF2'])
+  LON_REF3=float(atr['LON_REF3'])
+  LON_REF4=float(atr['LON_REF4'])
+  W =      float(atr['WIDTH'])
+  L =      float(atr['FILE_LENGTH'])
+  if ext == '.h5':  h5file.close()
+
+  try:
+     atr['subset_x0']
+     print 'WARNING: Cannot use subset file as input! No coordinate converted.'
+     return
+  except: pass
+
+  LAT_REF = np.array([LAT_REF1,LAT_REF2,LAT_REF3,LAT_REF4]).reshape(4,1)
+  LON_REF = np.array([LON_REF1,LON_REF2,LON_REF3,LON_REF4]).reshape(4,1)
+  X = np.array([1,W,1,W]).reshape(4,1)
+  Y = np.array([1,1,L,L]).reshape(4,1)
+
+  ### estimate 2D tranformation from Lease Square
+  A = np.hstack([X,Y,np.ones((4,1))])
+  B = np.hstack([LAT_REF,LON_REF])
+  affine_par = np.linalg.lstsq(A,B)[0]
+  res = B - np.dot(A,affine_par)
+  res_mean = np.mean(np.abs(res),0)
+  lat_res = res_mean[0]
+  lon_res = res_mean[1]
+  print 'Residul - lat: '+str(lat_res)+', lon: '+str(lon_res)
+
+  ### calculate geo coordinate of inputs
+  N = len(x)
+  A = np.hstack([x.reshape(N,1), y.reshape(N,1), np.ones((N,1))])
+  lat = np.dot(A, affine_par[:,0])
+  lon = np.dot(A, affine_par[:,1])
+
+  return lat, lon, lat_res, lon_res
+
+
+
+#########################################################################
+############### Check File is in Radar or Geo coordinate ################
+def radar_or_geo(File):
+  ext = os.path.splitext(File)[1]
+  if ext == '.h5':
+     h5file=h5py.File(File,'r')
+     k=h5file.keys()
+     if   k[0] in ('interferograms','coherence','wrapped'):
+        atrKey = h5file[k[0]][h5file[k[0]].keys()[0]].attrs.keys()
+     elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
+        atrKey = h5file[k[0]].attrs.keys()
+     h5file.close()
+  elif ext in ['.unw','.cor','.int','.hgt','.dem','.trans']:
+     atrKey = readfile.read_rsc_file(File + '.rsc').keys()
+  else: print 'Unrecognized extention: '+ext; return
+
+  if 'X_FIRST' in atrKey:  rdr_geo='geo'
+  else:                    rdr_geo='radar'
+  return rdr_geo
+
+
+
+#########################################################################
 def check_variable_name(path):
   s=path.split("/")[0]
   
@@ -55,6 +265,9 @@ def check_variable_name(path):
      path=path.replace(path.split("/")[0],p0)
   return path
 
+
+
+#########################################################################
 def hillshade(data,scale):
   #from scott baker, ptisk library 
   azdeg=315.0
@@ -521,8 +734,7 @@ def design_matrix(h5file):
 
 ######################################
 def timeseries_inversion(h5flat,h5timeseries):
-
-# modified from sbas.py written by scott baker, 2012 
+  #modified from sbas.py written by scott baker, 2012 
   '''Implementation of the SBAS algorithm.
   
   Usage:
@@ -538,21 +750,22 @@ def timeseries_inversion(h5flat,h5timeseries):
   B1 = np.array(B1,np.float32)
   ifgramList = h5flat['interferograms'].keys()
   numIfgrams = len(ifgramList)
-#  dset = h5flat[ifgramList[0]].get(h5flat[ifgramList[0]].keys()[0])
-#  data = dset[0:dset.shape[0],0:dset.shape[1]]
+  #dset = h5flat[ifgramList[0]].get(h5flat[ifgramList[0]].keys()[0])
+  #data = dset[0:dset.shape[0],0:dset.shape[1]]
   dset=h5flat['interferograms'][ifgramList[0]].get(ifgramList[0]) 
   data = dset[0:dset.shape[0],0:dset.shape[1]] 
   numPixels = np.shape(data)[0]*np.shape(data)[1]
   print 'Reading in the interferograms'
-  print numIfgrams,numPixels
+  print 'number of interferograms: '+str(numIfgrams)
+  print 'number of pixels: '+str(numPixels)
+  numPixels_step = int(numPixels/10)
 
   data = np.zeros((numIfgrams,numPixels),np.float32)
   for ni in range(numIfgrams):
+    #dset = h5flat[ifgramList[ni]].get(h5flat[ifgramList[ni]].keys()[0])
     dset=h5flat['interferograms'][ifgramList[ni]].get(ifgramList[ni])
-#    dset = h5flat[ifgramList[ni]].get(h5flat[ifgramList[ni]].keys()[0])
     d = dset[0:dset.shape[0],0:dset.shape[1]]
-  #  print np.shape(d)
-
+    #print np.shape(d)
     data[ni] = d.flatten(1)
   del d
   dataPoint = np.zeros((numIfgrams,1),np.float32)
@@ -570,7 +783,9 @@ def timeseries_inversion(h5flat,h5timeseries):
       zero = np.array([0.],np.float32)
       defo = np.concatenate((zero,np.cumsum([tmpe_ratea*dt])))
       tempDeformation[:,ni] = defo
-    if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,numPixels)
+    #if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,numPixels)
+    if not np.remainder(ni,numPixels_step):
+      print 'Processing point: %8d of %8d, %3d' % (ni,numPixels,(10*ni/numPixels_step))+'%'
   del data
   timeseries = np.zeros((modelDimension+1,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
   factor = -1*float(h5flat['interferograms'][ifgramList[0]].attrs['WAVELENGTH'])/(4.*np.pi)
@@ -580,16 +795,13 @@ def timeseries_inversion(h5flat,h5timeseries):
   del tempDeformation
   timeseriesDict = {}
   for key, value in h5flat['interferograms'][ifgramList[0]].attrs.iteritems():
-          timeseriesDict[key] = value 
-
+    timeseriesDict[key] = value 
 
   dateIndex={}
-  for ni in range(len(dateList)):
-    dateIndex[dateList[ni]]=ni
+  for ni in range(len(dateList)):   dateIndex[dateList[ni]]=ni
   if not 'timeseries' in h5timeseries:
     group = h5timeseries.create_group('timeseries')
-    for key,value in timeseriesDict.iteritems():
-      group.attrs[key] = value
+    for key,value in timeseriesDict.iteritems():   group.attrs[key] = value
 
   for date in dateList:
     if not date in h5timeseries['timeseries']:
@@ -600,7 +812,7 @@ def timeseries_inversion(h5flat,h5timeseries):
 ######################################
 def timeseries_inversion_FGLS(h5flat,h5timeseries):
 
-# modified from sbas.py written by scott baker, 2012 
+  #modified from sbas.py written by scott baker, 2012 
   '''Implementation of the SBAS algorithm.
   
   Usage:
@@ -608,6 +820,7 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
     h5flat: hdf5 file with the interferograms 
     h5timeseries: hdf5 file with the output from the inversion
   ##################################################'''
+
   total = time.time()
   A,B = design_matrix(h5flat)
   tbase,dateList,dateDict,dateDict2 = date_list(h5flat)
@@ -616,21 +829,24 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
   B1 = np.array(B1,np.float32)
   ifgramList = h5flat['interferograms'].keys()
   numIfgrams = len(ifgramList)
-#  dset = h5flat[ifgramList[0]].get(h5flat[ifgramList[0]].keys()[0])
-#  data = dset[0:dset.shape[0],0:dset.shape[1]]
+  #dset = h5flat[ifgramList[0]].get(h5flat[ifgramList[0]].keys()[0])
+  #data = dset[0:dset.shape[0],0:dset.shape[1]]
   dset=h5flat['interferograms'][ifgramList[0]].get(ifgramList[0])
   data = dset[0:dset.shape[0],0:dset.shape[1]] 
   numPixels = np.shape(data)[0]*np.shape(data)[1]
   print 'Reading in the interferograms'
-  print numIfgrams,numPixels
-  
+  #print numIfgrams,numPixels
+  print 'number of interferograms: '+str(numIfgrams)
+  print 'number of pixels: '+str(numPixels)
+  numPixels_step = int(numPixels/10)
+
   data = np.zeros((numIfgrams,numPixels),np.float32)
   for ni in range(numIfgrams):
     dset=h5flat['interferograms'][ifgramList[ni]].get(ifgramList[ni])
-#    dset = h5flat[ifgramList[ni]].get(h5flat[ifgramList[ni]].keys()[0])
+    #dset = h5flat[ifgramList[ni]].get(h5flat[ifgramList[ni]].keys()[0])
     d = dset[0:dset.shape[0],0:dset.shape[1]]
-  #  print np.shape(d)
-    
+    #print np.shape(d)
+
   del d
   dataPoint = np.zeros((numIfgrams,1),np.float32)
   modelDimension = np.shape(B)[1]
@@ -647,7 +863,9 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
       zero = np.array([0.],np.float32)
       defo = np.concatenate((zero,np.cumsum([tmpe_ratea*dt])))
       tempDeformation[:,ni] = defo
-    if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,numPixels)
+    #if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,numPixels)
+    if not np.remainder(ni,numPixels_step):
+      print 'Processing point: %8d of %8d, %3d' % (ni,numPixels,(10*ni/numPixels_step))+'%'
   del data
   timeseries = np.zeros((modelDimension+1,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
   factor = -1*float(h5flat['interferograms'][ifgramList[0]].attrs['WAVELENGTH'])/(4.*np.pi)
@@ -657,22 +875,18 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
   del tempDeformation
   timeseriesDict = {}
   for key, value in h5flat['interferograms'][ifgramList[0]].attrs.iteritems():
-          timeseriesDict[key] = value 
-    
-    
+    timeseriesDict[key] = value 
+
   dateIndex={}
-  for ni in range(len(dateList)):
-    dateIndex[dateList[ni]]=ni
+  for ni in range(len(dateList)):    dateIndex[dateList[ni]]=ni
   if not 'timeseries' in h5timeseries:
     group = h5timeseries.create_group('timeseries')
-    for key,value in timeseriesDict.iteritems():
-      group.attrs[key] = value
+    for key,value in timeseriesDict.iteritems():    group.attrs[key] = value
   
   for date in dateList:
     if not date in h5timeseries['timeseries']:
       dset = group.create_dataset(date, data=timeseries[dateIndex[date]], compression='gzip')
   print 'Time series inversion took ' + str(time.time()-total) +' secs'
-
 
 
 
@@ -686,7 +900,7 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
     print 'cvxopt should be installed to be able to use the L1 norm minimization.'
     print '-----------------------------------------------------------------------'
     sys.exit(1)
-# modified from sbas.py written by scott baker, 2012 
+    #modified from sbas.py written by scott baker, 2012 
 
   
   total = time.time()
@@ -698,21 +912,21 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
   B1 = np.array(B1,np.float32)
   ifgramList = h5flat['interferograms'].keys()
   numIfgrams = len(ifgramList)
-#  dset = h5flat[ifgramList[0]].get(h5flat[ifgramList[0]].keys()[0])
-#  data = dset[0:dset.shape[0],0:dset.shape[1]]
+  #dset = h5flat[ifgramList[0]].get(h5flat[ifgramList[0]].keys()[0])
+  #data = dset[0:dset.shape[0],0:dset.shape[1]]
   dset=h5flat['interferograms'][ifgramList[0]].get(ifgramList[0]) 
   data = dset[0:dset.shape[0],0:dset.shape[1]] 
   numPixels = np.shape(data)[0]*np.shape(data)[1]
   print 'Reading in the interferograms'
   print numIfgrams,numPixels
 
-#  data = np.zeros((numIfgrams,numPixels),np.float32)
+  #data = np.zeros((numIfgrams,numPixels),np.float32)
   data = np.zeros((numIfgrams,numPixels))
   for ni in range(numIfgrams):
     dset=h5flat['interferograms'][ifgramList[ni]].get(ifgramList[ni])
-#    dset = h5flat[ifgramList[ni]].get(h5flat[ifgramList[ni]].keys()[0])
+    #dset = h5flat[ifgramList[ni]].get(h5flat[ifgramList[ni]].keys()[0])
     d = dset[0:dset.shape[0],0:dset.shape[1]]
-#    print np.shape(d)
+    #print np.shape(d)
 
     data[ni] = d.flatten(1)
   del d
@@ -732,7 +946,7 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
     if not nan_fin.sum() == len(nan_fin):
       
       B1tmp = np.dot(B1,np.diag(fin_ndx))
-     # tmpe_ratea = np.dot(B1tmp,dataPoint)
+      #tmpe_ratea = np.dot(B1tmp,dataPoint)
       try:
           tmpe_ratea=np.array(l1(BL1,DataL1[:,ni]))
           zero = np.array([0.],np.float32)

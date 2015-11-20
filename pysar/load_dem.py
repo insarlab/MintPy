@@ -46,9 +46,9 @@ except:
 
 
 h5=h5py.File(outName,'w')
-group=h5.create_group('velocity')
+group=h5.create_group('dem')
 
-dset = group.create_dataset('velocity', data=dem, compression='gzip')
+dset = group.create_dataset('dem', data=dem, compression='gzip')
 
 for key , value in demRsc.iteritems():
      group.attrs[key]=value

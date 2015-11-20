@@ -4,17 +4,18 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
+#
+# Add -M option, Yunjun, Aug 2015
+#
 
 import sys
 import os
 import getopt
 import time
 import datetime
-import h5py
+#import h5py
 import numpy as np
-import matplotlib.pyplot as plt
-import getopt
-
+#import matplotlib.pyplot as plt
 
 def yyyymmdd2years(date):
   d = datetime.datetime(*time.strptime(date,"%Y%m%d")[0:5])   
@@ -24,33 +25,36 @@ def yyyymmdd2years(date):
 def Usage():
 
   print '''
+****************************************************************
+****************************************************************
     Estimating displacement velocity for each pixel.
     It also generates the standadrd deviation of the velocity and the RMSE.
 
     Usage:
 
-         timeseries2velocity.py -f timeSeriesFile.h5 -o OutputName.h5 -m Maximum date -d a list of dates to exclude
+         timeseries2velocity.py -f timeseries.h5 -o OutputName.h5 -m minimum_date -M maximum_date -d exclude_dates
     
     Example:
 
          timeseries2velocity.py timeSeriesFile.h5
-         timeseries2velocity.py -f timeSeries.h5  -m 20080201
-         timeseries2velocity.py -f timeSeries_demCor.h5  -d '20040502 20060708 20090103'
-         timeseries2velocity.py -f timeSeries_demCor.h5 -o velocity_demCor.h5  
+         timeseries2velocity.py -f timeseries.h5 -m 20080201
+         timeseries2velocity.py -f timeseries.h5 -m 20080201 -M 20100508
+         timeseries2velocity.py -f timeseries.h5 -d '20040502 20060708 20090103'
+         timeseries2velocity.py -f timeseries.h5 -o velocity_demCor.h5  
+         timeseries2velocity.py -f timeseries.h5 -m 20080201 -M 20100508 -d '20090703'
 
+****************************************************************
+****************************************************************
    '''
 
 
 ######################################
 def main(argv):
-#  try:
-#    timeSeriesFile = argv[0]
-#  except:
-#    Usage() ; sys.exit(1)
+
   if len(sys.argv)>2:
 
     try:
-      opts, args = getopt.getopt(argv,"f:d:m:h:o:")
+      opts, args = getopt.getopt(argv,"f:d:m:M:h:o:")
        
     except getopt.GetoptError:
       Usage() ; sys.exit(1)
@@ -59,8 +63,10 @@ def main(argv):
       if opt == '-f':
         timeSeriesFile = arg
       elif opt == '-d':
-        datesNot2include = arg
+        datesNot2include = arg.split()
       elif opt == '-m':
+        minDate = arg
+      elif opt == '-M':
         maxDate = arg
       elif opt == '-o':
         outName = arg
@@ -73,40 +79,50 @@ def main(argv):
     else:
        Usage(); sys.exit(1)
 
-  #elif len(sys.argv)<2:
   else:
     Usage(); sys.exit(1)    
 
 ##############################################################
   print "Loading time series file: " + timeSeriesFile
+  import h5py
   h5timeseries = h5py.File(timeSeriesFile)
   dateList1 = h5timeseries['timeseries'].keys()
 
 ##############################################################
-  print 'All dates exit:'
+  print 'All dates existed:'
   print dateList1
   print '*******************'
 
   try:
     datesNot2include
+    print 'exclude dates: '+str(datesNot2include)
   except:
     datesNot2include=[]
-  
+
+  try:
+    minDate
+    minDateyy=yyyymmdd2years(minDate)
+    print 'minimum date: '+minDate
+    for date in dateList1:
+       yy=yyyymmdd2years(date)
+       if yy < minDateyy:
+           print '  remove date: '+date
+           datesNot2include.append(date)
+  except:
+    print ''
+
  # maxDate='20100521'
   try:
     maxDate
     maxDateyy=yyyymmdd2years(maxDate) 
-    print maxDateyy
+    print 'maximum date: '+maxDate
     for date in dateList1:
        yy=yyyymmdd2years(date)
        if yy > maxDateyy:
-           print yy
+           print '  remove date: '+date
            datesNot2include.append(date)
   except:
-    try:
-       datesNot2include
-    except:
-       datesNot2include=[]
+    print ''
 
   try:
     # datesNot2include = '20100903 20100730 20100625 20100521 20100416'
@@ -175,7 +191,7 @@ def main(argv):
 
   x=np.dot(B1,Data)
   velocity=np.reshape(x[0,:],[rows,cols])
-
+#  import matplotlib.pyplot as plt
 #  plt.imshow(velocity,vmin=-0.02, vmax=.02)
 #  plt.colorbar()
 #  plt.show()
