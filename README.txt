@@ -2,11 +2,12 @@ PySAR is an InSAR time-series package to produce three dimensional (space and ti
 
 Depending on your shell you may use commands such as the following examples to setup pysar:
 
+Using bash:
 export PYTHONPATH=/nethome/hfattahi/development/PySAR/pysar:${PYTHONPATH}
 export PATH="/nethome/hfattahi/development/PySAR:$PATH"
 export TSSARDIR=/nethome/timeseries/
-OR:
 
+Using csh:
 setenv PYTHONPATH "/nethome/hfattahi/development/PySAR" 
 set path = (/nethome/hfattahi/development/PySAR/pysar $path)
 setenv TSSARDIR "/nethome/timeseries/"
