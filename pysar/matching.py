@@ -74,6 +74,9 @@ def nearest(x, X):
 
 def main(argv):
 
+   ## default value
+   fig_size   = [16.0,16.0]
+
    try: 
      V1file=sys.argv[1]
      V2file=sys.argv[2]
@@ -152,8 +155,8 @@ def main(argv):
       print 'No matching applied. Continue without matching ...'
       print '**************************************************'
 
+   fig = plt.figure(figsize=fig_size)
    if manual_matching=='yes':
-      fig = plt.figure()
       ax=fig.add_subplot(111)
       ax.imshow(V1)
       xc=[] 
@@ -245,6 +248,8 @@ def main(argv):
    fig=plt.subplot(2,2,4)
    plt.imshow(M)
    plt.colorbar()
+
+   plt.savefig('match.png',bbox_inches='tight')
 
    plt.show()
 

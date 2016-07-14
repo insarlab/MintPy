@@ -772,8 +772,9 @@ def main(argv):
         except: processMark = '_'+os.path.basename(File).split('.h5')[0]
         figTitle = date12+processMark
     else:  figTitle = File
-    if rewrapping == 'yes':  figTitle += '_wrap'
+
     if subsetData == 'yes':  figTitle += '_sub'
+    if rewrapping == 'yes':  figTitle += '_wrap'
     plt.title(figTitle,fontsize=font_size)
 
     ##### Plot in Geo-coordinate: plot in map
@@ -947,12 +948,6 @@ def main(argv):
             figNameBase = os.path.basename(figName).split(figNameExt)[0]
         except:
             figNameBase = os.path.basename(File).split(ext)[0]
-        try:
-            exclude_epoch
-            figNameBase += '_ex'
-        except: pass
-        if rewrapping == 'yes': figNameBase += '_wrap'
-        if subsetData == 'yes': figNameBase += '_sub'
 
     ## Reference date for timeseries
     if k == 'timeseries':
@@ -966,7 +961,6 @@ def main(argv):
                 ref_date = epochList[ref_epoch_number]
                 ref_dset = h5file[k].get(epochList[ref_epoch_number])
                 ref_data = ref_dset[win_y[0]:win_y[1],win_x[0]:win_x[1]]
-                figNameBase = figNameBase+'_ref'+ref_date
             else: print 'input reference epoch is the same as current one, no reference change.'
         except: pass
 
@@ -1107,14 +1101,27 @@ def main(argv):
             cbar.set_label(disp_unit)
         except: print 'Different color scale for each subplot!'
 
-        ## Save Figure
+        ##### Save Figure
         if saveFig == 'yes':
-           if fig_num > 1:  figName = figNameBase+'_'+str(j)+figNameExt
-           else:            figName = figNameBase+figNameExt
+            ## Figure File Name
+            ## priority: subset > ref_date > exclude_date > re-wrap > num4multiple_fig
+            if subsetData == 'yes': figNameBase += '_sub'
+            try:
+                ref_data
+                figNameBase = figNameBase+'_ref'+ref_date
+            except: pass
+            try:
+                exclude_epoch
+                figNameBase += '_ex'
+            except: pass
+            if rewrapping == 'yes': figNameBase += '_wrap'
 
-           plt.savefig(figName,bbox_inches='tight',transparent=True,dpi=fig_dpi)
-           print 'saved figure to '+figName
-           if dispFig == 'no':  fig.clf()
+            if fig_num > 1:  figName = figNameBase+'_'+str(j)+figNameExt
+            else:            figName = figNameBase+figNameExt
+
+            plt.savefig(figName,bbox_inches='tight',transparent=True,dpi=fig_dpi)
+            print 'saved figure to '+figName
+            if dispFig == 'no':  fig.clf()
 
 
     print '----------------------------------------'

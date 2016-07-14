@@ -11,15 +11,15 @@
 # Yunjun, Oct 2015: Add geocode_one()
 #                   Merge 'interferograms','coherence','wrapped' into one
 #                   Add support for subsetted radar coded files
+# Yunjun, Jun 2016: Add geocode_attributes(), use read() and write() for file IO
 
 
 import os
 import sys
 
-import numpy as np
 import h5py
 
-import pysar._readfile as readfile
+import pysar._readfile  as readfile
 import pysar._writefile as writefile
 
 
@@ -48,6 +48,18 @@ def geocode_one(data,geomapFile,outname):
    return amp, unw, unwrsc
 
 
+######################################################################################
+def geocode_attributes(atr_rdr,atr_geo):
+   atr = dict()
+   for key, value in atr_geo.iteritems():  atr[key] = str(value)
+   for key, value in atr_rdr.iteritems():  atr[key] = value
+   atr['WIDTH']       = atr_geo['WIDTH']
+   atr['FILE_LENGTH'] = atr_geo['FILE_LENGTH']
+
+   return atr
+
+
+######################################################################################
 def Usage():
    print '''
 *******************************************************************
@@ -58,22 +70,26 @@ def Usage():
     Usage:
          geocode.py File geocoding_lookupfile
 
-    File: PySAR hdf5 file [velocity, temporal_coherence, mask, rmse, timeseries
-                           unwrapped/wrapped interferograms, coherence]
+    File: PySAR hdf5 file, including subseted.
+                [velocity, temporal_coherence, mask, rmse, timeseries
+                 unwrapped/wrapped interferograms, coherence]
     geocoding_lookupfile: geocoding look-up table of the master interferogram   
 
     Example:
-         geocode.py velocity.h5   geomap_8rlks.trans
-         geocode.py timeseries.h5 geomap_8rlks.trans
-         geocode.py LoadedData.h5 geomap_8rlks.trans
-         geocode.py Coherence.h5  geomap_8rlks.trans
-         geocode.py Wrapped.h5    geomap_8rlks.trans
-         geocode.py DEM_error.h5  geomap_8rlks.trans
+         geocode.py velocity.h5        geomap_8rlks.trans
+         geocode.py subset_velocity.h5 geomap_8rlks.trans
+         geocode.py timeseries.h5      geomap_8rlks.trans
+         geocode.py LoadedData.h5      geomap_8rlks.trans
+         geocode.py Coherence.h5       geomap_8rlks.trans
+         geocode.py Wrapped.h5         geomap_8rlks.trans
+         geocode.py DEM_error.h5       geomap_8rlks.trans
+
 *******************************************************************
 *******************************************************************
    '''
 
 
+######################################################################################
 def main(argv):
 
    try:
@@ -82,19 +98,12 @@ def main(argv):
    except:
        Usage();sys.exit(1)
 
-######################################################################################
-   
+   ######################################################################################
    fileName=os.path.basename(file).split('.')[0]
    h5file=h5py.File(file,'r')
-   k=h5file.keys()
-
-   if 'interferograms' in k: k[0] = 'interferograms'
-   elif 'coherence'    in k: k[0] = 'coherence'
-   elif 'timeseries'   in k: k[0] = 'timeseries'
-   if k[0] in ('interferograms','coherence','wrapped'):
-       atr  = h5file[k[0]][h5file[k[0]].keys()[0]].attrs
-   elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
-       atr  = h5file[k[0]].attrs
+   atr = readfile.read_attributes(file)
+   k = atr['FILE_TYPE']
+   print 'geocoding '+k
 
    #### Subsetted radar coded file
    try:
@@ -113,27 +122,8 @@ def main(argv):
    except: pass
 
 
-######################################################################################
-
-   if k[0] in ('velocity','temporal_coherence','mask','rmse','dem'):
-
-       dset = h5file[k[0]].get(k[0])
-       data = dset[0:dset.shape[0],0:dset.shape[1]]
-       outname=fileName+'.unw'
-
-       amp,unw,unwrsc = geocode_one(data,geomap,outname)
-
-       f = h5py.File('geo_'+file,'w')
-       group=f.create_group(k[0])
-       dset = group.create_dataset(k[0], data=unw, compression='gzip')
-       for key,value in h5file[k[0]].attrs.iteritems():   group.attrs[key]=value
-       for key,value in unwrsc.iteritems():               group.attrs[key] = value
-
-
-######################################################################################
-
-   elif  'timeseries' in k:
-       print 'geocoding timeseries:'
+   ######################################################################################
+   if k in ['timeseries']:
        outname='epoch_temp.unw'
 
        f = h5py.File('geo_'+file,'w')
@@ -141,76 +131,79 @@ def main(argv):
        epochList=h5file['timeseries'].keys()
        for epoch in epochList:
            print 'geocoding '+epoch
-           d = h5file['timeseries'].get(epoch)
-           data = d[0:d.shape[0],0:d.shape[1]]
+           data = h5file['timeseries'].get(epoch)[:]
 
            amp,unw,unwrsc = geocode_one(data,geomap,outname)
            dset = group.create_dataset(epoch, data=unw, compression='gzip')
 
-       for key,value in unwrsc.iteritems():              group.attrs[key] = value
-       for key,value in h5file[k[0]].attrs.iteritems():  group.attrs[key] = value
-       group.attrs['WIDTH']       = unwrsc['WIDTH'] 
-       group.attrs['FILE_LENGTH'] = unwrsc['FILE_LENGTH']
-    
+       atr = geocode_attributes(atr,unwrsc)
+       for key,value in atr.iteritems():
+           group.attrs[key] = value
 
-######################################################################################
-
-   elif k[0] in ['interferograms','coherence','wrapped']:
-       print 'geocoding '+k[0]+' ...'
-       if   k[0] == 'interferograms': outname = k[0]+'_temp.unw'
-       elif k[0] == 'coherence':      outname = k[0]+'_temp.cor'
-       else:                          outname = k[0]+'_temp.int'
+   ######################################################################################
+   elif k in ['interferograms','coherence','wrapped']:
+       if   k == 'interferograms': outname = k[0]+'_temp.unw'
+       elif k == 'coherence'     : outname = k[0]+'_temp.cor'
+       else:                       outname = k[0]+'_temp.int'
 
        f = h5py.File('geo_'+file,'w')
        gg = f.create_group('interferograms')
-       igramList=h5file[k[0]].keys()
+       igramList=h5file[k].keys()
        for igram in igramList:
            print 'geocoding '+igram
-           d = h5file[k[0]][igram].get(igram)
-           data = d[0:d.shape[0],0:d.shape[1]]
+           data = h5file[k][igram].get(igram)[:]
 
            amp,unw,unwrsc = geocode_one(data,geomap,outname)
 
            group = gg.create_group('geo_'+igram)
            dset = group.create_dataset('geo_'+igram, data=unw, compression='gzip')
-           for key,value in unwrsc.iteritems():                         group.attrs[key] = value
-           for key,value in h5file[k[0]][igram].attrs.iteritems():      group.attrs[key] = value
-           group.attrs['WIDTH'] = unwrsc['WIDTH']
-           group.attrs['FILE_LENGTH'] = unwrsc['FILE_LENGTH']
+
+           atr = geocode_attributes(h5file[k][igram].attrs, unwrsc)
+           for key,value in atr.iteritems():
+               group.attrs[key] = value
 
        #######################  support of old format  #######################
        ### mask
        try:
-           d = h5file['mask'].get('mask')
-           data = d[0:d.shape[0],0:d.shape[1]]
+           data = h5file['mask'].get('mask')[:]
            amp,unw,unwrsc = geocode_one(data,geomap,'mask_'+outname)
            gm = f.create_group('mask')
            dset = gm.create_dataset('mask', data=unw, compression='gzip')
        except:  print 'No group for mask found in the file.'
        ### meanCoherence
        try:
-           d = h5file['meanCoherence'].get('meanCoherence')
-           data = d[0:d.shape[0],0:d.shape[1]]
+           data = h5file['meanCoherence'].get('meanCoherence')[:]
            amp,unw,unwrsc = geocode_one(data,geomap,'meanCoherence_'+outname)
            gm = f.create_group('meanCoherence')
            dset = gm.create_dataset('meanCoherence', data=unw, compression='gzip')
        except:  print 'No group for meanCoherence found in the file'
 
+   ######################################################################################
+   else:
+       data,atr = readfile.read(file)
+       outname=fileName+'.unw'
 
-######################################################################################
+       amp,unw,unwrsc = geocode_one(data,geomap,outname)
+       atr = geocode_attributes(atr,unwrsc)
+
+       writefile.write(unw,atr,'geo_'+file)
+
+
+   ######################################################################################
    try:
        atr['subset_x0']
        rmCmd='rm '+geomap;            os.system(rmCmd);       print rmCmd
        rmCmd='rm '+geomap+'.rsc';     os.system(rmCmd);       print rmCmd
    except: pass
 
-   f.close()
-   h5file.close()
+   try:
+       f.close()
+       h5file.close()
+   except: pass
+
 
 ######################################################################################
-
 if __name__ == '__main__':
-
   main(sys.argv[1:])
 
 
