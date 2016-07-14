@@ -5,36 +5,42 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 #
-# Add: Update Coherence file, Yunjun, Jul 2015
-#
+# Yunjun, Jul 2015: Update Coherence file
+# Yunjun, Oct 2015: Add 'T' option for template file input
+#                   and pysar.dropIfgIndex in template content
 
 
-import _pysar_utilities as ut
 import sys
 import os
 import getopt
 import time
 import datetime
 
-from numpy import *
-from scipy.io import loadmat
-import matplotlib
-import matplotlib.pyplot as plt
-from pylab import *
 import h5py
+import matplotlib
+from numpy import *
+from pylab import *
+#import random
+#from scipy.io import loadmat
+#from mpl_toolkits.axes_grid.inset_locator import inset_axes
 
-import random
-from mpl_toolkits.axes_grid.inset_locator import inset_axes
-
-import _readfile as readfile
+import pysar._pysar_utilities as ut
 
 
+######################################
 def nearest_neighbor(x,y, tbase, pbase):
   """ find nearest neighbour """
   dist = sqrt((tbase -x)**2+(pbase -y)**2) 
   indx=dist==min(dist)
   return indx
-  
+
+######################################
+def yymmdd2yyyymmdd(date):
+  if date[0] == '9':  date = '19'+date
+  else:               date = '20'+date
+  return date
+
+
 ######################################
 def Usage():
   print '''
@@ -43,7 +49,7 @@ def Usage():
   Modify the network of interferograms and/or coherence.
 
   usage:
-       modify_network.py -f interferogramsFile -s fontsize -w linewidth
+       modify_network.py -f interferogramsFile -s fontsize -w linewidth -T templateFile
 
     -f : interferograms file stored in hdf5 file format
     -C : coherence file stored in hdf5 file format
@@ -56,141 +62,135 @@ def Usage():
     -d : date (all interferograms that includes date is removed)
     -l : list of interferograms to remove  
     -N : interferogram numbers to remove
+    -T : template file with pysar.dropIfgIndex setted
     -n : (yes or no)network display to manually choose igrams from the network to remove(default is yes)
 
     
   Example:
 
-       modify_network.py LoadedData_SanAndreasT356EnvD.h5
-       modify_network.py -f LoadedData_SanAndreasT356EnvD.h5 -b 400 -n no
-       modify_network.py -f LoadedData_SanAndreasT356EnvD.h5 -b 500 -t 600 -d 080307
-       modify_network.py -f LoadedData_SanAndreasT356EnvD.h5 -d '080307 091023'           
-       modify_network.py -f LoadedData_SanAndreasT356EnvD.h5 -l 'filt_080307-091023-sim_HDR_8rlks_c10.unw filt_080307-090814-sim_HDR_8rlks_c10.unw' 
-       modify_network.py -f LoadedData_SanAndreasT356EnvD.h5 -N '0 4 20 76 89 100'
-       modify_network.py -f LoadedData_SanAndreasT356EnvD.h5 -C Coherence_SanAndreasT356EnvD.h5 -N '0 4 20 76 89 100'
+       modify_network.py LoadedData.h5
+       modify_network.py -f LoadedData.h5 -b 400 -n no
+       modify_network.py -f LoadedData.h5 -b 500 -t 600 -d 080307
+       modify_network.py -f LoadedData.h5 -d '080307 091023'           
+       modify_network.py -f LoadedData.h5 -l 'filt_080307-091023-sim_HDR_8rlks_c10.unw filt_080307-090814-sim_HDR_8rlks_c10.unw' 
+       modify_network.py -f LoadedData.h5 -N '0 4 20 76 89 100'
+       modify_network.py -f LoadedData.h5 -C Coherence.h5 -N '0 4 20 76 89 100'
+       modify_network.py -f LoadedData.h5 -T $TEM/KirishimaT246EnvD2.template
 
   ******************************************
   ******************************************  
   '''
 
-
-def yymmdd2yyyymmdd(date):
-  if date[0][0] == '9':
-      date[0] = '19'+date[0]
-  else:
-      date[0] = '20'+date[0]
-  return date
 ######################################
 def main(argv):
 
-  lineWidth=2
-  fontSize=12
-  markerColor='orange'
-  markerSize=16
-  networkDisplay='yes'
+  lineWidth   = 2
+  fontSize    = 12
+  markerColor = 'orange'
+  markerSize  = 16
+  networkDisplay = 'no'
 
   if len(sys.argv)>2:
 
     try:
-      opts, args = getopt.getopt(argv,"h:f:C:s:w:m:c:t:b:d:l:n:N:")
-      
+      opts, args = getopt.getopt(argv,"h:f:C:s:w:m:c:t:b:d:l:n:N:T:")
     except getopt.GetoptError:
       Usage() ; sys.exit(1)
 
     for opt,arg in opts:
       if opt in ("-h","--help"):
-        Usage()
-        sys.exit()
-      elif opt == '-f':
-        igramsFile = arg
-      elif opt == '-C':
-        corFile = arg
-      elif opt == '-s':
-        fontSize = int(arg)
-      elif opt == '-w':
-        lineWidth=int(arg)
-      elif opt == '-m':
-        markerSize=int(arg)
-      elif opt == '-c':
-        markerColor=arg
-      elif opt == '-t':
-        temp_thr=float(arg)
-      elif opt == '-b':
-        base_thr=float(arg)
-      elif opt == '-d':
-        dates2Rmv=arg
-      elif opt == '-l':
-        ifgrams_to_rmv=arg
-      elif opt == '-n':
-        networkDisplay=arg
-      elif opt == '-N':
-        ifgrams_Number_to_rmv=arg.split()
+        Usage();  sys.exit()
+      elif opt == '-f':        igramsFile     = arg
+      elif opt == '-C':        corFile        = arg
+      elif opt == '-s':        fontSize       = int(arg)
+      elif opt == '-w':        lineWidth      = int(arg)
+      elif opt == '-m':        markerSize     = int(arg)
+      elif opt == '-c':        markerColor    = arg
+      elif opt == '-t':        temp_thr       = float(arg)
+      elif opt == '-b':        base_thr       = float(arg)
+      elif opt == '-d':        dates2Rmv      = arg
+      elif opt == '-l':        ifgrams_to_rmv = arg
+      elif opt == '-n':        networkDisplay = arg
+      elif opt == '-N':        ifgrams_Number_to_rmv = arg.split()
+      elif opt == '-T':        templateFile   = arg
 
-
-    try:
-      igramsFile
-    except:
-       Usage() ; sys.exit(1)
+    try:  igramsFile
+    except:  Usage() ; sys.exit(1)
 
   elif len(sys.argv)==2:
-     igramsFile = argv[0]
-  else:
-     Usage() ; sys.exit(1)
+    igramsFile = argv[0]
+    networkDisplay = 'yes'
+  else:   Usage() ; sys.exit(1)
 
-############################################
+  ## display network for modification, if no other limit setted
+  try:
+    temp_thr
+    base_trh
+    dates2Rmv
+    ifgrams_to_rmv
+    ifgrams_Number_to_rmv
+    networkDisplay = 'yes'
+  except: pass
+
+###########################################################
   h5file = h5py.File(igramsFile)
-#  import pdb;  pdb.set_trace()
   if h5file.keys()[0] != 'interferograms':
       print 'Input file should be interferograms'
       Usage() ; sys.exit(1)
   ifgramList=h5file['interferograms'].keys()
 
+  try:     ifgrams_to_rmv
+  except:  ifgrams_to_rmv=[]
 
+###########################################################
+
+  #####  T - templateFile, pysar.dropIfgIndex
   try:
-    ifgrams_to_rmv
-  except:     
-    ifgrams_to_rmv=[]
-############################################
+    templateFile
+    import pysar._readfile as readfile
+    template = readfile.read_template(templateFile)
+    drop_ifg_index = template['pysar.dropIfgIndex'].split(',')
+    print 'drop interferogram index:'
+    print drop_ifg_index
+    try:    ifgrams_Number_to_rmv
+    except: ifgrams_Number_to_rmv = []
+    for index in drop_ifg_index:
+       index_temp = [int(i) for i in index.split(':')];    index_temp.sort()
+       if   len(index_temp)==2:
+           for j in range(index_temp[0],index_temp[1]+1):  ifgrams_Number_to_rmv.append(str(j))
+       elif len(index_temp)==1:                            ifgrams_Number_to_rmv.append(index)
+       else: print 'Unrecoganized input: '+index
+  except: pass
 
+  #####  N - interferogram number list
   try:
     for i in ifgrams_Number_to_rmv:
-        print i
-        print ifgramList[int(i)]
-        ifgrams_to_rmv.append(ifgramList[int(i)])
-  except:
-    print ''
-    
-  
+       print i+'    '+ifgramList[int(i)]
+       ifgrams_to_rmv.append(ifgramList[int(i)])
+  except: pass
+
+  #####  b - perpendicular baseline limit
   try:
     base_thr
     print 'interferograms with the spatial baseline longer than '+ str(base_thr)+' m is removed'
     for ifgram in  ifgramList:
-       Baseline = (float(h5file['interferograms'][ifgram].attrs['P_BASELINE_BOTTOM_HDR'])+float(h5file['interferograms'][ifgram].attrs['P_BASELINE_TOP_HDR']))/2
+       Baseline = (float(h5file['interferograms'][ifgram].attrs['P_BASELINE_BOTTOM_HDR'])+\
+                   float(h5file['interferograms'][ifgram].attrs['P_BASELINE_TOP_HDR']))/2
        if abs(Baseline) > base_thr:
-         if not ifgram in ifgrams_to_rmv:
-            ifgrams_to_rmv.append(ifgram)
-      
-  except:
-    print 'No Spatial Baseline threshold applied'
+         if not ifgram in ifgrams_to_rmv:   ifgrams_to_rmv.append(ifgram)
+  except:    print 'No Spatial Baseline threshold applied'
 
-#  print ifgrams_to_rmv
-  ###########################################################
-  #Check if interferograms made of specific dates should be removed
-#  print dates2Rmv
+  ##### d - dates to remove
   try:
     dates2Rmv
     print 'interferograms with any of following dates will be removed: '+ dates2Rmv
     for ifgram in  ifgramList:
       date1,date2 = h5file['interferograms'][ifgram].attrs['DATE12'].split('-')
-      
       if (date1 in dates2Rmv) or (date2 in dates2Rmv):
-         if not ifgram in ifgrams_to_rmv:
-            ifgrams_to_rmv.append(ifgram)
-  except:
-    print 'No specific dates selected to remove'
+         if not ifgram in ifgrams_to_rmv:   ifgrams_to_rmv.append(ifgram)
+  except:   print 'No specific dates selected to remove'
 
-###########################################################
-  #Check the temporal threshold
+  ##### t - temporal baseline limit
   tbase,dateList,dateDict,dateList1=ut.date_list(h5file)
   try:
     temp_thr
@@ -205,6 +205,7 @@ def main(argv):
             ifgrams_to_rmv.append(ifgram)
   except:
     print 'No Temporal Baseline threshold applied'
+
 ############################################################
 ############################################################
   if networkDisplay=='yes':
@@ -244,19 +245,19 @@ def main(argv):
       igram_pairs[i][1]=dateList1.index(date2)
       i=i+1
 
-#  h5file.close()
 ############################################################
+    import matplotlib.pyplot as plt
     fig1 = plt.figure(1)
     ax1=fig1.add_subplot(111)
 
     ax1.cla()
- # ax1.plot(dates,Bp, 'o',ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
+    # ax1.plot(dates,Bp, 'o',ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
     print tbase
     ax1.plot(tbase,Bp, 'o',ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
     for ni in range(len(ifgramList)):
-    #  ax1.plot(array([dates[igram_pairs[ni][0]],dates[igram_pairs[ni][1]]]),array([Bp[igram_pairs[ni][0]],Bp[igram_pairs[ni][1]]]),'k',lw=4)
-      ax1.plot(array([tbase[igram_pairs[ni][0]],tbase[igram_pairs[ni][1]]]),array([Bp[igram_pairs[ni][0]],Bp[igram_pairs[ni][1]]]),'k',lw=4) 
- # ax1.fmt_xdata = DateFormatter('%Y-%m-%d %H:%M:%S')
+      ax1.plot(array([tbase[igram_pairs[ni][0]],tbase[igram_pairs[ni][1]]]),\
+               array([Bp[igram_pairs[ni][0]],Bp[igram_pairs[ni][1]]]),'k',lw=4) 
+    # ax1.fmt_xdata = DateFormatter('%Y-%m-%d %H:%M:%S')
     ax1.set_ylabel('Bperp [m]',fontsize=fontSize)
     ax1.set_xlabel('Time [years]',fontsize=fontSize)
     ts=datevector[0]+0.2
@@ -265,32 +266,20 @@ def main(argv):
     ye=int(te)
     ms=int((ts-ys)*12)
     me=int((te-ye)*12)
-    if ms>12:
-       ys =ys+1
-       ms=1
-    if me>12:
-       ye =ye+1
-       me=1
-    
-    if ms<1:
-       ys =ys-1
-       ms=12
-    if me<1:
-       ye =ye-1
-       me=12
+    if ms>12:       ys =ys+1;       ms=1
+    if me>12:       ye =ye+1;       me=1
+    if ms<1:        ys =ys-1;       ms=12
+    if me<1:        ye =ye-1;       me=12
 
     dss=datetime.datetime(ys,ms,1,0,0)
     dee=datetime.datetime(ye,me,1,0,0)
-#  ax1.set_xlim(dss,dee)
     ax1.set_ylim(min(Bp)-0.4*abs(min(Bp)),max(Bp)+0.4*max(Bp))
 
     xticklabels = getp(gca(), 'xticklabels')
     yticklabels = getp(gca(), 'yticklabels')
     setp(yticklabels, 'color', 'k', fontsize=fontSize)
     setp(xticklabels, 'color', 'k', fontsize=fontSize)
- # fig1.autofmt_xdate()
-#  plt.show() 
-#  ax1.plot(array([tbase[igram_pairs[ni][0]],tbase[igram_pairs[ni][1]]]),array([Bp[igram_pairs[ni][0]],Bp[igram_pairs[ni][1]]]),'r',lw=10)
+
 ##########################################  
     x=[]
     y=[]
@@ -298,7 +287,6 @@ def main(argv):
     Slave_index_torremove=[]
     a_tbase=array(tbase)
     a_Bp=array(Bp)
-#  print igram_pairs
     def onclick(event):
       if event.button==1:
         print 'click'
@@ -308,9 +296,7 @@ def main(argv):
         xr = a_tbase[idx]
         yr = a_Bp[idx]
         ix=tbase.index(xr)+1
-    #  iy=Bp.index(yr)
         print ix
-     # print iy
         x.append(xr)
         y.append(yr)
         if mod(len(x),2)==0:
@@ -346,8 +332,6 @@ def main(argv):
     print 'No network display.'
 ############################################################
 ############################################################
-
-#  import pdb;  pdb.set_trace()
 
   print 'The list of interferograms to remove:' 
   print ifgrams_to_rmv

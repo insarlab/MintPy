@@ -5,28 +5,20 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 #
-# add 'timeseries'/'wrapped' option, Yunjun, Jul 2015
+# Yunjun, Jul 2015: add 'timeseries'/'wrapped' option
+# Yunjun, Oct 2015: merge all HDF5 option into one
+#                   add support for ROI_PAC product
 #
 
 import os
 import sys
-import h5py
+import getopt
+
+try:     from pykml.factory import KML_ElementMaker as KML
+except:  sys.exit('pykml should be installed!')
 import numpy as np
 import matplotlib as mpl              # FA 7/2015: allows plot generation without running an X server
 mpl.use('Agg')  
-import matplotlib.pyplot as plt
-#import matplotlib.pyplot as plt
-#import matplotlib.mpl as mpl
-#from numpy import round,pi
-try:
-    from pykml.factory import KML_ElementMaker as KML
-except:
-    print 'pykml should be installed!'
-    sys.exit(1)
-
-from lxml import etree
-import getopt
-#from numpy import nanmin,nanmax
 
 
 def rewrap(unw):
@@ -39,23 +31,30 @@ def Usage():
 ***************************************************************    
   generating  kml kmz files. (needs geocoded files )
 
-  Usage: save_kml.py -f file -m min -M max -d epoch_date -c color_map -i no(yes)
+  Usage:
+         save_kml.py file
+         save_kml.py -f file -m min -M max -d epoch_date -c color_map -i no(yes)
   
-  file: a geocoded PySAR product
+  -f file - a geocoded PySAR / ROI_PAC product
+        supportted format: .h5, .unw, .int, .dem, .cor, .trans
   -m minmum value
   -M maximum value
   -d date of interferogram or time-series epoch to be converted to kml
-     For interferogram, like 971220-990703; for timeseries, like 060924 or 20060924
+        for interferogram, like 971220-990703; 
+        for timeseries, like 060924 or 20060924
   -c colormap, jet as default
   -i inverse the colormap
-  -w re-wrapping the interferogram [default : yes]
+  -w re-wrapping the interferogram [default : no]
   -r dpi (dots per inch) [default = 500]
+
   Example:
-         
-         save_kml.py -f geo_velocity.h5 -m -0.015 -M 0.015 -i yes -c jet -r 250
+ 
+         save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05
+         save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 -i yes -c jet -r 250
          save_kml.py -f LoadedData_ChamanT256EnvA6.h5 -d 971220-990703 
-         save_kml.py -f Wrapped_ChamanT256EnvA6.h5 -d 971220-990703 
          save_kml.py -f timeseries.h5 -d 20060924         
+         save_kml.py -f geo_filt_100820-101120-sim_HDR_4rlks_c10.unw
+         save_kml.py gsi10m.dem
 
 ***************************************************************
 ***************************************************************
@@ -66,213 +65,166 @@ def main(argv):
   color_map='jet'
   disp_opposite = 'no'
   disp_colorbar='yes'
-  rewrapping='yes'
+  rewrapping='no'
   dpi=500
 
-  try:
-      opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:")
-
-  except getopt.GetoptError:
-      Usage() ; sys.exit(1)
+  if len(sys.argv)>2:
+    try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:")
+    except getopt.GetoptError:  Usage() ; sys.exit(1)
  
-  for opt,arg in opts:
+    for opt,arg in opts:
+      if   opt == '-f':        File = arg
+      elif opt == '-m':        Vmin = float(arg)
+      elif opt == '-M':        Vmax = float(arg)
+      elif opt == '-d':        epoch_date    = arg
+      elif opt == '-c':        color_map     = arg
+      elif opt == '-i':        disp_opposite = arg
+      elif opt == '-w':        rewrapping    = arg
+      elif opt == '-r':        dpi = int(arg)
 
-      if opt == '-f':
-        File = arg
-      elif opt == '-m':
-        Vmin = float(arg)
-      elif opt == '-M':
-        Vmax = float(arg)
-      elif opt == '-d':
-        epoch_date=arg
-      elif opt == '-c':
-        color_map=arg
-      elif opt == '-i':
-        disp_opposite=arg
-      elif opt == '-w':
-        rewrapping=arg
-      elif opt == '-r':
-        dpi=int(arg)
+  elif len(sys.argv)==2:
+    if argv[0]=='-h':               Usage(); sys.exit(1)
+    elif os.path.isfile(argv[0]):   File = argv[0]
+    else:                           Usage(); sys.exit(1)
+  else:                             Usage(); sys.exit(1)
+
+
+#######################################################
+###################  Prepare Data  ####################
+## prepare: data, North, East, South, West
+
+  import matplotlib.pyplot as plt
+  ext = os.path.splitext(File)[1]
+  map = plt.get_cmap(color_map)
+
+  if ext == '.h5':
+    import h5py
+    try:      h5file=h5py.File(File,'r')
+    except:   Usage() ; sys.exit(1)
+    outName=File.split('.')[0]
+
+    k=h5file.keys()
+    if 'interferograms' in k: k[0] = 'interferograms'
+    elif 'coherence'    in k: k[0] = 'coherence'
+    elif 'timeseries'   in k: k[0] = 'timeseries'
+    if k[0] in ('interferograms','coherence','wrapped'):
+       atr  = h5file[k[0]][h5file[k[0]].keys()[0]].attrs
+    elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
+       atr  = h5file[k[0]].attrs
+    print 'Input file is '+k[0]
+
+
+    if k[0] in ('interferograms','wrapped','coherence'):
+       ifgramList=h5file[k[0]].keys()
+       for i in range(len(ifgramList)):
+          if epoch_date in ifgramList[i]:
+             epoch_number = i
+       print ifgramList[epoch_number]
+       outName = ifgramList[epoch_number]
+       #outName=epoch_date
+           
+       dset = h5file[k[0]][ifgramList[epoch_number]].get(ifgramList[epoch_number])
+       data = dset[0:dset.shape[0],0:dset.shape[1]]
+
+       if k[0] == 'wrapped':
+          print 'No wrapping for wrapped interferograms. Set rewrapping=no'
+          rewrapping = 'no'
+          Vmin = -np.pi    
+          Vmax = np.pi
+
+    elif 'timeseries' in k:
+       epochList=h5file['timeseries'].keys()
+       for i in range(len(epochList)):
+          if epoch_date in epochList[i]:
+             epoch_number = i
+
+       #### Out name
+       ref_date=h5file['timeseries'].attrs['ref_date']
+       if len(epoch_date)==8:  outName=ref_date[2:]+'-'+epoch_date[2:]
+       else:                   outName=ref_date[2:]+'-'+epoch_date
+
+       dset = h5file['timeseries'].get(epochList[epoch_number])
+       data = dset[0:dset.shape[0],0:dset.shape[1]]
+
+    ### one dataset format: velocity, mask, temporal_coherence, rmse, std, etc.
+    else:
+       dset = h5file[k[0]].get(k[0])
+       data=dset[0:dset.shape[0],0:dset.shape[1]]
+       if disp_opposite in('yes','Yes','Y','y','YES'):
+          data=-1*data
+
+       try:
+          xref=h5file[k[0]].attrs['ref_x']
+          yref=h5file[k[0]].attrs['ref_y']
+       except: pass
+
+  elif ext in ['.unw','.cor','.hgt','.trans','.dem']:
+     import pysar._readfile as readfile
+     if   ext in ['.unw','.cor','.hgt','.trans']:  a,data,atr = readfile.read_float32(File);   outName = File
+     elif ext == '.dem':                             data,atr = readfile.read_dem(File);       outName = File
+  else: sys.exit('Do not support '+ext+' file!')
+
+
+########################################################
+
+  if rewrapping=='yes':
+     data=rewrap(data)
+     Vmin = -np.pi    #[-pi,pi] for wrapped interferograms
+     Vmax = np.pi
+  else:
+     try:     Vmin
+     except:  Vmin = np.nanmin(data)
+     try:     Vmax
+     except:  Vmax = np.nanmax(data)
 
   try:
-    h5file=h5py.File(File,'r')
-    k=h5file.keys()
-    outName=File.split('.')[0]
+     lon_step = float(atr['X_STEP'])
+     lat_step = float(atr['Y_STEP'])
+     lon_unit = atr['Y_UNIT']
+     lat_unit = atr['X_UNIT']
+     West     = float(atr['X_FIRST'])
+     North    = float(atr['Y_FIRST'])
+     South    = North+lat_step*(data.shape[0]-1)
+     East     = West +lon_step*(data.shape[1]-1)
+     geocoord = 'yes'
+     print 'Input file is Geocoded.'
   except:
-    Usage() ; sys.exit(1)
-
-  print 'Input file is '+k[0]
-  ccmap=plt.get_cmap(color_map)
-
-
-  if k[0] in ('interferograms','wrapped'):
-
-    ifgramList=h5file[k[0]].keys()
-    for i in range(len(ifgramList)):
-       if epoch_date in ifgramList[i]:
-          epoch_number = i
-    print ifgramList[epoch_number]
-    outName=epoch_date
-           
-    dset = h5file[k[0]][ifgramList[epoch_number]].get(ifgramList[epoch_number])
-    data = dset[0:dset.shape[0],0:dset.shape[1]]
-
-    if k[0] == 'wrapped':
-       rewrapping = 'no'
-       Vmin = -np.pi    
-       Vmax = np.pi
-
-    if rewrapping=='yes':
-       data=rewrap(data)
-       Vmin = -np.pi	#[-pi,pi] for wrapped interferograms
-       Vmax = np.pi
-    else:
-       try:
-          Vmin
-       except:
-          Vmin = np.nanmin(data)
-       try:
-          Vmax
-       except:
-          Vmax = np.nanmax(data)
-
-    try:
-       West	=float(h5file[k[0]][ifgramList[epoch_number]].attrs['X_FIRST'])
-       North	=float(h5file[k[0]][ifgramList[epoch_number]].attrs['Y_FIRST'])
-       lon_step	=float(h5file[k[0]][ifgramList[epoch_number]].attrs['X_STEP'])
-       lat_step	=float(h5file[k[0]][ifgramList[epoch_number]].attrs['Y_STEP'])
-       lon_unit	=h5file[k[0]][ifgramList[epoch_number]].attrs['Y_UNIT']
-       lat_unit	=h5file[k[0]][ifgramList[epoch_number]].attrs['X_UNIT']
-       South	=North+lat_step*(data.shape[0]-1)
-       East	=West+lon_step*(data.shape[1]-1)
-       geocoord='yes'
-       print 'Input file is Geocoded.'
-    except:
-       print '%%%%%%%%%%'
-       print 'Error:'
-       print 'The input file is not geocoded'
-       print ''
-       print '%%%%%%%%%%'
-       Usage();sys.exit(1)
-
-  elif 'timeseries' in k:
-    epochList=h5file['timeseries'].keys()
-    for i in range(len(epochList)):
-       if epoch_date in epochList[i]:
-          epoch_number = i
-
-    ref_date=h5file['timeseries'].attrs['ref_date']
-    if len(epoch_date)==8:
-       outName=ref_date[2:]+'-'+epoch_date[2:]
-    else:
-       outName=ref_date[2:]+'-'+epoch_date
-
-    dset = h5file['timeseries'].get(epochList[epoch_number])
-    data = dset[0:dset.shape[0],0:dset.shape[1]]
-    if rewrapping=='yes':
-       data=rewrap(data)
-
-    try:
-       Vmin
-    except:
-       Vmin = np.nanmin(data)
-    try:
-       Vmax
-    except:
-       Vmax = np.nanmax(data)
-
-    try:
-       West     = float(h5file['timeseries'].attrs['X_FIRST'])
-       North    = float(h5file['timeseries'].attrs['Y_FIRST'])
-       lon_step = float(h5file['timeseries'].attrs['X_STEP'])
-       lat_step = float(h5file['timeseries'].attrs['Y_STEP'])
-       lon_unit = h5file['timeseries'].attrs['Y_UNIT']
-       lat_unit = h5file['timeseries'].attrs['X_UNIT']
-       South = North + lat_step*(data.shape[0]-1)
-       East  = West  + lon_step*(data.shape[1]-1)
-       South = North + lat_step*(data.shape[0]-1)
-       East  = West  + lon_step*(data.shape[1]-1)
-       geocoord='yes'
-       print 'Input file is Geocoded.'
-    except:
-       print '%%%%%%%%%%'
-       print 'Error:'
-       print 'The input file is not geocoded'
-       print ''
-       print '%%%%%%%%%%'
-       Usage();sys.exit(1)
-
-
-  else:		# one dataset format: velocity, mask, temporal_coherence, rmse, std, etc.
-
-    dset = h5file[k[0]].get(k[0])
-    data=dset[0:dset.shape[0],0:dset.shape[1]]
-    if disp_opposite in('yes','Yes','Y','y','YES'):
-      data=-1*data
-
-    xref=h5file[k[0]].attrs['ref_x']
-    yref=h5file[k[0]].attrs['ref_y']
-
-    try:
-       Vmin
-    except:
-       Vmin = np.nanmin(data)
-    try:
-       Vmax
-    except:
-       Vmax = np.nanmax(data)
-
-    try:
-       West=float(h5file[k[0]].attrs['X_FIRST'])
-       North=float(h5file[k[0]].attrs['Y_FIRST'])
-       lon_step=float(h5file[k[0]].attrs['X_STEP'])
-       lat_step=float(h5file[k[0]].attrs['Y_STEP'])
-       lon_unit=h5file[k[0]].attrs['Y_UNIT']
-       lat_unit=h5file[k[0]].attrs['X_UNIT']
-       South=North+lat_step*(data.shape[0]-1)
-       East=West+lon_step*(data.shape[1]-1)     
-       geocoord='yes'
-       print 'Input file is Geocoded.'
-    except:
-       print '%%%%%%%%%%'
-       print 'Error:'
-       print 'The input file is not geocoded'
-       print ''
-       print '%%%%%%%%%%'
-       Usage();sys.exit(1)
+     print '%%%%%%%%%%'
+     print 'Error:\nThe input file is not geocoded\n'
+     print '%%%%%%%%%%'
+     Usage();sys.exit(1)
 
 
 
 #######################################################
+###################  Output KMZ  ######################
+
+  ############### Make PNG file
   print 'Making png file ...'   
   length = data.shape[0]
-  width = data.shape[1]
+  width  = data.shape[1]
   fig = plt.figure()
   fig = plt.figure(frameon=False)
- # fig.set_size_inches(width/1000,length/1000)
+  # fig.set_size_inches(width/1000,length/1000)
   ax = plt.Axes(fig, [0., 0., 1., 1.], )
   ax.set_axis_off()
   fig.add_axes(ax)
   
   aspect = width/(length*1.0)
-#  ax.imshow(data,aspect='normal')
+  # ax.imshow(data,aspect='normal')
   
-  
-  try:
-     ax.imshow(data,aspect='normal',vmax=Vmax,vmin=Vmin)
-  except:
-     ax.imshow(data,aspect='normal')
+  try:     ax.imshow(data,aspect='normal',vmax=Vmax,vmin=Vmin)
+  except:  ax.imshow(data,aspect='normal')
 
   ax.set_xlim([0,width])
   ax.set_ylim([length,0])
 
- # figName = k[0]+'.png'
+  # figName = k[0]+'.png'
   figName = outName + '.png'  
   plt.savefig(figName,pad_inches=0.0,dpi=dpi)
- # plt.show()
-#############################################################
-#Making colorbar
-  ######Making the colorbar
+  # plt.show()
+
+  ############### Making colorbar
   pc = plt.figure(figsize=(1,4))
   axc = pc.add_subplot(111)
   cmap = mpl.cm.jet
@@ -282,33 +234,39 @@ def main(argv):
   pc.subplots_adjust(left=0.25,bottom=0.1,right=0.4,top=0.9)
   pc.savefig('colorbar.png',transparent=True,dpi=300)
 
-#############################################################
+  ############## Generate KMZ file
   print 'generating kml file'
   doc = KML.kml(KML.Folder(KML.name('PySAR product')))
-  slc = KML.GroundOverlay(KML.name(figName),KML.Icon(KML.href(figName)),KML.TimeSpan(KML.begin('2003'),KML.end('2010')),KML.LatLonBox(KML.north(str(North)),KML.south(str(South)),KML.east(str(East)),KML.west(str(West))))
+  slc = KML.GroundOverlay(KML.name(figName),KML.Icon(KML.href(figName)),\
+                          KML.TimeSpan(KML.begin('2003'),KML.end('2010')),\
+                          KML.LatLonBox(KML.north(str(North)),KML.south(str(South)),\
+                                        KML.east(str(East)),  KML.west(str(West))))
   doc.Folder.append(slc)
 
-#############################
+  #############################
   print 'adding colorscale'  
   latdel = North-South
   londel = East-West
-  slc1 = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),KML.LatLonBox(KML.north(str(North-latdel/2.+0.5)), KML.south(str(South+latdel/2.0-0.5)), KML.east(str(West-0.2*londel)), KML.west(str(West-0.4*londel))),KML.altitude('9000'),KML.altitudeMode('absolute'))
+  slc1   = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),\
+                             KML.altitude('9000'),KML.altitudeMode('absolute'),\
+                             KML.LatLonBox(KML.north(str(North-latdel/2.+0.5)),KML.south(str(South+latdel/2.0-0.5)),\
+                                           KML.east(str(West-0.2*londel)),     KML.west(str(West-0.4*londel))))
   doc.Folder.append(slc1)
 
-#############################
-
+  #############################
+  from lxml import etree
   kmlstr = etree.tostring(doc, pretty_print=True) 
- # kmlname=k[0]+'.kml'
+  # kmlname=k[0]+'.kml'
   kmlname = outName + '.kml'
   print 'writing '+kmlname
   kmlfile = open(kmlname,'w')
   kmlfile.write(kmlstr)
   kmlfile.close()
 
- # kmzName = k[0]+'.kmz'
+  # kmzName = k[0]+'.kmz'
   kmzName = outName + '.kmz'
   print 'writing '+kmzName
- # cmdKMZ = 'zip ' + kmzName +' '+ kmlname +' ' + figName 
+  # cmdKMZ = 'zip ' + kmzName +' '+ kmlname +' ' + figName 
   cmdKMZ = 'zip ' + kmzName +' '+ kmlname +' ' + figName + ' colorbar.png'
   os.system(cmdKMZ)
 
@@ -319,6 +277,8 @@ def main(argv):
   cmdClean = 'rm colorbar.png'
   os.system(cmdClean)
 
+
+#######################################################
 if __name__ == '__main__':
 
   main(sys.argv[1:])

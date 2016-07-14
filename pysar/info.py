@@ -5,16 +5,18 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 #
-# Add 'coherence' option, Yunjun, Jul 2015
-#
+# Yunjun, Jul 2015: add 'coherence','wrapped' option, eNum
+# Yunjun, Oct 2015: merge 'interferograms','coherence','wrapped' into one
+
 
 import sys
 import os
 from numpy import std
-#import matplotlib.pyplot as plt
 import h5py
 import datetime
 import time
+
+
 def Usage():
   print '''
 ***************************************************************
@@ -47,6 +49,9 @@ def main(argv):
 
   h5file=h5py.File(File,'r')
   k=h5file.keys()
+  if 'interferograms' in k: k[0] = 'interferograms'
+  elif 'coherence'    in k: k[0] = 'coherence'
+  elif 'timeseries'   in k: k[0] = 'timeseries'
   print '******************************************'
   print '******************************************'
   print 'PySAR'
@@ -102,14 +107,15 @@ def main(argv):
          print key + ' : ' + str(value)
      print '*****************************************'
      print 'All groups in this file:'
-     print k
+     print h5file.keys()
+     #print k
 
 
-  elif 'interferograms' in k:
-     ifgramList = h5file['interferograms'].keys()
+  elif k[0] in ['interferograms', 'coherence', 'wrapped']:
+     ifgramList = h5file[k[0]].keys()
 
      try:
-        h5file['interferograms'][ifgramList[0]].attrs['X_FIRST']
+        h5file[k[0]][ifgramList[0]].attrs['X_FIRST']
         print 'coordinates : GEO'
      except:
         print 'coordinates : radar'
@@ -119,66 +125,29 @@ def main(argv):
         igramNumber=int(argv[1])
         print ifgramList[igramNumber-1]
         print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-        for key, value in h5file['interferograms'][ifgramList[igramNumber-1]].attrs.iteritems():
+        for key, value in h5file[k[0]][ifgramList[igramNumber-1]].attrs.iteritems():
             print key, value
         print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
         print ifgramList[igramNumber-1]
 
      except: 
-
-        print 'Number of interferograms: '+str(len(ifgramList)) 
+        print 'Number of '+k[0]+': '+str(len(ifgramList)) 
         print '**********************'
-        print 'List of the interferogram: 			eNum'
-	eNum=0
+        print 'List of the '+k[0]+': 			eNum'
+	eNum=1
         for ifg in ifgramList:
           print ifg + '	' + str(eNum)
 	  eNum=eNum+1
-     
         print '**********************'
         print 'File contains: '+ k[0]
-        print 'Number of interferograms: '+str(len(ifgramList))
+        print 'Number of '+k[0]+': '+str(len(ifgramList))
         print 'All groups in this file:'
-        print k
-
-     for key, value in h5file['interferograms'].attrs.iteritems():
-        print key, value
-
-
-  elif k[0] in ('coherence','wrapped'):
-     corList = h5file[k[0]].keys()
-
-     try:
-        h5file[k[0]][corList[0]].attrs['X_FIRST']
-        print 'coordinates : GEO'
-     except:
-        print 'coordinates : radar'
-     print '**********************'
-
-     try:
-        corNumber=int(argv[1])
-        print corList[corNumber-1]
-        print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-        for key, value in h5file[k[0]][corList[corNumber-1]].attrs.iteritems():
-            print key, value
-        print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-        print corList[corNumber-1]
-     except:
-        print 'Number of '+k[0]+': '+str(len(corList))
-        print '**********************'
-        print 'List of the '+k[0]+':                       eNum'
-        eNum=0
-        for cor in corList:
-          print cor + ' 		' + str(eNum)
-          eNum=eNum+1
-        print '**********************'
-        print 'File contains: '+ k[0]
-        print 'Number of '+k[0]+': '+str(len(corList))
-        print 'All groups in this file:'
-        print k
+        print h5file.keys()
+        #print k
 
      for key, value in h5file[k[0]].attrs.iteritems():
         print key, value
- 
+
   print '******************************************'
   print '******************************************'
 

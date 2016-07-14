@@ -4,15 +4,11 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
+# Yunjun, Oct 2015: add support for ROI_PAC product
 
 import sys
 import os
-import numpy as np
-#import matplotlib.pyplot as plt
-#import matplotlib.cm as cm
-#from matplotlib import colors
 import getopt
-import h5py
 
 def Usage():
   print '''
@@ -20,10 +16,12 @@ def Usage():
   ******************************************
   Masking a PySAR product using a mask file.
 
-  usage:
+  Usage:
+        masking.py -f file -m MaskFile
         masking.py -f file -m MaskFile -t threshold
+        masking.py -f file -m MaskFile -o outFile
 
-  file: an hdf5 file format to be masked.
+  file: an hdf5/roi_pac file format to be masked.
   MaskFile: the mask file 
   threshold: the threshold value used for masking. if not 
              specified then only pixels with mask value 
@@ -32,17 +30,19 @@ def Usage():
   if user wants to mask out an area with coordinates y1<y<y2 and x1<x<x2:
           masking.py -f file -m MaskFile -t threshold -y 'y1:y2' -x 'x1:x2'
    
-  example: 
+  Example: 
     masking velocity:
           masking.py -f velocity.h5 -m temporal_coherence.h5 -t 0.7
           masking.py -f velocity.h5 -m Mask.h5
           masking.py -f velocity.h5 -m temporal_coherence.h5 -t 0.9 -y '200:300' -x '300:400'
 
     masking interferograms (unwrapped/wrapped): 
-          masking.py -f Seeded_LoadedData_BajaT499EnvD2.h5 -m temporal_coherence.h5 -t 0.7
-          masking.py -f Modified_Seeded_LoadedData_BajaT499EnvD2.h5 -m Coherence_BajaT499EnvD2.h5 -t 0.7
-          masking.py -f Wrapped_BajaT499EnvD2.h5 -m temporal_coherence.h5 -t 0.7
-          masking.py -f Wrapped_BajaT499EnvD2.h5 -m Coherence_BajaT499EnvD2.h5 -t 0.7
+          masking.py -f LoadedData.h5 -m temporal_coherence.h5 -t 0.7
+          masking.py -f LoadedData.h5 -m Coherence.h5 -t 0.7
+          masking.py -f Wrapped.h5    -m temporal_coherence.h5 -t 0.7
+          masking.py -f Wrapped.h5    -m Coherence.h5 -t 0.7
+          masking.py -f geo_100102_101120.unw -m geo_100102_101120.cor -t 0.7
+          masking.py -f geo_100102_101120.unw -m geo_temporal_coherence.h5 -t 0.7
 
     masking time-series:
           masking.py -f timeseries.h5 -m temporal_coherence.h5 -t 0.7    
@@ -53,41 +53,43 @@ def Usage():
 ######################################
 def main(argv):
 
-#  lineWidth=4
-#  fontSize=32
-#  markerColor='orange'
-#  markerSize=20
-#  if len(sys.argv)>2:
+  #lineWidth=4
+  #fontSize=32
+  #markerColor='orange'
+  #markerSize=20
+  #if len(sys.argv)>2:
 
-    try:
-      opts, args = getopt.getopt(argv,"h:f:m:t:x:y:")
+  try:
+    opts, args = getopt.getopt(argv,"h:f:m:t:x:y:o:")
+  except getopt.GetoptError:
+    Usage() ; sys.exit(1)
 
-    except getopt.GetoptError:
-      Usage() ; sys.exit(1)
+  for opt,arg in opts:
+    if opt in ("-h","--help"):
+      Usage()
+      sys.exit()
+    elif opt == '-f':        File = arg
+    elif opt == '-m':        maskFile = arg
+    elif opt == '-t':        thr  = float(arg)
+    elif opt == '-y':        ysub = [int(i) for i in arg.split(':')];     ysub.sort()
+    elif opt == '-x':        xsub = [int(i) for i in arg.split(':')];     xsub.sort()
+    elif opt == '-o':        MaskedFile = arg
 
-    for opt,arg in opts:
-      if opt in ("-h","--help"):
-        Usage()
-        sys.exit()
-      elif opt == '-f':
-        File = arg
-      elif opt == '-m':
-        maskFile = arg
-      elif opt == '-t':
-        thr=float(arg)
-      elif opt=='-y':
-        ysub=[int(i) for i in arg.split(':')]
-        ysub.sort()
-      elif opt=='-x':
-        xsub = [int(i) for i in arg.split(':')]
-        xsub.sort()
-    try:
-      File
-      maskFile
-      
-    except:
-       Usage() ; sys.exit(1)
+  try:
+    File
+    maskFile
+  except:
+     Usage() ; sys.exit(1)
 
+######################################
+
+  ext = os.path.splitext(File)[1]
+  import h5py
+  import numpy as np
+
+  ################################  PySAR HDF5  #################################
+
+  if ext == '.h5':
     h5file=h5py.File(File,'r')
     h5mask=h5py.File(maskFile,'r')
     kf=h5file.keys()
@@ -95,10 +97,10 @@ def main(argv):
     if 'coherence' not in h5mask.keys():
        Mset=h5mask[h5mask.keys()[0]].get(h5mask.keys()[0])
        M=Mset[0:Mset.shape[0],0:Mset.shape[1]]
-  
-    MaskedFile = File.split('.')[0]+'_masked.h5'
-    h5file2 = h5py.File(MaskedFile,'w')
 
+    try:     MaskedFile
+    except:  MaskedFile = File.split('.')[0]+'_masked.h5'
+    h5file2 = h5py.File(MaskedFile,'w')
 
     if len(kf)==1 and kf[0] in ('velocity','temporal_coherence','rmse','mask'):
       Vset=h5file[h5file.keys()[0]].get(h5file.keys()[0])
@@ -108,13 +110,10 @@ def main(argv):
         xsub
         ysub
         M[ysub[0]:ysub[1],xsub[0]:xsub[1]]=0
-      except:
-        print 'No subset'
-      try:
-        thr
-        V[M<thr]=np.nan
-      except:
-        V[M==0]=np.nan
+      except:   print 'No subset'
+
+      try:     V[M<thr] = np.nan
+      except:  V[M==0]  = np.nan
     
       group=h5file2.create_group(kf[0])
       dset = group.create_dataset(os.path.basename(kf[0]), data=V, compression='gzip')
@@ -132,11 +131,8 @@ def main(argv):
         unwset = h5file['timeseries'].get(d)
         unw=unwset[0:unwset.shape[0],0:unwset.shape[1]]
 
-        try:
-          thr
-          unw[M<thr]=np.nan
-        except:
-          unw[M==0]=np.nan
+        try:     unw[M<thr] = np.nan
+        except:  unw[M==0]  = np.nan
 
         dset = group.create_dataset(d, data=unw, compression='gzip')
 
@@ -167,10 +163,12 @@ def main(argv):
          dset = group.create_dataset(igram, data=unw, compression='gzip')
          for key, value in h5file[kf[0]][igram].attrs.iteritems():
             group.attrs[key] = value
-      if kf[0] == 'interferograms':
-         gm = h5file2.create_group('mask')
+      try:
+      #if kf[0] == 'interferograms':
          mask = h5file['mask'].get('mask')
+         gm = h5file2.create_group('mask')
          dset = gm.create_dataset('mask', data=mask, compression='gzip')
+      except: print 'no mask group found.'
 
 
     elif kf[0] in ('interferograms','wrapped') and 'coherence' not in h5mask.keys():
@@ -181,25 +179,56 @@ def main(argv):
          print igram
          unwset = h5file[kf[0]][igram].get(igram)
          unw=unwset[0:unwset.shape[0],0:unwset.shape[1]]
-         try:
-           unw[M<thr]=np.nan
-         except:
-           unw[M==0]=np.nan
+         try:     unw[M<thr] = np.nan
+         except:  unw[M==0]  = np.nan
 
          group = gg.create_group(igram)
          dset = group.create_dataset(igram, data=unw, compression='gzip')
          for key, value in h5file[kf[0]][igram].attrs.iteritems():
             group.attrs[key] = value
 
-      if kf[0] == 'interferograms':
-         gm = h5file2.create_group('mask')
+      try:
+      #if kf[0] == 'interferograms':
          mask = h5file['mask'].get('mask')
+         gm = h5file2.create_group('mask')
          dset = gm.create_dataset('mask', data=mask, compression='gzip') 
+      except: print 'no mask group found.'
 
 
     h5file.close()
     h5mask.close()
     h5file2.close()    
+
+
+  ################################  ROI_PAC  ######################################
+
+  elif ext in ['.unw','.int']:
+    import pysar._readfile as readfile
+    import pysar._writefile as writefile
+    Mext = os.path.splitext(maskFile)[1]
+    if Mext == '.cor':
+       a,M,atr = readfile.read_float32(maskFile)
+    elif Mext == '.h5':
+       h5mask=h5py.File(maskFile,'r')
+       Mset=h5mask[h5mask.keys()[0]].get(h5mask.keys()[0])
+       M=Mset[0:Mset.shape[0],0:Mset.shape[1]]
+    else: sys.exit(['Un-recoganized mask file extension: '+Mext])
+
+    try:     MaskedFile
+    except:  MaskedFile = File.split('.')[0]+'_masked'+ext
+
+    a,unw,atr = readfile.read_float32(File)
+    try:     unw[M<thr] = np.nan
+    except:  unw[M==0]  = np.nan
+
+    print 'writting >>> '+MaskedFile
+    writefile.write_float32(unw,MaskedFile)
+    f = open(MaskedFile+'.rsc','w')
+    for k in atr.keys():  f.write(k+'    '+atr[k]+'\n')
+    f.close()
+
+    try: h5mask.close()
+    except: pass
 
 ############################################################
 
