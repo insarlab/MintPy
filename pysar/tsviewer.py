@@ -390,7 +390,7 @@ def main(argv):
 
   ## Reference Point
   if showRef == 'yes':
-      try: ax.plot(int(atr['ref_x']),int(atr['ref_y']),'ks',ms=10)
+      try: ax.plot(int(atr['ref_x']),int(atr['ref_y']),'ks',ms=6)
       except: pass
 
   ## Flip

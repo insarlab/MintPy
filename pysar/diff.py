@@ -71,7 +71,7 @@ def main(argv):
       except: pass
   else: Usage();  sys.exit(1)
 
-  print '**************** Diff *******************'
+  print '\n**************** Diff *******************'
   print 'Input files: '
   print fileList
 

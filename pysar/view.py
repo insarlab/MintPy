@@ -623,6 +623,7 @@ def main(argv):
   try:
       maskFile
       msk,msk_atr = readfile.read(maskFile)
+      msk = msk[win_y[0]:win_y[1],win_x[0]:win_x[1]]
       ndx = msk == 0
       print 'masking data with: '+maskFile
       masking = 'yes'
@@ -771,6 +772,8 @@ def main(argv):
         except: processMark = '_'+os.path.basename(File).split('.h5')[0]
         figTitle = date12+processMark
     else:  figTitle = File
+    if rewrapping == 'yes':  figTitle += '_wrap'
+    if subsetData == 'yes':  figTitle += '_sub'
     plt.title(figTitle,fontsize=font_size)
 
     ##### Plot in Geo-coordinate: plot in map
@@ -912,8 +915,8 @@ def main(argv):
           figName
        except:
           figNameBase = figTitle
-          if rewrapping == 'yes':  figNameBase += '_wrap'
           figName = figNameBase+figNameExt
+
        plt.savefig(figName,bbox_inches='tight',transparent=True,dpi=fig_dpi)
        print 'Saved figure to '+figName
 
@@ -949,6 +952,7 @@ def main(argv):
             figNameBase += '_ex'
         except: pass
         if rewrapping == 'yes': figNameBase += '_wrap'
+        if subsetData == 'yes': figNameBase += '_sub'
 
     ## Reference date for timeseries
     if k == 'timeseries':
@@ -1107,6 +1111,7 @@ def main(argv):
         if saveFig == 'yes':
            if fig_num > 1:  figName = figNameBase+'_'+str(j)+figNameExt
            else:            figName = figNameBase+figNameExt
+
            plt.savefig(figName,bbox_inches='tight',transparent=True,dpi=fig_dpi)
            print 'saved figure to '+figName
            if dispFig == 'no':  fig.clf()
