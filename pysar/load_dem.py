@@ -1,8 +1,8 @@
 #! /usr/bin/env python
-import h5py
-import _readfile as readfile
-import sys
 import os
+import sys
+import h5py
+import pysar._readfile as readfile
 
 try:
   demFile = sys.argv[1]

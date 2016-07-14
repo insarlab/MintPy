@@ -5,7 +5,7 @@ import os
 import re
 import h5py
 import getopt
-import _pysar_utilities as ut
+import pysar._pysar_utilities as ut
 
 
 def Usage():

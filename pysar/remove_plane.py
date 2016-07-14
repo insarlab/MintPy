@@ -4,11 +4,22 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
+# Yunjun, Jun 2016: Add template input option
+#                   Add multiple files support
+#
+
+
+import os
+import sys
+import getopt
+import glob
 
 import numpy as np
 import h5py
-import sys
-import _remove_surface as rm
+
+import pysar._remove_surface as rm
+import pysar._readfile as readfile
+
 
 ######################################
 def Usage():
@@ -16,24 +27,26 @@ def Usage():
 ********************************************************
 ********************************************************
 
-    usage:
+    Remove phase ramp
 
-          remove_plane.py file  method Maskfile
+    Usage:
+        remove_plane.py file method [Maskfile]
 
-     file: interferograms or time-series saved in HDF5 file format.
-
-     method: quadratic, plane, quardatic_range, quadratic_azimiuth, plane_range, plane_azimuth
-
-     Maskfile: a mask file with 0 values for those pixels which are not considered in
+        -f : input file (list) that need to remove ramp
+        -s : quadratic, plane, quardatic_range, quadratic_azimiuth, plane_range, plane_azimuth
+        -m : (optional) a mask file with 0 values for those pixels which are not considered in
                plane estimation.
-
+        -t : template file
+        -o : output name
 
     example:
-          
-          remove_plane.py  timeseries.h5 plane Mask.h5
-          remove_plane.py  LoadedData_SanAndreasT356EnvD.h5 plane Mask.h5
-          remove_plane.py  LoadedData_SanAndreasT356EnvD.h5 quadratic_range Mask.h5
-          remove_plane.py  timeseries.h5 quadratic_azimuth Mask.h5
+        remove_plane.py  timeseries.h5 plane
+        remove_plane.py  timeseries.h5 plane             Mask.h5
+        remove_plane.py  LoadedData.h5 quadratic_range   Mask.h5
+
+        remove_plane.py  -f timeseries.h5 -t KyushuT424F640AlosA.template
+
+        remove_plane.py  -f 'geo_100102_*.unw'  -s plane -m Mask_tempCoh.h5
 
 ********************************************************
 ********************************************************
@@ -41,69 +54,81 @@ def Usage():
 
 ######################################
 def main(argv):
-  try:
-    igramsFile = argv[0]
-    surfType=argv[1]
-    
-  except:
-    Usage() ; sys.exit(1)
 
-  h5file = h5py.File(igramsFile)
+  ########################## Check Inputs ################################################
+  ## Default value
+  Masking  = 'no'
+  surfType = 'plane'
+
+  if len(sys.argv) > 4:
+      try: opts, args = getopt.getopt(argv,'h:f:m:o:s:t:')
+      except getopt.GetoptError:  print 'Error while getting args!\n';  Usage(); sys.exit(1)
+
+      for opt,arg in opts:
+          if   opt in ['-h','--help']:    Usage(); sys.exit()
+          elif opt in '-f':    File     = arg
+          elif opt in '-m':    maskFile = arg
+          elif opt in '-o':    outName  = arg
+          elif opt in '-s':    surfType = arg.lower()
+          elif opt in '-t':    templateFile = arg
+
+  elif len(sys.argv) in [3,4]:
+      File          = argv[0]
+      surfType      = argv[1].lower()
+      try: maskFile = argv[2]
+      except: pass
+  else: Usage(); sys.exit(1)
+
+  ##### Tempate File
   try:
-    maskFile=argv[2]
-    h5Mask = h5py.File(maskFile,'r')
-    kMask=h5Mask.keys()
-    dset1 = h5Mask[kMask[0]].get(kMask[0])
-    Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-    Masking='yes'
+      templateFile
+      templateContents = readfile.read_template(templateFile)
+  except: pass
+
+  try: surfType
   except:
-    Masking='no'
-  
+      try: surfType = templateContents['pysar.orbitError.method']
+      except: print 'No ramp type found!'; sys.exit(1)
+
+  ##### Read Mask File 
+  ## Priority:
+  ## Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5
+  try:      maskFile
+  except:
+      try:  maskFile = templateContents['pysar.mask.file']
+      except: pass
+          #if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
+          #elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
+          #else: print 'No mask found!'; sys.exit(1)
+  try:
+      Mask,Matr = readfile.read(maskFile)
+      print 'mask: '+maskFile
+      Masking = 'yes'
+  except:
+      print 'No mask'
+      Masking = 'no'
+      pass
+      #sys.exit(1)
+
   if Masking=='no':
-    try:
-      dset1 = h5file['mask'].get('mask')
-      Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-      Masking=='yes'
-    except:
-      Masking=='no'
-
-  h5flat = h5py.File(igramsFile.split('.')[0]+'_'+surfType+'.h5','w')
-  k=h5file.keys()
-  if 'interferograms' in k:  
-
-     if Masking=='no':
-       igramList=h5file['interferograms'].keys()
-       W=int(h5file['interferograms'][igramList[0]].attrs['WIDTH'])
-       L=int(h5file['interferograms'][igramList[0]].attrs['FILE_LENGTH'])
-       Mask=np.ones((L,W))
-
-     rm.remove_surface_igrams(surfType,h5file,h5flat,Mask)
-     group=h5flat.create_group('mask')
-     dset = group.create_dataset('mask', data=Mask, compression='gzip')
-  elif 'timeseries' in k:
-     if Masking=='no':
-       W=int(h5file['timeseries'].attrs['WIDTH'])
-       L=int(h5file['timeseries'].attrs['FILE_LENGTH'])
-       Mask=np.ones((L,W))
-     rm.remove_surface_timeseries(surfType,h5file,h5flat,Mask)
-     group=h5flat.create_group('mask')
-     dset = group.create_dataset('mask', data=Mask, compression='gzip')
-  elif 'velocity' in k:
-     if Masking=='no':
-       W=int(h5file['velocity'].attrs['WIDTH'])
-       L=int(h5file['velocity'].attrs['FILE_LENGTH'])
-       Mask=np.ones((L,W))
-     rm.remove_surface_velocity(surfType,h5file,h5flat,Mask)
-  else:
-     print 'input should be interferograms, timeseries or velocity!'
+      atr = readfile.read_attributes(File)
+      length = int(atr['FILE_LENGTH'])
+      width  = int(atr['WIDTH'])
+      Mask=np.ones((length,width))
 
 
-  h5file.close()
-  h5flat.close()
-  
-######################################
+  ############################## Removing Phase Ramp #######################################
+  fileList = glob.glob(File)
+  fileList = sorted(fileList)
+  print 'number of file to de-ramp: '+str(len(fileList))
+  print fileList
+  for file in fileList:
+      print '*************** Phase Ramp Removal ***********************'
+      print 'input files : '+file
+      rm.remove_surface(file,Mask,surfType)
+
+###########################################################################################
 if __name__ == '__main__':
-
   main(sys.argv[1:])
 
 

@@ -8,7 +8,7 @@
 # Yunjun, Jul 2015: add 'timeseries'/'wrapped' option
 # Yunjun, Oct 2015: merge all HDF5 option into one
 #                   add support for ROI_PAC product
-#
+# Yunjun, Nov 2015: support different fig unit
 
 import os
 import sys
@@ -16,9 +16,14 @@ import getopt
 
 try:     from pykml.factory import KML_ElementMaker as KML
 except:  sys.exit('pykml should be installed!')
+from lxml import etree
+
 import numpy as np
-import matplotlib as mpl              # FA 7/2015: allows plot generation without running an X server
-mpl.use('Agg')  
+import matplotlib as mpl;  mpl.use('Agg')              # FA 7/2015: allows plot generation without running an X server
+import matplotlib.pyplot as plt
+import h5py
+
+import pysar._readfile as readfile
 
 
 def rewrap(unw):
@@ -32,20 +37,20 @@ def Usage():
   generating  kml kmz files. (needs geocoded files )
 
   Usage:
-         save_kml.py file
-         save_kml.py -f file -m min -M max -d epoch_date -c color_map -i no(yes)
+      save_kml.py file
+      save_kml.py -f file -m min -M max -d epoch_date -c color_map -i no(yes)
   
-  -f file - a geocoded PySAR / ROI_PAC product
-        supportted format: .h5, .unw, .int, .dem, .cor, .trans
-  -m minmum value
-  -M maximum value
-  -d date of interferogram or time-series epoch to be converted to kml
-        for interferogram, like 971220-990703; 
-        for timeseries, like 060924 or 20060924
-  -c colormap, jet as default
-  -i inverse the colormap
-  -w re-wrapping the interferogram [default : no]
-  -r dpi (dots per inch) [default = 500]
+      -f : geocoded PySAR / ROI_PAC product
+      -m : minmum value
+      -M : maximum value
+      -d : date of interferogram or time-series epoch to be converted to kml
+           for interferogram, like 971220-990703; 
+           for timeseries, like 060924 or 20060924
+      -c : colormap, jet as default
+      -i : inverse the colormap
+      -w : re-wrapping the interferogram [default : no]
+      -r : dpi (dots per inch) [default = 300]
+      --fig-size : figure size in inch, default is [8.0,12.0]
 
   Example:
  
@@ -62,14 +67,18 @@ def Usage():
 
 def main(argv):
 
-  color_map='jet'
+  color_map     = 'jet'
   disp_opposite = 'no'
-  disp_colorbar='yes'
-  rewrapping='no'
-  dpi=500
+  disp_colorbar = 'yes'
+  rewrapping    = 'no'
+  fig_dpi       = 500
+  fig_size      = [6.0,9.0]
+  fig_unit      = 'mm/yr'
+  disp_ref      = 'yes'
+
 
   if len(sys.argv)>2:
-    try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:")
+    try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:",['noreference','fig-size'])
     except getopt.GetoptError:  Usage() ; sys.exit(1)
  
     for opt,arg in opts:
@@ -80,7 +89,9 @@ def main(argv):
       elif opt == '-c':        color_map     = arg
       elif opt == '-i':        disp_opposite = arg
       elif opt == '-w':        rewrapping    = arg
-      elif opt == '-r':        dpi = int(arg)
+      elif opt == '-r':        fig_dpi = int(arg)
+      elif opt == '--noreference':   disp_ref = 'no'
+      elif opt == '--fig-size'   :   fig_size = [float(i) for i in arg.split(',')][0:2]
 
   elif len(sys.argv)==2:
     if argv[0]=='-h':               Usage(); sys.exit(1)
@@ -93,29 +104,20 @@ def main(argv):
 ###################  Prepare Data  ####################
 ## prepare: data, North, East, South, West
 
-  import matplotlib.pyplot as plt
-  ext = os.path.splitext(File)[1]
-  map = plt.get_cmap(color_map)
+  ext = os.path.splitext(File)[1].lower()
+  atr = readfile.read_attributes(File)
+  k = atr['FILE_TYPE']
+  print 'Input file is '+k
+
 
   if ext == '.h5':
-    import h5py
     try:      h5file=h5py.File(File,'r')
     except:   Usage() ; sys.exit(1)
     outName=File.split('.')[0]
 
-    k=h5file.keys()
-    if 'interferograms' in k: k[0] = 'interferograms'
-    elif 'coherence'    in k: k[0] = 'coherence'
-    elif 'timeseries'   in k: k[0] = 'timeseries'
-    if k[0] in ('interferograms','coherence','wrapped'):
-       atr  = h5file[k[0]][h5file[k[0]].keys()[0]].attrs
-    elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
-       atr  = h5file[k[0]].attrs
-    print 'Input file is '+k[0]
 
-
-    if k[0] in ('interferograms','wrapped','coherence'):
-       ifgramList=h5file[k[0]].keys()
+    if k in ('interferograms','wrapped','coherence'):
+       ifgramList=h5file[k].keys()
        for i in range(len(ifgramList)):
           if epoch_date in ifgramList[i]:
              epoch_number = i
@@ -123,10 +125,10 @@ def main(argv):
        outName = ifgramList[epoch_number]
        #outName=epoch_date
            
-       dset = h5file[k[0]][ifgramList[epoch_number]].get(ifgramList[epoch_number])
+       dset = h5file[k][ifgramList[epoch_number]].get(ifgramList[epoch_number])
        data = dset[0:dset.shape[0],0:dset.shape[1]]
 
-       if k[0] == 'wrapped':
+       if k == 'wrapped':
           print 'No wrapping for wrapped interferograms. Set rewrapping=no'
           rewrapping = 'no'
           Vmin = -np.pi    
@@ -139,7 +141,9 @@ def main(argv):
              epoch_number = i
 
        #### Out name
-       ref_date=h5file['timeseries'].attrs['ref_date']
+       try:    ref_date = atr['ref_date']
+       except: ref_date = ut.yyyymmdd(atr['DATE'])[0]
+       #ref_date=h5file['timeseries'].attrs['ref_date']
        if len(epoch_date)==8:  outName=ref_date[2:]+'-'+epoch_date[2:]
        else:                   outName=ref_date[2:]+'-'+epoch_date
 
@@ -148,20 +152,32 @@ def main(argv):
 
     ### one dataset format: velocity, mask, temporal_coherence, rmse, std, etc.
     else:
-       dset = h5file[k[0]].get(k[0])
+       dset = h5file[k].get(k)
        data=dset[0:dset.shape[0],0:dset.shape[1]]
        if disp_opposite in('yes','Yes','Y','y','YES'):
           data=-1*data
 
        try:
-          xref=h5file[k[0]].attrs['ref_x']
-          yref=h5file[k[0]].attrs['ref_y']
+          xref=h5file[k].attrs['ref_x']
+          yref=h5file[k].attrs['ref_y']
        except: pass
 
   elif ext in ['.unw','.cor','.hgt','.trans','.dem']:
-     import pysar._readfile as readfile
-     if   ext in ['.unw','.cor','.hgt','.trans']:  a,data,atr = readfile.read_float32(File);   outName = File
-     elif ext == '.dem':                             data,atr = readfile.read_dem(File);       outName = File
+     if   ext in ['.unw','.cor','.hgt','.trans']:
+        a,data,atr = readfile.read_float32(File)
+        outName = File
+        if ext in ['.unw']:
+           if rewrapping == 'no':
+              range2phase = -4*np.pi/float(atr['WAVELENGTH'])
+              data = data / range2phase
+              fig_unit = 'm'
+           else:
+              fig_unit = 'radian'
+     elif ext == '.dem':
+        data,atr = readfile.read_dem(File)
+        outName = File
+     if   ext in ['.hgt','.dem']:     fig_unit = 'm'
+     elif ext in ['.cor','.trans']:          fig_unit = ' '
   else: sys.exit('Do not support '+ext+' file!')
 
 
@@ -170,7 +186,7 @@ def main(argv):
   if rewrapping=='yes':
      data=rewrap(data)
      Vmin = -np.pi    #[-pi,pi] for wrapped interferograms
-     Vmax = np.pi
+     Vmax =  np.pi
   else:
      try:     Vmin
      except:  Vmin = np.nanmin(data)
@@ -187,7 +203,7 @@ def main(argv):
      South    = North+lat_step*(data.shape[0]-1)
      East     = West +lon_step*(data.shape[1]-1)
      geocoord = 'yes'
-     print 'Input file is Geocoded.'
+     print 'Geocoded'
   except:
      print '%%%%%%%%%%'
      print 'Error:\nThe input file is not geocoded\n'
@@ -203,40 +219,45 @@ def main(argv):
   print 'Making png file ...'   
   length = data.shape[0]
   width  = data.shape[1]
-  fig = plt.figure()
-  fig = plt.figure(frameon=False)
-  # fig.set_size_inches(width/1000,length/1000)
+  map = plt.get_cmap(color_map)
+  fig = plt.figure(figsize=fig_size,frameon=False)
   ax = plt.Axes(fig, [0., 0., 1., 1.], )
   ax.set_axis_off()
   fig.add_axes(ax)
   
-  aspect = width/(length*1.0)
-  # ax.imshow(data,aspect='normal')
-  
-  try:     ax.imshow(data,aspect='normal',vmax=Vmax,vmin=Vmin)
-  except:  ax.imshow(data,aspect='normal')
+  try:     ax.imshow(data,aspect='auto',vmax=Vmax,vmin=Vmin)
+  except:  ax.imshow(data,aspect='auto')
+
+  if disp_ref == 'yes':
+      try:
+          xref = int(atr['ref_x'])
+          yref = int(atr['ref_y'])
+          ax.plot(xref,yref,'ks',ms=8)
+      except: print 'Cannot find reference point info!'
 
   ax.set_xlim([0,width])
   ax.set_ylim([length,0])
 
-  # figName = k[0]+'.png'
   figName = outName + '.png'  
-  plt.savefig(figName,pad_inches=0.0,dpi=dpi)
-  # plt.show()
+  plt.savefig(figName,pad_inches=0.0,transparent=True,dpi=fig_dpi)
 
   ############### Making colorbar
   pc = plt.figure(figsize=(1,4))
   axc = pc.add_subplot(111)
   cmap = mpl.cm.jet
-  norm = mpl.colors.Normalize(vmin=Vmin*1000, vmax=Vmax*1000)
-  clb = mpl.colorbar.ColorbarBase(axc,cmap=cmap,norm=norm, orientation='vertical')
-  clb.set_label('mm/yr')
-  pc.subplots_adjust(left=0.25,bottom=0.1,right=0.4,top=0.9)
-  pc.savefig('colorbar.png',transparent=True,dpi=300)
+  if   fig_unit in ['mm','mm/yr']: v_scale = 1000
+  elif fig_unit in ['cm','cm/yr']: v_scale = 100
+  elif fig_unit in ['m',  'm/yr']: v_scale = 1
+  norm = mpl.colors.Normalize(vmin=Vmin*v_scale, vmax=Vmax*v_scale)
+  clb  = mpl.colorbar.ColorbarBase(axc,cmap=cmap,norm=norm, orientation='vertical')
+  clb.set_label(fig_unit)
+  pc.subplots_adjust(left=0.2,bottom=0.3,right=0.4,top=0.7)
+  pc.savefig('colorbar.png',bbox_inches='tight',transparent=True,dpi=300)
 
   ############## Generate KMZ file
   print 'generating kml file'
-  doc = KML.kml(KML.Folder(KML.name('PySAR product')))
+  try:     doc = KML.kml(KML.Folder(KML.name(atr['PROJECT_NAME'])))
+  except:  doc = KML.kml(KML.Folder(KML.name('PySAR product')))
   slc = KML.GroundOverlay(KML.name(figName),KML.Icon(KML.href(figName)),\
                           KML.TimeSpan(KML.begin('2003'),KML.end('2010')),\
                           KML.LatLonBox(KML.north(str(North)),KML.south(str(South)),\
@@ -250,32 +271,25 @@ def main(argv):
   slc1   = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),\
                              KML.altitude('9000'),KML.altitudeMode('absolute'),\
                              KML.LatLonBox(KML.north(str(North-latdel/2.+0.5)),KML.south(str(South+latdel/2.0-0.5)),\
-                                           KML.east(str(West-0.2*londel)),     KML.west(str(West-0.4*londel))))
+                                           KML.east( str(West-0.2*londel)),    KML.west( str(West-0.4*londel))))
   doc.Folder.append(slc1)
 
   #############################
-  from lxml import etree
   kmlstr = etree.tostring(doc, pretty_print=True) 
-  # kmlname=k[0]+'.kml'
   kmlname = outName + '.kml'
   print 'writing '+kmlname
   kmlfile = open(kmlname,'w')
   kmlfile.write(kmlstr)
   kmlfile.close()
 
-  # kmzName = k[0]+'.kmz'
   kmzName = outName + '.kmz'
   print 'writing '+kmzName
-  # cmdKMZ = 'zip ' + kmzName +' '+ kmlname +' ' + figName 
   cmdKMZ = 'zip ' + kmzName +' '+ kmlname +' ' + figName + ' colorbar.png'
   os.system(cmdKMZ)
 
-  cmdClean = 'rm '+kmlname
-  os.system(cmdClean)
-  cmdClean = 'rm '+figName
-  os.system(cmdClean)
-  cmdClean = 'rm colorbar.png'
-  os.system(cmdClean)
+  cmdClean = 'rm '+kmlname;      os.system(cmdClean)
+  cmdClean = 'rm '+figName;      os.system(cmdClean)
+  cmdClean = 'rm colorbar.png';  os.system(cmdClean)
 
 
 #######################################################

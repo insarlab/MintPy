@@ -1,37 +1,57 @@
 #! /usr/bin/env python
+############################################################
+# Program is part of PySAR v1.0                            #
+# Copyright(c) 2015, Heresh Fattahi                        #
+# Author:  Heresh Fattahi                                  #
+############################################################
+# Reference:
+# Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer
+# (2011), Systematic InSAR tropospheric phase delay corrections
+# from global meteorological reanalysis data, Geophys. Res. Lett.,
+# 38, L17311, doi:10.1029/2011GL048757
 
-import pyaps as pa
-from numpy import cos,zeros,pi
+
 import sys
-import h5py
 import getopt
 import os
+
+try: import pyaps as pa
+except: print 'Cannot import pyaps into Python!'; sys.exit(1)
+import h5py
+from numpy import cos,zeros,pi
+
 import pysar._pysar_utilities as ut
-#from pysar._pysar_utilities import check_variable_name
 
+
+###############################################################
 def Usage():
-
   print '''
   ##############################################################################
   Tropospheric correction using weather models. 
-  PyAPS is used to download and calculate the delay for each time-series epoch.
+    PyAPS is used to download and calculate the delay for each time-series epoch.
   
   Usage:
-         tropcor_pyaps.py -f timeseries.h5 -d demfile.hgt -s source of the atmospheric data -h acquisition time (hour) -D Delay_Type -i incidence_angle
+      tropcor_pyaps.py -f timeseries.h5 -d demfile.hgt -s source_of_atmospheric_data -h acquisition_time -D Delay_Type -i incidence_angle
+        
 
-         source of the atmospheric data: ECMWF, NARR
-         Delay_Type: Dry, Wet , comb [Deafult is comb which calculates both wet and dry delays]   
-         incidence_angle  : can be a file containing all incidence angles or can be one average value. 
-                            If it's not introduced, average look angle is used.
+      -f: timeseries HDF5 file, i.e. timeseries.h5, timeseries_LODcor.h5
+      -s: source of the atmospheric data: ECMWF, NARR
+      -D: Delay_Type: Dry, Wet , comb [Deafult is comb which calculates both wet and dry delays]   
+      -i: incidence_angle  : can be a file containing all incidence angles or can be one average value. 
+                                If it's not introduced, average look angle is used.
+      -h: time of data (ECMWF takes hh:mm, NARR takes hh only)
+
   Example:
-       
-        tropcor_pyaps.py -f timeseries_LODcor_demCor.h5 -d radar_8rlks.hgt -s ECMWF -h 18:00 -i incidence_angle.h5
-        tropcor_pyaps.py -f timeseries_LODcor_demCor.h5 -d radar_8rlks.hgt -s ECMWF -h 18:00 -i 23
-        tropcor_pyaps.py -f timeseries_LODcor_demCor.h5 -d radar_8rlks.hgt -s ECMWF -h 18:00
+      
+      tropcor_pyaps.py -f timeseries.h5        -d radar_8rlks.hgt -s ECMWF -h 18:00 -i incidence_angle.h5
+      tropcor_pyaps.py -f timeseries.h5        -d radar_8rlks.hgt -s NARR  -h 18    -i incidence_angle.h5
+      tropcor_pyaps.py -f timeseries.h5        -d radar_8rlks.hgt -s ECMWF -h 18:00 -D Dry -i 23
+      tropcor_pyaps.py -f timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF -h 18:00
 
   ##############################################################################
   '''
 
+###############################################################
 def main(argv):
 
     DelayType='comb'
@@ -44,7 +64,7 @@ def main(argv):
     for opt,arg in opts:
       if   opt == '-f':        timeSeriesFile = arg
       elif opt == '-d':        demFile   = arg
-      elif opt == '-s':        atmSource = arg
+      elif opt == '-s':        atmSource = arg.upper()
       elif opt == '-h':        hr        = arg
       elif opt == '-D':        DelayType = arg
       elif opt == '-i':        inc_angle = arg
@@ -62,9 +82,8 @@ def main(argv):
     yref=h5timeseries['timeseries'].attrs['ref_y']
     xref=h5timeseries['timeseries'].attrs['ref_x']
 
-###############################################################
-#incidence angle to map the zenith delay to the slant delay
-
+    ###############################################################
+    #incidence angle to map the zenith delay to the slant delay
     try:
        inc_angle
     except:
@@ -98,11 +117,10 @@ def main(argv):
        print 'incidence angle = '+ str(inc_angle)
 
     inc_angle=inc_angle*pi/180.0
-################################################################
-    
+    ################################################################
     dateList = h5timeseries['timeseries'].keys()
 
-    if atmSource in ['ecmwf','ECMWF']:
+    if atmSource == 'ECMWF':
        gribSource='ECMWF'
        if not os.path.isdir('ECMWF'):
           print 'making directory: ECMWF'
@@ -118,7 +136,7 @@ def main(argv):
           else:
              print ecm + ' already exists.'
 
-    elif atmSource in ['narr','NARR']:
+    elif atmSource == 'NARR':
        gribSource='NARR'
        if not os.path.isdir('NARR'):
           print 'making directory: NARR'
@@ -134,7 +152,7 @@ def main(argv):
           else:
              print ecm + ' already exists.'
 
-    elif atmSource in ['era','ERA']:
+    elif atmSource == 'ERA':
        gribSource='ERA'
        if not os.path.isdir('ERA'):
           print 'making directory: ERA'
@@ -150,7 +168,7 @@ def main(argv):
           else:
              print ecm + ' already exists.'
 
-    elif atmSource in ['merra','MERRA']:
+    elif atmSource == 'MERRA':
        gribSource='MERRA'
        if not os.path.isdir('MERRA'):
           print 'making directory: MERRA'
@@ -193,6 +211,7 @@ def main(argv):
     phs1 = zeros((aps1.ny,aps1.nx))
     aps1.getdelay(phs1)     
     phs1=(phs1 - phs1[yref,xref])/cos(inc_angle)   
+    dset = group_phs.create_dataset(dateList[0], data= phs1- phs1, compression='gzip')
     dset = group.create_dataset(dateList[0], data= phs1- phs1, compression='gzip')
     
     for i in range(1,len(ecmwf_file)):
@@ -213,12 +232,14 @@ def main(argv):
       group.attrs[key] = value
       group_phs.attrs[key] = value
 
-    dset1 = h5timeseries['mask'].get('mask')
-    Mask  = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-    group = h5apsCor.create_group('mask')
-    dset  = group.create_dataset('mask', data=Mask, compression='gzip')
+    try:
+        dset1 = h5timeseries['mask'].get('mask')[:]
+        group = h5apsCor.create_group('mask')
+        dset  = group.create_dataset('mask', data=Mask, compression='gzip')
+    except: pass
 
 
+###############################################################
 if __name__ == '__main__':
 
     main(sys.argv[1:])

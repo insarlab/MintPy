@@ -19,15 +19,15 @@ def Usage():
    To converts the PySAR hdf5 file formats to the roipac unw format 
 
    Usage: 
-         save_unw.py file.h5 
+         save_unw.py file.h5 [date_info]
 
    Example:
          save_unw.py velocity.h5
          save_unw.py timeseries.h5 20050601
          save_unw.py timeseries.h5 20040728 20050601
          save_unw.py LoadedData.h5 filt_091225-100723-sim_HDR_8rlks_c10.unw
+         save_unw.py LoadedData.h5 091225-100723
          save_unw.py temporal_coherence.h5
-
 
       for velocity:   the ouput will be a one year interferogram.
       for timeseries: if date is not specified, the last date will be used
@@ -128,18 +128,25 @@ def main(argv):
 
 
   elif k[0] in ['interferograms','coherence','wrapped']:
+    ## Check input
     igramList=h5file[k[0]].keys()
-    try:     d=sys.argv[2]
-    except:  d=igramList[-1];   print 'No input date specified >>> continue with the last date'
-    print 'reading '+d + ' ... '
-    dset=h5file[k[0]][d].get(d)
+    try:
+       d = sys.argv[2]
+       for i in range(len(igramList)):
+          if d in igramList[i]:
+             igram = igramList[i]
+    except:
+       igram = igramList[-1];   print 'No input date specified >>> continue with the last date'
+    ## Read and Write
+    print 'reading '+igram+' ... '
+    dset = h5file[k[0]][igram].get(igram)
     data = dset[0:dset.shape[0],0:dset.shape[1]]
-    outname=d
+    outname = igram
     print 'writing >>> '+ outname
     writefile.write_float32(data,outname)
     f = open(outname+'.rsc','w')
-    for key , value in h5file[k[0]][d].attrs.iteritems():
-      f.write(key+'    '+str(value)+'\n')
+    for key , value in h5file[k[0]][igram].attrs.iteritems():
+       f.write(key+'    '+str(value)+'\n')
     f.close()    
 
   h5file.close()

@@ -4,12 +4,29 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
+#
+# Yunjun, Mar 2016: add diff()
+#
+#
 
 import sys
 import os
+import getopt
+
 import numpy as np
-import matplotlib.pyplot as plt
 import h5py
+
+import pysar._readfile as readfile
+import pysar._writefile as writefile
+
+
+#####################################################################################
+
+def diff(data1,data2):
+  data = data1 - data2;
+  #data[np.isnan(data2)] = data1[np.isnan(data2)];
+
+  return data
 
 def Usage():
   print '''
@@ -18,104 +35,120 @@ def Usage():
 Generates the difference of two input files.
  
    Usage:
-          diff.py file1.h5 file2.h5
+          diff.py file1 file2 [ output_file ]
 
-   output is file1_diff_file2.h5  (file1 - file2)
+   output is file1_diff_file2.h5 by default
    
    example:
            
-          diff.py velocity_masked.h5 velocity_demCor_masked.h5
-          diff.py velocity_demCor_masked.h5 velocity_demCor_tropCor_masked.h5
-          diff.py timeseries_demCor.h5 timeseries_demCor_tropCor.h5
-          diff.py timeseries.h5 timeseries_demCor.h5
-          diff.py interferograms.h5 interferograms2.h5
+          diff.py velocity_masked.h5 velocity_demCor_masked.h5    demCor.h5
+          diff.py timeseries.h5      timeseries_demCor.h5         demCor.h5
+          diff.py LoadedData.h5      reconstruct_LoadedData.h5
+          diff.py -f velocity.h5,velocity_2.h5  -o velocity_diff.h5
 
 ***************************************************************
 ***************************************************************
 '''
 
+
+#####################################################################################
+
 def main(argv):
 
-  try:
-    File1=sys.argv[1]
-    File2=sys.argv[2]
-  except:
-    Usage();sys.exit(1)
+  ####################### Inputs Check ########################
+  try:    opts, args = getopt.getopt(argv,"h:f:o:",['help'])
+  except getopt.GetoptError:    Usage() ; sys.exit(1)
+
+  if len(sys.argv) > 4:
+      for opt,arg in opts:
+          if opt in ("-h","--help"):  Usage();  sys.exit()
+          elif opt == '-f':   fileList = arg.split(',')
+          elif opt == '-o':   outName  = arg
+
+  elif len(sys.argv) <= 4 and len(sys.argv) >= 3:
+      fileList = [sys.argv[1],sys.argv[2]]
+      try: outName = sys.argv[3]
+      except: pass
+  else: Usage();  sys.exit(1)
+
+  print '**************** Diff *******************'
+  print 'Input files: '
+  print fileList
+
+  ext = os.path.splitext(fileList[0])[1].lower()
+  try:     outName
+  except:  outName = fileList[0].split('.')[0]+'_diff_'+fileList[1].split('.')[0]+ext
+
+  ##### Read File Info / Attributes
+  atr  = readfile.read_attributes(fileList[0])
+  print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']
+  k = atr['FILE_TYPE']
+
+  ##### File Type Check
+  if k in ['timeseries','interferograms','coherence','wrapped']:
+      for i in range(1,len(fileList)):
+          File = fileList[i]
+          r = readfile.read_attributes(File)
+          if not r['FILE_TYPE'] == k:
+              print 'Input file type is not the same: '+r['FILE_TYPE']
+              sys.exit(1)
+
+      h5out = h5py.File(outName,'w')
+      group = h5out.create_group(k)
+      print 'writing >>> '+outName
+
+      h5in  = h5py.File(fileList[0])
+      epochList = h5in[k].keys()
+      print 'number of epochs: '+str(len(epochList))
+
+  ########################### Diff file by file ########################
+  if k in ['timeseries']:
+      for epoch in epochList:
+          print epoch
+          data = h5in[k].get(epoch)[:]
+          for i in range(1,len(fileList)):
+              #print fileList[i]
+              h5file = h5py.File(fileList[i],'r')
+              d = h5file[k].get(epoch)[:]
+
+              data = diff(data,d)
+
+          dset = group.create_dataset(epoch, data=data, compression='gzip')
+      for key,value in atr.iteritems():   group.attrs[key] = value
+
+      h5out.close()
+      h5in.close()
+
+  elif k in ['interferograms','coherence','wrapped']:
+      for epoch in epochList:
+          print epoch
+          data = h5in[k][epoch].get(epoch)[:]
+          for i in range(1,len(fileList)):
+              #print fileList[i]
+              h5file = h5py.File(fileList[i],'r')
+              d = h5file[k][epoch].get(epoch)[:]
+
+              data = diff(data,d)
+
+          gg = group.create_group(epoch)
+          dset = gg.create_dataset(epoch, data=data, compression='gzip')
+          for key, value in h5in[k][epoch].attrs.iteritems():
+              gg.attrs[key] = value
+
+      h5out.close()
+      h5in.close()
+
+  ## All the other file types
+  else:
+      data,atr = readfile.read(fileList[0])
+      for i in range(1,len(fileList)):
+          #print fileList[i]
+          d,r = readfile.read(fileList[i])
+          data = diff(data,d)
+      writefile.write(data,atr,outName)
 
 
-  h5file1=h5py.File(File1,'r')
-  k1=h5file1.keys()
-  h5file2=h5py.File(File2,'r')
-  k2=h5file2.keys()
-
-#  if k1[0]!=k2[0]:
-#    print 'Error'
-#    print 'Both input files should be the same type to calculate the difference'
-#    Usage();sys.exit(1)
-  
-  outName=File1.split('.')[0]+'_diff_'+File2.split('.')[0]+'.h5'
-
-  if k1[0] in ('velocity','temporal_coherence','rmse','mask') and not 'timeseries' in k1:
-     dset1 = h5file1[k1[0]].get(k1[0])
-     data1=dset1[0:dset1.shape[0],0:dset1.shape[1]]
-     dset2 = h5file2[k2[0]].get(k2[0])
-     data2=dset2[0:dset2.shape[0],0:dset2.shape[1]]
-     
-     h5file = h5py.File(outName,'w')
-     group=h5file.create_group(k1[0])
-     dset = group.create_dataset(k1[0], data=data1-data2, compression='gzip')
-     
-
-     for key , value in h5file1[k1[0]].attrs.iteritems():
-        group.attrs[key]=value
-     h5file.close()
-  
-  elif 'timeseries' in k1:
-
-     dateList1 = h5file1['timeseries'].keys() 
-     dateList2 = h5file2['timeseries'].keys()
-
-     h5timeseries = h5py.File(outName)
-     group = h5timeseries.create_group('timeseries')
-     for date in dateList1:
-        dset1 = h5file1['timeseries'].get(date)
-        data1 = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-        dset2 = h5file2['timeseries'].get(date)
-        data2 = dset2[0:dset2.shape[0],0:dset2.shape[1]]
-        dset = group.create_dataset(date, data=data1-data2, compression='gzip')
-
-     for key,value in h5file1['timeseries'].attrs.iteritems():
-        group.attrs[key] = value
-  
-     h5timeseries.close()
-  
-  elif 'interferograms' in k1:
-     ifgramList = h5file1['interferograms'].keys()
-     h5igrams = h5py.File(outName)   
-     gg = h5igrams.create_group('interferograms')
-     for igram in ifgramList:
-        dset1=h5file1['interferograms'][igram].get(igram)
-        data1 = dset1[0:dset1.shape[0],0:dset1.shape[1]]     
-        dset2=h5file2['interferograms'][igram].get(igram)
-        data2 = dset2[0:dset2.shape[0],0:dset2.shape[1]]
-        group = gg.create_group(igram)
-        dset = group.create_dataset(igram, data=data1-data2, compression='gzip')
-        for key, value in h5file1['interferograms'][igram].attrs.iteritems():
-           group.attrs[key] = value
-
-     try:
-       gm = h5igrams.create_group('mask')
-       mask = h5file1['mask'].get('mask')
-       dset = gm.create_dataset('mask', data=mask, compression='gzip')
-     except:
-       print 'mask not found' 
-
-     h5igrams.close()
-
-  h5file1.close()
-  h5file2.close()
-
+#####################################################################################
 if __name__ == '__main__':
-
   main(sys.argv[1:])  
 

@@ -4,26 +4,62 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
+# Yunjun, Jun 2016: use read() and write() for IO
+#                   add look_angle()
+
 
 import sys
 import os
-import numpy as np
 import getopt
+
 import h5py
+import numpy as np
 
-import pdb
+import pysar._readfile as readfile
+import pysar._writefile as writefile
 
+
+############################################################
+def look_angle(atr):
+  ## Read Attributes
+  near_range =float(atr['STARTING_RANGE1'])
+  dR         =float(atr['RANGE_PIXEL_SIZE'])
+  r          =float(atr['EARTH_RADIUS'])
+  H          =float(atr['HEIGHT'])
+  length     =float(atr['FILE_LENGTH'])
+  width      =float(atr['WIDTH'])
+
+  ## Calculation
+  far_range  =near_range+dR*width
+  incidence_n=np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))
+  incidence_f=np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))
+
+  print 'near    incidence angle : '+ str(incidence_n*180./np.pi)
+  print 'far     incidence angle : '+ str(incidence_f*180./np.pi)
+  print 'average incidence angle : '+ str(((incidence_f+incidence_n)/2)*180./np.pi)
+  print 'writing incidence_angle.h5 ...'
+
+  angle_x = np.linspace(incidence_n,incidence_f,num=width,endpoint='FALSE')
+
+  angle_xy = np.tile(angle_x,(length,1))
+  angle_xy *= 180./np.pi
+
+  return angle_xy
+
+############################################################
 def Usage():
   print '''
 ***************************************************************
 ***************************************************************
 
-  reads required attributes from the h5 file and generates incidence angles for each pixel
-  Output is incidence_angle.h5
+  Generates incidence angles (in Radar Coordinate) for each pixel,
+     with required attributes read from the h5 file
 
   Usage:
        
        incidence_angle.py -f  h5 file
+
+     Output is incidence_angle.h5
 
   Example:
 
@@ -35,6 +71,7 @@ def Usage():
 ***************************************************************
 '''
 
+############################################################
 def main(argv):
   try:
     opts, args = getopt.getopt(argv,"f:h")
@@ -43,53 +80,22 @@ def main(argv):
 
   if  opts==[]:  Usage() ; sys.exit(1)
   for opt,arg in opts:
-    if opt in ("-h","--help"):
-       Usage();  sys.exit()
-    elif opt == '-f':
-       File = arg
+    if opt in ("-h","--help"):   Usage();  sys.exit()
+    elif opt == '-f':            File = arg
 
-    h5file=h5py.File(File,'r')
-    k=h5file.keys()
-    if 'timeseries' in k:  k=['timeseries']
-    atr = h5file[k[0]].attrs
-    near_range =float(atr['STARTING_RANGE1'])
-    dR         =float(atr['RANGE_PIXEL_SIZE'])
-    r          =float(atr['EARTH_RADIUS'])
-    H          =float(atr['HEIGHT'])
-    length     =float(atr['FILE_LENGTH'])
-    width      =float(atr['WIDTH'])
-    
-    far_range  =near_range+dR*width
-    incidence_n=np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))
-    incidence_f=np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))
+    ##### Read attributes
+    atr = readfile.read_attributes(File)
 
-    lookx = np.linspace(incidence_n,incidence_f,num=width,endpoint='FALSE')
-    #look_step=(incidence_f-incidence_n)/width
-    #lookx=np.arange(incidence_n,incidence_f,look_step)
-    
-    look_angle = np.tile(lookx,(length,1))
-    look_angle = look_angle*(180./np.pi)
+    ##### Calculate look angle
+    angle = look_angle(atr)
 
-    #print '*********************************************'
-    print 'near    incidence angle : '+ str(incidence_n*180./np.pi)
-    print 'far     incidence angle : '+ str(incidence_f*180./np.pi)
-    print 'average incidence angle : '+ str(((incidence_f+incidence_n)/2)*180./np.pi)
-    #print '*********************************************'
-    print 'writing incidence_angle.h5 ...'
-    #print '*********************************************'
+    ##### Output
+    atr['FILE_TYPE'] = 'mask'
+    outName = 'incidence_angle.h5'
+    writefile.write(angle,atr,outName)
 
-    h5file2 = h5py.File('incidence_angle.h5','w')
-    group=h5file2.create_group('mask')
-    dset = group.create_dataset('mask', data=look_angle, compression='gzip')
-
-    for key, value in h5file[k[0]].attrs.iteritems():
-          group.attrs[key] = value
-
-    h5file.close()
-    h5file2.close()
-
+############################################################
 if __name__ == '__main__':
-
   main(sys.argv[1:])
 
 

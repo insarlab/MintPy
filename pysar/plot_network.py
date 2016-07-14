@@ -4,8 +4,10 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
+# Yunjun, Dec 2015: Add support for coherence/wrapped, update display
+# Yunjun, Jun 2016: Add plot_network(), plot_bperp_hist(),
+#                   axis_adjust_date_length(), igram_pairs()
 
-import _pysar_utilities as ut
 
 import sys
 import os
@@ -13,16 +15,135 @@ import getopt
 import time
 import datetime
 
-from numpy import *
-from scipy.io import loadmat
+import h5py
 import matplotlib
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from pylab import *
-import h5py
+from numpy import *
 
-import random
-from mpl_toolkits.axes_grid.inset_locator import inset_axes
+import pysar._pysar_utilities as ut
+import pysar._datetime as ptime
+import pysar._network  as pnet
+import pysar._readfile as readfile
 
+
+################# Read Pairs Info ####################
+def igram_pairs(igramFile):
+  ## Read Igram file
+  h5file = h5py.File(igramFile)
+  k = h5file.keys()
+  if 'interferograms' in k: k[0] = 'interferograms'
+  elif 'coherence'    in k: k[0] = 'coherence'
+  if k[0] not in  ['interferograms','coherence','wrapped']:
+      print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
+
+  dateList  = ptime.date_list(igramFile)
+  dateList6 = ptime.yymmdd(dateList)
+
+  pairs = []
+  igramList=h5file[k[0]].keys()
+  for igram in igramList:
+      date12 = h5file[k[0]][igram].attrs['DATE12'].split('-')
+      pairs.append([dateList6.index(date12[0]),dateList6.index(date12[1])])
+
+  return pairs
+
+
+def axis_adjust_date_length(ax,dateList,lengthArray):
+  fontSize    = 12
+  ## Date Convert
+  dates,datevector = ptime.date_list2vector(dateList)
+
+  ## Date Display
+  years    = mdates.YearLocator()   # every year
+  months   = mdates.MonthLocator()  # every month
+  yearsFmt = mdates.DateFormatter('%Y')
+
+  ## X axis format
+  ax.fmt_xdata = DateFormatter('%Y-%m-%d %H:%M:%S')
+  ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12)
+  te=datevector[-1]+0.2;  ye=int(te);  me=int((te-ye)*12)
+  if ms>12:   ys = ys+1;   ms=1
+  if me>12:   ye = ye+1;   me=1
+  if ms<1:    ys = ys-1;   ms=12
+  if me<1:    ye = ye-1;   me=12
+  dss=datetime.date(ys,ms,1)
+  dee=datetime.date(ye,me,1)
+  ax.set_xlim(dss,dee)                          # using the same xlim with the previous one
+  ax.xaxis.set_major_locator(years)
+  ax.xaxis.set_major_formatter(yearsFmt)
+  ax.xaxis.set_minor_locator(months)
+
+  ### Y axis format
+  ax.set_ylim(min(lengthArray)-0.4*abs(min(lengthArray)),\
+              max(lengthArray)+0.4*abs(max(lengthArray)))
+
+  xticklabels = getp(gca(), 'xticklabels')
+  yticklabels = getp(gca(), 'yticklabels')
+  setp(yticklabels, 'color', 'k', fontsize=fontSize)
+  setp(xticklabels, 'color', 'k', fontsize=fontSize)
+
+  return ax
+
+def plot_bperp_hist(fig,dateList,bperp):
+  ## Figure Setting
+  fontSize    = 12
+  markerColor = 'orange'
+  markerSize  = 16
+  lineWidth   = 2
+
+  ## Date Convert
+  dates,datevector = ptime.date_list2vector(dateList)
+
+  ## Plot
+  ax=fig.add_subplot(111)
+  ax.plot(dates,bperp, '-ko',ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
+  ax.set_title('Perpendicular Baseline History',fontsize=fontSize)
+
+  ## axis format
+  ax = axis_adjust_date_length(ax,dateList,bperp)
+  ax.set_xlabel('Time [years]',fontsize=fontSize)
+  ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
+
+  return fig
+
+
+##################################################################################
+def plot_network(fig,pairs_idx,dateList,bperp):
+  ## Plot Temporal-Bperp Network
+  ## 
+  ## Inputs
+  ##     fig       : matplotlib figure
+  ##     pairs_idx : pairs info in int index
+  ##     dateList  : date list in 8 digit string
+  ##     bperp     : perp baseline array
+  ## Output
+  ##     fig       : matplotlib figure
+
+  ## Figure Setting
+  fontSize    = 12
+  markerColor = 'orange'
+  markerSize  = 16
+  lineWidth   = 2
+
+  ## Date Convert
+  dates,datevector = ptime.date_list2vector(dateList)
+
+  ## Ploting
+  ax=fig.add_subplot(111)
+  ax.plot(dates,bperp, 'o',ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
+  for i in range(len(pairs_idx)):
+    ax.plot(array([dates[pairs_idx[i][0]],dates[pairs_idx[i][1]]]),\
+             array([bperp[pairs_idx[i][0]],bperp[pairs_idx[i][1]]]),'k',lw=lineWidth)
+  ax.set_title('Interferogram Network',fontsize=fontSize)
+
+  ## axis format
+  ax = axis_adjust_date_length(ax,dateList,bperp)
+  ax.set_xlabel('Time [years]',fontsize=fontSize)
+  ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
+
+  return fig
 
   
 ######################################
@@ -33,10 +154,12 @@ def Usage():
   Ploting the network of interferograms and 
   the baseline history of SAR acquisitions.
 
-  usage:
+  Usage:
        plot_network.py -f interferogramsFile -s fontsize -w linewidth
 
-    -f : interferograms file stored in hdf5 file format
+    -f : interferograms file stored in hdf5 file format, 
+             supported files: interferograms, coherence and wrapped
+    -l : pairs info list file
     -s : the font size used for x and y labels (default is 12)
     -w : line width used for plotting (default is 2)
     -m : marker size (default is 16)
@@ -44,237 +167,137 @@ def Usage():
     -t : temporal threshold
     -b : baseline threshold
     -d : date (all interferograms with master or slave using the specified date is removed) 
-    
+
+    Save and Output
+    --save      : save                    figure
+    --nodisplay : save and do not display figure
+    --list      : output pairs list file named Pairs.list
+
+  Example:
+       plot_network.py LoadedData.h5
+       plot_network.py -f Coherence.h5           --nodisplay
+       plot_network.py -f Modified_LoadedData.h5 --nodisplay --list
+       plot_network.py -f LoadedData.h5 -l pairs.list --save
+
   ******************************************
   ******************************************  
   '''
 
-
-
   
-######################################
+##########################  Main Function  ##############################
 def main(argv):
 
-  lineWidth=2
-  fontSize=12
-  markerColor='orange'
-  markerSize=16
-  saveFig='no'
+  ## Global Variables
+  global fontSize, lineWidth, markerColor, markerSize
+
+  ## Default Values
+  fontSize    = 12
+  lineWidth   = 2
+  markerColor = 'orange'
+  markerSize  = 16
+  saveFig  = 'no'
+  dispFig  = 'yes'
+  saveList = 'no'
+
   if len(sys.argv)>2:
-
-    try:
-      opts, args = getopt.getopt(argv,"h:f:s:w:m:c:S:")
-      
-#      for i in range(opts):
- #        if '-f' in opts[0][i]:
-  #          fileCheck
-   #      Usage() ; sys.exit(1)
-
+    try:  opts, args = getopt.getopt(argv,"h:f:s:w:l:m:c:o:",['save','nodisplay','list'])
     except getopt.GetoptError:
-#      print 'No input option by user'
-#      print 'runing with default options'
       Usage() ; sys.exit(1)
 
     for opt,arg in opts:
-      if opt in ("-h","--help"):
-        Usage()
-        sys.exit()
-      elif opt == '-f':
-        igramsFile = arg
-      elif opt == '-s':
-        fontSize = int(arg)
-      elif opt == '-w':
-        lineWidth=int(arg)
-      elif opt == '-m':
-        markerSize=int(arg)
-      elif opt == '-c':
-        markerColor=arg
-      elif opt == '-S':
-        saveFig=arg
-    try:
-      igramsFile
-    except:
-       Usage() ; sys.exit(1)
+      if opt in ("-h","--help"):  Usage();  sys.exit()
+      elif opt == '-f':        igramsFile  = arg
+      elif opt == '-l':        listFile    = arg
+      elif opt == '-s':        fontSize    = int(arg)
+      elif opt == '-w':        lineWidth   = int(arg)
+      elif opt == '-m':        markerSize  = int(arg)
+      elif opt == '-c':        markerColor = arg
+      elif opt == '-o':        figName2  = arg;   saveFig = 'yes'
+      elif opt == '--save'     : saveFig   = 'yes'
+      elif opt == '--nodisplay': dispFig   = 'no';  saveFig = 'yes'
+      elif opt == '--list'     : saveList  = 'yes'
 
-  elif len(sys.argv)==2:
-     igramsFile = argv[0]
-  else:
-     Usage() ; sys.exit(1)
+    try:     igramsFile
+    except:  Usage() ; sys.exit(1)
 
-#  igramsFile=argv[0]
+  elif len(sys.argv)==2:   igramsFile = argv[0]
+  else:                    Usage() ; sys.exit(1)
 
-#############################################
-#  Bp = ut.Baseline_timeseries(igramsFile)
- 
-  h5file = h5py.File(igramsFile)
-  if h5file.keys()[0] != 'interferograms':
-      print 'Inout file should be interferograms'
-      Usage() ; sys.exit(1)
-   
- 
-  tbase,dateList,dateDict,dateList1=ut.date_list(h5file)
-  dateIndex={}
-  for ni in range(len(dateList)):
-    dateIndex[dateList[ni]]=ni
-  tbase=[]
-  d1 = datetime.datetime(*time.strptime(dateList[0],"%Y%m%d")[0:5])
+  if saveFig == 'yes':
+      if 'Modified' in igramsFile:
+          figName1 = 'BperpHist_Modified.pdf'
+          figName2 = 'Network_Modified.pdf'
+      else:
+          figName1 = 'BperpHist.pdf'
+          figName2 = 'Network.pdf'
 
-  for ni in range(len(dateList)):
-    d2 = datetime.datetime(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
-    diff = d2-d1
-    tbase.append(diff.days)
+  ############# Check Input File ###################
+  atr = readfile.read_attributes(igramsFile)
+  k = atr['FILE_TYPE']
+  print 'Input file is '+k
+  if k not in  ['interferograms','coherence','wrapped']:
+      print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
 
-  dates=[]
-  for ni in range(len(dateList)):
-    d = datetime.datetime(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
-    dates.append(d)
+  ############# Read Time and Bperp ################ 
+  dateList  = ptime.date_list(igramsFile)
+  dateList6 = ptime.yymmdd(dateList)
+  print 'number of acquisitions: '+str(len(dateList))
 
-  datevector=[]
-  for i in range(len(dates)):
-    datevector.append(np.float(dates[i].year) + np.float(dates[i].month-1)/12 + np.float(dates[i].day-1)/365)
-  datevector2=[round(i,2) for i in datevector]
-
-##################################################  
   Bp = ut.Baseline_timeseries(igramsFile)
-  
-  fig2 = plt.figure(2)
-  ax2=fig2.add_subplot(111) 
-  
-  ax2.cla()
-  ax2.plot(dates,Bp, '-ko',ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
-  
-  ax2.fmt_xdata = DateFormatter('%Y-%m-%d %H:%M:%S')
-  ax2.set_ylabel('Bperp [m]',fontsize=fontSize)
-  ax2.set_xlabel('Time [years]',fontsize=fontSize)
-  ts=datevector[0]-0.2
-  te=datevector[-1]+0.2
-  ys=int(ts)
-  ye=int(te)
-  ms=int((ts-ys)*12)
-  me=int((te-ye)*12)
 
-  if ms>12:
-       ys =ys+1
-       ms=1
-  if me>12:
-       ye =ye+1
-       me=1
-
-  if ms<1:
-       ys =ys-1
-       ms=12
-  if me<1:
-       ye =ye-1
-       me=12
-
-  dss=datetime.datetime(ys,ms,1,0,0)
-  dee=datetime.datetime(ye,me,1,0,0)
-  ax2.set_xlim(dss,dee)
-  ax2.set_ylim(min(Bp)-0.4*abs(min(Bp)),max(Bp)+0.4*max(Bp))
-
-  xticklabels = getp(gca(), 'xticklabels')
-  yticklabels = getp(gca(), 'yticklabels')
-  setp(yticklabels, 'color', 'k', fontsize=fontSize)
-  setp(xticklabels, 'color', 'k', fontsize=fontSize)
-  
-  fig2.autofmt_xdate()
-  if saveFig=='yes':
-     figName='baselineHistory.png'
-     plt.savefig(figName)
-#############################################################
- 
-
-  ifgramList = h5file['interferograms'].keys()
-  print 'Number of interferograms: '+str(len(ifgramList))
-  igram_pairs=np.zeros([len(ifgramList),2],np.int)
-  i=0
-  for ifgram in  ifgramList:
-     date1,date2 = h5file['interferograms'][ifgram].attrs['DATE12'].split('-')
-     igram_pairs[i][0]=dateList1.index(date1)
-     igram_pairs[i][1]=dateList1.index(date2)
-     i=i+1
-
-##########################################################################
-# For simulated interferograms only
-# To plot the interferograms with unwrapping errors with a different color
-  N_unw_err=0
+  ############# Read Pairs Info ####################
   try:
-    for ifgram in  ifgramList:
-      if h5file['interferograms'][ifgram].attrs['unwrap_error']=='yes':
-         N_unw_err=N_unw_err+1
-
+      listFile
+      pairs = pnet.read_pairs_list(listFile,dateList)
   except:
-    print ""
-      
-  if N_unw_err>0:
-     igram_pairs_ue=np.zeros([N_unw_err,2],np.int)
-     i=0
-     for ifgram in  ifgramList:
-       if h5file['interferograms'][ifgram].attrs['unwrap_error']=='yes':
-         date1,date2 = h5file['interferograms'][ifgram].attrs['DATE12'].split('-')
-         igram_pairs_ue[i][0]=dateList1.index(date1)
-         igram_pairs_ue[i][1]=dateList1.index(date2)
-         i=i+1
+      pairs = pnet.read_igram_pairs(igramsFile)
+  print 'number of pairs       : '+str(len(pairs))
 
+  if saveList == 'yes':
+      pnet.write_pairs_list(pairs,dateList,'Pairs.list')
+      print 'save pairs info to Pairs.list'
 
-  h5file.close()
-##########################################################################
+  ############# Read Unwrapping Error Info #######################
+  ## For simulated interferograms only
+  ## To plot the interferograms with unwrapping errors with a different color
+  #N_unw_err=0
+  #try:
+  #  for ifgram in  ifgramList:
+  #    if h5file[k[0]][ifgram].attrs['unwrap_error']=='yes':
+  #       N_unw_err=N_unw_err+1
+  #except: pass
+  #    
+  #if N_unw_err>0:
+  #   pairs_ue=np.zeros([N_unw_err,2],np.int)
+  #   i=0
+  #   for ifgram in  ifgramList:
+  #     if h5file[k[0]][ifgram].attrs['unwrap_error']=='yes':
+  #       date1,date2 = h5file[k[0]][ifgram].attrs['DATE12'].split('-')
+  #       pairs_ue[i][0]=dateList6.index(date1)
+  #       pairs_ue[i][1]=dateList6.index(date2)
+  #       i=i+1
+  #
+
+  ############### Fig 1 - Interferogram Network ##################
   fig1 = plt.figure(1)
-  ax1=fig1.add_subplot(111)
+  fig1 = plot_network(fig1, pairs, dateList, Bp)
 
-  ax1.cla()
-  ax1.plot(dates,Bp, 'o',ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
-
-  for ni in range(len(ifgramList)):
-    ax1.plot(array([dates[igram_pairs[ni][0]],dates[igram_pairs[ni][1]]]),array([Bp[igram_pairs[ni][0]],Bp[igram_pairs[ni][1]]]),'k',lw=lineWidth)
-  
-  if N_unw_err>0:
-     for ni in range(N_unw_err):
-        ax1.plot(array([dates[igram_pairs_ue[ni][0]],dates[igram_pairs_ue[ni][1]]]),array([Bp[igram_pairs_ue[ni][0]],Bp[igram_pairs_ue[ni][1]]]),'r',lw=lineWidth)
-  
-  ax1.fmt_xdata = DateFormatter('%Y-%m-%d %H:%M:%S')
-  ax1.set_ylabel('Bperp [m]',fontsize=fontSize)
-  ax1.set_xlabel('Time [years]',fontsize=fontSize)
-  ts=datevector[0]-0.2
-  te=datevector[-1]+0.2
-  ys=int(ts)
-  ye=int(te)
-  ms=int((ts-ys)*12)
-  me=int((te-ye)*12)
-
-  if ms>12:
-       ys =ys+1
-       ms=1
-  if me>12:
-       ye =ye+1
-       me=1
-
-  if ms<1:
-       ys =ys-1
-       ms=12
-  if me<1:
-       ye =ye-1
-       me=12
-
-  dss=datetime.datetime(ys,ms,1,0,0)
-  dee=datetime.datetime(ye,me,1,0,0)
-  ax1.set_xlim(dss,dee)
-  ax1.set_ylim(min(Bp)-0.4*abs(min(Bp)),max(Bp)+0.4*max(Bp))
-
-  xticklabels = getp(gca(), 'xticklabels')
-  yticklabels = getp(gca(), 'yticklabels')
-  setp(yticklabels, 'color', 'k', fontsize=fontSize)
-  setp(xticklabels, 'color', 'k', fontsize=fontSize)
-  fig1.autofmt_xdate()
- 
   if saveFig=='yes':
-     figName='igramsNetwork.png'
-     plt.savefig(figName)
+     plt.savefig(figName2,bbox_inches='tight')
+     print 'save figure to '+figName2
 
-  plt.show() 
+
+  ############## Fig 2 - Baseline History ###################  
+  fig2 = plt.figure(2)
+  fig2 = plot_bperp_hist(fig2,dateList,Bp)
+
+  if saveFig=='yes':
+     plt.savefig(figName1,bbox_inches='tight')
+     print 'save figure to '+figName1
+
+  if dispFig == 'yes':  plt.show() 
 
 ############################################################
-
 if __name__ == '__main__':
   main(sys.argv[1:])
 

@@ -14,32 +14,42 @@ import h5py
 import numpy as np
 
 def Usage():
-  print '''********************************************
+  print '''
+  ********************************************
+  Calculate the Sum of Time Series Displacement per epoch
+      For each epoch, referencing it as the master date,
+      get a new time series and calculate the temporal
+      average displacement.
 
-Usage:
-  sum_epochs.py timeseries_file
+  Usage:
+      sum_epochs.py timeseries_file [output_file]
 
-Example:
-  sum_epochs.py timeseries.h5
-  sum_epochs.py timeseries.h5 ouput.h5
-********************************************
-'''
+      output filename is 'sum_'timeseries_file by default.
+
+  Example:
+      sum_epochs.py timeseries.h5
+      sum_epochs.py timeseries.h5 ouput.h5
+
+  ********************************************
+  '''
 
 def main(argv):
-  try:
-    timeSeriesFile=argv[0]
-  except:
-    Usage() ; sys.exit(1)
+  try: timeSeriesFile=argv[0]
+  except: Usage() ; sys.exit(1)
 
-########################################################
-  print "-----------------------------------------"
-  print ""
+  try:    outname=argv[1]
+  except: outname='sum_'+timeSeriesFile
+
+  ########################################################
+  print "\n*************** Calculating Sum of Epochs ****************"
   print "Loading time series: " + timeSeriesFile
   h5timeseries=h5py.File(timeSeriesFile) 
   dateList = h5timeseries['timeseries'].keys()
+  dateList.sort()
+
   dateIndex={}
   for ni in range(len(dateList)):
-    dateIndex[dateList[ni]]=ni
+      dateIndex[dateList[ni]]=ni
 
   dset = h5timeseries['timeseries'].get(h5timeseries['timeseries'].keys()[0])
   nrows,ncols=np.shape(dset)
@@ -53,24 +63,19 @@ def main(argv):
 
   lt=len(dateList)
   sumD=np.zeros(D.shape)
+  print 'calculating epochs sum ...'
   for j in range(lt):
-    print j
-    sumD[j,:]=np.sum(np.abs(D-D[j,:]),0)/lt
+      print j
+      sumD[j,:]=np.sum(np.abs(D-D[j,:]),0)/lt
 
-##################################################
-#Normalize to 0 and 1 with high atmosphere equal to 0 and no atmosphere equal to 1
+  ##################################################
+  #Normalize to 0 and 1 with high atmosphere equal to 0 and no atmosphere equal to 1
   sumD=-1*(sumD-np.max(sumD,0))
   sumD=sumD/np.max(sumD,0)
   ind=np.isnan(sumD)
   sumD[ind]=1
 
-##################################################  
-
-  try:
-    outname=argv[1]
-  except:
-    outname='sum.h5'
-
+  ##################################################  
   print 'writing to >>> '+outname
   h5sum = h5py.File(outname,'w')
   group = h5sum.create_group('timeseries')
@@ -80,9 +85,11 @@ def main(argv):
 
   for key,value in h5timeseries['timeseries'].attrs.iteritems():
       group.attrs[key] = value
-  print ""
-  print "-----------------------------------------"
 
+  print 'Done.'
+
+
+##################################################  
 if __name__ == '__main__':
 
   main(sys.argv[1:])

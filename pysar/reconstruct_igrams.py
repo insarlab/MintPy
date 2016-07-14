@@ -6,32 +6,33 @@
 ############################################################
 
 import sys
+import getopt
 import time
 import datetime
 
 from  numpy import pi as pi
 from numpy import shape,zeros,ones,hstack,dot,float32,reshape
 import h5py
-import getopt
-import _pysar_utilities as ut
+
+import pysar._pysar_utilities as ut
 
 
+#####################################################################################
 def reconstruct_igrams_from_timeseries(h5timeseries,h5igrams):
 
-   ########################################################
   dateList = h5timeseries['timeseries'].keys()
 
   dateIndex={}
   for ni in range(len(dateList)):
-    dateIndex[dateList[ni]]=ni
+      dateIndex[dateList[ni]]=ni
 
   dset = h5timeseries['timeseries'].get(h5timeseries['timeseries'].keys()[0])
   nrows,ncols=shape(dset)
   timeseries = zeros((len(h5timeseries['timeseries'].keys()),shape(dset)[0]*shape(dset)[1]),float32)
   for date in dateList:
-    dset = h5timeseries['timeseries'].get(date)
-    d = dset[0:dset.shape[0],0:dset.shape[1]]
-    timeseries[dateIndex[date]][:]=d.flatten(0)
+      dset = h5timeseries['timeseries'].get(date)
+      d = dset[0:dset.shape[0],0:dset.shape[1]]
+      timeseries[dateIndex[date]][:]=d.flatten(0)
   del d
 
   lt,numpixels=shape(timeseries)
@@ -47,47 +48,46 @@ def reconstruct_igrams_from_timeseries(h5timeseries,h5igrams):
 
   return estData,nrows,ncols
 
+#####################################################################################
 def Usage():
   print '''
-    ****************************************************************************************
-    ****************************************************************************************
-    reconstructs the interferograms from the time-series epochs
+  ****************************************************************************************
+  Reconstructs the interferograms from the time-series epochs
 
-    usage:
+  usage:
+       reconstruct_igrams.py simulatedIgrams.h5 timeseries.h5  [output_name]
 
-       reconstruct_igrams.py simulatedIgrams.h5 timeseries.h5  [Out put Name]
+       output reconstructed_simulatedIgrams.h5 by default.
 
-    example:
+  Example:
      
-       reconstruct_igrams.py Seeded_LoadedData_BajaT270EnvD2.h5 timeseries.h5
+       reconstruct_igrams.py Seeded_LoadedData.h5 timeseries_ECMWF_demCor.h5
+       reconstruct_igrams.py Seeded_LoadedData.h5 timeseries_ECMWF_demCor.h5  reconstructedIgrams.h5
 
-       reconstruct_igrams.py Seeded_LoadedData_BajaT270EnvD2.h5 timeseries.h5  reconstructedIgrams.h5
+  ****************************************************************************************
+  '''
 
-    ****************************************************************************************
-    ****************************************************************************************
-'''
-      
+
+#####################################################################################
 def main(argv):
 
+  ##### Inputs
   try:
-     igramFile=argv[0]
-     tsFile=argv[1]
+     igramFile = argv[0]
+     tsFile    = argv[1]
   except:
      Usage() ; sys.exit(1)
 
   try:
-     h5igrams=h5py.File(igramFile,'r')
-     h5timeseries=h5py.File(tsFile,'r')
+     h5igrams     = h5py.File(igramFile,'r')
+     h5timeseries = h5py.File(tsFile,'r')
   except:
      Usage() ; sys.exit(1)
 
-  try:
-     outName=argv[2]
-  except:
-     outName='reconstructed_'+igramFile
+  try:    outName = argv[2]
+  except: outName = 'reconstructed_'+igramFile
 
-  
-
+  #####
   estData,nrows,ncols=reconstruct_igrams_from_timeseries(h5timeseries,h5igrams)
   
   h5estIgram=h5py.File(outName,'w')
@@ -108,8 +108,9 @@ def main(argv):
   h5estIgram.close()   
 
 
-if __name__ == '__main__':
+#####################################################################################
 
+if __name__ == '__main__':
   main(sys.argv[1:])
 
 

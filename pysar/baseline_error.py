@@ -1,19 +1,23 @@
 #! /usr/bin/env python
-
 ############################################################
 # Program is part of PySAR v1.0                            #
 # Copyright(c) 2013, Heresh Fattahi                                           #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
+
 import sys
 import os
+
 import numpy as np
 import h5py
 from scipy.linalg import pinv as pinv
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib
+
+import pysar._readfile as readfile
+
 
 def to_percent(y, position):
     # Ignore the passed in position. This has the effect of scaling the default
@@ -50,25 +54,37 @@ def Usage():
   '''
 
 def main(argv):
-  try:
-    File = argv[0]
-  except:
-    Usage() ; sys.exit(1)
+  try:  File = argv[0]
+  except:  Usage() ; sys.exit(1)
+  try:  maskFile = argv[1]
+  except: pass
 
   ##################################
   h5file = h5py.File(File)
   dateList = h5file['timeseries'].keys()
   ##################################
 
-  try:
-    maskFile=argv[1]
-    h5Mask = h5py.File(maskFile,'r')
-    kMask=h5Mask.keys()
-    dset1 = h5Mask[kMask[0]].get(kMask[0])
-    Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
+  ##### Read Mask File 
+  ## Priority:
+  ## Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5
+  try:  maskFile
   except:
-    dset1 = h5file['mask'].get('mask')
-    Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
+      if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
+      elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
+      else: print 'No mask found!'; sys.exit(1)
+  try:  Mask,Matr = readfile.read(maskFile);   print 'mask: '+maskFile
+  except: print 'Can not open mask file: '+maskFile; sys.exit(1)
+
+
+  #try:
+  #  maskFile=argv[1]
+  #  h5Mask = h5py.File(maskFile,'r')
+  #  kMask=h5Mask.keys()
+  #  dset1 = h5Mask[kMask[0]].get(kMask[0])
+  #  Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
+  #except:
+  #  dset1 = h5file['mask'].get('mask')
+  #  Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
 
   
   ##################################
@@ -195,10 +211,11 @@ def main(argv):
   for key,value in h5file['timeseries'].attrs.iteritems():
       group.attrs[key] = value
 
-
-  dset1 = h5file['mask'].get('mask')
-  group=h5orbCor.create_group('mask')
-  dset = group.create_dataset('mask', data=dset1, compression='gzip')
+  try:
+      dset1 = h5file['mask'].get('mask')
+      group=h5orbCor.create_group('mask')
+      dset = group.create_dataset('mask', data=dset1, compression='gzip')
+  except: pass
 
   h5file.close()
   h5orbCor.close()

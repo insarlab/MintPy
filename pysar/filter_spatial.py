@@ -7,15 +7,15 @@
 
 import sys
 import os
-import numpy as np
 import getopt
-import h5py
-import _readfile as readfile
-import _writefile as writefile
 
-try:
-    from skimage.filter import roberts, sobel,canny,gaussian_filter
-    
+import numpy as np
+import h5py
+
+import pysar._readfile as readfile
+import pysar._writefile as writefile
+
+try:    from skimage.filters import roberts,sobel,canny,gaussian
 except:
     print '++++++++++++++++++++++++++++++++++++++++++++'
     print ''
@@ -26,69 +26,57 @@ except:
     print '++++++++++++++++++++++++++++++++++++++++++++'
     sys.exit(1)
 
+
 def Usage():
-
    print '''
-
    ***************************************************************
    Spatial filtering of the time-series or velocity ...
 
    Usage:
+       filter_spatial.py -f  file -t filter_type  -p parameters
 
-    filter.py -f  file -t filter_type  -p parameters
+           file: PySAR h5 files [interferogram, time-series, velocity], 
+                 Roi_pac  files [dem, unw, hgt, ]
+                 Image files [jpeg, jpg, png]
 
-    file: PySAR h5 files [interferogram, time-series, velocity], 
-          roi_pac files [dem, unw, hgt, ]
-          or image files [jpeg, jpg, png]
-
-    filter_type:
-                  lowpass_gaussian [-p defines the sigma] 
-                  highpass_gaussian [-p defines the sigma]
-                  lowpass_avg  [-p defines the size of the kernel]
-                  highpass_avg  [-p defines the size of the kernel]
-                  sobel
-                  roberts
-                  canny              
+           filter_type:
+               lowpass_gaussian  [-p defines the sigma] 
+               highpass_gaussian [-p defines the sigma]
+               lowpass_avg       [-p defines the size of the kernel]
+               highpass_avg      [-p defines the size of the kernel]
+               sobel
+               roberts
+               canny              
 
    Example:
-             filter.py -f timeseries.h5 -t lowpass_avg -p 5  
-             filter.py -f velocity.h5 -t lowpass_avg -p 5             
-             filter.py -f velocity.h5 -t sobel
-             filter.py -f velocity.h5 -t highpass_gaussian -p 3
+       filter.py -f timeseries.h5 -t lowpass_avg       -p 5  
+       filter.py -f velocity.h5   -t highpass_gaussian -p 3
+       filter.py -f velocity.h5   -t lowpass_avg       -p 5             
+       filter.py -f velocity.h5   -t sobel
 
    ***************************************************************
-
 '''
 
 def filter(data,filtType,par):
 
-    if filtType == "sobel":
-       filt_data = sobel(data)
-    elif filtType == "roberts":
-       filt_data = roberts(data)
-    elif filtType ==  "canny":
-       filt_data = canny(data)
-    elif filtType ==  "lowpass_avg":
+    if   filtType == "sobel":       filt_data = sobel(data)
+    elif filtType == "roberts":     filt_data = roberts(data)
+    elif filtType == "canny":       filt_data = canny(data)
+    elif filtType == "lowpass_avg":
        from scipy import ndimage
        p=int(par)
        kernel = np.ones((p,p),np.float32)/(p*p)
        filt_data = ndimage.convolve(data, kernel)
-    elif filtType ==  "lowpass_gaussian":
-        
-       s=float(par)
-       filt_data = gaussian_filter(data, sigma=s)
-
-    elif filtType ==  "highpass_gaussian":
-
-       s=float(par)
-       lp_data = gaussian_filter(data, sigma=s)
-       filt_data = data - lp_data
-
-    elif filtType ==  "highpass_avg":
+    elif filtType == "highpass_avg":
        from scipy import ndimage
        p=int(par)
        kernel = np.ones((p,p),np.float32)/(p*p)
        lp_data = ndimage.convolve(data, kernel)
+       filt_data = data - lp_data
+    elif filtType == "lowpass_gaussian":
+       filt_data = gaussian(data, sigma=float(par))
+    elif filtType == "highpass_gaussian":
+       lp_data   = gaussian(data, sigma=float(par))
        filt_data = data - lp_data
 
     #elif filtType ==  "gradient":
@@ -96,84 +84,51 @@ def filter(data,filtType,par):
     return filt_data
 
 def multilook(ifg,lksy,lksx):
-
-    
     rows,cols=ifg.shape
     rows_lowres=np.floor(rows/lksy)
     cols_lowres=np.floor(cols/lksx)
-
 
    # %ifg_lowres=NaN(rows_lowres,cols_lowres)
     
     thr = np.floor(lksx*lksy/2)
     
-    
     ifg_Clowres=np.zeros((rows,cols_lowres))
-    ifg_lowres=np.zeros((rows_lowres,cols_lowres))
+    ifg_lowres =np.zeros((rows_lowres,cols_lowres))
     
-    
-    for c in range(int(cols_lowres)):
-        ifg_Clowres[:,c]=np.sum(ifg[:,(c)*lksx:(c+1)*lksx],1)
-        
-    
-    
-    for r in range(int(rows_lowres)):
-        
-        ifg_lowres[r,:]=np.sum(ifg_Clowres[(r)*lksy:(r+1)*lksy,:],0)
-    
-    
+    for c in range(int(cols_lowres)):   ifg_Clowres[:,c]=np.sum(ifg[:,(c)*lksx:(c+1)*lksx],1)
+    for r in range(int(rows_lowres)):   ifg_lowres[r,:]=np.sum(ifg_Clowres[(r)*lksy:(r+1)*lksy,:],0)
     
     ifg_lowres=ifg_lowres/(lksy*lksx) 
     return ifg_lowres
 
 def main(argv):
 
-  try:
-    opts, args = getopt.getopt(argv,"h:f:t:p:")
-    
+  try:    opts, args = getopt.getopt(argv,"h:f:t:p:")
   except getopt.GetoptError:
     Usage() ; sys.exit(1)
 
   if opts==[]:
     Usage() ; sys.exit(1)
   for opt,arg in opts:
-    if opt in ("-h","--help"):
-      Usage()
-      sys.exit()
-    elif opt == '-f':
-      file = arg
-    elif opt == '-t':
-      filtType=arg
-    elif opt == '-p':
-      par=arg
-
-
-#  try:  
-#    file=argv[0]
-#    alks=float(argv[1])
-#    rlks=float(argv[2])
-#  except:
-#    Usage();sys.exit(1)
-
-
+    if opt in ("-h","--help"):  Usage(); sys.exit()
+    elif opt == '-f':           file     = arg
+    elif opt == '-t':           filtType = arg
+    elif opt == '-p':           par      = arg
 
   ext = os.path.splitext(file)[1]
   outName=file.split('.')[0]+'_'+filtType+ext
-  try:
-    par
-  except:
-    par=[]
+  try:    par
+  except: par=[]
 
-  print '+++++++++++++++++++++++++++'
+  #print '+++++++++++++++++++++++++++'
   print 'Filter type : '+filtType
   print 'parameters : ' + str(par)
-  print '+++++++++++++++++++++++++++'
-###############################################
+  #print '+++++++++++++++++++++++++++'
+  ###############################################
   if ext == '.int' or ext == '.slc':
     a,p,r = readfile.read_complex64(file)
     plks=multilook(p,alks,rlks)
     alks=multilook(a,alks,rlks)
-
 
     r['FILE_LENGTH']=str(dlks.shape[0])
     r['WIDTH']=str(dlks.shape[1])
@@ -249,7 +204,7 @@ def main(argv):
     imlks.save(outName)
 
     try:
-      r=readfile.read_rsc_file(file+'.rsc')
+      r=readfile.read_roipac_rsc(file+'.rsc')
     except:
       sys.exit(1)
 
@@ -327,13 +282,17 @@ def main(argv):
       group=h5file_lks.create_group(k[0])    
       dset1 = h5file[k[0]].get(k[0])
       data = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-      data=filter(data,filtType,par)
+      data = filter(data,filtType,par)
       dset = group.create_dataset(k[0], data=data, compression='gzip')
       for key , value in h5file[k[0]].attrs.iteritems():
          group.attrs[key]=value
 
     h5file.close()
     h5file_lks.close()
+    print 'writing >>> '+outName
+
+
+################################################################################################
 
 if __name__ == '__main__':
 

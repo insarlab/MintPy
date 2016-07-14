@@ -8,7 +8,7 @@
 import sys
 import os
 import getopt
-import _readfile as readfile
+import pysar._readfile as readfile
 
 def Usage():
   print '''
@@ -78,7 +78,7 @@ def main(argv):
   outname='subset_'+file
 
   try:
-     parContents = readfile.read_rsc_file(file + '.rsc')
+     parContents = readfile.read_roipac_rsc(file + '.rsc')
      width  = int(parContents['WIDTH'])
      length = int(parContents['FILE_LENGTH'])
   except:

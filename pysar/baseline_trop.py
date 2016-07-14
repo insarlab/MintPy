@@ -5,16 +5,21 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
+
 import sys
 import os
+
 import numpy as np
 import h5py
 from scipy.linalg import pinv as pinv
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib
-import _readfile as readfile
 
+import pysar._readfile as readfile
+
+
+####################################################################################
 def to_percent(y, position):
     # Ignore the passed in position. This has the effect of scaling the default
     # tick locations.
@@ -26,6 +31,7 @@ def to_percent(y, position):
     else:
         return s + '%'
 
+####################################################################################
 def Usage():
   print '''
 ******************************************************************************************************
@@ -46,6 +52,7 @@ def Usage():
 ******************************************************************************************************
   '''
 
+####################################################################################
 def main(argv):
   
   try:
@@ -55,42 +62,33 @@ def main(argv):
   except:
     Usage() ; sys.exit(1)
 
-  try:
-    baseline_error=argv[3]
-  except:
-    baseline_error='range_and_azimuth'
+  try:    baseline_error=argv[3]
+  except: baseline_error='range_and_azimuth'
+  print baseline_error  
   ##################################
   h5file = h5py.File(File)
   dateList = h5file['timeseries'].keys()
   ##################################
 
-  try:
-    maskFile=argv[4]
-    h5Mask = h5py.File(maskFile,'r')
-    kMask=h5Mask.keys()
-    dset1 = h5Mask[kMask[0]].get(kMask[0])
-    Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
+  try: maskFile=argv[4]
   except:
-    dset1 = h5file['mask'].get('mask')
-    Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-  
+      if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
+      elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
+      else: print 'No mask found!'; sys.exit(1)
+  try:  Mask,Matr = readfile.read(maskFile);   print 'mask: '+maskFile
+  except: print 'Can not open mask file: '+maskFile; sys.exit(1)
 
- # try:
- #   maskFile=argv[3]
- # except:
- #   maskFile='Mask.h5'
-
-#  try:
-#    baseline_error=argv[4]
-#  except:
-#    baseline_error='range_and_azimuth'
+  #try:
+  #  maskFile=argv[4]
+  #  h5Mask = h5py.File(maskFile,'r')
+  #  kMask=h5Mask.keys()
+  #  dset1 = h5Mask[kMask[0]].get(kMask[0])
+  #  Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
+  #except:
+  #  dset1 = h5file['mask'].get('mask')
+  #  Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
   
-  print baseline_error  
   ##################################
- # h5Mask = h5py.File(maskFile)
- # kMask=h5Mask.keys()
- # dset1 = h5Mask[kMask[0]].get(kMask[0])
- # Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
   Mask=Mask.flatten(1)
   ndx= Mask !=0
   ##################################
@@ -229,8 +227,10 @@ def main(argv):
 
   h5file.close()
   h5orbCor.close()
-if __name__ == '__main__':
 
+
+####################################################################################
+if __name__ == '__main__':
   main(sys.argv[1:])  
 
 

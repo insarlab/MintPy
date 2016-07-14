@@ -10,7 +10,7 @@ import getopt
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-import _readfile as readfile
+import pysar._readfile as readfile
 
 def Usage():
    print '''
@@ -22,11 +22,11 @@ def Usage():
   
    Usage:
      
-     correlation_with_dem.py dem velocity
+     correlation_with_dem.py dem_file velocity_file
 
    Example:
 
-     correlation_with_dem.py radar_8rlks.hgt  velocity.h5
+     correlation_with_dem.py radar_8rlks.hgt  velocity_masked.h5
 
 ***********************************************************************
 ***********************************************************************
