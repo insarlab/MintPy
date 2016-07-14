@@ -556,7 +556,7 @@ def main(argv):
           Delay['velocity_std'] = dis_vel[4]
           figBase = 'x'+str(xsub[0])+'_'+str(xsub[1]-1)+'y'+str(ysub[0])+'_'+str(ysub[1]-1)
           sio.savemat( figBase+'_ts.mat', {'displacement': Delay});                               print 'saved '+figBase+'_ts.mat'
-          fig2.savefig(figBase+'_ts.pdf',bbox_inches='tight',transparent=True,dpi=fig_dpi);       print 'saved '+figBase+'_ts.pdf'
+          fig2.savefig(figBase+'_ts.png',bbox_inches='tight',transparent=True,dpi=fig_dpi);       print 'saved '+figBase+'_ts.png'
           if dispFig == 'no':
               fig.savefig(figBase+'_vel.png',bbox_inches='tight',transparent=True,dpi=fig_dpi);   print 'saved '+figBase+'_vel.png'
   ################################  Plot Code Package <end> #################################
