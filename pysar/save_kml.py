@@ -50,7 +50,8 @@ def Usage():
       -i : inverse the colormap
       -w : re-wrapping the interferogram [default : no]
       -r : dpi (dots per inch) [default = 300]
-      --fig-size : figure size in inch, default is [8.0,12.0]
+      --fig-size    : figure size in inch, default is [8.0,12.0]
+      --noreference : do not show reference point
 
   Example:
  
@@ -107,6 +108,7 @@ def main(argv):
   ext = os.path.splitext(File)[1].lower()
   atr = readfile.read_attributes(File)
   k = atr['FILE_TYPE']
+  print '\n*************** Output to KMZ file ****************'
   print 'Input file is '+k
 
 
