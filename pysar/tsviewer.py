@@ -11,6 +11,7 @@
 #                   Add reference point display
 #                   Add plot_ts(), adjust_xaxis_date()
 # Yunjun, Jul 2016: Support reference date input
+#                   Support Zoom in for figure 1
 
 
 import sys
@@ -30,6 +31,7 @@ import matplotlib.pyplot as plt
 
 import pysar._readfile as readfile
 import pysar._datetime as ptime
+import pysar.subset as subset
 from pysar.view import orbit_direction
 
 
@@ -154,6 +156,9 @@ def Usage():
              set to 0 (-l 0) if you don't want any line connecting the points
         -u/--unit    : unit of the displacement [default = cm]. Other optons are: mm and m
         --rect-color : color of rectangle that mark the selection in velocity figure, 'crimson' by default
+        --zoomx      : subset/zoom in x/range/longtitude direction
+        --zoomy      : subset/zoom in y/azimuth/latitude direction
+
 
      XY Input
         -r : radius of selecting square in pixels, display mean value from (+/-radius,+/-radius).
@@ -174,6 +179,7 @@ def Usage():
         -T : maximum date for display
         -E/--exclude : exclude dates list for display
         --ref-date   : reference date for time series displacement
+        --zero-start : set the first displacement as zero
 
      Save and Output
         --save       : save data and plot                     - save timeseries data/plot
@@ -204,6 +210,8 @@ def Usage():
         tsviewer.py -f timeseries.h5 -x 300:330 -y 500:530
         tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem -C yes -x 300:330 -y 500:530 --nodisplay
 
+        tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem -C yes -x 300:330 -y 500:530 --nodisplay --zoom-x 300:800 --zoom-y 500:1500 --zero-start
+
 *******************************************************************************************************
     '''
 
@@ -217,30 +225,31 @@ def main(argv):
   global markerSize, markderSize2, markerColor, markerColor2, rectColor
   global lineWidth, lineWidth2, edgeWidth, fontSize
 
-  markerSize  =16
-  markerSize2 =16
-  markerColor ='crimson'     # g
-  markerColor2='royalblue'
-  markerColor3='white'
-  rectColor   ='crimson'
-  lineWidth   =2
-  lineWidth2  =0
-  edgeWidth   =1.5
-  fontSize    =16
+  markerSize   = 16
+  markerSize2  = 16
+  markerColor  = 'crimson'     # g
+  markerColor2 = 'royalblue'
+  markerColor3 = 'white'
+  rectColor    = 'crimson'
+  lineWidth    = 2
+  lineWidth2   = 0
+  edgeWidth    = 1.5
+  fontSize     = 16
 
 
   global unit, radius, saveFig, dispFig, fig_dpi
 
-  fig_dpi=300
-  radius=0;
+  fig_dpi = 300
+  radius  = 0
   saveFig = 'no'
   dispFig = 'yes'
-  unit='cm'
+  unit    = 'cm'
 
-  dispContour = 'only'
+  dispContour   = 'only'
   smoothContour = 'no'
   contour_step  = 200
-  showRef = 'yes'
+  showRef       = 'yes'
+  zero_start    = 'no'
 
   global ref_xsub, ref_ysub, ref_date
   global h5timeseries_2, dates_2, dateList_2
@@ -257,7 +266,8 @@ def main(argv):
 
   elif len(sys.argv)>2:
     try:   opts, args = getopt.getopt(argv,"f:F:v:a:b:s:m:c:w:u:l:h:D:C:V:t:T:d:r:x:y:X:Y:o:E:",
-                                          ['save','nodisplay','unit=','exclude=','ref-date=','rect-color'])
+                                          ['save','nodisplay','unit=','exclude=','ref-date=','rect-color',\
+                                           'zero-start','zoom-x=','zoom-y=','zoom-lon','zoom-lat'])
     except getopt.GetoptError:    Usage() ; sys.exit(1)
 
     for opt,arg in opts:
@@ -290,6 +300,12 @@ def main(argv):
       elif opt in ['-u','--unit']    : unit            = arg.lower()
       elif opt == '--save'           : saveFig         = 'yes'
       elif opt == '--nodisplay'      : dispFig         = 'no';   saveFig='yes'
+      elif opt == '--zero-start'     : zero_start      = 'yes'
+      elif opt == '--zoom-x'         : win_x           = [int(i)   for i in arg.split(':')];    win_x.sort()
+      elif opt == '--zoom-y'         : win_y           = [int(i)   for i in arg.split(':')];    win_y.sort()
+      elif opt == '--zoom-lon'       : win_lon         = [float(i) for i in arg.split(':')];    win_lon.sort()
+      elif opt == '--zoom-lat'       : win_lat         = [float(i) for i in arg.split(':')];    win_lat.sort()
+
 
   ##############################################################
   ## Read time series file info
@@ -357,6 +373,7 @@ def main(argv):
   datevector_all = list(datevector)
 
   ## Check reference date input
+  if zero_start == 'yes':  ref_date = dateList[0]
   try:
       ref_date
       if not ref_date in dateList:
@@ -369,6 +386,22 @@ def main(argv):
   ##### Plot Fig 1 - Velocity / last epoch of time series / DEM
   fig = plt.figure(1)
   ax=fig.add_subplot(111)
+
+
+  ##### Check subset range
+  width  = int(atr['WIDTH'])
+  length = int(atr['FILE_LENGTH'])
+  print 'file size: '+str(length)+', '+str(width)
+  try: win_y = subset.coord_geo2radar(win_lat,atr,'latitude')
+  except:
+      try:    win_y
+      except: win_y = [0,length]
+  try: win_x = subset.coord_geo2radar(win_lon,atr,'longitude')
+  except:
+      try:    win_x
+      except: win_x = [0,width]
+  win_y,win_x = subset.check_subset_range(win_y,win_x,atr)
+
 
   try:
      velocityFile
@@ -387,6 +420,7 @@ def main(argv):
      dset = h5timeseries['timeseries'].get(h5timeseries['timeseries'].keys()[-1])
      ax.set_title('epoch: '+dateList1[-1])
      print 'display last epoch'
+  #data1 = dset[win_y[0]:win_y[1],win_x[0]:win_x[1]]
 
   ## Reference Point
   if showRef == 'yes':
@@ -450,9 +484,15 @@ def main(argv):
   except:  img=ax.imshow(dset)
   plt.colorbar(img)
 
+  ## Zoom In (subset)
+  if flip_lr == 'yes':  ax.set_xlim(win_x[1],win_x[0])
+  else:                 ax.set_xlim(win_x[0],win_x[1])
+  if flip_ud == 'yes':  ax.set_ylim(win_y[0],win_y[1])
+  else:                 ax.set_ylim(win_y[1],win_y[0])
+
   ## Flip
-  if flip_lr == 'yes':  fig.gca().invert_xaxis()
-  if flip_ud == 'yes':  fig.gca().invert_yaxis()
+  #if flip_lr == 'yes':  fig.gca().invert_xaxis()
+  #if flip_ud == 'yes':  fig.gca().invert_yaxis()
 
 
   ########################################## 
