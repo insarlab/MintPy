@@ -277,7 +277,7 @@ def main(argv):
   atr = readfile.read_attributes(file)
   h5file = h5py.File(file)
   k=h5file.keys()
-  print '************** Reference Point ******************'
+  print '\n************** Reference Point ******************'
   try:
      atr['X_FIRST']      ## Geocoded
      latr

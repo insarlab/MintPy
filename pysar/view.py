@@ -201,6 +201,7 @@ def Usage():
   -s            : font size (default: 12 for plot_one, 8 for plot_all)
   -c            : colormaps of matplotlib found in (http://matplotlib.org/examples/pylab_examples/show_colormaps.html)
                   (default is jet). some options are: seismic, bwr, spectral, jet, ... 
+  --notitle     : turn off axis display of figure 
   --noaxis      : turn off axis display of figure 
   -T            : title of time-series epochs or interferograms. 
                   options are 'in' and 'out'. (default is out)
@@ -316,6 +317,7 @@ def main(argv):
   rewrapping = 'no'
   saveFig    = 'no'
   showRef    = 'yes'
+  showTitle  = 'yes'
   title      = 'out'
 
   ###################  Read Input Args  ###############
@@ -326,7 +328,7 @@ def main(argv):
                                         'scale=','nodisplay','noreference','figsize=','dem-contour','dem-noshade',\
                                         'contour-step=','contour-smooth=','ref-epoch=','ref-color=','ref-symbol=',\
                                         'ref-size=','display-radar','title=','dpi=','output=','exclude=','noaxis',\
-                                        'point=','line=','no-multilook','mask='])
+                                        'point=','line=','no-multilook','mask=','notitle'])
 
      except getopt.GetoptError:
         print 'Error in reading input options!';  Usage() ; sys.exit(1)
@@ -370,6 +372,7 @@ def main(argv):
         elif opt == '--noaxis'        : disp_axis    = 'no'
         elif opt == '--nodisplay'     : dispFig      = 'no';       saveFig = 'yes'
         elif opt == '--noreference'   : showRef      = 'no'
+        elif opt == '--notitle'       : showTitle      = 'no'
         elif opt == '--opposite'      : dispOpposite = 'yes'
         elif opt == '--ref-epoch'     : ref_epoch    = arg
         elif opt == '--ref-color'     : ref_color    = arg
@@ -775,7 +778,7 @@ def main(argv):
 
     if subsetData == 'yes':  figTitle += '_sub'
     if rewrapping == 'yes':  figTitle += '_wrap'
-    plt.title(figTitle,fontsize=font_size)
+    if showTitle  == 'yes':  plt.title(figTitle,fontsize=font_size)
 
     ##### Plot in Geo-coordinate: plot in map
     if geocoord == 'yes' and disp_geo == 'yes':
@@ -1071,8 +1074,9 @@ def main(argv):
             ax.set_xticklabels([])
             ax.set_xticks([])
             ax.set_yticks([])
-            if   title == 'out':  ax.set_title(figTitle,fontsize=font_size)
-            elif title == 'in':   add_inner_title(ax, figTitle, loc=1)
+            if showTitle == 'yes':
+                if   title == 'out':  ax.set_title(figTitle,fontsize=font_size)
+                elif title == 'in':   add_inner_title(ax, figTitle, loc=1)
 
             ## Flip
             if flip_lr == 'yes':  fig.gca().invert_xaxis()

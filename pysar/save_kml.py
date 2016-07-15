@@ -41,7 +41,7 @@ def Usage():
       save_kml.py -f file -m min -M max -d epoch_date -c color_map -i no(yes)
   
       -f : geocoded PySAR / ROI_PAC product
-      -m : minmum value
+      -m : minimum value
       -M : maximum value
       -d : date of interferogram or time-series epoch to be converted to kml
            for interferogram, like 971220-990703; 
