@@ -100,6 +100,7 @@ def main(argv):
           #if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
           #elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
           #else: print 'No mask found!'; sys.exit(1)
+  print '\n*************** Phase Ramp Removal ***********************'
   try:
       Mask,Matr = readfile.read(maskFile)
       print 'mask: '+maskFile
@@ -123,7 +124,7 @@ def main(argv):
   print 'number of file to de-ramp: '+str(len(fileList))
   print fileList
   for file in fileList:
-      print '*************** Phase Ramp Removal ***********************'
+      print '------------------------------------------'
       print 'input files : '+file
       rm.remove_surface(file,Mask,surfType)
 
