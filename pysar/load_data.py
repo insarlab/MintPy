@@ -158,8 +158,8 @@ def main(argv):
 
   try:
     if os.path.isfile(tssarProjectDir+'/LoadedData.h5'):
-      print '\nLoadedData.h5'+ '  already exists.'
-      sys.exit(1)
+        print '\nLoadedData.h5'+ '  already exists.'
+        sys.exit(1)
     igramList = glob.glob(igramPath)
     igramList = sorted(igramList)
     k = 'interferograms'
@@ -173,26 +173,24 @@ def main(argv):
     gg = f.create_group('interferograms')
     MaskZero=np.ones([int(mode_length),int(mode_width)])
     for igram in igramList:
-      if not os.path.basename(igram) in f:
-        print 'Adding ' + igram
-        group = gg.create_group(os.path.basename(igram))
-        amp,unw,unwrsc = readfile.read_float32(igram)
+        if not os.path.basename(igram) in f:
+            print 'Adding ' + igram
+            group = gg.create_group(os.path.basename(igram))
+            amp,unw,unwrsc = readfile.read_float32(igram)
 
-        MaskZero=amp*MaskZero
- 
-        dset = group.create_dataset(os.path.basename(igram), data=unw, compression='gzip')
-        for key,value in unwrsc.iteritems():
-          group.attrs[key] = value
+            MaskZero *= amp
 
-        d1,d2=unwrsc['DATE12'].split('-')
-        baseline_file=os.path.dirname(igram)+'/'+d1+'_'+d2+'_baseline.rsc'
-        baseline=readfile.read_roipac_rsc(baseline_file)
-        for key,value in baseline.iteritems():
-          group.attrs[key] = value
-        group.attrs['PROJECT_NAME'] = projectName
-        group.attrs['UNIT']         = 'radian'
-      else:
-        print os.path.basename(h5file) + " already contains " + os.path.basename(igram)
+            dset = group.create_dataset(os.path.basename(igram), data=unw, compression='gzip')
+            for key,value in unwrsc.iteritems():   group.attrs[key] = value
+
+            d1,d2=unwrsc['DATE12'].split('-')
+            baseline_file=os.path.dirname(igram)+'/'+d1+'_'+d2+'_baseline.rsc'
+            baseline=readfile.read_roipac_rsc(baseline_file)
+            for key,value in baseline.iteritems():    group.attrs[key] = value
+            group.attrs['PROJECT_NAME'] = projectName
+            group.attrs['UNIT']         = 'radian'
+        else:
+            print os.path.basename(h5file) + " already contains " + os.path.basename(igram)
 
     Mask=np.ones([int(mode_length),int(mode_width)])
     Mask[MaskZero==0]=0
@@ -200,7 +198,6 @@ def main(argv):
     #dset = gm.create_dataset('mask', data=Mask, compression='gzip')
     f.close()
 
-    import pdb; pdb.set_trace()
     ############## Mask file ###############
     print 'writing to Mask.h5\n'
     #Mask=np.ones([int(mode_length),int(mode_width)])
@@ -221,8 +218,8 @@ def main(argv):
 ############################# Coherence ################################
   try:
     if os.path.isfile(tssarProjectDir+'/Coherence.h5'):
-      print '\nCoherence.h5'+ '  already exists.'
-      sys.exit(1)
+        print '\nCoherence.h5'+ '  already exists.'
+        sys.exit(1)
     corList = glob.glob(corPath)
     corList = sorted(corList)
     k = 'coherence'
@@ -236,25 +233,23 @@ def main(argv):
     gg = fcor.create_group('coherence')
     meanCoherence=np.zeros([int(mode_length),int(mode_width)])
     for cor in corList:
-      if not os.path.basename(cor) in fcor:
-        print 'Adding ' + cor
-        group = gg.create_group(os.path.basename(cor))
-        amp,unw,unwrsc = readfile.read_float32(cor)
+        if not os.path.basename(cor) in fcor:
+            print 'Adding ' + cor
+            group = gg.create_group(os.path.basename(cor))
+            amp,unw,unwrsc = readfile.read_float32(cor)
 
-        meanCoherence=meanCoherence+unw
-        dset = group.create_dataset(os.path.basename(cor), data=unw, compression='gzip')
-        for key,value in unwrsc.iteritems():
-           group.attrs[key] = value
+            meanCoherence += unw
+            dset = group.create_dataset(os.path.basename(cor), data=unw, compression='gzip')
+            for key,value in unwrsc.iteritems():    group.attrs[key] = value
 
-        d1,d2=unwrsc['DATE12'].split('-')
-        baseline_file=os.path.dirname(cor)+'/'+d1+'_'+d2+'_baseline.rsc'
-        baseline=readfile.read_roipac_rsc(baseline_file)
-        for key,value in baseline.iteritems():
-           group.attrs[key] = value
-        group.attrs['PROJECT_NAME'] = projectName
-        group.attrs['UNIT']         = '1'
-      else:
-        print os.path.basename(h5file) + " already contains " + os.path.basename(cor)
+            d1,d2=unwrsc['DATE12'].split('-')
+            baseline_file=os.path.dirname(cor)+'/'+d1+'_'+d2+'_baseline.rsc'
+            baseline=readfile.read_roipac_rsc(baseline_file)
+            for key,value in baseline.iteritems():   group.attrs[key] = value
+            group.attrs['PROJECT_NAME'] = projectName
+            group.attrs['UNIT']         = '1'
+        else:
+            print os.path.basename(h5file) + " already contains " + os.path.basename(cor)
     #fcor.close()
 
     ########### mean coherence file ###############
@@ -268,8 +263,7 @@ def main(argv):
     fcor_mean = h5py.File(h5file_CorMean,'w')
     group=fcor_mean.create_group('mask')
     dset = group.create_dataset(os.path.basename('mask'), data=meanCoherence, compression='gzip')
-    for key,value in unwrsc.iteritems():
-       group.attrs[key] = value
+    for key,value in unwrsc.iteritems():    group.attrs[key] = value
     fcor_mean.close()
 
     fcor.close()
@@ -283,8 +277,8 @@ def main(argv):
 
   try:
     if os.path.isfile(tssarProjectDir+'/Wrapped.h5'):
-      print '\nWrapped.h5'+ '  already exists.'
-      sys.exit(1)
+        print '\nWrapped.h5'+ '  already exists.'
+        sys.exit(1)
     wrapList = glob.glob(wrapPath)
     wrapList = sorted(wrapList)
     k = 'wrapped'
@@ -297,26 +291,25 @@ def main(argv):
     fw = h5py.File(h5file,'w')
     gg = fw.create_group('wrapped')
     for wrap in wrapList:
-      if not os.path.basename(wrap) in fw:
-        print 'Adding ' + wrap
-        group = gg.create_group(os.path.basename(wrap))
-        amp,unw,unwrsc = readfile.read_complex64(wrap)
+        if not os.path.basename(wrap) in fw:
+            print 'Adding ' + wrap
+            group = gg.create_group(os.path.basename(wrap))
+            amp,unw,unwrsc = readfile.read_complex64(wrap)
 
-        dset = group.create_dataset(os.path.basename(wrap), data=unw, compression='gzip')
-        for key,value in unwrsc.iteritems():
-           group.attrs[key] = value
+            dset = group.create_dataset(os.path.basename(wrap), data=unw, compression='gzip')
+            for key,value in unwrsc.iteritems():   group.attrs[key] = value
 
-        d1,d2=unwrsc['DATE12'].split('-')
-        baseline_file=os.path.dirname(wrap)+'/'+d1+'_'+d2+'_baseline.rsc'
-        baseline=readfile.read_roipac_rsc(baseline_file)
-        for key,value in baseline.iteritems():
-           group.attrs[key] = value
-        group.attrs['PROJECT_NAME'] = projectName
-        group.attrs['UNIT']         = 'radian'
-      else:
-        print os.path.basename(h5file) + " already contains " + os.path.basename(wrap)
+            d1,d2=unwrsc['DATE12'].split('-')
+            baseline_file=os.path.dirname(wrap)+'/'+d1+'_'+d2+'_baseline.rsc'
+            baseline=readfile.read_roipac_rsc(baseline_file)
+            for key,value in baseline.iteritems():    group.attrs[key] = value
+            group.attrs['PROJECT_NAME'] = projectName
+            group.attrs['UNIT']         = 'radian'
+        else:
+            print os.path.basename(h5file) + " already contains " + os.path.basename(wrap)
     fw.close()
     print 'Writed '+str(len(wrapList))+' wrapped interferograms to '+h5file+'\n'
+
   except:
     print 'No wrapped interferogram is loaded.\n'
 
@@ -328,8 +321,8 @@ def main(argv):
     geomapPath = tssarProjectDir+'/geomap*.trans'
     geomapList = glob.glob(geomapPath)
     if len(geomapList)>0:
-      print '\ngeomap*.trans'+ '  already exists.'
-      sys.exit(1)
+        print '\ngeomap*.trans'+ '  already exists.'
+        sys.exit(1)
 
     geomapPath=templateContents['pysar.geomap']
     geomapPath=check_variable_name(geomapPath)
@@ -354,8 +347,8 @@ def main(argv):
     demRdrPath = tssarProjectDir+'/radar*.hgt'
     demRdrList = glob.glob(demRdrPath)
     if len(demRdrList)>0:
-      print '\nradar*.hgt'+ '  already exists.'
-      sys.exit(1)
+        print '\nradar*.hgt'+ '  already exists.'
+        sys.exit(1)
 
     demRdrPath=templateContents['pysar.dem.radarCoord']
     demRdrPath=check_variable_name(demRdrPath)
@@ -376,8 +369,8 @@ def main(argv):
     demGeoPath = tssarProjectDir+'/*.dem'
     demGeoList = glob.glob(demGeoPath)
     if len(demGeoList)>0:
-      print '\n*.dem'+ '  already exists.'
-      sys.exit(1)
+        print '\n*.dem'+ '  already exists.'
+        sys.exit(1)
 
     demGeoPath=templateContents['pysar.dem.geoCoord']
     demGeoPath=check_variable_name(demGeoPath)

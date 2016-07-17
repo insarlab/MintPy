@@ -234,6 +234,7 @@ def main(argv):
   ############# Check Input File ###################
   atr = readfile.read_attributes(igramsFile)
   k = atr['FILE_TYPE']
+  print '\n******************** Plot Network **********************'
   print 'Input file is '+k
   if k not in  ['interferograms','coherence','wrapped']:
       print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
