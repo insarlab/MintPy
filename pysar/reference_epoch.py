@@ -58,7 +58,7 @@ def main(argv):
      '''
      sys.exit(1)
   
-  print '************* Reference Epoch ***************'
+  print '\n************* Reference Epoch ***************'
   refDataSet=h5t['timeseries'].get(refDate)
   refData=refDataSet[0:refDataSet.shape[0],0:refDataSet.shape[1]]
   print 'referencing all epochs to ' + refDate

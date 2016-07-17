@@ -136,15 +136,14 @@ def main(argv):
   except: pass
 
 ###########################################################
-  h5file = h5py.File(file)
-  k=h5file.keys()
-  if 'interferograms' in k: k[0] = 'interferograms'
-  elif 'coherence'    in k: k[0] = 'coherence'
+  atr = readfile.read_attributes(file)
+  k = atr['FILE_TYPE']
   print '\n*************** Modify Network ****************'
-  print 'Input file is '+k[0]
+  print 'Input file is '+k
   #if h5file.keys()[0] != 'interferograms':
   #    print 'Input file should be interferograms'; sys.exit(1)
-  ifgramList=h5file[k[0]].keys()
+  h5file = h5py.File(file)
+  ifgramList=h5file[k].keys()
 
   try:     ifgrams_to_rmv
   except:  ifgrams_to_rmv=[]
@@ -184,8 +183,8 @@ def main(argv):
     base_thr
     print 'interferograms with the spatial baseline longer than '+ str(base_thr)+' m is removed'
     for ifgram in  ifgramList:
-       Baseline = (float(h5file[k[0]][ifgram].attrs['P_BASELINE_BOTTOM_HDR'])+\
-                   float(h5file[k[0]][ifgram].attrs['P_BASELINE_TOP_HDR']))/2
+       Baseline = (float(h5file[k][ifgram].attrs['P_BASELINE_BOTTOM_HDR'])+\
+                   float(h5file[k][ifgram].attrs['P_BASELINE_TOP_HDR']))/2
        if abs(Baseline) > base_thr:
          if not ifgram in ifgrams_to_rmv:   ifgrams_to_rmv.append(ifgram)
   except:    print 'No Spatial Baseline threshold applied'
@@ -195,7 +194,7 @@ def main(argv):
     dates2Rmv
     print 'interferograms with any of following dates will be removed: '+ dates2Rmv
     for ifgram in  ifgramList:
-      date1,date2 = h5file[k[0]][ifgram].attrs['DATE12'].split('-')
+      date1,date2 = h5file[k][ifgram].attrs['DATE12'].split('-')
       if (date1 in dates2Rmv) or (date2 in dates2Rmv):
          if not ifgram in ifgrams_to_rmv:   ifgrams_to_rmv.append(ifgram)
   except:   print 'No specific dates selected to remove'
@@ -206,7 +205,7 @@ def main(argv):
     temp_thr
     print 'Applying the temporal baseline threshold with threshold of '+str(temp_thr)+' days'
     for ifgram in  ifgramList:
-       date1,date2 = h5file[k[0]][ifgram].attrs['DATE12'].split('-')      
+       date1,date2 = h5file[k][ifgram].attrs['DATE12'].split('-')      
        ind1 = dateList6.index(date1)
        ind2 = dateList6.index(date2)
        dt=tbase[ind2]-tbase[ind1]
@@ -226,11 +225,11 @@ def main(argv):
     Bp = ut.Baseline_timeseries(file)
     #############################################################
  
-    ifgramList = h5file[k[0]].keys()
+    ifgramList = h5file[k].keys()
     igram_pairs=np.zeros([len(ifgramList),2],np.int)
     i=0
     for ifgram in  ifgramList:
-      date1,date2 = h5file[k[0]][ifgram].attrs['DATE12'].split('-')
+      date1,date2 = h5file[k][ifgram].attrs['DATE12'].split('-')
       igram_pairs[i][0]=dateList6.index(date1)
       igram_pairs[i][1]=dateList6.index(date2)
       i=i+1
@@ -313,7 +312,7 @@ def main(argv):
     print dateList6
     numIgrams_rmv=np.shape(R)[1]
     for ifgram in  ifgramList:
-       date1,date2 = h5file[k[0]][ifgram].attrs['DATE12'].split('-')
+       date1,date2 = h5file[k][ifgram].attrs['DATE12'].split('-')
        for i in range(numIgrams_rmv):
            if dateList6[R[0][i]]==date1 and dateList6[R[1][i]]==date2:
                ifgrams_to_rmv.append(ifgram)
@@ -328,9 +327,9 @@ def main(argv):
   print ifgrams_to_rmv
   file_modified='Modified_'+file
   h5filem = h5py.File(file_modified,'w')
-  gg = h5filem.create_group(k[0])
+  gg = h5filem.create_group(k)
   ifgram=ifgramList[0]
-  unw = h5file[k[0]][ifgram].get(ifgram)
+  unw = h5file[k][ifgram].get(ifgram)
   MaskZero=np.ones([unw.shape[0],unw.shape[1]])
 
   print 'writing >>> modified interferogram file ...'
@@ -338,22 +337,16 @@ def main(argv):
   for ifgram in  ifgramList:
      if not ifgram in ifgrams_to_rmv:
         print ifgram
-        unwSet = h5file[k[0]][ifgram].get(ifgram)
+        unwSet = h5file[k][ifgram].get(ifgram)
         unw = unwSet[0:unwSet.shape[0],0:unwSet.shape[1]]        
         MaskZero=unw*MaskZero
         group = gg.create_group(ifgram)
         dset = group.create_dataset(ifgram, data=unw, compression='gzip')
-        for key, value in h5file[k[0]][ifgram].attrs.iteritems():
+        for key, value in h5file[k][ifgram].attrs.iteritems():
            group.attrs[key] = value
 
   Mask=np.ones([unwSet.shape[0],unwSet.shape[1]])
   Mask[MaskZero==0]=0
-  atrMask = h5file[k[0]][ifgram].attrs
-
-  gm = h5filem.create_group('mask')
-  dset = gm.create_dataset('mask', data=Mask, compression='gzip')
-  for key, value in atrMask.iteritems():
-      gm.attrs[key] = value
 
   h5file.close()
   h5filem.close()
@@ -366,7 +359,6 @@ def main(argv):
   date12_to_rmv=[]
   for igram in ifgrams_to_rmv:
      date12_to_rmv.append(igram.split('-sim')[0].split('filt_')[-1])
-
 
   try:
      corFile
@@ -397,9 +389,9 @@ def main(argv):
   print 'writing >>> Modified_Mask.h5'
   
   h5mask = h5py.File('Modified_Mask.h5','w')
-  group=h5mask.create_group('mask')
-  dset = group.create_dataset(os.path.basename('mask'), data=Mask, compression='gzip')
-  for key, value in atrMask.iteritems():
+  group  = h5mask.create_group('mask')
+  dset   = group.create_dataset(os.path.basename('mask'), data=Mask, compression='gzip')
+  for key, value in atr.iteritems():
       group.attrs[key] = value
   h5mask.close()      
 

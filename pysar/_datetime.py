@@ -64,6 +64,7 @@ def date_list(igramFile):
   elif 'coherence'    in k: k[0] = 'coherence'
   if k[0] not in  ['interferograms','coherence','wrapped']:
       print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
+  print 'reading date list from '+k[0]
 
   dateList = []
   ifgramList = h5file[k[0]].keys()

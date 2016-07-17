@@ -291,7 +291,7 @@ def main(argv):
 
   cmdClean = 'rm '+kmlname;      os.system(cmdClean)
   cmdClean = 'rm '+figName;      os.system(cmdClean)
-  cmdClean = 'rm colorbar.png';  os.system(cmdClean)
+  #cmdClean = 'rm colorbar.png';  os.system(cmdClean)
 
 
 #######################################################

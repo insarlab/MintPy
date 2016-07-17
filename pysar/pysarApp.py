@@ -349,30 +349,19 @@ def main(argv):
 #########################################
   print '\n**********  Referencing Interferograms  ***************'
   if os.path.isfile('Seeded_'+igramFile):
-    igramFile = 'Seeded_'+igramFile
-    print igramFile + ' already exists.'
+      igramFile = 'Seeded_'+igramFile
+      print igramFile + ' already exists.'
+  elif os.path.isfile('Modified_Seeded_'+igramFile):
+      igramFile = 'Modified_Seeded_'+igramFile
+      print igramFile + ' already exists.'
   else:
-    print 'referncing all interferograms to the same pixel.'
-    seedCmd = 'seed_data.py -f '+igramFile+' -t '+templateFile+' -M '+maskFile
+      print 'referncing all interferograms to the same pixel.'
+      seedCmd = 'seed_data.py -f '+igramFile+' -t '+templateFile+' -M '+maskFile
+      igramFile = 'Seeded_'+igramFile
+      print seedCmd  
+      os.system(seedCmd)
 
-    #if 'pysar.seed.lalo' in template.keys():
-    #   'Checking lat/lon refernce point' 
-    #   lat= template['pysar.seed.lalo'].split(',')[0]
-    #   lon= template['pysar.seed.lalo'].split(',')[1]
-    #   seedCmd= 'seed_data.py -f ' + igramFile + ' -l ' +lat+ ' -L '+lon
-    #elif 'pysar.seed.yx' in template.keys():
-    #   'Checking y/x reference point'
-    #   y= template['pysar.seed.yx'].split(',')[0]
-    #   x= template['pysar.seed.yx'].split(',')[1]
-    #   seedCmd= 'seed_data.py -f ' + igramFile + ' -y ' +y+ ' -x '+x
-    #else: 
-    #   seedCmd= 'seed_data.py -f ' + igramFile
-
-    igramFile = 'Seeded_'+igramFile
-    print seedCmd  
-    os.system(seedCmd)
-
-  if os.path.isfile('Modified_'+igramFile):  igramFile = 'Modified_'+igramFile
+  #if os.path.isfile('Modified_'+igramFile):  igramFile = 'Modified_'+igramFile
 
 ############################################
 # Unwrapping Error Correction (Optional)
