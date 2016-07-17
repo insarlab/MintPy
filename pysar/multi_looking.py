@@ -104,8 +104,8 @@ def main(argv):
 
   try:  
       file = argv[0]
-      alks = int(argv[1]);  print 'number of multilooking in azimuth / latitude  direction: '+str(alks)
-      rlks = int(argv[2]);  print 'number of multilooking in range   / longitude direction: '+str(rlks)
+      alks = int(argv[1])
+      rlks = int(argv[2])
   except:
       Usage();sys.exit(1)
 
@@ -116,7 +116,10 @@ def main(argv):
   ################################################################################
   atr = readfile.read_attributes(file)
   file_type = atr['FILE_TYPE']
-  print 'multilooking '+file_type
+  print '\n***************** Multilooking *********************'
+  print 'number of multilooking in azimuth / latitude  direction: '+str(alks)
+  print 'number of multilooking in range   / longitude direction: '+str(rlks)
+  print 'input file: '+file_type
 
   if ext == '.h5':
       h5file_mli=h5py.File(outName,'w')

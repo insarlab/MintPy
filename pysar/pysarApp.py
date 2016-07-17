@@ -224,6 +224,9 @@ def main(argv):
   except:
      if os.getenv('PARENTDIR'):  tssarProjectDir = os.getenv('SCRATCHDIR')+'/'+projectName+"/TSSAR"
      else:                       tssarProjectDir = os.getenv('TSSARDIR')+'/'+projectName
+  print '\n********************************************************'
+  print   '*********************    PySAR    **********************'
+  print '********************************************************\n'
   print "TSSAR directory: " + os.path.abspath(tssarProjectDir)
   if not os.path.isdir(tssarProjectDir): os.mkdir(tssarProjectDir)
   os.chdir(tssarProjectDir)

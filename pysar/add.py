@@ -75,7 +75,7 @@ def main(argv):
       except: pass
   else: Usage();  sys.exit(1)
 
-  print '****************** Add **********************'
+  print '\n****************** Add **********************'
   print 'Input files: '
   print fileList
 

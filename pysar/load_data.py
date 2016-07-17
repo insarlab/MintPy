@@ -119,6 +119,7 @@ def main(argv):
      else:
         processProjectDir = os.getenv('PROCESSDIR')+'/'+projectName
         tssarProjectDir   = os.getenv('TSSARDIR')  +'/'+projectName
+  print '\n*************** Loading Data into PySAR ****************'
   print "PROCESS directory: "+processProjectDir
   print "TSSAR   directory: "+tssarProjectDir
   if not os.path.isdir(tssarProjectDir): os.mkdir(tssarProjectDir)

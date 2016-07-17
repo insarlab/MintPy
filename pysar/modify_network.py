@@ -140,6 +140,7 @@ def main(argv):
   k=h5file.keys()
   if 'interferograms' in k: k[0] = 'interferograms'
   elif 'coherence'    in k: k[0] = 'coherence'
+  print '\n*************** Modify Network ****************'
   print 'Input file is '+k[0]
   #if h5file.keys()[0] != 'interferograms':
   #    print 'Input file should be interferograms'; sys.exit(1)

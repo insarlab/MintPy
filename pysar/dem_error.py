@@ -89,6 +89,7 @@ def main(argv):
   except: outname = timeSeriesFile.replace('.h5','')+'_demCor.h5'
 
   ##### Read Time Series
+  print '\n*************** Topographic Error Correction ****************'
   print "Loading time series: " + timeSeriesFile
   atr = readfile.read_attributes(timeSeriesFile)
   h5timeseries = h5py.File(timeSeriesFile)

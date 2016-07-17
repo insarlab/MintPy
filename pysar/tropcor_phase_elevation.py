@@ -109,6 +109,9 @@ def main(argv):
     else:  print 'Mask file not recognized!';  Usage();  sys.exit(1)    
 
     #h5Mask.close()
+
+    print '\n************ Tropospheric Delay Correction - Topo-related *************'
+
 ###################################################
     h5timeseries = h5py.File(timeSeriesFile)
     yref=h5timeseries['timeseries'].attrs['ref_y']

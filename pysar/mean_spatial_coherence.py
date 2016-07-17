@@ -47,6 +47,7 @@ def main(argv):
   try:    outName = argv[2]
   except: outName = 'average_spatial_coherence.h5'
 
+  print '\n*************** Average Spatial Coherence ******************'
   epochList = h5file[k[0]].keys(); print 'number of epoch: '+str(len(epochList))
   epochSet  = h5file[k[0]][epochList[0]].get(epochList[0])
   epochMean = np.zeros(epochSet.shape)

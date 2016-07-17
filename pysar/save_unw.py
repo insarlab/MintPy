@@ -12,6 +12,12 @@
 import sys
 import os
 
+from numpy import pi
+import h5py
+
+import pysar._writefile as writefile
+ 
+
 def Usage():
   print '''
 ****************************************************************
@@ -42,15 +48,12 @@ def main(argv):
   try:    File=argv[0]
   except: Usage();sys.exit(1)
 
-  from numpy import pi
-  import h5py
-  import pysar._writefile as writefile
- 
   h5file=h5py.File(File,'r')
   k=h5file.keys()
   if 'interferograms' in k: k[0] = 'interferograms'
   elif 'coherence'    in k: k[0] = 'coherence'
   elif 'timeseries'   in k: k[0] = 'timeseries'
+  print '\n************* Output to ROI_PAC format ***************'
 
   if 'velocity' in k:
     dset = h5file['velocity'].get('velocity')

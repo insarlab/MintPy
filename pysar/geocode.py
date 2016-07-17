@@ -103,7 +103,8 @@ def main(argv):
    h5file=h5py.File(file,'r')
    atr = readfile.read_attributes(file)
    k = atr['FILE_TYPE']
-   print 'geocoding '+k
+   print '\n***************** Geocoding *******************'
+   print 'input file: '+k
 
    #### Subsetted radar coded file
    try:

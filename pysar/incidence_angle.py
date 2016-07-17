@@ -85,6 +85,7 @@ def main(argv):
 
     ##### Read attributes
     atr = readfile.read_attributes(File)
+    print '\n*************** Generate Incidence Angle *****************'
 
     ##### Calculate look angle
     angle = look_angle(atr)

@@ -51,6 +51,7 @@ def main(argv):
   try: file = argv[0]
   except: Usage(); sys.exit(1)
 
+  print '\n*************** Save to GRD file for GMT ****************'
   print 'Input file: '+file
   ext = os.path.splitext(file)[1]
 

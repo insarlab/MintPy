@@ -102,6 +102,7 @@ def main(argv):
   elif operator in ['/','obelus','divide',   'division']:        operator = 'divide'
   elif operator in ['^','exp',   'exponential']:                 operator = 'exp'
   else:  print 'ERROR: Unrecognized operator: '+operator;  sys.exit(1)
+  print '\n*************** Image Math ******************'
   print 'operation: '+operator+' '+str(operand)
 
   ext = os.path.splitext(file)[1]

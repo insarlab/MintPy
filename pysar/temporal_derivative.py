@@ -41,6 +41,7 @@ def main(argv):
 
 
   ########################################################
+  print '\n************ Temporal Derivative **************'
   print "Loading time series: " + timeSeriesFile
   h5timeseries = h5py.File(timeSeriesFile)
   dateList = h5timeseries['timeseries'].keys()

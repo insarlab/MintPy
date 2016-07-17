@@ -179,6 +179,8 @@ def main(argv):
   try:    outName
   except: outName = File.split('.')[0]+'_unwCor'+ext
 
+  print '\n**************** Unwrapping Error Correction ******************'
+
   ####################  Triangular Consistency (Phase Closure)  ####################
   if method == 'triangular_consistency':
       print 'Phase unwrapping error correction using Triangular Consistency / Phase Closure'

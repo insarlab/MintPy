@@ -88,6 +88,7 @@ def main(argv):
   except: outName = 'reconstructed_'+igramFile
 
   #####
+  print '\n**************** Reconstruct Interferograms ****************'
   estData,nrows,ncols=reconstruct_igrams_from_timeseries(h5timeseries,h5igrams)
   
   h5estIgram=h5py.File(outName,'w')
