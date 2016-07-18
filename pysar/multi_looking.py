@@ -17,6 +17,7 @@ import h5py
 import numpy as np
 
 import pysar._readfile as readfile
+import pysar._writefile as writefile
 
 
 ######################################## Sub Functions ############################################
@@ -103,38 +104,36 @@ def Usage():
 def main(argv):
 
   try:  
-      file = argv[0]
+      File = argv[0]
       alks = int(argv[1])
       rlks = int(argv[2])
   except:
       Usage();sys.exit(1)
 
-  ext = os.path.splitext(file)[1]
+  ext = os.path.splitext(File)[1]
   try:     outName = argv[3]
-  except:  outName = file.split('.')[0]+'_a'+str(int(alks))+'lks_r'+str(int(rlks))+'lks'+ext
+  except:  outName = File.split('.')[0]+'_a'+str(int(alks))+'lks_r'+str(int(rlks))+'lks'+ext
 
   ################################################################################
-  atr = readfile.read_attributes(file)
-  file_type = atr['FILE_TYPE']
+  atr = readfile.read_attributes(File)
+  k = atr['FILE_TYPE']
   print '\n***************** Multilooking *********************'
   print 'number of multilooking in azimuth / latitude  direction: '+str(alks)
   print 'number of multilooking in range   / longitude direction: '+str(rlks)
-  print 'input file: '+file_type
+  print 'input file: '+k
 
-  if ext == '.h5':
-      h5file_mli=h5py.File(outName,'w')
-      h5file=h5py.File(file,'r')
-      k = atr['FILE_TYPE']
+  if k in ['interferograms','coherence','wrapped','timeseries']:
+      h5file     = h5py.File(File,'r')
+      h5file_mli = h5py.File(outName,'w')
 
       print 'writing >>> '+outName 
 
       if k in ['interferograms','coherence','wrapped']:
-          print 'Multilooking the interferograms'
           gg = h5file_mli.create_group(k)
           igramList = h5file[k].keys()
           for igram in igramList:
               print igram
-              unw = h5file[k][igram].get(igram)
+              unw = h5file[k][igram].get(igram)[:]
               unwlks = multilook(unw,alks,rlks)
               group = gg.create_group(igram)
               dset = group.create_dataset(igram, data=unwlks, compression='gzip')
@@ -142,37 +141,17 @@ def main(argv):
               atr = h5file[k][igram].attrs
               atr = multilook_attributes(atr,alks,rlks)
               for key, value in atr.iteritems():   group.attrs[key] = value
-          try:
-              dset1=h5file['mask'].get('mask')
-              mask=dset1[0:dset1.shape[0],0:dset1.shape[1]]
-              masklks=multilook(mask,alks,rlks)
-              group=h5file_mli.create_group('mask')
-              dset = group.create_dataset('mask', data=masklks, compression='gzip')
-          except: print 'No mask group found.'
 
-      elif k in ['timeseries','temporal_coherence', 'velocity', 'mask', 'rmse']:
+      elif k == 'timeseries':
+          dateList=h5file[k].keys()
+          dateList = sorted(dateList)
+
           group = h5file_mli.create_group(k)
-
-          if k == 'timeseries':
-              dateList=h5file[k].keys()
-              for d in dateList:
-                  print d
-                  unw = h5file[k].get(d)
-                  unwlks=multilook(unw,alks,rlks)
-                  dset = group.create_dataset(d, data=unwlks, compression='gzip')
-          elif k in ['temporal_coherence', 'velocity', 'mask', 'rmse']:
-              dset1 = h5file[k].get(k)
-              unw = dset1[0:dset1.shape[0],0:dset1.shape[1]]
+          for d in dateList:
+              print d
+              unw = h5file[k].get(d)[:]
               unwlks=multilook(unw,alks,rlks)
-              dset = group.create_dataset(k, data=unwlks, compression='gzip')
-
-          try:
-              dset1 = h5file['mask'].get('mask')
-              Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-              Masklks=multilook(Mask,alks,rlks)
-              group=h5file_mli.create_group('mask')
-              dset = group.create_dataset('mask', data=Masklks, compression='gzip')
-          except:  print 'No mask group found.'
+              dset = group.create_dataset(d, data=unwlks, compression='gzip')
 
           ## Update attributes
           atr = h5file[k].attrs
@@ -184,16 +163,15 @@ def main(argv):
 
   ################################################################################
   else:
-      import pysar._writefile as writefile
       ####### To multi_look geomap*.trans file, both its file size and value need to be reduced.
-      if file_type == '.trans':
-          rg,az,atr = readfile.read(file)
+      if k == '.trans':
+          rg,az,atr = readfile.read(File)
           rgmli = multilook(rg,alks,rlks);    rgmli = rgmli/float(rlks)
           azmli = multilook(az,alks,rlks);    azmli = azmli/float(alks)
           atr = multilook_attributes(atr,alks,rlks)
           writefile.write(rgmli,azmli,atr,outName)
       else:
-          data,atr = readfile.read(file)
+          data,atr = readfile.read(File)
           data_mli = multilook(data,alks,rlks)
           atr = multilook_attributes(atr,alks,rlks)
           writefile.write(data_mli,atr,outName)
