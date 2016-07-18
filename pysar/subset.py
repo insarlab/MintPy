@@ -18,6 +18,7 @@
 #                   Add coord_geo2radar(),check_subset(),subset_attributes()
 # Yunjun, Jun 2016: Add geo_box()
 # Yunjun, Jul 2016: add parallel support
+#                   add outlier fill option
 
 
 import os
@@ -25,6 +26,7 @@ import sys
 import getopt
 
 import h5py
+import numpy as np
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -47,6 +49,7 @@ def coord_geo2radar(geoCoord,atr,type):
       elif type == 'longitude':
           radarCoord.append(int((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP'])))
   #print 'input '+type+': '+str(geoCoord[i])
+  radarCoord.sort()
 
   return radarCoord
 
@@ -176,18 +179,49 @@ def geo_box(atr):
 
   return box
 
+def box_overlap_index(box1,box2):
+  ## Calculate the overlap of two input boxes
+  ##   and output the index box of the overlap in each's coord.
+
+  x0 = max(box1[0],box2[0])
+  y0 = max(box1[1],box2[1])
+  x1 = min(box1[2],box2[2])
+  y1 = min(box1[3],box2[3])
+
+  if x0 >= x1 or y0 >= y1:
+      print 'No overlap between two ranges!'
+      print 'box 1:'
+      print box1
+      print 'box 2:'
+      print box2
+      sys.exit(1)
+
+  box  = (x0,y0,x1,y1)
+  idx1 = (box[0]-box1[0],box[1]-box1[1],box[2]-box1[0],box[3]-box1[1])
+  idx2 = (box[0]-box2[0],box[1]-box2[1],box[2]-box2[0],box[3]-box2[1])
+
+  return idx1, idx2
+
 
 ################################################################
-def subset_file(File,sub_x,sub_y,outName=''):
+def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
 
-  box = (sub_x[0],sub_y[0],sub_x[1],sub_y[1])
-
-  if outName == '':  outName = 'subset_'+os.path.basename(File)
+  ##### Overlap between subset and data range
+  atr = readfile.read_attributes(File)
+  width  = int(atr['WIDTH'])
+  length = int(atr['FILE_LENGTH'])
+  box1 = (0,0,width,length)
+  box2 = (sub_x[0],sub_y[0],sub_x[1],sub_y[1])
+  idx1,idx2 = box_overlap_index(box1,box2)
+  print 'data   range:'
+  print box1
+  print 'subset range:'
+  print box2
 
   ###########################  Data Read and Write  ######################
-  atr = readfile.read_attributes(File)
   k = atr['FILE_TYPE']
   print 'file type: '+k
+  if outName == '':  outName = 'subset_'+os.path.basename(File)
 
   ##### Multiple Dataset File
   if k in ['timeseries','interferograms','wrapped','coherence']:
@@ -207,8 +241,10 @@ def subset_file(File,sub_x,sub_y,outName=''):
       for epoch in epochList:
           print epoch
           dset = h5file[k].get(epoch)
+          data_overlap = dset[idx1[1]:idx1[3],idx1[0]:idx1[2]]
 
-          data = dset[sub_y[0]:sub_y[1],sub_x[0]:sub_x[1]]
+          data = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
+          data[idx2[1]:idx2[3],idx2[0]:idx2[2]] = data_overlap
 
           dset = group.create_dataset(epoch, data=data, compression='gzip')
 
@@ -220,22 +256,35 @@ def subset_file(File,sub_x,sub_y,outName=''):
           print epoch
           dset = h5file[k][epoch].get(epoch)
           atr  = h5file[k][epoch].attrs
+          data_overlap = dset[idx1[1]:idx1[3],idx1[0]:idx1[2]]
 
-          data = dset[sub_y[0]:sub_y[1],sub_x[0]:sub_x[1]]
+          data = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
+          data[idx2[1]:idx2[3],idx2[0]:idx2[2]] = data_overlap
+
           atr  = subset_attributes(atr,sub_y,sub_x)
-
           gg = group.create_group(epoch)
           dset = gg.create_dataset(epoch, data=data, compression='gzip')
           for key, value in atr.iteritems():    gg.attrs[key] = value
 
   ##### Single Dataset File
   elif k == '.trans':
-      rg,az,atr = readfile.read(File,box)
-      atr       = subset_attributes(atr,sub_y,sub_x)
+      rg_overlap,az_overlap,atr = readfile.read(File,idx1)
+
+      rg = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
+      rg[idx2[1]:idx2[3],idx2[0]:idx2[2]] = rg_overlap
+
+      az = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
+      az[idx2[1]:idx2[3],idx2[0]:idx2[2]] = az_overlap
+
+      atr = subset_attributes(atr,sub_y,sub_x)
       writefile.write(rg,az,atr,outName)
   else:
-      data,atr = readfile.read(File,box)
-      atr      = subset_attributes(atr,sub_y,sub_x)
+      data_overlap,atr = readfile.read(File,idx1)
+
+      data = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
+      data[idx2[1]:idx2[3],idx2[0]:idx2[2]] = data_overlap
+
+      atr = subset_attributes(atr,sub_y,sub_x)
       writefile.write(data,atr,outName)
 
   ##### End Cleaning
@@ -273,7 +322,11 @@ def Usage():
       -L/--lon : subset range in longitude
       -r       : reference file, subset to the same lalo as reference file
 
-      --parallel : enable parallel computing
+      --parallel     : enable parallel computing
+      --outfill-nan  : fill outside area with numpy.nan
+      --outfill-zero : fill outside area with zero
+      --outfill      : fill with input value if subset is outside of input data range
+                       --outfill 0
 
   Example:
       subset.py velocity.h5 SinabungT495F50AlosA.template
@@ -285,6 +338,8 @@ def Usage():
       subset.py -f geo_incidence.h5   -r subset_geo_velocity.h5
 
       subset.py -f '*velocity*.h5,timeseries*.h5'  -y 400:1500  -x 200:600  --parallel
+      subset.py -f geo_velocity.h5  -l 32.2:33.5  --outfill-nan
+      subset.py -f Mask.h5          -x 500:3500   --outfill 0
 
 ****************************************************************
   '''
@@ -298,7 +353,8 @@ def main(argv):
   ############### Check Inputs ###############
   if len(sys.argv)>3:
       try:
-          opts, args = getopt.getopt(argv,'f:l:L:o:t:x:y:r:',['lat=','lon=','row=','col=','parallel'])
+          opts, args = getopt.getopt(argv,'f:l:L:o:t:x:y:r:',['lat=','lon=','row=','col=',\
+                                          'parallel','outfill=','outfill-nan','outfill-zero'])
       except getopt.GetoptError:
           print 'Error while getting args'
           Usage() ; sys.exit(1)
@@ -308,11 +364,14 @@ def main(argv):
           elif opt == '-o':   outName      = arg
           elif opt == '-t':   templateFile = arg
           elif opt == '-r':   refFile      = arg
-          elif opt in ['-x','--col']:   sub_x   = [int(i)   for i in arg.split(':')];    sub_x.sort()
-          elif opt in ['-y','--row']:   sub_y   = [int(i)   for i in arg.split(':')];    sub_y.sort()
-          elif opt in ['-l','--lat']:   sub_lat = [float(i) for i in arg.split(':')];  sub_lat.sort()
-          elif opt in ['-L','--lon']:   sub_lon = [float(i) for i in arg.split(':')];  sub_lon.sort()
-          elif opt in '--parallel'  :   parallel = 'yes'
+          elif opt in ['-x','--col']  :   sub_x   = [int(i)   for i in arg.split(':')];    sub_x.sort()
+          elif opt in ['-y','--row']  :   sub_y   = [int(i)   for i in arg.split(':')];    sub_y.sort()
+          elif opt in ['-l','--lat']  :   sub_lat = [float(i) for i in arg.split(':')];  sub_lat.sort()
+          elif opt in ['-L','--lon']  :   sub_lon = [float(i) for i in arg.split(':')];  sub_lon.sort()
+          elif opt in '--parallel'    :   parallel = 'yes'
+          elif opt in '--outfill'     :   out_fill = float(arg)
+          elif opt in '--outfill-nan' :   out_fill = np.nan
+          elif opt in '--outfill-zero':   out_fill = 0.0
 
   elif len(sys.argv)==3:
       File         = argv[0].split(',')
@@ -403,10 +462,13 @@ def main(argv):
       except: sub_x = [0,width]
 
   ##### Check subset range
-  sub_y,sub_x = check_subset_range(sub_y,sub_x,atr)
-  if sub_y[1]-sub_y[0] == length and sub_x[1]-sub_x[0] == width:
-      print 'Input subset range == data size, no need to subset.'
-      sys.exit(0)
+  try:
+      out_fill
+  except:
+      sub_y,sub_x = check_subset_range(sub_y,sub_x,atr)
+      if sub_y[1]-sub_y[0] == length and sub_x[1]-sub_x[0] == width:
+          print 'Input subset range == data size, no need to subset.'
+          sys.exit(0)
 
 
   ################### Subset #######################
@@ -414,8 +476,8 @@ def main(argv):
       for file in fileList:
           print '-------------------------------------------'
           print 'subseting  : '+file
-          try:    subset_file(file,sub_x,sub_y,outName)
-          except: subset_file(file,sub_x,sub_y)
+          try:    subset_file(file,sub_x,sub_y,out_fill,outName)
+          except: subset_file(file,sub_x,sub_y,out_fill)
 
   else:
       print '-------------------------'
@@ -424,7 +486,7 @@ def main(argv):
       from joblib import Parallel, delayed
       import multiprocessing
       num_cores = multiprocessing.cpu_count()
-      Parallel(n_jobs=num_cores)(delayed(subset_file)(file,sub_x,sub_y) for file in fileList)
+      Parallel(n_jobs=num_cores)(delayed(subset_file)(file,sub_x,sub_y,out_fill) for file in fileList)
 
   print 'Done.'
 

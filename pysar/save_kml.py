@@ -52,10 +52,12 @@ def Usage():
       -r : dpi (dots per inch) [default = 300]
       --fig-size    : figure size in inch, default is [8.0,12.0]
       --noreference : do not show reference point
+      --ref-size    : reference point marker size in points
 
   Example:
  
          save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05
+         save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 --ref-size 2
          save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 -i yes -c jet -r 250
          save_kml.py -f LoadedData_ChamanT256EnvA6.h5 -d 971220-990703 
          save_kml.py -f timeseries.h5 -d 20060924         
@@ -76,10 +78,12 @@ def main(argv):
   fig_size      = [6.0,9.0]
   fig_unit      = 'mm/yr'
   disp_ref      = 'yes'
+  ref_size      = 8
 
 
   if len(sys.argv)>2:
-    try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:",['noreference','fig-size'])
+    try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:",['noreference','fig-size',\
+                                           'ref-size='])
     except getopt.GetoptError:  Usage() ; sys.exit(1)
  
     for opt,arg in opts:
@@ -93,6 +97,7 @@ def main(argv):
       elif opt == '-r':        fig_dpi = int(arg)
       elif opt == '--noreference':   disp_ref = 'no'
       elif opt == '--fig-size'   :   fig_size = [float(i) for i in arg.split(',')][0:2]
+      elif opt == '--ref-size'   :   ref_size = int(arg)
 
   elif len(sys.argv)==2:
     if argv[0]=='-h':               Usage(); sys.exit(1)
@@ -234,7 +239,8 @@ def main(argv):
       try:
           xref = int(atr['ref_x'])
           yref = int(atr['ref_y'])
-          ax.plot(xref,yref,'ks',ms=8)
+          ax.plot(xref,yref,'ks',ms=ref_size)
+          print 'showing reference point'
       except: print 'Cannot find reference point info!'
 
   ax.set_xlim([0,width])
@@ -290,7 +296,7 @@ def main(argv):
   os.system(cmdKMZ)
 
   cmdClean = 'rm '+kmlname;      os.system(cmdClean)
-  cmdClean = 'rm '+figName;      os.system(cmdClean)
+  #cmdClean = 'rm '+figName;      os.system(cmdClean)
   #cmdClean = 'rm colorbar.png';  os.system(cmdClean)
 
 
