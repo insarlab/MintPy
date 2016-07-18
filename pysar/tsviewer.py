@@ -12,6 +12,7 @@
 #                   Add plot_ts(), adjust_xaxis_date()
 # Yunjun, Jul 2016: Support reference date input
 #                   Support Zoom in for figure 1
+#                   Support lalo input
 
 
 import sys
@@ -32,7 +33,7 @@ import matplotlib.pyplot as plt
 import pysar._readfile as readfile
 import pysar._datetime as ptime
 import pysar.subset as subset
-from pysar.view import orbit_direction
+import pysar.view as view
 
 
 ################################## Sub Functions ###################################
@@ -167,6 +168,8 @@ def Usage():
         -y : y coordinate (range) of selection
         -X : x coordinate (range) of reference / comparison
         -Y : y coordinate (range) of reference / comparison
+        --lalo : latitude and longitude of selection (recommend to use it with -r option for now)
+                 i.e.  --lalo 32.12,130.59
 
      DEM
         -D : dem file
@@ -267,7 +270,7 @@ def main(argv):
   elif len(sys.argv)>2:
     try:   opts, args = getopt.getopt(argv,"f:F:v:a:b:s:m:c:w:u:l:h:D:C:V:t:T:d:r:x:y:X:Y:o:E:",
                                           ['save','nodisplay','unit=','exclude=','ref-date=','rect-color',\
-                                           'zero-start','zoom-x=','zoom-y=','zoom-lon','zoom-lat'])
+                                           'zero-start','zoom-x=','zoom-y=','zoom-lon','zoom-lat','lalo='])
     except getopt.GetoptError:    Usage() ; sys.exit(1)
 
     for opt,arg in opts:
@@ -294,6 +297,7 @@ def main(argv):
       elif opt == '-X':     ref_xsub = [int(i) for i in arg.split(':')];   ref_xsub.sort();
       elif opt == '-Y':     ref_ysub = [int(i) for i in arg.split(':')];   ref_ysub.sort();  # dispVelFig='no'
 
+      elif opt in '--lalo'           : lalosub         = [float(i) for i in arg.split(',')]
       elif opt in ['-E','--exclude'] : datesNot2show   = arg.split(',')
       elif opt in ['--rect-color']   : rectColor       = arg
       elif opt in ['--ref-date']     : ref_date        = ptime.yyyymmdd(arg)
@@ -319,6 +323,14 @@ def main(argv):
   dateList1 = sorted(dateList1)
   dates1,datevector1 = ptime.date_list2vector(dateList1)
   print '\n************ Time Series Display - Point *************'
+
+  ##### Select Check
+  try:
+      lalosub
+      xsub = subset.coord_geo2radar([lalosub[1]],atr,'longitude')
+      ysub = subset.coord_geo2radar([lalosub[0]],atr,'latitude')
+      if radius == 0:  radius = 3
+  except: pass
 
   ##############################################################
   global dates, dateList, datevector_all
@@ -428,26 +440,10 @@ def main(argv):
       except: pass
 
   ## Flip
-  orb_dir = orbit_direction(atr)
-  print orb_dir+' orbit'
-  ## flip by default if in radar coord
-  try:
-      atr['X_FIRST']
-      geocoord = 'yes'
+  try:        flip_lr
   except:
-      geocoord = 'no'
-
-  try: flip_lr
-  except:
-      if orb_dir == 'descending' and geocoord == 'no': flip_lr = 'yes'
-      else:                                            flip_lr = 'no'
-  try: flip_ud
-  except:
-      if orb_dir == 'ascending'  and geocoord == 'no': flip_ud = 'yes'
-      else:                                            flip_ud = 'no'
-  if flip_lr == 'yes':  print 'flip left and right'
-  if flip_ud == 'yes':  print 'flip up   and down'
-
+      try:    flip_ud
+      except: flip_lr, flip_ud = view.auto_flip_check(atr)
 
   ## Status bar
   def format_coord(x,y):

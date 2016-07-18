@@ -26,6 +26,7 @@
 #                   Add orbit_direction(), default flip based on asc_desc
 #                   Simplified code for multiple plots
 # Yunjun, Jul 2016: add --mask input option
+#                   add plot_dem_lalo() and plot_dem_yx(), auto_flip_check()
 
 
 import sys
@@ -138,6 +139,85 @@ def orbit_direction(atr):
       if abs(heading) < 90: return  'ascending'
       else:                 return 'descending'
   except: print 'Cannot found HEADING or HEADING_DEG attribute.'; sys.exit(1)
+
+
+##################################################
+def auto_flip_check(atr_dict):
+  ## Check flip left-right and up-down based on attribute dict
+
+  ## default value
+  flip_lr = 'no'
+  flip_ud = 'no'
+
+  ## flip by default if in radar coord
+  try:
+      atr_dict['X_FIRST']
+      geocoord = 'yes'
+  except:
+      geocoord = 'no'
+      orb_dir = orbit_direction(atr_dict)
+      print orb_dir+' orbit'
+      if   orb_dir == 'descending': flip_lr = 'yes'
+      elif orb_dir == 'ascending' : flip_ud = 'yes'
+      else: pass
+
+  return flip_lr, flip_ud
+
+
+##################################################
+def plot_dem_lalo(bmap, dem, geo_box, demShade='yes', demContour='no', contour_step=200.0, contour_sigma=3.0):
+  ## Plot DEM in geo-coordinate
+  ## Inputs:
+  ##     bmap       : basemap object
+  ##     dem        : dem data, 2D np.int16 matrix
+  ##     geo_box    : geo bounding box, 4-tuple as (urcrnrlon,urcrnrlat,llcrnrlon,llcrnrlat)
+  ##     demShade   : flag for shaded relief
+  ##     demContour : flag for topographic contour
+  ##
+  ## Examples:
+  ##     bmap = plot_dem_lalo(bmap,dem,geo_box,'no','yes')
+
+  if demShade == 'yes':
+      print 'show shaded relief DEM'
+      bmap.imshow(ut.hillshade(dem,50.0),origin='upper', cmap='gray')
+  if demContour == 'yes':
+      import scipy.ndimage as ndimage
+      import numpy.matlib
+      print 'show contour: step = '+str(contour_step)+' m'
+      dem_contour = ndimage.gaussian_filter(dem,sigma=contour_sigma,order=0)
+      contour_sequence = np.arange(-6000,9000,contour_step)
+      c_x = np.linspace(geo_box[0],geo_box[2],num=dem.shape[1],endpoint='FALSE').reshape(1,dem.shape[1])
+      c_xx= np.matlib.repmat(c_x,dem.shape[0],1)
+      c_y = np.linspace(geo_box[1],geo_box[3],num=dem.shape[0],endpoint='FALSE').reshape(dem.shape[0],1)
+      c_yy= np.matlib.repmat(c_y,1,dem.shape[1])
+      bmap.contour(c_xx,c_yy,dem_contour,contour_sequence,origin='upper',colors='black',alpha=0.5,latlon='FALSE')
+
+  return bmap
+
+
+##################################################
+def plot_dem_yx(ax, dem, demShade='yes', demContour='no', contour_step=200.0, contour_sigma=3.0):
+  ## Plot DEM in radar coordinate
+  ## Inputs:
+  ##     ax         : matplotlib axes object
+  ##     dem        : dem data, 2D np.int16 matrix
+  ##     demShade   : flag for shaded relief
+  ##     demContour : flag for topographic contour
+  ##
+  ## Examples:
+  ##     ax = plot_dem_yx(ax,dem,'no','yes')
+
+  if demShade == 'yes':
+      print 'show shaded relief DEM'
+      ax.imshow(ut.hillshade(dem,50.0), cmap='gray')
+  if demContour == 'yes':
+      import scipy.ndimage as ndimage
+      print 'show contour: step = '+str(contour_step)+' m'
+      dem_contour=ndimage.gaussian_filter(dem,sigma=contour_sigma,order=0)
+      contour_sequence=np.arange(-6000,9000,contour_step)
+      ax.contour(dem_contour,contour_sequence,origin='lower',colors='black',alpha=0.5)
+
+  return ax
 
 
 ##################  Usage  #######################
@@ -304,8 +384,6 @@ def main(argv):
 
   #fig_size   = [15.0,8.0]     # in inches; [15.0,8.0] for 13 inch Mac;
   #fig_size   = [30.0,16.0]     # in inches; [25,15] for 28 inch Monitor;
-  #flip_lr    = 'no'
-  #flip_ud    = 'no'
   #font_size = 8
   Hspace     = 0.1
   Wspace     = 0.1
@@ -521,24 +599,10 @@ def main(argv):
   print 'display in unit: '+disp_unit
 
   ## Flip
-  try:
-      orb_dir = orbit_direction(atr)
-      print orb_dir+' orbit'
-      ## flip by default if in radar coord
-      try: flip_lr
-      except:
-          if orb_dir == 'descending' and geocoord == 'no': flip_lr = 'yes'
-          else:                                            flip_lr = 'no'
-      try: flip_ud
-      except:
-          if orb_dir == 'ascending'  and geocoord == 'no': flip_ud = 'yes'
-          else:                                            flip_ud = 'no'
+  try:        flip_lr
   except:
-      flip_lr = 'no'
-      flip_ud = 'no'
-
-  if flip_lr == 'yes':  print 'flip left and right'
-  if flip_ud == 'yes':  print 'flip up   and down'
+      try:    flip_ud
+      except: flip_lr, flip_ud = auto_flip_check(atr)
 
   ## Display Min / Max
   try:
@@ -744,15 +808,6 @@ def main(argv):
                dem_box = (dem_win_x[0],dem_win_y[0],dem_win_x[1],dem_win_y[1])
                dem,demRsc = readfile.read(demFile,dem_box)
            except: print 'Can not use different size DEM file in radar coordinate.'; sys.exit
-
-       ##### DEM extension
-       if demShade == 'yes':           #DEM basemap
-          print 'show shaded relief DEM'
-       if demContour == 'yes':     #contour
-          print 'show contour: step = '+str(contour_step)+' m'
-          import scipy.ndimage as ndimage
-          dem_contour=ndimage.gaussian_filter(dem,sigma=contour_sigma,order=0)
-          contour_sequence=np.arange(-6000,9000,contour_step)
     except: pass
 
     ##################### Display #####################
@@ -790,18 +845,8 @@ def main(argv):
                    resolution='l', area_thresh=1., projection='cyl',suppress_ticks=False,ax=ax)
 
        ## Plot DEM
-       try:
-          demFile
-          if demShade == 'yes':
-             m.imshow(ut.hillshade(dem,50.0),origin='upper', cmap='gray')
-          if demContour == 'yes':
-             import numpy.matlib
-             c_x = np.linspace(llcrnrlon,urcrnrlon,num=dem.shape[1],endpoint='FALSE').reshape(1,dem.shape[1])
-             c_xx= np.matlib.repmat(c_x,dem.shape[0],1)
-             c_y = np.linspace(urcrnrlat,llcrnrlat,num=dem.shape[0],endpoint='FALSE').reshape(dem.shape[0],1)
-             c_yy= np.matlib.repmat(c_y,1,dem.shape[1])
-             m.contour(c_xx,c_yy,dem_contour,contour_sequence,origin='upper',colors='black',alpha=0.5,latlon='FALSE')
-       except:  pass
+       try: m = plot_dem_lalo(m,dem,geo_box,demShade,demContour)
+       except: pass
 
        ## Plot Data
        try:     im = m.imshow(data,cmap=ccmap,origin='upper',vmin=disp_min,vmax=disp_max)
@@ -845,13 +890,8 @@ def main(argv):
        print 'plot in Y/X'
 
        ## Plot DEM
-       try:
-          demFile
-          if demShade == 'yes':
-             ax.imshow(ut.hillshade(dem,50.0), cmap='gray')
-          if demContour == 'yes':
-             ax.contour(dem_contour,contour_sequence,origin='lower',colors='black',alpha=0.5)
-       except:  pass
+       try: ax = plot_dem_yx(ax,dem,demShade,demContour)
+       except: pass
 
        ## Plot Data
        try:     im = ax.imshow(data,cmap=ccmap, vmin=disp_min, vmax=disp_max)
@@ -908,8 +948,8 @@ def main(argv):
 
     ##### Figure Setting
     ## Flip
-    if flip_lr == 'yes':  fig.gca().invert_xaxis()
-    if flip_ud == 'yes':  fig.gca().invert_yaxis()
+    if flip_lr == 'yes':  fig.gca().invert_xaxis();  print 'flip left and right'
+    if flip_ud == 'yes':  fig.gca().invert_yaxis();  print 'flip up   and down'
     ## Turn off axis
     if disp_axis == 'no': ax.axis('off')
 
@@ -1079,8 +1119,8 @@ def main(argv):
                 elif title == 'in':   add_inner_title(ax, figTitle, loc=1)
 
             ## Flip
-            if flip_lr == 'yes':  fig.gca().invert_xaxis()
-            if flip_ud == 'yes':  fig.gca().invert_yaxis()
+            if flip_lr == 'yes':  fig.gca().invert_xaxis();  print 'flip left and right'
+            if flip_ud == 'yes':  fig.gca().invert_yaxis();  print 'flip up   and down'
             ## Turn off axis
             if disp_axis == 'no': ax.axis('off')
 
