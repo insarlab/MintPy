@@ -58,7 +58,6 @@ def main(argv):
   ########################## Check Inputs ################################################
   ## Default value
   Masking  = 'no'
-  surfType = 'plane'
 
   if len(sys.argv) > 4:
       try: opts, args = getopt.getopt(argv,'h:f:m:o:s:t:')
@@ -85,10 +84,12 @@ def main(argv):
       templateContents = readfile.read_template(templateFile)
   except: pass
 
-  try: surfType
+  try:        surfType
   except:
-      try: surfType = templateContents['pysar.orbitError.method']
-      except: print 'No ramp type found!'; sys.exit(1)
+      try:    surfType = templateContents['pysar.orbitError.method']
+      except: surfType = 'plane'; print 'No ramp type input, use plane as default'
+  print '\n*************** Phase Ramp Removal ***********************'
+  print 'phase ramp type: '+surfType
 
   ##### Read Mask File 
   ## Priority:
@@ -100,7 +101,6 @@ def main(argv):
           #if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
           #elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
           #else: print 'No mask found!'; sys.exit(1)
-  print '\n*************** Phase Ramp Removal ***********************'
   try:
       Mask,Matr = readfile.read(maskFile)
       print 'mask: '+maskFile
@@ -117,7 +117,6 @@ def main(argv):
       width  = int(atr['WIDTH'])
       Mask=np.ones((length,width))
 
-
   ############################## Removing Phase Ramp #######################################
   fileList = glob.glob(File)
   fileList = sorted(fileList)
@@ -132,4 +131,4 @@ def main(argv):
 if __name__ == '__main__':
   main(sys.argv[1:])
 
-
+#

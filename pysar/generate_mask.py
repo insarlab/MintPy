@@ -17,7 +17,7 @@ import numpy as np
 import h5py
 
 import pysar._readfile as readfile
-
+import pysar._writefile as writefile
 
 def Usage():
   print '''
@@ -160,11 +160,8 @@ def main(argv):
  
 
   ##### Writing mask file
-  h5mask = h5py.File(outName,'w');  print 'writing >>> '+outName
-  group = h5mask.create_group('mask')
-  dset = group.create_dataset('mask', data=mask, compression='gzip')
-  for key, value in atr.iteritems():    group.attrs[key] = value
-  h5mask.close()  
+  atr['FILE_TYPE'] = 'mask'
+  writefile.write(mask,atr,outName)
 
 
 ############################################################

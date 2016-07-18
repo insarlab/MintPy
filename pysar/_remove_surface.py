@@ -155,7 +155,7 @@ def remove_surface(File,Mask,surf_type):
       h5flat.close()
   except: pass
 
-  print 'Remove Plane took ' + str(time.time()-start) +' secs'
+  print 'Remove '+surf_type+' took ' + str(time.time()-start) +' secs'
 
 ##################################################################
 
