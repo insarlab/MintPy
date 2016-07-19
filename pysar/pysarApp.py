@@ -245,7 +245,7 @@ def main(argv):
 # Loading Data
 #########################################
   print '\n**********  Loading Data  *****************************'
-  if os.path.isfile(igramFile):
+  if len(glob.glob(igramFile)) > 0:
     print igramFile + ' already exists.'
   else:
     loadCmd='load_data.py ' + templateFile 
