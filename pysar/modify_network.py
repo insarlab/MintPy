@@ -143,7 +143,8 @@ def main(argv):
   #if h5file.keys()[0] != 'interferograms':
   #    print 'Input file should be interferograms'; sys.exit(1)
   h5file = h5py.File(file)
-  ifgramList=h5file[k].keys()
+  ifgramList = h5file[k].keys()
+  ifgramList = sorted(ifgramList)
 
   try:     ifgrams_to_rmv
   except:  ifgrams_to_rmv=[]

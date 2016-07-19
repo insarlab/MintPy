@@ -65,6 +65,21 @@ def multilook_attributes(atr_dict,lks_az,lks_rg):
       atr['RANGE_PIXEL_SIZE']   = str(lks_rg*float(atr['RANGE_PIXEL_SIZE']))
   except: pass
 
+  try:
+      atr['ref_y'] = str(int(int(atr['ref_y'])/lks_az))
+      atr['ref_x'] = str(int(int(atr['ref_x'])/lks_rg))
+  except: pass
+  try:
+      atr['ref_lat'] = str(float(atr['ref_lat'])/lks_az)
+      atr['ref_lon'] = str(float(atr['ref_lon'])/lks_rg)
+  except: pass
+  try:
+      atr['subset_y0'] = str(int(int(atr['subset_y0'])/lks_az))
+      atr['subset_y1'] = str(int(int(atr['subset_y1'])/lks_az))
+      atr['subset_x0'] = str(int(int(atr['subset_x0'])/lks_rg))
+      atr['subset_x1'] = str(int(int(atr['subset_x1'])/lks_rg))
+  except: pass
+
   return atr
 
 
@@ -131,6 +146,8 @@ def main(argv):
       if k in ['interferograms','coherence','wrapped']:
           gg = h5file_mli.create_group(k)
           igramList = h5file[k].keys()
+          igramList = sorted(igramList)
+
           for igram in igramList:
               print igram
               unw = h5file[k][igram].get(igram)[:]
