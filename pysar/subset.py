@@ -466,6 +466,7 @@ def main(argv):
       out_fill
   except:
       sub_y,sub_x = check_subset_range(sub_y,sub_x,atr)
+      out_fill = np.nan
       if sub_y[1]-sub_y[0] == length and sub_x[1]-sub_x[0] == width:
           print 'Input subset range == data size, no need to subset.'
           sys.exit(0)
