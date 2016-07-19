@@ -119,6 +119,7 @@ def main(argv):
     inc_angle=inc_angle*pi/180.0
     ################################################################
     dateList = h5timeseries['timeseries'].keys()
+    dateList = sorted(dateList)
     print '\n*************** Tropospheric Delay Correction - PyAPS ****************'
 
     if atmSource == 'ECMWF':

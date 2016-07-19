@@ -70,10 +70,6 @@ def multilook_attributes(atr_dict,lks_az,lks_rg):
       atr['ref_x'] = str(int(int(atr['ref_x'])/lks_rg))
   except: pass
   try:
-      atr['ref_lat'] = str(float(atr['ref_lat'])/lks_az)
-      atr['ref_lon'] = str(float(atr['ref_lon'])/lks_rg)
-  except: pass
-  try:
       atr['subset_y0'] = str(int(int(atr['subset_y0'])/lks_az))
       atr['subset_y1'] = str(int(int(atr['subset_y1'])/lks_az))
       atr['subset_x0'] = str(int(int(atr['subset_x0'])/lks_rg))
