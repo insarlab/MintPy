@@ -50,8 +50,8 @@ def mask_with_multi_masks(in_file,mask_file):
   if kf[0] in ('interferograms','wrapped','coherence') and 'coherence' in h5mask.keys():
       print 'file type: '+kf[0]
       print 'Masking each '+kf[0]+' using its coherence file'
-      igramList=h5file[kf[0]].keys()
-      cohList=h5mask['coherence'].keys()
+      igramList = h5file[kf[0]].keys();         igramList = sorted(igramList)
+      cohList   = h5mask['coherence'].keys();   cohList   = sorted(cohList)
       gg = h5out.create_group(kf[0])
       for igram in igramList:
           print igram
@@ -96,7 +96,7 @@ def mask_file(in_file,M):
   if k in ['timeseries','interferograms','wrapped','coherence']:
       h5file = h5py.File(in_file,'r')
       epochList = h5file[k].keys()
-      epochList.sort()
+      epochList = sorted(epochList)
       print 'number of epochs: '+str(len(epochList))
 
       h5out = h5py.File(out_file,'w')

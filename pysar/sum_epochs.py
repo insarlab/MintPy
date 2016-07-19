@@ -10,8 +10,12 @@ import os
 import getopt
 import time
 import datetime
+
 import h5py
 import numpy as np
+
+import pysar._readfile as readfile
+
 
 def Usage():
   print '''
@@ -42,18 +46,21 @@ def main(argv):
 
   ########################################################
   print "\n*************** Calculating Sum of Epochs ****************"
+  atr = readfile.read_attributes(timeSeriesFile)
+  k = atr['FILE_TYPE']
   print "Loading time series: " + timeSeriesFile
   h5timeseries=h5py.File(timeSeriesFile) 
   dateList = h5timeseries['timeseries'].keys()
-  dateList.sort()
+  dateList = sorted(dateList)
 
   dateIndex={}
   for ni in range(len(dateList)):
       dateIndex[dateList[ni]]=ni
 
-  dset = h5timeseries['timeseries'].get(h5timeseries['timeseries'].keys()[0])
-  nrows,ncols=np.shape(dset)
-  D = np.zeros((len(h5timeseries['timeseries'].keys()),np.shape(dset)[0]*np.shape(dset)[1]),np.float32)
+  length = int(atr['FILE_LENGTH'])
+  width  = int(atr['WIDTH'])
+  length,width=np.shape(dset)
+  D = np.zeros((len(dateList),length*width),np.float32)
 
   for date in dateList:
      print date
@@ -81,9 +88,9 @@ def main(argv):
   group = h5sum.create_group('timeseries')
   for date in dateList:
     print date
-    dset = group.create_dataset(date, data=np.reshape(sumD[dateIndex[date]][:],[nrows,ncols]), compression='gzip')
+    dset = group.create_dataset(date, data=np.reshape(sumD[dateIndex[date]][:],[length,width]), compression='gzip')
 
-  for key,value in h5timeseries['timeseries'].attrs.iteritems():
+  for key,value in atr.iteritems():
       group.attrs[key] = value
 
   print 'Done.'

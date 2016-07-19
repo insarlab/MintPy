@@ -228,7 +228,7 @@ def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
       ##### Input File Info
       h5file = h5py.File(File,'r')
       epochList = h5file[k].keys()
-      epochList.sort()
+      epochList = sorted(epochList)
       print 'number of epochs: '+str(len(epochList))
 
       ##### Output File Info

@@ -129,7 +129,8 @@ def main(argv):
 
        f = h5py.File('geo_'+file,'w')
        group = f.create_group('timeseries')
-       epochList=h5file['timeseries'].keys()
+       epochList = h5file['timeseries'].keys()
+       epochList = sorted(epochList)
        for epoch in epochList:
            print 'geocoding '+epoch
            data = h5file['timeseries'].get(epoch)[:]
@@ -149,7 +150,8 @@ def main(argv):
 
        f = h5py.File('geo_'+file,'w')
        gg = f.create_group('interferograms')
-       igramList=h5file[k].keys()
+       igramList = h5file[k].keys()
+       igramList = sorted(igramList)
        for igram in igramList:
            print 'geocoding '+igram
            data = h5file[k][igram].get(igram)[:]

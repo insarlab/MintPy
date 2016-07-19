@@ -90,9 +90,14 @@ def main(argv):
 
   ##############################################################
   print '\n********** Inversion: Time Series to Velocity ***********'
+  atr = readfile.read_attributes(timeSeriesFile)
+  k = atr['FILE_TYPE']
+  print 'input file: '+k
+  if not k == 'timeseries':  print 'Input file is not timeseries!'; sys.exit(1)
   print "Loading time series file: " + timeSeriesFile
   h5timeseries = h5py.File(timeSeriesFile)
-  dateList1 = h5timeseries['timeseries'].keys()
+  dateList1 = h5timeseries[k].keys()
+  dateList1 = sorted(dateList1)
 
   ##############################################################
   print 'All dates existed:'
@@ -171,41 +176,40 @@ def main(argv):
   B1 = np.array(B1,np.float32)
 
   #########################################
-
-  dset = h5timeseries['timeseries'].get(h5timeseries['timeseries'].keys()[0])
-  timeseries = np.zeros((len(dateList),np.shape(dset)[0],np.shape(dset)[1]),np.float32)
+  width  = int(atr['WIDTH'])
+  length = int(atr['FILE_LENGTH'])
+  lt     = len(dateList)
+  timeseries = np.zeros((lt,length,width),np.float32)
   for date in dateList:
-    timeseries[dateIndex[date]] = h5timeseries['timeseries'].get(date)
+    timeseries[dateIndex[date]] = h5timeseries[k].get(date)
 
-
-  lt,rows,cols=np.shape(timeseries)
-  numpixels=rows*cols
+  numpixels=length*width
   
   Data=np.zeros([lt,numpixels])
   for i in range(lt):
      Data[i,:]=np.reshape(timeseries[i],[1,numpixels])
 
   x=np.dot(B1,Data)
-  velocity=np.reshape(x[0,:],[rows,cols])
+  velocity=np.reshape(x[0,:],[length,width])
 
   #####################################################
   print 'Calculating rmse'
   Data_linear=np.dot(B,x)
-  rmse=np.reshape(np.sqrt((np.sum((Data_linear-Data)**2,0))/lt),[rows,cols])
-  # se=np.reshape((np.sum(np.abs(Data_linear-Data),0)/lt),[rows,cols])
-  # rmse=np.reshape((np.sum((Data_linear-Data)**2,0))/lt,[rows,cols])
+  rmse=np.reshape(np.sqrt((np.sum((Data_linear-Data)**2,0))/lt),[length,width])
+  # se=np.reshape((np.sum(np.abs(Data_linear-Data),0)/lt),[length,width])
+  # rmse=np.reshape((np.sum((Data_linear-Data)**2,0))/lt,[length,width])
   ######################################################
   print 'Calculating the standard deviation of the estimated velocities'
   residual=Data_linear-Data
   s1=np.sqrt(np.sum(residual**2,0)/(lt-2))
   s2=np.sqrt(np.sum((datevector-np.mean(datevector))**2))
-  se=np.reshape(s1/s2,[rows,cols])
+  se=np.reshape(s1/s2,[length,width])
   ######################################################
    
   # SSt=np.sum((Data-np.mean(Data,0))**2,0)
   # SSres=np.sum(residual**2,0)
   # SS_REG=SSt-SSres
-  # Rsquared=np.reshape(SS_REG/SSt,[rows,cols])
+  # Rsquared=np.reshape(SS_REG/SSt,[length,width])
   ######################################################  
   # covariance of the velocities
   
@@ -227,7 +231,7 @@ def main(argv):
   group.attrs['date1'] = datevector[0]
   group.attrs['date2'] = datevector[lt-1]
   
-  for key , value in h5timeseries['timeseries'].attrs.iteritems():
+  for key , value in atr.iteritems():
      group.attrs[key]=value
   h5velocity.close()  
 
@@ -240,7 +244,7 @@ def main(argv):
   group.attrs['date1'] = datevector[0]
   group.attrs['date2'] = datevector[lt-1]
 
-  for key , value in h5timeseries['timeseries'].attrs.iteritems():
+  for key , value in atr.iteritems():
      group.attrs[key]=value  
 
   #####################################
@@ -251,7 +255,7 @@ def main(argv):
   group.attrs['date1'] = datevector[0]
   group.attrs['date2'] = datevector[lt-1]
 
-  for key , value in h5timeseries['timeseries'].attrs.iteritems():
+  for key , value in atr.iteritems():
      group.attrs[key]=value
 
   # print 'writing to '+outName_Rsquared

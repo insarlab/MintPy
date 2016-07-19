@@ -429,7 +429,7 @@ def main(argv):
         ax.set_title('epoch: '+dateList1[epoch_number])
         print 'display epoch: '+dateList1[epoch_number]
   except:
-     dset = h5timeseries['timeseries'].get(h5timeseries['timeseries'].keys()[-1])
+     dset = h5timeseries['timeseries'].get(dateList1[-1])
      ax.set_title('epoch: '+dateList1[-1])
      print 'display last epoch'
   #data1 = dset[win_y[0]:win_y[1],win_x[0]:win_x[1]]

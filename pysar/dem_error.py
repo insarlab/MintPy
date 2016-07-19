@@ -94,7 +94,7 @@ def main(argv):
   atr = readfile.read_attributes(timeSeriesFile)
   h5timeseries = h5py.File(timeSeriesFile)
   dateList = h5timeseries['timeseries'].keys()
-  dateList.sort()
+  dateList = sorted(dateList)
   lt = len(dateList)
   print 'number of epochs: '+str(lt)
 

@@ -603,6 +603,8 @@ def main(argv):
   except:
       try:    flip_ud
       except: flip_lr, flip_ud = auto_flip_check(atr)
+  if flip_lr == 'yes':  print 'flip left and right'
+  if flip_ud == 'yes':  print 'flip up   and down'
 
   ## Display Min / Max
   try:
@@ -948,8 +950,8 @@ def main(argv):
 
     ##### Figure Setting
     ## Flip
-    if flip_lr == 'yes':  fig.gca().invert_xaxis();  print 'flip left and right'
-    if flip_ud == 'yes':  fig.gca().invert_yaxis();  print 'flip up   and down'
+    if flip_lr == 'yes':  fig.gca().invert_xaxis();
+    if flip_ud == 'yes':  fig.gca().invert_yaxis();
     ## Turn off axis
     if disp_axis == 'no': ax.axis('off')
 
@@ -1119,8 +1121,8 @@ def main(argv):
                 elif title == 'in':   add_inner_title(ax, figTitle, loc=1)
 
             ## Flip
-            if flip_lr == 'yes':  fig.gca().invert_xaxis();  print 'flip left and right'
-            if flip_ud == 'yes':  fig.gca().invert_yaxis();  print 'flip up   and down'
+            if flip_lr == 'yes':  fig.gca().invert_xaxis();
+            if flip_ud == 'yes':  fig.gca().invert_yaxis();
             ## Turn off axis
             if disp_axis == 'no': ax.axis('off')
 

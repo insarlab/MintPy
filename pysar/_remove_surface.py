@@ -111,7 +111,7 @@ def remove_surface(File,Mask,surf_type):
   if k in ['interferograms','coherence','wrapped','timeseries']:
       h5file = h5py.File(File,'r')
       ifgramList = h5file[k].keys()
-      ifgramList.sort()
+      ifgramList = sorted(ifgramList)
       print 'number of epochs: '+str(len(ifgramList))
 
       h5flat = h5py.File(outName,'w')

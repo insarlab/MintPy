@@ -49,7 +49,8 @@ def main(argv):
 
   h5t=h5py.File(timeSeriesFile)
   dateList = h5t['timeseries'].keys()
-  dateList.sort()
+  dateList = sorted(dateList)
+
   if not refDate in dateList:
      print '''**********************
      Error:  Reference date was not found.
