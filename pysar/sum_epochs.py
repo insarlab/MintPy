@@ -59,7 +59,6 @@ def main(argv):
 
   length = int(atr['FILE_LENGTH'])
   width  = int(atr['WIDTH'])
-  length,width=np.shape(dset)
   D = np.zeros((len(dateList),length*width),np.float32)
 
   for date in dateList:

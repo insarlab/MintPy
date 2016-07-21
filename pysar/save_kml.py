@@ -9,6 +9,8 @@
 # Yunjun, Oct 2015: merge all HDF5 option into one
 #                   add support for ROI_PAC product
 # Yunjun, Nov 2015: support different fig unit
+#                   update colorbar
+
 
 import os
 import sys
@@ -19,9 +21,10 @@ except:  sys.exit('pykml should be installed!')
 from lxml import etree
 
 import numpy as np
+import h5py
 import matplotlib as mpl;  mpl.use('Agg')              # FA 7/2015: allows plot generation without running an X server
 import matplotlib.pyplot as plt
-import h5py
+from matplotlib import ticker
 
 import pysar._readfile as readfile
 
@@ -54,6 +57,9 @@ def Usage():
       --noreference : do not show reference point
       --ref-size    : reference point marker size in points
 
+      --cbar-label  : colorbar label
+                      LOS deformation velocity (default)
+
   Example:
  
          save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05
@@ -70,6 +76,7 @@ def Usage():
 
 def main(argv):
 
+  cbar_label    = 'LOS deformation velocity'
   color_map     = 'jet'
   disp_opposite = 'no'
   disp_colorbar = 'yes'
@@ -83,7 +90,7 @@ def main(argv):
 
   if len(sys.argv)>2:
     try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:",['noreference','fig-size',\
-                                           'ref-size='])
+                                           'ref-size=','cbar-color='])
     except getopt.GetoptError:  Usage() ; sys.exit(1)
  
     for opt,arg in opts:
@@ -95,9 +102,10 @@ def main(argv):
       elif opt == '-i':        disp_opposite = arg
       elif opt == '-w':        rewrapping    = arg
       elif opt == '-r':        fig_dpi = int(arg)
-      elif opt == '--noreference':   disp_ref = 'no'
+      elif opt == '--cbar-label' :   cbar_label = arg
       elif opt == '--fig-size'   :   fig_size = [float(i) for i in arg.split(',')][0:2]
       elif opt == '--ref-size'   :   ref_size = int(arg)
+      elif opt == '--noreference':   disp_ref = 'no'
 
   elif len(sys.argv)==2:
     if argv[0]=='-h':               Usage(); sys.exit(1)
@@ -250,7 +258,7 @@ def main(argv):
   plt.savefig(figName,pad_inches=0.0,transparent=True,dpi=fig_dpi)
 
   ############### Making colorbar
-  pc = plt.figure(figsize=(1,4))
+  pc = plt.figure(figsize=(1,8))
   axc = pc.add_subplot(111)
   cmap = mpl.cm.jet
   if   fig_unit in ['mm','mm/yr']: v_scale = 1000
@@ -258,9 +266,17 @@ def main(argv):
   elif fig_unit in ['m',  'm/yr']: v_scale = 1
   norm = mpl.colors.Normalize(vmin=Vmin*v_scale, vmax=Vmax*v_scale)
   clb  = mpl.colorbar.ColorbarBase(axc,cmap=cmap,norm=norm, orientation='vertical')
-  clb.set_label(fig_unit)
+
+  #clb.set_label(fig_unit)
+  clb.set_label(cbar_label+' ['+fig_unit+']')
+  clb.locator = ticker.MaxNLocator(nbins=9)
+  clb.update_ticks()
+
   pc.subplots_adjust(left=0.2,bottom=0.3,right=0.4,top=0.7)
-  pc.savefig('colorbar.png',bbox_inches='tight',transparent=True,dpi=300)
+  #pc.savefig('colorbar.png',bbox_inches='tight',transparent=True,dpi=300)
+  pc.patch.set_facecolor('white')
+  pc.patch.set_alpha(0.7)
+  pc.savefig('colorbar.png',bbox_inches='tight',facecolor=pc.get_facecolor(),dpi=300)
 
   ############## Generate KMZ file
   print 'generating kml file'

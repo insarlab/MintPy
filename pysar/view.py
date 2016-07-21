@@ -289,8 +289,8 @@ def Usage():
                   displacement: mm, cm, m (default)
                   velocity    : m/day, m/mon, cm/mon, cm/yr, m/yr (default)
 
-  --display-radar : display in radar coordinates for geocoded files. 
-                    By default, for geocoded file display in geo coordinate, otherwise display in radar coordinate
+  --radar-coord : display in radar coordinates for geocoded files. 
+                  By default, for geocoded file display in geo coordinate, otherwise display in radar coordinate
 
   Reference (in time and space):
   --noreference   : do not show reference point. By default, it will show if there is reference point in attributes.
@@ -405,7 +405,7 @@ def main(argv):
                                        ['help','wrap','displacement','opposite','fliplr','flipud','save','unit=',\
                                         'scale=','nodisplay','noreference','figsize=','dem-contour','dem-noshade',\
                                         'contour-step=','contour-smooth=','ref-epoch=','ref-color=','ref-symbol=',\
-                                        'ref-size=','display-radar','title=','dpi=','output=','exclude=','noaxis',\
+                                        'ref-size=','radar-coord','title=','dpi=','output=','exclude=','noaxis',\
                                         'point=','line=','no-multilook','mask=','notitle'])
 
      except getopt.GetoptError:
@@ -441,7 +441,7 @@ def main(argv):
         elif opt == '--dem-contour'   : demContour   = 'yes'
         elif opt == '--dem-noshade'   : demShade     = 'no'
         elif opt == '--displacement'  : dispDisplacement = 'yes';  rewrapping = 'no'
-        elif opt == '--display-radar' : disp_geo = 'no'
+        elif opt == '--radar-coord'   : disp_geo = 'no'
         elif opt == '--dpi'           : fig_dpi  = int(arg);   saveFig = 'yes'
         elif opt == '--figsize'       : fig_size = [float(i) for i in arg.split(',')][0:2]
         elif opt == '--fliplr'        : flip_lr      = 'yes'
