@@ -70,6 +70,35 @@ def read_igram_pairs(igramFile):
   return pairs
 
 
+#############################################################
+def read_baseline_file(baselineFile):
+  ## Read bl_list.txt and put each line into an array
+  fb = open(baselineFile)
+  lines = []
+  for line in fb.xreadlines():
+      l = str.replace(line,'\n','').strip()
+      lines.append(l)
+  fb.close()
+
+  ## Read each line and put the values into arrays
+  dates   = []
+  pbase   = []
+  doppler = []
+  prf     = []
+  SLCdirs = []
+  for line in lines:
+      c = line.split()                # splits on white space
+      dates.append(c[0])
+      pbase.append(float(c[1]))
+      doppler.append(np.array([float(c[2]), float(c[3]), float(c[4])]))
+      prf.append(float(c[5]))
+      SLCdirs.append(c[6])
+
+  dateList = ptime.yyyymmdd(dates)
+
+  return dateList, pbase
+
+
 ############################################################
 def pair_sort(pairs):
   for idx in range(len(pairs)):

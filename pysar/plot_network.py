@@ -156,16 +156,17 @@ def Usage():
 
   Usage:
        plot_network.py -f interferogramsFile -s fontsize -w linewidth
+       plot_network.py -b baselineFile -l pairsFile
 
     -f : interferograms file stored in hdf5 file format, 
              supported files: interferograms, coherence and wrapped
+    -b : baseline file
     -l : pairs info list file
     -s : the font size used for x and y labels (default is 12)
     -w : line width used for plotting (default is 2)
     -m : marker size (default is 16)
     -c : marker face color (default is orange)
     -t : temporal threshold
-    -b : baseline threshold
     -d : date (all interferograms with master or slave using the specified date is removed) 
 
     Save and Output
@@ -178,6 +179,7 @@ def Usage():
        plot_network.py -f Coherence.h5           --nodisplay
        plot_network.py -f Modified_LoadedData.h5 --nodisplay --list
        plot_network.py -f LoadedData.h5 -l pairs.list --save
+       plot_network.py -b bl_list.txt   -l Pairs.list
 
   ******************************************
   ******************************************  
@@ -200,25 +202,27 @@ def main(argv):
   saveList = 'no'
 
   if len(sys.argv)>2:
-    try:  opts, args = getopt.getopt(argv,"h:f:s:w:l:m:c:o:",['save','nodisplay','list'])
-    except getopt.GetoptError:
-      Usage() ; sys.exit(1)
+      try:  opts, args = getopt.getopt(argv,"h:b:f:s:w:l:m:c:o:",['save','nodisplay','list'])
+      except getopt.GetoptError:   Usage() ; sys.exit(1)
 
-    for opt,arg in opts:
-      if opt in ("-h","--help"):  Usage();  sys.exit()
-      elif opt == '-f':        igramsFile  = arg
-      elif opt == '-l':        listFile    = arg
-      elif opt == '-s':        fontSize    = int(arg)
-      elif opt == '-w':        lineWidth   = int(arg)
-      elif opt == '-m':        markerSize  = int(arg)
-      elif opt == '-c':        markerColor = arg
-      elif opt == '-o':        figName2  = arg;   saveFig = 'yes'
-      elif opt == '--save'     : saveFig   = 'yes'
-      elif opt == '--nodisplay': dispFig   = 'no';  saveFig = 'yes'
-      elif opt == '--list'     : saveList  = 'yes'
+      for opt,arg in opts:
+          if opt in ("-h","--help"):  Usage();  sys.exit()
+          elif opt == '-b':        baselineFile= arg
+          elif opt == '-f':        igramsFile  = arg
+          elif opt == '-l':        listFile    = arg
+          elif opt == '-s':        fontSize    = int(arg)
+          elif opt == '-w':        lineWidth   = int(arg)
+          elif opt == '-m':        markerSize  = int(arg)
+          elif opt == '-c':        markerColor = arg
+          elif opt == '-o':        figName2  = arg;   saveFig = 'yes'
+          elif opt == '--save'     : saveFig   = 'yes'
+          elif opt == '--nodisplay': dispFig   = 'no';  saveFig = 'yes'
+          elif opt == '--list'     : saveList  = 'yes'
 
-    try:     igramsFile
-    except:  Usage() ; sys.exit(1)
+      try:  igramsFile
+      except:
+          try:  baselineFile
+          except:  Usage() ; sys.exit(1)
 
   elif len(sys.argv)==2:   igramsFile = argv[0]
   else:                    Usage() ; sys.exit(1)
@@ -231,22 +235,28 @@ def main(argv):
           figName1 = 'BperpHist.pdf'
           figName2 = 'Network.pdf'
 
-  ############# Check Input File ###################
-  atr = readfile.read_attributes(igramsFile)
-  k = atr['FILE_TYPE']
-  print '\n******************** Plot Network **********************'
-  print 'Input file is '+k
-  if k not in  ['interferograms','coherence','wrapped']:
-      print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
-
   ############# Read Time and Bperp ################ 
-  dateList  = ptime.date_list(igramsFile)
-  dateList6 = ptime.yymmdd(dateList)
-  print 'number of acquisitions: '+str(len(dateList))
+  print '\n******************** Plot Network **********************'
+  try:
+      igramsFile
+      atr = readfile.read_attributes(igramsFile)
+      k = atr['FILE_TYPE']
+      if k not in  ['interferograms','coherence','wrapped']:
+          print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
 
-  Bp = ut.Baseline_timeseries(igramsFile)
+      print 'reading date and perpendicular baseline from '+k
+      dateList  = ptime.date_list(igramsFile)
+      dateList6 = ptime.yymmdd(dateList)
+      print 'number of acquisitions: '+str(len(dateList))
+      Bp = ut.Baseline_timeseries(igramsFile)
+  except:
+      baselineFile
+      print 'reading date and perpendicular baseline from '+baselineFile
+      dateList, Bp = pnet.read_baseline_file(baselineFile)
+      dateList6 = ptime.yymmdd(dateList)
 
   ############# Read Pairs Info ####################
+  print 'reading pairs info'
   try:
       listFile
       pairs = pnet.read_pairs_list(listFile,dateList)

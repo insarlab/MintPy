@@ -179,8 +179,8 @@ def main(argv):
       ####### To multi_look geomap*.trans file, both its file size and value need to be reduced.
       if k == '.trans':
           rg,az,atr = readfile.read(File)
-          rgmli = multilook(rg,alks,rlks);    rgmli = rgmli/float(rlks)
-          azmli = multilook(az,alks,rlks);    azmli = azmli/float(alks)
+          rgmli = multilook(rg,alks,rlks);    #rgmli = rgmli/float(rlks)
+          azmli = multilook(az,alks,rlks);    #azmli = azmli/float(alks)
           atr = multilook_attributes(atr,alks,rlks)
           writefile.write(rgmli,azmli,atr,outName)
       else:
