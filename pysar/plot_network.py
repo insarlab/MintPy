@@ -214,7 +214,7 @@ def main(argv):
           elif opt == '-w':        lineWidth   = int(arg)
           elif opt == '-m':        markerSize  = int(arg)
           elif opt == '-c':        markerColor = arg
-          elif opt == '-o':        figName2  = arg;   saveFig = 'yes'
+          #elif opt == '-o':        figName2  = arg;   saveFig = 'yes'
           elif opt == '--save'     : saveFig   = 'yes'
           elif opt == '--nodisplay': dispFig   = 'no';  saveFig = 'yes'
           elif opt == '--list'     : saveList  = 'yes'
@@ -227,13 +227,15 @@ def main(argv):
   elif len(sys.argv)==2:   igramsFile = argv[0]
   else:                    Usage() ; sys.exit(1)
 
-  if saveFig == 'yes':
+  ##### Output figure name
+  figName1 = 'BperpHist.pdf'
+  figName2 = 'Network.pdf'
+  try:
+      igramsFile
       if 'Modified' in igramsFile:
           figName1 = 'BperpHist_Modified.pdf'
           figName2 = 'Network_Modified.pdf'
-      else:
-          figName1 = 'BperpHist.pdf'
-          figName2 = 'Network.pdf'
+  except: pass
 
   ############# Read Time and Bperp ################ 
   print '\n******************** Plot Network **********************'

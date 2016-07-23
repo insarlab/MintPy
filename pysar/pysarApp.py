@@ -255,7 +255,7 @@ def main(argv):
     #print copyDemCmd
     #os.system(copyDemCmd)
 
-  if not os.path.isfile(igramFile): sys.exit('\nERROR: No interferograms file found!\n')
+  #if not os.path.isfile(igramFile): sys.exit('\nERROR: No interferograms file found!\n')
 
   ##########  Initial File Name - 2  ####
   try:  demGeoFile = find_filename(template, 'pysar.dem.geoCoord');   print 'DEM in geo   coordinate: '+demGeoFile
