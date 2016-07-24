@@ -101,7 +101,7 @@ def main(argv):
     for opt,arg in opts:
       if opt in ("-h","--help"):
         Usage();  sys.exit()
-      elif opt == '-f':        file           = arg
+      elif opt == '-f':        File           = arg
       elif opt == '-C':        corFile        = arg
       elif opt == '-s':        fontSize       = int(arg)
       elif opt == '-w':        lineWidth      = int(arg)
@@ -117,11 +117,11 @@ def main(argv):
       elif opt == '-l':        list_fileList  = arg.split(',')
 
 
-    try:  file
+    try:  File
     except:  Usage() ; sys.exit(1)
 
   elif len(sys.argv)==2:
-    file = argv[0]
+    File = argv[0]
     networkDisplay = 'yes'
   else:   Usage() ; sys.exit(1)
 
@@ -136,13 +136,13 @@ def main(argv):
   except: pass
 
 ###########################################################
-  atr = readfile.read_attributes(file)
+  atr = readfile.read_attributes(File)
   k = atr['FILE_TYPE']
   print '\n*************** Modify Network ****************'
   print 'Input file is '+k
   #if h5file.keys()[0] != 'interferograms':
   #    print 'Input file should be interferograms'; sys.exit(1)
-  h5file = h5py.File(file)
+  h5file = h5py.File(File)
   ifgramList = h5file[k].keys()
   ifgramList = sorted(ifgramList)
 
@@ -223,7 +223,7 @@ def main(argv):
     dates,datevector = ptime.date_list2vector(dateList)
 
     ##################################################  
-    Bp = ut.Baseline_timeseries(file)
+    Bp = ut.Baseline_timeseries(File)
     #############################################################
  
     ifgramList = h5file[k].keys()
@@ -326,7 +326,7 @@ def main(argv):
   print 'Number of interferograms to remove: '+str(len(ifgrams_to_rmv))
   print 'List   of interferograms to remove:' 
   print ifgrams_to_rmv
-  file_modified='Modified_'+file
+  file_modified='Modified_'+File
   h5filem = h5py.File(file_modified,'w')
   gg = h5filem.create_group(k)
   ifgram=ifgramList[0]
