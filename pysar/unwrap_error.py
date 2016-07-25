@@ -5,7 +5,7 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 # Yunjun, Jan 2016: add bonding points correction
-#
+# Yunjun, Jul 2016: add ramp removal step
 
 
 import sys
@@ -111,11 +111,12 @@ def Usage():
 
              Note: choose x/y_ref point in the patch that also have seed point, for consistency
                    in multiple images.
+        --ramp : ramp type, i.e. plane, quadratic
 
     Examples:
         unwrap_error.py -f Seeded_LoadedData.h5     -m Mask.h5 -t ShikokuT417F650_690AlosA.template
         unwrap_error.py -f Seeded_LoadedData.h5     -m Mask.h5 -x 283,305 -y 1177,1247
-        unwrap_error.py -f Seeded_081018_090118.unw -m Mask.h5 -x 283,305 -y 1177,1247
+        unwrap_error.py -f Seeded_081018_090118.unw -m Mask_all.h5 -x 283,305 -y 1177,1247 --ramp quadratic
 
   ************************************************************************************
   ************************************************************************************
@@ -125,11 +126,12 @@ def Usage():
 ####################################################################################################
 def main(argv):
 
-  method = 'triangular_consistency'    ## or 'bonding_point'
+  method    = 'triangular_consistency'    ## or 'bonding_point'
+  ramp_type = 'plane'
 
   ##### Check Inputs
   if len(sys.argv)>2:
-      try: opts, args = getopt.getopt(argv,'h:f:m:x:y:o:t:')
+      try: opts, args = getopt.getopt(argv,'h:f:m:x:y:o:t:',['ramp='])
       except getopt.GetoptError:  print 'Error while getting args';  Usage(); sys.exit(1)
 
       for opt,arg in opts:
@@ -140,6 +142,7 @@ def main(argv):
           elif opt in '-x':    x = [int(i) for i in arg.split(',')];    method = 'bonding_point'
           elif opt in '-y':    y = [int(i) for i in arg.split(',')];    method = 'bonding_point'
           elif opt in '-t':    templateFile = arg
+          elif opt in '--ramp':  ramp_type = arg.lower()
 
   elif len(sys.argv)==2:
       if argv[0] in ['-h','--help']:    Usage();  sys.exit()
@@ -332,6 +335,10 @@ def main(argv):
       print 'Number of bonding point pairs: '+str(len(x)/2)
       print 'Bonding points coordinates:\nx: '+str(x)+'\ny: '+str(y)
 
+      ##### Ramp Info
+      ramp_mask = Mask!=0
+      print 'ramp type: '+ramp_type
+
       ########## PySAR ##########
       if ext == '.h5':
           try:     h5file=h5py.File(File,'r')
@@ -349,13 +356,13 @@ def main(argv):
               dset = h5file[k[0]][igram].get(igram)
               data = dset[0:dset.shape[0],0:dset.shape[1]]
 
-              data_plane = rm.remove_data_surface(data,np.ones(dset.shape),'plane')
-              plane = data_plane - data
-              data_con = phase_bonding(data_plane,Mask,x,y)
-              data_con -= plane
+              data_ramp = rm.remove_data_surface(data,ramp_mask,ramp_type)
+              ramp = data_ramp - data
+              dataCor = phase_bonding(data_ramp,Mask,x,y)
+              dataCor -= ramp
 
               group = gg.create_group(igram)
-              dset = group.create_dataset(igram, data=data_con, compression='gzip')
+              dset = group.create_dataset(igram, data=dataCor, compression='gzip')
               for key, value in h5file[k[0]][igram].attrs.iteritems():
                   group.attrs[key]=value
 
@@ -373,13 +380,12 @@ def main(argv):
           print 'Input file is '+ext
           a,data,atr = readfile.read_float32(File);
 
-          Mplane = np.ones((int(atr['FILE_LENGTH']),int(atr['WIDTH'])))
-          data_plane = rm.remove_data_surface(data,Mplane,'plane')
-          plane = data_plane - data
-          data_con = phase_bonding(data_plane,Mask,x,y)
-          data_con -= plane
+          data_ramp = rm.remove_data_surface(data,ramp_mask,ramp_type)
+          ramp = data_ramp - data
+          dataCor = phase_bonding(data_ramp,Mask,x,y)
+          dataCor -= ramp
 
-          writefile.write_float32(data_con,outName)
+          writefile.write_float32(dataCor,outName)
           print 'writing >>> '+outName
           ## write .rsc file
           f = open(outName+'.rsc','w')

@@ -100,9 +100,9 @@ def main(argv):
   dateList1 = sorted(dateList1)
 
   ##############################################################
+  print '--------------------------------------------'
   print 'All dates existed:'
   print dateList1
-  print '*******************'
 
   try:
     datesNot2include
