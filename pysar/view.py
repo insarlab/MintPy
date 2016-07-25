@@ -404,7 +404,7 @@ def main(argv):
   rewrapping = 'no'
   saveFig    = 'no'
   showRef    = 'yes'
-  showTitle  = 'no'
+  showTitle  = 'yes'
   title      = 'out'
 
   ###################  Read Input Args  ###############
@@ -1099,8 +1099,8 @@ def main(argv):
                 except: pass
             elif k in ('interferograms','coherence','wrapped'):
                 if   nfigs > 100:   figTitle = str(epoch_number[i]+1)
-                elif nfigs > 50 :   figTitle = str(epoch_number[i]+1)+'\n' +h5file[k][epoch].attrs['DATE12']
-                else:               figTitle = str(epoch_number[i]+1)+' : '+h5file[k][epoch].attrs['DATE12']
+                else:               figTitle = str(epoch_number[i]+1)+'\n' +h5file[k][epoch].attrs['DATE12']
+                #else:               figTitle = str(epoch_number[i]+1)+' : '+h5file[k][epoch].attrs['DATE12']
                 dset = h5file[k][epoch].get(epoch)
                 data = dset[win_y[0]:win_y[1],win_x[0]:win_x[1]]
 
