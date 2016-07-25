@@ -857,7 +857,7 @@ def main(argv):
        ## Map Setup
        from mpl_toolkits.basemap import Basemap
        m = Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat,
-                   resolution='l', area_thresh=1., projection='cyl',suppress_ticks=True,ax=ax)
+                   resolution='l', area_thresh=1., projection='cyl',suppress_ticks=False,ax=ax)
 
        ## Plot DEM
        try: m = plot_dem_lalo(m,dem,geo_box,demShade,demContour,contour_step,contour_sigma)
@@ -868,10 +868,10 @@ def main(argv):
        except:  im = m.imshow(data,cmap=ccmap,origin='upper')
 
        ## Lat Lon labels
-       parallels = np.linspace(float(str('%.2f'%llcrnrlat)),float(str('%.2f'%urcrnrlat)),5)
-       meridians = np.linspace(float(str('%.2f'%llcrnrlon)),float(str('%.2f'%urcrnrlon)),5)
-       m.drawparallels(parallels, fmt='%.2f', labels=[1,0,0,0], linewidth=0.0, fontsize=font_size)
-       m.drawmeridians(meridians, fmt='%.2f', labels=[0,0,0,1], linewidth=0.0, fontsize=font_size)
+       #parallels = np.linspace(float(str('%.2f'%llcrnrlat)),float(str('%.2f'%urcrnrlat)),5)
+       #meridians = np.linspace(float(str('%.2f'%llcrnrlon)),float(str('%.2f'%urcrnrlon)),5)
+       #m.drawparallels(parallels, fmt='%.2f', labels=[1,0,0,0], linewidth=0.0, fontsize=font_size)
+       #m.drawmeridians(meridians, fmt='%.2f', labels=[0,0,0,1], linewidth=0.0, fontsize=font_size)
 
        # Reference Point
        if showRef == 'yes':
