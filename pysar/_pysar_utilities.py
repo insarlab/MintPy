@@ -330,10 +330,10 @@ def check_variable_name(path):
 #########################################################################
 def hillshade(data,scale):
   #from scott baker, ptisk library 
-  azdeg=315.0
-  altdeg=45.0
-  az = azdeg*np.pi/180.0
-  alt = altdeg*np.pi/180.0
+  azdeg  = 315.0
+  altdeg = 45.0
+  az  = azdeg  * np.pi/180.0
+  alt = altdeg * np.pi/180.0
   dx, dy = np.gradient(data/scale)
   slope = 0.5*np.pi - np.arctan(np.hypot(dx, dy))
   aspect = np.arctan2(dx, dy)

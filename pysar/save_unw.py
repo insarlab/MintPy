@@ -15,6 +15,7 @@ import os
 from numpy import pi
 import h5py
 
+import pysar._readfile as readfile
 import pysar._writefile as writefile
  
 
@@ -47,6 +48,8 @@ def Usage():
 def main(argv):
   try:    File=argv[0]
   except: Usage();sys.exit(1)
+
+  atr = readfile.read_attributes(File)
 
   h5file=h5py.File(File,'r')
   k=h5file.keys()
@@ -86,49 +89,44 @@ def main(argv):
     dateList=h5file['timeseries'].keys() 
     ## Input
     if   len(sys.argv)==2:
-      print 'No input date specified >>> continue with the last date'
-      dateList=h5file['timeseries'].keys()
-      d=dateList[-1]
+        print 'No input date specified >>> continue with the last date'
+        dateList=h5file['timeseries'].keys()
+        d=dateList[-1]
     elif len(sys.argv)==3:
-      d=sys.argv[2]
+        d=sys.argv[2]
     elif len(sys.argv)==4:
-      ds=sys.argv[2:4]; ds.sort()
-      d_ref = ds[0]
-      d     = ds[1]
+        ds=sys.argv[2:4]; ds.sort()
+        d_ref = ds[0]
+        d     = ds[1]
     else: Usage(); sys.exit(1)
 
     ## Data Operation
     print 'reading '+d+' ... '
-    dset = h5file['timeseries'].get(d)    
-    data = dset[0:dset.shape[0],0:dset.shape[1]]
+    data = h5file['timeseries'].get(d)[:]
     try:
-      dset_ref = h5file['timeseries'].get(d_ref)
-      print 'reading '+d_ref+' ... '
-      data_ref = dset_ref[0:dset_ref.shape[0],0:dset_ref.shape[1]]
-      data = data - data_ref
+        print 'reading '+d_ref+' ... '
+        data_ref = h5file['timeseries'].get(d_ref)[:]
+        data = data - data_ref
     except: pass
-    wvl=float(h5file[k[0]].attrs['WAVELENGTH'])
-    data=(-4*pi/wvl)*data
+    wvl=float(atr['WAVELENGTH'])
+    data *= -4*pi/wvl
 
     ## outName
     try:      master_d = d_ref
     except:
-      try:    master_d = h5file[k[0]].attrs['ref_date']
-      except: master_d = h5file[k[0]].attrs['DATE']
+        try:    master_d = atr['ref_date']
+        except: master_d = atr['DATE']
     if len(master_d)==8:  master_d=master_d[2:8]
     if len(d)==8:         d=d[2:8]
     outname = master_d+'_'+d+'.unw'
 
     print 'writing >>> '+ outname
-    writefile.write_float32(data,outname)
-    f = open(outname+'.rsc','w')
-    for key , value in h5file[k[0]].attrs.iteritems():
-      if key=='DATE12':
-        f.write(key+'    '+master_d+'-'+d+'\n')
-      else:
-        f.write(key+'    '+str(value)+'\n')
-    f.close()
-
+    atr['FILE_TYPE']             = '.unw'
+    atr['P_BASELINE_TIMESERIES'] = '0.0'
+    atr['UNIT']                  = 'radian'
+    atr['DATE']                  = master_d
+    atr['DATE12']                = master_d+'-'+d
+    writefile.write(data,atr,outname)
 
   elif k[0] in ['interferograms','coherence','wrapped']:
     ## Check input

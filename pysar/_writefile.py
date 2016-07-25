@@ -117,20 +117,20 @@ def write(*args):
       atr     = args[1]
       outname = args[2]
 
-  type      = atr['FILE_TYPE']
+  k   = atr['FILE_TYPE']
   ext = os.path.splitext(outname)[1].lower()
   ############### Read ###############
   print 'writing >>> '+outname
   ##### PySAR HDF5 product
   if ext == '.h5':
-      if type in ['interferograms','coherence','wrapped','timeseries']:
-          print 'Un-supported file type: '+type
+      if k in ['interferograms','coherence','wrapped','timeseries']:
+          print 'Un-supported file type: '+k
           print 'Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...'
           return 0;
       import h5py
       h5file = h5py.File(outname,'w')
-      group = h5file.create_group(type)
-      dset = group.create_dataset(type, data=data, compression='gzip')
+      group = h5file.create_group(k)
+      dset = group.create_dataset(k, data=data, compression='gzip')
       for key , value in atr.iteritems():    group.attrs[key]=value
       h5file.close()
 
@@ -139,20 +139,20 @@ def write(*args):
   ##### ISCE / ROI_PAC GAMMA / Image product
   else:
       ##### Write Data File
-      if   type in ['.unw','.cor','.hgt']:
+      if   k in ['.unw','.cor','.hgt']:
           write_float32(data,outname)
-      elif type == '.dem':
+      elif k == '.dem':
           write_dem(data,outname)
-      elif type == '.trans':
+      elif k == '.trans':
           write_float32(rg,az,outname)
-      elif type in ['.jpeg','.jpg','.png','.ras','.bmp']:
+      elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
           import Image
           data.save(outname)
-      elif type == '.mli':
+      elif k == '.mli':
           write_gamma_float(data,outname)
-      elif type == '.slc':
+      elif k == '.slc':
           write_gamma_scomplex(data,outname)
-      else: print 'Un-supported file type: '+type; return 0;
+      else: print 'Un-supported file type: '+k; return 0;
 
       ##### Write .rsc File
       f = open(outname+'.rsc','w')

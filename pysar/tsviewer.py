@@ -148,6 +148,7 @@ def Usage():
         -a : lower bound of the colorscale to display the velocity to display
         -b : higher bound of the colorscale to display the velocity to display
         -F : another  timeseries file (can be used to compare 2 time-series)
+        --opposite   : show opposite value in velocity figure
 
      Figure Setting
         -s : size of font used x and y labels [default = 22]
@@ -159,7 +160,6 @@ def Usage():
         --rect-color : color of rectangle that mark the selection in velocity figure, 'crimson' by default
         --zoomx      : subset/zoom in x/range/longtitude direction
         --zoomy      : subset/zoom in y/azimuth/latitude direction
-
 
      XY Input
         -r : radius of selecting square in pixels, display mean value from (+/-radius,+/-radius).
@@ -173,9 +173,8 @@ def Usage():
 
      DEM
         -D : dem file
-        -C : display Contour: no, yes, or only
-             ('no' for DEM only, 'yes' for DEM basemap and Contour, 'only' for contour only). [Default is 'only']
-        -V : contour step for display [default is 200 m]
+        --dem-contour    : show DEM contour
+        --dem-noshade    : do not show DEM shaded relief
 
      Date Input
         -t : minimum date for display
@@ -224,6 +223,8 @@ def Usage():
 def main(argv):
 
   ## Default settings
+  demShade   = 'yes'
+  demContour = 'no'
 
   global markerSize, markderSize2, markerColor, markerColor2, rectColor
   global lineWidth, lineWidth2, edgeWidth, fontSize
@@ -248,10 +249,12 @@ def main(argv):
   dispFig = 'yes'
   unit    = 'cm'
 
+  dispOpposite  = 'no'
   dispContour   = 'only'
   smoothContour = 'no'
   contour_step  = 200
   showRef       = 'yes'
+  vel_alpha     = 1.0
   zero_start    = 'no'
 
   global ref_xsub, ref_ysub, ref_date
@@ -268,9 +271,10 @@ def main(argv):
     else:  Usage(); sys.exit(1)
 
   elif len(sys.argv)>2:
-    try:   opts, args = getopt.getopt(argv,"f:F:v:a:b:s:m:c:w:u:l:h:D:C:V:t:T:d:r:x:y:X:Y:o:E:",
+    try:   opts, args = getopt.getopt(argv,"f:F:v:a:b:s:m:c:w:u:l:h:D:V:t:T:d:r:x:y:X:Y:o:E:",
                                           ['save','nodisplay','unit=','exclude=','ref-date=','rect-color',\
-                                           'zero-start','zoom-x=','zoom-y=','zoom-lon','zoom-lat','lalo='])
+                                           'zero-start','zoom-x=','zoom-y=','zoom-lon','zoom-lat','lalo=',\
+                                           'opposite','dem-contour','dem-noshade'])
     except getopt.GetoptError:    Usage() ; sys.exit(1)
 
     for opt,arg in opts:
@@ -287,7 +291,6 @@ def main(argv):
       elif opt == '-l':     lbound           = float(arg)
       elif opt == '-h':     hbound           = float(arg)
       elif opt == '-D':     demFile          = arg
-      elif opt == '-C':     dispContour      = arg
       elif opt == '-V':     contour_step     = float(arg)
       elif opt == '-t':     minDate          = arg
       elif opt == '-T':     maxDate          = arg
@@ -297,13 +300,16 @@ def main(argv):
       elif opt == '-X':     ref_xsub = [int(i) for i in arg.split(':')];   ref_xsub.sort();
       elif opt == '-Y':     ref_ysub = [int(i) for i in arg.split(':')];   ref_ysub.sort();  # dispVelFig='no'
 
-      elif opt in '--lalo'           : lalosub         = [float(i) for i in arg.split(',')]
+      elif opt == '--dem-contour'    : demContour      = 'yes'
+      elif opt == '--dem-noshade'    : demShade        = 'no'
       elif opt in ['-E','--exclude'] : datesNot2show   = arg.split(',')
+      elif opt in '--lalo'           : lalosub         = [float(i) for i in arg.split(',')]
       elif opt in ['--rect-color']   : rectColor       = arg
       elif opt in ['--ref-date']     : ref_date        = ptime.yyyymmdd(arg)
       elif opt in ['-u','--unit']    : unit            = arg.lower()
       elif opt == '--save'           : saveFig         = 'yes'
       elif opt == '--nodisplay'      : dispFig         = 'no';   saveFig='yes'
+      elif opt == '--opposite'       : dispOpposite    = 'yes'
       elif opt == '--zero-start'     : zero_start      = 'yes'
       elif opt == '--zoom-x'         : win_x           = [int(i)   for i in arg.split(':')];    win_x.sort()
       elif opt == '--zoom-y'         : win_y           = [int(i)   for i in arg.split(':')];    win_y.sort()
@@ -417,27 +423,23 @@ def main(argv):
 
   try:
      velocityFile
-     try:              #if input velocityFile = 'velocity.h5'
-        h5file=h5py.File(velocityFile,'r')
-        k=h5file.keys()
-        dset= h5file[k[0]].get(k[0])
-        ax.set_title(velocityFile)
-        print 'display: ' + k[0]
-     except:           #if input velocityFile = '20100217'
-        epoch_number=dateList1.index(velocityFile)
-        dset=h5timeseries['timeseries'].get(dateList1[epoch_number])
-        ax.set_title('epoch: '+dateList1[epoch_number])
-        print 'display epoch: '+dateList1[epoch_number]
+     try:    vel, vel_atr = readfile.read(velocityFile)
+     except: vel, vel_atr = readfile.read(timeSeriesFile,velocityFile)
+     ax.set_title(velocityFile)
+     print 'display: ' + velocityFile
   except:
-     dset = h5timeseries['timeseries'].get(dateList1[-1])
+     vel, vel_atr = readfile.read(timeSeriesFile,dateList1[-1])
      ax.set_title('epoch: '+dateList1[-1])
      print 'display last epoch'
-  #data1 = dset[win_y[0]:win_y[1],win_x[0]:win_x[1]]
 
   ## Reference Point
   if showRef == 'yes':
       try: ax.plot(int(atr['ref_x']),int(atr['ref_y']),'ks',ms=6)
       except: pass
+
+  if dispOpposite == 'yes':
+      print 'show opposite value in figure/map 1'
+      vel *= -1
 
   ## Flip
   try:        flip_lr
@@ -449,8 +451,8 @@ def main(argv):
   def format_coord(x,y):
       col = int(x+0.5)
       row = int(y+0.5)
-      if col>=0 and col<=dset.shape[1] and row >=0 and row<=dset.shape[0]:
-         z = dset[row,col]
+      if col>=0 and col<=width and row>=0 and row<=length:
+         z = data[row,col]
          return 'x=%.4f,  y=%.4f,  value=%.4f'%(x,y,z)
       else:
          return 'x=%.4f,  y=%.4f'%(x,y)
@@ -459,25 +461,13 @@ def main(argv):
   ## DEM 
   try:
      demFile
-     if   os.path.basename(demFile).split('.')[1]=='hgt':  amp,dem,demRsc = readfile.read_float32(demFile)
-     elif os.path.basename(demFile).split('.')[1]=='dem':  dem,demRsc = readfile.read_dem(demFile)
-
-     if dispContour in ('no','No','n','N','NO','yes','Yes','y','Y','YES'):
-        print 'show DEM as basemap'
-        cmap_dem=plt.get_cmap('gray')
-        import pysar._pysar_utilities as ut
-        plt.imshow(ut.hillshade(dem,50.0),cmap=cmap_dem)
-     if dispContour in ('only','Only','o','O','ONLY','yes','Yes','y','Y','YES'):
-        print 'show contour'
-        if smoothContour in ('yes','Yes','y','Y','YES'):
-           import scipy.ndimage as ndimage
-           dem=ndimage.gaussian_filter(dem,sigma=10.0,order=0)
-        contour_sequence=np.arange(-6000,9000,contour_step)
-        plt.contour(dem,contour_sequence,origin='lower',colors='black',alpha=0.5)
+     dem,demRsc = readfile.read(demFile)
+     ax = view.plot_dem_yx(ax,dem,demShade,demContour)
+     vel_alpha = 0.7
   except: print 'No DEM file' 
 
-  try:     img=ax.imshow(dset,vmin=vmin,vmax=vmax)
-  except:  img=ax.imshow(dset)
+  try:     img=ax.imshow(vel,vmin=vmin,vmax=vmax, alpha=vel_alpha)
+  except:  img=ax.imshow(vel,alpha=vel_alpha)
   plt.colorbar(img)
 
   ## Zoom In (subset)

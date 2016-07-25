@@ -27,6 +27,7 @@
 #                   Simplified code for multiple plots
 # Yunjun, Jul 2016: add --mask input option
 #                   add plot_dem_lalo() and plot_dem_yx(), auto_flip_check()
+#                   use LightSource from plt.colors for shaded relief DEM
 
 
 import sys
@@ -36,6 +37,7 @@ import getopt
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+#plt.ion()
 
 import pysar._readfile as readfile
 import pysar._pysar_utilities as ut
@@ -178,8 +180,10 @@ def plot_dem_lalo(bmap, dem, geo_box, demShade='yes', demContour='no', contour_s
   ##     bmap = plot_dem_lalo(bmap,dem,geo_box,'no','yes')
 
   if demShade == 'yes':
+      from matplotlib.colors import LightSource
       print 'show shaded relief DEM'
-      bmap.imshow(ut.hillshade(dem,50.0),origin='upper', cmap='gray')
+      ls = LightSource(azdeg=315, altdeg=45)
+      bmap.imshow(ls.hillshade(dem, vert_exag=0.3), origin='upper', cmap='gray')
   if demContour == 'yes':
       import scipy.ndimage as ndimage
       import numpy.matlib
@@ -208,8 +212,10 @@ def plot_dem_yx(ax, dem, demShade='yes', demContour='no', contour_step=200.0, co
   ##     ax = plot_dem_yx(ax,dem,'no','yes')
 
   if demShade == 'yes':
+      from matplotlib.colors import LightSource
       print 'show shaded relief DEM'
-      ax.imshow(ut.hillshade(dem,50.0), cmap='gray')
+      ls = LightSource(azdeg=315, altdeg=45)
+      ax.imshow(ls.hillshade(dem, vert_exag=0.3), cmap='gray')
   if demContour == 'yes':
       import scipy.ndimage as ndimage
       print 'show contour: step = '+str(contour_step)+' m'
@@ -289,6 +295,8 @@ def Usage():
                   displacement: mm, cm, m (default)
                   velocity    : m/day, m/mon, cm/mon, cm/yr, m/yr (default)
 
+  --alpha       : data transparency (0.0 for transparent and 1.0 for no transparency)
+                  By default, 0.7 when showing topography, otherwise 1.0
   --radar-coord : display in radar coordinates for geocoded files. 
                   By default, for geocoded file display in geo coordinate, otherwise display in radar coordinate
 
@@ -371,6 +379,7 @@ def main(argv):
   contour_sigma = 3.0
   demContour    = 'no'
   demShade      = 'yes'
+  data_alpha    = 1.0
   disp_axis     = 'yes'
   disp_geo      = 'yes'
   dispDisplacement = 'no'
@@ -395,7 +404,7 @@ def main(argv):
   rewrapping = 'no'
   saveFig    = 'no'
   showRef    = 'yes'
-  showTitle  = 'yes'
+  showTitle  = 'no'
   title      = 'out'
 
   ###################  Read Input Args  ###############
@@ -810,6 +819,10 @@ def main(argv):
                dem_box = (dem_win_x[0],dem_win_y[0],dem_win_x[1],dem_win_y[1])
                dem,demRsc = readfile.read(demFile,dem_box)
            except: print 'Can not use different size DEM file in radar coordinate.'; sys.exit
+
+       ## Adjust transparency value
+       data_alpha = 0.7
+
     except: pass
 
     ##################### Display #####################
@@ -844,15 +857,21 @@ def main(argv):
        ## Map Setup
        from mpl_toolkits.basemap import Basemap
        m = Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat,
-                   resolution='l', area_thresh=1., projection='cyl',suppress_ticks=False,ax=ax)
+                   resolution='l', area_thresh=1., projection='cyl',suppress_ticks=True,ax=ax)
 
        ## Plot DEM
-       try: m = plot_dem_lalo(m,dem,geo_box,demShade,demContour)
+       try: m = plot_dem_lalo(m,dem,geo_box,demShade,demContour,contour_step,contour_sigma)
        except: pass
 
        ## Plot Data
-       try:     im = m.imshow(data,cmap=ccmap,origin='upper',vmin=disp_min,vmax=disp_max)
+       try:     im = m.imshow(data,cmap=ccmap,origin='upper',vmin=disp_min,vmax=disp_max, alpha=data_alpha)
        except:  im = m.imshow(data,cmap=ccmap,origin='upper')
+
+       ## Lat Lon labels
+       parallels = np.linspace(float(str('%.2f'%llcrnrlat)),float(str('%.2f'%urcrnrlat)),5)
+       meridians = np.linspace(float(str('%.2f'%llcrnrlon)),float(str('%.2f'%urcrnrlon)),5)
+       m.drawparallels(parallels, fmt='%.2f', labels=[1,0,0,0], linewidth=0.0, fontsize=font_size)
+       m.drawmeridians(meridians, fmt='%.2f', labels=[0,0,0,1], linewidth=0.0, fontsize=font_size)
 
        # Reference Point
        if showRef == 'yes':
@@ -892,11 +911,11 @@ def main(argv):
        print 'plot in Y/X'
 
        ## Plot DEM
-       try: ax = plot_dem_yx(ax,dem,demShade,demContour)
+       try: ax = plot_dem_yx(ax,dem,demShade,demContour,contour_step,contour_sigma)
        except: pass
 
        ## Plot Data
-       try:     im = ax.imshow(data,cmap=ccmap, vmin=disp_min, vmax=disp_max)
+       try:     im = ax.imshow(data,cmap=ccmap, vmin=disp_min, vmax=disp_max, alpha=data_alpha)
        except:  im = ax.imshow(data,cmap=ccmap)
 
        ## Colorbar

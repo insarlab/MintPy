@@ -61,10 +61,11 @@ def get_lat_lon(atr):
    lon_unit = atr['Y_UNIT']
    lat_unit = atr['X_UNIT']
 
-   lllat = ullat+Length*lat_step
-   urlon = ullon+Width*lon_step
+   lllat = ullat + Length * lat_step
+   urlon = ullon + Width  * lon_step
    lat = np.arange(ullat,lllat,lat_step)
    lon = np.arange(ullon,urlon,lon_step)
+
    return lat,lon,lat_step,lon_step
 
 ###############################################################

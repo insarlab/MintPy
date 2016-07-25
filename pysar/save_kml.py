@@ -49,6 +49,8 @@ def Usage():
       -d : date of interferogram or time-series epoch to be converted to kml
            for interferogram, like 971220-990703; 
            for timeseries, like 060924 or 20060924
+      --displacement : convert to displacement (for radian unit file type)
+
       -c : colormap, jet as default
       -i : inverse the colormap
       -w : re-wrapping the interferogram [default : no]
@@ -58,7 +60,7 @@ def Usage():
       --ref-size    : reference point marker size in points
 
       --cbar-label  : colorbar label
-                      LOS deformation velocity (default)
+                      LOS displacement velocity (default)
 
   Example:
  
@@ -76,7 +78,7 @@ def Usage():
 
 def main(argv):
 
-  cbar_label    = 'LOS deformation velocity'
+  cbar_label    = 'LOS displacement velocity'
   color_map     = 'jet'
   disp_opposite = 'no'
   disp_colorbar = 'yes'
@@ -86,11 +88,11 @@ def main(argv):
   fig_unit      = 'mm/yr'
   disp_ref      = 'yes'
   ref_size      = 8
-
+  dispDisplacement = 'no'
 
   if len(sys.argv)>2:
     try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:",['noreference','fig-size',\
-                                           'ref-size=','cbar-color='])
+                                           'ref-size=','cbar-label=','displacement'])
     except getopt.GetoptError:  Usage() ; sys.exit(1)
  
     for opt,arg in opts:
@@ -102,7 +104,8 @@ def main(argv):
       elif opt == '-i':        disp_opposite = arg
       elif opt == '-w':        rewrapping    = arg
       elif opt == '-r':        fig_dpi = int(arg)
-      elif opt == '--cbar-label' :   cbar_label = arg
+      elif opt == '--cbar-label' :   cbar_label       = arg
+      elif opt == '--displacement' : dispDisplacement = 'yes'
       elif opt == '--fig-size'   :   fig_size = [float(i) for i in arg.split(',')][0:2]
       elif opt == '--ref-size'   :   ref_size = int(arg)
       elif opt == '--noreference':   disp_ref = 'no'
@@ -182,17 +185,21 @@ def main(argv):
         a,data,atr = readfile.read_float32(File)
         outName = File
         if ext in ['.unw']:
-           if rewrapping == 'no':
-              range2phase = -4*np.pi/float(atr['WAVELENGTH'])
-              data = data / range2phase
-              fig_unit = 'm'
-           else:
-              fig_unit = 'radian'
+           if dispDisplacement == 'yes':
+               print 'show displacement'
+               phase2range = -float(atr['WAVELENGTH']) / (4*np.pi)
+               data *= phase2range
+               atr['UNIT'] = 'm'
+               rewrapping == 'no'
+               fig_unit = 'mm'
+           if rewrapping == 'yes':
+               data = rewrap(data,atr)
+               fig_unit = 'radian'
      elif ext == '.dem':
         data,atr = readfile.read_dem(File)
         outName = File
      if   ext in ['.hgt','.dem']:     fig_unit = 'm'
-     elif ext in ['.cor','.trans']:          fig_unit = ' '
+     elif ext in ['.cor','.trans']:   fig_unit = ' '
   else: sys.exit('Do not support '+ext+' file!')
 
 
@@ -224,7 +231,6 @@ def main(argv):
      print 'Error:\nThe input file is not geocoded\n'
      print '%%%%%%%%%%'
      Usage();sys.exit(1)
-
 
 
 #######################################################
