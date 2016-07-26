@@ -33,6 +33,9 @@ def read_pairs_list(listFile,dateList):
       date12 = line.split('-')
       pairs.append([dateList6.index(date12[0]),dateList6.index(date12[1])])
   fl.close()
+
+  pairs = pair_sort(pairs)
+
   return pairs
 
 
@@ -66,6 +69,8 @@ def read_igram_pairs(igramFile):
       date12 = h5file[k[0]][igram].attrs['DATE12'].split('-')
       pairs.append([dateList6.index(date12[0]),dateList6.index(date12[1])])
   h5file.close()
+
+  pairs = pair_sort(pairs)
 
   return pairs
 
