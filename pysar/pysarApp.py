@@ -348,11 +348,11 @@ def main(argv):
 # Referencing Interferograms
 #########################################
   print '\n**********  Referencing Interferograms  ***************'
-  if os.path.isfile('Seeded_'+igramFile):
-      igramFile = 'Seeded_'+igramFile
-      print igramFile + ' already exists.'
-  elif os.path.isfile('Modified_Seeded_'+igramFile):
+  if os.path.isfile('Modified_Seeded_'+igramFile):
       igramFile = 'Modified_Seeded_'+igramFile
+      print igramFile + ' already exists.'
+  elif os.path.isfile('Seeded_'+igramFile):
+      igramFile = 'Seeded_'+igramFile
       print igramFile + ' already exists.'
   else:
       print 'referncing all interferograms to the same pixel.'

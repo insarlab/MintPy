@@ -337,6 +337,7 @@ def main(argv):
 
       ##### Ramp Info
       ramp_mask = Mask!=0
+      print 'estimate phase ramp during the correction'
       print 'ramp type: '+ramp_type
 
       ########## PySAR ##########
