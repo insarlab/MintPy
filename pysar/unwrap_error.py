@@ -34,9 +34,10 @@ def phase_bonding(data,mask,x,y):
       p_ref = data[y[2*i-2],x[2*i-2]]
       p     = data[y[2*i-1],x[2*i-1]]
       n_jump = (abs(p-p_ref)+np.pi)//(2*np.pi)
-      if p-p_ref >=0:  n_jump = -n_jump
-      id = np.where(mask == mask[y[2*i-1],x[2*i-1]])
-      data[id] = data[id] + n_jump*2*np.pi;
+      if not n_jump == 0:
+          if p-p_ref >=0:  n_jump *= -1
+          id = np.where(mask == mask[y[2*i-1],x[2*i-1]])
+          data[id] = data[id] + n_jump*2*np.pi;
 
   return data
 
@@ -111,7 +112,8 @@ def Usage():
 
              Note: choose x/y_ref point in the patch that also have seed point, for consistency
                    in multiple images.
-        --ramp : ramp type, i.e. plane, quadratic
+        --ramp         : ramp type, i.e. plane, quadratic
+        --no-ramp-save : save corrected data with the ramp removed.
 
     Examples:
         unwrap_error.py -f Seeded_LoadedData.h5     -m Mask.h5 -t ShikokuT417F650_690AlosA.template
@@ -128,10 +130,11 @@ def main(argv):
 
   method    = 'triangular_consistency'    ## or 'bonding_point'
   ramp_type = 'plane'
+  save_rampCor = 'yes'
 
   ##### Check Inputs
   if len(sys.argv)>2:
-      try: opts, args = getopt.getopt(argv,'h:f:m:x:y:o:t:',['ramp='])
+      try: opts, args = getopt.getopt(argv,'h:f:m:x:y:o:t:',['ramp=','no-ramp-save'])
       except getopt.GetoptError:  print 'Error while getting args';  Usage(); sys.exit(1)
 
       for opt,arg in opts:
@@ -142,7 +145,8 @@ def main(argv):
           elif opt in '-x':    x = [int(i) for i in arg.split(',')];    method = 'bonding_point'
           elif opt in '-y':    y = [int(i) for i in arg.split(',')];    method = 'bonding_point'
           elif opt in '-t':    templateFile = arg
-          elif opt in '--ramp':  ramp_type = arg.lower()
+          elif opt in '--ramp'         :  ramp_type    = arg.lower()
+          elif opt in '--no-ramp-save' :  save_rampCor = 'no'
 
   elif len(sys.argv)==2:
       if argv[0] in ['-h','--help']:    Usage();  sys.exit()
@@ -332,40 +336,63 @@ def main(argv):
               print 'Wrong number of bridge points input: '+str(len(x))+' for x, '+str(len(y))+' for y'
               Usage();  sys.exit(1)
       except: print 'Error in reading bridge points info!';  Usage();  sys.exit(1)
+      for i in range(0,len(x)):
+          if Mask[y[i],x[i]] == 0:
+              print '\nERROR: Connecting point ('+str(y[i])+','+str(x[i])+') is out of masked area! Select them again!\n'
+              sys.exit(1)
+
       print 'Number of bonding point pairs: '+str(len(x)/2)
       print 'Bonding points coordinates:\nx: '+str(x)+'\ny: '+str(y)
 
       ##### Ramp Info
-      ramp_mask = Mask!=0
+      ramp_mask = Mask==1
       print 'estimate phase ramp during the correction'
       print 'ramp type: '+ramp_type
+      if save_rampCor == 'yes':
+          outName_ramp = os.path.basename(outName).split(ext)[0]+'_'+ramp_type+ext
 
       ########## PySAR ##########
       if ext == '.h5':
+          ##### Read
           try:     h5file=h5py.File(File,'r')
           except:  print 'ERROR: Cannot open input file: '+File; sys.exit(1)
           k=h5file.keys()
           if 'interferograms' in k: k[0] = 'interferograms';  print 'Input file is '+k[0]
           else: print 'Input file - '+File+' - is not interferograms.';  Usage();  sys.exit(1)
           igramList = h5file[k[0]].keys()
+          igramList = sorted(igramList)
 
+          #### Write
           h5out = h5py.File(outName,'w')
           gg = h5out.create_group(k[0])
+          print 'writing >>> '+outName
+
+          if save_rampCor == 'yes':
+              h5out_ramp = h5py.File(outName_ramp,'w')
+              gg_ramp = h5out_ramp.create_group(k[0])
+              print 'writing >>> '+outName_ramp
+
+          ##### Loop
           print 'Number of interferograms: '+str(len(igramList))
           for igram in igramList:
               print igram
-              dset = h5file[k[0]][igram].get(igram)
-              data = dset[0:dset.shape[0],0:dset.shape[1]]
+              data = h5file[k[0]][igram].get(igram)[:]
 
-              data_ramp = rm.remove_data_surface(data,ramp_mask,ramp_type)
-              ramp = data_ramp - data
-              dataCor = phase_bonding(data_ramp,Mask,x,y)
-              dataCor -= ramp
+              data_ramp,ramp = rm.remove_data_surface(data,ramp_mask,ramp_type)
+              #ramp = data_ramp - data
+              data_rampCor = phase_bonding(data_ramp,Mask,x,y)
+              dataCor = data_rampCor - ramp
 
               group = gg.create_group(igram)
               dset = group.create_dataset(igram, data=dataCor, compression='gzip')
               for key, value in h5file[k[0]][igram].attrs.iteritems():
                   group.attrs[key]=value
+
+              if save_rampCor == 'yes':
+                  group_ramp = gg_ramp.create_group(igram)
+                  dset = group_ramp.create_dataset(igram, data=data_rampCor, compression='gzip')
+                  for key, value in h5file[k[0]][igram].attrs.iteritems():
+                      group_ramp.attrs[key]=value
 
           try:
               mask = h5file['mask'].get('mask');
@@ -374,24 +401,23 @@ def main(argv):
           except: print 'no mask group found.'
 
           h5file.close()
-          print 'writing >>> '+outName
+          h5out.close()
+          if save_rampCor == 'yes':
+              h5out_ramp.close()
 
       ########## ROI_PAC ##########
       elif ext == '.unw':
           print 'Input file is '+ext
           a,data,atr = readfile.read_float32(File);
 
-          data_ramp = rm.remove_data_surface(data,ramp_mask,ramp_type)
-          ramp = data_ramp - data
-          dataCor = phase_bonding(data_ramp,Mask,x,y)
-          dataCor -= ramp
+          data_ramp,ramp = rm.remove_data_surface(data,ramp_mask,ramp_type)
+          #ramp = data_ramp - data
+          data_rampCor = phase_bonding(data_ramp,Mask,x,y)
+          dataCor = data_rampCor - ramp
 
-          writefile.write_float32(dataCor,outName)
-          print 'writing >>> '+outName
-          ## write .rsc file
-          f = open(outName+'.rsc','w')
-          for key in atr.keys():    f.write(key+'    '+atr[key]+'\n')
-          f.close()
+          writefile.write(dataCor, atr, outName)
+          if save_rampCor == 'yes':
+              writefile.write(data_rampCor,atr,outName_ramp)
 
       else: print 'Un-supported file type: '+ext;  Usage();  sys.exit(1)
 

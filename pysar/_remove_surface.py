@@ -89,10 +89,10 @@ def remove_data_surface(data,Mask,surf_type):
 
   data_n = data - zplane
   data_n[data == 0.] = 0.
-  #data_n = np.array(data_n,np.float32) 
   data_n = np.array(data_n,data.dtype) 
+  zplane = np.array(zplane,data.dtype) 
 
-  return data_n
+  return data_n, zplane
 
 
 ##################################################################
@@ -123,7 +123,7 @@ def remove_surface(File,Mask,surf_type):
           print "Removing " + surf_type  +" from " + ifgram
           data = h5file[k].get(ifgram)[:]
 
-          data_n = remove_data_surface(data,Mask,surf_type) 
+          data_n,ramp = remove_data_surface(data,Mask,surf_type) 
 
           dset = group.create_dataset(ifgram, data=data_n, compression='gzip')
       for key,value in h5file[k].attrs.iteritems():
@@ -134,7 +134,7 @@ def remove_surface(File,Mask,surf_type):
           print "Removing " + surf_type  +" from " + ifgram
           data = h5file[k][ifgram].get(ifgram)[:]
 
-          data_n = remove_data_surface(data,Mask,surf_type)
+          data_n,ramp = remove_data_surface(data,Mask,surf_type)
 
           gg   = group.create_group(ifgram)
           dset = gg.create_dataset(ifgram, data=data_n, compression='gzip')
@@ -146,7 +146,7 @@ def remove_surface(File,Mask,surf_type):
       except: pass
       print 'Removing '+surf_type+' from '+k
 
-      data_n = remove_data_surface(data,Mask,surf_type)
+      data_n,ramp = remove_data_surface(data,Mask,surf_type)
 
       writefile.write(data_n,atr,outName)
 

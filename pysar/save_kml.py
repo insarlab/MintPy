@@ -78,7 +78,7 @@ def Usage():
 
 def main(argv):
 
-  cbar_label    = 'LOS displacement velocity'
+  cbar_label    = 'Mean LOS velocity'
   color_map     = 'jet'
   disp_opposite = 'no'
   disp_colorbar = 'yes'
