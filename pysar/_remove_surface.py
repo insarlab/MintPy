@@ -6,7 +6,7 @@
 ############################################################
 # Yunjun, Jun 2016: merge functions for interferograms, timeseries
 #                   into one, and use read() for all the others
-#
+# Yunjun, Aug 2016: add remove*multiple_surface()
 
 
 import os
@@ -96,18 +96,56 @@ def remove_data_surface(data,Mask,surf_type):
 
 
 ##################################################################
-def remove_surface(File,Mask,surf_type):
-  start = time.time()
-  ## Output File Name
-  ext = os.path.splitext(File)[1].lower()
-  try:     outName
-  except:  outName = os.path.basename(File).split(ext)[0]+'_'+surf_type+ext
+def remove_data_multiple_surface(dataIn,surf_type,mask,ysub):
+#def remove_data_multiple_surface(dataIn,surf_type,Mask1,Mask2,Mask3):
+    ## 
+    ## ysub = [0,2400,2000,6800]
 
-  ## Input File Info
+    dataOut = np.zeros(dataIn.shape,dataIn.dtype)
+    dataOut[:] = np.nan
+
+    surfaceNum = len(ysub)/2
+    ## 1st Mask
+    print 'removing 1st surface ...'
+    i = 0
+    mask_i = np.zeros(dataIn.shape,dataIn.dtype)
+    mask_i[ysub[2*i]:ysub[2*i+1],:] = mask[ysub[2*i]:ysub[2*i+1],:]
+
+    dataOut_i,ramp_i = remove_data_surface(dataIn,mask_i,surf_type)
+    dataOut[ysub[2*i]:ysub[2*i+1],:] = dataOut_i[ysub[2*i]:ysub[2*i+1],:]
+
+    ## 2 - last Masks
+    for i in range(1,surfaceNum):
+        print 'removing '+str(i+1)+'th surface ...'
+        mask_i = np.zeros(dataIn.shape,dataIn.dtype)
+        mask_i[ysub[2*i]:ysub[2*i+1],:] = mask[ysub[2*i]:ysub[2*i+1],:]
+
+        dataOut_i,ramp_i = remove_data_surface(dataIn,mask_i,surf_type)
+
+        if ysub[2*i] < ysub[2*i-1]:
+            dataOut[ysub[2*i-1]:ysub[2*i],:]  += dataOut_i[ysub[2*i-1]:ysub[2*i],:]
+            dataOut[ysub[2*i-1]:ysub[2*i],:]  /= 2
+            dataOut[ysub[2*i-1]:ysub[2*i+1],:] = dataOut_i[ysub[2*i-1]:ysub[2*i+1],:]
+        else:
+            dataOut[ysub[2*i]:ysub[2*i+1],:]   = dataOut_i[ysub[2*i]:ysub[2*i+1],:]
+
+    return dataOut
+
+
+##################################################################
+def remove_surface(File,surf_type,Mask,outName=''):
+  start = time.time()
+  ##### Output File Name
+  if outName == '':
+      ext = os.path.splitext(File)[1].lower()
+      outName = os.path.basename(File).split(ext)[0]+'_'+surf_type+ext
+
+  ##### Input File Info
   atr = readfile.read_attributes(File)
   k = atr['FILE_TYPE']
   print 'Input file is '+atr['PROCESSOR']+' '+k
 
+  ## Multiple Datasets File
   if k in ['interferograms','coherence','wrapped','timeseries']:
       h5file = h5py.File(File,'r')
       ifgramList = h5file[k].keys()
@@ -141,6 +179,7 @@ def remove_surface(File,Mask,surf_type):
           for key,value in h5file[k][ifgram].attrs.iteritems():
                gg.attrs[key] = value
 
+  ## Single Dataset File
   else:
       try: data,atr = readfile.read(File)
       except: pass
@@ -157,6 +196,49 @@ def remove_surface(File,Mask,surf_type):
 
   print 'Remove '+surf_type+' took ' + str(time.time()-start) +' secs'
 
-##################################################################
 
+##################################################################
+def remove_multiple_surface(File,surf_type,Mask,ysub,outName):
+    start = time.time()
+    ##### Output File Name
+    if outName == '':
+        ext = os.path.splitext(File)[1].lower()
+        outName = os.path.basename(File).split(ext)[0]+'_'+surf_type+ext
+
+    atr = readfile.read_attributes(File)
+    k = atr['FILE_TYPE']
+    print 'Input file is '+atr['PROCESSOR']+' '+k
+
+    if k == 'timeseries':
+        h5file = h5py.File(File,'r')
+        ifgramList = h5file[k].keys()
+        ifgramList = sorted(ifgramList)
+        print 'number of epochs: '+str(len(ifgramList))
+
+        h5flat = h5py.File(outName,'w')
+        group  = h5flat.create_group(k)
+        print 'writing >>> '+outName
+
+        for ifgram in ifgramList:
+            print "Removing " + surf_type  +" from " + ifgram
+            dataIn = h5file[k].get(ifgram)[:]
+
+            dataOut = remove_data_multiple_surface(dataIn,surf_type,Mask,ysub)
+
+            dset = group.create_dataset(ifgram, data=dataOut, compression='gzip')
+        for key,value in h5file[k].attrs.iteritems():
+            group.attrs[key] = value
+
+    else:
+        try: dataIn,atr = readfile.read(File)
+        except: print 'Input file type is not supported: '+atr['FILE_TYPE']
+
+        dataOut = remove_data_multiple_surface(dataIn,surf_type,Mask,ysub)        
+        ramp = dataIn - dataOut
+
+        writefile.write(dataOut,atr,outName)
+        #atr['FILE_TYPE']='mask'
+        #writefile.write(ramp,atr,'2quadratic.h5')
+
+    print 'Remove '+surf_type+' took ' + str(time.time()-start) +' secs'
 
