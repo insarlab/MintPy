@@ -131,6 +131,7 @@ def main(argv):
   method    = 'triangular_consistency'    ## or 'bonding_point'
   ramp_type = 'plane'
   save_rampCor = 'yes'
+  plot_bonding_points = 'yes'
 
   ##### Check Inputs
   if len(sys.argv)>2:
@@ -343,6 +344,25 @@ def main(argv):
 
       print 'Number of bonding point pairs: '+str(len(x)/2)
       print 'Bonding points coordinates:\nx: '+str(x)+'\ny: '+str(y)
+
+      ## Plot Connecting Pair of Points
+      if plot_bonding_points == 'yes':
+          point_yx = ''
+          line_yx  = ''
+          n_bridge = len(x)/2
+          for i in range(n_bridge):
+              pair_yx = str(y[2*i])+','+str(x[2*i])+','+str(y[2*i+1])+','+str(x[2*i+1])
+              if not i == n_bridge-1:
+                  point_yx += pair_yx+','
+                  line_yx  += pair_yx+';'
+              else:
+                  point_yx += pair_yx
+                  line_yx  += pair_yx
+
+          plot_cmd = 'view4job.py --point="'+point_yx+'" --line="'+line_yx+'" --nodisplay -o bonding_points.png -f '+maskFile
+          print plot_cmd
+          os.system(plot_cmd)
+
 
       ##### Ramp Info
       ramp_mask = Mask==1
