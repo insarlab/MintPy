@@ -39,96 +39,96 @@ import pysar.view as view
 ################################## Sub Functions ###################################
 ################################################################
 def check_yx(xsub,ysub,radius,ax):
-  ##### Read Y/X
-  try:     xmin=xsub[0];         xmax=xsub[1]+1;       
-  except:  xmin=xsub[0]-radius;  xmax=xsub[0]+radius+1;
-  try:     ymin=ysub[0];         ymax=ysub[1]+1;       
-  except:  ymin=ysub[0]-radius;  ymax=ysub[0]+radius+1;
-
-  ## mark x/y in Fig 1
-  rectSelect=patches.Rectangle((xmin,ymin),xmax-xmin,ymax-ymin,color=rectColor,fill=False,lw=1.5)
-  ax.add_patch(rectSelect)
-
-  return [xmin,xmax],[ymin,ymax]
+    ##### Read Y/X
+    try:     xmin=xsub[0];         xmax=xsub[1]+1;       
+    except:  xmin=xsub[0]-radius;  xmax=xsub[0]+radius+1;
+    try:     ymin=ysub[0];         ymax=ysub[1]+1;       
+    except:  ymin=ysub[0]-radius;  ymax=ysub[0]+radius+1;
+  
+    ## mark x/y in Fig 1
+    rectSelect=patches.Rectangle((xmin,ymin),xmax-xmin,ymax-ymin,color=rectColor,fill=False,lw=1.5)
+    ax.add_patch(rectSelect)
+  
+    return [xmin,xmax],[ymin,ymax]
 
 ################################################################
 def read_dis(xsub,ysub,dateList,h5file,unit='cm'):
-  global ref_date
-
-  ## Unit and Scale
-  if   unit == 'm' :  unitFac=1.0
-  elif unit == 'mm':  unitFac=1000.0
-  elif unit == 'km':  unitFac=0.001
-  else:unit =  'cm';  unitFac=100.0   # cm by default
-
-  ## read displacement
-  try:
-      ref_date
-      dis_ref = h5file['timeseries'].get(ref_date)[ysub[0]:ysub[1],xsub[0]:xsub[1]]
-  except: pass
-
-  dis=[]
-  for date in dateList:
-      dis0 = h5file['timeseries'].get(date)[ysub[0]:ysub[1],xsub[0]:xsub[1]]
-      try: dis0 -= dis_ref
-      except: pass
-      dis.append(dis0)
-  dis=np.array(dis)*unitFac;
-  dis=np.reshape(dis,(len(dateList),-1))
-
-  ## calculate mean
-  dis_mean=stats.nanmean(dis,1)
-  ## calculate standard deviation
-  if (xsub[1]-xsub[0])*(ysub[1]-ysub[0]) == 1:
-      dis_std = np.array([0]*len(dateList))
-  else:
-      dis_std = stats.nanstd(dis,1)
-  ## calculate linear velocity
-  dates, datevector = ptime.date_list2vector(dateList)
-  dis_slope = stats.linregress(np.array(datevector),dis_mean)
+    global ref_date
   
-  ## display
-  print 'spatial averaged displacement ['+unit+']:'
-  print dis_mean
-  print 'standard deviation ['+unit+']:'
-  print dis_std
-  print 'linear velocity ['+unit+'/yr]:'
-  print str(dis_slope[0])+'+/-'+str(dis_slope[4])
-
-  return dis, dis_mean, dis_std, dis_slope
+    ## Unit and Scale
+    if   unit == 'm' :  unitFac=1.0
+    elif unit == 'mm':  unitFac=1000.0
+    elif unit == 'km':  unitFac=0.001
+    else:unit =  'cm';  unitFac=100.0   # cm by default
+  
+    ## read displacement
+    try:
+        ref_date
+        dis_ref = h5file['timeseries'].get(ref_date)[ysub[0]:ysub[1],xsub[0]:xsub[1]]
+    except: pass
+  
+    dis=[]
+    for date in dateList:
+        dis0 = h5file['timeseries'].get(date)[ysub[0]:ysub[1],xsub[0]:xsub[1]]
+        try: dis0 -= dis_ref
+        except: pass
+        dis.append(dis0)
+    dis=np.array(dis)*unitFac;
+    dis=np.reshape(dis,(len(dateList),-1))
+  
+    ## calculate mean
+    dis_mean=stats.nanmean(dis,1)
+    ## calculate standard deviation
+    if (xsub[1]-xsub[0])*(ysub[1]-ysub[0]) == 1:
+        dis_std = np.array([0]*len(dateList))
+    else:
+        dis_std = stats.nanstd(dis,1)
+    ## calculate linear velocity
+    dates, datevector = ptime.date_list2vector(dateList)
+    dis_slope = stats.linregress(np.array(datevector),dis_mean)
+    
+    ## display
+    print 'spatial averaged displacement ['+unit+']:'
+    print dis_mean
+    print 'standard deviation ['+unit+']:'
+    print dis_std
+    print 'linear velocity ['+unit+'/yr]:'
+    print str(dis_slope[0])+'+/-'+str(dis_slope[4])
+  
+    return dis, dis_mean, dis_std, dis_slope
 
 ################################################################
 def update_lim(disp_min,disp_max,data_mean,data_std):
-   disp_min = np.nanmin([np.nanmin(data_mean-data_std), disp_min])
-   disp_max = np.nanmax([np.nanmax(data_mean+data_std), disp_max])
-   return disp_min,disp_max
+    disp_min = np.nanmin([np.nanmin(data_mean-data_std), disp_min])
+    disp_max = np.nanmax([np.nanmax(data_mean+data_std), disp_max])
+    return disp_min,disp_max
 
 
 ####################### X Axis Format #######################
 def adjust_xaxis_date(ax,datevector):
-  ## Date Display
-  years    = mdates.YearLocator()   # every year
-  months   = mdates.MonthLocator()  # every month
-  yearsFmt = mdates.DateFormatter('%Y')
-
-  ## X axis format
-  ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
-  ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12)
-  te=datevector[-1]+0.2;  ye=int(te);  me=int((te-ye)*12)
-  if ms>12:   ys = ys+1;   ms=1
-  if me>12:   ye = ye+1;   me=1
-  if ms<1:    ys = ys-1;   ms=12
-  if me<1:    ye = ye-1;   me=12
-  dss=datetime.date(ys,ms,1)
-  dee=datetime.date(ye,me,1)
-  ax.set_xlim(dss,dee)                          # using the same xlim with the previous one
-  ax.xaxis.set_major_locator(years)
-  ax.xaxis.set_major_formatter(yearsFmt)
-  ax.xaxis.set_minor_locator(months)
-  for tick in ax.xaxis.get_major_ticks():  tick.label.set_fontsize(fontSize)
-  #fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
-
-  return ax
+    ## Date Display
+    years    = mdates.YearLocator()   # every year
+    months   = mdates.MonthLocator()  # every month
+    yearsFmt = mdates.DateFormatter('%Y')
+  
+    ## X axis format
+    ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
+    ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12)
+    te=datevector[-1]+0.2;  ye=int(te);  me=int((te-ye)*12)
+    if ms>12:   ys = ys+1;   ms=1
+    if me>12:   ye = ye+1;   me=1
+    if ms<1:    ys = ys-1;   ms=12
+    if me<1:    ye = ye-1;   me=12
+    dss=datetime.date(ys,ms,1)
+    dee=datetime.date(ye,me,1)
+    ax.set_xlim(dss,dee)                          # using the same xlim with the previous one
+    ax.xaxis.set_major_locator(years)
+    ax.xaxis.set_major_formatter(yearsFmt)
+    ax.xaxis.set_minor_locator(months)
+    for tick in ax.xaxis.get_major_ticks():  tick.label.set_fontsize(fontSize)
+    #fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
+  
+    return ax
 
 
 ########################## Usage ###############################
