@@ -5,13 +5,13 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
+
 import sys
 import os
+import getopt
+
 import numpy as np
 import matplotlib.pyplot as plt
-#import matplotlib.cm as cm
-#from matplotlib import colors
-import getopt
 import h5py
 
 
@@ -59,11 +59,9 @@ def nearest_neighbor(x,y, tbase, pbase):
   return indx
 
 ##################################
-
 def nearest(x, X):
   """ find nearest neighbour """
   dist = np.sqrt((X -x)**2)
-#  indx=dist==min(dist)
   indx=np.where(dist==min(dist))
 
   return indx[0]
@@ -80,14 +78,11 @@ def main(argv):
    try: 
      V1file=sys.argv[1]
      V2file=sys.argv[2]
-   except:
-     Usage();sys.exit(1)
+   except:  Usage();sys.exit(1)
 
 
-   try:
-     manual_matching = sys.argv[3]
-   except:
-     manual_matching = 'no' 
+   try:     manual_matching = sys.argv[3]
+   except:  manual_matching = 'no' 
 
    h5V1=h5py.File(V1file,'r')
    h5V2=h5py.File(V2file,'r')
@@ -128,15 +123,11 @@ def main(argv):
    
   
 ####################################################
-   VV1=np.zeros([LENGTH,WIDTH])
-   VV1[:,:]=np.nan
-   VV2=np.zeros([LENGTH,WIDTH])
-   VV2[:,:]=np.nan
+   VV1=np.zeros([LENGTH,WIDTH]);   VV1[:,:]=np.nan
+   VV2=np.zeros([LENGTH,WIDTH]);   VV2[:,:]=np.nan
 
    VV=np.zeros([LENGTH,WIDTH])
    VV[:,:]=np.nan
-  # print np.shape(VV1)
-  # print np.shape(VV1[indy1:indy1+LENGTH1,indx1:indx1+WIDTH1])
    VV1[indy1:indy1+LENGTH1,indx1:indx1+WIDTH1] = V1   
    VV2[indy2:indy2+LENGTH2,indx2:indx2+WIDTH2] = V2
 
@@ -219,12 +210,12 @@ def main(argv):
    for key , value in h5V1[k[0]].attrs.iteritems():
       group.attrs[key]=value
 
-   group.attrs['WIDTH']=WIDTH
-   group.attrs['FILE_LENGTH']=LENGTH
-   group.attrs['X_FIRST']=West
-   group.attrs['Y_FIRST']=North
-   group.attrs['X_STEP']=lon_step
-   group.attrs['Y_STEP']=lat_step
+   group.attrs['WIDTH']       = WIDTH
+   group.attrs['FILE_LENGTH'] = LENGTH
+   group.attrs['X_FIRST']     = West
+   group.attrs['Y_FIRST']     = North
+   group.attrs['X_STEP']      = lon_step
+   group.attrs['Y_STEP']      = lat_step
  
    h5velocity.close()
    h5V1.close()

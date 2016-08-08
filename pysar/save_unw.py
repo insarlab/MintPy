@@ -50,42 +50,22 @@ def main(argv):
   except: Usage();sys.exit(1)
 
   atr = readfile.read_attributes(File)
+  k = atr['FILE_TYPE']
 
   h5file=h5py.File(File,'r')
-  k=h5file.keys()
-  if 'interferograms' in k: k[0] = 'interferograms'
-  elif 'coherence'    in k: k[0] = 'coherence'
-  elif 'timeseries'   in k: k[0] = 'timeseries'
   print '\n************* Output to ROI_PAC format ***************'
 
-  if 'velocity' in k:
+  if k == 'velocity':
     dset = h5file['velocity'].get('velocity')
     data = dset[0:dset.shape[0],0:dset.shape[1]]
     print "converting velocity to a 1 year interferogram."
-    wvl=float(h5file[k[0]].attrs['WAVELENGTH'])
+    wvl=float(h5file[k].attrs['WAVELENGTH'])
     data=(-4*pi/wvl)*data
 
     outname=File.split('.')[0]+'.unw'
-    print 'writing >>> '+ outname
-    writefile.write_float32(data,outname)
-    f = open(outname+'.rsc','w')
-    for key , value in h5file[k[0]].attrs.iteritems():
-      f.write(key+'    '+str(value)+'\n')
-    f.close()
+    writefile.write(data,atr,outname)
 
-  elif k[0] in ['rmse','temporal_coherence','mask']:
-    dset = h5file[k[0]].get(k[0])
-    data = dset[0:dset.shape[0],0:dset.shape[1]]
-    if k[0] == 'temporal_coherence': outname=File.split('.')[0]+'.cor'
-    else:                            outname=File.split('.')[0]+'.unw'
-    print 'writing >>> '+ outname
-    writefile.write_float32(data,outname)
-    f = open(outname+'.rsc','w')
-    for key , value in h5file[k[0]].attrs.iteritems():
-      f.write(key+'    '+str(value)+'\n')
-    f.close()
-
-  elif 'timeseries' in k:
+  elif k == 'timeseries':
     dateList=h5file['timeseries'].keys() 
     ## Input
     if   len(sys.argv)==2:
@@ -128,9 +108,9 @@ def main(argv):
     atr['DATE12']                = master_d+'-'+d
     writefile.write(data,atr,outname)
 
-  elif k[0] in ['interferograms','coherence','wrapped']:
+  elif k in ['interferograms','coherence','wrapped']:
     ## Check input
-    igramList=h5file[k[0]].keys()
+    igramList=h5file[k].keys()
     try:
        d = sys.argv[2]
        for i in range(len(igramList)):
@@ -140,21 +120,29 @@ def main(argv):
        igram = igramList[-1];   print 'No input date specified >>> continue with the last date'
     ## Read and Write
     print 'reading '+igram+' ... '
-    dset = h5file[k[0]][igram].get(igram)
+    dset = h5file[k][igram].get(igram)
     data = dset[0:dset.shape[0],0:dset.shape[1]]
     outname = igram
     print 'writing >>> '+ outname
     writefile.write_float32(data,outname)
     f = open(outname+'.rsc','w')
-    for key , value in h5file[k[0]][igram].attrs.iteritems():
+    for key , value in h5file[k][igram].attrs.iteritems():
        f.write(key+'    '+str(value)+'\n')
     f.close()    
 
+
+  else:
+    dset = h5file[k].get(k)
+    data = dset[0:dset.shape[0],0:dset.shape[1]]
+    if k == 'temporal_coherence': outname=File.split('.')[0]+'.cor'
+    else:                         outname=File.split('.')[0]+'.unw'
+
+    writefile.write(data,atr,outname)
+
+
   h5file.close()
 
-
 ##########################################################################
-
 if __name__ == '__main__':
 
   main(sys.argv[1:])

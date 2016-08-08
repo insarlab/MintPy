@@ -117,12 +117,12 @@ def write(*args):
       atr     = args[1]
       outname = args[2]
 
-  k   = atr['FILE_TYPE']
   ext = os.path.splitext(outname)[1].lower()
   ############### Read ###############
   print 'writing >>> '+outname
   ##### PySAR HDF5 product
   if ext == '.h5':
+      k = atr['FILE_TYPE']
       if k in ['interferograms','coherence','wrapped','timeseries']:
           print 'Un-supported file type: '+k
           print 'Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...'
@@ -139,20 +139,20 @@ def write(*args):
   ##### ISCE / ROI_PAC GAMMA / Image product
   else:
       ##### Write Data File
-      if   k in ['.unw','.cor','.hgt']:
+      if   ext in ['.unw','.cor','.hgt']:
           write_float32(data,outname)
-      elif k == '.dem':
+      elif ext == '.dem':
           write_dem(data,outname)
-      elif k == '.trans':
+      elif ext == '.trans':
           write_float32(rg,az,outname)
-      elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
+      elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
           import Image
           data.save(outname)
-      elif k == '.mli':
+      elif ext == '.mli':
           write_gamma_float(data,outname)
-      elif k == '.slc':
+      elif ext == '.slc':
           write_gamma_scomplex(data,outname)
-      else: print 'Un-supported file type: '+k; return 0;
+      else: print 'Un-supported file type: '+ext; return 0;
 
       ##### Write .rsc File
       f = open(outname+'.rsc','w')
