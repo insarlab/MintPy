@@ -126,7 +126,7 @@ def main(argv):
   ## Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5
   try:      maskFile
   except:
-      try:  maskFile = [templateContents['pysar.mask.file']]
+      try:  maskFile = templateContents['pysar.mask.file']
       except: pass
 
   try:
