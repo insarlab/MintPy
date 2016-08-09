@@ -5,10 +5,9 @@ import h5py
 import pysar._readfile as readfile
 
 try:
-  demFile = sys.argv[1]
+    demFile = sys.argv[1]
 except:
-
-  print '''
+    print '''
 
   ********************************
   ********************************
@@ -24,25 +23,18 @@ except:
 
   ********************************
   ********************************
-'''
-  
-  sys.exit(1)
+    '''
+    sys.exit(1)
 
 
 ext = os.path.splitext(demFile)[1]
 
-if ext == '.hgt':
-
-   amp,dem,demRsc = readfile.read_float32(demFile)
-
-elif ext == '.dem':
-   dem,demRsc =readfile.read_dem(demFile)
+if ext == '.hgt':  amp,dem,demRsc = readfile.read_float32(demFile)
+elif ext == '.dem':    dem,demRsc =readfile.read_dem(demFile)
 
 
-try:
-  outName=sys.argv[2]
-except:
-  outName='dem.h5'
+try:     outName = sys.argv[2]
+except:  outName = 'dem.h5'
 
 
 h5=h5py.File(outName,'w')

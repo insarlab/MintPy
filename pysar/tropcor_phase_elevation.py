@@ -21,7 +21,7 @@ import pysar._readfile as readfile
 
 ######################################
 def Usage():
-  print '''
+    print '''
 ***************************************************************
 ***************************************************************
 
@@ -43,7 +43,7 @@ def Usage():
 
 ***************************************************************
 ***************************************************************
-'''
+    '''
 
 ######################################
 def main(argv):
@@ -57,20 +57,20 @@ def main(argv):
     except getopt.GetoptError:  Usage() ; sys.exit(1)
 
     for opt,arg in opts:
-      if   opt == '-f':        timeSeriesFile = arg
-      elif opt == '-d':        demFile        = arg
-      elif opt == '-p':        p              = int(arg)
-      elif opt == '-m':        maskFile       = arg
-      elif opt == '-M':        maskThr        = float(arg)
-      elif opt == '-t':        corThr         = float(arg)
-      elif opt == '-o':        outName        = arg
-      elif opt == '--plot':    save_plot      = 'yes'
+        if   opt == '-f':        timeSeriesFile = arg
+        elif opt == '-d':        demFile        = arg
+        elif opt == '-p':        p              = int(arg)
+        elif opt == '-m':        maskFile       = arg
+        elif opt == '-M':        maskThr        = float(arg)
+        elif opt == '-t':        corThr         = float(arg)
+        elif opt == '-o':        outName        = arg
+        elif opt == '--plot':    save_plot      = 'yes'
 
     try:
-      timeSeriesFile
-      demFile
+        timeSeriesFile
+        demFile
     except:
-      Usage() ; sys.exit(1)
+        Usage() ; sys.exit(1)
     
     try:       p
     except:    p=1
@@ -112,11 +112,11 @@ def main(argv):
 
     print '\n************ Tropospheric Delay Correction - Topo-related *************'
 
-###################################################
+    ###################################################
     h5timeseries = h5py.File(timeSeriesFile)
     yref=h5timeseries['timeseries'].attrs['ref_y']
     xref=h5timeseries['timeseries'].attrs['ref_x']
-###################################################
+    ###################################################
     dem,demRsc = readfile.read(demFile)
     dem -= dem[yref,xref]
 
@@ -130,7 +130,7 @@ def main(argv):
        
     dem=dem.flatten(1)
     print np.shape(dem)
-###################################################
+    ###################################################
     if p==1:
         A=np.vstack((dem[ndx],np.ones(len(dem[ndx])))).T
         B = np.vstack((dem,np.ones(len(dem)))).T
@@ -143,7 +143,7 @@ def main(argv):
     print np.shape(A)
 
     Ainv=np.linalg.pinv(A)
-###################################################
+    ###################################################
     print 'Estimating the tropospheric effect using the differences of the subsequent epochs and DEM'
     
     dateList = h5timeseries['timeseries'].keys()
@@ -160,62 +160,56 @@ def main(argv):
     print '******************************'
 
     for i in range(len(dateList)-1):
-       dset1 = h5timeseries['timeseries'].get(dateList[i])
-       dset2 = h5timeseries['timeseries'].get(dateList[i+1])
-       data1 = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-       data2 = dset2[0:dset2.shape[0],0:dset2.shape[1]]
-       d = dset2[0:dset2.shape[0],0:dset2.shape[1]] - dset1[0:dset1.shape[0],0:dset1.shape[1]]
-        
-       del dset1
-       del dset2
-       d=d.flatten(1)
-       data1=data1.flatten(1)
-       data2=data2.flatten(1)
-       ##############################
-       C1=np.zeros([2,len(dem[ndx])])
-       C1[0][:]=dem[ndx]
-       C1[1][:]=data1[ndx]
-       print dateList[i]+': '+str(np.corrcoef(C1)[0][1])
-
-       C2=np.zeros([2,len(dem[ndx])])
-       C2[0][:]=dem[ndx]
-       C2[1][:]=data2[ndx]
-       print dateList[i+1]+': '+str(np.corrcoef(C2)[0][1])
-       Correlation_Dict[dateList[i+1]]=np.corrcoef(C2)[0][1]
-
-       C=np.zeros([2,len(dem[ndx])])
-       C[0][:]=dem[ndx]
-       C[1][:]=d[ndx]
-       print dateList[i]+'-'+dateList[i+1]+': '+str(np.corrcoef(C)[0][1])
-       print '******************************'
-       Correlation_diff_Dict[dateList[i]+'-'+dateList[i+1]]=np.corrcoef(C)[0][1]
-
-       ##############################
-      # try:
-        # if np.corrcoef(C)[0][1] >= corThr:
-        #    par=np.dot(Ainv,d[ndx])
-       #  else:
-         #   par=[0,0]
-      # except:
-       par=np.dot(Ainv,d[ndx])
-       par_diff_Dict[dateList[i]+'-'+dateList[i+1]]=par  
-
-       try:
-         if np.abs(np.corrcoef(C2)[0][1]) >= corThr:        
-            PAR2=np.dot(Ainv,data2[ndx])
-         else:
-            PAR2=list(np.zeros(p+1))
-       except:
-            PAR2=np.dot(Ainv,data2[ndx])
+        dset1 = h5timeseries['timeseries'].get(dateList[i])
+        dset2 = h5timeseries['timeseries'].get(dateList[i+1])
+        data1 = dset1[0:dset1.shape[0],0:dset1.shape[1]]
+        data2 = dset2[0:dset2.shape[0],0:dset2.shape[1]]
+        d = dset2[0:dset2.shape[0],0:dset2.shape[1]] - dset1[0:dset1.shape[0],0:dset1.shape[1]]
+         
+        del dset1
+        del dset2
+        d=d.flatten(1)
+        data1=data1.flatten(1)
+        data2=data2.flatten(1)
+        ##############################
+        C1=np.zeros([2,len(dem[ndx])])
+        C1[0][:]=dem[ndx]
+        C1[1][:]=data1[ndx]
+        print dateList[i]+': '+str(np.corrcoef(C1)[0][1])
  
-       PAR_EPOCH_DICT_2[dateList[i+1]]=PAR2
-###################################################
+        C2=np.zeros([2,len(dem[ndx])])
+        C2[0][:]=dem[ndx]
+        C2[1][:]=data2[ndx]
+        print dateList[i+1]+': '+str(np.corrcoef(C2)[0][1])
+        Correlation_Dict[dateList[i+1]]=np.corrcoef(C2)[0][1]
+ 
+        C=np.zeros([2,len(dem[ndx])])
+        C[0][:]=dem[ndx]
+        C[1][:]=d[ndx]
+        print dateList[i]+'-'+dateList[i+1]+': '+str(np.corrcoef(C)[0][1])
+        print '******************************'
+        Correlation_diff_Dict[dateList[i]+'-'+dateList[i+1]]=np.corrcoef(C)[0][1]
+
+        ##############################
+        par=np.dot(Ainv,d[ndx])
+        par_diff_Dict[dateList[i]+'-'+dateList[i+1]]=par  
+ 
+        try:
+            if np.abs(np.corrcoef(C2)[0][1]) >= corThr:        
+                PAR2=np.dot(Ainv,data2[ndx])
+            else:
+                PAR2=list(np.zeros(p+1))
+        except:
+             PAR2=np.dot(Ainv,data2[ndx])
+  
+        PAR_EPOCH_DICT_2[dateList[i+1]]=PAR2
+    ###################################################
     print'****************************************'
     print 'Correlation of DEM with each time-series epoch:'
     average_phase_height_cor=0
     for date in dateList:
-       print date + ' : '+str(Correlation_Dict[date])
-       average_phase_height_cor=average_phase_height_cor+np.abs(Correlation_Dict[date])
+        print date + ' : '+str(Correlation_Dict[date])
+        average_phase_height_cor=average_phase_height_cor+np.abs(Correlation_Dict[date])
     print'****************************************'
     print'****************************************'
     print ''
@@ -224,17 +218,7 @@ def main(argv):
     print '****************************************'
     print'****************************************'
 
-   # print 'Correlation of DEM with epoch differences'
-   # for key , value in Correlation_diff_Dict.iteritems():
-    #   print key+' : '+str(value)
-   # print'****************************************'
-#    print 'Estimated parameters for each time-series epoch:'
-   # for date in dateList:
-   #    print date + ' : ' + str(PAR_EPOCH_DICT_2[date])
-   # print'****************************************'
-
-
-###################################################
+    ###################################################
     if save_plot == 'yes':
         fig=plt.figure(1)
         ax = fig.add_subplot(3,1,1)
@@ -245,8 +229,8 @@ def main(argv):
         ax.plot(dem[ndx],d[ndx],'o',ms=1)
         plt.show()
 
-###################################################
-   # print par_diff_Dict
+    ###################################################
+    # print par_diff_Dict
     par_epoch_Dict={}
     par_epoch_Dict[dateList[1]]=par_diff_Dict[dateList[0]+'-'+dateList[1]]
 
@@ -261,18 +245,18 @@ def main(argv):
     group = h5tropCor.create_group('timeseries')
     dset = group.create_dataset(dateList[0], data=h5timeseries['timeseries'].get(dateList[0]), compression='gzip')
     for date in dateList:
-       if not date in h5tropCor['timeseries']:
-         print date
-         dset = h5timeseries['timeseries'].get(date) 
-         data = dset[0:dset.shape[0],0:dset.shape[1]]
-         par=PAR_EPOCH_DICT_2[date]
-
-         tropo_effect = np.reshape(np.dot(B,par),[dset.shape[1],dset.shape[0]]).T
-         tropo_effect -= tropo_effect[yref,xref]
-         dset = group.create_dataset(date, data=data-tropo_effect, compression='gzip')
+        if not date in h5tropCor['timeseries']:
+            print date
+            dset = h5timeseries['timeseries'].get(date) 
+            data = dset[0:dset.shape[0],0:dset.shape[1]]
+            par=PAR_EPOCH_DICT_2[date]
+   
+            tropo_effect = np.reshape(np.dot(B,par),[dset.shape[1],dset.shape[0]]).T
+            tropo_effect -= tropo_effect[yref,xref]
+            dset = group.create_dataset(date, data=data-tropo_effect, compression='gzip')
 
     for key,value in h5timeseries['timeseries'].attrs.iteritems():
-       group.attrs[key] = value
+        group.attrs[key] = value
    
     try: 
         dset1 = h5timeseries['mask'].get('mask')
@@ -286,6 +270,6 @@ def main(argv):
     
 ###################################################
 if __name__ == '__main__':
-  main(sys.argv[1:])
+    main(sys.argv[1:])
 
 

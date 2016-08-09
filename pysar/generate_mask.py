@@ -20,9 +20,8 @@ import pysar._readfile as readfile
 import pysar._writefile as writefile
 
 def Usage():
-  print '''
-  ******************************************
-  ******************************************
+    print '''
+**********************************************************************************
   Generating a mask file with the same size of the input file
 
   Usage:
@@ -55,116 +54,115 @@ def Usage():
 
      generate_mask.py -f LoadedData.h5 --nonzero
 
-  ******************************************
-  ******************************************
-  '''
+**********************************************************************************
+    '''
 
 def main(argv):
 
-  outName = 'mask.h5'
-  method  = 'threshold'
-
-  ##### Check Inputs
-  if len(sys.argv)>2:
-      try:   opts, args = getopt.getopt(argv,'h:f:m:M:x:y:o:d:e:',['nonzero'])
-      except getopt.GetoptError:      Usage() ; sys.exit(1)
-
-      for opt,arg in opts:
-          if opt in ("-h","--help"):   Usage();   sys.exit()
-          elif opt == '-f':         File = arg
-          elif opt == '-m':         minV = float(arg)
-          elif opt == '-M':         maxV = float(arg)
-          elif opt == '-y':         ysub = [int(i) for i in arg.split(':')];        ysub.sort()
-          elif opt == '-x':         xsub = [int(i) for i in arg.split(':')];        xsub.sort()
-          elif opt == '-o':         outName    = arg
-          elif opt == '-d':         epoch_date = arg
-          elif opt == '-e':         epoch_num  = int(arg) - 1
-          elif opt == '--nonzero':  method     = 'nonzero'
-
-  elif len(sys.argv)==2:
-      if   argv[0] in ['-h','--help']:    Usage(); sys.exit(1)
-      elif os.path.isfile(argv[0]):       File = argv[0]
-      else:    print 'Input file does not existed: '+argv[0];  sys.exit(1)
-  else:                                   Usage(); sys.exit(1)
-
-
-  ##### Input File Info
-  atr = readfile.read_attributes(File)
-  print '\n****************** Generate Mask *******************'
-  print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File
-  mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
-  print 'Create initial mask with the same size as the input file and all = 1'
+    outName = 'mask.h5'
+    method  = 'threshold'
+  
+    ##### Check Inputs
+    if len(sys.argv)>2:
+        try:   opts, args = getopt.getopt(argv,'h:f:m:M:x:y:o:d:e:',['nonzero'])
+        except getopt.GetoptError:      Usage() ; sys.exit(1)
+  
+        for opt,arg in opts:
+            if opt in ("-h","--help"):   Usage();   sys.exit()
+            elif opt == '-f':         File = arg
+            elif opt == '-m':         minV = float(arg)
+            elif opt == '-M':         maxV = float(arg)
+            elif opt == '-y':         ysub = [int(i) for i in arg.split(':')];        ysub.sort()
+            elif opt == '-x':         xsub = [int(i) for i in arg.split(':')];        xsub.sort()
+            elif opt == '-o':         outName    = arg
+            elif opt == '-d':         epoch_date = arg
+            elif opt == '-e':         epoch_num  = int(arg) - 1
+            elif opt == '--nonzero':  method     = 'nonzero'
+  
+    elif len(sys.argv)==2:
+        if   argv[0] in ['-h','--help']:    Usage(); sys.exit(1)
+        elif os.path.isfile(argv[0]):       File = argv[0]
+        else:    print 'Input file does not existed: '+argv[0];  sys.exit(1)
+    else:                                   Usage(); sys.exit(1)
 
 
-  ##### Non-zero Mask #######
-  if method == 'nonzero':
-      k = atr['FILE_TYPE']
-      MaskZero = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
+    ##### Input File Info
+    atr = readfile.read_attributes(File)
+    print '\n****************** Generate Mask *******************'
+    print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File
+    mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
+    print 'Create initial mask with the same size as the input file and all = 1'
+  
+  
+    ##### Non-zero Mask #######
+    if method == 'nonzero':
+        k = atr['FILE_TYPE']
+        MaskZero = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
+  
+        ext = os.path.splitext(File)[1].lower()
+        if ext == '.h5' and k in ['interferograms','coherence','wrapped','timeseries']:
+            h5file = h5py.File(File,'r')
+            epochList = h5file[k].keys()
+  
+            for epoch in epochList:
+                print epoch
+                if k in ['interferograms','coherence','wrapped']:
+                    data = h5file[k][epoch].get(epoch)[:]
+                elif k in ['timeseries']:
+                    data = h5file[k].get(epoch)
+                MaskZero *= data
+                MaskZero[np.isnan(data)] = 0
+            h5file.close()
+  
+        else:
+            data,atr = readfile.read(File)
+            MaskZero *= data
+            MaskZero[np.isnan(data)] = 0
+  
+        mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
+        mask[MaskZero==0] = 0
 
-      ext = os.path.splitext(File)[1].lower()
-      if ext == '.h5' and k in ['interferograms','coherence','wrapped','timeseries']:
-          h5file = h5py.File(File,'r')
-          epochList = h5file[k].keys()
 
-          for epoch in epochList:
-              print epoch
-              if k in ['interferograms','coherence','wrapped']:
-                  data = h5file[k][epoch].get(epoch)[:]
-              elif k in ['timeseries']:
-                  data = h5file[k].get(epoch)
-              MaskZero *= data
-              MaskZero[np.isnan(data)] = 0
-          h5file.close()
-
-      else:
-          data,atr = readfile.read(File)
-          MaskZero *= data
-          MaskZero[np.isnan(data)] = 0
-
-      mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
-      mask[MaskZero==0] = 0
-
-
-  ##### Threshold ##########
-  else:
-      ##### Read and Initiate Mask
-      try:        V, atr = readfile.read(File,epoch_date)
-      except:
-          try:    V, atr = readfile.read(File,epoch_num)
-          except: V, atr = readfile.read(File)
-
-      ##### Calculating Mask
-      ## threshold
-      try:
-          mask[V<minV]=0
-          print 'all value < '+str(minV)+' = 0'
-      except:  print 'No min threshold'
-      try:
-          mask[V>maxV]=0
-          print 'all value > '+str(maxV)+' = 0'
-      except:  print 'No max threshold'  
-      ## nan value
-      mask[np.isnan(V)]=0
-
-  ## subset
-  try:
-      mask[0:ysub[0],:]=0
-      mask[ysub[1]:mask.shape[0],:]=0
-      print 'all y in [0,'+str(ysub[0])+'] and ['+str(ysub[1])+',end] = 0'
-  except:  print 'No subset in y direction'
-  try:
-      mask[:,0:xsub[0]]=0
-      mask[:,xsub[1]:mask.shape[1]]=0
-      print 'all x in [0,'+str(xsub[0])+'] and ['+str(xsub[1])+',end] = 0'
-  except:  print 'No subset in x direction'
- 
-
-  ##### Writing mask file
-  atr['FILE_TYPE'] = 'mask'
-  writefile.write(mask,atr,outName)
+    ##### Threshold ##########
+    else:
+        ##### Read and Initiate Mask
+        try:        V, atr = readfile.read(File,epoch_date)
+        except:
+            try:    V, atr = readfile.read(File,epoch_num)
+            except: V, atr = readfile.read(File)
+  
+        ##### Calculating Mask
+        ## threshold
+        try:
+            mask[V<minV]=0
+            print 'all value < '+str(minV)+' = 0'
+        except:  print 'No min threshold'
+        try:
+            mask[V>maxV]=0
+            print 'all value > '+str(maxV)+' = 0'
+        except:  print 'No max threshold'  
+        ## nan value
+        mask[np.isnan(V)]=0
+  
+    ## subset
+    try:
+        mask[0:ysub[0],:]=0
+        mask[ysub[1]:mask.shape[0],:]=0
+        print 'all y in [0,'+str(ysub[0])+'] and ['+str(ysub[1])+',end] = 0'
+    except:  print 'No subset in y direction'
+    try:
+        mask[:,0:xsub[0]]=0
+        mask[:,xsub[1]:mask.shape[1]]=0
+        print 'all x in [0,'+str(xsub[0])+'] and ['+str(xsub[1])+',end] = 0'
+    except:  print 'No subset in x direction'
+   
+  
+    ##### Writing mask file
+    atr['FILE_TYPE'] = 'mask'
+    writefile.write(mask,atr,outName)
 
 
 ############################################################
 if __name__ == '__main__':
-  main(sys.argv[1:])
+    main(sys.argv[1:])
 

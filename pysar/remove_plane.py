@@ -23,7 +23,7 @@ import pysar._readfile as readfile
 
 ######################################
 def Usage():
-  print '''
+    print '''
 ********************************************************
 ********************************************************
 
@@ -52,108 +52,108 @@ def Usage():
 
 ********************************************************
 ********************************************************
-  '''
+    '''
 
 ######################################
 def main(argv):
 
-  ########################## Check Inputs ################################################
-  ## Default value
-  Masking  = 'no'
+    ########################## Check Inputs ################################################
+    ## Default value
+    Masking  = 'no'
+  
+    if len(sys.argv) > 4:
+        try: opts, args = getopt.getopt(argv,'h:f:m:o:s:t:y:')
+        except getopt.GetoptError:  print 'Error while getting args!\n';  Usage(); sys.exit(1)
+  
+        for opt,arg in opts:
+            if   opt in ['-h','--help']:    Usage(); sys.exit()
+            elif opt in '-f':    File     = arg
+            elif opt in '-m':    maskFile = arg
+            elif opt in '-o':    outName  = arg
+            elif opt in '-s':    surfType = arg.lower()
+            elif opt in '-t':    templateFile = arg
+            elif opt in '-y':    ysub = [int(i) for i in arg.split(',')]
+  
+    elif len(sys.argv) in [3,4]:
+        File          = argv[0]
+        surfType      = argv[1].lower()
+        try: maskFile = argv[2]
+        except: pass
+    else: Usage(); sys.exit(1)
+  
+    print '\n*************** Phase Ramp Removal ***********************'
+    ## Multiple Surfaces
+    try:
+        ysub
+        if not len(ysub)%2 == 0:
+            print 'ERROR: -y input has to have even length!'
+            sys.exit(1)
+        surfNum = len(ysub)/2
+    except:
+        surfNum = 1
+    print 'phase ramp number: '+str(surfNum)
+  
+    ## Tempate File
+    try:
+        templateFile
+        templateContents = readfile.read_template(templateFile)
+    except: pass
 
-  if len(sys.argv) > 4:
-      try: opts, args = getopt.getopt(argv,'h:f:m:o:s:t:y:')
-      except getopt.GetoptError:  print 'Error while getting args!\n';  Usage(); sys.exit(1)
-
-      for opt,arg in opts:
-          if   opt in ['-h','--help']:    Usage(); sys.exit()
-          elif opt in '-f':    File     = arg
-          elif opt in '-m':    maskFile = arg
-          elif opt in '-o':    outName  = arg
-          elif opt in '-s':    surfType = arg.lower()
-          elif opt in '-t':    templateFile = arg
-          elif opt in '-y':    ysub = [int(i) for i in arg.split(',')]
-
-  elif len(sys.argv) in [3,4]:
-      File          = argv[0]
-      surfType      = argv[1].lower()
-      try: maskFile = argv[2]
-      except: pass
-  else: Usage(); sys.exit(1)
-
-  print '\n*************** Phase Ramp Removal ***********************'
-  ## Multiple Surfaces
-  try:
-      ysub
-      if not len(ysub)%2 == 0:
-          print 'ERROR: -y input has to have even length!'
-          sys.exit(1)
-      surfNum = len(ysub)/2
-  except:
-      surfNum = 1
-  print 'phase ramp number: '+str(surfNum)
-
-  ## Tempate File
-  try:
-      templateFile
-      templateContents = readfile.read_template(templateFile)
-  except: pass
-
-  try:        surfType
-  except:
-      try:    surfType = templateContents['pysar.orbitError.method']
-      except: surfType = 'plane'; print 'No ramp type input, use plane as default'
-  print 'phase ramp type  : '+surfType
-
-  ## Input File(s)
-  fileList = glob.glob(File)
-  fileList = sorted(fileList)
-  print 'input file(s): '+str(len(fileList))
-  print fileList
-
-  ## Output File(s)
-  if   len(fileList) >  1:    outName = ''
-  elif len(fileList) == 0:    print 'ERROR: Cannot find input file(s)!';  sys.exit(1)
-  else:    ## Customized output name only works for single file input
-      try:
-          outName
-      except:
-          ext     = os.path.splitext(fileList[0])[1].lower()
-          outName = os.path.basename(fileList[0]).split(ext)[0]+'_'+surfType+ext
-
-  ##### Read Mask File 
-  ## Priority:
-  ## Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5
-  try:      maskFile
-  except:
-      try:  maskFile = templateContents['pysar.mask.file']
-      except: pass
-
-  try:
-      Mask,Matr = readfile.read(maskFile)
-      print 'mask file: '+maskFile
-      Masking = 'yes'
-  except:
-      print 'No mask. Use the whole area for ramp estimation.'
-      Masking = 'no'
-      atr = readfile.read_attributes(File)
-      length = int(atr['FILE_LENGTH'])
-      width  = int(atr['WIDTH'])
-      Mask=np.ones((length,width))
-
-
-  ############################## Removing Phase Ramp #######################################
-  for file in fileList:
-      print '------------------------------------------'
-      print 'input file : '+file
-      if surfNum == 1:
-          rm.remove_surface(file,surfType,Mask,outName)
-      else:
-          rm.remove_multiple_surface(file,surfType,Mask,ysub,outName)
+    try:        surfType
+    except:
+        try:    surfType = templateContents['pysar.orbitError.method']
+        except: surfType = 'plane'; print 'No ramp type input, use plane as default'
+    print 'phase ramp type  : '+surfType
+  
+    ## Input File(s)
+    fileList = glob.glob(File)
+    fileList = sorted(fileList)
+    print 'input file(s): '+str(len(fileList))
+    print fileList
+  
+    ## Output File(s)
+    if   len(fileList) >  1:    outName = ''
+    elif len(fileList) == 0:    print 'ERROR: Cannot find input file(s)!';  sys.exit(1)
+    else:    ## Customized output name only works for single file input
+        try:
+            outName
+        except:
+            ext     = os.path.splitext(fileList[0])[1].lower()
+            outName = os.path.basename(fileList[0]).split(ext)[0]+'_'+surfType+ext
+  
+    ##### Read Mask File 
+    ## Priority:
+    ## Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5
+    try:      maskFile
+    except:
+        try:  maskFile = templateContents['pysar.mask.file']
+        except: pass
+  
+    try:
+        Mask,Matr = readfile.read(maskFile)
+        print 'mask file: '+maskFile
+        Masking = 'yes'
+    except:
+        print 'No mask. Use the whole area for ramp estimation.'
+        Masking = 'no'
+        atr = readfile.read_attributes(File)
+        length = int(atr['FILE_LENGTH'])
+        width  = int(atr['WIDTH'])
+        Mask=np.ones((length,width))
+  
+  
+    ############################## Removing Phase Ramp #######################################
+    for file in fileList:
+        print '------------------------------------------'
+        print 'input file : '+file
+        if surfNum == 1:
+            rm.remove_surface(file,surfType,Mask,outName)
+        else:
+            rm.remove_multiple_surface(file,surfType,Mask,ysub,outName)
 
 
 ###########################################################################################
 if __name__ == '__main__':
-  main(sys.argv[1:])
+    main(sys.argv[1:])
 
 #

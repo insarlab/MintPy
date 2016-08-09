@@ -181,7 +181,7 @@ def Usage():
         -T : maximum date for display
         -E/--exclude : exclude dates list for display
         --ref-date   : reference date for time series displacement
-        --zero-start : set the first displacement as zero
+        --zero-start : set the first displacement as zero, yes or no [yes by default]
 
      Save and Output
         --save       : save data and plot                     - save timeseries data/plot
@@ -212,7 +212,7 @@ def Usage():
         tsviewer.py -f timeseries.h5 -x 300:330 -y 500:530
         tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem -C yes -x 300:330 -y 500:530 --nodisplay
 
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem -C yes -x 300:330 -y 500:530 --nodisplay --zoom-x 300:800 --zoom-y 500:1500 --zero-start
+        tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem -C yes -x 300:330 -y 500:530 --nodisplay --zoom-x 300:800 --zoom-y 500:1500
 
 *******************************************************************************************************
     '''
@@ -222,401 +222,410 @@ def Usage():
 
 def main(argv):
 
-  ## Default settings
-  demShade   = 'yes'
-  demContour = 'no'
+    ## Default settings
+    demShade   = 'yes'
+    demContour = 'no'
+  
+    global markerSize, markderSize2, markerColor, markerColor2, rectColor
+    global lineWidth, lineWidth2, edgeWidth, fontSize
+  
+    markerSize   = 16
+    markerSize2  = 16
+    markerColor  = 'crimson'     # g
+    markerColor2 = 'royalblue'
+    markerColor3 = 'white'
+    rectColor    = 'crimson'
+    lineWidth    = 2
+    lineWidth2   = 0
+    edgeWidth    = 1.5
+    fontSize     = 16
+  
+  
+    global unit, radius, saveFig, dispFig, fig_dpi
+  
+    fig_dpi = 300
+    radius  = 0
+    saveFig = 'no'
+    dispFig = 'yes'
+    unit    = 'cm'
+  
+    dispOpposite  = 'no'
+    dispContour   = 'only'
+    smoothContour = 'no'
+    contour_step  = 200
+    showRef       = 'yes'
+    vel_alpha     = 1.0
+    zero_start    = 'yes'
+  
+    global ref_xsub, ref_ysub, ref_date
+    global h5timeseries_2, dates_2, dateList_2
+    global lbound, hbound
 
-  global markerSize, markderSize2, markerColor, markerColor2, rectColor
-  global lineWidth, lineWidth2, edgeWidth, fontSize
-
-  markerSize   = 16
-  markerSize2  = 16
-  markerColor  = 'crimson'     # g
-  markerColor2 = 'royalblue'
-  markerColor3 = 'white'
-  rectColor    = 'crimson'
-  lineWidth    = 2
-  lineWidth2   = 0
-  edgeWidth    = 1.5
-  fontSize     = 16
-
-
-  global unit, radius, saveFig, dispFig, fig_dpi
-
-  fig_dpi = 300
-  radius  = 0
-  saveFig = 'no'
-  dispFig = 'yes'
-  unit    = 'cm'
-
-  dispOpposite  = 'no'
-  dispContour   = 'only'
-  smoothContour = 'no'
-  contour_step  = 200
-  showRef       = 'yes'
-  vel_alpha     = 1.0
-  zero_start    = 'no'
-
-  global ref_xsub, ref_ysub, ref_date
-  global h5timeseries_2, dates_2, dateList_2
-  global lbound, hbound
-
-  ############### Check Inputs ##################
-  if   len(sys.argv)< 2:   Usage(); sys.exit(1)
-  elif len(sys.argv)==2:
-    if argv[0]=='-h':      Usage(); sys.exit(1)
-    elif os.path.isfile(argv[0]):
-       timeSeriesFile = argv[0];   h5timeseries = h5py.File(timeSeriesFile);  k = h5timeseries.keys();
-       if not 'timeseries' in k:   print 'ERROR: Input file is '+k[0]+'.\n\tOnly timeseries is supported.\n'; sys.exit(1)
-    else:  Usage(); sys.exit(1)
-
-  elif len(sys.argv)>2:
-    try:   opts, args = getopt.getopt(argv,"f:F:v:a:b:s:m:c:w:u:l:h:D:V:t:T:d:r:x:y:X:Y:o:E:",
-                                          ['save','nodisplay','unit=','exclude=','ref-date=','rect-color',\
-                                           'zero-start','zoom-x=','zoom-y=','zoom-lon','zoom-lat','lalo=',\
-                                           'opposite','dem-contour','dem-noshade'])
-    except getopt.GetoptError:    Usage() ; sys.exit(1)
-
-    for opt,arg in opts:
-      if   opt == '-f':     timeSeriesFile   = arg
-      elif opt == '-F':     timeSeriesFile_2 = arg
-      elif opt == '-v':     velocityFile     = arg
-      elif opt == '-a':     vmin             = float(arg)
-      elif opt == '-b':     vmax             = float(arg)
-      elif opt == '-s':     fontSize         = int(arg)
-      elif opt == '-m':     markerSize       = int(arg);       markerSize2=int(arg)
-      elif opt == '-c':     markerColor      = arg
-      elif opt == '-w':     lineWidth        = int(arg)
-      elif opt == '-u':     unit             = arg
-      elif opt == '-l':     lbound           = float(arg)
-      elif opt == '-h':     hbound           = float(arg)
-      elif opt == '-D':     demFile          = arg
-      elif opt == '-V':     contour_step     = float(arg)
-      elif opt == '-t':     minDate          = arg
-      elif opt == '-T':     maxDate          = arg
-      elif opt == '-r':     radius           = abs(int(arg))
-      elif opt == '-x':     xsub = [int(i) for i in arg.split(':')];   xsub.sort();  # dispVelFig='no'
-      elif opt == '-y':     ysub = [int(i) for i in arg.split(':')];   ysub.sort();  # dispVelFig='no'
-      elif opt == '-X':     ref_xsub = [int(i) for i in arg.split(':')];   ref_xsub.sort();
-      elif opt == '-Y':     ref_ysub = [int(i) for i in arg.split(':')];   ref_ysub.sort();  # dispVelFig='no'
-
-      elif opt == '--dem-contour'    : demContour      = 'yes'
-      elif opt == '--dem-noshade'    : demShade        = 'no'
-      elif opt in ['-E','--exclude'] : datesNot2show   = arg.split(',')
-      elif opt in '--lalo'           : lalosub         = [float(i) for i in arg.split(',')]
-      elif opt in ['--rect-color']   : rectColor       = arg
-      elif opt in ['--ref-date']     : ref_date        = ptime.yyyymmdd(arg)
-      elif opt in ['-u','--unit']    : unit            = arg.lower()
-      elif opt == '--save'           : saveFig         = 'yes'
-      elif opt == '--nodisplay'      : dispFig         = 'no';   saveFig='yes'
-      elif opt == '--opposite'       : dispOpposite    = 'yes'
-      elif opt == '--zero-start'     : zero_start      = 'yes'
-      elif opt == '--zoom-x'         : win_x           = [int(i)   for i in arg.split(':')];    win_x.sort()
-      elif opt == '--zoom-y'         : win_y           = [int(i)   for i in arg.split(':')];    win_y.sort()
-      elif opt == '--zoom-lon'       : win_lon         = [float(i) for i in arg.split(':')];    win_lon.sort()
-      elif opt == '--zoom-lat'       : win_lat         = [float(i) for i in arg.split(':')];    win_lat.sort()
-
-
-  ##############################################################
-  ## Read time series file info
-  if not os.path.isfile(timeSeriesFile):       Usage();sys.exit(1)
-  h5timeseries = h5py.File(timeSeriesFile)
-  k = h5timeseries.keys();       # read h5 file and its group type
-  if not 'timeseries' in k:  print 'ERROR: Input file is '+k[0]+'.\n\tOnly timeseries is supported.\n'; sys.exit(1)
- 
-  atr = readfile.read_attributes(timeSeriesFile)
-  dateList1 = h5timeseries['timeseries'].keys()
-  dateList1 = sorted(dateList1)
-  dates1,datevector1 = ptime.date_list2vector(dateList1)
-  print '\n************ Time Series Display - Point *************'
-
-  ##### Select Check
-  try:
-      lalosub
-      xsub = subset.coord_geo2radar([lalosub[1]],atr,'longitude')
-      ysub = subset.coord_geo2radar([lalosub[0]],atr,'latitude')
-      if radius == 0:  radius = 3
-  except: pass
-
-  ##############################################################
-  global dates, dateList, datevector_all
-
-  print '*******************'
-  print 'All dates existed:'
-  print dateList1
-  print '*******************'
-
-  ## Check exclude date input
-  try:
-     datesNot2show
-     print 'dates not to show: '+str(datesNot2show)
-  except:  datesNot2show=[]
-
-  ## Check Min / Max Date
-  try:
-    minDate
-    minDateyy=ptime.yyyymmdd2years(minDate)
-    print 'minimum date: '+minDate
-    for date in dateList1:
-       yy=ptime.yyyymmdd2years(date)
-       if yy < minDateyy:
-           datesNot2show.append(date)
-  except:  pass
-  try:
-    maxDate
-    maxDateyy=ptime.yyyymmdd2years(maxDate)
-    print 'maximum date: '+maxDate
-    for date in dateList1:
-       yy=ptime.yyyymmdd2years(date)
-       if yy > maxDateyy:
-           datesNot2show.append(date)
-  except:  pass
-
-  ## Finalize Date List
-  try:
-     dateList=[]
-     for date in dateList1:
-        if date not in datesNot2show:
-           dateList.append(date)
-     print '--------------------------------------------'
-     print 'dates used to show time series displacements:'
-     print dateList
-     print '--------------------------------------------'
-  except:
-     dateList=dateList1
-     print 'using all dates to show time series displacement'
-
-  ## Read Date Info (x axis for time series display)
-  dates,datevector = ptime.date_list2vector(dateList)
-  datevector_all = list(datevector)
-
-  ## Check reference date input
-  if zero_start == 'yes':  ref_date = dateList[0]
-  try:
-      ref_date
-      if not ref_date in dateList:
-          print 'Reference date - '+ref_date+' - is not included in date list to show.'
-          sys.exit(1)
-      else: print 'reference date: '+ref_date
-  except: pass
-
-  ##############################################################
-  ##### Plot Fig 1 - Velocity / last epoch of time series / DEM
-  fig = plt.figure(1)
-  ax=fig.add_subplot(111)
+    ############### Check Inputs ##################
+    if   len(sys.argv)< 2:   Usage(); sys.exit(1)
+    elif len(sys.argv)==2:
+        if argv[0]=='-h':      Usage(); sys.exit(1)
+        elif os.path.isfile(argv[0]):
+            timeSeriesFile = argv[0];
+            h5timeseries = h5py.File(timeSeriesFile);
+            k = h5timeseries.keys();
+            if not 'timeseries' in k:
+                print 'ERROR: Input file is '+k[0]+'.\n\tOnly timeseries is supported.\n';
+                sys.exit(1)
+        else:  Usage(); sys.exit(1)
+  
+    elif len(sys.argv)>2:
+        try:   opts, args = getopt.getopt(argv,"f:F:v:a:b:s:m:c:w:u:l:h:D:V:t:T:d:r:x:y:X:Y:o:E:",
+                                              ['save','nodisplay','unit=','exclude=','ref-date=','rect-color',\
+                                               'zero-start=','zoom-x=','zoom-y=','zoom-lon','zoom-lat','lalo=',\
+                                               'opposite','dem-contour','dem-noshade'])
+        except getopt.GetoptError:    Usage() ; sys.exit(1)
+    
+        for opt,arg in opts:
+            if   opt == '-f':     timeSeriesFile   = arg
+            elif opt == '-F':     timeSeriesFile_2 = arg
+            elif opt == '-v':     velocityFile     = arg
+            elif opt == '-a':     vmin             = float(arg)
+            elif opt == '-b':     vmax             = float(arg)
+            elif opt == '-s':     fontSize         = int(arg)
+            elif opt == '-m':     markerSize       = int(arg);       markerSize2=int(arg)
+            elif opt == '-c':     markerColor      = arg
+            elif opt == '-w':     lineWidth        = int(arg)
+            elif opt == '-u':     unit             = arg
+            elif opt == '-l':     lbound           = float(arg)
+            elif opt == '-h':     hbound           = float(arg)
+            elif opt == '-D':     demFile          = arg
+            elif opt == '-V':     contour_step     = float(arg)
+            elif opt == '-t':     minDate          = arg
+            elif opt == '-T':     maxDate          = arg
+            elif opt == '-r':     radius           = abs(int(arg))
+            elif opt == '-x':     xsub = [int(i) for i in arg.split(':')];   xsub.sort();  # dispVelFig='no'
+            elif opt == '-y':     ysub = [int(i) for i in arg.split(':')];   ysub.sort();  # dispVelFig='no'
+            elif opt == '-X':     ref_xsub = [int(i) for i in arg.split(':')];   ref_xsub.sort();
+            elif opt == '-Y':     ref_ysub = [int(i) for i in arg.split(':')];   ref_ysub.sort();  # dispVelFig='no'
+      
+            elif opt == '--dem-contour'    : demContour      = 'yes'
+            elif opt == '--dem-noshade'    : demShade        = 'no'
+            elif opt in ['-E','--exclude'] : datesNot2show   = arg.split(',')
+            elif opt in '--lalo'           : lalosub         = [float(i) for i in arg.split(',')]
+            elif opt in ['--rect-color']   : rectColor       = arg
+            elif opt in ['--ref-date']     : ref_date        = ptime.yyyymmdd(arg)
+            elif opt in ['-u','--unit']    : unit            = arg.lower()
+            elif opt == '--save'           : saveFig         = 'yes'
+            elif opt == '--nodisplay'      : dispFig         = 'no';   saveFig='yes'
+            elif opt == '--opposite'       : dispOpposite    = 'yes'
+            elif opt == '--zero-start'     : zero_start      = arg.lower()
+            elif opt == '--zoom-x'         : win_x           = [int(i)   for i in arg.split(':')];    win_x.sort()
+            elif opt == '--zoom-y'         : win_y           = [int(i)   for i in arg.split(':')];    win_y.sort()
+            elif opt == '--zoom-lon'       : win_lon         = [float(i) for i in arg.split(':')];    win_lon.sort()
+            elif opt == '--zoom-lat'       : win_lat         = [float(i) for i in arg.split(':')];    win_lat.sort()
 
 
-  ##### Check subset range
-  width  = int(atr['WIDTH'])
-  length = int(atr['FILE_LENGTH'])
-  print 'file size: '+str(length)+', '+str(width)
-  try: win_y = subset.coord_geo2radar(win_lat,atr,'latitude')
-  except:
-      try:    win_y
-      except: win_y = [0,length]
-  try: win_x = subset.coord_geo2radar(win_lon,atr,'longitude')
-  except:
-      try:    win_x
-      except: win_x = [0,width]
-  win_y,win_x = subset.check_subset_range(win_y,win_x,atr)
+    ##############################################################
+    ## Read time series file info
+    if not os.path.isfile(timeSeriesFile):       Usage();sys.exit(1)
+    h5timeseries = h5py.File(timeSeriesFile)
+    k = h5timeseries.keys();       # read h5 file and its group type
+    if not 'timeseries' in k:  print 'ERROR: Input file is '+k[0]+'.\n\tOnly timeseries is supported.\n'; sys.exit(1)
+   
+    atr = readfile.read_attributes(timeSeriesFile)
+    dateList1 = h5timeseries['timeseries'].keys()
+    dateList1 = sorted(dateList1)
+    dates1,datevector1 = ptime.date_list2vector(dateList1)
+    print '\n************ Time Series Display - Point *************'
+  
+    ##### Select Check
+    try:
+        lalosub
+        xsub = subset.coord_geo2radar([lalosub[1]],atr,'longitude')
+        ysub = subset.coord_geo2radar([lalosub[0]],atr,'latitude')
+        if radius == 0:  radius = 3
+    except: pass
+
+    ##############################################################
+    global dates, dateList, datevector_all
+  
+    print '*******************'
+    print 'All dates existed:'
+    print dateList1
+    print '*******************'
+  
+    ## Check exclude date input
+    try:
+        datesNot2show
+        print 'dates not to show: '+str(datesNot2show)
+    except:  datesNot2show=[]
+  
+    ## Check Min / Max Date
+    try:
+        minDate
+        minDateyy=ptime.yyyymmdd2years(minDate)
+        print 'minimum date: '+minDate
+        for date in dateList1:
+            yy=ptime.yyyymmdd2years(date)
+            if yy < minDateyy:
+                datesNot2show.append(date)
+    except:  pass
+    try:
+        maxDate
+        maxDateyy=ptime.yyyymmdd2years(maxDate)
+        print 'maximum date: '+maxDate
+        for date in dateList1:
+            yy=ptime.yyyymmdd2years(date)
+            if yy > maxDateyy:
+                datesNot2show.append(date)
+    except:  pass
+  
+    ## Finalize Date List
+    try:
+        dateList=[]
+        for date in dateList1:
+            if date not in datesNot2show:
+                dateList.append(date)
+        print '--------------------------------------------'
+        print 'dates used to show time series displacements:'
+        print dateList
+        print '--------------------------------------------'
+    except:
+        dateList=dateList1
+        print 'using all dates to show time series displacement'
+  
+    ## Read Date Info (x axis for time series display)
+    dates,datevector = ptime.date_list2vector(dateList)
+    datevector_all = list(datevector)
+  
+    ## Check reference date input
+    if zero_start == 'yes':
+        ref_date = dateList[0];
+        print 'set the 1st date as reference for displacement display.'
+    try:
+        ref_date
+        if not ref_date in dateList:
+            print 'Reference date - '+ref_date+' - is not included in date list to show.'
+            sys.exit(1)
+        else: print 'reference date: '+ref_date
+    except: pass
+
+    ##############################################################
+    ##### Plot Fig 1 - Velocity / last epoch of time series / DEM
+    fig = plt.figure(1)
+    ax=fig.add_subplot(111)
+  
+  
+    ##### Check subset range
+    width  = int(atr['WIDTH'])
+    length = int(atr['FILE_LENGTH'])
+    print 'file size: '+str(length)+', '+str(width)
+    try: win_y = subset.coord_geo2radar(win_lat,atr,'latitude')
+    except:
+        try:    win_y
+        except: win_y = [0,length]
+    try: win_x = subset.coord_geo2radar(win_lon,atr,'longitude')
+    except:
+        try:    win_x
+        except: win_x = [0,width]
+    win_y,win_x = subset.check_subset_range(win_y,win_x,atr)
+  
+  
+    try:
+        velocityFile
+        try:    vel, vel_atr = readfile.read(velocityFile)
+        except: vel, vel_atr = readfile.read(timeSeriesFile,velocityFile)
+        ax.set_title(velocityFile)
+        print 'display: ' + velocityFile
+    except:
+        vel, vel_atr = readfile.read(timeSeriesFile,dateList1[-1])
+        ax.set_title('epoch: '+dateList1[-1])
+        print 'display last epoch'
+  
+    ## Reference Point
+    if showRef == 'yes':
+        try: ax.plot(int(atr['ref_x']),int(atr['ref_y']),'ks',ms=6)
+        except: pass
+  
+    if dispOpposite == 'yes':
+        print 'show opposite value in figure/map 1'
+        vel *= -1
+  
+    ## Flip
+    try:        flip_lr
+    except:
+        try:    flip_ud
+        except: flip_lr, flip_ud = view.auto_flip_check(atr)
+  
+    ## Status bar
+    def format_coord(x,y):
+        col = int(x+0.5)
+        row = int(y+0.5)
+        if col>=0 and col<=width and row>=0 and row<=length:
+            z = data[row,col]
+            return 'x=%.4f,  y=%.4f,  value=%.4f'%(x,y,z)
+        else:
+            return 'x=%.4f,  y=%.4f'%(x,y)
+    ax.format_coord = format_coord
+
+    ## DEM 
+    try:
+        demFile
+        dem,demRsc = readfile.read(demFile)
+        ax = view.plot_dem_yx(ax,dem,demShade,demContour)
+        vel_alpha = 0.7
+    except: print 'No DEM file' 
+  
+    try:     img=ax.imshow(vel,vmin=vmin,vmax=vmax, alpha=vel_alpha)
+    except:  img=ax.imshow(vel,alpha=vel_alpha)
+    plt.colorbar(img)
+  
+    ## Zoom In (subset)
+    if flip_lr == 'yes':  ax.set_xlim(win_x[1],win_x[0])
+    else:                 ax.set_xlim(win_x[0],win_x[1])
+    if flip_ud == 'yes':  ax.set_ylim(win_y[0],win_y[1])
+    else:                 ax.set_ylim(win_y[1],win_y[0])
+  
+    ## Flip
+    #if flip_lr == 'yes':  fig.gca().invert_xaxis()
+    #if flip_ud == 'yes':  fig.gca().invert_yaxis()
+  
+  
+    ########################################## 
+    ##### Plot Fig 2 - Time series plot
+    #fig2 = plt.figure(num=2,figsize=(12,6))
+    fig2 = plt.figure(2,figsize=(12,6))
+    ax2  = fig2.add_subplot(111) 
+  
+    try:
+        timeSeriesFile_2
+        h5timeseries_2=h5py.File(timeSeriesFile_2)
+        dateList_2 = h5timeseries_2['timeseries'].keys()
+        dateList_2 = sorted(dateList_2)
+        dates_2,datevector_2 = ptime.date_list2vector(dateList_2)
+        datevector_all += list(set(datevector_2) - set(datevector_all))
+        datevector_all = sorted(datevector_all)
+    except:  pass
 
 
-  try:
-     velocityFile
-     try:    vel, vel_atr = readfile.read(velocityFile)
-     except: vel, vel_atr = readfile.read(timeSeriesFile,velocityFile)
-     ax.set_title(velocityFile)
-     print 'display: ' + velocityFile
-  except:
-     vel, vel_atr = readfile.read(timeSeriesFile,dateList1[-1])
-     ax.set_title('epoch: '+dateList1[-1])
-     print 'display last epoch'
+    ################################  Plot Code Package <start> #################################
+    def plot_ts(ax,ax2,fig2,xsub,ysub,h5timeseries):
+        ax2.cla()
+        print '\n-------------------------------------------------------------------------------'
+        disp_min = 0
+        disp_max = 0
+  
+        ############################# Plot Time Series ##############################
+        global ref_xsub, ref_ysub
+        ##### 1.1 Plot Reference time series
+        try:
+            ref_xsub
+            ref_ysub
+            ref_xsub,ref_ysub = check_yx(ref_xsub,ref_ysub,radius,ax)
+            print 'ref_x='+str(ref_xsub[0])+':'+str(ref_xsub[1]-1)
+            print 'ref_y='+str(ref_ysub[0])+':'+str(ref_ysub[1]-1)
+            print 'Reference Point - Time Series:'
+  
+            dis1, dis1_mean, dis1_std, dis1_vel = read_dis(ref_xsub,ref_ysub,dateList1,h5timeseries,unit)
+            (_, caps, _)=ax2.errorbar(dates1,dis1_mean,yerr=dis1_std,fmt='-ks',\
+                                      ms=markerSize2, lw=0, alpha=1,mfc=markerColor3,mew=edgeWidth,\
+                                      elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
+            for cap in caps:  cap.set_markeredgewidth(edgeWidth)
+            disp_min,disp_max = update_lim(disp_min,disp_max,dis1_mean,dis1_std)
+            print '-----------------------------'
+        except: pass
+  
+        ##### 1.2.0 Read y/x
+        xsub,ysub = check_yx(xsub,ysub,radius,ax)
+        print 'x='+str(xsub[0])+':'+str(xsub[1]-1)
+        print 'y='+str(ysub[0])+':'+str(ysub[1]-1)
+  
+        ##### 1.2.1 Plot 2nd time series
+        try:
+            timeSeriesFile_2
+            print '-----------------------------'
+            print '2nd Time Series:'
+            dis2, dis2_mean, dis2_std, dis2_vel = read_dis(xsub,ysub,dateList_2,h5timeseries_2,unit)
+            (_, caps, _)=ax2.errorbar(dates_2,dis2_mean,yerr=dis2_std,fmt='-ko',\
+                                      ms=markerSize2, lw=0, alpha=1, mfc=markerColor2,\
+                                      elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
+            for cap in caps:  cap.set_markeredgewidth(edgeWidth)
+            disp_min,disp_max = update_lim(disp_min,disp_max,dis2_mean,dis2_std)
+        except: pass
 
-  ## Reference Point
-  if showRef == 'yes':
-      try: ax.plot(int(atr['ref_x']),int(atr['ref_y']),'ks',ms=6)
-      except: pass
-
-  if dispOpposite == 'yes':
-      print 'show opposite value in figure/map 1'
-      vel *= -1
-
-  ## Flip
-  try:        flip_lr
-  except:
-      try:    flip_ud
-      except: flip_lr, flip_ud = view.auto_flip_check(atr)
-
-  ## Status bar
-  def format_coord(x,y):
-      col = int(x+0.5)
-      row = int(y+0.5)
-      if col>=0 and col<=width and row>=0 and row<=length:
-         z = data[row,col]
-         return 'x=%.4f,  y=%.4f,  value=%.4f'%(x,y,z)
-      else:
-         return 'x=%.4f,  y=%.4f'%(x,y)
-  ax.format_coord = format_coord
-
-  ## DEM 
-  try:
-     demFile
-     dem,demRsc = readfile.read(demFile)
-     ax = view.plot_dem_yx(ax,dem,demShade,demContour)
-     vel_alpha = 0.7
-  except: print 'No DEM file' 
-
-  try:     img=ax.imshow(vel,vmin=vmin,vmax=vmax, alpha=vel_alpha)
-  except:  img=ax.imshow(vel,alpha=vel_alpha)
-  plt.colorbar(img)
-
-  ## Zoom In (subset)
-  if flip_lr == 'yes':  ax.set_xlim(win_x[1],win_x[0])
-  else:                 ax.set_xlim(win_x[0],win_x[1])
-  if flip_ud == 'yes':  ax.set_ylim(win_y[0],win_y[1])
-  else:                 ax.set_ylim(win_y[1],win_y[0])
-
-  ## Flip
-  #if flip_lr == 'yes':  fig.gca().invert_xaxis()
-  #if flip_ud == 'yes':  fig.gca().invert_yaxis()
-
-
-  ########################################## 
-  ##### Plot Fig 2 - Time series plot
-  #fig2 = plt.figure(num=2,figsize=(12,6))
-  fig2 = plt.figure(2,figsize=(12,6))
-  ax2  = fig2.add_subplot(111) 
-
-  try:
-     timeSeriesFile_2
-     h5timeseries_2=h5py.File(timeSeriesFile_2)
-     dateList_2 = h5timeseries_2['timeseries'].keys()
-     dateList_2 = sorted(dateList_2)
-     dates_2,datevector_2 = ptime.date_list2vector(dateList_2)
-     datevector_all += list(set(datevector_2) - set(datevector_all))
-     datevector_all = sorted(datevector_all)
-  except:  pass
-
-
-  ################################  Plot Code Package <start> #################################
-  def plot_ts(ax,ax2,fig2,xsub,ysub,h5timeseries):
-      ax2.cla()
-      print '\n-------------------------------------------------------------------------------'
-      disp_min = 0
-      disp_max = 0
-
-      ############################# Plot Time Series ##############################
-      global ref_xsub, ref_ysub
-      ##### 1.1 Plot Reference time series
-      try:
-          ref_xsub
-          ref_ysub
-          ref_xsub,ref_ysub = check_yx(ref_xsub,ref_ysub,radius,ax)
-          print 'ref_x='+str(ref_xsub[0])+':'+str(ref_xsub[1]-1)
-          print 'ref_y='+str(ref_ysub[0])+':'+str(ref_ysub[1]-1)
-          print 'Reference Point - Time Series:'
-
-          dis1, dis1_mean, dis1_std, dis1_vel = read_dis(ref_xsub,ref_ysub,dateList1,h5timeseries,unit)
-          (_, caps, _)=ax2.errorbar(dates1,dis1_mean,yerr=dis1_std,fmt='-ks',\
-                                    ms=markerSize2, lw=0, alpha=1,mfc=markerColor3,mew=edgeWidth,\
-                                    elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
-          for cap in caps:  cap.set_markeredgewidth(edgeWidth)
-          disp_min,disp_max = update_lim(disp_min,disp_max,dis1_mean,dis1_std)
-          print '-----------------------------'
-      except: pass
-
-      ##### 1.2.0 Read y/x
-      xsub,ysub = check_yx(xsub,ysub,radius,ax)
-      print 'x='+str(xsub[0])+':'+str(xsub[1]-1)
-      print 'y='+str(ysub[0])+':'+str(ysub[1]-1)
-
-      ##### 1.2.1 Plot 2nd time series
-      try:
-          timeSeriesFile_2
-          print '-----------------------------'
-          print '2nd Time Series:'
-          dis2, dis2_mean, dis2_std, dis2_vel = read_dis(xsub,ysub,dateList_2,h5timeseries_2,unit)
-          (_, caps, _)=ax2.errorbar(dates_2,dis2_mean,yerr=dis2_std,fmt='-ko',\
-                                    ms=markerSize2, lw=0, alpha=1, mfc=markerColor2,\
-                                    elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
-          for cap in caps:  cap.set_markeredgewidth(edgeWidth)
-          disp_min,disp_max = update_lim(disp_min,disp_max,dis2_mean,dis2_std)
-      except: pass
-
-      ##### 1.2.2 Plot 1st time series
-      print '-----------------------------'
-      print 'Time Series:'
-      dis, dis_mean, dis_std, dis_vel = read_dis(xsub,ysub,dateList,h5timeseries,unit)
-      (_, caps, _)=ax2.errorbar(dates,dis_mean,yerr=dis_std,fmt='-ko',\
-                                ms=markerSize, lw=lineWidth, alpha=1, mfc=markerColor,\
-                                elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
-      for cap in caps:  cap.set_markeredgewidth(edgeWidth)
-      disp_min,disp_max = update_lim(disp_min,disp_max,dis_mean,dis_std)
-
-      ####################### Figure Format #######################
-      ## x axis format
-      ax2 = adjust_xaxis_date(ax2,datevector_all)
-
-      ## y axis format
-      ax2.set_ylabel('Displacement ['+unit+']',fontsize=fontSize)
-      try:
-          lbound
-          hbound
-          ax2.set_ylim(lbound,hbound)
-      except:
-          disp_buf = 0.2*(disp_max - disp_min)
-          ax2.set_ylim(disp_min-disp_buf,disp_max+disp_buf)
-      for tick in ax2.yaxis.get_major_ticks():  tick.label.set_fontsize(fontSize)
-
-      ## title
-      ax2.set_title('x='+str(xsub[0])+':'+str(xsub[1]-1)+', y='+str(ysub[0])+':'+str(ysub[1]-1))
-
-      ################## Save and Output #####################
-      if saveFig == 'yes':
-          Delay={}
-          Delay['displacement'] = dis
-          Delay['unit']         = unit
-          Delay['time']         = datevector
-          Delay['velocity']     = dis_vel[0]
-          Delay['velocity_unit']= unit+'/yr'
-          Delay['velocity_std'] = dis_vel[4]
-          figBase = 'x'+str(xsub[0])+'_'+str(xsub[1]-1)+'y'+str(ysub[0])+'_'+str(ysub[1]-1)
-          sio.savemat( figBase+'_ts.mat', {'displacement': Delay});                               print 'saved '+figBase+'_ts.mat'
-          fig2.savefig(figBase+'_ts.png',bbox_inches='tight',transparent=True,dpi=fig_dpi);       print 'saved '+figBase+'_ts.png'
-          if dispFig == 'no':
-              fig.savefig(figBase+'_vel.png',bbox_inches='tight',transparent=True,dpi=fig_dpi);   print 'saved '+figBase+'_vel.png'
-  ################################  Plot Code Package <end> #################################
+        ##### 1.2.2 Plot 1st time series
+        print '-----------------------------'
+        print 'Time Series:'
+        dis, dis_mean, dis_std, dis_vel = read_dis(xsub,ysub,dateList,h5timeseries,unit)
+        (_, caps, _)=ax2.errorbar(dates,dis_mean,yerr=dis_std,fmt='-ko',\
+                                  ms=markerSize, lw=lineWidth, alpha=1, mfc=markerColor,\
+                                  elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
+        for cap in caps:  cap.set_markeredgewidth(edgeWidth)
+        disp_min,disp_max = update_lim(disp_min,disp_max,dis_mean,dis_std)
+  
+        ####################### Figure Format #######################
+        ## x axis format
+        ax2 = adjust_xaxis_date(ax2,datevector_all)
+  
+        ## y axis format
+        ax2.set_ylabel('Displacement ['+unit+']',fontsize=fontSize)
+        try:
+            lbound
+            hbound
+            ax2.set_ylim(lbound,hbound)
+        except:
+            disp_buf = 0.2*(disp_max - disp_min)
+            ax2.set_ylim(disp_min-disp_buf,disp_max+disp_buf)
+        for tick in ax2.yaxis.get_major_ticks():  tick.label.set_fontsize(fontSize)
+  
+        ## title
+        ax2.set_title('x='+str(xsub[0])+':'+str(xsub[1]-1)+', y='+str(ysub[0])+':'+str(ysub[1]-1))
+  
+        ################## Save and Output #####################
+        if saveFig == 'yes':
+            Delay={}
+            Delay['displacement'] = dis
+            Delay['unit']         = unit
+            Delay['time']         = datevector
+            Delay['velocity']     = dis_vel[0]
+            Delay['velocity_unit']= unit+'/yr'
+            Delay['velocity_std'] = dis_vel[4]
+            figBase = 'x'+str(xsub[0])+'_'+str(xsub[1]-1)+'y'+str(ysub[0])+'_'+str(ysub[1]-1)
+            sio.savemat( figBase+'_ts.mat', {'displacement': Delay});
+            print 'saved '+figBase+'_ts.mat'
+            fig2.savefig(figBase+'_ts.png',bbox_inches='tight',transparent=True,dpi=fig_dpi);
+            print 'saved '+figBase+'_ts.png'
+            if dispFig == 'no':
+                fig.savefig(figBase+'_vel.png',bbox_inches='tight',transparent=True,dpi=fig_dpi);
+                print 'saved '+figBase+'_vel.png'
+    ################################  Plot Code Package <end> #################################
 
 
 
-  ########### 1. Plot Time Series with x/y ##########
-  try:
-      xsub
-      ysub
-      plot_ts(ax,ax2,fig2,xsub,ysub,h5timeseries)
-  except:  print 'No x/y input' ; pass
-
-
-  ########### 2. Plot Time Series with Click ##########
-  ## similar to 1. Plot Time Series with x/y
-
-  def onclick(event):
-      ax2.cla()
-      xsub = [int(event.xdata)]
-      ysub = [int(event.ydata)]
-      plot_ts(ax,ax2,fig2,xsub,ysub,h5timeseries)
-
-      if dispFig == 'yes':  plt.show()
-
-  try: cid = fig.canvas.mpl_connect('button_press_event', onclick)
-  except: pass
-
-  if dispFig == 'yes':  plt.show()
+    ########### 1. Plot Time Series with x/y ##########
+    try:
+        xsub
+        ysub
+        plot_ts(ax,ax2,fig2,xsub,ysub,h5timeseries)
+    except:  print 'No x/y input' ; pass
+  
+  
+    ########### 2. Plot Time Series with Click ##########
+    ## similar to 1. Plot Time Series with x/y
+  
+    def onclick(event):
+        ax2.cla()
+        xsub = [int(event.xdata)]
+        ysub = [int(event.ydata)]
+        plot_ts(ax,ax2,fig2,xsub,ysub,h5timeseries)
+  
+        if dispFig == 'yes':  plt.show()
+  
+    try: cid = fig.canvas.mpl_connect('button_press_event', onclick)
+    except: pass
+  
+    if dispFig == 'yes':  plt.show()
 
 
 ####################################################################################
 if __name__ == '__main__':
-  main(sys.argv[1:])
+    main(sys.argv[1:])
 
 
 
