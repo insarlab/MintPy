@@ -137,7 +137,7 @@ def main(argv):
         if k == 'temporal_coherence': outname=File.split('.')[0]+'.cor'
         else:                         outname=File.split('.')[0]+'.unw'
     
-      writefile.write(data,atr,outname)
+        writefile.write(data,atr,outname)
   
   
     h5file.close()

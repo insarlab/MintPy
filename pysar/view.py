@@ -28,6 +28,7 @@
 # Yunjun, Jul 2016: add --mask input option
 #                   add plot_dem_lalo() and plot_dem_yx(), auto_flip_check()
 #                   use LightSource from plt.colors for shaded relief DEM
+# Yunjun, Aug 2016: add reference point input
 
 
 import sys
@@ -306,6 +307,8 @@ def Usage():
   --ref-color     : color  of marker for the reference point (k,g,r,b,...)
   --ref-symbol    : symbol of marker for the reference point (s,o,^,v,p,x,'*'...)
   --ref-size      : size   of marker for the reference point (10 by default)
+  --ref-yx        : set reference point in row/y    and column/x
+  --ref-lalo      : set reference point in latitude and longitude
 
   Output and Display:
   --save        : save                    the figure
@@ -359,8 +362,11 @@ def Usage():
    Masking:
            view.py -f Seeded_LoadedData.h5 -d 931018-950809 --mask Mask_tempCoh.h5
 
-   Showing reference:
+   Reference:
            view.py -f velocity.h5 --noreference
+           view.py -f velocity.h5 --ref-yx   210,566
+           view.py -f velocity.h5 --ref-lalo 31.08,130.856
+           view.py -f timeseries.h5 --ref-epoch 20101120
 
    Save and Output:
            view.py -f velocity.h5 --save
@@ -416,7 +422,7 @@ def main(argv):
                                             'scale=','nodisplay','noreference','figsize=','dem-contour','dem-noshade',\
                                             'contour-step=','contour-smooth=','ref-epoch=','ref-color=','ref-symbol=',\
                                             'ref-size=','radar-coord','title=','dpi=','output=','exclude=','noaxis',\
-                                            'point=','line=','no-multilook','mask=','notitle'])
+                                            'point=','line=','no-multilook','mask=','notitle','','ref-yx=','ref-lalo='])
     
         except getopt.GetoptError:
             print 'Error in reading input options!';  Usage() ; sys.exit(1)
@@ -466,6 +472,8 @@ def main(argv):
             elif opt == '--ref-color'     : ref_color    = arg
             elif opt == '--ref-symbol'    : ref_symbol   = arg
             elif opt == '--ref-size'      : ref_size     = int(arg)
+            elif opt == '--ref-yx'        : ref_yx       = [int(i)   for i in arg.split(',')]
+            elif opt == '--ref-lalo'      : ref_lalo     = [float(i) for i in arg.split(',')]
             elif opt == '--save'          : saveFig      = 'yes'
             elif opt == '--scale'         : disp_scale   = float(arg)
             elif opt == '--wrap'          : rewrapping   = 'yes'
@@ -535,7 +543,7 @@ def main(argv):
     if win_y[1]-win_y[0] == length and win_x[1]-win_x[0] == width:
           subsetData = 'no'
     else: subsetData = 'yes'
-  
+    
     ## Geo coordinate
     try:
         lon_step = float(atr['X_STEP'])
@@ -552,6 +560,41 @@ def main(argv):
         print 'Input file is Geocoded'
         geo_box = (ullon,ullat,urcrnrlon,llcrnrlat)
     except:  geocoord='no'
+
+    ##### Read Input Mask File
+    try:
+        maskFile
+        msk,msk_atr = readfile.read(maskFile)
+        msk = msk[win_y[0]:win_y[1],win_x[0]:win_x[1]]
+        ndx = msk == 0
+        print 'masking data with: '+maskFile
+        masking = 'yes'
+    except:
+        masking = 'no'
+
+    ##### Check Reference Coord
+    try:
+        ref_lalo
+        ref_y = int((ref_lalo[0] - ullat)/lat_step)
+        ref_x = int((ref_lalo[1] - ullon)/lon_step)
+        ref_yx = [ref_y,ref_x]
+    except: pass
+
+    try:
+        ref_yx
+        ref_y = ref_yx[0]
+        ref_x = ref_yx[1]
+        ref_yx_new = 'yes'
+    except:
+        ref_yx_new = 'no'
+        try:
+            ref_y = int((float(atr['ref_lat']) - ullat)/lat_step)
+            ref_x = int((float(atr['ref_lon']) - ullon)/lon_step)
+        except:
+            try:
+                ref_y = int(atr['ref_x']) - win_x[0]
+                ref_x = int(atr['ref_y']) - win_y[0]
+            except:  pass
 
     ##### Template File
     try:
@@ -698,17 +741,6 @@ def main(argv):
         try: del ref_epoch
         except: pass
 
-    ##### Read Input Mask File
-    try:
-        maskFile
-        msk,msk_atr = readfile.read(maskFile)
-        msk = msk[win_y[0]:win_y[1],win_x[0]:win_x[1]]
-        ndx = msk == 0
-        print 'masking data with: '+maskFile
-        masking = 'yes'
-    except:
-        masking = 'no'
-
 
     ####################################################################
     ########################## Display One #############################
@@ -757,7 +789,14 @@ def main(argv):
         ############## Data Option ##################
         ## mask
         if masking == 'yes':  data[ndx] = np.nan
-    
+
+        ## reference point
+        if ref_yx_new == 'yes':
+            if not np.isnan(data[ref_y,ref_x]):
+                data -= data[ref_y,ref_x]
+                print 'set reference to point: ('+str(ref_y)+', '+str(ref_x)+')'
+            else:  print 'new reference point has nan value, thus disabled.'
+
         ## show displacement instead of phase
         if dispDisplacement == 'yes':
             data = data*phase2range
@@ -774,16 +813,6 @@ def main(argv):
         ## Scale Factor
         if not disp_scale == 1:
             data = data * disp_scale
-    
-        ## Reference Point
-        try:
-            yref = (float(atr['ref_lat']) - ullat)/lat_step
-            xref = (float(atr['ref_lon']) - ullon)/lon_step
-        except:
-            try:
-                xref = int(atr['ref_x']) - win_x[0]
-                yref = int(atr['ref_y']) - win_y[0]
-            except:  pass
     
         ## Min and Max for Colorbar Extend
         data_min = np.nanmin(data)
@@ -806,7 +835,7 @@ def main(argv):
             print 'Show topography'
      
             ##### Read DEM
-            if demRsc['WIDTH'] == width and demRsc['FILE_LENGTH'] == length:
+            if int(demRsc['WIDTH']) == width and int(demRsc['FILE_LENGTH']) == length:
                 dem,demRsc = readfile.read(demFile,box)
             ##### Support Different Resolution/Size DEM
             elif subsetData == 'no':
@@ -821,8 +850,8 @@ def main(argv):
                     dem,demRsc = readfile.read(demFile,dem_box)
                 except: print 'Can not use different size DEM file in radar coordinate.'; sys.exit
     
-           ## Adjust transparency value
-           data_alpha = 0.7
+            ## Adjust transparency value
+            data_alpha = 0.7
     
         except: pass
     
@@ -878,8 +907,8 @@ def main(argv):
             if showRef == 'yes':
                 try:
                     refPoint=ref_color+ref_symbol
-                    ref_lon = llcrnrlon + xref*lon_step
-                    ref_lat = urcrnrlat + yref*lat_step
+                    ref_lon = llcrnrlon + ref_x*lon_step
+                    ref_lat = urcrnrlat + ref_y*lat_step
                     plt.plot(ref_lon,ref_lat,refPoint,ms=ref_size)
                 except:  pass
      
@@ -899,11 +928,11 @@ def main(argv):
                     z = data[row,col]
                     try:
                         h = dem[row,col]
-                        return 'lon=%.4f,  lat=%.4f,  elev=%.1f m,  value=%.4f'%(x,y,h,z)
+                        return 'lon=%.4f, lat=%.4f, value=%.4f, elev=%.1f m'%(x,y,z,h)
                     except:
-                        return 'lon=%.4f,  lat=%.4f,  value=%.4f'%(x,y,z)
+                        return 'lon=%.4f, lat=%.4f, value=%.4f'%(x,y,z)
                 else:
-                    return 'lon=%.4f,  lat=%.4f'%(x,y)
+                    return 'lon=%.4f, lat=%.4f'%(x,y)
             ax.format_coord = format_coord
 
 
@@ -926,8 +955,8 @@ def main(argv):
             ## Reference Point
             if showRef == 'yes':
                 try:
-                   refPoint=ref_color+ref_symbol
-                   ax.plot(xref,yref,refPoint,ms=ref_size)
+                    refPoint = ref_color+ref_symbol
+                    ax.plot(ref_x,ref_y,refPoint,ms=ref_size)
                 except:  pass
      
             plt.xlim(0,np.shape(data)[1])
@@ -1044,23 +1073,35 @@ def main(argv):
             print 'number of data points per figure: '+'%.1E' %(win_size*nfigs)
             print 'multilook with a factor of '+str(lks)+' for display'
 
-        ################## DEM Options ####################
+        ############## Read DEM ##################
         try:
-            ## Read DEM
-            dem,demRsc = readfile.read(demFile,box)
+            demFile
+            demRsc = readfile.read_attributes(demFile)
             print 'Show topography'
+     
+            ##### Read DEM
+            if int(demRsc['WIDTH']) == width and int(demRsc['FILE_LENGTH']) == length:
+                dem,demRsc = readfile.read(demFile,box)
+            else: print 'Warning: DEM has different size than input data! Disable DEM display.'
+
             if lks > 1:   dem = multilook(dem,lks,lks)
-    
-            ## DEM Extension
+
+            ##### DEM Extension
             if demShade == 'yes':           #DEM basemap
-                print 'plot DEM as basemap'
-                cmap_dem=plt.get_cmap('gray')
-                hillshade_dem=ut.hillshade(dem,50.0)
+                from matplotlib.colors import LightSource
+                print 'show shaded relief DEM'
+                ls = LightSource(azdeg=315, altdeg=45)
+                dem_hillshade = ls.hillshade(dem, vert_exag=0.3)
             if demContour == 'yes':     #contour
-                print 'plot contour: step = '+str(contour_step)+' m'
+                print 'show contour: step = '+str(contour_step)+' m'
                 import scipy.ndimage as ndimage
-                dem=ndimage.gaussian_filter(dem,sigma=contour_sigma,order=0)
-                contour_sequence=np.arange(-6000,9000,contour_step)
+                dem_contour = ndimage.gaussian_filter(dem,sigma=contour_sigma,order=0)
+                contour_sequence = np.arange(-6000,9000,contour_step)
+
+            ##### Adjust transparency value
+            data_alpha = 0.7
+            print 'set data transparency to 0.7'
+
         except:  pass
     
     
@@ -1090,7 +1131,7 @@ def main(argv):
             for i in range(i_start,i_end):
                 epoch = epochList[epoch_number[i]]
                 print 'loading '+epoch+'  '+str(i+1)
-                ax = fig.add_subplot(fig_rows,fig_cols,i-i_start+1) 
+                ax = fig.add_subplot(fig_rows,fig_cols,i-i_start+1)
     
                 ##### Data Reading
                 if k == 'timeseries':
@@ -1124,12 +1165,11 @@ def main(argv):
                 fig_data_max = np.nanmax([fig_data_max,np.nanmax(data)])
 
                 # Plot
-                try:
-                    demFile
-                    if demShade   == 'yes':  plt.imshow(hillshade_dem,cmap='gray')
-                    if demContour == 'yes':  plt.contour(dem,contour_sequence,origin='lower',colors='black',alpha=0.5)
+                try:  plt.imshow(dem_hillshade,cmap='gray')
+                except: pass
+                try:  plt.contour(dem_contour,contour_sequence,origin='lower',colors='black',alpha=0.5)
                 except:  pass
-                try:     im = ax.imshow(data,cmap=ccmap,vmin=disp_min,vmax=disp_max)
+                try:     im = ax.imshow(data,cmap=ccmap,vmin=disp_min,vmax=disp_max, alpha=data_alpha)
                 except:  im = ax.imshow(data,cmap=ccmap)
                 #del data
     

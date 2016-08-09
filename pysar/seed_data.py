@@ -475,8 +475,8 @@ def main(argv):
                         print 'Choose another pixel as the reference pixel'
      
   
-          cid = fig.canvas.mpl_connect('button_press_event', onclick)
-          plt.show()
+            cid = fig.canvas.mpl_connect('button_press_event', onclick)
+            plt.show()
   
     try: h5file.close()
     except: pass

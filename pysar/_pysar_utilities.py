@@ -674,7 +674,7 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
                 zero = np.array([0.],np.float32)
                 defo = np.concatenate((zero,np.cumsum([tmpe_ratea*dt])))
     
-          tempDeformation[:,ni] = defo
+            tempDeformation[:,ni] = defo
         if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,numPixels)
     del data
     timeseries = np.zeros((modelDimension+1,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
