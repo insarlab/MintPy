@@ -575,8 +575,8 @@ def main(argv):
     ##### Check Reference Coord
     try:
         ref_lalo
-        ref_y = int((ref_lalo[0] - ullat)/lat_step)
-        ref_x = int((ref_lalo[1] - ullon)/lon_step)
+        ref_y = int((ref_lalo[0] - ullat)/lat_step + 0.5)
+        ref_x = int((ref_lalo[1] - ullon)/lon_step + 0.5)
         ref_yx = [ref_y,ref_x]
     except: pass
 
@@ -588,8 +588,8 @@ def main(argv):
     except:
         ref_yx_new = 'no'
         try:
-            ref_y = int((float(atr['ref_lat']) - ullat)/lat_step)
-            ref_x = int((float(atr['ref_lon']) - ullon)/lon_step)
+            ref_y = int((float(atr['ref_lat']) - ullat)/lat_step + 0.5)
+            ref_x = int((float(atr['ref_lon']) - ullon)/lon_step + 0.5)
         except:
             try:
                 ref_y = int(atr['ref_x']) - win_x[0]
