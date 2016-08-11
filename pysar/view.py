@@ -253,8 +253,8 @@ def Usage():
   --mask        : mask file for display (useful when displaying un-masked files)
 
   DEM:
-  -D               : dem file (show shaded relief by default)
-  --dem-contour    : show DEM contour
+  -D               : dem file (show both shaded relief and contour by default)
+  --dem-nocontour  : do not show DEM contour
   --dem-noshade    : do not show DEM shaded relief
   --contour-step   : contour step                      (default is 200 meters)
   --contour-smooth : contour smooth ( Sigma of Gaussian Filter, default is 3.0; Set to 0 for no smoothing) 
@@ -384,7 +384,7 @@ def main(argv):
     #################  default values  ################
     contour_step  = 200.0
     contour_sigma = 3.0
-    demContour    = 'no'
+    demContour    = 'yes'
     demShade      = 'yes'
     data_alpha    = 1.0
     disp_axis     = 'yes'
@@ -419,7 +419,7 @@ def main(argv):
         try:
             opts, args = getopt.getopt(argv,'c:d:D:e:E:f:h:i:j:l:L:m:M:o:p:r:s:t:T:u:x:y:',\
                                            ['help','wrap','displacement','opposite','fliplr','flipud','save','unit=',\
-                                            'scale=','nodisplay','noreference','figsize=','dem-contour','dem-noshade',\
+                                            'scale=','nodisplay','noreference','figsize=','dem-nocontour','dem-noshade',\
                                             'contour-step=','contour-smooth=','ref-epoch=','ref-color=','ref-symbol=',\
                                             'ref-size=','radar-coord','title=','dpi=','output=','exclude=','noaxis',\
                                             'point=','line=','no-multilook','mask=','notitle','','ref-yx=','ref-lalo='])
@@ -454,7 +454,7 @@ def main(argv):
             elif opt in ['-u','--unit']   : disp_unit    = arg.lower()
             elif opt == '--contour-step'  : contour_step = float(arg)
             elif opt == '--contour-smooth': contour_sigma = float(arg)
-            elif opt == '--dem-contour'   : demContour   = 'yes'
+            elif opt == '--dem-nocontour' : demContour   = 'no'
             elif opt == '--dem-noshade'   : demShade     = 'no'
             elif opt == '--displacement'  : dispDisplacement = 'yes';  rewrapping = 'no'
             elif opt == '--radar-coord'   : disp_geo = 'no'
@@ -850,8 +850,10 @@ def main(argv):
                     dem,demRsc = readfile.read(demFile,dem_box)
                 except: print 'Can not use different size DEM file in radar coordinate.'; sys.exit
     
-            ## Adjust transparency value
-            data_alpha = 0.7
+            ## Adjust transparency value when showing shaded relief DEM
+            if demShade == 'yes':
+                data_alpha = 0.8
+                print 'set data transparency to '+str(data_alpha)
     
         except: pass
     
@@ -928,11 +930,9 @@ def main(argv):
                     z = data[row,col]
                     try:
                         h = dem[row,col]
-                        return 'lon=%.4f, lat=%.4f, value=%.4f, elev=%.1f m'%(x,y,z,h)
+                        return 'lon=%.4f, lat=%.4f, value=%.4f, elev=%.1f m, x=%.1f, y=%.1f'%(x,y,z,h,col,row)
                     except:
-                        return 'lon=%.4f, lat=%.4f, value=%.4f'%(x,y,z)
-                else:
-                    return 'lon=%.4f, lat=%.4f'%(x,y)
+                        return 'lon=%.4f, lat=%.4f, value=%.4f, x=%.1f, y=%.1f'%(x,y,z,col,row)
             ax.format_coord = format_coord
 
 
@@ -1098,9 +1098,10 @@ def main(argv):
                 dem_contour = ndimage.gaussian_filter(dem,sigma=contour_sigma,order=0)
                 contour_sequence = np.arange(-6000,9000,contour_step)
 
-            ##### Adjust transparency value
-            data_alpha = 0.7
-            print 'set data transparency to 0.7'
+            ## Adjust transparency value when showing shaded relief DEM
+            if demShade == 'yes':
+                data_alpha = 0.8
+                print 'set data transparency to '+str(data_alpha)
 
         except:  pass
     

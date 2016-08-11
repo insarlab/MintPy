@@ -148,7 +148,8 @@ def Usage():
         -a : lower bound of the colorscale to display the velocity to display
         -b : higher bound of the colorscale to display the velocity to display
         -F : another  timeseries file (can be used to compare 2 time-series)
-        --opposite   : show opposite value in velocity figure
+        --opposite     : show opposite value in velocity figure
+        --displacement : show displacement instead of phase, work only for interferogram
 
      Figure Setting
         -s : size of font used x and y labels [default = 22]
@@ -233,8 +234,8 @@ def main(argv):
     markerSize2  = 16
     markerColor  = 'crimson'     # g
     markerColor2 = 'royalblue'
-    markerColor3 = 'white'
-    rectColor    = 'crimson'
+    markerColor_ref = 'white'
+    rectColor    = 'black'
     lineWidth    = 2
     lineWidth2   = 0
     edgeWidth    = 1.5
@@ -248,7 +249,8 @@ def main(argv):
     saveFig = 'no'
     dispFig = 'yes'
     unit    = 'cm'
-  
+
+    dispDisplacement = 'no'
     dispOpposite  = 'no'
     dispContour   = 'only'
     smoothContour = 'no'
@@ -278,7 +280,7 @@ def main(argv):
         try:   opts, args = getopt.getopt(argv,"f:F:v:a:b:s:m:c:w:u:l:h:D:V:t:T:d:r:x:y:X:Y:o:E:",
                                               ['save','nodisplay','unit=','exclude=','ref-date=','rect-color',\
                                                'zero-start=','zoom-x=','zoom-y=','zoom-lon','zoom-lat','lalo=',\
-                                               'opposite','dem-contour','dem-noshade'])
+                                               'opposite','dem-contour','dem-noshade','displacement'])
         except getopt.GetoptError:    Usage() ; sys.exit(1)
     
         for opt,arg in opts:
@@ -306,6 +308,7 @@ def main(argv):
       
             elif opt == '--dem-contour'    : demContour      = 'yes'
             elif opt == '--dem-noshade'    : demShade        = 'no'
+            elif opt == '--displacement'   : dispDisplacement= 'yes'
             elif opt in ['-E','--exclude'] : datesNot2show   = arg.split(',')
             elif opt in '--lalo'           : lalosub         = [float(i) for i in arg.split(',')]
             elif opt in ['--rect-color']   : rectColor       = arg
@@ -425,8 +428,7 @@ def main(argv):
         try:    win_x
         except: win_x = [0,width]
     win_y,win_x = subset.check_subset_range(win_y,win_x,atr)
-  
-  
+
     try:
         velocityFile
         try:    vel, vel_atr = readfile.read(velocityFile)
@@ -437,7 +439,14 @@ def main(argv):
         vel, vel_atr = readfile.read(timeSeriesFile,dateList1[-1])
         ax.set_title('epoch: '+dateList1[-1])
         print 'display last epoch'
-  
+
+    ##### show displacement instead of phase
+    if vel_atr['FILE_TYPE'] in ['interferograms','.unw'] and dispDisplacement == 'yes':
+        print 'show displacement'
+        phase2range = -float(vel_atr['WAVELENGTH']) / (4*np.pi)
+        vel *= phase2range
+    else: dispDisplacement = 'no'
+
     ## Reference Point
     if showRef == 'yes':
         try: ax.plot(int(atr['ref_x']),int(atr['ref_y']),'ks',ms=6)
@@ -524,7 +533,7 @@ def main(argv):
   
             dis1, dis1_mean, dis1_std, dis1_vel = read_dis(ref_xsub,ref_ysub,dateList1,h5timeseries,unit)
             (_, caps, _)=ax2.errorbar(dates1,dis1_mean,yerr=dis1_std,fmt='-ks',\
-                                      ms=markerSize2, lw=0, alpha=1,mfc=markerColor3,mew=edgeWidth,\
+                                      ms=markerSize2, lw=0, alpha=1,mfc=markerColor_ref,mew=edgeWidth,\
                                       elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
             for cap in caps:  cap.set_markeredgewidth(edgeWidth)
             disp_min,disp_max = update_lim(disp_min,disp_max,dis1_mean,dis1_std)
