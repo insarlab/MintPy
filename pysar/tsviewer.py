@@ -600,7 +600,13 @@ def main(argv):
         for tick in ax2.yaxis.get_major_ticks():  tick.label.set_fontsize(fontSize)
   
         ## title
-        ax2.set_title('x='+str(xsub[0])+':'+str(xsub[1]-1)+', y='+str(ysub[0])+':'+str(ysub[1]-1))
+        figTitle = 'x='+str(xsub[0])+':'+str(xsub[1]-1)+', y='+str(ysub[0])+':'+str(ysub[1]-1)
+        try:
+            lonc = ullon + (xsub[0]+xsub[1]-1)/2.0*lon_step
+            latc = ullat + (ysub[0]+ysub[1]-1)/2.0*lat_step
+            figTitle += ', lalo='+'%.4f:%.4f'%(latc,lonc)
+        except: pass
+        ax2.set_title(figTitle)
   
         ################## Save and Output #####################
         if saveFig == 'yes':

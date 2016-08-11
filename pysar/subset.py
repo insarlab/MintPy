@@ -45,9 +45,9 @@ def coord_geo2radar(geoCoord,atr,type):
     radarCoord = []
     for i in range(len(geoCoord)):
         if   type == 'latitude':
-            radarCoord.append(int((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP'])))
+            radarCoord.append(int((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']) + 0.5))
         elif type == 'longitude':
-            radarCoord.append(int((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP'])))
+            radarCoord.append(int((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']) + 0.5))
     #print 'input '+type+': '+str(geoCoord[i])
     radarCoord.sort()
   
