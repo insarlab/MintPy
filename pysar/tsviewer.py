@@ -467,7 +467,7 @@ def main(argv):
         col = int(x+0.5)
         row = int(y+0.5)
         if col>=0 and col<=width and row>=0 and row<=length:
-            z = data[row,col]
+            z = vel[row,col]
             return 'x=%.4f,  y=%.4f,  value=%.4f'%(x,y,z)
         else:
             return 'x=%.4f,  y=%.4f'%(x,y)
