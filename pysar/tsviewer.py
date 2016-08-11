@@ -463,14 +463,30 @@ def main(argv):
         except: flip_lr, flip_ud = view.auto_flip_check(atr)
   
     ## Status bar
+    ## Geo coordinate
+    try:
+        ullon    = float(atr['X_FIRST'])
+        ullat    = float(atr['Y_FIRST'])
+        lon_step = float(atr['X_STEP'])
+        lat_step = float(atr['Y_STEP'])
+        lon_unit = atr['Y_UNIT']
+        lat_unit = atr['X_UNIT']
+        geocoord='yes'
+        print 'Input file is Geocoded'
+    except:  geocoord='no'
+
+
     def format_coord(x,y):
         col = int(x+0.5)
         row = int(y+0.5)
         if col>=0 and col<=width and row>=0 and row<=length:
             z = vel[row,col]
-            return 'x=%.4f,  y=%.4f,  value=%.4f'%(x,y,z)
-        else:
-            return 'x=%.4f,  y=%.4f'%(x,y)
+            try:
+                lon = ullon + x*lon_step
+                lat = ullat + y*lat_step
+                return 'x=%.1f, y=%.1f, value=%.4f, lon=%.4f, lat=%.4f'%(x,y,z,lon,lat)
+            except:
+                return 'x=%.1f, y=%.1f, value=%.4f'%(x,y,z)
     ax.format_coord = format_coord
 
     ## DEM 
