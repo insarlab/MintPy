@@ -18,25 +18,26 @@ import getopt
 
 try:     from pykml.factory import KML_ElementMaker as KML
 except:  sys.exit('pykml should be installed!')
-from lxml import etree
 
+from lxml import etree
 import numpy as np
 import h5py
-import matplotlib as mpl;  mpl.use('Agg')              # FA 7/2015: allows plot generation without running an X server
+import matplotlib as mpl;  mpl.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 
 import pysar._readfile as readfile
 
 
+############################################################
 def rewrap(unw):
     rewrapped = unw - np.round(unw/(2*np.pi)) * 2*np.pi
     return rewrapped
 
+############################################################
 def Usage():
     print '''
 ***************************************************************
-***************************************************************    
   generating  kml kmz files. (needs geocoded files )
 
   Usage:
@@ -55,12 +56,13 @@ def Usage():
       -i : inverse the colormap
       -w : re-wrapping the interferogram [default : no]
       -r : dpi (dots per inch) [default = 300]
-      --fig-size    : figure size in inch, default is [8.0,12.0]
-      --noreference : do not show reference point
-      --ref-size    : reference point marker size in points
+      --fig-size     : figure size in inch, default is [8.0,12.0]
+      --noreference  : do not show reference point
+      --ref-size     : reference point marker size in points
 
-      --cbar-label  : colorbar label
-                      LOS displacement velocity (default)
+      --cbar-bin-num : colorbar bin number [9 by default]
+      --cbar-label   : colorbar label
+                       LOS displacement velocity (default)
 
   Example:
  
@@ -73,28 +75,31 @@ def Usage():
          save_kml.py gsi10m.dem
 
 ***************************************************************
-***************************************************************
     '''
 
+
+############################################################
 def main(argv):
 
+    cbar_bin_num  = 9
     cbar_label    = 'Mean LOS velocity'
     color_map     = 'jet'
+    data_alpha    = 0.7
     disp_opposite = 'no'
     disp_colorbar = 'yes'
     rewrapping    = 'no'
     fig_dpi       = 500
-    fig_size      = [6.0,9.0]
+    #fig_size      = [6.0,9.0]
     fig_unit      = 'mm/yr'
     disp_ref      = 'yes'
-    ref_size      = 8
+    ref_size      = 5
     dispDisplacement = 'no'
 
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:",['noreference','fig-size',\
-                                               'ref-size=','cbar-label=','displacement'])
+                                               'ref-size=','cbar-label=','displacement','cbar-bin-num='])
         except getopt.GetoptError:  Usage() ; sys.exit(1)
-     
+
         for opt,arg in opts:
             if   opt == '-f':        File = arg
             elif opt == '-m':        Vmin = float(arg)
@@ -104,12 +109,13 @@ def main(argv):
             elif opt == '-i':        disp_opposite = arg
             elif opt == '-w':        rewrapping    = arg
             elif opt == '-r':        fig_dpi = int(arg)
-            elif opt == '--cbar-label' :   cbar_label       = arg
-            elif opt == '--displacement' : dispDisplacement = 'yes'
-            elif opt == '--fig-size'   :   fig_size = [float(i) for i in arg.split(',')][0:2]
-            elif opt == '--ref-size'   :   ref_size = int(arg)
-            elif opt == '--noreference':   disp_ref = 'no'
-  
+            elif opt == '--cbar-bin-num' :   cbar_bin_num     = int(arg)
+            elif opt == '--cbar-label'   :   cbar_label       = arg
+            elif opt == '--displacement' :   dispDisplacement = 'yes'
+            elif opt == '--fig-size'     :   fig_size = [float(i) for i in arg.split(',')][0:2]
+            elif opt == '--ref-size'     :   ref_size = int(arg)
+            elif opt == '--noreference'  :   disp_ref = 'no'
+
     elif len(sys.argv)==2:
         if argv[0]=='-h':               Usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):   File = argv[0]
@@ -127,13 +133,11 @@ def main(argv):
     print '\n*************** Output to KMZ file ****************'
     print 'Input file is '+k
 
-
     if ext == '.h5':
         try:      h5file=h5py.File(File,'r')
         except:   Usage() ; sys.exit(1)
         outName=File.split('.')[0]
-    
-    
+
         if k in ('interferograms','wrapped','coherence'):
             ifgramList=h5file[k].keys()
             for i in range(len(ifgramList)):
@@ -142,10 +146,10 @@ def main(argv):
             print ifgramList[epoch_number]
             outName = ifgramList[epoch_number]
             #outName=epoch_date
-                
+
             dset = h5file[k][ifgramList[epoch_number]].get(ifgramList[epoch_number])
             data = dset[0:dset.shape[0],0:dset.shape[1]]
-     
+
             if k == 'wrapped':
                 print 'No wrapping for wrapped interferograms. Set rewrapping=no'
                 rewrapping = 'no'
@@ -157,29 +161,29 @@ def main(argv):
             for i in range(len(epochList)):
                 if epoch_date in epochList[i]:
                     epoch_number = i
-     
+
             #### Out name
             try:    ref_date = atr['ref_date']
             except: ref_date = ut.yyyymmdd(atr['DATE'])[0]
             #ref_date=h5file['timeseries'].attrs['ref_date']
             if len(epoch_date)==8:  outName=ref_date[2:]+'-'+epoch_date[2:]
             else:                   outName=ref_date[2:]+'-'+epoch_date
-     
+
             dset = h5file['timeseries'].get(epochList[epoch_number])
             data = dset[0:dset.shape[0],0:dset.shape[1]]
-     
+
         ### one dataset format: velocity, mask, temporal_coherence, rmse, std, etc.
         else:
             dset = h5file[k].get(k)
             data=dset[0:dset.shape[0],0:dset.shape[1]]
             if disp_opposite in('yes','Yes','Y','y','YES'):
                 data=-1*data
-     
+
             try:
                 xref=h5file[k].attrs['ref_x']
                 yref=h5file[k].attrs['ref_y']
             except: pass
- 
+
     elif ext in ['.unw','.cor','.hgt','.trans','.dem']:
         if   ext in ['.unw','.cor','.hgt','.trans']:
             a,data,atr = readfile.read_float32(File)
@@ -203,8 +207,7 @@ def main(argv):
     else: sys.exit('Do not support '+ext+' file!')
 
 
-########################################################
-
+    ########################################################
     if rewrapping=='yes':
         data=rewrap(data)
         Vmin = -np.pi    #[-pi,pi] for wrapped interferograms
@@ -214,7 +217,7 @@ def main(argv):
         except:  Vmin = np.nanmin(data)
         try:     Vmax
         except:  Vmax = np.nanmax(data)
-  
+
     try:
         lon_step = float(atr['X_STEP'])
         lat_step = float(atr['Y_STEP'])
@@ -240,15 +243,21 @@ def main(argv):
     print 'Making png file ...'   
     length = data.shape[0]
     width  = data.shape[1]
+    try:fig_size
+    except:
+        fig_size_0 = 6.0
+        size_ratio = max(length,width)/min(length,width)
+        fig_size_1 = fig_size_0*size_ratio
+        fig_size   = [fig_size_0,fig_size_1]
     map = plt.get_cmap(color_map)
     fig = plt.figure(figsize=fig_size,frameon=False)
     ax = plt.Axes(fig, [0., 0., 1., 1.], )
     ax.set_axis_off()
     fig.add_axes(ax)
-    
+
     try:     ax.imshow(data,aspect='auto',vmax=Vmax,vmin=Vmin)
     except:  ax.imshow(data,aspect='auto')
-  
+
     if disp_ref == 'yes':
         try:
             xref = int(atr['ref_x'])
@@ -256,13 +265,13 @@ def main(argv):
             ax.plot(xref,yref,'ks',ms=ref_size)
             print 'showing reference point'
         except: print 'Cannot find reference point info!'
-  
+
     ax.set_xlim([0,width])
     ax.set_ylim([length,0])
-  
-    figName = outName + '.png'  
+
+    figName = outName + '.png'
     plt.savefig(figName,pad_inches=0.0,transparent=True,dpi=fig_dpi)
-  
+
     ############### Making colorbar
     pc = plt.figure(figsize=(1,8))
     axc = pc.add_subplot(111)
@@ -272,18 +281,18 @@ def main(argv):
     elif fig_unit in ['m',  'm/yr']: v_scale = 1
     norm = mpl.colors.Normalize(vmin=Vmin*v_scale, vmax=Vmax*v_scale)
     clb  = mpl.colorbar.ColorbarBase(axc,cmap=cmap,norm=norm, orientation='vertical')
-  
+
     #clb.set_label(fig_unit)
     clb.set_label(cbar_label+' ['+fig_unit+']')
-    clb.locator = ticker.MaxNLocator(nbins=9)
+    clb.locator = ticker.MaxNLocator(nbins=cbar_bin_num)
     clb.update_ticks()
-  
+
     pc.subplots_adjust(left=0.2,bottom=0.3,right=0.4,top=0.7)
     #pc.savefig('colorbar.png',bbox_inches='tight',transparent=True,dpi=300)
     pc.patch.set_facecolor('white')
     pc.patch.set_alpha(0.7)
     pc.savefig('colorbar.png',bbox_inches='tight',facecolor=pc.get_facecolor(),dpi=300)
-  
+
     ############## Generate KMZ file
     print 'generating kml file'
     try:     doc = KML.kml(KML.Folder(KML.name(atr['PROJECT_NAME'])))
@@ -291,19 +300,20 @@ def main(argv):
     slc = KML.GroundOverlay(KML.name(figName),KML.Icon(KML.href(figName)),\
                             KML.TimeSpan(KML.begin('2003'),KML.end('2010')),\
                             KML.LatLonBox(KML.north(str(North)),KML.south(str(South)),\
-                                          KML.east(str(East)),  KML.west(str(West))))
+                                          KML.east( str(East)), KML.west( str(West))))
     doc.Folder.append(slc)
 
     #############################
-    print 'adding colorscale'  
-    latdel = North-South
-    londel = East-West
+    print 'adding colorscale'
+    cb_rg = min(North-South, East-West)
+    cb_N = (North+South)/2.0 + 0.5*0.7*cb_rg
+    cb_E = East  + 0.1*cb_rg
     slc1   = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),\
-                               KML.altitude('9000'),KML.altitudeMode('absolute'),\
-                               KML.LatLonBox(KML.north(str(North-latdel/2.+0.5)),KML.south(str(South+latdel/2.0-0.5)),\
-                                             KML.east( str(West-0.2*londel)),    KML.west( str(West-0.4*londel))))
+                               KML.altitude('1000'),KML.altitudeMode('absolute'),\
+                               KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.7*cb_rg)),\
+                                             KML.east( str(cb_E)),KML.west( str(cb_E+0.2*cb_rg))))
     doc.Folder.append(slc1)
-  
+
     #############################
     kmlstr = etree.tostring(doc, pretty_print=True) 
     kmlname = outName + '.kml'
@@ -311,12 +321,12 @@ def main(argv):
     kmlfile = open(kmlname,'w')
     kmlfile.write(kmlstr)
     kmlfile.close()
-  
+
     kmzName = outName + '.kmz'
     print 'writing '+kmzName
     cmdKMZ = 'zip ' + kmzName +' '+ kmlname +' ' + figName + ' colorbar.png'
     os.system(cmdKMZ)
-  
+
     cmdClean = 'rm '+kmlname;      os.system(cmdClean)
     #cmdClean = 'rm '+figName;      os.system(cmdClean)
     #cmdClean = 'rm colorbar.png';  os.system(cmdClean)

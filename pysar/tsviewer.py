@@ -44,29 +44,29 @@ def check_yx(xsub,ysub,radius,ax):
     except:  xmin=xsub[0]-radius;  xmax=xsub[0]+radius+1;
     try:     ymin=ysub[0];         ymax=ysub[1]+1;       
     except:  ymin=ysub[0]-radius;  ymax=ysub[0]+radius+1;
-  
+
     ## mark x/y in Fig 1
     rectSelect=patches.Rectangle((xmin,ymin),xmax-xmin,ymax-ymin,color=rectColor,fill=False,lw=1.5)
     ax.add_patch(rectSelect)
-  
+
     return [xmin,xmax],[ymin,ymax]
 
 ################################################################
 def read_dis(xsub,ysub,dateList,h5file,unit='cm'):
     global ref_date
-  
+
     ## Unit and Scale
     if   unit == 'm' :  unitFac=1.0
     elif unit == 'mm':  unitFac=1000.0
     elif unit == 'km':  unitFac=0.001
     else:unit =  'cm';  unitFac=100.0   # cm by default
-  
+
     ## read displacement
     try:
         ref_date
         dis_ref = h5file['timeseries'].get(ref_date)[ysub[0]:ysub[1],xsub[0]:xsub[1]]
     except: pass
-  
+
     dis=[]
     for date in dateList:
         dis0 = h5file['timeseries'].get(date)[ysub[0]:ysub[1],xsub[0]:xsub[1]]
@@ -75,7 +75,7 @@ def read_dis(xsub,ysub,dateList,h5file,unit='cm'):
         dis.append(dis0)
     dis=np.array(dis)*unitFac;
     dis=np.reshape(dis,(len(dateList),-1))
-  
+
     ## calculate mean
     dis_mean=stats.nanmean(dis,1)
     ## calculate standard deviation
