@@ -119,20 +119,20 @@ def date_list2vector(dateList):
     return dates, datevector
 
 ################################################################
-def adjust_xaxis_date(ax,datevector):
+def adjust_xaxis_date(ax,datevector,fontSize=12):
     ## Date Display
     years    = mdates.YearLocator()   # every year
     months   = mdates.MonthLocator()  # every month
     yearsFmt = mdates.DateFormatter('%Y')
   
     ## X axis format
-    ax.fmt_xdata = DateFormatter('%Y-%m-%d %H:%M:%S')
-    ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12)
-    te=datevector[-1]+0.2;  ye=int(te);  me=int((te-ye)*12)
-    if ms>12:   ys = ys+1;   ms=1
-    if me>12:   ye = ye+1;   me=1
-    if ms<1:    ys = ys-1;   ms=12
-    if me<1:    ye = ye-1;   me=12
+    ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
+    ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12.0)
+    te=datevector[-1]+0.3;  ye=int(te);  me=int((te-ye)*12.0)
+    #if ms>12:   ys = ys+1;   ms=1
+    #if me>12:   ye = ye+1;   me=1
+    #if ms<1:    ys = ys-1;   ms=12
+    #if me<1:    ye = ye-1;   me=12
     dss=datetime.date(ys,ms,1)
     dee=datetime.date(ye,me,1)
     ax.set_xlim(dss,dee)                          # using the same xlim with the previous one

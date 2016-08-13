@@ -246,9 +246,8 @@ def main(argv):
     try:fig_size
     except:
         fig_size_0 = 6.0
-        size_ratio = max(length,width)/min(length,width)
-        fig_size_1 = fig_size_0*size_ratio
-        fig_size   = [fig_size_0,fig_size_1]
+        fig_size_1 = fig_size_0/width*length
+        fig_size   = [fig_size_1,fig_size_0]
     map = plt.get_cmap(color_map)
     fig = plt.figure(figsize=fig_size,frameon=False)
     ax = plt.Axes(fig, [0., 0., 1., 1.], )
@@ -307,11 +306,11 @@ def main(argv):
     print 'adding colorscale'
     cb_rg = min(North-South, East-West)
     cb_N = (North+South)/2.0 + 0.5*0.7*cb_rg
-    cb_E = East  + 0.1*cb_rg
+    cb_W = East  + 0.1*cb_rg
     slc1   = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),\
                                KML.altitude('1000'),KML.altitudeMode('absolute'),\
                                KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.7*cb_rg)),\
-                                             KML.east( str(cb_E)),KML.west( str(cb_E+0.2*cb_rg))))
+                                             KML.west( str(cb_W)),KML.east( str(cb_W+0.2*cb_rg))))
     doc.Folder.append(slc1)
 
     #############################

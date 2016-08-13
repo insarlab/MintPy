@@ -34,6 +34,8 @@ import lod
 import look_angle
 import masking
 import matching
+import mean_temporal
+import mean_spatial
 import modify_network
 import multi_looking
 import multi_transect
