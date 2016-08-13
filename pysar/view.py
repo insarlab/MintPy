@@ -566,7 +566,7 @@ def main(argv):
         msk,msk_atr = readfile.read(maskFile)
         msk = msk[win_y[0]:win_y[1],win_x[0]:win_x[1]]
         ndx = msk == 0
-        print 'masking data with: '+maskFile
+        print 'masking data with: '+os.path.basename(maskFile)
         masking = 'yes'
     except:
         masking = 'no'

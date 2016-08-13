@@ -12,7 +12,6 @@ import getopt
 
 import h5py
 import numpy as np
-import matplotlib as mpl; mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 import pysar._readfile as readfile
@@ -45,10 +44,22 @@ def Usage():
 
   Usage:
       mean_spatial.py    multi_temporal_file    mask_file
-      mean_spatial.py -f multi_temporal_file -m mask_file --circle x,y,rad -x sub -y sub
+      mean_spatial.py -f multi_temporal_file -m mask_file [--circle x,y,rad -x sub -y sub]
+
+      -f : multi-temporal file
+      
+      ## Mark area included
+      -m : mask file
+      -x : subset in x/column/azimuth/longitude direction
+      -y : subset in y/row   /range  /latitude  direction
+      
+      ## Mark area excluded
+      --circle : circle shape subset, [center_x,center_y,radius;center_x2,...]
+
 
   Example:
-      mean_spatial.py sum_ts.h5 mask.h5
+      mean_spatial.py sum_Seeded_ts.h5 mask.h5
+      mean_spatial.py -f sum_Seeded_ts.h5 -m Mask.h5 -x 200:800 -y 230:700 --circle 361,567,50;610,536,25
 
 ******************************************************************************
     '''
@@ -80,8 +91,9 @@ def main(argv):
             #elif opt == '-o':  outName   = arg
             
     else:
-        File = argv[1]
-        try:  maskFile = argv[2]
+        try:  File = argv[0]
+        except: Usage(); sys.exit(1)
+        try:  maskFile = argv[1]
         except: pass
 
     try:  atr  = readfile.read_attributes(File)
