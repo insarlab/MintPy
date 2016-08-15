@@ -74,6 +74,10 @@ def main(argv):
     markerColor = 'crimson'
     markerSize  = 16
 
+    disp_fig  = 'no'
+    save_fig  = 'yes'
+    save_list = 'yes'
+
     ##### Check Inputs
     if len(sys.argv)>3:
         try:
@@ -118,48 +122,62 @@ def main(argv):
 
     ##### Mask Info
     try:
-        Mask,Matr = readfile.read(maskFile)
+        Mask_orig,Matr = readfile.read(maskFile)
         print 'mask file: '+maskFile
         Masking = 'yes'
     except:
         print 'No mask. Use the whole area for ramp estimation.'
         Masking = 'no'
-        Mask=np.ones((length,width))
+        Mask_orig=np.ones((length,width))
+    Mask = np.zeros((length,width))
+    Mask[:] = Mask_orig[:]
 
     ## Bounding Subset
     try:
         xsub, ysub
         ysub,xsub = subset.check_subset_range(ysub,xsub,atr)
-        Mask[0:ysub[0],:]      = 0
-        Mask[ysub[1]:length,:] = 0
-        Mask[:,0:xsub[0]]      = 0
-        Mask[:,xsub[1]:width]  = 0
-    except: print 'No subset input.'
+        Mask[ysub[0]:ysub[1],xsub[0]:xsub[1]] = Mask_orig[ysub[0]:ysub[1],xsub[0]:xsub[1]]*2
+        #Mask[0:ysub[0],:]      = 0
+        #Mask[ysub[1]:length,:] = 0
+        #Mask[:,0:xsub[0]]      = 0
+        #Mask[:,xsub[1]:width]  = 0
+    except:
+        Mask = Mask_orig*2
+        print 'No subset input.'
 
     ## Circle Inputs
     try:
         cir_par
         for i in range(len(cir_par)):
             cir_idx = circle_index(atr,cir_par[i])
-            Mask[cir_idx] = 0
+            Mask[cir_idx] = Mask_orig[cir_idx]
             print 'Circle '+str(i)+': '+cir_par[i]
     except: print 'No circle of interest input.'
+    
+    ## Mask output
+    idx = Mask == 2
+    idxNum = float(sum(sum(idx)))
+    
     fig = plt.figure()
-    plt.imshow(Mask,vmin=0,vmax=1,cmap='gray')
+    plt.imshow(Mask,cmap='gray')
     plt.savefig(outNameBase+'_mask.png',bbox_inches='tight')
     print 'save mask to '+outNameBase+'_mask.png'
+    #fig.clf()
 
     ##### Calculation
-    meanList = np.zeros(epochNum)
+    meanList   = np.zeros(epochNum)
+    pixPercent = np.zeros(epochNum)
+    pixT = 0.7
     print 'calculating ...'
     for i in range(epochNum):
         epoch = epochList[i]
         d      = h5file[k].get(epoch)[:]
-
-        d[Mask==0]  = np.nan
-        dMean       = np.nanmean(d)
-        print epoch+' : '+str(dMean)
-        meanList[i] = dMean
+        #d[Mask==0]  = np.nan
+        
+        meanList[i]   = np.nanmean(d[idx])
+        pixPercent[i] = np.sum(d[idx] >= pixT)/idxNum
+        
+        print epoch+' : %.2f    %.2f'%(meanList[i],pixPercent[i])
     del d
     h5file.close()
 
@@ -169,33 +187,52 @@ def main(argv):
     print top3
     
     meanT = 0.7
-    idxT  = meanList < meanT
-    print '------------ Below Threshold - '+str(meanT)+' --------'
-    print np.array(epochList)[idxT]
-    print meanList[idxT]
+    idxMean  = meanList < meanT
+    print '------------ Mean Value < '+str(meanT)+' --------'
+    print np.array(epochList)[idxMean]
+    print meanList[idxMean]
+    print '------------ Good Pixel Percentage < %.0f%% -------'%(pixT*100)
+    idxPix = pixPercent < pixT
+    print np.array(epochList)[idxPix]
+    print pixPercent[idxPix]
     print '-------------------------------------------'
 
     ##### Display
-    fig = plt.figure(2,figsize=(12,6))
-    ax  = fig.add_subplot(111)
+    fig = plt.figure(figsize=(12,12))
+    ax  = fig.add_subplot(211)
     ax.plot(dates, meanList, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
     ax.plot([dates[0],dates[-1]],[meanT,meanT], '--b', lw=lineWidth)
     ax = ptime.adjust_xaxis_date(ax,datevector)
     ax.set_ylim(0,1)
-    ax.set_title('Normalized Sum Epochs', fontsize=fontSize)
+    ax.set_title('Spatial Average Value', fontsize=fontSize)
     ax.set_xlabel('Time [years]',         fontsize=fontSize)
-    ax.set_ylabel('Normalized Sum Epochs',fontsize=fontSize)
-    plt.savefig(outNameBase+'.png',bbox_inches='tight')
-    print 'save figure to '+outNameBase+'.png'
+
+    ax  = fig.add_subplot(212)
+    ax.plot(dates, pixPercent, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
+    ax.plot([dates[0],dates[-1]],[meanT,meanT], '--b', lw=lineWidth)
+    ax = ptime.adjust_xaxis_date(ax,datevector)
+    ax.set_ylim(0,1)
+    ax.set_title('Percenrage of Pixels with Value > 0.7', fontsize=fontSize)
+    ax.set_xlabel('Time [years]',         fontsize=fontSize)
+    vals = ax.get_yticks()
+    ax.set_yticklabels(['{:3.0f}%'.format(i*100) for i in vals])
+
+    if save_fig == 'yes':
+        plt.savefig(outNameBase+'.png',bbox_inches='tight')
+        print 'save figure to '+outNameBase+'.png'
+
+    if disp_fig == 'yes':
+        plt.show()
 
     ##### Output
-    epochList6 = ptime.yymmdd(epochList)
-    fl = open(outNameBase+'.txt','w')
-    for i in range(epochNum):
-        str_line = epochList6[i]+'    '+str(meanList[i])+'\n'
-        fl.write(str_line)
-    fl.close()
-    print 'write data to '+outNameBase+'.txt\n'
+    if save_list == 'yes':
+        epochList6 = ptime.yymmdd(epochList)
+        fl = open(outNameBase+'.txt','w')
+        for i in range(epochNum):
+            str_line = epochList6[i]+'    %.2f    %.2f\n'%(meanList[i],pixPercent[i])
+            fl.write(str_line)
+        fl.close()
+        print 'write data to '+outNameBase+'.txt\n'
 
 
 ##############################################################################
