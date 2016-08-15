@@ -45,9 +45,9 @@ def coord_geo2radar(geoCoord,atr,type):
     radarCoord = []
     for i in range(len(geoCoord)):
         if   type == 'latitude':
-            radarCoord.append(int((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']) + 0.5))
+            radarCoord.append(int((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP'])))
         elif type == 'longitude':
-            radarCoord.append(int((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']) + 0.5))
+            radarCoord.append(int((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP'])))
     #print 'input '+type+': '+str(geoCoord[i])
     radarCoord.sort()
   
@@ -166,14 +166,14 @@ def geo_box(atr):
     ## box = (lon_min,lat_max,lon_max,lat_min)
     ## box = (UL_X,   UL_Y,   LR_X,   LR_Y)
   
-    len = float(atr['FILE_LENGTH'])
-    wid = float(atr['WIDTH'])
+    length = int(atr['FILE_LENGTH'])
+    width  = int(atr['WIDTH'])
     lat_step = float(atr['Y_STEP'])
     lon_step = float(atr['X_STEP'])
     lat_max  = float(atr['Y_FIRST'])
     lon_min  = float(atr['X_FIRST'])
-    lat_min  = lat_max + lat_step*len
-    lon_max  = lon_min + lon_step*wid
+    lat_min  = lat_max + lat_step*length
+    lon_max  = lon_min + lon_step*width
   
     box = (lon_min,lat_max,lon_max,lat_min)
   
