@@ -104,33 +104,6 @@ def update_lim(disp_min,disp_max,data_mean,data_std):
     return disp_min,disp_max
 
 
-####################### X Axis Format #######################
-def adjust_xaxis_date(ax,datevector):
-    ## Date Display
-    years    = mdates.YearLocator()   # every year
-    months   = mdates.MonthLocator()  # every month
-    yearsFmt = mdates.DateFormatter('%Y')
-
-    ## X axis format
-    ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
-    ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12)
-    te=datevector[-1]+0.2;  ye=int(te);  me=int((te-ye)*12)
-    if ms>12:   ys = ys+1;   ms=1
-    if me>12:   ye = ye+1;   me=1
-    if ms<1:    ys = ys-1;   ms=12
-    if me<1:    ye = ye-1;   me=12
-    dss=datetime.date(ys,ms,1)
-    dee=datetime.date(ye,me,1)
-    ax.set_xlim(dss,dee)                          # using the same xlim with the previous one
-    ax.xaxis.set_major_locator(years)
-    ax.xaxis.set_major_formatter(yearsFmt)
-    ax.xaxis.set_minor_locator(months)
-    for tick in ax.xaxis.get_major_ticks():  tick.label.set_fontsize(fontSize)
-    #fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
-
-    return ax
-
-
 ########################## Usage ###############################
 def Usage():
     print '''
@@ -583,7 +556,7 @@ def main(argv):
 
         ####################### Figure Format #######################
         ## x axis format
-        ax2 = adjust_xaxis_date(ax2,datevector_all)
+        ax2 = ptime.adjust_xaxis_date(ax2,datevector_all,fontSize)
 
         ## y axis format
         ax2.set_ylabel('Displacement ['+unit+']',fontsize=fontSize)
