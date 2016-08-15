@@ -45,9 +45,9 @@ def coord_geo2radar(geoCoord,atr,type):
     radarCoord = []
     for i in range(len(geoCoord)):
         if   type == 'latitude':
-            radarCoord.append(int((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP'])))
+            radarCoord.append(int(np.floor((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']))))
         elif type == 'longitude':
-            radarCoord.append(int((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP'])))
+            radarCoord.append(int(np.floor((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))))
     #print 'input '+type+': '+str(geoCoord[i])
     radarCoord.sort()
   
@@ -435,7 +435,7 @@ def main(argv):
             sub_y = [int(i) for i in sub[0].split(':')];  sub_y.sort()
             sub_x = [int(i) for i in sub[1].split(':')];  sub_x.sort()
         except: pass; #print 'No pysar.subset.yx option found in template file!'
-  
+
     ## Check Subset Inputs Existed or not
     try:     sub_y
     except:
@@ -460,7 +460,7 @@ def main(argv):
     except:
         try:    sub_x
         except: sub_x = [0,width]
-  
+
     ##### Check subset range
     try:
         out_fill
@@ -470,8 +470,7 @@ def main(argv):
         if sub_y[1]-sub_y[0] == length and sub_x[1]-sub_x[0] == width:
             print 'Input subset range == data size, no need to subset.'
             sys.exit(0)
-  
-  
+
     ################### Subset #######################
     if parallel == 'no':
         for file in fileList:
