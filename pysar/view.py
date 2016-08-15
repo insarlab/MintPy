@@ -524,8 +524,8 @@ def main(argv):
     else:  ccmap=plt.get_cmap(color_map)
 
     ##### Check subset range
-    width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    width  = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH']))
     print 'file size: '+str(length)+', '+str(width)
   
     try: win_y = subset.coord_geo2radar(win_lat,atr,'latitude')

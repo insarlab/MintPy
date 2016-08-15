@@ -168,8 +168,8 @@ def main(argv):
     lon_step=float(h5V1[k[0]].attrs['X_STEP'])
     lat_step=float(h5V1[k[0]].attrs['Y_STEP'])
  
-    WIDTH = round((East-West)/lon_step + 1.0)
-    LENGTH = round((South - North)/lat_step + 1.0)
+    WIDTH  = int(round((East  - West )/lon_step + 1.0))
+    LENGTH = int(round((South - North)/lat_step + 1.0))
 
     ####################################################
     indx11=nearest(West, lon1)
