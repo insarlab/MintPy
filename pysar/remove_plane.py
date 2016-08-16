@@ -14,12 +14,12 @@ import sys
 import getopt
 import glob
 
-import matplotlib.pyplot as plt
 import numpy as np
 import h5py
 
 import pysar._remove_surface as rm
 import pysar._readfile as readfile
+import pysar._writefile as writefile
 
 
 ######################################
@@ -115,6 +115,10 @@ def main(argv):
     print 'input file(s): '+str(len(fileList))
     print fileList
   
+    atr = readfile.read_attributes(fileList[0])
+    length = int(atr['FILE_LENGTH'])
+    width  = int(atr['WIDTH'])
+
     ## Output File(s)
     if   len(fileList) >  1:    outName = ''
     elif len(fileList) == 0:    print 'ERROR: Cannot find input file(s)!';  sys.exit(1)
@@ -140,18 +144,15 @@ def main(argv):
     except:
         print 'No mask. Use the whole area for ramp estimation.'
         Masking = 'no'
-        atr = readfile.read_attributes(File)
-        length = int(atr['FILE_LENGTH'])
-        width  = int(atr['WIDTH'])
         Mask=np.ones((length,width))
 
     ## Plot mask
     if save_mask == 'yes':
-        fig = plt.figure()
         mask_dis = np.zeros((length,width))
         if surfNum == 1:
             mask_dis = Mask
         else:
+            i = 0
             mask_dis[ysub[2*i]:ysub[2*i+1],:] = Mask[ysub[2*i]:ysub[2*i+1],:]
             for i in range(1,surfNum):
                 if ysub[2*i] < ysub[2*i-1]:
@@ -160,10 +161,9 @@ def main(argv):
                     mask_dis[ysub[2*i-1]:ysub[2*i+1],:] = Mask[ysub[2*i-1]:ysub[2*i+1],:]*(i+1)
                 else:
                     mask_dis[ysub[2*i]:ysub[2*i+1],:]   = Mask[ysub[2*i]:ysub[2*i+1],:]*(i+1)
-        plt.imshow(mask_dis)
-        plt.savefig('mask_'+str(surfNum)+surfType+'.png',bbox_inches='tight')
-    
-    #import pdb; pdb.set_trace()
+        maskOutName = 'mask_'+str(surfNum)+surfType+'.h5'
+        writefile.write(mask_dis,Matr,maskOutName)
+        print 'save mask to mask_'+str(surfNum)+surfType+'.h5'
 
     ############################## Removing Phase Ramp #######################################
     for file in fileList:
