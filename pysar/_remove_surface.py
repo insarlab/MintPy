@@ -121,8 +121,8 @@ def remove_data_multiple_surface(dataIn,surf_type,mask,ysub):
         dataOut_i,ramp_i = remove_data_surface(dataIn,mask_i,surf_type)
 
         if ysub[2*i] < ysub[2*i-1]:
-            dataOut[ysub[2*i-1]:ysub[2*i],:]  += dataOut_i[ysub[2*i-1]:ysub[2*i],:]
-            dataOut[ysub[2*i-1]:ysub[2*i],:]  /= 2
+            dataOut[ysub[2*i]:ysub[2*i-1],:]  += dataOut_i[ysub[2*i]:ysub[2*i-1],:]
+            dataOut[ysub[2*i]:ysub[2*i-1],:]  /= 2
             dataOut[ysub[2*i-1]:ysub[2*i+1],:] = dataOut_i[ysub[2*i-1]:ysub[2*i+1],:]
         else:
             dataOut[ysub[2*i]:ysub[2*i+1],:]   = dataOut_i[ysub[2*i]:ysub[2*i+1],:]

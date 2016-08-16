@@ -14,6 +14,7 @@ import sys
 import getopt
 import glob
 
+import matplotlib.pyplot as plt
 import numpy as np
 import h5py
 
@@ -39,6 +40,7 @@ def Usage():
         -t : template file
         -o : output name
         -y : subset in azimuth/row direction for multiple surface removal within one track
+        --save-mask : plot mask file and save it to file.
 
     example:
         remove_plane.py  timeseries.h5 plane
@@ -59,10 +61,11 @@ def main(argv):
 
     ########################## Check Inputs ################################################
     ## Default value
-    Masking  = 'no'
+    Masking   = 'no'
+    save_mask = 'no'
   
     if len(sys.argv) > 4:
-        try: opts, args = getopt.getopt(argv,'h:f:m:o:s:t:y:')
+        try: opts, args = getopt.getopt(argv,'h:f:m:o:s:t:y:',['help','save-mask'])
         except getopt.GetoptError:  print 'Error while getting args!\n';  Usage(); sys.exit(1)
   
         for opt,arg in opts:
@@ -73,6 +76,7 @@ def main(argv):
             elif opt in '-s':    surfType = arg.lower()
             elif opt in '-t':    templateFile = arg
             elif opt in '-y':    ysub = [int(i) for i in arg.split(',')]
+            elif opt in '--save-mask'  :    save_mask = 'yes'
   
     elif len(sys.argv) in [3,4]:
         File          = argv[0]
@@ -140,8 +144,27 @@ def main(argv):
         length = int(atr['FILE_LENGTH'])
         width  = int(atr['WIDTH'])
         Mask=np.ones((length,width))
-  
-  
+
+    ## Plot mask
+    if save_mask == 'yes':
+        fig = plt.figure()
+        mask_dis = np.zeros((length,width))
+        if surfNum == 1:
+            mask_dis = Mask
+        else:
+            mask_dis[ysub[2*i]:ysub[2*i+1],:] = Mask[ysub[2*i]:ysub[2*i+1],:]
+            for i in range(1,surfNum):
+                if ysub[2*i] < ysub[2*i-1]:
+                    mask_dis[ysub[2*i]:ysub[2*i-1],:]  += Mask[ysub[2*i]:ysub[2*i-1],:]*(i+1)
+                    mask_dis[ysub[2*i]:ysub[2*i-1],:]  /= 2
+                    mask_dis[ysub[2*i-1]:ysub[2*i+1],:] = Mask[ysub[2*i-1]:ysub[2*i+1],:]*(i+1)
+                else:
+                    mask_dis[ysub[2*i]:ysub[2*i+1],:]   = Mask[ysub[2*i]:ysub[2*i+1],:]*(i+1)
+        plt.imshow(mask_dis)
+        plt.savefig('mask_'+str(surfNum)+surfType+'.png',bbox_inches='tight')
+    
+    #import pdb; pdb.set_trace()
+
     ############################## Removing Phase Ramp #######################################
     for file in fileList:
         print '------------------------------------------'
