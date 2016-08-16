@@ -5,6 +5,8 @@
 # Author:  Yunjun Zhang                                    #
 ############################################################
 # Based on scripts writen by Heresh Fattahi
+# Yunjun, Aug 2016: add read_date_list()
+#
 # Recommended Usage:
 #   import pysar._datetime as ptime
 #   dateList = ptime.date_list('LoadedData.h5')
@@ -57,7 +59,9 @@ def yymmdd(dates):
 
 #################################################################
 def date_list(igramFile):
-    ## Read Input Igram File
+    ## Read Date List from Interferogram file
+    ## for timeseries file, use h5file['timeseries'].keys() directly
+
     h5file = h5py.File(igramFile,'r')
     k = h5file.keys()
     if 'interferograms' in k: k[0] = 'interferograms'
@@ -76,8 +80,22 @@ def date_list(igramFile):
     dateList.sort()
   
     #dateList6 = yymmdd(dateList)
-  
+
     return dateList
+
+
+#################################################################
+def read_date_list(date_list_file):
+    ## Read Date List from txt file
+    fl = open(date_list_file,'r')
+    dateList = fl.read().splitlines()
+    fl.close()
+
+    dateList = yyyymmdd(dateList)
+    dateList.sort()
+
+    return dateList
+
 
 ################################################################
 def date_index(dateList):
@@ -109,7 +127,7 @@ def date_list2vector(dateList):
     for ni in range(len(dateList)):
         d = datetime.datetime(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
         dates.append(d)
-  
+
     ## date in year - float format
     datevector=[]
     for i in range(len(dates)):

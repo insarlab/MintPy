@@ -41,21 +41,22 @@ def Usage():
 ******************************************************************************
 
   Calculate Spatial average/mean of multi-temporal 2D datasets.
+      write the optimal reference date to reference_date.txt, and
+      write turbulent date to drop_date.txt
 
   Usage:
       mean_spatial.py    multi_temporal_file    mask_file
       mean_spatial.py -f multi_temporal_file -m mask_file [--circle x,y,rad -x sub -y sub]
 
       -f : multi-temporal file
-      
+
       ## Mark area included
       -m : mask file
       -x : subset in x/column/azimuth/longitude direction
       -y : subset in y/row   /range  /latitude  direction
-      
+
       ## Mark area excluded
       --circle : circle shape subset, [center_x,center_y,radius;center_x2,...]
-
 
   Example:
       mean_spatial.py sum_Seeded_ts.h5 mask.h5
@@ -77,6 +78,9 @@ def main(argv):
     disp_fig  = 'no'
     save_fig  = 'yes'
     save_list = 'yes'
+
+    ref_file  = 'reference_date.txt'
+    drop_file = 'drop_date.txt'
 
     ##### Check Inputs
     if len(sys.argv)>3:
@@ -181,38 +185,54 @@ def main(argv):
     del d
     h5file.close()
 
-    ##### Max Value
+    ##### Reference date - Max Value
     top3 = sorted(zip(meanList,epochList), reverse=True)[:3]
     print '------------ Top 3 Dates ------------------'
     print top3
-    
-    meanT = 0.7
-    idxMean  = meanList < meanT
-    print '------------ Mean Value < '+str(meanT)+' --------'
-    print np.array(epochList)[idxMean]
-    print meanList[idxMean]
-    print '------------ Good Pixel Percentage < %.0f%% -------'%(pixT*100)
-    idxPix = pixPercent < pixT
-    print np.array(epochList)[idxPix]
+    ## Write to txt file
+    fref = open(ref_file,'w')
+    fref.write(str(top3[0][1])+'\n')
+    fref.close()
+    print 'write optimal reference date to '+ref_file
+
+    ##### Drop dates - mean threshold
+    #meanT = 0.7
+    #idxMean  = meanList < meanT
+    #print '------------ Mean Value < '+str(meanT)+' --------'
+    #print np.array(epochList)[idxMean]
+    #print meanList[idxMean]
+
+    ##### Drop dates - good pixel percentage
+    pixNumT = 0.7
+    print '------------ Good Pixel Percentage < %.0f%% -------'%(pixNumT*100)
+    idxPix = pixPercent < pixNumT
+    dropEpochList = np.array(epochList)[idxPix]
+    print dropEpochList
     print pixPercent[idxPix]
+    ## Write to txt file
+    fdrop = open(drop_file,'w')
+    for i in range(len(dropEpochList)):
+        fdrop.write(str(dropEpochList[i])+'\n')
+    fdrop.close()
+    print 'write drop dates to '+drop_file
     print '-------------------------------------------'
 
     ##### Display
-    fig = plt.figure(figsize=(12,12))
-    ax  = fig.add_subplot(211)
-    ax.plot(dates, meanList, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
-    ax.plot([dates[0],dates[-1]],[meanT,meanT], '--b', lw=lineWidth)
-    ax = ptime.adjust_xaxis_date(ax,datevector)
-    ax.set_ylim(0,1)
-    ax.set_title('Spatial Average Value', fontsize=fontSize)
-    ax.set_xlabel('Time [years]',         fontsize=fontSize)
+    fig = plt.figure(figsize=(12,6))
+    #ax  = fig.add_subplot(211)
+    #ax.plot(dates, meanList, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
+    #ax.plot([dates[0],dates[-1]],[meanT,meanT], '--b', lw=lineWidth)
+    #ax = ptime.adjust_xaxis_date(ax,datevector)
+    #ax.set_ylim(0,1)
+    #ax.set_title('Spatial Average Value', fontsize=fontSize)
+    #ax.set_xlabel('Time [years]',         fontsize=fontSize)
 
-    ax  = fig.add_subplot(212)
+    ax  = fig.add_subplot(111)
     ax.plot(dates, pixPercent, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
-    ax.plot([dates[0],dates[-1]],[meanT,meanT], '--b', lw=lineWidth)
+    ax.plot([dates[0],dates[-1]],[pixNumT,pixNumT], '--b', lw=lineWidth)
     ax = ptime.adjust_xaxis_date(ax,datevector)
     ax.set_ylim(0,1)
-    ax.set_title('Percenrage of Pixels with Value > 0.7', fontsize=fontSize)
+    ax.set_title('Percenrage of Pixels with Value > '+str(pixNumT), fontsize=fontSize)
     ax.set_xlabel('Time [years]',         fontsize=fontSize)
     vals = ax.get_yticks()
     ax.set_yticklabels(['{:3.0f}%'.format(i*100) for i in vals])

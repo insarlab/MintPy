@@ -358,6 +358,11 @@ def Usage():
            view.py -f timeseries.h5 -d 20100102      -x 100:600 -y 200:800
            view.py -f LoadedData.h5 -d 070927-100217 -x 100:600 -y 200:800
 
+   Exclude Dates:
+           view.py -f timeseries.h5 -E '20060624,20070815'
+           view.py -f timeseries.h5 -E drop_date.txt
+           view.py -f timeseries.h5 -t ShikokuT417F650_690AlosA.template
+
    Masking:
            view.py -f Seeded_LoadedData.h5 -d 931018-950809 --mask Mask_tempCoh.h5
 
@@ -694,7 +699,10 @@ def main(argv):
         ## exclude epoch
         try:
             exclude_epoch
-            exclude_epoch = ut.yymmdd(exclude_epoch)
+            if os.path.isfile(exclude_epoch[0]):
+                try:  exclude_epoch = ptime.read_date_list(exclude_epoch[0])
+                except:  print 'Can not read date list file: '+exclude_epoch[0]
+            exclude_epoch = ptime.yymmdd(exclude_epoch)
             print 'exclude dates below:'
             epochList2 = []
             for epoch in epochList: epochList2.append(epoch)

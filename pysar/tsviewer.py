@@ -175,6 +175,7 @@ def Usage():
 
     Exclude dates:
         tsviewer.py -f timeseries.h5 -v velocity.h5 -t 20100102 -T 20101120 -E '20100520,20100705'
+        tsviewer.py -f timeseries.h5 -v velocity.h5 -E drop_date.txt
 
     Compare two timeseries files:
         tsviewer.py -f timeseries.h5 -v velocity.h5 -F timeseries_tropCor.h5 
@@ -328,6 +329,9 @@ def main(argv):
     ## Check exclude date input
     try:
         datesNot2show
+        if os.path.isfile(datesNot2show[0]):
+            try:  datesNot2show = ptime.read_date_list(datesNot2show[0])
+            except:  print 'Can not read date list file: '+datesNot2show[0]
         print 'dates not to show: '+str(datesNot2show)
     except:  datesNot2show=[]
 

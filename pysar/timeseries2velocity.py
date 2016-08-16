@@ -6,6 +6,7 @@
 ############################################################
 # Yunjun, Aug 2015: Add -m/M/d option
 # Yunjun, Jun 2016: Add -t option
+# Yunjun, Aug 2015: Support drop_date txt file input
 
 
 import sys
@@ -18,6 +19,7 @@ import numpy as np
 import h5py
 
 import pysar._readfile as readfile
+import pysar._datetime as ptime
 
 
 ############################################################################
@@ -38,7 +40,12 @@ def Usage():
          timeseries2velocity.py -f timeseries.h5 [-o OutputName.h5 -m minimum_date -M maximum_date -E exclude_dates]
 
          -f: time series h5 file
-         -E: excluded dates for velocity estimation
+         -E: excluded dates for velocity estimation, or drop_date.txt
+             e.g.: -E 20040502,20060708,20090103
+                   -E drop_date.txt
+                   drop_date.txt: 20040502
+                                  20060708
+                                  20090103
          -m: earliest date  for velocity estimation
          -M: latest   date  for velocity estimation
          -o: output file name
@@ -51,9 +58,9 @@ def Usage():
          timeseries2velocity.py -f timeseries_ECMWF_demCor_plane.h5 -t $TE/KyushuT73F2980_2990AlosD.template
          timeseries2velocity.py -f timeseries.h5 -m 20080201
          timeseries2velocity.py -f timeseries.h5 -m 20080201 -M 20100508
-         timeseries2velocity.py -f timeseries.h5 -E 20040502,20060708,20090103
-         timeseries2velocity.py -f timeseries.h5 -o velocity_demCor.h5  
          timeseries2velocity.py -f timeseries.h5 -m 20080201 -M 20100508 -E 20090703
+         timeseries2velocity.py -f timeseries.h5 -E 20040502,20060708,20090103
+         timeseries2velocity.py -f timeseries_ECMWF_demCor.h5 -E drop_date.txt
 
 ****************************************************************
     '''
@@ -74,13 +81,13 @@ def main(argv):
             elif opt == '-t':    templateFile     = arg
   
     elif len(sys.argv)==2:
-        if   argv[0]=='-h':             Usage(); sys.exit(1)
+        if   argv[0]=='-h':  Usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):   timeSeriesFile = argv[0]
-        else:                           Usage(); sys.exit(1)
-    else:                             Usage(); sys.exit(1)    
+        else:  Usage(); sys.exit(1)
+    else:  Usage(); sys.exit(1)    
   
     ##### Read excluded date list Input
-    try:    datesNot2include
+    try:  datesNot2include
     except:
         try:
             templateFile
@@ -101,12 +108,17 @@ def main(argv):
   
     ##############################################################
     print '--------------------------------------------'
-    print 'All dates existed:'
+    print 'Dates from input file: '+str(len(dateList1))
     print dateList1
   
     try:
         datesNot2include
-        print 'exclude dates: '+str(datesNot2include)
+        if os.path.isfile(datesNot2include[0]):
+            try:  datesNot2include = ptime.read_date_list(datesNot2include[0])
+            except:  print 'Can not read date list file: '+datesNot2include[0]
+        print '--------------------------------------------'
+        print 'Date excluded: '+str(len(datesNot2include))
+        print datesNot2include
     except:
         datesNot2include=[]
   
@@ -131,18 +143,20 @@ def main(argv):
                 print '  remove date: '+date
                 datesNot2include.append(date)
     except: pass
-  
+
     try:
         dateList=[]
         for date in dateList1:
             if date not in datesNot2include:
                 dateList.append(date)
-    except:
-        dateList=dateList1
-        print 'using all dates to calculate the vlocity'
+    except:  pass
+
     print '--------------------------------------------'
-    print 'dates used to estimate the velocity:'
-    print dateList
+    if len(dateList) == len(dateList1):
+        print 'using all dates to calculate the vlocity'
+    else:
+        print 'Dates used to estimate the velocity: '+str(len(dateList))
+        print dateList
     print '--------------------------------------------'
 
     ##############################################################
