@@ -12,6 +12,7 @@
 import sys
 import os
 import getopt
+import warnings
 
 import h5py
 import numpy as np
@@ -36,8 +37,11 @@ def multilook(ifg,lksy,lksx):
     #for c in range(int(cols_lowres)):  ifg_Clowres[:,c]=np.nansum(ifg[:,(c)*lksx:(c+1)*lksx],1)
     #for r in range(int(rows_lowres)):  ifg_lowres[r,:] =np.nansum(ifg_Clowres[(r)*lksy:(r+1)*lksy,:],0)
     #ifg_lowres=ifg_lowres/(lksy*lksx)
-    for c in range(cols_lowres):  ifg_Clowres[:,c] = np.nanmean(ifg[:,(c)*lksx:(c+1)*lksx],1)
-    for r in range(rows_lowres):  ifg_lowres[r,:]  = np.nanmean(ifg_Clowres[(r)*lksy:(r+1)*lksy,:],0)
+    
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        for c in range(cols_lowres):  ifg_Clowres[:,c] = np.nanmean(ifg[:,(c)*lksx:(c+1)*lksx],1)
+        for r in range(rows_lowres):  ifg_lowres[r,:]  = np.nanmean(ifg_Clowres[(r)*lksy:(r+1)*lksy,:],0)
   
     return ifg_lowres
 

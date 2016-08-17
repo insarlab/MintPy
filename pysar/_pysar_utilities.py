@@ -41,6 +41,7 @@
 #                   Add inner function ts_inverse() to faster time series inversion
 #                   Add P_BASELINE_TIMESERIES attribute to timeseries file.
 # Yunjun, Jul 2016: add get_file_list() to support multiple files input
+# Yunjun, Aug 2016: add spatial_mean()
 
 
 import sys
@@ -49,6 +50,7 @@ import re
 import time
 import datetime
 import glob
+import warnings
 
 import numpy as np
 import h5py
@@ -56,6 +58,67 @@ import h5py
 import pysar._readfile as readfile
 import pysar._datetime as ptime
 
+
+######################################################################################################
+def spatial_mean(File,mask_orig,box):
+    ## Calculate the Spatial Average of all non-nan pixels for each epoch
+    ##     and return the mean value.
+    ## 
+    ## Inputs:
+    ##     File      :
+    ##     mask_orig : mask, same size as File
+    ##     box       : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
+    ## Output: list for multi-dataset file, and float for single-dataset file
+
+    ##### Input File Info
+    atr  = readfile.read_attributes(File)
+    k = atr['FILE_TYPE']
+    width  = int(atr['WIDTH'])
+    length = int(atr['FILE_LENGTH'])
+
+    ##### Bounding Box
+    #if box       == None:    box = [0,0,width,length]
+    ##### Mask Info
+    #if mask_orig == None:    mask_orig = np.ones((length,width))
+
+    mask = mask_orig[box[1]:box[3],box[0]:box[2]]
+    idx = mask != 0
+
+    ##### Calculation
+    if k in ['timeseries','interferogram','coherence','wrapped']:
+        h5file = h5py.File(File,'r')
+        epochList = h5file[k].keys();
+        epochList = sorted(epochList)
+        epochNum  = len(epochList)
+        #print 'number of epoch: '+str(epochNum)
+
+        meanList   = np.zeros(epochNum)
+        for i in range(epochNum):
+            epoch = epochList[i]
+            if k in ['interferogram','coherence','wrapped']:
+                dset = h5file[k][epoch].get(epoch)[:]
+            elif k == 'timeseries':
+                dset = h5file[k].get(epoch)[:]
+            else:  print 'Unrecognized group type: '+k
+            
+            d = dset[box[1]:box[3],box[0]:box[2]]
+            ## supress warning 
+            ## url - http://stackoverflow.com/questions/29688168/mean-nanmean-and-warning-mean-of-empty-slice
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                meanList[i] = np.nanmean(d[idx])        
+        del d
+        h5file.close()
+        
+        if epochNum == 1:   meanList = float(meanList)
+
+    else:
+        data,atr = readfile.read(File,box)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            meanList = np.nanmean(data[idx])
+
+    return meanList
 
 
 ######################################################################################################
@@ -788,24 +851,33 @@ def Bh_Bv_timeseries(igramsFile):
   
     return Bh,Bv
 
-def stacking(h5file):
-    k=h5file.keys()
-    if 'interferograms' in k: k[0] = 'interferograms'
-    elif 'coherence'    in k: k[0] = 'coherence'
-    numIfgrams = len(h5file['interferograms'].keys())
-    if numIfgrams == 0.:      print "There is no data in the file";  sys.exit(1)
-    print numIfgrams
- 
-    igramList = h5file[k[0]].keys()
-    stack=np.zeros([int(h5file[k[0]][igramList[0]].attrs['FILE_LENGTH']),\
-                    int(h5file[k[0]][igramList[0]].attrs['WIDTH'])])
-    for igram in igramList:
-        print igram
-        dset = h5file[k[0]][igram].get(igram)
-        unw=dset[0:dset.shape[0],0:dset.shape[1]]
-        stack=stack+unw
-    return stack
+def stacking(File):
+    ## Stack multi-temporal dataset into one
+    ##    equivalent to temporal sum
 
+    ## File Info
+    atr = readfile.read_attributes(File)
+    k = atr['FILE_TYPE']
+    length = int(atr['FILE_LENGTH'])
+    width  = int(atr['WIDTH'])
+
+    h5file = h5py.File(File,'r')
+    igramList = h5file[k].keys()
+    numIfgrams = len(igramList)
+    if numIfgrams == 0.:
+        print "There is no data in the file";  sys.exit(1)
+    #print 'number of epochs: '+str(numIfgrams)
+
+    stack  = np.zeros([length,width])
+    for igram in igramList:
+        #print igram
+        if k in ['interferograms','coherence','wrapped']:
+            data = h5file[k][igram].get(igram)[:]
+        else:
+            data = h5file[k].get(igram)[:]
+        stack += data
+    h5file.close()
+    return stack
 
 def yymmdd2YYYYMMDD(date):
     if date[0] == '9':      date = '19'+date

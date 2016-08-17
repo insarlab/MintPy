@@ -21,21 +21,22 @@ import h5py
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._pysar_utilities as ut
+import pysar.subset as sub
 
 
 ########################################## Sub Functions #############################################
 ###############################################################
-def random_selection(M):
+def random_selection(stack):
     import random
-    nrow,ncol=np.shape(M)
+    nrow,ncol = np.shape(stack)
   
     y = random.choice(range(nrow))
     x = random.choice(range(ncol))
   
-    while M[y,x]==0:
+    while np.isnan(stack[y,x]):
         y = random.choice(range(nrow))
         x = random.choice(range(ncol))
-  
+
     return y,x
 
 ###############################################################
@@ -48,85 +49,112 @@ def nearest(x, tbase,xstep):
         indx=[]
     return indx
 
-###############################################################
-#def get_lat_lon(h5file):
-def get_lat_lon(atr):
-
-    Width    = float(atr['WIDTH'])
-    Length   = float(atr['FILE_LENGTH'])
-    ullon    = float(atr['X_FIRST'])
-    ullat    = float(atr['Y_FIRST'])
-    lon_step = float(atr['X_STEP'])
-    lat_step = float(atr['Y_STEP'])
-    lon_unit = atr['Y_UNIT']
-    lat_unit = atr['X_UNIT']
- 
-    lllat = ullat + Length * lat_step
-    urlon = ullon + Width  * lon_step
-    lat = np.arange(ullat,lllat,lat_step)
-    lon = np.arange(ullon,urlon,lon_step)
- 
-    return lat,lon,lat_step,lon_step
 
 ###############################################################
-def find_row_column(Lon,Lat,atr):
-    # finding row and column numbers of the GPS point
-    lat,lon,lat_step,lon_step = get_lat_lon(atr)
-    idx= nearest(Lon, lon, lon_step)
-    idy= nearest(Lat, lat, lat_step)
-    if idx !=[] and idy != []:
-        IDX=np.where(idx==True)[0][0]
-        IDY=np.where(idy==True)[0][0]
+def seed_xy(File,x,y,outName=''):
+    ## Seed Input File with reference on point (y,x)
+    print 'Referencing input file to pixel: (%d, %d)'%(y,x)
+    ##4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
+    box = [x,y,x+1,y+1]
+
+    #####  IO Info
+    atr = readfile.read_attributes(File)
+    k = atr['FILE_TYPE']
+    if outName == '':  outName = 'Seeded_'+os.path.basename(File)
+
+    ##### Mask
+    length = int(atr['FILE_LENGTH'])
+    width  = int(atr['WIDTH'])
+    mask = np.ones((length,width))
+    
+    ## Read refernce value
+    refList = ut.spatial_mean(File,mask,box)
+
+    ## Seeding
+    seed_file(File,outName,refList,x,y)
+
+    return 1
+
+
+###############################################################
+def seed_file(File,outName,refList,ref_x='',ref_y=''):
+    ## Seed Input File with reference value in refList
+    print 'Reference value: '
+    print refList
+
+    #####  IO Info
+    atr = readfile.read_attributes(File)
+    k = atr['FILE_TYPE']
+    print 'file type: '+k
+
+    ##### Multiple Dataset File
+    if k in ['timeseries','interferograms','wrapped','coherence']:
+        ##### Input File Info
+        h5file = h5py.File(File,'r')
+        epochList = h5file[k].keys()
+        epochList = sorted(epochList)
+        epochNum  = len(epochList)
+        print 'number of epochs: '+str(epochNum)
+        
+        ##### Check Epoch Number
+        if not epochNum == len(refList):
+            print '\nERROR: Reference value has different epoch number'+\
+                  'from input file.'
+            print 'Reference List epoch number: '+str(refList)
+            print 'Input file     epoch number: '+str(epochNum)
+            sys.exit(1)
+  
+        ##### Output File Info
+        h5out = h5py.File(outName,'w')
+        group = h5out.create_group(k)
+        print 'writing >>> '+outName
+
+    ## Loop
+    if k == 'timeseries':
+        for i in range(epochNum):
+            epoch = epochList[i]
+            print epoch
+            data = h5file[k].get(epoch)[:]
+            
+            data -= refList[i]
+  
+            dset = group.create_dataset(epoch, data=data, compression='gzip')
+
+        atr  = seed_attributes(atr,ref_x,ref_y)
+        for key,value in atr.iteritems():   group.attrs[key] = value
+
+    elif k in ['interferograms','wrapped','coherence']:
+        for i in range(epochNum):
+            epoch = epochList[i]
+            print epoch
+            data = h5file[k][epoch].get(epoch)[:]
+            atr  = h5file[k][epoch].attrs
+
+            data -= refList[i]
+            atr  = seed_attributes(atr,ref_x,ref_y)
+
+            gg = group.create_group(epoch)
+            dset = gg.create_dataset(epoch, data=data, compression='gzip')
+            for key, value in atr.iteritems():    gg.attrs[key] = value
+  
+    ##### Single Dataset File
     else:
-        IDX=np.nan
-        IDY=np.nan
-    return IDY, IDX
+        data,atr = readfile.read(File)
 
-################################################
-def find_lat_lon(y,x,atr):
-    # finding lat and lon of point
-    mlat,mlon,lat_step,lon_step = get_lat_lon(atr)
-    lat = mlat[y]
-    lon = mlon[x]
-    return lat, lon
+        data -= refList
+        atr  = seed_attributes(atr,ref_x,ref_y)
+
+        writefile.write(data,atr,outName)
+  
+    ##### End & Cleaning
+    try:
+        h5file.close()
+        h5out.close()
+    except: pass
+
+    return 1
 
 ###############################################################
-def Seeding(h5file,h5file_Seeded,y,x,lat=[],lon=[]):
-
-    igramList = h5file['interferograms'].keys()
-    igramList = sorted(igramList)
-    gg = h5file_Seeded.create_group('interferograms')
-    for igram in igramList:
-        print igram
-        unw = h5file['interferograms'][igram].get(igram)
-        unw=unw-unw[y][x]
-        group = gg.create_group(igram)
-        dset = group.create_dataset(igram, data=unw, compression='gzip')
-        for key, value in h5file['interferograms'][igram].attrs.iteritems():
-            group.attrs[key] = value
-        group.attrs['ref_x'] = x
-        group.attrs['ref_y'] = y
-        if bool(lat) and bool(lon):
-            group.attrs['ref_lat'] = lat
-            group.attrs['ref_lon'] = lon
-  
-    # support old format
-    try:
-        mask = h5file['mask'].get('mask')
-        gm = h5file_Seeded.create_group('mask')
-        dset = gm.create_dataset('mask', data=mask, compression='gzip')
-        for key, value in mask.attrs.iteritems():
-            gm.attrs[key] = value
-    except:  print 'No group of mask found in loaded interferograms'
-  
-    try:
-        meanCoherence = h5file['meanCoherence'].get('meanCoherence')
-        gc = h5file_Seeded.create_group('meanCoherence')
-        dset = gc.create_dataset('meanCoherence', data=meanCoherence, compression='gzip')
-        for key, value in meanCoherence.attrs.iteritems():
-            gc.attrs[key] = value
-    except:  print 'No group of meanCoherence found in loaded interferograms'
-
 def seed_attributes(atr_in,x,y):
     atr = dict()
     for key, value in atr_in.iteritems():  atr[key] = str(value)
@@ -135,68 +163,154 @@ def seed_attributes(atr_in,x,y):
     atr['ref_x']=x
     try:
         atr['X_FIRST']
-        lat,lon = find_lat_lon(y,x,atr)
+        lat = sub.coord_radar2geo(y,atr,'y')
+        lon = sub.coord_radar2geo(x,atr,'x')
         atr['ref_lat']=lat
         atr['ref_lon']=lon
         geocoord='yes'
     except: geocoord='no'
-  
+
     return atr
+
+
+###############################################################
+def seed_manual(File,stack,outName):
+    import matplotlib.pyplot as plt
+
+    print '\n---------------------------------------------------------'
+    print   'Manual select reference point ...'
+    print   'Click on a pixel that you want to choose as the refernce '
+    print   '    pixel in the time-series analysis, and then close the'
+    print   '    displayed window'
+    print   '---------------------------------------------------------'
+
+    ## Mutable object
+    ## ref_url: http://stackoverflow.com/questions/15032638/how-to-return-a-value-from-button-press-event-matplotlib
+    SeedingDone = {}
+    SeedingDone['key'] = 'no'
+
+    ##### Display
+    fig = plt.figure();
+    ax  = fig.add_subplot(111);
+    ax.imshow(stack)
+
+    ##### Selecting Point
+    def onclick(event):
+        if event.button==1:
+            print 'click'
+            x = int(event.xdata+0.5)
+            y = int(event.ydata+0.5)
+
+            if not np.isnan(stack[y][x]):
+                seed_xy(File,x,y,outName)
+                SeedingDone['key'] = 'yes'
+                plt.close(fig) 
+            else:
+                print '\nWARNING:'
+                print 'The selectd pixel has NaN value in data.'
+                print 'Try a difference location please.'
+    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+    plt.show()
+
+    return SeedingDone['key']
+
+
+###############################################################
+def seed_max_coherence(File,mask,outFile,corFile=''):
+    print '\n---------------------------------------------------------'
+    print   'Automatically select reference point ...'
+    print   '    Based on maximum coherence.'
+    print   '    Input coherence file or meanCoherence group within   '
+    print   '    the file is needed.'
+    print   '---------------------------------------------------------'
+
+    SeedingDone = 'no'
+    
+    ##### Read Coherence
+    try:
+        h5file = h5py.File(File,'r')
+        coh = h5file['meanCoherence'].get('meanCoherence')[:]
+    except:
+        try:  coh, coh_atr = readfile.read(corFile)
+        except: print '\nERROR: No coherence data is found!'
+    import pdb; pdb.set_trace()
+
+
+    try:
+        print 'Searching the pixel with maximum avergae coherence'
+        coh *= mask
+        y,x = np.unravel_index(np.argmax(coh), coh.shape)
+        seed_xy(File,x,y,outFile)
+        SeedingDone = 'yes'
+    except: pass
+
+    return SeedingDone
+
+
+###############################################################
+def print_warning(next_method):
+    print '\n*****************************************************'
+    print   'WARNING:'
+    print   'Input file is not referenced to the same pixel yet!'
+    print   '*****************************************************'
+    print 'Continue with default automatic seeding method: '+next_method
 
 
 #########################################  Usage  ##############################################
 def Usage():
     print '''
 ****************************************************************************************
-    Referencing all interferograms to the same pixel.
+  Referencing all interferograms to the same pixel.
+
+  Usage:
+      seed_data.py -f filename -t templateFile               [ -M MaskFile -o out_name]
+      seed_data.py -f filename -y lineNumber -x pixelNumber  [ -M MaskFile]
+      seed_data.py -f filename -l latitude   -L longitude    [ -M MaskFile]
+      seed_data.py -f filename --method                      [ -M MaskFile]
+
+      -f : the interferograms, time-series or velocity file saved in hdf5 format.
+      -M : Mask file 
+           ##### Priority:
+               Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5 > 'mask' group in file
+      -o : output file name [Seeded_file by default]
   
-    usage:
-      seed_data.py -f filename -t templateFile               [ -M MaskFile -m method ]
-      seed_data.py -f filename -y lineNumber -x pixelNumber  [ -M MaskFile -m method ]
-      seed_data.py -f filename -l latitude   -L longitude    [ -M MaskFile -m method ]
-      seed_data.py filename
+      Input Method:
+      -y : line number  of the reference pixel
+      -x : pixel number of the reference pixel
+      -l : latitude     of the reference pixel (for geocoded file)
+      -L : longitude    of the reference pixel (for geocoded file)
+      -r : reference file, use seeding info of this file to seed input file
+      -t : template file with setting of reference point information
+           Example: pysar.seed.yx   = 1160,300
+                    pysar.seed.lalo = 33.1,130.0
+  
+           Priority:
+           lat/lon > y/x
+           Direct input coordinate (-y/x/l/L) > reference file (-r) > template file (-t)
+  
+      Non-Input Method: 
+      *This is effective only when there is no valid reference value from input coordinate (options above)
+      --manual         : display stack of input file and manually select reference point
+      --max-coherence  : automatically select point with highest coherence value as reference point [default]
+      --global-average : use spatial global average value as reference value for each epoch
+      --random         : random select point as reference point
+      
+      -c : coherence file, used in automatic seeding based on max coherence.
+  
+      Reference value cannot be nan, thus, all selected reference point can not be:
+          a. non zero in mask, if mask is given
+          b. non nan  in data (stack)
 
- 
-    -f : the interferograms, time-series or velocity file saved in hdf5 format.
-    -m : the method used for seeding. if x and y are in the input options method is not required.
-         method options are: 
+  Examples:
+     seed_data.py -f LoadedData.h5 -t ShikokuT417F650_690AlosA.template
+     seed_data.py -f LoadedData.h5 -t ShikokuT417F650_690AlosA.template  -m Mask.h5
+     seed_data.py -f 091120_100407.h5    -y 257       -x 151             -m Mask.h5
+     seed_data.py -f velocity.h5         -l 34.45     -L -116.23         -m Mask.h5
+     seed_data.py -f timeseries.h5       -r Seeded_velocity.h5
 
-         'manual': if method is manual the stack of interferograms
-                   is displayed and asks the user to choose a pixel as the reference pixel.
-
-         'auto' or no method specified: A pixel with maximum average coherence is considered as the reference pixel. 
-                                        if avergae coherence is not available a random pixel which has  phase value in 
-                                        all interferograms is selected.
-         ##### Priority:
-             Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5 > 'mask' group in file
-
-    -y : line number  of the reference pixel (if already is known)
-    -x : pixel number of the reference pixel (if already is known)
-    -l : latitude     of the reference pixel (for geocoded file)
-    -L : longitude    of the reference pixel (for geocoded file)
-    -t : template file with setting of reference point information
-         Example: pysar.seed.yx   = 1160,300
-                  pysar.seed.lalo = 33.1,130.0
-         If both pysar.seed.lalo and pysar.seed.yx are setted, pysar.seed.lalo will be used.
-
-        ##### Priority: 
-        For radar coord file, only y/x is possible: -y/x > pysar.seed.yx
-        For geo   coord file, all option work: -l/L > -y/x > pysar.seed.lalo > pysar.seed.yx
-    -r : reference file.
-
-
-    -M : Mask file to check if all interferograms have valid phase value in the reference pixel.
-    -o : output file name [Seeded_file by default]
-
-    example:
-       seed_data.py LoadedData.h5
-       seed_data.py -f LoadedData.h5 -t ShikokuT417F650_690AlosA.template
-       seed_data.py -f LoadedData.h5 -t ShikokuT417F650_690AlosA.template -o Seeded_LoadedData.h5
-       seed_data.py -f LoadedData.h5 -y 257   -x 151
-       seed_data.py -f LoadedData.h5 -l 34.45 -L -116.23
-       seed_data.py -f LoadedData.h5 -M Mask.h5
-       seed_data.py -f LoadedData.h5 -m manual
-       seed_data.py -f velocity.h5 -y 450 -x 230
+     seed_data.py -f LoadedData.h5 --manual
+     seed_data.py -f LoadedData.h5 --max-coherence -c average_spatial_coherence.h5
+     seed_data.py -f timeseries.h5 --global-average
 
 ****************************************************************************************
     '''
@@ -205,40 +319,60 @@ def Usage():
 #######################################  Main Function  ########################################
 def main(argv):
 
-    method = 'auto'
+    ##### Referencing methods
+    method_default = 'max_coherence'
+    #method = 'manual'
+    #method = 'max_coherence'        ## Use phase on point with max coherence [default]
+    #method = 'global_average'       ## Use Nan Mean of phase on all pixels
+    #method = 'random'
     #maskFile = 'Mask.h5'
-  
-    ##### Get Input Args
+
+    global SeedingDone
+    
+    ############################## Check Inputs ##############################
     if len(sys.argv) > 2:
-        try:  opts, args = getopt.getopt(argv,"h:f:m:y:x:l:L:M:t:o:r:")
+        try:  opts, args = getopt.getopt(argv,"h:c:f:m:y:x:l:L:t:o:r:",\
+                                         ['manual','max-coherence','global-average','random'])
         except getopt.GetoptError:  Usage() ; sys.exit(1)
-   
+
         for opt,arg in opts:
             if   opt in ("-h","--help"):   Usage();  sys.exit()
-            elif opt == '-f':        file     = arg
-            elif opt == '-m':        method   = arg
-            elif opt == '-y':        y        = int(arg)
-            elif opt == '-x':        x        = int(arg)
-            elif opt == '-l':        latr     = float(arg)
-            elif opt == '-L':        lonr     = float(arg)
-            elif opt == '-t':        templateFile = arg
-            elif opt == '-M':        maskFile = arg
+            elif opt == '-f':        File     = arg
+            elif opt == '-m':        maskFile = arg
+            elif opt == '-c':        corFile  = arg
             elif opt == '-o':        outFile  = arg
+
+            elif opt == '-y':        ry       = int(arg)
+            elif opt == '-x':        rx       = int(arg)
+            elif opt == '-l':        rlat     = float(arg)
+            elif opt == '-L':        rlon     = float(arg)
             elif opt == '-r':        refFile  = arg
-  
+            elif opt == '-t':        templateFile = arg
+
+            elif opt == '--global-average' :  method = 'global_average'
+            elif opt == '--manual'         :  method = 'manual'
+            elif opt == '--max-coherence'  :  method = 'max_coherence'
+            elif opt == '--random'         :  method = 'random'
+
     elif len(sys.argv)==2:
         if   argv[0]=='-h':            Usage(); sys.exit(1)
-        elif os.path.isfile(argv[0]):  file = argv[0]
+        elif os.path.isfile(argv[0]):  File = argv[0]
         else:  print 'Input file does not existed: '+argv[0];  sys.exit(1)
     elif len(sys.argv)<2:             Usage(); sys.exit(1)
-  
-    try:     file
+
+    ##### Input File Info
+    try:
+        File
+        atr = readfile.read_attributes(File)
+        k = atr['FILE_TYPE']
+        length = int(atr['FILE_LENGTH'])
+        width  = int(atr['WIDTH'])
     except:  Usage() ; sys.exit(1)
   
     try:    outFile
-    except: outFile = 'Seeded_'+file
+    except: outFile = 'Seeded_'+File
   
-    ##### Read Seed Inputs
+    ############################## Reference Point Input ####################
     try:
         refFile
         atr_ref = readfile.read_attributes(refFile)
@@ -249,245 +383,140 @@ def main(argv):
         templateContents = readfile.read_template(templateFile)
     except: pass
 
+    ### Priority
+    ## lat/lon > y/x
+    ## Direct Input > Reference File > Template File
     try:
-        latr
-        lonr
+        rlat
+        rlon
     except:
         try:
-            latr = float(atr_ref['ref_lat'])
-            lonr = float(atr_ref['ref_lon'])
+            rlat = float(atr_ref['ref_lat'])
+            rlon = float(atr_ref['ref_lon'])
         except:
-            try: latr,lonr = [float(i) for i in templateContents['pysar.seed.lalo'].split(',')]
-            except: pass
-    try:
-        y
-        x
-    except:
-        try:
-            y = int(atr_ref['ref_y'])
-            x = int(atr_ref['ref_x'])
-        except:
-            try: y,x       = [int(i)   for i in templateContents['pysar.seed.yx'].split(',')]
+            try: rlat,rlon = [float(i) for i in templateContents['pysar.seed.lalo'].split(',')]
             except: pass
 
-    ##### Judge: use lalo / yx  
-    atr = readfile.read_attributes(file)
-    h5file = h5py.File(file)
-    k=h5file.keys()
+    try:
+        ry
+        rx
+    except:
+        try:
+            ry = int(atr_ref['ref_y'])
+            rx = int(atr_ref['ref_x'])
+        except:
+            try: ry,rx       = [int(i)   for i in templateContents['pysar.seed.yx'].split(',')]
+            except: pass
+
+    ##### Check lalo / YX
     print '\n************** Reference Point ******************'
     try:
-        atr['X_FIRST']      ## Geocoded
-        latr
-        lonr
-        y,x=find_row_column(lonr,latr,atr)
-        print 'Reference point: lat = '+str(latr)+', lon = '+str(lonr)
-        print 'Its corresponding row and column number: y = '+str(y)+', x = '+str(x)
+        rlat
+        rlon
+        y = sub.coord_geo2radar(rlat,atr,'lat')
+        x = sub.coord_geo2radar(rlon,atr,'lon')
+        0<= x <= width
+        0<= y <= length
+        rx = x
+        ry = y
+        print 'Reference point: lat = '+str(rlat)+', lon = '+str(rlon)
+        print '                  y  = '+str(ry)+', x = '+str(rx)
     except:
-        print 'Skipping lat/lon reference point.'
-        print 'Continue with the y/x reference point.' 
-  
-    ##### Read Mask File 
+        print 'Skip input lat/lon reference point.'
+        print 'Continue with the y/x reference point.'
+
+
+    ######################### a. Read Mask File #########################
     ## Priority: Input mask file > pysar.mask.file > existed Modified_Mask.h5 >
     ##                             existed Mask.h5 > 'mask' group in file
-    try:       maskFile
+    try:     maskFile
     except:
-        try:    maskFile = templateContents['pysar.mask.file']
+        try: maskFile = templateContents['pysar.mask.file']
         except:
             if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
             elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
             else: print 'No mask found!';
-    try:  M,Matr = readfile.read(maskFile);  print 'mask: '+maskFile
-    except: print 'Can not open mask file: '+maskFile; sys.exit(1)
+    try:
+        M,Matr = readfile.read(maskFile);
+        print 'mask: '+maskFile
+    except:
+        print 'WARNING: No mask, use the whole area as mask'
+        M = np.ones((length,width))
 
-    ################################
-    import matplotlib.pyplot as plt
-  
-    if 'interferograms' in k:
-        try:
-            x
-            y
-            numIfgrams = len(h5file['interferograms'].keys())
-            if numIfgrams == 0.:     print "There is no data in the file";    sys.exit(1)
-     
-            ## Checking the reference pixel
-            if M[y][x]==0:
-                print '*************************************************************************'    
-                print 'ERROR:'
-                print 'The slecetd refernce pixel has NaN value in one or more interferograms!'
-                print 'Chhose another pixel as the reference pixel.'
-                print '*************************************************************************'
-                sys.exit(1)
-            else:
-                print 'Referencing all interferograms to the same pixel at:' +\
-                      ' y= '+str(y)+' , x= '+str(x)+':'
-                h5file_Seeded = h5py.File(outFile,'w');
-                if ut.radar_or_geo(file) == 'geo':
-                    lat,lon = find_lat_lon(y,x,atr)
-                    Seeding(h5file,h5file_Seeded,y,x,lat,lon)
-                else:
-                    Seeding(h5file,h5file_Seeded,y,x)
-                print 'Done!'
-                h5file_Seeded.close()          
-                h5file.close()
-          
-        ################################
-       
-        except:
-            if method=='manual':
-                print 'manual selection of the reference point'
-       
-                igramList = h5file['interferograms'].keys()
-                stack = ut.stacking(h5file)
-                stack[M==0]=np.nan
-       
-                fig = plt.figure();    ax=fig.add_subplot(111);    ax.imshow(stack)
-                print 'Click on a pixel that you want to choose as the refernce pixel \
-                       in the time-series analysis and then close the displayed velocity.'
-       
-                SeedingDone='no' 
-                def onclick(event):
-                    if event.button==1:
-                        print 'click'
-                        x = int(event.xdata)
-                        y = int(event.ydata)
-                        if not np.isnan(stack[y][x]):
-                           
-                            print 'Referencing all interferograms to the same pixel at:' +\
-                                  ' y= '+str(y)+' , x= '+str(x)+':'
-                            #outFile= 'Seeded_'+file; print 'writing >>> '+outFile
-                            h5file_Seeded = h5py.File(outFile,'w')
-                            if ut.radar_or_geo(file) == 'geo':
-                                lat,lon = find_lat_lon(y,x,atr)
-                                Seeding(h5file,h5file_Seeded,y,x,lat,lon)
-                            else:
-                                Seeding(h5file,h5file_Seeded,y,x)
-                            print 'Done!'   
-                            h5file_Seeded.close()
-                            SeedingDone='yes'
-                            plt.close() # this gic=ves an error message "segementation fault".
-                            # Although it can be ignored, there should be a better way to close without error message!
-                        else:
-                            print ''
-                            print 'warning:'
-                            print 'The slecetd refernce pixel has NaN value for some interferograms'
-                            print 'Choose another pixel as the reference pixel'
-        
-                cid = fig.canvas.mpl_connect('button_press_event', onclick)
-                plt.show()
-                h5file.close()
-                h5mask.close()
-       
-                if SeedingDone=='no':
-                    print '''
-                 **********************************     
-                 WARNING: interferograms are not referenced to the same pixel yet!
-                 **********************************
-                    '''
-            else:
-                print 'Automatic selection of the reference pixel!'
-       
-                #Mset=h5file['mask'].get('mask')
-                #M=Mset[0:Mset.shape[0],0:Mset.shape[1]]
-                ind0=M==0
-                if ind0.sum()==M.shape[0]*M.shape[1]:
-                    print 'Error:'
-                    print 'There is no pixel that has valid phase value in all interferograms.' 
-                    print 'Check the interferograms!'
-                    print 'Seeding failed'
-                    sys.exit(1)            
-       
-                try:
-                    Cset=h5file['meanCoherence'].get('meanCoherence')
-                    C=Cset[0:Cset.shape[0],0:Cset.shape[1]]
-                    C=C*M;    print 'finding a pixel with maximum avergae coherence'
-                    y,x=np.unravel_index(np.argmax(C), C.shape)
-                except:
-                    y,x=random_selection(M)
-       
-                print 'Referencing all interferograms to the same pixel at:' + ' y= '+str(y)+' , x= '+str(x)+':'
-                #outFile= 'Seeded_'+file; print 'writing >>> '+outFile
-                h5file_Seeded = h5py.File(outFile,'w')
-                if ut.radar_or_geo(file) == 'geo':
-                    lat,lon = find_lat_lon(y,x,atr)
-                    Seeding(h5file,h5file_Seeded,y,x,lat,lon)
-                else:
-                    Seeding(h5file,h5file_Seeded,y,x)
-                print 'Done!'
-                h5file_Seeded.close()
-                h5file.close()
-                #plt.imshow(C)
-                #plt.plot(x,y,'^',ms=10)
-                #plt.show()         
-
-    #####################################
-    elif 'timeseries' in k:
-        print 'Seeding time-series'
-        try:      print 'Seeding time-series epochs to : y=' + str(y) + ' x='+str(x)
-        except:   print 'y and x coordinates of the Seed point are required!';           sys.exit(1);
-        #outFile= 'Seeded_'+file; print 'writing >>> '+outFile 
-        h5file_Seeded = h5py.File(outFile,'w')
-        group=h5file_Seeded.create_group('timeseries')
-        dateList=h5file['timeseries'].keys()
-        for d in dateList:
-            print d
-            dset1=h5file['timeseries'].get(d)
-            data=dset1[0:dset1.shape[0],0:dset1.shape[1]]
-            dset = group.create_dataset(d, data=data-data[y,x], compression='gzip')
-        
-        atr = seed_attributes(h5file['timeseries'].attrs,x,y)
-        for key,value in atr.iteritems():
-            group.attrs[key] = value
-
-
-    #####################################
-    else:
-        V, atr = readfile.read(file)
-        try:
-            V=V-V[y,x]
-            atr = seed_attributes(atr,x,y)
-            writefile.write(V,atr,outFile)
-        except:
-            print"Choose the reference point on the screen"
-            fig = plt.figure()
-            ax=fig.add_subplot(111)
-            ax.imshow(V)
-    
-            print 'Click on a pixel that you want to choose as the refernce pixel:'
-            SeedingDone='no'
-            def onclick(event):
-                if event.button==1:
-                    print 'click'
-                    x = int(event.xdata)
-                    y = int(event.ydata)
-                    print V[1][1]
-                    if not np.isnan(V[y][x]):
-                        print 'Referencing all interferograms to the same pixel at:' + ' y= '+str(y)+' , x= '+str(x)+':'
-                        V=V-V[y][x]
-                        atr = seed_attributes(atr,x,y)
-                        writefile.write(V,atr,outFile)
-                        SeedingDone='yes'
-                        plt.close() # this gic=ves an error message "segementation fault". 
-                        # Although it can be ignored, there should be a better way to close without error message!
-                    else:
-                        print ''
-                        print 'warning:'
-                        print 'The slecetd refernce pixel has NaN value'
-                        print 'Choose another pixel as the reference pixel'
-     
-  
-            cid = fig.canvas.mpl_connect('button_press_event', onclick)
-            plt.show()
-  
-    try: h5file.close()
+    ## Message
+    try:
+        rx
+        ry
+        if M[ry,rx] == 0:
+            print 'Input point has 0 value in mask.'
     except: pass
-    try: h5file_Seeded.close()
+
+    ######################### b. Stack ##################################
+    print 'calculating the stacking of '+File+' ...'
+    stack = ut.stacking(File)
+    ## Message
+    try:
+        rx
+        ry
+        if np.isnan(stack[ry,rx]):
+            print 'Input point has nan value in data.'
     except: pass
-    try: h5mask.close()
-    except: pass
-  
-    #else: print 'Unrecognized file type: '+k[0]
-  
-    print 'writing >>> '+outFile
+
+    stack[M==0] = np.nan
+    if np.nansum(stack) == 0.0:
+        print '\n*****************************************************'
+        print   'ERROR:'
+        print   'There is no pixel that has valid phase value in all datasets.' 
+        print   'Check the file!'
+        print   'Seeding failed'
+        sys.exit(1)
+
+    ######################### Check Method ##############################
+    try:
+        ~np.isnan(stack[ry,rx])
+        method = 'input_coord'
+    except:
+        try:    method
+        except: method = method_default
+        print 'Skip input y/x reference point.'
+        print 'Continue with '+method
+
+    #h5file = h5py.File(File)
+
+    ######################### Seeding ###################################
+    ##### Input Coordinate
+    if method == 'input_coord':
+        seed_xy(File,rx,ry,outFile)
+
+    ##### Manual Selection
+    elif method == 'manual':
+        SeedingDone = seed_manual(File,stack,outFile)
+
+        if SeedingDone == 'no':
+            method = method_default
+            print_warning(method)
+
+    elif method == 'max_coherence':
+        try:    SeedingDone = seed_max_coherence(File,M,outFile,corFile)
+        except: SeedingDone = seed_max_coherence(File,M,outFile)
+
+        if SeedingDone == 'no':
+            method = 'global_average'
+            print_warning(method)
+
+    elif method == 'global_average':
+        print '\n---------------------------------------------------------'
+        print 'Automatically Seeding using Global Spatial Average Value '
+        print '---------------------------------------------------------'
+        print 'Calculating the global spatial average value for each epoch'+\
+              ' of all valid pixels ...'
+        box = [0,0,width,length]
+        meanList = ut.spatial_mean(File,M,box)
+        seed_file(File,outFile,meanList,'','')
+
+    elif method == 'random':
+        y,x = random_selection(stack)
+        seed_xy(File,x,y,outFile)
 
 
 ################################################################################################

@@ -487,3 +487,49 @@ def read(*args):
     else: print 'Unrecognized file format: '+ext; return 0
 
 
+#########################################################################
+## Not ready yet
+def read_multiple(File,box=''):
+    ## Read multi-temporal 2D datasets into a 3-D data stack
+    ## Inputs:
+    ##     File  : input file, interferograms,coherence, timeseries, ...
+    ##     box   : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
+    ## Examples:
+    ##     stack = stacking('timeseries.h5',(100,1200,500,1500))
+
+    ##### File Info
+    atr = readfile.read_attributes(File)
+    k = atr['FILE_TYPE']
+    length = int(atr['FILE_LENGTH'])
+    width  = int(atr['WIDTH'])
+
+    ##### Bounding Box
+    if box == '':  box = [0,0,width,length]
+
+    epochList = h5file[k].keys()
+    epochNum  = len(epochList)
+    if epochNum == 0:   print "There is no data in the file";  sys.exit(1)
+    print 'number of epochs: '+str(epochNum)
+ 
+    data = np.zeros([length,width])
+    for igram in igramList:
+        print igram
+        
+        dset = h5file[k][igram].get(igram)
+        ##### Crop
+        try:    data = dset[box[1]:box[3],box[0]:box[2]]
+        except: data = dset[:,:]
+        unw=dset[0:dset.shape[0],0:dset.shape[1]]
+        stack=stack+unw
+    return stack
+
+
+
+
+
+
+
+
+
+
+

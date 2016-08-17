@@ -19,6 +19,7 @@
 # Yunjun, Jun 2016: Add geo_box()
 # Yunjun, Jul 2016: add parallel support
 #                   add outlier fill option
+# Yunjun, Aug 2016: add coord_geo2radar()
 
 
 import os
@@ -34,24 +35,76 @@ import pysar._pysar_utilities as ut
 
 
 ################################################################
-def coord_geo2radar(geoCoord,atr,type):
+def coord_geo2radar(geoCoord,atr,coordType):
     ## convert geo coordinates into radar coordinates
     ## for Geocoded file only
     ## Inputs:
-    ##     geoCoord : list of coordinates in latitude or longitude
-    ##     atr      : dictionary of file attributes
-    ##     type     : coordinate type: latitude, longitude
-  
+    ##     geoCoord  : coordinate (list) in latitude/longitude in float
+    ##     atr       : dictionary of file attributes
+    ##     coordType : coordinate type: latitude, longitude
+    ##
+    ## Example:
+    ##      300        = coord_radar2geo(32.104990,    atr,'lat')
+    ##     [1000,1500] = coord_radar2geo([130.5,131.4],atr,'lon')
+
+    try: atr['X_FIRST']
+    except: print 'Support geocoded file only!'; sys.exit(1)
+
+    ## Convert to List if input is String
+    if isinstance(geoCoord,float):
+        geoCoord = [geoCoord]
+
     radarCoord = []
     for i in range(len(geoCoord)):
-        if   type == 'latitude':
-            radarCoord.append(int(np.floor((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']))))
-        elif type == 'longitude':
-            radarCoord.append(int(np.floor((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))))
-    #print 'input '+type+': '+str(geoCoord[i])
+        if   coordType.lower() in ['lat','latitude']:
+            coord = int(np.floor((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP'])))
+        elif coordType.lower() in ['lon','longitude']:
+            coord = int(np.floor((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP'])))
+        else: print 'Unrecognized coordinate type: '+coordType
+        radarCoord.append(coord)
     radarCoord.sort()
-  
+
+    if len(radarCoord) == 1:
+        radarCoord = radarCoord[0]
+
     return radarCoord
+
+
+################################################################
+def coord_radar2geo(radarCoord,atr,coordType):
+    ## convert radar coordinates into geo coordinates
+    ## for Geocoded file only
+    ##
+    ## Inputs:
+    ##     radarCoord : coordinate (list) in row/col in int
+    ##     atr        : dictionary of file attributes
+    ##     coordType  : coordinate type: row, col, y, x
+    ##
+    ## Example:
+    ##     32.104990     = coord_radar2geo(300,        atr,'y')
+    ##     [130.5,131.4] = coord_radar2geo([1000,1500],atr,'x')
+
+    try: atr['X_FIRST']
+    except: print 'Support geocoded file only!'; sys.exit(1)
+    
+    ## Convert to List if input is String
+    if isinstance(radarCoord,int):
+        radarCoord = [radarCoord]
+
+    geoCoord = []
+    for i in range(len(radarCoord)):
+        if   coordType.lower() in ['row','y']:
+            coord = (radarCoord[i] + 0.5)*float(atr['Y_STEP']) + float(atr['Y_FIRST'])
+        elif coordType.lower() in ['col','x','column']:
+            coord = (radarCoord[i] + 0.5)*float(atr['X_STEP']) + float(atr['X_FIRST'])
+        else: print 'Unrecognized coordinate type: '+coordType
+        geoCoord.append(coord)
+    geoCoord.sort()
+
+    if len(geoCoord) == 1:
+        geoCoord = geoCoord[0]
+
+    return geoCoord
 
 ################################################################
 def check_subset_range(sub_y,sub_x,atr):
@@ -205,7 +258,7 @@ def box_overlap_index(box1,box2):
 
 ################################################################
 def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
-  
+
     ##### Overlap between subset and data range
     atr = readfile.read_attributes(File)
     width  = int(atr['WIDTH'])
@@ -247,10 +300,10 @@ def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
             data[idx2[1]:idx2[3],idx2[0]:idx2[2]] = data_overlap
   
             dset = group.create_dataset(epoch, data=data, compression='gzip')
-  
+
         atr  = subset_attributes(atr,sub_y,sub_x)
         for key,value in atr.iteritems():   group.attrs[key] = value
-  
+
     elif k in ['interferograms','wrapped','coherence']:
         for epoch in epochList:
             print epoch
