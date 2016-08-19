@@ -245,9 +245,12 @@ def main(argv):
     width  = data.shape[1]
     try:fig_size
     except:
+        ## min figure dimension: 6.0
         fig_size_0 = 6.0
-        fig_size_1 = fig_size_0/width*length
-        fig_size   = [fig_size_1,fig_size_0]
+        ratio = float(width)/float(length)
+        if ratio < 1:  fig_size = [fig_size_0,fig_size_0/ratio]
+        else:          fig_size = [fig_size_0*ratio,fig_size_0]
+    print 'figure size:  %.1f, %.1f'%(fig_size[0],fig_size[1])
     map = plt.get_cmap(color_map)
     fig = plt.figure(figsize=fig_size,frameon=False)
     ax = plt.Axes(fig, [0., 0., 1., 1.], )
