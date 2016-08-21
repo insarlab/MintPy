@@ -174,6 +174,7 @@ def main(argv):
     pixPercent = np.zeros(epochNum)
     pixT = 0.7
     print 'calculating ...'
+    print '  Date       Mean   Percentage'
     for i in range(epochNum):
         epoch = epochList[i]
         d      = h5file[k].get(epoch)[:]
@@ -182,13 +183,13 @@ def main(argv):
         meanList[i]   = np.nanmean(d[idx])
         pixPercent[i] = np.sum(d[idx] >= pixT)/idxNum
         
-        print epoch+' : %.2f    %.2f'%(meanList[i],pixPercent[i])
+        print epoch+' :   %.2f    %.1f%%'%(meanList[i],pixPercent[i]*100)
     del d
     h5file.close()
 
     ##### Reference date - Max Value
     top3 = sorted(zip(meanList,epochList), reverse=True)[:3]
-    print '------------ Top 3 Dates ------------------'
+    print '------------ Top 3 Mean ------------------'
     print top3
     ## Write to txt file
     fref = open(ref_file,'w')
@@ -219,16 +220,16 @@ def main(argv):
     print '-------------------------------------------'
 
     ##### Display
-    fig = plt.figure(figsize=(12,6))
-    #ax  = fig.add_subplot(211)
-    #ax.plot(dates, meanList, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
+    fig = plt.figure(figsize=(12,12))
+    ax  = fig.add_subplot(211)
+    ax.plot(dates, meanList, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
     #ax.plot([dates[0],dates[-1]],[meanT,meanT], '--b', lw=lineWidth)
-    #ax = ptime.adjust_xaxis_date(ax,datevector)
-    #ax.set_ylim(0,1)
-    #ax.set_title('Spatial Average Value', fontsize=fontSize)
-    #ax.set_xlabel('Time [years]',         fontsize=fontSize)
+    ax = ptime.adjust_xaxis_date(ax,datevector)
+    ax.set_ylim(0,1)
+    ax.set_title('Spatial Average Value', fontsize=fontSize)
+    ax.set_xlabel('Time [years]',         fontsize=fontSize)
 
-    ax  = fig.add_subplot(111)
+    ax  = fig.add_subplot(212)
     ax.plot(dates, pixPercent, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
     ax.plot([dates[0],dates[-1]],[pixNumT,pixNumT], '--b', lw=lineWidth)
     ax = ptime.adjust_xaxis_date(ax,datevector)

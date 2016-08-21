@@ -308,12 +308,12 @@ def main(argv):
     #############################
     print 'adding colorscale'
     cb_rg = min(North-South, East-West)
-    cb_N = (North+South)/2.0 + 0.5*0.7*cb_rg
+    cb_N = (North+South)/2.0 + 0.5*0.5*cb_rg
     cb_W = East  + 0.1*cb_rg
     slc1   = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),\
                                KML.altitude('1000'),KML.altitudeMode('absolute'),\
-                               KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.7*cb_rg)),\
-                                             KML.west( str(cb_W)),KML.east( str(cb_W+0.2*cb_rg))))
+                               KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
+                                             KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
     doc.Folder.append(slc1)
 
     #############################
