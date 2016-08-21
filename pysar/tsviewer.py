@@ -40,7 +40,7 @@ import pysar.view as view
 ################################################################
 def check_yx(xsub,ysub,radius,ax,rectColor='black'):
     ##### Read Y/X
-    try:     xmin=xsub[0];         xmax=xsub[1]+1;       
+    try:     xmin=xsub[0];         xmax=xsub[1]+1;
     except:  xmin=xsub[0]-radius;  xmax=xsub[0]+radius+1;
     try:     ymin=ysub[0];         ymax=ysub[1]+1;       
     except:  ymin=ysub[0]-radius;  ymax=ysub[0]+radius+1;
@@ -314,6 +314,8 @@ def main(argv):
         lalosub
         xsub = subset.coord_geo2radar([lalosub[1]],atr,'longitude')
         ysub = subset.coord_geo2radar([lalosub[0]],atr,'latitude')
+        xsub = [xsub]
+        ysub = [ysub]
         if radius == 0:  radius = 3
     except: pass
 
