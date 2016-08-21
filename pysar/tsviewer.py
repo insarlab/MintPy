@@ -183,11 +183,10 @@ def Usage():
 
     X/Y Input:
         tsviewer.py -f timeseries.h5 -v velocity.h5 -r 10
-        tsviewer.py -f timeseries.h5 -x 300 -y 500  -r 10
-        tsviewer.py -f timeseries.h5 -x 300:330 -y 500:530
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem -C yes -x 300:330 -y 500:530 --nodisplay
-
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem -C yes -x 300:330 -y 500:530 --nodisplay --zoom-x 300:800 --zoom-y 500:1500
+        tsviewer.py -f timeseries.h5 -v velocity.h5 -x 300     -y 500      -r 10
+        tsviewer.py -f timeseries.h5 -v velocity.h5 -x 300:330 -y 500:530
+        tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem
+                    -x 300:330 -y 500:530 --nodisplay --zoom-x 300:800 --zoom-y 500:1500
 
 *******************************************************************************************************
     '''
@@ -578,7 +577,7 @@ def main(argv):
         try:
             lonc = ullon + (xsub[0]+xsub[1]-1)/2.0*lon_step
             latc = ullat + (ysub[0]+ysub[1]-1)/2.0*lat_step
-            figTitle += ', lalo='+'%.4f:%.4f'%(latc,lonc)
+            figTitle += ', lalo='+'%.4f,%.4f'%(latc,lonc)
         except: pass
         ax2.set_title(figTitle)
 
