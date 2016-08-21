@@ -271,7 +271,7 @@ def Usage():
       -f : the interferograms, time-series or velocity file saved in hdf5 format.
       -M : Mask file 
            ##### Priority:
-               Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5 > 'mask' group in file
+               Input mask file > pysar.mask.file
       -o : output file name [Seeded_file by default]
   
       Input Method:
@@ -419,23 +419,19 @@ def main(argv):
         0<= y <= length
         rx = x
         ry = y
-        print 'Reference point: lat = '+str(rlat)+', lon = '+str(rlon)
-        print '                  y  = '+str(ry)+', x = '+str(rx)
+        print 'Reference point: lat = %.4f,   lon = %.4f'%(rlat,rlon)
+        print '                 y   = %d,     x   = %d'%(ry,rx)
     except:
         print 'Skip input lat/lon reference point.'
         print 'Continue with the y/x reference point.'
 
 
     ######################### a. Read Mask File #########################
-    ## Priority: Input mask file > pysar.mask.file > existed Modified_Mask.h5 >
-    ##                             existed Mask.h5 > 'mask' group in file
+    ## Priority: Input mask file > pysar.mask.file 
     try:     maskFile
     except:
         try: maskFile = templateContents['pysar.mask.file']
-        except:
-            if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
-            elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
-            else: print 'No mask found!';
+        except:  print 'No mask found!';
     try:
         M,Matr = readfile.read(maskFile);
         print 'mask: '+maskFile

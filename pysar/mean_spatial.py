@@ -139,7 +139,8 @@ def main(argv):
 
     ## Bounding Subset
     try:
-        xsub, ysub
+        xsub
+        ysub
         ysub,xsub = subset.check_subset_range(ysub,xsub,atr)
         Mask[ysub[0]:ysub[1],xsub[0]:xsub[1]] = Mask_orig[ysub[0]:ysub[1],xsub[0]:xsub[1]]*2
         #Mask[0:ysub[0],:]      = 0
