@@ -147,8 +147,11 @@ def Usage():
 
      DEM
         -D : dem file
-        --dem-contour    : show DEM contour
+        --dem-nocontour  : do not show DEM contour
         --dem-noshade    : do not show DEM shaded relief
+        --contour-step   : contour step                      (default is 200 meters)
+        --contour-smooth : contour smooth ( Sigma of Gaussian Filter, default is 3.0; Set to 0 for no smoothing) 
+
 
      Date Input
         -t : minimum date for display
@@ -197,8 +200,10 @@ def Usage():
 def main(argv):
 
     ## Default settings
+    contour_step  = 200.0
+    contour_sigma = 3.0
     demShade   = 'yes'
-    demContour = 'no'
+    demContour = 'yes'
 
     global markerSize, markderSize2, markerColor, markerColor2, rectColor
     global lineWidth, lineWidth2, edgeWidth, fontSize
@@ -252,7 +257,8 @@ def main(argv):
         try:   opts, args = getopt.getopt(argv,"f:F:v:a:b:s:m:c:w:u:l:h:D:V:t:T:d:r:x:y:X:Y:o:E:",
                                               ['save','nodisplay','unit=','exclude=','ref-date=','rect-color=',\
                                                'zero-start=','zoom-x=','zoom-y=','zoom-lon','zoom-lat','lalo=',\
-                                               'opposite','dem-contour','dem-noshade','displacement'])
+                                               'opposite','dem-nocontour','dem-noshade','displacement','contour-step=',\
+                                               'contour-smooth='])
         except getopt.GetoptError:    Usage() ; sys.exit(1)
 
         for opt,arg in opts:
@@ -278,7 +284,9 @@ def main(argv):
             elif opt == '-X':     ref_xsub = [int(i) for i in arg.split(':')];   ref_xsub.sort();
             elif opt == '-Y':     ref_ysub = [int(i) for i in arg.split(':')];   ref_ysub.sort();  # dispVelFig='no'
 
-            elif opt == '--dem-contour'    : demContour      = 'yes'
+            elif opt == '--contour-step'   : contour_step    = float(arg)
+            elif opt == '--contour-smooth' : contour_sigma   = float(arg)
+            elif opt == '--dem-nocontour'  : demContour      = 'no'
             elif opt == '--dem-noshade'    : demShade        = 'no'
             elif opt == '--displacement'   : dispDisplacement= 'yes'
             elif opt in ['-E','--exclude'] : datesNot2show   = arg.split(',')
@@ -469,9 +477,9 @@ def main(argv):
     try:
         demFile
         dem,demRsc = readfile.read(demFile)
-        ax = view.plot_dem_yx(ax,dem,demShade,demContour)
-        vel_alpha = 0.7
-    except: print 'No DEM file' 
+        ax = view.plot_dem_yx(ax,dem,demShade,demContour,contour_step,contour_sigma)
+        vel_alpha = 0.8
+    except: print 'No DEM file'
 
     try:     img=ax.imshow(vel,vmin=vmin,vmax=vmax, alpha=vel_alpha)
     except:  img=ax.imshow(vel,alpha=vel_alpha)
