@@ -863,19 +863,21 @@ def stacking(File):
 
     h5file = h5py.File(File,'r')
     igramList = h5file[k].keys()
+    igramList = sorted(igramList)
     numIfgrams = len(igramList)
-    if numIfgrams == 0.:
-        print "There is no data in the file";  sys.exit(1)
-    #print 'number of epochs: '+str(numIfgrams)
-
-    stack  = np.zeros([length,width])
-    for igram in igramList:
-        #print igram
-        if k in ['interferograms','coherence','wrapped']:
-            data = h5file[k][igram].get(igram)[:]
-        else:
-            data = h5file[k].get(igram)[:]
-        stack += data
+    if   numIfgrams == 0.:  print "There is no data in the file";  sys.exit(1)
+    elif numIfgrams == 1:
+        stack = h5file[k].get(k)
+    else:
+        stack  = np.zeros([length,width])
+        for i in range(numIfgrams):
+            igram = igramList[i]
+            if k in ['interferograms','coherence','wrapped']:
+                data = h5file[k][igram].get(igram)[:]
+            else:
+                data = h5file[k].get(igram)[:]
+            stack += data
+            printProgress(i+1,numIfgrams)
     h5file.close()
     return stack
 
