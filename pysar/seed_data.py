@@ -55,7 +55,7 @@ def seed_xy(File,x,y,outName=''):
     ## Seed Input File with reference on point (y,x)
     print 'Referencing input file to pixel: (%d, %d)'%(y,x)
     ##4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
-    box = [x,y,x+1,y+1]
+    box = (x,y,x+1,y+1)
 
     #####  IO Info
     atr = readfile.read_attributes(File)
@@ -233,8 +233,6 @@ def seed_max_coherence(File,mask,outFile,corFile=''):
     except:
         try:  coh, coh_atr = readfile.read(corFile)
         except: print '\nERROR: No coherence data is found!'
-    import pdb; pdb.set_trace()
-
 
     try:
         print 'Searching the pixel with maximum avergae coherence'
