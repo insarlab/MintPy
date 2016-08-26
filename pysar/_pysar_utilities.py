@@ -85,7 +85,7 @@ def spatial_mean(File,mask_orig,box):
     idx = mask != 0
 
     ##### Calculation
-    if k in ['timeseries','interferogram','coherence','wrapped']:
+    if k in ['timeseries','interferograms','coherence','wrapped']:
         h5file = h5py.File(File,'r')
         epochList = h5file[k].keys();
         epochList = sorted(epochList)
@@ -95,7 +95,7 @@ def spatial_mean(File,mask_orig,box):
         meanList   = np.zeros(epochNum)
         for i in range(epochNum):
             epoch = epochList[i]
-            if k in ['interferogram','coherence','wrapped']:
+            if k in ['interferograms','coherence','wrapped']:
                 dset = h5file[k][epoch].get(epoch)[:]
             elif k == 'timeseries':
                 dset = h5file[k].get(epoch)[:]
@@ -408,7 +408,7 @@ def hillshade(data,scale):
 def date_list(h5file):
     dateList = []
     tbase = []
-    k=h5file.keys()
+    k = h5file.keys()
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
     ifgramList = h5file[k[0]].keys()

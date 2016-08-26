@@ -17,12 +17,13 @@ import h5py
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
+import pysar._datetime as ptime
  
 
 def Usage():
     print '''
-****************************************************************
-****************************************************************
+**************************************************************************
+
    To converts the PySAR hdf5 file formats to the roipac unw format 
 
    Usage: 
@@ -40,8 +41,8 @@ def Usage():
       for timeseries: if date is not specified, the last date will be used
                       if two dates are specified, the earlier date will be
                          used as the reference date.
-****************************************************************
-****************************************************************
+
+***************************************************************************
     '''
 
 
@@ -79,8 +80,11 @@ def main(argv):
             d_ref = ds[0]
             d     = ds[1]
         else: Usage(); sys.exit(1)
+        d = ptime.yyyymmdd(d)
+        try: d_ref = ptime.yyyymmdd(d_ref)
+        except: pass
     
-        ## Data Operation
+        ## Data
         print 'reading '+d+' ... '
         data = h5file['timeseries'].get(d)[:]
         try:
@@ -100,12 +104,14 @@ def main(argv):
         if len(d)==8:         d=d[2:8]
         outname = master_d+'_'+d+'.unw'
     
-        print 'writing >>> '+ outname
+        ## Attributes
         atr['FILE_TYPE']             = '.unw'
         atr['P_BASELINE_TIMESERIES'] = '0.0'
         atr['UNIT']                  = 'radian'
         atr['DATE']                  = master_d
         atr['DATE12']                = master_d+'-'+d
+        
+        ## Writing
         writefile.write(data,atr,outname)
 
     elif k in ['interferograms','coherence','wrapped']:

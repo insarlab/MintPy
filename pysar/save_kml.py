@@ -122,7 +122,6 @@ def main(argv):
         else:                           Usage(); sys.exit(1)
     else:                             Usage(); sys.exit(1)
 
-
     #######################################################
     ###################  Prepare Data  ####################
     ## prepare: data, North, East, South, West
@@ -245,44 +244,42 @@ def main(argv):
     width  = data.shape[1]
     try:fig_size
     except:
-        ## min figure dimension: 6.0
-        fig_size_0 = 6.0
-        ratio = float(width)/float(length)
-        if ratio < 1:  fig_size = [fig_size_0,fig_size_0/ratio]
-        else:          fig_size = [fig_size_0*ratio,fig_size_0]
+        fig_size_0 = 6.0           ## min figure dimension: 6.0
+        ratio = float(length)/float(width)
+        fig_size = [fig_size_0,fig_size_0*ratio]
     print 'figure size:  %.1f, %.1f'%(fig_size[0],fig_size[1])
-    map = plt.get_cmap(color_map)
+    ccmap = plt.get_cmap(color_map)
     fig = plt.figure(figsize=fig_size,frameon=False)
-    ax = plt.Axes(fig, [0., 0., 1., 1.], )
+    ax = fig.add_axes([0., 0., 1., 1.])
     ax.set_axis_off()
-    fig.add_axes(ax)
 
-    try:     ax.imshow(data,aspect='auto',vmax=Vmax,vmin=Vmin)
-    except:  ax.imshow(data,aspect='auto')
+    aspect = width/(length*1.0)
+    try:     ax.imshow(data,aspect='auto',cmap=ccmap,vmax=Vmax,vmin=Vmin)
+    except:  ax.imshow(data,aspect='auto',cmap=ccmap)
 
     if disp_ref == 'yes':
         try:
             xref = int(atr['ref_x'])
             yref = int(atr['ref_y'])
             ax.plot(xref,yref,'ks',ms=ref_size)
-            print 'showing reference point'
+            print 'show reference point'
         except: print 'Cannot find reference point info!'
 
     ax.set_xlim([0,width])
     ax.set_ylim([length,0])
 
     figName = outName + '.png'
-    plt.savefig(figName,pad_inches=0.0,transparent=True,dpi=fig_dpi)
+    print 'writing '+figName
+    plt.savefig(figName, pad_inches=0.0, transparent=True, dpi=fig_dpi)
 
     ############### Making colorbar
     pc = plt.figure(figsize=(1,8))
     axc = pc.add_subplot(111)
-    cmap = mpl.cm.jet
     if   fig_unit in ['mm','mm/yr']: v_scale = 1000
     elif fig_unit in ['cm','cm/yr']: v_scale = 100
     elif fig_unit in ['m',  'm/yr']: v_scale = 1
     norm = mpl.colors.Normalize(vmin=Vmin*v_scale, vmax=Vmax*v_scale)
-    clb  = mpl.colorbar.ColorbarBase(axc,cmap=cmap,norm=norm, orientation='vertical')
+    clb  = mpl.colorbar.ColorbarBase(axc,cmap=ccmap,norm=norm, orientation='vertical')
 
     #clb.set_label(fig_unit)
     clb.set_label(cbar_label+' ['+fig_unit+']')
@@ -290,30 +287,29 @@ def main(argv):
     clb.update_ticks()
 
     pc.subplots_adjust(left=0.2,bottom=0.3,right=0.4,top=0.7)
-    #pc.savefig('colorbar.png',bbox_inches='tight',transparent=True,dpi=300)
     pc.patch.set_facecolor('white')
     pc.patch.set_alpha(0.7)
     pc.savefig('colorbar.png',bbox_inches='tight',facecolor=pc.get_facecolor(),dpi=300)
 
     ############## Generate KMZ file
-    print 'generating kml file'
+    print 'generating kml file ...'
     try:     doc = KML.kml(KML.Folder(KML.name(atr['PROJECT_NAME'])))
     except:  doc = KML.kml(KML.Folder(KML.name('PySAR product')))
     slc = KML.GroundOverlay(KML.name(figName),KML.Icon(KML.href(figName)),\
-                            KML.TimeSpan(KML.begin('2003'),KML.end('2010')),\
+                            KML.altitudeMode('clampToGround'),\
                             KML.LatLonBox(KML.north(str(North)),KML.south(str(South)),\
                                           KML.east( str(East)), KML.west( str(West))))
     doc.Folder.append(slc)
 
     #############################
-    print 'adding colorscale'
+    print 'adding colorscale ...'
     cb_rg = min(North-South, East-West)
     cb_N = (North+South)/2.0 + 0.5*0.5*cb_rg
     cb_W = East  + 0.1*cb_rg
-    slc1   = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),\
-                               KML.altitude('1000'),KML.altitudeMode('absolute'),\
-                               KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
-                                             KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
+    slc1 = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),\
+                             KML.altitude('2000'),KML.altitudeMode('absolute'),\
+                             KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
+                                           KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
     doc.Folder.append(slc1)
 
     #############################
@@ -329,9 +325,9 @@ def main(argv):
     cmdKMZ = 'zip ' + kmzName +' '+ kmlname +' ' + figName + ' colorbar.png'
     os.system(cmdKMZ)
 
-    cmdClean = 'rm '+kmlname;      os.system(cmdClean)
-    #cmdClean = 'rm '+figName;      os.system(cmdClean)
-    #cmdClean = 'rm colorbar.png';  os.system(cmdClean)
+    cmdClean = 'rm '+kmlname;      print cmdClean;    os.system(cmdClean)
+    cmdClean = 'rm '+figName;      print cmdClean;    os.system(cmdClean)
+    cmdClean = 'rm colorbar.png';  print cmdClean;    os.system(cmdClean)
 
 
 #######################################################
