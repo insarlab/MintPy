@@ -370,7 +370,7 @@ def main(argv):
         print igramFile + ' already exists.'
     else:
         print 'referncing all interferograms to the same pixel.'
-        seedCmd = 'seed_data.py -f '+igramFile+' -t '+templateFile+' -M '+maskFile
+        seedCmd = 'seed_data.py -f '+igramFile+' -t '+templateFile+' -m '+maskFile
         igramFile = 'Seeded_'+igramFile
         print seedCmd  
         os.system(seedCmd)
