@@ -70,6 +70,7 @@ def spatial_mean(File,mask_orig,box):
     ##     box       : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
     ## Output: list for multi-dataset file, and float for single-dataset file
 
+    print 'calculating spatial average of '+File+' within '+str(box)+' ...'
     ##### Input File Info
     atr  = readfile.read_attributes(File)
     k = atr['FILE_TYPE']
@@ -96,9 +97,9 @@ def spatial_mean(File,mask_orig,box):
         for i in range(epochNum):
             epoch = epochList[i]
             if k in ['interferograms','coherence','wrapped']:
-                dset = h5file[k][epoch].get(epoch)[:]
+                dset = h5file[k][epoch].get(epoch)
             elif k == 'timeseries':
-                dset = h5file[k].get(epoch)[:]
+                dset = h5file[k].get(epoch)
             else:  print 'Unrecognized group type: '+k
             
             d = dset[box[1]:box[3],box[0]:box[2]]
@@ -106,7 +107,8 @@ def spatial_mean(File,mask_orig,box):
             ## url - http://stackoverflow.com/questions/29688168/mean-nanmean-and-warning-mean-of-empty-slice
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                meanList[i] = np.nanmean(d[idx])        
+                meanList[i] = np.nanmean(d[idx])
+            printProgress(i+1,epochNum)
         del d
         h5file.close()
         

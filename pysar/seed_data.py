@@ -33,7 +33,7 @@ def random_selection(stack):
     y = random.choice(range(nrow))
     x = random.choice(range(ncol))
   
-    while np.isnan(stack[y,x]):
+    while stack[y,x] == 0:
         y = random.choice(range(nrow))
         x = random.choice(range(ncol))
 
@@ -126,7 +126,7 @@ def seed_file(File,outName,refList,ref_x='',ref_y=''):
     elif k in ['interferograms','wrapped','coherence']:
         for i in range(epochNum):
             epoch = epochList[i]
-            print epoch
+            #print epoch
             data = h5file[k][epoch].get(epoch)[:]
             atr  = h5file[k][epoch].attrs
 
@@ -136,6 +136,8 @@ def seed_file(File,outName,refList,ref_x='',ref_y=''):
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
             for key, value in atr.iteritems():    gg.attrs[key] = value
+
+            ut.printProgress(i+1,epochNum,'seeding:',epoch)
   
     ##### Single Dataset File
     else:
@@ -201,7 +203,7 @@ def seed_manual(File,stack,outName):
             x = int(event.xdata+0.5)
             y = int(event.ydata+0.5)
 
-            if not np.isnan(stack[y][x]):
+            if not stack[y][x] == 0:
                 seed_xy(File,x,y,outName)
                 SeedingDone['key'] = 'yes'
                 plt.close(fig) 
@@ -235,8 +237,8 @@ def seed_max_coherence(File,mask,outFile,corFile=''):
         except: print '\nERROR: No coherence data is found!'
 
     try:
-        print 'Searching the pixel with maximum avergae coherence'
         coh *= mask
+        print 'Searching the pixel with maximum avergae coherence'
         y,x = np.unravel_index(np.argmax(coh), coh.shape)
         seed_xy(File,x,y,outFile)
         SeedingDone = 'yes'
@@ -247,11 +249,11 @@ def seed_max_coherence(File,mask,outFile,corFile=''):
 
 ###############################################################
 def print_warning(next_method):
-    print '\n*****************************************************'
-    print   'WARNING:'
-    print   'Input file is not referenced to the same pixel yet!'
-    print   '*****************************************************'
-    print 'Continue with default automatic seeding method: '+next_method
+    print '-----------------------------------------------------'
+    print 'WARNING:'
+    print 'Input file is not referenced to the same pixel yet!'
+    print '-----------------------------------------------------'
+    print 'Continue with default automatic seeding method: '+next_method+'\n'
 
 
 #########################################  Usage  ##############################################
@@ -317,6 +319,7 @@ def Usage():
 #######################################  Main Function  ########################################
 def main(argv):
 
+    global method_default
     ##### Referencing methods
     method_default = 'max_coherence'
     #method = 'manual'
@@ -366,7 +369,8 @@ def main(argv):
         length = int(atr['FILE_LENGTH'])
         width  = int(atr['WIDTH'])
     except:  Usage() ; sys.exit(1)
-  
+    ext = os.path.splitext(File)[1].lower()
+
     try:    outFile
     except: outFile = 'Seeded_'+File
   
@@ -434,30 +438,43 @@ def main(argv):
         M,Matr = readfile.read(maskFile);
         print 'mask: '+maskFile
     except:
+        print '---------------------------------------------------------'
         print 'WARNING: No mask, use the whole area as mask'
+        print '---------------------------------------------------------'
         M = np.ones((length,width))
 
     ## Message
     try:
         rx
         ry
+        0<= rx <= width
+        0<= ry <= length
         if M[ry,rx] == 0:
             print 'Input point has 0 value in mask.'
     except: pass
 
     ######################### b. Stack ##################################
-    print 'calculating the stacking of '+File+' ...'
-    stack = ut.stacking(File)
+    stackFile = os.path.basename(File).split(ext)[0] + '_stack.h5'
+    if os.path.isfile(stackFile):
+        print 'reading stacking file: '+stackFile
+        stack,atrStack = readfile.read(stackFile)
+    else:
+        print 'calculating the stacking of '+File+' ...'
+        stack = ut.stacking(File)
+        atrStack = atr.copy()
+        atrStack['FILE_TYPE'] = 'mask'
+        writefile.write(stack,atrStack,stackFile)
+
     ## Message
     try:
         rx
         ry
-        if np.isnan(stack[ry,rx]):
+        if stack[ry,rx] == 0:
             print 'Input point has nan value in data.'
     except: pass
 
-    stack[M==0] = np.nan
-    if np.nansum(stack) == 0.0:
+    stack[M==0] = 0
+    if np.nansum(M) == 0.0:
         print '\n*****************************************************'
         print   'ERROR:'
         print   'There is no pixel that has valid phase value in all datasets.' 
@@ -467,7 +484,7 @@ def main(argv):
 
     ######################### Check Method ##############################
     try:
-        ~np.isnan(stack[ry,rx])
+        not stack[ry,rx] == 0
         method = 'input_coord'
     except:
         try:    method
@@ -478,40 +495,59 @@ def main(argv):
     #h5file = h5py.File(File)
 
     ######################### Seeding ###################################
-    ##### Input Coordinate
+    ##### Sub-function
+    def seed_method(method,File,stack,outFile,corFile=''):
+        SeedingDone = 'no'
+        next_method = method_default
+        M = stack != 0
+
+        if   method == 'manual':
+            SeedingDone = seed_manual(File,stack,outFile)
+            if SeedingDone == 'no':
+                next_method = method_default
+                print_warning(next_method)
+
+        elif method == 'max_coherence':
+            try:    SeedingDone = seed_max_coherence(File,M,outFile,corFile)
+            except: SeedingDone = seed_max_coherence(File,M,outFile)
+            if SeedingDone == 'no':
+                next_method = 'random'
+                print_warning(next_method)
+
+        elif method == 'random':
+            y,x = random_selection(stack)
+            seed_xy(File,x,y,outFile)
+            SeedingDone = 'yes'
+
+        elif method == 'global_average':
+            print '\n---------------------------------------------------------'
+            print 'Automatically Seeding using Global Spatial Average Value '
+            print '---------------------------------------------------------'
+            print 'Calculating the global spatial average value for each epoch'+\
+                  ' of all valid pixels ...'
+            box = (0,0,width,length)
+            meanList = ut.spatial_mean(File,M,box)
+            seed_file(File,outFile,meanList,'','')
+            SeedingDone = 'yes'
+
+        return SeedingDone, next_method
+
+    ##### Seeding
+    SeedingDone = 'no'
+
     if method == 'input_coord':
         seed_xy(File,rx,ry,outFile)
+        SeedingDone = 'yes'
 
-    ##### Manual Selection
-    elif method == 'manual':
-        SeedingDone = seed_manual(File,stack,outFile)
-
-        if SeedingDone == 'no':
-            method = method_default
-            print_warning(method)
-
-    elif method == 'max_coherence':
-        try:    SeedingDone = seed_max_coherence(File,M,outFile,corFile)
-        except: SeedingDone = seed_max_coherence(File,M,outFile)
-
-        if SeedingDone == 'no':
-            method = 'global_average'
-            print_warning(method)
-
-    elif method == 'global_average':
-        print '\n---------------------------------------------------------'
-        print 'Automatically Seeding using Global Spatial Average Value '
-        print '---------------------------------------------------------'
-        print 'Calculating the global spatial average value for each epoch'+\
-              ' of all valid pixels ...'
-        box = [0,0,width,length]
-        meanList = ut.spatial_mean(File,M,box)
-        seed_file(File,outFile,meanList,'','')
-
-    elif method == 'random':
-        y,x = random_selection(stack)
-        seed_xy(File,x,y,outFile)
-
+    else:
+        i = 0
+        while SeedingDone == 'no' and i < 5:
+            try:    SeedingDone,method = seed_method(method,File,stack,outFile,corFile)
+            except: SeedingDone,method = seed_method(method,File,stack,outFile)
+            i += 1
+        if i >= 5:
+            print 'ERROR: Seeding failed after more than '+str(i)+' times try ...'
+            sys.exit(1)
 
 ################################################################################################
 if __name__ == '__main__':

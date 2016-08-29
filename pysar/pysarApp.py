@@ -370,7 +370,8 @@ def main(argv):
         print igramFile + ' already exists.'
     else:
         print 'referncing all interferograms to the same pixel.'
-        seedCmd = 'seed_data.py -f '+igramFile+' -t '+templateFile+' -m '+maskFile
+        meanCohFile = 'average_spatial_coherence.h5'
+        seedCmd = 'seed_data.py -f '+igramFile+' -t '+templateFile+' -m '+maskFile+' -c '+meanCohFile
         igramFile = 'Seeded_'+igramFile
         print seedCmd  
         os.system(seedCmd)
