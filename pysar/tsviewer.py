@@ -40,10 +40,10 @@ import pysar.view as view
 ################################################################
 def check_yx(xsub,ysub,radius,ax,rectColor='black'):
     ##### Read Y/X
-    try:     xmin=xsub[0];         xmax=xsub[1]+1;
-    except:  xmin=xsub[0]-radius;  xmax=xsub[0]+radius+1;
-    try:     ymin=ysub[0];         ymax=ysub[1]+1;       
-    except:  ymin=ysub[0]-radius;  ymax=ysub[0]+radius+1;
+    try:     xmin=xsub[0];         xmax=xsub[1];
+    except:  xmin=xsub[0]-radius;  xmax=xsub[0]+radius;
+    try:     ymin=ysub[0];         ymax=ysub[1];       
+    except:  ymin=ysub[0]-radius;  ymax=ysub[0]+radius;
 
     ## mark x/y in Fig 1
     rectSelect=patches.Rectangle((xmin,ymin),xmax-xmin,ymax-ymin,color=rectColor,fill=False,lw=1.5)
@@ -64,12 +64,12 @@ def read_dis(xsub,ysub,dateList,h5file,unit='cm'):
     ## read displacement
     try:
         ref_date
-        dis_ref = h5file['timeseries'].get(ref_date)[ysub[0]:ysub[1],xsub[0]:xsub[1]]
+        dis_ref = h5file['timeseries'].get(ref_date)[ysub[0]:ysub[1]+1,xsub[0]:xsub[1]+1]
     except: pass
 
     dis=[]
     for date in dateList:
-        dis0 = h5file['timeseries'].get(date)[ysub[0]:ysub[1],xsub[0]:xsub[1]]
+        dis0 = h5file['timeseries'].get(date)[ysub[0]:ysub[1]+1,xsub[0]:xsub[1]+1]
         try: dis0 -= dis_ref
         except: pass
         dis.append(dis0)
@@ -526,8 +526,8 @@ def main(argv):
             ref_xsub
             ref_ysub
             ref_xsub,ref_ysub = check_yx(ref_xsub,ref_ysub,radius,ax,rectColor)
-            print 'ref_x='+str(ref_xsub[0])+':'+str(ref_xsub[1]-1)
-            print 'ref_y='+str(ref_ysub[0])+':'+str(ref_ysub[1]-1)
+            print 'ref_x='+str(ref_xsub[0])+':'+str(ref_xsub[1])
+            print 'ref_y='+str(ref_ysub[0])+':'+str(ref_ysub[1])
             print 'Reference Point - Time Series:'
 
             dis1, dis1_mean, dis1_std, dis1_vel = read_dis(ref_xsub,ref_ysub,dateList1,h5timeseries,unit)
@@ -541,8 +541,8 @@ def main(argv):
 
         ##### 1.2.0 Read y/x
         xsub,ysub = check_yx(xsub,ysub,radius,ax,rectColor)
-        print 'x='+str(xsub[0])+':'+str(xsub[1]-1)
-        print 'y='+str(ysub[0])+':'+str(ysub[1]-1)
+        print 'x='+str(xsub[0])+':'+str(xsub[1])
+        print 'y='+str(ysub[0])+':'+str(ysub[1])
 
         ##### 1.2.1 Plot 2nd time series
         try:
@@ -583,10 +583,10 @@ def main(argv):
         for tick in ax2.yaxis.get_major_ticks():  tick.label.set_fontsize(fontSize)
 
         ## title
-        figTitle = 'x='+str(xsub[0])+':'+str(xsub[1]-1)+', y='+str(ysub[0])+':'+str(ysub[1]-1)
+        figTitle = 'x='+str(xsub[0])+':'+str(xsub[1])+', y='+str(ysub[0])+':'+str(ysub[1])
         try:
-            lonc = ullon + (xsub[0]+xsub[1]-1)/2.0*lon_step
-            latc = ullat + (ysub[0]+ysub[1]-1)/2.0*lat_step
+            lonc = ullon + (xsub[0]+xsub[1])/2.0*lon_step
+            latc = ullat + (ysub[0]+ysub[1])/2.0*lat_step
             figTitle += ', lalo='+'%.4f,%.4f'%(latc,lonc)
         except: pass
         ax2.set_title(figTitle)
