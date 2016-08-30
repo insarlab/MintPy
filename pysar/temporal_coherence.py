@@ -30,7 +30,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import pysar._readfile as readfile
-import pysar._pysar_utilities import ut
+import pysar._pysar_utilities as ut
 
 
 ######################################################################################################
