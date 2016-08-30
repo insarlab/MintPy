@@ -30,7 +30,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import pysar._readfile as readfile
-from pysar._pysar_utilities import printProgress
+import pysar._pysar_utilities import ut
 
 
 ######################################################################################################
@@ -111,33 +111,36 @@ def main(argv):
         timeSeriesFile = argv[1]
     except:
         Usage() ; sys.exit(1)
-  
+
     try:    tempCohFile = argv[2]
     except: tempCohFile = 'temporal_coherence.h5'
-  
+
     ########################################################
     print '\n********** Temporal Coherence ****************'
-    print "load time series: " + timeSeriesFile
+    print "load time series: "+timeSeriesFile
     atr_ts = readfile.read_attributes(timeSeriesFile)
     h5timeseries = h5py.File(timeSeriesFile)
     dateList = h5timeseries['timeseries'].keys()
-    
+    numDates = len(dateList)
+
+    print 'number of epoch: '+str(numDates)
     dateIndex={}
-    for ni in range(len(dateList)):
+    for ni in range(numDates):
         dateIndex[dateList[ni]]=ni 
-  
+
     dset = h5timeseries['timeseries'].get(h5timeseries['timeseries'].keys()[0])
     nrows,ncols=np.shape(dset)
     timeseries = np.zeros((len(h5timeseries['timeseries'].keys()),np.shape(dset)[0]*np.shape(dset)[1]),np.float32)
-  
-    for date in dateList:
+
+    for i in range(numDates):
+        date = dateList[i]
         dset = h5timeseries['timeseries'].get(date)
         d = dset[0:dset.shape[0],0:dset.shape[1]]
         timeseries[dateIndex[date]][:]=d.flatten(0)
+        ut.printProgress(i+1,numDates,'loading:',date)
     del d
-  
     h5timeseries.close()
-  
+
     lt,numpixels=np.shape(timeseries)
     range2phase = -4*np.pi/float(atr_ts['WAVELENGTH'])
     timeseries = range2phase*timeseries
@@ -151,31 +154,32 @@ def main(argv):
     A,B = design_matrix(h5igrams)
     p   = -1*np.ones([A.shape[0],1])
     Ap  = np.hstack((p,A))
-  
+
     print 'calculating temporal coherence ...'
     #data = np.zeros((numIfgrams,numpixels),np.float32)
     qq = np.zeros(numpixels)+0j
     for ni in range(numIfgrams):
         ## read interferogram
-        dset = h5igrams['interferograms'][ifgramList[ni]].get(ifgramList[ni])
+        igram = ifgramList[ni]
+        dset = h5igrams['interferograms'][igram].get(igram)
         data = dset[0:dset.shape[0],0:dset.shape[1]]
         data = data.flatten(0)
-  
+
         ## calculate difference between observed and estimated data
         ## interferogram by interferogram, less memory, Yunjun - 2016.06.10
         dataEst  = np.dot(Ap[ni,:],timeseries)
         dataDiff = data - dataEst
         qq += np.exp(1j*dataDiff)
-  
+
         ## progress bar
-        printProgress(ni+1,numIfgrams)
+        ut.printProgress(ni+1,numIfgrams,'calculating:',igram)
     del timeseries, data, dataEst, dataDiff
-    h5igrams.close() 
-  
+    h5igrams.close()
+
     #qq=np.absolute(np.sum(np.exp(1j*dataDiff),0))/numIfgrams
     qq = np.absolute(qq)/numIfgrams
     Temp_Coh=np.reshape(qq,[nrows,ncols])
-  
+
     ##### write temporal coherence file ####################
     print 'writing >>> '+tempCohFile
     h5TempCoh = h5py.File(tempCohFile,'w')
@@ -191,4 +195,4 @@ def main(argv):
 if __name__ == '__main__':
     main(sys.argv[1:])
 
-  
+
