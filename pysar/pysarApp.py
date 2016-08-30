@@ -517,7 +517,7 @@ def main(argv):
             if template['pysar.troposphericDelay.method'] in ['height-correlation','height_correlation',\
                                                               'Height-Correlation','Height_Correlation']:
                 print 'tropospheric delay correction with height-correlation approach'
-                outName = timeseriesFile.split('.')[0]+'_tropCor.h5'
+                outName = timeseriesFile.split('.')[0]+'_tropHgt.h5'
                 if os.path.isfile(outName):
                     timeseriesFile = outName
                     print timeseriesFile+' already exists.'

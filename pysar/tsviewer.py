@@ -207,12 +207,14 @@ def main(argv):
 
     global markerSize, markderSize2, markerColor, markerColor2, rectColor
     global lineWidth, lineWidth2, edgeWidth, fontSize
+    #global markerColor_ref, markerColor_ref2
 
     markerSize   = 16
     markerSize2  = 16
     markerColor  = 'crimson'     # g
     markerColor2 = 'royalblue'
-    markerColor_ref = 'white'
+    markerColor_ref  = 'white'
+    markerColor_ref2 = 'lightgray'
     rectColor    = 'black'
     lineWidth    = 2
     lineWidth2   = 0
@@ -526,20 +528,35 @@ def main(argv):
             ref_xsub
             ref_ysub
             ref_xsub,ref_ysub = check_yx(ref_xsub,ref_ysub,radius,ax,rectColor)
+            print '----------------------------------------------------'
+            print 'Reference Point:'
             print 'ref_x='+str(ref_xsub[0])+':'+str(ref_xsub[1])
             print 'ref_y='+str(ref_ysub[0])+':'+str(ref_ysub[1])
-            print 'Reference Point - Time Series:'
 
+            print '-----------------------------'
+            print 'Time series with all dates:'
             dis1, dis1_mean, dis1_std, dis1_vel = read_dis(ref_xsub,ref_ysub,dateList1,h5timeseries,unit)
             (_, caps, _)=ax2.errorbar(dates1,dis1_mean,yerr=dis1_std,fmt='-ks',\
                                       ms=markerSize2, lw=0, alpha=1,mfc=markerColor_ref,mew=edgeWidth,\
                                       elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
             for cap in caps:  cap.set_markeredgewidth(edgeWidth)
             disp_min,disp_max = update_lim(disp_min,disp_max,dis1_mean,dis1_std)
-            print '-----------------------------'
+
+            if not len(dateList) == len(dateList1):
+                print '-----------------------------'
+                print 'Time series with dates of interest:'
+                dis12, dis12_mean, dis12_std, dis12_vel = read_dis(ref_xsub,ref_ysub,dateList,h5timeseries,unit)
+                (_, caps, _)=ax2.errorbar(dates,dis12_mean,yerr=dis12_std,fmt='-ks',\
+                                          ms=markerSize2, lw=0, alpha=1,mfc=markerColor_ref2,mew=edgeWidth,\
+                                          elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
+                for cap in caps:  cap.set_markeredgewidth(edgeWidth)
+                disp_min,disp_max = update_lim(disp_min,disp_max,dis12_mean,dis12_std)
+            
         except: pass
 
         ##### 1.2.0 Read y/x
+        print '\n----------------------------------------------------'
+        print 'Point of Interest:'
         xsub,ysub = check_yx(xsub,ysub,radius,ax,rectColor)
         print 'x='+str(xsub[0])+':'+str(xsub[1])
         print 'y='+str(ysub[0])+':'+str(ysub[1])
@@ -593,6 +610,7 @@ def main(argv):
 
         ################## Save and Output #####################
         if saveFig == 'yes':
+            print '-----------------------------'
             Delay={}
             Delay['displacement'] = dis
             Delay['unit']         = unit
