@@ -876,7 +876,7 @@ def stacking(File):
             if k == 'timeseries':  data = h5file[k].get(epoch)[:]
             else:                  data = h5file[k][epoch].get(epoch)[:]
             stack += data
-            printProgress(i+1,numIfgrams)
+            printProgress(i+1,epochNum)
         h5file.close()
 
     else:

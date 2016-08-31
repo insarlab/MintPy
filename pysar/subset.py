@@ -44,8 +44,8 @@ def coord_geo2radar(geoCoord,atr,coordType):
     ##     coordType : coordinate type: latitude, longitude
     ##
     ## Example:
-    ##      300        = coord_radar2geo(32.104990,    atr,'lat')
-    ##     [1000,1500] = coord_radar2geo([130.5,131.4],atr,'lon')
+    ##      300        = coord_geo2radar(32.104990,    atr,'lat')
+    ##     [1000,1500] = coord_geo2radar([130.5,131.4],atr,'lon')
 
     try: atr['X_FIRST']
     except: print 'Support geocoded file only!'; sys.exit(1)
@@ -86,7 +86,7 @@ def coord_radar2geo(radarCoord,atr,coordType):
 
     try: atr['X_FIRST']
     except: print 'Support geocoded file only!'; sys.exit(1)
-    
+
     ## Convert to List if input is String
     if isinstance(radarCoord,int):
         radarCoord = [radarCoord]
@@ -113,12 +113,12 @@ def check_subset_range(sub_y,sub_x,atr):
     ##     sub   : list of coordinates in row or column
     ##     atr   : dictionary of file attributes
     ##     type  : coordinate type: row, col
-  
+
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
     sub_y = sorted(sub_y)
     sub_x = sorted(sub_x)
-  
+
     ## Check Y/Azimuth/Latitude subset range
     if not all(i>=0 and i<=length for i in sub_y) or not all(i>=0 and i<=width for i in sub_x):
         print 'WARNING: input index is out of data range!\nData range:'
@@ -128,8 +128,7 @@ def check_subset_range(sub_y,sub_x,atr):
             print 'range in latitude  - %.8f:%.8f'%(float(atr['Y_FIRST']),float(atr['Y_FIRST'])+float(atr['Y_STEP'])*length)
             print 'range in longitude - %.8f:%.8f'%(float(atr['X_FIRST']),float(atr['X_FIRST'])+float(atr['X_STEP'])*width)
         except: Geo=0
-   
-  
+
     if sub_y[0]<0:        sub_y[0]=0;      print 'WARNING: input y < min (0)! Set it to min.'
     if sub_y[1]>length:   sub_y[1]=length; print 'WARNING: input y > max ('+str(length)+')! Set it to max.'
     if sub_y[0]>length or sub_y[1]<0:
@@ -139,7 +138,7 @@ def check_subset_range(sub_y,sub_x,atr):
             print 'range in geo: lat - %.8f:%.8f'%(float(atr['Y_FIRST']),float(atr['Y_FIRST'])+float(atr['Y_STEP'])*length)
         except: Geo=0
         sys.exit(1)
-  
+
     ## Check X/Range/Longitude subset range
     if sub_x[0]<0:       sub_x[0]=0;      print 'WARNING: input x < min (0)! Set it to min.'
     if sub_x[1]>width:   sub_x[1]=width;  print 'WARNING: input x > max ('+str(width)+')! Set it to max x.'
@@ -161,7 +160,7 @@ def check_subset_range(sub_y,sub_x,atr):
             sub_lat[1] = float(atr['Y_FIRST']) + sub_y[1]*float(atr['Y_STEP'])
             print 'subset in latitude  - %.8f:%.8f'%(sub_lat[0],sub_lat[1])
         except: pass
-  
+
     if not sub_x[1]-sub_x[0] == width:
         print 'subset in x direction - '+str(sub_x[0])+':'+str(sub_x[1])
         try:
@@ -171,7 +170,7 @@ def check_subset_range(sub_y,sub_x,atr):
             sub_lon[1] = float(atr['X_FIRST']) + sub_x[1]*float(atr['X_STEP'])
             print 'subset in longitude - %.8f:%.8f'%(sub_lon[0],sub_lon[1])
         except: pass
-  
+
     return sub_y, sub_x
 
 ################################################################
@@ -179,13 +178,13 @@ def subset_attributes(atr_dict,sub_y,sub_x):
     #####
     atr = dict()
     for key, value in atr_dict.iteritems():  atr[key] = str(value)
-  
+
     ##### Update attribute variable
     atr['FILE_LENGTH'] = str(sub_y[1]-sub_y[0])
     atr['WIDTH']       = str(sub_x[1]-sub_x[0])
     atr['YMAX']        = str(sub_y[1]-sub_y[0] - 1)
     atr['XMAX']        = str(sub_x[1]-sub_x[0] - 1)
-  
+
     try:
         subset_y0_ori = int(atr['subset_y0'])
         atr['subset_y0'] = str(sub_y[0] + subset_y0_ori)
@@ -204,12 +203,12 @@ def subset_attributes(atr_dict,sub_y,sub_x):
         atr['Y_FIRST'] = str(float(atr['Y_FIRST'])+sub_y[0]*float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST'])+sub_x[0]*float(atr['X_STEP']))
     except: pass
-  
+
     try:
         atr['ref_y'] = str(int(atr['ref_y']) - sub_y[0])
         atr['ref_x'] = str(int(atr['ref_x']) - sub_x[0])
     except: pass
-  
+
     return atr
 
 
@@ -218,7 +217,7 @@ def geo_box(atr):
     ## calculate coverage box in lalo
     ## box = (lon_min,lat_max,lon_max,lat_min)
     ## box = (UL_X,   UL_Y,   LR_X,   LR_Y)
-  
+
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
     lat_step = float(atr['Y_STEP'])
@@ -227,20 +226,20 @@ def geo_box(atr):
     lon_min  = float(atr['X_FIRST'])
     lat_min  = lat_max + lat_step*length
     lon_max  = lon_min + lon_step*width
-  
+
     box = (lon_min,lat_max,lon_max,lat_min)
-  
+
     return box
 
 def box_overlap_index(box1,box2):
     ## Calculate the overlap of two input boxes
     ##   and output the index box of the overlap in each's coord.
-  
+
     x0 = max(box1[0],box2[0])
     y0 = max(box1[1],box2[1])
     x1 = min(box1[2],box2[2])
     y1 = min(box1[3],box2[3])
-  
+
     if x0 >= x1 or y0 >= y1:
         print 'No overlap between two ranges!'
         print 'box 1:'
@@ -248,11 +247,11 @@ def box_overlap_index(box1,box2):
         print 'box 2:'
         print box2
         sys.exit(1)
-  
+
     box  = (x0,y0,x1,y1)
     idx1 = (box[0]-box1[0],box[1]-box1[1],box[2]-box1[0],box[3]-box1[1])
     idx2 = (box[0]-box2[0],box[1]-box2[1],box[2]-box2[0],box[3]-box2[1])
-  
+
     return idx1, idx2
 
 
@@ -264,18 +263,18 @@ def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
     box1 = (0,0,width,length)
-    box2 = (sub_x[0],sub_y[0],sub_x[1],sub_y[1])
+    box2 = (sub_x[0],sub_y[0],sub_x[1]+1,sub_y[1]+1)
     idx1,idx2 = box_overlap_index(box1,box2)
     print 'data   range:'
     print box1
     print 'subset range:'
     print box2
-  
+
     ###########################  Data Read and Write  ######################
     k = atr['FILE_TYPE']
     print 'file type: '+k
     if outName == '':  outName = 'subset_'+os.path.basename(File)
-  
+
     ##### Multiple Dataset File
     if k in ['timeseries','interferograms','wrapped','coherence']:
         ##### Input File Info
@@ -283,7 +282,7 @@ def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
         epochList = h5file[k].keys()
         epochList = sorted(epochList)
         print 'number of epochs: '+str(len(epochList))
-  
+
         ##### Output File Info
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
@@ -295,10 +294,10 @@ def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
             print epoch
             dset = h5file[k].get(epoch)
             data_overlap = dset[idx1[1]:idx1[3],idx1[0]:idx1[2]]
-  
+
             data = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
             data[idx2[1]:idx2[3],idx2[0]:idx2[2]] = data_overlap
-  
+
             dset = group.create_dataset(epoch, data=data, compression='gzip')
 
         atr  = subset_attributes(atr,sub_y,sub_x)
@@ -310,36 +309,36 @@ def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
             dset = h5file[k][epoch].get(epoch)
             atr  = h5file[k][epoch].attrs
             data_overlap = dset[idx1[1]:idx1[3],idx1[0]:idx1[2]]
-  
+
             data = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
             data[idx2[1]:idx2[3],idx2[0]:idx2[2]] = data_overlap
-  
+
             atr  = subset_attributes(atr,sub_y,sub_x)
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
             for key, value in atr.iteritems():    gg.attrs[key] = value
-  
+
     ##### Single Dataset File
     elif k == '.trans':
         rg_overlap,az_overlap,atr = readfile.read(File,idx1)
-  
+
         rg = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
         rg[idx2[1]:idx2[3],idx2[0]:idx2[2]] = rg_overlap
-  
+
         az = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
         az[idx2[1]:idx2[3],idx2[0]:idx2[2]] = az_overlap
-  
+
         atr = subset_attributes(atr,sub_y,sub_x)
         writefile.write(rg,az,atr,outName)
     else:
         data_overlap,atr = readfile.read(File,idx1)
-  
+
         data = np.ones((box2[3]-box2[1],box2[2]-box2[0]))*outfill
         data[idx2[1]:idx2[3],idx2[0]:idx2[2]] = data_overlap
-  
+
         atr = subset_attributes(atr,sub_y,sub_x)
         writefile.write(data,atr,outName)
-  
+
     ##### End Cleaning
     try:
         h5file.close()
@@ -402,7 +401,7 @@ def main(argv):
 
     global outName
     parallel = 'no'
-  
+
     ############### Check Inputs ###############
     if len(sys.argv)>3:
         try:
@@ -411,7 +410,7 @@ def main(argv):
         except getopt.GetoptError:
             print 'Error while getting args'
             Usage() ; sys.exit(1)
-  
+
         for opt,arg in opts:
             if   opt == '-f':   File         = arg.split(',')
             elif opt == '-o':   outName      = arg
@@ -425,7 +424,7 @@ def main(argv):
             elif opt in '--outfill'     :   out_fill = float(arg)
             elif opt in '--outfill-nan' :   out_fill = np.nan
             elif opt in '--outfill-zero':   out_fill = 0.0
-  
+
     elif len(sys.argv)==3:
         File         = argv[0].split(',')
         templateFile = argv[1]
@@ -433,14 +432,14 @@ def main(argv):
         if argv[0] in ['-h','--help']:  Usage(); sys.exit()
         else: print '\nERROR: A minimum of 3 inputs is needed.\n'; Usage(); sys.exit()
     else: Usage(); sys.exit(1)
-  
+
     ##### Check Input file Info
     print '\n**************** Subset *********************'
     fileList = ut.get_file_list(File)
     print 'number of file: '+str(len(fileList))
     print fileList
     atr = readfile.read_attributes(fileList[0])
-  
+
     if len(fileList) == 1 and parallel == 'yes':
         print 'parallel is disabled for one input file.'
         parallel = 'no'
@@ -456,7 +455,7 @@ def main(argv):
         templateFile
         template = readfile.read_template(templateFile)
     except: pass
-  
+
     try:
         refFile
         atr_ref = readfile.read_attributes(refFile)
@@ -464,7 +463,7 @@ def main(argv):
         lat_ref = [box_ref[3],box_ref[1]]
         lon_ref = [box_ref[0],box_ref[2]]
     except: pass
-  
+
     try:
         sub_lat
         sub_lon
@@ -478,7 +477,7 @@ def main(argv):
                 sub_lat = [float(i) for i in sub[0].split(':')];  sub_lat.sort()
                 sub_lon = [float(i) for i in sub[1].split(':')];  sub_lon.sort()
             except: pass; #print 'No pysar.subset.lalo option found in template file!'
-  
+
     try:
         sub_y
         sub_x
@@ -504,7 +503,7 @@ def main(argv):
     length = int(atr['FILE_LENGTH'])
     print 'input file length: '+str(length)
     print 'input file width : '+str(width)
-  
+
     try: sub_y = coord_geo2radar(sub_lat,atr,'latitude')
     except:
         try:    sub_y
@@ -531,7 +530,7 @@ def main(argv):
             print 'subseting  : '+file
             try:    subset_file(file,sub_x,sub_y,out_fill,outName)
             except: subset_file(file,sub_x,sub_y,out_fill)
-  
+
     else:
         print '-------------------------'
         print 'parallel subseting ...'
@@ -540,7 +539,7 @@ def main(argv):
         import multiprocessing
         num_cores = multiprocessing.cpu_count()
         Parallel(n_jobs=num_cores)(delayed(subset_file)(file,sub_x,sub_y,out_fill) for file in fileList)
-  
+
     print 'Done.'
 
 

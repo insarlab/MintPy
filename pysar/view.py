@@ -541,7 +541,7 @@ def main(argv):
     except:
         try:    win_x
         except: win_x = [0,width]
-    
+
     win_y,win_x = subset.check_subset_range(win_y,win_x,atr)
     box = (win_x[0],win_y[0],win_x[1],win_y[1])
     if win_y[1]-win_y[0] == length and win_x[1]-win_x[0] == width:
