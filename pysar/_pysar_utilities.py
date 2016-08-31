@@ -863,25 +863,28 @@ def stacking(File):
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
 
-    h5file = h5py.File(File,'r')
-    igramList = h5file[k].keys()
-    igramList = sorted(igramList)
-    numIfgrams = len(igramList)
-    if   numIfgrams == 0.:  print "There is no data in the file";  sys.exit(1)
-    elif numIfgrams == 1:
-        stack = h5file[k].get(k)
-    else:
-        stack  = np.zeros([length,width])
-        for i in range(numIfgrams):
-            igram = igramList[i]
-            if k in ['interferograms','coherence','wrapped']:
-                data = h5file[k][igram].get(igram)[:]
-            else:
-                data = h5file[k].get(igram)[:]
+    ## Calculation
+    stack  = np.zeros([length,width])
+    if k in ['timeseries','interferograms','wrapped','coherence']:
+        ##### Input File Info
+        h5file = h5py.File(File,'r')
+        epochList = h5file[k].keys()
+        epochList = sorted(epochList)
+        epochNum  = len(epochList)
+        for i in range(epochNum):
+            epoch = epochList[i]
+            if k == 'timeseries':  data = h5file[k].get(epoch)[:]
+            else:                  data = h5file[k][epoch].get(epoch)[:]
             stack += data
             printProgress(i+1,numIfgrams)
-    h5file.close()
+        h5file.close()
+
+    else:
+        try: stack, atrStack = readfile.read(File)
+        except: print 'Cannot read file: '+File; sys.exit(1)
+
     return stack
+
 
 def yymmdd2YYYYMMDD(date):
     if date[0] == '9':      date = '19'+date

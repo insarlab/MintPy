@@ -491,7 +491,7 @@ def main(argv):
         elif os.path.isfile(argv[0]):  File = argv[0]
         else:    print 'Input file does not existed: '+argv[0];  sys.exit(1)
     elif len(sys.argv)<2:             Usage(); sys.exit(1)
-  
+
     ##### Read File Info / Attributes
     try: atr = readfile.read_attributes(File)
     except: print 'Can not read file: '+File; sys.exit(1)
@@ -764,6 +764,7 @@ def main(argv):
         #except: disp_axis = 'yes'
     
         ################# Data Reading ##################
+        print 'reading data ...'
         ##### Multiple Datasets File
         if k == 'timeseries':
             ## read data for display
@@ -840,7 +841,7 @@ def main(argv):
         try:
             demFile
             demRsc = readfile.read_attributes(demFile)
-            print 'Show topography'
+            print 'Show topography: '+os.path.basename(demFile)
      
             ##### Read DEM
             if int(demRsc['WIDTH']) == width and int(demRsc['FILE_LENGTH']) == length:
@@ -892,7 +893,7 @@ def main(argv):
 
         ##### Plot in Geo-coordinate: plot in map
         if geocoord == 'yes' and disp_geo == 'yes':
-            print 'plot in Lat/Lon'
+            print 'plot in Lat/Lon coordinate ...'
      
             ## Map Setup
             from mpl_toolkits.basemap import Basemap
@@ -946,7 +947,7 @@ def main(argv):
 
         ##### Plot in x/y coordinate: row and column
         else:
-            print 'plot in Y/X'
+            print 'plot in Y/X coordinate ...'
      
             ## Plot DEM
             try: ax = plot_dem_yx(ax,dem,demShade,demContour,contour_step,contour_sigma)
@@ -1085,7 +1086,7 @@ def main(argv):
         try:
             demFile
             demRsc = readfile.read_attributes(demFile)
-            print 'Show topography'
+            print 'Show topography: '+str(demFile)
      
             ##### Read DEM
             if int(demRsc['WIDTH']) == width and int(demRsc['FILE_LENGTH']) == length:

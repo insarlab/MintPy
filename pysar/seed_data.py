@@ -455,11 +455,11 @@ def main(argv):
 
     ######################### b. Stack ##################################
     stackFile = os.path.basename(File).split(ext)[0] + '_stack.h5'
-    if os.path.isfile(stackFile):
-        print 'reading stacking file: '+stackFile
+    try:
+        os.path.isfile(stackFile)
         stack,atrStack = readfile.read(stackFile)
-    else:
-        print 'calculating the stacking of '+File+' ...'
+        print 'read stack from file: '+stackFile
+    except:
         stack = ut.stacking(File)
         atrStack = atr.copy()
         atrStack['FILE_TYPE'] = 'mask'
