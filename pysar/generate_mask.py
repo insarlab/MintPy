@@ -61,7 +61,7 @@ def main(argv):
 
     outName = 'mask.h5'
     method  = 'threshold'
-  
+
     ##### Check Inputs
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,'h:f:m:M:x:y:o:d:e:',['nonzero'])
@@ -78,13 +78,12 @@ def main(argv):
             elif opt == '-d':         epoch_date = arg
             elif opt == '-e':         epoch_num  = int(arg) - 1
             elif opt == '--nonzero':  method     = 'nonzero'
-  
+
     elif len(sys.argv)==2:
         if   argv[0] in ['-h','--help']:    Usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):       File = argv[0]
         else:    print 'Input file does not existed: '+argv[0];  sys.exit(1)
     else:                                   Usage(); sys.exit(1)
-
 
     ##### Input File Info
     atr = readfile.read_attributes(File)
@@ -92,8 +91,7 @@ def main(argv):
     print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File
     mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
     print 'Create initial mask with the same size as the input file and all = 1'
-  
-  
+
     ##### Non-zero Mask #######
     if method == 'nonzero':
         k = atr['FILE_TYPE']

@@ -135,7 +135,7 @@ def Usage():
         --zoomx      : subset/zoom in x/range/longtitude direction
         --zoomy      : subset/zoom in y/azimuth/latitude direction
 
-     XY Input
+     XY Input (both input ends are included)
         -r : radius of selecting square in pixels, display mean value from (+/-radius,+/-radius).
              [default is 0 - one point]
         -x : x coordinate (range) of selection

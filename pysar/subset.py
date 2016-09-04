@@ -36,7 +36,7 @@ import pysar._pysar_utilities as ut
 
 ################################################################
 def coord_geo2radar(geoCoord,atr,coordType):
-    ## convert geo coordinates into radar coordinates
+    ## convert geo coordinates into radar coordinates (round to nearest integer)
     ## for Geocoded file only
     ## Inputs:
     ##     geoCoord  : coordinate (list) in latitude/longitude in float
@@ -55,13 +55,12 @@ def coord_geo2radar(geoCoord,atr,coordType):
         geoCoord = [geoCoord]
 
     radarCoord = []
+    coordType = coordType.lower()
     for i in range(len(geoCoord)):
-        if   coordType.lower() in ['lat','latitude']:
-            coord = int(np.floor((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP'])))
-        elif coordType.lower() in ['lon','longitude']:
-            coord = int(np.floor((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP'])))
+        if   coordType in ['lat','latitude' ]:  coord = np.rint((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
+        elif coordType in ['lon','longitude']:  coord = np.rint((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))
         else: print 'Unrecognized coordinate type: '+coordType
-        radarCoord.append(coord)
+        radarCoord.append(int(coord))
     radarCoord.sort()
 
     if len(radarCoord) == 1:
@@ -72,7 +71,7 @@ def coord_geo2radar(geoCoord,atr,coordType):
 
 ################################################################
 def coord_radar2geo(radarCoord,atr,coordType):
-    ## convert radar coordinates into geo coordinates
+    ## convert radar coordinates into geo coordinates (pixel UL corner)
     ## for Geocoded file only
     ##
     ## Inputs:
@@ -92,11 +91,10 @@ def coord_radar2geo(radarCoord,atr,coordType):
         radarCoord = [radarCoord]
 
     geoCoord = []
+    coordType = coordType.lower()
     for i in range(len(radarCoord)):
-        if   coordType.lower() in ['row','y']:
-            coord = (radarCoord[i] + 0.5)*float(atr['Y_STEP']) + float(atr['Y_FIRST'])
-        elif coordType.lower() in ['col','x','column']:
-            coord = (radarCoord[i] + 0.5)*float(atr['X_STEP']) + float(atr['X_FIRST'])
+        if   coordType in ['row','y']:           coord = radarCoord[i]*float(atr['Y_STEP']) + float(atr['Y_FIRST'])
+        elif coordType in ['col','x','column']:  coord = radarCoord[i]*float(atr['X_STEP']) + float(atr['X_FIRST'])
         else: print 'Unrecognized coordinate type: '+coordType
         geoCoord.append(coord)
     geoCoord.sort()
@@ -263,7 +261,7 @@ def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
     box1 = (0,0,width,length)
-    box2 = (sub_x[0],sub_y[0],sub_x[1]+1,sub_y[1]+1)
+    box2 = (sub_x[0],sub_y[0],sub_x[1],sub_y[1])
     idx1,idx2 = box_overlap_index(box1,box2)
     print 'data   range:'
     print box1
