@@ -455,11 +455,17 @@ def main(argv):
 
     ######################### b. Stack ##################################
     stackFile = os.path.basename(File).split(ext)[0] + '_stack.h5'
+    stack_file_exist = 'no'
     try:
         os.path.isfile(stackFile)
         stack,atrStack = readfile.read(stackFile)
-        print 'read stack from file: '+stackFile
-    except:
+        if width == int(atrStack['WIDTH']) and length == int(atrStack['FILE_LENGTH']):
+            stack_file_exist = 'yes'
+            print 'read stack from file: '+stackFile
+    except: pass
+
+    if stack_file_exist == 'no':
+        print 'calculating stack of input file ...'
         stack = ut.stacking(File)
         atrStack = atr.copy()
         atrStack['FILE_TYPE'] = 'mask'

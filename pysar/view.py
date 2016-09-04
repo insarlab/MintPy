@@ -502,7 +502,7 @@ def main(argv):
     ##################  Color Map  ######################
     try: color_map
     except:
-        if k in ['coherence','temporal_coherence','.cor','.dem','.hgt']:
+        if k in ['coherence','temporal_coherence','.cor']:
               color_map = 'gray'
         else: color_map = 'jet'
   

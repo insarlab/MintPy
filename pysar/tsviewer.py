@@ -144,6 +144,7 @@ def Usage():
         -Y : y coordinate (range) of reference / comparison
         --lalo : latitude and longitude of selection (recommend to use it with -r option for now)
                  i.e.  --lalo 32.12,130.59
+        --LALO : latitude and longitude of reference/comparison
 
      DEM
         -D : dem file
@@ -260,7 +261,7 @@ def main(argv):
                                               ['save','nodisplay','unit=','exclude=','ref-date=','rect-color=',\
                                                'zero-start=','zoom-x=','zoom-y=','zoom-lon','zoom-lat','lalo=',\
                                                'opposite','dem-nocontour','dem-noshade','displacement','contour-step=',\
-                                               'contour-smooth='])
+                                               'contour-smooth=','LALO='])
         except getopt.GetoptError:    Usage() ; sys.exit(1)
 
         for opt,arg in opts:
@@ -293,6 +294,7 @@ def main(argv):
             elif opt == '--displacement'   : dispDisplacement= 'yes'
             elif opt in ['-E','--exclude'] : datesNot2show   = arg.split(',')
             elif opt in '--lalo'           : lalosub         = [float(i) for i in arg.split(',')]
+            elif opt in '--LALO'           : ref_lalosub     = [float(i) for i in arg.split(',')]
             elif opt in ['--rect-color']   : rectColor       = arg
             elif opt in ['--ref-date']     : ref_date        = ptime.yyyymmdd(arg)
             elif opt in ['-u','--unit']    : unit            = arg.lower()
@@ -308,10 +310,14 @@ def main(argv):
 
     ##############################################################
     ## Read time series file info
-    if not os.path.isfile(timeSeriesFile):       Usage();sys.exit(1)
+    if not os.path.isfile(timeSeriesFile):
+        print '\nERROR: Input time series file does not exist: '+timeSeriesFile+'\n'
+        sys.exit(1)
     h5timeseries = h5py.File(timeSeriesFile)
     k = h5timeseries.keys();       # read h5 file and its group type
-    if not 'timeseries' in k:  print 'ERROR: Input file is '+k[0]+'.\n\tOnly timeseries is supported.\n'; sys.exit(1)
+    if not 'timeseries' in k:
+        print 'ERROR: Input file is '+k[0]+'.\n\tOnly timeseries is supported.\n';
+        sys.exit(1)
 
     atr = readfile.read_attributes(timeSeriesFile)
     dateList1 = h5timeseries['timeseries'].keys()
@@ -326,6 +332,15 @@ def main(argv):
         ysub = subset.coord_geo2radar([lalosub[0]],atr,'latitude')
         xsub = [xsub]
         ysub = [ysub]
+        if radius == 0:  radius = 3
+    except: pass
+
+    try:
+        ref_lalosub
+        ref_xsub = subset.coord_geo2radar([ref_lalosub[1]],atr,'longitude')
+        ref_ysub = subset.coord_geo2radar([ref_lalosub[0]],atr,'latitude')
+        ref_xsub = [ref_xsub]
+        ref_ysub = [ref_ysub]
         if radius == 0:  radius = 3
     except: pass
 
@@ -385,16 +400,17 @@ def main(argv):
     datevector_all = list(datevector)
 
     ## Check reference date input
-    if zero_start == 'yes':
-        ref_date = dateList[0];
-        print 'set the 1st date as reference for displacement display.'
     try:
         ref_date
         if not ref_date in dateList:
             print 'Reference date - '+ref_date+' - is not included in date list to show.'
             sys.exit(1)
         else: print 'reference date: '+ref_date
-    except: pass
+    except:
+        if zero_start == 'yes':
+            ref_date = dateList[0];
+            print 'set the 1st date as reference for displacement display.'
+        else: pass
 
     ##############################################################
     ##### Plot Fig 1 - Velocity / last epoch of time series / DEM
