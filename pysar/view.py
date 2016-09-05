@@ -272,11 +272,14 @@ def Usage():
                   use this option when high quality figure is needed.
 
   Point and Line:
-  --point       : point coordinate in x,y,x,y,...
-  --line        : line end coordinate x,y,x,y;x,y,x,y;...
+  --point-yx    : point    coordinate in y,x,y,x,...               [for plot in y/x]
+  --point-lalo  : point    coordinate in lat,lon,lat,lon,...       [for plot in lat/lon]
+  --line-yx     : line end coordinate in y,x,y,x;y,x,y,x;...       [for plot in y/x]
+  --line-lalo   : line end coordinate in lat,lon,lat,lon;lat,lon,lat,lon;...   [not implemented yet]
                   p_yx = '1468,1002,1498,1024,1354,1140,1394,1174'
                   l_yx = '1468,1002,1498,1024;1354,1140,1394,1174,1560,1155'
-                  view.py -f mask_all.h5 --point=p_yx --line=l_yx
+                  view.py -f mask_all.h5 --point-yx=p_yx --line-yx=l_yx
+                  view.py -f velocity_ex.h5 --mask Mask.h5 --point-lalo 33.0922,131.2314,33.1026,131.2441
 
   Figure Setting:
   --figsize     : figure size in inches (width, length), i.e. '15,10'
@@ -426,7 +429,8 @@ def main(argv):
                                             'scale=','nodisplay','noreference','figsize=','dem-nocontour','dem-noshade',\
                                             'contour-step=','contour-smooth=','ref-epoch=','ref-color=','ref-symbol=',\
                                             'ref-size=','radar-coord','title=','dpi=','output=','exclude=','noaxis',\
-                                            'point=','line=','no-multilook','mask=','notitle','','ref-yx=','ref-lalo='])
+                                            'no-multilook','mask=','notitle','','ref-yx=','ref-lalo=','point-yx=',\
+                                            'point-lalo=','line-yx=','line-lalo='])
     
         except getopt.GetoptError:
             print 'Error in reading input options!';  Usage() ; sys.exit(1)
@@ -481,8 +485,10 @@ def main(argv):
             elif opt == '--save'          : saveFig      = 'yes'
             elif opt == '--scale'         : disp_scale   = float(arg)
             elif opt == '--wrap'          : rewrapping   = 'yes'
-            elif opt == '--point'         : point_yx     = [i for i in arg.split(',')];
-            elif opt == '--line'          : line_yx    = [i for i in arg.split(';')];
+            elif opt == '--point-yx'      : point_yx     = [int(i)   for i in arg.split(',')];
+            elif opt == '--point-lalo'    : point_lalo   = [float(i) for i in arg.split(',')];
+            elif opt == '--line-yx'       : line_yx      = [i for i in arg.split(';')];
+            elif opt == '--line-lalo'     : line_lalo    = [i for i in arg.split(';')];
             elif opt == '--no-multilook'  : multilook    = 'no'
 
     elif len(sys.argv)==2:
@@ -921,6 +927,15 @@ def main(argv):
                     ref_lat = urcrnrlat + ref_y*lat_step
                     plt.plot(ref_lon,ref_lat,refPoint,ms=ref_size)
                 except:  pass
+            try:
+                point_lalo
+                point_num = len(point_lalo)/2*2
+                point_lalo = point_lalo[0:point_num]
+                point_lon = point_lalo[1::2]
+                point_lat = point_lalo[::2]
+                plt.plot(point_lon,point_lat,'ro')
+                print 'plot points'
+            except: pass
      
             # Colorbar
             from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -969,7 +984,7 @@ def main(argv):
      
             plt.xlim(0,np.shape(data)[1])
             plt.ylim(  np.shape(data)[0],0)
-     
+
             ##### Plot Points and Lines
             try:
                 point_yx
