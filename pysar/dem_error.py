@@ -66,7 +66,7 @@ def main(argv):
     ## Default value
     phase_velocity    = 'no'        # 'no' means use 'phase history'
     update_timeseries = 'yes'
-  
+
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,'h:f:F:o:v:',['phase-velocity','no-timeseries-update'])
         except getopt.GetoptError:
@@ -79,15 +79,15 @@ def main(argv):
             elif opt == '-o':    outname        = arg
             elif opt == '--phase-velocity'      :  phase_velocity = 'yes'
             elif opt == '--no-timeseries-update':  update_timeseries = 'no'
-  
+
     elif len(sys.argv)==2:
         if argv[0] in ['-h','--help']:  Usage(); sys.exit(1)
         else:  timeSeriesFile = argv[0]
     else:  Usage(); sys.exit(1)
-  
+
     try:    outname
     except: outname = timeSeriesFile.replace('.h5','')+'_demCor.h5'
-  
+
     ##### Read Time Series
     print '\n*************** Topographic Error Correction ****************'
     print "Loading time series: " + timeSeriesFile
@@ -97,10 +97,10 @@ def main(argv):
     dateList = sorted(dateList)
     lt = len(dateList)
     print 'number of epochs: '+str(lt)
-  
+
     dateIndex={}
     for ni in range(len(dateList)):   dateIndex[dateList[ni]]=ni
-  
+
     nrows = int(atr['FILE_LENGTH'])
     ncols = int(atr['WIDTH'])
     timeseries = np.zeros((len(dateList),nrows*ncols),np.float32)
@@ -116,7 +116,7 @@ def main(argv):
     print 'read temporal baseline'
     tbase,date_dict = ptime.date_list2tbase(dateList)
     tbase = np.array(tbase).reshape(lt,1)
-  
+
     ##### Perpendicular Baseline
     try:
         Bp = [float(i) for i in atr['P_BASELINE_TIMESERIES'].split()]
@@ -131,8 +131,7 @@ def main(argv):
             print 'Error in calculating baseline time series!'
             sys.exit(1)
     Bp_v = (Bp[1:lt] - Bp[0:lt-1]) / (tbase[1:lt] - tbase[0:lt-1])
-  
-  
+
     ##### Cubic Temporal Deformation Model
     ## Formula (10) in (Fattahi and Amelung, 2013, TGRS)
     if phase_velocity == 'yes':
@@ -144,14 +143,14 @@ def main(argv):
     else:
         print 'using phase history'
         M  = np.hstack((.5*tbase**2,tbase,np.ones((lt,1))))
-  
+
     ## Testing
     #teta = (tetaN+tetaF)/2
     #r = (rN+rF)/2
     #teta=19.658799999999999*np.pi/180
     #r=846848.2
     #Bperp=1000*np.random.random((lt,1))
-  
+
     ##### Range and Look Angle
     near_range = float(atr['STARTING_RANGE1'])
     dR         = float(atr['RANGE_PIXEL_SIZE'])
@@ -160,7 +159,7 @@ def main(argv):
     far_range  = near_range + dR*(ncols-1)
     incidence_n = np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))
     incidence_f = np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))
-  
+
     various_range = 'yes'
     if various_range == 'yes':
         range_x      = np.linspace(near_range, far_range,  num=ncols,endpoint='FALSE')
@@ -178,36 +177,35 @@ def main(argv):
     ##### Inversion column by column
     print 'inversing using L2-norm minimization (unweighted least squares)...'
     dz = np.zeros([1,nrows*ncols])
-  
+
     for i in range(ncols):
         ## Design Matrix Inversion
         C1_v = Bp_v / (range_x[i] * np.sin(look_angle_x[i]))
         C1   = Bp   / (range_x[i] * np.sin(look_angle_x[i]))
         if phase_velocity == 'yes':  C = np.hstack((M,C1_v))
         else:                        C = np.hstack((M,C1))
-  
+
         #print '    rank of the design matrix : '+str(np.linalg.matrix_rank(C))
         #if np.linalg.matrix_rank(C) == 4:  print '    design matrix has full rank'
         Cinv = np.linalg.pinv(C)
-  
+
         ## (Phase) Velocity History
         ts_x  = timeseries[:,i*nrows:(i+1)*nrows]
         ts_xv = (ts_x[1:lt,:] - ts_x[0:lt-1,:]) / (tbase[1:lt] - tbase[0:lt-1])
-  
+
         ## DEM error
         if phase_velocity == 'yes':    par  = np.dot(Cinv,ts_xv)
         else:                          par  = np.dot(Cinv,ts_x)
         dz_x = par[3].reshape((1,nrows))
-  
+
         ## Update DEM error matrix and timeseries matrix
         dz[0][i*nrows:(i+1)*nrows]         = dz_x
         timeseries[:,i*nrows:(i+1)*nrows] -= np.dot(C1,dz_x)
-  
+
         ut.printProgress(i+1,ncols)
-  
+
     #dz[0][:] = par[3][:]
     dz = np.reshape(dz,[nrows,ncols],order='F')
-
 
     ########## Output - DEM error #######################
     #print '**************************************'
@@ -217,7 +215,7 @@ def main(argv):
     #f.write('FILE_LENGTH       '+str(int(nrows))+'\n')
     #f.write('WIDTH             '+str(int(ncols))+'\n')  
     #print '**************************************'
-  
+
     h5fileDEM = 'DEM_error.h5'
     print 'writing >>> '+h5fileDEM
     h5rmse = h5py.File(h5fileDEM,'w')
@@ -227,12 +225,12 @@ def main(argv):
         group.attrs[key]=value
     group.attrs['UNIT']='m'
     print '**************************************'
-  
+
     ########### Output - Corrected Time Series ##########
     if update_timeseries == 'yes':
         print 'writing >>> '+outname
         print 'number of dates: '+str(len(dateList))
-  
+
         h5timeseriesDEMcor = h5py.File(outname,'w')
         group = h5timeseriesDEMcor.create_group('timeseries')
         for i in range(len(dateList)):
@@ -246,7 +244,6 @@ def main(argv):
         #        dset = group.create_dataset(date, data=d, compression='gzip') 
         for key,value in atr.iteritems():  group.attrs[key] = value
         h5timeseriesDEMcor.close()
-
 
 ################################################################################
 if __name__ == '__main__':

@@ -28,7 +28,26 @@ def circle_index(atr,circle_par):
 
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
-    c_x,c_y,radius = [int(i) for i in circle_par.split(',')]
+    cir_par = circle_par.split(',')
+    #import pdb; pdb.set_trace()
+    try:
+        c_y    = int(cir_par[0])
+        c_x    = int(cir_par[1])
+        radius = int(float(cir_par[2]))
+    except:
+        try:
+            c_lat  = float(cir_par[0])
+            c_lon  = float(cir_par[1])
+            radius = int(float(cir_par[2]))
+            c_y = subset.coord_geo2radar(c_lat,atr,'lat')
+            c_x = subset.coord_geo2radar(c_lon,atr,'lon')
+        except:
+            print '\nERROR: Unrecognized circle index format: '+circle_par
+            print 'Supported format:'
+            print '--circle 200,300,20            for radar coord input'
+            print '--circle 31.0214,130.5699,20   for geo   coord input\n'
+            return 0
+
     y,x = np.ogrid[-c_y:length-c_y, -c_x:width-c_x]
     idx = x**2 + y**2 <= radius**2
 
@@ -57,11 +76,14 @@ def Usage():
       -y : subset in y/row   /range  /latitude  direction
 
       ## Mark area excluded
-      --circle : circle shape subset, [center_x,center_y,radius;center_x2,...]
+      --circle : circle shape subset in y/x or lat/lon, [center_y/lat,center_x/lon,radius;center_y/lat2,...]
+                 i.e.: --circle 361,567,50;610,536,25          [int   coord input for radar coordinate]
+                       --circle 31.0212,131.0569,30            [float coord input for geo   coordinate]
 
   Example:
       mean_spatial.py sum_Seeded_ts.h5 mask.h5
       mean_spatial.py -f sum_Seeded_ts.h5 -m Mask.h5 -x 200:800 -y 230:700 --circle 361,567,50;610,536,25
+      mean_spatial.py -f sum_Seeded_ts.h5 -m Mask.h5 --circle 31.0212,131.0569,30
 
 ******************************************************************************
     '''
@@ -96,7 +118,7 @@ def main(argv):
             elif opt == '-m':  maskFile  = arg
             elif opt == '-x':  xsub = [int(i) for i in arg.split(':')];  xsub.sort()
             elif opt == '-y':  ysub = [int(i) for i in arg.split(':')];  ysub.sort()
-            elif opt == '--circle' :  cir_par = [i for i in arg.split(';')]
+            elif opt == '--circle'   :  cir_par   = [i for i in arg.split(';')]
             #elif opt == '-o':  outName   = arg
             
     else:
@@ -197,6 +219,7 @@ def main(argv):
     fref.write(str(top3[0][1])+'\n')
     fref.close()
     print 'write optimal reference date to '+ref_file
+    idxMean = meanList == np.nanmax(meanList)
 
     ##### Drop dates - mean threshold
     #meanT = 0.7
@@ -225,10 +248,14 @@ def main(argv):
     ax  = fig.add_subplot(211)
     ax.plot(dates, meanList, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
     #ax.plot([dates[0],dates[-1]],[meanT,meanT], '--b', lw=lineWidth)
+    #sc = ax.scatter(dates, np.tile(0.5,epochNum), c=meanList, s=22**2, alpha=0.3, vmin=0.0, vmax=1.0)
+    #ax.scatter(np.array(dates)[idxMean], 0.5, c=meanList[idxMean], s=22**2, alpha=1.0, vmin=0.0, vmax=1.0)
     ax = ptime.adjust_xaxis_date(ax,datevector)
     ax.set_ylim(0,1)
     ax.set_title('Spatial Average Value', fontsize=fontSize)
     ax.set_xlabel('Time [years]',         fontsize=fontSize)
+    #cbar = plt.colorbar(sc)
+    #cbar.set_label('Spatial Mean of Normalized Sum Epochs')
 
     ax  = fig.add_subplot(212)
     ax.plot(dates, pixPercent, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)

@@ -898,7 +898,7 @@ def main(argv):
 
         ##### Plot in Geo-coordinate: plot in map
         if geocoord == 'yes' and disp_geo == 'yes':
-            print 'plot in Lat/Lon coordinate ...'
+            print 'plotting in Lat/Lon coordinate ...'
      
             ## Map Setup
             from mpl_toolkits.basemap import Basemap
@@ -961,7 +961,7 @@ def main(argv):
 
         ##### Plot in x/y coordinate: row and column
         else:
-            print 'plot in Y/X coordinate ...'
+            print 'plotting in Y/X coordinate ...'
      
             ## Plot DEM
             try: ax = plot_dem_yx(ax,dem,demShade,demContour,contour_step,contour_sigma)
