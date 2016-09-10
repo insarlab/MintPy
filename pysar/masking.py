@@ -29,9 +29,15 @@ def mask_data(data,mask):
         ysub
         mask[ysub[0]:ysub[1],xsub[0]:xsub[1]]=0
     except:   pass
-  
-    try:     data[mask<thr] = np.nan
-    except:  data[mask==0]  = np.nan
+    
+    ## Masked Value
+    if data.dtype == np.dtype('int16'):
+        mask_value = np.ma.masked
+    else:
+        mask_value = np.nan
+
+    try:     data[mask<thr] = mask_value
+    except:  data[mask==0]  = mask_value
   
     return data
 

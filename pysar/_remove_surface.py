@@ -89,8 +89,8 @@ def remove_data_surface(data,Mask,surf_type):
   
     data_n = data - zplane
     data_n[data == 0.] = 0.
-    data_n = np.array(data_n,data.dtype) 
-    zplane = np.array(zplane,data.dtype) 
+    data_n = np.array(data_n,data.dtype)
+    zplane = np.array(zplane,data.dtype)
   
     return data_n, zplane
 

@@ -42,6 +42,7 @@ import matplotlib.pyplot as plt
 import pysar._readfile as readfile
 import pysar._pysar_utilities as ut
 import pysar.subset as subset
+import pysar.masking as mask
 import pysar._datetime as ptime
 
 
@@ -802,7 +803,8 @@ def main(argv):
 
         ############## Data Option ##################
         ## mask
-        if masking == 'yes':  data[ndx] = np.nan
+        if masking == 'yes':  data = mask.mask_data(data,msk)
+        #if masking == 'yes':  data[ndx] = np.nan
 
         ## reference point
         if ref_yx_new == 'yes':
@@ -1173,7 +1175,7 @@ def main(argv):
     
                 ##### Data Option
                 ## mask file
-                if masking          == 'yes':   data[ndx] = np.nan
+                if masking          == 'yes':   data = mask.mask_data(data)
                 ## multilooking
                 if lks              >  1    :   data = multilook(data,lks,lks)
                 ## show displacement instead of phase
