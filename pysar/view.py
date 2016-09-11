@@ -1175,7 +1175,7 @@ def main(argv):
     
                 ##### Data Option
                 ## mask file
-                if masking          == 'yes':   data = mask.mask_data(data)
+                if masking          == 'yes':   data = mask.mask_data(data,msk)
                 ## multilooking
                 if lks              >  1    :   data = multilook(data,lks,lks)
                 ## show displacement instead of phase

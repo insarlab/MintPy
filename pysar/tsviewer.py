@@ -115,7 +115,9 @@ def Usage():
                     -s fontsize -m Marker Size -c marker color -w linewidth -u unit
 
         -f : file of the timeseries
+        -f2: 
         -v : velocity file, or epoch_date (if not specified then the last time-series epoch is displayed)
+        -v2: 
         -l : lower bound of the displacement [default is min of the displacemen]
         -h : higher bound of the displacemet [default is max of the displacemen]
         -a : lower bound of the colorscale to display the velocity to display
