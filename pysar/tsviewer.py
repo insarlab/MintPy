@@ -347,7 +347,7 @@ def main(argv):
     except: pass
 
     ##############################################################
-    global dates, dateList, datevector_all
+    global dates, dateList, datevector_all, dateListMinMax
 
     print '*******************'
     print 'All dates existed:'
@@ -364,9 +364,12 @@ def main(argv):
     except:  datesNot2show=[]
 
     ## Check Min / Max Date
+    dateListMinMax = []
     try:
         minDate
-        minDateyy=ptime.yyyymmdd2years(minDate)
+        minDate   = ptime.yyyymmdd(minDate)
+        dateListMinMax.append(minDate)
+        minDateyy = ptime.yyyymmdd2years(minDate)
         print 'minimum date: '+minDate
         for date in dateList1:
             yy=ptime.yyyymmdd2years(date)
@@ -375,13 +378,19 @@ def main(argv):
     except:  pass
     try:
         maxDate
-        maxDateyy=ptime.yyyymmdd2years(maxDate)
+        maxDate   = ptime.yyyymmdd(maxDate)
+        dateListMinMax.append(maxDate)
+        maxDateyy = ptime.yyyymmdd2years(maxDate)
         print 'maximum date: '+maxDate
         for date in dateList1:
             yy=ptime.yyyymmdd2years(date)
             if yy > maxDateyy:
                 datesNot2show.append(date)
     except:  pass
+    
+    dateListMinMax = sorted(dateListMinMax)
+    if not dateListMinMax:  print 'no min/max date input.'
+    else:  datesMinMax, dateVecMinMax = ptime.date_list2vector(dateListMinMax)
 
     ## Finalize Date List
     try:
@@ -604,7 +613,8 @@ def main(argv):
 
         ####################### Figure Format #######################
         ## x axis format
-        ax2 = ptime.adjust_xaxis_date(ax2,datevector_all,fontSize)
+        try:    ax2 = ptime.adjust_xaxis_date(ax2,dateVecMinMax, fontSize)
+        except: ax2 = ptime.adjust_xaxis_date(ax2,datevector_all,fontSize)
 
         ## y axis format
         ax2.set_ylabel('Displacement ['+unit+']',fontsize=fontSize)
