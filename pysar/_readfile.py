@@ -205,8 +205,8 @@ def read_float32(*args):
 
     File = args[0]
     atr = read_attributes(File)
-    width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    width  = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH']))
 
     if   len(args)==1:     box = [0,0,width,length]
     elif len(args)==2:     box = args[1]
@@ -238,8 +238,8 @@ def read_complex64(File):
     ## 
 
     atr = read_attributes(File)
-    width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    width  = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH']))
 
     data = np.fromfile(File,np.complex64,length*2*width).reshape(length,width)
     amplitude = np.array([np.hypot(  data.real,data.imag)]).reshape(length,width)
@@ -254,8 +254,8 @@ def read_real_float32(File):
     ##     data, atr = read_real_float32('20070603.mli')
 
     atr = read_attributes(File)
-    width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    width  = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH']))
 
     data = np.fromfile(File,np.float32,length*width).reshape(length,width)
     return data, atr
@@ -274,8 +274,8 @@ def read_complex_int16(*args):
 
     File = args[0]
     atr = read_attributes(File)
-    width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    width  = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH']))
 
     if   len(args)==1:     box = [0,0,width,length]
     elif len(args)==2:     box = args[1]
@@ -313,8 +313,8 @@ def read_dem(File):
     ##     dem, atr = read_dem('gsi10m_30m.dem')
 
     atr = read_attributes(File)
-    width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])  
+    width  = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH'])) 
     dem = np.fromfile(File,dtype=np.int16).reshape(length,width)
     return dem, atr
 
@@ -514,8 +514,8 @@ def read_multiple(File,box=''):
     ##### File Info
     atr = readfile.read_attributes(File)
     k = atr['FILE_TYPE']
-    length = int(atr['FILE_LENGTH'])
-    width  = int(atr['WIDTH'])
+    length = int(float(atr['FILE_LENGTH']))
+    width  = int(float(atr['WIDTH']))
 
     ##### Bounding Box
     if box == '':  box = [0,0,width,length]

@@ -848,7 +848,7 @@ def main(argv):
         try:
             demFile
             demRsc = readfile.read_attributes(demFile)
-            print 'Show topography: '+os.path.basename(demFile)
+            print 'reading DEM: '+os.path.basename(demFile)+' ...'
      
             ##### Read DEM
             if int(demRsc['WIDTH']) == width and int(demRsc['FILE_LENGTH']) == length:
@@ -1102,7 +1102,7 @@ def main(argv):
         try:
             demFile
             demRsc = readfile.read_attributes(demFile)
-            print 'Show topography: '+str(demFile)
+            print 'reading DEM: '+str(demFile)+' ...'
      
             ##### Read DEM
             if int(demRsc['WIDTH']) == width and int(demRsc['FILE_LENGTH']) == length:
