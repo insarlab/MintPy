@@ -85,8 +85,8 @@ def write_complex_int16(data,outname):
     id2 = range(1,2*nlines*WIDTH,2)
 
     F=np.zeros([2*nlines*WIDTH,1],np.int16)
-    F[id1]=np.reshape(data.real,(nlines*WIDTH,1))
-    F[id2]=np.reshape(data.imag,(nlines*WIDTH,1))
+    F[id1]=np.reshape(np.array(data.real,np.int16),(nlines*WIDTH,1))
+    F[id2]=np.reshape(np.array(data.imag,np.int16),(nlines*WIDTH,1))
     F.tofile(outname)
 
 
