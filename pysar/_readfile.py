@@ -150,9 +150,20 @@ def read_gamma_par(File):
     ## Read GAMMA .par file into a python dictionary structure.
     ##
 
-    par_dict = dict(np.loadtxt(File,dtype=str,skiprows=2))
+    par_dict = {}
+    
+    f = open(File)
+    next(f); next(f);
+    for line in f:
+        l = line.split()
+        if len(l) < 2 or line.startswith('%') or line.startswith('#'):
+            next #ignore commented lines or those without variables
+        else:
+            par_dict[l[0].strip()] = str.replace(l[1],'\n','').split("#")[0].strip()
+    
     par_dict['WIDTH']       = par_dict['range_samples:']
     par_dict['FILE_LENGTH'] = par_dict['azimuth_lines:']
+    
     return par_dict
 
 #########################################################################
@@ -246,8 +257,9 @@ def read_complex_float32(File, real_imag=0):
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
 
-    data = np.fromfile(File,np.complex64,length*2*width).reshape(length,width)
-    
+    ##data = np.fromfile(File,np.complex64,length*2*width).reshape(length,width)
+    data = np.fromfile(File,np.complex64,length*width).reshape(length,width)
+
     if real_imag == 0:
         amplitude = np.array([np.hypot(  data.real,data.imag)]).reshape(length,width)
         phase     = np.array([np.arctan2(data.imag,data.real)]).reshape(length,width)
@@ -494,7 +506,7 @@ def read(*args):
         elif ext == '.slc':
             try:    data,atr = read_complex_int16(File,box)
             except: data,atr = read_complex_int16(File)
-            data = np.nanlog10(data)     # dB
+            data = np.log10(np.absolute(data))     # dB
             atr['UNIT'] = 'dB'
             return data, atr
 
