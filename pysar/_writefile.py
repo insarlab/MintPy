@@ -78,7 +78,7 @@ def write_complex_int16(data,outname):
     ## write gamma scomplex data, i.e. .slc file.
     ## data is complex 2-D matrix
     ## real, imagery, real, ...
-    
+
     nlines = data.shape[0]
     WIDTH  = data.shape[1]
     id1 = range(0,2*nlines*WIDTH,2)

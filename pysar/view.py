@@ -158,12 +158,14 @@ def auto_flip_check(atr_dict):
         geocoord = 'yes'
     except:
         geocoord = 'no'
-        orb_dir = orbit_direction(atr_dict)
-        print orb_dir+' orbit'
-        if   orb_dir == 'descending': flip_lr = 'yes'
-        elif orb_dir == 'ascending' : flip_ud = 'yes'
-        else: pass
-  
+        try:
+            orb_dir = orbit_direction(atr_dict)
+            print orb_dir+' orbit'
+            if   orb_dir == 'descending': flip_lr = 'yes'
+            elif orb_dir == 'ascending' : flip_ud = 'yes'
+            else: pass
+        except: pass
+
     return flip_lr, flip_ud
 
 

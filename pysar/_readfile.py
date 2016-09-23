@@ -278,7 +278,7 @@ def read_real_float32(File):
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
 
-    data = np.fromfile(File,np.float32,length*width).reshape(length,width)
+    data = np.fromfile(File,dtype=np.float32).reshape(length,width)
     return data, atr
 
 #########################################################################
@@ -464,14 +464,14 @@ def read(*args):
         try: data = data[box[1]:box[3],box[0]:box[2]]
         except: pass
         return data, atr
-  
+
     ##### ROI_PAC
-    elif processor == 'roipac':
+    elif processor in ['roipac','gamma']:
         if ext in ['.unw','.cor','.hgt']:
             try:    amp,pha,atr = read_float32(File,box)
             except: amp,pha,atr = read_float32(File)
             return pha, atr
-  
+
         elif ext == '.dem':
             dem,atr = read_dem(File)
             try: dem = dem[box[1]:box[3],box[0]:box[2]]
@@ -489,24 +489,25 @@ def read(*args):
             #return amp, atr
   
         elif ext == '.trans':
-            try:    rg,az,atr = read_float32(file,box)
-            except: rg,az,atr = read_float32(file)
+            try:    rg,az,atr = read_float32(File,box)
+            except: rg,az,atr = read_float32(File)
             return rg, az, atr
-  
+
     ##### Gamma
-    elif processor == 'gamma':
-        if ext == '.mli':
-            data,atr = read_real_float32(file)
+    #elif processor == 'gamma':
+        elif ext == '.mli':
+            data,atr = read_real_float32(File)
             try: data = data[box[1]:box[3],box[0]:box[2]]
             except: pass
-            data = np.nanlog10(data)     # dB
+            data = np.log10(data)     # dB
             atr['UNIT'] = 'dB'
             return data, atr
-  
+
         elif ext == '.slc':
             try:    data,atr = read_complex_int16(File,box)
             except: data,atr = read_complex_int16(File)
             data = np.log10(np.absolute(data))     # dB
+            data[data==-np.inf] = np.nan
             atr['UNIT'] = 'dB'
             return data, atr
 
