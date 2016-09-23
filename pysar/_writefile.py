@@ -17,6 +17,8 @@ import numpy as np
 def write_float32(*args):
     # To write an array to a binary file with float32 precision
     # Format of the binary file is same as roi_pac unw, cor, or hgt data.
+    #       should rename to write_rmg_float32()
+    #
     # Exmaple:
     #         write_float32(phase, outname)
     #         write_float32(amp, phase, outname)
@@ -64,19 +66,24 @@ def write_dem(data,outname):
     data.tofile(outname)
 
 
-def write_gamma_float(data,outname):
+def write_real_float32(data,outname):
+##def write_gamma_float(data,outname):
     ## write gamma float data, i.e. .mli file.
     data=np.array(data,dtype=np.float32)
     data.tofile(outname)
 
 
-def write_gamma_scomplex(data,outname):
+def write_complex_int16(data,outname):
+#def write_gamma_scomplex(data,outname):
     ## write gamma scomplex data, i.e. .slc file.
     ## data is complex 2-D matrix
+    ## real, imagery, real, ...
+    
     nlines = data.shape[0]
     WIDTH  = data.shape[1]
     id1 = range(0,2*nlines*WIDTH,2)
     id2 = range(1,2*nlines*WIDTH,2)
+
     F=np.zeros([2*nlines*WIDTH,1],np.int16)
     F[id1]=np.reshape(data.real,(nlines*WIDTH,1))
     F[id2]=np.reshape(data.imag,(nlines*WIDTH,1))
@@ -149,9 +156,9 @@ def write(*args):
             import Image
             data.save(outname)
         elif ext == '.mli':
-            write_gamma_float(data,outname)
+            write_real_float32(data,outname)
         elif ext == '.slc':
-            write_gamma_scomplex(data,outname)
+            write_complex_int16(data,outname)
         else: print 'Un-supported file type: '+ext; return 0;
   
         ##### Write .rsc File

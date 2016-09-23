@@ -224,7 +224,8 @@ def read_float32(*args):
     return amplitude, phase, atr
 
 #########################################################################
-def read_complex64(File):
+##def read_complex64(File, real_imag=0):
+def read_complex_float32(File, real_imag=0):
     ## Read complex float 32 data matrix, i.e. roi_pac int or slc data.
     ## should rename it to read_complex_float32()
     ##
@@ -234,17 +235,25 @@ def read_complex64(File):
     ## ...
     ##
     ## Usage:
-    ##     amp, phase, atr = read_complex64('/Users/sbaker/Desktop/geo_070603-070721_0048_00018.int')
-    ## 
+    ##     File : input file name
+    ##     real_imag : flag for output format, 0 for amplitude and phase [by default], others for real and imagery
+    ##
+    ## Example:
+    ##     amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
+    ##     data, atr       = read_complex_float32('150707.slc', 1)
 
     atr = read_attributes(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
 
     data = np.fromfile(File,np.complex64,length*2*width).reshape(length,width)
-    amplitude = np.array([np.hypot(  data.real,data.imag)]).reshape(length,width)
-    phase     = np.array([np.arctan2(data.imag,data.real)]).reshape(length,width)
-    return amplitude, phase, atr
+    
+    if real_imag == 0:
+        amplitude = np.array([np.hypot(  data.real,data.imag)]).reshape(length,width)
+        phase     = np.array([np.arctan2(data.imag,data.real)]).reshape(length,width)
+        return amplitude, phase, atr
+    else:
+        return data, atr
 
 #########################################################################
 def read_real_float32(File):
@@ -431,11 +440,11 @@ def read(*args):
     ##### ISCE
     elif processor == 'isce':
         if   ext in ['.flat']:
-            amp, data, atr = read_complex64(File)
+            amp, data, atr = read_complex_float32(File)
         elif ext in ['.cor']:
             data, atr = read_real_float32(File)
         elif ext in ['.slc']:
-            data, pha, atr = read_complex64(File)
+            data, pha, atr = read_complex_float32(File)
             ind = np.nonzero(data)
             data[ind] = np.log10(data[ind])     # dB
             atr['UNIT'] = 'dB'
@@ -458,7 +467,7 @@ def read(*args):
             return dem, atr
   
         elif ext == '.int':
-            amp, pha, atr = read_complex64(File)
+            amp, pha, atr = read_complex_float32(File)
             try: pha = pha[box[1]:box[3],box[0]:box[2]]
             except: pass
             return pha, atr

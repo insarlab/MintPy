@@ -294,7 +294,7 @@ def main(argv):
             if not os.path.basename(wrap) in fw:
                 print 'Adding ' + wrap
                 group = gg.create_group(os.path.basename(wrap))
-                amp,unw,unwrsc = readfile.read_complex64(wrap)
+                amp,unw,unwrsc = readfile.read_complex_float32(wrap)
     
                 dset = group.create_dataset(os.path.basename(wrap), data=unw, compression='gzip')
                 for key,value in unwrsc.iteritems():   group.attrs[key] = value

@@ -123,7 +123,7 @@ def main(argv):
     #print '+++++++++++++++++++++++++++'
     ###############################################
     if ext == '.int' or ext == '.slc':
-        a,p,r = readfile.read_complex64(file)
+        a,p,r = readfile.read_complex_float32(file)
         plks=multilook(p,alks,rlks)
         alks=multilook(a,alks,rlks)
     
