@@ -199,7 +199,7 @@ def main(argv):
                     data = rewrap(data,atr)
                     fig_unit = 'radian'
         elif ext == '.dem':
-            data,atr = readfile.read_dem(File)
+            data,atr = readfile.read_real_int16(File)
             outName = File
         if   ext in ['.hgt','.dem']:     fig_unit = 'm'
         elif ext in ['.cor','.trans']:   fig_unit = ' '

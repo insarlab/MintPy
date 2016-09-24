@@ -30,7 +30,7 @@ except:
 ext = os.path.splitext(demFile)[1]
 
 if ext == '.hgt':  amp,dem,demRsc = readfile.read_float32(demFile)
-elif ext == '.dem':    dem,demRsc =readfile.read_dem(demFile)
+elif ext == '.dem':    dem,demRsc = readfile.read_real_int16(demFile)
 
 
 try:     outName = sys.argv[2]

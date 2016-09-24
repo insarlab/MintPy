@@ -30,7 +30,7 @@ except:
 def Usage():
     print '''
    ***************************************************************
-   Spatial filtering of the time-series or velocity ...
+   Spatial filtering of the time-series or velocity ...read_real_int16
 
    Usage:
        filter_spatial.py -f  file -t filter_type  -p parameters
@@ -166,11 +166,11 @@ def main(argv):
         f.close()
   
     elif ext == ('.dem'):
-        d,r = readfile.read_dem(file)
+        d,r = readfile.read_real_int16(file)
         dlks=multilook(d,alks,rlks)
     
         print 'writing '+outName
-        writefile.write_dem(dlks,outName)
+        writefile.write_real_int16(dlks,outName)
         
         r['FILE_LENGTH']=str(dlks.shape[0])
         r['WIDTH']=str(dlks.shape[1])

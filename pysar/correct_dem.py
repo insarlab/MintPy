@@ -26,15 +26,15 @@ def main(argv):
   
     
   
-    dem, demrsc = _readfile.read_dem(dem_file)
+    dem, demrsc = _readfile.read_real_int16(dem_file)
     g = h5py.File(dem_error,'r')
     dset  = g['dem'].get('dem')
     dem_error = dset[0:dset.shape[0]]
-  
+
     print 'Correcting the DEM'
     sum = dem + dem_error
     print 'Creating the new DEM'
-    _writefile.write_dem(sum,'DEM_w_error.dem')
+    _writefile.write_real_int16(sum,'DEM_w_error.dem')
           
     rsc_file = open('DEM_w_error.dem.rsc','w')
     for k in demrsc.keys():

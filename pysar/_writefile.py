@@ -61,7 +61,8 @@ def write_complex64(data,outname):
     F.tofile(outname)
 
 
-def write_dem(data,outname):
+##def write_dem(data,outname):
+def write_real_int16(data,outname):
     data=np.array(data,dtype=np.int16)
     data.tofile(outname)
 
@@ -149,7 +150,7 @@ def write(*args):
         if   ext in ['.unw','.cor','.hgt']:
             write_float32(data,outname)
         elif ext == '.dem':
-            write_dem(data,outname)
+            write_real_int16(data,outname)
         elif ext == '.trans':
             write_float32(rg,az,outname)
         elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:

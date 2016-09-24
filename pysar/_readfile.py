@@ -324,14 +324,15 @@ def read_complex_int16(*args):
     #return amplitude, phase, parContents
 
 #########################################################################
-def read_dem(File):
+##def read_dem(File):
+def read_real_int16(File):
     ## Read real int 16 data matrix, i.e. ROI_PAC .dem file.
     ## should rename it to read_real_int16()
     ##
     ## Input:
     ##     roi_pac format dem file
     ## Usage:
-    ##     dem, atr = read_dem('gsi10m_30m.dem')
+    ##     dem, atr = read_real_int16('gsi10m_30m.dem')
 
     atr = read_attributes(File)
     width  = int(float(atr['WIDTH']))
@@ -473,7 +474,7 @@ def read(*args):
             return pha, atr
 
         elif ext == '.dem':
-            dem,atr = read_dem(File)
+            dem,atr = read_real_int16(File)
             try: dem = dem[box[1]:box[3],box[0]:box[2]]
             except: pass
             return dem, atr

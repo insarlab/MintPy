@@ -188,9 +188,9 @@ def main(argv):
             p2 = operation(p,operator,operand)
             writefile.write_float32(p2,outName)
         elif ext == '.dem':
-            p,r = readfile.read_dem(file)
+            p,r = readfile.read_real_int16(file)
             p2 = operation(p,operator,operand)
-            writefile.write_dem(p2,outName)
+            writefile.write_real_int16(p2,outName)
         elif ext == '.trans':
             a,p,r = readfile.read_float32(file)
             a2 = operation(a,operator,operand)

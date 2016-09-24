@@ -142,7 +142,7 @@ def main(argv):
     if os.path.basename(demFile).split('.')[1]=='hgt':
          amp,dem,demRsc = readfile.read_float32(demFile)
     elif os.path.basename(demFile).split('.')[1]=='dem':
-         dem,demRsc = readfile.read_dem(demFile)
+         dem,demRsc = readfile.read_real_int16(demFile)
   
     dem=dem-dem[yref][xref]
     dem=dem.flatten(1)

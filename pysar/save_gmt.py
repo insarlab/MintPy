@@ -87,7 +87,7 @@ def main(argv):
     ########## ROI_PAC Files ##################
     elif ext in ['.unw','.cor','.hgt','.dem']:
         import pysar._readfile as readfile
-        if ext == '.dem' :                    z,atr = readfile.read_dem(file)
+        if ext == '.dem' :                    z,atr = readfile.read_real_int16(file)
         if ext in ['.unw','.cor','.hgt']:   a,z,atr = readfile.read_float32(file)
   
     else: print 'Unsupported file extension: '+ext;  sys.exit(1)
