@@ -415,7 +415,7 @@ def read(*args):
     processor = atr['PROCESSOR']
   
     ##### PySAR HDF5
-    if processor == 'pysar':
+    if ext == '.h5':
         h5file = h5py.File(File,'r')
         k = atr['FILE_TYPE']
 
@@ -450,6 +450,15 @@ def read(*args):
         h5file.close()
         return data, atr
 
+    ##### Image
+    elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
+        atr = read_roipac_rsc(File+'.rsc')
+        import Image
+        data  = Image.open(File)
+        try: data = data.crop(box)
+        except: pass
+        return data, atr
+
     ##### ISCE
     elif processor == 'isce':
         if   ext in ['.flat']:
@@ -461,6 +470,7 @@ def read(*args):
             ind = np.nonzero(data)
             data[ind] = np.log10(data[ind])     # dB
             atr['UNIT'] = 'dB'
+        else: print 'Un-supported '+processfor+' file format: '+ext
   
         try: data = data[box[1]:box[3],box[0]:box[2]]
         except: pass
@@ -512,15 +522,7 @@ def read(*args):
             atr['UNIT'] = 'dB'
             return data, atr
 
-    ##### Image
-    elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
-        atr = read_roipac_rsc(File+'.rsc')
-        import Image
-        data  = Image.open(File)
-        try: data = data.crop(box)
-        except: pass
-        return data, atr
-  
+        else: print 'Un-supported '+processfor+' file format: '+ext
     else: print 'Unrecognized file format: '+ext; return 0
 
 
