@@ -453,7 +453,7 @@ def read(*args):
     ##### Image
     elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
         atr = read_roipac_rsc(File+'.rsc')
-        import Image
+        from PIL import Image
         data  = Image.open(File)
         try: data = data.crop(box)
         except: pass
