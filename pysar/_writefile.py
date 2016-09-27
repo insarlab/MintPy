@@ -154,7 +154,7 @@ def write(*args):
         elif ext == '.trans':
             write_float32(rg,az,outname)
         elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
-            import Image
+            from PIL import Image
             data.save(outname)
         elif ext == '.mli':
             write_real_float32(data,outname)

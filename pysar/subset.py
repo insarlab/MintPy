@@ -317,6 +317,10 @@ def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
             for key, value in atr.iteritems():    gg.attrs[key] = value
 
     ##### Single Dataset File
+    elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
+        data, atr = readfile.read(File,box2)
+        writefile.write(data,atr,outName)
+
     elif k == '.trans':
         rg_overlap,az_overlap,atr = readfile.read(File,idx1)
 
