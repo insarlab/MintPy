@@ -66,6 +66,9 @@ def write_real_int16(data,outname):
     data=np.array(data,dtype=np.int16)
     data.tofile(outname)
 
+def write_dem(data,outname):
+    data=np.array(data,dtype=np.int16)
+    data.tofile(outname)
 
 def write_real_float32(data,outname):
 ##def write_gamma_float(data,outname):

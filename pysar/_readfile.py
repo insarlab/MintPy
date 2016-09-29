@@ -340,6 +340,22 @@ def read_real_int16(File):
     dem = np.fromfile(File,dtype=np.int16).reshape(length,width)
     return dem, atr
 
+##def read_dem(File):
+def read_dem(File):
+    ## Read real int 16 data matrix, i.e. ROI_PAC .dem file.
+    ## should rename it to read_real_int16()
+    ##
+    ## Input:
+    ##     roi_pac format dem file
+    ## Usage:
+    ##     dem, atr = read_real_int16('gsi10m_30m.dem')
+
+    atr = read_attributes(File)
+    width  = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH'])) 
+    dem = np.fromfile(File,dtype=np.int16).reshape(length,width)
+    return dem, atr
+
 #########################################################################
 def read_GPS_USGS(File):  
     yyyymmdd= np.loadtxt(File,dtype=str,usecols = (0,1))[:,0]
