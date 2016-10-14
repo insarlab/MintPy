@@ -434,7 +434,7 @@ def main(argv):
                                             'ref-size=','radar-coord','title=','dpi=','output=','exclude=','noaxis',\
                                             'no-multilook','mask=','notitle','','ref-yx=','ref-lalo=','point-yx=',\
                                             'point-lalo=','line-yx=','line-lalo='])
-    
+
         except getopt.GetoptError:
             print 'Error in reading input options!';  Usage() ; sys.exit(1)
         if opts==[]: Usage() ; sys.exit(1)

@@ -7,18 +7,27 @@
 #
 # Yunjun, Jul 2015: add 'coherence','wrapped' option, eNum
 # Yunjun, Oct 2015: merge 'interferograms','coherence','wrapped' into one
+# Yunjun, Oct 2016: add --tree option to check hdf5 tree/structure
 
 
 import sys
 import os
+import getopt
 import time
 
 import h5py
 
 
+############################################################
+def print_attrs(name, obj):
+    print name
+    for key, val in obj.attrs.iteritems():
+        print "    %s: %s" % (key, val)
+
+
+############################################################
 def Usage():
     print '''
-***************************************************************
 ***************************************************************
 Displayes the general information of the PySAR product h5 file.
  
@@ -28,27 +37,33 @@ Displayes the general information of the PySAR product h5 file.
           file : HDF5 file, support all .h5 files
           eNum : number of interferogram/coherence in the group
                  (1 as the first)
+          --struct/structure/tree : show the structure tree
 
-   example:
+   Example:
            
           info.py timeseries.h5
           info.py velocity_demCor_masked.h5
-          info.py temporal_coherence.h5
           info.py LoadedData.h5
           info.py LoadedData.h5    3
-          info.py Coherence.h5
+          
+          info.py timeseries.h5 --tree
 
-***************************************************************
 ***************************************************************
     '''
 
+############################################################
 def main(argv):
 
-    try:    File=argv[0]
+    try:    File = argv[0]
     except: Usage();sys.exit(1)
-  
-  
+
     h5file=h5py.File(File,'r')
+
+    ## Print Structure Tree of Input HDF5 File
+    if argv[1] in ['--struct','--structure','--tree']:
+        h5file.visititems(print_attrs)
+        return
+
     k=h5file.keys()
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
@@ -160,9 +175,9 @@ def main(argv):
   
     h5file.close()
 
-
+############################################################
 if __name__ == '__main__':
-  main(sys.argv[1:])
+    main(sys.argv[1:])
 
 
 
