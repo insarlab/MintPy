@@ -355,8 +355,8 @@ def Usage():
 
    Showing DEM:
            view.py -f velocity.h5 -D SanAndreas.dem
-           view.py -f velocity.h5 -D SanAndreas.dem --dem-contour
-           view.py -f velocity.h5 -D SanAndreas.dem --dem-contour --dem-noshade
+           view.py -f velocity.h5 -D SanAndreas.dem --dem-nocontour
+           view.py -f velocity.h5 -D SanAndreas.dem --dem-nocontour --dem-noshade
 
    Display in subset:
            view.py -f velocity.h5 -x 100:600     -y 200:800

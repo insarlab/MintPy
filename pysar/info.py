@@ -19,6 +19,7 @@ import h5py
 
 
 ############################################################
+## By andrewcollette at https://github.com/h5py/h5py/issues/406
 def print_attrs(name, obj):
     print name
     for key, val in obj.attrs.iteritems():

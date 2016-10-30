@@ -29,7 +29,7 @@ def mask_data(data,mask):
         ysub
         mask[ysub[0]:ysub[1],xsub[0]:xsub[1]]=0
     except:   pass
-    
+
     ## Masked Value
     if data.dtype == np.dtype('int16'):
         mask_value = np.ma.masked
@@ -38,21 +38,22 @@ def mask_data(data,mask):
 
     try:     data[mask<thr] = mask_value
     except:  data[mask==0]  = mask_value
-  
+
     return data
 
 
 ############################################################
-def mask_with_multi_masks(in_file,mask_file):
+def mask_with_multi_masks(in_file,mask_file,out_file=''):
 
     h5file=h5py.File(in_file,'r')
     h5mask=h5py.File(mask_file,'r')
     kf=h5file.keys()
-  
-    ext = os.path.splitext(in_file)[1]
-    out_file = in_file.split('.')[0]+'_masked'+ext
+
+    if out_file == '':
+        ext = os.path.splitext(in_file)[1]
+        out_file = in_file.split('.')[0]+'_masked'+ext
     h5out = h5py.File(out_file,'w')
-  
+
     if kf[0] in ('interferograms','wrapped','coherence') and 'coherence' in h5mask.keys():
         print 'file type: '+kf[0]
         print 'Masking each '+kf[0]+' using its coherence file'
@@ -64,17 +65,17 @@ def mask_with_multi_masks(in_file,mask_file):
             date12 = h5file[kf[0]][igram].attrs['DATE12']
             for cohFile in cohList:
                 if h5mask['coherence'][cohFile].attrs['DATE12']==date12:
-                   igramCoh=cohFile
+                    igramCoh = cohFile
             print igramCoh
-  
+
             unwset = h5file[kf[0]][igram].get(igram)
             unw=unwset[0:unwset.shape[0],0:unwset.shape[1]]
-  
+
             cohset=h5mask['coherence'][igramCoh].get(igramCoh)
             coh=cohset[0:cohset.shape[0],0:cohset.shape[1]]
-  
+
             unw = mask_data(unw,coh)
-  
+
             group = gg.create_group(igram)
             dset = group.create_dataset(igram, data=unw, compression='gzip')
             for key, value in h5file[kf[0]][igram].attrs.iteritems():   group.attrs[key] = value
@@ -84,30 +85,31 @@ def mask_with_multi_masks(in_file,mask_file):
             gm = h5out.create_group('mask')
             dset = gm.create_dataset('mask', data=mask, compression='gzip')
         except: print 'no mask group found.'
-  
+
     else: print 'Only support multiple dataset file with multiple masks.'; sys.exit(1)
 
 
 ############################################################
-def mask_file(in_file,M):
+def mask_file(in_file,M,out_file=''):
     ## Mask input file with mask matrix M
-  
+
     atr = readfile.read_attributes(in_file)
     k = atr['FILE_TYPE']
     print 'file type: '+k
-  
-    ext      = os.path.splitext(in_file)[1]
-    out_file = os.path.basename(in_file).split('.')[0]+'_masked'+ext
-  
+
+    if out_file == '':
+        ext      = os.path.splitext(in_file)[1]
+        out_file = os.path.basename(in_file).split('.')[0]+'_masked'+ext
+
     if k in ['timeseries','interferograms','wrapped','coherence']:
         h5file = h5py.File(in_file,'r')
         epochList = h5file[k].keys()
         epochList = sorted(epochList)
         print 'number of epochs: '+str(len(epochList))
-  
+
         h5out = h5py.File(out_file,'w')
         print 'writing >>> '+out_file
-  
+
     ##### Multiple Dataset File
     if k == 'timeseries':
         group = h5out.create_group(k)
@@ -115,21 +117,21 @@ def mask_file(in_file,M):
             print d
             unwset = h5file[k].get(d)
             unw=unwset[0:unwset.shape[0],0:unwset.shape[1]]
-  
+
             unw = mask_data(unw,M)
-  
+
             dset = group.create_dataset(d, data=unw, compression='gzip')
         for key,value in atr.iteritems():   group.attrs[key] = value
-  
+
     elif k in ['interferograms','wrapped','coherence']:
         gg = h5out.create_group(k)
         for igram in epochList:
             print igram
             unwset = h5file[kf[0]][igram].get(igram)
             unw=unwset[0:unwset.shape[0],0:unwset.shape[1]]
-  
+
             unw = mask_data(unw,M)
-  
+
             group = gg.create_group(igram)
             dset = group.create_dataset(igram, data=unw, compression='gzip')
             for key, value in h5file[k][igram].attrs.iteritems():
@@ -139,7 +141,7 @@ def mask_file(in_file,M):
             gm = h5out.create_group('mask')
             dset = gm.create_dataset('mask', data=mask, compression='gzip')
         except: print 'no mask group found.'
-  
+
     ##### Single Dataset File
     else:
         import pysar._writefile as writefile
@@ -157,15 +159,15 @@ def mask_file(in_file,M):
 def Usage():
     print '''
 **************************************************************************
-  Masking File(s) using a mask
+  Masking File(s)
 
   Usage:
       masking.py file MaskFile
-      masking.py -f file -m MaskFile [ -t threshold ]
+      masking.py -f file -m MaskFile [ -t threshold -o output_name -x x_subset -y y_subset]
 
       -f : file (list) that needed to be masked
       -m : mask file 
-      -o : output file name
+      -o : output file name [works only for one input file]
 
       -t : threshold value used for masking. if not 
            specified then only pixels with mask value 
@@ -173,18 +175,19 @@ def Usage():
       -x : masking subset in range   / column / longtitude direction
       -y : masking subset in azimuth / row    / latitude   direction
 
-      --parallel : enable parallel computing
+      --no-parallel : disable parallel computing [enabled by default for multiple input files]
 
-  Example: 
-      masking.py velocity Mask.h5
+  Example:
+      Masking One File
+          masking.py velocity Mask.h5
+          masking.py -f geo_100102_101120.unw -m Mask.h5
+          masking.py -f timeseries.h5         -m temporal_coherence.h5 -t 0.7
+          masking.py -f LoadedData.h5         -m 100102_101120.cor     -t 0.9 -y '200:300' -x '300:400'
 
-      masking.py -f geo_100102_101120.unw -m Mask.h5
-      masking.py -f timeseries.h5         -m temporal_coherence.h5 -t 0.7
-      masking.py -f LoadedData.h5         -m 100102_101120.cor     -t 0.9 -y '200:300' -x '300:400'
-
-      masking.py -f 'timeseries*.h5'              -m Mask.h5
-      masking.py -f 'timeseries*.h5'              -m Mask.h5 --parallel
-      masking.py -f 'timeseries*.h5,*velocity.h5' -m Mask.h5 --parallel
+      Masking Multiple Files
+          masking.py -f 'timeseries*.h5'              -m Mask.h5
+          masking.py -f 'timeseries*.h5'              -m Mask.h5 --no-parallel
+          masking.py -f 'timeseries*.h5,*velocity.h5' -m Mask.h5
 
 **************************************************************************
     '''
@@ -193,17 +196,12 @@ def Usage():
 def main(argv):
 
     global xsub, ysub, thr
-    #lineWidth=4
-    #fontSize=32
-    #markerColor='orange'
-    #markerSize=20
-    #if len(sys.argv)>2:
-    parallel = 'no'
-  
+    parallel = 'yes'     ## Use parallel by default for multiple input files
+
     ######################################
-    try:    opts, args = getopt.getopt(argv,"h:f:m:t:x:y:o:",['parallel'])
+    try:    opts, args = getopt.getopt(argv,"h:f:m:t:x:y:o:",['no-parallel'])
     except getopt.GetoptError:    Usage() ; sys.exit(1)
-  
+
     if len(sys.argv) > 3:
         for opt,arg in opts:
             if opt in ("-h","--help"):     Usage();  sys.exit()
@@ -213,54 +211,77 @@ def main(argv):
             elif opt == '-y':        ysub = [int(i) for i in arg.split(':')];     ysub.sort()
             elif opt == '-x':        xsub = [int(i) for i in arg.split(':')];     xsub.sort()
             elif opt == '-o':        outFile = arg
-            elif opt == '--parallel':   parallel = 'yes'
-  
+            elif opt == '--no-parallel':   parallel = 'no'
+
     elif len(sys.argv)==3:
         if os.path.isfile(argv[0]) and os.path.isfile(argv[1]):
             File     = argv[0].split(',')
             maskFile = argv[1]
         else:  print 'Input file does not existed: '+argv[0]+' / '+argv[1];  sys.exit(1)
     else:   Usage();  sys.exit(1)
-  
+
     try:
         File
         maskFile
     except:    Usage() ; sys.exit(1)
-  
+
     ##### Check Input File List
     print '\n****************** Masking *********************'
     fileList = ut.get_file_list(File)
     print 'number of file to mask: '+str(len(fileList))
     print fileList
-  
-    ######################################
-    atr_mask = readfile.read_attributes(maskFile)
-    k_mask = atr_mask['FILE_TYPE']
-  
-    ##### Multiple Mask
-    if k_mask == 'coherence':
-        parallel = 'no'
-        mask_with_multi_masks(fileList[0],maskFile)
 
-    ##### Single Mask
-    else:
-        M,Matr = readfile.read(maskFile)
-        print 'mask file: '+maskFile
-  
-        if parallel == 'no':
-            for file in fileList:
-                print '-------------------------------------------'
-                print 'masking  : '+file
-                mask_file(file,M)
-  
-        else:
-            print '-----------------------'
-            print 'parallel masking ...'
-            print '-----------------------'
+    if len(fileList) == 1:
+        parallel = 'no'
+        try: outFile          ## Customized output file name for one input file only
+        except:
+            ext     = os.path.splitext(fileList[0])[1]
+            outFile = os.path.basename(fileList[0]).split('.')[0]+'_masked'+ext
+    elif len(fileList) > 1:
+        try:
+            del outFile
+            print 'Disabled customized output name for multiple input files, continue with automatic naming insread.'
+        except: pass
+    else: print 'ERROR: No input file!'; sys.exit(1)
+
+    ##### Check parallel computing requirement
+    if parallel == 'yes':
+        try:
             from joblib import Parallel, delayed
             import multiprocessing
-            num_cores = multiprocessing.cpu_count()
-            Parallel(n_jobs=num_cores)(delayed(mask_file)(file,M) for file in fileList)
+        except:
+            print '/nCannot import joblib or multiprocessing!'
+            print 'Disabled parallel masking.'
+            print 'Continue with masking file by file ...'
+
+    ###### Read Mask File
+    atr_mask = readfile.read_attributes(maskFile)
+    k_mask = atr_mask['FILE_TYPE']
+    if not k_mask == 'coherence':    ## Read mask file once 
+        M,Matr = readfile.read(maskFile)
+        print 'mask file: '+maskFile
+
+    ##### Masking - file by file
+    if parallel == 'no':
+        ##### Single Mask
+        if not k_mask == 'coherence':
+            for in_file in fileList:
+                print '-------------------------------------------'
+                print 'masking  : '+in_file
+                try:    mask_file(in_file,M,outFile)
+                except: mask_file(in_file,M)
+        ##### Multiple Mask
+        else:
+            try:    mask_with_multi_masks(fileList[0],maskFile,outFile)
+            except: mask_with_multi_masks(fileList[0],maskFile)
+
+    ##### Masking - parallel
+    else:
+        print '-----------------------'
+        print 'parallel masking ...'
+        print '-----------------------'
+        num_cores = multiprocessing.cpu_count()
+        Parallel(n_jobs=num_cores)(delayed(mask_file)(in_file,M) for in_file in fileList)
 
 
 ############################################################
