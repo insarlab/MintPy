@@ -189,7 +189,12 @@ def make_json_file(chunk_num, points):
 	# insert json file to pgsql using ogr2ogr - folder_name = area name
 	command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln ' + folder_name + " "
 	chunk_path = './mbtiles/' + folder_name + '/' + chunk
-	os.system(command + ' ' + chunk_path)
+	res = os.system(command + ' ' + chunk_path)
+
+	if res != 0:
+		print "Error inserting into the database. This is most often due to running out of Memory (RAM), or incorrect database credentials... quitting"
+		sys.exit()
+
 	print "inserted chunk " + str(chunk_num) + " to db"
 
 def usage():
