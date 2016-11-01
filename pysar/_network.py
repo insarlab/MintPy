@@ -6,6 +6,7 @@
 ############################################################
 # Recommended Usage:
 #   import pysar._network as pnet
+#
 
 
 import h5py
@@ -13,6 +14,7 @@ import numpy as np
 import datetime
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import itertools
 
 import pysar._datetime as ptime
 
@@ -23,7 +25,7 @@ def read_pairs_list(listFile,dateList):
     ## 070311-070426
     ## 070311-070611
     ## ...
-  
+
     dateList6 = ptime.yymmdd(dateList)
     pairs=[]
     fl = open(listFile,'r')
@@ -33,9 +35,9 @@ def read_pairs_list(listFile,dateList):
         date12 = line.split('-')
         pairs.append([dateList6.index(date12[0]),dateList6.index(date12[1])])
     fl.close()
-  
+
     pairs = pair_sort(pairs)
-  
+
     return pairs
 
 
@@ -59,49 +61,105 @@ def read_igram_pairs(igramFile):
     elif 'coherence'    in k: k[0] = 'coherence'
     if k[0] not in  ['interferograms','coherence','wrapped']:
         print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
-  
+
     dateList  = ptime.date_list(igramFile)
     dateList6 = ptime.yymmdd(dateList)
-  
+
     pairs = []
     igramList=h5file[k[0]].keys()
     for igram in igramList:
         date12 = h5file[k[0]][igram].attrs['DATE12'].split('-')
         pairs.append([dateList6.index(date12[0]),dateList6.index(date12[1])])
     h5file.close()
-  
+
     pairs = pair_sort(pairs)
-  
+
     return pairs
 
 
 #############################################################
-def read_baseline_file(baselineFile):
-    ## Read bl_list.txt and put each line into an array
+def read_baseline_file(baselineFile,exDateList=[]):
+    ## Read bl_list.txt without dates listed in exDateList
+    ##
+    ## Examples:
+    ##     date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile)
+    ##     date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile,['080520','100726'])
+    ##     date8List, perpBaseList = read_baseline_file(baselineFile)[0:2]
+
+    ## Read baseline file into lines
     fb = open(baselineFile)
     lines = []
     for line in fb.xreadlines():
         l = str.replace(line,'\n','').strip()
         lines.append(l)
     fb.close()
-  
+
     ## Read each line and put the values into arrays
-    dates   = []
-    pbase   = []
-    doppler = []
-    prf     = []
-    SLCdirs = []
+    date6List    = []
+    perpBaseList = []
+    dopplerList  = []
+    prfList      = []
+    slcDirList   = []
     for line in lines:
-        c = line.split()                # splits on white space
-        dates.append(c[0])
-        pbase.append(float(c[1]))
-        doppler.append(np.array([float(c[2]), float(c[3]), float(c[4])]))
-        prf.append(float(c[5]))
-        SLCdirs.append(c[6])
-  
-    dateList = ptime.yyyymmdd(dates)
-  
-    return dateList, pbase
+        c = line.split()    # splits on white space
+        date = c[0]
+        if not date in exDateList:
+            date6List.append(date)
+            perpBaseList.append(float(c[1]))
+            dopplerList.append(np.array([float(c[2]), float(c[3]), float(c[4])]))
+            prfList.append(float(c[5]))
+            slcDirList.append(c[6])
+
+    date8List = ptime.yyyymmdd(date6List)
+
+    return date8List, perpBaseList, dopplerList, prfList, slcDirList
+
+############################################################
+def threshold_perp_baseline(igramIdxList,perpBaseList,perpBaseMax=800,perpBaseMin=0):
+    ## Remove pairs/interoferogram that have perpendicular baseline out of [perpBaseMin, perpBaseMax]
+    ##
+    ## Example:
+    ##     pairs = threshold_perp_baseline(pairs,perpBaseList,500)
+    ##
+
+    igramIdxListOut = []
+    for igramIdx in igramIdxList:
+        idx1 = igramIdx[0]
+        idx2 = igramIdx[1]
+        perpBase = abs(perpBaseList[idx1]-perpBaseList[idx2])
+        if perpBaseMin <= perpBase <= perpBaseMax:
+            igramIdxListOut.append(igramIdx)
+
+    return igramIdxListOut
+
+
+############################################################
+def threshold_temporal_baseline(igramIdxList,tempBaseList,tempBaseMax=365,seasonal=1,tempBaseMin=0):
+    ## Remove pairs/interferograms out of min/max/seasonal temporal baseline limits
+    ##
+    ## Usage:
+    ##     seasonal : keep interferograms with seasonal temporal baseline
+    ##                1 - keep them, by default
+    ##                0 - do not keep them
+    ##
+    ## Example:
+    ##     pairs = threshold_temporal_baseline(pairs,tempBaseList,80)
+    ##     pairs = threshold_temporal_baseline(pairs,tempBaseList,80,0)  # disable seasonal checking
+
+    igramIdxListOut = []
+    
+    for igramIdx in igramIdxList:
+        idx1 = igramIdx[0]
+        idx2 = igramIdx[1]
+        tempBase = abs(tempBaseList[idx1]-tempBaseList[idx2])
+        if seasonal == 1:
+            if tempBaseMin <= tempBase <= tempBaseMax or tempBase/30 in [11,12]:
+                igramIdxListOut.append(igramIdx)
+        else:
+            if tempBaseMin <= tempBase <= tempBaseMax:
+                igramIdxListOut.append(igramIdx)
+
+    return igramIdxListOut
 
 
 ############################################################
@@ -113,6 +171,139 @@ def pair_sort(pairs):
             pairs[idx][0] = index1
             pairs[idx][1] = index2
     pairs=sorted(pairs)
+    return pairs
+
+
+############################################################
+def pair_merge(pairs1,pairs2):
+    pairs = pairs1
+    for pair in pairs2:
+        if not pair in pairs:
+            pairs.append(pair)
+
+    pairs=sorted(pairs)
+    return pairs
+
+############################################################
+def select_pairs_all(dateList):
+    ## Select All Possible Pairs/Interferograms
+
+    ## Get date index
+    indexList = []
+    for ni in range(len(dateList)):  indexList.append(ni)
+
+    ## Generate All Pairs
+    allPairs = list(itertools.combinations(indexList,2))
+
+    ## Convert tuple object to list object
+    allPairs2=[]
+    for pair in allPairs: allPairs2.append(list(pair))
+
+    return allPairs2
+
+
+############################################################
+def select_pairs_delaunay(tempBaseList,perpBaseList,normalize=1):
+    ## Select Pairs using Delaunay Triangulation based on temporal/perpendicular baselines
+    ##
+    ## Usage:
+    ##     tempBaseList : list of temporal baseline
+    ##     perpBaseList : list of perpendicular spatial baseline
+    ##     normalize    : normalize temporal baseline to perpendicular baseline
+    ##                    1 - enable  normalization, default
+    ##                    0 - disable normalization
+    ##
+    ## Key points
+    ##     1. Define a ratio between perpendicular and temporal baseline axis units
+    ##     2. Pairs with too large perpendicular / temporal baseline or Doppler centroid difference should be removed
+    ##        after this, using a threshold, to avoid strong decorrelations (Zebker and Villasenor, 1992, TGRS).
+    ##
+    ## Reference:
+    ##     Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
+    ## of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
+    ##     Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
+    ##
+
+
+    import matplotlib.delaunay as md
+
+    ##### Generate Delaunay Triangulation based on temporal and spatial perpendicular baselines
+    if normalize == 0:
+        centers,edges,tri,neighbors = md.delaunay(tempBase,perpBase)
+    else:
+        ##### Ratio between perpendicular and temporal baselines (Pepe and Lanari, 2006, TGRS)
+        tempBaseFacList = []
+        temp2perp_scale = (max(perpBaseList)-min(perpBaseList)) / (max(tempBaseList)-min(tempBaseList))
+        for tempBase in tempBaseList:
+            #tempBaseFac = (tempBase - min(tempBaseList)) * temp2perp_scale + min(perpBaseList)
+            tempBaseFac = tempBase * temp2perp_scale   # giving same result as the line above
+            tempBaseFacList.append(tempBaseFac)
+        centers,edges,tri,neighbors = md.delaunay(tempBaseFacList,perpBaseList)
+
+    ## The delaunay pairs do not necessarily have the indexes with lowest 
+    ## first, so let's arrange and sort the delaunay pairs
+    delaunayPairs = edges.tolist()
+    delaunayPairs = pair_sort(delaunayPairs)
+
+    return delaunayPairs
+
+
+############################################################
+def select_pairs_sequential(dateList, num_incr=2):
+    ## Select Pairs in a Sequential way:
+    ##
+    ##     For each acquisition, find its num_incr nearest acquisitions in the past time.
+    ##
+
+    ## Get date index
+    indexList = list(range(len(dateList)))
+
+    ## Generate Pairs
+    pairs = []
+    for idx in indexList:
+        for i in range(num_incr):
+            if not idx-i-1 < 0:  pairs.append([idx-i-1,idx])
+
+    pairs = pair_sort(pairs)
+
+    return pairs
+
+
+############################################################
+def select_pairs_hierarchical(tempBaseList,perpBaseList,tempPerpList):
+    ## Select Pairs in a hierarchical way using list of temporal and perpendicular baseline thresholds
+    ##     For each temporal/perpendicular combination, select all possible pairs; and then merge all combination results
+    ##     together for the final output (Zhao, 2015).
+    ##
+    ## Examples:
+    ##     pairs = select_pairs_hierarchical(tempBaseList,perpBaseList,[[32, 800], [48, 600], [64, 200]])
+    ##
+    ## Reference:
+    ##     Zhao, W., (2015), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
+    ## dissertation, Univ. of Miami, Section 6.3.
+    ##
+
+    ## Get date index
+    indexList = list(range(len(tempBaseList)))
+
+    ## Generate All possible pairs
+    pairsAll = []
+    pairsAll0 = list(itertools.combinations(indexList,2))    ## Generate All Pairs
+    for pair in pairsAll0:  pairsAll.append(list(pair))      ## Convert tuple object to list object
+
+    ## Filter Pairs in a Hierarchical way through loops
+    pairs = []
+    for i in range(len(tempPerpList)):
+        tempBaseMax = tempPerpList[i][0]
+        perpBaseMax = tempPerpList[i][1]
+
+        pairs_tmp = threshold_temporal_baseline(pairsAll,tempBaseList,tempBaseMax,0)
+        pairs_tmp = threshold_perp_baseline(pairs_tmp,perpBaseList,perpBaseMax)
+
+        pairs = pair_merge(pairs,pairs_tmp)
+
+    pairs = pair_sort(pairs)
+
     return pairs
 
 

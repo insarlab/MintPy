@@ -121,6 +121,15 @@ def read_attributes(File):
 
     return atr
 
+
+#########################################################################
+def check_variable_name(path):
+    s=path.split("/")[0]
+    if len(s)>0 and s[0]=="$":
+        p0=os.getenv(s[1:])
+        path=path.replace(path.split("/")[0],p0)
+    return path
+
 #########################################################################
 def read_template(File):
     ## Reads the template file into a python dictionary structure.
@@ -130,11 +139,12 @@ def read_template(File):
     template_dict = {}
     for line in open(File):
         c = line.split("=")
-        if len(c) < 2 or line.startswith('%') or line.startswith('#'): 
-            next #ignore commented lines or those without variables
-        else: 
-            template_dict[c[0].strip()] = str.replace(c[1],'\n','').split("#")[0].strip()
-
+        if len(c) < 2 or line.startswith('%') or line.startswith('#'):  next #ignore commented lines or those without variables
+        else:
+            atrName  = c[0].strip()
+            atrValue = str.replace(c[1],'\n','').split("#")[0].strip()
+            atrValue = check_variable_name(atrValue)
+            template_dict[atrName] = atrValue
     return template_dict
 
 #########################################################################

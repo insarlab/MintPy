@@ -6,6 +6,7 @@
 ############################################################
 # Based on scripts writen by Heresh Fattahi
 # Yunjun, Aug 2016: add read_date_list()
+# Yunjun, Oct 2016: update yymmdd() for string and list input
 #
 # Recommended Usage:
 #   import pysar._datetime as ptime
@@ -50,10 +51,17 @@ def yyyymmdd(dates):
     return datesOut
 
 def yymmdd(dates):
-    datesOut = []
-    for date in dates:
-        if len(date) == 8:  date = date[2:8]
-        datesOut.append(date)
+    if isinstance(dates,basestring):
+        if len(dates) == 8:  datesOut = date[2:8]
+        else:                datesOut = dates
+    elif isinstance(dates,list):
+        datesOut = []
+        for date in dates:
+            if len(date) == 8:   date = date[2:8]
+            datesOut.append(date)
+    else:
+        print 'Unrecognized date format. Only string and list supported.'
+        sys.exit(1)
     return datesOut
 
 
