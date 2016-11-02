@@ -187,6 +187,11 @@ def pair_merge(pairs1,pairs2):
 ############################################################
 def select_pairs_all(dateList):
     ## Select All Possible Pairs/Interferograms
+    ##
+    ## Reference:
+    ##     Berardino, P., G. Fornaro, R. Lanari, and E. Sansosti (2002), A new algorithm for surface deformation monitoring
+    ## based on small baseline differential SAR interferograms, IEEE TGRS, 40(11), 2375-2383.
+    ##
 
     ## Get date index
     indexList = []
@@ -214,7 +219,7 @@ def select_pairs_delaunay(tempBaseList,perpBaseList,normalize=1):
     ##                    0 - disable normalization
     ##
     ## Key points
-    ##     1. Define a ratio between perpendicular and temporal baseline axis units
+    ##     1. Define a ratio between perpendicular and temporal baseline axis units (Pepe and Lanari, 2006, TGRS).
     ##     2. Pairs with too large perpendicular / temporal baseline or Doppler centroid difference should be removed
     ##        after this, using a threshold, to avoid strong decorrelations (Zebker and Villasenor, 1992, TGRS).
     ##
@@ -251,8 +256,10 @@ def select_pairs_delaunay(tempBaseList,perpBaseList,normalize=1):
 ############################################################
 def select_pairs_sequential(dateList, num_incr=2):
     ## Select Pairs in a Sequential way:
-    ##
     ##     For each acquisition, find its num_incr nearest acquisitions in the past time.
+    ##
+    ## Reference:
+    ##     Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series, IEEE TGRS, 51(7), 4249-4259.
     ##
 
     ## Get date index
@@ -310,7 +317,13 @@ def select_pairs_hierarchical(tempBaseList,perpBaseList,tempPerpList):
 ############################################################
 def select_pairs_mst(tempBaseList,perpBaseList,normalize=1):
     ## Select Pairs using Minimum Spanning Tree technique
+    ##     Connection Cost is calculated using the baseline distance in perp and scaled temporal baseline (Pepe and Lanari,
+    ##     2006, TGRS) plane.
     ##
+    ## References:
+    ##     Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
+    ## of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
+    ##     Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
     ##
 
     from scipy.sparse import csr_matrix, find
@@ -327,7 +340,9 @@ def select_pairs_mst(tempBaseList,perpBaseList,normalize=1):
     ppMat1, ppMat2 = np.meshgrid(np.array(perpBaseList), np.array(perpBaseList))
     ttMat = np.abs(ttMat1-ttMat2)
     ppMat = np.abs(ppMat1-ppMat2)
-    baseMat = ttMat + ppMat
+
+    #baseMat = ttMat + ppMat
+    baseMat = np.sqrt(np.square(ttMat) + np.square(ppMat))    ## baseline distance in perp - scaled_temp plane.
     baseMat = csr_matrix(baseMat)
 
     ## Find MST
@@ -343,4 +358,40 @@ def select_pairs_mst(tempBaseList,perpBaseList,normalize=1):
     pairs = pair_sort(pairs)
 
     return pairs
+
+
+def select_pairs_star(dateList,m_date):
+    ## Select Star-like network/interferograms/pairs, it's a single master network, similar to PS approach.
+    ##
+    ## Usage:
+    ##     m_date : master date, choose it based on the following cretiria:
+    ##              1) near the center in temporal and spatial baseline
+    ##              2) prefer winter season than summer season for less temporal decorrelation
+    ##
+    ## Reference:
+    ##     Ferretti, A., C. Prati, and F. Rocca (2001), Permanent scatterers in SAR interferometry, IEEE TGRS, 39(1), 8-20.
+    ##
+
+    ## Pre-process Inputs
+    dateList = ptime.yymmdd(sorted(dateList))
+    m_date   = ptime.yymmdd(m_date)
+
+    ## Get date index
+    idxList = list(range(len(dateList)))
+    m_idx = dateList.index(m_date)
+
+    pairs = []
+    for idx in idxList:
+        if not idx == m_idx:
+            pairs.append([m_idx,idx])
+    pairs = pair_sort(pairs)
+
+    return pairs
+
+
+
+
+
+
+
 
