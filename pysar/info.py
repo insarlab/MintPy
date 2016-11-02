@@ -31,23 +31,23 @@ def Usage():
     print '''
 ***************************************************************
 Displayes the general information of the PySAR product h5 file.
- 
-   Usage:
-          info.py hdf5File  [eNum]
 
-          file : HDF5 file, support all .h5 files
-          eNum : number of interferogram/coherence in the group
-                 (1 as the first)
-          --struct/structure/tree : show the structure tree
+  Usage:
+      info.py hdf5File  [eNum]
 
-   Example:
-           
-          info.py timeseries.h5
-          info.py velocity_demCor_masked.h5
-          info.py LoadedData.h5
-          info.py LoadedData.h5    3
-          
-          info.py timeseries.h5 --tree
+      file : HDF5 file, support all .h5 files
+      eNum : number of interferogram/coherence in the group
+             (1 as the first)
+      --struct/structure/tree : show the structure tree
+
+  Example:
+
+      info.py timeseries.h5
+      info.py velocity_demCor_masked.h5
+      info.py LoadedData.h5
+      info.py LoadedData.h5    3
+
+      info.py timeseries.h5 --tree
 
 ***************************************************************
     '''
@@ -57,13 +57,14 @@ def main(argv):
 
     try:    File = argv[0]
     except: Usage();sys.exit(1)
-
     h5file=h5py.File(File,'r')
 
     ## Print Structure Tree of Input HDF5 File
-    if argv[1] in ['--struct','--structure','--tree']:
+    try:
+        argv[1] in ['--struct','--structure','--tree']
         h5file.visititems(print_attrs)
         return
+    except: pass
 
     k=h5file.keys()
     if 'interferograms' in k: k[0] = 'interferograms'
