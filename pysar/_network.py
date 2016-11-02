@@ -307,5 +307,40 @@ def select_pairs_hierarchical(tempBaseList,perpBaseList,tempPerpList):
     return pairs
 
 
+############################################################
+def select_pairs_mst(tempBaseList,perpBaseList,normalize=1):
+    ## Select Pairs using Minimum Spanning Tree technique
+    ##
+    ##
 
+    from scipy.sparse import csr_matrix, find
+    from scipy.sparse.csgraph import minimum_spanning_tree
+
+    ##### Ratio between perpendicular and temporal baselines (Pepe and Lanari, 2006, TGRS)
+    temp2perp_scale = (max(perpBaseList)-min(perpBaseList)) / (max(tempBaseList)-min(tempBaseList))
+    tempBaseFacList = []
+    for tempBase in tempBaseList:  tempBaseFacList.append(tempBase * temp2perp_scale )
+
+    ##### Minimum Spanning Tree
+    ## Prepare Input graph from temporal/perpendicular baseline
+    ttMat1, ttMat2 = np.meshgrid(np.array(tempBaseFacList), np.array(tempBaseFacList))
+    ppMat1, ppMat2 = np.meshgrid(np.array(perpBaseList), np.array(perpBaseList))
+    ttMat = np.abs(ttMat1-ttMat2)
+    ppMat = np.abs(ppMat1-ppMat2)
+    baseMat = ttMat + ppMat
+    baseMat = csr_matrix(baseMat)
+
+    ## Find MST
+    pairMat = minimum_spanning_tree(baseMat)
+
+    ## Convert to Pairs Index List
+    idxArray2,idxArray1 = find(pairMat)[0:2]
+    idxList1 = np.ndarray.tolist(idxArray1)
+    idxList2 = np.ndarray.tolist(idxArray2)
+
+    pairs = []
+    for i in range(len(idxList1)):  pairs.append([idxList1[i],idxList2[i]])
+    pairs = pair_sort(pairs)
+
+    return pairs
 
