@@ -225,7 +225,7 @@ def plot_dem_yx(ax, dem, demShade='yes', demContour='no', contour_step=200.0, co
         dem_contour=ndimage.gaussian_filter(dem,sigma=contour_sigma,order=0)
         contour_sequence=np.arange(-6000,9000,contour_step)
         ax.contour(dem_contour,contour_sequence,origin='lower',colors='black',alpha=0.5)
-  
+
     return ax
 
 
@@ -483,8 +483,8 @@ def main(argv):
             elif opt == '--ref-color'     : ref_color    = arg
             elif opt == '--ref-symbol'    : ref_symbol   = arg
             elif opt == '--ref-size'      : ref_size     = int(arg)
-            elif opt == '--ref-yx'        : ref_yx       = [int(i)   for i in arg.split(',')]
-            elif opt == '--ref-lalo'      : ref_lalo     = [float(i) for i in arg.split(',')]
+            elif opt == '--ref-yx'        : ref_yx_new   = [int(i)   for i in arg.split(',')]
+            elif opt == '--ref-lalo'      : ref_lalo_new = [float(i) for i in arg.split(',')]
             elif opt == '--save'          : saveFig      = 'yes'
             elif opt == '--scale'         : disp_scale   = float(arg)
             elif opt == '--wrap'          : rewrapping   = 'yes'
@@ -587,26 +587,20 @@ def main(argv):
 
     ##### Check Reference Coord
     try:
-        ref_lalo
-        ref_y = int((ref_lalo[0] - ullat)/lat_step + 0.5)
-        ref_x = int((ref_lalo[1] - ullon)/lon_step + 0.5)
-        ref_yx = [ref_y,ref_x]
+        ref_lalo_new
+        ref_yx_new[0] = int((ref_lalo[0] - ullat)/lat_step + 0.5)
+        ref_yx_new[1] = int((ref_lalo[1] - ullon)/lon_step + 0.5)
     except: pass
 
-    try:
-        ref_yx
-        ref_y = ref_yx[0]
-        ref_x = ref_yx[1]
-        ref_yx_new = 'yes'
+    try:  ref_yx_new
     except:
-        ref_yx_new = 'no'
         try:
             ref_y = int((float(atr['ref_lat']) - ullat)/lat_step + 0.5)
             ref_x = int((float(atr['ref_lon']) - ullon)/lon_step + 0.5)
         except:
             try:
-                ref_y = int(atr['ref_x']) - win_x[0]
-                ref_x = int(atr['ref_y']) - win_y[0]
+                ref_y = int(atr['ref_y']) - win_y[0]
+                ref_x = int(atr['ref_x']) - win_x[0]
             except:  pass
 
     ##### Template File
@@ -811,6 +805,8 @@ def main(argv):
         ## reference point
         if ref_yx_new == 'yes':
             if not np.isnan(data[ref_y,ref_x]):
+                ref_y = ref_yx[0]
+                ref_x = ref_yx[1]
                 data -= data[ref_y,ref_x]
                 print 'set reference to point: ('+str(ref_y)+', '+str(ref_x)+')'
             else:  print 'new reference point has nan value, thus disabled.'
