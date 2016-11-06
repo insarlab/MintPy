@@ -93,7 +93,7 @@ os.chdir(scratch_dir)
 os.system(command)
 
 os.system("createBatch.pl " + bjob_script_filename)
-command = "cp -r mbtiles/" + h5_file.split(".")[0] + " " + path_absolute  
+command = "cp -r mbtiles/" + h5_file.split(".")[0] + ".mbtiles " + path_absolute
 print "bjob finished, trying to execute " + command
 os.system(command)
 
