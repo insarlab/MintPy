@@ -803,13 +803,15 @@ def main(argv):
         #if masking == 'yes':  data[ndx] = np.nan
 
         ## reference point
-        if ref_yx_new == 'yes':
+        try:
+            ref_yx_new
             if not np.isnan(data[ref_y,ref_x]):
                 ref_y = ref_yx[0]
                 ref_x = ref_yx[1]
                 data -= data[ref_y,ref_x]
                 print 'set reference to point: ('+str(ref_y)+', '+str(ref_x)+')'
             else:  print 'new reference point has nan value, thus disabled.'
+        except: pass
 
         ## show displacement instead of phase
         if dispDisplacement == 'yes':
