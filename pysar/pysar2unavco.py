@@ -150,6 +150,9 @@ mission_index = project_name.find(frames) + len(frames)
 mission = project_name[mission_index:len(project_name)-1]
 
 group = unavco_file['/']
+
+# project_name
+group['project_name'] = project_name
 # 1) mission = last chars of a folder name - SinabungT495F40_50AlosA -> mission = Alos
 group.attrs['mission'] = mission
 
@@ -336,7 +339,8 @@ os.rename(unavco, "./" + unavco_name)
 # create a text file to store region (ex: Kyushu) needed for database but not unavco format
 attributes_file_name = unavco_name[:len(unavco_name)-3] + '_region.txt'
 attributes_file = open(attributes_file_name, "w")
-attributes_file.write(region_name)
+attributes_file.write(region_name + '\n')
+attributes_file.write(project_name)
 attributes_file.close()
 
 # ---------------------------------------------------------------------------------------
