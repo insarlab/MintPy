@@ -60,7 +60,7 @@ def convert_data():
 				displacement = timeseries_datasets[key][row][col]
 				displacements += (str(displacement) + ",")
 				displacement_values.append(float(displacement))
-			displacements = displacements[:len(displacements)-2] + '}'
+			displacements = displacements[:len(displacements) - 1] + '}'
 
 			# np array of displacement values, y parameter in linear regression equation
 			y = displacement_values
