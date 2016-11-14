@@ -108,12 +108,12 @@ def convert_data():
  	string_dates_sql = '{'
  	for k in dataset_keys:
  		string_dates_sql += (str(k) + ",")
- 	string_dates_sql = string_dates_sql[:len(string_dates_sql)-2] + '}'
+ 	string_dates_sql = string_dates_sql[:len(string_dates_sql) - 1] + '}'
 
  	decimal_dates_sql = '{'
  	for d in decimal_dates:
  		decimal_dates_sql += (str(d) + ",")
- 	decimal_dates_sql = decimal_dates_sql[:len(decimal_dates_sql)-2] + '}'
+ 	decimal_dates_sql = decimal_dates_sql[:len(decimal_dates_sql) - 1] + '}'
 
  	# scene_footprint attribute uses a wkt geometry type with format that confuses postgresql database
  	# thus we have to add "Polygon(coordinates, coordinates, coordinates, coordinates)" as string
