@@ -86,7 +86,7 @@ print "copying files to scratch with command " + command
 os.system(command)
 
 # go to scratch dir, and run the bjob command
-command = "echo unavco2website.py -f " + h5_file + " -u " + dbUsername + " -p " + dbPassword + " -h " + dbHost + " > " + bjob_script_filename
+command = "echo unavco2insarmaps.py -f " + h5_file + " -u " + dbUsername + " -p " + dbPassword + " -h " + dbHost + " > " + bjob_script_filename
 
 mbtiles_filename = h5_file.split(".")[0] + ".mbtiles"
 os.chdir(scratch_dir)
