@@ -353,7 +353,11 @@ unavco_file.close()
 # IMPORTANT: RENAME UNAVCO file to proper format based on file attributes
 # example - pysar file is called Kyushu T 80 F 245_246 JersD.h5
 # UNAVCO timeseries file is called JERS_SM_80_245_246_<first date>_<last date>.h5 since we dont need TBASE or BPERP for timeseries
-unavco_name = mission + '_SM_' + track_number + '_' + frames + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
+if no_frames:
+	unavco_name = mission + '_SM_' + track_number + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
+else:
+	unavco_name = mission + '_SM_' + track_number + '_' + frames + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
+
 os.rename(unavco, "./" + unavco_name)
 
 # create a text file to store region (ex: Kyushu) needed for database but not unavco format
