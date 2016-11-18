@@ -31,22 +31,19 @@ def diff(data1,data2):
 def Usage():
     print '''
 ***************************************************************
-***************************************************************
-Generates the difference of two input files.
- 
-   Usage:
-          diff.py file1 file2 [ output_file ]
+  Generates the difference of two input files.
 
-   output is file1_diff_file2.h5 by default
-   
-   example:
-           
-          diff.py velocity_masked.h5 velocity_demCor_masked.h5    demCor.h5
-          diff.py timeseries.h5      timeseries_demCor.h5         demCor.h5
-          diff.py LoadedData.h5      reconstruct_LoadedData.h5
-          diff.py -f velocity.h5,velocity_2.h5  -o velocity_diff.h5
+  Usage:
+      diff.py file1 file2 [ output_file ]
 
-***************************************************************
+      output is file1_diff_file2.h5 by default
+
+  Example:
+         diff.py velocity_masked.h5 velocity_demCor_masked.h5    demCor.h5
+         diff.py timeseries.h5      timeseries_demCor.h5         demCor.h5
+         diff.py LoadedData.h5      reconstruct_LoadedData.h5
+         diff.py -f velocity.h5,velocity_2.h5  -o velocity_diff.h5
+
 ***************************************************************
     '''
 

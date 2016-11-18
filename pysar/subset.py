@@ -61,7 +61,7 @@ def coord_geo2radar(geoCoord,atr,coordType):
         elif coordType in ['lon','longitude']:  coord = np.rint((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))
         else: print 'Unrecognized coordinate type: '+coordType
         radarCoord.append(int(coord))
-    radarCoord.sort()
+    #radarCoord.sort()
 
     if len(radarCoord) == 1:
         radarCoord = radarCoord[0]
@@ -97,7 +97,7 @@ def coord_radar2geo(radarCoord,atr,coordType):
         elif coordType in ['col','x','column']:  coord = radarCoord[i]*float(atr['X_STEP']) + float(atr['X_FIRST'])
         else: print 'Unrecognized coordinate type: '+coordType
         geoCoord.append(coord)
-    geoCoord.sort()
+    #geoCoord.sort()
 
     if len(geoCoord) == 1:
         geoCoord = geoCoord[0]
