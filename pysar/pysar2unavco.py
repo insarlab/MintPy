@@ -9,6 +9,7 @@ import os
 from osgeo import ogr
 import getopt
 import re
+import itertools
 
 # COMMAND I USE TO RUN SCRIPT: 
 # python ~/code/insar_map_mvc/storage/json/pysar2unavco_back.py -t timeseries.h5 -i incidence_angle.h5 -d DEM_error.h5 -c temporal_coherence.h5 -m mask.h5 
@@ -126,28 +127,42 @@ except Exception, e:
 print project_name
 track_index = project_name.find('T')
 frame_index = project_name.find('F')
-track_number = project_name[track_index+1:frame_index]
-region_name = project_name[:track_index]
+track_number = "None"
+mission_index = -1;
+mission = "None"
+no_frames = False
 
-# sometimes there is only one frame number instead of framenumber_framenumber - look for "_"
-multipleFrames = False
-try:
-	underscore = re.search("_", project_name).group(0)
-	multipleFrames = True
-except:
-	pass
+# no frame number
+if frame_index == -1:
+	no_frames = True
+	project_name_starting_at_track_number = project_name[track_index + 1:]
+	track_number = ("".join(itertools.takewhile(str.isdigit, project_name_starting_at_track_number)))
 
-if multipleFrames:
-	frames = re.search("\d+_\d+", project_name).group(0)
-	first_frame = frames.split("_")[0]
-	last_frame = frames.split("_")[1]
+	mission_index = project_name.find(track_number) + len(track_number)
+	mission = project_name[mission_index:len(project_name)-1]
 else:
-	frames = re.search("\d+", project_name[frame_index+1:]).group(0)
-	first_frame = frames
-	last_frame = frames
+	track_number = project_name[track_index+1:frame_index]
+	# sometimes there is only one frame number instead of framenumber_framenumber - look for "_"
+	multipleFrames = False
+	try:
+		underscore = re.search("_", project_name).group(0)
+		multipleFrames = True
+	except:
+		pass
 
-mission_index = project_name.find(frames) + len(frames)
-mission = project_name[mission_index:len(project_name)-1]
+	if multipleFrames:
+		frames = re.search("\d+_\d+", project_name).group(0)
+		first_frame = frames.split("_")[0]
+		last_frame = frames.split("_")[1]
+	else:
+		frames = re.search("\d+", project_name[frame_index+1:]).group(0)
+		first_frame = frames
+		last_frame = frames
+
+	mission_index = project_name.find(frames) + len(frames)
+	mission = project_name[mission_index:len(project_name)-1]
+
+region_name = project_name[:track_index]
 
 group = unavco_file['/']
 
@@ -195,8 +210,13 @@ group.attrs['history'] = datetime.datetime.now().date().isoformat()
 #  ENCODE RECOMMENDED ATTRIBUTES FROM TIMESERIES FILE INTO UNAVCO
 # ---------------------------------------------------------------------------------------
 # UNAVCO wants this to be an int but we have multiple frames so we have two frame attributes
-group.attrs['first_frame'] = int(first_frame)
-group.attrs['last_frame'] = int(last_frame)
+# ask what to do if no frames, for now, set to -1
+if no_frames:	
+	group.attrs['first_frame'] = -1
+	group.attrs['last_frame'] = -1
+else:
+	group.attrs['first_frame'] = int(first_frame)
+	group.attrs['last_frame'] = int(last_frame)
 
 # flight_direction = A or D (ascending or descending)
 # tried to encode as char but python seems to only know string
@@ -333,7 +353,11 @@ unavco_file.close()
 # IMPORTANT: RENAME UNAVCO file to proper format based on file attributes
 # example - pysar file is called Kyushu T 80 F 245_246 JersD.h5
 # UNAVCO timeseries file is called JERS_SM_80_245_246_<first date>_<last date>.h5 since we dont need TBASE or BPERP for timeseries
-unavco_name = mission + '_SM_' + track_number + '_' + frames + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
+if no_frames:
+	unavco_name = mission + '_SM_' + track_number + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
+else:
+	unavco_name = mission + '_SM_' + track_number + '_' + frames + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
+
 os.rename(unavco, "./" + unavco_name)
 
 # create a text file to store region (ex: Kyushu) needed for database but not unavco format
