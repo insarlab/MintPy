@@ -215,11 +215,11 @@ def main(argv):
     markerSize   = 16
     markerSize2  = 16
     markerColor  = 'crimson'     # g
-    markerColor2 = 'royalblue'
+    markerColor2 = 'lightgray'
     markerColor_ref  = 'white'
     markerColor_ref2 = 'lightgray'
     rectColor    = 'black'
-    lineWidth    = 2
+    lineWidth    = 0
     lineWidth2   = 0
     edgeWidth    = 1.5
     fontSize     = 16
@@ -596,7 +596,7 @@ def main(argv):
             dis2, dis2_mean, dis2_std, dis2_vel = read_dis(xsub,ysub,dateList_2,h5timeseries_2,unit)
             (_, caps, _)=ax2.errorbar(dates_2,dis2_mean,yerr=dis2_std,fmt='-ko',\
                                       ms=markerSize2, lw=0, alpha=1, mfc=markerColor2,\
-                                      elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
+                                      elinewidth=0,ecolor='black',capsize=0)
             for cap in caps:  cap.set_markeredgewidth(edgeWidth)
             disp_min,disp_max = update_lim(disp_min,disp_max,dis2_mean,dis2_std)
         except: pass
@@ -649,8 +649,8 @@ def main(argv):
             figBase = 'x'+str(xsub[0])+'_'+str(xsub[1]-1)+'y'+str(ysub[0])+'_'+str(ysub[1]-1)
             sio.savemat( figBase+'_ts.mat', {'displacement': Delay});
             print 'saved '+figBase+'_ts.mat'
-            fig2.savefig(figBase+'_ts.png',bbox_inches='tight',transparent=True,dpi=fig_dpi);
-            print 'saved '+figBase+'_ts.png'
+            fig2.savefig(figBase+'_ts.pdf',bbox_inches='tight',transparent=True,dpi=fig_dpi);
+            print 'saved '+figBase+'_ts.pdf'
             if dispFig == 'no':
                 fig.savefig(figBase+'_vel.png',bbox_inches='tight',transparent=True,dpi=fig_dpi);
                 print 'saved '+figBase+'_vel.png'

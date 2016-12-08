@@ -360,7 +360,7 @@ def main(argv):
                     line_yx  += pair_yx
 
             try:
-                plot_cmd = 'view.py --point="'+point_yx+'" --line="'+line_yx+\
+                plot_cmd = 'view.py --point-yx="'+point_yx+'" --line-yx="'+line_yx+\
                            '" --nodisplay -o bonding_points.png -f '+maskFile
                 print plot_cmd
                 os.system(plot_cmd)
