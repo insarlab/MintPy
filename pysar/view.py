@@ -267,7 +267,7 @@ def Usage():
   --opposite    : opposite sign - multiply data by -1
   --fliplr      : flip left-right
   --flipud      : flip up-down
-  -x            : subset in x direction 
+  -x            : subset in x direction
   -y            : subset in y direction
   -l            : subset in latitude
   -L            : subset in longitude
@@ -278,11 +278,15 @@ def Usage():
   --point-yx    : point    coordinate in y,x,y,x,...               [for plot in y/x]
   --point-lalo  : point    coordinate in lat,lon,lat,lon,...       [for plot in lat/lon]
   --line-yx     : line end coordinate in y,x,y,x;y,x,y,x;...       [for plot in y/x]
-  --line-lalo   : line end coordinate in lat,lon,lat,lon;lat,lon,lat,lon;...   [not implemented yet]
+  --line-lalo   : line end coordinate in lat,lon,lat,lon;lat,lon,lat,lon;... 
                   p_yx = '1468,1002,1498,1024,1354,1140,1394,1174'
                   l_yx = '1468,1002,1498,1024;1354,1140,1394,1174,1560,1155'
                   view.py -f mask_all.h5 --point-yx=p_yx --line-yx=l_yx
                   view.py -f velocity_ex.h5 --mask Mask.h5 --point-lalo 33.0922,131.2314,33.1026,131.2441
+                  or GMT format location filw, i.e. transect_lonlat.xy
+                    >
+                    131.1663    33.1157
+                    131.2621    33.0860
 
   Figure Setting:
   --figsize     : figure size in inches (width, length), i.e. '15,10'
@@ -491,7 +495,7 @@ def main(argv):
             elif opt == '--point-yx'      : point_yx     = [int(i)   for i in arg.split(',')];
             elif opt == '--point-lalo'    : point_lalo   = [float(i) for i in arg.split(',')];
             elif opt == '--line-yx'       : line_yx      = [i for i in arg.split(';')];
-            elif opt == '--line-lalo'     : line_lalo    = [i for i in arg.split(';')];
+            elif opt == '--line-lalo'     : line_lalo    = arg
             elif opt == '--no-multilook'  : multilook    = 'no'
 
     elif len(sys.argv)==2:
@@ -536,6 +540,7 @@ def main(argv):
         from matplotlib.colors import LinearSegmentedColormap
         ccmap = LinearSegmentedColormap('BlueRed1', cdict1)
     else:  ccmap=plt.get_cmap(color_map)
+    print 'colormap: '+color_map
 
     ##### Check subset range
     width  = int(float(atr['WIDTH']))
@@ -929,6 +934,7 @@ def main(argv):
                     ref_lat = urcrnrlat + ref_y*lat_step
                     plt.plot(ref_lon,ref_lat,refPoint,ms=ref_size)
                 except:  pass
+
             try:
                 point_lalo
                 point_num = len(point_lalo)/2*2
@@ -937,6 +943,32 @@ def main(argv):
                 point_lat = point_lalo[::2]
                 plt.plot(point_lon,point_lat,'ro')
                 print 'plot points'
+            except: pass
+
+            try:
+                line_lalo
+                if os.path.isfile(line_lalo):
+                    line_lon = []
+                    line_lat = []
+                    fll = open(line_lalo,'r')
+                    for line in fll:
+                        c = line.strip().split()
+                        if c[0].startswith('>'):
+                            plt.plot(line_lon,line_lat,'r--',lw=2)
+                            line_lon = []
+                            line_lat = []
+                        else:
+                            line_lon.append(c[0])
+                            line_lat.append(c[1])
+                    plt.plot(line_lon,line_lat,'k--',lw=2)
+                    fll.close()
+                else:
+                    line_lalo = [i for i in line_lalo.split(';')];
+                    for i in range(0,len(line_lalo)):
+                        line_lon = line_lalo[i].split(',')[1::2]
+                        line_lat = line_lalo[i].split(',')[::2]
+                        plt.plot(line_lon,line_lat,'r--',lw=2)
+                print 'plot lines'
             except: pass
      
             # Colorbar
