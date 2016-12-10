@@ -566,8 +566,8 @@ def main(argv):
     try:
         lon_step = float(atr['X_STEP'])
         lat_step = float(atr['Y_STEP'])
-        lon_unit = atr['Y_UNIT']
-        lat_unit = atr['X_UNIT']
+        #lon_unit = atr['Y_UNIT']
+        #lat_unit = atr['X_UNIT']
         ullon     = float(atr['X_FIRST'])+win_x[0]*lon_step
         ullat     = float(atr['Y_FIRST'])+win_y[0]*lat_step
         llcrnrlon = ullon

@@ -4,18 +4,7 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-# Reference:
-# Tizzani, P., P. Berardino, F. Casu, P. Euillades, M. Manzo,
-# G. P. Ricciardi, G. Zeni, and R. Lanari (2007), Surface 
-# deformation of Long Valley Caldera and Mono Basin, California,
-# investigated with the SBAS-InSAR approach, Remote Sens. 
-# Environ., 108(3), 277-289, doi:10.1016/j.rse.2006.11.015.
 #
-# Gourmelen, N., F. Amelung, and R. Lanari (2010), Interferometric
-# synthetic aperture radar-GPS integration: Interseismic strain
-# accumulation across the Hunter Mountain fault in the eastern
-# California shear zone, J. Geophys. Res., 115, B09408, 
-# doi:10.1029/2009JB007064.
 #
 
 
@@ -90,17 +79,28 @@ def design_matrix(h5file):
 ######################################################################################################
 def Usage():
     print '''
-  *************************************************************************
+***************************************************************************************
   Generates a parameter called temporal coherence for every pixel.
 
-    Usage:
-        temporal_coherence.py inteferograms_file timeseries_file [output_name]
+  Usage:
+      temporal_coherence.py inteferograms_file timeseries_file [output_name]
 
-    Example:
-        temporal_coherence.py Seeded_LoadedData.h5 timeseries.h5
-        temporal_coherence.py Seeded_LoadedData.h5 timeseries.h5 temporal_coherence.h5
+  Example:
+      temporal_coherence.py Seeded_LoadedData.h5 timeseries.h5
+      temporal_coherence.py Seeded_LoadedData.h5 timeseries.h5 temporal_coherence.h5
 
-  **************************************************************************
+  Reference:
+  Tizzani, P., P. Berardino, F. Casu, P. Euillades, M. Manzo, G. P. Ricciardi, G. Zeni,
+  and R. Lanari (2007), Surface deformation of Long Valley Caldera and Mono Basin, 
+  California, investigated with the SBAS-InSAR approach, Remote Sens. Environ., 108(3),
+  277-289, doi:10.1016/j.rse.2006.11.015.
+  
+  Gourmelen, N., F. Amelung, and R. Lanari (2010), Interferometric synthetic aperture
+  radar-GPS integration: Interseismic strain accumulation across the Hunter Mountain 
+  fault in the eastern California shear zone, J. Geophys. Res., 115, B09408, 
+  doi:10.1029/2009JB007064.
+
+***************************************************************************************
     '''
 
 

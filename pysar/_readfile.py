@@ -202,6 +202,16 @@ def read_isce_xml(File):
     return xmldict
 
 #########################################################################
+def merge_attribute(atr1,atr2):
+    atr = dict()
+    for key, value in atr1.iteritems():  atr[key] = str(value)
+    for key, value in atr2.iteritems():  atr[key] = str(value)
+
+    return atr
+
+
+#########################################################################
+##############################  Read Data  ##############################
 #def read_float32(File):
 def read_float32(*args):
     ## Reads roi_pac data (RMG format, interleaved line by line)
