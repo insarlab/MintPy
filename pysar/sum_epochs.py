@@ -19,9 +19,9 @@ import pysar._readfile as readfile
 
 
 #####################################################################
-def Usage():
+def usage():
     print '''
-  ********************************************
+************************************************************************
   Calculate the Sum of Time Series Displacement per epoch
       For each epoch, referencing it as the master date,
       get a new time series and calculate the temporal
@@ -36,14 +36,14 @@ def Usage():
       sum_epochs.py timeseries.h5
       sum_epochs.py timeseries.h5 ouput.h5
 
-  ********************************************
+************************************************************************
     '''
 
 
 #####################################################################
 def main(argv):
     try: timeSeriesFile=argv[0]
-    except: Usage() ; sys.exit(1)
+    except: usage() ; sys.exit(1)
 
     try:    outname=argv[1]
     except: outname='sum_'+timeSeriesFile

@@ -35,7 +35,7 @@ def rewrap(unw):
     return rewrapped
 
 ############################################################
-def Usage():
+def usage():
     print '''
 ***************************************************************
   generating  kml kmz files. (needs geocoded files )
@@ -65,14 +65,13 @@ def Usage():
                        LOS displacement velocity (default)
 
   Example:
- 
-         save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05
-         save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 --ref-size 2
-         save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 -i yes -c jet -r 250
-         save_kml.py -f LoadedData_ChamanT256EnvA6.h5 -d 971220-990703 
-         save_kml.py -f timeseries.h5 -d 20060924         
-         save_kml.py -f geo_filt_100820-101120-sim_HDR_4rlks_c10.unw
-         save_kml.py gsi10m.dem
+      save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05
+      save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 --ref-size 2
+      save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 -i yes -c jet -r 250
+      save_kml.py -f LoadedData_ChamanT256EnvA6.h5 -d 971220-990703 
+      save_kml.py -f timeseries.h5 -d 20060924         
+      save_kml.py -f geo_filt_100820-101120-sim_HDR_4rlks_c10.unw
+      save_kml.py gsi10m.dem
 
 ***************************************************************
     '''
@@ -98,7 +97,7 @@ def main(argv):
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:",['noreference','fig-size',\
                                                'ref-size=','cbar-label=','displacement','cbar-bin-num='])
-        except getopt.GetoptError:  Usage() ; sys.exit(1)
+        except getopt.GetoptError:  usage() ; sys.exit(1)
 
         for opt,arg in opts:
             if   opt == '-f':        File = arg
@@ -117,10 +116,10 @@ def main(argv):
             elif opt == '--noreference'  :   disp_ref = 'no'
 
     elif len(sys.argv)==2:
-        if argv[0]=='-h':               Usage(); sys.exit(1)
+        if argv[0]=='-h':               usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):   File = argv[0]
-        else:                           Usage(); sys.exit(1)
-    else:                             Usage(); sys.exit(1)
+        else:                           usage(); sys.exit(1)
+    else:                             usage(); sys.exit(1)
 
     #######################################################
     ###################  Prepare Data  ####################
@@ -134,7 +133,7 @@ def main(argv):
 
     if ext == '.h5':
         try:      h5file=h5py.File(File,'r')
-        except:   Usage() ; sys.exit(1)
+        except:   usage() ; sys.exit(1)
         outName=File.split('.')[0]
 
         if k in ('interferograms','wrapped','coherence'):
@@ -232,7 +231,7 @@ def main(argv):
         print '%%%%%%%%%%'
         print 'Error:\nThe input file is not geocoded\n'
         print '%%%%%%%%%%'
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
 
 
     #######################################################

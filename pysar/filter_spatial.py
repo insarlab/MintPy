@@ -27,34 +27,33 @@ except:
     sys.exit(1)
 
 
-def Usage():
+def usage():
     print '''
-   ***************************************************************
-   Spatial filtering of the time-series or velocity ...read_real_int16
+*********************************************************************
+  Spatial filtering of the time-series or velocity ...read_real_int16
+  
+  Usage:  filter_spatial.py -f  file -t filter_type  -p parameters
+  
+      file: PySAR h5 files [interferogram, time-series, velocity], 
+            Roi_pac  files [dem, unw, hgt, ]
+            Image files [jpeg, jpg, png]
+  
+      filter_type:
+          lowpass_gaussian  [-p defines the sigma] 
+          highpass_gaussian [-p defines the sigma]
+          lowpass_avg       [-p defines the size of the kernel]
+          highpass_avg      [-p defines the size of the kernel]
+          sobel
+          roberts
+          canny              
+  
+  Example:
+      filter.py -f timeseries.h5 -t lowpass_avg       -p 5  
+      filter.py -f velocity.h5   -t highpass_gaussian -p 3
+      filter.py -f velocity.h5   -t lowpass_avg       -p 5             
+      filter.py -f velocity.h5   -t sobel
 
-   Usage:
-       filter_spatial.py -f  file -t filter_type  -p parameters
-
-           file: PySAR h5 files [interferogram, time-series, velocity], 
-                 Roi_pac  files [dem, unw, hgt, ]
-                 Image files [jpeg, jpg, png]
-
-           filter_type:
-               lowpass_gaussian  [-p defines the sigma] 
-               highpass_gaussian [-p defines the sigma]
-               lowpass_avg       [-p defines the size of the kernel]
-               highpass_avg      [-p defines the size of the kernel]
-               sobel
-               roberts
-               canny              
-
-   Example:
-       filter.py -f timeseries.h5 -t lowpass_avg       -p 5  
-       filter.py -f velocity.h5   -t highpass_gaussian -p 3
-       filter.py -f velocity.h5   -t lowpass_avg       -p 5             
-       filter.py -f velocity.h5   -t sobel
-
-   ***************************************************************
+*********************************************************************
     '''
 
 def filter(data,filtType,par):
@@ -102,12 +101,12 @@ def main(argv):
 
     try:    opts, args = getopt.getopt(argv,"h:f:t:p:")
     except getopt.GetoptError:
-        Usage() ; sys.exit(1)
+        usage() ; sys.exit(1)
   
     if opts==[]:
-        Usage() ; sys.exit(1)
+        usage() ; sys.exit(1)
     for opt,arg in opts:
-        if opt in ("-h","--help"):  Usage(); sys.exit()
+        if opt in ("-h","--help"):  usage(); sys.exit()
         elif opt == '-f':           file     = arg
         elif opt == '-t':           filtType = arg
         elif opt == '-p':           par      = arg

@@ -28,7 +28,7 @@ def diff(data1,data2):
   
     return data
 
-def Usage():
+def usage():
     print '''
 ***************************************************************
   Generates the difference of two input files.
@@ -39,10 +39,10 @@ def Usage():
       output is file1_diff_file2.h5 by default
 
   Example:
-         diff.py velocity_masked.h5 velocity_demCor_masked.h5    demCor.h5
-         diff.py timeseries.h5      timeseries_demCor.h5         demCor.h5
-         diff.py LoadedData.h5      reconstruct_LoadedData.h5
-         diff.py -f velocity.h5,velocity_2.h5  -o velocity_diff.h5
+      diff.py velocity_masked.h5 velocity_demCor_masked.h5    demCor.h5
+      diff.py timeseries.h5      timeseries_demCor.h5         demCor.h5
+      diff.py LoadedData.h5      reconstruct_LoadedData.h5
+      diff.py -f velocity.h5,velocity_2.h5  -o velocity_diff.h5
 
 ***************************************************************
     '''
@@ -54,11 +54,11 @@ def main(argv):
 
     ####################### Inputs Check ########################
     try:    opts, args = getopt.getopt(argv,"h:f:o:",['help'])
-    except getopt.GetoptError:    Usage() ; sys.exit(1)
+    except getopt.GetoptError:    usage() ; sys.exit(1)
   
     if len(sys.argv) > 4:
         for opt,arg in opts:
-            if opt in ("-h","--help"):  Usage();  sys.exit()
+            if opt in ("-h","--help"):  usage();  sys.exit()
             elif opt == '-f':   fileList = arg.split(',')
             elif opt == '-o':   outName  = arg
   
@@ -66,7 +66,7 @@ def main(argv):
         fileList = [sys.argv[1],sys.argv[2]]
         try: outName = sys.argv[3]
         except: pass
-    else: Usage();  sys.exit(1)
+    else: usage();  sys.exit(1)
   
     print '\n**************** Diff *******************'
     print 'Input files: '

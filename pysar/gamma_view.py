@@ -10,33 +10,31 @@ import os
 import getopt
 import pysar._readfile as readfile
 
-def Usage():
+def usage():
     print '''
 **************************************************************
-**************************************************************
-  Display GAMMA products:
-     support files: .mli, .slc 
+  Display GAMMA products
+      support files: .mli, .slc 
 
   Usage:
-           gamma_view.py FILE
-           gamma_view.py -f FILE -x row_subset -y col_subset -r mli_rg -a mli_az
-           gamma_view.py -f FILE -l lat_subset -L lon_subset (not implemented)
+      gamma_view.py FILE
+      gamma_view.py -f FILE -x row_subset -y col_subset -r mli_rg -a mli_az
+      gamma_view.py -f FILE -l lat_subset -L lon_subset (not implemented)
 
-           -f: (input) SLC/intensity image (FLOAT or SCOMPLEX data type)
-           -x: subset in x directioin
-           -y: subset in y direction
-           -l: subset in latitude
-           -L: subset in longitude
-           -r: multilook number in range/x direction [default: 1]
-           -a: multilook number in azimuth/y direction [default: 1 for .mli, 2 for .slc]
-           -P: display ras file: yes or no [default: no]
+      -f: (input) SLC/intensity image (FLOAT or SCOMPLEX data type)
+      -x: subset in x directioin
+      -y: subset in y direction
+      -l: subset in latitude
+      -L: subset in longitude
+      -r: multilook number in range/x direction [default: 1]
+      -a: multilook number in azimuth/y direction [default: 1 for .mli, 2 for .slc]
+      -P: display ras file: yes or no [default: no]
 
   Example:
-           gamma_view.py 101016.mli
-           gamma_view.py -f 101016.mli -x 760:1060  -y 620:960
-           gamma_view.py -f 101016.slc -x 3200:4000 -y 5500:7100 -P yes
-           
-**************************************************************
+      gamma_view.py 101016.mli
+      gamma_view.py -f 101016.mli -x 760:1060  -y 620:960
+      gamma_view.py -f 101016.slc -x 3200:4000 -y 5500:7100 -P yes
+
 **************************************************************
     '''
 
@@ -48,10 +46,10 @@ def main(argv):
     if len(sys.argv)>2:
   
         try:  opts, args = getopt.getopt(argv,"h:f:x:y:l:L:r:a:o:P:")
-        except getopt.GetoptError:  Usage(); sys.exit(1)
+        except getopt.GetoptError:  usage(); sys.exit(1)
     
         for opt, arg in opts:
-            if opt in ("-h","--help"):    Usage(); sys.exit()
+            if opt in ("-h","--help"):    usage(); sys.exit()
             elif opt == '-f':   file = arg
             elif opt == '-x':   xsub = [int(i) for i in arg.split(':')];      xsub.sort()
             elif opt == '-y':   ysub = [int(i) for i in arg.split(':')];      ysub.sort()
@@ -63,10 +61,10 @@ def main(argv):
             elif opt == '-P':   disRas = arg
     
         try:     file
-        except:  Usage(); sys.exit(1)
+        except:  usage(); sys.exit(1)
   
     elif len(sys.argv)==2:   file = argv[0]
-    else:                    Usage(); sys.exit(1)
+    else:                    usage(); sys.exit(1)
         
     ############################################################
 
@@ -123,7 +121,7 @@ def main(argv):
         os.system(rasCmd)
     else:
         print 'Not recognized file extension!'
-        Usage(); sys.exit(1)
+        usage(); sys.exit(1)
 
     # display .ras file
     if disRas in ('yes','Yes','Y','y','YES'):

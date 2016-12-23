@@ -19,7 +19,7 @@ import h5py
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 
-def Usage():
+def usage():
     print '''
 **********************************************************************************
   Generating a mask file with the same size of the input file
@@ -65,10 +65,10 @@ def main(argv):
     ##### Check Inputs
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,'h:f:m:M:x:y:o:d:e:',['nonzero'])
-        except getopt.GetoptError:      Usage() ; sys.exit(1)
+        except getopt.GetoptError:      usage() ; sys.exit(1)
   
         for opt,arg in opts:
-            if opt in ("-h","--help"):   Usage();   sys.exit()
+            if opt in ("-h","--help"):   usage();   sys.exit()
             elif opt == '-f':         File = arg
             elif opt == '-m':         minV = float(arg)
             elif opt == '-M':         maxV = float(arg)
@@ -80,10 +80,10 @@ def main(argv):
             elif opt == '--nonzero':  method     = 'nonzero'
 
     elif len(sys.argv)==2:
-        if   argv[0] in ['-h','--help']:    Usage(); sys.exit(1)
+        if   argv[0] in ['-h','--help']:    usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):       File = argv[0]
         else:    print 'Input file does not existed: '+argv[0];  sys.exit(1)
-    else:                                   Usage(); sys.exit(1)
+    else:                                   usage(); sys.exit(1)
 
     ##### Input File Info
     atr = readfile.read_attributes(File)

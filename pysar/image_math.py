@@ -43,44 +43,40 @@ def diff(data1,data2):
 
 
 #######################  Usage  ######################
-def Usage():
+def usage():
     print '''
 ***************************************************************
-***************************************************************
-Basic Mathmatic Operations of file and value
+  Basic Mathmatic Operations of file and value
  
-   Usage:
-          image_math.py file operator operand [outputFileName]
+  Usage:  image_math.py file operator operand [outputFileName]
 
-      file     : input file. Support all PySAR HDF5 and ROI_PAC files
-                   PySAR HDF5 files: velocity, timeseries, interferograms, ...
-                   ROI_PAC    files: .unw .cor .int .hgt .dem .trans
-      operator : mathmatic operator, including: + - * / ^, other names:
-                   +, plus, add, addition
-                   -, minus, substract, substraction
-                   *, multiply, multiplication, times
-                   /, divide, division, obelus
-                   ^, exp, exponential [not implemented yet]
-      operand  : input value
-      outName  : output file name (optional, default is file_operatorOperand)
-   
-   Example:
+     file     : input file. Support all PySAR HDF5 and ROI_PAC files
+                  PySAR HDF5 files: velocity, timeseries, interferograms, ...
+                  ROI_PAC    files: .unw .cor .int .hgt .dem .trans
+     operator : mathmatic operator, including: + - * / ^, other names:
+                  +, plus, add, addition
+                  -, minus, substract, substraction
+                  *, multiply, multiplication, times
+                  /, divide, division, obelus
+                  ^, exp, exponential [not implemented yet]
+     operand  : input value
+     outName  : output file name (optional, default is file_operatorOperand)
+  
+  Example:
+      image_math.py velocity.h5   '+' 0.5
+      image_math.py velocity.h5   '-' 0.5
+      image_math.py velocity.h5   '*' 1.5
+      image_math.py velocity.h5   '/' 1.5
+      image_math.py velocity.h5   add    0.5
+      image_math.py velocity.h5   divide 0.5 velocity_divide0.5.h5
 
-          image_math.py velocity.h5   '+' 0.5
-          image_math.py velocity.h5   '-' 0.5
-          image_math.py velocity.h5   '*' 1.5
-          image_math.py velocity.h5   '/' 1.5
-          image_math.py velocity.h5   add    0.5
-          image_math.py velocity.h5   divide 0.5 velocity_divide0.5.h5
+      image_math.py timeseries.h5 '+' 0.5
+      image_math.py LoadedData.h5 '+' 0.5
+      image_math.py temporal_coherence.h5 '+' 0.5
 
-          image_math.py timeseries.h5 '+' 0.5
-          image_math.py LoadedData.h5 '+' 0.5
-          image_math.py temporal_coherence.h5 '+' 0.5
+      image_math.py geo_080212_101120.unw '+' 0.5
+      image_math.py geo_080212_101120.cor '+' 0.5
 
-          image_math.py geo_080212_101120.unw '+' 0.5
-          image_math.py geo_080212_101120.cor '+' 0.5
-
-***************************************************************
 ***************************************************************
     '''
 
@@ -94,7 +90,7 @@ def main(argv):
         operator = sys.argv[2]
         operand  = float(sys.argv[3])
     except:
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
   
     if   operator in ['+','plus',  'add',      'addition']:        operator = 'plus'
     elif operator in ['-','minus', 'substract','substraction']:    operator = 'minus'

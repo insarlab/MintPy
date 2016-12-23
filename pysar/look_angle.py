@@ -12,29 +12,25 @@ import getopt
 import h5py
 
 
-def Usage():
+def usage():
     print '''
 ***************************************************************
-***************************************************************
-
   Generating look angle for each pixel
 
   Usage:
-       
        look_angke velocity.h5
 
-***************************************************************
 ***************************************************************
     '''
 
 def main(argv):
     try:  opts, args = getopt.getopt(argv,"f:h")
-    except getopt.GetoptError:  Usage() ; sys.exit(1)
+    except getopt.GetoptError:  usage() ; sys.exit(1)
   
   
-    if opts==[]:  Usage() ; sys.exit(1)
+    if opts==[]:  usage() ; sys.exit(1)
     for opt,arg in opts:
-        if opt in ("-h","--help"):  Usage();  sys.exit()
+        if opt in ("-h","--help"):  usage();  sys.exit()
         elif opt == '-f':  File = arg
     
         h5file=h5py.File(File,'r')

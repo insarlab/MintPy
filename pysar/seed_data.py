@@ -257,7 +257,7 @@ def print_warning(next_method):
 
 
 #########################################  Usage  ##############################################
-def Usage():
+def usage():
     print '''
 ****************************************************************************************
   Referencing all interferograms to the same pixel.
@@ -302,15 +302,15 @@ def Usage():
           b. non nan  in data (stack)
 
   Examples:
-     seed_data.py -f LoadedData.h5 -t ShikokuT417F650_690AlosA.template
-     seed_data.py -f LoadedData.h5 -t ShikokuT417F650_690AlosA.template  -m Mask.h5
-     seed_data.py -f 091120_100407.h5    -y 257       -x 151             -m Mask.h5
-     seed_data.py -f velocity.h5         -l 34.45     -L -116.23         -m Mask.h5
-     seed_data.py -f timeseries.h5       -r Seeded_velocity.h5
-
-     seed_data.py -f LoadedData.h5 --manual
-     seed_data.py -f LoadedData.h5 --max-coherence -c average_spatial_coherence.h5
-     seed_data.py -f timeseries.h5 --global-average
+      seed_data.py -f LoadedData.h5 -t ShikokuT417F650_690AlosA.template
+      seed_data.py -f LoadedData.h5 -t ShikokuT417F650_690AlosA.template  -m Mask.h5
+      seed_data.py -f 091120_100407.h5    -y 257       -x 151             -m Mask.h5
+      seed_data.py -f velocity.h5         -l 34.45     -L -116.23         -m Mask.h5
+      seed_data.py -f timeseries.h5       -r Seeded_velocity.h5
+ 
+      seed_data.py -f LoadedData.h5 --manual
+      seed_data.py -f LoadedData.h5 --max-coherence -c average_spatial_coherence.h5
+      seed_data.py -f timeseries.h5 --global-average
 
 ****************************************************************************************
     '''
@@ -334,10 +334,10 @@ def main(argv):
     if len(sys.argv) > 2:
         try:  opts, args = getopt.getopt(argv,"h:c:f:m:y:x:l:L:t:o:r:",\
                                          ['manual','max-coherence','global-average','random'])
-        except getopt.GetoptError:  Usage() ; sys.exit(1)
+        except getopt.GetoptError:  usage() ; sys.exit(1)
 
         for opt,arg in opts:
-            if   opt in ("-h","--help"):   Usage();  sys.exit()
+            if   opt in ("-h","--help"):   usage();  sys.exit()
             elif opt == '-f':        File     = arg
             elif opt == '-m':        maskFile = arg
             elif opt == '-c':        corFile  = arg
@@ -356,10 +356,10 @@ def main(argv):
             elif opt == '--random'         :  method = 'random'
 
     elif len(sys.argv)==2:
-        if   argv[0]=='-h':            Usage(); sys.exit(1)
+        if   argv[0]=='-h':            usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):  File = argv[0]
         else:  print 'Input file does not existed: '+argv[0];  sys.exit(1)
-    elif len(sys.argv)<2:             Usage(); sys.exit(1)
+    elif len(sys.argv)<2:             usage(); sys.exit(1)
 
     ##### Input File Info
     try:
@@ -368,7 +368,7 @@ def main(argv):
         k = atr['FILE_TYPE']
         length = int(atr['FILE_LENGTH'])
         width  = int(atr['WIDTH'])
-    except:  Usage() ; sys.exit(1)
+    except:  usage() ; sys.exit(1)
     ext = os.path.splitext(File)[1].lower()
 
     try:    outFile

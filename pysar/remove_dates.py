@@ -13,24 +13,25 @@ import h5py
 import sys
 
 
-def Usage():
+def usage():
     print '''
-  ######################################
-
+***************************************************************
   remove_dates.py timeseries_file  dates_to_remove
 
   remove_dates.py timeseries.h5 '20050708,20060304,20101101'
 
-  ######################################
+***************************************************************
     '''
 
+
+###############################################################################
 def main(argv):
 
     try:
         tsFile=sys.argv[1]
         dates2rmv=sys.argv[2]
     except:
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
   
     h5file=h5py.File(tsFile,'r')
     k=h5file.keys()
@@ -59,7 +60,7 @@ def main(argv):
         print 'mask not found!'
 
 
-
+###############################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
 

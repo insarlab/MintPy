@@ -27,10 +27,10 @@ def print_attrs(name, obj):
 
 
 ############################################################
-def Usage():
+def usage():
     print '''
 ***************************************************************
-Displayes the general information of the PySAR product h5 file.
+  Displayes the general information of the PySAR product h5 file.
 
   Usage:
       info.py hdf5File  [eNum]
@@ -56,7 +56,7 @@ Displayes the general information of the PySAR product h5 file.
 def main(argv):
 
     try:    File = argv[0]
-    except: Usage();sys.exit(1)
+    except: usage();sys.exit(1)
     h5file=h5py.File(File,'r')
 
     ## Print Structure Tree of Input HDF5 File

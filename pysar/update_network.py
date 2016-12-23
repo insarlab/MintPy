@@ -18,28 +18,25 @@ import pysar._network as pnet
 
 
 ######################################
-def Usage():
+def usage():
     print '''
-  *********************************************************
-
+*********************************************************************************
   Update the network of coherence/interferograms based on 
-    the reference network of interferograms/coherence.
+      the reference network of interferograms/coherence.
 
-  usage:
-       updateNetwork.py -f inputFile -r referenceFile
-
-    -f : input file stored in hdf5 file format
-    -r : reference file stored in hdf5 file format
-         or pairs list file (list)
-    -o : output file name
+  Usage:  updateNetwork.py -f inputFile -r referenceFile
+      -f : input file stored in hdf5 file format
+      -r : reference file stored in hdf5 file format
+           or pairs list file (list)
+      -o : output file name
 
   Example:
-       update_network.py -f Coherence.h5 -r Modified_LoadedData.h5
-       update_network.py -f LoadedData.h5 -r Pairs.list
-       update_network.py -f LoadedData.h5 -r Pairs1.list,Pairs2.list
-       update_network.py -f LoadedData.h5 -r Paris_pre1995.list -o LoadedData_pre1995.h5
+      update_network.py -f Coherence.h5 -r Modified_LoadedData.h5
+      update_network.py -f LoadedData.h5 -r Pairs.list
+      update_network.py -f LoadedData.h5 -r Pairs1.list,Pairs2.list
+      update_network.py -f LoadedData.h5 -r Paris_pre1995.list -o LoadedData_pre1995.h5
 
-  *********************************************************
+*********************************************************************************
     '''
 
 ######################################
@@ -47,10 +44,10 @@ def main(argv):
 
     if len(sys.argv)>4:
         try:        opts, args = getopt.getopt(argv,"h:f:o:r:")
-        except getopt.GetoptError:       Usage();  sys.exit(1)
+        except getopt.GetoptError:       usage();  sys.exit(1)
    
         for opt,arg in opts:
-            if opt in ("-h","--help"):  Usage(); sys.exit()
+            if opt in ("-h","--help"):  usage(); sys.exit()
             elif opt == '-f':           inFile  = arg
             elif opt == '-r':           refFile = arg
             elif opt == '-o':           outFile = arg
@@ -58,8 +55,8 @@ def main(argv):
         try:
             inFile
             refFile
-        except:  Usage(); sys.exit(1)
-    else:       Usage(); sys.exit(1)
+        except:  usage(); sys.exit(1)
+    else:       usage(); sys.exit(1)
   
     try:     outFile
     except:  outFile = 'Modified_'+inFile
@@ -69,7 +66,7 @@ def main(argv):
     inK0=h5fileIn.keys()[0]
     if not inK0  in ('interferograms','coherence'):
         print 'Input file           should be interferograms/coherence';
-        Usage(); sys.exit(1)
+        usage(); sys.exit(1)
     print '\n************* Update Network ***************************'
     print 'Match/Update epoch info in '+inFile+' to '+refFile
   

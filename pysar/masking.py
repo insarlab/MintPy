@@ -156,7 +156,7 @@ def mask_file(in_file,M,out_file=''):
 
 
 ############################################################
-def Usage():
+def usage():
     print '''
 **************************************************************************
   Masking File(s)
@@ -200,11 +200,11 @@ def main(argv):
 
     ######################################
     try:    opts, args = getopt.getopt(argv,"h:f:m:t:x:y:o:",['no-parallel'])
-    except getopt.GetoptError:    Usage() ; sys.exit(1)
+    except getopt.GetoptError:    usage() ; sys.exit(1)
 
     if len(sys.argv) > 3:
         for opt,arg in opts:
-            if opt in ("-h","--help"):     Usage();  sys.exit()
+            if opt in ("-h","--help"):     usage();  sys.exit()
             elif opt == '-f':        File     = arg.split(',')
             elif opt == '-m':        maskFile = arg
             elif opt == '-t':        thr  = float(arg)
@@ -218,12 +218,12 @@ def main(argv):
             File     = argv[0].split(',')
             maskFile = argv[1]
         else:  print 'Input file does not existed: '+argv[0]+' / '+argv[1];  sys.exit(1)
-    else:   Usage();  sys.exit(1)
+    else:   usage();  sys.exit(1)
 
     try:
         File
         maskFile
-    except:    Usage() ; sys.exit(1)
+    except:    usage() ; sys.exit(1)
 
     ##### Check Input File List
     print '\n****************** Masking *********************'

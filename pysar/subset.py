@@ -349,7 +349,7 @@ def subset_file(File,sub_x,sub_y,outfill=np.nan,outName=''):
 
 
 ################################################################
-def Usage():
+def usage():
     print '''
 ****************************************************************
   Generate a subset of the dataset
@@ -411,7 +411,7 @@ def main(argv):
                                             'parallel','outfill=','outfill-nan','outfill-zero'])
         except getopt.GetoptError:
             print 'Error while getting args'
-            Usage() ; sys.exit(1)
+            usage() ; sys.exit(1)
 
         for opt,arg in opts:
             if   opt == '-f':   File         = arg.split(',')
@@ -431,9 +431,9 @@ def main(argv):
         File         = argv[0].split(',')
         templateFile = argv[1]
     elif len(sys.argv)==2:
-        if argv[0] in ['-h','--help']:  Usage(); sys.exit()
-        else: print '\nERROR: A minimum of 3 inputs is needed.\n'; Usage(); sys.exit()
-    else: Usage(); sys.exit(1)
+        if argv[0] in ['-h','--help']:  usage(); sys.exit()
+        else: print '\nERROR: A minimum of 3 inputs is needed.\n'; usage(); sys.exit()
+    else: usage(); sys.exit(1)
 
     ##### Check Input file Info
     print '\n**************** Subset *********************'
@@ -498,7 +498,7 @@ def main(argv):
             try: sub_lat
             except:
                 try: sub_lon
-                except: print 'ERROR: no subset is setted.'; Usage(); sys.exit(1)
+                except: print 'ERROR: no subset is setted.'; usage(); sys.exit(1)
 
     ##### Subset range radar to geo
     width  = int(atr['WIDTH'])
@@ -506,11 +506,11 @@ def main(argv):
     print 'input file length: '+str(length)
     print 'input file width : '+str(width)
 
-    try: sub_y = coord_geo2radar(sub_lat,atr,'latitude')
+    try: sub_y = coord_geo2radar(sub_lat,atr,'latitude');  sub_y.sort()
     except:
         try:    sub_y
         except: sub_y = [0,length]
-    try: sub_x = coord_geo2radar(sub_lon,atr,'longitude')
+    try: sub_x = coord_geo2radar(sub_lon,atr,'longitude');  sub_x.sort()
     except:
         try:    sub_x
         except: sub_x = [0,width]

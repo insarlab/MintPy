@@ -84,12 +84,12 @@ def multilook_attributes(atr_dict,lks_az,lks_rg):
 
 
 ##################################################################################################
-def Usage():
+def usage():
     print '''
 ***************************************************************
+  Multilooing 
 
   Usage:
-
      multi_looking.py  file  azimuth_looks  range_looks  [output_name]
 
      file: PySAR h5 files [interferogram, time-series, velocity] 
@@ -100,7 +100,6 @@ def Usage():
      output_name  : optional, file_a*lks_r*lks.$ext by default.
 
   Example:
-       
      multi_looking.py  velocity.h5        15 15
      multi_looking.py  velocity.h5        15 15 velocity_mli.h5
      multi_looking.py  LoadedData.h5      15 20
@@ -123,7 +122,7 @@ def main(argv):
         alks = int(argv[1])
         rlks = int(argv[2])
     except:
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
   
     ext = os.path.splitext(File)[1]
     try:     outName = argv[3]

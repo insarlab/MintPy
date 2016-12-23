@@ -29,38 +29,36 @@ def yyyymmdd2years(date):
     return yy
 
 ############################################################################
-def Usage():
+def usage():
     print '''
 ****************************************************************
-    Estimating displacement velocity for each pixel.
-    It also generates the standadrd deviation of the velocity and the RMSE.
+  Estimating displacement velocity for each pixel.
+      It also generates the standadrd deviation of the velocity and the RMSE.
 
-    Usage:
+  Usage:
+      timeseries2velocity.py -f timeseries.h5 [-o OutputName.h5 -m minimum_date -M maximum_date -E exclude_dates]
 
-         timeseries2velocity.py -f timeseries.h5 [-o OutputName.h5 -m minimum_date -M maximum_date -E exclude_dates]
+      -f: time series h5 file
+      -E: excluded dates for velocity estimation, or drop_date.txt
+          e.g.: -E 20040502,20060708,20090103
+                -E drop_date.txt
+                drop_date.txt: 20040502
+                               20060708
+                               20090103
+      -m: earliest date  for velocity estimation
+      -M: latest   date  for velocity estimation
+      -o: output file name
+      -t: template file
+          pysar.drop.date  = 20070107,20080712,20090530,20090830,20101203
 
-         -f: time series h5 file
-         -E: excluded dates for velocity estimation, or drop_date.txt
-             e.g.: -E 20040502,20060708,20090103
-                   -E drop_date.txt
-                   drop_date.txt: 20040502
-                                  20060708
-                                  20090103
-         -m: earliest date  for velocity estimation
-         -M: latest   date  for velocity estimation
-         -o: output file name
-         -t: template file
-             pysar.drop.date  = 20070107,20080712,20090530,20090830,20101203
-
-    Example:
-
-         timeseries2velocity.py timeSeriesFile.h5
-         timeseries2velocity.py -f timeseries_ECMWF_demCor_plane.h5 -t $TE/KyushuT73F2980_2990AlosD.template
-         timeseries2velocity.py -f timeseries.h5 -m 20080201
-         timeseries2velocity.py -f timeseries.h5 -m 20080201 -M 20100508
-         timeseries2velocity.py -f timeseries.h5 -m 20080201 -M 20100508 -E 20090703
-         timeseries2velocity.py -f timeseries.h5 -E 20040502,20060708,20090103
-         timeseries2velocity.py -f timeseries_ECMWF_demCor.h5 -E drop_date.txt
+  Example:
+      timeseries2velocity.py timeSeriesFile.h5
+      timeseries2velocity.py -f timeseries_ECMWF_demCor_plane.h5 -t $TE/KyushuT73F2980_2990AlosD.template
+      timeseries2velocity.py -f timeseries.h5 -m 20080201
+      timeseries2velocity.py -f timeseries.h5 -m 20080201 -M 20100508
+      timeseries2velocity.py -f timeseries.h5 -m 20080201 -M 20100508 -E 20090703
+      timeseries2velocity.py -f timeseries.h5 -E 20040502,20060708,20090103
+      timeseries2velocity.py -f timeseries_ECMWF_demCor.h5 -E drop_date.txt
 
 ****************************************************************
     '''
@@ -70,7 +68,7 @@ def main(argv):
 
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,"f:E:m:M:h:o:t:")
-        except getopt.GetoptError:   Usage() ; sys.exit(1)
+        except getopt.GetoptError:   usage() ; sys.exit(1)
     
         for opt,arg in opts:
             if   opt == '-f':    timeSeriesFile   = arg
@@ -81,10 +79,10 @@ def main(argv):
             elif opt == '-t':    templateFile     = arg
   
     elif len(sys.argv)==2:
-        if   argv[0]=='-h':  Usage(); sys.exit(1)
+        if   argv[0]=='-h':  usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):   timeSeriesFile = argv[0]
-        else:  Usage(); sys.exit(1)
-    else:  Usage(); sys.exit(1)    
+        else:  usage(); sys.exit(1)
+    else:  usage(); sys.exit(1)    
   
     ##### Read excluded date list Input
     try:  datesNot2include

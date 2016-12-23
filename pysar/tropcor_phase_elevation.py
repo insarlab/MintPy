@@ -20,29 +20,25 @@ import pysar._readfile as readfile
 
 
 ######################################
-def Usage():
+def usage():
     print '''
-***************************************************************
-***************************************************************
-
+***************************************************************************
   Tropospheric correction with height-correlation approach
 
   Usage:
+      tropcor_phase_eleveation.py -f timeSeriesFile -d demfile -p polynomial_order
+           -m maskFile [ -M maskThreshold -t corelation_threshold -o outputFile ]
 
-      tropcor_phase_eleveation.py -f timeSeriesFile -d demfile -p polynomial_order -m maskFile [ -M maskThreshold -t corelation_threshold -o outputFile ]
-
-      -t     : correlation threshold, correct topo-related phase only when that epoch-dem's correlation < threshold;
-               if not set, all epochs will be corrected.
+      -t     : correlation threshold, correct topo-related phase only when that 
+               epoch-dem's correlation < threshold; if not set, all epochs will be corrected.
       --plot : save dem - data plot into files.
 
   Example:
-      
       tropcor_phase_elevation.py -f timeseries_demCor.h5 -d radar_8rlks.hgt -p 1 -m temporal_coherence.h5 -M 0.9 -t 0.5
       tropcor_phase_elevation.py -f timeseries_demCor.h5 -d radar_8rlks.hgt -p 2 -m Mask.h5 -t 0.5
       tropcor_phase_elevation.py -f timeseries_demCor.h5 -d radar_8rlks.hgt -p 1 -m Mask.h5
 
-***************************************************************
-***************************************************************
+***************************************************************************
     '''
 
 ######################################
@@ -54,7 +50,7 @@ def main(argv):
 
     ##### Check Inputs
     try:  opts, args = getopt.getopt(argv,"f:d:p:m:M:t:o:",['plot'])
-    except getopt.GetoptError:  Usage() ; sys.exit(1)
+    except getopt.GetoptError:  usage() ; sys.exit(1)
 
     for opt,arg in opts:
         if   opt == '-f':        timeSeriesFile = arg
@@ -70,7 +66,7 @@ def main(argv):
         timeSeriesFile
         demFile
     except:
-        Usage() ; sys.exit(1)
+        usage() ; sys.exit(1)
     
     try:       p
     except:    p=1
@@ -106,7 +102,7 @@ def main(argv):
 
     if   kMask=='mask':                 ndx = Mask != 0
     elif kMask=='temporal_coherence':   ndx = Mask >  maskThr
-    else:  print 'Mask file not recognized!';  Usage();  sys.exit(1)    
+    else:  print 'Mask file not recognized!';  usage();  sys.exit(1)    
 
     #h5Mask.close()
 

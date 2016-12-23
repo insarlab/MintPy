@@ -12,22 +12,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pysar._readfile as readfile
 
-def Usage():
+def usage():
     print '''
 ************************************************************************
-************************************************************************
+  Calculates the correlation of the dem with the InSAR velocity field.
+ 
+  Usage:
+      correlation_with_dem.py dem_file velocity_file
+  Example:
+      correlation_with_dem.py radar_8rlks.hgt  velocity_masked.h5
 
-   Calculates the correlation of the dem with the InSAR velocity field.
-  
-   Usage:
-     
-     correlation_with_dem.py dem_file velocity_file
-
-   Example:
-
-     correlation_with_dem.py radar_8rlks.hgt  velocity_masked.h5
-
-***********************************************************************
 ***********************************************************************
     '''
 
@@ -35,8 +29,7 @@ try:
     demFile=sys.argv[1]
     File=sys.argv[2]
 except:
-    Usage()
-    sys.exit(1)
+    usage();  sys.exit(1)
 
 
 if os.path.basename(demFile).split('.')[1]=='hgt':

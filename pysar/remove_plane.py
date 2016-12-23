@@ -23,37 +23,34 @@ import pysar._writefile as writefile
 
 
 ######################################
-def Usage():
+def usage():
     print '''
-********************************************************
-********************************************************
+**************************************************************************
+  Remove phase ramp
 
-    Remove phase ramp
+  Usage:
+      remove_plane.py file method [Maskfile]
 
-    Usage:
-        remove_plane.py file method [Maskfile]
+      -f : input file (list) that need to remove ramp
+      -s : quadratic, plane, quardatic_range, quadratic_azimiuth, plane_range, plane_azimuth
+      -m : (optional) a mask file with 0 values for those pixels which are not considered in
+             plane estimation.
+      -t : template file
+      -o : output name
+      -y : subset in azimuth/row direction for multiple surface removal within one track
+      --save-mask : plot mask file and save it to file.
 
-        -f : input file (list) that need to remove ramp
-        -s : quadratic, plane, quardatic_range, quadratic_azimiuth, plane_range, plane_azimuth
-        -m : (optional) a mask file with 0 values for those pixels which are not considered in
-               plane estimation.
-        -t : template file
-        -o : output name
-        -y : subset in azimuth/row direction for multiple surface removal within one track
-        --save-mask : plot mask file and save it to file.
+  example:
+      remove_plane.py  timeseries.h5 plane
+      remove_plane.py  timeseries.h5 plane             Mask.h5
+      remove_plane.py  LoadedData.h5 quadratic_range   Mask.h5
 
-    example:
-        remove_plane.py  timeseries.h5 plane
-        remove_plane.py  timeseries.h5 plane             Mask.h5
-        remove_plane.py  LoadedData.h5 quadratic_range   Mask.h5
+      remove_plane.py  -f timeseries.h5 -t KyushuT424F640AlosA.template
 
-        remove_plane.py  -f timeseries.h5 -t KyushuT424F640AlosA.template
+      remove_plane.py  -f 'geo_100102_*.unw'  -s plane     -m Mask_tempCoh.h5
+      remove_plane.py  -f 090214_101120.unw   -s quadratic -m Mask_tempCoh.h5 -y 0,2400,2000,6843
 
-        remove_plane.py  -f 'geo_100102_*.unw'  -s plane     -m Mask_tempCoh.h5
-        remove_plane.py  -f 090214_101120.unw   -s quadratic -m Mask_tempCoh.h5 -y 0,2400,2000,6843
-
-********************************************************
-********************************************************
+**************************************************************************
     '''
 
 ######################################
@@ -66,10 +63,10 @@ def main(argv):
   
     if len(sys.argv) > 4:
         try: opts, args = getopt.getopt(argv,'h:f:m:o:s:t:y:',['help','save-mask'])
-        except getopt.GetoptError:  print 'Error while getting args!\n';  Usage(); sys.exit(1)
+        except getopt.GetoptError:  print 'Error while getting args!\n';  usage(); sys.exit(1)
   
         for opt,arg in opts:
-            if   opt in ['-h','--help']:    Usage(); sys.exit()
+            if   opt in ['-h','--help']:    usage(); sys.exit()
             elif opt in '-f':    File     = arg
             elif opt in '-m':    maskFile = arg
             elif opt in '-o':    outName  = arg
@@ -83,7 +80,7 @@ def main(argv):
         surfType      = argv[1].lower()
         try: maskFile = argv[2]
         except: pass
-    else: Usage(); sys.exit(1)
+    else: usage(); sys.exit(1)
   
     print '\n*************** Phase Ramp Removal ***********************'
     ## Multiple Surfaces

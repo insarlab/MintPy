@@ -230,162 +230,162 @@ def plot_dem_yx(ax, dem, demShade='yes', demContour='no', contour_step=200.0, co
 
 
 ##################  Usage  #######################
-def Usage():
+def usage():
     print '''
 *****************************************************************************************
-
   Display PySAR / ROI_PAC products:
 
+  ---------------------------------------------------------------------------------------
+  Usage:  
+      view.py file
+      view.py -f file -m minValue -M maxValue -r 5 -p 5
+      view.py -f file -t template_file
+      view.py -f file -D DEM.dem
+      view.py -f file --save --nodisplay
+      view.py -f file -l Latsub -L Lonsub
 
-  -f            : file to display, including:
-                  PySAR HDF5 files: velocity.h5, timeseries.h5, LoadedData.h5, ...
-                  ROI_PAC    files: .unw .cor .int .hgt .dem .trans .mli
-  -d            : display a specific date(s)     of time-series/interferograms (if not specified, all epochs are diplayed)
-  -e            : display a epoch (start from 1) of time-series/interferograms (if not specified, all epochs are diplayed).
-  -E/--exclude  : exclude epoch list for timeseries/interferograms.
-                  Set '-E --' to disable the exclude list in template, i.e.
-                      view.py -f timeseries.h5 -t KyushuT73F2980AlosD.template -E --
-  -m            : minimum bound of the colorscale (default is the minimum value of the data set, if set, -w will be no)
-  -M            : Maximum bound of the colorscale (default is the maximum value of the data set, if set, -w will be no)
-  -t            : template file, i.e.
-                  pysar.view.row     = 5
-                  pysar.view.column  = 20
-                  pysar.view.min     = -7
-                  pysar.view.max     = 7
-  --mask        : mask file for display (useful when displaying un-masked files)
+      -f : file to display, including:
+           PySAR HDF5 files: velocity.h5, timeseries.h5, LoadedData.h5, ...
+           ROI_PAC    files: .unw .cor .int .hgt .dem .trans .mli
+      -d : display a specific date(s)     of time-series/interferograms (if not specified, all epochs are diplayed)
+      -e : display a epoch (start from 1) of time-series/interferograms (if not specified, all epochs are diplayed).
+      -m : minimum bound of the colorscale (default is the minimum value of the data set, if set, -w will be no)
+      -M : Maximum bound of the colorscale (default is the maximum value of the data set, if set, -w will be no)
+      -t : template file, i.e.
+           pysar.view.row     = 5
+           pysar.view.column  = 20
+           pysar.view.min     = -7
+           pysar.view.max     = 7
+      -E/--exclude : exclude epoch list for timeseries/interferograms.
+                     Set '-E --' to disable the exclude list in template, i.e.
+                     view.py -f timeseries.h5 -t KyushuT73F2980AlosD.template -E --
+      --mask : mask file for display (useful when displaying un-masked files)
 
-  DEM:
-  -D               : dem file (show both shaded relief and contour by default)
-  --dem-nocontour  : do not show DEM contour
-  --dem-noshade    : do not show DEM shaded relief
-  --contour-step   : contour step                      (default is 200 meters)
-  --contour-smooth : contour smooth ( Sigma of Gaussian Filter, default is 3.0; Set to 0 for no smoothing) 
+    DEM:
+      -D               : dem file (show both shaded relief and contour by default)
+      --dem-nocontour  : do not show DEM contour
+      --dem-noshade    : do not show DEM shaded relief
+      --contour-step   : contour step                      (default is 200 meters)
+      --contour-smooth : contour smooth ( Sigma of Gaussian Filter, default is 3.0; Set to 0 for no smoothing) 
 
-  Data Option:
-  --wrap        : rewrap data to display the time-series epochs and interferograms
-  --displacement: show displacement, instead of phase
-  --opposite    : opposite sign - multiply data by -1
-  --fliplr      : flip left-right
-  --flipud      : flip up-down
-  -x            : subset in x direction
-  -y            : subset in y direction
-  -l            : subset in latitude
-  -L            : subset in longitude
-  --no-multilook: do not multilook for big data (by default, multilook applied for big data display)
+    Data Option:
+      --wrap        : rewrap data to display the time-series epochs and interferograms
+      --displacement: show displacement, instead of phase
+      --opposite    : opposite sign - multiply data by -1
+      --fliplr      : flip left-right
+      --flipud      : flip up-down
+      -x            : subset in x direction
+      -y            : subset in y direction
+      -l            : subset in latitude
+      -L            : subset in longitude
+      --no-multilook: do not multilook for big data (by default, multilook applied for big data display)
                   use this option when high quality figure is needed.
 
-  Point and Line:
-  --point-yx    : point    coordinate in y,x,y,x,...               [for plot in y/x]
-  --point-lalo  : point    coordinate in lat,lon,lat,lon,...       [for plot in lat/lon]
-  --line-yx     : line end coordinate in y,x,y,x;y,x,y,x;...       [for plot in y/x]
-  --line-lalo   : line end coordinate in lat,lon,lat,lon;lat,lon,lat,lon;... 
-                  p_yx = '1468,1002,1498,1024,1354,1140,1394,1174'
-                  l_yx = '1468,1002,1498,1024;1354,1140,1394,1174,1560,1155'
-                  view.py -f mask_all.h5 --point-yx=p_yx --line-yx=l_yx
-                  view.py -f velocity_ex.h5 --mask Mask.h5 --point-lalo 33.0922,131.2314,33.1026,131.2441
-                  or GMT format location filw, i.e. transect_lonlat.xy
-                    >
-                    131.1663    33.1157
-                    131.2621    33.0860
+    Point and Line:
+      --point-yx    : point    coordinate in y,x,y,x,...               [for plot in y/x]
+      --point-lalo  : point    coordinate in lat,lon,lat,lon,...       [for plot in lat/lon]
+      --line-yx     : line end coordinate in y,x,y,x;y,x,y,x;...       [for plot in y/x]
+      --line-lalo   : line end coordinate in lat,lon,lat,lon;lat,lon,lat,lon;... 
+                      p_yx = '1468,1002,1498,1024,1354,1140,1394,1174'
+                      l_yx = '1468,1002,1498,1024;1354,1140,1394,1174,1560,1155'
+                      view.py -f mask_all.h5 --point-yx=p_yx --line-yx=l_yx
+                      view.py -f velocity_ex.h5 --mask Mask.h5 --point-lalo 33.0922,131.2314,33.1026,131.2441
+                      or GMT format location filw, i.e. transect_lonlat.xy
+                        >
+                        131.1663    33.1157
+                        131.2621    33.0860
 
-  Figure Setting:
-  --figsize     : figure size in inches (width, length), i.e. '15,10'
-  -r            : row    number of figures in each window (default: 5)
-  -p            : column number of figures in each window (default: 8)
-  -i            : width  space between subplots (default 0.1)
-  -j            : height space between subplots (default 0.1)
-  -s            : font size (default: 12 for plot_one, 8 for plot_all)
-  -c            : colormaps of matplotlib found in (http://matplotlib.org/examples/pylab_examples/show_colormaps.html)
-                  (default is jet). some options are: seismic, bwr, spectral, jet, ... 
-  --notitle     : turn off axis display of figure 
-  --noaxis      : turn off axis display of figure 
-  -T            : title of time-series epochs or interferograms. 
-                  options are 'in' and 'out'. (default is out)
-  -u/--unit     : unit for display
-                  displacement: mm, cm, m (default)
-                  velocity    : m/day, m/mon, cm/mon, cm/yr, m/yr (default)
+    Figure Setting:
+      --figsize     : figure size in inches (width, length), i.e. '15,10'
+      -r            : row    number of figures in each window (default: 5)
+      -p            : column number of figures in each window (default: 8)
+      -i            : width  space between subplots (default 0.1)
+      -j            : height space between subplots (default 0.1)
+      -s            : font size (default: 12 for plot_one, 8 for plot_all)
+      -c            : colormaps of matplotlib found in (http://matplotlib.org/examples/pylab_examples/show_colormaps.html)
+                      (default is jet). some options are: seismic, bwr, spectral, jet, ... 
+      --notitle     : turn off axis display of figure 
+      --noaxis      : turn off axis display of figure 
+      -T            : title of time-series epochs or interferograms. 
+                      options are 'in' and 'out'. (default is out)
+      -u/--unit     : unit for display
+                      displacement: mm, cm, m (default)
+                      velocity    : m/day, m/mon, cm/mon, cm/yr, m/yr (default)
+    
+      --alpha       : data transparency (0.0 for transparent and 1.0 for no transparency)
+                      By default, 0.7 when showing topography, otherwise 1.0
+      --radar-coord : display in radar coordinates for geocoded files. 
+                      By default, for geocoded file display in geo coordinate, otherwise display in radar coordinate
 
-  --alpha       : data transparency (0.0 for transparent and 1.0 for no transparency)
-                  By default, 0.7 when showing topography, otherwise 1.0
-  --radar-coord : display in radar coordinates for geocoded files. 
-                  By default, for geocoded file display in geo coordinate, otherwise display in radar coordinate
+    Reference (in time and space):
+      --noreference   : do not show reference point. By default, it will show if there is reference point in attributes.
+      --ref-epoch     : reference date / epoch for timeseries / interferograms and wrapped file
+      --ref-color     : color  of marker for the reference point (k,g,r,b,...)
+      --ref-symbol    : symbol of marker for the reference point (s,o,^,v,p,x,'*'...)
+      --ref-size      : size   of marker for the reference point (10 by default)
+      --ref-yx        : set reference point in row/y    and column/x
+      --ref-lalo      : set reference point in latitude and longitude
 
-  Reference (in time and space):
-  --noreference   : do not show reference point. By default, it will show if there is reference point in attributes.
-  --ref-epoch     : reference date / epoch for timeseries / interferograms and wrapped file
-  --ref-color     : color  of marker for the reference point (k,g,r,b,...)
-  --ref-symbol    : symbol of marker for the reference point (s,o,^,v,p,x,'*'...)
-  --ref-size      : size   of marker for the reference point (10 by default)
-  --ref-yx        : set reference point in row/y    and column/x
-  --ref-lalo      : set reference point in latitude and longitude
+    Output and Display:
+      --save        : save                    the figure
+      --nodisplay   : save and do not display the figure
+      -o/--output   : output figure name, use input file name by default
+      --dpi         : save and change dpi number for output file
+                      (150 by default, 300 for normal print quality, 600 for high quality)
 
-  Output and Display:
-  --save        : save                    the figure
-  --nodisplay   : save and do not display the figure
-  -o/--output   : output figure name, use input file name by default
-  --dpi         : save and change dpi number for output file
-                  (150 by default, 300 for normal print quality, 600 for high quality)
 
-  Usage:  
-           view.py file
-           view.py -f file -m minValue -M maxValue -r 5 -p 5
-           view.py -f file -t template_file
-           view.py -f file -D DEM.dem
-           view.py -f file --save --nodisplay
-           view.py -f file -l Latsub -L Lonsub
-
-  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  
+  ---------------------------------------------------------------------------------------
   Example:
-           view.py velocity.h5
-           view.py filt_060924-070927.unw
-           view.py SanAndreas.dem
-           view.py -f filt_060924-070927.unw --displacement  --save
-           view.py -f velocity.h5 -t ShikokuT417F650_690AlosA.template -u cm/yr
-           view.py -f velocity.h5 -m -0.02 -M 0.02 -c bwr --fliplr
-           view.py -f velocity.h5 --ref-color=r --ref-symbol=^ --ref-size=5
+      view.py velocity.h5
+      view.py filt_060924-070927.unw
+      view.py SanAndreas.dem
+      view.py -f filt_060924-070927.unw --displacement  --save
+      view.py -f velocity.h5 -t ShikokuT417F650_690AlosA.template -u cm/yr
+      view.py -f velocity.h5 -m -0.02 -M 0.02 -c bwr --fliplr
+      view.py -f velocity.h5 --ref-color=r --ref-symbol=^ --ref-size=5
 
-           view.py -f timeseries.h5
-           view.py -f timeseries.h5 -d 20030502
-           view.py -f timeseries.h5 -d 080411 -R 110118
-           view.py -f timeseries.h5 -e 5 
-           view.py -f timeseries.h5 -r 5 -p 8 -i 0.1 -j 0.1 --wrap
+      view.py -f timeseries.h5
+      view.py -f timeseries.h5 -d 20030502
+      view.py -f timeseries.h5 -d 080411 -R 110118
+      view.py -f timeseries.h5 -e 5 
+      view.py -f timeseries.h5 -r 5 -p 8 -i 0.1 -j 0.1 --wrap
 
-           view.py -f LoadedData.h5
-           view.py -f LoadedData.h5 -d 070927-100217
-           view.py -f LoadedData.h5 -d geo_filt_070927-100217-sim_HDR_4rlks_c10.unw
-           view.py -f LoadedData.h5 -T in
-           view.py -f Coherence.h5  -e 5
-           view.py -f Wrapped.h5    -e 5
+      view.py -f LoadedData.h5
+      view.py -f LoadedData.h5 -d 070927-100217
+      view.py -f LoadedData.h5 -d geo_filt_070927-100217-sim_HDR_4rlks_c10.unw
+      view.py -f LoadedData.h5 -T in
+      view.py -f Coherence.h5  -e 5
+      view.py -f Wrapped.h5    -e 5
 
-   Showing DEM:
-           view.py -f velocity.h5 -D SanAndreas.dem
-           view.py -f velocity.h5 -D SanAndreas.dem --dem-nocontour
-           view.py -f velocity.h5 -D SanAndreas.dem --dem-nocontour --dem-noshade
+    Showing DEM:
+      view.py -f velocity.h5 -D SanAndreas.dem
+      view.py -f velocity.h5 -D SanAndreas.dem --dem-nocontour
+      view.py -f velocity.h5 -D SanAndreas.dem --dem-nocontour --dem-noshade
 
-   Display in subset:
-           view.py -f velocity.h5 -x 100:600     -y 200:800
-           view.py -f velocity.h5 -l 31.05:31.10 -L 130.05:130.10
-           view.py -f timeseries.h5 -d 20100102      -x 100:600 -y 200:800
-           view.py -f LoadedData.h5 -d 070927-100217 -x 100:600 -y 200:800
+    Display in subset:
+      view.py -f velocity.h5 -x 100:600     -y 200:800
+      view.py -f velocity.h5 -l 31.05:31.10 -L 130.05:130.10
+      view.py -f timeseries.h5 -d 20100102      -x 100:600 -y 200:800
+      view.py -f LoadedData.h5 -d 070927-100217 -x 100:600 -y 200:800
 
-   Exclude Dates:
-           view.py -f timeseries.h5 -E '20060624,20070815'
-           view.py -f timeseries.h5 -E drop_date.txt
-           view.py -f timeseries.h5 -t ShikokuT417F650_690AlosA.template
+    Exclude Dates:
+      view.py -f timeseries.h5 -E '20060624,20070815'
+      view.py -f timeseries.h5 -E drop_date.txt
+      view.py -f timeseries.h5 -t ShikokuT417F650_690AlosA.template
 
-   Masking:
-           view.py -f Seeded_LoadedData.h5 -d 931018-950809 --mask Mask_tempCoh.h5
+    Masking:
+      view.py -f Seeded_LoadedData.h5 -d 931018-950809 --mask Mask_tempCoh.h5
 
-   Reference:
-           view.py -f velocity.h5 --noreference
-           view.py -f velocity.h5 --ref-yx   210,566
-           view.py -f velocity.h5 --ref-lalo 31.08,130.856
-           view.py -f timeseries.h5 --ref-epoch 20101120
+    Reference:
+      view.py -f velocity.h5 --noreference
+      view.py -f velocity.h5 --ref-yx   210,566
+      view.py -f velocity.h5 --ref-lalo 31.08,130.856
+      view.py -f timeseries.h5 --ref-epoch 20101120
 
-   Save and Output:
-           view.py -f velocity.h5 --save
-           view.py -f velocity.h5 -o velocity.pdf
-           view.py -f velocity.h5 --nodisplay
+    Save and Output:
+      view.py -f velocity.h5 --save
+      view.py -f velocity.h5 -o velocity.pdf
+      view.py -f velocity.h5 --nodisplay
 
 *****************************************************************************************
     '''
@@ -440,11 +440,11 @@ def main(argv):
                                             'point-lalo=','line-yx=','line-lalo='])
 
         except getopt.GetoptError:
-            print 'Error in reading input options!';  Usage() ; sys.exit(1)
-        if opts==[]: Usage() ; sys.exit(1)
+            print 'Error in reading input options!';  usage() ; sys.exit(1)
+        if opts==[]: usage() ; sys.exit(1)
    
         for opt,arg in opts:
-            if opt in ("-h","--help"):    Usage() ; sys.exit()
+            if opt in ("-h","--help"):    usage() ; sys.exit()
             elif opt == '-f': File       = arg
             elif opt == '-c': color_map  = arg
             elif opt == '-D': demFile    = arg
@@ -499,10 +499,10 @@ def main(argv):
             elif opt == '--no-multilook'  : multilook    = 'no'
 
     elif len(sys.argv)==2:
-        if argv[0] in ['-h','--help']:              Usage(); sys.exit(1)
+        if argv[0] in ['-h','--help']:              usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):  File = argv[0]
         else:    print 'Input file does not existed: '+argv[0];  sys.exit(1)
-    elif len(sys.argv)<2:             Usage(); sys.exit(1)
+    elif len(sys.argv)<2:             usage(); sys.exit(1)
 
     ##### Read File Info / Attributes
     try: atr = readfile.read_attributes(File)

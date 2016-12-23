@@ -20,27 +20,26 @@ import pysar._writefile as writefile
 import pysar._datetime as ptime
  
 
-def Usage():
+def usage():
     print '''
 **************************************************************************
+  To converts the PySAR hdf5 file formats to the roipac unw format 
 
-   To converts the PySAR hdf5 file formats to the roipac unw format 
-
-   Usage: 
-         save_unw.py file.h5 [date_info]
-
-   Example:
-         save_unw.py velocity.h5
-         save_unw.py timeseries.h5 20050601
-         save_unw.py timeseries.h5 040728 050601
-         save_unw.py LoadedData.h5 filt_091225-100723-sim_HDR_8rlks_c10.unw
-         save_unw.py LoadedData.h5 091225-100723
-         save_unw.py temporal_coherence.h5
+  Usage: 
+      save_unw.py file.h5 [date_info]
 
       for velocity:   the ouput will be a one year interferogram.
       for timeseries: if date is not specified, the last date will be used
                       if two dates are specified, the earlier date will be
                          used as the reference date.
+
+  Example:
+      save_unw.py velocity.h5
+      save_unw.py timeseries.h5 20050601
+      save_unw.py timeseries.h5 040728 050601
+      save_unw.py LoadedData.h5 filt_091225-100723-sim_HDR_8rlks_c10.unw
+      save_unw.py LoadedData.h5 091225-100723
+      save_unw.py temporal_coherence.h5
 
 ***************************************************************************
     '''
@@ -48,7 +47,7 @@ def Usage():
 
 def main(argv):
     try:    File=argv[0]
-    except: Usage();sys.exit(1)
+    except: usage();sys.exit(1)
   
     atr = readfile.read_attributes(File)
     k = atr['FILE_TYPE']
@@ -79,7 +78,7 @@ def main(argv):
             ds=sys.argv[2:4]; ds.sort()
             d_ref = ds[0]
             d     = ds[1]
-        else: Usage(); sys.exit(1)
+        else: usage(); sys.exit(1)
         d = ptime.yyyymmdd(d)
         try: d_ref = ptime.yyyymmdd(d_ref)
         except: pass

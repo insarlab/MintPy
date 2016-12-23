@@ -148,39 +148,38 @@ def plot_network(fig,pairs_idx,dateList,bperp):
 
   
 ######################################
-def Usage():
+def usage():
     print '''
 ******************************************************************************
-
   Ploting the network of interferograms and 
-  the baseline history of SAR acquisitions.
+      the baseline history of SAR acquisitions.
 
   Usage:
-       plot_network.py -f interferogramsFile -s fontsize -w linewidth
-       plot_network.py -b baselineFile -l pairsFile
+      plot_network.py -f interferogramsFile -s fontsize -w linewidth
+      plot_network.py -b baselineFile -l pairsFile
 
-    -f : interferograms file stored in hdf5 file format, 
-             supported files: interferograms, coherence and wrapped
-    -b : baseline file
-    -l : pairs info list file
-    -s : the font size used for x and y labels (default is 12)
-    -w : line width used for plotting (default is 2)
-    -m : marker size (default is 16)
-    -c : marker face color (default is orange)
-    -t : temporal threshold
-    -d : date (all interferograms with master or slave using the specified date is removed) 
-
-    Save and Output
-    --save      : save                    figure
-    --nodisplay : save and do not display figure
-    --list      : output pairs list file named Pairs.list
+      -f : interferograms file stored in hdf5 file format, 
+               supported files: interferograms, coherence and wrapped
+      -b : baseline file
+      -l : pairs info list file
+      -s : the font size used for x and y labels (default is 12)
+      -w : line width used for plotting (default is 2)
+      -m : marker size (default is 16)
+      -c : marker face color (default is orange)
+      -t : temporal threshold
+      -d : date (all interferograms with master or slave using the specified date is removed) 
+  
+      Save and Output
+      --save      : save                    figure
+      --nodisplay : save and do not display figure
+      --list      : output pairs list file named Pairs.list
 
   Example:
-       plot_network.py LoadedData.h5
-       plot_network.py -f Coherence.h5           --nodisplay
-       plot_network.py -f Modified_LoadedData.h5 --nodisplay --list
-       plot_network.py -f LoadedData.h5 -l pairs.list --save
-       plot_network.py -b bl_list.txt   -l Pairs.list
+      plot_network.py LoadedData.h5
+      plot_network.py -f Coherence.h5           --nodisplay
+      plot_network.py -f Modified_LoadedData.h5 --nodisplay --list
+      plot_network.py -f LoadedData.h5 -l pairs.list --save
+      plot_network.py -b bl_list.txt   -l Pairs.list
 
 ******************************************************************************  
     '''
@@ -203,10 +202,10 @@ def main(argv):
 
     if len(sys.argv)>2:
         try:  opts, args = getopt.getopt(argv,"h:b:f:s:w:l:m:c:o:",['save','nodisplay','list'])
-        except getopt.GetoptError:   Usage() ; sys.exit(1)
+        except getopt.GetoptError:   usage() ; sys.exit(1)
 
         for opt,arg in opts:
-            if opt in ("-h","--help"):  Usage();  sys.exit()
+            if opt in ("-h","--help"):  usage();  sys.exit()
             elif opt == '-b':        baselineFile= arg
             elif opt == '-f':        igramsFile  = arg
             elif opt == '-l':        listFile    = arg
@@ -222,10 +221,10 @@ def main(argv):
         try:  igramsFile
         except:
             try:  baselineFile
-            except:  Usage() ; sys.exit(1)
+            except:  usage() ; sys.exit(1)
 
     elif len(sys.argv)==2:   igramsFile = argv[0]
-    else:                    Usage() ; sys.exit(1)
+    else:                    usage() ; sys.exit(1)
 
     ##### Output figure name
     figName1 = 'BperpHist.pdf'

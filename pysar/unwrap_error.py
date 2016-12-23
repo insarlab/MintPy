@@ -42,86 +42,84 @@ def phase_bonding(data,mask,x,y):
     return data
 
 ####################################################################################################
-def Usage():
+def usage():
     print '''
-  ************************************************************************************
-  ************************************************************************************
+************************************************************************************
   Unwrapping Error Correction based on:
-    1. Triangular consistency of interferograms (phase closure), or
-    2. Phase continuity of close bonding points (spatial continuity)
+      1. Triangular consistency of interferograms (phase closure), or
+      2. Phase continuity of close bonding points (spatial continuity)
+  
+  -------------------------------------------------------------------
+  1. Correct unwrapping errors based on triangular consistency
+      Based on phase closure of pairs circle (ab + bc + ca == 0), this method assumes
+      a. abundance of network: for interferogram with unwrapping error, there is
+         at least of one triangular connection to form a closed circle; with more
+         closed circles comes better constrain.
+      b. majority rightness: most of interferograms have to be right (no unwrapping
+         error) to correct the wrong minority. And if most of interferograms have 
+         unwrapping errors, then the minor right interferograms will turn into wrong.
 
-    -------------------------------------------------------------------
-    1. Correct unwrapping errors based on triangular consistency
-       Based on phase closure of pairs circle (ab + bc + ca == 0), this method assumes
-       a. abundance of network: for interferogram with unwrapping error, there is
-          at least of one triangular connection to form a closed circle; with more
-          closed circles comes better constrain.
-       b. majority rightness: most of interferograms have to be right (no unwrapping
-          error) to correct the wrong minority. And if most of interferograms have 
-          unwrapping errors, then the minor right interferograms will turn into wrong.
+  Usage:
+      unwrap_error.py interferograms_file    [ mask_file ]
+      unwrap_error.py -f interferograms_file [ -m mask_file -o output_file]
 
-    Usage:
-        unwrap_error.py interferograms_file    [ mask_file ]
-        unwrap_error.py -f interferograms_file [ -m mask_file -o output_file]
+      -f : unwrapped interferograms, i.e. Seeded_LoadedData.h5
+      -m : mask file to specify those pixels which user wants to correct for unwrapping errors.
+      -o : output file name [default is interferogram_file_unwCor.h5]
 
-        -f : unwrapped interferograms, i.e. Seeded_LoadedData.h5
-        -m : mask file to specify those pixels which user wants to correct for unwrapping errors.
-        -o : output file name [default is interferogram_file_unwCor.h5]
-
-    Examples:
-        unwrap_error.py Seeded_LoadedData.h5 mask.h5
-        unwrap_error.py -f Seeded_LoadedData.h5 -m mask.h5
-        unwrap_error.py Seeded_LoadedData.h5
+  Examples:
+      unwrap_error.py Seeded_LoadedData.h5 mask.h5
+      unwrap_error.py -f Seeded_LoadedData.h5 -m mask.h5
+      unwrap_error.py Seeded_LoadedData.h5
 
 
-    -------------------------------------------------------------------
-    2. Correct unwrapping errors based on bonding points
-       This method assumes:
-       a. no phase unwrapping error within each patch marked by mask file.
-       b. the absolute phase difference of bonding points (usually close in space) is 
-          smaller than one pi. Considering prevalent ramps in InSAR data might break
-          this assumptioin for bonding points that are not very close, across a bay
-          for example, we first estimate and remove a linear phase ramp, then applied
-          phase continuity constrain, and add the removed ramp back at the end.
+  -------------------------------------------------------------------
+  2. Correct unwrapping errors based on bonding points
+      This method assumes:
+      a. no phase unwrapping error within each patch marked by mask file.
+      b. the absolute phase difference of bonding points (usually close in space) is 
+         smaller than one pi. Considering prevalent ramps in InSAR data might break
+         this assumptioin for bonding points that are not very close, across a bay
+         for example, we first estimate and remove a linear phase ramp, then applied
+         phase continuity constrain, and add the removed ramp back at the end.
+ 
+      Phase unwrapping error is corrected epoch by epoch, following the steps below:
+      a. estimate and remove a linear phase ramp from unwrapped phase;
+      b. following the pair order of bonding points, correct patch by patch marked
+         by point's coordinate and mask file:
+         1) use 1st point as reference, calculate integer N, add N*2pi to 2nd point's
+            phase to make sure their absolute phase difference is smaller than pi.
+         2) add N*2pi to all pixels in 2nd point's patch.
+      c. add linear phase ramp estimated in step a back to the corrected phase in step b.
 
-       Phase unwrapping error is corrected epoch by epoch, following the steps below:
-       a. estimate and remove a linear phase ramp from unwrapped phase;
-       b. following the pair order of bonding points, correct patch by patch marked
-          by point's coordinate and mask file:
-          1) use 1st point as reference, calculate integer N, add N*2pi to 2nd point's
-             phase to make sure their absolute phase difference is smaller than pi.
-          2) add N*2pi to all pixels in 2nd point's patch.
-       c. add linear phase ramp estimated in step a back to the corrected phase in step b.
+  Usage:
+      unwrap_error.py -f interferograms_file -m mask_file -t template_file      [ -o output_file ]
+      unwrap_error.py -f interferograms_file -m mask_file -x x_ref,x -y y_ref,y [ -o output_file ]
 
-    Usage:
-        unwrap_error.py -f interferograms_file -m mask_file -t template_file      [ -o output_file ]
-        unwrap_error.py -f interferograms_file -m mask_file -x x_ref,x -y y_ref,y [ -o output_file ]
+      -f : unwrapped interferogram(s), i.e. LoadedData.h5, .unw file
+      -m : mask file to mark different patches that want to be corrected.
+           Masked out area is marked with 0, patches/area needed to be corrected marked with 
+           positive integers, i.e. 1, 2, 3, ...
+      -o : output file name [default is interferogram_file_unwCor.h5/.unw]
 
-        -f : unwrapped interferogram(s), i.e. LoadedData.h5, .unw file
-        -m : mask file to mark different patches that want to be corrected.
-             Masked out area is marked with 0, patches/area needed to be corrected marked with 
-             positive integers, i.e. 1, 2, 3, ...
-        -o : output file name [default is interferogram_file_unwCor.h5/.unw]
+      -x : reference and to-be-corrected patches' bridge points coordinate in x direction
+      -y : reference and to-be-corrected patches' bridge points coordinate in y direction
+           Example: x_ref1, x1, x_ref2, x2, ...
+      -t : template file with unwrapError.bonding_point option given value as
+               y_ref1,x_ref1,y1,x1,y_ref2,x_ref2,y2,x2 ...
+           Example: pysar.unwrapError.yx = 283,1177,305,1247 
 
-        -x : reference and to-be-corrected patches' bridge points coordinate in x direction
-        -y : reference and to-be-corrected patches' bridge points coordinate in y direction
-             Example: x_ref1, x1, x_ref2, x2, ...
-        -t : template file with unwrapError.bonding_point option given value as
-                 y_ref1,x_ref1,y1,x1,y_ref2,x_ref2,y2,x2 ...
-             Example: pysar.unwrapError.yx = 283,1177,305,1247 
+           Note: choose x/y_ref point in the patch that also have seed point, for consistency
+                 in multiple images.
+      --ramp         : ramp type, i.e. plane, quadratic
+      --no-ramp-save : save corrected data with the ramp removed.
 
-             Note: choose x/y_ref point in the patch that also have seed point, for consistency
-                   in multiple images.
-        --ramp         : ramp type, i.e. plane, quadratic
-        --no-ramp-save : save corrected data with the ramp removed.
+  Examples:
+      unwrap_error.py -f Seeded_LoadedData.h5     -m Mask.h5 -t ShikokuT417F650_690AlosA.template
+      unwrap_error.py -f Seeded_LoadedData.h5     -m Mask.h5 -x 283,305 -y 1177,1247
+      unwrap_error.py -f Seeded_081018_090118.unw -m Mask_all.h5 -x 283,305 -y 1177,1247 --ramp quadratic
 
-    Examples:
-        unwrap_error.py -f Seeded_LoadedData.h5     -m Mask.h5 -t ShikokuT417F650_690AlosA.template
-        unwrap_error.py -f Seeded_LoadedData.h5     -m Mask.h5 -x 283,305 -y 1177,1247
-        unwrap_error.py -f Seeded_081018_090118.unw -m Mask_all.h5 -x 283,305 -y 1177,1247 --ramp quadratic
-
-  ************************************************************************************
-  ************************************************************************************
+************************************************************************************
     '''
 
 
@@ -136,10 +134,10 @@ def main(argv):
     ##### Check Inputs
     if len(sys.argv)>2:
         try: opts, args = getopt.getopt(argv,'h:f:m:x:y:o:t:',['ramp=','no-ramp-save'])
-        except getopt.GetoptError:  print 'Error while getting args';  Usage(); sys.exit(1)
+        except getopt.GetoptError:  print 'Error while getting args';  usage(); sys.exit(1)
   
         for opt,arg in opts:
-            if   opt in ['-h','--help']:    Usage(); sys.exit()
+            if   opt in ['-h','--help']:    usage(); sys.exit()
             elif opt in '-f':    File     = arg
             elif opt in '-m':    maskFile = arg
             elif opt in '-o':    outName  = arg
@@ -150,11 +148,11 @@ def main(argv):
             elif opt in '--no-ramp-save' :  save_rampCor = 'no'
   
     elif len(sys.argv)==2:
-        if argv[0] in ['-h','--help']:    Usage();  sys.exit()
+        if argv[0] in ['-h','--help']:    usage();  sys.exit()
         elif os.path.isfile(argv[0]):     File = argv[0];  maskFile = argv[1]
         else:    print 'Input file does not existed: '+argv[0];  sys.exit(1)
   
-    else:  Usage(); sys.exit(1)
+    else:  usage(); sys.exit(1)
   
     ##### Check template file
     try:
@@ -335,8 +333,8 @@ def main(argv):
             y
             if len(x) != len(y) or np.mod(len(x),2) != 0:
                 print 'Wrong number of bridge points input: '+str(len(x))+' for x, '+str(len(y))+' for y'
-                Usage();  sys.exit(1)
-        except: print 'Error in reading bridge points info!';  Usage();  sys.exit(1)
+                usage();  sys.exit(1)
+        except: print 'Error in reading bridge points info!';  usage();  sys.exit(1)
         for i in range(0,len(x)):
             if Mask[y[i],x[i]] == 0:
                 print '\nERROR: Connecting point ('+str(y[i])+','+str(x[i])+') is out of masked area! Select them again!\n'
@@ -381,7 +379,7 @@ def main(argv):
             except:  print 'ERROR: Cannot open input file: '+File; sys.exit(1)
             k=h5file.keys()
             if 'interferograms' in k: k[0] = 'interferograms';  print 'Input file is '+k[0]
-            else: print 'Input file - '+File+' - is not interferograms.';  Usage();  sys.exit(1)
+            else: print 'Input file - '+File+' - is not interferograms.';  usage();  sys.exit(1)
             igramList = h5file[k[0]].keys()
             igramList = sorted(igramList)
   
@@ -442,7 +440,7 @@ def main(argv):
             if save_rampCor == 'yes':
                 writefile.write(data_rampCor,atr,outName_ramp)
   
-        else: print 'Un-supported file type: '+ext;  Usage();  sys.exit(1)
+        else: print 'Un-supported file type: '+ext;  usage();  sys.exit(1)
 
 
 

@@ -29,27 +29,27 @@ def get_geo_lat_lon(atr):
  
     return Y,X
 
-def Usage():
+def usage():
     print '''
-   ******************************************************
+***********************************************************************
    Exporting geocoded pysar velocity file to GMT grd file
-   It also exports an epoch of timeseries to the grd file 
+       It also exports an epoch of timeseries to the grd file 
 
    Example:
-
        save_gmt.py  geo_velocity.h5
        save_gmt.py  geo_timeseries.h5 20071031
        save_gmt.py  geo_timeseries.h5
        save_gmt.py  geo_filt_100608-101024-sim_HDR_16rlks_c10.unw
        save_gmt.py  gsi10m.dem
-   *****************************************************
+
+**********************************************************************
     '''
 
 
 ###############################  Main Function  ####################################
 def main(argv):
     try: file = argv[0]
-    except: Usage(); sys.exit(1)
+    except: usage(); sys.exit(1)
   
     print '\n*************** Save to GRD file for GMT ****************'
     print 'Input file: '+file

@@ -30,7 +30,7 @@ import pysar._readfile as readfile
 
 
 ######################################
-def Usage():
+def usage():
     print '''
 **********************************************************
 
@@ -70,10 +70,10 @@ def main(argv):
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,'h:f:F:o:v:',['phase-velocity','no-timeseries-update'])
         except getopt.GetoptError:
-            print 'Error in reading input options!';  Usage() ; sys.exit(1)
+            print 'Error in reading input options!';  usage() ; sys.exit(1)
   
         for opt,arg in opts:
-            if opt in ['-h','--help']:    Usage() ; sys.exit()
+            if opt in ['-h','--help']:    usage() ; sys.exit()
             elif opt == '-f':    timeSeriesFile = arg
             elif opt == '-F':    igramsFile     = arg
             elif opt == '-o':    outname        = arg
@@ -81,9 +81,9 @@ def main(argv):
             elif opt == '--no-timeseries-update':  update_timeseries = 'no'
 
     elif len(sys.argv)==2:
-        if argv[0] in ['-h','--help']:  Usage(); sys.exit(1)
+        if argv[0] in ['-h','--help']:  usage(); sys.exit(1)
         else:  timeSeriesFile = argv[0]
-    else:  Usage(); sys.exit(1)
+    else:  usage(); sys.exit(1)
 
     try:    outname
     except: outname = timeSeriesFile.replace('.h5','')+'_demCor.h5'

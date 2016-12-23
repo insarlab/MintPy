@@ -17,24 +17,24 @@ import pysar._readfile as readfile
 
 
 ######################################
-def Usage():
+def usage():
     print '''
-    ********************************************************************************
-    Inversion of interferograms using L1 or L2 norm minimization (Default is L2)
+********************************************************************************
+  Inversion of interferograms using L1 or L2 norm minimization (Default is L2)
   
-    Usage:
-         igram_inversion.py interferograms_file
-         igram_inversion.py -f interferograms_file [ -l method -o timeseries_file]
+  Usage:
+      igram_inversion.py interferograms_file
+      igram_inversion.py -f interferograms_file [ -l method -o timeseries_file]
   
-         -f: stacked interferograms file
-         -l: inverse method, L2 (default) or L1
-         -o: output timeseries file name
+      -f: stacked interferograms file
+      -l: inverse method, L2 (default) or L1
+      -o: output timeseries file name
   
-    Example:
-         igram_inversion.py Seeded_LoadedData.h5
-         igram_inversion.py -f Seeded_LoadedData.h5 -l L1
-  
-    ********************************************************************************
+  Example:
+      igram_inversion.py Seeded_LoadedData.h5
+      igram_inversion.py -f Seeded_LoadedData.h5 -l L1
+
+********************************************************************************
     '''
 
 ######################################
@@ -46,21 +46,21 @@ def main(argv):
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,"h:f:l:o:")
         except getopt.GetoptError:
-            Usage() ; sys.exit(1)
+            usage() ; sys.exit(1)
   
         for opt,arg in opts:
-            if opt in ("-h","--help"):  Usage();   sys.exit()
+            if opt in ("-h","--help"):  usage();   sys.exit()
             elif opt == '-f':           igramsFile        = arg
             elif opt == '-l':           inversion_method  = arg.lower()
             elif opt == '-o':           timeseriesFile    = arg
   
     elif len(sys.argv)==2:
         if os.path.isfile(argv[0]):     igramsFile = argv[0]
-        else:  Usage(); sys.exit(1)
-    else:  Usage(); sys.exit(1)
+        else:  usage(); sys.exit(1)
+    else:  usage(); sys.exit(1)
     
     #try:     igramsFile = argv[0]
-    #except:  Usage() ; sys.exit(1)
+    #except:  usage() ; sys.exit(1)
     #try:     inversion_method = argv[1]
     #except:  inversion_method = 'L2'
   
@@ -74,7 +74,7 @@ def main(argv):
         print 'ERROR:'
         print '       '+igramsFile+ '  was not found or the file is not readable!'
         print '**********************************************************************'
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
 
     #numIfgrams = len(h5file['interferograms'].keys())
     #if numIfgrams == 0.:

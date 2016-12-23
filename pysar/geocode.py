@@ -60,28 +60,26 @@ def geocode_attributes(atr_rdr,atr_geo):
 
 
 ######################################################################################
-def Usage():
+def usage():
      print '''
 *******************************************************************
-    
-    uses roi_pac geocoding functions to geocode the PySAR products
+  Geocode PySAR products using roi_pac geocoding function
 
-    Usage:
-         geocode.py File geocoding_lookupfile
+  Usage:  geocode.py File geocoding_lookupfile
 
-    File: PySAR hdf5 file, including subseted.
-                [velocity, temporal_coherence, mask, rmse, timeseries
-                 unwrapped/wrapped interferograms, coherence]
-    geocoding_lookupfile: geocoding look-up table of the master interferogram   
+      File: PySAR hdf5 file, including subseted.
+            [velocity, temporal_coherence, mask, rmse, timeseries
+             unwrapped/wrapped interferograms, coherence]
+      geocoding_lookupfile: geocoding look-up table of the master interferogram   
 
-    Example:
-         geocode.py velocity.h5        geomap_8rlks.trans
-         geocode.py subset_velocity.h5 geomap_8rlks.trans
-         geocode.py timeseries.h5      geomap_8rlks.trans
-         geocode.py LoadedData.h5      geomap_8rlks.trans
-         geocode.py Coherence.h5       geomap_8rlks.trans
-         geocode.py Wrapped.h5         geomap_8rlks.trans
-         geocode.py DEM_error.h5       geomap_8rlks.trans
+  Example:
+      geocode.py velocity.h5        geomap_8rlks.trans
+      geocode.py subset_velocity.h5 geomap_8rlks.trans
+      geocode.py timeseries.h5      geomap_8rlks.trans
+      geocode.py LoadedData.h5      geomap_8rlks.trans
+      geocode.py Coherence.h5       geomap_8rlks.trans
+      geocode.py Wrapped.h5         geomap_8rlks.trans
+      geocode.py DEM_error.h5       geomap_8rlks.trans
 
 *******************************************************************
     '''
@@ -94,7 +92,7 @@ def main(argv):
         file=argv[0]
         geomap=argv[1]
     except:
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
  
     ######################################################################################
     fileName=os.path.basename(file).split('.')[0]

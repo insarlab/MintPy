@@ -4,11 +4,6 @@
 # Copyright(c) 2015, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-# Reference:
-# Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer
-# (2011), Systematic InSAR tropospheric phase delay corrections
-# from global meteorological reanalysis data, Geophys. Res. Lett.,
-# 38, L17311, doi:10.1029/2011GL048757
 
 
 import sys
@@ -24,15 +19,15 @@ import pysar._pysar_utilities as ut
 
 
 ###############################################################
-def Usage():
+def usage():
     print '''
-##############################################################################
+*****************************************************************************************
   Tropospheric correction using weather models. 
-    PyAPS is used to download and calculate the delay for each time-series epoch.
+      PyAPS is used to download and calculate the delay for each time-series epoch.
   
   Usage:
-      tropcor_pyaps.py -f timeseries.h5 -d demfile.hgt -s source_of_atmospheric_data -h acquisition_time -D Delay_Type -i incidence_angle
-        
+      tropcor_pyaps.py -f timeseries.h5 -d demfile.hgt -s source_of_atmospheric_data
+          -h acquisition_time -D Delay_Type -i incidence_angle
 
       -f: timeseries HDF5 file, i.e. timeseries.h5, timeseries_LODcor.h5
       -s: source of the atmospheric data: ECMWF, NARR
@@ -42,13 +37,17 @@ def Usage():
       -h: time of data (ECMWF takes hh:mm, NARR takes hh only)
 
   Example:
-      
       tropcor_pyaps.py -f timeseries.h5        -d radar_8rlks.hgt -s ECMWF -h 18:00 -i incidence_angle.h5
       tropcor_pyaps.py -f timeseries.h5        -d radar_8rlks.hgt -s NARR  -h 18    -i incidence_angle.h5
       tropcor_pyaps.py -f timeseries.h5        -d radar_8rlks.hgt -s ECMWF -h 18:00 -D Dry -i 23
       tropcor_pyaps.py -f timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF -h 18:00
 
-##############################################################################
+  Reference:
+      Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer (2011), 
+      Systematic InSAR tropospheric phase delay corrections from global meteorological
+      reanalysis data, Geophys. Res. Lett., 38, L17311, doi:10.1029/2011GL048757
+
+*****************************************************************************************
     '''
 
 ###############################################################
@@ -57,7 +56,7 @@ def main(argv):
     DelayType='comb'
 
     try:  opts, args = getopt.getopt(argv,"f:d:s:h:D:i:")
-    except getopt.GetoptError:  Usage() ; sys.exit(1)
+    except getopt.GetoptError:  usage() ; sys.exit(1)
 
     for opt,arg in opts:
         if   opt == '-f':        timeSeriesFile = arg
@@ -71,7 +70,7 @@ def main(argv):
         timeSeriesFile
         demFile
     except:
-        Usage() ; sys.exit(1)
+        usage() ; sys.exit(1)
 
     demFile  = ut.check_variable_name(demFile)
     demCoord = ut.radar_or_geo(demFile)
@@ -185,7 +184,7 @@ def main(argv):
                 print ecm + ' already exists.'
 
     else:
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
 
     print '*******************************************************************************'
     print 'Calcualting delay for each epoch.'

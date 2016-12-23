@@ -79,30 +79,29 @@ def check_size(k,epochList):
 
 
 ##########################  Usage  ###############################
-def Usage():
+def usage():
     print '''
-    ************************************************************************
+************************************************************************
+   loading the processed data for PySAR:
+       interferograms (unwrapped and wrapped)
+       coherence files
+       geomap.trans file
+       DEM (radar and geo coordinate)
+   
+   Usage: load_data.py TEMPLATEFILE  [inDir outDir]
 
-       loading the processed data for PySAR:
-           interferograms (unwrapped and wrapped)
-           coherence files
-           geomap.trans file
-           DEM (radar and geo coordinate)
-       
-       Usage: load_data.py TEMPLATEFILE  [inDir outDir]
+   Example:
+       load_data.py $TE/SanAndreasT356EnvD.template
+       load_data.py $TE/SanAndreasT356EnvD.template $SC/PROCESS/SanAndreasT356EnvD $SC/TSSAR/SanAndreasT356EnvD
 
-       Example:
-              load_data.py $TE/SanAndreasT356EnvD.template
-              load_data.py $TE/SanAndreasT356EnvD.template $SC/PROCESS/SanAndreasT356EnvD $SC/TSSAR/SanAndreasT356EnvD
-
-    ************************************************************************
+************************************************************************
     '''
 
 
 #############################  Main Function  ################################
 def main(argv):
     try:     templateFile = argv[1]
-    except:  Usage(); sys.exit(1)
+    except:  usage(); sys.exit(1)
   
     from pysar._pysar_utilities import check_variable_name
     templateContents = readfile.read_template(templateFile)

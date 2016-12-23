@@ -56,10 +56,9 @@ def circle_index(atr,circle_par):
 
 
 #################################  Usage  ####################################
-def Usage():
+def usage():
     print '''
 ******************************************************************************
-
   Calculate Spatial average/mean of multi-temporal 2D datasets.
       write the optimal reference date to reference_date.txt, and
       write turbulent date to drop_date.txt
@@ -110,10 +109,10 @@ def main(argv):
         try:
             opts, args = getopt.getopt(argv,'h:f:m:o:x:y:',['help','circle='])
         except getopt.GetoptError:
-            print 'Error in reading input options!';  Usage() ; sys.exit(1)
+            print 'Error in reading input options!';  usage() ; sys.exit(1)
 
         for opt,arg in opts:
-            if opt in ("-h","--help"):    Usage() ; sys.exit()
+            if opt in ("-h","--help"):    usage() ; sys.exit()
             elif opt == '-f':  File      = arg
             elif opt == '-m':  maskFile  = arg
             elif opt == '-x':  xsub = [int(i) for i in arg.split(':')];  xsub.sort()
@@ -123,12 +122,12 @@ def main(argv):
             
     else:
         try:  File = argv[0]
-        except: Usage(); sys.exit(1)
+        except: usage(); sys.exit(1)
         try:  maskFile = argv[1]
         except: pass
 
     try:  atr  = readfile.read_attributes(File)
-    except: Usage(); sys.exit(1)
+    except: usage(); sys.exit(1)
     ext      = os.path.splitext(File)[1].lower()
     FileBase = os.path.basename(File).split(ext)[0]
     outNameBase = 'spatialMean_'+FileBase

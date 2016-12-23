@@ -47,38 +47,31 @@ def look_angle(atr):
     return angle_xy
 
 ############################################################
-def Usage():
+def usage():
     print '''
 ***************************************************************
-***************************************************************
-
   Generates incidence angles (in Radar Coordinate) for each pixel,
      with required attributes read from the h5 file
 
-  Usage:
-       
-       incidence_angle.py -f  h5 file
-
-     Output is incidence_angle.h5
+  Usage: incidence_angle.py -f  h5 file
+      Output is incidence_angle.h5
 
   Example:
-
-       incidence_angle.py -f velocity.h5
-       incidence_angle.py -f timeseries.h5
-       incidence_angle.py -f temporal_coherence.h5
+      incidence_angle.py -f velocity.h5
+      incidence_angle.py -f timeseries.h5
+      incidence_angle.py -f temporal_coherence.h5
        
-***************************************************************
 ***************************************************************
     '''
 
 ############################################################
 def main(argv):
     try:  opts, args = getopt.getopt(argv,"f:h")
-    except getopt.GetoptError:  Usage() ; sys.exit(1)
+    except getopt.GetoptError:  usage() ; sys.exit(1)
   
-    if  opts==[]:  Usage() ; sys.exit(1)
+    if  opts==[]:  usage() ; sys.exit(1)
     for opt,arg in opts:
-        if opt in ("-h","--help"):   Usage();  sys.exit()
+        if opt in ("-h","--help"):   usage();  sys.exit()
         elif opt == '-f':            File = arg
     
         ##### Read attributes

@@ -30,32 +30,28 @@ def to_percent(y, position):
     else:
         return s + '%'
 
-def Usage():
+def usage():
     print '''
 ********************************************************
-********************************************************
- Estimating the errors in baseline components (bh,bv,dbh,dbv), 
- and correcting the time-series. 
+  Estimating the errors in baseline components (bh,bv,dbh,dbv), 
+  and correcting the time-series. 
+  
+  Usage:
  
- Usage:
-
-   baseline_error.py  time-series mask 
-
-   time-series: The timeseries in HDF5 format.
-   mask: a mask file to mask out points with high deformation or located in noisy areas
-
- Example:
-   
-   baseline_error.py  timeseries.h5 Mask.h5
+      baseline_error.py  time-series mask 
+ 
+      time-series: The timeseries in HDF5 format.
+      mask       : a mask file to mask out points with high deformation or located in noisy areas
+ 
+  Example:
+      baseline_error.py  timeseries.h5 Mask.h5
      
-
-********************************************************
 ********************************************************
     '''
 
 def main(argv):
     try:  File = argv[0]
-    except:  Usage() ; sys.exit(1)
+    except:  usage() ; sys.exit(1)
     try:  maskFile = argv[1]
     except: pass
   

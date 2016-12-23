@@ -35,39 +35,37 @@ def nearest_neighbor(x,y, tbase, pbase):
     return indx
 
 ##############  Usage  ###############
-def Usage():
+def usage():
     print '''
-  ******************************************
-  ******************************************
+************************************************************************************
   Modify the network of interferograms and/or coherence.
 
   usage:
-       modify_network.py -f interferogramsFile -s fontsize -w linewidth -T templateFile
+      modify_network.py -f interferogramsFile -s fontsize -w linewidth -T templateFile
 
-    -f : interferograms file stored in hdf5 file format
-    -C : coherence file stored in hdf5 file format
-
-    Remove Pairs:
-    -t : temporal threshold
-    -b : baseline threshold
-    -d : date (all interferograms that includes date is removed)
-    -l : list of interferograms to remove  
-    -N : interferogram numbers to remove (1 as the first)
-    -n : (yes or no)network display to manually choose igrams from the network to remove(default is yes)
-    -T : template file with pysar.dropIfgIndex setted (recommend)
-         Example for template option:
-             pysar.drop.ifgIndex   = 7:9,15,25,26,31,35,39,48,53,62,66,67,72,73,77,85,86,90,102,107,111
-             pysar.drop.date       = 20080102          # not implemented yet
-
-    -r : list file with interferograms to remove
-
-    -s : the font size used for x and y labels (default is 12)
-    -w : line width used for plotting (default is 2)
-    -m : marker size (default is 16)
-    -c : marker face color (default is orange) 
+      -f : interferograms file stored in hdf5 file format
+      -C : coherence file stored in hdf5 file format
+  
+      Remove Pairs:
+      -t : temporal threshold
+      -b : baseline threshold
+      -d : date (all interferograms that includes date is removed)
+      -l : list of interferograms to remove  
+      -N : interferogram numbers to remove (1 as the first)
+      -n : (yes or no)network display to manually choose igrams from the network to remove(default is yes)
+      -T : template file with pysar.dropIfgIndex setted (recommend)
+           Example for template option:
+               pysar.drop.ifgIndex   = 7:9,15,25,26,31,35,39,48,53,62,66,67,72,73,77,85,86,90,102,107,111
+               pysar.drop.date       = 20080102          # not implemented yet
+  
+      -r : list file with interferograms to remove
+  
+      -s : the font size used for x and y labels (default is 12)
+      -w : line width used for plotting (default is 2)
+      -m : marker size (default is 16)
+      -c : marker face color (default is orange) 
     
   Example:
-
        modify_network.py LoadedData.h5
        modify_network.py -f Seeded_LoadedData.h5 -T $TE/KirishimaT246EnvD2.template
        modify_network.py -f LoadedData.h5 -b 400 -n no
@@ -77,8 +75,7 @@ def Usage():
        modify_network.py -f LoadedData.h5 -N '1 4 20 76 89 100'
        modify_network.py -f LoadedData.h5 -C Coherence.h5 -N '1 4 20 76 89 100'
 
-  ******************************************
-  ******************************************  
+************************************************************************************
     '''
 
 
@@ -94,10 +91,10 @@ def main(argv):
     if len(sys.argv)>2:
   
         try:  opts, args = getopt.getopt(argv,"h:f:C:s:w:m:c:t:b:d:l:n:N:T:l:")
-        except getopt.GetoptError: Usage() ; sys.exit(1)
+        except getopt.GetoptError: usage() ; sys.exit(1)
     
         for opt,arg in opts:
-            if opt in ("-h","--help"):   Usage();  sys.exit()
+            if opt in ("-h","--help"):   usage();  sys.exit()
             elif opt == '-f':        File           = arg
             elif opt == '-C':        corFile        = arg
             elif opt == '-s':        fontSize       = int(arg)
@@ -115,12 +112,12 @@ def main(argv):
     
     
         try:  File
-        except:  Usage() ; sys.exit(1)
+        except:  usage() ; sys.exit(1)
   
     elif len(sys.argv)==2:
         File = argv[0]
         networkDisplay = 'yes'
-    else:   Usage() ; sys.exit(1)
+    else:   usage() ; sys.exit(1)
   
     ## display network for modification, if no other limit setted
     try:

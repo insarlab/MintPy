@@ -119,7 +119,7 @@ def check_mask(inName, maskFile, workDir='.'):
 
 
 ###########################  Usage Function  ###########################
-def Usage():
+def usage():
     print '''
 *******************************************************
 *******************************************************
@@ -215,7 +215,7 @@ def main(argv):
     start = time.time()
   
     try:     templateFile = argv[1]
-    except:  Usage(); sys.exit(1)
+    except:  usage(); sys.exit(1)
   
     ###########  Path  ############
     projectName = os.path.basename(templateFile).partition('.')[0]

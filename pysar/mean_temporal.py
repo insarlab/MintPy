@@ -17,10 +17,9 @@ import pysar._readfile as readfile
 
 
 #################################  Usage  ####################################
-def Usage():
+def usage():
     print '''
 ******************************************************************************
-
   Calculate temporal average/mean of multi-temporal datasets.
 
   Usage:
@@ -39,7 +38,7 @@ def main(argv):
     try:
         File = argv[0]
         atr  = readfile.read_attributes(File)
-    except: Usage(); sys.exit(1)
+    except: usage(); sys.exit(1)
 
     try:    outName = argv[1]
     except: outName = 'tempMean_'+File

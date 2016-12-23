@@ -29,29 +29,27 @@ def add(data1,data2):
     return data
 
 
-def Usage():
+def usage():
     print '''
 ***************************************************************
-***************************************************************
-Generates the sum of two input files.
+  Generates the sum of two input files.
 
-   Usage:
-       add.py file1 file2 [out_name]
-       add.py -f file1,file2,... -o out_name
+  Usage:
+      add.py file1 file2 [out_name]
+      add.py -f file1,file2,... -o out_name
 
-       -f : files to be added, need to be the same format, supported file format:
-       -o : output filename, optional [default is file1_plus_file2.h5]
+      -f : files to be added, need to be the same format, supported file format:
+      -o : output filename, optional [default is file1_plus_file2.h5]
 
-   example:
+  example:
            
-          add.py velocity_masked.h5    velocity_demCor_masked.h5
-          add.py timeseries.h5         timeseries_demCor.h5
-          add.py LoadedData.h5         LoadedData2.h5
-          add.py 081008_100220.unw     100220_110417.unw      081008_110417.unw
+      add.py velocity_masked.h5    velocity_demCor_masked.h5
+      add.py timeseries.h5         timeseries_demCor.h5
+      add.py LoadedData.h5         LoadedData2.h5
+      add.py 081008_100220.unw     100220_110417.unw      081008_110417.unw
 
-          add.py -f mask_1.h5,mask_2.h5,mask_3.h5       -o mask_all.h5
+      add.py -f mask_1.h5,mask_2.h5,mask_3.h5       -o mask_all.h5
 
-***************************************************************
 ***************************************************************
     '''
 
@@ -61,11 +59,11 @@ def main(argv):
 
     ####################### Inputs Check ########################
     try:    opts, args = getopt.getopt(argv,"h:f:o:",['help'])
-    except getopt.GetoptError:    Usage() ; sys.exit(1)
+    except getopt.GetoptError:    usage() ; sys.exit(1)
   
     if len(sys.argv) > 4:
         for opt,arg in opts:
-            if opt in ("-h","--help"):  Usage();  sys.exit()
+            if opt in ("-h","--help"):  usage();  sys.exit()
             elif opt == '-f':   fileList = arg.split(',')
             elif opt == '-o':   outName  = arg
   
@@ -73,7 +71,7 @@ def main(argv):
         fileList = [sys.argv[1],sys.argv[2]]
         try: outName = sys.argv[3]
         except: pass
-    else: Usage();  sys.exit(1)
+    else: usage();  sys.exit(1)
   
     print '\n****************** Add **********************'
     print 'Input files: '
