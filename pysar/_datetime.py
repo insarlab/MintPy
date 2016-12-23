@@ -174,4 +174,3 @@ def adjust_xaxis_date(ax,datevector,fontSize=12):
 
 
 
-

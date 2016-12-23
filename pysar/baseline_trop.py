@@ -32,23 +32,20 @@ def to_percent(y, position):
         return s + '%'
 
 ####################################################################################
-def Usage():
+def usage():
     print '''
 ******************************************************************************************************
-******************************************************************************************************
-
   Simultaneously correcting the baseline error and stratified tropospheric delay correlated with DEM.
 
   Usage:
 
-  baseline_trop.py  time-series  dem polynomial_order  mask baseline_error_direction
+      baseline_trop.py  time-series  dem polynomial_order  mask baseline_error_direction
   
   Example:
       baseline_trop.py  timeseries.h5 radar.hgt 1
       baseline_trop.py  timeseries.h5 radar.hgt 1 range
       baseline_trop.py  timeseries.h5 radar.hgt 1 range_and_azimuth mask.h5
 
-******************************************************************************************************
 ******************************************************************************************************
     '''
 
@@ -60,7 +57,7 @@ def main(argv):
         demFile=argv[1]
         p=int(argv[2])
     except:
-        Usage() ; sys.exit(1)
+        usage() ; sys.exit(1)
   
     try:    baseline_error=argv[3]
     except: baseline_error='range_and_azimuth'
