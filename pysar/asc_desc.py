@@ -15,25 +15,19 @@ import getopt
 import h5py
 
 
-def Usage():
+def usage():
     print'''
 ***************************************************************
-***************************************************************
-projecting Asc and Des LOS velocities to Horizontal and Vertical 
-components. Horizontal component is parallel to the azimuth angle.
+  Projecting Asc and Desc LOS velocities to Horizontal and Vertical 
+  components. Horizontal component is parallel to the azimuth angle.
 
 
-Usage:
+  Usage: asc_des.py  V1.h5 V2.h5 azimuth incidence1 incidence2
 
-  asc_des.py  V1.h5 V2.h5 azimuth incidence1 incidence2
+  Example: 
+      asc_des.py seeded_T134_masked.h5 seeded_T256.h5 16  23 38
+      asc_des.py seeded_T134_masked.h5 seeded_T256.h5 16
 
-Example: 
-
-  asc_des.py seeded_T134_masked.h5 seeded_T256.h5 16  23 38
-
-  asc_des.py seeded_T134_masked.h5 seeded_T256.h5 16
-
-***************************************************************
 ***************************************************************  
     '''
 
@@ -143,7 +137,7 @@ def main(argv):
         V1file=sys.argv[1]
         V2file=sys.argv[2]
     except:
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
  
     h5V1=h5py.File(V1file,'r')
     h5V2=h5py.File(V2file,'r')
