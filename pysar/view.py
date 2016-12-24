@@ -29,6 +29,7 @@
 #                   add plot_dem_lalo() and plot_dem_yx(), auto_flip_check()
 #                   use LightSource from plt.colors for shaded relief DEM
 # Yunjun, Aug 2016: add reference point input
+# Yunjun, Dec 2016: add --projection option
 
 
 import sys
@@ -303,7 +304,7 @@ def usage():
       -j            : height space between subplots (default 0.1)
       -s            : font size (default: 12 for plot_one, 8 for plot_all)
       -c            : colormaps of matplotlib found in (http://matplotlib.org/examples/pylab_examples/show_colormaps.html)
-                      (default is jet). some options are: seismic, bwr, spectral, jet, ... 
+                      (default is jet). some options are: jet, RdBu, hsv, ... 
       --notitle     : turn off axis display of figure 
       --noaxis      : turn off axis display of figure 
       -T            : title of time-series epochs or interferograms. 
@@ -316,6 +317,11 @@ def usage():
                       By default, 0.7 when showing topography, otherwise 1.0
       --radar-coord : display in radar coordinates for geocoded files. 
                       By default, for geocoded file display in geo coordinate, otherwise display in radar coordinate
+      --projection  : map projection when plotting in geo-coordinate, 'cyl' by default.
+                      Reference: http://matplotlib.org/basemap/users/mapsetup.html
+                      'cyl' : Equidistant Cylindrical      Projection
+                      'laea': Lambert Azimuthal Equal Area Projection
+                      
 
     Reference (in time and space):
       --noreference   : do not show reference point. By default, it will show if there is reference point in attributes.
@@ -419,6 +425,7 @@ def main(argv):
     Wspace     = 0.1
     masking    = 'no'
     multilook  = 'yes'
+    map_projection =  'cyl'
     ref_color  = 'k'
     ref_symbol = 's'
     ref_size   = 10
@@ -437,7 +444,7 @@ def main(argv):
                                             'contour-step=','contour-smooth=','ref-epoch=','ref-color=','ref-symbol=',\
                                             'ref-size=','radar-coord','title=','dpi=','output=','exclude=','noaxis',\
                                             'no-multilook','mask=','notitle','','ref-yx=','ref-lalo=','point-yx=',\
-                                            'point-lalo=','line-yx=','line-lalo='])
+                                            'point-lalo=','line-yx=','line-lalo=','projection='])
 
         except getopt.GetoptError:
             print 'Error in reading input options!';  usage() ; sys.exit(1)
@@ -483,6 +490,7 @@ def main(argv):
             elif opt == '--noreference'   : showRef      = 'no'
             elif opt == '--notitle'       : showTitle      = 'no'
             elif opt == '--opposite'      : dispOpposite = 'yes'
+            elif opt == '--projection'    : map_projection = arg.lower()
             elif opt == '--ref-epoch'     : ref_epoch    = arg
             elif opt == '--ref-color'     : ref_color    = arg
             elif opt == '--ref-symbol'    : ref_symbol   = arg
@@ -909,8 +917,17 @@ def main(argv):
      
             ## Map Setup
             from mpl_toolkits.basemap import Basemap
-            m = Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat,
-                        resolution='l', area_thresh=1., projection='cyl',suppress_ticks=False,ax=ax)
+            print 'map projection: '+map_projection
+            if   map_projection in ['cyl','merc','mill','cea','gall']:
+                m = Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat,\
+                            projection=map_projection, resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
+            elif map_projection in ['ortho']:
+                m = Basemap(lon_0=(llcrnrlon+urcrnrlon)/2.0, lat_0=(llcrnrlat+urcrnrlat)/2.0,\
+                            projection=map_projection, resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
+            else:
+                m = Basemap(lon_0=(llcrnrlon+urcrnrlon)/2.0, lat_0=(llcrnrlat+urcrnrlat)/2.0,\
+                            llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat,\
+                            projection=map_projection, resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
      
             ## Plot DEM
             try: m = plot_dem_lalo(m,dem,geo_box,demShade,demContour,contour_step,contour_sigma)
