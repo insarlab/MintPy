@@ -112,17 +112,19 @@ def main(argv):
 
     if k == 'timeseries':
         from numpy import std
+        datevector = ptime.date_list2vector(epochList)[1]
+
         print '*************** Date Info ***************'
-        print 'Number of epochs: '+str(len(epochList))
         print 'Start       Date: '+epochList[0]
         print 'End         Date: '+epochList[-1]
+        print 'Number             of acquisitions      : '+str(len(epochList))
+        print 'Standard deviation of acquisition times : '+str(std(datevector))+' years'
+        print '----------------------'
         print 'List of dates:'
         print epochList
-
-        datevector = ptime.date_list2vector(epochList)[1]
+        print '----------------------'
         print 'List of dates in years'
         print datevector
-        print 'Standard deviation of aquisition times :  '+str(std(datevector)) + ' years'
 
         print '*************** Attributes **************'
         print_attributes(atr)
@@ -143,7 +145,7 @@ def main(argv):
             print '*****************************************'
             print 'Number of '+k+': '+str(len(epochList)) 
             print '*****************************************'
-            print 'List of the '+k+':     eNum'
+            print 'List of the '+k+':             number'
             for i in range(len(epochList)):
                 print epochList[i] + '    ' + str(i+1)
             print '*****************************************'
