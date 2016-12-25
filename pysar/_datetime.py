@@ -15,7 +15,7 @@
 
 import sys
 import time
-import datetime
+from datetime import datetime as dt
 
 import numpy as np
 import h5py
@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 ##### Date Format Transform
 
 def yyyymmdd2years(date):
-    d = datetime.datetime(*time.strptime(date,"%Y%m%d")[0:5])
+    d = dt(*time.strptime(date,"%Y%m%d")[0:5])
     yy = float(d.year) + float(d.month-1)/12 + float(d.day-1)/365
     return yy
 
@@ -116,9 +116,9 @@ def date_index(dateList):
 def date_list2tbase(dateList):
     ##### Temporal Baseline in days with respect to the 1st date
     tbase=[]
-    d1 = datetime.datetime(*time.strptime(dateList[0],"%Y%m%d")[0:5])
+    d1 = dt(*time.strptime(dateList[0],"%Y%m%d")[0:5])
     for ni in range(len(dateList)):
-        d2 = datetime.datetime(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
+        d2 = dt(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
         diff = d2-d1
         tbase.append(diff.days)
     ## Dictionary: key - date, value - temporal baseline
@@ -133,13 +133,14 @@ def date_list2vector(dateList):
     ##### Time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
     dates=[]
     for ni in range(len(dateList)):
-        d = datetime.datetime(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
+        d = dt(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
         dates.append(d)
 
     ## date in year - float format
     datevector=[]
     for i in range(len(dates)):
-        datevector.append(np.float(dates[i].year) + np.float(dates[i].month-1)/12 + np.float(dates[i].day-1)/365)
+        dvector = dates[i].year + (dates[i].month-1)/12.0 + (dates[i].day-1)/365.0
+        datevector.append(dvector)
     datevector2=[round(i,2) for i in datevector]
   
     return dates, datevector

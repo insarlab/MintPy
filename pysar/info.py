@@ -10,20 +10,38 @@
 # Yunjun, Oct 2016: add --tree option to check hdf5 tree/structure
 
 
-import sys
 import os
+import sys
 import getopt
 import time
 
 import h5py
 
+import pysar._readfile as readfile
+import pysar._datetime as ptime
+
+
+############################################################
+def print_attributes(atr):
+    ## Print Dictionary of Attributes
+    keyDigitList   = []
+    for key in atr.iterkeys():
+        keyDigitList.append(len(key))
+    digits = max(keyDigitList)
+    f = '{0:<%d}    {1}'%(digits)
+
+    for key in sorted(atr.iterkeys()):
+        print(f.format(key,atr[key]))
+
+    return
+
 
 ############################################################
 ## By andrewcollette at https://github.com/h5py/h5py/issues/406
-def print_attrs(name, obj):
+def print_structure(name, obj):
     print name
-    for key, val in obj.attrs.iteritems():
-        print "    %s: %s" % (key, val)
+    print_attributes(obj.attrs)
+    return
 
 
 ############################################################
@@ -55,127 +73,92 @@ def usage():
 ############################################################
 def main(argv):
 
+    ##### Check Inputs
     try:    File = argv[0]
     except: usage();sys.exit(1)
-    h5file=h5py.File(File,'r')
+    print '\n************************ File Info *****************************'
 
-    ## Print Structure Tree of Input HDF5 File
-    try:
-        argv[1] in ['--struct','--structure','--tree']
-        h5file.visititems(print_attrs)
-        return
-    except: pass
+    #################### Basic Info #####################
+    try: atr = readfile.read_attributes(File)
+    except: print 'Can not read file: '+File; sys.exit(1)
+    ext = os.path.splitext(File)[1].lower()
+    k = atr['FILE_TYPE']
 
-    k=h5file.keys()
-    if 'interferograms' in k: k[0] = 'interferograms'
-    elif 'coherence'    in k: k[0] = 'coherence'
-    elif 'timeseries'   in k: k[0] = 'timeseries'
-    print '******************************************'
-    print '******************************************'
-    print 'PySAR'
-    print '**********************'
-    print 'File contains: '+ k[0]
-    print '**********************'
+    print 'File name   : '+os.path.basename(File)
+    print 'File type   : '+atr['PROCESSOR']+' '+atr['FILE_TYPE']
+    try:  atr['X_FIRST'];  print 'Coordinates : GEO'
+    except:                print 'Coordinates : radar'
 
- 
-    if 'timeseries' in k:
-        import datetime
-        from numpy import std
-   
+    #################### HDF5 File Info #####################
+    if ext == '.h5':
+        h5file=h5py.File(File,'r')
+
+        ##### Print Structure Tree of Input HDF5 File
         try:
-            h5file[k[0]].attrs['X_FIRST']
-            print 'coordinates : GEO'
-        except:
-            print 'coordinates : radar'
-        print '**********************'
-        dateList = h5file['timeseries'].keys()
-        print 'Number of epochs: '+str(len(dateList))
-        print 'Start Date: '+dateList[0]
-        print 'End Date: '+dateList[-1]
-        print '**********************'
-        print 'List of the dates:'
-        print dateList
-        print '**********************'
-        print 'List of the dates in years'
-        t=[]
-        for i in range(len(dateList)):
-            ti=(datetime.datetime(*time.strptime(dateList[i],"%Y%m%d")[0:5]))
-            tt = ti.timetuple()
-            ty=tt.tm_year + (tt.tm_mon-1)/12.0 + tt.tm_mday/365.0
-            t.append(ty)
-        print t
-        
-        print '*****************************************'
-        print 'Standard deviation of aquisition times :'
-        print str(std(t)) + ' years'
-        print '**********************'
-        print 'Attributes:'
-        print''
-        for key,value in h5file['timeseries'].attrs.iteritems():
-            print key + ' : ' + str(value)
-        print '*****************************************'
-        print 'All groups in this file:'
+            argv[1] in ['--struct','--structure','--tree']
+            print '***** File Structure *****'
+            h5file.visititems(print_structure)
+            return
+        except: pass
+
+        ##### Group Info
+        print 'Al groups in this file:'
         print h5file.keys()
-        #print k
 
+        ##### DateList / IgramList
+        if k in ['interferograms','coherence','wrapped','timeseries']:
+            epochList = h5file[k].keys()
+            epochList = sorted(epochList)
 
-    elif k[0] in ['interferograms', 'coherence', 'wrapped']:
-        ifgramList = h5file[k[0]].keys()
-   
-        try:
-            h5file[k[0]][ifgramList[0]].attrs['X_FIRST']
-            print 'coordinates : GEO'
-        except:
-            print 'coordinates : radar'
-        print '**********************'
-   
+    if k == 'timeseries':
+        from numpy import std
+        print '*************** Date Info ***************'
+        print 'Number of epochs: '+str(len(epochList))
+        print 'Start       Date: '+epochList[0]
+        print 'End         Date: '+epochList[-1]
+        print 'List of dates:'
+        print epochList
+
+        datevector = ptime.date_list2vector(epochList)[1]
+        print 'List of dates in years'
+        print datevector
+        print 'Standard deviation of aquisition times :  '+str(std(datevector)) + ' years'
+
+        print '*************** Attributes **************'
+        print_attributes(atr)
+
+    elif k in ['interferograms', 'coherence', 'wrapped']:
+        ##### Plot Attributes of One Epoch
         try: 
-            igramNumber=int(argv[1])
-            print ifgramList[igramNumber-1]
-            print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-            for key, value in h5file[k[0]][ifgramList[igramNumber-1]].attrs.iteritems():
-                print key + ' : ' + value
-            print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-            print ifgramList[igramNumber-1]
-    
+            epochNum = int(argv[1])
+            epochAtr = h5file[k][epochList[epochNum-1]].attrs
+            print '*****************************************'
+            print epochList[epochNum-1]
+            print '*************** Attributes **************'
+            print_attributes(epochAtr)
+            print '*****************************************'
+            print epochList[epochNum-1]
+        ##### Plot Epoch List Info
         except: 
-            print 'Number of '+k[0]+': '+str(len(ifgramList)) 
-            print '**********************'
-            print 'List of the '+k[0]+':     eNum'
-            eNum=1
-            for ifg in ifgramList:
-                print ifg + '    ' + str(eNum)
-                eNum += 1
-            print '**********************'
-            print 'File contains: '+ k[0]
-            print 'Number of '+k[0]+': '+str(len(ifgramList))
-            print 'All groups in this file:'
-            print h5file.keys()
-            #print k
-   
-        for key, value in h5file[k[0]].attrs.iteritems():
-            print key, value
-  
-  
-    elif len(k)==1:
-        try:
-            h5file[k[0]].attrs['X_FIRST']
-            print 'coordinates : GEO'
-        except:
-            print 'coordinates : radar'
-        print '**********************'
-        print 'Attributes:'
-        print''
-        for key , value in h5file[k[0]].attrs.iteritems():
-            print key + ' : ' + str(value)
-  
-    else: print 'Unrecognized file: '+File
-  
-  
-    print '******************************************'
-    print '******************************************'
-  
-    h5file.close()
+            print '*****************************************'
+            print 'Number of '+k+': '+str(len(epochList)) 
+            print '*****************************************'
+            print 'List of the '+k+':     eNum'
+            for i in range(len(epochList)):
+                print epochList[i] + '    ' + str(i+1)
+            print '*****************************************'
+            print 'Number of '+k+': '+str(len(epochList))
+
+    ##### All other file types, except for timeseries/interferograms/coherence/wrapped
+    else:
+        print '*************** Attributes **************'
+        print_attributes(atr)
+
+    try: h5file.close()
+    except: pass
+    print '****************************************************************'
+    return
+
 
 ############################################################
 if __name__ == '__main__':
