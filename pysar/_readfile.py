@@ -53,7 +53,7 @@ def read_attributes(File):
         sys.exit(1)
 
     ##### PySAR
-    if ext == '.h5':
+    if ext in ['.h5','.he5']:
         h5f = h5py.File(File,'r')
         k = h5f.keys()
         if   'interferograms' in k: k[0] = 'interferograms'
@@ -360,21 +360,6 @@ def read_real_int16(File):
     dem = np.fromfile(File,dtype=np.int16).reshape(length,width)
     return dem, atr
 
-##def read_dem(File):
-def read_dem(File):
-    ## Read real int 16 data matrix, i.e. ROI_PAC .dem file.
-    ## should rename it to read_real_int16()
-    ##
-    ## Input:
-    ##     roi_pac format dem file
-    ## Usage:
-    ##     dem, atr = read_real_int16('gsi10m_30m.dem')
-
-    atr = read_attributes(File)
-    width  = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH'])) 
-    dem = np.fromfile(File,dtype=np.int16).reshape(length,width)
-    return dem, atr
 
 #########################################################################
 def read_GPS_USGS(File):  
@@ -451,7 +436,7 @@ def read(*args):
     processor = atr['PROCESSOR']
   
     ##### PySAR HDF5
-    if ext == '.h5':
+    if ext in ['.h5','.he5']:
         h5file = h5py.File(File,'r')
         k = atr['FILE_TYPE']
 

@@ -22,27 +22,50 @@ import pysar._datetime as ptime
 
 
 ############################################################
-def print_attributes(atr):
+def print_attributes(atr, sort=1):
     ## Print Dictionary of Attributes
     keyDigitList   = []
     for key in atr.iterkeys():
         keyDigitList.append(len(key))
-    digits = max(keyDigitList)
+    digits = max(keyDigitList+[0])
     f = '{0:<%d}    {1}'%(digits)
 
-    for key in sorted(atr.iterkeys()):
-        print(f.format(key,atr[key]))
+    if sort == 1: keyList = sorted(atr.iterkeys())
+    else:         keyList = atr.iterkeys()
+    for key in keyList:
+        print(f.format(str(key),str(atr[key])))
 
     return
 
 
 ############################################################
 ## By andrewcollette at https://github.com/h5py/h5py/issues/406
-def print_structure(name, obj):
-    print name
-    print_attributes(obj.attrs)
+def print_hdf5_structure(File):
+    def print_hdf5_structure_obj(name, obj):
+        print name
+        print_attributes(obj.attrs)
+    h5file=h5py.File(File,'r')
+    h5file.visititems(print_structure_obj)
+    h5file.close()
     return
 
+
+############################################################
+def print_timseries_date_info(dateList):
+    from numpy import std
+    datevector = ptime.date_list2vector(dateList)[1]
+    print '*************** Date Info ***************'
+    print 'Start       Date: '+dateList[0]
+    print 'End         Date: '+dateList[-1]
+    print 'Number             of acquisitions      : '+str(len(dateList))
+    print 'Standard deviation of acquisition times : '+str(std(datevector))+' years'
+    print '----------------------'
+    print 'List of dates:'
+    print dateList
+    print '----------------------'
+    print 'List of dates in years'
+    print datevector
+    return
 
 ############################################################
 def usage():
@@ -89,18 +112,19 @@ def main(argv):
     try:  atr['X_FIRST'];  print 'Coordinates : GEO'
     except:                print 'Coordinates : radar'
 
+
+    #################### File Structure #####################
+    try:
+        argv[1] in ['--struct','--structure','--tree']
+        ext in ['.h5','.he5']
+        print '***** HDF5 File Structure *****'
+        print_hdf5_structure(File)
+        return
+    except: pass
+
     #################### HDF5 File Info #####################
-    if ext == '.h5':
+    if ext in ['.h5','.he5']:
         h5file=h5py.File(File,'r')
-
-        ##### Print Structure Tree of Input HDF5 File
-        try:
-            argv[1] in ['--struct','--structure','--tree']
-            print '***** File Structure *****'
-            h5file.visititems(print_structure)
-            return
-        except: pass
-
         ##### Group Info
         print 'Al groups in this file:'
         print h5file.keys()
@@ -111,20 +135,8 @@ def main(argv):
             epochList = sorted(epochList)
 
     if k == 'timeseries':
-        from numpy import std
-        datevector = ptime.date_list2vector(epochList)[1]
-
-        print '*************** Date Info ***************'
-        print 'Start       Date: '+epochList[0]
-        print 'End         Date: '+epochList[-1]
-        print 'Number             of acquisitions      : '+str(len(epochList))
-        print 'Standard deviation of acquisition times : '+str(std(datevector))+' years'
-        print '----------------------'
-        print 'List of dates:'
-        print epochList
-        print '----------------------'
-        print 'List of dates in years'
-        print datevector
+        try: print_timseries_date_info(epochList)
+        except: pass
 
         print '*************** Attributes **************'
         print_attributes(atr)

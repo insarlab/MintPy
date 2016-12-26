@@ -902,8 +902,8 @@ def main(argv):
                 else:                     date12 = ref_date+'_'+date12
             except: pass
             print 'Displaying '+date12
-            try:    processMark = '_ts'+os.path.basename(File).split('timeseries')[1].split('.h5')[0]
-            except: processMark = '_'+os.path.basename(File).split('.h5')[0]
+            try:    processMark = '_ts'+os.path.basename(File).split('timeseries')[1].split(ext)[0]
+            except: processMark = '_'+os.path.basename(File).split(ext)[0]
             figTitle = date12+processMark
         else:  figTitle = File
     

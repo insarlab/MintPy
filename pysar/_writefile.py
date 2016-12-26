@@ -132,7 +132,7 @@ def write(*args):
     ############### Read ###############
     print 'writing >>> '+outname
     ##### PySAR HDF5 product
-    if ext == '.h5':
+    if ext in ['.h5','.he5']:
         k = atr['FILE_TYPE']
         if k in ['interferograms','coherence','wrapped','timeseries']:
             print 'Un-supported file type: '+k
