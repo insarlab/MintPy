@@ -88,22 +88,15 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
 
 ################################################################
 def cmdLineParse():
-    '''
-    Command line parser.
-    '''
     parser = argparse.ArgumentParser(description='Convert PySAR product into UNAVCO InSAR Archive format')
 
-    ## Required Inputs
-    parser.add_argument('-f','--timeseries_file', dest='timeseries', type=str, required=True, default='timeseries.h5',\
-                        help='Timeseries file')
+    parser.add_argument('timeseries', default='timeseries.h5', help='Timeseries file')
 
-    ## Optional Inputs
-    parser.add_argument('-i','--incidence_angle', dest='incidence_angle', type=str, default='incidence_angle.h5',\
-                        help='Incidence angle file')
-    parser.add_argument('-d','--dem', dest='dem', type=str, default='dem.h5', help='DEM file')
-    parser.add_argument('-c','--coherence','--correlation', dest='coherence', type=str, default='temporal_coherence.h5',
+    parser.add_argument('-i','--incidence_angle', default='incidence_angle.h5', help='Incidence angle file')
+    parser.add_argument('-d','--dem', default='dem.h5', help='DEM file')
+    parser.add_argument('-c','--coherence', default='temporal_coherence.h5',
                         help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
-    parser.add_argument('-m','--mask', dest='mask', type=str, default='mask.h5',help='Mask file')
+    parser.add_argument('-m','--mask'default='mask.h5',help='Mask file')
 
     inps = parser.parse_args()
     
@@ -114,13 +107,15 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
 
+    print '\n**************** PySAR to UNAVCO **************'
     ##### Prepare Metadata
     pysar_meta_dict = readfile.read_attributes(inps.timeseries)
     k = pysar_meta_dict['FILE_TYPE']
     h5_timeseries = h5py.File(inps.timeseries,'r')
     dateList = h5_timeseries[k].keys();  dateList = sorted(dateList)
     unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
-    print '************** UNAVCO Metadata ****************'
+    print '## UNAVCO Metadata:'
+    print '-----------------------------------------'
     info.print_attributes(unavco_meta_dict)
 
     meta_dict = pysar_meta_dict.copy()
@@ -137,7 +132,7 @@ def main(argv):
     BPERP = "%05d"%(0)
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
 
-    print '************** Writing HDF5 File **************'
+    print '-----------------------------------------'
     print 'writing >>> '+outName
     f = h5py.File(outName,'w')
     group = f.create_group('timeseries')

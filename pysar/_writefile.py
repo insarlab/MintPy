@@ -130,7 +130,7 @@ def write(*args):
   
     ext = os.path.splitext(outname)[1].lower()
     ############### Read ###############
-    print 'writing >>> '+outname
+    #print 'writing >>> '+outname
     ##### PySAR HDF5 product
     if ext in ['.h5','.he5']:
         k = atr['FILE_TYPE']
