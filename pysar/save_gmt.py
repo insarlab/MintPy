@@ -7,11 +7,15 @@
 #
 # Yunjun, Dec 2015: add support for ROI_PAC product
 
+
+import os
+import sys
+
 import _gmt
 import h5py
 from numpy import linspace,meshgrid,flipud
-import sys
-import os
+
+import pysar._readfile as readfile
 
 
 def get_geo_lat_lon(atr):
@@ -86,7 +90,6 @@ def main(argv):
   
     ########## ROI_PAC Files ##################
     elif ext in ['.unw','.cor','.hgt','.dem']:
-        import pysar._readfile as readfile
         if ext == '.dem' :                    z,atr = readfile.read_real_int16(file)
         if ext in ['.unw','.cor','.hgt']:   a,z,atr = readfile.read_float32(file)
   

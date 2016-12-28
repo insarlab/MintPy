@@ -28,6 +28,8 @@ import getopt
 
 import h5py
 import numpy as np
+import multiprocessing
+from joblib import Parallel, delayed
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -537,8 +539,6 @@ def main(argv):
         print '-------------------------'
         print 'parallel subseting ...'
         print '-------------------------'
-        from joblib import Parallel, delayed
-        import multiprocessing
         num_cores = multiprocessing.cpu_count()
         Parallel(n_jobs=num_cores)(delayed(subset_file)(file,sub_x,sub_y,out_fill) for file in fileList)
 

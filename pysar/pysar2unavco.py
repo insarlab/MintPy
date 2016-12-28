@@ -20,9 +20,9 @@ import pysar.info as info
 
 
 ################################################################
-izero = np.int16(0)
-fzero = np.float32(0.0)
-czero = np.complex64(0.0)
+INT_ZERO = np.int16(0)
+FLOAT_ZERO = np.float32(0.0)
+CPX_ZERO = np.complex64(0.0)
 
 ################################################################
 def metadata_pysar2unavco(pysar_meta_dict,dateList):
@@ -149,9 +149,9 @@ def main(argv):
         data = h5_timeseries[k].get(date)[:,:]
         dset = grid.create_dataset(date, data=data, compression='gzip')
         dset.attrs['Title'] = 'Time series displacement'
-        dset.attrs['MissingValue'] = fzero
+        dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'meters'
-        dset.attrs['_FillValue'] = fzero
+        dset.attrs['_FillValue'] = FLOAT_ZERO
 
     ##### Write Incidence_Angle
     if os.path.isfile(inps.incidence_angle):
@@ -159,9 +159,9 @@ def main(argv):
         inc_angle, inc_angle_meta = readfile.read(inps.incidence_angle)
         dset = grid.create_dataset('incidence_angle', data=inc_angle, compression='gzip')
         dset.attrs['Title'] = 'Incidence angle'
-        dset.attrs['MissingValue'] = fzero
+        dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'degrees'
-        dset.attrs['_FillValue'] = fzero
+        dset.attrs['_FillValue'] = FLOAT_ZERO
 
     ##### Write DEM
     if os.path.isfile(inps.dem):
@@ -169,9 +169,9 @@ def main(argv):
         dem, dem_meta = readfile.read(inps.dem)
         dset = grid.create_dataset('dem', data=dem, compression='gzip')
         dset.attrs['Title'] = 'Digital elevatino model'
-        dset.attrs['MissingValue'] = izero
+        dset.attrs['MissingValue'] = INT_ZERO
         dset.attrs['Units'] = 'meters'
-        dset.attrs['_FillValue'] = izero
+        dset.attrs['_FillValue'] = INT_ZERO
 
     ##### Write Coherence
     if os.path.isfile(inps.coherence):
@@ -179,9 +179,9 @@ def main(argv):
         coherence, coherence_meta = readfile.read(inps.coherence)
         dset = grid.create_dataset('coherence', data=coherence, compression='gzip')
         dset.attrs['Title'] = 'Temporal Coherence'
-        dset.attrs['MissingValue'] = fzero
+        dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'None'
-        dset.attrs['_FillValue'] = fzero
+        dset.attrs['_FillValue'] = FLOAT_ZERO
 
     ##### Write Mask
     if os.path.isfile(inps.mask):
@@ -189,9 +189,9 @@ def main(argv):
         mask, mask_meta = readfile.read(inps.mask)
         dset = grid.create_dataset('mask', data=mask, compression='gzip')
         dset.attrs['Title'] = 'Mask'
-        dset.attrs['MissingValue'] = izero
+        dset.attrs['MissingValue'] = INT_ZERO
         dset.attrs['Units'] = 'None'
-        dset.attrs['_FillValue'] = izero
+        dset.attrs['_FillValue'] = INT_ZERO
 
     f.close()
     print 'Done.'

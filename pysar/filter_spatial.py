@@ -5,12 +5,15 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
+
 import sys
 import os
 import getopt
 
-import numpy as np
 import h5py
+import numpy as np
+import Image
+from scipy import ndimage
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -62,12 +65,10 @@ def filter(data,filtType,par):
     elif filtType == "roberts":     filt_data = roberts(data)
     elif filtType == "canny":       filt_data = canny(data)
     elif filtType == "lowpass_avg":
-        from scipy import ndimage
         p=int(par)
         kernel = np.ones((p,p),np.float32)/(p*p)
         filt_data = ndimage.convolve(data, kernel)
     elif filtType == "highpass_avg":
-        from scipy import ndimage
         p=int(par)
         kernel = np.ones((p,p),np.float32)/(p*p)
         lp_data = ndimage.convolve(data, kernel)
@@ -188,8 +189,6 @@ def main(argv):
         f.close()
 
     elif ext in ['.jpeg','jpg','png']:
-  
-        import Image
         im = Image.open(file)
     
         width = im.size[0] / int(rlks)

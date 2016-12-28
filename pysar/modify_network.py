@@ -10,16 +10,15 @@
 #                   and pysar.dropIfgIndex in template content
 
 
-import sys
 import os
+import sys
 import getopt
 import time
 import datetime
 
-import matplotlib
-from numpy import *
-from pylab import *
 import h5py
+import numpy as np
+import matplotlib.pyplot as plt
 
 import pysar._pysar_utilities as ut
 import pysar._datetime as ptime
@@ -229,7 +228,6 @@ def main(argv):
             i=i+1
     
         ############################################################
-        import matplotlib.pyplot as plt
         fig1 = plt.figure(1)
         ax1=fig1.add_subplot(111)
     

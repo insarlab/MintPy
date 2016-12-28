@@ -10,7 +10,10 @@
 
 
 import os
+
+import h5py
 import numpy as np
+from PIL import Image
 
 
 #def write_float32(data,outname):
@@ -138,7 +141,6 @@ def write(*args):
             print 'Un-supported file type: '+k
             print 'Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...'
             return 0;
-        import h5py
         h5file = h5py.File(outname,'w')
         group = h5file.create_group(k)
         dset = group.create_dataset(k, data=data, compression='gzip')
@@ -157,7 +159,6 @@ def write(*args):
         elif ext == '.trans':
             write_float32(rg,az,outname)
         elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
-            from PIL import Image
             data.save(outname)
         elif ext == '.mli':
             write_real_float32(data,outname)

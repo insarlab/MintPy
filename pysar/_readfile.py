@@ -35,8 +35,10 @@
 import os
 import sys
 
-import numpy as np
 import h5py
+import numpy as np
+import xml.etree.ElementTree as ET
+from PIL import Image
 
 
 #########################################################################
@@ -182,7 +184,6 @@ def read_isce_xml(File):
     ##
 
     #from lxml import etree as ET
-    import xml.etree.ElementTree as ET
     tree = ET.parse(File)
     root = tree.getroot()
     xmldict={}
@@ -474,7 +475,6 @@ def read(*args):
     ##### Image
     elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
         atr = read_roipac_rsc(File+'.rsc')
-        from PIL import Image
         data  = Image.open(File)
         try: data = data.crop(box)
         except: pass

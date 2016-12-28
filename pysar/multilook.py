@@ -19,6 +19,8 @@ import warnings
 
 import h5py
 import numpy as np
+from joblib import Parallel, delayed
+import multiprocessing
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -85,6 +87,7 @@ def multilook_attributes(atr_dict,lks_y,lks_x):
     except: pass
   
     return atr
+
 
 def multilook_file(infile,lks_y,lks_x,outfile=None):
     lks_y = int(lks_y)
@@ -188,13 +191,11 @@ def main(argv):
     inps = cmdLineParse()
     print '\n**************** Multilook *********************'
     fileList = get_file_list(inps.file)
-    if len(fileList) == 1 & inps.parallel:
+    if len(fileList) == 1 and inps.parallel:
         inps.parallel =  False
         print 'parallel processing is diabled for one input file'
 
     if inps.parallel:
-        from joblib import Parallel, delayed
-        import multiprocessing
         num_cores = multiprocessing.cpu_count()
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(multilook_file)(file,inps.lks_y,inps.lks_x) for file in fileList)

@@ -5,6 +5,7 @@
 # Author:  Yunjun Zhang                                    #
 ############################################################
 
+
 import sys
 import os
 
@@ -107,8 +108,7 @@ def main(argv):
 
     ########### Read - Calculate - Write  ###########
     ##### PySAR HDF5 files ######
-    if ext == '.h5':
-        import h5py
+    if ext in ['.h5','.he5']:
         try: h5file=h5py.File(file,'r')
         except: print 'ERROR: can not open file: '+file; sys.exit(1)
         k=h5file.keys()
@@ -176,8 +176,6 @@ def main(argv):
 
     ##### ROI_PAC files #######
     elif ext in ['.unw','.cor','.hgt','.dem','.trans']:
-        import pysar._readfile as readfile
-        import pysar._writefile as writefile
         print 'Input file is '+ext+'\nwriting >>> '+outName
         if ext in ['.unw','.cor','.hgt']:
             a,p,r = readfile.read_float32(file)

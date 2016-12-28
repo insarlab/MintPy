@@ -29,7 +29,6 @@ def circle_index(atr,circle_par):
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
     cir_par = circle_par.split(',')
-    #import pdb; pdb.set_trace()
     try:
         c_y    = int(cir_par[0])
         c_x    = int(cir_par[1])

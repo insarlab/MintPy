@@ -9,12 +9,16 @@
 #
 
 
+import datetime
+import itertools
+
 import h5py
 import numpy as np
-import datetime
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-import itertools
+from matplotlib.tri import Triangulation
+from scipy.sparse import csr_matrix, find
+from scipy.sparse.csgraph import minimum_spanning_tree
 
 import pysar._datetime as ptime
 
@@ -229,12 +233,9 @@ def select_pairs_delaunay(tempBaseList,perpBaseList,normalize=1):
     ##     Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
     ##
 
-
-    import matplotlib.delaunay as md
-
     ##### Generate Delaunay Triangulation based on temporal and spatial perpendicular baselines
     if normalize == 0:
-        centers,edges,tri,neighbors = md.delaunay(tempBase,perpBase)
+        centers,edges,tri,neighbors = Triangulation(tempBase,perpBase)
     else:
         ##### Ratio between perpendicular and temporal baselines (Pepe and Lanari, 2006, TGRS)
         tempBaseFacList = []
@@ -243,7 +244,7 @@ def select_pairs_delaunay(tempBaseList,perpBaseList,normalize=1):
             #tempBaseFac = (tempBase - min(tempBaseList)) * temp2perp_scale + min(perpBaseList)
             tempBaseFac = tempBase * temp2perp_scale   # giving same result as the line above
             tempBaseFacList.append(tempBaseFac)
-        centers,edges,tri,neighbors = md.delaunay(tempBaseFacList,perpBaseList)
+        centers,edges,tri,neighbors = Triangulation(tempBaseFacList,perpBaseList)
 
     ## The delaunay pairs do not necessarily have the indexes with lowest 
     ## first, so let's arrange and sort the delaunay pairs
@@ -325,9 +326,6 @@ def select_pairs_mst(tempBaseList,perpBaseList,normalize=1):
     ## of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
     ##     Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
     ##
-
-    from scipy.sparse import csr_matrix, find
-    from scipy.sparse.csgraph import minimum_spanning_tree
 
     ##### Ratio between perpendicular and temporal baselines (Pepe and Lanari, 2006, TGRS)
     temp2perp_scale = (max(perpBaseList)-min(perpBaseList)) / (max(tempBaseList)-min(tempBaseList))

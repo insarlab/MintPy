@@ -15,8 +15,10 @@ import os
 import sys
 import getopt
 
-import numpy as np
 import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+import random
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -27,7 +29,6 @@ import pysar.subset as sub
 ########################################## Sub Functions #############################################
 ###############################################################
 def random_selection(stack):
-    import random
     nrow,ncol = np.shape(stack)
   
     y = random.choice(range(nrow))
@@ -177,7 +178,6 @@ def seed_attributes(atr_in,x,y):
 
 ###############################################################
 def seed_manual(File,stack,outName):
-    import matplotlib.pyplot as plt
 
     print '\n---------------------------------------------------------'
     print   'Manual select reference point ...'

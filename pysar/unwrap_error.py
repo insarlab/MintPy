@@ -14,6 +14,7 @@ import getopt
 
 import h5py
 import numpy as np
+from scipy.linalg import pinv
 
 import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
@@ -241,7 +242,6 @@ def main(argv):
         
         Mask=Mask.flatten(1)
 
-        from scipy.linalg import pinv as pinv
         for ni in range(numPixels):
             #dU = np.zeros([ligram,1])
             #print np.shape(dU)

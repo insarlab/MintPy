@@ -16,6 +16,7 @@ import getopt
 import time
 
 import h5py
+from numpy import std
 
 import pysar._readfile as readfile
 import pysar._datetime as ptime
@@ -52,7 +53,6 @@ def print_hdf5_structure(File):
 
 ############################################################
 def print_timseries_date_info(dateList):
-    from numpy import std
     datevector = ptime.date_list2vector(dateList)[1]
     print '*************** Date Info ***************'
     print 'Start       Date: '+dateList[0]

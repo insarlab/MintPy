@@ -13,7 +13,12 @@ import sys
 import glob
 import time
 
+import h5py
+import numpy as np
+
 import pysar._readfile as readfile
+from pysar._pysar_utilities import check_variable_name
+
 
 
 ############################ Sub Functions ###################################
@@ -103,7 +108,6 @@ def main(argv):
     try:     templateFile = argv[1]
     except:  usage(); sys.exit(1)
   
-    from pysar._pysar_utilities import check_variable_name
     templateContents = readfile.read_template(templateFile)
     projectName = os.path.basename(templateFile).partition('.')[0]
   
@@ -123,8 +127,7 @@ def main(argv):
     if not os.path.isdir(tssarProjectDir): os.mkdir(tssarProjectDir)
   
     ########### Use defaults if paths not given in template file #########
-    import h5py
-    import numpy as np
+
     optionName = {}
     optionName['interferograms']='pysar.inputFiles'  
     optionName['coherence']     ='pysar.corFiles'
