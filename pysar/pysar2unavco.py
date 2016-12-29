@@ -87,8 +87,14 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     return unavco_meta_dict
 
 ################################################################
+EXAMPLE='''example:
+  pysar2unavco.py timeseries.h5 -i incidence_angle -d dem.h5 -c temporal_coherence.h5 -m mask.h5
+'''
+
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Convert PySAR product into UNAVCO InSAR Archive format')
+    parser = argparse.ArgumentParser(description='Convert PySAR product into UNAVCO InSAR Archive format',\
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,\
+                                     epilog=EXAMPLE)
 
     parser.add_argument('timeseries', default='timeseries.h5', help='Timeseries file')
 
@@ -96,7 +102,7 @@ def cmdLineParse():
     parser.add_argument('-d','--dem', default='dem.h5', help='DEM file')
     parser.add_argument('-c','--coherence', default='temporal_coherence.h5',
                         help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
-    parser.add_argument('-m','--mask'default='mask.h5',help='Mask file')
+    parser.add_argument('-m','--mask', default='mask.h5',help='Mask file')
 
     inps = parser.parse_args()
     

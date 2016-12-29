@@ -163,7 +163,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
 
 ##################################################################################################
-example='''
+EXAMPLE='''
 example:
   multilook.py  velocity.h5  15 15
   multilook.py  srtm30m.dem  10 10  -o srtm30m_300m.dem
@@ -172,7 +172,7 @@ example:
 def cmdLineParse():
     parser = argparse.ArgumentParser(description='Multilook.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=example)
+                                     epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='File(s) to multilook')
     parser.add_argument('lks_x', type=int, help='number of multilooking in azimuth/y direction')

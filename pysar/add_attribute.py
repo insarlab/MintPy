@@ -47,7 +47,9 @@ def usage():
 def main(argv):
 
     ##### Check Inputs
-    if argv[0] in ['-h','--help']:  usage();   sys.exit(1)
+    if not argv or argv[0] in ['-h','--help']:
+        usage()
+        sys.exit(1)
     if len(argv) < 2:  print('\nAt lease 2 inputs are needed.\n'); sys.exit(1)
 
     ##### Read Original Attributes
