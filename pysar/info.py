@@ -46,7 +46,7 @@ def print_hdf5_structure(File):
         print name
         print_attributes(obj.attrs)
     h5file=h5py.File(File,'r')
-    h5file.visititems(print_structure_obj)
+    h5file.visititems(print_hdf5_structure_obj)
     h5file.close()
     return
 
