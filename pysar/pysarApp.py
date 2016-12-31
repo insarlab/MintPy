@@ -35,13 +35,17 @@
 #                   Finished pysar.subset.yx option.
 #                   Add check_mask(), check_geocode()
 # Yunjun, Nov 2015: Add pysar.kml option, workDir input option
+# Yunjun, Dec 2016: Add command line parser
+
 
 import os
 import sys
 import glob
 import time
+import argparse
 
 import h5py
+import numpy as np
 
 import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
@@ -109,7 +113,7 @@ def check_mask(inName, maskFile, workDir='.'):
     if   os.path.isfile(workDir+'/'+outName):
         print outName+' already exists.'
     elif os.path.isfile(workDir+'/'+inName):
-        maskCmd = 'masking.py -f '+inName+' -m '+maskFile
+        maskCmd = 'mask.py -f '+inName+' -m '+maskFile
         print maskCmd
         os.system(maskCmd)
     else:
@@ -136,7 +140,7 @@ def usage():
 *******************************************************
 *******************************************************
 A Python Module for InSAR time-series analysis.
-PySAR v1.0 July 2013, InSAR Lab, RSMAS, University of Miami
+PySAR v1.0 July 2013, Geodesy Lab, RSMAS, University of Miami
 
 Usage:       
       pysarApp.py TEMPLATEFILE [workDir]
@@ -208,6 +212,14 @@ pysar.view.list          = geo_velocity_masked.h5,temporal_coherence.h5       #n
 
 ####################################################################
     '''
+    return
+
+
+def cmdLineParse():
+    parser = argparse.ArgumentParser(description='PySAR - A Python Module for InSAR time-series analysis.')
+    parser.add_argument('-v','--version', action='version', version='%(prog)s 2.0')
+    inps = parser.parse_args()
+    return inps
 
 
 ####################################  Main Function  ######################################
@@ -291,7 +303,6 @@ def main(argv):
         subset = template['pysar.subset.yx'].split(',')
     
         print 'calculating bounding box in geo coordinate.'
-        import numpy as np
         ysub = [float(i) for i in subset[0].split(':')];  ysub.sort()
         xsub = [float(i) for i in subset[1].split(':')];  xsub.sort()
         x = np.array([xsub[0],xsub[1],xsub[0],xsub[1]])
@@ -319,7 +330,6 @@ def main(argv):
         subset= template['pysar.subset.lalo'].split(',')
     
         print 'calculate bounding box in radar coordinate.'
-        import numpy as np
         latsub = [float(i) for i in subset[0].split(':')];  latsub.sort()
         lonsub = [float(i) for i in subset[1].split(':')];  lonsub.sort()
         lat = np.array([latsub[0],latsub[0],latsub[1],latsub[1]])

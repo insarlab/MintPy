@@ -430,12 +430,12 @@ def read(*args):
         if   isinstance(args[i], tuple):       box        = args[i]
         elif isinstance(args[i], basestring):  epoch_date = args[i]
         elif isinstance(args[i], int):         epoch_num  = args[i]
-  
+
     ############### Read ###############
     ext = os.path.splitext(File)[1].lower()
     atr = read_attributes(File)
     processor = atr['PROCESSOR']
-  
+
     ##### PySAR HDF5
     if ext in ['.h5','.he5']:
         h5file = h5py.File(File,'r')

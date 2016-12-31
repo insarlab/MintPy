@@ -32,12 +32,12 @@ import load_data
 #import load_dem
 import lod
 import look_angle
-import masking
+import mask
 import matching
 import mean_temporal
 import mean_spatial
 import modify_network
-import multi_looking
+import multilook
 import multi_transect
 #import plot
 import plot_network

@@ -200,7 +200,7 @@ def main(argv):
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(multilook_file)(file,inps.lks_y,inps.lks_x) for file in fileList)
     else:
-        multilook_file(file,inps.lks_y,inps.lks_x,inps.outfile)
+        multilook_file(fileList[0],inps.lks_y,inps.lks_x,inps.outfile)
 
     return
 

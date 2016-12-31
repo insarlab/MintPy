@@ -56,7 +56,7 @@ def main(argv):
     print '************ Add / Update HDF5 File Attributes *************'
     File = argv[0]
     atr  = readfile.read_attributes(File)
-    print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']
+    print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File
 
     ##### Read New Attributes
     atr_new = dict()
