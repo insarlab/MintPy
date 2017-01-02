@@ -385,6 +385,18 @@ def box_pixel2geo(pixel_box, meta_dict):
         geo_box = None
     return geo_box
 
+
+def box_geo2pixel(geo_box, meta_dict):
+    '''Convert geo_box to pixel_box'''
+    try:
+        y = subset.coord_geo2radar([geo_box[1],geo_box[3]], meta_dict, 'latitude')
+        x = subset.coord_geo2radar([geo_box[0],geo_box[2]], meta_dict, 'longitude')
+        pixel_box = (x[0],y[0],x[1],y[1])
+    except:
+        pixel_box = None
+    return pixel_box
+
+
 ################################################################
 def subset_file(File, subset_dict, outFile=None):
     '''Subset file with
@@ -608,7 +620,7 @@ def main(argv):
         # Update subset_y/x/lat/lon
         inps = update_subset_input_from_box(inps, pix_box, geo_box)
 
-     # check outfile and parallel option
+    # check outfile and parallel option
     if len(fileList) > 1:
         inps.outfile = None
     elif len(fileList) == 1 and inps.parallel:

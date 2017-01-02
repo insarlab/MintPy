@@ -580,11 +580,13 @@ def timeseries_inversion(igramsFile,timeseriesFile):
         if not date in h5timeseries['timeseries']:
             print date
             dset = group.create_dataset(date, data=timeseries[dateIndex[date]], compression='gzip')
+
     ## Attributes
     print 'calculating perpendicular baseline timeseries'
     Bperp = Baseline_timeseries(igramsFile)
     Bperp = str(Bperp.tolist()).translate(None,'[],')
     atr['P_BASELINE_TIMESERIES'] = Bperp
+    atr['ref_date'] = dateList[0]
     for key,value in atr.iteritems():   group.attrs[key] = value
     h5timeseries.close()
   
