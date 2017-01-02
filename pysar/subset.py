@@ -389,8 +389,8 @@ def box_pixel2geo(pixel_box, meta_dict):
 def box_geo2pixel(geo_box, meta_dict):
     '''Convert geo_box to pixel_box'''
     try:
-        y = subset.coord_geo2radar([geo_box[1],geo_box[3]], meta_dict, 'latitude')
-        x = subset.coord_geo2radar([geo_box[0],geo_box[2]], meta_dict, 'longitude')
+        y = coord_geo2radar([geo_box[1],geo_box[3]], meta_dict, 'latitude')
+        x = coord_geo2radar([geo_box[0],geo_box[2]], meta_dict, 'longitude')
         pixel_box = (x[0],y[0],x[1],y[1])
     except:
         pixel_box = None

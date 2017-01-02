@@ -404,12 +404,12 @@ def read(File, box=(), epoch=''):
     atr = read_attributes(File)
     processor = atr['PROCESSOR']
 
-    # Update attributes if subset
-    if box:
-        width = float(atr['WIDTH'])
-        length = float(atr['FILE_LENGTH'])
-        if (box[2]-box[0])*(box[3]-box[1]) < width*length:
-            atr = subset.subset_attributes(atr, box)
+    ## Update attributes if subset
+    #if box:
+    #    width = float(atr['WIDTH'])
+    #    length = float(atr['FILE_LENGTH'])
+    #    if (box[2]-box[0])*(box[3]-box[1]) < width*length:
+    #        atr = subset_attributes(atr, box)
 
     ##### HDF5
     if ext in ['.h5','.he5']:
