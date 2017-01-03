@@ -43,7 +43,7 @@ from PIL import Image
 
 #########################################################################
 #######################  Read Attributes  ######################
-def read_attributes(File):
+def read_attributes(File, epoch=''):
     ## Read attributes of input file into a dictionary
     ## Input  : file name
     ## Output : atr  - attributes dictionary
@@ -62,7 +62,10 @@ def read_attributes(File):
         elif 'coherence'      in k: k[0] = 'coherence'
         elif 'timeseries'     in k: k[0] = 'timeseries'
         if   k[0] in ('interferograms','coherence','wrapped'):
-            attrs  = h5f[k[0]][h5f[k[0]].keys()[0]].attrs
+            if epoch:
+                attrs  = h5f[k[0]][epoch].attrs
+            else:
+                attrs  = h5f[k[0]][h5f[k[0]].keys()[0]].attrs
         elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
             attrs  = h5f[k[0]].attrs
         else: print 'Unrecognized h5 file key: '+k[0]
@@ -401,7 +404,7 @@ def read(File, box=(), epoch=''):
 
     # Basic Info
     ext = os.path.splitext(File)[1].lower()
-    atr = read_attributes(File)
+    atr = read_attributes(File, epoch)
     processor = atr['PROCESSOR']
 
     ## Update attributes if subset
