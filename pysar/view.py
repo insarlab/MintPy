@@ -31,11 +31,12 @@
 # Yunjun, Aug 2016: add reference point input
 # Yunjun, Dec 2016: add --projection option
 # Yunjun, Jan 2016: major updates including:
-#                   1. use cmdLineParse() and Namespace for plot input options
-#                   2. add auto_row_col_num() and plt.tight_layout() for multi-dataset display
-#                   3. clean up disp_wrap/unit/scale conflict
-#                   4. update_plot_inps_with_meta_dict() and update_matrix_with_plot_inps()
-#                   5. introduce plot_matrxi() for easy external call
+#                   use cmdLineParse() and Namespace for plot input options
+#                   add auto_row_col_num() and plt.tight_layout() for multi-dataset display
+#                   clean up disp_wrap/unit/scale conflict
+#                   update_plot_inps_with_meta_dict() and update_matrix_with_plot_inps()
+#                   introduce plot_matrxi() for easy external call
+#                   add scalebar
 
 
 import os
@@ -52,7 +53,7 @@ from matplotlib.colors import LinearSegmentedColormap, LightSource
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.patheffects import withStroke
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits.basemap import Basemap, cm
+from mpl_toolkits.basemap import Basemap, cm, pyproj
 
 import pysar._datetime as ptime
 import pysar._readfile as readfile
@@ -60,6 +61,35 @@ import pysar._pysar_utilities as ut
 import pysar.mask as mask
 import pysar.subset as subset
 from pysar.multilook import multilook_matrix
+
+
+############################################ Class ###############################################
+class Basemap2(Basemap): 
+    # add drawscale method to Basemap class. 
+    def drawscale(self,lat_c,lon_c,dist,font_size=12, yoffset=None): 
+        """draw a simple map scale from x1,y to x2,y in map projection 
+        coordinates, label it with actual distance in km
+        Inputs:
+            lat_c/lon_c : float, longitude and latitude of scale bar center, in degree
+            dist        : float, distance of scale bar, in m
+            yoffset     : float, optional, scale bar length at two ends, in degree
+        Example:
+            m.drawscale(33.06, 131.18, 2000)
+        ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
+        """
+        gc = pyproj.Geod(a=self.rmajor,b=self.rminor) 
+        lon_c2, lat_c2, az21 = gc.fwd(lon_c, lat_c, 90, dist)
+        length = np.abs(lon_c - lon_c2)
+        lon0 = lon_c - length/2.0
+        lon1 = lon_c + length/2.0
+        if yoffset is None: yoffset = 0.1*length
+
+        self.plot([lon0,lon1],[lat_c,lat_c],color='k')
+        self.plot([lon0,lon0],[lat_c,lat_c+yoffset],color='k')
+        self.plot([lon1,lon1],[lat_c,lat_c+yoffset],color='k')
+        plt.text(lon0+0.5*length, lat_c+yoffset*2, '%d km'%(dist/1000.,),\
+        verticalalignment='top',\
+        horizontalalignment='center',fontsize=font_size) 
 
 
 ##########################################  Sub Function  ########################################
@@ -414,6 +444,11 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     print 'subset coverage in lat/lon: '+str(inps.geo_box)
     print '------------------------------------------------------------------------'
 
+    # Scale Bar
+    if inps.geo_box and not inps.scalebar:
+        inps.scalebar = [inps.geo_box[3]+0.1*(inps.geo_box[1]-inps.geo_box[3]),\
+                         inps.geo_box[0]+0.2*(inps.geo_box[2]-inps.geo_box[0]), 2000]
+    
     # Multilook
     # if too many subplots in one figure for less memory and faster speed
     if inps.multilook_num > 1:
@@ -597,17 +632,17 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         # Map Setup
         print 'map projection: '+inps.map_projection
         if   inps.map_projection in ['cyl','merc','mill','cea','gall']:
-            m = Basemap(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
+            m = Basemap2(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
                         urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],\
                         projection=inps.map_projection,\
                         resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
         elif map_projection in ['ortho']:
-            m = Basemap(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
+            m = Basemap2(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
                         lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,\
                         projection=inps.map_projection,\
                         resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
         else:
-            m = Basemap(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
+            m = Basemap2(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
                         lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,\
                         llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
                         urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],\
@@ -623,6 +658,11 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         print 'plotting Data ...'
         im = m.imshow(data, cmap=inps.colormap, origin='upper', vmin=inps.disp_min, vmax=inps.disp_max,\
                       alpha=inps.transparency, interpolation='nearest')
+
+        # Scale Bar
+        if inps.disp_scalebar:
+            print 'plot scale bar'
+            m.drawscale(inps.scalebar[0], inps.scalebar[1], inps.scalebar[2], inps.font_size)
 
         # Lat Lon labels
         if inps.lalo_label:
@@ -910,6 +950,10 @@ def cmdLineParse(argv):
     fig_group.add_argument('--lalo-label', dest='lalo_label', action='store_true',\
                            help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
                                 'Useful for final figure output.')
+    fig_group.add_argument('--scalebar', type=float, nargs=3,\
+                           help="add scale bar centerd in [lat, lon] in degree with distance in meters"\
+                                'i.e. --scalebar 131.18 33.06 2000')
+    fig_group.add_argument('--noscalebar', dest='disp_scalebar', action='store_false', help='do not display scale bar.')
 
     inps = parser.parse_args(argv)
     # If output flie name assigned or figure shown is turned off, turn on the figure save
