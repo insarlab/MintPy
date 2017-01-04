@@ -580,7 +580,7 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
 
-    print '\n**************** Multilook *********************'
+    print '\n**************** Subset *********************'
     fileList = get_file_list(inps.file)
     atr_dict = readfile.read_attributes(fileList[0])
 

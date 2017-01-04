@@ -17,10 +17,9 @@ import sys
 import time
 from datetime import datetime as dt
 
-import numpy as np
 import h5py
+import numpy as np
 import matplotlib.dates as mdates
-import matplotlib.pyplot as plt
 
 
 ################################################################

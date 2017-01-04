@@ -476,6 +476,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     
     # Seed Point
     # If value of new seed point is not nan, re-seed the data and update inps.seed_yx/lalo
+    # Otherwise, try to read seed info from atrributes into inps.seed_yx/lalo
     if inps.seed_yx:
         inps.seed_value = data[inps.seed_yx[0]-inps.pix_box[1], inps.seed_yx[1]-inps.pix_box[0]]
         if not np.isnan(inps.seed_value):
@@ -489,6 +490,11 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
         else:
             print 'WARNING: input reference point has nan value, continue with original reference info'
             inps.seed_yx = None
+    else:
+        try:    inps.seed_yx = [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]
+        except: inps.seed_yx = None
+        try:    inps.seed_lalo = [float(meta_dict['ref_lat']), float(meta_dict['ref_lon'])]
+        except: inps.seed_lalo = None
 
     # Multilook
     if inps.multilook:
@@ -620,32 +626,31 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
         # Lat Lon labels
         if inps.lalo_label:
-            # Find proper lat/lon sequence
+            # 1 - Find proper lat/lon sequence
             max_lalo_dist = max([inps.geo_box[1]-inps.geo_box[3], inps.geo_box[2]-inps.geo_box[0]])
-            lalo_step = round_to_1(max_lalo_dist/5.0)
-            lats = np.arange(float(str('%.2f'%(inps.geo_box[3]+lalo_step/2.0))),\
-                             float(str('%.2f'%inps.geo_box[1])),lalo_step)
-            lons = np.arange(float(str('%.2f'%(inps.geo_box[0]+lalo_step/2.0))),\
-                             float(str('%.2f'%inps.geo_box[2])),lalo_step)
+            lalo_step = round_to_1(max_lalo_dist/4.0)
+            digit = len(str(lalo_step).split('.')[1])
+            f = "{:.%df}"%(digit)
+            fmt = '%.'+'%d'%(digit)+'f'
+            lats = np.arange(float(f.format(inps.geo_box[3]+lalo_step/2.0)), float(f.format(inps.geo_box[1])), lalo_step)
+            lons = np.arange(float(f.format(inps.geo_box[0]+lalo_step/2.0)), float(f.format(inps.geo_box[2])), lalo_step)
+            ## 2 - Write them down manually
+            #lats = np.arange(33.06, 33.15, 0.04)
+            #lons = np.arange(131.16, 131.27, 0.04)
+
             # Plot x/y tick without label
             ax.set_xticks(lons)
             ax.set_yticks(lats)
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             # Plot x/y label
-            m.drawparallels(lats, fmt='%.2f', labels=[1,0,0,0], linewidth=0.0, fontsize=inps.font_size)
-            m.drawmeridians(lons, fmt='%.2f', labels=[0,0,0,1], linewidth=0.0, fontsize=inps.font_size)
+            m.drawparallels(lats, fmt=fmt, labels=[1,0,0,0], linewidth=0.0, fontsize=inps.font_size)
+            m.drawmeridians(lons, fmt=fmt, labels=[0,0,0,1], linewidth=0.0, fontsize=inps.font_size)
 
         
         # Plot Seed Point
-        if inps.disp_seed:
-            if inps.seed_lalo:
-                seed_lon = inps.seed_lalo[1]
-                seed_lat = inps.seed_lalo[0]
-            else:
-                seed_lon = float(meta_dict['ref_lon'])
-                seed_lat = float(meta_dict['ref_lat'])
-            ax.plot(seed_lon, seed_lat, inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
+        if inps.disp_seed and inps.seed_lalo:
+            ax.plot(inps.seed_lalo[1], inps.seed_lalo[0], inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
             print 'plot reference point'
 
 
@@ -683,14 +688,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
                        alpha=inps.transparency, interpolation='nearest')
         
         # Plot Seed Point
-        if inps.disp_seed:
-            if inps.seed_yx:
-                seed_x = inps.seed_yx[1]
-                seed_y = inps.seed_yx[0]
-            else:
-                seed_x = int(meta_dict['ref_x'])
-                seed_y = int(meta_dict['ref_y'])
-            ax.plot(seed_x-inps.pix_box[0], seed_y-inps.pix_box[1],\
+        if inps.disp_seed and inps.seed_yx:
+            ax.plot(inps.seed_yx[1]-inps.pix_box[0], inps.seed_yx[0]-inps.pix_box[1],\
                     inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
             print 'plot reference point'
 
