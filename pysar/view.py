@@ -914,8 +914,7 @@ def cmdLineParse(argv):
 
     inps = parser.parse_args(argv)
     # If output flie name assigned or figure shown is turned off, turn on the figure save
-    if inps.outfile or not inps.disp_fig:
-        inps.save_fig = True
+    if inps.outfile or not inps.disp_fig:  inps.save_fig = True
     
     return inps
 
@@ -923,6 +922,9 @@ def cmdLineParse(argv):
 #########################################  Main Function  ########################################
 def main(argv):
     inps = cmdLineParse(argv)
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
+
     print '\n******************** Display ********************'
 
     # File Basic Info
@@ -1011,14 +1013,14 @@ def main(argv):
         if not inps.fig_size:   inps.fig_size = [12.5,8.0]
         fig = plt.figure(figsize=inps.fig_size)
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
-
+        
         # Plotting
         ax, inps = plot_matrix(ax, data, atr, inps)
 
         # Figure Output
         if inps.save_fig:
             if not inps.outfile:
-                inps.outfile = inps.fig_title+inps.fig_file_ext
+                inps.outfile = inps.fig_title+inps.outfile_ext
             plt.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print 'Saved figure to '+inps.outfile
 
