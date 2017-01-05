@@ -579,10 +579,10 @@ def cmdLineParse():
 ###########################################################################################
 def main(argv):
     inps = cmdLineParse()
+    inps.file = get_file_list(inps.file)
 
     print '\n**************** Subset *********************'
-    fileList = get_file_list(inps.file)
-    atr_dict = readfile.read_attributes(fileList[0])
+    atr_dict = readfile.read_attributes(inps.file[0])
 
     ##### Convert All Inputs into subset_y/x/lat/lon
     # Input Priority: subset_y/x/lat/lon > reference > template > footprint
@@ -621,9 +621,9 @@ def main(argv):
         inps = update_subset_input_from_box(inps, pix_box, geo_box)
 
     # check outfile and parallel option
-    if len(fileList) > 1:
+    if len(inps.file) > 1:
         inps.outfile = None
-    elif len(fileList) == 1 and inps.parallel:
+    elif len(inps.file) == 1 and inps.parallel:
         inps.parallel =  False
         print 'parallel processing is diabled for one input file'
 
@@ -632,9 +632,9 @@ def main(argv):
     if inps.parallel:
         num_cores = multiprocessing.cpu_count()
         print 'parallel processing using %d cores ...'%(num_cores)
-        Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in fileList)
+        Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in inps.file)
     else:
-        subset_file(fileList[0], vars(inps), inps.outfile)
+        subset_file(inps.file[0], vars(inps), inps.outfile)
 
     print 'Done.'
 

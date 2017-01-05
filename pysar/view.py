@@ -66,6 +66,7 @@ from pysar.multilook import multilook_matrix
 ############################################ Class ###############################################
 class Basemap2(Basemap): 
     # add drawscale method to Basemap class. 
+    # Basemap.drawmapscale() do not support 'cyl' projection.
     def drawscale(self,lat_c,lon_c,dist,font_size=12, yoffset=None): 
         """draw a simple map scale from x1,y to x2,y in map projection 
         coordinates, label it with actual distance in km
