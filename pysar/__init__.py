@@ -8,7 +8,7 @@ import _readfile
 import _remove_surface
 import _writefile
 import add
-import asc_des
+import asc_desc
 import baseline_error
 import baseline_trop
 import convert2mat
@@ -33,7 +33,7 @@ import load_data
 import lod
 import look_angle
 import mask
-import matching
+import match
 import mean_temporal
 import mean_spatial
 import modify_network
