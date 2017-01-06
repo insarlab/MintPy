@@ -581,8 +581,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
          
         data, atr = readfile.read('velocity.h5')
         fig = plt.figure()
-        ax = fig.add_axes()
-        axes = view.plot_matrix(axes, data, atr)
+        ax = fig.add_axes([0.1,0.1,0.8,0.8])
+        ax = view.plot_matrix(ax, data, atr)
         plt.show()
     '''
 
