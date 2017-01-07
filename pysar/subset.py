@@ -564,7 +564,7 @@ def cmdLineParse():
 
     parser.add_argument('--outfill', dest='fill_value', type=float,\
                         help="fill subset area out of data coverage with input value. i.e. \n"
-                             "nan, 0, 1000, ... \n"
+                             "np.nan, 0, 1000, ... \n"
                              "By default, it's None for no-outfill.")
     parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.\n\n')
@@ -612,8 +612,10 @@ def main(argv):
             lons = [atr_dict['LON_REF1'], atr_dict['LON_REF3'], atr_dict['LON_REF4'], atr_dict['LON_REF2']]
             lats = [float(i) for i in lats]
             lons = [float(i) for i in lons]
-            geo_box = (min(lons)-0.1, max(lats)+0.1, max(lons)+0.1, min(lats)-0.1)
+            lalo_buff = min([max(lats)-min(lats), max(lons)-min(lons)]) * 0.05
+            geo_box = (min(lons)-lalo_buff, max(lats)+lalo_buff, max(lons)+lalo_buff, min(lats)-lalo_buff)
             pix_box = None
+            if not inps.fill_value: inps.fill_value = np.nan
             print 'using subset info from scene footprint - LAT/LON_REF1/2/3/4'
         else:
             raise Exception('No subset inputs found!')

@@ -88,7 +88,7 @@ class Basemap2(Basemap):
         self.plot([lon0,lon1],[lat_c,lat_c],color='k')
         self.plot([lon0,lon0],[lat_c,lat_c+yoffset],color='k')
         self.plot([lon1,lon1],[lat_c,lat_c+yoffset],color='k')
-        plt.text(lon0+0.5*length, lat_c+yoffset*2, '%d km'%(dist/1000.,),\
+        plt.text(lon0+0.5*length, lat_c+yoffset*3, '%d km'%(dist/1000.,),\
         verticalalignment='top',\
         horizontalalignment='center',fontsize=font_size) 
 
@@ -444,11 +444,6 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     print 'data   coverage in lat/lon: '+str(subset.box_pixel2geo(data_box, meta_dict))
     print 'subset coverage in lat/lon: '+str(inps.geo_box)
     print '------------------------------------------------------------------------'
-
-    # Scale Bar
-    if inps.geo_box and not inps.scalebar:
-        inps.scalebar = [inps.geo_box[3]+0.1*(inps.geo_box[1]-inps.geo_box[3]),\
-                         inps.geo_box[0]+0.2*(inps.geo_box[2]-inps.geo_box[0]), 2000]
     
     # Multilook
     # if too many subplots in one figure for less memory and faster speed
@@ -663,6 +658,13 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         # Scale Bar
         if inps.disp_scalebar:
             print 'plot scale bar'
+            if not inps.scalebar:
+                # Default Distance - 10% of data width
+                gc = pyproj.Geod(a=m.rmajor,b=m.rminor) 
+                az12, az21, wid_dist = gc.inv(inps.geo_box[0], inps.geo_box[3], inps.geo_box[2], inps.geo_box[3])
+                #import pdb; pdb.set_trace()
+                inps.scalebar = [inps.geo_box[3]+0.1*(inps.geo_box[1]-inps.geo_box[3]),\
+                             inps.geo_box[0]+0.2*(inps.geo_box[2]-inps.geo_box[0]), round_to_1(wid_dist)*0.1]
             m.drawscale(inps.scalebar[0], inps.scalebar[1], inps.scalebar[2], inps.font_size)
 
         # Lat Lon labels
