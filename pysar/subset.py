@@ -121,7 +121,7 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
     sub_x = [pixel_box[0], pixel_box[2]]
     sub_y = [pixel_box[1], pixel_box[3]]
 
-    if not all(i>=0 and i<=length for i in sub_y) or not all(i>=0 and i<=width for i in sub_x):
+    if sub_y[0]>=length or sub_y[1]<=0 or sub_x[0]>=width or sub_x[1]<=0:
         print 'ERROR: input index is out of data range!'
         data_box = (0,0,width,length)
         print '\tdata   range in y/x: '+str(data_box)
