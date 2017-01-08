@@ -28,11 +28,11 @@ import pysar._writefile as writefile
 from pysar._pysar_utilities import get_file_list
 
 
-def geomap4subset_radar_file(in_atr, geomap_file):
+def geomap4subset_radar_file(radar_atr, geomap_file):
     ''' Add offset value to geomap file if input radar file has been subsetted.'''
-    if 'subset_x0' in in_atr.keys():
-        x0 = float(atr['subset_x0'])
-        y0 = float(atr['subset_y0'])
+    if 'subset_x0' in radar_atr.keys():
+        x0 = float(radar_atr['subset_x0'])
+        y0 = float(radar_atr['subset_y0'])
         print '\nInput radar coord file has been subsetted.\n    creating temporary geomap file for it...'
 
         rg,az,rsc = readfile.read_float32(geomap_file)
@@ -224,7 +224,7 @@ def main(argv):
 
     # Check geomap file for previously subsetted radar coord file
     atr = readfile.read_attribute(inps.file[0])
-    if 'subset_x0' in in_atr.keys():
+    if 'subset_x0' in atr.keys():
         inps.lookup_file = geomap4subset_radar_file(atr, inps.lookup_file)
 
     # Geocode files(s)
@@ -237,7 +237,7 @@ def main(argv):
         geocode_file_roipac(inps.file[0], inps.lookup_file, inps.outfile)
 
     # clean temporary geomap file for previously subsetted radar coord file
-    if 'subset_x0' in in_atr.keys():
+    if 'subset_x0' in atr.keys():
         rmCmd='rm '+geomap;            os.system(rmCmd);       print rmCmd
         rmCmd='rm '+geomap+'.rsc';     os.system(rmCmd);       print rmCmd
 
