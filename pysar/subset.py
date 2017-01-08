@@ -559,7 +559,7 @@ def cmdLineParse():
     parser.add_argument('-r','--reference',\
                         help='reference file, subset to the same lalo as reference file')
     parser.add_argument('--footprint', action='store_true',\
-                        help='subset based on footprint.\n'
+                        help='subset geomap_*.trans file based on footprint - non-zero values.\n'
                              'A convenient way to get rid of extra wide space due to "too large" DEM.\n\n')
 
     parser.add_argument('--outfill', dest='fill_value', type=float,\
@@ -608,15 +608,26 @@ def main(argv):
 
         # 3. Use subset from footprint info
         elif inps.footprint:
-            lats = [atr_dict['LAT_REF1'], atr_dict['LAT_REF3'], atr_dict['LAT_REF4'], atr_dict['LAT_REF2']]
-            lons = [atr_dict['LON_REF1'], atr_dict['LON_REF3'], atr_dict['LON_REF4'], atr_dict['LON_REF2']]
-            lats = [float(i) for i in lats]
-            lons = [float(i) for i in lons]
-            lalo_buff = min([max(lats)-min(lats), max(lons)-min(lons)]) * 0.05
-            geo_box = (min(lons)-lalo_buff, max(lats)+lalo_buff, max(lons)+lalo_buff, min(lats)-lalo_buff)
-            pix_box = None
-            if not inps.fill_value: inps.fill_value = np.nan
-            print 'using subset info from scene footprint - LAT/LON_REF1/2/3/4'
+            if atr_dict['FILE_TYPE']=='.trans':
+                # Non-zero area in geomap_*.trans file, accurate
+                trans_rg, trans_atr = readfile.read(inps.file[0], (), 'range')
+                idx_row, idx_col = np.nonzero(trans_rg)
+                pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
+                geo_box = box_pixel2geo(pix_box, trans_atr)
+            else:
+                print '--footprint option only works for geomap_*.trans file.'
+                inps.footprint = False
+
+            ## from LAT/LON_REF*, which is not accurate
+            #lats = [atr_dict['LAT_REF1'], atr_dict['LAT_REF3'], atr_dict['LAT_REF4'], atr_dict['LAT_REF2']]
+            #lons = [atr_dict['LON_REF1'], atr_dict['LON_REF3'], atr_dict['LON_REF4'], atr_dict['LON_REF2']]
+            #lats = [float(i) for i in lats]
+            #lons = [float(i) for i in lons]
+            #lalo_buff = min([max(lats)-min(lats), max(lons)-min(lons)]) * 0.05
+            #geo_box = (min(lons)-lalo_buff, max(lats)+lalo_buff, max(lons)+lalo_buff, min(lats)-lalo_buff)
+            #pix_box = None
+            #if not inps.fill_value: inps.fill_value = np.nan
+            #print 'using subset info from scene footprint - LAT/LON_REF1/2/3/4'
         else:
             raise Exception('No subset inputs found!')
         # Update subset_y/x/lat/lon

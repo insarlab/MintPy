@@ -389,6 +389,10 @@ def read(File, box=(), epoch=''):
                 Image   file: .jpeg .jpg .png .ras .bmp
         box   : 4-tuple of int, area to read, defined in (x0, y0, x1, y1) in pixel coordinate
         epoch : string, epoch to read, for multi-dataset files
+                for .trans file:
+                '' - return both dataset
+                rg, range   - for geomap_*.trans file
+                az, azimuth - for geomap_*.trans file
         
     Outputs:
         data : 2-D matrix in numpy.array format, return None if failed
@@ -399,6 +403,7 @@ def read(File, box=(), epoch=''):
         data, atr = read('100120-110214.unw', (100,1100, 500, 2500))
         data, atr = read('timeseries.h5', (), '20101120')
         data, atr = read('timeseries.h5', (100,1100, 500, 2500), '20101120')
+        az,   atr = read('geomap*.trans', (), 'azimuth')
         rg,az,atr = read('geomap*.trans')
     '''
 
@@ -499,7 +504,16 @@ def read(File, box=(), epoch=''):
                 rg,az,atr = read_float32(File,box)
             else:
                 rg,az,atr = read_float32(File)
-            return rg, az, atr
+
+            if not epoch:
+                print 'read range and azimuth from '+File
+                return rg, az, atr
+            elif epoch in ['rg','range']:
+                print 'read range from '+File
+                return rg, atr
+            elif epoch in ['az','azimuth']:
+                print 'read azimuth from '+File
+                return az, atr
 
         ##### Gamma
         #elif processor == 'gamma':

@@ -793,38 +793,29 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 ##################################################################################################
 EXAMPLE='''
 example:
-  view.py velocity.h5
-  view.py filt_060924-070927.unw
   view.py SanAndreas.dem
-  view.py -f velocity.h5 -t ShikokuT417F650_690AlosA.template -u cm/yr
-  view.py -f velocity.h5 -m -0.02 -M 0.02 -c bwr --fliplr
+  view.py velocity.h5 -u cm -m -2 -M 2 -c bwr --mask Mask_tempCoh.h5 -d SanAndreas.dem
 
-  view.py -f timeseries.h5 -r 5 -p 8 -i 0.1 -j 0.1 --wrap
-  view.py -f LoadedData.h5
-  view.py -f LoadedData.h5 -d 070927-100217
-  view.py -f Wrapped.h5    -e 5
-
-  # Showing DEM:
-  view.py -f velocity.h5 -D SanAndreas.dem
+  view.py timeseries.h5 
+  view.py LoadedData.h5 070927-100217
+  view.py Wrapped.h5    -n 5
+  view.py geomap_4rlks.trans range
 
   # Display in subset:
-  view.py -f velocity.h5 -x 100:600     -y 200:800
-  view.py -f velocity.h5 -l 31.05:31.10 -L 130.05:130.10
+  view.py velocity.h5 -x 100 600     -y 200 800
+  view.py velocity.h5 -l 31.05 31.10 -L 130.05 130.10
 
   # Exclude Dates:
-  view.py -f timeseries.h5 -E drop_date.txt
-
-  # Masking:
-  view.py -f Seeded_LoadedData.h5 -d 931018-950809 --mask Mask_tempCoh.h5
+  view.py timeseries.h5 -ex drop_date.txt
 
   # Reference:
-  view.py -f velocity.h5 --ref-yx   210,566
-  view.py -f timeseries.h5 --ref-epoch 20101120
+  view.py velocity.h5   --ref-yx   210 566
+  view.py timeseries.h5 --ref-date 20101120
 
   # Save and Output:
-  view.py -f velocity.h5 --save
-  view.py -f velocity.h5 -o velocity.pdf
-  view.py -f velocity.h5 --nodisplay
+  view.py velocity.h5 --save
+  view.py velocity.h5 -o velocity.pdf
+  view.py velocity.h5 --nodisplay
 '''
 
 
@@ -982,6 +973,7 @@ def main(argv):
     width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
     print 'file size in y/x: '+atr['FILE_LENGTH']+', '+atr['WIDTH']
+    #import pdb; pdb.set_trace()
 
     #------------------------------ Epoch/Date Info -------------------------------------------#
     # Read "epoch list to display' and 'reference date' for multi-dataset files
@@ -1029,7 +1021,10 @@ def main(argv):
         if len(inps.epoch) == 0:
             raise Exception('Zero epoch found!')
     # for single-dataset file
-    else: 
+    elif k in ['.trans']:
+        if not inps.epoch:
+            inps.epoch = ['range']
+    else:
         inps.epoch = ['']
 
     #------------------------------ Update Plot Inps with metadata dict ----------------#
