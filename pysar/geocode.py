@@ -98,6 +98,13 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
     if k == 'coherence':  roipac_ext = '.cor'
     elif k == 'wrapped':  roipac_ext = '.int'
     else:  roipac_ext = '.unw'
+     
+    # temporary geomap file - needed for parallel processing
+    geomap_file_orig = geomap_file
+    geomap_file = geomap_file_orig.split('.trans')[0]+'4'+infile_base+'.trans'
+    cpCmd='cp '+geomap_file_orig+' '+geomap_file
+    os.system(cpCmd)
+    print cpCmd
     
     # Output file name
     if not outfile:
@@ -154,6 +161,11 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
         geo_atr = geocode_attribute(atr, geo_rsc)
         
         writefile.write(geo_data, geo_atr, outfile)
+
+    # delete temporary geomap file
+    rmCmd='rm '+geomap_file
+    os.system(rmCmd)
+    print rmCmd
 
     return outfile
 
@@ -214,7 +226,9 @@ def main(argv):
     inps = cmdLineParse()
     inps.file = get_file_list(inps.file)
     print '\n***************** Geocoding *******************'
-
+    print 'number of file to mask: '+str(len(inps.file))
+    print inps.file
+    
     # check outfile and parallel option
     if len(inps.file) > 1:
         inps.outfile = None
