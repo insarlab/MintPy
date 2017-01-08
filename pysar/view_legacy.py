@@ -512,7 +512,7 @@ def main(argv):
     elif len(sys.argv)<2:             usage(); sys.exit(1)
 
     ##### Read File Info / Attributes
-    try: atr = readfile.read_attributes(File)
+    try: atr = readfile.read_attribute(File)
     except: print 'Can not read file: '+File; sys.exit(1)
     ext = os.path.splitext(File)[1].lower()
     print '\n******************** Display ********************'
@@ -860,7 +860,7 @@ def main(argv):
         ############## Read DEM ##################
         try:
             demFile
-            demRsc = readfile.read_attributes(demFile)
+            demRsc = readfile.read_attribute(demFile)
             print 'reading DEM: '+os.path.basename(demFile)+' ...'
      
             ##### Read DEM
@@ -1150,7 +1150,7 @@ def main(argv):
         ############## Read DEM ##################
         try:
             demFile
-            demRsc = readfile.read_attributes(demFile)
+            demRsc = readfile.read_attribute(demFile)
             print 'reading DEM: '+str(demFile)+' ...'
      
             ##### Read DEM

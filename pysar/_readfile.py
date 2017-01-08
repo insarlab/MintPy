@@ -29,7 +29,7 @@
 # Yunjun, Oct 2015: Add box option for read_float32()
 # Heresh, Nov 2015: Add ISCE xml reader
 # Yunjun, Jan 2016: Add read()
-# Yunjun, May 2016: Add read_attributes() and 'PROCESSOR','FILE_TYPE','UNIT' attributes
+# Yunjun, May 2016: Add read_attribute() and 'PROCESSOR','FILE_TYPE','UNIT' attributes
 
 
 import os
@@ -43,7 +43,7 @@ from PIL import Image
 
 #########################################################################
 #######################  Read Attributes  ######################
-def read_attributes(File, epoch=''):
+def read_attribute(File, epoch=''):
     ## Read attributes of input file into a dictionary
     ## Input  : file name
     ## Output : atr  - attributes dictionary
@@ -232,7 +232,7 @@ def read_float32(*args):
     ##    a,p,r = read_float32('100102-100403.unw',(100,1200,500,1500))
 
     File = args[0]
-    atr = read_attributes(File)
+    atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
 
@@ -270,7 +270,7 @@ def read_complex_float32(File, real_imag=0):
     ##     amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
     ##     data, atr       = read_complex_float32('150707.slc', 1)
 
-    atr = read_attributes(File)
+    atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
 
@@ -291,7 +291,7 @@ def read_real_float32(File):
     ## Usage:
     ##     data, atr = read_real_float32('20070603.mli')
 
-    atr = read_attributes(File)
+    atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
 
@@ -311,7 +311,7 @@ def read_complex_int16(*args):
     ##    data,rsc = read_complex_int16('100102.slc',(100,1200,500,1500))
 
     File = args[0]
-    atr = read_attributes(File)
+    atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
 
@@ -351,7 +351,7 @@ def read_real_int16(File):
     ## Usage:
     ##     dem, atr = read_real_int16('gsi10m_30m.dem')
 
-    atr = read_attributes(File)
+    atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH'])) 
     dem = np.fromfile(File,dtype=np.int16).reshape(length,width)
@@ -409,7 +409,7 @@ def read(File, box=(), epoch=''):
 
     # Basic Info
     ext = os.path.splitext(File)[1].lower()
-    atr = read_attributes(File, epoch)
+    atr = read_attribute(File, epoch)
     processor = atr['PROCESSOR']
 
     ## Update attributes if subset
@@ -417,7 +417,7 @@ def read(File, box=(), epoch=''):
     #    width = float(atr['WIDTH'])
     #    length = float(atr['FILE_LENGTH'])
     #    if (box[2]-box[0])*(box[3]-box[1]) < width*length:
-    #        atr = subset_attributes(atr, box)
+    #        atr = subset_attribute(atr, box)
 
     ##### HDF5
     if ext in ['.h5','.he5']:
@@ -549,7 +549,7 @@ def read_multiple(File,box=''):
     ##     stack = stacking('timeseries.h5',(100,1200,500,1500))
 
     ##### File Info
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     length = int(float(atr['FILE_LENGTH']))
     width  = int(float(atr['WIDTH']))

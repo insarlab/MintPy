@@ -59,7 +59,7 @@ def seed_xy(File,x,y,outName=''):
     box = (x,y,x+1,y+1)
 
     #####  IO Info
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     if outName == '':  outName = 'Seeded_'+os.path.basename(File)
 
@@ -84,7 +84,7 @@ def seed_file(File,outName,refList,ref_x='',ref_y=''):
     print refList
 
     #####  IO Info
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     print 'file type: '+k
 
@@ -364,7 +364,7 @@ def main(argv):
     ##### Input File Info
     try:
         File
-        atr = readfile.read_attributes(File)
+        atr = readfile.read_attribute(File)
         k = atr['FILE_TYPE']
         length = int(atr['FILE_LENGTH'])
         width  = int(atr['WIDTH'])
@@ -377,7 +377,7 @@ def main(argv):
     ############################## Reference Point Input ####################
     try:
         refFile
-        atr_ref = readfile.read_attributes(refFile)
+        atr_ref = readfile.read_attribute(refFile)
     except: pass
   
     try:

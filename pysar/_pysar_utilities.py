@@ -72,7 +72,7 @@ def spatial_mean(File,mask_orig,box):
 
     print 'calculating spatial average of '+File+' within '+str(box)+' ...'
     ##### Input File Info
-    atr  = readfile.read_attributes(File)
+    atr  = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
@@ -503,7 +503,7 @@ def timeseries_inversion(igramsFile,timeseriesFile):
     ##### Basic Info
     ifgramList = h5flat['interferograms'].keys()
     numIfgrams = len(ifgramList)
-    atr = readfile.read_attributes(igramsFile)
+    atr = readfile.read_attribute(igramsFile)
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
     numPixels = length * width
@@ -860,7 +860,7 @@ def stacking(File):
     ##    equivalent to temporal sum
 
     ## File Info
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])

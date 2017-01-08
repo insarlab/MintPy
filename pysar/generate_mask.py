@@ -86,7 +86,7 @@ def main(argv):
     else:                                   usage(); sys.exit(1)
 
     ##### Input File Info
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     print '\n****************** Generate Mask *******************'
     print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File
     mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])

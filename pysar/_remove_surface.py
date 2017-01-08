@@ -139,7 +139,7 @@ def remove_surface(File,surf_type,Mask,outName=''):
         outName = os.path.basename(File).split(ext)[0]+'_'+surf_type+ext
   
     ##### Input File Info
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     print 'Input file is '+atr['PROCESSOR']+' '+k
   
@@ -203,7 +203,7 @@ def remove_multiple_surface(File,surf_type,Mask,ysub,outName):
         ext = os.path.splitext(File)[1].lower()
         outName = os.path.basename(File).split(ext)[0]+'_'+surf_type+ext
 
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     print 'Input file is '+atr['PROCESSOR']+' '+k
 

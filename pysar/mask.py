@@ -96,7 +96,7 @@ def mask_with_multi_masks(in_file,mask_file,out_file=''):
 def mask_file(in_file,M,out_file=''):
     ## Mask input file with mask matrix M
 
-    atr = readfile.read_attributes(in_file)
+    atr = readfile.read_attribute(in_file)
     k = atr['FILE_TYPE']
     print 'file type: '+k
 
@@ -247,7 +247,7 @@ def main(argv):
     else: print 'ERROR: No input file!'; sys.exit(1)
 
     ###### Read Mask File
-    atr_mask = readfile.read_attributes(maskFile)
+    atr_mask = readfile.read_attribute(maskFile)
     k_mask = atr_mask['FILE_TYPE']
     if not k_mask == 'coherence':    ## Read mask file once 
         M,Matr = readfile.read(maskFile)

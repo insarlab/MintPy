@@ -95,7 +95,7 @@ def main(argv):
 
     ##############################################################
     print '\n********** Inversion: Time Series to Velocity ***********'
-    atr = readfile.read_attributes(timeSeriesFile)
+    atr = readfile.read_attribute(timeSeriesFile)
     k = atr['FILE_TYPE']
     print 'input file: '+k
     if not k == 'timeseries':  print 'Input file is not timeseries!'; sys.exit(1)

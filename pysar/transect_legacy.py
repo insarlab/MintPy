@@ -354,7 +354,7 @@ def main(argv):
         elif opt == '-E':   save_to_mat     = arg
 
     ##### Input File Info
-    try: atr = readfile.read_attributes(velocityFile)
+    try: atr = readfile.read_attribute(velocityFile)
     except:  Usage(); sys.exit(1)
     k = atr['FILE_TYPE']
     print 'input file is '+k

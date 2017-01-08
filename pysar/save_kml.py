@@ -126,7 +126,7 @@ def main(argv):
     ## prepare: data, North, East, South, West
 
     ext = os.path.splitext(File)[1].lower()
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     print '\n*************** Output to KMZ file ****************'
     print 'Input file is '+k

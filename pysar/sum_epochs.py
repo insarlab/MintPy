@@ -50,7 +50,7 @@ def main(argv):
 
     ##################################################
     print "\n*************** Calculating Sum of Epochs ****************"
-    atr = readfile.read_attributes(timeSeriesFile)
+    atr = readfile.read_attribute(timeSeriesFile)
     k = atr['FILE_TYPE']
     print "Loading time series: " + timeSeriesFile
     h5timeseries=h5py.File(timeSeriesFile)

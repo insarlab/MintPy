@@ -118,7 +118,7 @@ def main(argv):
     ########################################################
     print '\n********** Temporal Coherence ****************'
     print "load time series: "+timeSeriesFile
-    atr_ts = readfile.read_attributes(timeSeriesFile)
+    atr_ts = readfile.read_attribute(timeSeriesFile)
     h5timeseries = h5py.File(timeSeriesFile)
     dateList = h5timeseries['timeseries'].keys()
     numDates = len(dateList)

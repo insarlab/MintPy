@@ -129,7 +129,7 @@ def main(argv):
     except: pass
 
     ###########################################################
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     print '\n*************** Modify Network ****************'
     print 'Input file is '+k

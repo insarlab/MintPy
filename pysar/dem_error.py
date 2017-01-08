@@ -91,7 +91,7 @@ def main(argv):
     ##### Read Time Series
     print '\n*************** Topographic Error Correction ****************'
     print "Loading time series: " + timeSeriesFile
-    atr = readfile.read_attributes(timeSeriesFile)
+    atr = readfile.read_attribute(timeSeriesFile)
     h5timeseries = h5py.File(timeSeriesFile)
     dateList = h5timeseries['timeseries'].keys()
     dateList = sorted(dateList)

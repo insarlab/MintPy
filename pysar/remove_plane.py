@@ -112,7 +112,7 @@ def main(argv):
     print 'input file(s): '+str(len(fileList))
     print fileList
   
-    atr = readfile.read_attributes(fileList[0])
+    atr = readfile.read_attribute(fileList[0])
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
 

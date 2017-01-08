@@ -104,7 +104,7 @@ def read_dis_xy(xsub,ysub,dateList,h5file,unit='cm'):
 
 ################################################################
 def read_dis_lalo(lat,lon,dateList,timeseriesFile,radius=0,unit='cm'):
-    atr = readfile.read_attributes(timeseriesFile)
+    atr = readfile.read_attribute(timeseriesFile)
     h5 = h5py.File(timeseriesFile,'r')
 
     x = subset.coord_geo2radar(lon,atr,'longitude');
@@ -342,7 +342,7 @@ def main(argv):
         print 'ERROR: Input file is '+k[0]+'.\n\tOnly timeseries is supported.\n';
         sys.exit(1)
 
-    atr = readfile.read_attributes(timeSeriesFile)
+    atr = readfile.read_attribute(timeSeriesFile)
     dateList1 = h5timeseries['timeseries'].keys()
     dateList1 = sorted(dateList1)
     dates1,datevector1 = ptime.date_list2vector(dateList1)

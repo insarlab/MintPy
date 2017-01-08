@@ -37,7 +37,7 @@ def main(argv):
 
     try:
         File = argv[0]
-        atr  = readfile.read_attributes(File)
+        atr  = readfile.read_attribute(File)
     except: usage(); sys.exit(1)
 
     try:    outName = argv[1]

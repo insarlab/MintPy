@@ -7,7 +7,7 @@
 # Yunjun, Oct 2015: Merge timeseries/velocity into one
 #                   Merge all non-hdf5 into one
 # Yunjun, Nov 2015: Support geomap*.trans file
-# Yunjun, May 2015: add multilook() and multilook_attributes()
+# Yunjun, May 2015: add multilook() and multilook_attribute()
 # Yunjun, Dec 2016: add multilook_file(), cmdLineParse() and parallel option
 #                   rename multi_looking.py to multilook.py
 
@@ -52,7 +52,7 @@ def multilook_matrix(matrix,lks_y,lks_x):
     return matrix_mli
 
 
-def multilook_attributes(atr_dict,lks_y,lks_x):
+def multilook_attribute(atr_dict,lks_y,lks_x):
     #####
     atr = dict()
     for key, value in atr_dict.iteritems():  atr[key] = str(value)
@@ -94,7 +94,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     lks_x = int(lks_x)
 
     ## input file info
-    atr = readfile.read_attributes(infile)
+    atr = readfile.read_attribute(infile)
     k = atr['FILE_TYPE']
     print 'input file: '+k+' - '+infile
 
@@ -124,7 +124,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
                 ## Update attributes
                 atr = h5file[k][igram].attrs
-                atr = multilook_attributes(atr,lks_y,lks_x)
+                atr = multilook_attribute(atr,lks_y,lks_x)
                 for key, value in atr.iteritems():   group.attrs[key] = value
 
         elif k == 'timeseries':
@@ -140,7 +140,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
             ## Update attributes
             atr = h5file[k].attrs
-            atr = multilook_attributes(atr,lks_y,lks_x)
+            atr = multilook_attribute(atr,lks_y,lks_x)
             for key, value in atr.iteritems():   group.attrs[key] = value
 
         h5file.close()
@@ -151,12 +151,12 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         rg,az,atr = readfile.read(infile)
         rgmli = multilook_matrix(rg,lks_y,lks_x);
         azmli = multilook_matrix(az,lks_y,lks_x);
-        atr = multilook_attributes(atr,lks_y,lks_x)
+        atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(rgmli,azmli,atr,outfile)
     else:
         data,atr = readfile.read(infile)
         data_mli = multilook_matrix(data,lks_y,lks_x)
-        atr = multilook_attributes(atr,lks_y,lks_x)
+        atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(data_mli,atr,outfile)
 
     return outfile

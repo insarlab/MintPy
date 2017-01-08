@@ -240,7 +240,7 @@ def main(argv):
     print '\n******************** Plot Network **********************'
     try:
         igramsFile
-        atr = readfile.read_attributes(igramsFile)
+        atr = readfile.read_attribute(igramsFile)
         k = atr['FILE_TYPE']
         if k not in  ['interferograms','coherence','wrapped']:
             print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)

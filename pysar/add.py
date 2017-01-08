@@ -83,7 +83,7 @@ def main(argv):
   
   
     ##### Read File Info / Attributes
-    atr  = readfile.read_attributes(fileList[0])
+    atr  = readfile.read_attribute(fileList[0])
     print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']
     k = atr['FILE_TYPE']
   
@@ -91,7 +91,7 @@ def main(argv):
     if k in ['timeseries','interferograms','coherence','wrapped']:
         for i in range(1,len(fileList)):
             File = fileList[i]
-            r = readfile.read_attributes(File)
+            r = readfile.read_attribute(File)
             if not r['FILE_TYPE'] == k:
                 print 'Input file type is not the same: '+r['FILE_TYPE']
                 sys.exit(1)

@@ -75,7 +75,7 @@ def main(argv):
         elif opt == '-f':            File = arg
     
         ##### Read attributes
-        atr = readfile.read_attributes(File)
+        atr = readfile.read_attribute(File)
         print '\n*************** Generate Incidence Angle *****************'
     
         ##### Calculate look angle

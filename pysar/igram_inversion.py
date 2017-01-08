@@ -68,7 +68,7 @@ def main(argv):
     except: timeseriesFile = 'timeseries.h5'
   
     #h5file = h5py.File(igramsFile,'r')
-    atr = readfile.read_attributes(igramsFile)
+    atr = readfile.read_attribute(igramsFile)
     if not atr['FILE_TYPE'] == 'interferograms':
         print '**********************************************************************'
         print 'ERROR:'

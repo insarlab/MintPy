@@ -102,7 +102,7 @@ def main(argv):
     print '\n************************ File Info *****************************'
 
     #################### Basic Info #####################
-    try: atr = readfile.read_attributes(File)
+    try: atr = readfile.read_attribute(File)
     except: print 'Can not read file: '+File; sys.exit(1)
     ext = os.path.splitext(File)[1].lower()
     k = atr['FILE_TYPE']

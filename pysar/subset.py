@@ -15,7 +15,7 @@
 #                   Merge ROI_APC, Image and GAMMA into one
 # Yunjun, Oct 2015: Support '.trans' file
 # Yunjun, May 2016: Add -t and -- option, simplied code
-#                   Add coord_geo2radar(),check_subset(),subset_attributes()
+#                   Add coord_geo2radar(),check_subset(),subset_attribute()
 # Yunjun, Jun 2016: Add geo_box()
 # Yunjun, Jul 2016: add parallel support
 #                   add outlier fill option
@@ -187,7 +187,7 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
 
 
 ################################################################
-def subset_attributes(atr_dict, subset_box):
+def subset_attribute(atr_dict, subset_box):
     '''Update attributes dictionary due to subset
     Inputs:
         atr_dict   : dict, data attributes to update
@@ -415,7 +415,7 @@ def subset_file(File, subset_dict, outFile=None):
     '''
 
     # Input File Info
-    atr_dict = readfile.read_attributes(File)
+    atr_dict = readfile.read_attribute(File)
     width = int(atr_dict['WIDTH'])
     length = int(atr_dict['FILE_LENGTH'])
     k = atr_dict['FILE_TYPE']
@@ -476,7 +476,7 @@ def subset_file(File, subset_dict, outFile=None):
 
             dset = group.create_dataset(epoch, data=data, compression='gzip')
 
-        atr_dict  = subset_attributes(atr_dict, pix_box)
+        atr_dict  = subset_attribute(atr_dict, pix_box)
         for key,value in atr_dict.iteritems():   group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
@@ -489,7 +489,7 @@ def subset_file(File, subset_dict, outFile=None):
             data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-            atr_dict  = subset_attributes(atr_dict, pix_box)
+            atr_dict  = subset_attribute(atr_dict, pix_box)
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
             for key, value in atr_dict.iteritems():    gg.attrs[key] = value
@@ -497,7 +497,7 @@ def subset_file(File, subset_dict, outFile=None):
     ##### Single Dataset File
     elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
         data, atr_dict = readfile.read(File, pix_box)
-        atr_dict = subset_attributes(atr_dict, pix_box)
+        atr_dict = subset_attribute(atr_dict, pix_box)
         writefile.write(data,atr_dict,outFile)
 
     elif k == '.trans':
@@ -509,7 +509,7 @@ def subset_file(File, subset_dict, outFile=None):
         az = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
         az[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = az_overlap
 
-        atr_dict = subset_attributes(atr_dict, pix_box)
+        atr_dict = subset_attribute(atr_dict, pix_box)
         writefile.write(rg,az,atr_dict,outFile)
     else:
         data_overlap,atr_dict = readfile.read(File, pix_box4data)
@@ -517,7 +517,7 @@ def subset_file(File, subset_dict, outFile=None):
         data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
         data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-        atr_dict = subset_attributes(atr_dict, pix_box)
+        atr_dict = subset_attribute(atr_dict, pix_box)
         writefile.write(data, atr_dict, outFile)
 
     ##### End Cleaning
@@ -582,14 +582,14 @@ def main(argv):
     inps.file = get_file_list(inps.file)
 
     print '\n**************** Subset *********************'
-    atr_dict = readfile.read_attributes(inps.file[0])
+    atr_dict = readfile.read_attribute(inps.file[0])
 
     ##### Convert All Inputs into subset_y/x/lat/lon
     # Input Priority: subset_y/x/lat/lon > reference > template > footprint
     if not inps.subset_x and not inps.subset_y and not inps.subset_lat and not inps.subset_lon:
         # 1. Read subset info from Reference File
         if inps.reference:
-            ref_atr_dict = readfile.read_attributes(inps.reference)
+            ref_atr_dict = readfile.read_attribute(inps.reference)
             pix_box, geo_box = get_coverage_box(ref_atr_dict)
             print 'using subset info from '+inps.reference
 
@@ -615,8 +615,9 @@ def main(argv):
                 pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
                 geo_box = box_pixel2geo(pix_box, trans_atr)
             else:
-                print '--footprint option only works for geomap_*.trans file.'
+                print 'ERROR: --footprint option only works for geomap_*.trans file.\n'
                 inps.footprint = False
+                sys.exit(1)
 
             ## from LAT/LON_REF*, which is not accurate
             #lats = [atr_dict['LAT_REF1'], atr_dict['LAT_REF3'], atr_dict['LAT_REF4'], atr_dict['LAT_REF2']]

@@ -603,7 +603,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
     # 1.7 DEM
     if inps.dem:
-        dem_meta_dict = readfile.read_attributes(inps.dem)
+        dem_meta_dict = readfile.read_attribute(inps.dem)
         print 'reading DEM: '+os.path.basename(inps.dem)+' ...'
         if inps.geo_box:
             # Support DEM with different Resolution and Coverage 
@@ -965,7 +965,7 @@ def main(argv):
     print '\n******************** Display ********************'
 
     # File Basic Info
-    try: atr = readfile.read_attributes(inps.file)
+    try: atr = readfile.read_attribute(inps.file)
     except: print 'Can not read file: '+inps.file; sys.exit(1)
     ext = os.path.splitext(inps.file)[1].lower()
     print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+inps.file

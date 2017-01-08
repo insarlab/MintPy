@@ -49,7 +49,7 @@ def main(argv):
     try:    File=argv[0]
     except: usage();sys.exit(1)
   
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
   
     h5file=h5py.File(File,'r')

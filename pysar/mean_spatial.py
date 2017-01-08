@@ -125,7 +125,7 @@ def main(argv):
         try:  maskFile = argv[1]
         except: pass
 
-    try:  atr  = readfile.read_attributes(File)
+    try:  atr  = readfile.read_attribute(File)
     except: usage(); sys.exit(1)
     ext      = os.path.splitext(File)[1].lower()
     FileBase = os.path.basename(File).split(ext)[0]
