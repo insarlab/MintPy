@@ -96,7 +96,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## input file info
     atr = readfile.read_attribute(infile)
     k = atr['FILE_TYPE']
-    print 'input file: '+k+' - '+infile
+    print 'multilooking '+k+' file '+infile+' ...'
 
     ## output file name
     if not outfile:
@@ -107,44 +107,43 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ###############################################################################
     ## Read/Write multi-dataset files
     if k in ['interferograms','coherence','wrapped','timeseries']:
-        h5file     = h5py.File(infile,'r')
-        h5file_mli = h5py.File(outfile,'w')
+        h5 = h5py.File(infile,'r')
+        epochList = h5[k].keys()
+        epochList = sorted(epochList)
+        print 'number of epochs: '+str(len(epochList))
+
+        h5out = h5py.File(outfile,'w')
+        group = h5out.create_group(k)
 
         if k in ['interferograms','coherence','wrapped']:
-            gg = h5file_mli.create_group(k)
-            igramList = h5file[k].keys()
-            igramList = sorted(igramList)
+            for epoch in epochList:
+                print epoch
+                data = h5[k][epoch].get(epoch)[:]
+                atr = h5[k][epoch].attrs
 
-            for igram in igramList:
-                print igram
-                unw = h5file[k][igram].get(igram)[:]
-                unwlks = multilook_matrix(unw,lks_y,lks_x)
-                group = gg.create_group(igram)
-                dset = group.create_dataset(igram, data=unwlks, compression='gzip')
+                data_mli = multilook_matrix(data,lks_y,lks_x)
+                atr_mli = multilook_attribute(atr,lks_y,lks_x)
 
-                ## Update attributes
-                atr = h5file[k][igram].attrs
-                atr = multilook_attribute(atr,lks_y,lks_x)
-                for key, value in atr.iteritems():   group.attrs[key] = value
+                gg = group.create_group(epoch)
+                dset = gg.create_dataset(epoch, data=data_mli, compression='gzip')
+                for key, value in atr_mli.iteritems():
+                    gg.attrs[key] = value
 
         elif k == 'timeseries':
-            dateList=h5file[k].keys()
-            dateList = sorted(dateList)
+            for epoch in epochList:
+                print epoch
+                data = h5[k].get(epoch)[:]
 
-            group = h5file_mli.create_group(k)
-            for d in dateList:
-                print d
-                unw = h5file[k].get(d)[:]
-                unwlks=multilook_matrix(unw,lks_y,lks_x)
-                dset = group.create_dataset(d, data=unwlks, compression='gzip')
+                data_mli = multilook_matrix(data,lks_y,lks_x)
+                
+                dset = group.create_dataset(epoch, data=data_mli, compression='gzip')
+            atr = h5[k].attrs
+            atr_mli = multilook_attribute(atr,lks_y,lks_x)
+            for key, value in atr_mli.iteritems():
+                group.attrs[key] = value
 
-            ## Update attributes
-            atr = h5file[k].attrs
-            atr = multilook_attribute(atr,lks_y,lks_x)
-            for key, value in atr.iteritems():   group.attrs[key] = value
-
-        h5file.close()
-        h5file_mli.close()
+        h5.close()
+        h5out.close()
 
     ## Read/Write single-dataset files
     elif k == '.trans':        
