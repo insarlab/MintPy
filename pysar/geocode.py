@@ -102,9 +102,8 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
     # temporary geomap file - needed for parallel processing
     geomap_file_orig = geomap_file
     geomap_file = geomap_file_orig.split('.trans')[0]+'4'+infile_base+'.trans'
-    cpCmd='cp '+geomap_file_orig+' '+geomap_file
-    os.system(cpCmd)
-    print cpCmd
+    cpCmd='cp '+geomap_file_orig+' '+geomap_file;              os.system(cpCmd);  print cpCmd
+    cpCmd='cp '+geomap_file_orig+'.rsc '+geomap_file+'.rsc';   os.system(cpCmd);  print cpCmd
     
     # Output file name
     if not outfile:
@@ -163,9 +162,8 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
         writefile.write(geo_data, geo_atr, outfile)
 
     # delete temporary geomap file
-    rmCmd='rm '+geomap_file
-    os.system(rmCmd)
-    print rmCmd
+    rmCmd='rm '+geomap_file;         os.system(rmCmd);   print rmCmd
+    rmCmd='rm '+geomap_file+'.rsc';  os.system(rmCmd);   print rmCmd
 
     return outfile
 
@@ -226,6 +224,9 @@ def main(argv):
     inps = cmdLineParse()
     inps.file = get_file_list(inps.file)
     print '\n***************** Geocoding *******************'
+    if not inps.lookup_file.endswith('.trans'):
+        print 'ERROR: Input lookup file is not .trans file: '+inps.lookup_file
+        sys.exit(1)
     print 'number of file to mask: '+str(len(inps.file))
     print inps.file
     
