@@ -168,7 +168,6 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
     return outfile
 
 
-
 ######################################################################################
 def usage():
     print '''
@@ -225,7 +224,7 @@ def main(argv):
     inps.file = get_file_list(inps.file)
     print '\n***************** Geocoding *******************'
     if not inps.lookup_file.endswith('.trans'):
-        print 'ERROR: Input lookup file is not .trans file: '+inps.lookup_file
+        print 'ERROR: Input lookup file is not .trans file: '+inps.lookup_file+'\n'
         sys.exit(1)
     print 'number of file to mask: '+str(len(inps.file))
     print inps.file

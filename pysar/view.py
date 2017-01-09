@@ -508,7 +508,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     # Seed Point
     # If value of new seed point is not nan, re-seed the data and update inps.seed_yx/lalo
     # Otherwise, try to read seed info from atrributes into inps.seed_yx/lalo
-    if inps.seed_yx:
+    if inps.seed_yx and not inps.seed_yx == [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]:
         inps.seed_value = data[inps.seed_yx[0]-inps.pix_box[1], inps.seed_yx[1]-inps.pix_box[0]]
         if not np.isnan(inps.seed_value):
             data -= inps.seed_value
@@ -1085,8 +1085,12 @@ def main(argv):
             else:
                 fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
             inps.fig_row_num, inps.fig_col_num = auto_row_col_num(len(inps.epoch), data_shape, fig_size4plot, inps.fig_num)
-        print 'row    number: '+str(inps.fig_row_num)
-        print 'column number: '+str(inps.fig_col_num)
+        inps.fig_num = int(np.ceil(float(len(inps.epoch)) / float(inps.fig_row_num*inps.fig_col_num)))
+        print 'dataset number: '+str(len(inps.epoch))
+        print 'row     number: '+str(inps.fig_row_num)
+        print 'column  number: '+str(inps.fig_col_num)
+        print 'figure  number: '+str(inps.fig_num)
+
         # Update multilook parameters with new num and col number
         if inps.multilook and inps.multilook_num == 1:
             inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box, inps.fig_row_num, inps.fig_col_num)
@@ -1135,8 +1139,6 @@ def main(argv):
                 contour_sequence = np.arange(-6000, 9000, inps.dem_contour_step)
 
         ################## Plot Loop ####################
-        inps.fig_num = int(np.ceil(float(len(inps.epoch)) / float(inps.fig_row_num*inps.fig_col_num)))
-        print 'figure number: '+str(inps.fig_num)
 
         ## Find min and value for all data, reference for better min/max setting next time
         all_data_min=0
