@@ -44,9 +44,10 @@ from PIL import Image
 #########################################################################
 #######################  Read Attributes  ######################
 def read_attribute(File, epoch=''):
-    ## Read attributes of input file into a dictionary
-    ## Input  : file name
-    ## Output : atr  - attributes dictionary
+    '''Read attributes of input file into a dictionary
+    Input  : string, file name and epoch (optional)
+    Output : dictionary, attributes dictionary
+    '''
 
     ext = os.path.splitext(File)[1].lower()
     if not os.path.isfile(File):
@@ -130,10 +131,10 @@ def check_variable_name(path):
 
 #########################################################################
 def read_template(File):
-    ## Reads the template file into a python dictionary structure.
-    ## Input: full path to the template file
-    ##  
-
+    '''Reads the template file into a python dictionary structure.
+    Input : string, full path to the template file
+    Output: dictionary, pysar template content
+    '''
     template_dict = {}
     for line in open(File):
         c = line.split("=")
@@ -147,17 +148,13 @@ def read_template(File):
 
 #########################################################################
 def read_roipac_rsc(File):
-    ## Read ROI_PAC .rsc file into a python dictionary structure.
-    ##
-
+    '''Read ROI_PAC .rsc file into a python dictionary structure.'''
     rsc_dict = dict(np.loadtxt(File,dtype=str))
     return rsc_dict
 
 #########################################################################
 def read_gamma_par(File):
-    ## Read GAMMA .par file into a python dictionary structure.
-    ##
-
+    '''Read GAMMA .par file into a python dictionary structure.'''
     par_dict = {}
     
     f = open(File)
@@ -176,9 +173,7 @@ def read_gamma_par(File):
 
 #########################################################################
 def read_isce_xml(File):
-    ## Read ISCE .xml file input a python dictionary structure.
-    ##
-
+    '''Read ISCE .xml file input a python dictionary structure.'''
     #from lxml import etree as ET
     tree = ET.parse(File)
     root = tree.getroot()
@@ -210,26 +205,26 @@ def merge_attribute(atr1,atr2):
 #########################################################################
 ##############################  Read Data  ##############################
 def read_float32(File, box=None):
-#def read_float32(*args):
-    ## Reads roi_pac data (RMG format, interleaved line by line)
-    ## should rename it to read_rmg_float32()
-    ##
-    ## RMG format (named after JPL radar pionner Richard M. Goldstein): made
-    ## up of real*4 numbers in two arrays side-by-side. The two arrays often
-    ## show the magnitude of the radar image and the phase, although not always
-    ## (sometimes the phase is the correlation). The length and width of each 
-    ## array are given as lines in the metadata (.rsc) file. Thus the total
-    ## width width of the binary file is (2*width) and length is (length), data
-    ## are stored as:
-    ## magnitude, magnitude, magnitude, ...,phase, phase, phase, ...
-    ## magnitude, magnitude, magnitude, ...,phase, phase, phase, ...
-    ## ......
-    ##
-    ##    file: .unw, .cor, .hgt, .trans
-    ##    box:  4-tuple defining the left, upper, right, and lower pixel coordinate.
-    ## Example:
-    ##    a,p,r = read_float32('100102-100403.unw')
-    ##    a,p,r = read_float32('100102-100403.unw',(100,1200,500,1500))
+    '''Reads roi_pac data (RMG format, interleaved line by line)
+    should rename it to read_rmg_float32()
+    
+    RMG format (named after JPL radar pionner Richard M. Goldstein): made
+    up of real*4 numbers in two arrays side-by-side. The two arrays often
+    show the magnitude of the radar image and the phase, although not always
+    (sometimes the phase is the correlation). The length and width of each 
+    array are given as lines in the metadata (.rsc) file. Thus the total
+    width width of the binary file is (2*width) and length is (length), data
+    are stored as:
+    magnitude, magnitude, magnitude, ...,phase, phase, phase, ...
+    magnitude, magnitude, magnitude, ...,phase, phase, phase, ...
+    ......
+    
+       file: .unw, .cor, .hgt, .trans
+       box:  4-tuple defining the left, upper, right, and lower pixel coordinate.
+    Example:
+       a,p,r = read_float32('100102-100403.unw')
+       a,p,r = read_float32('100102-100403.unw',(100,1200,500,1500))
+    '''
 
     #File = args[0]
     atr = read_attribute(File)
@@ -256,26 +251,26 @@ def read_float32(File, box=None):
 #########################################################################
 ##def read_complex64(File, real_imag=0):
 def read_complex_float32(File, real_imag=0):
-    ## Read complex float 32 data matrix, i.e. roi_pac int or slc data.
-    ## should rename it to read_complex_float32()
-    ##
-    ## Data is sotred as:
-    ## real, imaginary, real, imaginary, ...
-    ## real, imaginary, real, imaginary, ...
-    ## ...
-    ##
-    ## Usage:
-    ##     File : input file name
-    ##     real_imag : flag for output format, 0 for amplitude and phase [by default], others for real and imagery
-    ##
-    ## Example:
-    ##     amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
-    ##     data, atr       = read_complex_float32('150707.slc', 1)
+    '''Read complex float 32 data matrix, i.e. roi_pac int or slc data.
+    should rename it to read_complex_float32()
+    
+    Data is sotred as:
+    real, imaginary, real, imaginary, ...
+    real, imaginary, real, imaginary, ...
+    ...
+    
+    Usage:
+        File : input file name
+        real_imag : flag for output format, 0 for amplitude and phase [by default], others for real and imagery
+    
+    Example:
+        amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
+        data, atr       = read_complex_float32('150707.slc', 1)
+    '''
 
     atr = read_attribute(File)
-    width  = int(float(atr['WIDTH']))
+    width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-
     ##data = np.fromfile(File,np.complex64,length*2*width).reshape(length,width)
     data = np.fromfile(File,np.complex64,length*width).reshape(length,width)
 
@@ -288,29 +283,26 @@ def read_complex_float32(File, real_imag=0):
 
 #########################################################################
 def read_real_float32(File):
-    ## Read real float 32 data matrix, i.e. GAMMA .mli file
-    ##
-    ## Usage:
-    ##     data, atr = read_real_float32('20070603.mli')
-
+    '''Read real float 32 data matrix, i.e. GAMMA .mli file
+    Usage:  data, atr = read_real_float32('20070603.mli')
+    '''
     atr = read_attribute(File)
-    width  = int(float(atr['WIDTH']))
+    width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-
     data = np.fromfile(File,dtype=np.float32).reshape(length,width)
     return data, atr
 
 #########################################################################
 #def read_gamma_scomplex(File,box):
 def read_complex_int16(*args):
-    ## Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
-    ##
-    ## Inputs:
-    ##    file: complex data matrix (cpx_int16)
-    ##    box: 4-tuple defining the left, upper, right, and lower pixel coordinate.
-    ## Example:
-    ##    data,rsc = read_complex_int16('100102.slc')
-    ##    data,rsc = read_complex_int16('100102.slc',(100,1200,500,1500))
+    '''Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
+    Inputs:
+       file: complex data matrix (cpx_int16)
+       box: 4-tuple defining the left, upper, right, and lower pixel coordinate.
+    Example:
+       data,rsc = read_complex_int16('100102.slc')
+       data,rsc = read_complex_int16('100102.slc',(100,1200,500,1500))
+    '''
 
     File = args[0]
     atr = read_attribute(File)
@@ -344,12 +336,10 @@ def read_complex_int16(*args):
 
 #########################################################################
 def read_dem(File):
-    ## Read real int 16 data matrix, i.e. ROI_PAC .dem file.
-    ## Input:
-    ##     roi_pac format dem file
-    ## Usage:
-    ##     dem, atr = read_real_int16('gsi10m_30m.dem')
-
+    '''Read real int 16 data matrix, i.e. ROI_PAC .dem file.
+    Input:  roi_pac format dem file
+    Usage:  dem, atr = read_real_int16('gsi10m_30m.dem')
+    '''
     atr = read_attribute(File)
     width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH'])) 
@@ -357,12 +347,7 @@ def read_dem(File):
     return dem, atr
 
 def read_real_int16(File):
-    ## Read real int 16 data matrix, i.e. ROI_PAC .dem file.
-    ## Input:
-    ##     roi_pac format dem file
-    ## Usage:
-    ##     dem, atr = read_real_int16('gsi10m_30m.dem')
-
+    '''Same as read_dem() above'''
     atr = read_attribute(File)
     width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH'])) 
@@ -553,12 +538,13 @@ def read(File, box=(), epoch=''):
 #########################################################################
 ## Not ready yet
 def read_multiple(File,box=''):
-    ## Read multi-temporal 2D datasets into a 3-D data stack
-    ## Inputs:
-    ##     File  : input file, interferograms,coherence, timeseries, ...
-    ##     box   : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
-    ## Examples:
-    ##     stack = stacking('timeseries.h5',(100,1200,500,1500))
+    '''Read multi-temporal 2D datasets into a 3-D data stack
+    Inputs:
+        File  : input file, interferograms,coherence, timeseries, ...
+        box   : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
+    Examples:
+        stack = stacking('timeseries.h5',(100,1200,500,1500))
+    '''
 
     ##### File Info
     atr = readfile.read_attribute(File)
