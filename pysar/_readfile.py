@@ -208,6 +208,8 @@ def read_float32(File, box=None):
     '''Reads roi_pac data (RMG format, interleaved line by line)
     should rename it to read_rmg_float32()
     
+    ROI_PAC file: .unw, .cor, .hgt, .trans, .msk
+    
     RMG format (named after JPL radar pionner Richard M. Goldstein): made
     up of real*4 numbers in two arrays side-by-side. The two arrays often
     show the magnitude of the radar image and the phase, although not always
@@ -219,8 +221,7 @@ def read_float32(File, box=None):
     magnitude, magnitude, magnitude, ...,phase, phase, phase, ...
     ......
     
-       file: .unw, .cor, .hgt, .trans
-       box:  4-tuple defining the left, upper, right, and lower pixel coordinate.
+       box  : 4-tuple defining the left, upper, right, and lower pixel coordinate.
     Example:
        a,p,r = read_float32('100102-100403.unw')
        a,p,r = read_float32('100102-100403.unw',(100,1200,500,1500))
@@ -254,6 +255,8 @@ def read_complex_float32(File, real_imag=0):
     '''Read complex float 32 data matrix, i.e. roi_pac int or slc data.
     should rename it to read_complex_float32()
     
+    ROI_PAC file: .slc, .int, .amp
+    
     Data is sotred as:
     real, imaginary, real, imaginary, ...
     real, imaginary, real, imaginary, ...
@@ -261,7 +264,9 @@ def read_complex_float32(File, real_imag=0):
     
     Usage:
         File : input file name
-        real_imag : flag for output format, 0 for amplitude and phase [by default], others for real and imagery
+        real_imag : flag for output format, 
+                    0 for amplitude and phase [by default], 
+                    non-0 : for real and imagery
     
     Example:
         amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
@@ -353,6 +358,25 @@ def read_real_int16(File):
     length = int(float(atr['FILE_LENGTH'])) 
     dem = np.fromfile(File, dtype=np.int16).reshape(length, width)
     return dem, atr
+
+
+#########################################################################
+def read_flag(File):
+    '''Read binary file with flags, 1-byte values with flags set in bits
+    For ROI_PAC .flg, *_snap_connect.byt file.    
+    '''
+    # Read attribute
+    if File.endswith('_snap_connect.byt'):
+        rscFile = File.split('_snap_connect.byt')[0]+'.unw.rsc'
+    else:
+        rscFile = File+'.rsc'
+    atr = read_attribute(rscFile.split('.rsc')[0])
+    width = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH'])) 
+    
+    flag = np.fromfile(File, dtype=bool).reshape(length, width)
+    
+    return flag, atr
 
 
 #########################################################################
@@ -475,7 +499,7 @@ def read(File, box=(), epoch=''):
 
     ##### ROI_PAC
     elif processor in ['roipac','gamma']:
-        if ext in ['.unw','.cor','.hgt']:
+        if ext in ['.unw','.cor','.hgt', '.msk']:
             if box:
                 amp,pha,atr = read_float32(File,box)
             else:
