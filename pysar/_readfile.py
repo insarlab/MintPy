@@ -209,8 +209,8 @@ def merge_attribute(atr1,atr2):
 
 #########################################################################
 ##############################  Read Data  ##############################
-#def read_float32(File):
-def read_float32(*args):
+def read_float32(File, box=None):
+#def read_float32(*args):
     ## Reads roi_pac data (RMG format, interleaved line by line)
     ## should rename it to read_rmg_float32()
     ##
@@ -231,14 +231,16 @@ def read_float32(*args):
     ##    a,p,r = read_float32('100102-100403.unw')
     ##    a,p,r = read_float32('100102-100403.unw',(100,1200,500,1500))
 
-    File = args[0]
+    #File = args[0]
     atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
 
-    if   len(args)==1:     box = [0,0,width,length]
-    elif len(args)==2:     box = args[1]
-    else: print 'Error: only support 1/2 inputs.'; return 0
+    if not box:
+        box = [0,0,width,length]
+    #if   len(args)==1:     box = [0,0,width,length]
+    #elif len(args)==2:     box = args[1]
+    #else: print 'Error: only support 1/2 inputs.'; return 0
 
     data = np.fromfile(File,np.float32,box[3]*2*width).reshape(box[3],2*width)
     amplitude = data[box[1]:box[3],box[0]:box[2]]
@@ -341,20 +343,30 @@ def read_complex_int16(*args):
     #return amplitude, phase, parContents
 
 #########################################################################
-##def read_dem(File):
-def read_real_int16(File):
+def read_dem(File):
     ## Read real int 16 data matrix, i.e. ROI_PAC .dem file.
-    ## should rename it to read_real_int16()
-    ##
     ## Input:
     ##     roi_pac format dem file
     ## Usage:
     ##     dem, atr = read_real_int16('gsi10m_30m.dem')
 
     atr = read_attribute(File)
-    width  = int(float(atr['WIDTH']))
+    width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH'])) 
-    dem = np.fromfile(File,dtype=np.int16).reshape(length,width)
+    dem = np.fromfile(File, dtype=np.int16).reshape(length, width)
+    return dem, atr
+
+def read_real_int16(File):
+    ## Read real int 16 data matrix, i.e. ROI_PAC .dem file.
+    ## Input:
+    ##     roi_pac format dem file
+    ## Usage:
+    ##     dem, atr = read_real_int16('gsi10m_30m.dem')
+
+    atr = read_attribute(File)
+    width = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH'])) 
+    dem = np.fromfile(File, dtype=np.int16).reshape(length, width)
     return dem, atr
 
 
