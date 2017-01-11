@@ -81,26 +81,31 @@ def read_attribute(File, epoch=''):
             except: atr['ref_date'] = sorted(h5f[k[0]].keys())[0]
 
         h5f.close()
-
-    ##### GAMMA
-    elif os.path.isfile(File + '.par'):
-        atr = read_gamma_par(File + '.par')
-        atr['PROCESSOR'] = 'gamma'
-        atr['FILE_TYPE'] = ext
     
-    ##### ROI_PAC
-    elif os.path.isfile(File + '.rsc'):
-        atr = read_roipac_rsc(File + '.rsc')
-        atr['PROCESSOR'] = 'roipac'
-        atr['FILE_TYPE'] = ext
+    else:
+        # attribute file list
+        potentialRscFileList = [File+'.rsc', File.split('_snap_connect.byt')[0]+'.unw.rsc']
+        rscFile = [rscFile for rscFile in potentialRscFileList if os.path.isfile(rscFile)][0]
 
-    ##### ISCE
-    elif os.path.isfile(File + '.xml'):
-        atr = read_isce_xml(File + '.xml')
-        atr['PROCESSOR'] = 'isce'
-        atr['FILE_TYPE'] = ext
-
-    else: print 'Unrecognized file extension: '+ext; sys.exit(1)
+        ##### GAMMA
+        if os.path.isfile(File+'.par'):
+            atr = read_gamma_par(File+'.par')
+            atr['PROCESSOR'] = 'gamma'
+            atr['FILE_TYPE'] = ext
+        
+        ##### ROI_PAC
+        elif rscFile:
+            atr = read_roipac_rsc(rscFile)
+            atr['PROCESSOR'] = 'roipac'
+            atr['FILE_TYPE'] = ext
+    
+        ##### ISCE
+        elif os.path.isfile(File+'.xml'):
+            atr = read_isce_xml(File+'.xml')
+            atr['PROCESSOR'] = 'isce'
+            atr['FILE_TYPE'] = ext
+    
+        else: print 'Unrecognized file extension: '+ext; sys.exit(1)
 
     # Unit - str
     if atr['FILE_TYPE'] in ['interferograms','wrapped','.unw','.int','.flat']:
@@ -513,6 +518,9 @@ def read(File, box=(), epoch=''):
                 masterAmplitude = masterAmplitude[box[1]:box[3],box[0]:box[2]]
                 slaveAmplitude = slaveAmplitude[box[1]:box[3],box[0]:box[2]]
             return masterAmplitude, slaveAmplitude, atr
+        elif ext in ['.flg', '.byt']:
+            flag, atr = read_flag(File)
+            return flag, atr
   
         elif ext == '.trans':
             if box:

@@ -190,7 +190,8 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
 ##################################################################################################
 def check_colormap_input(atr_dict, colormap=None):
     if not colormap:
-        if atr_dict['FILE_TYPE'] in ['coherence','temporal_coherence','.cor','.mli','.slc','.amp']:
+        if atr_dict['FILE_TYPE'] in ['coherence','temporal_coherence','.cor',\
+                                     '.mli','.slc','.amp']:
               colormap = 'gray'
         else: colormap = 'jet'
     print 'colormap: '+colormap

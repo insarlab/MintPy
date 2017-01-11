@@ -28,7 +28,6 @@ import info
 import insar_vs_gps
 #import l1
 import load_data
-import load_data
 #import load_dem
 import lod
 import look_angle
