@@ -118,11 +118,13 @@ def auto_flip_direction(atr_dict):
         geocoord = True
     except:
         geocoord = False
-        print atr_dict['ORBIT_DIRECTION']+' orbit'
-        if atr_dict['ORBIT_DIRECTION'][0].upper() == 'A':
-            flip_ud = True
-        else:
-            flip_lr = True
+        try:
+            print atr_dict['ORBIT_DIRECTION']+' orbit'
+            if atr_dict['ORBIT_DIRECTION'][0].upper() == 'A':
+                flip_ud = True
+            else:
+                flip_lr = True
+        except: pass
     return flip_lr, flip_ud
 
 
@@ -188,7 +190,7 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
 ##################################################################################################
 def check_colormap_input(atr_dict, colormap=None):
     if not colormap:
-        if atr_dict['FILE_TYPE'] in ['coherence','temporal_coherence','.cor']:
+        if atr_dict['FILE_TYPE'] in ['coherence','temporal_coherence','.cor','.mli','.slc','.amp']:
               colormap = 'gray'
         else: colormap = 'jet'
     print 'colormap: '+colormap
@@ -362,8 +364,6 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
     scale = 1.0
     data_unit = atr_dict['UNIT'].lower().split('/')
     disp_unit = disp_unit.lower().split('/')
-    range2phase = -(4*np.pi) / float(atr_dict['WAVELENGTH'])
-    phase2range = -float(atr_dict['WAVELENGTH']) / (4*np.pi)
 
     # if data and display unit is the same
     if disp_unit == data_unit:
@@ -377,11 +377,13 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
         elif disp_unit[0] == 'dm': scale *= 10.0
         elif disp_unit[0] == 'km': scale *= 1/1000.0
         elif disp_unit[0] in ['radians','radian','rad','r']:
+            range2phase = -(4*np.pi) / float(atr_dict['WAVELENGTH'])
             scale *= range2phase
         else:
             print 'Unrecognized phase/length unit: '+disp_unit[0]
             return
     elif data_unit[0] == 'radian':
+        phase2range = -float(atr_dict['WAVELENGTH']) / (4*np.pi)
         if   disp_unit[0] == 'mm': scale *= phase2range * 1000.0
         elif disp_unit[0] == 'cm': scale *= phase2range * 100.0
         elif disp_unit[0] == 'dm': scale *= phase2range * 10.0
@@ -397,7 +399,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
         if disp_unit[0] == 'db':
             ind = np.nonzero(matrix)
             matrix[ind] = np.log10(np.absolute(matrix[ind]))
-            disp_unit[0] == 'dB'
+            disp_unit[0] = 'dB'
         else:
             print 'Unrecognized amplitude/coherence unit: '+disp_unit[0]
             return
@@ -478,6 +480,10 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
         print 'WARNING: re-wrap is disabled because display unit is not radian.'
         inps.wrap = False
 
+    # Default unit for amplitude image
+    if not inps.disp_unit and k in ['.mli','.slc','.amp']:
+        inps.disp_unit = 'dB'
+        
     # Min / Max - Display
     if not inps.disp_min and not inps.disp_max:
         if k in ['coherence','temporal_coherence','.cor']:

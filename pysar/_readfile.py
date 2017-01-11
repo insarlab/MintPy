@@ -82,6 +82,12 @@ def read_attribute(File, epoch=''):
 
         h5f.close()
 
+    ##### GAMMA
+    elif os.path.isfile(File + '.par'):
+        atr = read_gamma_par(File + '.par')
+        atr['PROCESSOR'] = 'gamma'
+        atr['FILE_TYPE'] = ext
+    
     ##### ROI_PAC
     elif os.path.isfile(File + '.rsc'):
         atr = read_roipac_rsc(File + '.rsc')
@@ -92,18 +98,6 @@ def read_attribute(File, epoch=''):
     elif os.path.isfile(File + '.xml'):
         atr = read_isce_xml(File + '.xml')
         atr['PROCESSOR'] = 'isce'
-        atr['FILE_TYPE'] = ext
-
-    ##### GAMMA
-    elif os.path.isfile(File + '.par'):
-        atr = read_gamma_par(File + '.par')
-        atr['PROCESSOR'] = 'gamma'
-        atr['FILE_TYPE'] = ext
-
-    # obselete
-    elif os.path.isfile(os.path.splitext(File)[0] + '.par'):
-        atr = read_gamma_par(os.path.splitext(File)[0] + '.par')
-        atr['PROCESSOR'] = 'gamma'
         atr['FILE_TYPE'] = ext
 
     else: print 'Unrecognized file extension: '+ext; sys.exit(1)
@@ -138,7 +132,8 @@ def read_template(File):
     template_dict = {}
     for line in open(File):
         c = line.split("=")
-        if len(c) < 2 or line.startswith('%') or line.startswith('#'):  next #ignore commented lines or those without variables
+        if len(c) < 2 or line.startswith('%') or line.startswith('#'):
+            next #ignore commented lines or those without variables
         else:
             atrName  = c[0].strip()
             atrValue = str.replace(c[1],'\n','').split("#")[0].strip()
@@ -227,16 +222,11 @@ def read_float32(File, box=None):
        a,p,r = read_float32('100102-100403.unw',(100,1200,500,1500))
     '''
 
-    #File = args[0]
     atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-
     if not box:
         box = [0,0,width,length]
-    #if   len(args)==1:     box = [0,0,width,length]
-    #elif len(args)==2:     box = args[1]
-    #else: print 'Error: only support 1/2 inputs.'; return 0
 
     data = np.fromfile(File,np.float32,box[3]*2*width).reshape(box[3],2*width)
     amplitude = data[box[1]:box[3],box[0]:box[2]]
@@ -251,7 +241,7 @@ def read_float32(File, box=None):
 
 #########################################################################
 ##def read_complex64(File, real_imag=0):
-def read_complex_float32(File, real_imag=0):
+def read_complex_float32(File, real_imag=False):
     '''Read complex float 32 data matrix, i.e. roi_pac int or slc data.
     should rename it to read_complex_float32()
     
@@ -279,7 +269,7 @@ def read_complex_float32(File, real_imag=0):
     ##data = np.fromfile(File,np.complex64,length*2*width).reshape(length,width)
     data = np.fromfile(File,np.complex64,length*width).reshape(length,width)
 
-    if real_imag == 0:
+    if not real_imag:
         amplitude = np.array([np.hypot(  data.real,data.imag)]).reshape(length,width)
         phase     = np.array([np.arctan2(data.imag,data.real)]).reshape(length,width)
         return amplitude, phase, atr
@@ -298,9 +288,12 @@ def read_real_float32(File):
     return data, atr
 
 #########################################################################
-#def read_gamma_scomplex(File,box):
-def read_complex_int16(*args):
+#def read_complex_int16(*args):
+def read_complex_int16(File, box=None):
     '''Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
+    
+    Gamma file: .slc
+    
     Inputs:
        file: complex data matrix (cpx_int16)
        box: 4-tuple defining the left, upper, right, and lower pixel coordinate.
@@ -309,23 +302,17 @@ def read_complex_int16(*args):
        data,rsc = read_complex_int16('100102.slc',(100,1200,500,1500))
     '''
 
-    File = args[0]
     atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-
-    if   len(args)==1:     box = [0,0,width,length]
-    elif len(args)==2:     box = args[1]
-    else: print 'Error: only support 1/2 inputs.'; return 0
-    nlines = box[3]-box[1]
-    WIDTH  = box[2]-box[0]
+    if not box:
+        box = [0,0,width,length]
 
     data = np.fromfile(File,np.int16,box[3]*2*width).reshape(box[3],2*width)
-    data = data[box[1]:box[3],2*box[0]:2*box[2]].reshape(2*nlines*WIDTH,1)
-    id1 = range(0,2*nlines*WIDTH,2)
-    id2 = range(1,2*nlines*WIDTH,2)
-    real = data[id1].reshape(nlines,WIDTH)
-    imag = data[id2].reshape(nlines,WIDTH)
+    data = data[box[1]:box[3],2*box[0]:2*box[2]].flatten()
+    odd_idx = np.arange(1, len(data), 2)
+    real = data[odd_idx-1].reshape(box[3]-box[1],box[2]-box[0])
+    imag = data[odd_idx].reshape(box[3]-box[1],box[2]-box[0])
 
     data_cpx = real + imag*1j
     return data_cpx, atr
@@ -506,19 +493,22 @@ def read(File, box=(), epoch=''):
                 amp,pha,atr = read_float32(File)
             return pha, atr
 
-        elif ext == '.dem':
+        elif ext in ['.dem']:
             dem,atr = read_real_int16(File)
             if box:  dem = dem[box[1]:box[3],box[0]:box[2]]
             return dem, atr
   
-        elif ext == '.int':
+        elif ext in ['.int']:
             amp, pha, atr = read_complex_float32(File)
-            if box:  pha = pha[box[1]:box[3],box[0]:box[2]]
+            if box:
+                pha = pha[box[1]:box[3],box[0]:box[2]]
             return pha, atr
-            #ind = np.nonzero(amp)
-            #amp[ind] = np.log10(amp[ind])
-            #atr['UNIT'] = 'dB'
-            #return amp, atr
+        elif ext in ['.amp']:
+            masterAmplitude, slaveAmplitude, atr = read_complex_float32(File, real_imag=True)
+            if box:
+                masterAmplitude = masterAmplitude[box[1]:box[3],box[0]:box[2]]
+                slaveAmplitude = slaveAmplitude[box[1]:box[3],box[0]:box[2]]
+            return masterAmplitude, slaveAmplitude, atr
   
         elif ext == '.trans':
             if box:
@@ -541,8 +531,6 @@ def read(File, box=(), epoch=''):
         elif ext == '.mli':
             data,atr = read_real_float32(File)
             if box: data = data[box[1]:box[3],box[0]:box[2]]
-            #data = np.log10(data)     # dB
-            #atr['UNIT'] = 'dB'
             return data, atr
 
         elif ext == '.slc':
@@ -550,10 +538,8 @@ def read(File, box=(), epoch=''):
                 data,atr = read_complex_int16(File,box)
             else:
                 data,atr = read_complex_int16(File)
-            #data = np.log10(np.absolute(data))     # dB
-            #data[data==-np.inf] = np.nan
-            #atr['UNIT'] = 'dB'
-            return data, atr
+            amplitude = np.array([np.hypot(data.real, data.imag)])
+            return amplitude, atr
 
         else: print 'Un-supported '+processfor+' file format: '+ext
     else: print 'Unrecognized file format: '+ext; return 0
