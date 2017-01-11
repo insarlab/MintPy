@@ -289,7 +289,7 @@ def read_real_float32(File):
 
 #########################################################################
 #def read_complex_int16(*args):
-def read_complex_int16(File, box=None):
+def read_complex_int16(File, box=None, real_imag=False):
     '''Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
     
     Gamma file: .slc
@@ -314,8 +314,12 @@ def read_complex_int16(File, box=None):
     real = data[odd_idx-1].reshape(box[3]-box[1],box[2]-box[0])
     imag = data[odd_idx].reshape(box[3]-box[1],box[2]-box[0])
 
-    data_cpx = real + imag*1j
-    return data_cpx, atr
+    if real_imag:
+        return real, imag, atr
+    else:
+        amplitude = np.array([np.hypot(imag,real)]).reshape(length,width)
+        phase = np.array([np.arctan2(imag,real)]).reshape(length,width)
+        return amplitude, phase, atr
 
     #data = np.fromfile(File,np.int16,length*2*width).reshape(length*2,width)
     #oddindices = np.where(np.arange(length*2)&1)[0]
@@ -535,10 +539,10 @@ def read(File, box=(), epoch=''):
 
         elif ext == '.slc':
             if box:
-                data,atr = read_complex_int16(File,box)
+                amplitude, phase,atr = read_complex_int16(File, box)
             else:
-                data,atr = read_complex_int16(File)
-            amplitude = np.array([np.hypot(data.real, data.imag)])
+                amplitude, phase, atr = read_complex_int16(File)
+            del phase
             return amplitude, atr
 
         else: print 'Un-supported '+processfor+' file format: '+ext
