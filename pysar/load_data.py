@@ -6,8 +6,9 @@
 ############################################################
 #
 # Yunjun, Jul 2015: Add check_num/check_file_size to .int/.cor file
-# Yunjun, Jan 2017: Add auto_path_miami(), copy_roipac_file(), load_roipac2multi_group_h5()
-#                   r+ mode loading of multi_group hdf5 file
+# Yunjun, Jan 2017: Add auto_path_miami(), copy_roipac_file()
+#                   Add load_roipac2multi_group_h5()
+#                   Add r+ mode loading of multi_group hdf5 file
 
 
 import os
@@ -227,28 +228,9 @@ def copy_roipac_file(targetFile, destDir):
 
 
 ##########################  Usage  ###############################
-def usage():
-    print '''
-************************************************************************
-   loading the processed data for PySAR:
-       interferograms (unwrapped and wrapped)
-       coherence files
-       geomap.trans file
-       DEM (radar and geo coordinate)
-   
-   Usage: load_data.py TEMPLATEFILE  [inDir outDir]
-
-   Example:
-       load_data.py $TE/SanAndreasT356EnvD.template
-       load_data.py $TE/SanAndreasT356EnvD.template $SC/PROCESS/SanAndreasT356EnvD $SC/TSSAR/SanAndreasT356EnvD
-
-************************************************************************
-    '''
-    return
-
 EXAMPLE='''example:
   load_data_roipac.py  $TE/SanAndreasT356EnvD.template
-  load_data_roipac.py  $TE/SanAndreasT356EnvD.template  $SC/SanAndreasT356EnvD/PROCESS  $SC/SanAndreasT356EnvD/TSSAR
+  load_data_roipac.py  $TE/SanAndreasT356EnvD.template  --dir $SC/SanAndreasT356EnvD/TSSAR
 '''
 
 TEMPLATE='''template:

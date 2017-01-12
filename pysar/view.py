@@ -62,6 +62,8 @@ import pysar.mask as mask
 import pysar.subset as subset
 from pysar.multilook import multilook_matrix
 
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+
 
 ############################################ Class ###############################################
 class Basemap2(Basemap): 
@@ -669,7 +671,6 @@ def plot_matrix(ax, data, meta_dict, inps=None):
                 # Default Distance - 10% of data width
                 gc = pyproj.Geod(a=m.rmajor,b=m.rminor) 
                 az12, az21, wid_dist = gc.inv(inps.geo_box[0], inps.geo_box[3], inps.geo_box[2], inps.geo_box[3])
-                #import pdb; pdb.set_trace()
                 inps.scalebar = [inps.geo_box[3]+0.1*(inps.geo_box[1]-inps.geo_box[3]),\
                              inps.geo_box[0]+0.2*(inps.geo_box[2]-inps.geo_box[0]), round_to_1(wid_dist)*0.1]
             m.drawscale(inps.scalebar[0], inps.scalebar[1], inps.scalebar[2], inps.font_size)
@@ -980,11 +981,10 @@ def main(argv):
     width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
     print 'file size in y/x: '+atr['FILE_LENGTH']+', '+atr['WIDTH']
-    #import pdb; pdb.set_trace()
 
     #------------------------------ Epoch/Date Info -------------------------------------------#
     # Read "epoch list to display' and 'reference date' for multi-dataset files
-    if k in ['interferograms','coherence','wrapped','timeseries']:
+    if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         # Read Epoch List
         h5file = h5py.File(inps.file,'r')
         epochList = h5file[k].keys()
@@ -1003,11 +1003,19 @@ def main(argv):
                 inps.exclude_epoch = ptime.read_date_list(inps.exclude_epoch[0])
             inps.exclude_epoch = get_epoch_full_list_from_input(epochList, inps.exclude_epoch)[0]
             inps.epoch -= inps.exclude_epoch
+        else:
+            inps.exclude_epoch = []
+        epochNum = len(inps.epoch)
 
         # Output message
-        print 'dates in file '+inps.file+':\n'+str(epochList)
-        print 'dates to exclude:'+'\n'+str(inps.exclude_epoch)
-        print 'dates to display:'+'\n'+str(inps.epoch)
+        if k in multi_dataset_hdf5_file:
+            print 'dates in file '+inps.file+':\n'+str(epochList)
+            print 'dates to exclude:'+'\n'+str(inps.exclude_epoch)
+            print 'dates to display:'+'\n'+str(inps.epoch)
+        else:
+            print 'num of dates in file   :'+str(len(epochList))
+            print 'num of dates to exclude:'+str(len(inps.exclude_epoch))
+            print 'num of dates to display:'+str(epochNum)
 
         # Reference Date
         if inps.ref_date:
@@ -1025,7 +1033,7 @@ def main(argv):
 
         print '------------------------------------------------------------------------'
         # Raise Error if no epoch left
-        if len(inps.epoch) == 0:
+        if epochNum == 0:
             raise Exception('Zero epoch found!')
     # for single-dataset file
     elif k in ['.trans']:
@@ -1044,7 +1052,7 @@ def main(argv):
 
     ############################### Read Data and Display ###############################
     ##### Display One Dataset
-    if len(inps.epoch) == 1:
+    if epochNum == 1:
         # Read Data
         print 'reading data ...'
         data, atr = readfile.read(inps.file, inps.pix_box, inps.epoch[0])
@@ -1091,9 +1099,9 @@ def main(argv):
                 fig_size4plot = inps.fig_size
             else:
                 fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
-            inps.fig_row_num, inps.fig_col_num = auto_row_col_num(len(inps.epoch), data_shape, fig_size4plot, inps.fig_num)
-        inps.fig_num = int(np.ceil(float(len(inps.epoch)) / float(inps.fig_row_num*inps.fig_col_num)))
-        print 'dataset number: '+str(len(inps.epoch))
+            inps.fig_row_num, inps.fig_col_num = auto_row_col_num(epochNum, data_shape, fig_size4plot, inps.fig_num)
+        inps.fig_num = int(np.ceil(float(epochNum) / float(inps.fig_row_num*inps.fig_col_num)))
+        print 'dataset number: '+str(epochNum)
         print 'row     number: '+str(inps.fig_row_num)
         print 'column  number: '+str(inps.fig_col_num)
         print 'figure  number: '+str(inps.fig_num)
@@ -1158,7 +1166,7 @@ def main(argv):
                 inps.outfile = inps.outfile_base+'_'+str(j)+inps.outfile_ext
             else:
                 inps.outfile = inps.outfile_base+inps.outfile_ext
-            fig_title = 'Figure '+str(j)+' - '+inps.outfile
+            fig_title = 'Figure '+str(j)+' - '+inps.outfile_base
             print '----------------------------------------'
             print fig_title
             # Open a new figure object
@@ -1168,22 +1176,22 @@ def main(argv):
             fig_data_min=0
             fig_data_max=0
             i_start = (j-1)*inps.fig_row_num*inps.fig_col_num
-            i_end   = min([len(inps.epoch), i_start+inps.fig_row_num*inps.fig_col_num])
+            i_end   = min([epochNum, i_start+inps.fig_row_num*inps.fig_col_num])
             ##### Loop 2 - Subplots
             for i in range(i_start, i_end):
                 epoch = inps.epoch[i]
-                print 'loading '+epoch+'  '+str(i+1)
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
-    
+                ut.printProgress(i-i_start+1, i_end-i_start, prefix='loading', suffix=epoch)
+
                 # Read Data
                 h5file = h5py.File(inps.file, 'r')
-                if k == 'timeseries':
+                if k in multi_dataset_hdf5_file:
                     dset = h5file[k].get(epoch)
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
                     if inps.ref_date:
                         data -= ref_data
                     subplot_title = dt.strptime(epoch, '%Y%m%d').isoformat()[0:10]
-                elif k in ['interferograms','coherence','wrapped']:
+                elif k in multi_group_hdf5_file:
                     if   inps.fig_row_num*inps.fig_col_num > 100:
                         subplot_title = str(epochList.index(epoch)+1)
                     else:
