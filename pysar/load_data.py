@@ -6,7 +6,9 @@
 ############################################################
 #
 # Yunjun, Jul 2015: Add check_num/check_file_size to .int/.cor file
-#
+# Yunjun, Jan 2017: Add auto_path_miami(), copy_roipac_file(), load_roipac2multi_group_h5()
+#                   r+ mode loading of multi_group hdf5 file
+
 
 import os
 import sys
@@ -19,7 +21,6 @@ import numpy as np
 
 import pysar._readfile as readfile
 from pysar._pysar_utilities import check_variable_name
-
 
 
 ############################ Sub Functions ###################################
@@ -74,7 +75,7 @@ def check_file_size(fileList, mode_width=None, mode_length=None):
     widthList =[]
     lengthList=[]
     for file in fileList:
-        rsc = readfile.read_roipac_rsc(file+'.rsc')
+        rsc = readfile.read_attribute(file)
         widthList.append(rsc['WIDTH'])
         lengthList.append(rsc['FILE_LENGTH'])
     # Mode of Width and Length
@@ -100,35 +101,41 @@ def check_file_size(fileList, mode_width=None, mode_length=None):
     return fileListOut, mode_width, mode_length
 
 
-def check_existed_hdf5_file(roipacFileList, pysarFile):
+def check_existed_hdf5_file(roipacFileList, hdf5File):
     '''Check file list with existed hdf5 file'''
     # If input file list is empty
-    if not roipacFileList:
-        return roipacFileList
+    outFileList = list(roipacFileList)
+    if not outFileList:
+        return outFileList
     
     # if previous hdf5 file existed
-    if os.path.isfile(pysarFile):
-        print os.path.basename(pysarFile)+'  already exists.'
-        h5 = h5py.File(pysarFile, 'r')
+    if os.path.isfile(hdf5File):
+        print os.path.basename(hdf5File)+'  already exists.'
+        atr = readfile.read_attribute(hdf5File)
+        k = atr['FILE_TYPE']
+        h5 = h5py.File(hdf5File, 'r')
         epochList = sorted(h5[k].keys())
-        atr = h5[k][epochList[0]].attrs
         h5.close()
         
         # Remove file/epoch that already existed
-        roipacFileList = list(set(roipacFileList) - set(epochList))
+        for epoch in epochList:
+            for file in roipacFileList:
+                if epoch in file:
+                    outFileList.remove(file)
 
         # Check mode length/width with existed hdf5 file
-        ext = os.path.splitext(roipacFileList[0])[1]
-        roipacFileList, mode_width, mode_length = check_file_size(roipacFileList)
-        if mode_width != atr['WIDTH'] or mode_length != atr['FILE_LENGTH']:
-            print 'WARNING: input ROI_PAC files have different size than existed hdf5 file:'
-            print 'ROI_PAC file size: '+mode_length+', '+mode_width
-            print 'HDF5    file size: '+atr['FILE_LENGTH']+', '+atr['WIDTH']
-            print 'Continue WITHOUT loading '+ext+' file'
-            print 'To enforse loading, change/remove existed HDF5 filename and re-run loading script'
-            roipacFileList = None
+        if outFileList:
+            ext = os.path.splitext(outFileList[0])[1]
+            outFileList, mode_width, mode_length = check_file_size(outFileList)
+            if mode_width != atr['WIDTH'] or mode_length != atr['FILE_LENGTH']:
+                print 'WARNING: input ROI_PAC files have different size than existed hdf5 file:'
+                print 'ROI_PAC file size: '+mode_length+', '+mode_width
+                print 'HDF5    file size: '+atr['FILE_LENGTH']+', '+atr['WIDTH']
+                print 'Continue WITHOUT loading '+ext+' file'
+                print 'To enforse loading, change/remove existed HDF5 filename and re-run loading script'
+                outFileList = None
     
-    return roipacFileList
+    return outFileList
 
 
 def load_roipac2multi_group_h5(fileType, fileList, hdf5File='unwrapIfgram.h5', pysar_meta_dict=None):
@@ -144,7 +151,7 @@ def load_roipac2multi_group_h5(fileType, fileList, hdf5File='unwrapIfgram.h5', p
     '''
     ext = os.path.splitext(fileList[0])[1]
     print '--------------------------------------------'
-    print 'loading ROI_PAC'+ext+' files into '+fileType+' HDF5 file ...'
+    print 'loading ROI_PAC '+ext+' files into '+fileType+' HDF5 file ...'
     print 'number of '+ext+' input: '+str(len(fileList))
 
     # Check width/length mode of input files
@@ -156,6 +163,7 @@ def load_roipac2multi_group_h5(fileType, fileList, hdf5File='unwrapIfgram.h5', p
     fileList2 = check_existed_hdf5_file(fileList, hdf5File)
     
     # Open(Create) HDF5 file with r+/w mode based on fileList2
+    
     if fileList2 == fileList:
         # Create and open new hdf5 file with w mode
         print 'number of '+ext+' to add: '+str(len(fileList))
@@ -180,20 +188,20 @@ def load_roipac2multi_group_h5(fileType, fileList, hdf5File='unwrapIfgram.h5', p
         else:
             gg = h5file[fileType]                  # existing hdf5 file
         
-        for igram in fileList:
-            print 'Adding ' + igram
-            amp,unw,unwrsc = readfile.read_float32(igram)
+        for file in fileList:
+            print 'Adding ' + file
+            data, rsc = readfile.read(file)
             
             # Dataset
-            group = gg.create_group(os.path.basename(igram))
-            dset = group.create_dataset(os.path.basename(igram), data=unw, compression='gzip')
+            group = gg.create_group(os.path.basename(file))
+            dset = group.create_dataset(os.path.basename(file), data=data, compression='gzip')
             
             # Attribute - *.unw.rsc
-            for key,value in unwrsc.iteritems():
+            for key,value in rsc.iteritems():
                 group.attrs[key] = value
             # Attribute - *baseline.rsc
-            d1, d2 = unwrsc['DATE12'].split('-')
-            baseline_file = os.path.dirname(igram)+'/'+d1+'_'+d2+'_baseline.rsc'
+            d1, d2 = rsc['DATE12'].split('-')
+            baseline_file = os.path.dirname(file)+'/'+d1+'_'+d2+'_baseline.rsc'
             baseline_rsc = readfile.read_roipac_rsc(baseline_file)
             for key,value in baseline_rsc.iteritems():
                 group.attrs[key] = value
@@ -206,6 +214,16 @@ def load_roipac2multi_group_h5(fileType, fileList, hdf5File='unwrapIfgram.h5', p
         print 'finished writing to '+hdf5File
 
     return fileList, hdf5File
+
+
+def copy_roipac_file(targetFile, destDir):
+    '''Copy ROI_PAC file and its .rsc file to destination directory.'''
+    print '--------------------------------------------'
+    if os.path.isfile(destDir+'/'+os.path.basename(targetFile)):
+        print os.path.basename(targetFile)+' already exists, no need to re-load.'
+    else:
+        cpCmd="cp "+targetFile+" "+destDir;       print cpCmd;   os.system(cpCmd)
+        cpCmd="cp "+targetFile+".rsc "+destDir;   print cpCmd;   os.system(cpCmd)
 
 
 ##########################  Usage  ###############################
@@ -307,265 +325,40 @@ def main(argv):
     print 'DEM file in geo   coord : '+inps.dem_geo
     
     # Get all file list
-    if inps.unw:  inps.unw = sorted(glob.glob(inps.unw))
+    if inps.unw:
+        inps.snap_connect = inps.unw.split('.unw')[0]+'_snap_connect.byt'
+        inps.snap_connect = sorted(glob.glob(inps.snap_connect))
+        inps.unw = sorted(glob.glob(inps.unw))
     if inps.cor:  inps.cor = sorted(glob.glob(inps.cor))
     if inps.int:  inps.int = sorted(glob.glob(inps.int))
     if inps.geomap:     inps.geomap    = glob.glob(inps.geomap)[0]
     if inps.dem_radar:  inps.dem_radar = glob.glob(inps.dem_radar)[0]
     if inps.dem_geo:    inps.dem_geo   = glob.glob(inps.dem_geo)[0]
-    import pdb; pdb.set_trace()
-    inps.snap_connect = []
-        
+
     ##### 2. Load data into hdf5 file
-    # 2.1 Unwrapped Interferograms - unwrapIfgram.h5
+    # 2.1 multi_group_hdf5_file
     if inps.unw:
         load_roipac2multi_group_h5('interferograms', inps.unw, inps.tssar_dir+'/unwrapIfgram.h5', vars(inps))
-        
-        
-        import pdb; pdb.set_trace()
-    
-    
-    
-    
-    
-    
-    if inps.unw:
-        print '--------------------------------------------'
-        print 'loading unwrapped interferograms ...'
-        k = 'interferograms'
-        outfile = inps.tssar_dir+'/unwrapIfgram.h5'
-        maskfile = inps.tssar_dir+'/Mask.h5'
-        print 'number of '+k+' input: '+str(len(inps.unw))
+    if inps.snap_connect:        
+        load_roipac2multi_group_h5('snaphu_connect_component', inps.snap_connect, inps.tssar_dir+'/snaphuConnectComponent.h5', vars(inps))
 
-        # Check width/length mode of input files
-        inps.unw, mode_width, mode_length = check_file_size(k, inps.unw)
-        # Check conflict with existing hdf5 file and Open hdf5 file
-        inps.unw, h5file = check_with_existed_hdf5_file(inps.unw, outfile)
+    if inps.cor:
+        load_roipac2multi_group_h5('coherence', inps.cor, inps.tssar_dir+'/coherence.h5', vars(inps))
 
-        # Loop - Writing ROI_PAC files into hdf5 file
-        if inps.unw:
-            # Mask
-            try:
-                MaskZero = readfile.read(maskfile)[0]
-                print 'updating existing '+maskfile+' ...'
-            except:
-                MaskZero = np.ones([int(mode_length), int(mode_width)])
-                print 'creating new '+maskfile+' ...'
-            
-            # Unwraped Interferograms
-            if not k in h5file.keys():
-                gg = h5file.create_group(k)
-            else:
-                gg = h5file[k]
-            for igram in inps.unw:
-                print 'Adding ' + igram
-                amp,unw,unwrsc = readfile.read_float32(igram)
-                
-                # Dataset
-                group = gg.create_group(os.path.basename(igram))
-                dset = group.create_dataset(os.path.basename(igram), data=unw, compression='gzip')
-                
-                # Attribute - *.unw.rsc
-                for key,value in unwrsc.iteritems():
-                    group.attrs[key] = value
-                # Attribute - *baseline.rsc
-                d1, d2 = unwrsc['DATE12'].split('-')
-                baseline_file = os.path.dirname(igram)+'/'+d1+'_'+d2+'_baseline.rsc'
-                baseline_rsc = readfile.read_roipac_rsc(baseline_file)
-                for key,value in baseline_rsc.iteritems():
-                    group.attrs[key] = value
-                # Attribute - PySAR
-                group.attrs['PROJECT_NAME'] = project_name
-                group.attrs['UNIT'] = 'radian'
-                
-                # Mask
-                MaskZero *= amp
-            # End of Loop
-            f.close()
-            print 'finished writing to '+outfile
+    if inps.int:
+        load_roipac2multi_group_h5('wrapped', inps.int, inps.tssar_dir+'/wrapIfgram.h5', vars(inps))
 
-            # writing Mask file
-            Mask = np.ones([int(mode_length), int(mode_width)])
-            Mask[MaskZero==0] = 0
-            h5mask = h5py.File(maskfile,'w')
-            group = h5mask.create_group('mask')
-            dset = group.create_dataset('mask', data=Mask, compression='gzip')
-            for key,value in unwrsc.iteritems():
-                group.attrs[key] = value
-            h5mask.close()
+    # generate default Mask.h5 and meanCoherence.h5 file
+    
+    # 2.2 single dataset file
+    if inps.geomap:
+        copy_roipac_file(inps.geomap, inps.tssar_dir)
 
-    ########################################################################
-    ############################# Coherence ################################
-    try:
-        if os.path.isfile(inps.tssar_dir+'/Coherence.h5'):
-            print '\nCoherence.h5'+ '  already exists.'
-            sys.exit(1)
-        corList = glob.glob(corPath)
-        corList = sorted(corList)
-        k = 'coherence'
-        check_number(k,optionName[k],corList)   # number check 
-        print 'loading coherence files ...'
-        corList,mode_width,mode_length = check_file_size(k,corList)     # size check
-        corList = sorted(corList)
-    
-        h5file = inps.tssar_dir+'/Coherence.h5'
-        fcor = h5py.File(h5file,'w')
-        gg = fcor.create_group('coherence')
-        meanCoherence=np.zeros([int(mode_length),int(mode_width)])
-        for cor in corList:
-            if not os.path.basename(cor) in fcor:
-                print 'Adding ' + cor
-                group = gg.create_group(os.path.basename(cor))
-                amp,unw,unwrsc = readfile.read_float32(cor)
-    
-                meanCoherence += unw
-                dset = group.create_dataset(os.path.basename(cor), data=unw, compression='gzip')
-                for key,value in unwrsc.iteritems():    group.attrs[key] = value
-    
-                d1,d2=unwrsc['DATE12'].split('-')
-                baseline_file=os.path.dirname(cor)+'/'+d1+'_'+d2+'_baseline.rsc'
-                baseline=readfile.read_roipac_rsc(baseline_file)
-                for key,value in baseline.iteritems():   group.attrs[key] = value
-                group.attrs['PROJECT_NAME'] = project_name
-                group.attrs['UNIT']         = '1'
-            else:
-                print os.path.basename(h5file) + " already contains " + os.path.basename(cor)
-        #fcor.close()
-    
-        ########### mean coherence file ###############
-        meanCoherence=meanCoherence/(len(corList))
-        print 'writing meanCoherence group to the coherence h5 file'
-        gc = fcor.create_group('meanCoherence')
-        dset = gc.create_dataset('meanCoherence', data=meanCoherence, compression='gzip')
-    
-        print 'writing average_spatial_coherence.h5\n'
-        h5file_CorMean = inps.tssar_dir+'/average_spatial_coherence.h5'
-        fcor_mean = h5py.File(h5file_CorMean,'w')
-        group=fcor_mean.create_group('mask')
-        dset = group.create_dataset(os.path.basename('mask'), data=meanCoherence, compression='gzip')
-        for key,value in unwrsc.iteritems():    group.attrs[key] = value
-        fcor_mean.close()
-    
-        fcor.close()
-  
-    except:
-        print 'No correlation file is loaded.\n'
+    if inps.dem_radar:
+        copy_roipac_file(inps.dem_radar, inps.tssar_dir)
 
-
-    ##############################################################################
-    ########################## Wrapped Interferograms ############################
-
-    try:
-        if os.path.isfile(inps.tssar_dir+'/Wrapped.h5'):
-            print '\nWrapped.h5'+ '  already exists.'
-            sys.exit(1)
-        wrapList = glob.glob(wrapPath)
-        wrapList = sorted(wrapList)
-        k = 'wrapped'
-        check_number(k,optionName[k],wrapList)   # number check 
-        print 'loading wrapped phase ...'
-        wrapList,mode_width,mode_length = check_file_size(k,wrapList)     # size check
-        wrapList = sorted(wrapList)
-    
-        h5file = inps.tssar_dir+'/Wrapped.h5'
-        fw = h5py.File(h5file,'w')
-        gg = fw.create_group('wrapped')
-        for wrap in wrapList:
-            if not os.path.basename(wrap) in fw:
-                print 'Adding ' + wrap
-                group = gg.create_group(os.path.basename(wrap))
-                amp,unw,unwrsc = readfile.read_complex_float32(wrap)
-    
-                dset = group.create_dataset(os.path.basename(wrap), data=unw, compression='gzip')
-                for key,value in unwrsc.iteritems():   group.attrs[key] = value
-    
-                d1,d2=unwrsc['DATE12'].split('-')
-                baseline_file=os.path.dirname(wrap)+'/'+d1+'_'+d2+'_baseline.rsc'
-                baseline=readfile.read_roipac_rsc(baseline_file)
-                for key,value in baseline.iteritems():    group.attrs[key] = value
-                group.attrs['PROJECT_NAME'] = project_name
-                group.attrs['UNIT']         = 'radian'
-            else:
-                print os.path.basename(h5file) + " already contains " + os.path.basename(wrap)
-        fw.close()
-        print 'Writed '+str(len(wrapList))+' wrapped interferograms to '+h5file+'\n'
-  
-    except:
-        print 'No wrapped interferogram is loaded.\n'
-
-
-    ##############################################################################
-    ################################# geomap.trans ###############################
-
-    try:
-        geomapPath = inps.tssar_dir+'/geomap*.trans'
-        geomapList = glob.glob(geomapPath)
-        if len(geomapList)>0:
-            print '\ngeomap*.trans'+ '  already exists.'
-            sys.exit(1)
-    
-        geomapPath=template_dict['pysar.geomap']
-        geomapPath=check_variable_name(geomapPath)
-        geomapList=glob.glob(geomapPath)
-    
-        cpCmd="cp " + geomapList[0] + " " + inps.tssar_dir
-        print cpCmd
-        os.system(cpCmd)
-        cpCmd="cp " + geomapList[0] + ".rsc " + inps.tssar_dir
-        print cpCmd+'\n'
-        os.system(cpCmd)
-    except:
-        #print "*********************************"
-        print "no geomap file is loaded.\n"
-        #print "*********************************\n"
-
-
-    ##############################################################################
-    ##################################  DEM  #####################################
-
-    try:
-        demRdrPath = inps.tssar_dir+'/radar*.hgt'
-        demRdrList = glob.glob(demRdrPath)
-        if len(demRdrList)>0:
-            print '\nradar*.hgt'+ '  already exists.'
-            sys.exit(1)
-    
-        demRdrPath=template_dict['pysar.dem.radarCoord']
-        demRdrPath=check_variable_name(demRdrPath)
-        demRdrList=glob.glob(demRdrPath)
-    
-        cpCmd="cp " + demRdrList[0] + " " + inps.tssar_dir
-        print cpCmd
-        os.system(cpCmd)
-        cpCmd="cp " + demRdrList[0] + ".rsc " + inps.tssar_dir
-        print cpCmd+'\n'
-        os.system(cpCmd)
-    except:
-        #print "*********************************"
-        print "no DEM (radar coordinate) file is loaded.\n"
-        #print "*********************************"
-  
-    try:
-        demGeoPath = inps.tssar_dir+'/*.dem'
-        demGeoList = glob.glob(demGeoPath)
-        if len(demGeoList)>0:
-            print '\n*.dem'+ '  already exists.'
-            sys.exit(1)
-    
-        demGeoPath=template_dict['pysar.dem.geoCoord']
-        demGeoPath=check_variable_name(demGeoPath)
-        demGeoList=glob.glob(demGeoPath)
-    
-        cpCmd="cp " + demGeoList[0] + " " + inps.tssar_dir
-        print cpCmd
-        os.system(cpCmd)
-        cpCmd="cp " + demGeoList[0] + ".rsc " + inps.tssar_dir
-        print cpCmd+'\n'
-        os.system(cpCmd)
-    except:
-        #print "*********************************"
-        print "no DEM (geo coordinate) file is loaded.\n"
-        #print "*********************************\n"
+    if inps.dem_geo:
+        copy_roipac_file(inps.dem_geo, inps.tssar_dir)
 
 
 ##############################################################################
