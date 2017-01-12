@@ -42,6 +42,16 @@ from PIL import Image
 
 
 #########################################################################
+'''Three types of HDF5 files in PySAR
+multi_group   : multiple groups with one      dataset and one attribute dict per group (Ngroup-1dset-1atr)
+multi_dataset : one      group  with multiple dataset and one attribute dict per group (1group-Ndset-1atr)
+single_dataset: one      group  with one      dataset and one attribute dict per gropu (1group-1dset-1atr)
+'''
+multi_group_hdf5_file=['interferograms','coherence','wrapped','snaphu_connect_component']
+multi_dataset_hdf5_file=['timeseries']
+single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
+
+#########################################################################
 #######################  Read Attributes  ######################
 def read_attribute(File, epoch=''):
     '''Read attributes of input file into a dictionary
@@ -62,12 +72,12 @@ def read_attribute(File, epoch=''):
         if   'interferograms' in k: k[0] = 'interferograms'
         elif 'coherence'      in k: k[0] = 'coherence'
         elif 'timeseries'     in k: k[0] = 'timeseries'
-        if   k[0] in ('interferograms','coherence','wrapped'):
+        if   k[0] in multi_group_hdf5_file:
             if epoch:
                 attrs  = h5f[k[0]][epoch].attrs
             else:
                 attrs  = h5f[k[0]][h5f[k[0]].keys()[0]].attrs
-        elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
+        elif k[0] in multi_dataset_hdf5_file+single_dataset_hdf5_file:
             attrs  = h5f[k[0]].attrs
         else: print 'Unrecognized h5 file key: '+k[0]
 
@@ -442,7 +452,7 @@ def read(File, box=(), epoch=''):
         k = atr['FILE_TYPE']
 
         # Read Dataset
-        if k in ['interferograms','coherence','wrapped','timeseries']:
+        if k in multi_group_hdf5_file:
             epochList = h5file[k].keys()
             epochList = sorted(epochList)
 
@@ -452,12 +462,12 @@ def read(File, box=(), epoch=''):
                 print 'epoch in file '+File
                 print epochList
 
-            if k in ['timeseries']:
+            if k in multi_dataset_hdf5_file:
                 dset = h5file[k].get(epoch)
-            elif k in ['interferograms','coherence','wrapped']:
+            else:
                 dset = h5file[k][epoch].get(epoch)
 
-        elif k in ['dem','mask','rmse','temporal_coherence', 'velocity']:
+        elif k in single_dataset_hdf5_file:
             dset = h5file[k].get(k)
         else: print 'Unrecognized h5 file type: '+k
 

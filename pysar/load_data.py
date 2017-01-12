@@ -27,8 +27,8 @@ from pysar._pysar_utilities import check_variable_name
 def auto_path_miami(inps):
     '''Auto File Path Setting for Geodesy Lab - University of Miami'''
     if not inps.tssar_dir:
-        inps.tssar_dir = os.getenv('SCRATCHDIR')+'/'+project_name+'/TSSAR'
-    process_dir = os.getenv('SCRATCHDIR')+'/'+project_name+'/PROCESS'
+        inps.tssar_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/TSSAR'
+    process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
     print "PROCESS directory: "+process_dir
 
     if not inps.unw:   inps.unw = process_dir+'/DONE/IFGRAM*/filt_*.unw'
@@ -36,7 +36,7 @@ def auto_path_miami(inps):
     if not inps.int:   inps.int = process_dir+'/DONE/IFGRAM*/filt_*rlks.int'
 
     # Search PROCESS/GEO folder and use the first folder as master interferogram
-    if not inps.geomap and not inps.dem.radar:
+    if not inps.geomap and not inps.dem_radar:
         try:
             master_igram_date12 = os.walk(process_dir+'/GEO').next()[1][0].split('geo_')[1]
             inps.geomap    = process_dir+'/GEO/*'+master_igram_date12+'*/geomap*.trans'
@@ -131,20 +131,21 @@ def check_existed_hdf5_file(roipacFileList, pysarFile):
     return roipacFileList
 
 
-def load_roipac2multi_group_h5(fileList, hdf5File='unwrapIfgram.h5'):
+def load_roipac2multi_group_h5(fileType, fileList, hdf5File='unwrapIfgram.h5', pysar_meta_dict=None):
     '''Load multiple ROI_PAC product into (Multi-group, one dataset and one attribute dict per group) HDF5 file.
     Inputs:
-        fileList : list of path, ROI_PAC .unw file
-        hdf5File : string, PySAR file name/path for unwrapped interferograms
+        fileType : string, i.e. interferograms, coherence, snaphu_connect_component, etc.
+        fileList : list of path, ROI_PAC .unw/.cor/.int/.byt file
+        hdf5File : string, file name/path of the multi-group hdf5 PySAR file
+        pysar_meta_dict : dict, extra attribute dictionary 
     Outputs:
         hdf5File
 
     '''
-    print '--------------------------------------------'
-    print 'loading unwrapped interferograms ...'
-    k = 'interferograms'
-    print 'number of '+k+' input: '+str(len(fileList))
     ext = os.path.splitext(fileList[0])[1]
+    print '--------------------------------------------'
+    print 'loading ROI_PAC'+ext+' files into '+fileType+' HDF5 file ...'
+    print 'number of '+ext+' input: '+str(len(fileList))
 
     # Check width/length mode of input files
     fileList, mode_width, mode_length = check_file_size(fileList)
@@ -159,13 +160,13 @@ def load_roipac2multi_group_h5(fileList, hdf5File='unwrapIfgram.h5'):
         # Create and open new hdf5 file with w mode
         print 'number of '+ext+' to add: '+str(len(fileList))
         print 'open '+hdf5File+' with w mode'
-        h5unw = h5py.File(hdf5File, 'w')
+        h5file = h5py.File(hdf5File, 'w')
     elif fileList2:
         # Open existed hdf5 file with r+ mode
         print 'Continue by adding the following new epochs ...'
         print 'number of '+ext+' to add: '+str(len(fileList))
         print 'open '+hdf5File+' with r+ mode'
-        h5unw = h5py.File(hdf5File, 'r+')
+        h5file = h5py.File(hdf5File, 'r+')
         fileList = list(fileList2)
     else:
         print 'All input '+ext+' are included, no need to re-load.'
@@ -174,10 +175,10 @@ def load_roipac2multi_group_h5(fileList, hdf5File='unwrapIfgram.h5'):
     # Loop - Writing ROI_PAC files into hdf5 file
     if fileList:
         # Unwraped Interferograms
-        if not k in h5unw.keys():
-            gg = h5unw.create_group(k)     # new hdf5 file
+        if not fileType in h5file.keys():
+            gg = h5file.create_group(fileType)     # new hdf5 file
         else:
-            gg = h5unw[k]                  # existing hdf5 file
+            gg = h5file[fileType]                  # existing hdf5 file
         
         for igram in fileList:
             print 'Adding ' + igram
@@ -197,10 +198,11 @@ def load_roipac2multi_group_h5(fileList, hdf5File='unwrapIfgram.h5'):
             for key,value in baseline_rsc.iteritems():
                 group.attrs[key] = value
             # Attribute - PySAR
-            group.attrs['PROJECT_NAME'] = project_name
+            if pysar_meta_dict:
+                group.attrs['PROJECT_NAME'] = pysar_meta_dict['project_name']
         
         # End of Loop
-        h5unw.close()
+        h5file.close()
         print 'finished writing to '+hdf5File
 
     return fileList, hdf5File
@@ -232,12 +234,12 @@ EXAMPLE='''example:
 '''
 
 TEMPLATE='''template:
-  pysar.unwrapFiles = $SC/SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*.unw
-  pysar.corFiles    = $SC/SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*rlks.cor
-  pysar.wrapFiles   = $SC/SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*rlks.int                       #optional
-  pysar.geomap      = $SC/SanAndreasT356EnvD/PROCESS/GEO/*050102-070809*/geomap*.trans
-  pysar.dem.radar   = $SC/SanAndreasT356EnvD/PROCESS/DONE/*050102-070809*/radar*.hgt
-  pysar.dem.geo     = $SC/SanAndreasT356EnvD/DEM/srtm1_30m.dem                                     #optional
+  pysar.unwrapFiles    = $SC/SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*.unw
+  pysar.corFiles       = $SC/SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*rlks.cor
+  pysar.wrapFiles      = $SC/SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*rlks.int                       #optional
+  pysar.geomap         = $SC/SanAndreasT356EnvD/PROCESS/GEO/*050102-070809*/geomap*.trans
+  pysar.dem.radarCoord = $SC/SanAndreasT356EnvD/PROCESS/DONE/*050102-070809*/radar*.hgt
+  pysar.dem.geoCoord   = $SC/SanAndreasT356EnvD/DEM/srtm1_30m.dem                                     #optional
 '''
 
 def cmdLineParse():
@@ -267,8 +269,8 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     print '\n*************** Loading ROI_PAC Data into PySAR ****************'
-    project_name = os.path.basename(inps.template_file).partition('.')[0]
-    print 'project: '+project_name
+    inps.project_name = os.path.basename(inps.template_file).partition('.')[0]
+    print 'project: '+inps.project_name
     
     ##### 1. Read file path
     # Priority: command line input > template > auto setting
@@ -282,8 +284,8 @@ def main(argv):
     if not inps.cor and 'pysar.corFiles'        in keyList:   inps.cor = template_dict['pysar.corFiles']
     if not inps.int and 'pysar.wrapFiles'       in keyList:   inps.int = template_dict['pysar.wrapFiles']
     if not inps.geomap    and 'pysar.geomap'    in keyList:   inps.geomap    = template_dict['pysar.geomap']
-    if not inps.dem_radar and 'pysar.dem.radar' in keyList:   inps.dem_radar = template_dict['pysar.dem.radar']
-    if not inps.dem_geo   and 'pysar.dem.geo'   in keyList:   inps.dem_geo   = template_dict['pysar.dem.geo']
+    if not inps.dem_radar and 'pysar.dem.radarCoord' in keyList:   inps.dem_radar = template_dict['pysar.dem.radarCoord']
+    if not inps.dem_geo   and 'pysar.dem.geoCoord'   in keyList:   inps.dem_geo   = template_dict['pysar.dem.geoCoord']
 
     # Auto Setting for Geodesy Lab - University of Miami 
     if inps.auto_path_miami:
@@ -299,8 +301,8 @@ def main(argv):
     # display message
     print 'unwrapped interferograms: '+inps.unw
     print 'wrapped   interferograms: '+inps.int
-    print 'coherence               : '+inps.cor
-    print 'geomap file             : '+inps.geomap
+    print 'coherence files         : '+inps.cor
+    print 'geomap    file          : '+inps.geomap
     print 'DEM file in radar coord : '+inps.dem_radar
     print 'DEM file in geo   coord : '+inps.dem_geo
     
@@ -311,12 +313,15 @@ def main(argv):
     if inps.geomap:     inps.geomap    = glob.glob(inps.geomap)[0]
     if inps.dem_radar:  inps.dem_radar = glob.glob(inps.dem_radar)[0]
     if inps.dem_geo:    inps.dem_geo   = glob.glob(inps.dem_geo)[0]
-
+    import pdb; pdb.set_trace()
+    inps.snap_connect = []
+        
     ##### 2. Load data into hdf5 file
     # 2.1 Unwrapped Interferograms - unwrapIfgram.h5
     if inps.unw:
-        import pdb; pdb.set_trace()
-        load_roipac2multi_group_h5(inps.unw, 'unwrapIfgram.h5')
+        load_roipac2multi_group_h5('interferograms', inps.unw, inps.tssar_dir+'/unwrapIfgram.h5', vars(inps))
+        
+        
         import pdb; pdb.set_trace()
     
     
