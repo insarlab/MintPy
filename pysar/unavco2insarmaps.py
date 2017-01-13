@@ -11,6 +11,7 @@ import sys
 import psycopg2
 import geocoder
 import getopt
+from pysar.add_attributes_insarmaps import InsarDatabaseController
 
 # ex: python Converter_unavco.py Alos_SM_73_2980_2990_20070107_20110420.h5
 
@@ -154,6 +155,19 @@ def convert_data():
 		print "error inserting into area"
 		print e
 		sys.exit()
+
+	# put attributes in own table. TODO: remove old way of adding attributes
+	# via array	
+	attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
+	attributesController.connect()
+
+ 	for k, v in attributes_dictionary:
+ 		if "POLYGON" in str(v):
+ 			arr = v.split(",")
+ 			s = "\,"
+ 			v = s.join(arr)
+		attributesController.add_attribute(project_name, k, v)
+	attributesController.close()
 
 	# create index to speed up queries:
 	print "Creating index"
