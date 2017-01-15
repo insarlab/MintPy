@@ -157,15 +157,15 @@ def convert_data():
 		sys.exit()
 
 	# put attributes in own table. TODO: remove old way of adding attributes
-	# via array	
+	# via array
 	attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
 	attributesController.connect()
 
- 	for k, v in attributes_dictionary:
- 		if "POLYGON" in str(v):
- 			arr = v.split(",")
- 			s = "\,"
- 			v = s.join(arr)
+	for k, v in attributes_dictionary:
+		if "POLYGON" in str(v):
+			arr = v.split(",")
+			s = "\,"
+			v = s.join(arr)
 		attributesController.add_attribute(project_name, k, v)
 	attributesController.close()
 
