@@ -21,7 +21,7 @@ import h5py
 import numpy as np
 
 import pysar._readfile as readfile
-from pysar._pysar_utilities import check_variable_name
+from pysar._pysar_utilities import check_variable_name, printProgress
 
 
 ############################ Sub Functions ###################################
@@ -232,15 +232,15 @@ def roipac_ampltitude_mask(unwFileList, maskFile='maskAmp.h5'):
 
         # Update mask from input .unw file list
         fileNum = len(unwFileList)
-        for i in fileNum:
+        for i in range(fileNum):
             file = unwFileList[i]
             amp, unw, rsc = readfile.read_float32(file)
             
             maskZero *= amp
-            ut.printProgress(i+1, fileNum, prefix='loading', suffix=file)
+            printProgress(i+1, fileNum, prefix='loading', suffix=os.path.basename(file))
         mask = np.ones([int(length), int(width)])
         mask[maskZero==0] = 0
-            
+        
         # write mask hdf5 file
         print 'writing >>> '+maskFile
         h5 = h5py.File(maskFile,'w')
@@ -367,6 +367,7 @@ def main(argv):
     # 2.1 multi_group_hdf5_file
     if inps.unw:
         load_roipac2multi_group_h5('interferograms', inps.unw, inps.tssar_dir+'/unwrapIfgram.h5', vars(inps))
+        print 'Generate mask from amplitude of interferograms'
         roipac_ampltitude_mask(inps.unw, 'maskAmp.h5')
     # Optional
     if inps.snap_connect:

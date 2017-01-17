@@ -15,6 +15,8 @@ import numpy as np
 
 import pysar._readfile as readfile
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar._pysar_utilities import printProgress
+
 
 #################################  Usage  ####################################
 def usage():
@@ -60,14 +62,16 @@ def main(argv):
     ##### Calculation
     dMean = np.zeros((length,width))
     print 'calculating ...'
-    for epoch in epochList:
-        print epoch
+    epochNum = len(epochList)
+    for i in range(epochNum):
+        epoch = epochList[i]
         if k in multi_group_hdf5_file:
             d = h5file[k][epoch].get(epoch)[:]
         elif k in ['timeseries']:
             d = h5file[k].get(epoch)[:]
         else: print k+' type is not supported currently.'; sys.exit(1)
         dMean += d
+        printProgress(i+1, epochNum, prefix='loading', suffix=epoch)
     dMean /= len(epochList)
     del d
     h5file.close()
