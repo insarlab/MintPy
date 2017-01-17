@@ -214,7 +214,53 @@ def load_roipac2multi_group_h5(fileType, fileList, hdf5File='unwrapIfgram.h5', p
         h5file.close()
         print 'finished writing to '+hdf5File
 
-    return fileList, hdf5File
+    return hdf5File, fileList
+
+
+def roipac_ampltitude_mask(unwFileList, maskFile='maskAmp.h5'):
+    '''Generate mask from amplitude info of ROI_PAC .unw file list.'''
+    unwFileList, width, length = check_file_size(unwFileList)
+    if unwFileList:
+        # Initial mask value
+        if os.path.isfile(maskFile):
+            maskZero, atr = readfile.read(maskFile)
+            print 'update existing mask file: '+maskFile
+        else:
+            maskZero = np.ones([int(length), int(width)])
+            atr = None
+            print 'create initial mask matrix'
+
+        # Update mask from input .unw file list
+        fileNum = len(unwFileList)
+        for i in fileNum:
+            file = unwFileList[i]
+            amp, unw, rsc = readfile.read_float32(file)
+            
+            maskZero *= amp
+            ut.printProgress(i+1, fileNum, prefix='loading', suffix=file)
+        mask = np.ones([int(length), int(width)])
+        mask[maskZero==0] = 0
+            
+        # write mask hdf5 file
+        print 'writing >>> '+maskFile
+        h5 = h5py.File(maskFile,'w')
+        group = h5.create_group('mask')
+        dset = group.create_dataset('mask', data=mask, compression='gzip')
+        # Attribute - *.unw.rsc
+        for key,value in rsc.iteritems():
+            group.attrs[key] = value
+        # Attribute - *baseline.rsc
+        d1, d2 = rsc['DATE12'].split('-')
+        baseline_file = os.path.dirname(file)+'/'+d1+'_'+d2+'_baseline.rsc'
+        baseline_rsc = readfile.read_roipac_rsc(baseline_file)
+        for key,value in baseline_rsc.iteritems():
+            group.attrs[key] = value
+        # Attribute - existed file
+        if atr:
+            for key, value in atr.iteritems():
+                group.attrs[key] = value
+
+    return maskFile, unwFileList
 
 
 def copy_roipac_file(targetFile, destDir):
@@ -321,12 +367,17 @@ def main(argv):
     # 2.1 multi_group_hdf5_file
     if inps.unw:
         load_roipac2multi_group_h5('interferograms', inps.unw, inps.tssar_dir+'/unwrapIfgram.h5', vars(inps))
+        roipac_ampltitude_mask(inps.unw, 'maskAmp.h5')
+    # Optional
     if inps.snap_connect:
         load_roipac2multi_group_h5('snaphu_connect_component', inps.snap_connect,\
                                    inps.tssar_dir+'/snaphuConnectComponent.h5', vars(inps))
 
     if inps.cor:
-        load_roipac2multi_group_h5('coherence', inps.cor, inps.tssar_dir+'/coherence.h5', vars(inps))
+        cohFile = load_roipac2multi_group_h5('coherence', inps.cor, inps.tssar_dir+'/coherence.h5', vars(inps))[0]
+        meanCohCmd = 'mean_temporal.py '+cohFile+' average_spatial_coherence.h5'
+        print meanCohCmd
+        os.system(meanCohCmd)
 
     if inps.int:
         load_roipac2multi_group_h5('wrapped', inps.int, inps.tssar_dir+'/wrapIfgram.h5', vars(inps))

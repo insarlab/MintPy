@@ -14,7 +14,7 @@ import h5py
 import numpy as np
 
 import pysar._readfile as readfile
-
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 #################################  Usage  ####################################
 def usage():
@@ -62,7 +62,7 @@ def main(argv):
     print 'calculating ...'
     for epoch in epochList:
         print epoch
-        if k in ['interferogram','coherence','wrapped']:
+        if k in multi_group_hdf5_file:
             d = h5file[k][epoch].get(epoch)[:]
         elif k in ['timeseries']:
             d = h5file[k].get(epoch)[:]
