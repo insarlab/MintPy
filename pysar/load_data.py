@@ -29,6 +29,8 @@ import pysar._pysar_utilities as ut
 ##################################################################
 def auto_path_miami(inps):
     '''Auto File Path Setting for Geodesy Lab - University of Miami'''
+    print 'Use auto path setting in University of Miami'
+    print 'To turn it off, change miami_path value to False in pysar/__init__.py'
     if not inps.tssar_dir:
         inps.tssar_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/TSSAR'
     process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
