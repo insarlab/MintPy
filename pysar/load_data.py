@@ -321,8 +321,9 @@ def main(argv):
     # 2.1 multi_group_hdf5_file
     if inps.unw:
         load_roipac2multi_group_h5('interferograms', inps.unw, inps.tssar_dir+'/unwrapIfgram.h5', vars(inps))
-    if inps.snap_connect:        
-        load_roipac2multi_group_h5('snaphu_connect_component', inps.snap_connect, inps.tssar_dir+'/snaphuConnectComponent.h5', vars(inps))
+    if inps.snap_connect:
+        load_roipac2multi_group_h5('snaphu_connect_component', inps.snap_connect,\
+                                   inps.tssar_dir+'/snaphuConnectComponent.h5', vars(inps))
 
     if inps.cor:
         load_roipac2multi_group_h5('coherence', inps.cor, inps.tssar_dir+'/coherence.h5', vars(inps))

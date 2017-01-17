@@ -139,14 +139,17 @@ def check_variable_name(path):
     return path
 
 #########################################################################
-def read_template(File):
+def read_template(File, separator='='):
     '''Reads the template file into a python dictionary structure.
     Input : string, full path to the template file
     Output: dictionary, pysar template content
+    Example:
+        tmpl = read_template(KyushuT424F610_640AlosA.template)
+        tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
     '''
     template_dict = {}
     for line in open(File):
-        c = line.split("=")
+        c = line.split(separator)
         if len(c) < 2 or line.startswith('%') or line.startswith('#'):
             next #ignore commented lines or those without variables
         else:
