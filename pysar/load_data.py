@@ -20,8 +20,9 @@ import argparse
 import h5py
 import numpy as np
 
+import pysar
 import pysar._readfile as readfile
-from pysar._pysar_utilities import check_variable_name, printProgress
+import pysar._pysar_utilities as ut
 
 
 ############################ Sub Functions ###################################
@@ -237,7 +238,7 @@ def roipac_ampltitude_mask(unwFileList, maskFile='maskAmp.h5'):
             amp, unw, rsc = readfile.read_float32(file)
             
             maskZero *= amp
-            printProgress(i+1, fileNum, prefix='loading', suffix=os.path.basename(file))
+            ut.printProgress(i+1, fileNum, prefix='loading', suffix=os.path.basename(file))
         mask = np.ones([int(length), int(width)])
         mask[maskZero==0] = 0
         
@@ -323,7 +324,7 @@ def main(argv):
     # Read template contents into inps Namespace
     template_dict = readfile.read_template(inps.template_file)
     for key, value in template_dict.iteritems():
-        template_dict[key] = check_variable_name(value)
+        template_dict[key] = ut.check_variable_name(value)
     keyList = template_dict.keys()
     
     if not inps.unw and 'pysar.unwrapFiles'     in keyList:   inps.unw = template_dict['pysar.unwrapFiles']
@@ -334,7 +335,8 @@ def main(argv):
     if not inps.dem_geo   and 'pysar.dem.geoCoord'   in keyList:   inps.dem_geo   = template_dict['pysar.dem.geoCoord']
 
     # Auto Setting for Geodesy Lab - University of Miami 
-    if inps.auto_path_miami:
+    #if inps.auto_path_miami:
+    if pysar.miami_path:
         inps = auto_path_miami(inps)
 
     # Working directory for PySAR

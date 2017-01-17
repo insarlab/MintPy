@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+###################### Auto setting for University of Miami ############
+miami_path=True    # Package-wide variable
+                   # change it to False if you are not using the file structure of University of Miami
+
+###################### Do not change below this line ###################
 import _datetime
 import _gmt
 import _network
