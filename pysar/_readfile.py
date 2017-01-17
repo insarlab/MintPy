@@ -162,7 +162,7 @@ def read_template(File, separator='='):
 #########################################################################
 def read_roipac_rsc(File):
     '''Read ROI_PAC .rsc file into a python dictionary structure.'''
-    rsc_dict = dict(np.loadtxt(File,dtype=str))
+    rsc_dict = dict(np.loadtxt(File, dtype=str, usecols=(0,1)))
     return rsc_dict
 
 #########################################################################

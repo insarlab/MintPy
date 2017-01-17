@@ -7,6 +7,10 @@ import _pysar_utilities
 import _readfile
 import _remove_surface
 import _writefile
+import subset
+import multilook
+import view
+
 import add
 import asc_desc
 import baseline_error
@@ -36,9 +40,7 @@ import match
 import mean_temporal
 import mean_spatial
 import modify_network
-import multilook
 import multi_transect
-#import plot
 import plot_network
 import pysarApp
 import quality_map
@@ -47,12 +49,11 @@ import reference_epoch
 import remove_dates
 import remove_plane
 import rewrap
-#import save_gmt
-#import save_kml
+import save_gmt
+import save_kml
 import save_unw
 import seed_data
 import simulation
-import subset
 import sum_epochs
 import temporal_coherence
 #import temporal_derivative
@@ -63,4 +64,3 @@ import tropcor_phase_elevation
 import tsviewer
 import unwrap_error
 import update_network
-#import view

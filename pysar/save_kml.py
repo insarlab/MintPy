@@ -16,13 +16,14 @@ import os
 import sys
 import getopt
 
-try:     from pykml.factory import KML_ElementMaker as KML
-except:  sys.exit('pykml should be installed!')
+try:
+    from pykml.factory import KML_ElementMaker as KML
+except:
+    sys.exit('pykml should be installed!')
 
 from lxml import etree
 import numpy as np
 import h5py
-import matplotlib as mpl;  mpl.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 
@@ -79,6 +80,7 @@ def usage():
 
 ############################################################
 def main(argv):
+    plt.switch_backend('Agg')
 
     cbar_bin_num  = 9
     cbar_label    = 'Mean LOS velocity'
