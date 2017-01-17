@@ -1041,6 +1041,7 @@ def main(argv):
             inps.epoch = ['range']
     else:
         inps.epoch = ['']
+    epochNum = len(inps.epoch)
 
     #------------------------------ Update Plot Inps with metadata dict ----------------#
     inps = update_plot_inps_with_meta_dict(inps, atr)
