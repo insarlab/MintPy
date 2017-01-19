@@ -431,6 +431,27 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
 
 
 ##################################################################################################
+def update_plot_inps_with_display_setting_file(inps, disp_set_file):
+    '''Update inps using values from display setting file'''
+    disp_set_dict = readfile.read_template(disp_set_file)
+    keyList = disp_set_dict.keys()
+    if not inps.disp_unit and 'plot.displayUnit' in keyList:
+        inps.disp_unit = disp_set_dict['plot.displayUnit']
+    if not inps.disp_min and 'plot.displayMin' in keyList:
+        inps.disp_min = float(disp_set_dict['plot.displayMin'])
+    if not inps.disp_max and 'plot.displayMax' in keyList:
+        inps.disp_max = float(disp_set_dict['plot.displayMax'])
+    if not inps.colormap and 'plot.colormap' in keyList:
+        inps.colormap = disp_set_dict['plot.colormap']
+    if not inps.subset_lat and 'plot.subsetLat' in keyList:
+        inps.subset_lat = [float(n) for n in disp_set_dict['plot.subsetLat'].split()]
+    if not inps.subset_lon and 'plot.subsetLon' in keyList:
+        inps.subset_lon = [float(n) for n in disp_set_dict['plot.subsetLon'].split()]
+    if not inps.seed_lalo and 'plot.referenceLalo' in keyList:
+        inps.seed_lalo = [float(n) for n in disp_set_dict['plot.referenceLalo'].split()]
+    
+    return inps
+
 def update_plot_inps_with_meta_dict(inps, meta_dict):
     k = meta_dict['FILE_TYPE']
     width = int(float(meta_dict['WIDTH']))
@@ -799,8 +820,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
 
 ##################################################################################################
-EXAMPLE='''
-example:
+EXAMPLE='''example:
   view.py SanAndreas.dem
   view.py velocity.h5 -u cm -m -2 -M 2 -c bwr --mask Mask_tempCoh.h5 -d SanAndreas.dem
 
@@ -824,6 +844,20 @@ example:
   view.py velocity.h5 --save
   view.py velocity.h5 -o velocity.pdf
   view.py velocity.h5 --nodisplay
+'''
+
+PLOT_TEMPLATE='''Plot Setting:
+  plot.name          = 'Yunjun et al., 2016, AGU, Fig 4f'
+  plot.type          = LOS_VELOCITY
+  plot.startDate     = 
+  plot.endDate       = 
+  plot.displayUnit   = cm/yr
+  plot.displayMin    = -2
+  plot.displayMax    = 2
+  plot.colormap      = jet
+  plot.subsetLat     = 33.05   33.15
+  plot.subsetLon     = 131.15  131.27
+  plot.referenceLalo = 33.0651 131.2076
 '''
 
 
@@ -881,6 +915,8 @@ def cmdLineParse(argv):
     disp_parser.add_argument('--alpha', dest='transparency', type=float,\
                              help='Data transparency. \n'
                                   '0.0 - fully transparent, 1.0 - no transparency.')
+    disp_parser.add_argument('--plot-setting', dest='disp_setting_file',\
+                             help='Template file with plot setting.\n'+PLOT_TEMPLATE)
 
     ##### DEM
     dem_group = parser.add_argument_group('DEM','display topography in the background')
@@ -953,7 +989,7 @@ def cmdLineParse(argv):
                            help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
                                 'Useful for final figure output.')
     fig_group.add_argument('--scalebar', type=float, nargs=3,\
-                           help="add scale bar centerd in [lat, lon] in degree with distance in meters"\
+                           help="add scale bar centerd in [lat, lon] in degree with distance in meters\n"\
                                 'i.e. --scalebar 131.18 33.06 2000')
     fig_group.add_argument('--noscalebar', dest='disp_scalebar', action='store_false', help='do not display scale bar.')
 
@@ -1044,6 +1080,8 @@ def main(argv):
     epochNum = len(inps.epoch)
 
     #------------------------------ Update Plot Inps with metadata dict ----------------#
+    if inps.disp_setting_file:
+        inps = update_plot_inps_with_display_setting_file(inps, inps.disp_setting_file)
     inps = update_plot_inps_with_meta_dict(inps, atr)
 
     # Read mask file if inputed
