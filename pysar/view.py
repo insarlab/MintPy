@@ -441,14 +441,16 @@ def update_plot_inps_with_display_setting_file(inps, disp_set_file):
         inps.disp_min = float(disp_set_dict['plot.displayMin'])
     if not inps.disp_max and 'plot.displayMax' in keyList:
         inps.disp_max = float(disp_set_dict['plot.displayMax'])
+     
     if not inps.colormap and 'plot.colormap' in keyList:
         inps.colormap = disp_set_dict['plot.colormap']
-    if not inps.subset_lat and 'plot.subsetLat' in keyList:
-        inps.subset_lat = [float(n) for n in disp_set_dict['plot.subsetLat'].split()]
-    if not inps.subset_lon and 'plot.subsetLon' in keyList:
-        inps.subset_lon = [float(n) for n in disp_set_dict['plot.subsetLon'].split()]
-    if not inps.seed_lalo and 'plot.referenceLalo' in keyList:
-        inps.seed_lalo = [float(n) for n in disp_set_dict['plot.referenceLalo'].split()]
+
+    if not inps.subset_lat and 'plot.subset.lalo' in keyList:
+        inps.subset_lat = [float(n) for n in disp_set_dict['plot.subset.lalo'].replace(',',' ').split()[0:2]]
+    if not inps.subset_lon and 'plot.subset.lalo' in keyList:
+        inps.subset_lon = [float(n) for n in disp_set_dict['plot.subset.lalo'].replace(',',' ').split()[2:4]]
+    if not inps.seed_lalo and 'plot.seed.lalo' in keyList:
+        inps.seed_lalo = [float(n) for n in disp_set_dict['plot.referenceLalo'].replace(',',' ').split()]
     
     return inps
 
