@@ -88,7 +88,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
 
 ################################################################
 EXAMPLE='''example:
-  pysar2unavco.py timeseries.h5 -i incidence_angle -d dem.h5 -c temporal_coherence.h5 -m mask.h5
+  save_unavco.py timeseries.h5 -i incidence_angle -d dem.h5 -c temporal_coherence.h5 -m mask.h5
 '''
 
 def cmdLineParse():
@@ -113,7 +113,7 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
 
-    print '\n**************** PySAR to UNAVCO **************'
+    print '\n**************** Output to UNAVCO **************'
     ##### Prepare Metadata
     pysar_meta_dict = readfile.read_attribute(inps.timeseries)
     k = pysar_meta_dict['FILE_TYPE']
