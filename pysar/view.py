@@ -857,9 +857,8 @@ PLOT_TEMPLATE='''Plot Setting:
   plot.displayMin    = -2
   plot.displayMax    = 2
   plot.colormap      = jet
-  plot.subsetLat     = 33.05   33.15
-  plot.subsetLon     = 131.15  131.27
-  plot.referenceLalo = 33.0651 131.2076
+  plot.subset.lalo   = 33.05:33.15, 131.15:131.27
+  plot.seed.lalo = 33.0651, 131.2076
 '''
 
 

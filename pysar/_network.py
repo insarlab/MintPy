@@ -24,7 +24,7 @@ import pysar._datetime as ptime
 
 
 ############################################################
-def read_pairs_list(listFile,dateList):
+def read_pairs_list(listFile, dateList):
     ## Read Pairs List file like below:
     ## 070311-070426
     ## 070311-070611
@@ -235,7 +235,7 @@ def select_pairs_delaunay(tempBaseList,perpBaseList,normalize=1):
 
     ##### Generate Delaunay Triangulation based on temporal and spatial perpendicular baselines
     if normalize == 0:
-        centers,edges,tri,neighbors = Triangulation(tempBase,perpBase)
+        delaunayPairs = Triangulation(tempBase,perpBase).edges.tolist()
     else:
         ##### Ratio between perpendicular and temporal baselines (Pepe and Lanari, 2006, TGRS)
         tempBaseFacList = []
@@ -244,11 +244,10 @@ def select_pairs_delaunay(tempBaseList,perpBaseList,normalize=1):
             #tempBaseFac = (tempBase - min(tempBaseList)) * temp2perp_scale + min(perpBaseList)
             tempBaseFac = tempBase * temp2perp_scale   # giving same result as the line above
             tempBaseFacList.append(tempBaseFac)
-        centers,edges,tri,neighbors = Triangulation(tempBaseFacList,perpBaseList)
+        delaunayPairs = Triangulation(tempBaseFacList,perpBaseList).edges.tolist()
 
     ## The delaunay pairs do not necessarily have the indexes with lowest 
     ## first, so let's arrange and sort the delaunay pairs
-    delaunayPairs = edges.tolist()
     delaunayPairs = pair_sort(delaunayPairs)
 
     return delaunayPairs

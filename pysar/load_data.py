@@ -295,7 +295,7 @@ def cmdLineParse():
     parser = argparse.ArgumentParser(description='Load ROI_PAC data.\n'\
                                      'Load ROI_PAC product (from process_dir to tssar_dir) for PySAR analysis.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=EXAMPLE+'\n'+TEMPLATE)
+                                     epilog=TEMPLATE+'\n'+EXAMPLE)
     parser.add_argument('template_file', help='template file with path of ROI_PAC products.')
     parser.add_argument('--dir', dest='tssar_dir', help='output directory for PySAR time series analysis.'\
                                                         'Use current directory if not assigned.')
