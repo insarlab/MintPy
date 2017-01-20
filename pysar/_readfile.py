@@ -46,6 +46,9 @@ from PIL import Image
 multi_group   : multiple groups with one      dataset and one attribute dict per group (Ngroup-1dset-1atr)
 multi_dataset : one      group  with multiple dataset and one attribute dict per group (1group-Ndset-1atr)
 single_dataset: one      group  with one      dataset and one attribute dict per gropu (1group-1dset-1atr)
+
+Recommend usage:
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 '''
 multi_group_hdf5_file=['interferograms','coherence','wrapped','snaphu_connect_component']
 multi_dataset_hdf5_file=['timeseries']

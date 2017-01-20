@@ -106,7 +106,6 @@ def main(argv):
     except: print 'Can not read file: '+File; sys.exit(1)
     ext = os.path.splitext(File)[1].lower()
     k = atr['FILE_TYPE']
-
     print 'File name   : '+os.path.basename(File)
     print 'File type   : '+atr['PROCESSOR']+' '+atr['FILE_TYPE']
     try:  atr['X_FIRST'];  print 'Coordinates : GEO'
@@ -115,11 +114,11 @@ def main(argv):
 
     #################### File Structure #####################
     try:
-        argv[1] in ['--struct','--structure','--tree']
-        ext in ['.h5','.he5']
-        print '***** HDF5 File Structure *****'
-        print_hdf5_structure(File)
-        return
+        argv[1]
+        if argv[1] in ['--struct','--structure','--tree'] and ext in ['.h5','.he5']:
+            print '***** HDF5 File Structure *****'
+            print_hdf5_structure(File)
+            return
     except: pass
 
     #################### HDF5 File Info #####################

@@ -46,7 +46,7 @@ def main(argv):
     except: outName = 'tempMean_'+File
     #except: outName = 'average_spatial_coherence.h5'
 
-    print '\n*************** Temporal Average ******************'
+    print '\n*************** Average in Time Domain ******************'
 
     ##### Input File Info
     k = atr['FILE_TYPE']

@@ -783,7 +783,7 @@ def Baseline_timeseries(igramsFile):
     for igram in igramList:
         Bp_igram.append((float(h5file[k[0]][igram].attrs['P_BASELINE_BOTTOM_HDR'])+\
                          float(h5file[k[0]][igram].attrs['P_BASELINE_TOP_HDR']))/2)
-  
+    
     A,B=design_matrix(h5file)
     dateList       = ptime.date_list(igramsFile)
     tbase,dateDict = ptime.date_list2tbase(dateList)
