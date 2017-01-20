@@ -27,125 +27,6 @@ import pysar._datetime as ptime
 import pysar._network  as pnet
 import pysar._readfile as readfile
 
-
-################# Read Pairs Info ####################
-def igram_pairs(igramFile):
-    ## Read Igram file
-    h5file = h5py.File(igramFile)
-    k = h5file.keys()
-    if 'interferograms' in k: k[0] = 'interferograms'
-    elif 'coherence'    in k: k[0] = 'coherence'
-    if k[0] not in  ['interferograms','coherence','wrapped']:
-        print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
-
-    dateList  = ptime.date_list(igramFile)
-    dateList6 = ptime.yymmdd(dateList)
-
-    pairs = []
-    igramList=h5file[k[0]].keys()
-    for igram in igramList:
-        date12 = h5file[k[0]][igram].attrs['DATE12'].split('-')
-        pairs.append([dateList6.index(date12[0]),dateList6.index(date12[1])])
-
-    return pairs
-
-
-def axis_adjust_date_length(ax,dateList,lengthArray):
-    fontSize    = 12
-    ## Date Convert
-    dates,datevector = ptime.date_list2vector(dateList)
-
-    ## Date Display
-    years    = mdates.YearLocator()   # every year
-    months   = mdates.MonthLocator()  # every month
-    yearsFmt = mdates.DateFormatter('%Y')
-
-    ## X axis format
-    ax.fmt_xdata = DateFormatter('%Y-%m-%d %H:%M:%S')
-    ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12)
-    te=datevector[-1]+0.3;  ye=int(te);  me=int((te-ye)*12)
-    if ms>12:   ys = ys+1;   ms=1
-    if me>12:   ye = ye+1;   me=1
-    if ms<1:    ys = ys-1;   ms=12
-    if me<1:    ye = ye-1;   me=12
-    dss=datetime.date(ys,ms,1)
-    dee=datetime.date(ye,me,1)
-    ax.set_xlim(dss,dee)                          # using the same xlim with the previous one
-    ax.xaxis.set_major_locator(years)
-    ax.xaxis.set_major_formatter(yearsFmt)
-    ax.xaxis.set_minor_locator(months)
-
-    ### Y axis format
-    length = max(lengthArray) - min(lengthArray)
-    ax.set_ylim(min(lengthArray)-0.1*length,\
-                max(lengthArray)+0.1*length)
-
-    xticklabels = getp(gca(), 'xticklabels')
-    yticklabels = getp(gca(), 'yticklabels')
-    setp(yticklabels, 'color', 'k', fontsize=fontSize)
-    setp(xticklabels, 'color', 'k', fontsize=fontSize)
-
-    return ax
-
-def plot_bperp_hist(fig,dateList,bperp):
-    ## Figure Setting
-    fontSize    = 12
-    markerColor = 'orange'
-    markerSize  = 16
-    lineWidth   = 2
-
-    ## Date Convert
-    dates,datevector = ptime.date_list2vector(dateList)
-
-    ## Plot
-    ax=fig.add_subplot(111)
-    ax.plot(dates,bperp, '-ko',ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
-    ax.set_title('Perpendicular Baseline History',fontsize=fontSize)
-
-    ## axis format
-    ax = axis_adjust_date_length(ax,dateList,bperp)
-    ax.set_xlabel('Time [years]',fontsize=fontSize)
-    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
-
-    return fig
-
-
-##################################################################################
-def plot_network(fig,pairs_idx,dateList,bperp):
-    ## Plot Temporal-Bperp Network
-    ## 
-    ## Inputs
-    ##     fig       : matplotlib figure
-    ##     pairs_idx : pairs info in int index
-    ##     dateList  : date list in 8 digit string
-    ##     bperp     : perp baseline array
-    ## Output
-    ##     fig       : matplotlib figure
-
-    ## Figure Setting
-    fontSize    = 12
-    markerColor = 'orange'
-    markerSize  = 16
-    lineWidth   = 2
-
-    ## Date Convert
-    dates,datevector = ptime.date_list2vector(dateList)
-
-    ## Ploting
-    ax=fig.add_subplot(111)
-    ax.plot(dates,bperp, 'o',ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
-    for i in range(len(pairs_idx)):
-        ax.plot(array([dates[pairs_idx[i][0]],dates[pairs_idx[i][1]]]),\
-                array([bperp[pairs_idx[i][0]],bperp[pairs_idx[i][1]]]),'k',lw=lineWidth)
-    ax.set_title('Interferogram Network',fontsize=fontSize)
-
-    ## axis format
-    ax = axis_adjust_date_length(ax,dateList,bperp)
-    ax.set_xlabel('Time [years]',fontsize=fontSize)
-    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
-
-    return fig
-
   
 ######################################
 def usage():
@@ -292,7 +173,8 @@ def main(argv):
 
     ############### Fig 1 - Interferogram Network ##################
     fig1 = plt.figure(1)
-    fig1 = plot_network(fig1, pairs, dateList, Bp)
+    ax1 = fig1.add_subplot(111)
+    fig1 = pnet.plot_network(ax1, pairs, dateList, Bp)
 
     if saveFig=='yes':
         plt.savefig(figName2,bbox_inches='tight')
@@ -300,7 +182,8 @@ def main(argv):
 
     ############## Fig 2 - Baseline History ###################  
     fig2 = plt.figure(2)
-    fig2 = plot_bperp_hist(fig2,dateList,Bp)
+    ax2 = fig2.add_subplot(111)
+    fig2 = pnet.plot_perp_baseline_hist(ax2,dateList,Bp)
 
     if saveFig=='yes':
         plt.savefig(figName1,bbox_inches='tight')

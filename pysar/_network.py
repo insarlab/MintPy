@@ -23,12 +23,13 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 import pysar._datetime as ptime
 
 
-############################################################
+################################# Basic File I/O #################################
 def read_pairs_list(listFile, dateList):
-    ## Read Pairs List file like below:
-    ## 070311-070426
-    ## 070311-070611
-    ## ...
+    '''Read Pairs List file like below:
+    070311-070426
+    070311-070611
+    ...
+    '''
 
     dateList6 = ptime.yymmdd(dateList)
     pairs=[]
@@ -45,7 +46,6 @@ def read_pairs_list(listFile, dateList):
     return pairs
 
 
-############################################################
 def write_pairs_list(pairs,dateList,outName):
     dateList6 = ptime.yymmdd(dateList)
     fl = open(outName,'w')
@@ -56,8 +56,8 @@ def write_pairs_list(pairs,dateList,outName):
     return 1
 
 
-############################################################
 def read_igram_pairs(igramFile):
+    '''Read pairs index from hdf5 file'''
     ## Read Igram file
     h5file = h5py.File(igramFile,'r')
     k = h5file.keys()
@@ -81,14 +81,13 @@ def read_igram_pairs(igramFile):
     return pairs
 
 
-#############################################################
 def read_baseline_file(baselineFile,exDateList=[]):
-    ## Read bl_list.txt without dates listed in exDateList
-    ##
-    ## Examples:
-    ##     date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile)
-    ##     date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile,['080520','100726'])
-    ##     date8List, perpBaseList = read_baseline_file(baselineFile)[0:2]
+    '''Read bl_list.txt without dates listed in exDateList
+    Examples:
+        date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile)
+        date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile,['080520','100726'])
+        date8List, perpBaseList = read_baseline_file(baselineFile)[0:2]
+    '''
 
     ## Read baseline file into lines
     fb = open(baselineFile)
@@ -118,14 +117,57 @@ def read_baseline_file(baselineFile,exDateList=[]):
 
     return date8List, perpBaseList, dopplerList, prfList, slcDirList
 
-############################################################
-def threshold_perp_baseline(igramIdxList,perpBaseList,perpBaseMax=800,perpBaseMin=0):
-    ## Remove pairs/interoferogram that have perpendicular baseline out of [perpBaseMin, perpBaseMax]
-    ##
-    ## Example:
-    ##     pairs = threshold_perp_baseline(pairs,perpBaseList,500)
-    ##
 
+def igram_date12_list(File):
+    '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
+    Example:
+        date12List = get_date12_list('unwrapIfgram.h5')
+        date12List = get_date12_list('Pairs.list')
+    '''
+    print 'read pairs info from '+File
+    date12_list = []
+    ext = os.path.splitext(File)[1].lower()
+    if ext == '.h5':
+        k = readfile.read_attribute(File)['FILE_TYPE']
+        h5 = h5py.File(File, 'r')
+        epochList = h5[k].keys()
+        epochList = sorted(epochList)
+        for epoch in epochList:
+            date12 = h5[k][epoch].attrs['DATE12']
+            date12_list.append(date12)
+        h5.close()
+    else:
+        fl = open(ref_file)
+        date12_list = fl.read().splitlines()
+        date12_list = sorted(date12_list)
+        print 'number of pairs: '+str(len(date12_list))
+        fl.close()
+
+    return date12_list
+
+
+def igram_perp_baseline_list(File):
+    '''Get perpendicular baseline list from input multi_group hdf5 file'''
+    print 'reading perp baseline info from '+File
+    p_baseline_list = []
+    k = readfile.read_attribute(File)['FILE_TYPE']
+    h5 = h5py.File(File, 'r')
+    epochList = h5[k].keys()
+    epochList = sorted(epochList)
+    for epoch in epochList:
+        p_baseline = (float(h5[k][epoch].attrs['P_BASELINE_BOTTOM_HDR'])+\
+                      float(h5[k][epoch].attrs['P_BASELINE_TOP_HDR']))/2
+        p_baseline_list.append(p_baseline)
+    h5.close()
+    return p_baseline_list
+
+
+################################# Network Selection #################################
+def threshold_perp_baseline(igramIdxList,perpBaseList,perpBaseMax=800,perpBaseMin=0):
+    '''Remove pairs/interoferogram out of [perpBaseMin, perpBaseMax]
+    Example:
+        pairs = threshold_perp_baseline(pairs,perpBaseList,500)
+    '''
     igramIdxListOut = []
     for igramIdx in igramIdxList:
         idx1 = igramIdx[0]
@@ -137,19 +179,16 @@ def threshold_perp_baseline(igramIdxList,perpBaseList,perpBaseMax=800,perpBaseMi
     return igramIdxListOut
 
 
-############################################################
 def threshold_temporal_baseline(igramIdxList,tempBaseList,tempBaseMax=365,seasonal=1,tempBaseMin=0):
-    ## Remove pairs/interferograms out of min/max/seasonal temporal baseline limits
-    ##
-    ## Usage:
-    ##     seasonal : keep interferograms with seasonal temporal baseline
-    ##                1 - keep them, by default
-    ##                0 - do not keep them
-    ##
-    ## Example:
-    ##     pairs = threshold_temporal_baseline(pairs,tempBaseList,80)
-    ##     pairs = threshold_temporal_baseline(pairs,tempBaseList,80,0)  # disable seasonal checking
-
+    '''Remove pairs/interferograms out of min/max/seasonal temporal baseline limits
+    Usage:
+        seasonal : keep interferograms with seasonal temporal baseline
+                   1 - keep them, by default
+                   0 - do not keep them
+    Example:
+        pairs = threshold_temporal_baseline(pairs,tempBaseList,80)
+        pairs = threshold_temporal_baseline(pairs,tempBaseList,80,0)  # disable seasonal checking
+    '''
     igramIdxListOut = []
     
     for igramIdx in igramIdxList:
@@ -166,7 +205,6 @@ def threshold_temporal_baseline(igramIdxList,tempBaseList,tempBaseMax=365,season
     return igramIdxListOut
 
 
-############################################################
 def pair_sort(pairs):
     for idx in range(len(pairs)):
         if pairs[idx][0] > pairs[idx][1]:
@@ -178,7 +216,6 @@ def pair_sort(pairs):
     return pairs
 
 
-############################################################
 def pair_merge(pairs1,pairs2):
     pairs = pairs1
     for pair in pairs2:
@@ -188,14 +225,13 @@ def pair_merge(pairs1,pairs2):
     pairs=sorted(pairs)
     return pairs
 
-############################################################
+
 def select_pairs_all(dateList):
-    ## Select All Possible Pairs/Interferograms
-    ##
-    ## Reference:
-    ##     Berardino, P., G. Fornaro, R. Lanari, and E. Sansosti (2002), A new algorithm for surface deformation monitoring
-    ## based on small baseline differential SAR interferograms, IEEE TGRS, 40(11), 2375-2383.
-    ##
+    '''Select All Possible Pairs/Interferograms
+    Reference:
+        Berardino, P., G. Fornaro, R. Lanari, and E. Sansosti (2002), A new algorithm for surface deformation monitoring
+        based on small baseline differential SAR interferograms, IEEE TGRS, 40(11), 2375-2383.
+    '''
 
     ## Get date index
     indexList = []
@@ -211,27 +247,23 @@ def select_pairs_all(dateList):
     return allPairs2
 
 
-############################################################
 def select_pairs_delaunay(tempBaseList,perpBaseList,normalize=1):
-    ## Select Pairs using Delaunay Triangulation based on temporal/perpendicular baselines
-    ##
-    ## Usage:
-    ##     tempBaseList : list of temporal baseline
-    ##     perpBaseList : list of perpendicular spatial baseline
-    ##     normalize    : normalize temporal baseline to perpendicular baseline
-    ##                    1 - enable  normalization, default
-    ##                    0 - disable normalization
-    ##
-    ## Key points
-    ##     1. Define a ratio between perpendicular and temporal baseline axis units (Pepe and Lanari, 2006, TGRS).
-    ##     2. Pairs with too large perpendicular / temporal baseline or Doppler centroid difference should be removed
-    ##        after this, using a threshold, to avoid strong decorrelations (Zebker and Villasenor, 1992, TGRS).
-    ##
-    ## Reference:
-    ##     Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
-    ## of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
-    ##     Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
-    ##
+    '''Select Pairs using Delaunay Triangulation based on temporal/perpendicular baselines
+    Usage:
+        tempBaseList : list of temporal baseline
+        perpBaseList : list of perpendicular spatial baseline
+        normalize    : normalize temporal baseline to perpendicular baseline
+                       1 - enable  normalization, default
+                       0 - disable normalization
+    Key points
+        1. Define a ratio between perpendicular and temporal baseline axis units (Pepe and Lanari, 2006, TGRS).
+        2. Pairs with too large perpendicular / temporal baseline or Doppler centroid difference should be removed
+           after this, using a threshold, to avoid strong decorrelations (Zebker and Villasenor, 1992, TGRS).
+    Reference:
+        Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
+        of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
+        Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
+    '''
 
     ##### Generate Delaunay Triangulation based on temporal and spatial perpendicular baselines
     if normalize == 0:
@@ -253,14 +285,12 @@ def select_pairs_delaunay(tempBaseList,perpBaseList,normalize=1):
     return delaunayPairs
 
 
-############################################################
 def select_pairs_sequential(dateList, num_incr=2):
-    ## Select Pairs in a Sequential way:
-    ##     For each acquisition, find its num_incr nearest acquisitions in the past time.
-    ##
-    ## Reference:
-    ##     Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series, IEEE TGRS, 51(7), 4249-4259.
-    ##
+    '''Select Pairs in a Sequential way:
+        For each acquisition, find its num_incr nearest acquisitions in the past time.
+    Reference:
+        Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series, IEEE TGRS, 51(7), 4249-4259.
+    '''
 
     ## Get date index
     indexList = list(range(len(dateList)))
@@ -270,25 +300,21 @@ def select_pairs_sequential(dateList, num_incr=2):
     for idx in indexList:
         for i in range(num_incr):
             if not idx-i-1 < 0:  pairs.append([idx-i-1,idx])
-
     pairs = pair_sort(pairs)
 
     return pairs
 
 
-############################################################
 def select_pairs_hierarchical(tempBaseList,perpBaseList,tempPerpList):
-    ## Select Pairs in a hierarchical way using list of temporal and perpendicular baseline thresholds
-    ##     For each temporal/perpendicular combination, select all possible pairs; and then merge all combination results
-    ##     together for the final output (Zhao, 2015).
-    ##
-    ## Examples:
-    ##     pairs = select_pairs_hierarchical(tempBaseList,perpBaseList,[[32, 800], [48, 600], [64, 200]])
-    ##
-    ## Reference:
-    ##     Zhao, W., (2015), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
-    ## dissertation, Univ. of Miami, Section 6.3.
-    ##
+    '''Select Pairs in a hierarchical way using list of temporal and perpendicular baseline thresholds
+        For each temporal/perpendicular combination, select all possible pairs; and then merge all combination results
+        together for the final output (Zhao, 2015).
+    Examples:
+        pairs = select_pairs_hierarchical(tempBaseList,perpBaseList,[[32, 800], [48, 600], [64, 200]])
+    Reference:
+        Zhao, W., (2015), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
+        dissertation, Univ. of Miami, Section 6.3.
+    '''
 
     ## Get date index
     indexList = list(range(len(tempBaseList)))
@@ -314,17 +340,15 @@ def select_pairs_hierarchical(tempBaseList,perpBaseList,tempPerpList):
     return pairs
 
 
-############################################################
 def select_pairs_mst(tempBaseList,perpBaseList,normalize=1):
-    ## Select Pairs using Minimum Spanning Tree technique
-    ##     Connection Cost is calculated using the baseline distance in perp and scaled temporal baseline (Pepe and Lanari,
-    ##     2006, TGRS) plane.
-    ##
-    ## References:
-    ##     Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
-    ## of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
-    ##     Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
-    ##
+    '''Select Pairs using Minimum Spanning Tree technique
+        Connection Cost is calculated using the baseline distance in perp and scaled temporal baseline (Pepe and Lanari,
+        2006, TGRS) plane.
+    References:
+        Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
+        of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
+        Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
+    '''
 
     ##### Ratio between perpendicular and temporal baselines (Pepe and Lanari, 2006, TGRS)
     temp2perp_scale = (max(perpBaseList)-min(perpBaseList)) / (max(tempBaseList)-min(tempBaseList))
@@ -358,16 +382,14 @@ def select_pairs_mst(tempBaseList,perpBaseList,normalize=1):
 
 
 def select_pairs_star(dateList,m_date):
-    ## Select Star-like network/interferograms/pairs, it's a single master network, similar to PS approach.
-    ##
-    ## Usage:
-    ##     m_date : master date, choose it based on the following cretiria:
-    ##              1) near the center in temporal and spatial baseline
-    ##              2) prefer winter season than summer season for less temporal decorrelation
-    ##
-    ## Reference:
-    ##     Ferretti, A., C. Prati, and F. Rocca (2001), Permanent scatterers in SAR interferometry, IEEE TGRS, 39(1), 8-20.
-    ##
+    '''Select Star-like network/interferograms/pairs, it's a single master network, similar to PS approach.
+    Usage:
+        m_date : master date, choose it based on the following cretiria:
+                 1) near the center in temporal and spatial baseline
+                 2) prefer winter season than summer season for less temporal decorrelation
+    Reference:
+        Ferretti, A., C. Prati, and F. Rocca (2001), Permanent scatterers in SAR interferometry, IEEE TGRS, 39(1), 8-20.
+    '''
 
     ## Pre-process Inputs
     dateList = ptime.yymmdd(sorted(dateList))
@@ -387,8 +409,96 @@ def select_pairs_star(dateList,m_date):
 
 
 
+################################# Plotting #################################
+def plot_network(ax, pairs_idx, date8List, bperpList):
+    '''Plot Temporal-Perp baseline Network
+    Inputs
+        fig : matplotlib figure object
+        pairsidx  : list of list of 2 int, pairs index
+        date8List : list of 8-digit string, date 
+        bperpList : list of float, perp baseline 
+    Output
+        fig : matplotlib figure object
+    '''
+    
+    # Figure Setting
+    fontSize    = 12
+    lineWidth   = 2
+    markerColor = 'orange'
+    markerSize  = 16
+
+    # Date Convert
+    dates, datevector = ptime.date_list2vector(date8List)
+
+    # Ploting
+    #ax=fig.add_subplot(111)
+    # Dot - SAR Acquisition
+    ax.plot(dates, bperpList, 'o', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
+    # Line - Pair/Interferogram
+    for i in range(len(pairs_idx)):
+        ax.plot(np.array([dates[pairs_idx[i][0]],dates[pairs_idx[i][1]]]),\
+                np.array([bperpList[pairs_idx[i][0]],bperpList[pairs_idx[i][1]]]), 'k', lw=lineWidth)
+
+    ax.set_title('Interferogram Network', fontsize=fontSize)
+
+    # axis format
+    ax = ptime.adjust_xaxis_date(ax, datevector, fontSize)
+    ax = adjust_yaxis(ax, bperpList, fontSize)
+    ax.set_xlabel('Time [years]',fontsize=fontSize)
+    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
+
+    return fig
 
 
+def plot_perp_baseline_hist(ax, date8List, bperpList):
+    ''' Plot Perpendicular Spatial Baseline History
+    Inputs
+        fig : matplotlib figure object
+        date8List : list of 8-digit string, date 
+        bperpList : list of float, perp baseline 
+    Output
+        fig : matplotlib figure object
+    '''
+    # Figure Setting
+    fontSize    = 12
+    markerColor = 'orange'
+    markerSize  = 16
+    lineWidth   = 2
+
+    # Date Convert
+    dates, datevector = ptime.date_list2vector(date8List)
+
+    # Plot
+    #ax=fig.add_subplot(111)
+    ax.plot(dates, bperpList, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
+    ax.set_title('Perpendicular Baseline History',fontsize=fontSize)
+
+    # axis format
+    ax = ptime.adjust_xaxis_date(ax, datevector, fontSize)
+    ax = adjust_yaxis(ax, bperpList, fontSize)
+    ax.set_xlabel('Time [years]',fontsize=fontSize)
+    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
+
+    return fig
+
+
+def adjust_yaxis(ax, dataList, fontSize=12):
+    '''Adjust Y axis
+    Input:
+        ax - matplot figure axes object
+        dataList : list of float, value in y axis
+    '''
+    # Min/Max
+    dataRange = max(dataList) - min(dataList)
+    ax.set_ylim(min(dataList) - 0.1*dataRange,\
+                max(dataList) + 0.1*dataRange)
+    # Tick/Label setting
+    xticklabels = plt.getp(ax, 'xticklabels')
+    yticklabels = plt.getp(ax, 'yticklabels')
+    plt.setp(yticklabels, 'color', 'k', fontsize=fontSize)
+    plt.setp(xticklabels, 'color', 'k', fontsize=fontSize)
+    
+    return ax
 
 
 

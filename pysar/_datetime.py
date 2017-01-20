@@ -10,11 +10,12 @@
 #
 # Recommended Usage:
 #   import pysar._datetime as ptime
-#   dateList = ptime.date_list('LoadedData.h5')
+#   dateList = ptime.igram_date_list('LoadedData.h5')
 
 
 import sys
 import time
+import datetime
 from datetime import datetime as dt
 
 import h5py
@@ -65,7 +66,7 @@ def yymmdd(dates):
 
 
 #################################################################
-def date_list(igramFile):
+def igram_date_list(igramFile):
     ## Read Date List from Interferogram file
     ## for timeseries file, use h5file['timeseries'].keys() directly
 
@@ -108,7 +109,8 @@ def read_date_list(date_list_file):
 def date_index(dateList):
     ##### Date Index
     dateIndex={}
-    for ni in range(len(dateList)):  dateIndex[dateList[ni]]=ni
+    for ni in range(len(dateList)):
+        dateIndex[dateList[ni]] = ni
     return dateIndex
 
 ################################################################
@@ -122,7 +124,8 @@ def date_list2tbase(dateList):
         tbase.append(diff.days)
     ## Dictionary: key - date, value - temporal baseline
     dateDict = {}
-    for i in range(len(dateList)): dateDict[dateList[i]] = tbase[i]
+    for i in range(len(dateList)):
+        dateDict[dateList[i]] = tbase[i]
   
     return tbase, dateDict
 
@@ -144,15 +147,19 @@ def date_list2vector(dateList):
   
     return dates, datevector
 
-################################################################
-def adjust_xaxis_date(ax,datevector,fontSize=12):
-    ## Date Display
-    years    = mdates.YearLocator()   # every year
-    months   = mdates.MonthLocator()  # every month
-    yearsFmt = mdates.DateFormatter('%Y')
 
-    ## X axis format
-    ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
+################################################################
+def adjust_xaxis_date(ax, datevector, fontSize=12):
+    '''Adjust X axis
+    Input:
+        ax : matplotlib figure axes object
+        datevector : list of float, date in years
+                     i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
+    Output:
+        ax : matplotlib figure axes object
+    '''
+    
+    # Min/Max
     ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12.0)
     te=datevector[-1]+0.3;  ye=int(te);  me=int((te-ye)*12.0)
     if ms>12:   ys = ys+1;   ms=1
@@ -161,13 +168,18 @@ def adjust_xaxis_date(ax,datevector,fontSize=12):
     if me<1:    ye = ye-1;   me=12
     dss=datetime.date(ys,ms,1)
     dee=datetime.date(ye,me,1)
-    ax.set_xlim(dss,dee)                          # using the same xlim with the previous one
-    ax.xaxis.set_major_locator(years)
-    ax.xaxis.set_major_formatter(yearsFmt)
-    ax.xaxis.set_minor_locator(months)
-    for tick in ax.xaxis.get_major_ticks():  tick.label.set_fontsize(fontSize)
+    ax.set_xlim(dss,dee)
+    
+    # Label/Tick format
+    ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
+    ax.xaxis.set_major_locator(mdates.YearLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    ax.xaxis.set_minor_locator(mdates.MonthLocator())
+    
+    # Label font size
+    for tick in ax.xaxis.get_major_ticks():
+        tick.label.set_fontsize(fontSize)
     #fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
-  
     return ax
 
 
