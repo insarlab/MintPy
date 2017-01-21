@@ -447,7 +447,7 @@ def plot_network(ax, pairs_idx, date8List, bperpList):
     ax.set_xlabel('Time [years]',fontsize=fontSize)
     ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
 
-    return fig
+    return ax
 
 
 def plot_perp_baseline_hist(ax, date8List, bperpList):
@@ -479,7 +479,7 @@ def plot_perp_baseline_hist(ax, date8List, bperpList):
     ax.set_xlabel('Time [years]',fontsize=fontSize)
     ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
 
-    return fig
+    return ax
 
 
 def adjust_yaxis(ax, dataList, fontSize=12):
