@@ -118,7 +118,7 @@ def read_baseline_file(baselineFile,exDateList=[]):
     return date8List, perpBaseList, dopplerList, prfList, slcDirList
 
 
-def igram_date12_list(File):
+def get_date12_list(File):
     '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
     Example:
         date12List = get_date12_list('unwrapIfgram.h5')
