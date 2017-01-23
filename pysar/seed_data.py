@@ -69,7 +69,7 @@ def seed_xy(File,x,y,outName=''):
     mask = np.ones((length,width))
     
     ## Read refernce value
-    refList = ut.spatial_mean(File,mask,box)
+    refList = ut.spatial_average(File,mask,box)
 
     ## Seeding
     seed_file(File,outName,refList,x,y)
@@ -532,7 +532,7 @@ def main(argv):
             print 'Calculating the global spatial average value for each epoch'+\
                   ' of all valid pixels ...'
             box = (0,0,width,length)
-            meanList = ut.spatial_mean(File,M,box)
+            meanList = ut.spatial_average(File,M,box)
             seed_file(File,outFile,meanList,'','')
             SeedingDone = 'yes'
 

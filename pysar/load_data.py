@@ -220,8 +220,8 @@ def load_roipac2multi_group_h5(fileType, fileList, hdf5File='unwrapIfgram.h5', p
     return hdf5File, fileList
 
 
-def roipac_ampltitude_mask(unwFileList, maskFile='maskAmp.h5'):
-    '''Generate mask from amplitude info of ROI_PAC .unw file list.'''
+def roipac_nonzero_mask(unwFileList, maskFile='maskAmp.h5'):
+    '''Generate mask for non-zero amplitude pixel of ROI_PAC .unw file list.'''
     unwFileList, width, length = check_file_size(unwFileList)
     if unwFileList:
         # Initial mask value
@@ -372,7 +372,7 @@ def main(argv):
     if inps.unw:
         load_roipac2multi_group_h5('interferograms', inps.unw, inps.tssar_dir+'/unwrapIfgram.h5', vars(inps))
         print 'Generate mask from amplitude of interferograms'
-        roipac_ampltitude_mask(inps.unw, 'maskAmp.h5')
+        roipac_nonzero_mask(inps.unw, 'Mask.h5')
     # Optional
     if inps.snap_connect:
         load_roipac2multi_group_h5('snaphu_connect_component', inps.snap_connect,\

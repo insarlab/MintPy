@@ -41,11 +41,12 @@
 #                   Add inner function ts_inverse() to faster time series inversion
 #                   Add P_BASELINE_TIMESERIES attribute to timeseries file.
 # Yunjun, Jul 2016: add get_file_list() to support multiple files input
-# Yunjun, Aug 2016: add spatial_mean()
+# Yunjun, Aug 2016: add spatial_average()
+# Yunjun, Jan 2017: add temporal_average(), nonzero_mask()
 
 
-import sys
 import os
+import sys
 import re
 import time
 import datetime
@@ -56,71 +57,160 @@ import numpy as np
 import h5py
 
 import pysar._readfile as readfile
+import pysar._writefile as writefile
 import pysar._datetime as ptime
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+
+
+
+def nonzero_mask(File, outFile='Mask.h5'):
+    '''Generate mask file for non-zero value of input multi-group hdf5 file'''
+    atr = readfile.read_attribute(File)
+    k = atr['FILE_TYPE']
+    width = int(atr['WIDTH'])
+    length = int(atr['FILE_LENGTH'])
+    
+    mask = np.ones([length, width])
+    
+    h5 = h5py.File(File,'r')
+    igramList = h5[k].keys()
+    igramList = sorted(igramList)
+    for i in range(len(igramList)):
+        igram = igramList[i]
+        data = h5[k][igram].get(igram)[:]
+        
+        mask[data==0] = 0
+        ut.printProgress(i+1, len(igramList))
+
+    atr['FILE_TYPE'] = 'mask'
+    writefile.write(mask, atr, outFile)
 
 
 ######################################################################################################
-def spatial_mean(File,mask_orig,box):
-    ## Calculate the Spatial Average of all non-nan pixels for each epoch
-    ##     and return the mean value.
-    ## 
-    ## Inputs:
-    ##     File      :
-    ##     mask_orig : mask, same size as File
-    ##     box       : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
-    ## Output: list for multi-dataset file, and float for single-dataset file
+def spatial_average(File, mask=None, box=None, saveList=False):
+    '''Calculate  Spatial Average.
+        Only non-nan pixel is considered.
+    Input:
+        File : string, path of input file
+        mask : 2D np.array, mask file 
+        box  : 4-tuple defining the left, upper, right, and lower pixel coordinate
+        saveList: bool, save (list of) mean value into text file
+    Output:
+        meanList : list for float, average value in space for each epoch of input file
+    Example:
+        meanList = spatial_average('coherence.h5')
+        meanList = spatial_average('coherence.h5', mask, saveList=True)
+        refList = spatial_average('unwrapIfgram.h5', box=(100,200,101,201))
+    '''
 
-    print 'calculating spatial average of '+File+' within '+str(box)+' ...'
-    ##### Input File Info
+    # Baic File Info
     atr  = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    width  = int(atr['WIDTH'])
+    width = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
 
-    ##### Bounding Box
-    #if box       == None:    box = [0,0,width,length]
-    ##### Mask Info
-    #if mask_orig == None:    mask_orig = np.ones((length,width))
+    if not box:
+        box = (0,0,width,length)
+    if mask:
+        mask = mask[box[1]:box[3],box[0]:box[2]]
 
-    mask = mask_orig[box[1]:box[3],box[0]:box[2]]
-    idx = mask != 0
-
-    ##### Calculation
-    if k in ['timeseries','interferograms','coherence','wrapped']:
+    # Calculate mean coherence list
+    if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         h5file = h5py.File(File,'r')
         epochList = h5file[k].keys();
         epochList = sorted(epochList)
         epochNum  = len(epochList)
-        #print 'number of epoch: '+str(epochNum)
 
         meanList   = np.zeros(epochNum)
         for i in range(epochNum):
             epoch = epochList[i]
-            if k in ['interferograms','coherence','wrapped']:
+            if k in multi_group_hdf5_file:
                 dset = h5file[k][epoch].get(epoch)
-            elif k == 'timeseries':
+            elif k in multi_dataset_hdf5_file:
                 dset = h5file[k].get(epoch)
             else:  print 'Unrecognized group type: '+k
             
-            d = dset[box[1]:box[3],box[0]:box[2]]
+            data = dset[box[1]:box[3],box[0]:box[2]]
+            if mask:
+                data[mask==0] = np.nan
             ## supress warning 
             ## url - http://stackoverflow.com/questions/29688168/mean-nanmean-and-warning-mean-of-empty-slice
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                meanList[i] = np.nanmean(d[idx])
-            printProgress(i+1,epochNum)
-        del d
+                meanList[i] = np.nanmean(data)
+            printProgress(i+1, epochNum, suffix=epoch)
+        del data
         h5file.close()
-        
-        if epochNum == 1:   meanList = float(meanList)
-
     else:
-        data,atr = readfile.read(File,box)
+        data,atr = readfile.read(File, box)
+        if mask:
+            data[mask==0] = np.nan
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            meanList = np.nanmean(data[idx])
+            meanList = [np.nanmean(data)]
 
+    # Write mean coherence list into text file
+    if saveList:
+        txtFile = os.path.splitext(File)[0]+'_spatialAverage.list'
+        print 'write average coherence in space into text file: '+txtFile
+        fl = open(txtFile, 'w')
+        # 1st column of file
+        if k in multi_group_hdf5_file:
+            str1_list = pnet.get_date12_list(File)
+        elif k in multi_dataset_hdf5_file:
+            str1_list = epochList
+        else:
+            str1_list = [os.path.basename(File)]
+        for i in range(len(str1_list)):
+            line = str1_list[i]+'    '+str(meanList[i])+'\n'
+            fl.write(line)
+        fl.close()
+
+    if len(meanList) == 1:
+        meanList = meanList[0]
     return meanList
+
+
+def temporal_average(File, outFile=None):
+    '''Calculate temporal average.'''
+    # Input File Info
+    atr = readfile.read_attribute(File)
+    k = atr['FILE_TYPE']
+    width = int(atr['WIDTH'])
+    length = int(atr['FILE_LENGTH'])
+
+    h5file = h5py.File(File)
+    epochList = h5file[k].keys()
+    epochList = sorted(epochList)
+    epochNum = len(epochList)
+
+    # Calculation
+    dMean = np.zeros((length,width))
+    for i in range(epochNum):
+        epoch = epochList[i]
+        if k in multi_group_hdf5_file:
+            d = h5file[k][epoch].get(epoch)[:]
+        elif k in ['timeseries']:
+            d = h5file[k].get(epoch)[:]
+        else: print k+' type is not supported currently.'; sys.exit(1)
+        dMean += d
+        printProgress(i+1, epochNum, suffix=epoch)
+    dMean /= float(len(epochList))
+    del d
+    h5file.close()
+
+    # Output
+    if not outFile:
+        outFile = os.path.splitext(File)[0]+'_tempAverage.h5'
+    print 'writing >>> '+outFile
+    h5mean = h5py.File(outFile, 'w')
+    group  = h5mean.create_group('mask')
+    dset = group.create_dataset(os.path.basename('mask'), data=dMean, compression='gzip')
+    for key,value in atr.iteritems():
+        group.attrs[key] = value
+    h5mean.close()
+
+    return outFile
 
 
 ######################################################################################################
