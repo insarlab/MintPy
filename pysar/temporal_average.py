@@ -20,10 +20,10 @@ def usage():
   Calculate temporal average/mean of multi-temporal datasets.
 
   Usage:
-      mean_temporal.py multi_temporal_file [output_filename]
+      temporal_average.py multi_temporal_file [output_filename]
 
   Example:
-      mean_temporal.py Coherence.h5 average_spatial_coherence.h5
+      temporal_average.py Coherence.h5 average_spatial_coherence.h5
 
 ******************************************************************************
     '''

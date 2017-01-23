@@ -31,7 +31,6 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 ###########################  Sub Function  #############################
-######################################
 def nearest_neighbor(x,y, x_array, y_array):
     """ find nearest neighbour
     Input:
@@ -44,54 +43,7 @@ def nearest_neighbor(x,y, x_array, y_array):
     idx = np.argmin(dist)
     #idx = dist==np.min(dist)
     return idx
-
-
-def spatial_average(File, mask=None):
-    '''Calculate spatial average value for multiple dataset/group file
-    Example:
-        meanList = spatial_average('coherence.h5')
-        meanList = spatial_average('timeseries_ECMWF_demCor_quadratic.h5', mask)
-    '''
-    atr = readfile.read_attribute(File)
-    k = atr['FILE_TYPE']
-    # Read Epoch List
-    h5file = h5py.File(File,'r')
-    epochList = h5file[k].keys()
-    epochList = sorted(epochList)
-    epochNum = len(epochList)
-
-    # Calculate mean coherence list    
-    meanList = np.zeros(epochNum)
-    for i in range(len(epochList)):
-        epoch = epochList[i]
-        # Read data
-        if k in multi_group_hdf5_file:
-            data = h5file[k][epoch].get(epoch)[:]
-        elif k in multi_dataset_hdf5_file:
-            data = h5file[k].get(epoch)[:]
-        else:
-            print 'Un-supported data type: '+k
-            data = 0
-        # Mask
-        if mask:
-            data[mask==0] = np.nan
-        # Calculate average in space
-        meanList[epochList.index(epoch)] = np.nanmean(data)
-        ut.printProgress(i+1, epochNum, suffix=epoch)
-    h5file.close()
-
-    # Write mean coherence list into text file
-    date12_list = pnet.get_date12_list(File)
-    txtFile = os.path.splitext(os.path.basename(File))[0]+'_average_in_space.list'
-    print 'write average coherence in space into text file: '+txtFile
-    fl = open(txtFile, 'w')
-    for i in range(epochNum):
-        line = date12_list[i]+'    '+str(meanList[i])+'\n'
-        fl.write(line)
-    fl.close()
-    
-    return meanList
-    
+  
 
 def manual_select_pairs_to_remove(File):
     '''Manually select interferograms to remove'''
@@ -127,15 +79,15 @@ def manual_select_pairs_to_remove(File):
         print 'click at '+date6
         date_click.append(date6)
         if len(date_click)%2 == 0 and date_click[-2] != date_click[-1]:
-             [m_date, s_date] = sorted(date_click[-2:])
-             m_idx = date6_list.index(m_date)
-             s_idx = date6_list.index(s_date)
-             date12 = m_date+'-'+s_date
-             if date12 in date12_orig:
-                 print 'select date12: '+date12
-                 date12_click.append(date12)
-                 ax.plot([dateNum_array[m_idx],dateNum_array[s_idx]], [bperp_array[m_idx],bperp_array[s_idx]], 'r', lw=4)
-             else:
+            [m_date, s_date] = sorted(date_click[-2:])
+            m_idx = date6_list.index(m_date)
+            s_idx = date6_list.index(s_date)
+            date12 = m_date+'-'+s_date
+            if date12 in date12_orig:
+                print 'select date12: '+date12
+                date12_click.append(date12)
+                ax.plot([dateNum_array[m_idx],dateNum_array[s_idx]], [bperp_array[m_idx],bperp_array[s_idx]], 'r', lw=4)
+            else:
                  print date12+' is not existed in input file'
         plt.draw()
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
@@ -160,12 +112,21 @@ def update_inps_with_template(inps, template_file):
     if not inps.reference_file and 'pysar.network.reference' in keyList:
         inps.reference_file = template_dict['pysar.network.reference']
     
-    if not inps.coherence_file and 'pysar.network.coherenceBase.coherence' in keyList:
-        inps.coherence_file = template_dict['pysar.network.coherenceBase.coherence']
-    if not inps.mask_file and 'pysar.network.coherenceBase.mask' in keyList:
-        inps.mask_file = template_dict['pysar.network.coherenceBase.mask']
-    if not inps.min_coherence and 'pysar.network.coherenceBase.minCoherence' in keyList:
-        inps.min_coherence = float(template_dict['pysar.network.coherenceBase.minCoherence'])
+    # Coherence-Based 
+    if 'pysar.network.coherenceBase' in keyList:
+        if not inps.coherence_file and template_dict['pysar.network.coherenceBase'].lower() in ['yes','y']:
+            # Search coherence file from input files
+            k_list = [readfile.read_attribute[f]['FILE_TYPE'] for f in inps.file]
+            try:
+                cohFileIdx = k_list.index('coherence')
+            except:
+                print "ERROR: No coherence found in input files, it's need for coherence-based approach."
+                sys.exit(1)
+            inps.coherence_file = inps.file[cohFileIdx]
+            
+            # Search mask file
+            if not inps.mask_file and os.path.isfile('Mask.h5'):
+                inps.mask_file = 'Mask.h5'
     
     return inps
 
@@ -209,34 +170,28 @@ def modify_file_date12_list(File, date12_to_rmv, outFile=None):
     return outFile
 
 
-
-##############  Usage  ###############
-
+###############################  Usage  ################################
 EXAMPLE='''example:
-  modify_network.py LoadedData.h5
-  modify_network.py -f Seeded_LoadedData.h5 -T $TE/KirishimaT246EnvD2.template
-  modify_network.py -f LoadedData.h5 -b 400 -n no
-  modify_network.py -f LoadedData.h5 -b 500 -t 600 -d 080307
-  modify_network.py -f LoadedData.h5 -d '080307 091023'           
-  modify_network.py -f LoadedData.h5 -N '1 4 20 76 89 100'
-  modify_network.py -f LoadedData.h5 -C Coherence.h5 -N '1 4 20 76 89 100'
-
-************************************************************************************
+  modify_network.py unwrapIfgram.h5 coherence.h5 --template KyushuT422F650AlosA.template
+  modify_network.py unwrapIfgram.h5 coherence.h5 -t 365 -b 200
+  modify_network.py unwrapIfgram.h5 coherence.h5 --coherence-base coherence.h5 --mask Mask.h5 --min-coherence 0.7
+  modify_network.py unwrapIfgram.h5 -r Modified_coherence.h5
+  modify_network.py unwrapIfgram.h5 --drop-date 20080520 20090816
+  modify_network.py unwrapIfgram.h5 --drop-ifg-index 3:9 11 23
+  modify_network.py unwrapIfgram.h5 --manual
 '''
 
-TEMPLATE='''template:
-  pysar.network.dropIfgramIndex = 7:9 15 25 26
-  pysar.network.dropDate        = 20080520 20090816
-  
-  pysar.network.maxTempBaseline = 720
-  pysar.network.maxPerpBaseline = 2000
-  
-  pysar.network.reference   = Modified_unwrapIfgram.h5
-  pysar.network.reference   = Paris.list
-  
-  pysar.network.coherenceBase.coherence    =  coherence.h5
-  pysar.network.coherenceBase.mask         =  maskAmp.h5
-  pysar.network.coherenceBase.minCoherence =  0.7
+TEMPLATE='''
+pysar.network.dropIfgramIndex = 7:9 15 25 26      #start from 1
+pysar.network.dropDate        = 20080520 20090816
+
+pysar.network.maxTempBaseline = 720
+pysar.network.maxPerpBaseline = 2000
+
+pysar.network.reference   = Modified_unwrapIfgram.h5
+pysar.network.reference   = Paris.list
+
+pysar.network.coherenceBase = yes    #search and use input coherence file
 '''
 
 
@@ -247,19 +202,20 @@ def cmdLineParse():
     parser.add_argument('file', nargs='+',\
                         help='Files to modify/drop network.\n'\
                              'i.e. unwrapIfgram.h5, wrapIfgram.h5, coherence.h5, ...')
+    parser.add_argument('-t', dest='max_temp_baseline', type=float, help='temporal baseline threshold/maximum in days')
+    parser.add_argument('-b', dest='max_perp_baseline', type=float, help='perpendicular baseline threshold/maximum in meters')
+
     parser.add_argument('-r','--reference', dest='reference_file',\
                         help='Reference hdf5 / list file with network information.\n'\
                              'i.e. Modified_unwrapIfgram.h5, Pairs.list')
-    parser.add_argument('--template', dest='template_file', help='Template file with ')
+    parser.add_argument('--template', dest='template_file', help='Template file with input options:\n'+TEMPLATE+'\n')
     
-    parser.add_argument('-t', dest='max_temp_baseline', type=float, help='temporal baseline threshold/maximum in days')
-    parser.add_argument('-b', dest='max_perp_baseline', type=float, help='perpendicular baseline threshold/maximum in meters')
     parser.add_argument('--drop-ifg-index', dest='drop_ifg_index', nargs='*',\
                         help='index of interferograms to remove/drop.\n1 as the first')
     parser.add_argument('--drop-date', dest='drop_date', nargs='*',\
                         help='date(s) to remove/drop, all interferograms included date(s) will be removed')
     
-    # Coherence-based network    
+    # Coherence-based network
     coherenceGroup = parser.add_argument_group('Coherence-based Network',\
                                                'Drop/modify network based on spatial coherence')
     coherenceGroup.add_argument('--coherence-base', dest='coherence_file',\
@@ -278,6 +234,7 @@ def cmdLineParse():
 
     inps = parser.parse_args()
     return inps
+
 
 #########################  Main Function  ##############################
 def main(argv):
@@ -343,7 +300,7 @@ def main(argv):
             print 'mask coherence with file: '+inps.mask_file
         else:
             mask = None
-        cohTextFile = os.path.splitext(os.path.basename(inps.coherence_file))[0]+'_average_in_space.list'
+        cohTextFile = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.list'
         if os.path.isfile(cohTextFile):
             print 'average coherence in space has been calculated before and store in file: '+cohTextFile
             print 'read it directly, or delete it and re-run the script to re-calculate the list'
@@ -352,7 +309,7 @@ def main(argv):
             coh_date12_list = [i for i in cohTxt[:,0]]
         else:
             print 'calculating average coherence of each interferogram ...'
-            mean_coherence_list = spatial_average(inps.coherence_file, mask)
+            mean_coherence_list = ut.spatial_average(inps.coherence_file, mask, saveList=True)
             coh_date12_list = pnet.get_date12_list(inps.coherence_file)
         print 'date12 with average coherence < '+str(inps.min_coherence)+': '
         for i in range(len(coh_date12_list)):
@@ -430,7 +387,18 @@ def main(argv):
 
     ##### Update Input Files with date12_to_rmv
     for File in inps.file:
-        modify_file_date12_list(File, date12_to_rmv)
+        Modified_File = modify_file_date12_list(File, date12_to_rmv)
+        
+        k = readfile.read_attribute(File)['FILE_TYPE']
+        # Update Mask File
+        if k == 'interferograms':
+            print 'update mask file for input '+k+' file: '+File
+            outFile = 'Modified_Mask.h5'
+            print 'writing >>> '+outFile
+            ut.nonzero_mask(Modified_File, outFile)
+        elif k == 'coherence':
+            print 'update average spatial coherence for input '+k+' file: '+File
+            
     print 'Done.'
 
 

@@ -63,8 +63,8 @@ def usage():
       write turbulent date to drop_date.txt
 
   Usage:
-      mean_spatial.py    multi_temporal_file    mask_file
-      mean_spatial.py -f multi_temporal_file -m mask_file [--circle x,y,rad -x sub -y sub]
+      spatial_average.py    multi_temporal_file    mask_file
+      spatial_average.py -f multi_temporal_file -m mask_file [--circle x,y,rad -x sub -y sub]
 
       -f : multi-temporal file
 
@@ -79,9 +79,9 @@ def usage():
                        --circle 31.0212,131.0569,30            [float coord input for geo   coordinate]
 
   Example:
-      mean_spatial.py sum_Seeded_ts.h5 mask.h5
-      mean_spatial.py -f sum_Seeded_ts.h5 -m Mask.h5 -x 200:800 -y 230:700 --circle 361,567,50;610,536,25
-      mean_spatial.py -f sum_Seeded_ts.h5 -m Mask.h5 --circle 31.0212,131.0569,30
+      spatial_average.py sum_Seeded_ts.h5 mask.h5
+      spatial_average.py -f sum_Seeded_ts.h5 -m Mask.h5 -x 200:800 -y 230:700 --circle 361,567,50;610,536,25
+      spatial_average.py -f sum_Seeded_ts.h5 -m Mask.h5 --circle 31.0212,131.0569,30
 
 ******************************************************************************
     '''
