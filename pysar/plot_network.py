@@ -127,7 +127,7 @@ def main(argv):
             print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
 
         print 'reading date and perpendicular baseline from '+k
-        dateList  = ptime.date_list(igramsFile)
+        dateList  = ptime.igram_date_list(igramsFile)
         dateList6 = ptime.yymmdd(dateList)
         print 'number of acquisitions: '+str(len(dateList))
         Bp = ut.Baseline_timeseries(igramsFile)

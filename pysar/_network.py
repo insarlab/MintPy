@@ -9,6 +9,7 @@
 #
 
 
+import os
 import datetime
 import itertools
 
@@ -21,6 +22,7 @@ from scipy.sparse import csr_matrix, find
 from scipy.sparse.csgraph import minimum_spanning_tree
 
 import pysar._datetime as ptime
+import pysar._readfile as readfile
 
 
 ################################# Basic File I/O #################################
@@ -66,7 +68,7 @@ def read_igram_pairs(igramFile):
     if k[0] not in  ['interferograms','coherence','wrapped']:
         print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
 
-    dateList  = ptime.date_list(igramFile)
+    dateList  = ptime.igram_date_list(igramFile)
     dateList6 = ptime.yymmdd(dateList)
 
     pairs = []
@@ -148,7 +150,7 @@ def get_date12_list(File):
 
 def igram_perp_baseline_list(File):
     '''Get perpendicular baseline list from input multi_group hdf5 file'''
-    print 'reading perp baseline info from '+File
+    print 'read perp baseline info from '+File
     p_baseline_list = []
     k = readfile.read_attribute(File)['FILE_TYPE']
     h5 = h5py.File(File, 'r')
@@ -492,11 +494,11 @@ def adjust_yaxis(ax, dataList, fontSize=12):
     dataRange = max(dataList) - min(dataList)
     ax.set_ylim(min(dataList) - 0.1*dataRange,\
                 max(dataList) + 0.1*dataRange)
-    # Tick/Label setting
-    xticklabels = plt.getp(ax, 'xticklabels')
-    yticklabels = plt.getp(ax, 'yticklabels')
-    plt.setp(yticklabels, 'color', 'k', fontsize=fontSize)
-    plt.setp(xticklabels, 'color', 'k', fontsize=fontSize)
+    ## Tick/Label setting
+    #xticklabels = plt.getp(ax, 'xticklabels')
+    #yticklabels = plt.getp(ax, 'yticklabels')
+    #plt.setp(yticklabels, 'color', 'k', fontsize=fontSize)
+    #plt.setp(xticklabels, 'color', 'k', fontsize=fontSize)
     
     return ax
 
