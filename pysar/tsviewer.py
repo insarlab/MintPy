@@ -9,7 +9,7 @@
 # Yunjun, Sep 2015: Add x/y/dispVelFig/dispTsFig option
 # Yunjun, Jun 2016: Add date_list2vector(), check_yx(), read_dis()
 #                   Add reference point display
-#                   Add plot_ts(), adjust_xaxis_date()
+#                   Add plot_ts(), auto_adjust_xaxis_date()
 # Yunjun, Jul 2016: Support reference date input
 #                   Support Zoom in for figure 1
 #                   Support lalo input
@@ -634,8 +634,8 @@ def main(argv):
 
         ####################### Figure Format #######################
         ## x axis format
-        try:    ax2 = ptime.adjust_xaxis_date(ax2,dateVecMinMax, fontSize)
-        except: ax2 = ptime.adjust_xaxis_date(ax2,datevector_all,fontSize)
+        try:    ax2 = ptime.auto_adjust_xaxis_date(ax2,dateVecMinMax, fontSize)
+        except: ax2 = ptime.auto_adjust_xaxis_date(ax2,datevector_all,fontSize)
 
         ## y axis format
         ax2.set_ylabel('Displacement ['+unit+']',fontsize=fontSize)

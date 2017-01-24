@@ -976,7 +976,7 @@ def cmdLineParse(argv):
     fig_group.add_argument('--dpi', dest='fig_dpi', type=int, default=150, help='DPI - dot per inch - for display/write')
     fig_group.add_argument('--figsize', dest='fig_size', type=float, nargs=2,\
                             help='figure size in inches - width and length')
-    fig_group.add_argument('--figext', dest='outfile_ext',\
+    fig_group.add_argument('--figext', dest='fig_ext',\
                            default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
                            help='File extension for figure output file')
     fig_group.add_argument('--fignum', dest='fig_num', type=int, default=1, help='number of figure windows')
@@ -1116,7 +1116,7 @@ def main(argv):
         # Figure Output
         if inps.save_fig:
             if not inps.outfile:
-                inps.outfile = inps.fig_title+inps.outfile_ext
+                inps.outfile = inps.fig_title+inps.fig_ext
             plt.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print 'Saved figure to '+inps.outfile
 
@@ -1152,8 +1152,8 @@ def main(argv):
 
         # Output File Name
         if inps.outfile:
-            inps.outfile_ext  = os.path.splitext(inps.outfile)[1].lower()
-            inps.outfile_base = os.path.basename(inps.outfile).split(inps.outfile_ext)[0]
+            inps.fig_ext  = os.path.splitext(inps.outfile)[1].lower()
+            inps.outfile_base = os.path.basename(inps.outfile).split(inps.fig_ext)[0]
         else:
             inps.outfile_base = os.path.splitext(inps.file)[0]
 
@@ -1203,9 +1203,9 @@ def main(argv):
         for j in range(1, inps.fig_num+1):
             # Output file name for current figure
             if inps.fig_num > 1:
-                inps.outfile = inps.outfile_base+'_'+str(j)+inps.outfile_ext
+                inps.outfile = inps.outfile_base+'_'+str(j)+inps.fig_ext
             else:
-                inps.outfile = inps.outfile_base+inps.outfile_ext
+                inps.outfile = inps.outfile_base+inps.fig_ext
             fig_title = 'Figure '+str(j)+' - '+inps.outfile_base
             print '----------------------------------------'
             print fig_title

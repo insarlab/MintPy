@@ -59,6 +59,7 @@ import h5py
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._datetime as ptime
+import pysar._network as pnet
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -84,6 +85,8 @@ def nonzero_mask(File, outFile='Mask.h5'):
 
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask, atr, outFile)
+    
+    return outFile
 
 
 ######################################################################################################

@@ -15,9 +15,11 @@ import itertools
 
 import h5py
 import numpy as np
+import matplotlib as mpl
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from matplotlib.tri import Triangulation
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.sparse import csr_matrix, find
 from scipy.sparse.csgraph import minimum_spanning_tree
 
@@ -26,29 +28,36 @@ import pysar._readfile as readfile
 
 
 ################################# Basic File I/O #################################
-def read_pairs_list(listFile, dateList):
+def read_pairs_list(date12ListFile, dateList=[]):
     '''Read Pairs List file like below:
     070311-070426
     070311-070611
     ...
     '''
+    
+    # Read date12 list file
+    date12List = sorted(list(np.loadtxt(date12ListFile, dtype=str)))
 
-    dateList6 = ptime.yymmdd(dateList)
-    pairs=[]
-    fl = open(listFile,'r')
-    lines = []
-    lines = fl.read().splitlines()
-    for line in lines:
-        date12 = line.split('-')
-        pairs.append([dateList6.index(date12[0]),dateList6.index(date12[1])])
-    fl.close()
+    # Get dateList from date12List
+    if not dateList:
+        dateList = []
+        for date12 in date12List:
+            dates = date12.split('-')
+            if not dates[0] in dateList: dateList.append(dates[0])
+            if not dates[1] in dateList: dateList.append(dates[1])
+        dateList.sort()
+    date6List = ptime.yymmdd(dateList)
+    
+    # Get pair index 
+    pairs_idx = []
+    for date12 in date12List:
+        dates = date12.split('-')
+        pair_idx = [date6List.index(dates[0]), date6List.index(dates[1])]
+        pairs_idx.append(pair_idx)
 
-    pairs = pair_sort(pairs)
+    return pairs_idx
 
-    return pairs
-
-
-def write_pairs_list(pairs,dateList,outName):
+def write_pairs_list(pairs, dateList, outName):
     dateList6 = ptime.yymmdd(dateList)
     fl = open(outName,'w')
     for idx in pairs:
@@ -120,13 +129,32 @@ def read_baseline_file(baselineFile,exDateList=[]):
     return date8List, perpBaseList, dopplerList, prfList, slcDirList
 
 
+def date12_list2index(date12_list, date_list=[]):
+    '''Convert list of date12 string into list of index'''
+    # Get dateList from date12List
+    if not date_list:
+        m_dates = [date12.split('-')[0] for date12 in date12_list]
+        s_dates = [date12.split('-')[1] for date12 in date12_list]
+        date_list = sorted(list(set(m_dates + s_dates)))
+    date6_list = ptime.yymmdd(date_list)
+    
+    # Get pair index 
+    pairs_idx = []
+    for date12 in date12_list:
+        dates = date12.split('-')
+        pair_idx = [date6_list.index(dates[0]), date6_list.index(dates[1])]
+        pairs_idx.append(pair_idx)
+
+    return pairs_idx
+
+
 def get_date12_list(File):
     '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
     Example:
         date12List = get_date12_list('unwrapIfgram.h5')
         date12List = get_date12_list('Pairs.list')
     '''
-    print 'read pairs info from '+File
+    #print 'read pairs info from '+File
     date12_list = []
     ext = os.path.splitext(File)[1].lower()
     if ext == '.h5':
@@ -139,12 +167,9 @@ def get_date12_list(File):
             date12_list.append(date12)
         h5.close()
     else:
-        fl = open(ref_file)
-        date12_list = fl.read().splitlines()
-        date12_list = sorted(date12_list)
-        print 'number of pairs: '+str(len(date12_list))
-        fl.close()
-
+        date12_list = list(np.loadtxt(File, dtype=str))
+    
+    date12_list = sorted(date12_list)
     return date12_list
 
 
@@ -383,7 +408,7 @@ def select_pairs_mst(tempBaseList,perpBaseList,normalize=1):
     return pairs
 
 
-def select_pairs_star(dateList,m_date):
+def select_pairs_star(dateList, m_date):
     '''Select Star-like network/interferograms/pairs, it's a single master network, similar to PS approach.
     Usage:
         m_date : master date, choose it based on the following cretiria:
@@ -412,79 +437,120 @@ def select_pairs_star(dateList,m_date):
 
 
 ################################# Plotting #################################
-def plot_network(ax, pairs_idx, date8List, bperpList):
+def plot_network(ax, pairs_idx, date8List, bperpList, plot_dict={}, coherenceList=None):
     '''Plot Temporal-Perp baseline Network
     Inputs
-        fig : matplotlib figure object
-        pairsidx  : list of list of 2 int, pairs index
-        date8List : list of 8-digit string, date 
-        bperpList : list of float, perp baseline 
+        ax : matplotlib axes object
+        pairs_idx : list of list of 2 int, pairs index, len = number of interferograms
+        date8List : list of 8-digit string, date, len=number of acquisition
+        bperpList : list of float, perp baseline, len=number of acquisition
+        plot_dict : dictionary with the following items:
+                    fontsize
+                    linewidth
+                    markercolor
+                    markersize
+        coherenceList : list of float, coherence value of each interferogram, len = number of ifgrams
     Output
-        fig : matplotlib figure object
+        ax : matplotlib axes object
     '''
     
     # Figure Setting
-    fontSize    = 12
-    lineWidth   = 2
-    markerColor = 'orange'
-    markerSize  = 16
+    keyList = plot_dict.keys()
+    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
+    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
+    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'k'
+    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
 
     # Date Convert
     dates, datevector = ptime.date_list2vector(date8List)
 
     # Ploting
     #ax=fig.add_subplot(111)
+    # Colorbar when conherence is colored
+    if coherenceList:
+        # Normalize
+        normalization=False
+        if normalization:
+            min_coh = min(coherenceList)
+            max_coh = max(coherenceList)
+            coherenceList = [(coh-min_coh)/(max_coh-min_coh) for coh in coherenceList]
+        else:
+            min_coh = 0.0
+            max_coh = 1.0
+        # Plot
+        print 'showing colorbar'
+        cmap = mpl.cm.RdBu
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", "5%", pad="3%")
+        norm = mpl.colors.Normalize(vmin=min_coh, vmax=max_coh)
+        cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
+        cbar.set_label('Coherence')
+
     # Dot - SAR Acquisition
-    ax.plot(dates, bperpList, 'o', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
+    ax.plot(dates, bperpList, 'o', lw=plot_dict['linewidth'], alpha=0.7,\
+            ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
+
     # Line - Pair/Interferogram
     for i in range(len(pairs_idx)):
-        ax.plot(np.array([dates[pairs_idx[i][0]],dates[pairs_idx[i][1]]]),\
-                np.array([bperpList[pairs_idx[i][0]],bperpList[pairs_idx[i][1]]]), 'k', lw=lineWidth)
-
-    ax.set_title('Interferogram Network', fontsize=fontSize)
-
+        idx = pairs_idx[i]
+        x = np.array([dates[idx[0]], dates[idx[1]]])
+        y = np.array([bperpList[idx[0]], bperpList[idx[1]]])
+        if coherenceList:
+            coherence = coherenceList[i]
+            ax.plot(x, y, lw=plot_dict['linewidth'], alpha=0.7, c=cmap(coherence)) 
+        else:
+            ax.plot(x, y, lw=plot_dict['linewidth'], alpha=0.7, c='k')
+    
+    ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
     # axis format
-    ax = ptime.adjust_xaxis_date(ax, datevector, fontSize)
-    ax = adjust_yaxis(ax, bperpList, fontSize)
-    ax.set_xlabel('Time [years]',fontsize=fontSize)
-    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])
+    ax = auto_adjust_yaxis(ax, bperpList, plot_dict['fontsize'])
+    ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
+    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=plot_dict['fontsize'])
 
     return ax
 
 
-def plot_perp_baseline_hist(ax, date8List, bperpList):
+def plot_perp_baseline_hist(ax, date8List, bperpList, plot_dict={}):
     ''' Plot Perpendicular Spatial Baseline History
     Inputs
-        fig : matplotlib figure object
+        ax : matplotlib axes object
         date8List : list of 8-digit string, date 
         bperpList : list of float, perp baseline 
-    Output
-        fig : matplotlib figure object
+        plot_dict : dictionary with the following items:
+                    fontsize
+                    linewidth
+                    markercolor
+                    markersize
+    Output:
+        ax : matplotlib axes object
     '''
     # Figure Setting
-    fontSize    = 12
-    markerColor = 'orange'
-    markerSize  = 16
-    lineWidth   = 2
+    keyList = plot_dict.keys()
+    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
+    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
+    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
+    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
 
     # Date Convert
     dates, datevector = ptime.date_list2vector(date8List)
 
     # Plot
     #ax=fig.add_subplot(111)
-    ax.plot(dates, bperpList, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
-    ax.set_title('Perpendicular Baseline History',fontsize=fontSize)
+    ax.plot(dates, bperpList, '-ko', lw=plot_dict['linewidth'], alpha=0.7,\
+            ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
+    ax.set_title('Perpendicular Baseline History',fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = ptime.adjust_xaxis_date(ax, datevector, fontSize)
-    ax = adjust_yaxis(ax, bperpList, fontSize)
-    ax.set_xlabel('Time [years]',fontsize=fontSize)
-    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=fontSize)
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])
+    ax = auto_adjust_yaxis(ax, bperpList, plot_dict['fontsize'])
+    ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
+    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=plot_dict['fontsize'])
 
     return ax
 
 
-def adjust_yaxis(ax, dataList, fontSize=12):
+def auto_adjust_yaxis(ax, dataList, fontSize=12):
     '''Adjust Y axis
     Input:
         ax - matplot figure axes object

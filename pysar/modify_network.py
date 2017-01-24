@@ -191,7 +191,7 @@ pysar.network.maxPerpBaseline = 2000
 pysar.network.reference   = Modified_unwrapIfgram.h5
 pysar.network.reference   = Paris.list
 
-pysar.network.coherenceBase = yes    #search and use input coherence file
+pysar.network.coherenceBase = yes    #search and use input coherence file, set to no or comment the line to disable
 '''
 
 
@@ -398,7 +398,9 @@ def main(argv):
             ut.nonzero_mask(Modified_File, outFile)
         elif k == 'coherence':
             print 'update average spatial coherence for input '+k+' file: '+File
-            
+            outFile = 'Modified_average_spatial_coherence.h5'
+            print 'writing >>> '+outFile
+            ut.temporal_average(Modified_File, outFile)
     print 'Done.'
 
 

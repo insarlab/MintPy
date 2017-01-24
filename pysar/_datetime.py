@@ -149,7 +149,7 @@ def date_list2vector(dateList):
 
 
 ################################################################
-def adjust_xaxis_date(ax, datevector, fontSize=12):
+def auto_adjust_xaxis_date(ax, datevector, fontSize=12):
     '''Adjust X axis
     Input:
         ax : matplotlib figure axes object
