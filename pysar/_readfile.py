@@ -61,7 +61,6 @@ def read_attribute(File, epoch=''):
     Input  : string, file name and epoch (optional)
     Output : dictionary, attributes dictionary
     '''
-
     ext = os.path.splitext(File)[1].lower()
     if not os.path.isfile(File):
         print 'Input file not existed: '+File
@@ -97,8 +96,10 @@ def read_attribute(File, epoch=''):
     
     else:
         # attribute file list
-        potentialRscFileList = [File+'.rsc', File.split('_snap_connect.byt')[0]+'.unw.rsc']
-        rscFile = [rscFile for rscFile in potentialRscFileList if os.path.isfile(rscFile)][0]
+        try:
+            potentialRscFileList = [File+'.rsc', File.split('_snap_connect.byt')[0]+'.unw.rsc']
+            rscFile = [rscFile for rscFile in potentialRscFileList if os.path.isfile(rscFile)][0]
+        except: pass
 
         ##### GAMMA
         if os.path.isfile(File+'.par'):

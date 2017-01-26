@@ -29,8 +29,8 @@ import pysar._pysar_utilities as ut
 ##################################################################
 def auto_path_miami(inps):
     '''Auto File Path Setting for Geodesy Lab - University of Miami'''
-    print 'Use auto path setting in University of Miami'
-    print 'To turn it off, change miami_path value to False in pysar/__init__.py'
+    print 'Use auto path setting in University of Miami.'+\
+          '(To turn it off, change miami_path value to False in pysar/__init__.py)'
     if not inps.tssar_dir:
         inps.tssar_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/TSSAR'
     process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
@@ -380,7 +380,7 @@ def main(argv):
 
     if inps.cor:
         cohFile = load_roipac2multi_group_h5('coherence', inps.cor, inps.tssar_dir+'/coherence.h5', vars(inps))[0]
-        meanCohCmd = 'mean_temporal.py '+cohFile+' average_spatial_coherence.h5'
+        meanCohCmd = 'temporal_average.py '+cohFile+' average_spatial_coherence.h5'
         print meanCohCmd
         os.system(meanCohCmd)
 
