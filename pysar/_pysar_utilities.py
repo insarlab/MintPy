@@ -81,7 +81,7 @@ def nonzero_mask(File, outFile='Mask.h5'):
         data = h5[k][igram].get(igram)[:]
         
         mask[data==0] = 0
-        ut.printProgress(i+1, len(igramList))
+        printProgress(i+1, len(igramList))
 
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask, atr, outFile)

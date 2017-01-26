@@ -1006,7 +1006,6 @@ def main(argv):
     inps = cmdLineParse(argv)
     if not inps.disp_fig:
         plt.switch_backend('Agg')
-
     print '\n******************** Display ********************'
 
     # File Basic Info
