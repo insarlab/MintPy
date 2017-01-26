@@ -42,8 +42,8 @@ import lod
 import look_angle
 import mask
 import match
-import mean_temporal
-import mean_spatial
+import temporal_average
+import spatial_average
 import modify_network
 import multi_transect
 import plot_network
@@ -58,6 +58,7 @@ import save_gmt
 import save_kml
 import save_unw
 import seed_data
+import save_unavco
 import simulation
 import sum_epochs
 import temporal_coherence
