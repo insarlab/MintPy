@@ -124,7 +124,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
         epochList = sorted(epochList)
         epochNum  = len(epochList)
 
-        meanList   = np.zeros(epochNum)
+        meanList   = []
         for i in range(epochNum):
             epoch = epochList[i]
             if k in multi_group_hdf5_file:
@@ -140,7 +140,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
             ## url - http://stackoverflow.com/questions/29688168/mean-nanmean-and-warning-mean-of-empty-slice
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                meanList[i] = np.nanmean(data)
+                meanList.append(np.nanmean(data))
             printProgress(i+1, epochNum, suffix=epoch)
         del data
         h5file.close()

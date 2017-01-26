@@ -437,7 +437,7 @@ def select_pairs_star(dateList, m_date):
 
 
 ################################# Plotting #################################
-def plot_network(ax, pairs_idx, date8List, bperpList, plot_dict={}, coherenceList=None):
+def plot_network(ax, pairs_idx, date8List, bperpList, plot_dict={}):
     '''Plot Temporal-Perp baseline Network
     Inputs
         ax : matplotlib axes object
@@ -449,7 +449,10 @@ def plot_network(ax, pairs_idx, date8List, bperpList, plot_dict={}, coherenceLis
                     linewidth
                     markercolor
                     markersize
-        coherenceList : list of float, coherence value of each interferogram, len = number of ifgrams
+                    
+                    coherence_list : list of float, coherence value of each interferogram, len = number of ifgrams
+                    disp_min/max :  float, min/max range of the color display based on coherence_list
+                    colormap : string, colormap name
     Output
         ax : matplotlib axes object
     '''
@@ -460,6 +463,11 @@ def plot_network(ax, pairs_idx, date8List, bperpList, plot_dict={}, coherenceLis
     if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'k'
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
+    # For colorful display of coherence
+    if not 'coherence_list' in keyList:  plot_dict['coherence_list'] = None
+    if not 'disp_min'       in keyList:  plot_dict['disp_min']       = 0.4
+    if not 'disp_max'       in keyList:  plot_dict['disp_max']       = 1.0
+    if not 'colormap'       in keyList:  plot_dict['colormap']       = 'RdBu'
 
     # Date Convert
     dates, datevector = ptime.date_list2vector(date8List)
@@ -467,22 +475,24 @@ def plot_network(ax, pairs_idx, date8List, bperpList, plot_dict={}, coherenceLis
     # Ploting
     #ax=fig.add_subplot(111)
     # Colorbar when conherence is colored
-    if coherenceList:
+    if plot_dict['coherence_list']:
+        data_min = min(plot_dict['coherence_list'])
+        data_max = max(plot_dict['coherence_list'])
         # Normalize
-        normalization=False
+        normalization = False
         if normalization:
-            min_coh = min(coherenceList)
-            max_coh = max(coherenceList)
-            coherenceList = [(coh-min_coh)/(max_coh-min_coh) for coh in coherenceList]
-        else:
-            min_coh = 0.0
-            max_coh = 1.0
-        # Plot
-        print 'showing colorbar'
-        cmap = mpl.cm.RdBu
+            plot_dict['coherence_list'] = [(coh-data_min) / (data_min-data_min) for coh in plot_dict['coherence_list']]
+            plot_dict['disp_min'] = data_min
+            plot_dict['disp_max'] = data_max
+        
+        print 'showing coherence'
+        print 'colormap: '+plot_dict['colormap']
+        print 'display range: '+str([plot_dict['disp_min'], plot_dict['disp_max']])
+        print 'data    range: '+str([data_min, data_max])
+        cmap = plt.get_cmap(plot_dict['colormap'])
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "5%", pad="3%")
-        norm = mpl.colors.Normalize(vmin=min_coh, vmax=max_coh)
+        norm = mpl.colors.Normalize(vmin=plot_dict['disp_min'], vmax=plot_dict['disp_max'])
         cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
         cbar.set_label('Coherence')
 
@@ -495,8 +505,8 @@ def plot_network(ax, pairs_idx, date8List, bperpList, plot_dict={}, coherenceLis
         idx = pairs_idx[i]
         x = np.array([dates[idx[0]], dates[idx[1]]])
         y = np.array([bperpList[idx[0]], bperpList[idx[1]]])
-        if coherenceList:
-            coherence = coherenceList[i]
+        if plot_dict['coherence_list']:
+            coherence = plot_dict['coherence_list'][i]
             ax.plot(x, y, lw=plot_dict['linewidth'], alpha=0.7, c=cmap(coherence)) 
         else:
             ax.plot(x, y, lw=plot_dict['linewidth'], alpha=0.7, c='k')
