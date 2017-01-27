@@ -128,59 +128,16 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
         print '\tsubset range in y/x: '+str(pixel_box)
         print '\tdata   range in lat/lon: '+str(box_pixel2geo(data_box, atr_dict))
         print '\tsubset range in lat/lon: '+str(box_pixel2geo(pixel_box, atr_dict))
-        #print     'range in y - 0:'+str(length)
-        #print     'range in x - 0:'+str(width)
-        #try:
-        #    print 'range in latitude  - %.8f:%.8f'%(float(atr_dict['Y_FIRST']),\
-        #                                            float(atr_dict['Y_FIRST']) + float(atr_dict['Y_STEP'])*length)
-        #    print 'range in longitude - %.8f:%.8f'%(float(atr_dict['X_FIRST']),\
-        #                                            float(atr_dict['X_FIRST']) + float(atr_dict['X_STEP'])*width)
-        #except: Geo=0
         sys.exit(1)
 
     ## Check Y/Azimuth/Latitude subset range
     if sub_y[0]<0:        sub_y[0]=0;      print 'WARNING: input y < min (0)! Set it to min.'
     if sub_y[1]>length:   sub_y[1]=length; print 'WARNING: input y > max ('+str(length)+')! Set it to max.'
-    #if sub_y[0]>length or sub_y[1]<0:
-    #    print 'ERROR: input index is out of data range!'
-    #    print     '              y - 0 : '+str(length)
-    #    try:
-    #        print 'range in geo: lat - %.8f:%.8f'%(float(atr_dict['Y_FIRST']),\
-    #                                               float(atr_dict['Y_FIRST']) + float(atr_dict['Y_STEP'])*length)
-    #    except: Geo=0
-    #    sys.exit(1)
 
     ## Check X/Range/Longitude subset range
     if sub_x[0]<0:       sub_x[0]=0;      print 'WARNING: input x < min (0)! Set it to min.'
     if sub_x[1]>width:   sub_x[1]=width;  print 'WARNING: input x > max ('+str(width)+')! Set it to max x.'
-    #if sub_x[0]>width or sub_x[1]<0:
-    #    print 'ERROR: input index is out of data range!'
-    #    print     'range in rdr: x - 0 : '+str(width)
-    #    try:
-    #        print '              lon - %.8f:%.8f'%(float(atr_dict['X_FIRST']),\
-    #                                               float(atr_dict['X_FIRST']) + float(atr_dict['X_STEP'])*width)
-    #    except: Geo=0
-    #    sys.exit(1)
 
-    ##### Display subset range Info
-    #if not sub_y[1]-sub_y[0] == length:
-    #    print 'subset in y direction - '+str(sub_y[0])+':'+str(sub_y[1])
-    #    try:
-    #        atr_dict['Y_FIRST']
-    #        sub_lat = [0]*2
-    #        sub_lat[0] = float(atr_dict['Y_FIRST']) + sub_y[0]*float(atr_dict['Y_STEP'])
-    #        sub_lat[1] = float(atr_dict['Y_FIRST']) + sub_y[1]*float(atr_dict['Y_STEP'])
-    #        print 'subset in latitude  - %.8f:%.8f'%(sub_lat[0],sub_lat[1])
-    #    except: pass
-    #if not sub_x[1]-sub_x[0] == width:
-    #    print 'subset in x direction - '+str(sub_x[0])+':'+str(sub_x[1])
-    #    try:
-    #        atr_dict['Y_FIRST']
-    #        sub_lon = [0]*2
-    #        sub_lon[0] = float(atr_dict['X_FIRST']) + sub_x[0]*float(atr_dict['X_STEP'])
-    #        sub_lon[1] = float(atr_dict['X_FIRST']) + sub_x[1]*float(atr_dict['X_STEP'])
-    #        print 'subset in longitude - %.8f:%.8f'%(sub_lon[0],sub_lon[1])
-    #    except: pass
 
     out_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
     return out_box
@@ -260,15 +217,32 @@ def get_coverage_box(atr):
         geo_box = None
 
     # Get pixel box
-    try:
-        pix_box = (int(atr['subset_x0']), int(atr['subset_y0']), int(atr['subset_x1']), int(atr['subset_y1']))
-    except:
-        pix_box = None
+    try:    pix_box = (int(atr['subset_x0']), int(atr['subset_y0']), int(atr['subset_x1']), int(atr['subset_y1']))
+    except: pix_box = None
 
     return pix_box, geo_box
 
 
-def update_subset_input_from_box(inps, pix_box, geo_box):
+def read_subset_template2box(templateFile):
+    tmpl = readfile.read_template(templateFile)
+    try:
+        sub = [i.strip() for i in tmpl['pysar.subset.lalo'].split(',')]
+        sub_lat = [float(i.strip()) for i in sub[0].split(':')];  sub_lat.sort()
+        sub_lon = [float(i.strip()) for i in sub[1].split(':')];  sub_lon.sort()
+        geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
+    except:
+        geo_box = None
+    try:
+        sub = [i.strip() for i in tmpl['pysar.subset.yx'].split(',')]
+        sub_y = [int(i.strip()) for i in sub[0].split(':')];  sub_y.sort()
+        sub_x = [int(i.strip()) for i in sub[1].split(':')];  sub_x.sort()
+        pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])    
+    except:
+        pix_box = None
+    return pix_box, geo_box
+
+
+def subset_box2inps(inps, pix_box, geo_box):
     '''Update inps.subset_y/x/lat/lon from pixel_box and geo_box'''
     if geo_box:
         inps.subset_lon = [geo_box[0], geo_box[2]]
@@ -413,9 +387,10 @@ def subset_file(File, subset_dict, outFile=None):
     Outputs:
         outFile :  str, path/name of output file
     '''
-
+    
     # Input File Info
-    atr_dict = readfile.read_attribute(File)
+    try:  atr_dict = readfile.read_attribute(File)
+    except:  return None
     width = int(atr_dict['WIDTH'])
     length = int(atr_dict['FILE_LENGTH'])
     k = atr_dict['FILE_TYPE']
@@ -539,6 +514,7 @@ EXAMPLE='''example:
   subset.py *velocity*.h5 timeseries*.h5  -y 400:1500  -x 200:600
   subset.py geo_velocity.h5    -l 32.2:33.5  --outfill-nan
   subset.py Mask.h5            -x 500:3500   --outfill 0
+  subset.py geomap_4rlks.trans --footprint
 '''
 
 def cmdLineParse():
@@ -552,7 +528,7 @@ def cmdLineParse():
     parser.add_argument('-l','--lat', dest='subset_lat', type=float, nargs=2, help='subset range in latitude')
     parser.add_argument('-L','--lon', dest='subset_lon', type=float, nargs=2, help='subset range in column\n\n')
 
-    parser.add_argument('-t','--template',\
+    parser.add_argument('-t','--template', dest='template_file',\
                         help='template file with subset setting.  i.e. \n'
                              'pysar.subset.yx    = 300:800,1000:3500\n'
                              'pysar.subset.lalo  = 30.2:30.5,130.1:131.3')
@@ -594,17 +570,9 @@ def main(argv):
             print 'using subset info from '+inps.reference
 
         # 2. Read subset info from template options
-        elif inps.template:
-            tmpl = readfile.read_template(inps.template)
-            sub = tmpl['pysar.subset.lalo'].split(',')
-            sub_lat = [float(i) for i in sub[0].split(':')];  sub_lat.sort()
-            sub_lon = [float(i) for i in sub[1].split(':')];  sub_lon.sort()
-            sub = tmpl['pysar.subset.yx'].split(',')
-            sub_y = [int(i) for i in sub[0].split(':')];  sub_y.sort()
-            sub_x = [int(i) for i in sub[1].split(':')];  sub_x.sort()
-            geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
-            pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
-            print 'using subset info from '+inps.template
+        elif inps.template_file:
+            pix_box, geo_box = read_subset_template2box(inps.template_file)
+            print 'using subset info from '+inps.template_file
 
         # 3. Use subset from footprint info
         elif inps.footprint:
@@ -632,7 +600,7 @@ def main(argv):
         else:
             raise Exception('No subset inputs found!')
         # Update subset_y/x/lat/lon
-        inps = update_subset_input_from_box(inps, pix_box, geo_box)
+        inps = subset_box2inps(inps, pix_box, geo_box)
 
     # check outfile and parallel option
     if len(inps.file) > 1:

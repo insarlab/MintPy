@@ -261,7 +261,7 @@ def printProgress (iteration, total, prefix = 'calculating:', suffix = 'complete
 
 #########################################################################
 ############### Convertion from Geo to Radar coordinate #################
-def glob2radar(lat,lon,rdrRefFile='radar*.hgt',igramNum=1):
+def glob2radar(lat,lon,rdrRefFile='radar*.hgt', geomapFile='geomap*.trans'):
     ## Convert geo coordinates into radar coordinates.
     ##     If geomap*.trans file exists, use it for precise conversion;
     ##     If not, use radar*.hgt or input reference file's 4 corners' lat/lon
@@ -284,10 +284,10 @@ def glob2radar(lat,lon,rdrRefFile='radar*.hgt',igramNum=1):
   
     ########## Precise conversion using geomap.trans file, if it exists.
     try:
-        geomapFile = glob.glob('geomap*.trans')[0]
+        geomapFile = glob.glob(geomapFile)[0]
         atr = readfile.read_roipac_rsc(geomapFile+'.rsc')
         print 'finding precise radar coordinate from '+geomapFile+' file.'
-    
+        
         width  = int(atr['WIDTH'])
         row = (lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']);  row = (row+0.5).astype(int)
         col = (lon - float(atr['X_FIRST'])) / float(atr['X_STEP']);  col = (col+0.5).astype(int)
@@ -304,22 +304,8 @@ def glob2radar(lat,lon,rdrRefFile='radar*.hgt',igramNum=1):
         rdrRefFile = glob.glob(rdrRefFile)[0]
         print 'finding approximate radar coordinate with 2D linear transformation estimation.'
         print '    using four corner lat/lon info from '+rdrRefFile+' file.'
-    
-        ext = os.path.splitext(rdrRefFile)[1]
-        if ext == '.h5':
-            h5file=h5py.File(rdrRefFile,'r')
-            k=h5file.keys()
-            if 'interferograms' in k: k[0] = 'interferograms'
-            elif 'coherence'    in k: k[0] = 'coherence'
-            elif 'timeseries'   in k: k[0] = 'timeseries'
-            if   k[0] in ('interferograms','coherence','wrapped'):
-                atr = h5file[k[0]][h5file[k[0]].keys()[igramNum-1]].attrs
-            elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
-                atr = h5file[k[0]].attrs
-        elif ext in ['.unw','.cor','.int','.hgt','.dem']:
-            atr = readfile.read_roipac_rsc(rdrRefFile + '.rsc')
-        else: print 'Unrecognized reference file extention: '+ext; return
-    
+        
+        atr = readfile.read_attribute(rdrRefFile)
         LAT_REF1=float(atr['LAT_REF1'])
         LAT_REF2=float(atr['LAT_REF2'])
         LAT_REF3=float(atr['LAT_REF3'])
@@ -330,7 +316,6 @@ def glob2radar(lat,lon,rdrRefFile='radar*.hgt',igramNum=1):
         LON_REF4=float(atr['LON_REF4'])
         W =      float(atr['WIDTH'])
         L =      float(atr['FILE_LENGTH'])
-        if ext == '.h5':  h5file.close()
     
         ## subset radar image has different WIDTH and FILE_LENGTH info
         try:
