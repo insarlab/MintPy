@@ -83,12 +83,11 @@ def cmdLineParse():
                            help='figure size in inches - width and length')
     fig_group.add_argument('--figext', dest='fig_ext',\
                            default='.pdf', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
-                           help='File extension for figure output file')
+                           help='File extension for figure output file\n\n')
     
-    fig_group.add_argument('--save', dest='save_fig', action='store_true',\
-                           help='save the figure')
-    fig_group.add_argument('--nodisplay', dest='disp_fig', action='store_false',\
-                           help='save and do not display the figure')
+    fig_group.add_argument('--list', dest='save_list', action='store_true', help='save pairs/date12 list into text file')
+    fig_group.add_argument('--save', dest='save_fig', action='store_true', help='save the figure')
+    fig_group.add_argument('--nodisplay', dest='disp_fig', action='store_false', help='save and do not display the figure')
 
     inps = parser.parse_args()
     if not inps.disp_fig:
@@ -100,6 +99,8 @@ def cmdLineParse():
 ##########################  Main Function  ##############################
 def main(argv):
     inps = cmdLineParse()
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')
     print '\n******************** Plot Network **********************'
 
     # Output figure name
@@ -135,7 +136,7 @@ def main(argv):
 
     # Read Coherence List
     inps.coherence_list = None
-    if inps.coherence_file:
+    if inps.coherence_file and os.path.isfile(inps.coherence_file):
         ext = os.path.splitext(inps.coherence_file)[1]
         if ext in ['.h5']:
             listFile = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.list'
@@ -175,13 +176,13 @@ def main(argv):
     ax2 = pnet.plot_network(ax2, pairs_idx, date8List, Bp, vars(inps))
 
     if inps.save_fig:
-        # Save network/date12 to text file
+        fig2.savefig(figName2,bbox_inches='tight')
+        print 'save figure to '+figName2
+
+    if inps.save_list:
         txtFile = os.path.splitext(inps.file)[0]+'_date12.list'
         np.savetxt(txtFile, date12_list, fmt='%s')
         print 'save pairs/date12 info to file: '+txtFile
-        # Save Network figure
-        fig2.savefig(figName2,bbox_inches='tight')
-        print 'save figure to '+figName2
 
     if inps.disp_fig:
         plt.show() 

@@ -43,7 +43,7 @@ def nearest_neighbor(x,y, x_array, y_array):
     idx = np.argmin(dist)
     #idx = dist==np.min(dist)
     return idx
-  
+
 
 def manual_select_pairs_to_remove(File):
     '''Manually select interferograms to remove'''
@@ -117,11 +117,8 @@ def update_inps_with_template(inps, template_file):
         if not inps.coherence_file and template_dict['pysar.network.coherenceBase'].lower() in ['yes','y']:
             # Search coherence file from input files
             k_list = [readfile.read_attribute[f]['FILE_TYPE'] for f in inps.file]
-            try:
-                cohFileIdx = k_list.index('coherence')
-            except:
-                print "ERROR: No coherence found in input files, it's need for coherence-based approach."
-                sys.exit(1)
+            try:  cohFileIdx = k_list.index('coherence')
+            except:  sys.exit("ERROR: No coherence found in input files, cannot use coherence-based approach without it.")
             inps.coherence_file = inps.file[cohFileIdx]
             
             # Search mask file
@@ -184,16 +181,12 @@ EXAMPLE='''example:
 TEMPLATE='''
 pysar.network.dropIfgramIndex = 7:9 15 25 26      #start from 1
 pysar.network.dropDate        = 20080520 20090816
-
 pysar.network.maxTempBaseline = 720
 pysar.network.maxPerpBaseline = 2000
-
-pysar.network.reference   = Modified_unwrapIfgram.h5
-pysar.network.reference   = Paris.list
-
-pysar.network.coherenceBase = yes    #search and use input coherence file, set to no or comment the line to disable
+pysar.network.reference       = Modified_unwrapIfgram.h5
+pysar.network.reference       = Paris.list
+pysar.network.coherenceBase   = yes    #search and use input coherence file, set to no or comment the line to disable
 '''
-
 
 def cmdLineParse():
     parser = argparse.ArgumentParser(description='Modify the network of interferograms',\
@@ -214,6 +207,7 @@ def cmdLineParse():
                         help='index of interferograms to remove/drop.\n1 as the first')
     parser.add_argument('--drop-date', dest='drop_date', nargs='*',\
                         help='date(s) to remove/drop, all interferograms included date(s) will be removed')
+    parser.add_argument('--plot', action='store_true', help='plot and save the result to image files.')
     
     # Coherence-based network
     coherenceGroup = parser.add_argument_group('Coherence-based Network',\
@@ -240,6 +234,7 @@ def cmdLineParse():
 def main(argv):
     ##### Read Inputs
     inps = cmdLineParse()
+    inps.file = ut.get_file_list(inps.file)
     date12_orig = pnet.get_date12_list(inps.file[0])
     print '\n****************** Network Modification ********************'
 
@@ -386,21 +381,30 @@ def main(argv):
     print date12_to_rmv
 
     ##### Update Input Files with date12_to_rmv
+    Modified_CoherenceFile = 'Modified_coherence.h5'
     for File in inps.file:
         Modified_File = modify_file_date12_list(File, date12_to_rmv)
         
         k = readfile.read_attribute(File)['FILE_TYPE']
         # Update Mask File
         if k == 'interferograms':
-            print 'update mask file for input '+k+' file: '+File
+            print 'update mask file for input '+k+' file based on '+Modified_File
             outFile = 'Modified_Mask.h5'
             print 'writing >>> '+outFile
             ut.nonzero_mask(Modified_File, outFile)
         elif k == 'coherence':
-            print 'update average spatial coherence for input '+k+' file: '+File
+            print 'update average spatial coherence for input '+k+' file based on: '+Modified_File
             outFile = 'Modified_average_spatial_coherence.h5'
             print 'writing >>> '+outFile
             ut.temporal_average(Modified_File, outFile)
+            Modified_CoherenceFile = Modified_File
+
+    # Plot result
+    if inps.plot:
+        plotCmd = 'plot_network.py '+Modified_File+' --coherence '+Modified_CoherenceFile+' --nodisplay'
+        print plotCmd
+        os.system(plotCmd)
+    
     print 'Done.'
 
 
