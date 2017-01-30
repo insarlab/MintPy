@@ -30,8 +30,11 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 def correct_lod_file(File, outFile=None):
     # Check Sensor Type
+    print 'input file: '+File
     atr = readfile.read_attribute(File)
+    k = atr['FILE_TYPE']
     platform = atr['PLATFORM']
+    print 'platform: '+platform
     if not platform.lower() in ['env','envisat']:
         print 'No need to correct LOD for '+platform
         sys.exit(1)
@@ -55,7 +58,6 @@ def correct_lod_file(File, outFile=None):
     Ramp -= Ramp[yref][xref]
 
     # Correct LOD Ramp for Input File
-    k = atr['FILE_TYPE']
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         h5 = h5py.File(File,'r')
         epochList = sorted(h5[k].keys())
@@ -72,9 +74,9 @@ def correct_lod_file(File, outFile=None):
                 data = h5[k][epoch].get(epoch)[:]
                 atr = h5[k][epoch].attrs
                 
-                date1, date2 = atr['DATE12'].split('-')
-                date1 = ptime.yyyymmdd2years(date1)
-                date2 = ptime.yyyymmdd2years(date2)
+                dates = ptime.yyyymmdd(atr['DATE12'].split('-'))
+                date1 = ptime.yyyymmdd2years(dates[0])
+                date2 = ptime.yyyymmdd2years(dates[1])
                 dt = date1 - date2
                 data -= Ramp*dt
                  
@@ -84,7 +86,7 @@ def correct_lod_file(File, outFile=None):
                     gg.attrs[key] = value
 
         elif k == 'timeseries':
-            tbase = [float(dy)/365.25 for dy in ptime.date_list2tbase(dateList)[0]]
+            tbase = [float(dy)/365.25 for dy in ptime.date_list2tbase(epochList)[0]]
             for i in range(len(epochList)):
                 epoch = epochList[i]
                 print epoch
@@ -136,7 +138,8 @@ def main(argv):
     except:  usage();  sys.exit(1)
     try:     outName = argv[2]
     except:  outName = os.path.splitext(File)[0]+'_LODcor'+os.path.splitext(File)[1]
-    
+
+    print '\n***************** Correct Local Oscilator Drift *******************'    
     outFile = correct_lod_file(File, outName)
     
     print 'Done.'
