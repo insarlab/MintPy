@@ -28,7 +28,9 @@ import matplotlib.dates as mdates
 
 def yyyymmdd2years(date):
     d = dt(*time.strptime(date,"%Y%m%d")[0:5])
-    yy = float(d.year) + float(d.month-1)/12 + float(d.day-1)/365
+    day_of_year = d.timetuple().tm_yday
+    yy = float(d.year)+float(day_of_year-1)/365.25
+    #yy = float(d.year) + float(d.month-1)/12 + float(d.day-1)/365.25
     return yy
 
 def yymmdd2yyyymmdd(date):
