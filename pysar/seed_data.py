@@ -92,8 +92,7 @@ def seed_file(File,outName,refList,ref_x='',ref_y=''):
     if k in ['timeseries','interferograms','wrapped','coherence']:
         ##### Input File Info
         h5file = h5py.File(File,'r')
-        epochList = h5file[k].keys()
-        epochList = sorted(epochList)
+        epochList = sorted(h5file[k].keys())
         epochNum  = len(epochList)
         print 'number of epochs: '+str(epochNum)
         

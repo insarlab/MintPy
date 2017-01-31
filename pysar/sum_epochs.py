@@ -54,8 +54,7 @@ def main(argv):
     k = atr['FILE_TYPE']
     print "Loading time series: " + timeSeriesFile
     h5timeseries=h5py.File(timeSeriesFile)
-    dateList = h5timeseries['timeseries'].keys()
-    dateList = sorted(dateList)
+    dateList = sorted(h5timeseries['timeseries'].keys())
 
     dateIndex={}
     for ni in range(len(dateList)):

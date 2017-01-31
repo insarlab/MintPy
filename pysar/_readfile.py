@@ -460,8 +460,7 @@ def read(File, box=(), epoch=''):
 
         # Read Dataset
         if k in multi_group_hdf5_file:
-            epochList = h5file[k].keys()
-            epochList = sorted(epochList)
+            epochList = sorted(h5file[k].keys())
 
             if not epoch in epochList:
                 print 'input epoch is not included in file: '+File

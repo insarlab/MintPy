@@ -160,8 +160,7 @@ def get_date12_list(File):
     if ext == '.h5':
         k = readfile.read_attribute(File)['FILE_TYPE']
         h5 = h5py.File(File, 'r')
-        epochList = h5[k].keys()
-        epochList = sorted(epochList)
+        epochList = sorted(h5[k].keys())
         for epoch in epochList:
             date12 = h5[k][epoch].attrs['DATE12']
             date12_list.append(date12)
@@ -179,8 +178,7 @@ def igram_perp_baseline_list(File):
     p_baseline_list = []
     k = readfile.read_attribute(File)['FILE_TYPE']
     h5 = h5py.File(File, 'r')
-    epochList = h5[k].keys()
-    epochList = sorted(epochList)
+    epochList = sorted(h5[k].keys())
     for epoch in epochList:
         p_baseline = (float(h5[k][epoch].attrs['P_BASELINE_BOTTOM_HDR'])+\
                       float(h5[k][epoch].attrs['P_BASELINE_TOP_HDR']))/2

@@ -118,7 +118,7 @@ def main(argv):
     pysar_meta_dict = readfile.read_attribute(inps.timeseries)
     k = pysar_meta_dict['FILE_TYPE']
     h5_timeseries = h5py.File(inps.timeseries,'r')
-    dateList = h5_timeseries[k].keys();  dateList = sorted(dateList)
+    dateList = sorted(h5_timeseries[k].keys())
     unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
     print '## UNAVCO Metadata:'
     print '-----------------------------------------'

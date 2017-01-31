@@ -60,8 +60,8 @@ def mask_with_multi_masks(in_file,mask_file,out_file=''):
     if kf[0] in ('interferograms','wrapped','coherence') and 'coherence' in h5mask.keys():
         print 'file type: '+kf[0]
         print 'mask each '+kf[0]+' using its coherence file'
-        igramList = h5file[kf[0]].keys();         igramList = sorted(igramList)
-        cohList   = h5mask['coherence'].keys();   cohList   = sorted(cohList)
+        igramList = sorted(h5file[kf[0]].keys())
+        cohList   = sorted(h5mask['coherence'].keys())
         gg = h5out.create_group(kf[0])
         for igram in igramList:
             print igram
@@ -106,8 +106,7 @@ def mask_file(in_file,M,out_file=''):
 
     if k in ['timeseries','interferograms','wrapped','coherence']:
         h5file = h5py.File(in_file,'r')
-        epochList = h5file[k].keys()
-        epochList = sorted(epochList)
+        epochList = sorted(h5file[k].keys())
         print 'number of epochs: '+str(len(epochList))
 
         h5out = h5py.File(out_file,'w')
@@ -210,8 +209,8 @@ def main(argv):
             elif opt == '-f':        File     = arg.split(',')
             elif opt == '-m':        maskFile = arg
             elif opt == '-t':        thr  = float(arg)
-            elif opt == '-y':        ysub = [int(i) for i in arg.split(':')];     ysub.sort()
-            elif opt == '-x':        xsub = [int(i) for i in arg.split(':')];     xsub.sort()
+            elif opt == '-y':        ysub = sorted([int(i) for i in arg.split(':')])
+            elif opt == '-x':        xsub = sorted([int(i) for i in arg.split(':')])
             elif opt == '-o':        outFile = arg
             elif opt == '--no-parallel':   parallel = 'no'
 

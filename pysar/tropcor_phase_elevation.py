@@ -142,8 +142,7 @@ def main(argv):
     ###################################################
     print 'Estimating the tropospheric effect using the differences of the subsequent epochs and DEM'
     
-    dateList = h5timeseries['timeseries'].keys()
-    dateList = sorted(dateList)
+    dateList = sorted(h5timeseries['timeseries'].keys())
     nrows,ncols=np.shape(h5timeseries['timeseries'].get(dateList[0]))
     PAR_EPOCH_DICT_2={} 
     par_diff_Dict={}

@@ -108,8 +108,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## Read/Write multi-dataset files
     if k in ['interferograms','coherence','wrapped','timeseries']:
         h5 = h5py.File(infile,'r')
-        epochList = h5[k].keys()
-        epochList = sorted(epochList)
+        epochList = sorted(h5[k].keys())
         print 'number of epochs: '+str(len(epochList))
 
         h5out = h5py.File(outfile,'w')

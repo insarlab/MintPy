@@ -74,8 +74,7 @@ def nonzero_mask(File, outFile='Mask.h5'):
     mask = np.ones([length, width])
     
     h5 = h5py.File(File,'r')
-    igramList = h5[k].keys()
-    igramList = sorted(igramList)
+    igramList = sorted(h5[k].keys())
     for i in range(len(igramList)):
         igram = igramList[i]
         data = h5[k][igram].get(igram)[:]
@@ -120,8 +119,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
     # Calculate mean coherence list
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         h5file = h5py.File(File,'r')
-        epochList = h5file[k].keys();
-        epochList = sorted(epochList)
+        epochList = sorted(h5file[k].keys())
         epochNum  = len(epochList)
 
         meanList   = []
@@ -183,8 +181,7 @@ def temporal_average(File, outFile=None):
     length = int(atr['FILE_LENGTH'])
 
     h5file = h5py.File(File)
-    epochList = h5file[k].keys()
-    epochList = sorted(epochList)
+    epochList = sorted(h5file[k].keys())
     epochNum = len(epochList)
 
     # Calculation
@@ -491,7 +488,7 @@ def date_list(h5file):
     k = h5file.keys()
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
-    ifgramList = h5file[k[0]].keys()
+    ifgramList = sorted(h5file[k[0]].keys())
     for ifgram in  ifgramList:
         dates = h5file[k[0]][ifgram].attrs['DATE12'].split('-')
         dates1= h5file[k[0]][ifgram].attrs['DATE12'].split('-')
@@ -948,8 +945,7 @@ def stacking(File):
     if k in ['timeseries','interferograms','wrapped','coherence']:
         ##### Input File Info
         h5file = h5py.File(File,'r')
-        epochList = h5file[k].keys()
-        epochList = sorted(epochList)
+        epochList = sorted(h5file[k].keys())
         epochNum  = len(epochList)
         for i in range(epochNum):
             epoch = epochList[i]

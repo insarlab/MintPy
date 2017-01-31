@@ -72,8 +72,8 @@ def main(argv):
             elif opt == '-f':         File = arg
             elif opt == '-m':         minV = float(arg)
             elif opt == '-M':         maxV = float(arg)
-            elif opt == '-y':         ysub = [int(i) for i in arg.split(':')];        ysub.sort()
-            elif opt == '-x':         xsub = [int(i) for i in arg.split(':')];        xsub.sort()
+            elif opt == '-y':         ysub = sorted([int(i) for i in arg.split(':')])
+            elif opt == '-x':         xsub = sorted([int(i) for i in arg.split(':')])
             elif opt == '-o':         outName    = arg
             elif opt == '-d':         epoch_date = arg
             elif opt == '-e':         epoch_num  = int(arg) - 1

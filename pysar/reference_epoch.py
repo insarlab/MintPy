@@ -56,8 +56,7 @@ def main(argv):
     #except:  outName = timeSeriesFile.split('.h5')[0]+'_ref'+refDate+'.h5'
 
     h5t=h5py.File(timeSeriesFile)
-    dateList = h5t['timeseries'].keys()
-    dateList = sorted(dateList)
+    dateList = sorted(h5t['timeseries'].keys())
   
     if not refDate in dateList:
         print '''**********************

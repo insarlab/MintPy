@@ -101,8 +101,7 @@ def main(argv):
     if not k == 'timeseries':  print 'Input file is not timeseries!'; sys.exit(1)
     print "Loading time series file: " + timeSeriesFile
     h5timeseries = h5py.File(timeSeriesFile)
-    dateList1 = h5timeseries[k].keys()
-    dateList1 = sorted(dateList1)
+    dateList1 = sorted(h5timeseries[k].keys())
   
     ##############################################################
     print '--------------------------------------------'

@@ -46,8 +46,8 @@ def main(argv):
         elif opt == '-u':        unw_error_perc = float(arg)  #percentage of interferograms with unwrapping error
         elif opt == '-o':        outName = arg
         elif opt == '-m':        unwrapMaskFile=arg
-        elif opt == '-x':        xsub = [int(i) for i in arg.split(':')];        xsub.sort()
-        elif opt == '-y':        ysub = [int(i) for i in arg.split(':')];        ysub.sort()
+        elif opt == '-x':        xsub = sorted([int(i) for i in arg.split(':')])
+        elif opt == '-y':        ysub = sorted([int(i) for i in arg.split(':')])
   
     try:
         h5file=h5py.File(igramFile,'r')

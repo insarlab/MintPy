@@ -227,15 +227,15 @@ def read_subset_template2box(templateFile):
     tmpl = readfile.read_template(templateFile)
     try:
         sub = [i.strip() for i in tmpl['pysar.subset.lalo'].split(',')]
-        sub_lat = [float(i.strip()) for i in sub[0].split(':')];  sub_lat.sort()
-        sub_lon = [float(i.strip()) for i in sub[1].split(':')];  sub_lon.sort()
+        sub_lat = sorted([float(i.strip()) for i in sub[0].split(':')])
+        sub_lon = sorted([float(i.strip()) for i in sub[1].split(':')])
         geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
     except:
         geo_box = None
     try:
         sub = [i.strip() for i in tmpl['pysar.subset.yx'].split(',')]
-        sub_y = [int(i.strip()) for i in sub[0].split(':')];  sub_y.sort()
-        sub_x = [int(i.strip()) for i in sub[1].split(':')];  sub_x.sort()
+        sub_y = sorted([int(i.strip()) for i in sub[0].split(':')])
+        sub_x = sorted([int(i.strip()) for i in sub[1].split(':')])
         pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])    
     except:
         pix_box = None
@@ -431,8 +431,7 @@ def subset_file(File, subset_dict, outFile=None):
     if k in ['timeseries','interferograms','wrapped','coherence']:
         ##### Open Input File 
         h5file = h5py.File(File,'r')
-        epochList = h5file[k].keys()
-        epochList = sorted(epochList)
+        epochList = sorted(h5file[k].keys())
         print 'number of epochs: '+str(len(epochList))
 
         ##### Open Output File

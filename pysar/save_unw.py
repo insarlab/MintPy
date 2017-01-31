@@ -75,7 +75,7 @@ def main(argv):
         elif len(sys.argv)==3:
             d=sys.argv[2]
         elif len(sys.argv)==4:
-            ds=sys.argv[2:4]; ds.sort()
+            ds=sorted(sys.argv[2:4])
             d_ref = ds[0]
             d     = ds[1]
         else: usage(); sys.exit(1)

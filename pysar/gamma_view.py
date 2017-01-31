@@ -101,7 +101,7 @@ def main(argv):
     else:
         outname = file
         print 'No subset.'
-  
+    
     # generate .ras file
     if ext == '.mli':
         try:    mli_rg

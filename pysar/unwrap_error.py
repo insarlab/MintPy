@@ -380,8 +380,7 @@ def main(argv):
             k=h5file.keys()
             if 'interferograms' in k: k[0] = 'interferograms';  print 'Input file is '+k[0]
             else: print 'Input file - '+File+' - is not interferograms.';  usage();  sys.exit(1)
-            igramList = h5file[k[0]].keys()
-            igramList = sorted(igramList)
+            igramList = sorted(h5file[k[0]].keys())
   
             #### Write
             h5out = h5py.File(outName,'w')

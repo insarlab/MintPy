@@ -1023,8 +1023,7 @@ def main(argv):
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         # Read Epoch List
         h5file = h5py.File(inps.file,'r')
-        epochList = h5file[k].keys()
-        epochList = sorted(epochList)
+        epochList = sorted(h5file[k].keys())
         h5file.close()
 
         # Epochs to display

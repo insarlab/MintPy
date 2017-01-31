@@ -146,8 +146,7 @@ def remove_surface(File,surf_type,Mask,outName=''):
     ## Multiple Datasets File
     if k in ['interferograms','coherence','wrapped','timeseries']:
         h5file = h5py.File(File,'r')
-        ifgramList = h5file[k].keys()
-        ifgramList = sorted(ifgramList)
+        ifgramList = sorted(h5file[k].keys())
         print 'number of epochs: '+str(len(ifgramList))
   
         h5flat = h5py.File(outName,'w')
@@ -209,8 +208,7 @@ def remove_multiple_surface(File,surf_type,Mask,ysub,outName):
 
     if k == 'timeseries':
         h5file = h5py.File(File,'r')
-        ifgramList = h5file[k].keys()
-        ifgramList = sorted(ifgramList)
+        ifgramList = sorted(h5file[k].keys())
         print 'number of epochs: '+str(len(ifgramList))
 
         h5flat = h5py.File(outName,'w')

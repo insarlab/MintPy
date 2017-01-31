@@ -130,8 +130,7 @@ def main(argv):
 
         ##### DateList / IgramList
         if k in ['interferograms','coherence','wrapped','timeseries']:
-            epochList = h5file[k].keys()
-            epochList = sorted(epochList)
+            epochList = sorted(h5file[k].keys())
 
     if k == 'timeseries':
         try: print_timseries_date_info(epochList)

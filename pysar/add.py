@@ -100,7 +100,7 @@ def main(argv):
         group = h5out.create_group(k)
   
         h5in  = h5py.File(fileList[0])
-        epochList = h5in[k].keys()
+        epochList = sorted(h5in[k].keys())
 
     ########################### Add file by file ########################
     if k in ['timeseries']:

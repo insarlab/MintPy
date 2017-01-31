@@ -93,8 +93,7 @@ def main(argv):
     print "Loading time series: " + timeSeriesFile
     atr = readfile.read_attribute(timeSeriesFile)
     h5timeseries = h5py.File(timeSeriesFile)
-    dateList = h5timeseries['timeseries'].keys()
-    dateList = sorted(dateList)
+    dateList = sorted(h5timeseries['timeseries'].keys())
     lt = len(dateList)
     print 'number of epochs: '+str(lt)
 

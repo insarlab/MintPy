@@ -113,8 +113,7 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
     # Multi-dataset file
     if k in ['timeseries','interferograms','coherence','wrapped']:
         h5 = h5py.File(infile, 'r')
-        epochList = h5[k].keys()
-        epochList = sorted(epochList)
+        epochList = sorted(h5[k].keys())
         print 'number of epochs: '+str(len(epochList))
         
         h5out = h5py.File(outfile, 'w')

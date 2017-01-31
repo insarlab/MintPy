@@ -305,10 +305,10 @@ def main(argv):
             elif opt == '-t':     minDate          = arg
             elif opt == '-T':     maxDate          = arg
             elif opt == '-r':     radius           = abs(int(arg))
-            elif opt == '-x':     xsub = [int(i) for i in arg.split(':')];   xsub.sort();  # dispVelFig='no'
-            elif opt == '-y':     ysub = [int(i) for i in arg.split(':')];   ysub.sort();  # dispVelFig='no'
-            elif opt == '-X':     ref_xsub = [int(i) for i in arg.split(':')];   ref_xsub.sort();
-            elif opt == '-Y':     ref_ysub = [int(i) for i in arg.split(':')];   ref_ysub.sort();  # dispVelFig='no'
+            elif opt == '-x':     xsub = sorted([int(i) for i in arg.split(':')])
+            elif opt == '-y':     ysub = sorted([int(i) for i in arg.split(':')])
+            elif opt == '-X':     ref_xsub = sorted([int(i) for i in arg.split(':')])
+            elif opt == '-Y':     ref_ysub = sorted([int(i) for i in arg.split(':')])
 
             elif opt == '--contour-step'   : contour_step    = float(arg)
             elif opt == '--contour-smooth' : contour_sigma   = float(arg)
@@ -325,10 +325,10 @@ def main(argv):
             elif opt == '--nodisplay'      : dispFig         = 'no';   saveFig='yes'
             elif opt == '--opposite'       : dispOpposite    = 'yes'
             elif opt == '--zero-start'     : zero_start      = arg.lower()
-            elif opt == '--zoom-x'         : win_x           = [int(i)   for i in arg.split(':')];    win_x.sort()
-            elif opt == '--zoom-y'         : win_y           = [int(i)   for i in arg.split(':')];    win_y.sort()
-            elif opt == '--zoom-lon'       : win_lon         = [float(i) for i in arg.split(':')];    win_lon.sort()
-            elif opt == '--zoom-lat'       : win_lat         = [float(i) for i in arg.split(':')];    win_lat.sort()
+            elif opt == '--zoom-x'         : win_x           = sorted([int(i)   for i in arg.split(':')])
+            elif opt == '--zoom-y'         : win_y           = sorted([int(i)   for i in arg.split(':')])
+            elif opt == '--zoom-lon'       : win_lon         = sorted([float(i) for i in arg.split(':')])
+            elif opt == '--zoom-lat'       : win_lat         = sorted([float(i) for i in arg.split(':')])
 
 
     ##############################################################
@@ -343,8 +343,7 @@ def main(argv):
         sys.exit(1)
 
     atr = readfile.read_attribute(timeSeriesFile)
-    dateList1 = h5timeseries['timeseries'].keys()
-    dateList1 = sorted(dateList1)
+    dateList1 = sorted(h5timeseries['timeseries'].keys())
     dates1,datevector1 = ptime.date_list2vector(dateList1)
     print '\n************ Time Series Display - Point *************'
 
@@ -554,8 +553,7 @@ def main(argv):
     try:
         timeSeriesFile_2
         h5timeseries_2=h5py.File(timeSeriesFile_2)
-        dateList_2 = h5timeseries_2['timeseries'].keys()
-        dateList_2 = sorted(dateList_2)
+        dateList_2 = sorted(h5timeseries_2['timeseries'].keys())
         dates_2,datevector_2 = ptime.date_list2vector(dateList_2)
         datevector_all += list(set(datevector_2) - set(datevector_all))
         datevector_all = sorted(datevector_all)
