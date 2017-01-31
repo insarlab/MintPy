@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 ############################################################
 # Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                                           #
+# Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
@@ -47,9 +47,8 @@ def usage():
       baseline_error.py  timeseries.h5 Mask.h5
       
   Reference:
-  Gourmelen, N., F. Amelung, and R. Lanari (2010), Interferometric synthetic aperture radar–GPS integration: Interseismic
+  Gourmelen, N., F. Amelung, and R. Lanari (2010), Interferometric synthetic aperture radar-GPS integration: Interseismic
       strain accumulation across the Hunter Mountain fault in the eastern California shear zone, JGR, 115(B9).
-     
 ********************************************************
     '''
 

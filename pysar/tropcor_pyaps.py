@@ -43,9 +43,8 @@ def usage():
       tropcor_pyaps.py -f timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF -h 18:00
 
   Reference:
-      Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer (2011), 
-      Systematic InSAR tropospheric phase delay corrections from global meteorological
-      reanalysis data, Geophys. Res. Lett., 38, L17311, doi:10.1029/2011GL048757
+  Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer (2011), Systematic InSAR tropospheric phase delay
+      corrections from global meteorological reanalysis data, Geophys. Res. Lett., 38, L17311, doi:10.1029/2011GL048757
 
 *****************************************************************************************
     '''
