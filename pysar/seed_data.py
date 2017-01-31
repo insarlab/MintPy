@@ -280,8 +280,8 @@ def usage():
       -L : longitude    of the reference pixel (for geocoded file)
       -r : reference file, use seeding info of this file to seed input file
       -t : template file with setting of reference point information
-           Example: pysar.seed.yx   = 1160,300
-                    pysar.seed.lalo = 33.1,130.0
+           Example: pysar.reference.yx   = 1160,300
+                    pysar.reference.lalo = 33.1,130.0
   
            Priority:
            lat/lon > y/x
@@ -382,6 +382,7 @@ def main(argv):
     try:
         templateFile
         templateContents = readfile.read_template(templateFile)
+        templateKeyList = templateContents.keys()
     except: pass
 
     ### Priority
@@ -395,9 +396,10 @@ def main(argv):
             rlat = float(atr_ref['ref_lat'])
             rlon = float(atr_ref['ref_lon'])
         except:
-            try: rlat,rlon = [float(i) for i in templateContents['pysar.seed.lalo'].split(',')]
-            except: pass
-
+            if 'pysar.seed.lalo' in templateKeyList:
+                rlat,rlon = [float(i) for i in templateContents['pysar.seed.lalo'].split(',')]
+            elif 'pysar.reference.lalo' in templateKeyList:
+                rlat,rlon = [float(i) for i in templateContents['pysar.reference.lalo'].split(',')]
     try:
         ry
         rx
@@ -406,8 +408,10 @@ def main(argv):
             ry = int(atr_ref['ref_y'])
             rx = int(atr_ref['ref_x'])
         except:
-            try: ry,rx       = [int(i)   for i in templateContents['pysar.seed.yx'].split(',')]
-            except: pass
+            if 'pysar.seed.yx' in templateKeyList:
+                ry,rx = [int(i)   for i in templateContents['pysar.seed.yx'].split(',')]
+            elif 'pysar.reference.yx' in templateKeyList:
+                ry,rx = [int(i)   for i in templateContents['pysar.reference.yx'].split(',')]
 
     ##### Check lalo / YX
     print '\n************** Reference Point ******************'

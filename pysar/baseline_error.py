@@ -9,12 +9,12 @@
 import sys
 import os
 
-import numpy as np
 import h5py
-from scipy.linalg import pinv as pinv
+import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
-import matplotlib
+from scipy.linalg import pinv as pinv
 
 import pysar._readfile as readfile
 
@@ -37,7 +37,7 @@ def usage():
   and correcting the time-series. 
   
   Usage:
- 
+
       baseline_error.py  time-series mask 
  
       time-series: The timeseries in HDF5 format.
@@ -45,6 +45,10 @@ def usage():
  
   Example:
       baseline_error.py  timeseries.h5 Mask.h5
+      
+  Reference:
+  Gourmelen, N., F. Amelung, and R. Lanari (2010), Interferometric synthetic aperture radar–GPS integration: Interseismic
+      strain accumulation across the Hunter Mountain fault in the eastern California shear zone, JGR, 115(B9).
      
 ********************************************************
     '''
@@ -83,7 +87,7 @@ def main(argv):
     lookangle=np.tile(np.linspace(nt,ft,sx),[sy,1])
     lookangle=lookangle.flatten(1)*np.pi/180.0
     Fh=-np.sin(lookangle)
-    Fv=-np.cos(lookangle)  
+    Fv=-np.cos(lookangle)
   
     try:
         daz=float(h5file['timeseries'].attrs['AZIMUTH_PIXEL_SIZE'])
