@@ -25,13 +25,23 @@ import matplotlib.dates as mdates
 
 ################################################################
 ##### Date Format Transform
-
-def yyyymmdd2years(date):
-    d = dt(*time.strptime(date,"%Y%m%d")[0:5])
-    day_of_year = d.timetuple().tm_yday
-    yy = float(d.year)+float(day_of_year-1)/365.25
-    #yy = float(d.year) + float(d.month-1)/12 + float(d.day-1)/365.25
+def yyyymmdd2years(dates):
+    if isinstance(dates, basestring):
+        d = dt(*time.strptime(date,"%Y%m%d")[0:5])
+        day_of_year = d.timetuple().tm_yday
+        yy = float(d.year)+float(day_of_year-1)/365.25
+        #yy = float(d.year) + float(d.month-1)/12 + float(d.day-1)/365.25
+    elif isinstance(dates, list):
+        yy = []
+        for date in dates:
+            d = dt(*time.strptime(date,"%Y%m%d")[0:5])
+            day_of_year = d.timetuple().tm_yday
+            yy.append(float(d.year)+float(day_of_year-1)/365.25)
+    else:
+        print 'Unrecognized date format. Only string and list supported.'
+        sys.exit(1)
     return yy
+
 
 def yymmdd2yyyymmdd(date):
     if date[0] == '9':      date = '19'+date

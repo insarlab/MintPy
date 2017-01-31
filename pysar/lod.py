@@ -68,16 +68,15 @@ def correct_lod_file(File, outFile=None):
 
         if k in ['interferograms','wrapped']:
             wvl = float(atr['WAVELENGTH'])
-            Ramp *= 4*np.pi/wvl
+            Ramp *= -4*np.pi/wvl
             for epoch in epochList:
                 print epoch
                 data = h5[k][epoch].get(epoch)[:]
                 atr = h5[k][epoch].attrs
                 
                 dates = ptime.yyyymmdd(atr['DATE12'].split('-'))
-                date1 = ptime.yyyymmdd2years(dates[0])
-                date2 = ptime.yyyymmdd2years(dates[1])
-                dt = date1 - date2
+                dates = ptime.yyyymmdd2years(dates)
+                dt = date[1] - date[0]
                 data -= Ramp*dt
                  
                 gg = group.create_group(epoch)
@@ -120,11 +119,12 @@ def usage():
   by Petar Marinkovic and Yngvar Larsen, 2013.
 
   Usage:
-      lod.py 'time-series in radar coordinate' outname
+      lod.py file_radarCoord [out_name]
 
   Example:
       lod.py timeseries.h5
       lod.py timeseries.h5 timeseries_LODcor.h5
+      lod.py Seeded_unwrapIfgram.h5
 
 *****************************************************************
     '''
