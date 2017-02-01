@@ -361,11 +361,11 @@ def main(argv):
         print 'coherence files: '+str(inps.cor)
         inps.cor = sorted(glob.glob(inps.cor))
     try:    inps.geomap = glob.glob(inps.geomap)[0]
-    except: inps.geomap = []
+    except: inps.geomap = None
     try:    inps.dem_radar = glob.glob(inps.dem_radar)[0]
-    except: inps.dem_radar = []
+    except: inps.dem_radar = None
     try:    inps.dem_geo = glob.glob(inps.dem_geo)[0]
-    except: inps.dem_geo = []
+    except: inps.dem_geo = None
     print 'geomap file: '+inps.geomap
     print 'DEM file in radar coord: '+inps.dem_radar
     print 'DEM file in geo   coord: '+inps.dem_geo
