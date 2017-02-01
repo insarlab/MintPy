@@ -350,73 +350,78 @@ def main(argv):
     # Get all file list
     inps.snap_connect = []
     if inps.unw:
+        print 'unwrapped interferograms: '+str(inps.unw)
         inps.snap_connect = inps.unw.split('.unw')[0]+'_snap_connect.byt'
         inps.snap_connect = sorted(glob.glob(inps.snap_connect))
         inps.unw = sorted(glob.glob(inps.unw))
-    if inps.cor:  inps.cor = sorted(glob.glob(inps.cor))
-    if inps.int:  inps.int = sorted(glob.glob(inps.int))
+    if inps.int:
+        print 'wrapped   interferograms: '+str(inps.int)
+        inps.int = sorted(glob.glob(inps.int))
+    if inps.cor:
+        print 'coherence files: '+str(inps.cor)
+        inps.cor = sorted(glob.glob(inps.cor))
     try:    inps.geomap = glob.glob(inps.geomap)[0]
     except: inps.geomap = []
     try:    inps.dem_radar = glob.glob(inps.dem_radar)[0]
     except: inps.dem_radar = []
     try:    inps.dem_geo = glob.glob(inps.dem_geo)[0]
     except: inps.dem_geo = []
+    print 'geomap file: '+inps.geomap
+    print 'DEM file in radar coord: '+inps.dem_radar
+    print 'DEM file in geo   coord: '+inps.dem_geo
 
     ##### 2. Load data into hdf5 file
-    inps.ifgram_file = 'unwrapIfgram.h5'
-    inps.coherence_file = 'coherence.h5'
-    inps.wrapIfgram_file = 'wrapIfgram.h5'
-    inps.mask_file = 'Mask.h5'
+    inps.ifgram_file     = inps.tssar_dir+'/unwrapIfgram.h5'
+    inps.coherence_file  = inps.tssar_dir+'/coherence.h5'
+    inps.wrapIfgram_file = inps.tssar_dir+'/wrapIfgram.h5'
+    inps.snap_connect_file = inps.tssar_dir+'/snaphuConnectComponent.h5'
+    inps.mask_file = inps.tssar_dir+'/Mask.h5'
     
     # 2.1 multi_group_hdf5_file
     # Unwrapped Interferograms
     if inps.unw:
-        print 'unwrapped interferograms: '+inps.unw
-        unwList = load_roipac2multi_group_h5('interferograms', inps.unw, inps.tssar_dir+'/'+inps.ifgram_file, vars(inps))[1]
+        unwList = load_roipac2multi_group_h5('interferograms', inps.unw, inps.ifgram_file, vars(inps))[1]
         # Update mask only when update unwrapIfgram.h5
         if unwList:
             print 'Generate mask from amplitude of interferograms'
             roipac_nonzero_mask(inps.unw, 'Mask.h5')
-    elif os.path.isfile(inps.tssar_dir+'/'+inps.ifgram_file):
+    elif os.path.isfile(inps.ifgram_file):
         print inps.ifgram_file+' already exists, no need to re-load.'
-    else:  sys.exit('ERROR: Cannot load/find unwrapped interferograms!')
+    else:
+        sys.exit('ERROR: Cannot load/find unwrapped interferograms!')
 
     # Optional
     if inps.snap_connect:
-        load_roipac2multi_group_h5('snaphu_connect_component', inps.snap_connect,\
-                                   inps.tssar_dir+'/snaphuConnectComponent.h5', vars(inps))
+        load_roipac2multi_group_h5('snaphu_connect_component', inps.snap_connect, inps.snap_connect_file, vars(inps))
 
     # Coherence
     if inps.cor:
-        print 'coherence files: '+inps.cor
-        cohFile,corList = load_roipac2multi_group_h5('coherence', inps.cor, inps.tssar_dir+'/'+inps.coherence_file, vars(inps))
+        cohFile,corList = load_roipac2multi_group_h5('coherence', inps.cor, inps.coherence_file, vars(inps))
         if corList:
             meanCohCmd = 'temporal_average.py '+cohFile+' average_spatial_coherence.h5'
             print meanCohCmd
             os.system(meanCohCmd)
-    elif os.path.isfile(inps.tssar_dir+'/'+inps.coherence_file):
+    elif os.path.isfile(inps.coherence_file):
         print inps.coherence_file+' already exists, no need to re-load.'
-    else:  print 'WARNING: Cannot load/find coherence.'
+    else:
+        print 'WARNING: Cannot load/find coherence.'
 
     # Wrapped Interferograms
     if inps.int:
-        print 'wrapped interferograms: '+inps.int
-        load_roipac2multi_group_h5('wrapped', inps.int, inps.tssar_dir+'/'+inps.wrapIfgram_file, vars(inps))
-    elif os.path.isfile(inps.tssar_dir+'/'+inps.wrapIfgram_file):
+        load_roipac2multi_group_h5('wrapped', inps.int, inps.wrapIfgram_file, vars(inps))
+    elif os.path.isfile(inps.wrapIfgram_file):
         print inps.wrapIfgram_file+' already exists, no need to re-load.'
-    else:  print 'WARNING: Cannot load/find wrapped interferograms.'
+    else:
+        print 'WARNING: Cannot load/find wrapped interferograms.'
 
     # 2.2 single dataset file
     if inps.geomap:
-        print 'geomap file: '+inps.geomap
         copy_roipac_file(inps.geomap, inps.tssar_dir)
 
     if inps.dem_radar:
-        print 'DEM file in radar coord: '+inps.dem_radar
         copy_roipac_file(inps.dem_radar, inps.tssar_dir)
 
     if inps.dem_geo:
-        print 'DEM file in geo coord: '+inps.dem_geo
         copy_roipac_file(inps.dem_geo, inps.tssar_dir)
 
 
