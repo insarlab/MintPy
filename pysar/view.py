@@ -659,12 +659,12 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         print 'plot in Lat/Lon coordinate'
         # Map Setup
         print 'map projection: '+inps.map_projection
-        if   inps.map_projection in ['cyl','merc','mill','cea','gall']:
+        if inps.map_projection in ['cyl','merc','mill','cea','gall']:
             m = Basemap2(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
                         urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],\
                         projection=inps.map_projection,\
                         resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
-        elif map_projection in ['ortho']:
+        elif inps.map_projection in ['ortho']:
             m = Basemap2(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
                         lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,\
                         projection=inps.map_projection,\
