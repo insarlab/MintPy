@@ -1,6 +1,6 @@
 ## Welcome to PySAR!
 
-PySAR is an InSAR time-series package to produce three dimensional (space and time) ground displacement from InSAR data. To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path   
+PySAR is an InSAR (Interferometric Synthetic Aperture Radar) time series package to produce three dimensional (space and time) ground displacement from InSAR data. To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path   
 
 Depending on your shell you may use commands such as the following examples to setup pysar:   
 
