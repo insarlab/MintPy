@@ -505,7 +505,7 @@ def subset_file(File, subset_dict, outFile=None):
 
 ###########################################################################################
 EXAMPLE='''example:
-  subset.py LoadedData.h5      -y    400  1500   -x    200   600
+  subset.py unwrapIfgram.h5    -y    400  1500   -x    200   600
   subset.py geo_velocity.h5    -l    30.5 30.8   -L    130.3 130.9
   subset.py geo_timeseries.h5  --lat 30.5 30.8   --lon 130.3 130.9
   subset.py 030405_090801.unw  -t SinabungT495F50AlosA.template

@@ -41,9 +41,9 @@ def usage():
       --save-mask : plot mask file and save it to file.
 
   example:
-      remove_plane.py  timeseries.h5 plane
-      remove_plane.py  timeseries.h5 plane             Mask.h5
-      remove_plane.py  LoadedData.h5 quadratic_range   Mask.h5
+      remove_plane.py  timeseries.h5   plane
+      remove_plane.py  timeseries.h5   plane             Mask.h5
+      remove_plane.py  unwrapIfgram.h5 quadratic_range   Mask.h5
 
       remove_plane.py  -f timeseries.h5 -t KyushuT424F640AlosA.template
 

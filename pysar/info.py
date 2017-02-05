@@ -85,8 +85,8 @@ def usage():
 
       info.py timeseries.h5
       info.py velocity_demCor_masked.h5
-      info.py LoadedData.h5
-      info.py LoadedData.h5    3
+      info.py unwrapIfgram.h5
+      info.py unwrapIfgram.h5    3
 
       info.py timeseries.h5 --tree
 

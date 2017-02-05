@@ -60,8 +60,8 @@ def usage():
       output reconstructed_simulatedIgrams.h5 by default.
 
   Example:
-      reconstruct_igrams.py Seeded_LoadedData.h5 timeseries_ECMWF_demCor.h5
-      reconstruct_igrams.py Seeded_LoadedData.h5 timeseries_ECMWF_demCor.h5  reconstructedIgrams.h5
+      reconstruct_igrams.py Seeded_unwrapIfgram.h5 timeseries_ECMWF_demCor.h5
+      reconstruct_igrams.py Seeded_unwrapIfgram.h5 timeseries_ECMWF_demCor.h5  reconstructedIgrams.h5
 
 ****************************************************************************************
     '''

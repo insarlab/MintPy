@@ -39,7 +39,7 @@ def usage():
      -M: maximum value
      -o: output file, in HDF5 format [default name is mask.h5]
 
-     --nonzero : mask of all nonzero pixels, equivalent to Mask.h5 from LoadedData.h5
+     --nonzero : mask of all nonzero pixels, equivalent to Mask.h5 from unwrapIfgram.h5
 
 
   Example:
@@ -50,9 +50,9 @@ def usage():
      generate_mask.py -f 081018_090118.unw     -m 2    -M 4
      generate_mask.py -f 081018_090118.cor     -m 0.5
      generate_mask.py -f srtm1.dem             -m 1000 -M 1500
-     generate_mask.py -f Seed_LoadedData_mask.h5 -e 50 -m 4
+     generate_mask.py -f Seed_unwrapIfgram_masked.h5 -e 50 -m 4
 
-     generate_mask.py -f LoadedData.h5 --nonzero
+     generate_mask.py -f unwrapIfgram.h5 --nonzero
 
 **********************************************************************************
     '''

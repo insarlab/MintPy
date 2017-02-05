@@ -10,7 +10,7 @@
 #
 # Recommended Usage:
 #   import pysar._datetime as ptime
-#   dateList = ptime.igram_date_list('LoadedData.h5')
+#   dateList = ptime.igram_date_list('unwrapIfgram.h5')
 
 
 import sys

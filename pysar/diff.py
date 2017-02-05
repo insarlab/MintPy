@@ -41,7 +41,7 @@ def usage():
   Example:
       diff.py velocity_masked.h5 velocity_demCor_masked.h5    demCor.h5
       diff.py timeseries.h5      timeseries_demCor.h5         demCor.h5
-      diff.py LoadedData.h5      reconstruct_LoadedData.h5
+      diff.py unwrapIfgram.h5      reconstruct_unwrapIfgram.h5
       diff.py -f velocity.h5,velocity_2.h5  -o velocity_diff.h5
 
 ***************************************************************

@@ -69,9 +69,9 @@ def usage():
       -o : output file name [default is interferogram_file_unwCor.h5]
 
   Examples:
-      unwrap_error.py Seeded_LoadedData.h5 mask.h5
-      unwrap_error.py -f Seeded_LoadedData.h5 -m mask.h5
-      unwrap_error.py Seeded_LoadedData.h5
+      unwrap_error.py Seeded_unwrapIfgram.h5 mask.h5
+      unwrap_error.py -f Seeded_unwrapIfgram.h5 -m mask.h5
+      unwrap_error.py Seeded_unwrapIfgram.h5
 
 
   -------------------------------------------------------------------
@@ -116,8 +116,8 @@ def usage():
       --no-ramp-save : save corrected data with the ramp removed.
 
   Examples:
-      unwrap_error.py -f Seeded_LoadedData.h5     -m Mask.h5 -t ShikokuT417F650_690AlosA.template
-      unwrap_error.py -f Seeded_LoadedData.h5     -m Mask.h5 -x 283,305 -y 1177,1247
+      unwrap_error.py -f Seeded_unwrapIfgram.h5   -m Mask.h5 -t ShikokuT417F650_690AlosA.template
+      unwrap_error.py -f Seeded_unwrapIfgram.h5   -m Mask.h5 -x 283,305 -y 1177,1247
       unwrap_error.py -f Seeded_081018_090118.unw -m Mask_all.h5 -x 283,305 -y 1177,1247 --ramp quadratic
 
 ************************************************************************************

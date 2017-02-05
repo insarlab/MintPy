@@ -72,7 +72,7 @@ def usage():
       image_math.py velocity.h5   divide 0.5 velocity_divide0.5.h5
 
       image_math.py timeseries.h5 '+' 0.5
-      image_math.py LoadedData.h5 '+' 0.5
+      image_math.py unwrapIfgram.h5 '+' 0.5
       image_math.py temporal_coherence.h5 '+' 0.5
 
       image_math.py geo_080212_101120.unw '+' 0.5

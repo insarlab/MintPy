@@ -86,8 +86,8 @@ def usage():
       temporal_coherence.py inteferograms_file timeseries_file [output_name]
 
   Example:
-      temporal_coherence.py Seeded_LoadedData.h5 timeseries.h5
-      temporal_coherence.py Seeded_LoadedData.h5 timeseries.h5 temporal_coherence.h5
+      temporal_coherence.py Seeded_unwrapIfgram.h5 timeseries.h5
+      temporal_coherence.py Seeded_unwrapIfgram.h5 timeseries.h5 temporal_coherence.h5
 
   Reference:
       Tizzani, P., P. Berardino, F. Casu, P. Euillades, M. Manzo, G. P. Ricciardi, G. Zeni,

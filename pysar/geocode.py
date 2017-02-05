@@ -168,31 +168,6 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
 
 
 ######################################################################################
-def usage():
-    print '''
-*******************************************************************
-  Geocode PySAR products using roi_pac geocoding function
-
-  Usage:  geocode.py File geocoding_lookupfile
-
-      File: PySAR hdf5 file, including subseted.
-            [velocity, temporal_coherence, mask, rmse, timeseries
-             unwrapped/wrapped interferograms, coherence]
-      geocoding_lookupfile: geocoding look-up table of the master interferogram   
-
-  Example:
-      geocode.py velocity.h5        geomap_8rlks.trans
-      geocode.py subset_velocity.h5 geomap_8rlks.trans
-      geocode.py timeseries.h5      geomap_8rlks.trans
-      geocode.py LoadedData.h5      geomap_8rlks.trans
-      geocode.py Coherence.h5       geomap_8rlks.trans
-      geocode.py Wrapped.h5         geomap_8rlks.trans
-      geocode.py DEM_error.h5       geomap_8rlks.trans
-
-*******************************************************************
-    '''
-    return
-
 EXAMPLE='''example:
   geocode.py  geomap_8rlks.trans  velocity.py
   geocode.py  geomap_8rlks.trans  *velocity*h5

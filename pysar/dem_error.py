@@ -55,7 +55,7 @@ def usage():
       dem_error.py timeseries_ECMWF.h5
       dem_error.py -f timeseries_ECMWF.h5 --phase-velocity
       dem_error.py -f timeseries_NARR.h5  -o timeseries_demCor.h5
-      dem_error.py -f timeseries_MERRA.h5 -F Seeded_LoadedData.h5
+      dem_error.py -f timeseries_MERRA.h5 -F Seeded_unwrapIfgram.h5
 
 **********************************************************
     '''

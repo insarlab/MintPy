@@ -31,8 +31,8 @@ def usage():
       -o: output timeseries file name
   
   Example:
-      igram_inversion.py Seeded_LoadedData.h5
-      igram_inversion.py -f Seeded_LoadedData.h5 -l L1
+      igram_inversion.py Seeded_unwrapIfgram.h5
+      igram_inversion.py -f Seeded_unwrapIfgram.h5 -l L1
 
 ********************************************************************************
     '''

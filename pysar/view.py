@@ -827,7 +827,7 @@ EXAMPLE='''example:
   view.py velocity.h5 -u cm -m -2 -M 2 -c bwr --mask Mask_tempCoh.h5 -d SanAndreas.dem
 
   view.py timeseries.h5 
-  view.py LoadedData.h5 070927-100217
+  view.py unwrapIfgram.h5 070927-100217
   view.py Wrapped.h5    -n 5
   view.py geomap_4rlks.trans range
 

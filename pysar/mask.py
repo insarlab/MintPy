@@ -183,7 +183,7 @@ def usage():
           mask.py velocity Mask.h5
           mask.py -f geo_100102_101120.unw -m Mask.h5
           mask.py -f timeseries.h5         -m temporal_coherence.h5 -t 0.7
-          mask.py -f LoadedData.h5         -m 100102_101120.cor     -t 0.9 -y '200:300' -x '300:400'
+          mask.py -f unwrapIfgram.h5       -m 100102_101120.cor     -t 0.9 -y '200:300' -x '300:400'
 
       mask Multiple Files
           mask.py -f 'timeseries*.h5'              -m Mask.h5

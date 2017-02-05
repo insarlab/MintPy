@@ -69,7 +69,7 @@ def usage():
       save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05
       save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 --ref-size 2
       save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 -i yes -c jet -r 250
-      save_kml.py -f LoadedData_ChamanT256EnvA6.h5 -d 971220-990703 
+      save_kml.py -f unwrapIfgram.h5 -d 971220-990703 
       save_kml.py -f timeseries.h5 -d 20060924         
       save_kml.py -f geo_filt_100820-101120-sim_HDR_4rlks_c10.unw
       save_kml.py gsi10m.dem

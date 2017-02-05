@@ -12,7 +12,7 @@ def usage():
     print '''
 *******************************************************************
 
-  igram_closure.py Seeded_LoadedData_BajaT499EnvD2.h5
+  igram_closure.py Seeded_unwrapIfgram.h5
 
 *******************************************************************
     '''

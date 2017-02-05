@@ -45,7 +45,7 @@ def usage():
            
       add.py velocity_masked.h5    velocity_demCor_masked.h5
       add.py timeseries.h5         timeseries_demCor.h5
-      add.py LoadedData.h5         LoadedData2.h5
+      add.py unwrapIfgram.h5       unwrapIfgram2.h5
       add.py 081008_100220.unw     100220_110417.unw      081008_110417.unw
 
       add.py -f mask_1.h5,mask_2.h5,mask_3.h5       -o mask_all.h5
