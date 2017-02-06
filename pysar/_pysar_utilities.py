@@ -64,6 +64,41 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 
+
+def get_file_stack(File, maskFile=None):
+    '''Get stack file of input File and return the stack 2D matrix
+    Input:   File/maskFile - string
+    Output:  stack - 2D np.array matrix
+    '''
+    stack = None
+    atr = readfile.read_attribute(File)
+    stackFile = os.path.splitext(File)[0]+'_stack.h5'
+    
+    # Read stack from existed file
+    if os.path.isfile(stackFile):
+        atrStack = readfile.read_attribute(stackFile)
+        if atrStack['WIDTH'] == atr['WIDTH'] and atrStack['FILE_LENGTH'] == atr['FILE_LENGTH']:
+            print 'reading stack from existed file: '+stackFile
+            stack = readfile.read(stackFile)[0]
+    # Calculate stack
+    else:
+        print 'calculating stack of input file ...'
+        stack = stacking(File)
+        # Write stack file is input file is multi-dataset (large file size usually)
+        if atr['FILE_TYPE'] in multi_group_hdf5_file+multi_dataset_hdf5_file:
+            atrStack = atr.copy()
+            atrStack['FILE_TYPE'] = 'mask'
+            print 'writing stack file >>> '+stackFile
+            writefile.write(stack, atrStack, stackFile)
+
+    # set masked out area into NaN
+    if maskFile:
+        mask = readfile.read(maskFile)[0]
+        stack[mask==0] = np.nan
+    
+    return stack
+
+
 def nonzero_mask(File, outFile='Mask.h5'):
     '''Generate mask file for non-zero value of input multi-group hdf5 file'''
     atr = readfile.read_attribute(File)
@@ -113,7 +148,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
 
     if not box:
         box = (0,0,width,length)
-    if mask:
+    if not mask is None:
         mask = mask[box[1]:box[3],box[0]:box[2]]
 
     # Calculate mean coherence list
@@ -132,7 +167,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
             else:  print 'Unrecognized group type: '+k
             
             data = dset[box[1]:box[3],box[0]:box[2]]
-            if mask:
+            if not mask is None:
                 data[mask==0] = np.nan
             ## supress warning 
             ## url - http://stackoverflow.com/questions/29688168/mean-nanmean-and-warning-mean-of-empty-slice
@@ -144,7 +179,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
         h5file.close()
     else:
         data,atr = readfile.read(File, box)
-        if mask:
+        if not mask is None:
             data[mask==0] = np.nan
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)

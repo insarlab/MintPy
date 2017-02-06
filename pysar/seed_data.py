@@ -382,6 +382,11 @@ pysar.reference.yx   = 1160,300
 pysar.reference.lalo = 33.1,130.0
 '''
 
+NOTE='''note: Reference value cannot be nan, thus, all selected reference point must be:
+  a. non zero in mask, if mask is given
+  b. non nan  in data (stack)
+'''
+
 EXAMPLE='''example:
   seed_data.py .h5 -t ShikokuT417F650_690AlosA.template
   seed_data.py 091120_100407.unw -y 257       -x 151             -m Mask.h5
@@ -397,7 +402,7 @@ EXAMPLE='''example:
 def cmdLineParse():
     parser = argparse.ArgumentParser(description='Reference to the same pixel in space.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=EXAMPLE)
+                                     epilog=NOTE+'\n'+EXAMPLE)
     
     parser.add_argument('file', nargs='+', help='file(s) to be referenced.')
     parser.add_argument('-m','--mask', dest='mask_file', help='mask file')
@@ -405,14 +410,15 @@ def cmdLineParse():
     parser.add_argument('--no-parallel', dest='parallel', action='store_false',\
                         help='Disable parallel processing. Diabled auto for 1 input file.\n')
     
-    coord_group = parser.add_argument_group('Specific coordinates')
+    coord_group = parser.add_argument_group('input coordinates')
     coord_group.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')
     coord_group.add_argument('-x','--col', dest='ref_x', type=int, help='column/range number of reference pixel')
     coord_group.add_argument('-l','--lat', dest='ref_lat', type=float, help='latitude  of reference pixel')
     coord_group.add_argument('-L','--lon', dest='ref_lon', type=float, help='longitude of reference pixel')
     
     coord_group.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
-    coord_group.add_argument('-t','-template', dest='template_file', help='template with reference info as below:\n'+TEMPLATE)
+    coord_group.add_argument('-t','-template', dest='template_file',\
+                             help='template with reference info as below:\n'+TEMPLATE)
 
     parser.add_argument('-c','--coherence', dest='coherence_file',\
                         help='use input coherence file to find the pixel with max coherence for reference pixel.')

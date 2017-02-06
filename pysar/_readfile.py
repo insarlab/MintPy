@@ -122,14 +122,15 @@ def read_attribute(File, epoch=''):
         else: print 'Unrecognized file extension: '+ext; sys.exit(1)
 
     # Unit - str
-    if atr['FILE_TYPE'] in ['interferograms','wrapped','.unw','.int','.flat']:
-        atr['UNIT'] = 'radian'
-    elif atr['FILE_TYPE'] in ['timeseries','dem','.dem','.hgt']:
-        atr['UNIT'] = 'm'
-    elif atr['FILE_TYPE'] in ['velocity']:
-        atr['UNIT'] = 'm/yr'
-    else:
-        atr['UNIT'] = '1'
+    if 'UNIT' not in atr.keys():
+        if atr['FILE_TYPE'] in ['interferograms','wrapped','.unw','.int','.flat']:
+            atr['UNIT'] = 'radian'
+        elif atr['FILE_TYPE'] in ['timeseries','dem','.dem','.hgt']:
+            atr['UNIT'] = 'm'
+        elif atr['FILE_TYPE'] in ['velocity']:
+            atr['UNIT'] = 'm/yr'
+        else:
+            atr['UNIT'] = '1'
 
     return atr
 
