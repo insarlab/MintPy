@@ -21,18 +21,18 @@ import pysar._writefile as writefile
 ############################################################
 def incidence_angle(atr):
     ## Read Attributes
-    near_range =float(atr['STARTING_RANGE'])
-    dR =float(atr['RANGE_PIXEL_SIZE'])
-    r =float(atr['EARTH_RADIUS'])
-    H =float(atr['HEIGHT'])
-    length =float(atr['FILE_LENGTH'])
-    width =float(atr['WIDTH'])
-  
+    near_range = float(atr['STARTING_RANGE'])
+    dR = float(atr['RANGE_PIXEL_SIZE'])
+    r  = float(atr['EARTH_RADIUS'])
+    H  = float(atr['HEIGHT'])
+    length = int(atr['FILE_LENGTH'])
+    width  = int(atr['WIDTH'])
+    
     ## Calculation
     far_range = near_range+dR*width
     incidence_n = np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))
     incidence_f = np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))
-  
+    
     print 'near    incidence angle : '+ str(incidence_n*180./np.pi)
     print 'far     incidence angle : '+ str(incidence_f*180./np.pi)
     print 'average incidence angle : '+ str(((incidence_f+incidence_n)/2)*180./np.pi)

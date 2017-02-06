@@ -12,7 +12,7 @@ import getopt
 
 import h5py
 import numpy as np
-import Image
+from PIL import Image
 from scipy import ndimage
 
 import pysar._readfile as readfile
