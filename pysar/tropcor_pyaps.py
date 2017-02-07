@@ -75,9 +75,9 @@ def main(argv):
     demCoord = ut.radar_or_geo(demFile)
 
     h5timeseries = h5py.File(timeSeriesFile)
-    yref=h5timeseries['timeseries'].attrs['ref_y']
-    xref=h5timeseries['timeseries'].attrs['ref_x']
-
+    yref = int(h5timeseries['timeseries'].attrs['ref_y'])
+    xref = int(h5timeseries['timeseries'].attrs['ref_x'])
+   
     ###############################################################
     #incidence angle to map the zenith delay to the slant delay
     try:
@@ -186,6 +186,8 @@ def main(argv):
 
     print '*******************************************************************************'
     print 'Calcualting delay for each epoch.'
+        
+
     h5phsName=atmSource + '.h5'
     h5phs=h5py.File(h5phsName,'w')
     outName=timeSeriesFile.replace('.h5','_') + atmSource + '.h5'	#Yunjun, Feb 15, 2015
@@ -200,7 +202,7 @@ def main(argv):
     #else:
     #   demCoord='radar'  
     #   print 'The coordinate system is : radar'      
-
+    
     print ecmwf_file[0]
     if demCoord=='radar':  aps1 = pa.PyAPS_rdr(str(ecmwf_file[0]),demFile,grib=gribSource,verb=True,Del=DelayType)
     else:                  aps1 = pa.PyAPS_geo(str(ecmwf_file[0]),demFile,grib=gribSource,verb=True,Del=DelayType)
