@@ -102,7 +102,7 @@ def main(argv):
 
     try:        surfType
     except:
-        try:    surfType = templateContents['pysar.orbitError.method']
+        try:    surfType = templateContents['pysar.deramp']
         except: surfType = 'plane'; print 'No ramp type input, use plane as default'
     print 'phase ramp type  : '+surfType
   
@@ -129,11 +129,7 @@ def main(argv):
     ##### Read Mask File 
     ## Priority:
     ## Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5
-    try:      maskFile
-    except:
-        try:  maskFile = templateContents['pysar.mask.file']
-        except: pass
-  
+    
     try:
         Mask,Matr = readfile.read(maskFile)
         print 'mask file: '+maskFile
