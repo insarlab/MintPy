@@ -25,7 +25,7 @@ import multiprocessing
 
 import pysar._readfile  as readfile
 import pysar._writefile as writefile
-from pysar._pysar_utilities import get_file_list
+import pysar._pysar_utilities as ut
 
 
 def geomap4subset_radar_file(radar_atr, geomap_file):
@@ -195,7 +195,11 @@ def cmdLineParse():
 ######################################################################################
 def main(argv):
     inps = cmdLineParse()
-    inps.file = get_file_list(inps.file)
+    inps.file = ut.get_file_list(inps.file)
+    
+    if not ut.which('geocode.pl'):
+        sys.exit("\nERROR: Can not find geocode.pl, it's needed for geocoding.\n")
+    
     print '\n***************** Geocoding *******************'
     if not inps.lookup_file.endswith('.trans'):
         print 'ERROR: Input lookup file is not .trans file: '+inps.lookup_file+'\n'
