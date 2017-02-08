@@ -247,9 +247,15 @@ def subset_box2inps(inps, pix_box, geo_box):
     if geo_box:
         inps.subset_lon = [geo_box[0], geo_box[2]]
         inps.subset_lat = [geo_box[1], geo_box[3]]
+    else:
+        inps.subset_lon = None
+        inps.subset_lat = None
     if pix_box:
         inps.subset_x = [pix_box[0], pix_box[2]]
         inps.subset_y = [pix_box[1], pix_box[3]]
+    else:
+        inps.subset_x = None
+        inps.subset_y = None
     return inps
 
 def get_box_overlap_index(box1,box2):

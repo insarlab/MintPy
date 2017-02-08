@@ -55,9 +55,9 @@ def usage():
       incidence_angle.py  hdf5_file  [output_file]
 
   Example:
-      incidence_angle.py -f velocity.h5
-      incidence_angle.py -f timeseries.h5
-      incidence_angle.py -f temporal_coherence.h5
+      incidence_angle.py velocity.h5
+      incidence_angle.py timeseries.h5
+      incidence_angle.py temporal_coherence.h5
        
 ***************************************************************
     '''

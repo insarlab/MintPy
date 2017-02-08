@@ -161,13 +161,11 @@ def main(argv):
     for ni in range(numIfgrams):
         ## read interferogram
         igram = ifgramList[ni]
-        dset = h5igrams['interferograms'][igram].get(igram)
-        data = dset[0:dset.shape[0],0:dset.shape[1]]
-        data = data.flatten(0)
+        data = h5igrams['interferograms'][igram].get(igram)[:].flatten(0)
 
         ## calculate difference between observed and estimated data
         ## interferogram by interferogram, less memory, Yunjun - 2016.06.10
-        dataEst  = np.dot(Ap[ni,:],timeseries)
+        dataEst  = np.dot(Ap[ni,:], timeseries)
         dataDiff = data - dataEst
         qq += np.exp(1j*dataDiff)
 

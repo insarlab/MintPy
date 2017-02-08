@@ -360,15 +360,16 @@ def main(argv):
     if inps.cor:
         print 'coherence files: '+str(inps.cor)
         inps.cor = sorted(glob.glob(inps.cor))
+    
     try:    inps.geomap = glob.glob(inps.geomap)[0]
     except: inps.geomap = None
     try:    inps.dem_radar = glob.glob(inps.dem_radar)[0]
     except: inps.dem_radar = None
     try:    inps.dem_geo = glob.glob(inps.dem_geo)[0]
     except: inps.dem_geo = None
-    print 'geomap file: '+inps.geomap
-    print 'DEM file in radar coord: '+inps.dem_radar
-    print 'DEM file in geo   coord: '+inps.dem_geo
+    print 'geomap file: '+str(inps.geomap)
+    print 'DEM file in radar coord: '+str(inps.dem_radar)
+    print 'DEM file in geo   coord: '+str(inps.dem_geo)
 
     ##### 2. Load data into hdf5 file
     inps.ifgram_file     = inps.tssar_dir+'/unwrapIfgram.h5'
@@ -386,7 +387,7 @@ def main(argv):
             print 'Generate mask from amplitude of interferograms'
             roipac_nonzero_mask(inps.unw, 'Mask.h5')
     elif os.path.isfile(inps.ifgram_file):
-        print inps.ifgram_file+' already exists, no need to re-load.'
+        print os.path.basename(inps.ifgram_file)+' already exists, no need to re-load.'
     else:
         sys.exit('ERROR: Cannot load/find unwrapped interferograms!')
 
@@ -402,7 +403,7 @@ def main(argv):
             print meanCohCmd
             os.system(meanCohCmd)
     elif os.path.isfile(inps.coherence_file):
-        print inps.coherence_file+' already exists, no need to re-load.'
+        print os.path.basename(inps.coherence_file)+' already exists, no need to re-load.'
     else:
         print 'WARNING: Cannot load/find coherence.'
 
@@ -410,9 +411,9 @@ def main(argv):
     if inps.int:
         load_roipac2multi_group_h5('wrapped', inps.int, inps.wrapIfgram_file, vars(inps))
     elif os.path.isfile(inps.wrapIfgram_file):
-        print inps.wrapIfgram_file+' already exists, no need to re-load.'
+        print os.path.basename(inps.wrapIfgram_file)+' already exists, no need to re-load.'
     else:
-        print 'WARNING: Cannot load/find wrapped interferograms.'
+        print "WARNING: Cannot load/find wrapped interferograms. It's okay, continue without it ..."
 
     # 2.2 single dataset file
     if inps.geomap:

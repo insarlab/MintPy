@@ -116,7 +116,7 @@ def update_inps_with_template(inps, template_file):
     if 'pysar.network.coherenceBase' in keyList:
         if not inps.coherence_file and template_dict['pysar.network.coherenceBase'].lower() in ['yes','y']:
             # Search coherence file from input files
-            k_list = [readfile.read_attribute[f]['FILE_TYPE'] for f in inps.file]
+            k_list = [readfile.read_attribute(f)['FILE_TYPE'] for f in inps.file]
             try:  cohFileIdx = k_list.index('coherence')
             except:  sys.exit("ERROR: No coherence found in input files, cannot use coherence-based approach without it.")
             inps.coherence_file = inps.file[cohFileIdx]
