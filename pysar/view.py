@@ -404,11 +404,9 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
             matrix[ind] = np.log10(np.absolute(matrix[ind]))
             disp_unit[0] = 'dB'
         else:
-            print 'Unrecognized amplitude/coherence unit: '+disp_unit[0]
-            return
+            print 'Un-scalable display unit: '+disp_unit[0]
     else:
-        print 'Unrecognized data unit: '+data_unit
-        return
+        print 'Un-scalable data unit: '+data_unit
 
     # Calculate scaling factor  - 2
     if len(data_unit)==2:
@@ -623,7 +621,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
     #----------------------- 1.2 Update plot inps/data with data matrix ----------------------#
     data, inps = update_matrix_with_plot_inps(data, meta_dict, inps)
-    print 'display in unit: '+inps.disp_unit
+    print 'data    unit: '+meta_dict['UNIT']
+    print 'display unit: '+inps.disp_unit
 
     # 1.6 Min / Max - Data/Display
     data_min = np.nanmin(data)

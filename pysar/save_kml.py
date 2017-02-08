@@ -21,11 +21,11 @@ try:
 except:
     sys.exit('pykml should be installed!')
 
+import h5py
 from lxml import etree
 import numpy as np
-import h5py
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib import ticker
 
 import pysar._readfile as readfile
 
@@ -284,7 +284,7 @@ def main(argv):
 
     #clb.set_label(fig_unit)
     clb.set_label(cbar_label+' ['+fig_unit+']')
-    clb.locator = ticker.MaxNLocator(nbins=cbar_bin_num)
+    clb.locator = mpl.ticker.MaxNLocator(nbins=cbar_bin_num)
     clb.update_ticks()
 
     pc.subplots_adjust(left=0.2,bottom=0.3,right=0.4,top=0.7)

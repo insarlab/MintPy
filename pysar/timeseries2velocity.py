@@ -150,7 +150,7 @@ def main(argv):
 
     print '--------------------------------------------'
     if len(dateList) == len(dateList1):
-        print 'using all dates to calculate the vlocity'
+        print 'using all dates to calculate the velocity'
     else:
         print 'Dates used to estimate the velocity: '+str(len(dateList))
         print dateList
