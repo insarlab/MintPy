@@ -343,7 +343,7 @@ def main(argv):
         print inps.ifgram_file + ' already exists.'
     else:
         print 'referncing all interferograms to the same pixel.'
-        seedCmd = 'seed_data.py -f '+inps.ifgram_file+' -t '+inps.template_file+' -m '+inps.mask_file+\
+        seedCmd = 'seed_data.py '+inps.ifgram_file+' -t '+inps.template_file+' -m '+inps.mask_file+\
                   ' -c '+inps.spatial_coherence_file
         print seedCmd
         os.system(seedCmd)
@@ -515,7 +515,7 @@ def main(argv):
                 acquisition_time = template['pysar.acquisitionTime']
                 print 'acquisition time: '+acquisition_time
                 cmdTrop = 'tropcor_pyaps.py -f '+inps.timeseries_file+' -d '+demFile+' -s '+model+\
-                                          ' -h '+acquisition_time+' -i '+incAngleFile
+                                          ' -h '+acquisition_time+' -i '+inps.inc_angle_file
                 print cmdTrop
                 os.system(cmdTrop)
                 inps.timeseries_file = outName
