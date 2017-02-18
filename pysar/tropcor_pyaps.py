@@ -50,7 +50,7 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
 def get_delay(grib_file, atr, inps_dict):
     # Get delay matrix using PyAPS
-    if atr['X_FIRST']:
+    if 'X_FIRST' in atr.keys():
         aps = pa.PyAPS_geo(grib_file, inps_dict['dem_file'], grib=inps_dict['grib_source'],\
                            verb=True, Del=inps_dict['delay_type'])
     else:
@@ -123,8 +123,8 @@ def cmdLineParse():
 def main(argv):
     
     inps = cmdLineParse()
-    inps.dem_file = get_file_list(inps.dem_file)[0]
-    inps.timeseries_file = get_file_list(inps.timeseries_file)[0]
+    inps.dem_file = ut.get_file_list([inps.dem_file])[0]
+    inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
     atr = readfile.read_attribute(inps.timeseries_file)
 
     print '*******************************************************************************'
@@ -202,21 +202,22 @@ def main(argv):
     else:
         ref_idx = 0
     print 'calculating phase delay on reference date: '+dateList[ref_idx]
-    phs_ref = get_delay(grib_file_list[ref_idx], atr, vars(inps))
+    phs_ref = get_delay(inps.grib_file_list[ref_idx], atr, vars(inps))
     
     ## Loop to calculate phase delay on the other dates
-    for i in range(len(grib_file_list)):
-        grib_file = grib_file_list[i] 
-        print grib_file
-        
+    for i in range(len(inps.grib_file_list)):
         # Get phase delay
+        grib_file = inps.grib_file_list[i] 
         if not i == ref_idx:
+            print dateList[i]
             phs = get_delay(grib_file, atr, vars(inps))
         else:
-            phs = phs_ref
+            phs = np.copy(phs_ref)
         # Get relative phase delay in time
         phs -= phs_ref
         
+        # Write dataset
+        print 'writing hdf5 file ...'
         data = h5timeseries['timeseries'].get(dateList[i])[:]
         dset  = group_tropCor.create_dataset(dateList[i], data=data+phs, compression='gzip')
         dset  = group_trop.create_dataset(dateList[i], data=phs, compression='gzip')
@@ -228,7 +229,8 @@ def main(argv):
     
     h5timeseries.close()
     h5timeseries_tropCor.close()
-    httrop.close()
+    h5trop.close()
+    print 'Done.'
 
     return
 
