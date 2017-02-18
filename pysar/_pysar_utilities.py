@@ -92,7 +92,6 @@ def incidence_angle(atr):
     print 'near    incidence angle : '+ str(incidence_n*180./np.pi)
     print 'far     incidence angle : '+ str(incidence_f*180./np.pi)
     print 'average incidence angle : '+ str(((incidence_f+incidence_n)/2)*180./np.pi)
-    print 'writing incidence_angle.h5 ...'
     
     angle_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
     angle_xy = np.tile(angle_x,(length,1))

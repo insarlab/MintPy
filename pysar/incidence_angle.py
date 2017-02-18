@@ -52,6 +52,7 @@ def main(argv):
     angle = ut.incidence_angle(atr)
     
     ##### Output
+    print 'writing >>> '+outFile
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'degree'
     writefile.write(angle, atr, outFile)
