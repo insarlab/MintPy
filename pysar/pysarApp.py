@@ -119,8 +119,7 @@ TEMPLATE='''template:
    
   pysar.troposphericDelay.method        = pyaps   #['height-correlation'] 
   pysar.troposphericDelay.polyOrder     = 1       #for 'height-correlation' method
-  pysar.troposphericDelay.weatherModel  = ECMWF   #['MERRA', 'NARR'], for 'pyaps' method
-  pysar.acquisitionTime                 = 00:00   #['06:00', '12:00', '18:00']
+  pysar.troposphericDelay.weatherModel  = ECMWF   #['ERA','MERRA', 'NARR'], for 'pyaps' method
   
   pysar.topoError = yes               #['no'], optional
   
@@ -514,8 +513,7 @@ def main(argv):
             else:
                 acquisition_time = template['pysar.acquisitionTime']
                 print 'acquisition time: '+acquisition_time
-                cmdTrop = 'tropcor_pyaps.py -f '+inps.timeseries_file+' -d '+demFile+' -s '+model+\
-                                          ' -h '+acquisition_time+' -i '+inps.inc_angle_file
+                cmdTrop = 'tropcor_pyaps.py '+inps.timeseries_file+' -d '+demFile+' -s '+model
                 print cmdTrop
                 os.system(cmdTrop)
                 inps.timeseries_file = outName

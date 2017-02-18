@@ -44,7 +44,7 @@ import match
 #import temporal_average
 #import spatial_average
 import modify_network
-import multi_transect
+#import multi_transect
 #import plot_network
 #import pysarApp
 #import quality_map
@@ -66,4 +66,3 @@ import tropcor_phase_elevation
 #import tropcor_pyaps
 import tsviewer
 import unwrap_error
-import update_network

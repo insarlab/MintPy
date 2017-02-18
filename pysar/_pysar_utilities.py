@@ -63,6 +63,44 @@ import pysar._network as pnet
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
+
+############################################################
+def incidence_angle(atr):
+    '''Calculate 2D matrix of incidence angle from ROI_PAC attributes
+    Input: dictionary - ROI_PAC attributes including the following items:
+                        STARTING_RANGE
+                        RANGE_PIXEL_SIZE
+                        EARTH_RADIUS
+                        HEIGHT
+                        FILE_LENGTH
+                        WIDTH
+    Output: 2D np.array - incidence angle in degree for each pixel
+    '''
+    ## Read Attributes
+    near_range = float(atr['STARTING_RANGE'])
+    dR = float(atr['RANGE_PIXEL_SIZE'])
+    r  = float(atr['EARTH_RADIUS'])
+    H  = float(atr['HEIGHT'])
+    length = int(atr['FILE_LENGTH'])
+    width  = int(atr['WIDTH'])
+    
+    ## Calculation
+    far_range = near_range+dR*width
+    incidence_n = np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))
+    incidence_f = np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))
+    
+    print 'near    incidence angle : '+ str(incidence_n*180./np.pi)
+    print 'far     incidence angle : '+ str(incidence_f*180./np.pi)
+    print 'average incidence angle : '+ str(((incidence_f+incidence_n)/2)*180./np.pi)
+    print 'writing incidence_angle.h5 ...'
+    
+    angle_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
+    angle_xy = np.tile(angle_x,(length,1))
+    angle_xy *= 180.0/np.pi
+  
+    return angle_xy
+
+
 def which(program):
     '''Test if executable exists'''
     def is_exe(fpath):
