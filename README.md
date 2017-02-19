@@ -98,6 +98,3 @@ Untar the package
 cd cvxopt-1.1.6   
 python setup.py install   
 ##########################################################   
-
-
-Github Page: https://yunjunz.github.io/PySAR/     
