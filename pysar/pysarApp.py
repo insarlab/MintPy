@@ -68,30 +68,9 @@ ____/________(___/_(____/___/____|_/_____|_______
             (_ /                            
 
  A Python package for InSAR time series analysis.
-               PySAR v1.0, Jan 2017
+               PySAR v1.2, Jan 2017
  Geodesy Lab, University of Miami, Maimi FL, USA
 _________________________________________________
-'''
-
-PYSAR_LOGO_OLD='''
-*******************************************************
-*******************************************************
-*******************************************************
-*******************************************************
-*********   OOOOO      OOOOO     O     OOOO   *********
-*********   O   O O O  O        O O    O   O  *********
-*********   OOOOO OOO  OOOOO   OOOOO   OOOO   *********  
-*********   O       O      O  O     O  O  O   *********
-*********   O     OOO  OOOOO O       O O   O  *********
-*********                                     *********
-*******************************************************
-*******************************************************
-*******************************************************
-
-
-*******************************************************
-A Python Module for InSAR time-series analysis.
-PySAR v1.0 July 2013, Geodesy Lab, RSMAS, University of Miami
 '''
 
 TEMPLATE='''template:
@@ -611,7 +590,7 @@ def main(argv):
     # Velocity and rmse maps
     #############################################
     print '\n**********  Velocity estimation  **********************'
-    velCmd = 'timeseries2velocity.py -f '+inps.timeseries_file+' -t '+inps.template_file
+    velCmd = 'timeseries2velocity.py '+inps.timeseries_file
     print velCmd
     os.system(velCmd)
     inps.velocity_file = 'velocity.h5'
@@ -640,13 +619,13 @@ def main(argv):
     # Masking (Optional)
     #############################################
     print '\n**********  Masking Velocity  *************************'
-    maskCmd = 'mask.py -f '+inps.velocity_file+' -m '+inps.mask_file
+    maskCmd = 'mask.py '+inps.velocity_file+' -m '+inps.mask_file
     print maskCmd
     os.system(maskCmd)
     inps.velocity_file = os.path.splitext(inps.velocity_file)[0]+'_masked.h5'
     
     if os.path.isfile(inps.geo_velocity_file):
-        maskCmd = 'mask.py -f '+inps.geo_velocity_file+' -m '+inps.geo_temp_coherence_file+' -t 0.7'
+        maskCmd = 'mask.py '+inps.geo_velocity_file+' -m '+inps.geo_temp_coherence_file+' -t 0.7'
         print maskCmd
         os.system(maskCmd)
         inps.geo_velocity_file = os.path.splitext(inps.geo_velocity_file)[0]+'_masked.h5'

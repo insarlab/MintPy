@@ -27,7 +27,7 @@ import matplotlib.dates as mdates
 ##### Date Format Transform
 def yyyymmdd2years(dates):
     if isinstance(dates, basestring):
-        d = dt(*time.strptime(date,"%Y%m%d")[0:5])
+        d = dt(*time.strptime(dates,"%Y%m%d")[0:5])
         day_of_year = d.timetuple().tm_yday
         yy = float(d.year)+float(day_of_year-1)/365.25
         #yy = float(d.year) + float(d.month-1)/12 + float(d.day-1)/365.25
