@@ -85,7 +85,8 @@ class Basemap2(Basemap):
         length = np.abs(lon_c - lon_c2)
         lon0 = lon_c - length/2.0
         lon1 = lon_c + length/2.0
-        if yoffset is None: yoffset = 0.1*length
+        if not yoffset:
+            yoffset = 0.1*length
 
         self.plot([lon0,lon1],[lat_c,lat_c],color='k')
         self.plot([lon0,lon0],[lat_c,lat_c+yoffset],color='k')
@@ -277,7 +278,6 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
         dem   : dem data, 2D np.int16 matrix
         box   : geo bounding box, 4-tuple as (urcrnrlon,urcrnrlat,llcrnrlon,llcrnrlat)
         inps_dict : dict with the following 5 items:
-                    'dem'               : str,   DEM file name
                     'disp_dem_shade'    : bool,  True/False
                     'disp_dem_contour'  : bool,  True/False
                     'dem_contour_step'  : float, 200.0
@@ -317,7 +317,6 @@ def plot_dem_yx(ax, dem, inps_dict):
         ax         : matplotlib axes object
         dem        : dem data, 2D np.int16 matrix
         inps_dict : dict with the following 5 items:
-                    'dem'               : str,   DEM file name
                     'disp_dem_shade'    : bool,  True/False
                     'disp_dem_contour'  : bool,  True/False
                     'dem_contour_step'  : float, 200.0
@@ -520,7 +519,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     # Transparency - Alpha
     if not inps.transparency:
         ## Auto adjust transparency value when showing shaded relief DEM
-        if inps.dem and inps.disp_dem_shade:
+        if inps.dem_file and inps.disp_dem_shade:
             inps.transparency = 0.8
         else:
             inps.transparency = 1.0    
@@ -633,15 +632,15 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     print 'display range: '+str(inps.disp_min)+' - '+str(inps.disp_max)
 
     # 1.7 DEM
-    if inps.dem:
-        dem_meta_dict = readfile.read_attribute(inps.dem)
-        print 'reading DEM: '+os.path.basename(inps.dem)+' ...'
+    if inps.dem_file:
+        dem_meta_dict = readfile.read_attribute(inps.dem_file)
+        print 'reading DEM: '+os.path.basename(inps.dem_file)+' ...'
         if inps.geo_box:
             # Support DEM with different Resolution and Coverage 
             inps.dem_pix_box = subset.box_geo2pixel(inps.geo_box, dem_meta_dict)
         else:
             inps.dem_pix_box = inps.pix_box
-        dem, dem_meta_dict = readfile.read(inps.dem, inps.dem_pix_box)
+        dem, dem_meta_dict = readfile.read(inps.dem_file, inps.dem_pix_box)
 
         # If data is too large, do not show DEM contour
         if inps.geo_box:
@@ -677,7 +676,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
                         resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
 
         # Plot DEM
-        if inps.dem:
+        if inps.dem_file:
             print 'plotting DEM background ...'
             m = plot_dem_lalo(m, dem, inps.geo_box, vars(inps))
 
@@ -733,7 +732,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             row = subset.coord_geo2radar(y, meta_dict, 'lat') - inps.pix_box[1]
             if 0 <= col <= data.shape[1] and 0 <= row <= data.shape[0]:
                 z = data[row, col]
-                if inps.dem:
+                if inps.dem_file:
                     dem_col = subset.coord_geo2radar(x, dem_meta_dict, 'lon') - inps.dem_pix_box[0]
                     dem_row = subset.coord_geo2radar(y, dem_meta_dict, 'lat') - inps.dem_pix_box[1]
                     h = dem[dem_row, dem_col]
@@ -751,7 +750,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         print 'plotting in Y/X coordinate ...'
         
         # Plot DEM
-        if inps.dem:
+        if inps.dem_file:
             print 'plotting DEM background ...'
             ax = plot_dem_yx(ax, dem, vars(inps))
 
@@ -775,7 +774,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             row = int(y+0.5)
             if 0 <= col <= data.shape[1] and 0 <= row <= data.shape[0]:
                 z = data[row,col]
-                if inps.dem:
+                if inps.dem_file:
                     h = dem[row,col]
                     return 'x=%.4f,  y=%.4f,  elev=%.1f m,  value=%.4f'%(x,y,h,z)
                 else:
@@ -920,7 +919,7 @@ def cmdLineParse(argv):
 
     ##### DEM
     dem_group = parser.add_argument_group('DEM','display topography in the background')
-    dem_group.add_argument('-d','--dem', help='DEM file to show topography as background')
+    dem_group.add_argument('-d','--dem', dest='dem_file', help='DEM file to show topography as background')
     dem_group.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',\
                            help='do not show DEM shaded relief')
     dem_group.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',\
@@ -1174,9 +1173,9 @@ def main(argv):
                 ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)
 
         # Read DEM
-        if inps.dem:
-            print 'reading DEM: '+os.path.basename(inps.dem)+' ...'
-            dem, dem_meta_dict = readfile.read(inps.dem, inps.pix_box)
+        if inps.dem_file:
+            print 'reading DEM: '+os.path.basename(inps.dem_file)+' ...'
+            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box)
             if inps.multilook:
                 dem = multilook_matrix(dem, inps.multilook_num, inps.multilook_num)
 
@@ -1247,9 +1246,9 @@ def main(argv):
                 fig_data_max = np.nanmax([fig_data_min, np.nanmax(data)])
 
                 # Plot DEM
-                if inps.dem and inps.disp_dem_shade:
+                if inps.dem_file and inps.disp_dem_shade:
                     ax.imshow(dem_hillshade, cmap='gray', interpolation='nearest')
-                if inps.dem and inps.disp_dem_contour:
+                if inps.dem_file and inps.disp_dem_contour:
                     ax.contour(dem_contour, contour_sequence, origin='lower',colors='black',alpha=0.5)
 
                 # Plot Data
