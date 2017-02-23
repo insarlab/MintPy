@@ -504,8 +504,9 @@ def plot_network(ax, pairs_idx, date8List, bperpList, plot_dict={}):
         x = np.array([dates[idx[0]], dates[idx[1]]])
         y = np.array([bperpList[idx[0]], bperpList[idx[1]]])
         if plot_dict['coherence_list']:
-            coherence = plot_dict['coherence_list'][i]
-            ax.plot(x, y, lw=plot_dict['linewidth'], alpha=0.7, c=cmap(coherence)) 
+            coh_idx = (plot_dict['coherence_list'][i] - plot_dict['disp_min']) /\
+                      (plot_dict['disp_max'] - plot_dict['disp_min'])
+            ax.plot(x, y, lw=plot_dict['linewidth'], alpha=0.7, c=cmap(coh_idx)) 
         else:
             ax.plot(x, y, lw=plot_dict['linewidth'], alpha=0.7, c='k')
     
