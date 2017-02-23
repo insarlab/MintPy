@@ -187,19 +187,27 @@ def cmdLineParse():
 def main(argv):
 
     inps = cmdLineParse()
-    print '\n**************** Multilook *********************'
+    #print '\n**************** Multilook *********************'
     fileList = get_file_list(inps.file)
-    if len(fileList) == 1 and inps.parallel:
+
+    # check outfile and parallel option
+    if len(inps.file) > 1:
+        inps.outfile = None
+    elif len(inps.file) == 1 and inps.parallel:
         inps.parallel =  False
         print 'parallel processing is diabled for one input file'
 
+    # multilooking
     if inps.parallel:
         num_cores = multiprocessing.cpu_count()
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(multilook_file)(file,inps.lks_y,inps.lks_x) for file in fileList)
     else:
-        multilook_file(fileList[0],inps.lks_y,inps.lks_x,inps.outfile)
+        for File in inps.file:
+            print '-------------------------------------------'
+            multilook_file(File,inps.lks_y,inps.lks_x,inps.outfile)
 
+    print 'Done.'
     return
 
 ###################################################################################################

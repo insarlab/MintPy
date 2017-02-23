@@ -90,7 +90,7 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
     # Input file info
     atr = readfile.read_attribute(infile)
     k = atr['FILE_TYPE']
-    print 'geocoding '+k+' file '+infile+' ...'
+    print 'geocoding '+k+' file: '+infile+' ...'
 
     # roipac outfile name info - intermediate product
     ext = os.path.splitext(infile)[1]
@@ -200,7 +200,7 @@ def main(argv):
     if not ut.which('geocode.pl'):
         sys.exit("\nERROR: Can not find geocode.pl, it's needed for geocoding.\n")
     
-    print '\n***************** Geocoding *******************'
+    #print '\n***************** Geocoding *******************'
     if not inps.lookup_file.endswith('.trans'):
         print 'ERROR: Input lookup file is not .trans file: '+inps.lookup_file+'\n'
         sys.exit(1)
@@ -219,14 +219,15 @@ def main(argv):
     if 'subset_x0' in atr.keys():
         inps.lookup_file = geomap4subset_radar_file(atr, inps.lookup_file)
 
-    # Geocode files(s)
-    print '----------------------------------------------------'
+    # Geocoding
     if inps.parallel:
         num_cores = multiprocessing.cpu_count()
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(geocode_file_roipac)(file, inps.lookup_file) for file in inps.file)
     else:
-        geocode_file_roipac(inps.file[0], inps.lookup_file, inps.outfile)
+        for File in inps.file:
+            print '----------------------------------------------------'
+            geocode_file_roipac(File, inps.lookup_file, inps.outfile)
 
     # clean temporary geomap file for previously subsetted radar coord file
     if 'subset_x0' in atr.keys():
@@ -234,6 +235,7 @@ def main(argv):
         rmCmd='rm '+geomap+'.rsc';     os.system(rmCmd);       print rmCmd
 
     print 'Done.'
+    return
 
 ######################################################################################
 if __name__ == '__main__':

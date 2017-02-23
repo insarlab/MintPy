@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import multiprocessing
+from joblib import Parallel, delayed
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -441,27 +442,19 @@ def cmdLineParse():
 def main(argv):
     
     inps = cmdLineParse()
-    inps.file = ut.get_file_list(inps.file)   
+    inps.file = ut.get_file_list(inps.file)
+    
     atr = readfile.read_attribute(inps.file[0])
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
-        
-    # Disable output file name option when there are >1 input files
+
+    # check outfile and parallel option
     if len(inps.file) > 1:
         inps.outfile = None
-    
-    # Check parallel requirements: a) >1 input file; b) joblib installed
-    if inps.parallel and len(inps.file)>1:
-        try:
-            from joblib import Parallel, delayed
-            num_cores = multiprocessing.cpu_count()
-            print 'parallel processing using %d cores ...'%(num_cores)
-        except:
-            inps.parallel =  False
-            print 'WARNING: Can not import joblib. Parallel processing is disabled.'
-    else:
+    elif len(inps.file) == 1 and inps.parallel:
         inps.parallel =  False
-    
+        print 'parallel processing is diabled for one input file'
+
     ##### Check Input Coordinates
     # Read ref_y/x/lat/lon from reference/template
     # priority: Direct Input > Reference File > Template File
@@ -512,14 +505,18 @@ def main(argv):
         else: 
             inps.coherence_file = None
     
-    ##### Seeding file by file
     if inps.method == 'manual':
         inps.parallel = False
         print 'Parallel processing is disabled for manual seeding method.'
+
+    ##### Seeding file by file
     if inps.parallel:
+        num_cores = multiprocessing.cpu_count()
+        print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(seed_file_inps)(file, inps) for file in inps.file)
     else:
         for file in inps.file:
+            print '-------------------------------------------'
             seed_file_inps(inps.file[0], inps, inps.outfile)
 
     print 'Done.'

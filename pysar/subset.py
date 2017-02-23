@@ -400,7 +400,7 @@ def subset_file(File, subset_dict, outFile=None):
     width = int(atr_dict['WIDTH'])
     length = int(atr_dict['FILE_LENGTH'])
     k = atr_dict['FILE_TYPE']
-    print 'subset '+k+' file: '+File
+    print 'subset '+k+' file: '+File+' ...'
 
     # Read Subset Inputs into 4-tuple box in pixel and geo coord
     pix_box, geo_box = subset_input_dict2box(subset_dict, atr_dict)
@@ -615,15 +615,17 @@ def main(argv):
         print 'parallel processing is diabled for one input file'
 
     ##### Subset files
-    print '----------------------------------------------------'
     if inps.parallel:
         num_cores = multiprocessing.cpu_count()
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in inps.file)
     else:
-        subset_file(inps.file[0], vars(inps), inps.outfile)
+        for File in inps.file:
+            print '----------------------------------------------------'
+            subset_file(inps.file[0], vars(inps), inps.outfile)
 
     print 'Done.'
+    return
 
 
 ###########################################################################
