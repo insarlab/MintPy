@@ -148,7 +148,7 @@ def write(*args):
             group.attrs[key]=value
         h5file.close()
   
-        return 1;
+        return outname
 
     ##### ISCE / ROI_PAC GAMMA / Image product
     else:
@@ -168,9 +168,13 @@ def write(*args):
         else: print 'Un-supported file type: '+ext; return 0;
   
         ##### Write .rsc File
-        f = open(outname+'.rsc','w')
-        for key in atr.keys():    f.write(key+'    '+atr[key]+'\n')
-        f.close()
+        digits = max([len(key) for key in atr.keys()]+[0])
+        f = '{0:<%d}    {1}'%(digits)
+        
+        frsc = open(outname+'.rsc','w')
+        for key in atr.keys():
+            frsc.write(f.format(str(key), str(atr[key]))+'\n')
+        frsc.close()
   
-        return 1;
+        return outname
 

@@ -125,16 +125,12 @@ def main(argv):
             igram = igramList[-1];   print 'No input date specified >>> continue with the last date'
         ## Read and Write
         print 'reading '+igram+' ... '
-        dset = h5file[k][igram].get(igram)
-        data = dset[0:dset.shape[0],0:dset.shape[1]]
+        data = h5file[k][igram].get(igram)[:]
+        atr = h5file[k][igram].attrs
         outname = igram
+        
         print 'writing >>> '+ outname
-        writefile.write_float32(data,outname)
-        f = open(outname+'.rsc','w')
-        for key , value in h5file[k][igram].attrs.iteritems():
-            f.write(key+'    '+str(value)+'\n')
-        f.close()    
-  
+        writefile.write(data, atr, outname)  
   
     else:
         dset = h5file[k].get(k)
@@ -146,6 +142,8 @@ def main(argv):
   
   
     h5file.close()
+    return
+
 
 ##########################################################################
 if __name__ == '__main__':

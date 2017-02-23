@@ -23,16 +23,13 @@ import pysar._datetime as ptime
 
 
 ############################################################
-def print_attributes(atr, sort=1):
+def print_attributes(atr, sorting=True):
     ## Print Dictionary of Attributes
-    keyDigitList   = []
-    for key in atr.iterkeys():
-        keyDigitList.append(len(key))
-    digits = max(keyDigitList+[0])
+    digits = digits = max([len(key) for key in atr.keys()]+[0])
     f = '{0:<%d}    {1}'%(digits)
 
-    if sort == 1: keyList = sorted(atr.iterkeys())
-    else:         keyList = atr.iterkeys()
+    if sorting: keyList = sorted(atr.iterkeys())
+    else:       keyList = atr.iterkeys()
     for key in keyList:
         print(f.format(str(key),str(atr[key])))
 
