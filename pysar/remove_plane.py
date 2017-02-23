@@ -11,165 +11,117 @@
 
 import os
 import sys
-import getopt
-import glob
+import argparse
 
 import numpy as np
 import h5py
+import multiprocessing
+from joblib import Parallel, delayed
 
+import pysar._pysar_utilities as ut
 import pysar._remove_surface as rm
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 
 
 ######################################
-def usage():
-    print '''
-**************************************************************************
-  Remove phase ramp
+EXAMPLE='''example:
+  remove_plane.py  timeseries.h5      -m Mask.h5
+  remove_plane.py  timeseries.h5      -m Mask.h5         -s quadratic
+  remove_plane.py  090214_101120.unw  -m Mask_tempCoh.h5 -s quadratic  -y 0,2400,2000,6843
+'''
 
-  Usage:
-      remove_plane.py file method [Maskfile]
 
-      -f : input file (list) that need to remove ramp
-      -s : quadratic, plane, quardatic_range, quadratic_azimiuth, plane_range, plane_azimuth
-      -m : (optional) a mask file with 0 values for those pixels which are not considered in
-             plane estimation.
-      -t : template file
-      -o : output name
-      -y : subset in azimuth/row direction for multiple surface removal within one track
-      --save-mask : plot mask file and save it to file.
+def cmdLineParse():
+    parser = argparse.ArgumentParser(description='Remove phase ramp',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=EXAMPLE)
 
-  example:
-      remove_plane.py  timeseries.h5   plane
-      remove_plane.py  timeseries.h5   plane             Mask.h5
-      remove_plane.py  unwrapIfgram.h5 quadratic_range   Mask.h5
+    parser.add_argument('file', nargs='+', help='File(s) for ramp removal')
+    parser.add_argument('-m','--mask', dest='mask_file', help='mask for pixels used in ramp estimation')
+    parser.add_argument('-s', dest='surface_type', default='plane', \
+                        choices={'plane','quadratic','plane_range','quadratic_range','plane_azimuth','quadratic_azimuth'},\
+                        help='type of surface/ramp to remove')
+    parser.add_argument('-y', dest='ysub', type=int, nargs='*',\
+                        help='subset in azimuth/row direction for multiple surface removal within one track, i.e.:\n'+\
+                             '0,2400,2000,6843')
+    parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
+    parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
+                        help='Disable parallel processing. Diabled auto for 1 input file.')
 
-      remove_plane.py  -f timeseries.h5 -t KyushuT424F640AlosA.template
+    inps = parser.parse_args()
+    if inps.ysub and not len(inps.ysub)%2 == 0:
+        raise Exception('ERROR: -y input has to have even length!')
+    return inps
 
-      remove_plane.py  -f 'geo_100102_*.unw'  -s plane     -m Mask_tempCoh.h5
-      remove_plane.py  -f 090214_101120.unw   -s quadratic -m Mask_tempCoh.h5 -y 0,2400,2000,6843
-
-**************************************************************************
-    '''
 
 ######################################
 def main(argv):
-
-    ########################## Check Inputs ################################################
-    ## Default value
-    Masking   = 'no'
-    save_mask = 'no'
-  
-    if len(sys.argv) > 4:
-        try: opts, args = getopt.getopt(argv,'h:f:m:o:s:t:y:',['help','save-mask'])
-        except getopt.GetoptError:  print 'Error while getting args!\n';  usage(); sys.exit(1)
-  
-        for opt,arg in opts:
-            if   opt in ['-h','--help']:    usage(); sys.exit()
-            elif opt in '-f':    File     = arg
-            elif opt in '-m':    maskFile = arg
-            elif opt in '-o':    outName  = arg
-            elif opt in '-s':    surfType = arg.lower()
-            elif opt in '-t':    templateFile = arg
-            elif opt in '-y':    ysub = [int(i) for i in arg.split(',')]
-            elif opt in '--save-mask'  :    save_mask = 'yes'
-  
-    elif len(sys.argv) in [3,4]:
-        File          = argv[0]
-        surfType      = argv[1].lower()
-        try: maskFile = argv[2]
-        except: pass
-    else: usage(); sys.exit(1)
-  
-    print '\n*************** Phase Ramp Removal ***********************'
-    ## Multiple Surfaces
-    try:
-        ysub
-        if not len(ysub)%2 == 0:
-            print 'ERROR: -y input has to have even length!'
-            sys.exit(1)
-        surfNum = len(ysub)/2
-    except:
-        surfNum = 1
-    print 'phase ramp number: '+str(surfNum)
-  
-    ## Tempate File
-    try:
-        templateFile
-        templateContents = readfile.read_template(templateFile)
-    except: pass
-
-    try:        surfType
-    except:
-        try:    surfType = templateContents['pysar.deramp']
-        except: surfType = 'plane'; print 'No ramp type input, use plane as default'
-    print 'phase ramp type  : '+surfType
-  
-    ## Input File(s)
-    fileList = glob.glob(File)
-    fileList = sorted(fileList)
-    print 'input file(s): '+str(len(fileList))
-    print fileList
-  
-    atr = readfile.read_attribute(fileList[0])
-    length = int(atr['FILE_LENGTH'])
-    width  = int(atr['WIDTH'])
-
-    ## Output File(s)
-    if   len(fileList) >  1:    outName = ''
-    elif len(fileList) == 0:    print 'ERROR: Cannot find input file(s)!';  sys.exit(1)
-    else:    ## Customized output name only works for single file input
-        try:
-            outName
-        except:
-            ext     = os.path.splitext(fileList[0])[1].lower()
-            outName = os.path.basename(fileList[0]).split(ext)[0]+'_'+surfType+ext
-  
-    ##### Read Mask File 
-    ## Priority:
-    ## Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5
     
-    try:
-        Mask,Matr = readfile.read(maskFile)
-        print 'mask file: '+maskFile
-        Masking = 'yes'
-    except:
-        print 'No mask. Use the whole area for ramp estimation.'
-        Masking = 'no'
-        Mask=np.ones((length,width))
+    inps = cmdLineParse()
+    inps.file = ut.get_file_list(inps.file)
+    print 'input file(s): '+str(len(inps.file))
+    print inps.file
+    
+    #print '\n*************** Phase Ramp Removal ***********************'
+    atr = readfile.read_attribute(inps.file[0])
+    length = int(atr['FILE_LENGTH'])
+    width = int(atr['WIDTH'])
 
-    ## Plot mask
-    if save_mask == 'yes':
-        mask_dis = np.zeros((length,width))
+    # check outfile and parallel option
+    if len(inps.file) > 1:
+        inps.outfile = None
+    elif len(inps.file) == 1 and inps.parallel:
+        inps.parallel =  False
+        print 'parallel processing is diabled for one input file'
+
+    # Update mask for multiple surfaces
+    if inps.ysub:
+        # Read mask
+        if not inps.mask_file:
+            Mask_temp = readfile.read(inps.mask_file)[0]
+            Mask = np.zeros((length, width))
+            Mask[Mask_temp!=0] = 1
+        else:
+            Mask = np.ones((length, width))
+        
+        # Update mask for multiple surface from inps.ysub
+        mask_multiSurface = np.zeros((length,width))
+        surfNum = len(inps.ysub)/2
         if surfNum == 1:
-            mask_dis = Mask
+            mask_multiSurface = Mask
         else:
             i = 0
-            mask_dis[ysub[2*i]:ysub[2*i+1],:] = Mask[ysub[2*i]:ysub[2*i+1],:]
+            mask_multiSurface[inps.ysub[2*i]:inps.ysub[2*i+1],:] = Mask[inps.ysub[2*i]:inps.ysub[2*i+1],:]
             for i in range(1,surfNum):
-                if ysub[2*i] < ysub[2*i-1]:
-                    mask_dis[ysub[2*i]:ysub[2*i-1],:]  += Mask[ysub[2*i]:ysub[2*i-1],:]*(i+1)
-                    mask_dis[ysub[2*i]:ysub[2*i-1],:]  /= 2
-                    mask_dis[ysub[2*i-1]:ysub[2*i+1],:] = Mask[ysub[2*i-1]:ysub[2*i+1],:]*(i+1)
+                if inps.ysub[2*i] < inps.ysub[2*i-1]:
+                    mask_multiSurface[inps.ysub[2*i]:inps.ysub[2*i-1],:]  += Mask[inps.ysub[2*i]:inps.ysub[2*i-1],:]*(i+1)
+                    mask_multiSurface[inps.ysub[2*i]:inps.ysub[2*i-1],:]  /= 2
+                    mask_multiSurface[inps.ysub[2*i-1]:inps.ysub[2*i+1],:] = Mask[inps.ysub[2*i-1]:inps.ysub[2*i+1],:]*(i+1)
                 else:
-                    mask_dis[ysub[2*i]:ysub[2*i+1],:]   = Mask[ysub[2*i]:ysub[2*i+1],:]*(i+1)
-        maskOutName = 'mask_'+str(surfNum)+surfType+'.h5'
-        writefile.write(mask_dis,Matr,maskOutName)
-        print 'save mask to mask_'+str(surfNum)+surfType+'.h5'
+                    mask_multiSurface[inps.ysub[2*i]:inps.ysub[2*i+1],:]   = Mask[inps.ysub[2*i]:inps.ysub[2*i+1],:]*(i+1)
+         
+        # Write updated mask for multiple surfaces into file
+        outFile = 'mask_'+str(surfNum)+inps.surface_type+'.h5'
+        atr['FILE_TYPE'] = 'mask'
+        writefile.write(mask_multiSurface, atr, outFile)
+        print 'saved mask to '+outFile
 
     ############################## Removing Phase Ramp #######################################
-    for file in fileList:
-        print '------------------------------------------'
-        print 'input file : '+file
-        if surfNum == 1:
-            rm.remove_surface(file,surfType,Mask,outName)
-        else:
-            rm.remove_multiple_surface(file,surfType,Mask,ysub,outName)
+    print '------------------------------------------'
+    if inps.parallel:
+        num_cores = multiprocessing.cpu_count()
+        print 'parallel processing using %d cores ...'%(num_cores)
+        Parallel(n_jobs=num_cores)(delayed(rm.remove_surface)(file, inps.surface_type, inps.mask_file, ysub=inps.ysub)\
+                                   for file in inps.file)
+    else:
+        rm.remove_surface(inps.file[0], inps.surface_type, inps.mask_file, inps.outfile, inps.ysub)
+    
+    print 'Done.'
+    return
 
 
 ###########################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
 
-#

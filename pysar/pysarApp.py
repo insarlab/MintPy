@@ -117,15 +117,15 @@ TEMPLATE='''template:
   pysar.reference.lalo     = 31.8, 130.8              #[not implemented yet]
   pysar.reference.date     = 20090120
    
-  pysar.troposphericDelay.method        = pyaps   #['height-correlation'] 
-  pysar.troposphericDelay.polyOrder     = 1       #for 'height-correlation' method
+  pysar.troposphericDelay.method        = pyaps   #['height_correlation'] 
+  pysar.troposphericDelay.polyOrder     = 1       #for 'height_correlation' method
   pysar.troposphericDelay.weatherModel  = ECMWF   #['ERA','MERRA', 'NARR'], for 'pyaps' method
   
   pysar.topoError = yes               #['no'], optional
   
   pysar.deramp    = plane             #[    'plane',     'plane_range',     'plane_azimuth']
                                       #['quadratic', 'quadratic_range', 'quadratic_azimuth']
-                                      #['baselineCor','BaseTropCor']
+                                      #['baseline_cor','base_trop_cor']
   
   pysar.geocode   = yes               #['no'], optional
 '''
@@ -452,9 +452,9 @@ def main(argv):
     print '\n**********  Tropospheric Correction  ******************'
     # Check conflicts
     if 'pysar.troposphericDelay.method' in template.keys():
-        deramp_method = template['pysar.deramp'].lower().replace('-','').replace('_','')
+        deramp_method = template['pysar.deramp'].lower().replace('-','_')
         # 1. Conflict with Base-Trop ramp removal
-        if deramp_method in ['basetropcor']:
+        if deramp_method in ['base_trop_cor']:
             print '''
             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             WARNING:
@@ -481,9 +481,9 @@ def main(argv):
             template.pop('pysar.troposphericDelay.method', None)
     
     if 'pysar.troposphericDelay.method' in template.keys():
-        trop_method = template['pysar.troposphericDelay.method'].lower().replace('-','').replace('_','')
+        trop_method = template['pysar.troposphericDelay.method'].lower().replace('-','_')
         # Height-Correlation
-        if trop_method in ['heightcorrelation']:
+        if trop_method in ['height_correlation']:
             print 'tropospheric delay correction with height-correlation approach'
             outName = os.path.splitext(inps.timeseries_file)[0]+'_tropHgt.h5'
             if os.path.isfile(outName):
@@ -511,8 +511,8 @@ def main(argv):
                 inps.timeseries_file = outName
                 print inps.timeseries_file+' already exists.'
             else:
-                acquisition_time = template['pysar.acquisitionTime']
-                print 'acquisition time: '+acquisition_time
+                #acquisition_time = template['pysar.acquisitionTime']
+                #print 'acquisition time: '+acquisition_time
                 cmdTrop = 'tropcor_pyaps.py '+inps.timeseries_file+' -d '+demFile+' -s '+model
                 print cmdTrop
                 os.system(cmdTrop)
@@ -547,22 +547,27 @@ def main(argv):
     ##############################################
     print '\n**********  Ramp Removal  ***********************'
     if 'pysar.deramp' in template.keys():
-        deramp_method = template['pysar.deramp'].lower().replace('-','').replace('_','')
+        deramp_method = template['pysar.deramp'].lower().replace('-','_')
         print 'Phase Ramp Removal method : '+template['pysar.deramp']
-        outName = os.path.splitext(inps.timeseries_file)[0]+'_'+deramp_method+'.h5'
-        if os.path.isfile(outName):
-            print inps.timeseries_file+' already exists.'
-            inps.timeseries_file = outName
-        else:
-            if deramp_method in ['plane',     'plane_range',     'plane_azimuth',\
-                                 'quadratic', 'quadratic_range', 'quadratic_azimuth']:
-                derampCmd = 'remove_plane.py -f '+inps.timeseries_file+' -m '+inps.mask_file+\
-                            ' -t '+inps.template_file+' -o '+outName
+
+        if deramp_method in ['plane', 'quadratic', 'plane_range', 'quadratic_range',\
+                             'plane_azimuth', 'quadratic_azimuth']:
+            outName = os.path.splitext(inps.timeseries_file)[0]+'_'+deramp_method+'.h5'
+            if os.path.isfile(outName):
+                print inps.timeseries_file+' already exists.'
+                inps.timeseries_file = outName
+            else:
+                derampCmd = 'remove_plane.py '+inps.timeseries_file+' -m '+inps.mask_file+' -s '+deramp_method
                 print derampCmd
                 os.system(derampCmd)
+            inps.timeseries_file = outName
+
+        elif deramp_method in ['baseline_cor','baselinecor']:
+            outName = os.path.splitext(inps.timeseries_file)[0]+'_baselineCor.h5'
+            if os.path.isfile(outName):
+                print inps.timeseries_file+' already exists.'
                 inps.timeseries_file = outName
-            
-            elif deramp_method in ['baselinecor']:
+            else:
                 if not 'X_FIRST' in atr.keys():
                     derampCmd = 'baseline_error.py '+inps.timeseries_file+' '+inps.mask_file
                     print derampCmd
@@ -570,10 +575,15 @@ def main(argv):
                     inps.timeseries_file = outName
                 else:
                     print 'WARNING!'
-                    print 'Skipping orbital error correction.'
+                    print 'Skipping correction.'
                     print 'baselineCor method can only be applied in radar coordinate'
-            
-            elif deramp_method in ['basetropcor']:
+
+        elif deramp_method in ['base_trop_cor','basetropcor','baselinetropcor']:
+            outName = os.path.splitext(inps.timeseries_file)[0]+'_baseTropCor.h5'
+            if os.path.isfile(outName):
+                print inps.timeseries_file+' already exists.'
+                inps.timeseries_file = outName
+            else:
                 if not 'X_FIRST' in atr.keys():
                     print 'Joint estimation of Baseline error and tropospheric delay'+\
                           ' [height-correlation approach]'
@@ -589,11 +599,10 @@ def main(argv):
                     inps.timeseries_file = outName
                 else:
                     print 'WARNING!'
-                    print 'Skipping orbital error correction.'
+                    print 'Skipping correction.'
                     print 'baselineCor method can only be applied in radar coordinate'
-      
-            else:
-                print 'WARNING: Unrecognized Orbital error correction method: '+template['pysar.deramp']
+        else:
+            print 'WARNING: Unrecognized phase ramp method: '+template['pysar.deramp']
     else:
         print 'No phaes ramp removal.'
 

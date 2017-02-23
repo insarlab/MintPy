@@ -205,7 +205,7 @@ def main(argv):
         del effect
   
     print 'Correctiing the time series '
-    outName=File.replace('.h5','')+'_BaseTropCor.h5'
+    outName=File.replace('.h5','')+'_baseTropCor.h5'
     h5orbCor=h5py.File(outName,'w')
     group = h5orbCor.create_group('timeseries')
     for i in range(len(dateList)):
