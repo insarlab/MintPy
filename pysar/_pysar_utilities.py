@@ -36,7 +36,7 @@
 # Yunjun, Dec 2015: Use k[0] instead of 'interferograms' in some functions for 
 #                       better support of interferograms, coherence and wrapped
 # Yunjun, Jan 2016: Add yyyymmdd() and yymmdd()
-# Yunjun, Jun 2016: Add printProgress() written by Greenstick from Stack Overflow
+# Yunjun, Jun 2016: Add print_progress() written by Greenstick from Stack Overflow
 #                   Removed remove_plane functions since a better version in _remove_plane
 #                   Add inner function ts_inverse() to faster time series inversion
 #                   Add P_BASELINE_TIMESERIES attribute to timeseries file.
@@ -169,7 +169,7 @@ def nonzero_mask(File, outFile='Mask.h5'):
         data = h5[k][igram].get(igram)[:]
         
         mask[data==0] = 0
-        printProgress(i+1, len(igramList))
+        print_progress(i+1, len(igramList))
 
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask, atr, outFile)
@@ -228,7 +228,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 meanList.append(np.nanmean(data))
-            printProgress(i+1, epochNum, suffix=epoch)
+            print_progress(i+1, epochNum, suffix=epoch)
         del data
         h5file.close()
     else:
@@ -283,7 +283,7 @@ def temporal_average(File, outFile=None):
             d = h5file[k].get(epoch)[:]
         else: print k+' type is not supported currently.'; sys.exit(1)
         dMean += d
-        printProgress(i+1, epochNum, suffix=epoch)
+        print_progress(i+1, epochNum, suffix=epoch)
     dMean /= float(len(epochList))
     del d
     h5file.close()
@@ -304,9 +304,10 @@ def temporal_average(File, outFile=None):
 
 ######################################################################################################
 def get_file_list(fileList):
-    ## Get all existed files matching the input list of file pattern
-    ## Example:
-    ## fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
+    '''Get all existed files matching the input list of file pattern
+    Example:
+    fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
+    '''
   
     fileListOut = []
     for i in range(len(fileList)):
@@ -317,10 +318,8 @@ def get_file_list(fileList):
 
 
 ######################################################################################################
-## Print iterations progress - Greenstick from Stack Overflow
-## http://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
-def printProgress (iteration, total, prefix = 'calculating:', suffix = 'complete', decimals = 1, barLength = 50):
-    """
+def print_progress(iteration, total, prefix='calculating:', suffix='complete', decimals=1, barLength=50):
+    """Print iterations progress - Greenstick from Stack Overflow
     Call in a loop to create terminal progress bar
     @params:
         iteration   - Required  : current iteration (Int)
@@ -329,6 +328,8 @@ def printProgress (iteration, total, prefix = 'calculating:', suffix = 'complete
         suffix      - Optional  : suffix string (Str)
         decimals    - Optional  : number of decimals in percent complete (Int) 
         barLength   - Optional  : character length of bar (Int) 
+    
+    Reference: http://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
     """
     filledLength    = int(round(barLength * iteration / float(total)))
     percents        = round(100.00 * (iteration / float(total)), decimals)
@@ -341,32 +342,33 @@ def printProgress (iteration, total, prefix = 'calculating:', suffix = 'complete
     '''
     Sample Useage:
     for i in range(len(dateList)):
-        printProgress(i+1,len(dateList))
+        print_progress(i+1,len(dateList))
     '''
 
 
 #########################################################################
-############### Convertion from Geo to Radar coordinate #################
 def glob2radar(lat,lon,rdrRefFile='radar*.hgt', geomapFile='geomap*.trans'):
-    ## Convert geo coordinates into radar coordinates.
-    ##     If geomap*.trans file exists, use it for precise conversion;
-    ##     If not, use radar*.hgt or input reference file's 4 corners' lat/lon
-    ##          info for a simple 2D linear transformation.
-    ##
-    ## Usage: x,y,x_res,y_res = glob2radar(lat,lon [,rdrRefFile] [,igramNum])
-    ##
-    ##     lat (np.array) : Array of latitude
-    ##     lon (np.array) : Array of longitude
-    ##     rdrRefFile     : radar coded file (not subseted), optional.
-    ##                      radar*.hgt by default, support all PySAR / ROI_PAC format
-    ##     igramNum       : used interferogram number, i.e. 1 or 56, optional
-    ##
-    ##     x/y            : Array of radar coordinate - range/azimuth
-    ##     x_res/y_res    : residul/uncertainty of coordinate conversion
-    ##
-    ## Exmaple: x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]))
-    ##          x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]),'Mask.h5')
-    ##          x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]),'LoadedData.h5',1)
+    '''Convert geo coordinates into radar coordinates.
+        If geomap*.trans file exists, use it for precise conversion;
+        If not, use radar*.hgt or input reference file's 4 corners' lat/lon
+             info for a simple 2D linear transformation.
+    
+    Usage: x,y,x_res,y_res = glob2radar(lat,lon [,rdrRefFile] [,igramNum])
+    
+        lat (np.array) : Array of latitude
+        lon (np.array) : Array of longitude
+        rdrRefFile     : radar coded file (not subseted), optional.
+                         radar*.hgt by default, support all PySAR / ROI_PAC format
+        igramNum       : used interferogram number, i.e. 1 or 56, optional
+    
+        x/y            : Array of radar coordinate - range/azimuth
+        x_res/y_res    : residul/uncertainty of coordinate conversion
+    
+    Exmaple:
+        x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]))
+        x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]),'Mask.h5')
+        x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]),'LoadedData.h5',1)
+    '''
   
     ########## Precise conversion using geomap.trans file, if it exists.
     try:
@@ -437,27 +439,28 @@ def glob2radar(lat,lon,rdrRefFile='radar*.hgt', geomapFile='geomap*.trans'):
 
 
 #########################################################################
-############### Convertion from Radar to Geo coordinate #################
 def radar2glob(x,y,rdrRefFile='radar*.hgt',igramNum=1):
-    ## Convert radar coordinates into geo coordinates.
-    ##     This function use radar*.hgt or input reference file's 4 corners'
-    ##     lat/lon info for a simple 2D linear transformation.
-    ##     Accuracy: rough, not accurate
-    ##
-    ## Usage: lat,lon,lat_res,lon_res = glob2radar(x, y [,rdrRefFile] [,igramNum])
-    ##
-    ##     x (np.array)     : Array of x/range pixel number
-    ##     y (np.array)     : Array of y/azimuth pixel number
-    ##     rdrRefFile       : radar coded file (not subseted), optional.
-    ##                        radar*.hgt by default, support all PySAR / ROI_PAC format
-    ##     igramNum         : used interferogram number, i.e. 1 or 56, optional
-    ##
-    ##     lat/lon          : Array of geo coordinate
-    ##     lat_res/lon_res  : residul/uncertainty of coordinate conversion
-    ##
-    ## Exmaple: lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]))
-    ##          lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]),'Mask.h5')
-    ##          lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]),'LoadedData.h5',1)
+    '''Convert radar coordinates into geo coordinates.
+        This function use radar*.hgt or input reference file's 4 corners'
+        lat/lon info for a simple 2D linear transformation.
+        Accuracy: rough, not accurate
+    
+    Usage: lat,lon,lat_res,lon_res = glob2radar(x, y [,rdrRefFile] [,igramNum])
+    
+        x (np.array)     : Array of x/range pixel number
+        y (np.array)     : Array of y/azimuth pixel number
+        rdrRefFile       : radar coded file (not subseted), optional.
+                           radar*.hgt by default, support all PySAR / ROI_PAC format
+        igramNum         : used interferogram number, i.e. 1 or 56, optional
+    
+        lat/lon          : Array of geo coordinate
+        lat_res/lon_res  : residul/uncertainty of coordinate conversion
+    
+    Exmaple:
+        lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]))
+        lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]),'Mask.h5')
+        lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]),'LoadedData.h5',1)
+    '''
   
     ### find and read radar coded reference file
     rdrRefFile = check_variable_name(rdrRefFile)  
@@ -521,8 +524,8 @@ def radar2glob(x,y,rdrRefFile='radar*.hgt',igramNum=1):
 
 
 #########################################################################
-############### Check File is in Radar or Geo coordinate ################
 def radar_or_geo(File):
+    '''Check File is in Radar or Geo coordinate'''
     ext = os.path.splitext(File)[1]
     if ext == '.h5':
         h5file=h5py.File(File,'r')
@@ -548,17 +551,15 @@ def radar_or_geo(File):
 #########################################################################
 def check_variable_name(path):
     s=path.split("/")[0]
-
     if len(s)>0 and s[0]=="$":
         p0=os.getenv(s[1:])
         path=path.replace(path.split("/")[0],p0)
     return path
 
 
-
 #########################################################################
 def hillshade(data,scale):
-    #from scott baker, ptisk library 
+    '''from scott baker, ptisk library '''
     azdeg  = 315.0
     altdeg = 45.0
     az  = azdeg  * np.pi/180.0
@@ -602,8 +603,8 @@ def date_list(h5file):
     for i in range(len(dateList)): dateDict[dateList[i]] = tbase[i]
     return tbase,dateList,dateDict,dateList1
 
-#####################################
 
+#####################################
 def YYYYMMDD2years(d):
     dy = datetime.datetime(*time.strptime(d,"%Y%m%d")[0:5])
     dyy=np.float(dy.year) + np.float(dy.month-1)/12 + np.float(dy.day-1)/365
@@ -643,10 +644,9 @@ def design_matrix(h5file):
     return A,B
 
 ######################################
-#def timeseries_inversion(h5flat,h5timeseries):
-def timeseries_inversion(igramsFile,timeseriesFile):
-    ## modified from sbas.py written by scott baker, 2012 
+def timeseries_inversion(igramsFile, timeseriesFile):
     '''Implementation of the SBAS algorithm.
+    modified from sbas.py written by scott baker, 2012 
     
     Usage:
     timeseries_inversion(h5flat,h5timeseries)
@@ -722,7 +722,7 @@ def timeseries_inversion(igramsFile,timeseriesFile):
         #    try: tempDeformation[:,i*length+j] = point_inverse(dataPoint)
         #    except: pass
   
-        printProgress(i+1,length,prefix='calculating:')
+        print_progress(i+1,length,prefix='calculating:')
     del data
   
     ##### Time Series Data Preparation
@@ -757,10 +757,7 @@ def timeseries_inversion(igramsFile,timeseriesFile):
     print 'Done.\nTime series inversion took ' + str(time.time()-total) +' secs'
     
 ###################################################
-######################################
 def timeseries_inversion_FGLS(h5flat,h5timeseries):
-
-    #modified from sbas.py written by scott baker, 2012 
     '''Implementation of the SBAS algorithm.
     
     Usage:
@@ -839,7 +836,6 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
 
 
 def timeseries_inversion_L1(h5flat,h5timeseries):
-
     try:
         from l1 import l1
         from cvxopt import normal,matrix
@@ -1020,8 +1016,9 @@ def Bh_Bv_timeseries(igramsFile):
     return Bh,Bv
 
 def stacking(File):
-    ## Stack multi-temporal dataset into one
-    ##    equivalent to temporal sum
+    '''Stack multi-temporal dataset into one
+       equivalent to temporal sum
+    '''
 
     ## File Info
     atr = readfile.read_attribute(File)
@@ -1041,7 +1038,7 @@ def stacking(File):
             if k == 'timeseries':  data = h5file[k].get(epoch)[:]
             else:                  data = h5file[k][epoch].get(epoch)[:]
             stack += data
-            printProgress(i+1,epochNum)
+            print_progress(i+1,epochNum)
         h5file.close()
 
     else:
@@ -1076,7 +1073,6 @@ def yymmdd(dates):
 
 
 def make_triangle(dates12,igram1,igram2,igram3):
-
     dates=[]
     dates.append(igram1.split('-')[0])
     dates.append(igram1.split('-')[1])
@@ -1095,7 +1091,6 @@ def make_triangle(dates12,igram1,igram2,igram3):
     return Igramtriangle,IgramtriangleIndexes
 
 def get_triangles(h5file):
-   
     k=h5file.keys()
     igramList=h5file[k[0]].keys()
    
@@ -1146,7 +1141,6 @@ def get_triangles(h5file):
 
 
 def generate_curls(curlfile,h5file,Triangles,curls):
-
     ifgramList = h5file['interferograms'].keys()
     h5curlfile=h5py.File(curlfile,'w')
     gg = h5curlfile.create_group('interferograms')
@@ -1164,7 +1158,7 @@ def generate_curls(curlfile,h5file,Triangles,curls):
         dset = group.create_dataset(Triangles[i][0]+'_'+Triangles[i][1]+'_'+Triangles[i][2],\
                                     data=data1+data3-data2, compression='gzip')
         for key, value in h5file['interferograms'][ifgramList[curls[i,0]]].attrs.iteritems():
-           group.attrs[key] = value
+            group.attrs[key] = value
  
     h5curlfile.close()
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-###################### Auto setting for University of Miami ############
-miami_path=True    # Package-wide variable
+########################################################################
+miami_path=True    # Package-wide variable, Auto setting for University of Miami
                    # change it to False if you are not using the file structure of University of Miami
 
 ###################### Do not change below this line ###################

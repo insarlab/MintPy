@@ -27,7 +27,7 @@ import pysar._datetime as ptime
 import pysar._readfile as readfile
 
 
-################################# Basic File I/O #################################
+##################################################################
 def read_pairs_list(date12ListFile, dateList=[]):
     '''Read Pairs List file like below:
     070311-070426
@@ -56,6 +56,7 @@ def read_pairs_list(date12ListFile, dateList=[]):
         pairs_idx.append(pair_idx)
 
     return pairs_idx
+
 
 def write_pairs_list(pairs, dateList, outName):
     dateList6 = ptime.yymmdd(dateList)
@@ -187,7 +188,7 @@ def igram_perp_baseline_list(File):
     return p_baseline_list
 
 
-################################# Network Selection #################################
+##################################################################
 def threshold_perp_baseline(igramIdxList,perpBaseList,perpBaseMax=800,perpBaseMin=0):
     '''Remove pairs/interoferogram out of [perpBaseMin, perpBaseMax]
     Example:
@@ -433,8 +434,7 @@ def select_pairs_star(dateList, m_date):
     return pairs
 
 
-
-################################# Plotting #################################
+##################################################################
 def plot_network(ax, pairs_idx, date8List, bperpList, plot_dict={}):
     '''Plot Temporal-Perp baseline Network
     Inputs
@@ -576,6 +576,4 @@ def auto_adjust_yaxis(ax, dataList, fontSize=12):
     #plt.setp(xticklabels, 'color', 'k', fontsize=fontSize)
     
     return ax
-
-
 

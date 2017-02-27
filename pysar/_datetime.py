@@ -24,7 +24,6 @@ import matplotlib.dates as mdates
 
 
 ################################################################
-##### Date Format Transform
 def yyyymmdd2years(dates):
     if isinstance(dates, basestring):
         d = dt(*time.strptime(dates,"%Y%m%d")[0:5])
@@ -48,6 +47,7 @@ def yymmdd2yyyymmdd(date):
     else:                   date = '20'+date
     return date
 
+
 def yyyymmdd(dates):
     if isinstance(dates,basestring):
         if len(dates) == 6:  datesOut = yymmdd2yyyymmdd(dates)
@@ -61,6 +61,7 @@ def yyyymmdd(dates):
         print 'Unrecognized date format. Only string and list supported.'
         sys.exit(1)
     return datesOut
+
 
 def yymmdd(dates):
     if isinstance(dates,basestring):
@@ -79,8 +80,9 @@ def yymmdd(dates):
 
 #################################################################
 def igram_date_list(igramFile):
-    ## Read Date List from Interferogram file
-    ## for timeseries file, use h5file['timeseries'].keys() directly
+    '''Read Date List from Interferogram file
+        for timeseries file, use h5file['timeseries'].keys() directly
+    '''
 
     h5file = h5py.File(igramFile,'r')
     k = h5file.keys()
@@ -106,7 +108,7 @@ def igram_date_list(igramFile):
 
 #################################################################
 def read_date_list(date_list_file):
-    ## Read Date List from txt file
+    '''Read Date List from txt file'''
     fl = open(date_list_file,'r')
     dateList = fl.read().splitlines()
     fl.close()
@@ -119,7 +121,6 @@ def read_date_list(date_list_file):
 
 ################################################################
 def date_index(dateList):
-    ##### Date Index
     dateIndex={}
     for ni in range(len(dateList)):
         dateIndex[dateList[ni]] = ni
@@ -127,7 +128,7 @@ def date_index(dateList):
 
 ################################################################
 def date_list2tbase(dateList):
-    ##### Temporal Baseline in days with respect to the 1st date
+    '''Get temporal Baseline in days with respect to the 1st date'''
     tbase=[]
     d1 = dt(*time.strptime(dateList[0],"%Y%m%d")[0:5])
     for ni in range(len(dateList)):
@@ -144,7 +145,7 @@ def date_list2tbase(dateList):
 
 ################################################################
 def date_list2vector(dateList):
-    ##### Time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
+    '''Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)'''
     dates=[]
     for ni in range(len(dateList)):
         d = dt(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
@@ -193,8 +194,4 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12):
         tick.label.set_fontsize(fontSize)
     #fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
     return ax
-
-
-
-
 
