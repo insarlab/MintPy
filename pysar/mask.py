@@ -43,10 +43,13 @@ def update_mask(mask, inps_dict=None):
     '''Update mask matrix from input options: subset_x/y and threshold'''
     if inps_dict['subset_x']:
         mask[:,inps_dict['subset_x'][0]:inps_dict['subset_x'][1]] = 0
+        print 'mask out area not in x: '+str(inps_dict['subset_x'])
     if inps_dict['subset_y']:
         mask[inps_dict['subset_y'][0]:inps_dict['subset_y'][1],:] = 0
+        print 'mask out area not in y: '+str(inps_dict['subset_y'])
     if inps_dict['thr']:
-        mask[mask<=inps_dict['thr']] = 0
+        mask[mask<inps_dict['thr']] = 0
+        print 'mask out pixels < '+str(inps_dict['thr'])+' in mask file'
     return mask
 
 
@@ -72,7 +75,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
     if km not in multi_group_hdf5_file+multi_dataset_hdf5_file:
         print 'reading mask file: '+maskFile
         mask = readfile.read(maskFile)[0]
-        if not inps_dict:
+        if inps_dict:
             mask = update_mask(mask, inps_dict)
     
     if not outFile:
