@@ -102,7 +102,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
             for key, value in atr.iteritems():    gg.attrs[key] = value
 
-            ut.printProgress(i+1,epochNum,'seeding:',epoch)
+            ut.print_progress(i+1,epochNum,'seeding:',epoch)
   
     ##### Single Dataset File
     else:

@@ -53,11 +53,7 @@ import pysar._readfile as readfile
 import pysar.subset as subset
 
 
-##################################### Sub Functions #######################################
-
-###########################  Usage Function  ###########################
-#generate_from: http://patorjk.com/software/taag/
-PYSAR_LOGO='''
+LOGO='''
 _________________________________________________
        ____             __     __     ____  
        /    )         /    )   / |    /    )
@@ -72,6 +68,7 @@ ____/________(___/_(____/___/____|_/_____|_______
  Geodesy Lab, University of Miami, Maimi FL, USA
 _________________________________________________
 '''
+#generate_from: http://patorjk.com/software/taag/
 
 TEMPLATE='''template:
   pysar.unwrapFiles    = /SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*.unw
@@ -81,14 +78,9 @@ TEMPLATE='''template:
   pysar.dem.radarCoord = /SanAndreasT356EnvD/PROCESS/DONE/*050102-070809*/radar*.hgt
   pysar.dem.geoCoord   = /SanAndreasT356EnvD/DEM/srtm1_30m.dem                   #optional
   
-  pysar.network.dropIfgramIndex = 7:9 15 25 26        #start from 1
-  pysar.network.dropDate        = 20080520 20090816
-  pysar.network.maxTempBaseline = 720
-  pysar.network.maxPerpBaseline = 2000
-  pysar.network.reference       = Modified_unwrapIfgram.h5
   pysar.network.reference       = Pairs.list
   pysar.network.coherenceBase   = yes    #search and use coherence from input
-  
+
   pysar.subset.yx          = 1800:2000,700:800        #optional
   pysar.subset.lalo        = 31.5:32.5,130.5:131.0    #optional, priority: lalo > yx
   
@@ -96,17 +88,13 @@ TEMPLATE='''template:
   pysar.reference.lalo     = 31.8, 130.8              #[not implemented yet]
   pysar.reference.date     = 20090120
    
-  pysar.troposphericDelay.method        = pyaps   #['height_correlation'] 
-  pysar.troposphericDelay.polyOrder     = 1       #for 'height_correlation' method
-  pysar.troposphericDelay.weatherModel  = ECMWF   #['ERA','MERRA', 'NARR'], for 'pyaps' method
+  pysar.troposphericDelay.method        = pyaps   #[height_correlation] 
+  pysar.troposphericDelay.polyOrder     = 1       #for height_correlation method
+  pysar.troposphericDelay.weatherModel  = ECMWF   #[ERA, MERRA, NARR], for pyaps method
   
-  pysar.topoError = yes               #['no'], optional
-  
-  pysar.deramp    = plane             #[    'plane',     'plane_range',     'plane_azimuth']
-                                      #['quadratic', 'quadratic_range', 'quadratic_azimuth']
-                                      #['baseline_cor','base_trop_cor']
-  
-  pysar.geocode   = yes               #['no'], optional
+  pysar.topoError = yes               #[no], optional  
+  pysar.deramp    = plane             #[plane, quadratic, baseline_cor, base_trop_cor]
+  pysar.geocode   = yes               #[no], optional
 '''
 
 EXAMPLE='''example:
@@ -126,7 +114,7 @@ UM_FILE_STRUCT='''
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description=PYSAR_LOGO,
+    parser = argparse.ArgumentParser(description=LOGO,
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
     
@@ -154,7 +142,7 @@ def main(argv):
     #########################################
     # Initiation
     #########################################
-    print PYSAR_LOGO
+    print LOGO
     inps.project_name = os.path.splitext(os.path.basename(inps.template_file))[0]
     print 'Project name: '+inps.project_name
     

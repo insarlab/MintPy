@@ -240,7 +240,7 @@ def roipac_nonzero_mask(unwFileList, maskFile='Mask.h5'):
             amp, unw, rsc = readfile.read_float32(file)
             
             maskZero *= amp
-            ut.printProgress(i+1, fileNum, prefix='loading', suffix=os.path.basename(file))
+            ut.print_progress(i+1, fileNum, prefix='loading', suffix=os.path.basename(file))
         mask = np.ones([int(length), int(width)])
         mask[maskZero==0] = 0
         

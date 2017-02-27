@@ -137,7 +137,7 @@ def main(argv):
         dset = h5timeseries['timeseries'].get(date)
         d = dset[0:dset.shape[0],0:dset.shape[1]]
         timeseries[dateIndex[date]][:]=d.flatten(0)
-        ut.printProgress(i+1,numDates,'loading:',date)
+        ut.print_progress(i+1,numDates,'loading:',date)
     del d
     h5timeseries.close()
 
@@ -170,7 +170,7 @@ def main(argv):
         qq += np.exp(1j*dataDiff)
 
         ## progress bar
-        ut.printProgress(ni+1,numIfgrams,'calculating:',igram)
+        ut.print_progress(ni+1,numIfgrams,'calculating:',igram)
     del timeseries, data, dataEst, dataDiff
     h5igrams.close()
 

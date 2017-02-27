@@ -1217,7 +1217,7 @@ def main(argv):
             for i in range(i_start, i_end):
                 epoch = inps.epoch[i]
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
-                ut.printProgress(i-i_start+1, i_end-i_start, prefix='loading', suffix=epoch)
+                ut.print_progress(i-i_start+1, i_end-i_start, prefix='loading', suffix=epoch)
 
                 # Read Data
                 h5file = h5py.File(inps.file, 'r')

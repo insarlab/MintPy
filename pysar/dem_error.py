@@ -201,7 +201,7 @@ def main(argv):
         dz[0][i*nrows:(i+1)*nrows]         = dz_x
         timeseries[:,i*nrows:(i+1)*nrows] -= np.dot(C1,dz_x)
 
-        ut.printProgress(i+1,ncols)
+        ut.print_progress(i+1,ncols)
 
     #dz[0][:] = par[3][:]
     dz = np.reshape(dz,[nrows,ncols],order='F')
