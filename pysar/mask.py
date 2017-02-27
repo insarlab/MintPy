@@ -41,11 +41,11 @@ def mask_matrix(data_mat,mask_mat):
 ############################################################
 def update_mask(mask, inps_dict=None):
     '''Update mask matrix from input options: subset_x/y and threshold'''
-    if not inps_dict['subset_x']:
+    if inps_dict['subset_x']:
         mask[:,inps_dict['subset_x'][0]:inps_dict['subset_x'][1]] = 0
-    if not inps_dict['subset_y']:
+    if inps_dict['subset_y']:
         mask[inps_dict['subset_y'][0]:inps_dict['subset_y'][1],:] = 0
-    if not inps_dict['thr']:
+    if inps_dict['thr']:
         mask[mask<=inps_dict['thr']] = 0
     return mask
 

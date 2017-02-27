@@ -86,7 +86,7 @@ TEMPLATE='''template:
   pysar.network.maxTempBaseline = 720
   pysar.network.maxPerpBaseline = 2000
   pysar.network.reference       = Modified_unwrapIfgram.h5
-  pysar.network.reference       = Paris.list
+  pysar.network.reference       = Pairs.list
   pysar.network.coherenceBase   = yes    #search and use coherence from input
   
   pysar.subset.yx          = 1800:2000,700:800        #optional
