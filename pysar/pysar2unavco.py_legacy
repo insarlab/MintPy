@@ -18,27 +18,27 @@ import itertools
 # ---------------------------------------------------------------------------------------
 # takes string formatted (YYYY-MM-DD) and returns date object
 def get_date(date_string): 
-	year = int(date_string[0:4])
-	month = int(date_string[4:6])
-	day = int(date_string[6:8])
-	return date(year, month, day)
+    year = int(date_string[0:4])
+    month = int(date_string[4:6])
+    day = int(date_string[6:8])
+    return date(year, month, day)
 
 def mask_timeseries(timeseries_file, mask_file, out_file):
-	os.system("masking.py -f " + timeseries_file + " -m " + mask_file + " -o " + out_file)
-	
+    os.system("mask.py -f " + timeseries_file + " -m " + mask_file + " -o " + out_file)
+    
 def usage():
-	print 'Correct format: python pysar2unavco.py -t timeseries.h5 -i incidence_angle.h5 -d DEM_error.h5 -c temporal_coherence.h5 -m mask.h5'
-	print 'Optional: --add_option OPTION_NAME=OPTION_VALUE, --mask_data (mask data using mask file)'
+    print 'Correct format: python pysar2unavco.py -t timeseries.h5 -i incidence_angle.h5 -d DEM_error.h5 -c temporal_coherence.h5 -m mask.h5'
+    print 'Optional: --add_option OPTION_NAME=OPTION_VALUE, --mask_data (mask data using mask file)'
 
 # ---------------------------------------------------------------------------------------
 #  BEGIN EXECUTABLE
 # ---------------------------------------------------------------------------------------
 try:
-	opts, extraArgs = getopt.getopt(sys.argv[1:],'t:i:d:c:m:', ['add_option=', 'mask_data']) 
+    opts, extraArgs = getopt.getopt(sys.argv[1:],'t:i:d:c:m:', ['add_option=', 'mask_data']) 
 except getopt.GetoptError:
-	print 'Error while retrieving operations - exit'
-	usage()
-	sys.exit()
+    print 'Error while retrieving operations - exit'
+    usage()
+    sys.exit()
 
 # read operations and arguments(file names):
 operations = {}
@@ -46,42 +46,42 @@ added_options = {}
 mask_data = False
 
 for o, a in opts:
-	if o == '--add_option':
-		option_and_value = a.split('=')
-		added_options[option_and_value[0].upper()] = option_and_value[1]
-	elif o == "-t":
-		timeseries = a
-	elif o == "-i":
-		incidence_angle = a
-	elif o == "-d":
-		dem = a
-	elif o == "-c":
-		temporal_coherence = a
-	elif o == "-m":
-		mask = a
-	elif o == '--mask_data':
-		mask_data = True
-	else:
-		assert False, "unhandled option - exit"
-		sys.exit()
+    if o == '--add_option':
+        option_and_value = a.split('=')
+        added_options[option_and_value[0].upper()] = option_and_value[1]
+    elif o == "-t":
+        timeseries = a
+    elif o == "-i":
+        incidence_angle = a
+    elif o == "-d":
+        dem = a
+    elif o == "-c":
+        temporal_coherence = a
+    elif o == "-m":
+        mask = a
+    elif o == '--mask_data':
+        mask_data = True
+    else:
+        assert False, "unhandled option - exit"
+        sys.exit()
 
 # ---------------------------------------------------------------------------------------
 #  GET TIMESERIES FILE INTO UNAVCO and encode attributes to timeseries group in unavco file
 # ---------------------------------------------------------------------------------------
 if mask_data:
-	print "Masking timeseries file named " + timeseries
-	out_name = timeseries.split('.')[0] + "_masked.h5"
-	mask_timeseries(timeseries, mask, out_name)
-	timeseries = out_name 
+    print "Masking timeseries file named " + timeseries
+    out_name = timeseries.split('.')[0] + "_masked.h5"
+    mask_timeseries(timeseries, mask, out_name)
+    timeseries = out_name 
 
 print 'trying to open ' + timeseries
 timeseries_file = h5py.File(timeseries, "r")
 try: 
-	key = 'timeseries'
-	group = timeseries_file[key]
+    key = 'timeseries'
+    group = timeseries_file[key]
 except: 
-	print "failed using key '" + key + "' on " + dem
-	sys.exit()
+    print "failed using key '" + key + "' on " + dem
+    sys.exit()
 
 # get attributes and dates from timeseries file, sort dates to make life easier
 attributes = group.attrs
@@ -97,14 +97,14 @@ print "created test file"
 # similar format key to the interferogram files found in unavco portal
 unavco_file.create_group('/GEOCODE/timeseries')
 for d in dates:
-	old_key = '/timeseries/' + d
-	timeseries_file.copy(old_key, unavco_file['/GEOCODE/timeseries'], d)
+    old_key = '/timeseries/' + d
+    timeseries_file.copy(old_key, unavco_file['/GEOCODE/timeseries'], d)
 
 # ---------------------------------------------------------------------------------------
 #  ENCODE REQURIED ATTRIBUTES FROM TIMESERIES FILE INTO UNAVCO
 # ---------------------------------------------------------------------------------------
-x_step = float(attributes["X_STEP"])	# longitude = width = x = columns
-y_step = float(attributes["Y_STEP"])	# latitude = length = y = rows
+x_step = float(attributes["X_STEP"])    # longitude = width = x = columns
+y_step = float(attributes["Y_STEP"])    # latitude = length = y = rows
 x_first = float(attributes["X_FIRST"])
 y_first = float(attributes["Y_FIRST"])
 num_columns = int(attributes["WIDTH"])
@@ -113,16 +113,16 @@ num_rows = int(attributes["FILE_LENGTH"])
 # extract attributes from project name
 # KyushuT73F2980_2990AlosD - 73 = track number, 2980_2990 = frames, Alos = mission
 try:
-	project_name = attributes["PROJECT_NAME"]
+    project_name = attributes["PROJECT_NAME"]
 except Exception, e:
-	print "Project name is not in the h5 file, trying to find supplied name on the command line"
-	key = "project_name"
+    print "Project name is not in the h5 file, trying to find supplied name on the command line"
+    key = "project_name"
 
-	try:
-		project_name = added_options[key.upper()]
-	except Exception, e:
-		print "Project name not supplied on the command line... quitting"
-		sys.exit()
+    try:
+        project_name = added_options[key.upper()]
+    except Exception, e:
+        print "Project name not supplied on the command line... quitting"
+        sys.exit()
 
 print project_name
 track_index = project_name.find('T')
@@ -134,33 +134,33 @@ no_frames = False
 
 # no frame number
 if frame_index == -1:
-	no_frames = True
-	project_name_starting_at_track_number = project_name[track_index + 1:]
-	track_number = ("".join(itertools.takewhile(str.isdigit, project_name_starting_at_track_number)))
+    no_frames = True
+    project_name_starting_at_track_number = project_name[track_index + 1:]
+    track_number = ("".join(itertools.takewhile(str.isdigit, project_name_starting_at_track_number)))
 
-	mission_index = project_name.find(track_number) + len(track_number)
-	mission = project_name[mission_index:len(project_name)-1]
+    mission_index = project_name.find(track_number) + len(track_number)
+    mission = project_name[mission_index:len(project_name)-1]
 else:
-	track_number = project_name[track_index+1:frame_index]
-	# sometimes there is only one frame number instead of framenumber_framenumber - look for "_"
-	multipleFrames = False
-	try:
-		underscore = re.search("_", project_name).group(0)
-		multipleFrames = True
-	except:
-		pass
+    track_number = project_name[track_index+1:frame_index]
+    # sometimes there is only one frame number instead of framenumber_framenumber - look for "_"
+    multipleFrames = False
+    try:
+        underscore = re.search("_", project_name).group(0)
+        multipleFrames = True
+    except:
+        pass
 
-	if multipleFrames:
-		frames = re.search("\d+_\d+", project_name).group(0)
-		first_frame = frames.split("_")[0]
-		last_frame = frames.split("_")[1]
-	else:
-		frames = re.search("\d+", project_name[frame_index+1:]).group(0)
-		first_frame = frames
-		last_frame = frames
+    if multipleFrames:
+        frames = re.search("\d+_\d+", project_name).group(0)
+        first_frame = frames.split("_")[0]
+        last_frame = frames.split("_")[1]
+    else:
+        frames = re.search("\d+", project_name[frame_index+1:]).group(0)
+        first_frame = frames
+        last_frame = frames
 
-	mission_index = project_name.find(frames) + len(frames)
-	mission = project_name[mission_index:len(project_name)-1]
+    mission_index = project_name.find(frames) + len(frames)
+    mission = project_name[mission_index:len(project_name)-1]
 
 region_name = project_name[:track_index]
 
@@ -211,12 +211,12 @@ group.attrs['history'] = datetime.datetime.now().date().isoformat()
 # ---------------------------------------------------------------------------------------
 # UNAVCO wants this to be an int but we have multiple frames so we have two frame attributes
 # ask what to do if no frames, for now, set to -1
-if no_frames:	
-	group.attrs['first_frame'] = -1
-	group.attrs['last_frame'] = -1
+if no_frames:   
+    group.attrs['first_frame'] = -1
+    group.attrs['last_frame'] = -1
 else:
-	group.attrs['first_frame'] = int(first_frame)
-	group.attrs['last_frame'] = int(last_frame)
+    group.attrs['first_frame'] = int(first_frame)
+    group.attrs['last_frame'] = int(last_frame)
 
 # flight_direction = A or D (ascending or descending)
 # tried to encode as char but python seems to only know string
@@ -272,27 +272,27 @@ print 'trying to open ' + incidence_angle
 incidence_angle_file = h5py.File(incidence_angle, "r")
 is_open = True
 try:
-	key = 'incidence_angle'
-	group = incidence_angle_file[key]
+    key = 'incidence_angle'
+    group = incidence_angle_file[key]
 except:
-	print "failed using key '" + key + "' on " + incidence_angle
-	is_open = False
+    print "failed using key '" + key + "' on " + incidence_angle
+    is_open = False
 
 if not is_open:
-	try:
-		key = 'mask'
-		group = incidence_angle_file[key]
-	except:
-		print "failed using key '" + key + "' on " + incidence_angle
-		print incidence_angle + ' could not be read'
-		sys.exit()
+    try:
+        key = 'mask'
+        group = incidence_angle_file[key]
+    except:
+        print "failed using key '" + key + "' on " + incidence_angle
+        print incidence_angle + ' could not be read'
+        sys.exit()
 
 # in current format incidence_angle.h5 requires you to use key 'incidence_angle/incidence_angle'
 # in order to get the datasets from the h5 file - perhaps in later version we fix this to make it
 # less verbose
 for k in group.keys():
-	old_key = key + "/" + k
-	incidence_angle_file.copy(old_key, unavco_file['/GEOCODE'], 'incidence_angle')
+    old_key = key + "/" + k
+    incidence_angle_file.copy(old_key, unavco_file['/GEOCODE'], 'incidence_angle')
 
 incidence_angle_file.close()
 
@@ -302,14 +302,14 @@ incidence_angle_file.close()
 dem_file = h5py.File(dem, "r")
 print 'trying to open ' + dem
 try:
-	key = 'dem'
-	group = dem_file[key]
+    key = 'dem'
+    group = dem_file[key]
 except:
-	print "failed using key '" + key + "' on " + dem
+    print "failed using key '" + key + "' on " + dem
 
 for k in group.keys():
-	old_key = key + "/" + k
-	dem_file.copy(old_key, unavco_file['/GEOCODE'], key)
+    old_key = key + "/" + k
+    dem_file.copy(old_key, unavco_file['/GEOCODE'], key)
 
 dem_file.close()
 
@@ -319,14 +319,14 @@ dem_file.close()
 temporal_coherence_file = h5py.File(temporal_coherence, "r")
 print 'trying to open ' + temporal_coherence
 try:
-	key = 'temporal_coherence'
-	group = temporal_coherence_file[key]
+    key = 'temporal_coherence'
+    group = temporal_coherence_file[key]
 except:
-	print "failed using key '" + key + "' on " + temporal_coherence
+    print "failed using key '" + key + "' on " + temporal_coherence
 
 for k in group.keys():
-	old_key = key + "/" + k
-	temporal_coherence_file.copy(old_key, unavco_file['/GEOCODE'], key)
+    old_key = key + "/" + k
+    temporal_coherence_file.copy(old_key, unavco_file['/GEOCODE'], key)
 
 temporal_coherence_file.close()
 
@@ -336,14 +336,14 @@ temporal_coherence_file.close()
 mask_file = h5py.File(mask, "r")
 print 'trying to open ' + mask
 try:
-	key = 'mask'
-	group = mask_file[key]
+    key = 'mask'
+    group = mask_file[key]
 except:
-	print "failed using key '" + key + "' on " + mask
+    print "failed using key '" + key + "' on " + mask
 
 for k in group.keys():
-	old_key = key + "/" + k
-	mask_file.copy(old_key, unavco_file['/GEOCODE'], key)
+    old_key = key + "/" + k
+    mask_file.copy(old_key, unavco_file['/GEOCODE'], key)
 
 mask_file.close()
 
@@ -354,9 +354,9 @@ unavco_file.close()
 # example - pysar file is called Kyushu T 80 F 245_246 JersD.h5
 # UNAVCO timeseries file is called JERS_SM_80_245_246_<first date>_<last date>.h5 since we dont need TBASE or BPERP for timeseries
 if no_frames:
-	unavco_name = mission + '_SM_' + track_number + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
+    unavco_name = mission + '_SM_' + track_number + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
 else:
-	unavco_name = mission + '_SM_' + track_number + '_' + frames + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
+    unavco_name = mission + '_SM_' + track_number + '_' + frames + '_' + dates[0] + '_' + dates[len(dates)-1] + '.h5'
 
 os.rename(unavco, "./" + unavco_name)
 
@@ -377,7 +377,7 @@ print "opened "  + unavco_name
 print 'trying to print the attribute types'
 attributes = f['/'].attrs.items()
 for k, v in attributes:
-	print "key: " + k + ", value: " + str(v) + ", type: " + str(type(v)) + "\n"
+    print "key: " + k + ", value: " + str(v) + ", type: " + str(type(v)) + "\n"
 
 print 'trying to print main group GEOCODE'
 geocode = f["GEOCODE"]

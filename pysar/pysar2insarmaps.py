@@ -6,13 +6,13 @@ import getopt
 
 # extract project name from command line supplied path
 def project_name_from_path(path):
-	tokens = path.split("/")
-	last_token = tokens[len(tokens) - 1]
+    tokens = path.split("/")
+    last_token = tokens[len(tokens) - 1]
 
-	if last_token != '':
-		return last_token
+    if last_token != '':
+        return last_token
 
-	return tokens[len(tokens) - 2]
+    return tokens[len(tokens) - 2]
 
 # get folders in path sorted in ascending time order
 def sorted_ls(path):
@@ -28,20 +28,20 @@ def rev_sorted_ls(path):
 
 # figure out what the name of the h5 file to put on site is in the given path
 def get_H5_filename(path):
-        files = rev_sorted_ls(path)
-	region_file = None
+    files = rev_sorted_ls(path)
+    region_file = None
 
-	for file in files:
-		if "_region.txt" in file:
-			region_file = file
-			break
+    for file in files:
+        if "_region.txt" in file:
+            region_file = file
+            break
 
-	h5_file = region_file.split("_region.txt")[0] + ".h5"
+    h5_file = region_file.split("_region.txt")[0] + ".h5"
         
-	return h5_file # h5 file to go on site should be second newest file
+    return h5_file # h5 file to go on site should be second newest file
 
 def usage():
-	print "pysar2insarmapsBatch.py -f path/dir -u DB_USERNAME -p DBPASSWORD -h DB_PASSWORD"
+    print "pysar2insarmapsBatch.py -f path/dir -u DB_USERNAME -p DBPASSWORD -h DB_PASSWORD"
 
 dbUsername = "INSERT"
 dbPassword = "INSERT"
@@ -50,24 +50,24 @@ dbHost = "INSERT"
 path = None
 
 try:
-	opts, extraArgs = getopt.getopt(sys.argv[1:],'f:u:p:h:')
+    opts, extraArgs = getopt.getopt(sys.argv[1:],'f:u:p:h:')
 except getopt.GetoptError:
-	print 'Error while retrieving operations - exit'
-	usage()
-	sys.exit()
+    print 'Error while retrieving operations - exit'
+    usage()
+    sys.exit()
 
 for o, a in opts:
-	if o == '-f':
-		path = a
-	elif o == '-u':
-		dbUsername = a
-	elif o == '-p':
-		dbPassword = a
-	elif o == '-h':
-		dbHost = a
-	else:
-		assert False, "unhandled option - exit"
-		sys.exit()
+    if o == '-f':
+        path = a
+    elif o == '-u':
+        dbUsername = a
+    elif o == '-p':
+        dbPassword = a
+    elif o == '-h':
+        dbHost = a
+    else:
+        assert False, "unhandled option - exit"
+        sys.exit()
 
 bjob_script_filename = "run_pysar2insarmaps.py"
 path_absolute = os.path.abspath(path)
