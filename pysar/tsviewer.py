@@ -460,7 +460,8 @@ def main(argv):
     except:
         try:    win_x
         except: win_x = [0,width]
-    win_y,win_x = subset.check_subset_range(win_y,win_x,atr)
+    win_box = (win_x[0], win_y[0], win_x[1], win_y[1])
+    win_box = subset.check_box_within_data_coverage(win_box, atr)
 
     try:
         velocityFile
@@ -493,7 +494,7 @@ def main(argv):
     try:        flip_lr
     except:
         try:    flip_ud
-        except: flip_lr, flip_ud = view.auto_flip_check(atr)
+        except: flip_lr, flip_ud = view.auto_flip_direction(atr)
 
     ## Status bar
     ## Geo coordinate
@@ -535,10 +536,10 @@ def main(argv):
     plt.colorbar(img)
 
     ## Zoom In (subset)
-    if flip_lr == 'yes':  ax.set_xlim(win_x[1],win_x[0])
-    else:                 ax.set_xlim(win_x[0],win_x[1])
-    if flip_ud == 'yes':  ax.set_ylim(win_y[0],win_y[1])
-    else:                 ax.set_ylim(win_y[1],win_y[0])
+    if flip_lr == 'yes':  ax.set_xlim(win_box[2], win_box[0])
+    else:                 ax.set_xlim(win_box[0], win_box[2])
+    if flip_ud == 'yes':  ax.set_ylim(win_box[1], win_box[3])
+    else:                 ax.set_ylim(win_box[3], win_box[1])
 
     ## Flip
     #if flip_lr == 'yes':  fig.gca().invert_xaxis()
