@@ -12,6 +12,7 @@ import psycopg2
 import geocoder
 import getopt
 from pysar.add_attributes_insarmaps import InsarDatabaseController
+import argparse
 
 # ex: python Converter_unavco.py Alos_SM_73_2980_2990_20070107_20110420.h5
 
@@ -212,8 +213,6 @@ def make_json_file(chunk_num, points):
 
     print "inserted chunk " + str(chunk_num) + " to db"
 
-def usage():
-    print "Usage: python Converter_unavco.py -f Alos_SM_73_2980_2990_20070107_20110420.h5 -u DB_USERNAME -p DBPASSWORD -h DB_PASSWORD"
 # ---------------------------------------------------------------------------------------
 # START OF EXECUTABLE
 # ---------------------------------------------------------------------------------------
@@ -221,123 +220,124 @@ def usage():
 # ---------------------------------------------------------------------------------------
 #  BEGIN EXECUTABLE
 # ---------------------------------------------------------------------------------------
-file_name = None
+def build_parser():
+    dbHost = "insarmaps.rsmas.miami.edu"
+    parser = argparse.ArgumentParser(description='Convert a Unavco format H5 file for ingestion into insarmaps.')
+    required = parser.add_argument_group("required arguments")
+    required.add_argument("-f", "--file", help="unavco file to ingest", required=True)
+    required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
+    required.add_argument("-p", "--password", help="password for the insarmaps database", required=True)
+    required.add_argument("--host", default=dbHost, help="postgres DB URL for insarmaps database", required=True)
 
-try:
-    opts, extraArgs = getopt.getopt(sys.argv[1:],'f:u:p:h:')
-except getopt.GetoptError:
-    print 'Error while retrieving operations - exit'
-    usage()
-    sys.exit()
+    return parser
 
-for o, a in opts:
-    if o == '-f':
-        file_name = a
-    elif o == '-u':
-        dbUsername = a
-    elif o == '-p':
-        dbPassword = a
-    elif o == '-h':
-        dbHost = a
-    else:
-        assert False, "unhandled option - exit"
-        sys.exit()
+def main():
+    parser = build_parser()
+    parseArgs = parser.parse_args()
 
-path_name = file_name[:len(file_name)-3]
-region_file_name = file_name[:len(file_name)-3] + '_region.txt'
+    file_name = parseArgs.file
+    dbUsername = parseArgs.user
+    dbPassword = parseArgs.password
+    dbHost = parseArgs.host
+
+    path_name = file_name[:len(file_name)-3]
+    region_file_name = file_name[:len(file_name)-3] + '_region.txt'
 # ---------------------------------------------------------------------------------------
 # start clock to track how long conversion process takes
-start_time = time.clock()
+    start_time = time.clock()
 
 # search for region file - if exist get first line which is region name
-region_file = None
-region = "null"
-project_name = "null"
-try: 
-    region_file = open(region_file_name, "r")
-    region = region_file.readline()
-    project_name = region_file.readline()
-    region_file.close()
-except:
-    pass
+    region_file = None
+    region = "null"
+    project_name = "null"
+    try:
+        region_file = open(region_file_name, "r")
+        region = region_file.readline()
+        project_name = region_file.readline()
+        region_file.close()
+    except:
+        pass
 
 # use h5py to open specified group(s) in the h5 file 
 # then read datasets from h5 file into memory for faster reading of data
 # depending on UNAVCO format, the main key to access groups might be '/GEOCODE'
-file = h5py.File(file_name,  "r")
-group = file['GEOCODE/timeseries']  # assuming there is only one main key called 'GEOCODE'
+    file = h5py.File(file_name,  "r")
+    group = file['GEOCODE/timeseries']  # assuming there is only one main key called 'GEOCODE'
 
 # get attributes (stored at root) of UNAVCO timeseries file
-attributes = file['/'].attrs
-attributes_dictionary = attributes.items()
+    attributes = file['/'].attrs
+    attributes_dictionary = attributes.items()
 
 # in timeseries group, there are 25 datasets 
 # need to get datasets with dates - strings that can be converted to integers
-dataset_keys = []
-for k in group.keys():
-    if k.isdigit():
-        dataset_keys.append(k)
-dataset_keys.sort()
+    dataset_keys = []
+    for k in group.keys():
+        if k.isdigit():
+            dataset_keys.append(k)
+    dataset_keys.sort()
 
 # get the attributes for calculating latitude and longitude
-x_step = float(attributes["X_STEP"])
-y_step = float(attributes["Y_STEP"])
-x_first = float(attributes["X_FIRST"])
-y_first = float(attributes["Y_FIRST"])
-num_columns = int(attributes["WIDTH"])
-num_rows = int(attributes["FILE_LENGTH"])
-print "columns: %d" % num_columns
-print "rows: %d" % num_rows
+    x_step = float(attributes["X_STEP"])
+    y_step = float(attributes["Y_STEP"])
+    x_first = float(attributes["X_FIRST"])
+    y_first = float(attributes["Y_FIRST"])
+    num_columns = int(attributes["WIDTH"])
+    num_rows = int(attributes["FILE_LENGTH"])
+    print "columns: %d" % num_columns
+    print "rows: %d" % num_rows
 
 # array that stores dates from dataset_keys that have been converted to decimal
-decimal_dates = []
+    decimal_dates = []
 
 # read datasets in the group into a dictionary of 2d arrays and intialize decimal dates
-timeseries_datasets = {}
-for key in dataset_keys:
-    timeseries_datasets[key] = group[key][:]
-    d = get_date(key)
-    decimal = get_decimal_date(d)
-    decimal_dates.append(decimal)
+    timeseries_datasets = {}
+    for key in dataset_keys:
+        timeseries_datasets[key] = group[key][:]
+        d = get_date(key)
+        decimal = get_decimal_date(d)
+        decimal_dates.append(decimal)
 
 # set number of points per json chunk - then close h5 file
-chunk_size = 20000
-file.close()    
+    chunk_size = 20000
+    file.close()
 
 # connect to postgresql database
 # also create folder named after h5 file to store json files in mbtiles folder
-con = None
-cur = None
+    con = None
+    cur = None
 
-path_list = path_name.split("/")
-mbtiles_path = os.getcwd() + "/mbtiles"
-folder_name = path_name.split("/")[len(path_list)-1]
-json_path = mbtiles_path + "/" + folder_name
+    path_list = path_name.split("/")
+    mbtiles_path = os.getcwd() + "/mbtiles"
+    folder_name = path_name.split("/")[len(path_list)-1]
+    json_path = mbtiles_path + "/" + folder_name
 
-try: # create path for folder that stores all mbtiles
-    os.mkdir(mbtiles_path)
-except:
-    print mbtiles_path + " already exists"
+    try: # create path for folder that stores all mbtiles
+        os.mkdir(mbtiles_path)
+    except:
+        print mbtiles_path + " already exists"
 
-try: # create path for json
-    os.mkdir(json_path)
-except:
-    print json_path + " already exists"
+    try: # create path for json
+        os.mkdir(json_path)
+    except:
+        print json_path + " already exists"
 
 # read and convert the datasets, then write them into json files and insert into database
-convert_data()
+    convert_data()
 
 # run tippecanoe command to get mbtiles file and then delete the json files to save space
-os.chdir(os.path.abspath(json_path))
-os.system("tippecanoe *.json -x d -pf -pk -Bg -d9 -D12 -g12 -r0 -o " + folder_name + ".mbtiles")
-os.system("rm -rf *.json")
+    os.chdir(os.path.abspath(json_path))
+    os.system("tippecanoe *.json -x d -pf -pk -Bg -d9 -D12 -g12 -r0 -o " + folder_name + ".mbtiles")
+    os.system("rm -rf *.json")
 
 # move mbtiles file from json folder to mbtiles folder and then delete json folder
-os.system("mv " + folder_name + ".mbtiles " + os.path.abspath(mbtiles_path))
-os.system("rm -rf " + os.path.abspath(json_path))
+    os.system("mv " + folder_name + ".mbtiles " + os.path.abspath(mbtiles_path))
+    os.system("rm -rf " + os.path.abspath(json_path))
 
 # ---------------------------------------------------------------------------------------
 # check how long it took to read h5 file data and create json files
-end_time =  time.clock()
-print ("time elapsed: " + str(end_time - start_time))
+    end_time =  time.clock()
+    print ("time elapsed: " + str(end_time - start_time))
 # ---------------------------------------------------------------------------------------
+
+if __name__ == '__main__':
+    main()

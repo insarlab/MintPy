@@ -23,7 +23,7 @@ def buildURL(args):
 
     return url[:-1]
 
-def main():
+def build_parser():
     parser = argparse.ArgumentParser(description='Query insarmaps database.')
     parser.add_argument("-s", "--satellite", help="satellite to search for")
     parser.add_argument("-r", "--relativeOrbit", help="relative orbit to search for")
@@ -33,6 +33,11 @@ def main():
     parser.add_argument("-D", "--dataset", help="dataset to search in")
     parser.add_argument("-l", "--latitude", help="latitude of point to search for")
     parser.add_argument("-L", "--longitude", help="longitude of point to search for")
+
+    return parser
+
+def main():
+    parser = build_parser()
 
     parseArgs = parser.parse_args()
 
