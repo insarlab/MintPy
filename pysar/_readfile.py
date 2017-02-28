@@ -108,7 +108,7 @@ def read(File, box=(), epoch=''):
         k = atr['FILE_TYPE']
 
         # Read Dataset
-        if k in multi_group_hdf5_file:
+        if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
             epochList = sorted(h5file[k].keys())
 
             if not epoch in epochList:

@@ -1170,7 +1170,7 @@ def main(argv):
         # Reference date for timeseries
         if k == 'timeseries':
             if inps.ref_date:
-                ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)
+                ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)[0]
 
         # Read DEM
         if inps.dem_file:
