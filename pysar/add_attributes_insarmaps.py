@@ -4,6 +4,7 @@ import psycopg2
 import sys
 import getopt
 import os
+import argparse
 
 class InsarDatabaseController:
     def __init__(self, username, password, host, db):
