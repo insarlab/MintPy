@@ -107,34 +107,28 @@ def parse_file_for_attributes(file):
 
     return attributes_dict
 
+def build_parser():
+    dbHost = "insarmaps.rsmas.miami.edu"
+    parser = argparse.ArgumentParser(description='Edit attributes of an insarmaps dataset')
+    required = parser.add_argument_group("required arguments")
+    required.add_argument("-f", "--folder", help="folder of the dataset to look for add_Attribute.txt", required=True)
+    required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
+    required.add_argument("-p", "--password", help="password for the insarmaps database", required=True)
+    required.add_argument("--host", default=dbHost, help="postgres DB URL for insarmaps database", required=True)
+    required.add_argument("-d", "--db", help="postgres database", required=True)
+
+    return parser
+
 def main(argv):
-    username = None
-    password = None
-    host = None
-    db = None
-    working_dir = None
+    parser = build_parser()
+    parseArgs = parser.parse_args()
 
-    try:
-        opts, extraArgs = getopt.getopt(argv[1:],'u:p:h:d:f:')
-    except getopt.GetoptError:
-        print 'Error while retrieving operations - exit'
-        usage()
-        sys.exit()
+    username = parseArgs.user
+    password = parseArgs.password
+    host = parseArgs.host
+    db = parseArgs.db
+    working_dir = parseArgs.folder
 
-    for o, a in opts:
-        if o == '-u':
-            username = a
-        elif o == '-p':
-            password = a
-        elif o == '-h':
-            host = a
-        elif o == '-d':
-            db = a
-        elif o == '-f':
-            working_dir = a
-        else:
-            assert False, "unhandled option " + o + " - exit"
-            sys.exit()
 
     # make sure we have a final / so the below code doesn't break
     if working_dir[-1] != "/":
