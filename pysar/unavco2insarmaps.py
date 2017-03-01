@@ -38,7 +38,30 @@ def get_decimal_date(d):
     start = date(d.year, 1, 1)
     return abs(d-start).days / 365.0 + d.year
 # ---------------------------------------------------------------------------------------
-def convert_data(): 
+def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name, region_file_name):
+
+# search for region file - if exist get first line which is region name
+    region_file = None
+    region = "null"
+    project_name = "null"
+    try:
+        region_file = open(region_file_name, "r")
+        region = region_file.readline()
+        project_name = region_file.readline()
+        print region
+        print project_name
+        region_file.close()
+    except:
+        pass
+# get the attributes for calculating latitude and longitude
+    x_step = float(attributes["X_STEP"])
+    y_step = float(attributes["Y_STEP"])
+    x_first = float(attributes["X_FIRST"])
+    y_first = float(attributes["Y_FIRST"])
+    num_columns = int(attributes["WIDTH"])
+    num_rows = int(attributes["FILE_LENGTH"])
+    print "columns: %d" % num_columns
+    print "rows: %d" % num_rows
     # create a siu_man array to store json point objects
     siu_man = []
     displacement_values = []
@@ -49,6 +72,7 @@ def convert_data():
     y = []
     chunk_num = 1
     point_num = 0
+    CHUNK_SIZE = 20000
 
     # outer loop increments row = longitude, inner loop increments column = latitude
     for (row, col), value in np.ndenumerate(timeseries_datasets[dataset_keys[0]]):
@@ -86,13 +110,13 @@ def convert_data():
 
             # if chunk_size limit is reached, write chunk into a json file
             # then increment chunk number and clear siu_man array
-            if len(siu_man) == chunk_size:
-                make_json_file(chunk_num, siu_man)
+            if len(siu_man) == CHUNK_SIZE:
+                make_json_file(chunk_num, siu_man, dataset_keys, json_path, folder_name)
                 chunk_num += 1
                 siu_man = []
 
     # write the last chunk that might be smaller than chunk_size
-    make_json_file(chunk_num, siu_man)
+    make_json_file(chunk_num, siu_man, dataset_keys, json_path, folder_name)
 
     # calculate mid lat and long of dataset - then use google python lib to get country
     mid_lat = x_first + ((num_columns/2) * x_step)
@@ -121,7 +145,10 @@ def convert_data():
     # thus we have to add "Polygon(coordinates, coordinates, coordinates, coordinates)" as string
     attribute_keys = '{'
     attribute_values = '{'
-    for k, v in attributes_dictionary:
+    for k in attributes:
+        v = attributes[k]
+        print k
+        print v
         attribute_keys += (str(k) + ",")
         if "POLYGON" in str(v):
             arr = v.split(",")
@@ -162,7 +189,8 @@ def convert_data():
     attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
     attributesController.connect()
 
-    for k, v in attributes_dictionary:
+    for k in attributes:
+        v = attributes[k]
         if "POLYGON" in str(v):
             arr = v.split(",")
             s = "\,"
@@ -188,7 +216,7 @@ def convert_data():
 # ---------------------------------------------------------------------------------------
 # create a json file out of siu man array
 # then put json file into directory named after the h5 file
-def make_json_file(chunk_num, points): 
+def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
 
     data = {
     "type": "FeatureCollection",
@@ -236,6 +264,7 @@ def main():
     parseArgs = parser.parse_args()
 
     file_name = parseArgs.file
+    global dbUsername, dbPassword, dbHost
     dbUsername = parseArgs.user
     dbPassword = parseArgs.password
     dbHost = parseArgs.host
@@ -246,18 +275,6 @@ def main():
 # start clock to track how long conversion process takes
     start_time = time.clock()
 
-# search for region file - if exist get first line which is region name
-    region_file = None
-    region = "null"
-    project_name = "null"
-    try:
-        region_file = open(region_file_name, "r")
-        region = region_file.readline()
-        project_name = region_file.readline()
-        region_file.close()
-    except:
-        pass
-
 # use h5py to open specified group(s) in the h5 file 
 # then read datasets from h5 file into memory for faster reading of data
 # depending on UNAVCO format, the main key to access groups might be '/GEOCODE'
@@ -265,8 +282,7 @@ def main():
     group = file['GEOCODE/timeseries']  # assuming there is only one main key called 'GEOCODE'
 
 # get attributes (stored at root) of UNAVCO timeseries file
-    attributes = file['/'].attrs
-    attributes_dictionary = attributes.items()
+    attributes = dict(file['/'].attrs)
 
 # in timeseries group, there are 25 datasets 
 # need to get datasets with dates - strings that can be converted to integers
@@ -276,15 +292,6 @@ def main():
             dataset_keys.append(k)
     dataset_keys.sort()
 
-# get the attributes for calculating latitude and longitude
-    x_step = float(attributes["X_STEP"])
-    y_step = float(attributes["Y_STEP"])
-    x_first = float(attributes["X_FIRST"])
-    y_first = float(attributes["Y_FIRST"])
-    num_columns = int(attributes["WIDTH"])
-    num_rows = int(attributes["FILE_LENGTH"])
-    print "columns: %d" % num_columns
-    print "rows: %d" % num_rows
 
 # array that stores dates from dataset_keys that have been converted to decimal
     decimal_dates = []
@@ -298,7 +305,6 @@ def main():
         decimal_dates.append(decimal)
 
 # set number of points per json chunk - then close h5 file
-    chunk_size = 20000
     file.close()
 
 # connect to postgresql database
@@ -322,7 +328,7 @@ def main():
         print json_path + " already exists"
 
 # read and convert the datasets, then write them into json files and insert into database
-    convert_data()
+    convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name, region_file_name)
 
 # run tippecanoe command to get mbtiles file and then delete the json files to save space
     os.chdir(os.path.abspath(json_path))
