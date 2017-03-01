@@ -363,7 +363,7 @@ def main(argv):
     
     try:    inps.geomap = glob.glob(inps.geomap)[0]
     except: inps.geomap = None
-    try:    inps.dem_radar = glob.glob(inps.dem_radar)[0]
+    try:    inps.dem_radar = glob.glob(inps.dem_radar)[-1]
     except: inps.dem_radar = None
     try:    inps.dem_geo = glob.glob(inps.dem_geo)[0]
     except: inps.dem_geo = None
