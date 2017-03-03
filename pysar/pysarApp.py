@@ -160,6 +160,10 @@ def main(argv):
     
     # Read template
     template = readfile.read_template(inps.template_file)
+    if 'pysar.deramp' in template.keys():
+        template['pysar.deramp'] = template['pysar.deramp'].lower().replace('-','_')
+    if 'pysar.troposphericDelay.method' in template.keys():
+        template['pysar.troposphericDelay.method'] = template['pysar.troposphericDelay.method'].lower().replace('-','_')
 
 
     #########################################
@@ -193,14 +197,16 @@ def main(argv):
     # DEM in geo coord
     try:    inps.dem_geo_file = os.path.basename(template['pysar.dem.geoCoord'])
     except: inps.dem_geo_file = '*.dem'
-    inps.dem_geo_file = glob.glob('./'+inps.dem_geo_file)[0]
+    try:    inps.dem_geo_file = glob.glob('./'+inps.dem_geo_file)[0]
+    except: inps.dem_geo_file = None
     if inps.dem_geo_file:    print 'DEM in geo coord: '+str(inps.dem_geo_file)
     else:  print '\nWARNING: No geo coord DEM found.\n'
     
     # DEM in radar coord
     try:    inps.dem_radar_file = os.path.basename(template['pysar.dem.radarCoord'])
     except: inps.dem_radar_file = 'radar*.hgt'
-    inps.dem_radar_file = glob.glob('./'+inps.dem_radar_file)[0]
+    try:    inps.dem_radar_file = glob.glob('./'+inps.dem_radar_file)[-1]
+    except: inps.dem_radar_file = None
     if inps.dem_radar_file:  print 'DEM in radar coord: '+str(inps.dem_radar_file)
     else:
         print '\nWARNING: No radar coord DEM found! '+\
@@ -209,7 +215,8 @@ def main(argv):
     # Transform file for geocoding
     try:    inps.geomap_file = os.path.basename(template['pysar.geomap'])
     except: inps.geomap_file = 'geomap*.trans'
-    inps.geomap_file = glob.glob('./'+inps.geomap_file)[0]
+    try:    inps.geomap_file = glob.glob('./'+inps.geomap_file)[0]
+    except: inps.geomap_file = None
     if inps.geomap_file:     print 'Transform file: '+str(inps.geomap_file)
     else:  print '\nWARNING: No transform file found! Cannot geocoding without it.\n'
 
@@ -255,8 +262,10 @@ def main(argv):
             print '--------------------------------------------'
             print 'subseting data in UpperLeft/LowerRight lon/lat: '+str(geo_box)
             inps = subset.subset_box2inps(inps, pix_box, geo_box)
-            inps.dem_geo_file = subset.subset_file(inps.dem_geo_file, vars(inps))
-            inps.geomap_file  = subset.subset_file(inps.geomap_file, vars(inps))
+            try: inps.dem_geo_file = subset.subset_file(inps.dem_geo_file, vars(inps))
+            except: pass
+            try: inps.geomap_file  = subset.subset_file(inps.geomap_file, vars(inps))
+            except: pass
             
             print '--------------------------------------------'
             print 'calculate bounding box in radar coordinate.'
@@ -271,6 +280,8 @@ def main(argv):
             inps.ifgram_file    = subset.subset_file(inps.ifgram_file, vars(inps))
             inps.coherence_file = subset.subset_file(inps.coherence_file, vars(inps))
             inps.mask_file      = subset.subset_file(inps.mask_file, vars(inps))
+            try: inps.dem_radar_file = subset.subset_file(inps.dem_radar_file, vars(inps))
+            except: pass
 
         elif pix_box:
             geo_box = None
@@ -280,6 +291,8 @@ def main(argv):
             inps.ifgram_file    = subset.subset_file(inps.ifgram_file, vars(inps))
             inps.coherence_file = subset.subset_file(inps.coherence_file, vars(inps))
             inps.mask_file      = subset.subset_file(inps.mask_file, vars(inps))
+            try: inps.dem_radar_file = subset.subset_file(inps.dem_radar_file, vars(inps))
+            except: pass
 
             print '--------------------------------------------'
             print 'calculating bounding box in geo coordinate.'
@@ -291,8 +304,10 @@ def main(argv):
             pix_box = None
             print 'subset data in UpperLeft/LowerRight lon/lat: '+str(geo_box)
             inps = subset.subset_box2inps(inps, pix_box, geo_box)
-            inps.dem_geo_file = subset.subset_file(inps.dem_geo_file, vars(inps))
-            inps.geomap_file  = subset.subset_file(inps.geomap_file, vars(inps))  
+            try: inps.dem_geo_file = subset.subset_file(inps.dem_geo_file, vars(inps))
+            except: pass
+            try: inps.geomap_file  = subset.subset_file(inps.geomap_file, vars(inps))
+            except: pass
     else:
         print 'No Subset selected. Processing the whole area.'
 
@@ -349,7 +364,27 @@ def main(argv):
         print invertCmd
         os.system(invertCmd)
     inps.timeseries_file = 'timeseries.h5'
+
+    ## Check DEM file for tropospheric delay / deramp setting
+    ## DEM is needed with same coord (radar/geo) as timeseries file
     atr = readfile.read_attribute(inps.timeseries_file)
+    if 'X_FIRST' in atr.keys():
+        demFile = inps.dem_geo_file
+    else:
+        demFile = inps.dem_radar_file
+
+    if not demFile or not os.path.isfile(demFile):
+        print '++++++++++++++++++++++++++++++++++++++++++++++'
+        print 'ERROR:'
+        print '    DEM file was not found!'
+        
+        if 'pysar.troposphericDelay.method' in template.keys():
+            print '    Continue without tropospheric correction ...'
+            template.pop('pysar.troposphericDelay.method', None)
+        
+        if template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']:
+            template.pop('pysar.deramp', None)
+        print '++++++++++++++++++++++++++++++++++++++++++++++'
 
 
     ##############################################
@@ -417,11 +452,9 @@ def main(argv):
     # Tropospheric Delay Correction (Optional)
     ##############################################
     print '\n**********  Tropospheric Correction  ******************'
-    # Check conflicts
     if 'pysar.troposphericDelay.method' in template.keys():
-        deramp_method = template['pysar.deramp'].lower().replace('-','_')
-        # 1. Conflict with Base-Trop ramp removal
-        if deramp_method in ['base_trop_cor']:
+        # 1. Check Conflict with Base-Trop ramp removal
+        if template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']:
             print '''
             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             WARNING:
@@ -433,22 +466,9 @@ def main(argv):
             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             '''
             template.pop('pysar.troposphericDelay.method', None)
-
-        # 2. If DEM is not existed
-        if 'X_FIRST' in atr.keys():
-            demFile = inps.dem_geo_file
-        else:
-            demFile = inps.dem_radar_file
-        if not os.path.isfile(demFile):
-            print '++++++++++++++++++++++++++++++++++++++++++++++'
-            print 'ERROR:'
-            print '    DEM file was not found!'
-            print '    Continue without tropospheric correction ...'
-            print '++++++++++++++++++++++++++++++++++++++++++++++'
-            template.pop('pysar.troposphericDelay.method', None)
     
     if 'pysar.troposphericDelay.method' in template.keys():
-        trop_method = template['pysar.troposphericDelay.method'].lower().replace('-','_')
+        trop_method = template['pysar.troposphericDelay.method']
         # Height-Correlation
         if trop_method in ['height_correlation']:
             print 'tropospheric delay correction with height-correlation approach'
@@ -514,9 +534,8 @@ def main(argv):
     ##############################################
     print '\n**********  Ramp Removal  ***********************'
     if 'pysar.deramp' in template.keys():
-        deramp_method = template['pysar.deramp'].lower().replace('-','_')
-        print 'Phase Ramp Removal method : '+template['pysar.deramp']
-
+        deramp_method = template['pysar.deramp']
+        print 'Phase Ramp Removal method : '+deramp_method
         if deramp_method in ['plane', 'quadratic', 'plane_range', 'quadratic_range',\
                              'plane_azimuth', 'quadratic_azimuth']:
             outName = os.path.splitext(inps.timeseries_file)[0]+'_'+deramp_method+'.h5'
@@ -593,15 +612,21 @@ def main(argv):
             outName = 'geo_'+os.path.basename(File)
             if os.path.isfile(outName):
                 print outName+' already existed.'
-            else:
+            elif inps.geomap_file:
                 geocodeCmd = 'geocode.py '+inps.geomap_file+' '+File
                 print geocodeCmd
                 try: os.system(geocodeCmd)
                 except: pass
+            else:
+                print 'WARNING: No geomap*.trans file found! Skip geocoding.'
     else:
         print 'No geocoding applied'
-    inps.geo_velocity_file = 'geo_'+os.path.basename(inps.velocity_file)
-    inps.geo_temp_coherence_file = 'geo_'+os.path.basename(inps.temp_coherence_file)
+    try:    inps.geo_velocity_file = glob.glob('geo_'+os.path.basename(inps.velocity_file))[0]
+    except: inps.geo_velocity_file = None
+    try:    inps.geo_temp_coherence_file = 'geo_'+os.path.basename(inps.temp_coherence_file)
+    except: inps.geo_temp_coherence_file = None
+    try:    inps.geo_timeseries_file = 'geo_'+os.path.basename(inps.timeseries_file)
+    except: inps.geo_timeseries_file = None
 
     #############################################
     # Masking (Optional)
@@ -612,11 +637,12 @@ def main(argv):
     os.system(maskCmd)
     inps.velocity_file = os.path.splitext(inps.velocity_file)[0]+'_masked.h5'
     
-    if os.path.isfile(inps.geo_velocity_file):
+    if inps.geo_velocity_file and inps.geo_temp_coherence_file:
         maskCmd = 'mask.py '+inps.geo_velocity_file+' -m '+inps.geo_temp_coherence_file+' -t 0.7'
         print maskCmd
         os.system(maskCmd)
-        inps.geo_velocity_file = os.path.splitext(inps.geo_velocity_file)[0]+'_masked.h5'
+        try: inps.geo_velocity_file = glob.glob(os.path.splitext(inps.geo_velocity_file)[0]+'_masked.h5')
+        except: pass
     
 
     #############################################

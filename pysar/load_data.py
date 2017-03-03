@@ -27,7 +27,7 @@ import pysar._pysar_utilities as ut
 
 ############################ Sub Functions ###################################
 ##################################################################
-def auto_path_miami(inps):
+def auto_path_miami(inps, template_dict={}):
     '''Auto File Path Setting for Geodesy Lab - University of Miami'''
     print 'Use auto path setting in University of Miami.'+\
           '(To turn it off, change miami_path value to False in pysar/__init__.py)'
@@ -48,6 +48,15 @@ def auto_path_miami(inps):
             inps.dem_radar = process_dir+'/DONE/*'+master_igram_date12+'*/radar*.hgt'
         except:
             print 'ERROR: do not find any folder in PROCESS/GEO as master interferogram'
+    
+    # Use DEMg/DEM option if dem_geo is not specified in pysar option
+    if not inps.dem_geo and template_dict:
+        if 'DEMg' in template_dict.keys():
+            inps.dem_geo = template_dict['DEMg']
+        elif 'DEM' in template_dict.keys():
+            inps.dem_geo = template_dict['DEM']
+        else:
+            print 'No DEMg/DEM option found in template, continue without pysar.dem.geoCoord option.'
 
     return inps
 
@@ -338,7 +347,7 @@ def main(argv):
 
     # Auto Setting for Geodesy Lab - University of Miami 
     if pysar.miami_path and 'SCRATCHDIR' in os.environ:
-        inps = auto_path_miami(inps)
+        inps = auto_path_miami(inps, template_dict)
 
     # Working directory for PySAR
     if not inps.tssar_dir:
