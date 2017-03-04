@@ -106,7 +106,7 @@ def main(argv):
 
     #h5Mask.close()
 
-    print '\n************ Tropospheric Delay Correction - Topo-related *************'
+    #print '\n************ Tropospheric Delay Correction - Topo-related *************'
 
     ###################################################
     h5timeseries = h5py.File(timeSeriesFile)

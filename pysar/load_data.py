@@ -326,7 +326,7 @@ def cmdLineParse():
 #############################  Main Function  ################################
 def main(argv):
     inps = cmdLineParse()
-    print '\n*************** Loading ROI_PAC Data into PySAR ****************'
+    #print '\n*************** Loading ROI_PAC Data into PySAR ****************'
     inps.project_name = os.path.basename(inps.template_file).partition('.')[0]
     print 'project: '+inps.project_name
     

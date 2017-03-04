@@ -139,7 +139,7 @@ def main(argv):
     try:     outName = argv[2]
     except:  outName = os.path.splitext(File)[0]+'_LODcor'+os.path.splitext(File)[1]
 
-    print '\n***************** Correct Local Oscilator Drift *******************'    
+    #print '\n***************** Correct Local Oscilator Drift *******************'    
     outFile = correct_lod_file(File, outName)
     
     print 'Done.'

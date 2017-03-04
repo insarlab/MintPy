@@ -47,7 +47,7 @@ def main(argv):
     try:    outFile = argv[1]
     except: outFile = 'incidence_angle.h5'
     
-    print '\n*************** Generate Incidence Angle *****************'
+    #print '\n*************** Generate Incidence Angle *****************'
     ##### Calculate look angle
     angle = ut.incidence_angle(atr)
     

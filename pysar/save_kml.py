@@ -130,7 +130,7 @@ def main(argv):
     ext = os.path.splitext(File)[1].lower()
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    print '\n*************** Output to KMZ file ****************'
+    #print '\n*************** Output to KMZ file ****************'
     print 'Input file is '+k
 
     if ext == '.h5':

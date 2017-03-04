@@ -116,7 +116,7 @@ def main(argv):
     except: tempCohFile = 'temporal_coherence.h5'
 
     ########################################################
-    print '\n********** Temporal Coherence ****************'
+    #print '\n********** Temporal Coherence ****************'
     print "load time series: "+timeSeriesFile
     atr_ts = readfile.read_attribute(timeSeriesFile)
     h5timeseries = h5py.File(timeSeriesFile)

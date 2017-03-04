@@ -224,6 +224,9 @@ def get_coverage_box(atr):
 
 
 def read_subset_template2box(templateFile):
+    '''Read pysar.subset.lalo/yx option from template file into box type
+    Return None if not specified.
+    '''
     tmpl = readfile.read_template(templateFile)
     try:
         sub = [i.strip() for i in tmpl['pysar.subset.lalo'].split(',')]
@@ -562,7 +565,7 @@ def main(argv):
     inps = cmdLineParse()
     inps.file = get_file_list(inps.file)
 
-    print '\n**************** Subset *********************'
+    #print '\n**************** Subset *********************'
     atr_dict = readfile.read_attribute(inps.file[0])
 
     ##### Convert All Inputs into subset_y/x/lat/lon

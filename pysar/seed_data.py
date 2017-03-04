@@ -269,6 +269,7 @@ def manual_select_reference_yx(stack, inps):
 def select_max_coherence_yx(corFile, mask=None):
     print '\n---------------------------------------------------------'
     print   'Searching pixel with max coherence ...'
+    print 'use coherence file: '+corFile
     coh, coh_atr = readfile.read(corFile)
     if not mask is None:
         coh[mask==0] = 0.0
@@ -516,7 +517,6 @@ def main(argv):
         Parallel(n_jobs=num_cores)(delayed(seed_file_inps)(file, inps) for file in inps.file)
     else:
         for file in inps.file:
-            print '-------------------------------------------'
             seed_file_inps(inps.file[0], inps, inps.outfile)
 
     print 'Done.'
