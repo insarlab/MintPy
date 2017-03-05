@@ -62,18 +62,24 @@ import pysar._datetime as ptime
 import pysar._network as pnet
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
+    
 
 
 ############################################################
-def incidence_angle(atr):
-    '''Calculate 2D matrix of incidence angle from ROI_PAC attributes
-    Input: dictionary - ROI_PAC attributes including the following items:
-                        STARTING_RANGE
-                        RANGE_PIXEL_SIZE
-                        EARTH_RADIUS
-                        HEIGHT
-                        FILE_LENGTH
-                        WIDTH
+def incidence_angle(atr, dimension=2):
+    '''Calculate 2D matrix of incidence angle from ROI_PAC attributes, very accurate.
+    Input:
+        dictionary - ROI_PAC attributes including the following items:
+                     STARTING_RANGE
+                     RANGE_PIXEL_SIZE
+                     EARTH_RADIUS
+                     HEIGHT
+                     FILE_LENGTH
+                     WIDTH
+        dimension - int,
+                    2 for 2d matrix
+                    1 for 1d array
+                    0 for one center value
     Output: 2D np.array - incidence angle in degree for each pixel
     '''
     ## Read Attributes
@@ -86,18 +92,22 @@ def incidence_angle(atr):
     
     ## Calculation
     far_range = near_range+dR*width
-    incidence_n = np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))
-    incidence_f = np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))
+    incidence_n = (np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range)))*180.0/np.pi
+    incidence_f = (np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range)))*180.0/np.pi
+    incidence_c = (incidence_f+incidence_n)/2
+    if dimension == 0:
+        return incidence_c
     
-    print 'near    incidence angle : '+ str(incidence_n*180./np.pi)
-    print 'far     incidence angle : '+ str(incidence_f*180./np.pi)
-    print 'average incidence angle : '+ str(((incidence_f+incidence_n)/2)*180./np.pi)
+    print 'near    incidence angle : '+ str(incidence_n)
+    print 'far     incidence angle : '+ str(incidence_f)
+    print 'average incidence angle : '+ str(incidence_c)
     
-    angle_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
-    angle_xy = np.tile(angle_x,(length,1))
-    angle_xy *= 180.0/np.pi
-  
-    return angle_xy
+    incidence_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
+    if dimension == 1:
+        return incidence_x
+    else:
+        incidence_xy = np.tile(incidence_x,(length,1))
+        return incidence_xy
 
 
 def which(program):
@@ -347,70 +357,73 @@ def print_progress(iteration, total, prefix='calculating:', suffix='complete', d
 
 
 #########################################################################
-def glob2radar(lat,lon,rdrRefFile='radar*.hgt', geomapFile='geomap*.trans'):
+def glob2radar(lat, lon, geomapFile='geomap*.trans', rdrFile=None):
     '''Convert geo coordinates into radar coordinates.
-        If geomap*.trans file exists, use it for precise conversion;
-        If not, use radar*.hgt or input reference file's 4 corners' lat/lon
-             info for a simple 2D linear transformation.
-    
-    Usage: x,y,x_res,y_res = glob2radar(lat,lon [,rdrRefFile] [,igramNum])
-    
-        lat (np.array) : Array of latitude
-        lon (np.array) : Array of longitude
-        rdrRefFile     : radar coded file (not subseted), optional.
-                         radar*.hgt by default, support all PySAR / ROI_PAC format
-        igramNum       : used interferogram number, i.e. 1 or 56, optional
-    
-        x/y            : Array of radar coordinate - range/azimuth
-        x_res/y_res    : residul/uncertainty of coordinate conversion
-    
-    Exmaple:
-        x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]))
-        x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]),'Mask.h5')
-        x,y,x_res,y_res = glob2radar(np.array([31.1,31.2,...]), np.array([130.1,130.2,...]),'LoadedData.h5',1)
+    Inputs:
+        lat/lon    - np.array, float, latitude/longitude
+        geomapFile - string, trans/look up file
+        rdrFile    - string, file in radar coord, optional but recommended.
+    Output:
+        az/rg     - np.array, float, range/azimuth pixel number
+        az/rg_res - float, residul/uncertainty of coordinate conversion
     '''
-  
+    try:    geomapFile = glob.glob(geomapFile)[0]
+    except: geomapFile = None
+
     ########## Precise conversion using geomap.trans file, if it exists.
-    try:
-        geomapFile = glob.glob(geomapFile)[0]
-        atr = readfile.read_roipac_rsc(geomapFile+'.rsc')
-        print 'finding precise radar coordinate from '+geomapFile+' file.'
+    if geomapFile:
+        # Get lat/lon resolution/step
+        print 'reading file: '+geomapFile
+        trans_rg, trans_atr = readfile.read(geomapFile, (), 'range')
+        trans_az = readfile.read(geomapFile, (), 'azimuth')[0]
+        lat_step = float(trans_atr['Y_STEP'])
+        lon_step = float(trans_atr['X_STEP'])
+        lat_first = float(trans_atr['Y_FIRST'])
+        lon_first = float(trans_atr['X_FIRST'])
         
-        width  = int(atr['WIDTH'])
-        row = (lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']);  row = (row+0.5).astype(int)
-        col = (lon - float(atr['X_FIRST'])) / float(atr['X_STEP']);  col = (col+0.5).astype(int)
-        row_read = np.max(row)+1
-        data = np.fromfile(geomapFile,np.float32,row_read*2*width).reshape(row_read,2*width)
-        x = data[row, col];       x = (x+0.5).astype(int)
-        y = data[row, col+width]; y = (y+0.5).astype(int)
-        x_res = 2
-        y_res = 2
+        # Get range/azimuth ground resolution/step
+        if rdrFile:
+            rdr_atr = readfile.read_attribute(rdrFile)
+            Re = float(rdr_atr['EARTH_RADIUS'])
+            Height = float(rdr_atr['HEIGHT'])
+            inc_angle = incidence_angle(rdr_atr, 0)
+            az_step = float(rdr_atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
+            rg_step = float(rdr_atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
+        
+            x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
+            y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
+        else:
+            x_factor = 10
+            y_factor = 10
+        
+        width  = int(trans_atr['WIDTH'])
+        row = np.rint((lat - lat_first)/lat_step).astype(int)
+        col = np.rint((lon - lon_first)/lon_step).astype(int)
+        rg = np.rint(trans_rg[row, col]).astype(int)
+        az = np.rint(trans_az[row, col]).astype(int)
+        rg_resid = x_factor
+        az_resid = y_factor
 
     ########## Simple conversion using 2D linear transformation, with 4 corners' lalo info
-    except:
-        rdrRefFile = check_variable_name(rdrRefFile)
-        rdrRefFile = glob.glob(rdrRefFile)[0]
+    elif rdrFile:
         print 'finding approximate radar coordinate with 2D linear transformation estimation.'
-        print '    using four corner lat/lon info from '+rdrRefFile+' file.'
-        
-        atr = readfile.read_attribute(rdrRefFile)
-        LAT_REF1=float(atr['LAT_REF1'])
-        LAT_REF2=float(atr['LAT_REF2'])
-        LAT_REF3=float(atr['LAT_REF3'])
-        LAT_REF4=float(atr['LAT_REF4'])
-        LON_REF1=float(atr['LON_REF1'])
-        LON_REF2=float(atr['LON_REF2'])
-        LON_REF3=float(atr['LON_REF3'])
-        LON_REF4=float(atr['LON_REF4'])
-        W =      float(atr['WIDTH'])
-        L =      float(atr['FILE_LENGTH'])
-    
-        ## subset radar image has different WIDTH and FILE_LENGTH info
-        try:
-            atr['subset_x0']
+        print '    using four corner lat/lon info from '+rdrFile+' file.'
+        rdr_atr = readfile.read_attribute(rdrFile)
+        # This method only works for whole frame/track, thus input file cannot be subsetted before.
+        if 'subset_x0' in rdr_atr.keys():
             print 'WARNING: Cannot use subset file as input! No coordinate converted.'
-            return
-        except: pass
+            return None
+
+        LAT_REF1=float(rdr_atr['LAT_REF1'])
+        LAT_REF2=float(rdr_atr['LAT_REF2'])
+        LAT_REF3=float(rdr_atr['LAT_REF3'])
+        LAT_REF4=float(rdr_atr['LAT_REF4'])
+        LON_REF1=float(rdr_atr['LON_REF1'])
+        LON_REF2=float(rdr_atr['LON_REF2'])
+        LON_REF3=float(rdr_atr['LON_REF3'])
+        LON_REF4=float(rdr_atr['LON_REF4'])
+        W =      float(rdr_atr['WIDTH'])
+        L =      float(rdr_atr['FILE_LENGTH'])
 
         LAT_REF = np.array([LAT_REF1,LAT_REF2,LAT_REF3,LAT_REF4]).reshape(4,1)
         LON_REF = np.array([LON_REF1,LON_REF2,LON_REF3,LON_REF4]).reshape(4,1)
@@ -423,104 +436,120 @@ def glob2radar(lat,lon,rdrRefFile='radar*.hgt', geomapFile='geomap*.trans'):
         affine_par = np.linalg.lstsq(A,B)[0]
         res = B - np.dot(A,affine_par)
         res_mean = np.mean(np.abs(res),0)
-        x_res = (res_mean[0]+0.5).astype(int)
-        y_res = (res_mean[1]+0.5).astype(int)
-        print 'Residul - x: '+str(x_res)+', y: '+str(y_res)
+        rg_resid = (res_mean[0]+0.5).astype(int)
+        az_resid = (res_mean[1]+0.5).astype(int)
+        print 'Residul - rg: '+str(rg_resid)+', az: '+str(az_resid)
     
         ### calculate radar coordinate of inputs
         N = len(lat)
         A = np.hstack([lat.reshape(N,1), lon.reshape(N,1), np.ones((N,1))])
-        x = np.dot(A, affine_par[:,0]);   x = (x+0.5).astype(int)
-        y = np.dot(A, affine_par[:,1]);   y = (y+0.5).astype(int)
+        rg = np.rint(np.dot(A, affine_par[:,0])).astype(int)
+        az = np.rint(np.dot(A, affine_par[:,1])).astype(int)
   
-  
-    return x, y, x_res, y_res
+    return az, rg, az_resid, rg_resid
 
 
-
-#########################################################################
-def radar2glob(x,y,rdrRefFile='radar*.hgt',igramNum=1):
-    '''Convert radar coordinates into geo coordinates.
-        This function use radar*.hgt or input reference file's 4 corners'
-        lat/lon info for a simple 2D linear transformation.
-        Accuracy: rough, not accurate
-    
-    Usage: lat,lon,lat_res,lon_res = glob2radar(x, y [,rdrRefFile] [,igramNum])
-    
-        x (np.array)     : Array of x/range pixel number
-        y (np.array)     : Array of y/azimuth pixel number
-        rdrRefFile       : radar coded file (not subseted), optional.
-                           radar*.hgt by default, support all PySAR / ROI_PAC format
-        igramNum         : used interferogram number, i.e. 1 or 56, optional
-    
-        lat/lon          : Array of geo coordinate
-        lat_res/lon_res  : residul/uncertainty of coordinate conversion
-    
-    Exmaple:
-        lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]))
-        lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]),'Mask.h5')
-        lat,lon,lat_res,lon_res = glob2radar(np.array([202,808,...]), np.array([404,303,...]),'LoadedData.h5',1)
+def radar2glob(az, rg, geomapFile='geomap*.trans', rdrFile=None):
+    '''Convert radar coordinates into geo coordinates
+    Inputs:
+        rg/az      - np.array, int, range/azimuth pixel number
+        geomapFile - string, trans/look up file
+        rdrFile    - string, file in radar coord, optional but recommended.
+    Output:
+        lon/lat    - np.array, float, longitude/latitude of input point (rg,az)
+        latlon_res - float, residul/uncertainty of coordinate conversion
     '''
-  
-    ### find and read radar coded reference file
-    rdrRefFile = check_variable_name(rdrRefFile)  
-    rdrRefFile = glob.glob(rdrRefFile)[0]
-    ext = os.path.splitext(rdrRefFile)[1]
-    if ext == '.h5':
-        h5file=h5py.File(rdrRefFile,'r')
-        k=h5file.keys()
-        if 'interferograms' in k: k[0] = 'interferograms'
-        elif 'coherence'    in k: k[0] = 'coherence'
-        elif 'timeseries'   in k: k[0] = 'timeseries'
-        if   k[0] in ('interferograms','coherence','wrapped'):
-            atr = h5file[k[0]][h5file[k[0]].keys()[igramNum-1]].attrs
-        elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
-            atr = h5file[k[0]].attrs
-    elif ext in ['.unw','.cor','.int','.hgt','.dem']:
-        atr = readfile.read_roipac_rsc(rdrRefFile + '.rsc')
-    else: print 'Unrecognized file extention: '+ext; return
-  
-    LAT_REF1=float(atr['LAT_REF1'])
-    LAT_REF2=float(atr['LAT_REF2'])
-    LAT_REF3=float(atr['LAT_REF3'])
-    LAT_REF4=float(atr['LAT_REF4'])
-    LON_REF1=float(atr['LON_REF1'])
-    LON_REF2=float(atr['LON_REF2'])
-    LON_REF3=float(atr['LON_REF3'])
-    LON_REF4=float(atr['LON_REF4'])
-    W =      float(atr['WIDTH'])
-    L =      float(atr['FILE_LENGTH'])
-    if ext == '.h5':  h5file.close()
+    try:    geomapFile = glob.glob(geomapFile)[0]
+    except: geomapFile = None
+    
+    lon = np.zeros(rg.shape)
+    lat = np.zeros(rg.shape)    
 
-    try:
-        atr['subset_x0']
-        print 'WARNING: Cannot use subset file as input! No coordinate converted.'
-        return
-    except: pass
-  
-    LAT_REF = np.array([LAT_REF1,LAT_REF2,LAT_REF3,LAT_REF4]).reshape(4,1)
-    LON_REF = np.array([LON_REF1,LON_REF2,LON_REF3,LON_REF4]).reshape(4,1)
-    X = np.array([1,W,1,W]).reshape(4,1)
-    Y = np.array([1,1,L,L]).reshape(4,1)
-  
-    ### estimate 2D tranformation from Lease Square
-    A = np.hstack([X,Y,np.ones((4,1))])
-    B = np.hstack([LAT_REF,LON_REF])
-    affine_par = np.linalg.lstsq(A,B)[0]
-    res = B - np.dot(A,affine_par)
-    res_mean = np.mean(np.abs(res),0)
-    lat_res = res_mean[0]
-    lon_res = res_mean[1]
-    print 'Residul - lat: '+str(lat_res)+', lon: '+str(lon_res)
-  
-    ### calculate geo coordinate of inputs
-    N = len(x)
-    A = np.hstack([x.reshape(N,1), y.reshape(N,1), np.ones((N,1))])
-    lat = np.dot(A, affine_par[:,0])
-    lon = np.dot(A, affine_par[:,1])
-  
-    return lat, lon, lat_res, lon_res
+    ##### Use geomap*.trans file for precious (pixel-level) coord conversion
+    ## by searching pixels in trans file with value falling buffer lat/lon value
+    if geomapFile:
+        # Get lat/lon resolution/step
+        print 'reading file: '+geomapFile
+        trans_rg, trans_atr = readfile.read(geomapFile, (), 'range')
+        trans_az = readfile.read(geomapFile, (), 'azimuth')[0]
+        lat_step = float(trans_atr['Y_STEP'])
+        lon_step = float(trans_atr['X_STEP'])
+        lat_first = float(trans_atr['Y_FIRST'])
+        lon_first = float(trans_atr['X_FIRST'])
 
+        # Get range/azimuth ground resolution/step
+        if rdrFile:
+            rdr_atr = readfile.read_attribute(rdrFile)
+            Re = float(rdr_atr['EARTH_RADIUS'])
+            Height = float(rdr_atr['HEIGHT'])
+            inc_angle = incidence_angle(rdr_atr, 0)
+            az_step = float(rdr_atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
+            rg_step = float(rdr_atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
+        
+            x_factor = np.ceil(abs(lon_step)/rg_step)
+            y_factor = np.ceil(abs(lat_step)/az_step)
+        else:
+            x_factor = 10
+            y_factor = 10
+        
+        for i in range(len(rg)):
+            mask_rg = np.multiply(trans_rg>=rg[i]-x_factor, trans_rg<=rg[i]+x_factor)
+            mask_az = np.multiply(trans_az>=az[i]-y_factor, trans_az<=az[i]+y_factor)
+            idx = np.where(np.multiply(mask_rg, mask_az))
+            trans_row, trans_col = np.mean(idx,1)
+            
+            lat[i] = trans_row*lat_step + lat_first
+            lon[i] = trans_col*lon_step + lon_first
+        
+        lat_resid = y_factor*lat_step
+        lon_resid = x_factor*lon_step
+
+    ##### Use corner lat/lon for rough (ten-pixels or more level) coord conversion
+    ## by estimating a simple 2D linear transformation
+    elif rdrFile:
+        rdr_atr = readfile.read_attribute(rdrFile)
+        # This method only works for whole frame/track, thus input file cannot be subsetted before.
+        if 'subset_x0' in rdr_atr.keys():
+            print 'WARNING: Cannot use subset file as input! No coordinate converted.'
+            return None
+        
+        LAT_REF1=float(rdr_atr['LAT_REF1'])
+        LAT_REF2=float(rdr_atr['LAT_REF2'])
+        LAT_REF3=float(rdr_atr['LAT_REF3'])
+        LAT_REF4=float(rdr_atr['LAT_REF4'])
+        LON_REF1=float(rdr_atr['LON_REF1'])
+        LON_REF2=float(rdr_atr['LON_REF2'])
+        LON_REF3=float(rdr_atr['LON_REF3'])
+        LON_REF4=float(rdr_atr['LON_REF4'])
+        W =      float(rdr_atr['WIDTH'])
+        L =      float(rdr_atr['FILE_LENGTH'])
+        
+        LAT_REF = np.array([LAT_REF1,LAT_REF2,LAT_REF3,LAT_REF4]).reshape(4,1)
+        LON_REF = np.array([LON_REF1,LON_REF2,LON_REF3,LON_REF4]).reshape(4,1)
+        X = np.array([1,W,1,W]).reshape(4,1)
+        Y = np.array([1,1,L,L]).reshape(4,1)
+        
+        ### estimate 2D tranformation from Lease Square
+        A = np.hstack([X,Y,np.ones((4,1))])
+        B = np.hstack([LAT_REF,LON_REF])
+        affine_par = np.linalg.lstsq(A,B)[0]
+        res = B - np.dot(A,affine_par)
+        res_mean = np.mean(np.abs(res),0)
+        lat_resid = res_mean[0]
+        lon_resid = res_mean[1]
+        print 'Residul - lat: '+str(lat_resid)+', lon: '+str(lon_resid)
+        
+        ### calculate geo coordinate of inputs
+        N = len(rg)
+        A = np.hstack([rg.reshape(N,1), az.reshape(N,1), np.ones((N,1))])
+        lat = np.dot(A, affine_par[:,0])
+        lon = np.dot(A, affine_par[:,1])
+        
+    else:
+        print 'No geomap*.trans or radar coord file found!'
+        return None
+        
+    return lat, lon, lat_resid, lon_resid
 
 
 #########################################################################
@@ -701,7 +730,8 @@ def timeseries_inversion(igramsFile, timeseriesFile):
     print 'Reading interferograms ...'
     data = np.zeros((numIfgrams,numPixels),np.float32)
     for j in range(numIfgrams):
-        print ifgramList[j]+'   '+str(j+1)
+        ifgram = ifgramList[j]
+        print_progress(j+1, numIfgrams, prefix='loading: ', suffix=ifgram)
         d = h5flat['interferograms'][ifgramList[j]].get(ifgramList[j])[:]
         data[j] = d.flatten(1)
     h5flat.close()
