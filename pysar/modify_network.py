@@ -114,7 +114,7 @@ def update_inps_with_template(inps, template_file):
     
     # Coherence-Based 
     if 'pysar.network.coherenceBase' in keyList:
-        if not inps.coherence_file and template_dict['pysar.network.coherenceBase'].lower() in ['yes','y']:
+        if not inps.coherence_file and template_dict['pysar.network.coherenceBase'].lower() in ['yes','y','auto']:
             # Search coherence file from input files
             k_list = [readfile.read_attribute(f)['FILE_TYPE'] for f in inps.file]
             try:  cohFileIdx = k_list.index('coherence')
@@ -139,6 +139,7 @@ def modify_file_date12_list(File, date12_to_rmv, outFile=None):
     print 'number of interferograms to keep/write: '+str(len(date12_to_write))
     print 'list   of interferograms to keep/write: '
     print date12_to_write
+    date12Num = len(date12_to_write)
 
     if not outFile:
         outFile = 'Modified_'+os.path.basename(File)
@@ -147,19 +148,18 @@ def modify_file_date12_list(File, date12_to_rmv, outFile=None):
     gg = h5out.create_group(k)
     
     h5 = h5py.File(File, 'r')
-    igramList = h5[k].keys()
-    eNum = 1
-    for igram in igramList:
-        date12 = h5[k][igram].attrs['DATE12']
-        if not date12 in date12_to_rmv:
-            print igram+'   '+str(eNum)
-            eNum += 1
-            data = h5[k][igram].get(igram)[:]
-            
-            group = gg.create_group(igram)
-            dset = group.create_dataset(igram, data=data, compression='gzip')
-            for key, value in h5[k][igram].attrs.iteritems():
-                group.attrs[key] = value
+    igramList = sorted(h5[k].keys())
+    for i in range(date12Num):
+        date12 = date12_to_write[i]
+        idx = date12_orig.index(date12)
+        igram = igramList[idx]
+        ut.print_progress(i+1, date12Num, prefix='', suffix=igram)
+
+        data = h5[k][igram].get(igram)[:]
+        group = gg.create_group(igram)
+        dset = group.create_dataset(igram, data=data, compression='gzip')
+        for key, value in h5[k][igram].attrs.iteritems():
+            group.attrs[key] = value
     h5.close()
     h5out.close()
     print 'finished writing >>> '+outFile
@@ -236,7 +236,7 @@ def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
     date12_orig = pnet.get_date12_list(inps.file[0])
-    print '\n****************** Network Modification ********************'
+    #print '\n****************** Network Modification ********************'
 
     if (not inps.reference_file and not inps.template_file and\
         not inps.max_temp_baseline and not inps.max_perp_baseline and\
@@ -380,32 +380,38 @@ def main(argv):
     print 'list   of interferograms to remove:'
     print date12_to_rmv
 
-    ##### Update Input Files with date12_to_rmv
-    Modified_CoherenceFile = 'Modified_coherence.h5'
-    for File in inps.file:
-        Modified_File = modify_file_date12_list(File, date12_to_rmv)
-        
-        k = readfile.read_attribute(File)['FILE_TYPE']
-        # Update Mask File
-        if k == 'interferograms':
-            print 'update mask file for input '+k+' file based on '+Modified_File
-            outFile = 'Modified_Mask.h5'
-            print 'writing >>> '+outFile
-            ut.nonzero_mask(Modified_File, outFile)
-        elif k == 'coherence':
-            print 'update average spatial coherence for input '+k+' file based on: '+Modified_File
-            outFile = 'Modified_average_spatial_coherence.h5'
-            print 'writing >>> '+outFile
-            ut.temporal_average(Modified_File, outFile)
-            Modified_CoherenceFile = Modified_File
-
-    # Plot result
-    if inps.plot:
-        plotCmd = 'plot_network.py '+Modified_File+' --coherence '+Modified_CoherenceFile+' --nodisplay'
-        print plotCmd
-        os.system(plotCmd)
+    if date12_to_rmv:
+        ##### Update Input Files with date12_to_rmv
+        Modified_CoherenceFile = 'Modified_coherence.h5'
+        for File in inps.file:
+            Modified_File = modify_file_date12_list(File, date12_to_rmv)
+            
+            k = readfile.read_attribute(File)['FILE_TYPE']
+            # Update Mask File
+            if k == 'interferograms':
+                print 'update mask file for input '+k+' file based on '+Modified_File
+                outFile = 'Modified_Mask.h5'
+                print 'writing >>> '+outFile
+                ut.nonzero_mask(Modified_File, outFile)
+            elif k == 'coherence':
+                print 'update average spatial coherence for input '+k+' file based on: '+Modified_File
+                outFile = 'Modified_average_spatial_coherence.h5'
+                print 'writing >>> '+outFile
+                ut.temporal_average(Modified_File, outFile)
+                Modified_CoherenceFile = Modified_File
     
-    print 'Done.'
+        # Plot result
+        if inps.plot:
+            print '\nplot modified network and save to file.'
+            plotCmd = 'plot_network.py '+Modified_File+' --coherence '+Modified_CoherenceFile+' --nodisplay'
+            print plotCmd
+            os.system(plotCmd)
+        
+        print 'Done.'
+        return
+    else:
+        print 'No interferogram dropped, skip update.'
+        return
 
 
 ########################################################################
