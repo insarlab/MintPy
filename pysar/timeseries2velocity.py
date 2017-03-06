@@ -21,6 +21,7 @@ import h5py
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._datetime as ptime
+import pysar._pysar_utilities as ut
 
 
 ############################################################################
@@ -173,8 +174,9 @@ def main(argv):
     dateNum = len(dateList)
     timeseries = np.zeros([dateNum,length*width],np.float32)
     for i in range(dateNum):
-        print dateList[i]
-        timeseries[i,:] = h5file[k].get(dateList[i])[:].flatten()
+        date = dateList[i]
+        ut.print_progress(i+1, dateNum, prefix='loading:', suffix=date)
+        timeseries[i,:] = h5file[k].get(date)[:].flatten()
     h5file.close()
 
     # Velocity Inversion

@@ -34,7 +34,8 @@ from joblib import Parallel, delayed
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
-from pysar._pysar_utilities import get_file_list
+import pysar._pysar_utilities as ut
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ################################################################
@@ -441,16 +442,22 @@ def subset_file(File, subset_dict, outFile=None):
         ##### Open Input File 
         h5file = h5py.File(File,'r')
         epochList = sorted(h5file[k].keys())
-        print 'number of epochs: '+str(len(epochList))
+        epochNum = len(epochList)
+        if k in multi_dataset_hdf5_file:
+            print 'number of acquisitions: '+str(epochNum)
+        else:
+            print 'number of interferograms: '+str(epochNum)
 
         ##### Open Output File
-        h5out = h5py.File(outFile,'w')
+        h5out = h5py.File(outFile)
         group = h5out.create_group(k)
 
     ## Loop
     if k == 'timeseries':
-        for epoch in epochList:
-            print epoch
+        for i in range(epochNum):
+            epoch = epochList[i]
+            ut.print_progress(i+1, epochNum, prefix='', suffix=epoch)
+            
             dset = h5file[k].get(epoch)
             data_overlap = dset[pix_box4data[1]:pix_box4data[3],pix_box4data[0]:pix_box4data[2]]
 
@@ -463,8 +470,10 @@ def subset_file(File, subset_dict, outFile=None):
         for key,value in atr_dict.iteritems():   group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
-        for epoch in epochList:
-            print epoch
+        for i in range(epochNum):
+            epoch = epochList[i]
+            ut.print_progress(i+1, epochNum, prefix='', suffix=epoch)
+            
             dset = h5file[k][epoch].get(epoch)
             atr_dict  = h5file[k][epoch].attrs
             data_overlap = dset[pix_box4data[1]:pix_box4data[3],pix_box4data[0]:pix_box4data[2]]
@@ -563,7 +572,7 @@ def cmdLineParse():
 ###########################################################################################
 def main(argv):
     inps = cmdLineParse()
-    inps.file = get_file_list(inps.file)
+    inps.file = ut.get_file_list(inps.file)
 
     #print '\n**************** Subset *********************'
     atr_dict = readfile.read_attribute(inps.file[0])

@@ -25,7 +25,6 @@ import numpy as np
 
 import pysar._datetime as ptime
 import pysar._pysar_utilities as ut
-#import pysar._writefile as writefile
 import pysar._readfile as readfile
 
 
@@ -103,8 +102,9 @@ def main(argv):
     nrows = int(atr['FILE_LENGTH'])
     ncols = int(atr['WIDTH'])
     timeseries = np.zeros((len(dateList),nrows*ncols),np.float32)
-    for date in dateList:
-        print date
+    for i in range(lt):
+        date = dateList[i]
+        ut.print_progress(i+1, lt, prefix='loading:', suffix=date)
         d = h5timeseries['timeseries'].get(date)[:]
         timeseries[dateIndex[date]][:]=d.flatten('F')
     del d
@@ -232,10 +232,11 @@ def main(argv):
 
         h5timeseriesDEMcor = h5py.File(outname,'w')
         group = h5timeseriesDEMcor.create_group('timeseries')
-        for i in range(len(dateList)):
-            print dateList[i]
+        for i in range(lt):
+            date = dateList[i]
+            ut.print_progress(i+1, lt, prefix='writing:', suffix=date)
             d = np.reshape(timeseries[i][:],[nrows,ncols],order='F')
-            dset = group.create_dataset(dateList[i], data=d, compression='gzip')
+            dset = group.create_dataset(date, data=d, compression='gzip')
         #for date in dateList:
         #    print date
         #    if not date in h5timeseriesDEMcor['timeseries']:

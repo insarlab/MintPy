@@ -31,8 +31,8 @@ def auto_path_miami(inps, template_dict={}):
     '''Auto File Path Setting for Geodesy Lab - University of Miami'''
     print 'Use auto path setting in University of Miami.'+\
           '(To turn it off, change miami_path value to False in pysar/__init__.py)'
-    if not inps.tssar_dir:
-        inps.tssar_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/TSSAR'
+    if not inps.timeseries_dir:
+        inps.timeseries_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/TIMESERIES'
     process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
     print "PROCESS directory: "+process_dir
 
@@ -288,7 +288,7 @@ def copy_roipac_file(targetFile, destDir):
 ##########################  Usage  ###############################
 EXAMPLE='''example:
   load_data_roipac.py  $TE/SanAndreasT356EnvD.template
-  load_data_roipac.py  $TE/SanAndreasT356EnvD.template  --dir $SC/SanAndreasT356EnvD/TSSAR
+  load_data_roipac.py  $TE/SanAndreasT356EnvD.template  --dir $SC/SanAndreasT356EnvD/TIMESERIES
 '''
 
 TEMPLATE='''template:
@@ -302,11 +302,11 @@ TEMPLATE='''template:
 
 def cmdLineParse():
     parser = argparse.ArgumentParser(description='Load ROI_PAC data.\n'\
-                                     'Load ROI_PAC product (from process_dir to tssar_dir) for PySAR analysis.',\
+                                     'Load ROI_PAC product (from process_dir to timeseries_dir) for PySAR analysis.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
     parser.add_argument('template_file', help='template file with path of ROI_PAC products.')
-    parser.add_argument('--dir', dest='tssar_dir', help='output directory for PySAR time series analysis.'\
+    parser.add_argument('--dir', dest='timeseries_dir', help='output directory for PySAR time series analysis.'\
                                                         'Use current directory if not assigned.')
     parser.add_argument('--nomiami', dest='auto_path_miami', action='store_false',\
                         help='Disable updating file path based on University of Miami processing structure.')
@@ -350,11 +350,11 @@ def main(argv):
         inps = auto_path_miami(inps, template_dict)
 
     # Working directory for PySAR
-    if not inps.tssar_dir:
-        inps.tssar_dir = os.getcwd()
-    if not os.path.isdir(inps.tssar_dir):
-        os.mkdir(inps.tssar_dir)
-    print "work    directory: "+inps.tssar_dir
+    if not inps.timeseries_dir:
+        inps.timeseries_dir = os.getcwd()
+    if not os.path.isdir(inps.timeseries_dir):
+        os.mkdir(inps.timeseries_dir)
+    print "work    directory: "+inps.timeseries_dir
     
     # Get all file list
     inps.snap_connect = []
@@ -381,11 +381,11 @@ def main(argv):
     print 'DEM file in geo   coord: '+str(inps.dem_geo)
 
     ##### 2. Load data into hdf5 file
-    inps.ifgram_file     = inps.tssar_dir+'/unwrapIfgram.h5'
-    inps.coherence_file  = inps.tssar_dir+'/coherence.h5'
-    inps.wrapIfgram_file = inps.tssar_dir+'/wrapIfgram.h5'
-    inps.snap_connect_file = inps.tssar_dir+'/snaphuConnectComponent.h5'
-    inps.mask_file = inps.tssar_dir+'/Mask.h5'
+    inps.ifgram_file     = inps.timeseries_dir+'/unwrapIfgram.h5'
+    inps.coherence_file  = inps.timeseries_dir+'/coherence.h5'
+    inps.wrapIfgram_file = inps.timeseries_dir+'/wrapIfgram.h5'
+    inps.snap_connect_file = inps.timeseries_dir+'/snaphuConnectComponent.h5'
+    inps.mask_file = inps.timeseries_dir+'/Mask.h5'
     
     # 2.1 multi_group_hdf5_file
     # Unwrapped Interferograms
@@ -426,13 +426,13 @@ def main(argv):
 
     # 2.2 single dataset file
     if inps.geomap:
-        copy_roipac_file(inps.geomap, inps.tssar_dir)
+        copy_roipac_file(inps.geomap, inps.timeseries_dir)
 
     if inps.dem_radar:
-        copy_roipac_file(inps.dem_radar, inps.tssar_dir)
+        copy_roipac_file(inps.dem_radar, inps.timeseries_dir)
 
     if inps.dem_geo:
-        copy_roipac_file(inps.dem_geo, inps.tssar_dir)
+        copy_roipac_file(inps.dem_geo, inps.timeseries_dir)
 
 
 ##############################################################################

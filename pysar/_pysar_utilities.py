@@ -367,6 +367,7 @@ def glob2radar(lat, lon, geomapFile='geomap*.trans', rdrFile=None):
         az/rg     - np.array, float, range/azimuth pixel number
         az/rg_res - float, residul/uncertainty of coordinate conversion
     '''
+
     try:    geomapFile = glob.glob(geomapFile)[0]
     except: geomapFile = None
 
@@ -389,18 +390,24 @@ def glob2radar(lat, lon, geomapFile='geomap*.trans', rdrFile=None):
             inc_angle = incidence_angle(rdr_atr, 0)
             az_step = float(rdr_atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
             rg_step = float(rdr_atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
-        
+            try:    az0 = int(rdr_atr['subset_y0'])
+            except: az0 = 0
+            try:    rg0 = int(rdr_atr['subset_x0'])
+            except: rg0 = 0
+            
             x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
             y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
         else:
             x_factor = 10
             y_factor = 10
+            az0 = 0
+            rg0 = 0
         
         width  = int(trans_atr['WIDTH'])
         row = np.rint((lat - lat_first)/lat_step).astype(int)
         col = np.rint((lon - lon_first)/lon_step).astype(int)
-        rg = np.rint(trans_rg[row, col]).astype(int)
-        az = np.rint(trans_az[row, col]).astype(int)
+        rg = np.rint(trans_rg[row, col]).astype(int) - rg0
+        az = np.rint(trans_az[row, col]).astype(int) - az0
         rg_resid = x_factor
         az_resid = y_factor
 
@@ -769,11 +776,11 @@ def timeseries_inversion(igramsFile, timeseriesFile):
     print 'number of dates: '+str(numDates)
     h5timeseries = h5py.File(timeseriesFile,'w')
     group = h5timeseries.create_group('timeseries')
-    dateIndex = ptime.date_index(dateList)
-    for date in dateList:
-        if not date in h5timeseries['timeseries']:
-            print date
-            dset = group.create_dataset(date, data=timeseries[dateIndex[date]], compression='gzip')
+    #dateIndex = ptime.date_index(dateList)
+    for i in range(numDates):
+        date = dateList[i]
+        print_progress(i+1, numDates, suffix=date)
+        dset = group.create_dataset(date, data=timeseries[i], compression='gzip')
 
     ## Attributes
     print 'calculating perpendicular baseline timeseries'
@@ -853,10 +860,12 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
         timeseriesDict[key] = value 
   
     dateIndex={}
-    for ni in range(len(dateList)):    dateIndex[dateList[ni]]=ni
+    for ni in range(len(dateList)):
+        dateIndex[dateList[ni]]=ni
     if not 'timeseries' in h5timeseries:
         group = h5timeseries.create_group('timeseries')
-        for key,value in timeseriesDict.iteritems():    group.attrs[key] = value
+        for key,value in timeseriesDict.iteritems():
+            group.attrs[key] = value
     
     for date in dateList:
         if not date in h5timeseries['timeseries']:

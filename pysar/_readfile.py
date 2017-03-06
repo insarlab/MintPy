@@ -194,13 +194,13 @@ def read(File, box=(), epoch=''):
                 rg,az,atr = read_float32(File)
 
             if not epoch:
-                print 'read range and azimuth from '+File
+                #print 'read range and azimuth from '+File
                 return rg, az, atr
             elif epoch in ['rg','range']:
-                print 'read range from '+File
+                #print 'read range from '+File
                 return rg, atr
             elif epoch in ['az','azimuth']:
-                print 'read azimuth from '+File
+                #print 'read azimuth from '+File
                 return az, atr
 
         ##### Gamma
