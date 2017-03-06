@@ -98,7 +98,7 @@ def check_geocode_file(geomapFile, File, outFile=None):
     if check_isfile(outFile):
         print outFile+' already exists, no need to re-geocode.'
     else:
-        geocodeCmd = 'geocode.py '+geomapFile+' '+File
+        geocodeCmd = 'geocode.py '+os.path.basename(geomapFile)+' '+File
         print geocodeCmd
         try: os.system(geocodeCmd)
         except: pass
@@ -390,6 +390,7 @@ def main(argv):
     #########################################
     print '\n*************** Subset ****************'
     print "Get tight subset of geomap*.trans file and/or DEM file in geo coord"
+    print '--------------------------------------------'
     if inps.geomap_file:
         outName = os.path.splitext(inps.geomap_file)[0]+'_tight'+os.path.splitext(inps.geomap_file)[1]
         if check_isfile(outName):
@@ -414,7 +415,7 @@ def main(argv):
         pix_box, geo_box = subset.read_subset_template2box(inps.template_file)
         inps = create_subset_dataset(inps, pix_box, geo_box)
     else:
-        print 'No Subset selected. Processing the whole area.'
+        print '\nNo Subset selected. Processing the whole area.'
 
 
     #########################################

@@ -87,7 +87,7 @@ def main(argv):
 
     ##### Input File Info
     atr = readfile.read_attribute(File)
-    print '\n****************** Generate Mask *******************'
+    #print '\n****************** Generate Mask *******************'
     print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File
     mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
     print 'Create initial mask with the same size as the input file and all = 1'
