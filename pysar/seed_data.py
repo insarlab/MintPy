@@ -106,6 +106,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
   
     ##### Single Dataset File
     else:
+        print 'writing >>> '+outName
         data,atr = readfile.read(File)
         data -= refList
         atr  = seed_attributes(atr,ref_x,ref_y)
@@ -303,14 +304,16 @@ def read_seed_template2inps(template_file, inps=None):
         if 'pysar.seed.yx' in templateKeyList:
             inps.ref_y, inps.ref_x = [int(i) for i in template['pysar.seed.yx'].split(',')]
         elif 'pysar.reference.yx' in templateKeyList:
-            inps.ref_y, inps.ref_x = [int(i) for i in template['pysar.reference.yx'].split(',')]
+            try:  inps.ref_y, inps.ref_x = [int(i) for i in template['pysar.reference.yx'].split(',')]
+            except:  pass
         else: print 'No y/x input from template'
     
     if not inps.ref_lat or not inps.ref_lon:
         if 'pysar.seed.lalo' in templateKeyList:
             inps.ref_lat, inps.ref_lon = [float(i) for i in template['pysar.seed.lalo'].split(',')]
         elif 'pysar.reference.lalo' in templateKeyList:
-            inps.ref_lat, inps.ref_lon = [float(i) for i in template['pysar.reference.lalo'].split(',')]
+            try:  inps.ref_lat, inps.ref_lon = [float(i) for i in template['pysar.reference.lalo'].split(',')]
+            except:  pass
         else: print 'No lat/lon input from template'
     
     return inps
@@ -391,9 +394,10 @@ NOTE='''note: Reference value cannot be nan, thus, all selected reference point 
 
 EXAMPLE='''example:
   seed_data.py .h5 -t ShikokuT417F650_690AlosA.template
-  seed_data.py 091120_100407.unw -y 257       -x 151             -m Mask.h5
-  seed_data.py geo_velocity.h5   -l 34.45     -L -116.23         -m Mask.h5
   seed_data.py timeseries.h5     -r Seeded_velocity.h5
+  seed_data.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
+  seed_data.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
+  seed_data.py unwrapIfgram.h5   -l 34.45  -L -116.23  --trans geomap_4rlks.trans
   
   seed_data.py unwrapIfgram.h5 -c average_spatial_coherence.h5
   seed_data.py unwrapIfgram.h5 --method manual
@@ -419,6 +423,9 @@ def cmdLineParse():
     coord_group.add_argument('-L','--lon', dest='ref_lon', type=float, help='longitude of reference pixel')
     
     coord_group.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
+    coord_group.add_argument('--trans', dest='trans_file',\
+                             help='Mapping transformation file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
+                                  'Needed for radar coord input file with --lat/lon seeding option.')
     coord_group.add_argument('-t','-template', dest='template_file',\
                              help='template with reference info as below:\n'+TEMPLATE)
 
@@ -466,16 +473,21 @@ def main(argv):
         print 'reading reference info from reference: '+inps.reference_file
         inps = read_seed_reference2inps(inps.reference_file, inps)
     
-    # Do not use ref_lat/lon input for file in radar-coord
-    if not 'X_FIRST' in atr.keys() and (inps.ref_lat or inps.ref_lon):
-        print 'Lat/lon reference input is disabled for file in radar coord.'
-        inps.ref_lat = None
-        inps.ref_lon = None
+    ## Do not use ref_lat/lon input for file in radar-coord
+    #if not 'X_FIRST' in atr.keys() and (inps.ref_lat or inps.ref_lon):
+    #    print 'Lat/lon reference input is disabled for file in radar coord.'
+    #    inps.ref_lat = None
+    #    inps.ref_lon = None
     
     # Convert ref_lat/lon to ref_y/x
     if inps.ref_lat and inps.ref_lon:
-        inps.ref_y = subset.coord_geo2radar(inps.ref_lat, atr, 'lat')
-        inps.ref_x = subset.coord_geo2radar(inps.ref_lon, atr, 'lon')
+        if 'X_FIRST' in atr.keys():
+            inps.ref_y = subset.coord_geo2radar(inps.ref_lat, atr, 'lat')
+            inps.ref_x = subset.coord_geo2radar(inps.ref_lon, atr, 'lon')
+        else:
+            # Convert lat/lon to az/rg for radar coord file using geomap*.trans file
+            inps.ref_y, inps.ref_x = ut.glob2radar(np.array(inps.ref_lat), np.array(inps.ref_lon),\
+                                                   inps.trans_file, inps.file[0])[0:2]
         print 'Input reference point in lat/lon: '+str([inps.ref_lat, inps.ref_lon])
     print 'Input reference point in   y/x  : '+str([inps.ref_y, inps.ref_x])
     
