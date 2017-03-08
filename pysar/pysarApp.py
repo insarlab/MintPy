@@ -293,19 +293,6 @@ def main(argv):
     inps.project_name = os.path.splitext(os.path.basename(inps.template_file))[0]
     print 'Project name: '+inps.project_name
     
-    # work directory
-    if not inps.work_dir:
-        if pysar.miami_path and 'SCRATCHDIR' in os.environ:
-            inps.work_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+"/TIMESERIES"
-            print 'Use file/dir structure in University of Miami.'+\
-                  '(To turn it off, change miami_path value to False in pysar/__init__.py)'
-        else:
-            inps.work_dir = os.getcwd()
-    
-    if not os.path.isdir(inps.work_dir):   os.mkdir(inps.work_dir)
-    os.chdir(inps.work_dir)
-    print "Go to work directory: "+inps.work_dir
-    
     # Read template
     inps.template_file = os.path.abspath(inps.template_file)
     template = readfile.read_template(inps.template_file)
@@ -317,6 +304,21 @@ def main(argv):
         template['pysar.deramp'] = template['pysar.deramp'].lower().replace('-','_')
     if 'pysar.troposphericDelay.method' in template.keys():
         template['pysar.troposphericDelay.method'] = template['pysar.troposphericDelay.method'].lower().replace('-','_')
+
+    # work directory
+    if not inps.work_dir:
+        if pysar.miami_path and 'SCRATCHDIR' in os.environ:
+            inps.work_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+"/TIMESERIES"
+            print 'Use file/dir structure in University of Miami.'+\
+                  '(To turn it off, change miami_path value to False in pysar/__init__.py)'
+        else:
+            inps.work_dir = os.getcwd()
+    else:
+        inps.work_dir = os.path.abspath(inps.work_dir)
+    
+    if not os.path.isdir(inps.work_dir):   os.mkdir(inps.work_dir)
+    os.chdir(inps.work_dir)
+    print "Go to work directory: "+inps.work_dir
 
 
     #########################################

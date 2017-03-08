@@ -173,9 +173,10 @@ def main(argv):
     length = int(atr['FILE_LENGTH'])
     dateNum = len(dateList)
     timeseries = np.zeros([dateNum,length*width],np.float32)
+    start_time = time.time()
     for i in range(dateNum):
         date = dateList[i]
-        ut.print_progress(i+1, dateNum, prefix='loading:', suffix=date)
+        ut.print_progress(i+1, dateNum, prefix='loading:', suffix=date, elapsed_time=time.time()-start_time)
         timeseries[i,:] = h5file[k].get(date)[:].flatten()
     h5file.close()
 
