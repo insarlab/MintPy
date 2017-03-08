@@ -491,23 +491,23 @@ def main(argv):
         print 'Input reference point in lat/lon: '+str([inps.ref_lat, inps.ref_lon])
     print 'Input reference point in   y/x  : '+str([inps.ref_y, inps.ref_x])
     
-    if inps.ref_y and inps.ref_x:
-        # Do not use ref_y/x outside of data coverage
-        if not (0<= inps.ref_y <= length and 0<= inps.ref_x <= width):
+    # Do not use ref_y/x outside of data coverage
+    if (inps.ref_y and inps.ref_x and
+        not (0<= inps.ref_y <= length and 0<= inps.ref_x <= width)):
+        inps.ref_y = None
+        inps.ref_x = None
+        print 'WARNING: input reference point is OUT of data coverage!'
+        print 'Continue with other method to select reference point.'
+        
+    # Do not use ref_y/x in masked out area
+    if inps.ref_y and inps.ref_x and inps.mask_file:
+        print 'mask: '+inps.mask_file
+        mask = readfile.read(inps.mask_file)[0]
+        if mask[inps.ref_y, inps.ref_x] == 0:
             inps.ref_y = None
             inps.ref_x = None
-            print 'WARNING: input reference point is OUT of data coverage!'
+            print 'WARNING: input reference point is in masked OUT area!'
             print 'Continue with other method to select reference point.'
-        
-        # Do not use ref_y/x in masked out area
-        if inps.mask_file:
-            print 'mask: '+inps.mask_file
-            mask = readfile.read(inps.mask_file)[0]
-            if mask[inps.ref_y, inps.ref_x] == 0:
-                inps.ref_y = None
-                inps.ref_x = None
-                print 'WARNING: input reference point is in masked OUT area!'
-                print 'Continue with other method to select reference point.'
     
     ##### Select method
     if inps.ref_y and inps.ref_x:
