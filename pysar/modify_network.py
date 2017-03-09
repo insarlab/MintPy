@@ -132,7 +132,7 @@ def modify_file_date12_list(File, date12_to_rmv, outFile=None):
     '''Update multiple group hdf5 file using date12 to remove/keep'''
     k = readfile.read_attribute(File)['FILE_TYPE']
     date12_orig = pnet.get_date12_list(File)
-    date12_to_write = list(set(date12_orig) - set(date12_to_rmv))
+    date12_to_write = sorted(list(set(date12_orig) - set(date12_to_rmv)))
     print '----------------------------------------------------------------------------'
     print 'file: '+File
     print 'number of interferograms in file      : '+str(len(date12_orig))

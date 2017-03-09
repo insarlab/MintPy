@@ -327,12 +327,13 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     #print '\n*************** Loading ROI_PAC Data into PySAR ****************'
-    inps.project_name = os.path.basename(inps.template_file).partition('.')[0]
+    inps.project_name = os.path.splitext(os.path.basename(inps.template_file))[0]
     print 'project: '+inps.project_name
     
     ##### 1. Read file path
     # Priority: command line input > template > auto setting
     # Read template contents into inps Namespace
+    inps.template_file = os.path.abspath(inps.template_file)
     template_dict = readfile.read_template(inps.template_file)
     for key, value in template_dict.iteritems():
         template_dict[key] = ut.check_variable_name(value)
@@ -349,13 +350,18 @@ def main(argv):
     if pysar.miami_path and 'SCRATCHDIR' in os.environ:
         inps = auto_path_miami(inps, template_dict)
 
-    # Working directory for PySAR
+    # TIMESERIES directory for PySAR
     if not inps.timeseries_dir:
         inps.timeseries_dir = os.getcwd()
     if not os.path.isdir(inps.timeseries_dir):
         os.mkdir(inps.timeseries_dir)
-    print "work    directory: "+inps.timeseries_dir
+    print "TIMESERIES directory: "+inps.timeseries_dir
     
+    # TEMPLATE file directory (to support relative path input)
+    inps.template_dir = os.path.dirname(inps.template_file)
+    os.chdir(inps.template_dir)
+    print 'Go to TEMPLATE directory: '+inps.template_dir
+
     # Get all file list
     inps.snap_connect = []
     if inps.unw:
@@ -386,6 +392,7 @@ def main(argv):
     inps.wrapIfgram_file = inps.timeseries_dir+'/wrapIfgram.h5'
     inps.snap_connect_file = inps.timeseries_dir+'/snaphuConnectComponent.h5'
     inps.mask_file = inps.timeseries_dir+'/Mask.h5'
+    inps.spatial_coherence_file = inps.timeseries_dir+'/average_spatial_coherence.h5'
     
     # 2.1 multi_group_hdf5_file
     # Unwrapped Interferograms
@@ -394,7 +401,7 @@ def main(argv):
         # Update mask only when update unwrapIfgram.h5
         if unwList:
             print 'Generate mask from amplitude of interferograms'
-            roipac_nonzero_mask(inps.unw, 'Mask.h5')
+            roipac_nonzero_mask(inps.unw, inps.mask_file)
     elif os.path.isfile(inps.ifgram_file):
         print os.path.basename(inps.ifgram_file)+' already exists, no need to re-load.'
     else:
@@ -408,7 +415,7 @@ def main(argv):
     if inps.cor:
         cohFile,corList = load_roipac2multi_group_h5('coherence', inps.cor, inps.coherence_file, vars(inps))
         if corList:
-            meanCohCmd = 'temporal_average.py '+cohFile+' average_spatial_coherence.h5'
+            meanCohCmd = 'temporal_average.py '+cohFile+' '+inps.spatial_coherence_file
             print meanCohCmd
             os.system(meanCohCmd)
     elif os.path.isfile(inps.coherence_file):

@@ -290,10 +290,9 @@ def main(argv):
     # Initiation
     #########################################
     print LOGO
+    # Read template
     inps.project_name = os.path.splitext(os.path.basename(inps.template_file))[0]
     print 'Project name: '+inps.project_name
-    
-    # Read template
     inps.template_file = os.path.abspath(inps.template_file)
     template = readfile.read_template(inps.template_file)
     for key in template.keys():
