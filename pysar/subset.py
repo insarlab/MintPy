@@ -246,6 +246,41 @@ def read_subset_template2box(templateFile):
     return pix_box, geo_box
 
 
+def bbox_geo2radar(geo_box, rdrFile, transFile='geomap*.trans'):
+    '''Calculate bounding box in x/y for file in radar coord, based on input geo box.
+    Inputs:
+        geo_box   - tuple of 4 float, indicating the UL/LR lon/lat 
+        rdrFile   - string, path of file in radar coord
+        transFile - string, path of transformation file, i.e. geomap_4rlks.trans
+    Output:
+        pix_box - tuple of 4 int, indicating the UL/LR x/y of the bounding box in radar coord
+                  for the corresponding lat/lon coverage.
+    '''
+    lat = np.array([geo_box[3],geo_box[3],geo_box[1],geo_box[1]])
+    lon = np.array([geo_box[0],geo_box[2],geo_box[0],geo_box[2]])
+    y, x, y_res, x_res = ut.glob2radar(lat, lon, transFile, rdrFile)
+    buf = 10*(np.max([x_res, y_res]))
+    pix_box = (np.min(x)-buf, np.min(y)-buf, np.max(x)+buf, np.max(y)+buf)
+    return pix_box
+
+
+def bbox_radar2geo(pix_box, rdrFile, transFile='geomap*.trans'):
+    '''Calculate bounding box in lat/lon for file in geo coord, based on input radar/pixel box
+    Inputs:
+        pix_box   - tuple of 4 int, indicating the UL/LR x/y
+        rdrFile   - string, path of file in radar coord
+        transFile - string, path of transformation file, i.e. geomap_4rlks.trans
+    Output:
+        geo_box - tuple of 4 float, indicating the UL/LR lon/lat of the bounding box
+    '''
+    x = np.array([pix_box[0],pix_box[2],pix_box[0],pix_box[2]])
+    y = np.array([pix_box[1],pix_box[1],pix_box[3],pix_box[3]])
+    lat, lon, lat_res, lon_res = ut.radar2glob(y, x, transFile, rdrFile)
+    buf = 10*(np.max([lat_res,lon_res]))
+    geo_box = (np.min(lon)-buf, np.max(lat)+buf, np.max(lon)+buf, np.min(lat)-buf)
+    return geo_box
+
+
 def subset_box2inps(inps, pix_box, geo_box):
     '''Update inps.subset_y/x/lat/lon from pixel_box and geo_box'''
     if geo_box:
@@ -261,6 +296,7 @@ def subset_box2inps(inps, pix_box, geo_box):
         inps.subset_x = None
         inps.subset_y = None
     return inps
+
 
 def get_box_overlap_index(box1,box2):
     '''Get index box overlap area of two input boxes
@@ -395,7 +431,9 @@ def subset_file(File, subset_dict, outFile=None):
                       fill_value : float, optional. filled value for area outside of data coverage. default=None
                                    None/not-existed to subset within data coverage only.
     Outputs:
-        outFile :  str, path/name of output file
+        outFile :  str, path/name of output file; 
+                   outFile = 'subset_'+File, if File is in current directory;
+                   outFile = File, if File is not in the current directory.
     '''
     
     # Input File Info
@@ -434,7 +472,11 @@ def subset_file(File, subset_dict, outFile=None):
 
     ###########################  Data Read and Write  ######################
     # Output File Name
-    if not outFile:  outFile = 'subset_'+os.path.basename(File)
+    if not outFile:
+        if os.getcwd() == os.path.dirname(os.path.abspath(File)):
+            outFile = 'subset_'+os.path.basename(File)
+        else:
+            outFile = os.path.basename(File)
     print 'writing >>> '+outFile
 
     ##### Multiple Dataset File

@@ -168,26 +168,16 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
         
         # Calculate subset range in lat/lon for geo files and y/x for radar files
         if geo_box:
-            geo_box4geo = geo_box
             print 'use subset input in lat/lon'
             print 'calculate corresponding bounding box in radar coordinate.'
-            lat = np.array([geo_box4geo[3],geo_box4geo[3],geo_box4geo[1],geo_box4geo[1]])
-            lon = np.array([geo_box4geo[0],geo_box4geo[2],geo_box4geo[0],geo_box4geo[2]])
-            y, x, y_res, x_res = ut.glob2radar(lat, lon, geomap_file_orig, inps.ifgram_file)
-            buf = 10*(np.max([x_res, y_res]))
-            pix_box4rdr = (np.min(x)-buf, np.min(y)-buf, np.max(x)+buf, np.max(y)+buf)
+            pix_box = subset.bbox_geo2radar(geo_box, inps.ifgram_file, geomap_file_orig)
         else:
-            pix_box4rdr = pix_box
             print 'use subset input in y/x'
             print 'calculate corresponding bounding box in geo coordinate.'
-            x = np.array([pix_box4rdr[0],pix_box4rdr[2],pix_box4rdr[0],pix_box4rdr[2]])
-            y = np.array([pix_box4rdr[1],pix_box4rdr[1],pix_box4rdr[3],pix_box4rdr[3]])
-            lat, lon, lat_res, lon_res = ut.radar2glob(y, x, geomap_file_orig, inps.ifgram_file)
-            buf = 10*(np.max([lat_res,lon_res]))
-            geo_box4geo = (np.min(lon)-buf, np.max(lat)+buf, np.max(lon)+buf, np.min(lat)-buf)
+            geo_box = subset.bbox_radar2geo(pix_box, inps.ifgram_file, geomap_file_orig)
         
         # subset
-        inps = subset_dataset(inps, geo_box4geo, pix_box4rdr)
+        inps = subset_dataset(inps, geo_box, pix_box)
 
     else:
         print 'Loaded dataset is in geo coordinate.'
