@@ -32,7 +32,7 @@ def auto_path_miami(inps, template_dict={}):
     print 'Use auto path setting in University of Miami.'+\
           '(To turn it off, change miami_path value to False in pysar/__init__.py)'
     if not inps.timeseries_dir:
-        inps.timeseries_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/TIMESERIES'
+        inps.timeseries_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PYSAR'
     process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
     print "PROCESS directory: "+process_dir
 
@@ -288,7 +288,7 @@ def copy_roipac_file(targetFile, destDir):
 ##########################  Usage  ###############################
 EXAMPLE='''example:
   load_data_roipac.py  $TE/SanAndreasT356EnvD.template
-  load_data_roipac.py  $TE/SanAndreasT356EnvD.template  --dir $SC/SanAndreasT356EnvD/TIMESERIES
+  load_data_roipac.py  $TE/SanAndreasT356EnvD.template  --dir $SC/SanAndreasT356EnvD/PYSAR
 '''
 
 TEMPLATE='''template:
@@ -355,7 +355,7 @@ def main(argv):
         inps.timeseries_dir = os.getcwd()
     if not os.path.isdir(inps.timeseries_dir):
         os.mkdir(inps.timeseries_dir)
-    print "TIMESERIES directory: "+inps.timeseries_dir
+    print "PySAR working directory: "+inps.timeseries_dir
     
     # TEMPLATE file directory (to support relative path input)
     inps.template_dir = os.path.dirname(inps.template_file)

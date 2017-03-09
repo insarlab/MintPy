@@ -297,7 +297,7 @@ def main(argv):
     # work directory
     if not inps.work_dir:
         if pysar.miami_path and 'SCRATCHDIR' in os.environ:
-            inps.work_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+"/TIMESERIES"
+            inps.work_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+"/PYSAR"
             print 'Use file/dir structure in University of Miami.'+\
                   '(To turn it off, change miami_path value to False in pysar/__init__.py)'
         else:
