@@ -42,9 +42,9 @@ def geomap4subset_radar_file(radar_atr, geomap_file):
         geomap_file = 'temp_'+geomap_file
         print '    writing >>> '+geomap_file+'\n'
         writefile.write_float32(rg, az, geomap_file)
-        f = open(geomap+'.rsc','w')
+        f = open(geomap_file+'.rsc','w')
         for key in rsc.keys():
-            f.write(kg+'    '+rsc[key]+'\n')
+            f.write(key+'    '+rsc[key]+'\n')
         f.close()
     return geomap_file
 
@@ -231,8 +231,8 @@ def main(argv):
 
     # clean temporary geomap file for previously subsetted radar coord file
     if 'subset_x0' in atr.keys():
-        rmCmd='rm '+geomap;            os.system(rmCmd);       print rmCmd
-        rmCmd='rm '+geomap+'.rsc';     os.system(rmCmd);       print rmCmd
+        rmCmd='rm '+inps.lookup_file;            os.system(rmCmd);       print rmCmd
+        rmCmd='rm '+inps.lookup_file+'.rsc';     os.system(rmCmd);       print rmCmd
 
     print 'Done.'
     return
