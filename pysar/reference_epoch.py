@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-
 ############################################################
 # Program is part of PySAR v1.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
@@ -8,79 +7,98 @@
 
 import sys
 import os
+
 import h5py
+import pysar._datetime as ptime
 
 
+##################################################################
+def yymmdd2yyyymmdd(date):
+    if date[0] == '9':   date = '19'+date
+    else:                date = '20'+date
+    return date
+
+##################################################################
 def Usage():
-
-  print '''
+    print '''
   ***************************************************************
 
   Referencing all time-series epochs to the specified date.
 
-  reference_epoch.py   time-series  ref_Date Outname
+  Usage:
+        reference_epoch.py time-series  ref_Date [output_name]
+        
+        reference_date.txt
+            20071228
 
   Example:
-
-    reference_epoch.py timeseries.h5 20050107 timeseries_ref.h5
-
-    reference_epoch.py timeseries.h5 20050107
+        reference_epoch.py timeseries_ECMWF_demCor_plane.h5 20050107
+        reference_epoch.py timeseries_ECMWF_demCor.h5       20050107
+        reference_epoch.py timeseries_ECMWF_demCor.h5       reference_date.txt
 
   ***************************************************************
+    '''
 
-'''
 
+##################################################################
 def main(argv):
-  try:
-    timeSeriesFile = argv[0]
-    refDate = argv[1]
-  except:
-    Usage() ; sys.exit(1)
+    try:
+        timeSeriesFile = argv[0]
+        refDate        = argv[1]
+    except:  Usage() ; sys.exit(1)
 
-  try:
-    outName=argv[2]
-  except:
-    outName='Ref_changed_'+timeSeriesFile
+    if os.path.isfile(refDate):
+        try: refDate = ptime.read_date_list(refDate)[0]
+        except: print 'Can not read reference date file: '+refDate
 
+    if len(refDate)==6:    refDate=yymmdd2yyyymmdd(refDate)
+    try:     outName = argv[2]
+    except:  outName = timeSeriesFile.split('.h5')[0]+'_refDate.h5'
+    #except:  outName = timeSeriesFile.split('.h5')[0]+'_ref'+refDate+'.h5'
 
-  h5t=h5py.File(timeSeriesFile)
-  dateList=h5t['timeseries'].keys()
-  if not refDate in dateList:
-     print '''**********************
-     Error:  Reference date was not found.
-             Choose a date available in the time-series.
-             Exit without any action.
-     '''
-     sys.exit(1)
+    h5t=h5py.File(timeSeriesFile)
+    dateList = h5t['timeseries'].keys()
+    dateList = sorted(dateList)
   
-  refDataSet=h5t['timeseries'].get(refDate)
-  refData=refDataSet[0:refDataSet.shape[0],0:refDataSet.shape[1]]
-  print 'referencing all epochs to ' + refDate
+    if not refDate in dateList:
+        print '''**********************
+        Error:  Reference date was not found.
+                Choose a date available in the time-series.
+        Exit without any action.
+        '''
+        sys.exit(1)
+    
+    print '\n************* Reference Epoch ***************'
+    refDataSet=h5t['timeseries'].get(refDate)
+    refData=refDataSet[0:refDataSet.shape[0],0:refDataSet.shape[1]]
+    print 'referencing all epochs to ' + refDate
 
-  h5t2=h5py.File(outName,'w')
-  group = h5t2.create_group('timeseries')
-  for d in dateList:
-     print d
-     ds=h5t['timeseries'].get(d)
-     data=ds[0:ds.shape[0],0:ds.shape[1]]
-     dset = group.create_dataset(d, data=data-refData, compression='gzip')
+    h5t2=h5py.File(outName,'w'); print 'writing >>> '+outName
+    group = h5t2.create_group('timeseries')
+    for d in dateList:
+        print d
+        ds=h5t['timeseries'].get(d)
+        data=ds[0:ds.shape[0],0:ds.shape[1]]
+        dset = group.create_dataset(d, data=data-refData, compression='gzip')
 
-  for key,value in h5t['timeseries'].attrs.iteritems():
-      group.attrs[key] = value
+    ## Attributes
+    for key,value in h5t['timeseries'].attrs.iteritems():
+        group.attrs[key] = value
+    #group.attrs['DATE'] = refDate[2:8]
+    group.attrs['ref_date']=refDate
   
-  group.attrs['ref_date']=refDate
-  try:
-      h5t['mask'].get('mask')
-      dset1 = h5t['mask'].get('mask')
-      Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-      group=h5t2.create_group('mask')
-      dset = group.create_dataset('mask', data=Mask, compression='gzip')
-  except:
-      print 'no mask in the file.'
+    try:
+        h5t['mask'].get('mask')
+        dset1 = h5t['mask'].get('mask')
+        Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
+        group=h5t2.create_group('mask')
+        dset = group.create_dataset('mask', data=Mask, compression='gzip')
+    except:
+        print 'no mask in the file.'
 
 
+##################################################################
 if __name__ == '__main__':
-
-  main(sys.argv[1:])
+    main(sys.argv[1:])
 
 

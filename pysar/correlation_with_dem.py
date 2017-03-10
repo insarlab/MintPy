@@ -10,11 +10,10 @@ import getopt
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-import _readfile as readfile
+import pysar._readfile as readfile
 
 def Usage():
-   print '''
-
+    print '''
 ************************************************************************
 ************************************************************************
 
@@ -22,29 +21,29 @@ def Usage():
   
    Usage:
      
-     correlation_with_dem.py dem velocity
+     correlation_with_dem.py dem_file velocity_file
 
    Example:
 
-     correlation_with_dem.py radar_8rlks.hgt  velocity.h5
+     correlation_with_dem.py radar_8rlks.hgt  velocity_masked.h5
 
 ***********************************************************************
 ***********************************************************************
-'''
+    '''
 
 try:
-  demFile=sys.argv[1]
-  File=sys.argv[2]
+    demFile=sys.argv[1]
+    File=sys.argv[2]
 except:
-  Usage()
-  sys.exit(1)
+    Usage()
+    sys.exit(1)
 
 
 if os.path.basename(demFile).split('.')[1]=='hgt':
-       amp,dem,demRsc = readfile.read_float32(demFile)
+    amp,dem,demRsc = readfile.read_float32(demFile)
 
 elif os.path.basename(demFile).split('.')[1]=='dem':
-       dem,demRsc = readfile.read_dem(demFile)
+    dem,demRsc = readfile.read_real_int16(demFile)
 
 #amp,dem,demRsc = readfile.read_float32(demFile)
 h5data = h5py.File(File)
@@ -52,12 +51,12 @@ dset = h5data['velocity'].get('velocity')
 data = dset[0:dset.shape[0],0:dset.shape[1]]
 
 try:
-  suby=sys.argv[3].split(':')
-  subx=sys.argv[4].split(':')
-  data = data[int(suby[0]):int(suby[1]),int(subx[0]):int(subx[1])]
-  dem = dem[int(suby[0]):int(suby[1]),int(subx[0]):int(subx[1])]
+    suby=sys.argv[3].split(':')
+    subx=sys.argv[4].split(':')
+    data = data[int(suby[0]):int(suby[1]),int(subx[0]):int(subx[1])]
+    dem = dem[int(suby[0]):int(suby[1]),int(subx[0]):int(subx[1])]
 except:
-  print 'no subset'
+    print 'no subset'
 
 dem=dem.flatten(1)
 data=data.flatten(1)

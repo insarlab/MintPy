@@ -135,7 +135,6 @@ def main(argv):
     xref=int(h5file['timeseries'].attrs['ref_x'])
     dateList = h5file['timeseries'].keys() 
     tbase=tempbase(dateList)
-   # print tbase
     t1=datetime.datetime(*time.strptime(dateList[0],"%Y%m%d")[0:5]) 
 
     h5timeseries = h5py.File(outName,'w')
@@ -147,9 +146,7 @@ def main(argv):
        
        t=datetime.datetime(*time.strptime(date,"%Y%m%d")[0:5])
        dt=(t-t1)
-     #  print dt.days
        dt=float(dt.days)/365.0
-     #  print dt
        Rampt=Ramp*dt
        Rampt=Rampt-Rampt[yref][xref]
        dset = group.create_dataset(date, data=data-Rampt, compression='gzip')
@@ -157,9 +154,11 @@ def main(argv):
     for key,value in h5file['timeseries'].attrs.iteritems():
       group.attrs[key] = value
 
-    dset1 = h5file['mask'].get('mask')
-    group=h5timeseries.create_group('mask')
-    dset = group.create_dataset('mask', data=dset1, compression='gzip')
+    try:
+        dset1 = h5file['mask'].get('mask')
+        group=h5timeseries.create_group('mask')
+        dset = group.create_dataset('mask', data=dset1, compression='gzip')
+    except: pass
     h5timeseries.close()
     h5file.close()    
   
@@ -181,9 +180,12 @@ def main(argv):
       dset = group.create_dataset(igram, data=unw, compression='gzip')
       for key, value in h5file['interferograms'][igram].attrs.iteritems():
           group.attrs[key] = value      
-    gm = h5out.create_group('mask')
-    mask = h5file['mask'].get('mask')
-    dset = gm.create_dataset('mask', data=mask, compression='gzip')    
+
+    try:
+        mask = h5file['mask'].get('mask')
+        gm = h5out.create_group('mask')
+        dset = gm.create_dataset('mask', data=mask, compression='gzip')    
+    except: pass
 
     try:
        meanCoherence = h5file['meanCoherence'].get('meanCoherence')

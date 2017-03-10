@@ -37,12 +37,12 @@ import getopt
 
 import h5py
 import numpy as np
+import matplotlib as mpl; mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 import pysar._readfile as readfile
 import pysar._pysar_utilities as ut
 import pysar.subset as subset
-import pysar.masking as mask
 import pysar._datetime as ptime
 
 
@@ -158,14 +158,12 @@ def auto_flip_check(atr_dict):
         geocoord = 'yes'
     except:
         geocoord = 'no'
-        try:
-            orb_dir = orbit_direction(atr_dict)
-            print orb_dir+' orbit'
-            if   orb_dir == 'descending': flip_lr = 'yes'
-            elif orb_dir == 'ascending' : flip_ud = 'yes'
-            else: pass
-        except: pass
-
+        orb_dir = orbit_direction(atr_dict)
+        print orb_dir+' orbit'
+        if   orb_dir == 'descending': flip_lr = 'yes'
+        elif orb_dir == 'ascending' : flip_ud = 'yes'
+        else: pass
+  
     return flip_lr, flip_ud
 
 
@@ -225,7 +223,7 @@ def plot_dem_yx(ax, dem, demShade='yes', demContour='no', contour_step=200.0, co
         dem_contour=ndimage.gaussian_filter(dem,sigma=contour_sigma,order=0)
         contour_sequence=np.arange(-6000,9000,contour_step)
         ax.contour(dem_contour,contour_sequence,origin='lower',colors='black',alpha=0.5)
-
+  
     return ax
 
 
@@ -267,7 +265,7 @@ def Usage():
   --opposite    : opposite sign - multiply data by -1
   --fliplr      : flip left-right
   --flipud      : flip up-down
-  -x            : subset in x direction
+  -x            : subset in x direction 
   -y            : subset in y direction
   -l            : subset in latitude
   -L            : subset in longitude
@@ -275,18 +273,11 @@ def Usage():
                   use this option when high quality figure is needed.
 
   Point and Line:
-  --point-yx    : point    coordinate in y,x,y,x,...               [for plot in y/x]
-  --point-lalo  : point    coordinate in lat,lon,lat,lon,...       [for plot in lat/lon]
-  --line-yx     : line end coordinate in y,x,y,x;y,x,y,x;...       [for plot in y/x]
-  --line-lalo   : line end coordinate in lat,lon,lat,lon;lat,lon,lat,lon;... 
+  --point       : point coordinate in x,y,x,y,...
+  --line        : line end coordinate x,y,x,y;x,y,x,y;...
                   p_yx = '1468,1002,1498,1024,1354,1140,1394,1174'
                   l_yx = '1468,1002,1498,1024;1354,1140,1394,1174,1560,1155'
-                  view.py -f mask_all.h5 --point-yx=p_yx --line-yx=l_yx
-                  view.py -f velocity_ex.h5 --mask Mask.h5 --point-lalo 33.0922,131.2314,33.1026,131.2441
-                  or GMT format location filw, i.e. transect_lonlat.xy
-                    >
-                    131.1663    33.1157
-                    131.2621    33.0860
+                  view.py -f mask_all.h5 --point=p_yx --line=l_yx
 
   Figure Setting:
   --figsize     : figure size in inches (width, length), i.e. '15,10'
@@ -359,8 +350,8 @@ def Usage():
 
    Showing DEM:
            view.py -f velocity.h5 -D SanAndreas.dem
-           view.py -f velocity.h5 -D SanAndreas.dem --dem-nocontour
-           view.py -f velocity.h5 -D SanAndreas.dem --dem-nocontour --dem-noshade
+           view.py -f velocity.h5 -D SanAndreas.dem --dem-contour
+           view.py -f velocity.h5 -D SanAndreas.dem --dem-contour --dem-noshade
 
    Display in subset:
            view.py -f velocity.h5 -x 100:600     -y 200:800
@@ -436,9 +427,8 @@ def main(argv):
                                             'scale=','nodisplay','noreference','figsize=','dem-nocontour','dem-noshade',\
                                             'contour-step=','contour-smooth=','ref-epoch=','ref-color=','ref-symbol=',\
                                             'ref-size=','radar-coord','title=','dpi=','output=','exclude=','noaxis',\
-                                            'no-multilook','mask=','notitle','','ref-yx=','ref-lalo=','point-yx=',\
-                                            'point-lalo=','line-yx=','line-lalo='])
-
+                                            'point=','line=','no-multilook','mask=','notitle','','ref-yx=','ref-lalo='])
+    
         except getopt.GetoptError:
             print 'Error in reading input options!';  Usage() ; sys.exit(1)
         if opts==[]: Usage() ; sys.exit(1)
@@ -487,15 +477,13 @@ def main(argv):
             elif opt == '--ref-color'     : ref_color    = arg
             elif opt == '--ref-symbol'    : ref_symbol   = arg
             elif opt == '--ref-size'      : ref_size     = int(arg)
-            elif opt == '--ref-yx'        : ref_yx_new   = [int(i)   for i in arg.split(',')]
-            elif opt == '--ref-lalo'      : ref_lalo_new = [float(i) for i in arg.split(',')]
+            elif opt == '--ref-yx'        : ref_yx       = [int(i)   for i in arg.split(',')]
+            elif opt == '--ref-lalo'      : ref_lalo     = [float(i) for i in arg.split(',')]
             elif opt == '--save'          : saveFig      = 'yes'
             elif opt == '--scale'         : disp_scale   = float(arg)
             elif opt == '--wrap'          : rewrapping   = 'yes'
-            elif opt == '--point-yx'      : point_yx     = [int(i)   for i in arg.split(',')];
-            elif opt == '--point-lalo'    : point_lalo   = [float(i) for i in arg.split(',')];
-            elif opt == '--line-yx'       : line_yx      = [i for i in arg.split(';')];
-            elif opt == '--line-lalo'     : line_lalo    = arg
+            elif opt == '--point'         : point_yx     = [i for i in arg.split(',')];
+            elif opt == '--line'          : line_yx    = [i for i in arg.split(';')];
             elif opt == '--no-multilook'  : multilook    = 'no'
 
     elif len(sys.argv)==2:
@@ -515,7 +503,7 @@ def main(argv):
     ##################  Color Map  ######################
     try: color_map
     except:
-        if k in ['coherence','temporal_coherence','.cor']:
+        if k in ['coherence','temporal_coherence','.cor','.dem','.hgt']:
               color_map = 'gray'
         else: color_map = 'jet'
   
@@ -540,7 +528,6 @@ def main(argv):
         from matplotlib.colors import LinearSegmentedColormap
         ccmap = LinearSegmentedColormap('BlueRed1', cdict1)
     else:  ccmap=plt.get_cmap(color_map)
-    print 'colormap: '+color_map
 
     ##### Check subset range
     width  = int(float(atr['WIDTH']))
@@ -555,7 +542,7 @@ def main(argv):
     except:
         try:    win_x
         except: win_x = [0,width]
-
+    
     win_y,win_x = subset.check_subset_range(win_y,win_x,atr)
     box = (win_x[0],win_y[0],win_x[1],win_y[1])
     if win_y[1]-win_y[0] == length and win_x[1]-win_x[0] == width:
@@ -566,8 +553,8 @@ def main(argv):
     try:
         lon_step = float(atr['X_STEP'])
         lat_step = float(atr['Y_STEP'])
-        #lon_unit = atr['Y_UNIT']
-        #lat_unit = atr['X_UNIT']
+        lon_unit = atr['Y_UNIT']
+        lat_unit = atr['X_UNIT']
         ullon     = float(atr['X_FIRST'])+win_x[0]*lon_step
         ullat     = float(atr['Y_FIRST'])+win_y[0]*lat_step
         llcrnrlon = ullon
@@ -592,20 +579,26 @@ def main(argv):
 
     ##### Check Reference Coord
     try:
-        ref_lalo_new
-        ref_yx_new[0] = int((ref_lalo[0] - ullat)/lat_step + 0.5)
-        ref_yx_new[1] = int((ref_lalo[1] - ullon)/lon_step + 0.5)
+        ref_lalo
+        ref_y = int((ref_lalo[0] - ullat)/lat_step + 0.5)
+        ref_x = int((ref_lalo[1] - ullon)/lon_step + 0.5)
+        ref_yx = [ref_y,ref_x]
     except: pass
 
-    try:  ref_yx_new
+    try:
+        ref_yx
+        ref_y = ref_yx[0]
+        ref_x = ref_yx[1]
+        ref_yx_new = 'yes'
     except:
+        ref_yx_new = 'no'
         try:
             ref_y = int((float(atr['ref_lat']) - ullat)/lat_step + 0.5)
             ref_x = int((float(atr['ref_lon']) - ullon)/lon_step + 0.5)
         except:
             try:
-                ref_y = int(atr['ref_y']) - win_y[0]
-                ref_x = int(atr['ref_x']) - win_x[0]
+                ref_y = int(atr['ref_x']) - win_x[0]
+                ref_x = int(atr['ref_y']) - win_y[0]
             except:  pass
 
     ##### Template File
@@ -804,19 +797,14 @@ def main(argv):
 
         ############## Data Option ##################
         ## mask
-        if masking == 'yes':  data = mask.mask_data(data,msk)
-        #if masking == 'yes':  data[ndx] = np.nan
+        if masking == 'yes':  data[ndx] = np.nan
 
         ## reference point
-        try:
-            ref_yx_new
-            if not np.isnan(data[ref_yx_new[0],ref_yx_new[1]]):
-                ref_y = ref_yx_new[0]
-                ref_x = ref_yx_new[1]
+        if ref_yx_new == 'yes':
+            if not np.isnan(data[ref_y,ref_x]):
                 data -= data[ref_y,ref_x]
                 print 'set reference to point: ('+str(ref_y)+', '+str(ref_x)+')'
             else:  print 'new reference point has nan value, thus disabled.'
-        except: pass
 
         ## show displacement instead of phase
         if dispDisplacement == 'yes':
@@ -853,7 +841,7 @@ def main(argv):
         try:
             demFile
             demRsc = readfile.read_attributes(demFile)
-            print 'reading DEM: '+os.path.basename(demFile)+' ...'
+            print 'Show topography: '+os.path.basename(demFile)
      
             ##### Read DEM
             if int(demRsc['WIDTH']) == width and int(demRsc['FILE_LENGTH']) == length:
@@ -905,7 +893,7 @@ def main(argv):
 
         ##### Plot in Geo-coordinate: plot in map
         if geocoord == 'yes' and disp_geo == 'yes':
-            print 'plotting in Lat/Lon coordinate ...'
+            print 'plot in Lat/Lon coordinate ...'
      
             ## Map Setup
             from mpl_toolkits.basemap import Basemap
@@ -934,42 +922,6 @@ def main(argv):
                     ref_lat = urcrnrlat + ref_y*lat_step
                     plt.plot(ref_lon,ref_lat,refPoint,ms=ref_size)
                 except:  pass
-
-            try:
-                point_lalo
-                point_num = len(point_lalo)/2*2
-                point_lalo = point_lalo[0:point_num]
-                point_lon = point_lalo[1::2]
-                point_lat = point_lalo[::2]
-                plt.plot(point_lon,point_lat,'ro')
-                print 'plot points'
-            except: pass
-
-            try:
-                line_lalo
-                if os.path.isfile(line_lalo):
-                    line_lon = []
-                    line_lat = []
-                    fll = open(line_lalo,'r')
-                    for line in fll:
-                        c = line.strip().split()
-                        if c[0].startswith('>'):
-                            plt.plot(line_lon,line_lat,'r--',lw=2)
-                            line_lon = []
-                            line_lat = []
-                        else:
-                            line_lon.append(c[0])
-                            line_lat.append(c[1])
-                    plt.plot(line_lon,line_lat,'k--',lw=2)
-                    fll.close()
-                else:
-                    line_lalo = [i for i in line_lalo.split(';')];
-                    for i in range(0,len(line_lalo)):
-                        line_lon = line_lalo[i].split(',')[1::2]
-                        line_lat = line_lalo[i].split(',')[::2]
-                        plt.plot(line_lon,line_lat,'r--',lw=2)
-                print 'plot lines'
-            except: pass
      
             # Colorbar
             from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -995,7 +947,7 @@ def main(argv):
 
         ##### Plot in x/y coordinate: row and column
         else:
-            print 'plotting in Y/X coordinate ...'
+            print 'plot in Y/X coordinate ...'
      
             ## Plot DEM
             try: ax = plot_dem_yx(ax,dem,demShade,demContour,contour_step,contour_sigma)
@@ -1018,7 +970,7 @@ def main(argv):
      
             plt.xlim(0,np.shape(data)[1])
             plt.ylim(  np.shape(data)[0],0)
-
+     
             ##### Plot Points and Lines
             try:
                 point_yx
@@ -1134,7 +1086,7 @@ def main(argv):
         try:
             demFile
             demRsc = readfile.read_attributes(demFile)
-            print 'reading DEM: '+str(demFile)+' ...'
+            print 'Show topography: '+str(demFile)
      
             ##### Read DEM
             if int(demRsc['WIDTH']) == width and int(demRsc['FILE_LENGTH']) == length:
@@ -1207,7 +1159,7 @@ def main(argv):
     
                 ##### Data Option
                 ## mask file
-                if masking          == 'yes':   data = mask.mask_data(data,msk)
+                if masking          == 'yes':   data[ndx] = np.nan
                 ## multilooking
                 if lks              >  1    :   data = multilook(data,lks,lks)
                 ## show displacement instead of phase
