@@ -233,11 +233,11 @@ def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
     # insert json file to pgsql using ogr2ogr - folder_name = area name
     command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln ' + folder_name + " "
     chunk_path = './mbtiles/' + folder_name + '/' + chunk
-    '''res = os.system(command + ' ' + chunk_path)
+    res = os.system(command + ' ' + chunk_path)
 
     if res != 0:
         print "Error inserting into the database. This is most often due to running out of Memory (RAM), or incorrect database credentials... quitting"
-        sys.exit()'''
+        sys.exit()
 
     print "inserted chunk " + str(chunk_num) + " to db"
 
@@ -259,11 +259,6 @@ def build_parser():
 
     return parser
 
-def print_attrs(name, obj):
-    print name
-    for key, val in obj.attrs.iteritems():
-        print "    %s: %s" % (key, val)
-
 def main():
     parser = build_parser()
     parseArgs = parser.parse_args()
@@ -284,20 +279,19 @@ def main():
 # then read datasets from h5 file into memory for faster reading of data
 # depending on UNAVCO format, the main key to access groups might be '/GEOCODE'
     file = h5py.File(file_name,  "r")
-    #file.visititems(print_attrs)
-    #return
-    group = file['timeseries']  # assuming there is only one main key called 'GEOCODE'
+    group = file['GEOCODE/timeseries']  # assuming there is only one main key called 'GEOCODE'
 
 # get attributes (stored at root) of UNAVCO timeseries file
-    attributes = dict(group.attrs)
+    attributes = dict(file['/'].attrs)
 
 # in timeseries group, there are 25 datasets 
 # need to get datasets with dates - strings that can be converted to integers
     dataset_keys = []
-    for k in group["GRIDS"].keys():
+    for k in group.keys():
         if k.isdigit():
             dataset_keys.append(k)
     dataset_keys.sort()
+
 
 # array that stores dates from dataset_keys that have been converted to decimal
     decimal_dates = []
@@ -305,7 +299,7 @@ def main():
 # read datasets in the group into a dictionary of 2d arrays and intialize decimal dates
     timeseries_datasets = {}
     for key in dataset_keys:
-        timeseries_datasets[key] = group["GRIDS"][key][:]
+        timeseries_datasets[key] = group[key][:]
         d = get_date(key)
         decimal = get_decimal_date(d)
         decimal_dates.append(decimal)
@@ -339,11 +333,11 @@ def main():
 # run tippecanoe command to get mbtiles file and then delete the json files to save space
     os.chdir(os.path.abspath(json_path))
     os.system("tippecanoe *.json -x d -pf -pk -Bg -d9 -D12 -g12 -r0 -o " + folder_name + ".mbtiles")
-    #os.system("rm -rf *.json")
+    os.system("rm -rf *.json")
 
 # move mbtiles file from json folder to mbtiles folder and then delete json folder
     os.system("mv " + folder_name + ".mbtiles " + os.path.abspath(mbtiles_path))
-    #os.system("rm -rf " + os.path.abspath(json_path))
+    os.system("rm -rf " + os.path.abspath(json_path))
 
 # ---------------------------------------------------------------------------------------
 # check how long it took to read h5 file data and create json files
