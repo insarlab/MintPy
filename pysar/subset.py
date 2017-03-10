@@ -467,6 +467,10 @@ def subset_file(File, subset_dict, outFile=None):
     print 'data   range in lat/lon: '+str(box_pixel2geo(data_box, atr_dict))
     print 'subset range in lat/lon: '+str(geo_box)
 
+    if pix_box == data_box:
+        print 'Subset range == data coverage, no need to subset. Skip.'
+        return File
+
     # Calculate Subset/Overlap Index
     pix_box4data, pix_box4subset = get_box_overlap_index(data_box, pix_box)
 
@@ -718,7 +722,7 @@ def main(argv):
         else:
             print 'use subset input in y/x'
             print 'calculate corresponding bounding box in geo coordinate.'
-            pix_box = (inps.subst_x[0], inps.subset_y[0], inps.subset_x[1], inps.subset_y[1])
+            pix_box = (inps.subset_x[0], inps.subset_y[0], inps.subset_x[1], inps.subset_y[1])
             geo_box = bbox_radar2geo(pix_box, atr_rdr, inps.trans_file)
         print 'geo   box: '+str(geo_box)
         print 'pixel box: '+str(pix_box)

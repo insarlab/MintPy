@@ -396,7 +396,6 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict()):
     except: transFile = None
 
     ########## Precise conversion using geomap.trans file, if it exists.
-    import pdb; pdb.set_trace()
     if transFile:
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter

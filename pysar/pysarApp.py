@@ -313,7 +313,7 @@ def main(argv):
     # Loading Data
     #########################################
     print '\n*************** Load Data ****************'
-    loadCmd = 'load_data.py '+inps.template_file
+    loadCmd = 'load_data.py '+inps.template_file+' --dir '+inps.work_dir
     print loadCmd
     os.system(loadCmd)
 
@@ -383,13 +383,12 @@ def main(argv):
     print '--------------------------------------------'
     if inps.geomap_file:
         outName = os.path.splitext(inps.geomap_file)[0]+'_tight'+os.path.splitext(inps.geomap_file)[1]
-        if check_isfile(outName):
-            print '\n'+outName+' already existed.\n'
-        else:
-            subsetCmd = 'subset.py '+inps.geomap_file+' --footprint '+' -o '+outName
-            print subsetCmd
-            os.system(subsetCmd)
-        inps.geomap_file = outName
+        # Get bounding box of non-zero area in geomap*.trans file
+        trans_rg, trans_atr = readfile.read(inps.geomap_file, (), 'range')
+        idx_row, idx_col = np.nonzero(trans_rg)
+        pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
+        inps = subset.subset_box2inps(inps, pix_box, None)
+        inps.geomap_file = check_subset_file(inps.geomap_file, vars(inps), outName)
         
         # Subset DEM in geo coord
         outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
