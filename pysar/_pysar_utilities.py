@@ -30,8 +30,7 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 ############################################################################### 
-# Yunjun, Oct 2015: Add radar_or_geo() (modifed from pysarApp.py written by Heresh)
-#                   Add glob2radar() and radar2glob() (modified from radar2geo.py
+# Yunjun, Oct 2015: Add glob2radar() and radar2glob() (modified from radar2geo.py
 #                       written by Heresh)
 # Yunjun, Dec 2015: Use k[0] instead of 'interferograms' in some functions for 
 #                       better support of interferograms, coherence and wrapped
@@ -358,45 +357,67 @@ def print_progress(iteration, total, prefix='calculating:', suffix='complete', d
     for i in range(len(dateList)):
         print_progress(i+1,len(dateList))
     '''
+    return
+
+
+def range_resolution(atr):
+    '''Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
+    if 'X_FIRST' in atr.keys():
+        print 'Input file is in geo coord, no range resolution info.'
+        return
+    inc_angle = incidence_angle(atr, 0)
+    rg_step = float(atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
+    return rg_step
+
+def azimuth_resolution(atr):
+    '''Get azimuth resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
+    if 'X_FIRST' in atr.keys():
+        print 'Input file is in geo coord, no azimuth resolution info.'
+        return
+    Re = float(atr['EARTH_RADIUS'])
+    Height = float(atr['HEIGHT'])
+    az_step = float(atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
+    return az_step
 
 
 #########################################################################
-def glob2radar(lat, lon, geomapFile='geomap*.trans', rdrFile=None):
+def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict()):
     '''Convert geo coordinates into radar coordinates.
     Inputs:
         lat/lon    - np.array, float, latitude/longitude
-        geomapFile - string, trans/look up file
-        rdrFile    - string, file in radar coord, optional but recommended.
+        transFile - string, trans/look up file
+        atr_rdr    - dict, attributes of file in radar coord, optional but recommended.
     Output:
         az/rg     - np.array, float, range/azimuth pixel number
         az/rg_res - float, residul/uncertainty of coordinate conversion
     '''
 
-    try:    geomapFile = glob.glob(geomapFile)[0]
-    except: geomapFile = None
+    try:    transFile = glob.glob(transFile)[0]
+    except: transFile = None
 
     ########## Precise conversion using geomap.trans file, if it exists.
-    if geomapFile:
-        # Get lat/lon resolution/step
-        print 'reading file: '+geomapFile
-        trans_rg, trans_atr = readfile.read(geomapFile, (), 'range')
-        trans_az = readfile.read(geomapFile, (), 'azimuth')[0]
-        lat_step = float(trans_atr['Y_STEP'])
-        lon_step = float(trans_atr['X_STEP'])
+    import pdb; pdb.set_trace()
+    if transFile:
+        # Get lat/lon resolution/step in meter
+        earth_radius = 6371.0e3;    # in meter
+        print 'reading file: '+transFile
+        trans_rg, trans_atr = readfile.read(transFile, (), 'range')
+        trans_az = readfile.read(transFile, (), 'azimuth')[0]
         lat_first = float(trans_atr['Y_FIRST'])
         lon_first = float(trans_atr['X_FIRST'])
+        lat_center = lat_first + float(trans_atr['Y_STEP'])*float(trans_atr['FILE_LENGTH'])/2
+        lat_step_deg = float(trans_atr['Y_STEP'])
+        lon_step_deg = float(trans_atr['X_STEP'])
+        lat_step = lat_step_deg*np.pi/180.0*earth_radius
+        lon_step = lon_step_deg*np.pi/180.0*earth_radius*np.sin(lat_center*np.pi/180)
         
-        # Get range/azimuth ground resolution/step
-        if rdrFile:
-            rdr_atr = readfile.read_attribute(rdrFile)
-            Re = float(rdr_atr['EARTH_RADIUS'])
-            Height = float(rdr_atr['HEIGHT'])
-            inc_angle = incidence_angle(rdr_atr, 0)
-            az_step = float(rdr_atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
-            rg_step = float(rdr_atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
-            try:    az0 = int(rdr_atr['subset_y0'])
+        # Get range/azimuth ground resolution/step in meter
+        if atr_rdr:
+            az_step = azimuth_resolution(atr_rdr)
+            rg_step = range_resolution(atr_rdr)
+            try:    az0 = int(atr_rdr['subset_y0'])
             except: az0 = 0
-            try:    rg0 = int(rdr_atr['subset_x0'])
+            try:    rg0 = int(atr_rdr['subset_x0'])
             except: rg0 = 0
             
             x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
@@ -408,33 +429,32 @@ def glob2radar(lat, lon, geomapFile='geomap*.trans', rdrFile=None):
             rg0 = 0
         
         width  = int(trans_atr['WIDTH'])
-        row = np.rint((lat - lat_first)/lat_step).astype(int)
-        col = np.rint((lon - lon_first)/lon_step).astype(int)
+        row = np.rint((lat - lat_first)/lat_step_deg).astype(int)
+        col = np.rint((lon - lon_first)/lon_step_deg).astype(int)
         rg = np.rint(trans_rg[row, col]).astype(int) - rg0
         az = np.rint(trans_az[row, col]).astype(int) - az0
         rg_resid = x_factor
         az_resid = y_factor
 
     ########## Simple conversion using 2D linear transformation, with 4 corners' lalo info
-    elif rdrFile:
+    elif atr_rdr:
         print 'finding approximate radar coordinate with 2D linear transformation estimation.'
         print '    using four corner lat/lon info from '+rdrFile+' file.'
-        rdr_atr = readfile.read_attribute(rdrFile)
         # This method only works for whole frame/track, thus input file cannot be subsetted before.
-        if 'subset_x0' in rdr_atr.keys():
+        if 'subset_x0' in atr_rdr.keys():
             print 'WARNING: Cannot use subset file as input! No coordinate converted.'
             return None
 
-        LAT_REF1=float(rdr_atr['LAT_REF1'])
-        LAT_REF2=float(rdr_atr['LAT_REF2'])
-        LAT_REF3=float(rdr_atr['LAT_REF3'])
-        LAT_REF4=float(rdr_atr['LAT_REF4'])
-        LON_REF1=float(rdr_atr['LON_REF1'])
-        LON_REF2=float(rdr_atr['LON_REF2'])
-        LON_REF3=float(rdr_atr['LON_REF3'])
-        LON_REF4=float(rdr_atr['LON_REF4'])
-        W =      float(rdr_atr['WIDTH'])
-        L =      float(rdr_atr['FILE_LENGTH'])
+        LAT_REF1=float(atr_rdr['LAT_REF1'])
+        LAT_REF2=float(atr_rdr['LAT_REF2'])
+        LAT_REF3=float(atr_rdr['LAT_REF3'])
+        LAT_REF4=float(atr_rdr['LAT_REF4'])
+        LON_REF1=float(atr_rdr['LON_REF1'])
+        LON_REF2=float(atr_rdr['LON_REF2'])
+        LON_REF3=float(atr_rdr['LON_REF3'])
+        LON_REF4=float(atr_rdr['LON_REF4'])
+        W =      float(atr_rdr['WIDTH'])
+        L =      float(atr_rdr['FILE_LENGTH'])
 
         LAT_REF = np.array([LAT_REF1,LAT_REF2,LAT_REF3,LAT_REF4]).reshape(4,1)
         LON_REF = np.array([LON_REF1,LON_REF2,LON_REF3,LON_REF4]).reshape(4,1)
@@ -460,42 +480,42 @@ def glob2radar(lat, lon, geomapFile='geomap*.trans', rdrFile=None):
     return az, rg, az_resid, rg_resid
 
 
-def radar2glob(az, rg, geomapFile='geomap*.trans', rdrFile=None):
+def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
     '''Convert radar coordinates into geo coordinates
     Inputs:
         rg/az      - np.array, int, range/azimuth pixel number
-        geomapFile - string, trans/look up file
-        rdrFile    - string, file in radar coord, optional but recommended.
+        transFile - string, trans/look up file
+        atr_rdr    - dict, attributes of file in radar coord, optional but recommended.
     Output:
         lon/lat    - np.array, float, longitude/latitude of input point (rg,az)
         latlon_res - float, residul/uncertainty of coordinate conversion
     '''
-    try:    geomapFile = glob.glob(geomapFile)[0]
-    except: geomapFile = None
+    try:    transFile = glob.glob(transFile)[0]
+    except: transFile = None
     
     lon = np.zeros(rg.shape)
     lat = np.zeros(rg.shape)    
 
     ##### Use geomap*.trans file for precious (pixel-level) coord conversion
     ## by searching pixels in trans file with value falling buffer lat/lon value
-    if geomapFile:
-        # Get lat/lon resolution/step
-        print 'reading file: '+geomapFile
-        trans_rg, trans_atr = readfile.read(geomapFile, (), 'range')
-        trans_az = readfile.read(geomapFile, (), 'azimuth')[0]
-        lat_step = float(trans_atr['Y_STEP'])
-        lon_step = float(trans_atr['X_STEP'])
+    if transFile:
+        # Get lat/lon resolution/step in meter
+        earth_radius = 6371.0e3;    # in meter
+        print 'reading file: '+transFile
+        trans_rg, trans_atr = readfile.read(transFile, (), 'range')
+        trans_az = readfile.read(transFile, (), 'azimuth')[0]
         lat_first = float(trans_atr['Y_FIRST'])
         lon_first = float(trans_atr['X_FIRST'])
+        lat_center = lat_first + float(trans_atr['Y_STEP'])*float(trans_atr['FILE_LENGTH'])/2
+        lat_step_deg = float(trans_atr['Y_STEP'])
+        lon_step_deg = float(trans_atr['X_STEP'])
+        lat_step = lat_step_deg*np.pi/180.0*earth_radius
+        lon_step = lon_step_deg*np.pi/180.0*earth_radius*np.sin(lat_center*np.pi/180)
 
         # Get range/azimuth ground resolution/step
-        if rdrFile:
-            rdr_atr = readfile.read_attribute(rdrFile)
-            Re = float(rdr_atr['EARTH_RADIUS'])
-            Height = float(rdr_atr['HEIGHT'])
-            inc_angle = incidence_angle(rdr_atr, 0)
-            az_step = float(rdr_atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
-            rg_step = float(rdr_atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
+        if atr_rdr:
+            az_step = azimuth_resolution(atr_rdr)
+            rg_step = range_resolution(atr_rdr)
         
             x_factor = np.ceil(abs(lon_step)/rg_step)
             y_factor = np.ceil(abs(lat_step)/az_step)
@@ -509,31 +529,30 @@ def radar2glob(az, rg, geomapFile='geomap*.trans', rdrFile=None):
             idx = np.where(np.multiply(mask_rg, mask_az))
             trans_row, trans_col = np.mean(idx,1)
             
-            lat[i] = trans_row*lat_step + lat_first
-            lon[i] = trans_col*lon_step + lon_first
+            lat[i] = trans_row*lat_step_deg + lat_first
+            lon[i] = trans_col*lon_step_deg + lon_first
         
-        lat_resid = y_factor*lat_step
-        lon_resid = x_factor*lon_step
+        lat_resid = y_factor*lat_step_deg
+        lon_resid = x_factor*lon_step_deg
 
     ##### Use corner lat/lon for rough (ten-pixels or more level) coord conversion
     ## by estimating a simple 2D linear transformation
-    elif rdrFile:
-        rdr_atr = readfile.read_attribute(rdrFile)
+    elif atr_rdr:
         # This method only works for whole frame/track, thus input file cannot be subsetted before.
-        if 'subset_x0' in rdr_atr.keys():
+        if 'subset_x0' in atr_rdr.keys():
             print 'WARNING: Cannot use subset file as input! No coordinate converted.'
             return None
         
-        LAT_REF1=float(rdr_atr['LAT_REF1'])
-        LAT_REF2=float(rdr_atr['LAT_REF2'])
-        LAT_REF3=float(rdr_atr['LAT_REF3'])
-        LAT_REF4=float(rdr_atr['LAT_REF4'])
-        LON_REF1=float(rdr_atr['LON_REF1'])
-        LON_REF2=float(rdr_atr['LON_REF2'])
-        LON_REF3=float(rdr_atr['LON_REF3'])
-        LON_REF4=float(rdr_atr['LON_REF4'])
-        W =      float(rdr_atr['WIDTH'])
-        L =      float(rdr_atr['FILE_LENGTH'])
+        LAT_REF1=float(atr_rdr['LAT_REF1'])
+        LAT_REF2=float(atr_rdr['LAT_REF2'])
+        LAT_REF3=float(atr_rdr['LAT_REF3'])
+        LAT_REF4=float(atr_rdr['LAT_REF4'])
+        LON_REF1=float(atr_rdr['LON_REF1'])
+        LON_REF2=float(atr_rdr['LON_REF2'])
+        LON_REF3=float(atr_rdr['LON_REF3'])
+        LON_REF4=float(atr_rdr['LON_REF4'])
+        W =      float(atr_rdr['WIDTH'])
+        L =      float(atr_rdr['FILE_LENGTH'])
         
         LAT_REF = np.array([LAT_REF1,LAT_REF2,LAT_REF3,LAT_REF4]).reshape(4,1)
         LON_REF = np.array([LON_REF1,LON_REF2,LON_REF3,LON_REF4]).reshape(4,1)
@@ -561,31 +580,6 @@ def radar2glob(az, rg, geomapFile='geomap*.trans', rdrFile=None):
         return None
         
     return lat, lon, lat_resid, lon_resid
-
-
-#########################################################################
-def radar_or_geo(File):
-    '''Check File is in Radar or Geo coordinate'''
-    ext = os.path.splitext(File)[1]
-    if ext == '.h5':
-        h5file=h5py.File(File,'r')
-        k=h5file.keys()
-        if 'interferograms' in k: k[0] = 'interferograms'
-        elif 'coherence'    in k: k[0] = 'coherence'
-        elif 'timeseries'   in k: k[0] = 'timeseries'
-        if   k[0] in ('interferograms','coherence','wrapped'):
-            atrKey = h5file[k[0]][h5file[k[0]].keys()[0]].attrs.keys()
-        elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
-            atrKey = h5file[k[0]].attrs.keys()
-        h5file.close()
-    elif ext in ['.unw','.cor','.int','.hgt','.dem','.trans']:
-        atrKey = readfile.read_roipac_rsc(File + '.rsc').keys()
-    else: print 'Unrecognized extention: '+ext; return
-  
-    if 'X_FIRST' in atrKey:  rdr_geo='geo'
-    else:                    rdr_geo='radar'
-    return rdr_geo
-
 
 
 #########################################################################

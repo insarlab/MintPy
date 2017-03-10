@@ -30,7 +30,6 @@
 #
 # Yunjun, Feb 2015: Update mask, generate incident angle file
 # Yunjun, Oct 2015: Add find_filename(), check_subset()
-#                   Move radar_or_geo() to _pysar_utilities.py
 #                   Update name for pysar.dem.* and pysar.trop*
 #                   Finished pysar.subset.yx option.
 #                   Add check_mask(), check_geocode()
@@ -170,11 +169,11 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
         if geo_box:
             print 'use subset input in lat/lon'
             print 'calculate corresponding bounding box in radar coordinate.'
-            pix_box = subset.bbox_geo2radar(geo_box, inps.ifgram_file, geomap_file_orig)
+            pix_box = subset.bbox_geo2radar(geo_box, atr, geomap_file_orig)
         else:
             print 'use subset input in y/x'
             print 'calculate corresponding bounding box in geo coordinate.'
-            geo_box = subset.bbox_radar2geo(pix_box, inps.ifgram_file, geomap_file_orig)
+            geo_box = subset.bbox_radar2geo(pix_box, atr, geomap_file_orig)
         
         # subset
         inps = subset_dataset(inps, geo_box, pix_box)

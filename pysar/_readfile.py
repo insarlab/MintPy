@@ -352,6 +352,7 @@ def read_gamma_par(File):
         else:
             par_dict[l[0].strip()] = str.replace(l[1],'\n','').split("#")[0].strip()
     
+    # Attributes: Gamma to ROI_PAC
     par_dict['WIDTH']       = par_dict['range_samples:']
     par_dict['FILE_LENGTH'] = par_dict['azimuth_lines:']
     

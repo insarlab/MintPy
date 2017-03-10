@@ -487,7 +487,7 @@ def main(argv):
         else:
             # Convert lat/lon to az/rg for radar coord file using geomap*.trans file
             inps.ref_y, inps.ref_x = ut.glob2radar(np.array(inps.ref_lat), np.array(inps.ref_lon),\
-                                                   inps.trans_file, inps.file[0])[0:2]
+                                                   inps.trans_file, atr)[0:2]
         print 'Input reference point in lat/lon: '+str([inps.ref_lat, inps.ref_lon])
     print 'Input reference point in   y/x  : '+str([inps.ref_y, inps.ref_x])
     

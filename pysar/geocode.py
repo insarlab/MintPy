@@ -75,12 +75,21 @@ def geocode_data_roipac(data,geomapFile,outname):
 
 
 ######################################################################################
-def geocode_attribute(atr_rdr,atr_geo):
+def geocode_attribute(atr_rdr, atr_geo, transFile=None):
+    '''Update attributes after geocoding'''
     atr = dict()
     for key, value in atr_geo.iteritems():  atr[key] = str(value)
     for key, value in atr_rdr.iteritems():  atr[key] = value
     atr['WIDTH']       = atr_geo['WIDTH']
     atr['FILE_LENGTH'] = atr_geo['FILE_LENGTH']
+    
+    # Reference point from y/x to lat/lon
+    if transFile and ('ref_x' and 'ref_y' in atr_rdr.keys()):
+        ref_x = np.array(int(atr_rdr['ref_x']))
+        ref_y = np.array(int(atr_rdr['ref_y']))
+        ref_lat, ref_lon = ut.radar2glob(ref_y, ref_x, transFile, atr_rdr)[0:2]
+        atr['ref_lat'] = ref_lat
+        atr['ref_lon'] = ref_lon
 
     return atr
 
