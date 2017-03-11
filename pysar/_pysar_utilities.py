@@ -491,7 +491,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
     '''
     try:    transFile = glob.glob(transFile)[0]
     except: transFile = None
-    
+
     lon = np.zeros(rg.shape)
     lat = np.zeros(rg.shape)    
 
@@ -523,8 +523,8 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
             y_factor = 10
         
         for i in range(len(rg)):
-            mask_rg = np.multiply(trans_rg>=rg[i]-x_factor, trans_rg<=rg[i]+x_factor)
-            mask_az = np.multiply(trans_az>=az[i]-y_factor, trans_az<=az[i]+y_factor)
+            mask_rg = np.multiply(trans_rg>=max(rg[i]-x_factor,0.5), trans_rg<=rg[i]+x_factor)
+            mask_az = np.multiply(trans_az>=max(az[i]-y_factor,0.5), trans_az<=az[i]+y_factor)
             idx = np.where(np.multiply(mask_rg, mask_az))
             trans_row, trans_col = np.mean(idx,1)
             
