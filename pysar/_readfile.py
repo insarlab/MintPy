@@ -353,10 +353,17 @@ def read_gamma_par(File):
             par_dict[l[0].strip()] = str.replace(l[1],'\n','').split("#")[0].strip()
     
     # Attributes: Gamma to ROI_PAC
-    par_dict['WIDTH']       = par_dict['range_samples:']
-    par_dict['FILE_LENGTH'] = par_dict['azimuth_lines:']
+    par_dict = attribute_gamma2roipac(par_dict, par_dict)
     
     return par_dict
+
+def attribute_gamma2roipac(par_dict, rsc_dict=dict()):
+    '''Convert Gamma par attribute into ROI_PAC format'''
+    try:    rsc_dict['WIDTH'] = par_dict['range_samples:']
+    except: rsc_dict['WIDTH'] = par_dict['interferogram_width:']
+    try:    rsc_dict['FILE_LENGTH'] = par_dict['azimuth_lines:']
+    except: rsc_dict['FILE_LENGTH'] = par_dict['interferogram_azimuth_lines:']
+    return rsc_dict
 
 
 def read_isce_xml(File):
