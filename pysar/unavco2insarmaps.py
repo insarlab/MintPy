@@ -194,21 +194,11 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
         if k in needed_attributes:
             v = attributes[k]
             attributesController.add_attribute(project_name, k, v)
-    attributesController.close()
 
     # create index to speed up queries:
     print "Creating index"
-    try:
-        con = psycopg2.connect("dbname='pgis' user='" + dbUsername + "' host='" + dbHost + "' password='" + dbPassword + "'")
-        cur = con.cursor()
-        query = 'CREATE INDEX ON ' + area + ' (p)'
-        cur.execute(query)
-        con.commit()
-        con.close()
-    except Exception, e:
-        print "error creating index on p"
-        print e
-        #sys.exit() Don't exit, as what if the index already exists
+    attributesController.index_table_on(area, "p", None)
+    attributesController.close()
     print "Done creating index"
     
 # ---------------------------------------------------------------------------------------

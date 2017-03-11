@@ -75,9 +75,13 @@ class InsarDatabaseController:
         self.cursor.execute(sql, prepared_values)
         self.con.commit()
 
-    def index_table_on(self, table, on):
+    def index_table_on(self, table, on, index_name):
         # can't remove single quotes from table name, so we do it manually
-        sql = "CREATE INDEX area_id_idx ON " + table + " (" + on + ");"
+        sql = None
+        if index_name:
+            sql = "CREATE INDEX " + index_name + " ON " + table + " (" + on + ");"
+        else:
+            sql = "CREATE INDEX ON " + table + " (" + on + ");"
 
         try:
             self.cursor.execute(sql)
@@ -145,7 +149,7 @@ def main(argv):
         print "Setting attribute " + key + " to " + attributes[key]
         dbController.add_attribute(project_name, key, attributes[key])
 
-    dbController.index_table_on("extra_attributes", "area_id")
+    dbController.index_table_on("extra_attributes", "area_id", "area_id_idx")
     dbController.close()
 
 if __name__ == '__main__':
