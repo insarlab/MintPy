@@ -30,7 +30,6 @@
 #
 # Yunjun, Feb 2015: Update mask, generate incident angle file
 # Yunjun, Oct 2015: Add find_filename(), check_subset()
-#                   Move radar_or_geo() to _pysar_utilities.py
 #                   Update name for pysar.dem.* and pysar.trop*
 #                   Finished pysar.subset.yx option.
 #                   Add check_mask(), check_geocode()
@@ -168,26 +167,16 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
         
         # Calculate subset range in lat/lon for geo files and y/x for radar files
         if geo_box:
-            geo_box4geo = geo_box
             print 'use subset input in lat/lon'
             print 'calculate corresponding bounding box in radar coordinate.'
-            lat = np.array([geo_box4geo[3],geo_box4geo[3],geo_box4geo[1],geo_box4geo[1]])
-            lon = np.array([geo_box4geo[0],geo_box4geo[2],geo_box4geo[0],geo_box4geo[2]])
-            y, x, y_res, x_res = ut.glob2radar(lat, lon, geomap_file_orig, inps.ifgram_file)
-            buf = 10*(np.max([x_res, y_res]))
-            pix_box4rdr = (np.min(x)-buf, np.min(y)-buf, np.max(x)+buf, np.max(y)+buf)
+            pix_box = subset.bbox_geo2radar(geo_box, atr, geomap_file_orig)
         else:
-            pix_box4rdr = pix_box
             print 'use subset input in y/x'
             print 'calculate corresponding bounding box in geo coordinate.'
-            x = np.array([pix_box4rdr[0],pix_box4rdr[2],pix_box4rdr[0],pix_box4rdr[2]])
-            y = np.array([pix_box4rdr[1],pix_box4rdr[1],pix_box4rdr[3],pix_box4rdr[3]])
-            lat, lon, lat_res, lon_res = ut.radar2glob(y, x, geomap_file_orig, inps.ifgram_file)
-            buf = 10*(np.max([lat_res,lon_res]))
-            geo_box4geo = (np.min(lon)-buf, np.max(lat)+buf, np.max(lon)+buf, np.min(lat)-buf)
+            geo_box = subset.bbox_radar2geo(pix_box, atr, geomap_file_orig)
         
         # subset
-        inps = subset_dataset(inps, geo_box4geo, pix_box4rdr)
+        inps = subset_dataset(inps, geo_box, pix_box)
 
     else:
         print 'Loaded dataset is in geo coordinate.'
@@ -307,7 +296,7 @@ def main(argv):
     # work directory
     if not inps.work_dir:
         if pysar.miami_path and 'SCRATCHDIR' in os.environ:
-            inps.work_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+"/TIMESERIES"
+            inps.work_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+"/PYSAR"
             print 'Use file/dir structure in University of Miami.'+\
                   '(To turn it off, change miami_path value to False in pysar/__init__.py)'
         else:
@@ -324,7 +313,7 @@ def main(argv):
     # Loading Data
     #########################################
     print '\n*************** Load Data ****************'
-    loadCmd = 'load_data.py '+inps.template_file
+    loadCmd = 'load_data.py '+inps.template_file+' --dir '+inps.work_dir
     print loadCmd
     os.system(loadCmd)
 
@@ -394,13 +383,12 @@ def main(argv):
     print '--------------------------------------------'
     if inps.geomap_file:
         outName = os.path.splitext(inps.geomap_file)[0]+'_tight'+os.path.splitext(inps.geomap_file)[1]
-        if check_isfile(outName):
-            print '\n'+outName+' already existed.\n'
-        else:
-            subsetCmd = 'subset.py '+inps.geomap_file+' --footprint '+' -o '+outName
-            print subsetCmd
-            os.system(subsetCmd)
-        inps.geomap_file = outName
+        # Get bounding box of non-zero area in geomap*.trans file
+        trans_rg, trans_atr = readfile.read(inps.geomap_file, (), 'range')
+        idx_row, idx_col = np.nonzero(trans_rg)
+        pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
+        inps = subset.subset_box2inps(inps, pix_box, None)
+        inps.geomap_file = check_subset_file(inps.geomap_file, vars(inps), outName)
         
         # Subset DEM in geo coord
         outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]

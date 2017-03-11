@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 import pysar._readfile as readfile
-from pysar._pysar_utilities import get_file_list
+import pysar._pysar_utilities as ut
 import pysar.subset as sub
 import pysar.view as view
 
@@ -166,8 +166,8 @@ def transect_yx(z,atr,start_yx,end_yx,interpolation='nearest'):
         x_step = float(atr['X_STEP'])*np.pi/180.0*earth_radius*np.sin((lat0+lat1)/2*np.pi/180)
         y_step = float(atr['Y_STEP'])*np.pi/180.0*earth_radius
     except:
-        x_step = float(atr['RANGE_PIXEL_SIZE'])
-        y_step = float(atr['AZIMUTH_PIXEL_SIZE'])
+        x_step = ut.range_resolution(atr)
+        y_step = ut.azimuth_resolution(atr)
     dis_x = (x-x0)*x_step
     dis_y = (y-y0)*y_step
     transect[:,0] = np.hypot(dis_x,dis_y)
@@ -272,7 +272,7 @@ def cmdLineParse():
                            help='File extension for figure output file')
 
     inps = parser.parse_args()
-    inps.file = get_file_list(inps.file)
+    inps.file = ut.get_file_list(inps.file)
     if inps.outfile or not inps.disp_fig:  inps.save_fig = True
     return inps
 

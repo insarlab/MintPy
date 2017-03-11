@@ -626,8 +626,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     # 1.6 Min / Max - Data/Display
     data_min = np.nanmin(data)
     data_max = np.nanmax(data)
-    if not inps.disp_min:  inps.disp_min = data_min
-    if not inps.disp_max:  inps.disp_max = data_max
+    if inps.disp_min is None:  inps.disp_min = data_min
+    if inps.disp_max is None:  inps.disp_max = data_max
     print 'data    range: '+str(data_min)+' - '+str(data_max)
     print 'display range: '+str(inps.disp_min)+' - '+str(inps.disp_max)
 

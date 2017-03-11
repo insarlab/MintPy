@@ -246,6 +246,41 @@ def read_subset_template2box(templateFile):
     return pix_box, geo_box
 
 
+def bbox_geo2radar(geo_box, atr_rdr=dict(), transFile='geomap*.trans'):
+    '''Calculate bounding box in x/y for file in radar coord, based on input geo box.
+    Inputs:
+        geo_box   - tuple of 4 float, indicating the UL/LR lon/lat 
+        atr_rdr   - dict, attributes of file in radar coord
+        transFile - string, path of transformation file, i.e. geomap_4rlks.trans
+    Output:
+        pix_box - tuple of 4 int, indicating the UL/LR x/y of the bounding box in radar coord
+                  for the corresponding lat/lon coverage.
+    '''
+    lat = np.array([geo_box[3],geo_box[3],geo_box[1],geo_box[1]])
+    lon = np.array([geo_box[0],geo_box[2],geo_box[0],geo_box[2]])
+    y, x, y_res, x_res = ut.glob2radar(lat, lon, transFile, atr_rdr)
+    buf = 10*(np.max([x_res, y_res]))
+    pix_box = (np.min(x)-buf, np.min(y)-buf, np.max(x)+buf, np.max(y)+buf)
+    return pix_box
+
+
+def bbox_radar2geo(pix_box, atr_rdr=dict(), transFile='geomap*.trans'):
+    '''Calculate bounding box in lat/lon for file in geo coord, based on input radar/pixel box
+    Inputs:
+        pix_box   - tuple of 4 int, indicating the UL/LR x/y
+        atr_rdr   - dict, attributes of file in radar coord
+        transFile - string, path of transformation file, i.e. geomap_4rlks.trans
+    Output:
+        geo_box - tuple of 4 float, indicating the UL/LR lon/lat of the bounding box
+    '''
+    x = np.array([pix_box[0],pix_box[2],pix_box[0],pix_box[2]])
+    y = np.array([pix_box[1],pix_box[1],pix_box[3],pix_box[3]])
+    lat, lon, lat_res, lon_res = ut.radar2glob(y, x, transFile, atr_rdr)
+    buf = 10*(np.max([lat_res,lon_res]))
+    geo_box = (np.min(lon)-buf, np.max(lat)+buf, np.max(lon)+buf, np.min(lat)-buf)
+    return geo_box
+
+
 def subset_box2inps(inps, pix_box, geo_box):
     '''Update inps.subset_y/x/lat/lon from pixel_box and geo_box'''
     if geo_box:
@@ -261,6 +296,7 @@ def subset_box2inps(inps, pix_box, geo_box):
         inps.subset_x = None
         inps.subset_y = None
     return inps
+
 
 def get_box_overlap_index(box1,box2):
     '''Get index box overlap area of two input boxes
@@ -297,7 +333,7 @@ def get_box_overlap_index(box1,box2):
 
 ################################################################
 def subset_input_dict2box(subset_dict, meta_dict):
-    '''Convert subset inputs dict into bbox in radar and/or geo bounding box
+    '''Convert subset inputs dict into box in radar and/or geo coord.
     Inputs:
         subset_dict : dict, including the following 4 objects:
                       subset_x   : list of 2 int,   subset in x direction,   default=None
@@ -395,7 +431,9 @@ def subset_file(File, subset_dict, outFile=None):
                       fill_value : float, optional. filled value for area outside of data coverage. default=None
                                    None/not-existed to subset within data coverage only.
     Outputs:
-        outFile :  str, path/name of output file
+        outFile :  str, path/name of output file; 
+                   outFile = 'subset_'+File, if File is in current directory;
+                   outFile = File, if File is not in the current directory.
     '''
     
     # Input File Info
@@ -429,12 +467,20 @@ def subset_file(File, subset_dict, outFile=None):
     print 'data   range in lat/lon: '+str(box_pixel2geo(data_box, atr_dict))
     print 'subset range in lat/lon: '+str(geo_box)
 
+    if pix_box == data_box:
+        print 'Subset range == data coverage, no need to subset. Skip.'
+        return File
+
     # Calculate Subset/Overlap Index
     pix_box4data, pix_box4subset = get_box_overlap_index(data_box, pix_box)
 
     ###########################  Data Read and Write  ######################
     # Output File Name
-    if not outFile:  outFile = 'subset_'+os.path.basename(File)
+    if not outFile:
+        if os.getcwd() == os.path.dirname(os.path.abspath(File)):
+            outFile = 'subset_'+os.path.basename(File)
+        else:
+            outFile = os.path.basename(File)
     print 'writing >>> '+outFile
 
     ##### Multiple Dataset File
@@ -521,6 +567,27 @@ def subset_file(File, subset_dict, outFile=None):
     return outFile
 
 
+def subset_file_list(fileList, inps):
+    '''Subset file list'''
+    # check outfile and parallel option
+    if len(fileList) > 1:
+        inps.outfile = None
+    elif len(fileList) == 1 and inps.parallel:
+        inps.parallel =  False
+        print 'parallel processing is diabled for one input file'
+
+    ##### Subset files
+    if inps.parallel:
+        num_cores = min(multiprocessing.cpu_count(), len(fileList))
+        print 'parallel processing using %d cores ...'%(num_cores)
+        Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in fileList)
+    else:
+        for File in fileList:
+            print '----------------------------------------------------'
+            subset_file(File, vars(inps), inps.outfile)
+    return
+
+
 ###########################################################################################
 EXAMPLE='''example:
   subset.py unwrapIfgram.h5    -y    400  1500   -x    200   600
@@ -528,10 +595,13 @@ EXAMPLE='''example:
   subset.py geo_timeseries.h5  --lat 30.5 30.8   --lon 130.3 130.9
   subset.py 030405_090801.unw  -t SinabungT495F50AlosA.template
   subset.py geo_incidence.h5   -r subset_geo_velocity.h
-  subset.py *velocity*.h5 timeseries*.h5  -y 400:1500  -x 200:600
+  subset.py *velocity*.h5 timeseries*.h5  -y 400 1500  -x 200 600
   subset.py geo_velocity.h5    -l 32.2:33.5  --outfill-nan
   subset.py Mask.h5            -x 500:3500   --outfill 0
   subset.py geomap_4rlks.trans --footprint
+  
+  subset.py unwrapIfgram.h5 coherence.h5 geomap*.trans  -l 33.10 33.50 -L 131.30 131.80 --bbox geomap_4rlks.trans
+  subset.py *.unw *.cor *.trans *.dem  -y 50 450 -x 1300 1800 --bbox geomap_4rlks.trans
 '''
 
 def cmdLineParse():
@@ -563,7 +633,17 @@ def cmdLineParse():
                         help='Disable parallel processing. Diabled auto for 1 input file.\n\n')
 
     parser.add_argument('-o','--output', dest='outfile',\
-                        help='output file name')
+                        help='output file name\n'+\
+                             'add prefix "subset_" if input/output files are in the same directory;\n'+\
+                             'same filename otherwise.')
+    
+    dset_group = parser.add_argument_group('Datasets',\
+                                           'Create a subset of entire dataset in radar using y/x or lat/lon option\n'+\
+                                           'Including *.trans and *.dem in geo coord.')
+    dset_group.add_argument('--bbox', dest='trans_file',\
+                            help='calculate bounding box in geo/radar coord from input radar/geo subset range\n'+\
+                                 'using transformation file, i.e. geomap_4rlks.trans\n'+\
+                                 'All input radar coord file should be same size/coverage; same for all geo coord files.')
 
     inps = parser.parse_args()
     return inps
@@ -575,15 +655,15 @@ def main(argv):
     inps.file = ut.get_file_list(inps.file)
 
     #print '\n**************** Subset *********************'
-    atr_dict = readfile.read_attribute(inps.file[0])
+    atr = readfile.read_attribute(inps.file[0])
 
     ##### Convert All Inputs into subset_y/x/lat/lon
     # Input Priority: subset_y/x/lat/lon > reference > template > footprint
     if not inps.subset_x and not inps.subset_y and not inps.subset_lat and not inps.subset_lon:
         # 1. Read subset info from Reference File
         if inps.reference:
-            ref_atr_dict = readfile.read_attribute(inps.reference)
-            pix_box, geo_box = get_coverage_box(ref_atr_dict)
+            ref_atr = readfile.read_attribute(inps.reference)
+            pix_box, geo_box = get_coverage_box(ref_atr)
             print 'using subset info from '+inps.reference
 
         # 2. Read subset info from template options
@@ -593,7 +673,7 @@ def main(argv):
 
         # 3. Use subset from footprint info
         elif inps.footprint:
-            if atr_dict['FILE_TYPE']=='.trans':
+            if atr['FILE_TYPE']=='.trans':
                 # Non-zero area in geomap_*.trans file, accurate
                 trans_rg, trans_atr = readfile.read(inps.file[0], (), 'range')
                 idx_row, idx_col = np.nonzero(trans_rg)
@@ -605,8 +685,8 @@ def main(argv):
                 sys.exit(1)
 
             ## from LAT/LON_REF*, which is not accurate
-            #lats = [atr_dict['LAT_REF1'], atr_dict['LAT_REF3'], atr_dict['LAT_REF4'], atr_dict['LAT_REF2']]
-            #lons = [atr_dict['LON_REF1'], atr_dict['LON_REF3'], atr_dict['LON_REF4'], atr_dict['LON_REF2']]
+            #lats = [atr['LAT_REF1'], atr['LAT_REF3'], atr['LAT_REF4'], atr['LAT_REF2']]
+            #lons = [atr['LON_REF1'], atr['LON_REF3'], atr['LON_REF4'], atr['LON_REF2']]
             #lats = [float(i) for i in lats]
             #lons = [float(i) for i in lons]
             #lalo_buff = min([max(lats)-min(lats), max(lons)-min(lons)]) * 0.05
@@ -619,22 +699,48 @@ def main(argv):
         # Update subset_y/x/lat/lon
         inps = subset_box2inps(inps, pix_box, geo_box)
 
-    # check outfile and parallel option
-    if len(inps.file) > 1:
-        inps.outfile = None
-    elif len(inps.file) == 1 and inps.parallel:
-        inps.parallel =  False
-        print 'parallel processing is diabled for one input file'
-
-    ##### Subset files
-    if inps.parallel:
-        num_cores = multiprocessing.cpu_count()
-        print 'parallel processing using %d cores ...'%(num_cores)
-        Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in inps.file)
-    else:
+    ##### --bbox option
+    if inps.trans_file:
+        ## Seperate files in radar and geo coord
+        rdrFileList = []
+        geoFileList = []
         for File in inps.file:
-            print '----------------------------------------------------'
-            subset_file(inps.file[0], vars(inps), inps.outfile)
+            atr = readfile.read_attribute(File)
+            if 'X_FIRST' in atr.keys():
+                geoFileList.append(File)
+            else:
+                rdrFileList.append(File)
+        
+        ## Calculate bbox
+        rdrFile = rdrFileList[0]
+        atr_rdr = readfile.read_attribute(rdrFile)
+        if inps.subset_lat and inps.subset_lon:
+            print 'use subset input in lat/lon'
+            print 'calculate corresponding bounding box in radar coordinate.'
+            geo_box = (inps.subset_lon[0], inps.subset_lat[1], inps.subset_lon[1], inps.subset_lat[0])
+            pix_box = bbox_geo2radar(geo_box, atr_rdr, inps.trans_file)
+        else:
+            print 'use subset input in y/x'
+            print 'calculate corresponding bounding box in geo coordinate.'
+            pix_box = (inps.subset_x[0], inps.subset_y[0], inps.subset_x[1], inps.subset_y[1])
+            geo_box = bbox_radar2geo(pix_box, atr_rdr, inps.trans_file)
+        print 'geo   box: '+str(geo_box)
+        print 'pixel box: '+str(pix_box)
+        
+        ## Subset files
+        inps.fill_value = 0
+        print '--------------------------------------------'
+        print 'subseting dataset in geo coord geo_box: '+str(geo_box)
+        inps = subset_box2inps(inps, None, geo_box)
+        subset_file_list(geoFileList, inps)
+        print '--------------------------------------------'
+        print 'subseting dataset in radar coord pix_box: '+str(pix_box)
+        inps = subset_box2inps(inps, pix_box, None)
+        subset_file_list(rdrFileList, inps)
+
+    else:
+        ##### Subset files
+        subset_file_list(inps.file, inps)
 
     print 'Done.'
     return
