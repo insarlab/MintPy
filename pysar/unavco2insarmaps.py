@@ -37,22 +37,27 @@ def get_date(date_string):
 def get_decimal_date(d):
     start = date(d.year, 1, 1)
     return abs(d-start).days / 365.0 + d.year
+
+def region_name_from_project_name(project_name):
+    track_index = project_name.find('T')
+
+    return project_name[:track_index]
+
+needed_attributes = {
+    "prf", "first_date", "mission", "WIDTH", "X_STEP", "processing_software",
+    "wavelength", "processing_type", "beam_swath", "Y_FIRST", "look_direction",
+    "flight_direction", "last_frame", "post_processing_method", "min_baseline_perp"
+    "unwrap_method", "relative_orbit", "beam_mode", "FILE_LENGTH", "max_baseline_perp",
+    "X_FIRST", "atmos_correct_method", "last_date", "first_frame", "Y_STEP", "history",
+    "scene_footprint", "downloadUnavcoUrl", "referencePdfUrl", "areaName", "referenceText"    
+}
 # ---------------------------------------------------------------------------------------
 def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name, region_file_name):
 
 # search for region file - if exist get first line which is region name
     region_file = None
-    region = "null"
-    project_name = "null"
-    try:
-        region_file = open(region_file_name, "r")
-        region = region_file.readline()
-        project_name = region_file.readline()
-        print region
-        print project_name
-        region_file.close()
-    except:
-        pass
+    project_name = attributes["PROJECT_NAME"]
+    region = region_name_from_project_name(project_name)
 # get the attributes for calculating latitude and longitude
     x_step = float(attributes["X_STEP"])
     y_step = float(attributes["Y_STEP"])
@@ -147,14 +152,10 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     attribute_values = '{'
     for k in attributes:
         v = attributes[k]
-        print k
-        print v
-        attribute_keys += (str(k) + ",")
-        if "POLYGON" in str(v):
-            arr = v.split(",")
-            s = "\,"
-            v = s.join(arr)
-        attribute_values += (str(v) + ',')
+        if k in needed_attributes:
+            print k + ": " + str(v)
+            attribute_keys += (str(k) + ",")
+            attribute_values += (str(v) + ',')
     attribute_keys = attribute_keys[:len(attribute_keys)-1] + '}'
     attribute_values = attribute_values[:len(attribute_values)-1] + '}'
 
@@ -190,12 +191,9 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     attributesController.connect()
 
     for k in attributes:
-        v = attributes[k]
-        if "POLYGON" in str(v):
-            arr = v.split(",")
-            s = "\,"
-            v = s.join(arr)
-        attributesController.add_attribute(project_name, k, v)
+        if k in needed_attributes:
+            v = attributes[k]
+            attributesController.add_attribute(project_name, k, v)
     attributesController.close()
 
     # create index to speed up queries:
@@ -231,13 +229,13 @@ def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
     json_file.close()
 
     # insert json file to pgsql using ogr2ogr - folder_name = area name
-    command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln ' + folder_name + " "
+    command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + folder_name + '" '
     chunk_path = './mbtiles/' + folder_name + '/' + chunk
-    '''res = os.system(command + ' ' + chunk_path)
+    res = os.system(command + ' ' + chunk_path)
 
     if res != 0:
         print "Error inserting into the database. This is most often due to running out of Memory (RAM), or incorrect database credentials... quitting"
-        sys.exit()'''
+        sys.exit()
 
     print "inserted chunk " + str(chunk_num) + " to db"
 
@@ -259,11 +257,6 @@ def build_parser():
 
     return parser
 
-def print_attrs(name, obj):
-    print name
-    for key, val in obj.attrs.iteritems():
-        print "    %s: %s" % (key, val)
-
 def main():
     parser = build_parser()
     parseArgs = parser.parse_args()
@@ -274,8 +267,10 @@ def main():
     dbPassword = parseArgs.password
     dbHost = parseArgs.host
 
-    path_name = file_name[:len(file_name)-3]
-    region_file_name = file_name[:len(file_name)-3] + '_region.txt'
+    path_name_and_extension = os.path.basename(file_name).split(".")
+    path_name = path_name_and_extension[0]
+    extension = path_name_and_extension[1]
+    region_file_name = path_name + '_region.txt'
 # ---------------------------------------------------------------------------------------
 # start clock to track how long conversion process takes
     start_time = time.clock()
@@ -284,8 +279,6 @@ def main():
 # then read datasets from h5 file into memory for faster reading of data
 # depending on UNAVCO format, the main key to access groups might be '/GEOCODE'
     file = h5py.File(file_name,  "r")
-    #file.visititems(print_attrs)
-    #return
     group = file['timeseries']  # assuming there is only one main key called 'GEOCODE'
 
 # get attributes (stored at root) of UNAVCO timeseries file
@@ -339,11 +332,11 @@ def main():
 # run tippecanoe command to get mbtiles file and then delete the json files to save space
     os.chdir(os.path.abspath(json_path))
     os.system("tippecanoe *.json -x d -pf -pk -Bg -d9 -D12 -g12 -r0 -o " + folder_name + ".mbtiles")
-    #os.system("rm -rf *.json")
+    os.system("rm -rf *.json")
 
 # move mbtiles file from json folder to mbtiles folder and then delete json folder
     os.system("mv " + folder_name + ".mbtiles " + os.path.abspath(mbtiles_path))
-    #os.system("rm -rf " + os.path.abspath(json_path))
+    os.system("rm -rf " + os.path.abspath(json_path))
 
 # ---------------------------------------------------------------------------------------
 # check how long it took to read h5 file data and create json files
