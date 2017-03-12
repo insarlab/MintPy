@@ -9,10 +9,11 @@
 # Yunjun, Sep 2015: Add x/y/dispVelFig/dispTsFig option
 # Yunjun, Jun 2016: Add date_list2vector(), check_yx(), read_dis()
 #                   Add reference point display
-#                   Add plot_ts(), adjust_xaxis_date()
+#                   Add plot_ts(), auto_adjust_xaxis_date()
 # Yunjun, Jul 2016: Support reference date input
 #                   Support Zoom in for figure 1
 #                   Support lalo input
+# Yunjun, Dec 2016: Add read_dis_lalo()
 
 
 import sys
@@ -52,7 +53,7 @@ def check_yx(xsub,ysub,radius,ax,rectColor='black'):
     return [xmin,xmax],[ymin,ymax]
 
 ################################################################
-def read_dis(xsub,ysub,dateList,h5file,unit='cm'):
+def read_dis_xy(xsub,ysub,dateList,h5file,unit='cm'):
     global ref_date
 
     ## Unit and Scale
@@ -77,26 +78,46 @@ def read_dis(xsub,ysub,dateList,h5file,unit='cm'):
     dis=np.reshape(dis,(len(dateList),-1))
 
     ## calculate mean
-    dis_mean=stats.nanmean(dis,1)
+    dis_mean=np.nanmean(dis,1)
     ## calculate standard deviation
     if (xsub[1]-xsub[0])*(ysub[1]-ysub[0]) == 1:
         dis_std = np.array([0]*len(dateList))
     else:
-        dis_std = stats.nanstd(dis,1)
-    ## calculate linear velocity
-    dates, datevector = ptime.date_list2vector(dateList)
-    dis_slope = stats.linregress(np.array(datevector),dis_mean)
+        dis_std = np.nanstd(dis,1)
 
     ## display
     print 'spatial averaged displacement ['+unit+']:'
     print dis_mean
     print 'standard deviation ['+unit+']:'
     print dis_std
-    print 'linear velocity ['+unit+'/yr]:'
-    print str(dis_slope[0])+'+/-'+str(dis_slope[4])
 
-    return dis, dis_mean, dis_std, dis_slope
+    ## calculate linear velocity
+    try:
+        dates, datevector = ptime.date_list2vector(dateList)
+        dis_slope = stats.linregress(np.array(datevector),dis_mean)
+        print 'linear velocity ['+unit+'/yr]:'
+        print str(dis_slope[0])+'+/-'+str(dis_slope[4])
+    except:  pass
 
+    try:     return dis, dis_mean, dis_std, dis_slope
+    except:  return dis, dis_mean, dis_std
+
+################################################################
+def read_dis_lalo(lat,lon,dateList,timeseriesFile,radius=0,unit='cm'):
+    atr = readfile.read_attribute(timeseriesFile)
+    h5 = h5py.File(timeseriesFile,'r')
+
+    x = subset.coord_geo2radar(lon,atr,'longitude');
+    y = subset.coord_geo2radar(lat,atr,'latitude');
+    if radius == 0:  radius = 3
+    xsub = [x-radius,x+radius]
+    ysub = [y-radius,y+radius]
+
+    dis,dis_mean,dis_std = read_dis_xy(xsub,ysub,dateList,h5,unit)[0:3]
+    h5.close()
+ 
+    return dis,dis_mean,dis_std
+    
 ################################################################
 def update_lim(disp_min,disp_max,data_mean,data_std):
     disp_min = np.nanmin([np.nanmin(data_mean-data_std), disp_min])
@@ -105,94 +126,94 @@ def update_lim(disp_min,disp_max,data_mean,data_std):
 
 
 ########################## Usage ###############################
-def Usage():
+def usage():
     print '''
 *******************************************************************************************************
   Time-series Viewer
 
   Usage:
       tsviewer.py -f timeseriesFile.h5 -v velocityFile.h5 -l lower bound -h higher bound
-                    -s fontsize -m Marker Size -c marker color -w linewidth -u unit
+                  -s fontsize -m Marker Size -c marker color -w linewidth -u unit
 
-        -f : file of the timeseries
-        -f2: 
-        -v : velocity file, or epoch_date (if not specified then the last time-series epoch is displayed)
-        -v2: 
-        -l : lower bound of the displacement [default is min of the displacemen]
-        -h : higher bound of the displacemet [default is max of the displacemen]
-        -a : lower bound of the colorscale to display the velocity to display
-        -b : higher bound of the colorscale to display the velocity to display
-        -F : another  timeseries file (can be used to compare 2 time-series)
-        --opposite     : show opposite value in velocity figure
-        --displacement : show displacement instead of phase, work only for interferogram
+      -f : file of the timeseries
+      -f2: 
+      -v : velocity file, or epoch_date (if not specified then the last time-series epoch is displayed)
+      -v2: 
+      -l : lower bound of the displacement [default is min of the displacemen]
+      -h : higher bound of the displacemet [default is max of the displacemen]
+      -a : lower bound of the colorscale to display the velocity to display
+      -b : higher bound of the colorscale to display the velocity to display
+      -F : another  timeseries file (can be used to compare 2 time-series)
+      --opposite     : show opposite value in velocity figure
+      --displacement : show displacement instead of phase, work only for interferogram
 
-     Figure Setting
-        -s : size of font used x and y labels [default = 22]
-        -m : marker size [default = 16]
-        -c : color of the markers [default = green]. some options are: orange, black, yellow, blue, green...
-        -w : width of lines to connect the points [default = 2].
-             set to 0 (-l 0) if you don't want any line connecting the points
-        -u/--unit    : unit of the displacement [default = cm]. Other optons are: mm and m
-        --rect-color : color of rectangle that mark the selection in velocity figure, 'crimson' by default
-        --zoomx      : subset/zoom in x/range/longtitude direction
-        --zoomy      : subset/zoom in y/azimuth/latitude direction
+    Figure Setting
+      -s : size of font used x and y labels [default = 22]
+      -m : marker size [default = 16]
+      -c : color of the markers [default = green]. some options are: orange, black, yellow, blue, green...
+      -w : width of lines to connect the points [default = 2].
+           set to 0 (-l 0) if you don't want any line connecting the points
+      -u/--unit    : unit of the displacement [default = cm]. Other optons are: mm and m
+      --rect-color : color of rectangle that mark the selection in velocity figure, 'crimson' by default
+      --zoomx      : subset/zoom in x/range/longtitude direction
+      --zoomy      : subset/zoom in y/azimuth/latitude direction
 
-     XY Input (both input ends are included)
-        -r : radius of selecting square in pixels, display mean value from (+/-radius,+/-radius).
-             [default is 0 - one point]
-        -x : x coordinate (range) of selection
-        -y : y coordinate (range) of selection
-        -X : x coordinate (range) of reference / comparison
-        -Y : y coordinate (range) of reference / comparison
-        --lalo : latitude and longitude of selection (recommend to use it with -r option for now)
-                 i.e.  --lalo 32.12,130.59
-        --LALO : latitude and longitude of reference/comparison
+    XY Input (both input ends are included)
+      -r : radius of selecting square in pixels, display mean value from (+/-radius,+/-radius).
+           [default is 0 - one point]
+      -x : x coordinate (range) of selection
+      -y : y coordinate (range) of selection
+      -X : x coordinate (range) of reference / comparison
+      -Y : y coordinate (range) of reference / comparison
+      --lalo : latitude and longitude of selection (recommend to use it with -r option for now)
+               i.e.  --lalo 32.12,130.59
+      --LALO : latitude and longitude of reference/comparison
 
-     DEM
-        -D : dem file
-        --dem-nocontour  : do not show DEM contour
-        --dem-noshade    : do not show DEM shaded relief
-        --contour-step   : contour step                      (default is 200 meters)
-        --contour-smooth : contour smooth ( Sigma of Gaussian Filter, default is 3.0; Set to 0 for no smoothing) 
+    DEM
+      -D : dem file
+      --dem-nocontour  : do not show DEM contour
+      --dem-noshade    : do not show DEM shaded relief
+      --contour-step   : contour step                      (default is 200 meters)
+      --contour-smooth : contour smooth ( Sigma of Gaussian Filter, default is 3.0; Set to 0 for no smoothing) 
 
 
-     Date Input
-        -t : minimum date for display
-        -T : maximum date for display
-        -E/--exclude : exclude dates list for display
-        --ref-date   : reference date for time series displacement
-        --zero-start : set the first displacement as zero, yes or no [yes by default]
+    Date Input
+      -t : minimum date for display
+      -T : maximum date for display
+      -E/--exclude : exclude dates list for display
+      --ref-date   : reference date for time series displacement
+      --zero-start : set the first displacement as zero, yes or no [yes by default]
 
-     Save and Output
-        --save       : save data and plot                     - save timeseries data/plot
-        --nodisplay  : save data and plots and do not display - save timeseries data/plot and velocity plot
-                       default output filename:
-                       x100_110y230_240_ts.mat
-                       x100_110y230_240_ts.pdf
-                       x100_110y230_240_vel.png
+    Save and Output
+      --save       : save data and plot                     - save timeseries data/plot
+      --nodisplay  : save data and plots and do not display - save timeseries data/plot and velocity plot
+                     default output filename:
+                     x100_110y230_240_ts.mat
+                     x100_110y230_240_ts.pdf
+                     x100_110y230_240_vel.png
 
   Example:
-        tsviewer.py timeseries.h5
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.01 -b 0.01
-        tsviewer.py -f timeseries.h5 -v 20080929
-        tsviewer.py -f timeseries.h5 -s 24 -m 12 -c orange -l -10 -h 10 -w 4 -u mm 
+      tsviewer.py timeseries.h5
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.01 -b 0.01
+      tsviewer.py -f timeseries.h5 -v 20080929
+      tsviewer.py -f timeseries.h5 -s 24 -m 12 -c orange -l -10 -h 10 -w 4 -u mm 
 
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.01 -b 0.02 -l -10 -h 10 -D Andreas.dem -C yes --save
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.01 -b 0.02 -l -10 -h 10 -D Andreas.dem -C yes --save
 
     Exclude dates:
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -t 20100102 -T 20101120 -E '20100520,20100705'
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -E drop_date.txt
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -t 20100102 -T 20101120 -E '20100520,20100705'
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -E drop_date.txt
 
     Compare two timeseries files:
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -F timeseries_tropCor.h5 
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -F timeseries.h5        -E '20100520,20100705'  
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -F timeseries_tropCor.h5 
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -F timeseries.h5        -E '20100520,20100705'  
 
     X/Y Input:
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -r 10
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -x 300     -y 500      -r 10
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -x 300:330 -y 500:530
-        tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem
-                    -x 300:330 -y 500:530 --nodisplay --zoom-x 300:800 --zoom-y 500:1500
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -r 10
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -x 300     -y 500      -r 10
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -x 300:330 -y 500:530
+      tsviewer.py -f timeseries.h5 -v velocity.h5 -a -0.02 -b 0.02 -l -5 -h 5 -D Andreas.dem
+                  -x 300:330 -y 500:530 --nodisplay --zoom-x 300:800 --zoom-y 500:1500
 
 *******************************************************************************************************
     '''
@@ -246,9 +267,9 @@ def main(argv):
     global lbound, hbound
 
     ############### Check Inputs ##################
-    if   len(sys.argv)< 2:   Usage(); sys.exit(1)
+    if   len(sys.argv)< 2:   usage(); sys.exit(1)
     elif len(sys.argv)==2:
-        if argv[0]=='-h':      Usage(); sys.exit(1)
+        if argv[0]=='-h':      usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):
             timeSeriesFile = argv[0];
             h5timeseries = h5py.File(timeSeriesFile);
@@ -256,7 +277,7 @@ def main(argv):
             if not 'timeseries' in k:
                 print 'ERROR: Input file is '+k[0]+'.\n\tOnly timeseries is supported.\n';
                 sys.exit(1)
-        else:  Usage(); sys.exit(1)
+        else:  usage(); sys.exit(1)
 
     elif len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,"f:F:v:a:b:s:m:c:w:u:l:h:D:V:t:T:d:r:x:y:X:Y:o:E:",
@@ -264,7 +285,7 @@ def main(argv):
                                                'zero-start=','zoom-x=','zoom-y=','zoom-lon','zoom-lat','lalo=',\
                                                'opposite','dem-nocontour','dem-noshade','displacement','contour-step=',\
                                                'contour-smooth=','LALO='])
-        except getopt.GetoptError:    Usage() ; sys.exit(1)
+        except getopt.GetoptError:    usage() ; sys.exit(1)
 
         for opt,arg in opts:
             if   opt == '-f':     timeSeriesFile   = arg
@@ -284,10 +305,10 @@ def main(argv):
             elif opt == '-t':     minDate          = arg
             elif opt == '-T':     maxDate          = arg
             elif opt == '-r':     radius           = abs(int(arg))
-            elif opt == '-x':     xsub = [int(i) for i in arg.split(':')];   xsub.sort();  # dispVelFig='no'
-            elif opt == '-y':     ysub = [int(i) for i in arg.split(':')];   ysub.sort();  # dispVelFig='no'
-            elif opt == '-X':     ref_xsub = [int(i) for i in arg.split(':')];   ref_xsub.sort();
-            elif opt == '-Y':     ref_ysub = [int(i) for i in arg.split(':')];   ref_ysub.sort();  # dispVelFig='no'
+            elif opt == '-x':     xsub = sorted([int(i) for i in arg.split(':')])
+            elif opt == '-y':     ysub = sorted([int(i) for i in arg.split(':')])
+            elif opt == '-X':     ref_xsub = sorted([int(i) for i in arg.split(':')])
+            elif opt == '-Y':     ref_ysub = sorted([int(i) for i in arg.split(':')])
 
             elif opt == '--contour-step'   : contour_step    = float(arg)
             elif opt == '--contour-smooth' : contour_sigma   = float(arg)
@@ -304,10 +325,10 @@ def main(argv):
             elif opt == '--nodisplay'      : dispFig         = 'no';   saveFig='yes'
             elif opt == '--opposite'       : dispOpposite    = 'yes'
             elif opt == '--zero-start'     : zero_start      = arg.lower()
-            elif opt == '--zoom-x'         : win_x           = [int(i)   for i in arg.split(':')];    win_x.sort()
-            elif opt == '--zoom-y'         : win_y           = [int(i)   for i in arg.split(':')];    win_y.sort()
-            elif opt == '--zoom-lon'       : win_lon         = [float(i) for i in arg.split(':')];    win_lon.sort()
-            elif opt == '--zoom-lat'       : win_lat         = [float(i) for i in arg.split(':')];    win_lat.sort()
+            elif opt == '--zoom-x'         : win_x           = sorted([int(i)   for i in arg.split(':')])
+            elif opt == '--zoom-y'         : win_y           = sorted([int(i)   for i in arg.split(':')])
+            elif opt == '--zoom-lon'       : win_lon         = sorted([float(i) for i in arg.split(':')])
+            elif opt == '--zoom-lat'       : win_lat         = sorted([float(i) for i in arg.split(':')])
 
 
     ##############################################################
@@ -315,15 +336,14 @@ def main(argv):
     if not os.path.isfile(timeSeriesFile):
         print '\nERROR: Input time series file does not exist: '+timeSeriesFile+'\n'
         sys.exit(1)
-    h5timeseries = h5py.File(timeSeriesFile)
+    h5timeseries = h5py.File(timeSeriesFile,'r')
     k = h5timeseries.keys();       # read h5 file and its group type
     if not 'timeseries' in k:
         print 'ERROR: Input file is '+k[0]+'.\n\tOnly timeseries is supported.\n';
         sys.exit(1)
 
-    atr = readfile.read_attributes(timeSeriesFile)
-    dateList1 = h5timeseries['timeseries'].keys()
-    dateList1 = sorted(dateList1)
+    atr = readfile.read_attribute(timeSeriesFile)
+    dateList1 = sorted(h5timeseries['timeseries'].keys())
     dates1,datevector1 = ptime.date_list2vector(dateList1)
     print '\n************ Time Series Display - Point *************'
 
@@ -440,7 +460,8 @@ def main(argv):
     except:
         try:    win_x
         except: win_x = [0,width]
-    win_y,win_x = subset.check_subset_range(win_y,win_x,atr)
+    win_box = (win_x[0], win_y[0], win_x[1], win_y[1])
+    win_box = subset.check_box_within_data_coverage(win_box, atr)
 
     try:
         velocityFile
@@ -473,7 +494,7 @@ def main(argv):
     try:        flip_lr
     except:
         try:    flip_ud
-        except: flip_lr, flip_ud = view.auto_flip_check(atr)
+        except: flip_lr, flip_ud = view.auto_flip_direction(atr)
 
     ## Status bar
     ## Geo coordinate
@@ -515,10 +536,10 @@ def main(argv):
     plt.colorbar(img)
 
     ## Zoom In (subset)
-    if flip_lr == 'yes':  ax.set_xlim(win_x[1],win_x[0])
-    else:                 ax.set_xlim(win_x[0],win_x[1])
-    if flip_ud == 'yes':  ax.set_ylim(win_y[0],win_y[1])
-    else:                 ax.set_ylim(win_y[1],win_y[0])
+    if flip_lr == 'yes':  ax.set_xlim(win_box[2], win_box[0])
+    else:                 ax.set_xlim(win_box[0], win_box[2])
+    if flip_ud == 'yes':  ax.set_ylim(win_box[1], win_box[3])
+    else:                 ax.set_ylim(win_box[3], win_box[1])
 
     ## Flip
     #if flip_lr == 'yes':  fig.gca().invert_xaxis()
@@ -533,8 +554,7 @@ def main(argv):
     try:
         timeSeriesFile_2
         h5timeseries_2=h5py.File(timeSeriesFile_2)
-        dateList_2 = h5timeseries_2['timeseries'].keys()
-        dateList_2 = sorted(dateList_2)
+        dateList_2 = sorted(h5timeseries_2['timeseries'].keys())
         dates_2,datevector_2 = ptime.date_list2vector(dateList_2)
         datevector_all += list(set(datevector_2) - set(datevector_all))
         datevector_all = sorted(datevector_all)
@@ -562,7 +582,7 @@ def main(argv):
 
             print '-----------------------------'
             print 'Time series with all dates:'
-            dis1, dis1_mean, dis1_std, dis1_vel = read_dis(ref_xsub,ref_ysub,dateList1,h5timeseries,unit)
+            dis1, dis1_mean, dis1_std, dis1_vel = read_dis_xy(ref_xsub,ref_ysub,dateList1,h5timeseries,unit)
             (_, caps, _)=ax2.errorbar(dates1,dis1_mean,yerr=dis1_std,fmt='-ks',\
                                       ms=markerSize2, lw=0, alpha=1,mfc=markerColor_ref,mew=edgeWidth,\
                                       elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
@@ -572,7 +592,7 @@ def main(argv):
             if not len(dateList) == len(dateList1):
                 print '-----------------------------'
                 print 'Time series with dates of interest:'
-                dis12, dis12_mean, dis12_std, dis12_vel = read_dis(ref_xsub,ref_ysub,dateList,h5timeseries,unit)
+                dis12, dis12_mean, dis12_std, dis12_vel = read_dis_xy(ref_xsub,ref_ysub,dateList,h5timeseries,unit)
                 (_, caps, _)=ax2.errorbar(dates,dis12_mean,yerr=dis12_std,fmt='-ks',\
                                           ms=markerSize2, lw=0, alpha=1,mfc=markerColor_ref2,mew=edgeWidth,\
                                           elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
@@ -593,7 +613,7 @@ def main(argv):
             timeSeriesFile_2
             print '-----------------------------'
             print '2nd Time Series:'
-            dis2, dis2_mean, dis2_std, dis2_vel = read_dis(xsub,ysub,dateList_2,h5timeseries_2,unit)
+            dis2, dis2_mean, dis2_std, dis2_vel = read_dis_xy(xsub,ysub,dateList_2,h5timeseries_2,unit)
             (_, caps, _)=ax2.errorbar(dates_2,dis2_mean,yerr=dis2_std,fmt='-ko',\
                                       ms=markerSize2, lw=0, alpha=1, mfc=markerColor2,\
                                       elinewidth=0,ecolor='black',capsize=0)
@@ -604,7 +624,7 @@ def main(argv):
         ##### 1.2.2 Plot 1st time series
         print '-----------------------------'
         print 'Time Series:'
-        dis, dis_mean, dis_std, dis_vel = read_dis(xsub,ysub,dateList,h5timeseries,unit)
+        dis, dis_mean, dis_std, dis_vel = read_dis_xy(xsub,ysub,dateList,h5timeseries,unit)
         (_, caps, _)=ax2.errorbar(dates,dis_mean,yerr=dis_std,fmt='-ko',\
                                   ms=markerSize, lw=lineWidth, alpha=1, mfc=markerColor,\
                                   elinewidth=edgeWidth,ecolor='black',capsize=markerSize*0.5)
@@ -613,8 +633,8 @@ def main(argv):
 
         ####################### Figure Format #######################
         ## x axis format
-        try:    ax2 = ptime.adjust_xaxis_date(ax2,dateVecMinMax, fontSize)
-        except: ax2 = ptime.adjust_xaxis_date(ax2,datevector_all,fontSize)
+        try:    ax2 = ptime.auto_adjust_xaxis_date(ax2,dateVecMinMax, fontSize)
+        except: ax2 = ptime.auto_adjust_xaxis_date(ax2,datevector_all,fontSize)
 
         ## y axis format
         ax2.set_ylabel('Displacement ['+unit+']',fontsize=fontSize)

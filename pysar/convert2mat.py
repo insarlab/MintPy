@@ -17,22 +17,20 @@ import scipy.io as sio
 import datetime
 import time
 
-def Usage():
+def usage():
     print '''
-****************************************************************
 ****************************************************************
    This function converts the PySAR hdf5 file formats to the 
    matlab structure and saves to a .mat file.
    Current version only  timeseries, velocity, rmse and temporal coherence.
 
    usage: 
-         convert2mat.py file.h5 
+       convert2mat.py file.h5 
 
    example:
-         convert2mat.py velocity.h5
-         convert2mat.py timeseries.h5
+       convert2mat.py velocity.h5
+       convert2mat.py timeseries.h5
 
-****************************************************************
 ****************************************************************
     '''
 def yyyymmdd2years(date):
@@ -44,7 +42,7 @@ def main(argv):
     try:
         File=argv[0]
     except:
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
    
     h5file=h5py.File(File,'r')
     k=h5file.keys()

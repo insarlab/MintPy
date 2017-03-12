@@ -7,25 +7,27 @@ import h5py
 from pysar import _readfile
 from pysar import _writefile
 
+
+
+def usage():
+    print '''
+*******************************************
+  Usage: correct_dem.py demFile geo_demErrorFile
+
+  Example:
+      correct_dem.py $DEMDIR/Socorro-30/Socorro_30.dem geo_DEM_error.h5
+      correct_dem.py $DEMDIR/Socorro-30/Socorro_30.dem geo_DEM_error.h5
+
+*******************************************         
+    '''
+
+
 def main(argv):
     try:
         dem_file = argv[1]
         dem_error = argv[2]
-    except:
-        print '''
-        *******************************************
-           
-           Usage: correct_dem.py demFile geo_demErrorFile
-           Example:
-                  correct_dem.py $DEMDIR/Socorro-30/Socorro_30.dem geo_DEM_error.h5
-                  correct_dem.py $DEMDIR/Socorro-30/Socorro_30.dem geo_DEM_error.h5
-    
-        *******************************************         
-        '''
-        sys.exit(1)
-  
-    
-  
+    except: usage();  sys.exit(1)
+
     dem, demrsc = _readfile.read_real_int16(dem_file)
     g = h5py.File(dem_error,'r')
     dset  = g['dem'].get('dem')

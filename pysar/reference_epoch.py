@@ -19,24 +19,23 @@ def yymmdd2yyyymmdd(date):
     return date
 
 ##################################################################
-def Usage():
+def usage():
     print '''
-  ***************************************************************
-
+***************************************************************
   Referencing all time-series epochs to the specified date.
 
   Usage:
-        reference_epoch.py time-series  ref_Date [output_name]
+      reference_epoch.py time-series  ref_Date [output_name]
         
-        reference_date.txt
-            20071228
+      reference_date.txt
+      0071228
 
   Example:
-        reference_epoch.py timeseries_ECMWF_demCor_plane.h5 20050107
-        reference_epoch.py timeseries_ECMWF_demCor.h5       20050107
-        reference_epoch.py timeseries_ECMWF_demCor.h5       reference_date.txt
+      reference_epoch.py timeseries_ECMWF_demCor_plane.h5 20050107
+      reference_epoch.py timeseries_ECMWF_demCor.h5       20050107
+      reference_epoch.py timeseries_ECMWF_demCor.h5       reference_date.txt
 
-  ***************************************************************
+***************************************************************
     '''
 
 
@@ -45,7 +44,7 @@ def main(argv):
     try:
         timeSeriesFile = argv[0]
         refDate        = argv[1]
-    except:  Usage() ; sys.exit(1)
+    except:  usage() ; sys.exit(1)
 
     if os.path.isfile(refDate):
         try: refDate = ptime.read_date_list(refDate)[0]
@@ -57,8 +56,7 @@ def main(argv):
     #except:  outName = timeSeriesFile.split('.h5')[0]+'_ref'+refDate+'.h5'
 
     h5t=h5py.File(timeSeriesFile)
-    dateList = h5t['timeseries'].keys()
-    dateList = sorted(dateList)
+    dateList = sorted(h5t['timeseries'].keys())
   
     if not refDate in dateList:
         print '''**********************

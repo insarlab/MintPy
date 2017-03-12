@@ -46,21 +46,20 @@ def get_data(h5timeseries):
   
     return timeseries,tbase,dateList,lt,numpixels,nrows,ncols
 
-def Usage():
+def usage():
     print '''
-    Usage:
-      
+*********************************************************************
+  Usage:
       filter_temporal.py -f timeseries_file -t time_window -o Name of output
 
       time_window : default is 0.3
 
-    Example:
-
+  Example:
       filter_temporal.py -f timeseries_LODcor_demCor.h5
-
       filter_temporal.py -f timeseries_LODcor_demCor.h5 -t 0.5
-
       filter_temporal.py -f timeseries_LODcor_demCor.h5 -t 0.5 -o smoothed_timseries.h5
+
+*********************************************************************
 
     '''
 
@@ -68,11 +67,11 @@ def Usage():
 def main(argv):
     time_win=0.3
     try:  opts, args = getopt.getopt(argv,"h:f:t:o:")
-    except getopt.GetoptError:  Usage() ; sys.exit(1)
+    except getopt.GetoptError:  usage() ; sys.exit(1)
   
-    if opts==[]:    Usage() ; sys.exit(1)
+    if opts==[]:    usage() ; sys.exit(1)
     for opt,arg in opts:
-        if opt in ("-h","--help"):  Usage();  sys.exit()
+        if opt in ("-h","--help"):  usage();  sys.exit()
         elif opt == '-f':       file = arg
         elif opt == '-t':       time_win=float(arg)
         elif opt == '-o':       outname = arg      

@@ -64,11 +64,6 @@ def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0,
     fid.variables['y_range'][1] = lats[-1]
     fid.variables['spacing'][1] = lats[1]-lats[0]
 
-#    fid.variables['y_range'][0] = lats[-1]
-#    fid.variables['y_range'][1] = lats[0]
-#    fid.variables['spacing'][1] = lats[0]-lats[1]
-
-
     #####Range
     zmin = np.nanmin(z)
     zmax = np.nanmax(z)

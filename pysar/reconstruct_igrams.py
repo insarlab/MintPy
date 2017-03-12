@@ -49,22 +49,21 @@ def reconstruct_igrams_from_timeseries(h5timeseries,h5igrams):
     return estData,nrows,ncols
 
 #####################################################################################
-def Usage():
+def usage():
     print '''
-  ****************************************************************************************
+****************************************************************************************
   Reconstructs the interferograms from the time-series epochs
 
-  usage:
-       reconstruct_igrams.py simulatedIgrams.h5 timeseries.h5  [output_name]
+  Usage:
+      reconstruct_igrams.py simulatedIgrams.h5 timeseries.h5  [output_name]
 
-       output reconstructed_simulatedIgrams.h5 by default.
+      output reconstructed_simulatedIgrams.h5 by default.
 
   Example:
-     
-       reconstruct_igrams.py Seeded_LoadedData.h5 timeseries_ECMWF_demCor.h5
-       reconstruct_igrams.py Seeded_LoadedData.h5 timeseries_ECMWF_demCor.h5  reconstructedIgrams.h5
+      reconstruct_igrams.py Seeded_unwrapIfgram.h5 timeseries_ECMWF_demCor.h5
+      reconstruct_igrams.py Seeded_unwrapIfgram.h5 timeseries_ECMWF_demCor.h5  reconstructedIgrams.h5
 
-  ****************************************************************************************
+****************************************************************************************
     '''
 
 
@@ -76,13 +75,13 @@ def main(argv):
         igramFile = argv[0]
         tsFile    = argv[1]
     except:
-        Usage() ; sys.exit(1)
+        usage() ; sys.exit(1)
   
     try:
         h5igrams     = h5py.File(igramFile,'r')
         h5timeseries = h5py.File(tsFile,'r')
     except:
-        Usage() ; sys.exit(1)
+        usage() ; sys.exit(1)
   
     try:    outName = argv[2]
     except: outName = 'reconstructed_'+igramFile

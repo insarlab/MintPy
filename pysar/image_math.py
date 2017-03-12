@@ -5,6 +5,7 @@
 # Author:  Yunjun Zhang                                    #
 ############################################################
 
+
 import sys
 import os
 
@@ -43,44 +44,40 @@ def diff(data1,data2):
 
 
 #######################  Usage  ######################
-def Usage():
+def usage():
     print '''
 ***************************************************************
-***************************************************************
-Basic Mathmatic Operations of file and value
+  Basic Mathmatic Operations of file and value
  
-   Usage:
-          image_math.py file operator operand [outputFileName]
+  Usage:  image_math.py file operator operand [outputFileName]
 
-      file     : input file. Support all PySAR HDF5 and ROI_PAC files
-                   PySAR HDF5 files: velocity, timeseries, interferograms, ...
-                   ROI_PAC    files: .unw .cor .int .hgt .dem .trans
-      operator : mathmatic operator, including: + - * / ^, other names:
-                   +, plus, add, addition
-                   -, minus, substract, substraction
-                   *, multiply, multiplication, times
-                   /, divide, division, obelus
-                   ^, exp, exponential [not implemented yet]
-      operand  : input value
-      outName  : output file name (optional, default is file_operatorOperand)
-   
-   Example:
+     file     : input file. Support all PySAR HDF5 and ROI_PAC files
+                  PySAR HDF5 files: velocity, timeseries, interferograms, ...
+                  ROI_PAC    files: .unw .cor .int .hgt .dem .trans
+     operator : mathmatic operator, including: + - * / ^, other names:
+                  +, plus, add, addition
+                  -, minus, substract, substraction
+                  *, multiply, multiplication, times
+                  /, divide, division, obelus
+                  ^, exp, exponential [not implemented yet]
+     operand  : input value
+     outName  : output file name (optional, default is file_operatorOperand)
+  
+  Example:
+      image_math.py velocity.h5   '+' 0.5
+      image_math.py velocity.h5   '-' 0.5
+      image_math.py velocity.h5   '*' 1.5
+      image_math.py velocity.h5   '/' 1.5
+      image_math.py velocity.h5   add    0.5
+      image_math.py velocity.h5   divide 0.5 velocity_divide0.5.h5
 
-          image_math.py velocity.h5   '+' 0.5
-          image_math.py velocity.h5   '-' 0.5
-          image_math.py velocity.h5   '*' 1.5
-          image_math.py velocity.h5   '/' 1.5
-          image_math.py velocity.h5   add    0.5
-          image_math.py velocity.h5   divide 0.5 velocity_divide0.5.h5
+      image_math.py timeseries.h5 '+' 0.5
+      image_math.py unwrapIfgram.h5 '+' 0.5
+      image_math.py temporal_coherence.h5 '+' 0.5
 
-          image_math.py timeseries.h5 '+' 0.5
-          image_math.py LoadedData.h5 '+' 0.5
-          image_math.py temporal_coherence.h5 '+' 0.5
+      image_math.py geo_080212_101120.unw '+' 0.5
+      image_math.py geo_080212_101120.cor '+' 0.5
 
-          image_math.py geo_080212_101120.unw '+' 0.5
-          image_math.py geo_080212_101120.cor '+' 0.5
-
-***************************************************************
 ***************************************************************
     '''
 
@@ -94,7 +91,7 @@ def main(argv):
         operator = sys.argv[2]
         operand  = float(sys.argv[3])
     except:
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
   
     if   operator in ['+','plus',  'add',      'addition']:        operator = 'plus'
     elif operator in ['-','minus', 'substract','substraction']:    operator = 'minus'
@@ -111,8 +108,7 @@ def main(argv):
 
     ########### Read - Calculate - Write  ###########
     ##### PySAR HDF5 files ######
-    if ext == '.h5':
-        import h5py
+    if ext in ['.h5','.he5']:
         try: h5file=h5py.File(file,'r')
         except: print 'ERROR: can not open file: '+file; sys.exit(1)
         k=h5file.keys()
@@ -180,8 +176,6 @@ def main(argv):
 
     ##### ROI_PAC files #######
     elif ext in ['.unw','.cor','.hgt','.dem','.trans']:
-        import pysar._readfile as readfile
-        import pysar._writefile as writefile
         print 'Input file is '+ext+'\nwriting >>> '+outName
         if ext in ['.unw','.cor','.hgt']:
             a,p,r = readfile.read_float32(file)

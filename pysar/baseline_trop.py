@@ -9,12 +9,12 @@
 import sys
 import os
 
-import numpy as np
 import h5py
-from scipy.linalg import pinv as pinv
+import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
-import matplotlib
+from scipy.linalg import pinv as pinv
 
 import pysar._readfile as readfile
 
@@ -32,23 +32,23 @@ def to_percent(y, position):
         return s + '%'
 
 ####################################################################################
-def Usage():
+def usage():
     print '''
 ******************************************************************************************************
-******************************************************************************************************
-
   Simultaneously correcting the baseline error and stratified tropospheric delay correlated with DEM.
-
+  
   Usage:
-
-  baseline_trop.py  time-series  dem polynomial_order  mask baseline_error_direction
+      baseline_trop.py  time-series  dem polynomial_order  mask baseline_error_direction
   
   Example:
       baseline_trop.py  timeseries.h5 radar.hgt 1
       baseline_trop.py  timeseries.h5 radar.hgt 1 range
       baseline_trop.py  timeseries.h5 radar.hgt 1 range_and_azimuth mask.h5
 
-******************************************************************************************************
+  Reference:
+  Jo, M.-J., J.-S. Won, S.-W. Kim, and H.-S. Jung (2010), A time-series SAR observation of surface deformation at the
+      southern end of the San Andreas Fault Zone, Geosciences Journal, 14(3), 277-287, doi:10.1007/s12303-010-0028-y.
+
 ******************************************************************************************************
     '''
 
@@ -60,7 +60,7 @@ def main(argv):
         demFile=argv[1]
         p=int(argv[2])
     except:
-        Usage() ; sys.exit(1)
+        usage() ; sys.exit(1)
   
     try:    baseline_error=argv[3]
     except: baseline_error='range_and_azimuth'
@@ -102,7 +102,7 @@ def main(argv):
     lookangle=np.tile(np.linspace(nt,ft,sx),[sy,1])
     lookangle=lookangle.flatten(1)*np.pi/180.0
     Fh=-np.sin(lookangle)
-    Fv=-np.cos(lookangle)  
+    Fv=-np.cos(lookangle)
   
     print 'Looking for azimuth pixel size'
     try:
@@ -205,7 +205,7 @@ def main(argv):
         del effect
   
     print 'Correctiing the time series '
-    outName=File.replace('.h5','')+'_BaseTropCor.h5'
+    outName=File.replace('.h5','')+'_baseTropCor.h5'
     h5orbCor=h5py.File(outName,'w')
     group = h5orbCor.create_group('timeseries')
     for i in range(len(dateList)):

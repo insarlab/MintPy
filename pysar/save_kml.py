@@ -16,15 +16,16 @@ import os
 import sys
 import getopt
 
-try:     from pykml.factory import KML_ElementMaker as KML
-except:  sys.exit('pykml should be installed!')
+try:
+    from pykml.factory import KML_ElementMaker as KML
+except:
+    sys.exit('pykml should be installed!')
 
+import h5py
 from lxml import etree
 import numpy as np
-import h5py
-import matplotlib as mpl;  mpl.use('Agg')
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib import ticker
 
 import pysar._readfile as readfile
 
@@ -35,7 +36,7 @@ def rewrap(unw):
     return rewrapped
 
 ############################################################
-def Usage():
+def usage():
     print '''
 ***************************************************************
   generating  kml kmz files. (needs geocoded files )
@@ -65,14 +66,13 @@ def Usage():
                        LOS displacement velocity (default)
 
   Example:
- 
-         save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05
-         save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 --ref-size 2
-         save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 -i yes -c jet -r 250
-         save_kml.py -f LoadedData_ChamanT256EnvA6.h5 -d 971220-990703 
-         save_kml.py -f timeseries.h5 -d 20060924         
-         save_kml.py -f geo_filt_100820-101120-sim_HDR_4rlks_c10.unw
-         save_kml.py gsi10m.dem
+      save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05
+      save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 --ref-size 2
+      save_kml.py -f geo_velocity.h5 -m -0.05 -M 0.05 -i yes -c jet -r 250
+      save_kml.py -f unwrapIfgram.h5 -d 971220-990703 
+      save_kml.py -f timeseries.h5 -d 20060924         
+      save_kml.py -f geo_filt_100820-101120-sim_HDR_4rlks_c10.unw
+      save_kml.py gsi10m.dem
 
 ***************************************************************
     '''
@@ -80,6 +80,7 @@ def Usage():
 
 ############################################################
 def main(argv):
+    plt.switch_backend('Agg')
 
     cbar_bin_num  = 9
     cbar_label    = 'Mean LOS velocity'
@@ -98,7 +99,7 @@ def main(argv):
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,"f:m:M:d:c:w:i:r:",['noreference','fig-size',\
                                                'ref-size=','cbar-label=','displacement','cbar-bin-num='])
-        except getopt.GetoptError:  Usage() ; sys.exit(1)
+        except getopt.GetoptError:  usage() ; sys.exit(1)
 
         for opt,arg in opts:
             if   opt == '-f':        File = arg
@@ -117,24 +118,24 @@ def main(argv):
             elif opt == '--noreference'  :   disp_ref = 'no'
 
     elif len(sys.argv)==2:
-        if argv[0]=='-h':               Usage(); sys.exit(1)
+        if argv[0]=='-h':               usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):   File = argv[0]
-        else:                           Usage(); sys.exit(1)
-    else:                             Usage(); sys.exit(1)
+        else:                           usage(); sys.exit(1)
+    else:                             usage(); sys.exit(1)
 
     #######################################################
     ###################  Prepare Data  ####################
     ## prepare: data, North, East, South, West
 
     ext = os.path.splitext(File)[1].lower()
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    print '\n*************** Output to KMZ file ****************'
+    #print '\n*************** Output to KMZ file ****************'
     print 'Input file is '+k
 
     if ext == '.h5':
         try:      h5file=h5py.File(File,'r')
-        except:   Usage() ; sys.exit(1)
+        except:   usage() ; sys.exit(1)
         outName=File.split('.')[0]
 
         if k in ('interferograms','wrapped','coherence'):
@@ -232,7 +233,7 @@ def main(argv):
         print '%%%%%%%%%%'
         print 'Error:\nThe input file is not geocoded\n'
         print '%%%%%%%%%%'
-        Usage();sys.exit(1)
+        usage();sys.exit(1)
 
 
     #######################################################
@@ -283,7 +284,7 @@ def main(argv):
 
     #clb.set_label(fig_unit)
     clb.set_label(cbar_label+' ['+fig_unit+']')
-    clb.locator = ticker.MaxNLocator(nbins=cbar_bin_num)
+    clb.locator = mpl.ticker.MaxNLocator(nbins=cbar_bin_num)
     clb.update_ticks()
 
     pc.subplots_adjust(left=0.2,bottom=0.3,right=0.4,top=0.7)

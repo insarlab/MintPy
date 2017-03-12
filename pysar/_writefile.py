@@ -10,18 +10,105 @@
 
 
 import os
+
+import h5py
 import numpy as np
+from PIL import Image
 
 
-#def write_float32(data,outname):
+def write(*args):
+    '''Write one dataset, i.e. interferogram, coherence, velocity, dem ...
+        Return 0 if failed.
+  
+    Usage:
+        write(data,atr,outname)
+        write(rg,az,atr,outname)
+    
+    Inputs:
+        data : 2D data matrix
+        atr  : attribute object
+        outname : output file name
+    
+    Output:
+        output file name
+    
+    Examples:
+        write(data,atr,'velocity.h5')
+        write(data,atr,'temporal_coherence.h5')
+        write(data,atr,'100120-110214.unw')
+        write(data,atr,'strm1.dem')
+        write(data,atr,'100120.mli')
+        write(rg,az,atr,'geomap_4lks.trans')
+    '''
+
+    ########## Check Inputs ##########
+    if len(args) == 4:       ## .trans file
+        rg      = args[0]
+        az      = args[1]
+        atr     = args[2]
+        outname = args[3]
+    else:
+        data    = args[0]
+        atr     = args[1]
+        outname = args[2]
+  
+    ext = os.path.splitext(outname)[1].lower()
+    ############### Read ###############
+    #print 'writing >>> '+outname
+    ##### PySAR HDF5 product
+    if ext in ['.h5','.he5']:
+        k = atr['FILE_TYPE']
+        if k in ['interferograms','coherence','wrapped','timeseries']:
+            print 'Un-supported file type: '+k
+            print 'Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...'
+            return 0;
+        h5file = h5py.File(outname,'w')
+        group = h5file.create_group(k)
+        dset = group.create_dataset(k, data=data, compression='gzip')
+        for key , value in atr.iteritems():
+            group.attrs[key]=value
+        h5file.close()
+  
+        return outname
+
+    ##### ISCE / ROI_PAC GAMMA / Image product
+    else:
+        ##### Write Data File
+        if   ext in ['.unw','.cor','.hgt']:
+            write_float32(data,outname)
+        elif ext == '.dem':
+            write_real_int16(data,outname)
+        elif ext == '.trans':
+            write_float32(rg,az,outname)
+        elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
+            data.save(outname)
+        elif ext == '.mli':
+            write_real_float32(data,outname)
+        elif ext == '.slc':
+            write_complex_int16(data,outname)
+        else: print 'Un-supported file type: '+ext; return 0;
+  
+        ##### Write .rsc File
+        digits = max([len(key) for key in atr.keys()]+[0])
+        f = '{0:<%d}    {1}'%(digits)
+        
+        frsc = open(outname+'.rsc','w')
+        for key in atr.keys():
+            frsc.write(f.format(str(key), str(atr[key]))+'\n')
+        frsc.close()
+  
+        return outname
+
+
 def write_float32(*args):
-    # To write an array to a binary file with float32 precision
-    # Format of the binary file is same as roi_pac unw, cor, or hgt data.
-    #       should rename to write_rmg_float32()
-    #
-    # Exmaple:
-    #         write_float32(phase, outname)
-    #         write_float32(amp, phase, outname)
+    '''Write ROI_PAC rmg format with float32 precision
+    Format of the binary file is same as roi_pac unw, cor, or hgt data.
+          should rename to write_rmg_float32()
+    
+    Exmaple:
+            write_float32(phase, outname)
+            write_float32(amp, phase, outname)
+    '''
  
     if len(args)==2:
         amp     = args[0]
@@ -44,10 +131,11 @@ def write_float32(*args):
         F[(2*WIDTH)*(line)+WIDTH : (2*WIDTH)*(line+1)]    =np.reshape(pha[line][:],[WIDTH,1])
  
     F.tofile(outname)
+    return outname
 
 
 def write_complex64(data,outname):   
-    # writes roi_pac .int data
+    '''Writes roi_pac .int data'''
     nlines=data.shape[0]
     WIDTH=data.shape[1]
     R=np.cos(data)
@@ -59,29 +147,33 @@ def write_complex64(data,outname):
     F[id1]=np.reshape(R,(nlines*WIDTH,1))
     F[id2]=np.reshape(Im,(nlines*WIDTH,1))
     F.tofile(outname)
+    return outname
 
 
-##def write_dem(data,outname):
 def write_real_int16(data,outname):
     data=np.array(data,dtype=np.int16)
     data.tofile(outname)
+    return outname
+
 
 def write_dem(data,outname):
     data=np.array(data,dtype=np.int16)
     data.tofile(outname)
+    return outname
+
 
 def write_real_float32(data,outname):
-##def write_gamma_float(data,outname):
-    ## write gamma float data, i.e. .mli file.
+    '''write gamma float data, i.e. .mli file.'''
     data=np.array(data,dtype=np.float32)
     data.tofile(outname)
+    return outname
 
 
 def write_complex_int16(data,outname):
-#def write_gamma_scomplex(data,outname):
-    ## write gamma scomplex data, i.e. .slc file.
-    ## data is complex 2-D matrix
-    ## real, imagery, real, ...
+    '''Write gamma scomplex data, i.e. .slc file.
+        data is complex 2-D matrix
+        real, imagery, real, ...
+    '''
 
     nlines = data.shape[0]
     WIDTH  = data.shape[1]
@@ -92,83 +184,5 @@ def write_complex_int16(data,outname):
     F[id1]=np.reshape(np.array(data.real,np.int16),(nlines*WIDTH,1))
     F[id2]=np.reshape(np.array(data.imag,np.int16),(nlines*WIDTH,1))
     F.tofile(outname)
-
-
-def write(*args):
-    ## Write one dataset, i.e. interferogram, coherence, velocity, dem ...
-    ##     return 0 if failed.
-  
-    ## Usage:
-    ##     write(data,atr,outname)
-    ##     write(rg,az,atr,outname)
-    ##
-    ##   Inputs:
-    ##     data : 2D data matrix
-    ##     atr  : attribute object
-    ##     outname : output file name
-  
-    ## Examples:
-    ##     write(data,atr,'velocity.h5')
-    ##     write(data,atr,'temporal_coherence.h5')
-    ##
-    ##     write(data,atr,'100120-110214.unw')
-    ##     write(data,atr,'strm1.dem')
-    ##     write(data,atr,'100120.mli')
-    ##     write(rg,az,atr,'geomap_4lks.trans')
-
-
-    ########## Check Inputs ##########
-    if len(args) == 4:       ## .trans file
-        rg      = args[0]
-        az      = args[1]
-        atr     = args[2]
-        outname = args[3]
-    else:
-        data    = args[0]
-        atr     = args[1]
-        outname = args[2]
-  
-    ext = os.path.splitext(outname)[1].lower()
-    ############### Read ###############
-    print 'writing >>> '+outname
-    ##### PySAR HDF5 product
-    if ext == '.h5':
-        k = atr['FILE_TYPE']
-        if k in ['interferograms','coherence','wrapped','timeseries']:
-            print 'Un-supported file type: '+k
-            print 'Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...'
-            return 0;
-        import h5py
-        h5file = h5py.File(outname,'w')
-        group = h5file.create_group(k)
-        dset = group.create_dataset(k, data=data, compression='gzip')
-        for key , value in atr.iteritems():    group.attrs[key]=value
-        h5file.close()
-  
-        return 1;
-
-    ##### ISCE / ROI_PAC GAMMA / Image product
-    else:
-        ##### Write Data File
-        if   ext in ['.unw','.cor','.hgt']:
-            write_float32(data,outname)
-        elif ext == '.dem':
-            write_real_int16(data,outname)
-        elif ext == '.trans':
-            write_float32(rg,az,outname)
-        elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
-            from PIL import Image
-            data.save(outname)
-        elif ext == '.mli':
-            write_real_float32(data,outname)
-        elif ext == '.slc':
-            write_complex_int16(data,outname)
-        else: print 'Un-supported file type: '+ext; return 0;
-  
-        ##### Write .rsc File
-        f = open(outname+'.rsc','w')
-        for key in atr.keys():    f.write(key+'    '+atr[key]+'\n')
-        f.close()
-  
-        return 1;
+    return outname
 

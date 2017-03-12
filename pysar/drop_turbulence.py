@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import pysar._readfile as readfile
 import pysar._datetime as ptime
 import pysar.subset as subset
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ##############################################################################
@@ -29,7 +30,6 @@ def circle_index(atr,circle_par):
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
     cir_par = circle_par.split(',')
-    #import pdb; pdb.set_trace()
     try:
         c_y    = int(cir_par[0])
         c_x    = int(cir_par[1])
@@ -56,17 +56,16 @@ def circle_index(atr,circle_par):
 
 
 #################################  Usage  ####################################
-def Usage():
+def usage():
     print '''
 ******************************************************************************
-
   Calculate Spatial average/mean of multi-temporal 2D datasets.
       write the optimal reference date to reference_date.txt, and
       write turbulent date to drop_date.txt
 
   Usage:
-      mean_spatial.py    multi_temporal_file    mask_file
-      mean_spatial.py -f multi_temporal_file -m mask_file [--circle x,y,rad -x sub -y sub]
+      spatial_average.py    multi_temporal_file    mask_file
+      spatial_average.py -f multi_temporal_file -m mask_file [--circle x,y,rad -x sub -y sub]
 
       -f : multi-temporal file
 
@@ -81,9 +80,9 @@ def Usage():
                        --circle 31.0212,131.0569,30            [float coord input for geo   coordinate]
 
   Example:
-      mean_spatial.py sum_Seeded_ts.h5 mask.h5
-      mean_spatial.py -f sum_Seeded_ts.h5 -m Mask.h5 -x 200:800 -y 230:700 --circle 361,567,50;610,536,25
-      mean_spatial.py -f sum_Seeded_ts.h5 -m Mask.h5 --circle 31.0212,131.0569,30
+      spatial_average.py sum_Seeded_ts.h5 mask.h5
+      spatial_average.py -f sum_Seeded_ts.h5 -m Mask.h5 -x 200:800 -y 230:700 --circle 361,567,50;610,536,25
+      spatial_average.py -f sum_Seeded_ts.h5 -m Mask.h5 --circle 31.0212,131.0569,30
 
 ******************************************************************************
     '''
@@ -110,10 +109,10 @@ def main(argv):
         try:
             opts, args = getopt.getopt(argv,'h:f:m:o:x:y:',['help','circle='])
         except getopt.GetoptError:
-            print 'Error in reading input options!';  Usage() ; sys.exit(1)
+            print 'Error in reading input options!';  usage() ; sys.exit(1)
 
         for opt,arg in opts:
-            if opt in ("-h","--help"):    Usage() ; sys.exit()
+            if opt in ("-h","--help"):    usage() ; sys.exit()
             elif opt == '-f':  File      = arg
             elif opt == '-m':  maskFile  = arg
             elif opt == '-x':  xsub = [int(i) for i in arg.split(':')];  xsub.sort()
@@ -123,12 +122,12 @@ def main(argv):
             
     else:
         try:  File = argv[0]
-        except: Usage(); sys.exit(1)
+        except: usage(); sys.exit(1)
         try:  maskFile = argv[1]
         except: pass
 
-    try:  atr  = readfile.read_attributes(File)
-    except: Usage(); sys.exit(1)
+    try:  atr  = readfile.read_attribute(File)
+    except: usage(); sys.exit(1)
     ext      = os.path.splitext(File)[1].lower()
     FileBase = os.path.basename(File).split(ext)[0]
     outNameBase = 'spatialMean_'+FileBase
@@ -141,10 +140,11 @@ def main(argv):
     length = int(atr['FILE_LENGTH'])
 
     h5file = h5py.File(File)
-    epochList = h5file[k].keys();
+    epochList = h5file[k].keys()
     epochList = sorted(epochList)
     epochNum  = len(epochList)
     print 'number of epoch: '+str(epochNum)
+    if 
     dates,datevector = ptime.date_list2vector(epochList)
 
     ##### Mask Info
@@ -250,7 +250,7 @@ def main(argv):
     #ax.plot([dates[0],dates[-1]],[meanT,meanT], '--b', lw=lineWidth)
     #sc = ax.scatter(dates, np.tile(0.5,epochNum), c=meanList, s=22**2, alpha=0.3, vmin=0.0, vmax=1.0)
     #ax.scatter(np.array(dates)[idxMean], 0.5, c=meanList[idxMean], s=22**2, alpha=1.0, vmin=0.0, vmax=1.0)
-    ax = ptime.adjust_xaxis_date(ax,datevector)
+    ax = ptime.auto_adjust_xaxis_date(ax,datevector)
     ax.set_ylim(0,1)
     ax.set_title('Spatial Average Value', fontsize=fontSize)
     ax.set_xlabel('Time [years]',         fontsize=fontSize)
@@ -260,7 +260,7 @@ def main(argv):
     ax  = fig.add_subplot(212)
     ax.plot(dates, pixPercent, '-ko', ms=markerSize, lw=lineWidth, alpha=0.7, mfc=markerColor)
     ax.plot([dates[0],dates[-1]],[pixNumT,pixNumT], '--b', lw=lineWidth)
-    ax = ptime.adjust_xaxis_date(ax,datevector)
+    ax = ptime.auto_adjust_xaxis_date(ax,datevector)
     ax.set_ylim(0,1)
     ax.set_title('Percenrage of Pixels with Value > '+str(pixNumT), fontsize=fontSize)
     ax.set_xlabel('Time [years]',         fontsize=fontSize)

@@ -25,12 +25,11 @@ import numpy as np
 
 import pysar._datetime as ptime
 import pysar._pysar_utilities as ut
-#import pysar._writefile as writefile
 import pysar._readfile as readfile
 
 
 ######################################
-def Usage():
+def usage():
     print '''
 **********************************************************
 
@@ -55,7 +54,7 @@ def Usage():
       dem_error.py timeseries_ECMWF.h5
       dem_error.py -f timeseries_ECMWF.h5 --phase-velocity
       dem_error.py -f timeseries_NARR.h5  -o timeseries_demCor.h5
-      dem_error.py -f timeseries_MERRA.h5 -F Seeded_LoadedData.h5
+      dem_error.py -f timeseries_MERRA.h5 -F Seeded_unwrapIfgram.h5
 
 **********************************************************
     '''
@@ -70,10 +69,10 @@ def main(argv):
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,'h:f:F:o:v:',['phase-velocity','no-timeseries-update'])
         except getopt.GetoptError:
-            print 'Error in reading input options!';  Usage() ; sys.exit(1)
+            print 'Error in reading input options!';  usage() ; sys.exit(1)
   
         for opt,arg in opts:
-            if opt in ['-h','--help']:    Usage() ; sys.exit()
+            if opt in ['-h','--help']:    usage() ; sys.exit()
             elif opt == '-f':    timeSeriesFile = arg
             elif opt == '-F':    igramsFile     = arg
             elif opt == '-o':    outname        = arg
@@ -81,20 +80,19 @@ def main(argv):
             elif opt == '--no-timeseries-update':  update_timeseries = 'no'
 
     elif len(sys.argv)==2:
-        if argv[0] in ['-h','--help']:  Usage(); sys.exit(1)
+        if argv[0] in ['-h','--help']:  usage(); sys.exit(1)
         else:  timeSeriesFile = argv[0]
-    else:  Usage(); sys.exit(1)
+    else:  usage(); sys.exit(1)
 
     try:    outname
     except: outname = timeSeriesFile.replace('.h5','')+'_demCor.h5'
 
     ##### Read Time Series
-    print '\n*************** Topographic Error Correction ****************'
+    #print '\n*************** Topographic Error Correction ****************'
     print "Loading time series: " + timeSeriesFile
-    atr = readfile.read_attributes(timeSeriesFile)
+    atr = readfile.read_attribute(timeSeriesFile)
     h5timeseries = h5py.File(timeSeriesFile)
-    dateList = h5timeseries['timeseries'].keys()
-    dateList = sorted(dateList)
+    dateList = sorted(h5timeseries['timeseries'].keys())
     lt = len(dateList)
     print 'number of epochs: '+str(lt)
 
@@ -104,8 +102,9 @@ def main(argv):
     nrows = int(atr['FILE_LENGTH'])
     ncols = int(atr['WIDTH'])
     timeseries = np.zeros((len(dateList),nrows*ncols),np.float32)
-    for date in dateList:
-        print date
+    for i in range(lt):
+        date = dateList[i]
+        ut.print_progress(i+1, lt, prefix='loading:', suffix=date)
         d = h5timeseries['timeseries'].get(date)[:]
         timeseries[dateIndex[date]][:]=d.flatten('F')
     del d
@@ -202,7 +201,7 @@ def main(argv):
         dz[0][i*nrows:(i+1)*nrows]         = dz_x
         timeseries[:,i*nrows:(i+1)*nrows] -= np.dot(C1,dz_x)
 
-        ut.printProgress(i+1,ncols)
+        ut.print_progress(i+1,ncols)
 
     #dz[0][:] = par[3][:]
     dz = np.reshape(dz,[nrows,ncols],order='F')
@@ -233,10 +232,11 @@ def main(argv):
 
         h5timeseriesDEMcor = h5py.File(outname,'w')
         group = h5timeseriesDEMcor.create_group('timeseries')
-        for i in range(len(dateList)):
-            print dateList[i]
+        for i in range(lt):
+            date = dateList[i]
+            ut.print_progress(i+1, lt, prefix='writing:', suffix=date)
             d = np.reshape(timeseries[i][:],[nrows,ncols],order='F')
-            dset = group.create_dataset(dateList[i], data=d, compression='gzip')
+            dset = group.create_dataset(date, data=d, compression='gzip')
         #for date in dateList:
         #    print date
         #    if not date in h5timeseriesDEMcor['timeseries']:

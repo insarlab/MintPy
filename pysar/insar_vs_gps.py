@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 def readGPSfile(gpsFile,gps_source):
-
-
    if gps_source in ['cmm4','CMM4']:
 
        gpsData = np.loadtxt(gpsFile,usecols = (1,2,3,4,5,6,7,8,9,10))
@@ -104,7 +102,7 @@ def find_row_column(Lon,Lat,lon,lat,lon_step,lat_step):
 ################################################
   
 
-def Usage():
+def usage():
    print '''
    ********************************
    ********************************
@@ -175,7 +173,7 @@ def main(argv):
       opts, args = getopt.getopt(argv,"v:r:g:G:l:c:t:m:M:s:S:A:B:C:x:y:I:H:u:")
 
    except getopt.GetoptError:
-      Usage() ; sys.exit(1)
+      usage() ; sys.exit(1)
 
    for opt,arg in opts:
 
@@ -223,7 +221,7 @@ def main(argv):
      gpsFile 
      refStation
    except:
-     Usage();sys.exit(1)
+     usage();sys.exit(1)
 
    try:
      thr

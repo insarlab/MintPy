@@ -7,11 +7,15 @@
 #
 # Yunjun, Dec 2015: add support for ROI_PAC product
 
+
+import os
+import sys
+
 import _gmt
 import h5py
 from numpy import linspace,meshgrid,flipud
-import sys
-import os
+
+import pysar._readfile as readfile
 
 
 def get_geo_lat_lon(atr):
@@ -29,27 +33,27 @@ def get_geo_lat_lon(atr):
  
     return Y,X
 
-def Usage():
+def usage():
     print '''
-   ******************************************************
+***********************************************************************
    Exporting geocoded pysar velocity file to GMT grd file
-   It also exports an epoch of timeseries to the grd file 
+       It also exports an epoch of timeseries to the grd file 
 
    Example:
-
        save_gmt.py  geo_velocity.h5
        save_gmt.py  geo_timeseries.h5 20071031
        save_gmt.py  geo_timeseries.h5
        save_gmt.py  geo_filt_100608-101024-sim_HDR_16rlks_c10.unw
        save_gmt.py  gsi10m.dem
-   *****************************************************
+
+**********************************************************************
     '''
 
 
 ###############################  Main Function  ####################################
 def main(argv):
     try: file = argv[0]
-    except: Usage(); sys.exit(1)
+    except: usage(); sys.exit(1)
   
     print '\n*************** Save to GRD file for GMT ****************'
     print 'Input file: '+file
@@ -86,7 +90,6 @@ def main(argv):
   
     ########## ROI_PAC Files ##################
     elif ext in ['.unw','.cor','.hgt','.dem']:
-        import pysar._readfile as readfile
         if ext == '.dem' :                    z,atr = readfile.read_real_int16(file)
         if ext in ['.unw','.cor','.hgt']:   a,z,atr = readfile.read_float32(file)
   

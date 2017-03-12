@@ -19,7 +19,7 @@ import h5py
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 
-def Usage():
+def usage():
     print '''
 **********************************************************************************
   Generating a mask file with the same size of the input file
@@ -39,7 +39,7 @@ def Usage():
      -M: maximum value
      -o: output file, in HDF5 format [default name is mask.h5]
 
-     --nonzero : mask of all nonzero pixels, equivalent to Mask.h5 from LoadedData.h5
+     --nonzero : mask of all nonzero pixels, equivalent to Mask.h5 from unwrapIfgram.h5
 
 
   Example:
@@ -50,9 +50,9 @@ def Usage():
      generate_mask.py -f 081018_090118.unw     -m 2    -M 4
      generate_mask.py -f 081018_090118.cor     -m 0.5
      generate_mask.py -f srtm1.dem             -m 1000 -M 1500
-     generate_mask.py -f Seed_LoadedData_mask.h5 -e 50 -m 4
+     generate_mask.py -f Seed_unwrapIfgram_masked.h5 -e 50 -m 4
 
-     generate_mask.py -f LoadedData.h5 --nonzero
+     generate_mask.py -f unwrapIfgram.h5 --nonzero
 
 **********************************************************************************
     '''
@@ -65,29 +65,29 @@ def main(argv):
     ##### Check Inputs
     if len(sys.argv)>2:
         try:   opts, args = getopt.getopt(argv,'h:f:m:M:x:y:o:d:e:',['nonzero'])
-        except getopt.GetoptError:      Usage() ; sys.exit(1)
+        except getopt.GetoptError:      usage() ; sys.exit(1)
   
         for opt,arg in opts:
-            if opt in ("-h","--help"):   Usage();   sys.exit()
+            if opt in ("-h","--help"):   usage();   sys.exit()
             elif opt == '-f':         File = arg
             elif opt == '-m':         minV = float(arg)
             elif opt == '-M':         maxV = float(arg)
-            elif opt == '-y':         ysub = [int(i) for i in arg.split(':')];        ysub.sort()
-            elif opt == '-x':         xsub = [int(i) for i in arg.split(':')];        xsub.sort()
+            elif opt == '-y':         ysub = sorted([int(i) for i in arg.split(':')])
+            elif opt == '-x':         xsub = sorted([int(i) for i in arg.split(':')])
             elif opt == '-o':         outName    = arg
             elif opt == '-d':         epoch_date = arg
             elif opt == '-e':         epoch_num  = int(arg) - 1
             elif opt == '--nonzero':  method     = 'nonzero'
 
     elif len(sys.argv)==2:
-        if   argv[0] in ['-h','--help']:    Usage(); sys.exit(1)
+        if   argv[0] in ['-h','--help']:    usage(); sys.exit(1)
         elif os.path.isfile(argv[0]):       File = argv[0]
         else:    print 'Input file does not existed: '+argv[0];  sys.exit(1)
-    else:                                   Usage(); sys.exit(1)
+    else:                                   usage(); sys.exit(1)
 
     ##### Input File Info
-    atr = readfile.read_attributes(File)
-    print '\n****************** Generate Mask *******************'
+    atr = readfile.read_attribute(File)
+    #print '\n****************** Generate Mask *******************'
     print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File
     mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
     print 'Create initial mask with the same size as the input file and all = 1'

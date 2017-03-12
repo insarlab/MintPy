@@ -1,7 +1,10 @@
-
+############################################################
+# Program is part of PySAR v1.0                            #
+# Copyright(c) 2013, Heresh Fattahi                        #
+# Author:  Heresh Fattahi                                  #
+############################################################
 #This program is modified from the software originally written by Scott Baker with 
 #the following licence:
-
 ###############################################################################
 #  Copyright (c) 2011, Scott Baker 
 # 
@@ -23,29 +26,208 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 ###############################################################################
-#
 # Yunjun, Sep 2015: Add read_par_file()
 #                   Add read_gamma_float() and read_gamma_scomplex()
 # Yunjun, Oct 2015: Add box option for read_float32()
 # Heresh, Nov 2015: Add ISCE xml reader
 # Yunjun, Jan 2016: Add read()
-# Yunjun, May 2016: Add read_attributes() and 'PROCESSOR','FILE_TYPE','UNIT' attributes
+# Yunjun, May 2016: Add read_attribute() and 'PROCESSOR','FILE_TYPE','UNIT' attributes
 
 
 import os
 import sys
 
-import numpy as np
 import h5py
+import numpy as np
+import xml.etree.ElementTree as ET
+from PIL import Image
 
 
 #########################################################################
-#######################  Read Attributes  ######################
-def read_attributes(File):
-    ## Read attributes of input file into a dictionary
-    ## Input  : file name
-    ## Output : atr  - attributes dictionary
+'''Three types of HDF5 files in PySAR
+multi_group   : multiple groups with one      dataset and one attribute dict per group (Ngroup-1dset-1atr)
+multi_dataset : one      group  with multiple dataset and one attribute dict per group (1group-Ndset-1atr)
+single_dataset: one      group  with one      dataset and one attribute dict per gropu (1group-1dset-1atr)
 
+Recommend usage:
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+'''
+multi_group_hdf5_file=['interferograms','coherence','wrapped','snaphu_connect_component']
+multi_dataset_hdf5_file=['timeseries']
+single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
+
+
+#########################################################################
+def read(File, box=(), epoch=''):
+    '''Read one dataset and its attributes from input file.
+    
+    Read one dataset, i.e. interferogram, coherence, velocity, dem ...
+    return 0 if failed.
+    
+    Inputs:
+        File  : str, path of file to read
+                PySAR   file: interferograms, timeseries, velocity, etc.
+                ROI_PAC file: .unw .cor .hgt .dem .trans
+                Gamma   file: .mli .slc
+                Image   file: .jpeg .jpg .png .ras .bmp
+        box   : 4-tuple of int, area to read, defined in (x0, y0, x1, y1) in pixel coordinate
+        epoch : string, epoch to read, for multi-dataset files
+                for .trans file:
+                '' - return both dataset
+                rg, range   - for geomap_*.trans file
+                az, azimuth - for geomap_*.trans file
+        
+    Outputs:
+        data : 2-D matrix in numpy.array format, return None if failed
+        atr  : dictionary, attributes of data, return None if failed
+        
+    Examples:
+        data, atr = read('velocity.h5')
+        data, atr = read('100120-110214.unw', (100,1100, 500, 2500))
+        data, atr = read('timeseries.h5', (), '20101120')
+        data, atr = read('timeseries.h5', (100,1100, 500, 2500), '20101120')
+        az,   atr = read('geomap*.trans', (), 'azimuth')
+        rg,az,atr = read('geomap*.trans')
+    '''
+
+    # Basic Info
+    ext = os.path.splitext(File)[1].lower()
+    atr = read_attribute(File, epoch)
+    processor = atr['PROCESSOR']
+
+    ## Update attributes if subset
+    #if box:
+    #    width = float(atr['WIDTH'])
+    #    length = float(atr['FILE_LENGTH'])
+    #    if (box[2]-box[0])*(box[3]-box[1]) < width*length:
+    #        atr = subset_attribute(atr, box)
+
+    ##### HDF5
+    if ext in ['.h5','.he5']:
+        h5file = h5py.File(File,'r')
+        k = atr['FILE_TYPE']
+
+        # Read Dataset
+        if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
+            epochList = sorted(h5file[k].keys())
+
+            if not epoch in epochList:
+                print 'input epoch is not included in file: '+File
+                print 'input epoch: '+epoch
+                print 'epoch in file '+File
+                print epochList
+
+            if k in multi_dataset_hdf5_file:
+                dset = h5file[k].get(epoch)
+            else:
+                dset = h5file[k][epoch].get(epoch)
+
+        elif k in single_dataset_hdf5_file:
+            dset = h5file[k].get(k)
+        else: print 'Unrecognized h5 file type: '+k
+
+        # Crop
+        if box:
+            data = dset[box[1]:box[3],box[0]:box[2]]
+        else:
+            data = dset[:,:]
+
+        h5file.close()
+        return data, atr
+
+    ##### Image
+    elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
+        atr = read_roipac_rsc(File+'.rsc')
+        data  = Image.open(File)
+        if box:  data = data.crop(box)
+        return data, atr
+
+    ##### ISCE
+    elif processor == 'isce':
+        if   ext in ['.flat']:
+            amp, data, atr = read_complex_float32(File)
+        elif ext in ['.cor']:
+            data, atr = read_real_float32(File)
+        elif ext in ['.slc']:
+            data, pha, atr = read_complex_float32(File)
+            #ind = np.nonzero(data)
+            #data[ind] = np.log10(data[ind])     # dB
+            #atr['UNIT'] = 'dB'
+        else: print 'Un-supported '+processfor+' file format: '+ext
+  
+        if box:  data = data[box[1]:box[3],box[0]:box[2]]
+        return data, atr
+
+    ##### ROI_PAC
+    elif processor in ['roipac','gamma']:
+        if ext in ['.unw','.cor','.hgt', '.msk']:
+            if box:
+                amp,pha,atr = read_float32(File,box)
+            else:
+                amp,pha,atr = read_float32(File)
+            return pha, atr
+
+        elif ext in ['.dem']:
+            dem,atr = read_real_int16(File)
+            if box:  dem = dem[box[1]:box[3],box[0]:box[2]]
+            return dem, atr
+  
+        elif ext in ['.int']:
+            amp, pha, atr = read_complex_float32(File)
+            if box:
+                pha = pha[box[1]:box[3],box[0]:box[2]]
+            return pha, atr
+        elif ext in ['.amp']:
+            masterAmplitude, slaveAmplitude, atr = read_complex_float32(File, real_imag=True)
+            if box:
+                masterAmplitude = masterAmplitude[box[1]:box[3],box[0]:box[2]]
+                slaveAmplitude = slaveAmplitude[box[1]:box[3],box[0]:box[2]]
+            return masterAmplitude, slaveAmplitude, atr
+        elif ext in ['.flg', '.byt']:
+            flag, atr = read_flag(File)
+            return flag, atr
+  
+        elif ext == '.trans':
+            if box:
+                rg,az,atr = read_float32(File,box)
+            else:
+                rg,az,atr = read_float32(File)
+
+            if not epoch:
+                #print 'read range and azimuth from '+File
+                return rg, az, atr
+            elif epoch in ['rg','range']:
+                #print 'read range from '+File
+                return rg, atr
+            elif epoch in ['az','azimuth']:
+                #print 'read azimuth from '+File
+                return az, atr
+
+        ##### Gamma
+        #elif processor == 'gamma':
+        elif ext == '.mli':
+            data,atr = read_real_float32(File)
+            if box: data = data[box[1]:box[3],box[0]:box[2]]
+            return data, atr
+
+        elif ext == '.slc':
+            if box:
+                amplitude, phase,atr = read_complex_int16(File, box)
+            else:
+                amplitude, phase, atr = read_complex_int16(File)
+            del phase
+            return amplitude, atr
+
+        else: print 'Un-supported '+processfor+' file format: '+ext
+    else: print 'Unrecognized file format: '+ext; return 0
+
+
+#########################################################################
+def read_attribute(File, epoch=''):
+    '''Read attributes of input file into a dictionary
+    Input  : string, file name and epoch (optional)
+    Output : dictionary, attributes dictionary
+    '''
     ext = os.path.splitext(File)[1].lower()
     if not os.path.isfile(File):
         print 'Input file not existed: '+File
@@ -53,15 +235,18 @@ def read_attributes(File):
         sys.exit(1)
 
     ##### PySAR
-    if ext == '.h5':
+    if ext in ['.h5','.he5']:
         h5f = h5py.File(File,'r')
         k = h5f.keys()
         if   'interferograms' in k: k[0] = 'interferograms'
         elif 'coherence'      in k: k[0] = 'coherence'
         elif 'timeseries'     in k: k[0] = 'timeseries'
-        if   k[0] in ('interferograms','coherence','wrapped'):
-            attrs  = h5f[k[0]][h5f[k[0]].keys()[0]].attrs
-        elif k[0] in ('dem','velocity','mask','temporal_coherence','rmse','timeseries'):
+        if   k[0] in multi_group_hdf5_file:
+            if epoch:
+                attrs  = h5f[k[0]][epoch].attrs
+            else:
+                attrs  = h5f[k[0]][h5f[k[0]].keys()[0]].attrs
+        elif k[0] in multi_dataset_hdf5_file+single_dataset_hdf5_file:
             attrs  = h5f[k[0]].attrs
         else: print 'Unrecognized h5 file key: '+k[0]
 
@@ -69,55 +254,50 @@ def read_attributes(File):
         for key, value in attrs.iteritems():  atr[key] = str(value)
         atr['PROCESSOR'] = 'pysar'
         atr['FILE_TYPE'] = str(k[0])
-        #try: atr['UNIT']
-        #except:
-        if   k[0] in ['interferograms','wrapped']:                atr['UNIT'] = 'radian'
-        elif k[0] in ['coherence','temporal_coherence','rmse']:   atr['UNIT'] = '1'
-        elif k[0] in ['dem','timeseries']:                        atr['UNIT'] = 'm'
-        elif k[0] in ['velocity']:                                atr['UNIT'] = 'm/yr'
-        else:                                                     atr['UNIT'] = '1'
+
+        if k[0] == 'timeseries':
+            try: atr['ref_date']
+            except: atr['ref_date'] = sorted(h5f[k[0]].keys())[0]
 
         h5f.close()
+    
+    else:
+        # attribute file list
+        try:
+            potentialRscFileList = [File+'.rsc', File.split('_snap_connect.byt')[0]+'.unw.rsc']
+            rscFile = [rscFile for rscFile in potentialRscFileList if os.path.isfile(rscFile)][0]
+        except: pass
 
-    ##### ROI_PAC
-    elif os.path.isfile(File + '.rsc'):
-        atr = read_roipac_rsc(File + '.rsc')
-        atr['PROCESSOR'] = 'roipac'
-        atr['FILE_TYPE'] = ext
-        if   ext in ['.unw','.int']:
-            atr['UNIT'] = 'radian'
-        elif ext in ['.cor','.msk','.trans','.slc','.mli']:
-            atr['UNIT'] = '1'
-        elif ext in ['.dem','.hgt']:
-            atr['UNIT'] = 'm'
+        ##### GAMMA
+        if os.path.isfile(File+'.par'):
+            atr = read_gamma_par(File+'.par')
+            atr['PROCESSOR'] = 'gamma'
+            atr['FILE_TYPE'] = ext
+        
+        ##### ROI_PAC
+        elif rscFile:
+            atr = read_roipac_rsc(rscFile)
+            atr['PROCESSOR'] = 'roipac'
+            atr['FILE_TYPE'] = ext
+    
+        ##### ISCE
+        elif os.path.isfile(File+'.xml'):
+            atr = read_isce_xml(File+'.xml')
+            atr['PROCESSOR'] = 'isce'
+            atr['FILE_TYPE'] = ext
+    
+        else: print 'Unrecognized file extension: '+ext; sys.exit(1)
 
-    ##### ISCE
-    elif os.path.isfile(File + '.xml'):
-        atr = read_isce_xml(File + '.xml')
-        atr['PROCESSOR'] = 'isce'
-        atr['FILE_TYPE'] = ext
-        if   ext in ['.slc','.cor']:
-            atr['UNIT'] = '1'
-        elif ext in ['.flat']:
-            atr['UNIT'] = 'radian'
-
-    ##### GAMMA
-    elif os.path.isfile(File + '.par'):
-        atr = read_gamma_par(File + '.par')
-        atr['PROCESSOR'] = 'gamma'
-        atr['FILE_TYPE'] = ext
-        if  ext in ['.mli','.slc']:
-            atr['UNIT'] = '1'
-    # obselete
-    elif os.path.isfile(os.path.splitext(File)[0] + '.par'):
-        atr = read_gamma_par(os.path.splitext(File)[0] + '.par')
-        atr['PROCESSOR'] = 'gamma'
-        atr['FILE_TYPE'] = ext
-
-    else: print 'Unrecognized file extension: '+ext; sys.exit(1)
-
-    ##### Common Attributes
-    atr['FILE_EXTENSION'] = ext
+    # Unit - str
+    #if 'UNIT' not in atr.keys():
+    if atr['FILE_TYPE'] in ['interferograms','wrapped','.unw','.int','.flat']:
+        atr['UNIT'] = 'radian'
+    elif atr['FILE_TYPE'] in ['timeseries','dem','.dem','.hgt']:
+        atr['UNIT'] = 'm'
+    elif atr['FILE_TYPE'] in ['velocity']:
+        atr['UNIT'] = 'm/yr'
+    else:
+        atr['UNIT'] = '1'
 
     return atr
 
@@ -130,36 +310,37 @@ def check_variable_name(path):
         path=path.replace(path.split("/")[0],p0)
     return path
 
-#########################################################################
-def read_template(File):
-    ## Reads the template file into a python dictionary structure.
-    ## Input: full path to the template file
-    ##  
 
+def read_template(File, delimiter='='):
+    '''Reads the template file into a python dictionary structure.
+    Input : string, full path to the template file
+    Output: dictionary, pysar template content
+    Example:
+        tmpl = read_template(KyushuT424F610_640AlosA.template)
+        tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
+    '''
     template_dict = {}
     for line in open(File):
-        c = line.split("=")
-        if len(c) < 2 or line.startswith('%') or line.startswith('#'):  next #ignore commented lines or those without variables
+        line = line.strip()
+        c = [i.strip() for i in line.split(delimiter, 1)]  #split on the 1st occurrence of delimiter
+        if len(c) < 2 or line.startswith('%') or line.startswith('#'):
+            next #ignore commented lines or those without variables
         else:
-            atrName  = c[0].strip()
+            atrName  = c[0]
             atrValue = str.replace(c[1],'\n','').split("#")[0].strip()
             atrValue = check_variable_name(atrValue)
             template_dict[atrName] = atrValue
     return template_dict
 
-#########################################################################
-def read_roipac_rsc(File):
-    ## Read ROI_PAC .rsc file into a python dictionary structure.
-    ##
 
-    rsc_dict = dict(np.loadtxt(File,dtype=str))
+def read_roipac_rsc(File):
+    '''Read ROI_PAC .rsc file into a python dictionary structure.'''
+    rsc_dict = dict(np.loadtxt(File, dtype=str, usecols=(0,1)))
     return rsc_dict
 
-#########################################################################
-def read_gamma_par(File):
-    ## Read GAMMA .par file into a python dictionary structure.
-    ##
 
+def read_gamma_par(File):
+    '''Read GAMMA .par file into a python dictionary structure.'''
     par_dict = {}
     
     f = open(File)
@@ -171,18 +352,23 @@ def read_gamma_par(File):
         else:
             par_dict[l[0].strip()] = str.replace(l[1],'\n','').split("#")[0].strip()
     
-    par_dict['WIDTH']       = par_dict['range_samples:']
-    par_dict['FILE_LENGTH'] = par_dict['azimuth_lines:']
+    # Attributes: Gamma to ROI_PAC
+    par_dict = attribute_gamma2roipac(par_dict, par_dict)
     
     return par_dict
 
-#########################################################################
-def read_isce_xml(File):
-    ## Read ISCE .xml file input a python dictionary structure.
-    ##
+def attribute_gamma2roipac(par_dict, rsc_dict=dict()):
+    '''Convert Gamma par attribute into ROI_PAC format'''
+    try:    rsc_dict['WIDTH'] = par_dict['range_samples:']
+    except: rsc_dict['WIDTH'] = par_dict['interferogram_width:']
+    try:    rsc_dict['FILE_LENGTH'] = par_dict['azimuth_lines:']
+    except: rsc_dict['FILE_LENGTH'] = par_dict['interferogram_azimuth_lines:']
+    return rsc_dict
 
+
+def read_isce_xml(File):
+    '''Read ISCE .xml file input a python dictionary structure.'''
     #from lxml import etree as ET
-    import xml.etree.ElementTree as ET
     tree = ET.parse(File)
     root = tree.getroot()
     xmldict={}
@@ -201,7 +387,7 @@ def read_isce_xml(File):
     #xmldict['DATE2'] = Date2
     return xmldict
 
-#########################################################################
+
 def merge_attribute(atr1,atr2):
     atr = dict()
     for key, value in atr1.iteritems():  atr[key] = str(value)
@@ -211,37 +397,34 @@ def merge_attribute(atr1,atr2):
 
 
 #########################################################################
-##############################  Read Data  ##############################
-#def read_float32(File):
-def read_float32(*args):
-    ## Reads roi_pac data (RMG format, interleaved line by line)
-    ## should rename it to read_rmg_float32()
-    ##
-    ## RMG format (named after JPL radar pionner Richard M. Goldstein): made
-    ## up of real*4 numbers in two arrays side-by-side. The two arrays often
-    ## show the magnitude of the radar image and the phase, although not always
-    ## (sometimes the phase is the correlation). The length and width of each 
-    ## array are given as lines in the metadata (.rsc) file. Thus the total
-    ## width width of the binary file is (2*width) and length is (length), data
-    ## are stored as:
-    ## magnitude, magnitude, magnitude, ...,phase, phase, phase, ...
-    ## magnitude, magnitude, magnitude, ...,phase, phase, phase, ...
-    ## ......
-    ##
-    ##    file: .unw, .cor, .hgt, .trans
-    ##    box:  4-tuple defining the left, upper, right, and lower pixel coordinate.
-    ## Example:
-    ##    a,p,r = read_float32('100102-100403.unw')
-    ##    a,p,r = read_float32('100102-100403.unw',(100,1200,500,1500))
+def read_float32(File, box=None):
+    '''Reads roi_pac data (RMG format, interleaved line by line)
+    should rename it to read_rmg_float32()
+    
+    ROI_PAC file: .unw, .cor, .hgt, .trans, .msk
+    
+    RMG format (named after JPL radar pionner Richard M. Goldstein): made
+    up of real*4 numbers in two arrays side-by-side. The two arrays often
+    show the magnitude of the radar image and the phase, although not always
+    (sometimes the phase is the correlation). The length and width of each 
+    array are given as lines in the metadata (.rsc) file. Thus the total
+    width width of the binary file is (2*width) and length is (length), data
+    are stored as:
+    magnitude, magnitude, magnitude, ...,phase, phase, phase, ...
+    magnitude, magnitude, magnitude, ...,phase, phase, phase, ...
+    ......
+    
+       box  : 4-tuple defining the left, upper, right, and lower pixel coordinate.
+    Example:
+       a,p,r = read_float32('100102-100403.unw')
+       a,p,r = read_float32('100102-100403.unw',(100,1200,500,1500))
+    '''
 
-    File = args[0]
-    atr = read_attributes(File)
+    atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-
-    if   len(args)==1:     box = [0,0,width,length]
-    elif len(args)==2:     box = args[1]
-    else: print 'Error: only support 1/2 inputs.'; return 0
+    if not box:
+        box = [0,0,width,length]
 
     data = np.fromfile(File,np.float32,box[3]*2*width).reshape(box[3],2*width)
     amplitude = data[box[1]:box[3],box[0]:box[2]]
@@ -254,85 +437,85 @@ def read_float32(*args):
 
     return amplitude, phase, atr
 
-#########################################################################
-##def read_complex64(File, real_imag=0):
-def read_complex_float32(File, real_imag=0):
-    ## Read complex float 32 data matrix, i.e. roi_pac int or slc data.
-    ## should rename it to read_complex_float32()
-    ##
-    ## Data is sotred as:
-    ## real, imaginary, real, imaginary, ...
-    ## real, imaginary, real, imaginary, ...
-    ## ...
-    ##
-    ## Usage:
-    ##     File : input file name
-    ##     real_imag : flag for output format, 0 for amplitude and phase [by default], others for real and imagery
-    ##
-    ## Example:
-    ##     amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
-    ##     data, atr       = read_complex_float32('150707.slc', 1)
 
-    atr = read_attributes(File)
-    width  = int(float(atr['WIDTH']))
+def read_complex_float32(File, real_imag=False):
+    '''Read complex float 32 data matrix, i.e. roi_pac int or slc data.
+    old name: read_complex64()
+    
+    ROI_PAC file: .slc, .int, .amp
+    
+    Data is sotred as:
+    real, imaginary, real, imaginary, ...
+    real, imaginary, real, imaginary, ...
+    ...
+    
+    Usage:
+        File : input file name
+        real_imag : flag for output format, 
+                    0 for amplitude and phase [by default], 
+                    non-0 : for real and imagery
+    
+    Example:
+        amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
+        data, atr       = read_complex_float32('150707.slc', 1)
+    '''
+
+    atr = read_attribute(File)
+    width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-
     ##data = np.fromfile(File,np.complex64,length*2*width).reshape(length,width)
     data = np.fromfile(File,np.complex64,length*width).reshape(length,width)
 
-    if real_imag == 0:
+    if not real_imag:
         amplitude = np.array([np.hypot(  data.real,data.imag)]).reshape(length,width)
         phase     = np.array([np.arctan2(data.imag,data.real)]).reshape(length,width)
         return amplitude, phase, atr
     else:
         return data, atr
 
-#########################################################################
+
 def read_real_float32(File):
-    ## Read real float 32 data matrix, i.e. GAMMA .mli file
-    ##
-    ## Usage:
-    ##     data, atr = read_real_float32('20070603.mli')
-
-    atr = read_attributes(File)
-    width  = int(float(atr['WIDTH']))
+    '''Read real float 32 data matrix, i.e. GAMMA .mli file
+    Usage:  data, atr = read_real_float32('20070603.mli')
+    '''
+    atr = read_attribute(File)
+    width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-
     data = np.fromfile(File,dtype=np.float32).reshape(length,width)
     return data, atr
 
-#########################################################################
-#def read_gamma_scomplex(File,box):
-def read_complex_int16(*args):
-    ## Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
-    ##
-    ## Inputs:
-    ##    file: complex data matrix (cpx_int16)
-    ##    box: 4-tuple defining the left, upper, right, and lower pixel coordinate.
-    ## Example:
-    ##    data,rsc = read_complex_int16('100102.slc')
-    ##    data,rsc = read_complex_int16('100102.slc',(100,1200,500,1500))
 
-    File = args[0]
-    atr = read_attributes(File)
+def read_complex_int16(File, box=None, real_imag=False):
+    '''Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
+    
+    Gamma file: .slc
+    
+    Inputs:
+       file: complex data matrix (cpx_int16)
+       box: 4-tuple defining the left, upper, right, and lower pixel coordinate.
+    Example:
+       data,rsc = read_complex_int16('100102.slc')
+       data,rsc = read_complex_int16('100102.slc',(100,1200,500,1500))
+    '''
+
+    atr = read_attribute(File)
     width  = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-
-    if   len(args)==1:     box = [0,0,width,length]
-    elif len(args)==2:     box = args[1]
-    else: print 'Error: only support 1/2 inputs.'; return 0
-    nlines = box[3]-box[1]
-    WIDTH  = box[2]-box[0]
+    if not box:
+        box = [0,0,width,length]
 
     data = np.fromfile(File,np.int16,box[3]*2*width).reshape(box[3],2*width)
-    data = data[box[1]:box[3],2*box[0]:2*box[2]].reshape(2*nlines*WIDTH,1)
-    id1 = range(0,2*nlines*WIDTH,2)
-    id2 = range(1,2*nlines*WIDTH,2)
-    real = data[id1].reshape(nlines,WIDTH)
-    imag = data[id2].reshape(nlines,WIDTH)
+    data = data[box[1]:box[3],2*box[0]:2*box[2]].flatten()
+    odd_idx = np.arange(1, len(data), 2)
+    real = data[odd_idx-1].reshape(box[3]-box[1],box[2]-box[0])
+    imag = data[odd_idx].reshape(box[3]-box[1],box[2]-box[0])
 
-    data_cpx = real + imag*1j
-    return data_cpx, atr
+    if real_imag:
+        return real, imag, atr
+    else:
+        amplitude = np.array([np.hypot(imag,real)]).reshape(length,width)
+        phase = np.array([np.arctan2(imag,real)]).reshape(length,width)
+        return amplitude, phase, atr
 
     #data = np.fromfile(File,np.int16,length*2*width).reshape(length*2,width)
     #oddindices = np.where(np.arange(length*2)&1)[0]
@@ -343,40 +526,46 @@ def read_complex_int16(*args):
     #phase     = np.array([np.arctan2(imag,real)]).reshape(length,width)
     #return amplitude, phase, parContents
 
-#########################################################################
-##def read_dem(File):
-def read_real_int16(File):
-    ## Read real int 16 data matrix, i.e. ROI_PAC .dem file.
-    ## should rename it to read_real_int16()
-    ##
-    ## Input:
-    ##     roi_pac format dem file
-    ## Usage:
-    ##     dem, atr = read_real_int16('gsi10m_30m.dem')
 
-    atr = read_attributes(File)
-    width  = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH'])) 
-    dem = np.fromfile(File,dtype=np.int16).reshape(length,width)
-    return dem, atr
-
-##def read_dem(File):
 def read_dem(File):
-    ## Read real int 16 data matrix, i.e. ROI_PAC .dem file.
-    ## should rename it to read_real_int16()
-    ##
-    ## Input:
-    ##     roi_pac format dem file
-    ## Usage:
-    ##     dem, atr = read_real_int16('gsi10m_30m.dem')
-
-    atr = read_attributes(File)
-    width  = int(float(atr['WIDTH']))
+    '''Read real int 16 data matrix, i.e. ROI_PAC .dem file.
+    Input:  roi_pac format dem file
+    Usage:  dem, atr = read_real_int16('gsi10m_30m.dem')
+    '''
+    atr = read_attribute(File)
+    width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH'])) 
-    dem = np.fromfile(File,dtype=np.int16).reshape(length,width)
+    dem = np.fromfile(File, dtype=np.int16).reshape(length, width)
     return dem, atr
 
-#########################################################################
+
+def read_real_int16(File):
+    '''Same as read_dem() above'''
+    atr = read_attribute(File)
+    width = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH'])) 
+    dem = np.fromfile(File, dtype=np.int16).reshape(length, width)
+    return dem, atr
+
+
+def read_flag(File):
+    '''Read binary file with flags, 1-byte values with flags set in bits
+    For ROI_PAC .flg, *_snap_connect.byt file.    
+    '''
+    # Read attribute
+    if File.endswith('_snap_connect.byt'):
+        rscFile = File.split('_snap_connect.byt')[0]+'.unw.rsc'
+    else:
+        rscFile = File+'.rsc'
+    atr = read_attribute(rscFile.split('.rsc')[0])
+    width = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH'])) 
+    
+    flag = np.fromfile(File, dtype=bool).reshape(length, width)
+    
+    return flag, atr
+
+
 def read_GPS_USGS(File):  
     yyyymmdd= np.loadtxt(File,dtype=str,usecols = (0,1))[:,0]
     YYYYMMDD=[]
@@ -392,188 +581,17 @@ def read_GPS_USGS(File):
 
 
 #########################################################################
-def read(*args):
-    ## Read one dataset, i.e. interferogram, coherence, velocity, dem ...
-    ##     return 0 if failed.
-  
-    ## Things to think: how to output multiple dataset, like all timeseries, rg and az coord of
-    ##     .trans file, multiple dataset and attrs of interferograms h5 file.
-  
-    ## Usage:
-    ##     [ data,atr] = read(file, [box|epoch_date|epoch_num])
-    ##     [rg,az,atr] = read(file, [box|epoch_date|epoch_num])   ## .trans file
-    ##
-    ##   Inputs:
-    ##     file : file path, supported format:
-    ##            PySAR   file: interferograms, timeseries, velocity, etc.
-    ##            ROI_PAC file: .unw .cor .hgt .dem .trans
-    ##            Gamma   file: .mli .slc
-    ##            Image   file: .jpeg .jpg .png .ras .bmp
-    ##
-    ##     box  : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
-    ##     epoch_date : date (pair) [optional]
-    ##     epoch_num  : epoch number [starting from 0, optional]
-  
-    ##   Outputs:
-    ##     data : 2D data matrix
-    ##     rg/az: 2D matrix of range and azimuth pixel location of SAR (radar coord) for each DEM pixel
-    ##     atr  : attribute object
-  
-    ## Examples:
-    ##     data,atr = read('velocity.h5')
-    ##     data,atr = read('temporal_coherence.h5')
-    ##     data,atr = read('timeseries.h5','20100120')
-    ##     data,atr = read('timeseries.h5',3)
-    ##     data,atr = read('LoadedData.h5','100120-110214')
-    ##     data,atr = read('LoadedData.h5',3)
-    ##
-    ##     data,atr = read('100120-110214.unw')
-    ##     data,atr = read('strm1.dem')
-    ##     data,atr = read('strm1.dem.jpg')
-    ##     data,atr = read('100120.mli')
-    ##     rg,az,atre = read('geomap*.trans')
-    ##
-    ##     data,atr = read('velocity.h5',             (100,1200,500,1500))
-    ##     data,atr = read('100120-110214.unw',       (100,1200,500,1500))
-    ##     data,atr = read('timeseries.h5','20100120',(100,1200,500,1500))
-
-
-    ########## Check Inputs ##########
-    File = args[0]
-    for i in range(1,len(args)):
-        if   isinstance(args[i], tuple):       box        = args[i]
-        elif isinstance(args[i], basestring):  epoch_date = args[i]
-        elif isinstance(args[i], int):         epoch_num  = args[i]
-  
-    ############### Read ###############
-    ext = os.path.splitext(File)[1].lower()
-    atr = read_attributes(File)
-    processor = atr['PROCESSOR']
-  
-    ##### PySAR HDF5
-    if ext == '.h5':
-        h5file = h5py.File(File,'r')
-        k = atr['FILE_TYPE']
-
-        ##### Read Data
-        if k == 'timeseries':
-            epochList = h5file[k].keys()
-            try:     epoch_num
-            except:
-                try: epoch_num = epochList.index(epoch_date)
-                except: print 'Unrecognized / No epoch input!';  return 0;
-            dset = h5file[k].get(epochList[epoch_num])
-
-        elif k in ['interferograms','coherence','wrapped']:
-            epochList = h5file[k].keys()
-            try:    epoch_num
-            except:
-                try:
-                    epoch_date
-                    for i in range(len(epochList)):
-                        if epoch_date in epochList[i]:   epoch_num = i
-                except: print 'Unrecognized / No epoch input!';  return 0;
-            dset = h5file[k][epochList[epoch_num]].get(epochList[epoch_num])
-
-        elif k in ['dem','mask','rmse','temporal_coherence', 'velocity']:
-            dset = h5file[k].get(k)
-        else: print 'Unrecognized h5 file type: '+k
-
-        ##### Crop
-        try:    data = dset[box[1]:box[3],box[0]:box[2]]
-        except: data = dset[:,:]
-
-        h5file.close()
-        return data, atr
-
-    ##### Image
-    elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
-        atr = read_roipac_rsc(File+'.rsc')
-        from PIL import Image
-        data  = Image.open(File)
-        try: data = data.crop(box)
-        except: pass
-        return data, atr
-
-    ##### ISCE
-    elif processor == 'isce':
-        if   ext in ['.flat']:
-            amp, data, atr = read_complex_float32(File)
-        elif ext in ['.cor']:
-            data, atr = read_real_float32(File)
-        elif ext in ['.slc']:
-            data, pha, atr = read_complex_float32(File)
-            ind = np.nonzero(data)
-            data[ind] = np.log10(data[ind])     # dB
-            atr['UNIT'] = 'dB'
-        else: print 'Un-supported '+processfor+' file format: '+ext
-  
-        try: data = data[box[1]:box[3],box[0]:box[2]]
-        except: pass
-        return data, atr
-
-    ##### ROI_PAC
-    elif processor in ['roipac','gamma']:
-        if ext in ['.unw','.cor','.hgt']:
-            try:    amp,pha,atr = read_float32(File,box)
-            except: amp,pha,atr = read_float32(File)
-            return pha, atr
-
-        elif ext == '.dem':
-            dem,atr = read_real_int16(File)
-            try: dem = dem[box[1]:box[3],box[0]:box[2]]
-            except: pass
-            return dem, atr
-  
-        elif ext == '.int':
-            amp, pha, atr = read_complex_float32(File)
-            try: pha = pha[box[1]:box[3],box[0]:box[2]]
-            except: pass
-            return pha, atr
-            #ind = np.nonzero(amp)
-            #amp[ind] = np.log10(amp[ind])
-            #atr['UNIT'] = 'dB'
-            #return amp, atr
-  
-        elif ext == '.trans':
-            try:    rg,az,atr = read_float32(File,box)
-            except: rg,az,atr = read_float32(File)
-            return rg, az, atr
-
-    ##### Gamma
-    #elif processor == 'gamma':
-        elif ext == '.mli':
-            data,atr = read_real_float32(File)
-            try: data = data[box[1]:box[3],box[0]:box[2]]
-            except: pass
-            data = np.log10(data)     # dB
-            atr['UNIT'] = 'dB'
-            return data, atr
-
-        elif ext == '.slc':
-            try:    data,atr = read_complex_int16(File,box)
-            except: data,atr = read_complex_int16(File)
-            data = np.log10(np.absolute(data))     # dB
-            data[data==-np.inf] = np.nan
-            atr['UNIT'] = 'dB'
-            return data, atr
-
-        else: print 'Un-supported '+processfor+' file format: '+ext
-    else: print 'Unrecognized file format: '+ext; return 0
-
-
-#########################################################################
-## Not ready yet
-def read_multiple(File,box=''):
-    ## Read multi-temporal 2D datasets into a 3-D data stack
-    ## Inputs:
-    ##     File  : input file, interferograms,coherence, timeseries, ...
-    ##     box   : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
-    ## Examples:
-    ##     stack = stacking('timeseries.h5',(100,1200,500,1500))
+def read_multiple(File,box=''):  # Not ready yet
+    '''Read multi-temporal 2D datasets into a 3-D data stack
+    Inputs:
+        File  : input file, interferograms,coherence, timeseries, ...
+        box   : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
+    Examples:
+        stack = stacking('timeseries.h5',(100,1200,500,1500))
+    '''
 
     ##### File Info
-    atr = readfile.read_attributes(File)
+    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     length = int(float(atr['FILE_LENGTH']))
     width  = int(float(atr['WIDTH']))

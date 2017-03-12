@@ -14,42 +14,41 @@ import sys
 import os
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
-def Usage():
-
-   print '''
+def usage():
+    print '''
 *****************************************************************************************
-
    Generating multiple profiles(each profile includes seeveral transects [specified by -n])  
    perpendicular to a Fault . Fault is a path specified by lat and lon coordinates.
-  
 
    Usage:
-
-   -n number of transects used to generate one profile
-   -d distance [in pixel] between individual transects to generate one profile   
-   -F a txt file including the fault coordinates (first column lon , second column: lat)
-   -p flip profile left-right (yes or no) [default: no]
-   -u flip up - down [default: no]
-   -g gps_file (if exists)
-   -S source of GPS velocities (usgs,cmm4,pysar)
-   -G gps stations to compare with InSAR  (all,insar,profile)  ["all": all gps stations is projected to the profile "insar": same as all but limited to the area covered by insar    "profile": only those gps stations which are in the profile area]
-
-   -x lower bound to display in x direction
-   -X higher bound to display in x direction
-   -l lower bound to display in y direction
-   -h higher bound to display in y direction
-   -I display InSAR velocity [on] or off
-   -A display Average InSAR velocity [on] or off
-   -U display Standard deviation of the InSAR velocity [on] or off
-   -E Export the generated transect to a matlab file [off] or on
-   -W Length of a profile
-   -D Distance between two consequent average profile
-   
-********************************************************************************************
-   Example:
+       -n number of transects used to generate one profile
+       -d distance [in pixel] between individual transects to generate one profile   
+       -F a txt file including the fault coordinates (first column lon , second column: lat)
+       -p flip profile left-right (yes or no) [default: no]
+       -u flip up - down [default: no]
+       -g gps_file (if exists)
+       -S source of GPS velocities (usgs,cmm4,pysar)
+       -G gps stations to compare with InSAR  (all,insar,profile)  
+          "all": all gps stations is projected to the profile 
+          "insar": same as all but limited to the area covered by insar    
+          "profile": only those gps stations which are in the profile area]
     
-     multi_transect.py -f geo_velocity_masked.h5 -n 50 -d 1 -W 10 -D 2 -F Chaman_fault.txt 
-   '''
+       -x lower bound to display in x direction
+       -X higher bound to display in x direction
+       -l lower bound to display in y direction
+       -h higher bound to display in y direction
+       -I display InSAR velocity [on] or off
+       -A display Average InSAR velocity [on] or off
+       -U display Standard deviation of the InSAR velocity [on] or off
+       -E Export the generated transect to a matlab file [off] or on
+       -W Length of a profile
+       -D Distance between two consequent average profile
+
+   Example:
+       multi_transect.py -f geo_velocity_masked.h5 -n 50 -d 1 -W 10 -D 2 -F Chaman_fault.txt 
+
+********************************************************************************************
+    '''
 
 def dms2d(Coord):
     d,m,s=Coord.split(' ')
@@ -373,7 +372,7 @@ def main(argv):
        opts, args = getopt.getopt(argv,"f:s:e:n:d:g:l:h:r:L:F:p:u:G:S:i:I:A:U:E:D:W:x:X:")
 
   except getopt.GetoptError:
-       Usage() ; sys.exit(1)
+       usage() ; sys.exit(1)
 
   for opt,arg in opts:
       if opt == '-f':
@@ -433,7 +432,7 @@ def main(argv):
   try:    
        h5file=h5py.File(velocityFile,'r')
   except:
-       Usage()
+       usage()
        sys.exit(1)
     
   k=h5file.keys()

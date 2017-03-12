@@ -17,18 +17,16 @@ from numpy import sum,remainder,zeros,dot,reshape, float32, array, hstack, vstac
 from scipy.stats import nanstd, nanmean
 ######################################
 ######################################
-def Usage():
+def usage():
     print '''
-    ***********************************************
-    Usage:
-    
+***************************************************************************
+  Usage:
       temporal_derivative.py  timeSeriesFile 
 
-    Example:
-
+  Example:
       temporal_derivative.py  timeseries.h5 
 
-   ***********************************************   
+***************************************************************************   
     '''
 
 ######################################
@@ -37,7 +35,7 @@ def main(argv):
         timeSeriesFile = argv[0]
         # igramsFile = argv[1]
     except:
-        Usage() ; sys.exit(1)
+        usage() ; sys.exit(1)
 
   
     ########################################################

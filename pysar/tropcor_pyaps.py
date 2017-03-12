@@ -4,243 +4,238 @@
 # Copyright(c) 2015, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-# Reference:
-# Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer
-# (2011), Systematic InSAR tropospheric phase delay corrections
-# from global meteorological reanalysis data, Geophys. Res. Lett.,
-# 38, L17311, doi:10.1029/2011GL048757
+# Yunjun, Feb 2017: add closest_weather_product_time()
+#                   add get_delay()
+#                   use argparse instead of getopt
 
 
-import sys
-import getopt
 import os
+import sys
+import argparse
 
 try: import pyaps as pa
 except: print 'Cannot import pyaps into Python!'; sys.exit(1)
 import h5py
-from numpy import cos,zeros,pi
+import numpy as np
 
 import pysar._pysar_utilities as ut
+import pysar._readfile as readfile
 
 
 ###############################################################
-def Usage():
-    print '''
-##############################################################################
-  Tropospheric correction using weather models. 
-    PyAPS is used to download and calculate the delay for each time-series epoch.
-  
-  Usage:
-      tropcor_pyaps.py -f timeseries.h5 -d demfile.hgt -s source_of_atmospheric_data -h acquisition_time -D Delay_Type -i incidence_angle
-        
-
-      -f: timeseries HDF5 file, i.e. timeseries.h5, timeseries_LODcor.h5
-      -s: source of the atmospheric data: ECMWF, NARR
-      -D: Delay_Type: Dry, Wet , comb [Deafult is comb which calculates both wet and dry delays]   
-      -i: incidence_angle  : can be a file containing all incidence angles or can be one average value. 
-                                If it's not introduced, average look angle is used.
-      -h: time of data (ECMWF takes hh:mm, NARR takes hh only)
-
-  Example:
-      
-      tropcor_pyaps.py -f timeseries.h5        -d radar_8rlks.hgt -s ECMWF -h 18:00 -i incidence_angle.h5
-      tropcor_pyaps.py -f timeseries.h5        -d radar_8rlks.hgt -s NARR  -h 18    -i incidence_angle.h5
-      tropcor_pyaps.py -f timeseries.h5        -d radar_8rlks.hgt -s ECMWF -h 18:00 -D Dry -i 23
-      tropcor_pyaps.py -f timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF -h 18:00
-
-##############################################################################
+def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
+    '''Find closest available time of weather product from SAR acquisition time
+    Inputs:
+        sar_acquisition_time - string, SAR data acquisition time in seconds
+        grib_source - string, Grib Source of weather reanalysis product
+    Output:
+        grib_hr - string, time of closest available weather product 
     '''
+    # Get hour/min of SAR acquisition time
+    sar_time = float(sar_acquisition_time)
+    sar_hh = int(sar_time/3600.0)
+    sar_mm = int((sar_time-3600.0*sar_hh) / 60.0)
+    
+    # Find closest time in available weather products
+    grib_hr_list = [0, 6, 12, 18]
+    grib_hr = min(grib_hr_list, key=lambda x:abs(x-sar_hh))
+    
+    # Adjust time output format
+    if grib_source == 'NARR':
+        grib_hr = "%02d"%grib_hr
+    else:
+        grib_hr = "%02d:00"%grib_hr
+    return grib_hr
+
+
+def get_delay(grib_file, atr, inps_dict):
+    # Get delay matrix using PyAPS
+    if 'X_FIRST' in atr.keys():
+        aps = pa.PyAPS_geo(grib_file, inps_dict['dem_file'], grib=inps_dict['grib_source'],\
+                           verb=True, Del=inps_dict['delay_type'])
+    else:
+        aps = pa.PyAPS_rdr(grib_file, inps_dict['dem_file'], grib=inps_dict['grib_source'],\
+                           verb=True, Del=inps_dict['delay_type'])
+    phs = np.zeros((aps.ny, aps.nx))
+    aps.getdelay(phs)
+    
+    # Get relative phase delay in space
+    yref = int(atr['ref_y'])
+    xref = int(atr['ref_x'])
+    phs -= phs[yref, xref]
+    
+    # project into LOS direction
+    phs /= np.cos(inps_dict['incidence_angle'])
+    
+    return phs
+
+
+###############################################################
+EXAMPLE='''example:
+  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt
+  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s NARR
+  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s MERRA --delay dry -i 23
+  tropcor_pyaps.py timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF 
+'''
+
+REFERENCE='''reference:
+  Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer (2011), Systematic InSAR tropospheric
+  phase delay corrections from global meteorological reanalysis data, Geophys. Res. Lett., 38, L17311,
+  doi:10.1029/2011GL048757
+'''
+
+TEMPLATE='''
+pysar.troposphericDelay.method        = pyaps   #['height-correlation'] 
+pysar.troposphericDelay.weatherModel  = ECMWF   #['ERA', 'MERRA', 'NARR']
+'''
+
+
+def cmdLineParse():
+    parser = argparse.ArgumentParser(description='Tropospheric correction using weather models\n'+\
+                                     '  PyAPS is used to download and calculate the delay for each time-series epoch.',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
+
+    parser.add_argument('timeseries_file', help='timeseries HDF5 file, i.e. timeseries.h5')
+    parser.add_argument('-d','--dem', dest='dem_file', required=True,\
+                        help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
+    
+    parser.add_argument('-s', dest='weather_model',\
+                        default='ECMWF', choices={'ECMWF','ERA-Interim','ERA','MERRA','MERRA2','NARR'},\
+                        help='source of the atmospheric data')
+    parser.add_argument('--delay', dest='delay_type', default='comb', choices={'comb','dry','wet'},\
+                        help='Delay type to calculate, comb contains both wet and dry delays')
+    parser.add_argument('-t','--hour', dest='hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
+    
+    parser.add_argument('-i', dest='incidence_angle',\
+                        help='a file containing all incidence angles, or\n'+\
+                             'one average value presenting the whole area, if not input, average look angle will be used.')
+    
+    parser.add_argument('--template', dest='template_file',\
+                        help='template file with input options below:\n'+TEMPLATE)
+    parser.add_argument('-o', dest='out_file', help='Output file name for trospheric corrected timeseries.')
+
+    inps = parser.parse_args()
+    return inps
+
 
 ###############################################################
 def main(argv):
+    
+    inps = cmdLineParse()
+    inps.dem_file = ut.get_file_list([inps.dem_file])[0]
+    inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
+    atr = readfile.read_attribute(inps.timeseries_file)
 
-    DelayType='comb'
+    print '*******************************************************************************'
+    print 'Downloading weather model data ...'
+    
+    ## Get Grib Source
+    if inps.weather_model in ['ECMWF','ERA-Interim']:   inps.grib_source = 'ECMWF'
+    elif inps.weather_model == 'ERA'  :                 inps.grib_source = 'ERA'
+    elif inps.weather_model == 'MERRA':                 inps.grib_source = 'MERRA'
+    elif inps.weather_model == 'NARR' :                 inps.grib_source = 'NARR'
+    else: raise Reception('Unrecognized weather model: '+inps.weather_model)
+    print 'grib source: '+inps.grib_source
+    
+    ## Get Acquisition time
+    inps.hour = closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.grib_source)
+    print 'Time of cloest vailable product: '+inps.hour
+    
+    if not os.path.isdir(inps.grib_source):
+        print 'making directory: '+inps.grib_source
+        os.mkdir(inps.grib_source)
+    
+    ## Loop to download 
+    inps.grib_file_list = []
+    h5timeseries = h5py.File(inps.timeseries_file, 'r')
+    dateList = sorted(h5timeseries['timeseries'].keys())
+    for d in dateList:
+        print [d]
+        if   inps.grib_source == 'ECMWF':  grib_file = './ECMWF/ERA-Int_'+d+'_'+inps.hour+'.grb'
+        elif inps.grib_source == 'ERA'  :  grib_file = './ERA/ERA_'+d+'_'+inps.hour+'.grb'
+        elif inps.grib_source == 'MERRA':  grib_file = './MERRA/merra-'+d+'-'+inps.hour+'.hdf'
+        elif inps.grib_source == 'NARR' :  grib_file = './NARR/narr-a_221_'+d+'_'+inps.hour+'00_000.grb'
+        inps.grib_file_list.append(grib_file)
+        
+        if os.path.isfile(grib_file):
+            print grib_file + ' already exists.'
+        else:
+            if   inps.grib_source == 'ECMWF':  pa.ECMWFdload([d], inps.hour, './'+inps.grib_source+'/')
+            elif inps.grib_source == 'ERA'  :  pa.ERAdload(  [d], inps.hour, './'+inps.grib_source+'/')
+            elif inps.grib_source == 'MERRA':  pa.MERRAdload([d], inps.hour, './'+inps.grib_source+'/')
+            elif inps.grib_source == 'NARR' :  pa.NARRdload( [d], inps.hour, './'+inps.grib_source+'/')
 
-    try:  opts, args = getopt.getopt(argv,"f:d:s:h:D:i:")
-    except getopt.GetoptError:  Usage() ; sys.exit(1)
-
-    for opt,arg in opts:
-        if   opt == '-f':        timeSeriesFile = arg
-        elif opt == '-d':        demFile   = arg
-        elif opt == '-s':        atmSource = arg.upper()
-        elif opt == '-h':        hr        = arg
-        elif opt == '-D':        DelayType = arg
-        elif opt == '-i':        inc_angle = arg
-     
-    try:
-        timeSeriesFile
-        demFile
-    except:
-        Usage() ; sys.exit(1)
-
-    demFile  = ut.check_variable_name(demFile)
-    demCoord = ut.radar_or_geo(demFile)
-
-    h5timeseries = h5py.File(timeSeriesFile)
-    yref=h5timeseries['timeseries'].attrs['ref_y']
-    xref=h5timeseries['timeseries'].attrs['ref_x']
-
-    ###############################################################
-    #incidence angle to map the zenith delay to the slant delay
-    try:
-        inc_angle
-    except:
-        print '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-        print 'WARNING:'
-        print 'incedence angle is not specified >>>> Average look angle is used ... '
-        print 'For more precise results use input option -i to introduce the incidence angle file or average incodence angle'
-        print '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-        input_inc_angle='None'
- 
-        wavelength=float(h5timeseries['timeseries'].attrs['WAVELENGTH'])
-        inc_angle1=float(h5timeseries['timeseries'].attrs['LOOK_REF1'])
-        inc_angle2=float(h5timeseries['timeseries'].attrs['LOOK_REF2'])
-        inc_angle=(inc_angle1+inc_angle2)/2.0
-        print '*******************************************************************************'
-        print 'Near Look Angle: ' + str(inc_angle1)
-        print 'Far  Look Angle:' + str(inc_angle2)
-        print 'Average Look Angle (used in pyaps to calculate delay): ' + str(inc_angle)
-        print 'Acquisition time is : '+ hr
-        print '*******************************************************************************'
-        inc_angle=str(inc_angle)
-
-    if os.path.isfile(inc_angle):
-        incidenceFile=inc_angle       
-        h5incidence=h5py.File(incidenceFile,'r')
-        iset=h5incidence['mask'].get('mask')
-        inc_angle=iset[0:iset.shape[0],0:iset.shape[1]]
-        h5incidence.close()
-    else:
-        inc_angle=float(inc_angle)
-        print 'incidence angle = '+ str(inc_angle)
-
-    inc_angle=inc_angle*pi/180.0
-    ################################################################
-    dateList = h5timeseries['timeseries'].keys()
-    dateList = sorted(dateList)
-    print '\n*************** Tropospheric Delay Correction - PyAPS ****************'
-
-    if atmSource == 'ECMWF':
-        gribSource='ECMWF'
-        if not os.path.isdir('ECMWF'):
-            print 'making directory: ECMWF'
-            os.mkdir('ECMWF')
- 
-        ecmwf_file=[]
-        for d in dateList:
-            ecm='./ECMWF/ERA-Int_'+d+'_'+hr+'.grb'
-            ecmwf_file.append(ecm)
-            print [d]
-            if not os.path.isfile(ecm):
-                pa.ECMWFdload([d],hr,'./ECMWF/')
-            else:
-                print ecm + ' already exists.'
-
-    elif atmSource == 'NARR':
-        gribSource='NARR'
-        if not os.path.isdir('NARR'):
-            print 'making directory: NARR'
-            os.mkdir('NARR')
- 
-        ecmwf_file=[]
-        for d in dateList:
-            ecm='./NARR/narr-a_221_'+d+'_'+hr+'00_000.grb'
-            ecmwf_file.append(ecm)
-            print [d]
-            if not os.path.isfile(ecm):
-                pa.NARRdload([d],hr,'./NARR/')
-            else:
-                print ecm + ' already exists.'
-
-    elif atmSource == 'ERA':
-        gribSource='ERA'
-        if not os.path.isdir('ERA'):
-            print 'making directory: ERA'
-            os.mkdir('ERA')
- 
-        ecmwf_file=[]
-        for d in dateList:
-            ecm='./ERA/ERA_'+d+'_'+hr+'.grb'
-            ecmwf_file.append(ecm)
-            print [d]
-            if not os.path.isfile(ecm):
-                pa.ERAdload([d],hr,'./ERA/')
-            else:
-                print ecm + ' already exists.'
-
-    elif atmSource == 'MERRA':
-        gribSource='MERRA'
-        if not os.path.isdir('MERRA'):
-            print 'making directory: MERRA'
-            os.mkdir('MERRA')
- 
-        ecmwf_file=[]
-        for d in dateList:
-            ecm='./MERRA/merra-'+d+'-'+hr+'.hdf'
-            ecmwf_file.append(ecm)
-            print [d]
-            if not os.path.isfile(ecm):
-                pa.MERRAdload([d],hr,'./MERRA/')
-            else:
-                print ecm + ' already exists.'
-
-    else:
-        Usage();sys.exit(1)
 
     print '*******************************************************************************'
     print 'Calcualting delay for each epoch.'
-    h5phsName=atmSource + '.h5'
-    h5phs=h5py.File(h5phsName,'w')
-    outName=timeSeriesFile.replace('.h5','_') + atmSource + '.h5'	#Yunjun, Feb 15, 2015
-    #outName=timeSeriesFile.replace('.h5','')+'_tropCorPyAPS.h5' 
-    h5apsCor=h5py.File(outName,'w')
-    group=h5apsCor.create_group('timeseries')
-    group_phs=h5phs.create_group('timeseries')
-
-    #if 'X_FIRST' in  h5timeseries['timeseries'].attrs.keys():
-    #   demCoord='geo'
-    #   print 'The coordinate system is : Geo'
-    #else:
-    #   demCoord='radar'  
-    #   print 'The coordinate system is : radar'      
-
-    print ecmwf_file[0]
-    if demCoord=='radar':  aps1 = pa.PyAPS_rdr(str(ecmwf_file[0]),demFile,grib=gribSource,verb=True,Del=DelayType)
-    else:                  aps1 = pa.PyAPS_geo(str(ecmwf_file[0]),demFile,grib=gribSource,verb=True,Del=DelayType)
-
-    phs1 = zeros((aps1.ny,aps1.nx))
-    aps1.getdelay(phs1)     
-    phs1=(phs1 - phs1[yref,xref])/cos(inc_angle)   
-    dset = group_phs.create_dataset(dateList[0], data= phs1- phs1, compression='gzip')
-    dset = group.create_dataset(dateList[0], data= phs1- phs1, compression='gzip')
     
-    for i in range(1,len(ecmwf_file)):
-        ecm=ecmwf_file[i] 
-        print ecm
-        if demCoord=='radar':  aps = pa.PyAPS_rdr(str(ecm),demFile,grib=gribSource,verb=True,Del=DelayType)   
-        else:                  aps = pa.PyAPS_geo(str(ecm),demFile,grib=gribSource,verb=True,Del=DelayType)
-        phs = zeros((aps.ny,aps.nx))
-        aps.getdelay(phs)
-        phs=(phs - phs[yref,xref])/cos(inc_angle)
-        phs=phs-phs1
-        dset  = group_phs.create_dataset(dateList[i], data= phs, compression='gzip')
-        dset1 = h5timeseries['timeseries'].get(dateList[i])
-        data1 = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-        dset  = group.create_dataset(dateList[i], data= data1+phs, compression='gzip')
+    ## Get Incidence angle: to map the zenith delay to the slant delay
+    if inps.incidence_angle:
+        if os.path.isfile(inps.incidence_angle):
+            inps.incidence_angle = readfile.read(inps.incidence_angle)[0]
+        else:
+            inps.incidence_angle = float(inps.incidence_angle)
+            print 'incidence angle: '+str(inps.incidence_angle)
+    else:
+        print 'calculating incidence angle ...'
+        inps.incidence_angle = ut.incidence_angle(atr)
+    inps.incidence_angle = inps.incidence_angle*np.pi/180.0
+    
+    ## Create delay hdf5 file
+    tropFile = inps.grib_source+'.h5'
+    print 'writing >>> '+tropFile
+    h5trop = h5py.File(tropFile, 'w')
+    group_trop = h5trop.create_group('timeseries')
+    
+    ## Create tropospheric corrected timeseries hdf5 file
+    if not inps.out_file:
+        ext = os.path.splitext(inps.timeseries_file)[1]
+        inps.out_file = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.grib_source+'.h5'
+    print 'writing >>> '+inps.out_file
+    h5timeseries_tropCor = h5py.File(inps.out_file, 'w')
+    group_tropCor = h5timeseries_tropCor.create_group('timeseries')
 
-    for key,value in h5timeseries['timeseries'].attrs.iteritems():
-        group.attrs[key] = value
-        group_phs.attrs[key] = value
+    ## Calculate phase delay on reference date
+    if 'ref_date' in atr.keys():
+        ref_idx = dateList.index(atr['ref_date'])
+    else:
+        ref_idx = 0
+    print 'calculating phase delay on reference date: '+dateList[ref_idx]
+    phs_ref = get_delay(inps.grib_file_list[ref_idx], atr, vars(inps))
+    
+    ## Loop to calculate phase delay on the other dates
+    for i in range(len(inps.grib_file_list)):
+        # Get phase delay
+        grib_file = inps.grib_file_list[i] 
+        if not i == ref_idx:
+            print dateList[i]
+            phs = get_delay(grib_file, atr, vars(inps))
+        else:
+            phs = np.copy(phs_ref)
+        # Get relative phase delay in time
+        phs -= phs_ref
+        
+        # Write dataset
+        print 'writing hdf5 file ...'
+        data = h5timeseries['timeseries'].get(dateList[i])[:]
+        dset  = group_tropCor.create_dataset(dateList[i], data=data+phs, compression='gzip')
+        dset  = group_trop.create_dataset(dateList[i], data=phs, compression='gzip')
+    
+    ## Write Attributes
+    for key,value in atr.iteritems():
+        group_tropCor.attrs[key] = value
+        group_trop.attrs[key] = value
+    
+    h5timeseries.close()
+    h5timeseries_tropCor.close()
+    h5trop.close()
+    print 'Done.'
 
-    try:
-        dset1 = h5timeseries['mask'].get('mask')[:]
-        group = h5apsCor.create_group('mask')
-        dset  = group.create_dataset('mask', data=Mask, compression='gzip')
-    except: pass
+    return
 
 
 ###############################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
 
