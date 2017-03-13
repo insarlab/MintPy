@@ -492,10 +492,15 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
     try:    transFile = glob.glob(transFile)[0]
     except: transFile = None
 
-    lon = np.zeros(rg.shape)
-    lat = np.zeros(rg.shape)    
-
     ##### Use geomap*.trans file for precious (pixel-level) coord conversion
+    def get_trans_row_col4radar(az, rg, trans_az, trans_rg, x_factor=10, y_factor=10):
+        mask_rg = np.multiply(trans_rg>=max(rg-x_factor,0.5), trans_rg<=rg+x_factor)
+        mask_az = np.multiply(trans_az>=max(az-y_factor,0.5), trans_az<=az+y_factor)
+        idx = np.where(np.multiply(mask_rg, mask_az))
+        trans_row, trans_col = np.mean(idx,1)
+        return trans_row, trans_col
+
+
     ## by searching pixels in trans file with value falling buffer lat/lon value
     if transFile:
         # Get lat/lon resolution/step in meter
@@ -516,21 +521,22 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
             az_step = azimuth_resolution(atr_rdr)
             rg_step = range_resolution(atr_rdr)
         
-            x_factor = np.ceil(abs(lon_step)/rg_step)
-            y_factor = np.ceil(abs(lat_step)/az_step)
+            x_factor = 2*np.ceil(abs(lon_step)/rg_step)
+            y_factor = 2*np.ceil(abs(lat_step)/az_step)
         else:
             x_factor = 10
             y_factor = 10
         
-        for i in range(len(rg)):
-            mask_rg = np.multiply(trans_rg>=max(rg[i]-x_factor,0.5), trans_rg<=rg[i]+x_factor)
-            mask_az = np.multiply(trans_az>=max(az[i]-y_factor,0.5), trans_az<=az[i]+y_factor)
-            idx = np.where(np.multiply(mask_rg, mask_az))
-            trans_row, trans_col = np.mean(idx,1)
-            
-            lat[i] = trans_row*lat_step_deg + lat_first
-            lon[i] = trans_col*lon_step_deg + lon_first
-        
+        trans_row = np.zeros(rg.shape)
+        trans_col = np.zeros(rg.shape)
+        if rg.size == 1:
+            trans_row, trans_col = get_trans_row_col4radar(az, rg, trans_az, trans_rg, x_factor, y_factor)
+        else:
+            for i in range(rg.size):
+                trans_row[i], trans_col[i] = get_trans_row_col4radar(az[i], rg[i], trans_az, trans_rg, x_factor, y_factor)
+
+        lat = trans_row*lat_step_deg + lat_first
+        lon = trans_col*lon_step_deg + lon_first
         lat_resid = y_factor*lat_step_deg
         lon_resid = x_factor*lon_step_deg
 

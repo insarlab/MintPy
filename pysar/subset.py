@@ -382,7 +382,6 @@ def subset_input_dict2box(subset_dict, meta_dict):
     # Get subset box in y/x
     sub_x = sorted(sub_x)
     sub_y = sorted(sub_y)
-    #import pdb; pdb.set_trace()
     pixel_box = (sub_x[0],sub_y[0],sub_x[1],sub_y[1])
 
     # Get subset box in lat/lon from subset box in y/x

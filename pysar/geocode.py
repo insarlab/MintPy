@@ -20,6 +20,7 @@ import sys
 import argparse
 
 import h5py
+import numpy as np
 from joblib import Parallel, delayed
 import multiprocessing
 
@@ -90,7 +91,7 @@ def geocode_attribute(atr_rdr, atr_geo, transFile=None):
         ref_lat, ref_lon = ut.radar2glob(ref_y, ref_x, transFile, atr_rdr)[0:2]
         atr['ref_lat'] = ref_lat
         atr['ref_lon'] = ref_lon
-
+        print 'update reference point info in lat/lon'
     return atr
 
 
@@ -136,7 +137,7 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
                 
                 roipac_outname = infile_base+'_'+epoch+roipac_ext
                 geo_amp, geo_data, geo_rsc = geocode_data_roipac(data, geomap_file, roipac_outname)
-                geo_atr = geocode_attribute(atr, geo_rsc)
+                geo_atr = geocode_attribute(atr, geo_rsc, geomap_file)
                 
                 gg = group.create_group('geo_'+epoch)
                 dset = gg.create_dataset('geo_'+epoch, data=geo_data, compression='gzip')
@@ -152,7 +153,7 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
                 geo_amp, geo_data, geo_rsc = geocode_data_roipac(data, geomap_file, roipac_outname)
                 
                 dset = group.create_dataset(epoch, data=geo_data, compression='gzip')
-            geo_atr = geocode_attribute(atr, geo_rsc)
+            geo_atr = geocode_attribute(atr, geo_rsc, geomap_file)
             for key, value in geo_atr.iteritems():
                 group.attrs[key] = value
                 
@@ -165,7 +166,7 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
         roipac_outname = infile_base+roipac_ext
         
         geo_amp, geo_data, geo_rsc = geocode_data_roipac(data, geomap_file, roipac_outname)
-        geo_atr = geocode_attribute(atr, geo_rsc)
+        geo_atr = geocode_attribute(atr, geo_rsc, geomap_file)
         
         writefile.write(geo_data, geo_atr, outfile)
 
