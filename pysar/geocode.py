@@ -233,7 +233,7 @@ def main(argv):
 
     # Geocoding
     if inps.parallel:
-        num_cores = multiprocessing.cpu_count()
+        num_cores = min(multiprocessing.cpu_count(), len(inps.file))
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(geocode_file_roipac)(file, inps.lookup_file) for file in inps.file)
     else:
