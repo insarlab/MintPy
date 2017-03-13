@@ -514,7 +514,8 @@ def main(argv):
         print tempCohCmd
         os.system(tempCohCmd)
 
-    print '\nUpdate Mask based on Temporal Coherence ...'
+    print '\n--------------------------------------------'
+    print 'Update Mask based on Temporal Coherence ...'
     outName = 'Mask_tempCoh.h5'
     maskCmd = 'generate_mask.py -f '+inps.temp_coherence_file+' -m 0.7 -o '+outName
     print maskCmd
