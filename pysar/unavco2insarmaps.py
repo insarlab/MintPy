@@ -12,6 +12,7 @@ import psycopg2
 import geocoder
 import getopt
 from pysar.add_attributes_insarmaps import InsarDatabaseController
+from pysar.mask import mask_matrix
 import argparse
 
 # ex: python Converter_unavco.py Alos_SM_73_2980_2990_20070107_20110420.h5
@@ -48,7 +49,7 @@ needed_attributes = {
     "wavelength", "processing_type", "beam_swath", "Y_FIRST", "look_direction",
     "flight_direction", "last_frame", "post_processing_method", "min_baseline_perp"
     "unwrap_method", "relative_orbit", "beam_mode", "FILE_LENGTH", "max_baseline_perp",
-    "X_FIRST", "atmos_correct_method", "last_date", "first_frame", "Y_STEP", "history",
+    "X_FIRST", "atmos_correct_method", "last_date", "first_frame", "frame", "Y_STEP", "history",
     "scene_footprint", "downloadUnavcoUrl", "referencePdfUrl", "areaName", "referenceText"    
 }
 # ---------------------------------------------------------------------------------------
@@ -239,6 +240,7 @@ def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Convert a Unavco format H5 file for ingestion into insarmaps.')
+    parser.add_argument("-m", "--mask", help="mask dataset before ingestion", action="store_true", required=False)
     required = parser.add_argument_group("required arguments")
     required.add_argument("-f", "--file", help="unavco file to ingest", required=True)
     required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
@@ -250,7 +252,6 @@ def build_parser():
 def main():
     parser = build_parser()
     parseArgs = parser.parse_args()
-
     file_name = parseArgs.file
     global dbUsername, dbPassword, dbHost
     dbUsername = parseArgs.user
@@ -288,7 +289,13 @@ def main():
 # read datasets in the group into a dictionary of 2d arrays and intialize decimal dates
     timeseries_datasets = {}
     for key in dataset_keys:
-        timeseries_datasets[key] = group["GRIDS"][key][:]
+        dataset = group["GRIDS"][key][:]
+        if parseArgs.mask:
+            print "Masking " + str(key)
+            mask = group["GRIDS"].get('mask')[:]
+            dataset = mask_matrix(dataset, mask)
+
+        timeseries_datasets[key] = dataset
         d = get_date(key)
         decimal = get_decimal_date(d)
         decimal_dates.append(decimal)
