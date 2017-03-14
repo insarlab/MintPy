@@ -56,7 +56,6 @@ needed_attributes = {
 # convert h5 file to json and upload it. folder_name == unavco_name
 def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name):
 
-# search for region file - if exist get first line which is region name
     region_file = None
     project_name = attributes["PROJECT_NAME"]
     region = region_name_from_project_name(project_name)
@@ -88,7 +87,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
         attributesController.remove_dataset(folder_name, project_name)
     attributesController.close()
 
-    # outer loop increments row = longitude, inner loop increments column = latitude
+    # iterate through h5 file timeseries
     for (row, col), value in np.ndenumerate(timeseries_datasets[dataset_keys[0]]):
         longitude = x_first + (col * x_step)
         latitude = y_first + (row * y_step) 
@@ -113,7 +112,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
             "geometry": {"type": "Point", "coordinates": [longitude, latitude]},    
             "properties": {"d": displacement_values, "m": m, "p": point_num}
             }   
-            # allocate memory space for siu_man array in beginning 
+
             siu_man.append(data)
 
             # clear displacement array for json and the other string for dictionary, for next point
@@ -155,8 +154,8 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
         decimal_dates_sql += (str(d) + ",")
     decimal_dates_sql = decimal_dates_sql[:len(decimal_dates_sql) - 1] + '}'
 
-    # scene_footprint attribute uses a wkt geometry type with format that confuses postgresql database
-    # thus we have to add "Polygon(coordinates, coordinates, coordinates, coordinates)" as string
+    # add keys and values to area table. TODO: this will be removed eventually
+    # and all attributes will be put in extra_attributes table
     attribute_keys = '{'
     attribute_values = '{'
     for k in attributes:
@@ -181,7 +180,6 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
         sys.exit()
 
     # put dataset into area table
-    # area_data = {"latitude": mid_lat, "longitude": mid_long, "country": country, "num_chunks": chunk_num, "dates": dataset_keys}
     try:
         con = psycopg2.connect("dbname='pgis' user='" + dbUsername + "' host='" + dbHost + "' password='" + dbPassword + "'")
         cur = con.cursor()
@@ -226,7 +224,7 @@ def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
     json_file.write("%s" % string_json)
     json_file.close()
 
-    # insert json file to pgsql using ogr2ogr - folder_name = area name
+    # insert json file to pgsql using ogr2ogr - folder_name == area unavco_name
     command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + folder_name + '" '
     chunk_path = './mbtiles/' + folder_name + '/' + chunk
     res = os.system(command + ' ' + chunk_path)
@@ -237,12 +235,6 @@ def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
 
     print "inserted chunk " + str(chunk_num) + " to db"
 
-# ---------------------------------------------------------------------------------------
-# START OF EXECUTABLE
-# ---------------------------------------------------------------------------------------
-# get name of h5 file and the groupname of that file's data
-# ---------------------------------------------------------------------------------------
-#  BEGIN EXECUTABLE
 # ---------------------------------------------------------------------------------------
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
@@ -256,6 +248,9 @@ def build_parser():
 
     return parser
 
+# ---------------------------------------------------------------------------------------
+# START OF EXECUTABLE
+# ---------------------------------------------------------------------------------------
 def main():
     parser = build_parser()
     parseArgs = parser.parse_args()
@@ -274,14 +269,13 @@ def main():
 
 # use h5py to open specified group(s) in the h5 file 
 # then read datasets from h5 file into memory for faster reading of data
-# depending on UNAVCO format, the main key to access groups might be '/GEOCODE'
     file = h5py.File(file_name,  "r")
-    group = file['timeseries']  # assuming there is only one main key called 'GEOCODE'
+    group = file['timeseries']
 
 # get attributes (stored at root) of UNAVCO timeseries file
     attributes = dict(group.attrs)
 
-# in timeseries group, there are 25 datasets 
+# in timeseries group, there are datasets
 # need to get datasets with dates - strings that can be converted to integers
     dataset_keys = []
     for k in group["GRIDS"].keys():
@@ -306,11 +300,10 @@ def main():
         decimal = get_decimal_date(d)
         decimal_dates.append(decimal)
 
-# set number of points per json chunk - then close h5 file
+# close h5 file
     file.close()
 
-# connect to postgresql database
-# also create folder named after h5 file to store json files in mbtiles folder
+# create folder named after h5 file to store json files in mbtiles folder
     con = None
     cur = None
 
