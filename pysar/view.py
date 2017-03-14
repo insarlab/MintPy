@@ -692,23 +692,29 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         print 'plot in Lat/Lon coordinate'
         # Map Setup
         print 'map projection: '+inps.map_projection
+        print 'boundary database resolution: '+inps.resolution
         if inps.map_projection in ['cyl','merc','mill','cea','gall']:
             m = Basemap2(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
                         urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],\
                         projection=inps.map_projection,\
-                        resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
+                        resolution=inps.resolution, area_thresh=1., suppress_ticks=False, ax=ax)
         elif inps.map_projection in ['ortho']:
             m = Basemap2(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
                         lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,\
                         projection=inps.map_projection,\
-                        resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
+                        resolution=inps.resolution, area_thresh=1., suppress_ticks=False, ax=ax)
         else:
             m = Basemap2(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
                         lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,\
                         llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
                         urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],\
                         projection=inps.map_projection,\
-                        resolution='l', area_thresh=1., suppress_ticks=False, ax=ax)
+                        resolution=inps.resolution, area_thresh=1., suppress_ticks=False, ax=ax)
+
+        # Draw coastline
+        if inps.coastline:
+            print 'draw coast line'
+            m.drawcoastlines()
 
         # Plot DEM
         if inps.dem_file:
@@ -733,6 +739,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
         # Lat Lon labels
         if inps.lalo_label:
+            print 'plot lat/lon labels'
             ax = m.draw_lalo_label(inps.geo_box, ax=ax, font_size=inps.font_size)
         
         # Plot Seed Point
@@ -999,17 +1006,27 @@ def cmdLineParse(argv):
                            help='height space between subplots in inches')
     fig_group.add_argument('--coord', dest='fig_coord', choices=['radar','geo'], default='geo',\
                            help='Display in radar/geo coordination system, for geocoded file only.')
-    fig_group.add_argument('--lalo-label', dest='lalo_label', action='store_true',\
+    
+    ##### Map
+    map_group = parser.add_argument_group('Map', 'Map settings for display')
+    map_group.add_argument('--coastline', action='store_true', help='Draw coastline.')
+    map_group.add_argument('--resolution', default='c', choices={'c','l','i','h','f',None}, \
+                           help='Resolution of boundary database to use.\n'+\
+                                'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
+    map_group.add_argument('--lalo-label', dest='lalo_label', action='store_true',\
                            help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
                                 'Useful for final figure output.')
-    fig_group.add_argument('--scalebar', type=float, nargs=3,\
+    map_group.add_argument('--scalebar', type=float, nargs=3,\
                            help="add scale bar centerd in [lat, lon] in degree with distance in meters\n"\
                                 'i.e. --scalebar 131.18 33.06 2000')
-    fig_group.add_argument('--noscalebar', dest='disp_scalebar', action='store_false', help='do not display scale bar.')
+    map_group.add_argument('--noscalebar', dest='disp_scalebar', action='store_false', help='do not display scale bar.')
 
     inps = parser.parse_args(argv)
     # If output flie name assigned or figure shown is turned off, turn on the figure save
-    if inps.outfile or not inps.disp_fig:  inps.save_fig = True
+    if inps.outfile or not inps.disp_fig:
+        inps.save_fig = True
+    if inps.coastline and inps.resolution in ['c','l']:
+        inps.resolution = 'i'
     
     return inps
 
@@ -1118,6 +1135,7 @@ def main(argv):
         # Figure Setting 
         if not inps.font_size:  inps.font_size = 16
         if not inps.fig_size:   inps.fig_size = [12.5,8.0]
+        print 'create figure in size: '+str(inps.fig_size)
         fig = plt.figure(figsize=inps.fig_size)
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
         
