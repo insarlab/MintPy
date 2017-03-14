@@ -188,7 +188,7 @@ def main(argv):
 
     inps = cmdLineParse()
     #print '\n**************** Multilook *********************'
-    fileList = get_file_list(inps.file)
+    inps.file = get_file_list(inps.file)
 
     # check outfile and parallel option
     if len(inps.file) > 1:
@@ -199,9 +199,9 @@ def main(argv):
 
     # multilooking
     if inps.parallel:
-        num_cores = multiprocessing.cpu_count()
+        num_cores = min(multiprocessing.cpu_count(), len(inps.file))
         print 'parallel processing using %d cores ...'%(num_cores)
-        Parallel(n_jobs=num_cores)(delayed(multilook_file)(file,inps.lks_y,inps.lks_x) for file in fileList)
+        Parallel(n_jobs=num_cores)(delayed(multilook_file)(file,inps.lks_y,inps.lks_x) for file in inps.file)
     else:
         for File in inps.file:
             print '-------------------------------------------'

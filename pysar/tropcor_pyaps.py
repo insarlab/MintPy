@@ -42,9 +42,9 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
     
     # Adjust time output format
     if grib_source == 'NARR':
-        grib_hr = "%2d"%grib_hr
+        grib_hr = "%02d"%grib_hr
     else:
-        grib_hr = "%2d:00"%grib_hr
+        grib_hr = "%02d:00"%grib_hr
     return grib_hr
 
 

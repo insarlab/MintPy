@@ -69,19 +69,19 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 class Basemap2(Basemap): 
     # add drawscale method to Basemap class. 
     # Basemap.drawmapscale() do not support 'cyl' projection.
-    def drawscale(self,lat_c,lon_c,dist,font_size=12, yoffset=None): 
+    def drawscale(self, lat_c, lon_c, distance, ax=None, font_size=12, yoffset=None): 
         """draw a simple map scale from x1,y to x2,y in map projection 
         coordinates, label it with actual distance in km
         Inputs:
             lat_c/lon_c : float, longitude and latitude of scale bar center, in degree
-            dist        : float, distance of scale bar, in m
+            distance    : float, distance of scale bar, in m
             yoffset     : float, optional, scale bar length at two ends, in degree
         Example:
             m.drawscale(33.06, 131.18, 2000)
         ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
         """
         gc = pyproj.Geod(a=self.rmajor,b=self.rminor) 
-        lon_c2, lat_c2, az21 = gc.fwd(lon_c, lat_c, 90, dist)
+        lon_c2, lat_c2, az21 = gc.fwd(lon_c, lat_c, 90, distance)
         length = np.abs(lon_c - lon_c2)
         lon0 = lon_c - length/2.0
         lon1 = lon_c + length/2.0
@@ -91,9 +91,44 @@ class Basemap2(Basemap):
         self.plot([lon0,lon1],[lat_c,lat_c],color='k')
         self.plot([lon0,lon0],[lat_c,lat_c+yoffset],color='k')
         self.plot([lon1,lon1],[lat_c,lat_c+yoffset],color='k')
-        plt.text(lon0+0.5*length, lat_c+yoffset*3, '%d km'%(dist/1000.,),\
-        verticalalignment='top',\
-        horizontalalignment='center',fontsize=font_size) 
+        if not ax:  ax = plt.gca()
+        ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d km'%(distance/1000.,),\
+                verticalalignment='top',\
+                horizontalalignment='center',fontsize=font_size) 
+
+    def draw_lalo_label(self, geo_box, ax=None, labels=[1,0,0,1], font_size=12):
+        '''Auto draw lat/lon label/tick based on coverage from geo_box
+        Inputs:
+            geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+            labels  : list of 4 int, positions where the labels are drawn as in [left, right, top, bottom]
+            ax      : axes object the labels are drawn
+        Example:
+            geo_box = (128.0, 37.0, 138.0, 30.0)
+            m.draw_lalo_label(geo_box)
+        '''
+        # Find proper lat/lon sequence
+        max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
+        lalo_step = round_to_1(max_lalo_dist/4.0)
+        digit = len(str(lalo_step).split('.')[1])
+        f = "{:.%df}"%(digit)
+        fmt = '%.'+'%d'%(digit)+'f'
+        lats = np.arange(float(f.format(geo_box[3]+lalo_step/2.0)), float(f.format(geo_box[1])), lalo_step)
+        lons = np.arange(float(f.format(geo_box[0]+lalo_step/2.0)), float(f.format(geo_box[2])), lalo_step)
+
+        # Plot x/y tick without label
+        if not ax:  ax = plt.gca()
+        ax.set_xticks(lons)
+        ax.set_yticks(lats)
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        
+        # Plot x/y label
+        labels_lat = np.multiply(labels, [1,1,0,0])
+        labels_lon = np.multiply(labels, [0,0,1,1])
+        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.0, fontsize=font_size)
+        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.0, fontsize=font_size)
+        
+        return ax
 
 
 ##########################################  Sub Function  ########################################
@@ -694,31 +729,11 @@ def plot_matrix(ax, data, meta_dict, inps=None):
                 az12, az21, wid_dist = gc.inv(inps.geo_box[0], inps.geo_box[3], inps.geo_box[2], inps.geo_box[3])
                 inps.scalebar = [inps.geo_box[3]+0.1*(inps.geo_box[1]-inps.geo_box[3]),\
                              inps.geo_box[0]+0.2*(inps.geo_box[2]-inps.geo_box[0]), round_to_1(wid_dist)*0.1]
-            m.drawscale(inps.scalebar[0], inps.scalebar[1], inps.scalebar[2], inps.font_size)
+            m.drawscale(inps.scalebar[0], inps.scalebar[1], inps.scalebar[2], ax=ax, font_size=inps.font_size)
 
         # Lat Lon labels
         if inps.lalo_label:
-            # 1 - Find proper lat/lon sequence
-            max_lalo_dist = max([inps.geo_box[1]-inps.geo_box[3], inps.geo_box[2]-inps.geo_box[0]])
-            lalo_step = round_to_1(max_lalo_dist/4.0)
-            digit = len(str(lalo_step).split('.')[1])
-            f = "{:.%df}"%(digit)
-            fmt = '%.'+'%d'%(digit)+'f'
-            lats = np.arange(float(f.format(inps.geo_box[3]+lalo_step/2.0)), float(f.format(inps.geo_box[1])), lalo_step)
-            lons = np.arange(float(f.format(inps.geo_box[0]+lalo_step/2.0)), float(f.format(inps.geo_box[2])), lalo_step)
-            ## 2 - Write them down manually
-            #lats = np.arange(33.06, 33.15, 0.04)
-            #lons = np.arange(131.16, 131.27, 0.04)
-
-            # Plot x/y tick without label
-            ax.set_xticks(lons)
-            ax.set_yticks(lats)
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            # Plot x/y label
-            m.drawparallels(lats, fmt=fmt, labels=[1,0,0,0], linewidth=0.0, fontsize=inps.font_size)
-            m.drawmeridians(lons, fmt=fmt, labels=[0,0,0,1], linewidth=0.0, fontsize=inps.font_size)
-
+            ax = m.draw_lalo_label(inps.geo_box, ax=ax, font_size=inps.font_size)
         
         # Plot Seed Point
         if inps.disp_seed and inps.seed_lalo:

@@ -20,7 +20,7 @@
 # Yunjun, Jul 2016: add parallel support
 #                   add outlier fill option
 # Yunjun, Aug 2016: add coord_geo2radar()
-# Yunjun, Dec 2016: add cmdLineParse(), --footprint option
+# Yunjun, Dec 2016: add cmdLineParse(), --tight option
 
 
 import os
@@ -382,7 +382,6 @@ def subset_input_dict2box(subset_dict, meta_dict):
     # Get subset box in y/x
     sub_x = sorted(sub_x)
     sub_y = sorted(sub_y)
-    #import pdb; pdb.set_trace()
     pixel_box = (sub_x[0],sub_y[0],sub_x[1],sub_y[1])
 
     # Get subset box in lat/lon from subset box in y/x
@@ -430,6 +429,7 @@ def subset_file(File, subset_dict, outFile=None):
                       subset_lon : list of 2 float, subset in lon direction, default=None
                       fill_value : float, optional. filled value for area outside of data coverage. default=None
                                    None/not-existed to subset within data coverage only.
+                      tight  : bool, tight subset or not, for lookup table file, i.e. geomap*.trans
     Outputs:
         outFile :  str, path/name of output file; 
                    outFile = 'subset_'+File, if File is in current directory;
@@ -450,11 +450,9 @@ def subset_file(File, subset_dict, outFile=None):
     # if fill_value exists and not None, subset data and fill assigned value for area out of its coverage.
     # otherwise, re-check subset to make sure it's within data coverage and initialize the matrix with np.nan
     outfill = False
-    try:
-        subset_dict['fill_value']
-        if subset_dict['fill_value']:
-            outfill = True
-    except:
+    if 'fill_value' in subset_dict.keys() and subset_dict['fill_value']:
+        outfill = True
+    else:
         outfill = False
     if not outfill:
         pix_box = check_box_within_data_coverage(pix_box, atr_dict)
@@ -478,7 +476,10 @@ def subset_file(File, subset_dict, outFile=None):
     # Output File Name
     if not outFile:
         if os.getcwd() == os.path.dirname(os.path.abspath(File)):
-            outFile = 'subset_'+os.path.basename(File)
+            if 'tight' in subset_dict.keys() and subset_dict['tight']:
+                outFile = os.path.splitext(File)[0]+'_tight'+os.path.splitext(File)[1]
+            else:
+                outFile = 'subset_'+os.path.basename(File)
         else:
             outFile = os.path.basename(File)
     print 'writing >>> '+outFile
@@ -598,7 +599,7 @@ EXAMPLE='''example:
   subset.py *velocity*.h5 timeseries*.h5  -y 400 1500  -x 200 600
   subset.py geo_velocity.h5    -l 32.2:33.5  --outfill-nan
   subset.py Mask.h5            -x 500:3500   --outfill 0
-  subset.py geomap_4rlks.trans --footprint
+  subset.py geomap_4rlks.trans --tight
   
   subset.py unwrapIfgram.h5 coherence.h5 geomap*.trans  -l 33.10 33.50 -L 131.30 131.80 --bbox geomap_4rlks.trans
   subset.py *.unw *.cor *.trans *.dem  -y 50 450 -x 1300 1800 --bbox geomap_4rlks.trans
@@ -621,8 +622,9 @@ def cmdLineParse():
                              'pysar.subset.lalo  = 30.2:30.5,130.1:131.3')
     parser.add_argument('-r','--reference',\
                         help='reference file, subset to the same lalo as reference file')
-    parser.add_argument('--footprint', action='store_true',\
-                        help='subset geomap_*.trans file based on footprint - non-zero values.\n'
+    parser.add_argument('--tight', action='store_true',\
+                        help='subset geomap_*.trans file based on non-zero values.\n'+\
+                             'For geocoded file(s) only'
                              'A convenient way to get rid of extra wide space due to "too large" DEM.\n\n')
 
     parser.add_argument('--outfill', dest='fill_value', type=float,\
@@ -658,7 +660,7 @@ def main(argv):
     atr = readfile.read_attribute(inps.file[0])
 
     ##### Convert All Inputs into subset_y/x/lat/lon
-    # Input Priority: subset_y/x/lat/lon > reference > template > footprint
+    # Input Priority: subset_y/x/lat/lon > reference > template > tight
     if not inps.subset_x and not inps.subset_y and not inps.subset_lat and not inps.subset_lon:
         # 1. Read subset info from Reference File
         if inps.reference:
@@ -671,8 +673,8 @@ def main(argv):
             pix_box, geo_box = read_subset_template2box(inps.template_file)
             print 'using subset info from '+inps.template_file
 
-        # 3. Use subset from footprint info
-        elif inps.footprint:
+        # 3. Use subset from tight info
+        elif inps.tight:
             if atr['FILE_TYPE']=='.trans':
                 # Non-zero area in geomap_*.trans file, accurate
                 trans_rg, trans_atr = readfile.read(inps.file[0], (), 'range')
@@ -680,8 +682,8 @@ def main(argv):
                 pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
                 geo_box = box_pixel2geo(pix_box, trans_atr)
             else:
-                print 'ERROR: --footprint option only works for geomap_*.trans file.\n'
-                inps.footprint = False
+                print 'ERROR: --tight option only works for geomap_*.trans file.\n'
+                inps.tight = False
                 sys.exit(1)
 
             ## from LAT/LON_REF*, which is not accurate

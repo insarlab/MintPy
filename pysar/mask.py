@@ -193,7 +193,7 @@ def main(argv):
 
     # masking
     if inps.parallel:
-        num_cores = multiprocessing.cpu_count()
+        num_cores = min(multiprocessing.cpu_count(), len(inps.file))
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(mask_file)(File, inps.mask_file, inps_dict=vars(inps)) for File in inps.file)
     else:

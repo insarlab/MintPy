@@ -524,7 +524,7 @@ def main(argv):
 
     ##### Seeding file by file
     if inps.parallel:
-        num_cores = multiprocessing.cpu_count()
+        num_cores = min(multiprocessing.cpu_count(), len(inps.file))
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(seed_file_inps)(file, inps) for file in inps.file)
     else:

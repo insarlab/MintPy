@@ -20,6 +20,7 @@ import sys
 import argparse
 
 import h5py
+import numpy as np
 from joblib import Parallel, delayed
 import multiprocessing
 
@@ -50,14 +51,11 @@ def geomap4subset_radar_file(radar_atr, geomap_file):
 
 
 ######################  Geocode one data  ########################
-def geocode_data_roipac(data,geomapFile,outname):
+def geocode_data_roipac(data, atr, geomapFile, outname):
 
     print 'writing to roi_pac unw file format'
     writefile.write_float32(data, outname)
-    f = open(outname+'.rsc','w')
-    f.write('FILE_LENGTH       '+str(data.shape[0])+'\n')
-    f.write('WIDTH             '+str(data.shape[1])+'\n')
-    f.close()
+    writefile.write_roipac_rsc(atr, outname+'.rsc')
  
     geoCmd='geocode.pl '+geomapFile+' '+outname+' geo_'+outname
     print geoCmd
@@ -82,6 +80,11 @@ def geocode_attribute(atr_rdr, atr_geo, transFile=None):
     for key, value in atr_rdr.iteritems():  atr[key] = value
     atr['WIDTH']       = atr_geo['WIDTH']
     atr['FILE_LENGTH'] = atr_geo['FILE_LENGTH']
+    atr['YMIN'] = atr_geo['YMIN']
+    atr['YMAX'] = atr_geo['YMAX']
+    atr['XMIN'] = atr_geo['XMIN']
+    atr['XMAX'] = atr_geo['XMAX']
+    
     
     # Reference point from y/x to lat/lon
     if transFile and ('ref_x' and 'ref_y' in atr_rdr.keys()):
@@ -90,7 +93,7 @@ def geocode_attribute(atr_rdr, atr_geo, transFile=None):
         ref_lat, ref_lon = ut.radar2glob(ref_y, ref_x, transFile, atr_rdr)[0:2]
         atr['ref_lat'] = ref_lat
         atr['ref_lon'] = ref_lon
-
+        print 'update reference point info in lat/lon'
     return atr
 
 
@@ -135,8 +138,8 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
                 atr = h5[k][epoch].attrs
                 
                 roipac_outname = infile_base+'_'+epoch+roipac_ext
-                geo_amp, geo_data, geo_rsc = geocode_data_roipac(data, geomap_file, roipac_outname)
-                geo_atr = geocode_attribute(atr, geo_rsc)
+                geo_amp, geo_data, geo_rsc = geocode_data_roipac(data, atr, geomap_file, roipac_outname)
+                geo_atr = geocode_attribute(atr, geo_rsc, geomap_file)
                 
                 gg = group.create_group('geo_'+epoch)
                 dset = gg.create_dataset('geo_'+epoch, data=geo_data, compression='gzip')
@@ -149,10 +152,10 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
                 data = h5[k].get(epoch)[:]
                 
                 roipac_outname = infile_base+'_'+epoch+roipac_ext
-                geo_amp, geo_data, geo_rsc = geocode_data_roipac(data, geomap_file, roipac_outname)
+                geo_amp, geo_data, geo_rsc = geocode_data_roipac(data, atr, geomap_file, roipac_outname)
                 
                 dset = group.create_dataset(epoch, data=geo_data, compression='gzip')
-            geo_atr = geocode_attribute(atr, geo_rsc)
+            geo_atr = geocode_attribute(atr, geo_rsc, geomap_file)
             for key, value in geo_atr.iteritems():
                 group.attrs[key] = value
                 
@@ -164,8 +167,8 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
         data, atr = readfile.read(infile)
         roipac_outname = infile_base+roipac_ext
         
-        geo_amp, geo_data, geo_rsc = geocode_data_roipac(data, geomap_file, roipac_outname)
-        geo_atr = geocode_attribute(atr, geo_rsc)
+        geo_amp, geo_data, geo_rsc = geocode_data_roipac(data, atr, geomap_file, roipac_outname)
+        geo_atr = geocode_attribute(atr, geo_rsc, geomap_file)
         
         writefile.write(geo_data, geo_atr, outfile)
 
@@ -230,7 +233,7 @@ def main(argv):
 
     # Geocoding
     if inps.parallel:
-        num_cores = multiprocessing.cpu_count()
+        num_cores = min(multiprocessing.cpu_count(), len(inps.file))
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(geocode_file_roipac)(file, inps.lookup_file) for file in inps.file)
     else:

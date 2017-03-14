@@ -89,15 +89,20 @@ def write(*args):
         else: print 'Un-supported file type: '+ext; return 0;
   
         ##### Write .rsc File
-        digits = max([len(key) for key in atr.keys()]+[0])
-        f = '{0:<%d}    {1}'%(digits)
+        write_roipac_rsc(atr, outname+'.rsc')
         
-        frsc = open(outname+'.rsc','w')
-        for key in atr.keys():
-            frsc.write(f.format(str(key), str(atr[key]))+'\n')
-        frsc.close()
-  
         return outname
+
+
+def write_roipac_rsc(atr, outname):
+    '''Write attribute dict into ROI_PAC .rsc file.'''
+    digits = max([len(key) for key in atr.keys()]+[0])
+    f = '{0:<%d}    {1}'%(digits)
+    frsc = open(outname,'w')
+    for key in atr.keys():
+        frsc.write(f.format(str(key), str(atr[key]))+'\n')
+    frsc.close()
+    return outname
 
 
 def write_float32(*args):

@@ -109,7 +109,7 @@ def main(argv):
 
     ############################## Removing Phase Ramp #######################################
     if inps.parallel:
-        num_cores = multiprocessing.cpu_count()
+        num_cores = min(multiprocessing.cpu_count(), len(inps.file))
         print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(rm.remove_surface)(file, inps.surface_type, inps.mask_file, ysub=inps.ysub)\
                                    for file in inps.file)
