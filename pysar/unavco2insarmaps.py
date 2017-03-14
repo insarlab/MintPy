@@ -53,7 +53,8 @@ needed_attributes = {
     "scene_footprint", "downloadUnavcoUrl", "referencePdfUrl", "areaName", "referenceText"    
 }
 # ---------------------------------------------------------------------------------------
-def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name, region_file_name):
+# convert h5 file to json and upload it. folder_name == unavco_name
+def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name):
 
 # search for region file - if exist get first line which is region name
     region_file = None
@@ -79,6 +80,13 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     chunk_num = 1
     point_num = 0
     CHUNK_SIZE = 20000
+
+    attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
+    attributesController.connect()
+    if attributesController.table_exists(folder_name.lower()):
+        print "Dataset already exists... attempting to delete it"
+        attributesController.remove_dataset(folder_name, project_name)
+    attributesController.close()
 
     # outer loop increments row = longitude, inner loop increments column = latitude
     for (row, col), value in np.ndenumerate(timeseries_datasets[dataset_keys[0]]):
@@ -188,7 +196,6 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
 
     # put attributes in own table. TODO: remove old way of adding attributes
     # via array
-    attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
     attributesController.connect()
 
     for k in attributes:
@@ -261,7 +268,6 @@ def main():
     path_name_and_extension = os.path.basename(file_name).split(".")
     path_name = path_name_and_extension[0]
     extension = path_name_and_extension[1]
-    region_file_name = path_name + '_region.txt'
 # ---------------------------------------------------------------------------------------
 # start clock to track how long conversion process takes
     start_time = time.clock()
@@ -324,7 +330,7 @@ def main():
         print json_path + " already exists"
 
 # read and convert the datasets, then write them into json files and insert into database
-    convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name, region_file_name)
+    convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name)
 
 # run tippecanoe command to get mbtiles file and then delete the json files to save space
     os.chdir(os.path.abspath(json_path))
