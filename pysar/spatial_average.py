@@ -44,6 +44,7 @@ def main(argv):
     print '\n*************** Spatial Average ******************'
 
     if inps.mask_file:
+        print 'reading mask file: '+inps.mask_file
         mask, mask_atr = readfile.read(inps.mask_file)
     else:
         mask = None

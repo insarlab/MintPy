@@ -245,10 +245,11 @@ def main(argv):
     width  = data.shape[1]
     try:fig_size
     except:
-        fig_size_0 = 6.0           ## min figure dimension: 6.0
-        ratio = float(length)/float(width)
-        fig_size = [fig_size_0,fig_size_0*ratio]
-    print 'figure size:  %.1f, %.1f'%(fig_size[0],fig_size[1])
+        # Auto size proportional to data size, with min len = 8.0 inches
+        fig_size = list(data.shape)
+        fig_scale = 8.0/min(fig_size)
+        fig_size = [np.rint(i*fig_scale) for i in fig_size]
+    print 'figure size: '+str(fig_size)
     ccmap = plt.get_cmap(color_map)
     fig = plt.figure(figsize=fig_size,frameon=False)
     ax = fig.add_axes([0., 0., 1., 1.])

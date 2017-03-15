@@ -215,12 +215,12 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
         row_num : number of subplots in row    direction per figure
         col_num : number of subplots in column direction per figure
     '''
-    subplot_num_per_fig = int(float(subplot_num)/float(fig_num) + 0.5)
+    subplot_num_per_fig = np.ceil(float(subplot_num)/float(fig_num))
 
     data_shape_ratio = float(data_shape[0])/float(data_shape[1])
     num_ratio = fig_size[1]/fig_size[0]/data_shape_ratio
-    col_num = int(np.sqrt(subplot_num_per_fig/num_ratio) + 0.5)
-    row_num = int(np.sqrt(subplot_num_per_fig*num_ratio) + 0.5)
+    col_num = np.ceil(np.sqrt(subplot_num_per_fig/num_ratio)).astype(int)
+    row_num = np.ceil(np.sqrt(subplot_num_per_fig*num_ratio)).astype(int)
 
     return row_num, col_num
 
@@ -734,7 +734,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
                 gc = pyproj.Geod(a=m.rmajor,b=m.rminor) 
                 az12, az21, wid_dist = gc.inv(inps.geo_box[0], inps.geo_box[3], inps.geo_box[2], inps.geo_box[3])
                 inps.scalebar = [inps.geo_box[3]+0.1*(inps.geo_box[1]-inps.geo_box[3]),\
-                             inps.geo_box[0]+0.2*(inps.geo_box[2]-inps.geo_box[0]), round_to_1(wid_dist)*0.1]
+                             inps.geo_box[0]+0.2*(inps.geo_box[2]-inps.geo_box[0]), round_to_1(wid_dist)*0.2]
             m.drawscale(inps.scalebar[0], inps.scalebar[1], inps.scalebar[2], ax=ax, font_size=inps.font_size)
 
         # Lat Lon labels
@@ -817,7 +817,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "5%", pad="3%")
     cbar = plt.colorbar(im, cax=cax, extend=cb_extend)
-    cbar.set_label(inps.disp_unit)
+    cbar.ax.tick_params(labelsize=inps.font_size)
+    cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
 
     # 3.2 Title
     if not inps.fig_title:
@@ -986,14 +987,14 @@ def cmdLineParse(argv):
 
     ##### Figure 
     fig_group = parser.add_argument_group('Figure','Figure settings for display')
+    fig_group.add_argument('-s','--fontsize', dest='font_size', type=int, help='font size')
+    fig_group.add_argument('--dpi', dest='fig_dpi', type=int, default=150, help='DPI - dot per inch - for display/write')
     fig_group.add_argument('-r','--row', dest='fig_row_num', type=int, default=1, help='subplot number in row')
     fig_group.add_argument('-p','--col', dest='fig_col_num', type=int, default=1, help='subplot number in column')
     fig_group.add_argument('--noaxis', dest='disp_axis', action='store_false', help='do not display axis')
     fig_group.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
-    fig_group.add_argument('--figtitle', dest='fig_title', help='Title shown in the figure.')
     fig_group.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
-    fig_group.add_argument('-s','--font-size', dest='font_size', type=int, help='font size')
-    fig_group.add_argument('--dpi', dest='fig_dpi', type=int, default=150, help='DPI - dot per inch - for display/write')
+    fig_group.add_argument('--figtitle', dest='fig_title', help='Title shown in the figure.')
     fig_group.add_argument('--figsize', dest='fig_size', type=float, nargs=2,\
                             help='figure size in inches - width and length')
     fig_group.add_argument('--figext', dest='fig_ext',\
@@ -1134,7 +1135,12 @@ def main(argv):
         
         # Figure Setting 
         if not inps.font_size:  inps.font_size = 16
-        if not inps.fig_size:   inps.fig_size = [12.5,8.0]
+        if not inps.fig_size:
+            # Auto size proportional to data size, with min len = 8.0 inches
+            inps.fig_size = list(data.shape)
+            fig_scale = 8.0/min(inps.fig_size)
+            inps.fig_size = [np.rint(i*fig_scale) for i in inps.fig_size]
+            #inps.fig_size = [12.5,8.0]
         print 'create figure in size: '+str(inps.fig_size)
         fig = plt.figure(figsize=inps.fig_size)
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
@@ -1169,7 +1175,7 @@ def main(argv):
             else:
                 fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
             inps.fig_row_num, inps.fig_col_num = auto_row_col_num(epochNum, data_shape, fig_size4plot, inps.fig_num)
-        inps.fig_num = int(np.ceil(float(epochNum) / float(inps.fig_row_num*inps.fig_col_num)))
+        inps.fig_num = np.ceil(float(epochNum) / float(inps.fig_row_num*inps.fig_col_num)).astype(int)
         print 'dataset number: '+str(epochNum)
         print 'row     number: '+str(inps.fig_row_num)
         print 'column  number: '+str(inps.fig_col_num)
@@ -1329,7 +1335,8 @@ def main(argv):
                 fig.subplots_adjust(right=0.95)
                 cax = fig.add_axes([0.955, 0.25, 0.015, 0.5])
                 cbar = fig.colorbar(im, cax=cax, extend=cb_extend)
-                cbar.set_label(inps.disp_unit)
+                cbar.ax.tick_params(labelsize=inps.font_size)
+                cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
 
             # Save Figure
             if inps.save_fig:
