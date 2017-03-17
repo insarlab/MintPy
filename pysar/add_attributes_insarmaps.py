@@ -5,6 +5,7 @@ import sys
 import getopt
 import os
 import argparse
+import pysar._readfile as readfile
 
 class InsarDatabaseController:
     def __init__(self, username, password, host, db):
@@ -108,24 +109,6 @@ class InsarDatabaseController:
 def usage():
     print "add_atributes.py -u USERNAME -p PASSWORD -h HOST -d DB -f FILE"
 
-def parse_file_for_attributes(file):
-    attributes_dict = {}
-
-    with open(file) as f:
-        file_contents = f.readlines()
-
-        for line in file_contents:
-            if line != '\n':
-                key_value = line.split("=") # index 0 is key, 1 is value
-
-                if key_value[1][-1] == '\n':
-                    key_value[1] = key_value[1][:-1]
-                    key_value[1] = key_value[1].lstrip() # take out leading whitespace
-
-                attributes_dict[key_value[0]] = key_value[1]
-
-    return attributes_dict
-
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Edit attributes of an insarmaps dataset')
@@ -155,7 +138,7 @@ def main(argv):
 
     project_name = working_dir.split("/")[-2]
     attributes_file = working_dir + "add_Attribute.txt"
-    attributes = parse_file_for_attributes(attributes_file)
+    attributes = readfile.read_template(attributes_file)
     dbController = InsarDatabaseController(username, password, host, db)    
     dbController.connect()
 
