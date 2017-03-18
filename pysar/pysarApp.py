@@ -307,6 +307,10 @@ def main(argv):
     if not os.path.isdir(inps.work_dir):   os.mkdir(inps.work_dir)
     os.chdir(inps.work_dir)
     print "Go to work directory: "+inps.work_dir
+    
+    cpCmd = 'cp '+inps.template_file+' .'
+    print cpCmd
+    os.system(cpCmd)
 
 
     #########################################
