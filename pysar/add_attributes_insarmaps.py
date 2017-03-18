@@ -37,7 +37,7 @@ class InsarDatabaseController:
         return self.cursor.fetchall()
 
     def get_dataset_id(self, dataset):
-        sql = "SELECT id from area WHERE area.project_name = '" + dataset + "'"
+        sql = "SELECT id from area WHERE area.unavco_name = '" + dataset + "'"
         self.cursor.execute(sql)
 
         return self.cursor.fetchone()[0]
@@ -91,19 +91,24 @@ class InsarDatabaseController:
         except Exception, e:
             pass
 
-    def remove_dataset(self, unavco_name, project_name):
-        # try to drop table first in case extra_attributes or area table isn't populated
-        sql = "DROP TABLE " + unavco_name.lower()
+    def remove_point_table_if_there(self, unavco_name): 
+        sql = "DROP TABLE IF EXISTS " + unavco_name.lower()
         self.cursor.execute(sql)
         self.con.commit()
 
+    def remove_dataset_if_there(self, unavco_name):
+        # try to drop table first in case extra_attributes or area table isn't populated
+        self.remove_point_table_if_there(unavco_name)
         # then try to delete from area and extra_attributes
-        dataset_id = self.get_dataset_id(project_name)
-        sql = "DELETE from area WHERE id = " + str(dataset_id)
-        self.cursor.execute(sql)
-        sql = "DELETE from extra_attributes WHERE area_id = " + str(dataset_id)
-        self.cursor.execute(sql)
-        self.con.commit()
+        try:
+            dataset_id = self.get_dataset_id(unavco_name)
+            sql = "DELETE from area WHERE id = " + str(dataset_id)
+            self.cursor.execute(sql)
+            sql = "DELETE from extra_attributes WHERE area_id = " + str(dataset_id)
+            self.cursor.execute(sql)
+            self.con.commit()
+        except Exception, e:
+            pass
             
 
 def usage():
@@ -136,7 +141,7 @@ def main(argv):
     if working_dir[-1] != "/":
         working_dir += "/"
 
-    project_name = working_dir.split("/")[-2]
+    unavco_name = parseArgs.unavco_name
     attributes_file = working_dir + "add_Attribute.txt"
     attributes = readfile.read_template(attributes_file)
     dbController = InsarDatabaseController(username, password, host, db)    
@@ -144,7 +149,7 @@ def main(argv):
 
     for key in attributes:
         print "Setting attribute " + key + " to " + attributes[key]
-        dbController.add_attribute(project_name, key, attributes[key])
+        dbController.add_attribute(unavco_name, key, attributes[key])
 
     dbController.index_table_on("extra_attributes", "area_id", "area_id_idx")
     dbController.close()
