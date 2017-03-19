@@ -26,21 +26,36 @@ def build_parser():
 
     return parser
 
-def upload_json(folder_name):
+def get_file_name(fullPath):
+    pathComponents = fullPath.split("/")
+    for name in reversed(pathComponents):
+        if name != "":
+            return name
+
+    return None
+
+def upload_json(folder_path):
     global dbUsername, dbPassword, dbHost
 
-    for json_chunk in os.listdir(folder_name):
+    folder_name = get_file_name(folder_path)
+    for json_chunk in os.listdir(folder_path):
 # insert json file to pgsql using ogr2ogr - folder_name == area unavco_name
-        command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + folder_name + '" ' + folder_name + '/' + json_chunk
+        command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + folder_name + '" ' + folder_path + '/' + json_chunk
 
         res = os.system(command)
-        print command
 
         if res != 0:
             print "Error inserting into the database. This is most often due to running out of Memory (RAM), or incorrect database credentials... quitting"
             sys.exit()
 
         print "Inserted " + json_chunk + " to db"
+
+    # create index
+    print "Creating index on " + folder_name
+    attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
+    attributesController.connect()
+    attributesController.index_table_on(area, "p", None)
+    attributesController.close()
 
 def upload_mbtiles(fileName, username, password):
     curl = pycurl.Curl()
@@ -71,20 +86,20 @@ def upload_mbtiles(fileName, username, password):
 
 def main():
     global dbUsername, dbPassword, dbHost
-
     parser = build_parser()
     parseArgs = parser.parse_args()
     dbUsername = parseArgs.user
     dbPassword = parseArgs.password
     dbHost = parseArgs.host
-    folder_name = parseArgs.folder
+    folder_path = parseArgs.folder
 
     if parseArgs.folder:
         attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
+        folder_name = get_file_name(folder_path)
         attributesController.connect()
-        if attributesController.table_exists(folder_name):
+        if attributesController.table_exists(folder_name.lower()):
             print "Deleting old timeseries table"
-            attributesController.remove_point_table_if_there(folder_name)
+            attributesController.remove_point_table_if_there(folder_name.lower())
         attributesController.close()
  
         print "Uploading json chunks..."
@@ -94,7 +109,7 @@ def main():
         if not parseArgs.server_user or not parseArgs.server_password:
             print "Error: credentials for the insarmaps server not provided"
         else:
-            print "Uploading mbtilesi..."
+            print "Uploading mbtiles..."
             upload_mbtiles(parseArgs.mbtiles, parseArgs.server_user, parseArgs.server_password)
 
 if __name__ == '__main__':
