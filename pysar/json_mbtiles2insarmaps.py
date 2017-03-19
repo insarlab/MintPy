@@ -37,10 +37,10 @@ def get_file_name(fullPath):
 def upload_json(folder_path):
     global dbUsername, dbPassword, dbHost
 
-    folder_name = get_file_name(folder_path)
+    table_name = get_file_name(folder_path)
     for json_chunk in os.listdir(folder_path):
-# insert json file to pgsql using ogr2ogr - folder_name == area unavco_name
-        command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + folder_name + '" ' + folder_path + '/' + json_chunk
+        # insert json file to pgsql using ogr2ogr
+        command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + table_name + '" ' + folder_path + '/' + json_chunk
 
         res = os.system(command)
 
@@ -51,10 +51,10 @@ def upload_json(folder_path):
         print "Inserted " + json_chunk + " to db"
 
     # create index
-    print "Creating index on " + folder_name
+    print "Creating index on " + table_name
     attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
     attributesController.connect()
-    attributesController.index_table_on(area, "p", None)
+    attributesController.index_table_on(table_name, "p", None)
     attributesController.close()
 
 def upload_mbtiles(fileName, username, password):
@@ -95,11 +95,11 @@ def main():
 
     if parseArgs.folder:
         attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
-        folder_name = get_file_name(folder_path)
+        table_name = get_file_name(folder_path)
         attributesController.connect()
-        if attributesController.table_exists(folder_name.lower()):
+        if attributesController.table_exists(table_name.lower()):
             print "Deleting old timeseries table"
-            attributesController.remove_point_table_if_there(folder_name.lower())
+            attributesController.remove_point_table_if_there(table_name.lower())
         attributesController.close()
  
         print "Uploading json chunks..."
