@@ -1,5 +1,13 @@
 ## Welcome to PySAR!
 
+[![Build Status](http://img.shields.io/travis/doge/wow.svg)](https://github.com/yunjunz/PySAR)
+[![Dependency Status](http://img.shields.io/gemnasium/doge/wow.svg)](https://github.com/yunjunz/PySAR)
+[![Coverage Status](http://img.shields.io/coveralls/doge/wow.svg)](https://github.com/yunjunz/PySAR)
+[![Code Climate](http://img.shields.io/codeclimate/github/doge/wow.svg)](https://github.com/yunjunz/PySAR)
+[![Gem Version](http://img.shields.io/gem/v/suchgem.svg)](https://github.com/yunjunz/PySAR)
+[![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/yunjunz/PySAR)
+[![Badges](http://img.shields.io/:badges-7/7-ff6799.svg)](https://github.com/yunjunz/PySAR)
+
 PySAR is an InSAR (Interferometric Synthetic Aperture Radar) time series package to produce three dimensional (space and time) ground displacement from InSAR data. To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path   
 
 Depending on your shell you may use commands such as the following examples to setup pysar:   
