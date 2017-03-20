@@ -335,18 +335,15 @@ def read_template(File, delimiter='='):
         c = [i.strip() for i in line.split(delimiter, 1)]  #split on the 1st occurrence of delimiter
         if len(c) < 2 or line.startswith('%') or line.startswith('#'):
             if line.startswith(">"):
-                print line
                 plotAttributeDict = {}
                 insidePlotObject = True
             elif insidePlotObject:
                 # just came from being inside plot object, but now we are outside
                 insidePlotObject = False
                 plotAttributes.append(plotAttributeDict)
-                print line
             next #ignore commented lines or those without variables
         else:
             atrName  = c[0]
-            print line + " " + str(insidePlotObject)  + " " + str(is_plot_attribute(atrName))
             atrValue = str.replace(c[1],'\n','').split("#")[0].strip()
             atrValue = check_variable_name(atrValue)
 
@@ -358,7 +355,6 @@ def read_template(File, delimiter='='):
                     insidePlotObject = False
                     plotAttributes.append(plotAttributeDict)
                     template_dict[atrName] = atrValue
-                    print line
 
             else:
                 template_dict[atrName] = atrValue
