@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-from pysar.add_attributes_insarmaps import InsarDatabaseController
+from pysar.add_attribute_insarmaps import InsarDatabaseController
 import os
 import pycurl
 from cStringIO import StringIO
