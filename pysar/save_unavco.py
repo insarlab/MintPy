@@ -63,16 +63,17 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     unavco_meta_dict['last_date']  = dt.strptime(dateList[-1],'%Y%m%d').isoformat()[0:10]
 
     ## footprint
-    lats = [pysar_meta_dict['LAT_REF1'], pysar_meta_dict['LAT_REF3'], pysar_meta_dict['LAT_REF4'],\
-            pysar_meta_dict['LAT_REF2'], pysar_meta_dict['LAT_REF1']]
     lons = [pysar_meta_dict['LON_REF1'], pysar_meta_dict['LON_REF3'], pysar_meta_dict['LON_REF4'],\
             pysar_meta_dict['LON_REF2'], pysar_meta_dict['LON_REF1']]
-    unavco_meta_dict['scene_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lat,lon in zip(lats,lons)]) + "))"
+    lats = [pysar_meta_dict['LAT_REF1'], pysar_meta_dict['LAT_REF3'], pysar_meta_dict['LAT_REF4'],\
+            pysar_meta_dict['LAT_REF2'], pysar_meta_dict['LAT_REF1']]
+    unavco_meta_dict['scene_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
 
     ## processing info
     unavco_meta_dict['processing_type']     = pysar_meta_dict['processing_type']
     unavco_meta_dict['processing_software'] = pysar_meta_dict['processing_software']
     unavco_meta_dict['history'] = dt.utcnow().isoformat()[0:10]
+
 
     #################################
     ##### Recommended metadata
@@ -83,6 +84,22 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     else:                                        unavco_meta_dict['look_direction'] = 'L'
     unavco_meta_dict['prf']         = float(pysar_meta_dict['PRF'])
     unavco_meta_dict['wavelength']  = float(pysar_meta_dict['WAVELENGTH'])
+
+
+    #################################
+    ##### insarmaps metadata
+    #################################
+    # footprint for data coverage
+    if 'X_FIRST' in pysar_meta_dict.keys():
+        lon0 = float(pysar_meta_dict['X_FIRST'])
+        lat0 = float(pysar_meta_dict['Y_FIRST'])
+        lon1 = lon0 + float(pysar_meta_dict['X_STEP'])*int(pysar_meta_dict['WIDTH'])
+        lat1 = lat0 + float(pysar_meta_dict['Y_STEP'])*int(pysar_meta_dict['FILE_LENGTH'])
+        lons = [str(lon0), str(lon1), str(lon1), str(lon0), str(lon0)]
+        lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
+        unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
+    else:
+        print 'Input file is not geocoded, can not calculate data_footprint without X/Y_FIRST/STEP info.'
 
     return unavco_meta_dict
 
