@@ -6,6 +6,7 @@ import getopt
 import os
 import argparse
 import pysar._readfile as readfile
+import json
 
 class InsarDatabaseController:
     def __init__(self, username, password, host, db):
@@ -128,10 +129,6 @@ class InsarDatabaseController:
         except Exception, e:
             pass
             
-
-def usage():
-    print "add_atributes.py -u USERNAME -p PASSWORD -h HOST -d DB -f FILE"
-
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Edit attributes of an insarmaps dataset')
@@ -168,7 +165,10 @@ def main(argv):
 
     for key in attributes:
         print "Setting attribute " + key + " to " + attributes[key]
-        dbController.add_attribute(unavco_name, key, attributes[key])
+        if readfile.is_plot_attribute(key):
+            dbController.add_plot_attribute(unavco_name, key, json.dumps(attributes[key]))
+        else:
+            dbController.add_attribute(unavco_name, key, attributes[key])
 
     dbController.index_table_on("extra_attributes", "area_id", "area_id_idx")
     dbController.close()

@@ -41,6 +41,7 @@ import h5py
 import numpy as np
 import xml.etree.ElementTree as ET
 from PIL import Image
+import json
 
 
 #########################################################################
@@ -310,6 +311,12 @@ def check_variable_name(path):
         path=path.replace(path.split("/")[0],p0)
     return path
 
+def is_plot_attribute(attribute):
+    tokens = attribute.split(".")
+    if tokens is None:
+        return False
+
+    return tokens[0] == "plot" and len(tokens) > 1
 
 def read_template(File, delimiter='='):
     '''Reads the template file into a python dictionary structure.
@@ -320,16 +327,48 @@ def read_template(File, delimiter='='):
         tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
     '''
     template_dict = {}
+    plotAttributeDict = {}
+    insidePlotObject = False
+    plotAttributes = []
     for line in open(File):
         line = line.strip()
         c = [i.strip() for i in line.split(delimiter, 1)]  #split on the 1st occurrence of delimiter
         if len(c) < 2 or line.startswith('%') or line.startswith('#'):
+            if line.startswith(">"):
+                print line
+                plotAttributeDict = {}
+                insidePlotObject = True
+            elif insidePlotObject:
+                # just came from being inside plot object, but now we are outside
+                insidePlotObject = False
+                plotAttributes.append(plotAttributeDict)
+                print line
             next #ignore commented lines or those without variables
         else:
             atrName  = c[0]
+            print line + " " + str(insidePlotObject)  + " " + str(is_plot_attribute(atrName))
             atrValue = str.replace(c[1],'\n','').split("#")[0].strip()
             atrValue = check_variable_name(atrValue)
-            template_dict[atrName] = atrValue
+
+            if insidePlotObject:
+                if is_plot_attribute(atrName):
+                    plotAttributeDict[atrName] = atrValue
+                else:
+                    # just came from being inside plot object, but now we are outside
+                    insidePlotObject = False
+                    plotAttributes.append(plotAttributeDict)
+                    template_dict[atrName] = atrValue
+                    print line
+
+            else:
+                template_dict[atrName] = atrValue
+
+    # what if no \n at end of file? write out last plot attributes dict
+    if insidePlotObject:
+        plotAttributes.append(plotAttributeDict)
+
+    template_dict["plotAttributes"] = json.dumps(plotAttributes)
+
     return template_dict
 
 
