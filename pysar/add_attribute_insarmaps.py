@@ -141,6 +141,7 @@ def build_parser():
     required.add_argument("-p", "--password", help="password for the insarmaps database", required=True)
     required.add_argument("--host", default=dbHost, help="postgres DB URL for insarmaps database", required=True)
     required.add_argument("-d", "--db", help="postgres database", required=True)
+    required.add_argument("-U", "--unavco_name", help="UNAVCO name of this dataset", required=True)
 
     return parser
 
