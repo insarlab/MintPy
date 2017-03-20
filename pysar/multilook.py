@@ -65,7 +65,12 @@ def multilook_attribute(atr_dict,lks_y,lks_x):
   
     ##### Update attributes
     atr['FILE_LENGTH'] = str(length_mli)
-    atr['WIDTH']       = str(width_mli)
+    atr['WIDTH'] = str(width_mli)
+    atr['XMIN'] = '0'
+    atr['YMIN'] = '0'
+    atr['XMAX'] = str(width_mli-1)
+    atr['YMAX'] = str(length_mli-1)
+    
     try:
         atr['Y_STEP'] = str(lks_y*float(atr['Y_STEP']))
         atr['X_STEP'] = str(lks_x*float(atr['X_STEP']))
@@ -74,7 +79,7 @@ def multilook_attribute(atr_dict,lks_y,lks_x):
         atr['AZIMUTH_PIXEL_SIZE'] = str(lks_y*float(atr['AZIMUTH_PIXEL_SIZE']))
         atr['RANGE_PIXEL_SIZE']   = str(lks_x*float(atr['RANGE_PIXEL_SIZE']))
     except: pass
-  
+    
     try:
         atr['ref_y'] = str(int(int(atr['ref_y'])/lks_y))
         atr['ref_x'] = str(int(int(atr['ref_x'])/lks_x))
@@ -101,7 +106,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## output file name
     if not outfile:
         ext = os.path.splitext(infile)[1]
-        outfile = os.path.splitext(infile)[0]+'_a'+str(lks_y)+'lks_r'+str(lks_x)+'lks'+ext
+        outfile = os.path.splitext(infile)[0]+'_'+str(lks_y)+'alks_'+str(lks_x)+'rlks'+ext
     print 'writing >>> '+outfile
 
     ###############################################################################

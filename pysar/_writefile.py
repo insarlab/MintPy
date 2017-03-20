@@ -94,12 +94,22 @@ def write(*args):
         return outname
 
 
-def write_roipac_rsc(atr, outname):
-    '''Write attribute dict into ROI_PAC .rsc file.'''
-    digits = max([len(key) for key in atr.keys()]+[0])
+def write_roipac_rsc(atr, outname, sorting=True):
+    '''Write attribute dict into ROI_PAC .rsc file
+    Inputs:
+        atr     - dict, attributes dictionary
+        outname - rsc file name, to which attribute is writen
+        sorting - bool, sort attributes in alphabetic order while writing
+    Output:
+        outname
+    '''
+    keyList = atr.iterkeys()
+    if sorting:
+        keyList = sorted(keyList)
+    digits = max([len(key) for key in keyList]+[0])
     f = '{0:<%d}    {1}'%(digits)
     frsc = open(outname,'w')
-    for key in atr.keys():
+    for key in keyList:
         frsc.write(f.format(str(key), str(atr[key]))+'\n')
     frsc.close()
     return outname
