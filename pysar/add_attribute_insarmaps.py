@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 
 import psycopg2
 import sys
@@ -61,10 +60,9 @@ class InsarDatabaseController:
         sql = ""
         prepared_values = None
 
-        if not self.table_exists("extra_attributes"):
-            sql = "CREATE TABLE IF NOT EXISTS extra_attributes (area_id integer, attributekey varchar, attributevalue varchar);"
-            self.cursor.execute(sql)
-            self.con.commit()
+        sql = "CREATE TABLE IF NOT EXISTS extra_attributes (area_id integer, attributekey varchar, attributevalue varchar);"
+        self.cursor.execute(sql)
+        self.con.commit()
 
         if not self.attribute_exists_for_dataset(dataset, attributekey):
             sql = "INSERT INTO extra_attributes VALUES (%s, %s, %s);"
@@ -76,6 +74,25 @@ class InsarDatabaseController:
         self.cursor.execute(sql, prepared_values)
         self.con.commit()
 
+    def add_plot_attribute(self, dataset, attributekey, plotAttributeJSON):
+        dataset_id = self.get_dataset_id(dataset)
+        sql = ""
+        prepared_values = None
+
+        sql = "CREATE TABLE IF NOT EXISTS plot_attributes (area_id integer, attributekey varchar, attributevalue json);"
+        self.cursor.execute(sql)
+        self.con.commit()
+
+        if not self.attribute_exists_for_dataset(dataset, attributekey):
+            sql = "INSERT INTO plot_attributes VALUES (%s, %s, %s);"
+            prepared_values = (str(dataset_id), attributekey, plotAttributeJSON)
+        else:
+            sql = "UPDATE plot_attributes SET attributevalue = %s WHERE area_id = %s AND attributekey = %s"
+            prepared_values = (attributevalue, str(dataset_id), plotAttributeJSON)
+
+        self.cursor.execute(sql, prepared_values)
+        self.con.commit()
+        
     def index_table_on(self, table, on, index_name):
         # can't remove single quotes from table name, so we do it manually
         sql = None
