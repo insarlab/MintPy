@@ -128,7 +128,7 @@ class Basemap2(Basemap):
         self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.0, fontsize=font_size)
         self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.0, fontsize=font_size)
         
-        return ax
+        #return ax
 
 
 ##########################################  Sub Function  ########################################
@@ -215,12 +215,12 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
         row_num : number of subplots in row    direction per figure
         col_num : number of subplots in column direction per figure
     '''
-    subplot_num_per_fig = np.ceil(float(subplot_num)/float(fig_num))
+    subplot_num_per_fig = int(float(subplot_num)/float(fig_num)+0.5)
 
     data_shape_ratio = float(data_shape[0])/float(data_shape[1])
     num_ratio = fig_size[1]/fig_size[0]/data_shape_ratio
-    col_num = np.ceil(np.sqrt(subplot_num_per_fig/num_ratio)).astype(int)
-    row_num = np.ceil(np.sqrt(subplot_num_per_fig*num_ratio)).astype(int)
+    col_num = int(np.sqrt(subplot_num_per_fig/num_ratio)+0.5)
+    row_num = int(np.sqrt(subplot_num_per_fig*num_ratio)+0.5)
 
     return row_num, col_num
 
@@ -740,7 +740,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         # Lat Lon labels
         if inps.lalo_label:
             print 'plot lat/lon labels'
-            ax = m.draw_lalo_label(inps.geo_box, ax=ax, font_size=inps.font_size)
+            m.draw_lalo_label(inps.geo_box, ax=ax, font_size=inps.font_size)
         
         # Plot Seed Point
         if inps.disp_seed and inps.seed_lalo:
@@ -752,7 +752,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         def format_coord(x,y):
             col = subset.coord_geo2radar(x, meta_dict, 'lon') - inps.pix_box[0]
             row = subset.coord_geo2radar(y, meta_dict, 'lat') - inps.pix_box[1]
-            if 0 <= col <= data.shape[1] and 0 <= row <= data.shape[0]:
+            if 0 <= col < data.shape[1] and 0 <= row < data.shape[0]:
                 z = data[row, col]
                 if inps.dem_file:
                     dem_col = subset.coord_geo2radar(x, dem_meta_dict, 'lon') - inps.dem_pix_box[0]
@@ -792,9 +792,9 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         
         # Status bar
         def format_coord(x,y):
-            col = int(x+0.5)
-            row = int(y+0.5)
-            if 0 <= col <= data.shape[1] and 0 <= row <= data.shape[0]:
+            col = int(x)
+            row = int(y)
+            if 0 <= col < data.shape[1] and 0 <= row < data.shape[0]:
                 z = data[row,col]
                 if inps.dem_file:
                     h = dem[row,col]
@@ -815,7 +815,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     else:  cb_extend='both'
 
     divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", "5%", pad="3%")
+    cax = divider.append_axes("right", "3%", pad="3%")
     cbar = plt.colorbar(im, cax=cax, extend=cb_extend)
     cbar.ax.tick_params(labelsize=inps.font_size)
     cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
@@ -1137,7 +1137,7 @@ def main(argv):
         if not inps.font_size:  inps.font_size = 16
         if not inps.fig_size:
             # Auto size proportional to data size, with min len = 8.0 inches
-            inps.fig_size = list(data.shape)
+            inps.fig_size = [data.shape[1]*1.1, data.shape[0]]
             fig_scale = 8.0/min(inps.fig_size)
             inps.fig_size = [np.rint(i*fig_scale) for i in inps.fig_size]
             #inps.fig_size = [12.5,8.0]
@@ -1162,6 +1162,7 @@ def main(argv):
 
     ##### Display Multiple Multiple Datasets
     else:
+        #plt.switch_backend('Agg')   #to depress the warning from tight_layout.
         ##### Figure Setting 
         if not inps.font_size:  inps.font_size = 12
         if not inps.fig_size:   inps.fig_size = [30.0,16.0]
@@ -1333,7 +1334,7 @@ def main(argv):
                 print 'show colorbar'
                 #fig.subplots_adjust(wspace=inps.fig_wid_space, hspace=inps.fig_hei_space, right=0.965)
                 fig.subplots_adjust(right=0.95)
-                cax = fig.add_axes([0.955, 0.25, 0.015, 0.5])
+                cax = fig.add_axes([0.96, 0.25, 0.01, 0.5])
                 cbar = fig.colorbar(im, cax=cax, extend=cb_extend)
                 cbar.ax.tick_params(labelsize=inps.font_size)
                 cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
