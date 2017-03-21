@@ -40,7 +40,7 @@ def upload_json(folder_path):
     table_name = get_file_name(folder_path)
     for json_chunk in os.listdir(folder_path):
         # insert json file to pgsql using ogr2ogr
-        command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + table_name + '" ' + folder_path + '/' + json_chunk
+        command = 'ogr2ogr -lco LAUNDER=NO -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + table_name + '" ' + folder_path + '/' + json_chunk
 
         res = os.system(command)
 

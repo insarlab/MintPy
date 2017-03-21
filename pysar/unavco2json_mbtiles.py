@@ -196,8 +196,8 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     attributesController.connect()
 
     for k in attributes:
+        v = attributes[k]
         if k in needed_attributes:
-            v = attributes[k]
             attributesController.add_attribute(folder_name, k, v)
         elif k == "plotAttributes":
             attributesController.add_plot_attribute(folder_name, k, v)
