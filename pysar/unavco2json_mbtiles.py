@@ -199,6 +199,8 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
         if k in needed_attributes:
             v = attributes[k]
             attributesController.add_attribute(folder_name, k, v)
+        elif k == "plotAttributes":
+            attributesController.add_plot_attribute(folder_name, k, v)
 
     # create index to speed up queries:
     print "Creating index"
