@@ -123,6 +123,19 @@ class InsarDatabaseController:
         sql = 'DROP TABLE IF EXISTS "' + unavco_name + '"'
         self.cursor.execute(sql)
         self.con.commit()
+        
+    def create_area_table_if_not_exists(self):
+        # create area table if not exist - limit for number of dates is 2    00, limt for number of attribute keys/values is 100
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS area ( unavco_name varchar, project_name varchar, longitude double precision, latitude double precision, country varchar, region varchar, numchunks integer, attributekeys varchar[100], attributevalues varchar[100], stringdates varchar[200], decimaldates double precision[200] );")
+        self.con.commit()
+
+    def insert_dataset_into_area_table(self, area, project_name,
+    mid_long, mid_lat, country, region, chunk_num, attribute_keys,
+    attribute_values, string_dates_sql, decimal_dates_sql):
+        # put dataset into area table
+        query = "INSERT INTO area VALUES (" + "'" + area + "','" + project_name + "','" + str(mid_long) + "','" + str(mid_lat) + "','" + country + "    ','" + region + "','" + str(chunk_num) + "','" + attribute_keys + "','" +     attribute_values + "','" + string_dates_sql + "','" + decimal_dates_sql +     "')"
+        self.cursor.execute(query)
+        self.con.commit()
 
     def remove_dataset_if_there(self, unavco_name):
         # try to drop table first in case extra_attributes or area table isn't populated

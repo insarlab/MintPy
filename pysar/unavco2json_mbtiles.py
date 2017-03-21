@@ -14,6 +14,7 @@ import getopt
 from pysar.add_attribute_insarmaps import InsarDatabaseController
 from pysar.mask import mask_matrix
 import argparse
+import cPickle
 
 # ex: python Converter_unavco.py Alos_SM_73_2980_2990_20070107_20110420.h5
 
@@ -22,9 +23,6 @@ import argparse
 # ---------------------------------------------------------------------------------------
 # FUNCTIONS
 # ---------------------------------------------------------------------------------------
-dbUsername = "INSERT"
-dbPassword = "INSERT"
-dbHost = "INSERT"
 # returns a dictionary of datasets that are stored in memory to speed up h5 read process
 def get_date(date_string): 
     year = int(date_string[0:4])
@@ -52,6 +50,10 @@ needed_attributes = {
     "X_FIRST", "atmos_correct_method", "last_date", "first_frame", "frame", "Y_STEP", "history",
     "scene_footprint", "downloadUnavcoUrl", "referencePdfUrl", "areaName", "referenceText"    
 }
+
+def serialize_dictionary(dictionary, fileName):
+    with open(fileName, "w") as file:
+        cPickle.dump(dictionary, file)
 # ---------------------------------------------------------------------------------------
 # convert h5 file to json and upload it. folder_name == unavco_name
 def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name):
@@ -79,12 +81,6 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     chunk_num = 1
     point_num = 0
     CHUNK_SIZE = 20000
-
-    attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
-    attributesController.connect()
-    print "Clearing old dataset, if it is there"
-    attributesController.remove_dataset_if_there(folder_name)
-    attributesController.close()
 
     # iterate through h5 file timeseries
     for (row, col), value in np.ndenumerate(timeseries_datasets[dataset_keys[0]]):
@@ -130,6 +126,9 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     # write the last chunk that might be smaller than chunk_size
     make_json_file(chunk_num, siu_man, dataset_keys, json_path, folder_name)
 
+    # dictionary to contain metadata needed by db to be written to a file
+    # and then be read by json_mbtiles2insarmaps.py
+    insarmapsMetadata = {}
     # calculate mid lat and long of dataset - then use google python lib to get country
     mid_long = x_first + ((num_columns/2) * x_step)
     mid_lat = y_first + ((num_rows/2) * y_step)
@@ -152,7 +151,6 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     for d in decimal_dates:
         decimal_dates_sql += (str(d) + ",")
     decimal_dates_sql = decimal_dates_sql[:len(decimal_dates_sql) - 1] + '}'
-
     # add keys and values to area table. TODO: this will be removed eventually
     # and all attributes will be put in extra_attributes table
     attribute_keys = '{'
@@ -166,48 +164,22 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     attribute_keys = attribute_keys[:len(attribute_keys)-1] + '}'
     attribute_values = attribute_values[:len(attribute_values)-1] + '}'
 
-    try:    # connect to databse
-        con = psycopg2.connect("dbname='pgis' user='" + dbUsername + "' host='" + dbHost + "' password='" + dbPassword + "'")
-        cur = con.cursor()
-        # create area table if not exist - limit for number of dates is 200, limt for number of attribute keys/values is 100
-        cur.execute("CREATE TABLE IF NOT EXISTS area ( unavco_name varchar, project_name varchar, longitude double precision, latitude double precision, country varchar, region varchar, numchunks integer, attributekeys varchar[100], attributevalues varchar[100], stringdates varchar[200], decimaldates double precision[200] );")
-        con.commit()
-        print 'created area table'
-    except Exception, e:
-        print "unable to connect to the database"
-        print e
-        sys.exit()
-
-    # put dataset into area table
-    try:
-        con = psycopg2.connect("dbname='pgis' user='" + dbUsername + "' host='" + dbHost + "' password='" + dbPassword + "'")
-        cur = con.cursor()
-        query = "INSERT INTO area VALUES (" + "'" + area + "','" + project_name + "','" + str(mid_long) + "','" + str(mid_lat) + "','" + country + "','" + region + "','" + str(chunk_num) + "','" + attribute_keys + "','" + attribute_values + "','" + string_dates_sql + "','" + decimal_dates_sql + "')"
-        cur.execute(query)
-        con.commit()
-        con.close()
-    except Exception, e:
-        print "error inserting into area"
-        print e
-        sys.exit()
-
-    # put attributes in own table. TODO: remove old way of adding attributes
-    # via array
-    attributesController.connect()
-
-    for k in attributes:
-        v = attributes[k]
-        if k in needed_attributes:
-            attributesController.add_attribute(folder_name, k, v)
-        elif k == "plotAttributes":
-            attributesController.add_plot_attribute(folder_name, k, v)
-
-    # create index to speed up queries:
-    print "Creating index"
-    attributesController.index_table_on(area, "p", None)
-    attributesController.close()
-    print "Done creating index"
-    
+    # write out metadata to json file
+    insarmapsMetadata["area"] = area
+    insarmapsMetadata["project_name"] = project_name
+    insarmapsMetadata["mid_long"] = mid_long
+    insarmapsMetadata["mid_lat"] = mid_lat
+    insarmapsMetadata["country"] = country
+    insarmapsMetadata["region"] = region
+    insarmapsMetadata["chunk_num"] = chunk_num
+    insarmapsMetadata["attribute_keys"] = attribute_keys
+    insarmapsMetadata["attribute_values"] = attribute_values
+    insarmapsMetadata["string_dates_sql"] = string_dates_sql
+    insarmapsMetadata["decimal_dates_sql"] = decimal_dates_sql
+    insarmapsMetadata["attributes"] = attributes
+    insarmapsMetadata["needed_attributes"] = needed_attributes
+    metadataFilePath = json_path + "/metadata.pickle" 
+    serialize_dictionary(insarmapsMetadata, metadataFilePath)
 # ---------------------------------------------------------------------------------------
 # create a json file out of siu man array
 # then put json file into directory named after the h5 file
@@ -235,9 +207,6 @@ def build_parser():
     parser.add_argument("-m", "--mask", help="mask dataset before ingestion", action="store_true", required=False)
     required = parser.add_argument_group("required arguments")
     required.add_argument("-f", "--file", help="unavco file to ingest", required=True)
-    required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
-    required.add_argument("-p", "--password", help="password for the insarmaps database", required=True)
-    required.add_argument("--host", default=dbHost, help="postgres DB URL for insarmaps database", required=True)
 
     return parser
 
@@ -248,10 +217,6 @@ def main():
     parser = build_parser()
     parseArgs = parser.parse_args()
     file_name = parseArgs.file
-    global dbUsername, dbPassword, dbHost
-    dbUsername = parseArgs.user
-    dbPassword = parseArgs.password
-    dbHost = parseArgs.host
 
     path_name_and_extension = os.path.basename(file_name).split(".")
     path_name = path_name_and_extension[0]
