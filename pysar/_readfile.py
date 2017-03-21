@@ -343,7 +343,7 @@ def read_template(File, delimiter='='):
                 insidePlotObject = True
             # otherwise, if previously inside attributes object, we are now outsid    e
             # unless the line is a comment
-            elif insidePlotObject and not line.startswith('%') and not line.starts.with('#'):
+            elif insidePlotObject and not line.startswith('%') and not line.startswith('#'):
                 # just came from being inside plot object, but now we are outside
                 insidePlotObject = False
                 plotAttributes.append(plotAttributeDict)
