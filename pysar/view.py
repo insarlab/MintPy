@@ -221,12 +221,13 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
     num_ratio = fig_size[1]/fig_size[0]/data_shape_ratio
     row_num = np.sqrt(subplot_num_per_fig*num_ratio)
     col_num = np.sqrt(subplot_num_per_fig/num_ratio)
-    if row_num%1 > col_num%1:
-        row_num = np.ceil(row_num)
-    else:
-        col_num = np.ceil(col_num)
-    row_num = int(row_num+0.5)
-    col_num = int(col_num+0.5)
+    while np.rint(row_num)*np.rint(col_num) < subplot_num_per_fig:
+        if row_num%1 > col_num%1:
+            row_num += 0.5
+        else:
+            col_num += 0.5
+    row_num = int(np.rint(row_num))
+    col_num = int(np.rint(col_num))
     
     return row_num, col_num
 
