@@ -243,9 +243,13 @@ UM_FILE_STRUCT='''
             DEM/             # DEM file(s) (for topographic phase and geocode)
             DOWNLOAD/        # (optional) Data downloaded from agencies
             PROCESS/         # Interferograms processed by ROI_PAC, Gamma, ISCE, ... 
+            PYSAR/           # PySAR work directory for time series analysis
+                subset/      # PySAR subset
             RAW/             # (optional) Raw SAR data untared from DOWNLOAD directory
             SLC/             # (optional) SLC SAR data after focusing from RAW directory
-            TIMESERIES/           # PySAR work directory for time series analysis
+            WEATHER/         # Weather data (e.g. PyAPS products)
+                ECMWF/
+                MERRA/
 '''
 
 def cmdLineParse():
@@ -308,9 +312,10 @@ def main(argv):
     os.chdir(inps.work_dir)
     print "Go to work directory: "+inps.work_dir
     
-    cpCmd = 'cp '+inps.template_file+' .'
-    print cpCmd
-    os.system(cpCmd)
+    if not os.path.isfile(os.path.basename(inps.template_file)):
+        cpCmd = 'cp '+inps.template_file+' .'
+        print cpCmd
+        os.system(cpCmd)
 
 
     #########################################
@@ -421,7 +426,7 @@ def main(argv):
             print '\n'+outName+' already existed, no need to re-modify network.\n'
         else:
             networkCmd = 'modify_network.py '+inps.ifgram_file+' '+inps.coherence_file+\
-                         ' --template '+inps.template_file+' --mask '+inps.mask_file+' --plot'
+                         ' --template '+inps.template_file+' --mask '+inps.mask_file+' --plot' 
             print networkCmd
             os.system(networkCmd)
         

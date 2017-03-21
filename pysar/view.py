@@ -215,13 +215,19 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
         row_num : number of subplots in row    direction per figure
         col_num : number of subplots in column direction per figure
     '''
-    subplot_num_per_fig = int(float(subplot_num)/float(fig_num)+0.5)
+    subplot_num_per_fig = int(np.ceil(float(subplot_num)/float(fig_num)))
 
     data_shape_ratio = float(data_shape[0])/float(data_shape[1])
     num_ratio = fig_size[1]/fig_size[0]/data_shape_ratio
-    col_num = int(np.sqrt(subplot_num_per_fig/num_ratio)+0.5)
-    row_num = int(np.sqrt(subplot_num_per_fig*num_ratio)+0.5)
-
+    row_num = np.sqrt(subplot_num_per_fig*num_ratio)
+    col_num = np.sqrt(subplot_num_per_fig/num_ratio)
+    if row_num%1 > col_num%1:
+        row_num = np.ceil(row_num)
+    else:
+        col_num = np.ceil(col_num)
+    row_num = int(row_num+0.5)
+    col_num = int(col_num+0.5)
+    
     return row_num, col_num
 
 
@@ -604,7 +610,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     
     # Re-wrap
     if inps.wrap and inps.disp_unit == 'radian':
-        print 're-wrapping data to [-pi, pi]'
+        #print 're-wrapping data to [-pi, pi]'
         data -= np.round(data/(2*np.pi)) * (2*np.pi)
 
     # 1.4 Scale 

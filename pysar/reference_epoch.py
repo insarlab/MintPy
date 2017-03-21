@@ -85,14 +85,17 @@ def main(argv):
     #group.attrs['DATE'] = refDate[2:8]
     group.attrs['ref_date']=refDate
   
-    try:
-        h5t['mask'].get('mask')
-        dset1 = h5t['mask'].get('mask')
-        Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-        group=h5t2.create_group('mask')
-        dset = group.create_dataset('mask', data=Mask, compression='gzip')
-    except:
-        print 'no mask in the file.'
+    #try:
+    #    h5t['mask'].get('mask')
+    #    dset1 = h5t['mask'].get('mask')
+    #    Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
+    #    group=h5t2.create_group('mask')
+    #    dset = group.create_dataset('mask', data=Mask, compression='gzip')
+    #except:
+    #    print 'no mask in the file.'
+    
+    print 'Done.'
+    return
 
 
 ##################################################################

@@ -47,8 +47,8 @@ EXAMPLE='''example:
   timeseries2velocity.py  timeseries_ECMWF_demCor_plane.h5 -t KyushuT73F2980_2990AlosD.template
   timeseries2velocity.py  timeseries.h5 -m 20080201
   timeseries2velocity.py  timeseries.h5 -m 20080201 -M 20100508
-  timeseries2velocity.py  timeseries.h5 -E 20040502,20060708,20090103
-  timeseries2velocity.py  timeseries.h5 -E drop_date.txt
+  timeseries2velocity.py  timeseries.h5 --ex 20040502 20060708 20090103
+  timeseries2velocity.py  timeseries.h5 --ex drop_date.txt
 '''
 
 TEMPLATE='''
