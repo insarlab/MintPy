@@ -39,7 +39,7 @@ DATE12_LIST='''
 EXAMPLE='''example:
   plot_network.py unwrapIfgram.h5
   plot_network.py unwrapIfgram.h5 --coherence coherence_spatialAverage.list
-  plot_network.py unwrapIfgram.h5 --coherence coherence.h5
+  plot_network.py unwrapIfgram.h5 --coherence coherence.h5 --mask Mask.h5
   plot_network.py Modified_coherence.h5 --save
   plot_network.py Modified_coherence.h5 --nodisplay
   plot_network.py Pairs.list               -b bl_list.txt
@@ -69,6 +69,7 @@ def cmdLineParse():
     coh_group.add_argument('-M', dest='disp_max', type=float, default=1.0, help='maximum coherence to display')
     coh_group.add_argument('-c','--colormap', dest='colormap', default='RdBu',\
                            help='colormap for display, i.e. RdBu, jet, ...')
+    coh_group.add_argument('--mask', dest='mask_file', help='mask file used to calculate the coherence')
 
     # Figure  Setting
     fig_group = parser.add_argument_group('Figure','Figure settings for display')
@@ -147,13 +148,18 @@ def main(argv):
                 coh_date12_list     = [i        for i in fcoh[:,0]]
             else:
                 print 'calculating average coherence value from '+inps.coherence_file
-                inps.coherence_list = ut.spatial_average(inps.coherence_file, saveList=True)
+                if inps.mask_file:
+                    mask = readfile.read(inps.mask_file)[0]
+                else:
+                    mask = None
+                inps.coherence_list = ut.spatial_average(inps.coherence_file, mask, saveList=True)
                 coh_date12_list = pnet.get_date12_list(inps.coherence_file)
         else:
             print 'reading coherence value from '+inps.coherence_file
             fcoh = np.loadtxt(inps.coherence_file, dtype=str)
             inps.coherence_list = [float(i) for i in fcoh[:,1]]
             coh_date12_list     = [i        for i in fcoh[:,0]]
+        
         # Check length of coherence file and input file
         if not set(coh_date12_list) == set(date12_list):
             print 'WARNING: input coherence list has different pairs/date12 from input file'

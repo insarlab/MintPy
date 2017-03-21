@@ -390,9 +390,9 @@ def main(argv):
             # Update Mask File
             if k == 'interferograms':
                 print 'update mask file for input '+k+' file based on '+Modified_File
-                outFile = 'Modified_Mask.h5'
-                print 'writing >>> '+outFile
-                ut.nonzero_mask(Modified_File, outFile)
+                inps.mask_file = 'Modified_Mask.h5'
+                print 'writing >>> '+inps.mask_file
+                ut.nonzero_mask(Modified_File, inps.mask_file)
             elif k == 'coherence':
                 print 'update average spatial coherence for input '+k+' file based on: '+Modified_File
                 outFile = 'Modified_average_spatial_coherence.h5'
@@ -404,6 +404,8 @@ def main(argv):
         if inps.plot:
             print '\nplot modified network and save to file.'
             plotCmd = 'plot_network.py '+Modified_File+' --coherence '+Modified_CoherenceFile+' --nodisplay'
+            if inps.mask_file:
+                plotCmd += ' --mask '+inps.mask_file
             print plotCmd
             os.system(plotCmd)
         
