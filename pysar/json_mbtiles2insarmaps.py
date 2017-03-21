@@ -13,20 +13,6 @@ dbUsername = "INSERT"
 dbPassword = "INSERT"
 dbHost = "INSERT"
 
-def build_parser():
-    dbHost = "insarmaps.rsmas.miami.edu"
-    parser = argparse.ArgumentParser(description='Convert a Unavco format     H5 file for ingestion into insarmaps.')
-    parser.add_argument("-f", "--folder", help="folder containing json to upload. The folder name will be used as the table name in the db to upload, so it should be as provided by unavco2json_mbtiles.py", required=False)
-    parser.add_argument("-U", "--server_user", help="username for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
-    parser.add_argument("-P", "--server_password", help="password for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
-    parser.add_argument("-m", "--mbtiles", help="mbtiles file to upload", required=False)
-    required = parser.add_argument_group("required arguments")
-    required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
-    required.add_argument("-p", "--password", help="password for the insarmaps database", required=True)
-    required.add_argument("--host", default=dbHost, help="postgres DB URL     for insarmaps database", required=True)
-
-    return parser
-
 def get_file_name(fullPath):
     pathComponents = fullPath.split("/")
     for name in reversed(pathComponents):
@@ -94,8 +80,6 @@ def upload_json(folder_path):
                 sys.exit()
 
             print "Inserted " + json_chunk + " to db"
-        else:
-            print "PICKLE!!!!!"
 
     # uploading metadata for area 
     upload_insarmaps_metadata(folder_path + "/metadata.pickle")
@@ -133,6 +117,21 @@ def upload_mbtiles(fileName, username, password):
     else:
         print "The server responded with code: " + str(responseCode)
 
+def build_parser():
+    dbHost = "insarmaps.rsmas.miami.edu"
+    parser = argparse.ArgumentParser(description='Convert a Unavco format     H5 file for ingestion into insarmaps.')
+    parser.add_argument("-f", "--folder", help="folder containing json to upload. The folder name will be used as the table name in the db to upload, so it should be as provided by unavco2json_mbtiles.py", required=False)
+    parser.add_argument("-U", "--server_user", help="username for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
+    parser.add_argument("-r", "--dataset_to_remove", help="UNAVCO name of dataset to remove from insarmaps website", required=False)
+    parser.add_argument("-P", "--server_password", help="password for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
+    parser.add_argument("-m", "--mbtiles", help="mbtiles file to upload", required=False)
+    required = parser.add_argument_group("required arguments")
+    required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
+    required.add_argument("-p", "--password", help="password for the insarmaps database", required=True)
+    required.add_argument("--host", default=dbHost, help="postgres DB URL     for insarmaps database", required=True)
+
+    return parser
+
 def main():
     global dbUsername, dbPassword, dbHost
     parser = build_parser()
@@ -152,6 +151,13 @@ def main():
         else:
             print "Uploading mbtiles..."
             upload_mbtiles(parseArgs.mbtiles, parseArgs.server_user, parseArgs.server_password)
+
+    if parseArgs.dataset_to_remove:
+        print "Removing " + parseArgs.dataset_to_remove
+        attributesController = InsarDatabaseController(dbUsername, dbPassword,     dbHost, 'pgis')
+        attributesController.connect()
+        attributesController.remove_dataset_if_there(parseArgs.dataset_to_remove)
+        attributesController.close()
 
 if __name__ == '__main__':
     main()
