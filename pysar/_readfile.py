@@ -330,6 +330,10 @@ def read_template(File, delimiter='='):
     plotAttributeDict = {}
     insidePlotObject = False
     plotAttributes = []
+    # the below logic for plotattributes object can be made much more simple
+    # if we assume that any plot attribute coming after a > belongs to the
+    # same object. Must Ask Falk and Yunjung if we can assume this to eliminate
+    # all these conditionals
     for line in open(File):
         line = line.strip()
         c = [i.strip() for i in line.split(delimiter, 1)]  #split on the 1st occurrence of delimiter
@@ -337,7 +341,9 @@ def read_template(File, delimiter='='):
             if line.startswith(">"):
                 plotAttributeDict = {}
                 insidePlotObject = True
-            elif insidePlotObject:
+            # otherwise, if previously inside attributes object, we are now outsid    e
+            # unless the line is a comment
+            elif insidePlotObject and not line.startswith('%') and not line.starts    with('#'):
                 # just came from being inside plot object, but now we are outside
                 insidePlotObject = False
                 plotAttributes.append(plotAttributeDict)
