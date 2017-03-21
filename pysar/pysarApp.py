@@ -397,6 +397,7 @@ def main(argv):
         idx_row, idx_col = np.nonzero(trans_rg)
         pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
         inps = subset.subset_box2inps(inps, pix_box, None)
+        inps.fill_value = 0.0
         inps.geomap_file = check_subset_file(inps.geomap_file, vars(inps), outName)
         
         # Subset DEM in geo coord
