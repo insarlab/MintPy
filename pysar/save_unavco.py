@@ -33,22 +33,10 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     #################################
     ##### Required metadata
     #################################
-
+    ##### Given manually
     ## mission
+    # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
     unavco_meta_dict['mission'] = pysar_meta_dict['mission']
-    #tmp = [atr['PLATFORM'],atr['PROJECT_NAME']]
-    #if   'alos'  in tmp:  atr['mission'] = 'ALOS'
-    #elif 'alos2' in tmp:  atr['mission'] = 'ALOS2'
-    #elif 'csk'   in tmp:  atr['mission'] = 'CSK'
-    #elif 'env'   in tmp:  atr['mission'] = 'ENV'
-    #elif 'ers'   in tmp:  atr['mission'] = 'ERS'
-    #elif 'rast'  in tmp:  atr['mission'] = 'RSAT'
-    #elif 'rsat2' in tmp:  atr['mission'] = 'RSAT2'
-    #elif 'sen'   in tmp:  atr['mission'] = 'SEN'
-    #elif 's1'    in tmp:  atr['mission'] = 'SEN'
-    #elif 'tdx'   in tmp:  atr['mission'] = 'TSX'
-    #elif 'tsx'   in tmp:  atr['mission'] = 'TSX'
-    #else: raise Exception('Cannot find mission name!')
 
     ## beam_mode/swath
     unavco_meta_dict['beam_mode']  = pysar_meta_dict['beam_mode']
@@ -58,6 +46,11 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     #atr_dict['relative_orbit'] = int(re.match(r'(\w+)T([0-9+])',atr['PROJECT_NAME']).groups()[1])
     unavco_meta_dict['relative_orbit'] = int(pysar_meta_dict['relative_orbit'])
     
+    ## processing info
+    unavco_meta_dict['processing_type']     = pysar_meta_dict['processing_type']
+    unavco_meta_dict['processing_software'] = pysar_meta_dict['processing_software']
+
+    ##### Grabbed by script
     ## date info
     unavco_meta_dict['first_date'] = dt.strptime(dateList[0], '%Y%m%d').isoformat()[0:10]
     unavco_meta_dict['last_date']  = dt.strptime(dateList[-1],'%Y%m%d').isoformat()[0:10]
@@ -69,19 +62,29 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
             pysar_meta_dict['LAT_REF2'], pysar_meta_dict['LAT_REF1']]
     unavco_meta_dict['scene_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
 
-    ## processing info
-    unavco_meta_dict['processing_type']     = pysar_meta_dict['processing_type']
-    unavco_meta_dict['processing_software'] = pysar_meta_dict['processing_software']
     unavco_meta_dict['history'] = dt.utcnow().isoformat()[0:10]
 
 
     #################################
     ##### Recommended metadata
     #################################
-    unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
+    ##### Given manually
+    try:    unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
+    except: pass
+    try:    unavco_meta_dict['atmos_correct_method'] = pysar_meta_dict['atmos_correct_method']
+    except: pass
+    try:    unavco_meta_dict['post_processing_method'] = pysar_meta_dict['post_processing_method']
+    except: unavco_meta_dict['post_processing_method'] = 'PySAR'
+    try:  unavco_meta_dict['processing_dem'] = pysar_meta_dict['processing_dem']
+    except: pass
+    try:  unavco_meta_dict['unwrap_method'] = pysar_meta_dict['unwrap_method']
+    except: pass
+
+    ##### Grabbed by script
     unavco_meta_dict['flight_direction'] = pysar_meta_dict['ORBIT_DIRECTION'][0].upper()
     if pysar_meta_dict['ANTENNA_SIDE'] == '-1':  unavco_meta_dict['look_direction'] = 'R'
     else:                                        unavco_meta_dict['look_direction'] = 'L'
+    unavco_meta_dict['polarization'] = pysar_meta_dict['POLARIZATION']
     unavco_meta_dict['prf']         = float(pysar_meta_dict['PRF'])
     unavco_meta_dict['wavelength']  = float(pysar_meta_dict['WAVELENGTH'])
 
@@ -99,7 +102,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
         lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
         unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
     else:
-        print 'Input file is not geocoded, can not calculate data_footprint without X/Y_FIRST/STEP info.'
+        print 'Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info.'
 
     return unavco_meta_dict
 
