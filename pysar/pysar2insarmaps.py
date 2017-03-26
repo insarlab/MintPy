@@ -14,6 +14,7 @@ def get_H5_filename(path):
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Convert a Unavco format H5 file for ingestion into insarmaps.')
+    parser.add_argument("-m", "--mask", help="mask dataset before ingestion", action="store_true", required=False)
     required = parser.add_argument_group("required arguments")
     required.add_argument("-f", "--file", help="unavco file to ingest", required=True)
     required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
@@ -55,6 +56,9 @@ def main():
 
 # go to scratch dir, and run the bjob command
     unavcoToJsonMbtilesCommand = "unavco2json_mbtiles.py -f " + h5FileFullName
+    if parseArgs.mask:
+        unavcoToJsonMbtilesCommand += " -m"
+
     jsonMbtilesToInsarmapsCommand = "json_mbtiles2insarmaps.py -u " + dbUsername + " -p " + dbPassword + " -U " + serverUser + " -P " + serverPassword + " -m " + mbtilesFile + " -f " + jsonFolder + " --host " + dbHost
 
     command = "echo '" + unavcoToJsonMbtilesCommand + " && " + jsonMbtilesToInsarmapsCommand + "' > " + bjobScriptFilename

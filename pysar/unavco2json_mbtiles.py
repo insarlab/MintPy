@@ -197,7 +197,6 @@ def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
     json_file.write("%s" % string_json)
     json_file.close()
 
-
     print "converted chunk " + str(chunk_num)
 
 # ---------------------------------------------------------------------------------------
