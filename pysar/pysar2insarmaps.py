@@ -14,16 +14,13 @@ def get_H5_filename(path):
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Convert a Unavco format H5 file for ingestion into insarmaps.')
-    parser.add_argument("-f", "--folder", help="folder containing json to upload. The folder name will be used as the table name in the db to upload, so it should be as provided by unavco2json_mbtiles.py", required=False)
-    parser.add_argument("-U", "--server_user", help="username for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
-    parser.add_argument("-P", "--server_password", help="password for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
-    parser.add_argument("-m", "--mbtiles", help="mbtiles file to upload", required=False)
-    required = parser.add_argument_group("required arguments")
     required = parser.add_argument_group("required arguments")
     required.add_argument("-f", "--file", help="unavco file to ingest", required=True)
     required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
     required.add_argument("-p", "--password", help="password for the insarmaps database", required=True)
     required.add_argument("--host", default=dbHost, help="postgres DB URL for insarmaps database", required=True)
+    required.add_argument("-U", "--server_user", help="username for the insarmaps server (the machine where the tileserver and http server reside)", required=True)
+    parser.add_argument("-P", "--server_password", help="password for the insarmaps server (the machine where the tileserver and http server reside)", required=True)
 
     return parser
 
@@ -34,34 +31,38 @@ def main():
     dbUsername = parseArgs.user
     dbPassword = parseArgs.password
     dbHost = parseArgs.host
-
-    path = parseArgs.file
+    serverUser = parseArgs.server_user
+    serverPassword = parseArgs.server_password
 
     bjobScriptFilename = "run_pysar2insarmaps.py"
+
+    path = parseArgs.file
     path_absolute = os.path.abspath(path)
 
-    h5FileFullName = get_H5_filename(path)
-    h5FileNameNoExtension = h5FileFullName.split(".")[0]
+    h5FileFullName = get_file_name(path)
 
-    curProjName = get_file_name(path)
+    curProjName = h5FileFullName.split(".")[0]
+    jsonFolder = "json/" + curProjName
+    mbtilesFile = "json/" + curProjName + ".mbtiles"
 
 # create working directory in scratch and copy relevant files over
     scratch_dir = os.environ["SCRATCHDIR"] + "/" + curProjName
     print "making directory " + scratch_dir
     os.system("mkdir " + scratch_dir)
-    command = "cp " + curProjName + "/" + h5FileNameNoExtension + "*" + " " + scratch_dir
+    command = "cp " + h5FileFullName + " " + scratch_dir + "/"
     print "copying files to scratch with command " + command
     os.system(command)
 
 # go to scratch dir, and run the bjob command
-    command = "echo unavco2json_mbtiles.py -f " + h5FileFullName + " -u " + dbUsername + " -p " + dbPassword + " -h " + dbHost + " > " + bjobScriptFilename
+    unavcoToJsonMbtilesCommand = "unavco2json_mbtiles.py -f " + h5FileFullName
+    jsonMbtilesToInsarmapsCommand = "json_mbtiles2insarmaps.py -u " + dbUsername + " -p " + dbPassword + " -U " + serverUser + " -P " + serverPassword + " -m " + mbtilesFile + " -f " + jsonFolder + " --host " + dbHost
 
-    mbtiles_filename = h5FileFullName.split(".")[0] + ".mbtiles"
+    command = "echo '" + unavcoToJsonMbtilesCommand + " && " + jsonMbtilesToInsarmapsCommand + "' > " + bjobScriptFilename
+
     os.chdir(scratch_dir)
     os.system(command)
 
     os.system("createBatch.pl " + bjobScriptFilename)
-    command = "cp -r json/ " + path_absolute
     print "bjob finished, trying to execute " + command
     os.system(command)
 
