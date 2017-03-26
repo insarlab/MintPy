@@ -133,8 +133,12 @@ class InsarDatabaseController:
     mid_long, mid_lat, country, region, chunk_num, attribute_keys,
     attribute_values, string_dates_sql, decimal_dates_sql):
         # put dataset into area table
-        query = "INSERT INTO area VALUES (" + "'" + area + "','" + project_name + "','" + str(mid_long) + "','" + str(mid_lat) + "','" + country + "    ','" + region + "','" + str(chunk_num) + "','" + attribute_keys + "','" +     attribute_values + "','" + string_dates_sql + "','" + decimal_dates_sql +     "')"
-        self.cursor.execute(query)
+        query = "INSERT INTO area VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+
+        preparedValues = (area, project_name,
+    mid_long, mid_lat, country, region, chunk_num, attribute_keys,
+    attribute_values, string_dates_sql, decimal_dates_sql)
+        self.cursor.execute(query, preparedValues)
         self.con.commit()
 
     def remove_dataset_if_there(self, unavco_name):
