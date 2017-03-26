@@ -67,8 +67,7 @@ def main():
     os.system(command)
 
     os.system("createBatch.pl " + bjobScriptFilename)
-    print "bjob finished, trying to execute " + command
-    os.system(command)
+    print "bjob finished"
 
 if __name__ == '__main__':
     main()
