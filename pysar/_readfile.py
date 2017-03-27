@@ -369,7 +369,8 @@ def read_template(File, delimiter='='):
     if insidePlotObject:
         plotAttributes.append(plotAttributeDict)
 
-    template_dict["plotAttributes"] = json.dumps(plotAttributes)
+    if len(plotAttributes) > 0:
+        template_dict["plotAttributes"] = json.dumps(plotAttributes)
 
     return template_dict
 
