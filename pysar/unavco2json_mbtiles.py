@@ -48,7 +48,7 @@ needed_attributes = {
     "flight_direction", "last_frame", "post_processing_method", "min_baseline_perp"
     "unwrap_method", "relative_orbit", "beam_mode", "FILE_LENGTH", "max_baseline_perp",
     "X_FIRST", "atmos_correct_method", "last_date", "first_frame", "frame", "Y_STEP", "history",
-    "scene_footprint", "downloadUnavcoUrl", "referencePdfUrl", "areaName", "referenceText"    
+    "scene_footprint", "data_footprint", "downloadUnavcoUrl", "referencePdfUrl", "areaName", "referenceText"
 }
 
 def serialize_dictionary(dictionary, fileName):
