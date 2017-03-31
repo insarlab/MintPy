@@ -166,8 +166,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
 
 ##################################################################################################
-EXAMPLE='''
-example:
+EXAMPLE='''example:
   multilook.py  velocity.h5  15 15
   multilook.py  srtm30m.dem  10 10  -o srtm30m_300m.dem
 '''

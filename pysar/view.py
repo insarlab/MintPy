@@ -99,6 +99,42 @@ class Basemap2(Basemap):
         else:
             ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d km'%(distance/1000.0),\
                     verticalalignment='top', horizontalalignment='center',fontsize=font_size) 
+    
+    def auto_lalo_sequence(self, geo_box, max_tick_num=4, step_candidate=[1,2,4,5]):
+        '''Auto calculate lat/lon label sequence based on input geo_box
+        Inputs:
+            geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+            max_tick_num   : int, rough major tick number along the longer axis
+            step_candidate : list of int, candidate list for the significant number of step
+        Outputs:
+            lats/lons : np.array of float, sequence of lat/lon auto calculated from input geo_box
+            lalo_step : float, lat/lon label step
+        Example:
+            geo_box = (128.0, 37.0, 138.0, 30.0)
+            lats, lons, step = m.auto_lalo_sequence(geo_box)
+        '''
+        # Initial tick step
+        max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
+        lalo_step = round_to_1(max_lalo_dist/max_tick_num)
+        
+        # Final tick step - choose from candidate list
+        digit = np.int(np.floor(np.log10(lalo_step)))
+        lalo_step_candidate = [i*10**digit for i in step_candidate]
+        distance = [(i - max_lalo_dist/max_tick_num)**2 for i in lalo_step_candidate]
+        lalo_step = lalo_step_candidate[distance.index(min(distance))]
+
+        # Auto tick sequence
+        lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
+        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-max_lalo_dist, -lalo_step),\
+                                    np.arange(lat_major, lat_major+max_lalo_dist, lalo_step))))
+        lats = np.sort(lats[np.where(np.logical_and(lats>=geo_box[3], lats<=geo_box[1]))])
+        
+        lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
+        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-max_lalo_dist, -lalo_step),\
+                                    np.arange(lon_major, lon_major+max_lalo_dist, lalo_step))))
+        lons = np.sort(lons[np.where(np.logical_and(lons>=geo_box[0], lons<=geo_box[2]))])
+ 
+        return lats, lons, lalo_step
 
     def draw_lalo_label(self, geo_box, ax=None, labels=[1,0,0,1], font_size=12):
         '''Auto draw lat/lon label/tick based on coverage from geo_box
@@ -106,20 +142,16 @@ class Basemap2(Basemap):
             geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
             labels  : list of 4 int, positions where the labels are drawn as in [left, right, top, bottom]
             ax      : axes object the labels are drawn
+            draw    : bool, do not draw if False
+        Outputs:
+            
         Example:
             geo_box = (128.0, 37.0, 138.0, 30.0)
             m.draw_lalo_label(geo_box)
         '''
-
-        # Find proper lat/lon sequence
-        max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
-        lalo_step = round_to_1(max_lalo_dist/4.0)
-        digit = len(str(lalo_step).split('.')[1])
-        f = "{:.%df}"%(digit)
-        fmt = '%.'+'%d'%(digit)+'f'
-        lats = np.arange(float(f.format(geo_box[3]+lalo_step/2.0)), float(f.format(geo_box[1])), lalo_step)
-        lons = np.arange(float(f.format(geo_box[0]+lalo_step/2.0)), float(f.format(geo_box[2])), lalo_step)
-        
+        lats, lons, step = self.auto_lalo_sequence(geo_box)
+        digit = np.int(np.floor(np.log10(step)))
+        fmt = '%.'+'%d'%(abs(min(digit, 0)))+'f'
         # Change the 2 lines below for customized label
         #lats = np.linspace(31.55, 31.60, 2)
         #lons = np.linspace(130.60, 130.70, 3)
@@ -347,7 +379,8 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
     if inps_dict['disp_dem_shade']:
         print 'show shaded relief DEM'
         ls = LightSource(azdeg=315, altdeg=45)
-        bmap.imshow(ls.hillshade(dem, vert_exag=0.3), origin='upper', cmap='gray', interpolation='nearest')
+        dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+2000)
+        bmap.imshow(dem_shade, origin='upper', interpolation='spline16')
 
     if inps_dict['disp_dem_contour']:
         print 'show contour in step - '+str(inps_dict['dem_contour_step'])+' m'+\
@@ -1257,7 +1290,7 @@ def main(argv):
             if inps.disp_dem_shade: 
                 print 'show shaded relief DEM'
                 ls = LightSource(azdeg=315, altdeg=45)
-                dem_hillshade = ls.hillshade(dem, vert_exag=0.3)
+                dem_hillshade = ls.hillshade(dem, vert_exag=1.0, vmin=-5000, vmax=np.nanmax(dem)+2000)
             if inps.disp_dem_contour:
                 print 'show contour: step = '+str(contour_step)+' m'
                 dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
@@ -1321,7 +1354,7 @@ def main(argv):
 
                 # Plot DEM
                 if inps.dem_file and inps.disp_dem_shade:
-                    ax.imshow(dem_hillshade, cmap='gray', interpolation='nearest')
+                    ax.imshow(dem_hillshade, cmap='gray', interpolation='spline16')
                 if inps.dem_file and inps.disp_dem_contour:
                     ax.contour(dem_contour, contour_sequence, origin='lower',colors='black',alpha=0.5)
 
