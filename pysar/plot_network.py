@@ -102,7 +102,7 @@ def main(argv):
     inps = cmdLineParse()
     if not inps.disp_fig:
         plt.switch_backend('Agg')
-    print '\n******************** Plot Network **********************'
+    #print '\n******************** Plot Network **********************'
 
     # Output figure name
     figName1 = 'BperpHist'+inps.fig_ext
@@ -132,8 +132,8 @@ def main(argv):
     # Read Pairs Info
     print 'reading pairs info from file: '+inps.file
     date12_list = pnet.get_date12_list(inps.file)
-    pairs_idx = pnet.date12_list2index(date12_list, date6List)
-    print 'number of pairs       : '+str(len(pairs_idx))
+    #pairs_idx = pnet.date12_list2index(date12_list, date6List)
+    print 'number of pairs       : '+str(len(date12_list))
 
     # Read Coherence List
     inps.coherence_list = None
@@ -179,7 +179,7 @@ def main(argv):
     # Fig 2 - Interferogram Network
     fig2 = plt.figure(2)
     ax2 = fig2.add_subplot(111)
-    ax2 = pnet.plot_network(ax2, pairs_idx, date8List, Bp, vars(inps))
+    ax2 = pnet.plot_network(ax2, date12_list, date8List, Bp, vars(inps))
 
     if inps.save_fig:
         fig2.savefig(figName2,bbox_inches='tight')
