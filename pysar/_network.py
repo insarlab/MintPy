@@ -326,6 +326,7 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
     Outputs:
         date12_list : list of string, for date12 in YYMMDD-YYMMDD format
     '''
+    if not date12_list:  return []
     # Get date6_list
     if not date_list:
         m_dates = [date12.split('-')[0] for date12 in date12_list]
@@ -363,6 +364,7 @@ def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase
     Example:
         date12_list = threshold_perp_baseline(date12_list, date_list, pbase_list, 500)
     '''
+    if not date12_list:  return []
     # Get date6_list
     if not date_list:
         m_dates = [date12.split('-')[0] for date12 in date12_list]
@@ -400,13 +402,14 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
         date12_list = threshold_temporal_baseline(date12_list, 200)
         date12_list = threshold_temporal_baseline(date12_list, 200, False)
     '''
+    if not date12_list:  return []
     # Get date list and tbase list
     m_dates = [date12.split('-')[0] for date12 in date12_list]
     s_dates = [date12.split('-')[1] for date12 in date12_list]
     date8_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
     date6_list = ptime.yymmdd(date8_list)
     tbase_list = ptime.date_list2tbase(date8_list)[0]
-    
+
     # Threshold
     date12_list_out = []
     for date12 in date12_list:
@@ -499,7 +502,7 @@ def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
     '''
     # Get all date12
     date12_list = select_pairs_all(date_list)
-    
+
     # Loop of Threshold
     for temp_perp in temp_perp_list:
         tbase_max = temp_perp[0]
@@ -594,17 +597,18 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[]):
     date8_list = sorted(ptime.yyyymmdd(date_list))
     date6_list = ptime.yymmdd(date8_list)
     
+    # Select master date if not existed
+    if not m_date:
+        m_date = select_master_date(date8_list, pbase_list)
+        print 'auto select master date: '+m_date
+    
     # Check input master date
     m_date8 = ptime.yyyymmdd(m_date)
     if m_date8 not in date8_list:
         print 'Input master date is not existed in date list!'
-        print 'Input master date: '+m_date8
+        print 'Input master date: '+str(m_date8)
         print 'Input date list: '+str(date8_list)
         m_date8 = None
-    
-    # Select master date if not existed
-    if not m_date8:
-        m_date8 = select_master_date(date8_list, pbase_list)
     
     # Generate star/ps network
     m_idx = date8_list.index(m_date8)
