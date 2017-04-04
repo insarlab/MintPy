@@ -52,19 +52,50 @@ import datetime
 import glob
 import warnings
 
-import numpy as np
 import h5py
+import numpy as np
+import multiprocessing
 
+import pysar
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._datetime as ptime
 import pysar._network as pnet
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
-    
-
 
 ############################################################
+def check_parallel(file_num=1):
+    '''Check parallel option based on pysar setting, file num and installed module'''
+    enable_parallel = True
+
+    # Disable parallel option for one input file
+    if file_num <= 1:
+        enable_parallel = False
+        print 'parallel processing is diabled for one input file'
+
+    # Check required python module
+    try:
+        from joblib import Parallel, delayed
+    except:
+        print 'Can not import joblib'
+        print 'parallel is disabled.'
+        enable_parallel = False
+
+    # Find proper number of cores for parallel processing
+    num_cores = min(multiprocessing.cpu_count(), file_num, pysar.parallel_num)
+    if num_cores <= 1:
+        enable_parallel = False
+        print 'parallel processing is disabled because min of the following two numbers <= 1:'
+        print 'available cpu number of the computer: '+str(multiprocessing.cpu_count())
+        print 'pysar.__init__.py: parallel_num: '+str(pysar.parallel_num)
+    else:
+        print 'parallel processing using %d cores ...'%(num_cores)
+    
+    try:    return num_cores, enable_parallel, Parallel, delayed
+    except: return num_cores, enable_parallel, None, None
+    
+
 def incidence_angle(atr, dimension=2):
     '''Calculate 2D matrix of incidence angle from ROI_PAC attributes, very accurate.
     Input:

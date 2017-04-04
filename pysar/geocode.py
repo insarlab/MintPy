@@ -21,10 +21,9 @@ import argparse
 
 import h5py
 import numpy as np
-from joblib import Parallel, delayed
-import multiprocessing
+#from joblib import Parallel, delayed
+#import multiprocessing
 
-import pysar
 import pysar._readfile  as readfile
 import pysar._writefile as writefile
 import pysar._pysar_utilities as ut
@@ -44,10 +43,8 @@ def geomap4subset_radar_file(radar_atr, geomap_file):
         geomap_file = 'temp_'+geomap_file
         print '    writing >>> '+geomap_file+'\n'
         writefile.write_float32(rg, az, geomap_file)
-        f = open(geomap_file+'.rsc','w')
-        for key in rsc.keys():
-            f.write(key+'    '+rsc[key]+'\n')
-        f.close()
+        writefile.write_roipac_rsc(rsc, geomap_file+'.rsc')
+
     return geomap_file
 
 
@@ -65,15 +62,15 @@ def geocode_data_roipac(data, atr, geomapFile, roipac_name):
     writefile.write_float32(data, roipac_name)
     writefile.write_roipac_rsc(atr, roipac_name+'.rsc')
  
-    geoCmd='geocode.pl '+geomapFile+' '+roipac_name+' geo_'+roipac_name
-    print geoCmd
+    geoCmd = 'geocode.pl '+geomapFile+' '+roipac_name+' geo_'+roipac_name
     os.system(geoCmd)
+    print geoCmd
  
     print 'reading geocoded file...'
     amp,unw,unwrsc = readfile.read_float32('geo_'+roipac_name)
  
-    rmCmd='rm '+roipac_name+' '+roipac_name+'.rsc';     os.system(rmCmd);       print rmCmd
-    rmCmd='rm geo_'+roipac_name+' geo_'+roipac_name+'.rsc'; os.system(rmCmd);       print rmCmd
+    rmCmd = 'rm '+roipac_name+' '+roipac_name+'.rsc';           os.system(rmCmd);       print rmCmd
+    rmCmd = 'rm geo_'+roipac_name+' geo_'+roipac_name+'.rsc';   os.system(rmCmd);       print rmCmd
  
     return amp, unw, unwrsc
 
@@ -171,6 +168,7 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
 
     # Single-dataset file
     else:
+        rmCmd = 'rm '+outfile+' '+outfile+'.rsc';    os.system(rmCmd);    print rmCmd
         data, atr = readfile.read(infile)
 
         roipac_name = infile_mark+roipac_ext
@@ -217,7 +215,9 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
-    
+    print 'number of file to mask: '+str(len(inps.file))
+    print inps.file
+
     if not ut.which('geocode.pl'):
         sys.exit("\nERROR: Can not find geocode.pl, it's needed for geocoding.\n")
     
@@ -225,25 +225,23 @@ def main(argv):
     if not inps.lookup_file.endswith('.trans'):
         print 'ERROR: Input lookup file is not .trans file: '+inps.lookup_file+'\n'
         sys.exit(1)
-    print 'number of file to mask: '+str(len(inps.file))
-    print inps.file
-    
-    # check outfile and parallel option
-    if len(inps.file) > 1:
-        inps.outfile = None
-    elif len(inps.file) == 1 and inps.parallel:
-        inps.parallel =  False
-        print 'parallel processing is diabled for one input file'
 
     # Check geomap file for previously subsetted radar coord file
     atr = readfile.read_attribute(inps.file[0])
     if 'subset_x0' in atr.keys():
         inps.lookup_file = geomap4subset_radar_file(atr, inps.lookup_file)
 
-    # Geocoding
+    # check outfile and parallel option
     if inps.parallel:
-        num_cores = min(multiprocessing.cpu_count(), len(inps.file), pysar.parallel_num)
-        print 'parallel processing using %d cores ...'%(num_cores)
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
+
+    # Geocoding
+    if len(inps.file) == 1:
+        geocode_file_roipac(inps.file[0], inps.lookup_file, inps.outfile)
+
+    elif inps.parallel:
+        #num_cores = min(multiprocessing.cpu_count(), len(inps.file), pysar.parallel_num)
+        #print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(geocode_file_roipac)(file, inps.lookup_file) for file in inps.file)
     else:
         for File in inps.file:
@@ -252,8 +250,9 @@ def main(argv):
 
     # clean temporary geomap file for previously subsetted radar coord file
     if 'subset_x0' in atr.keys():
-        rmCmd='rm '+inps.lookup_file;            os.system(rmCmd);       print rmCmd
-        rmCmd='rm '+inps.lookup_file+'.rsc';     os.system(rmCmd);       print rmCmd
+        rmCmd='rm '+inps.lookup_file+' '+inps.lookup_file+'.rsc'
+        os.system(rmCmd)
+        print rmCmd
 
     print 'Done.'
     return
