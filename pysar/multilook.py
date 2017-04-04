@@ -19,8 +19,8 @@ import warnings
 
 import h5py
 import numpy as np
-from joblib import Parallel, delayed
-import multiprocessing
+#from joblib import Parallel, delayed
+#import multiprocessing
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -195,21 +195,21 @@ def main(argv):
     inps.file = get_file_list(inps.file)
 
     # check outfile and parallel option
-    if len(inps.file) > 1:
-        inps.outfile = None
-    elif len(inps.file) == 1 and inps.parallel:
-        inps.parallel =  False
-        print 'parallel processing is diabled for one input file'
+    if inps.parallel:
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
 
     # multilooking
-    if inps.parallel:
-        num_cores = min(multiprocessing.cpu_count(), len(inps.file))
-        print 'parallel processing using %d cores ...'%(num_cores)
-        Parallel(n_jobs=num_cores)(delayed(multilook_file)(file,inps.lks_y,inps.lks_x) for file in inps.file)
+    if len(inps.file) == 1:
+        multilook_file(inps.file[0], inps.lks_y, inps.lks_x, inps.outfile)
+
+    elif inps.parallel:
+        #num_cores = min(multiprocessing.cpu_count(), len(inps.file))
+        #print 'parallel processing using %d cores ...'%(num_cores)
+        Parallel(n_jobs=num_cores)(delayed(multilook_file)(file, inps.lks_y, inps.lks_x) for file in inps.file)
     else:
         for File in inps.file:
             print '-------------------------------------------'
-            multilook_file(File,inps.lks_y,inps.lks_x,inps.outfile)
+            multilook_file(File, inps.lks_y, inps.lks_x)
 
     print 'Done.'
     return

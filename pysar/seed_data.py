@@ -19,8 +19,8 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-import multiprocessing
-from joblib import Parallel, delayed
+#import multiprocessing
+#from joblib import Parallel, delayed
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -456,13 +456,6 @@ def main(argv):
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
 
-    # check outfile and parallel option
-    if len(inps.file) > 1:
-        inps.outfile = None
-    elif len(inps.file) == 1 and inps.parallel:
-        inps.parallel =  False
-        print 'parallel processing is diabled for one input file'
-
     ##### Check Input Coordinates
     # Read ref_y/x/lat/lon from reference/template
     # priority: Direct Input > Reference File > Template File
@@ -523,13 +516,20 @@ def main(argv):
         print 'Parallel processing is disabled for manual seeding method.'
 
     ##### Seeding file by file
+    # check outfile and parallel option
     if inps.parallel:
-        num_cores = min(multiprocessing.cpu_count(), len(inps.file))
-        print 'parallel processing using %d cores ...'%(num_cores)
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
+
+    if len(inps.file) == 1:
+        seed_file_inps(inps.file[0], inps, inps.outfile)
+        
+    elif inps.parallel:
+        #num_cores = min(multiprocessing.cpu_count(), len(inps.file))
+        #print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(seed_file_inps)(file, inps) for file in inps.file)
     else:
-        for file in inps.file:
-            seed_file_inps(inps.file[0], inps, inps.outfile)
+        for File in inps.file:
+            seed_file_inps(File, inps)
 
     print 'Done.'
     return

@@ -86,6 +86,8 @@ def write(*args):
             write_real_float32(data,outname)
         elif ext == '.slc':
             write_complex_int16(data,outname)
+        elif ext == '.int':
+            write_complex64(data, outname)
         else: print 'Un-supported file type: '+ext; return 0;
   
         ##### Write .rsc File
@@ -106,7 +108,7 @@ def write_roipac_rsc(atr, outname, sorting=True):
     keyList = atr.iterkeys()
     if sorting:
         keyList = sorted(keyList)
-    digits = max([len(key) for key in keyList]+[0])
+    digits = max([len(key) for key in keyList]+[2])
     f = '{0:<%d}    {1}'%(digits)
     frsc = open(outname,'w')
     for key in keyList:
@@ -149,7 +151,7 @@ def write_float32(*args):
     return outname
 
 
-def write_complex64(data,outname):   
+def write_complex64(data,outname):
     '''Writes roi_pac .int data'''
     nlines=data.shape[0]
     WIDTH=data.shape[1]

@@ -29,8 +29,8 @@ import argparse
 
 import h5py
 import numpy as np
-import multiprocessing
-from joblib import Parallel, delayed
+#import multiprocessing
+#from joblib import Parallel, delayed
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -571,21 +571,21 @@ def subset_file(File, subset_dict, outFile=None):
 def subset_file_list(fileList, inps):
     '''Subset file list'''
     # check outfile and parallel option
-    if len(fileList) > 1:
-        inps.outfile = None
-    elif len(fileList) == 1 and inps.parallel:
-        inps.parallel =  False
-        print 'parallel processing is diabled for one input file'
+    if inps.parallel:
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(fileList))
 
     ##### Subset files
-    if inps.parallel:
-        num_cores = min(multiprocessing.cpu_count(), len(fileList))
-        print 'parallel processing using %d cores ...'%(num_cores)
+    if len(fileList) == 1:
+        subset_file(fileList[0], vars(inps), inps.outfile)
+    
+    elif inps.parallel:
+        #num_cores = min(multiprocessing.cpu_count(), len(fileList))
+        #print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in fileList)
     else:
         for File in fileList:
             print '----------------------------------------------------'
-            subset_file(File, vars(inps), inps.outfile)
+            subset_file(File, vars(inps))
     return
 
 
@@ -655,6 +655,8 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
+    print 'number of input files: '+str(len(inps.file))
+    print inps.file
 
     #print '\n**************** Subset *********************'
     atr = readfile.read_attribute(inps.file[0])

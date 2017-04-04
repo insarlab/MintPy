@@ -15,8 +15,8 @@ import argparse
 
 import numpy as np
 import h5py
-import multiprocessing
-from joblib import Parallel, delayed
+#import multiprocessing
+#from joblib import Parallel, delayed
 
 import pysar._pysar_utilities as ut
 import pysar._remove_surface as rm
@@ -68,13 +68,6 @@ def main(argv):
     length = int(atr['FILE_LENGTH'])
     width = int(atr['WIDTH'])
 
-    # check outfile and parallel option
-    if len(inps.file) > 1:
-        inps.outfile = None
-    elif len(inps.file) == 1 and inps.parallel:
-        inps.parallel =  False
-        print 'parallel processing is diabled for one input file'
-
     # Update mask for multiple surfaces
     if inps.ysub:
         # Read mask
@@ -108,15 +101,22 @@ def main(argv):
         print 'saved mask to '+outFile
 
     ############################## Removing Phase Ramp #######################################
+    # check outfile and parallel option
     if inps.parallel:
-        num_cores = min(multiprocessing.cpu_count(), len(inps.file))
-        print 'parallel processing using %d cores ...'%(num_cores)
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
+
+    if len(inps.file) == 1:
+        rm.remove_surface(inps.file[0], inps.surface_type, inps.mask_file, inps.outfile, inps.ysub)
+        
+    elif inps.parallel:
+        #num_cores = min(multiprocessing.cpu_count(), len(inps.file))
+        #print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(rm.remove_surface)(file, inps.surface_type, inps.mask_file, ysub=inps.ysub)\
                                    for file in inps.file)
     else:
         for File in inps.file:
             print '------------------------------------------'
-            rm.remove_surface(inps.file[0], inps.surface_type, inps.mask_file, inps.outfile, inps.ysub)
+            rm.remove_surface(File, inps.surface_type, inps.mask_file, ysub=inps.ysub)
     
     print 'Done.'
     return
