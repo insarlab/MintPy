@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 ########################################################################
-miami_path=True    # Package-wide variable, Auto setting for University of Miami
-                   # change it to False if you are not using the file structure of University of Miami
+miami_path = True    # Package-wide variable, Auto setting for University of Miami
+                     # change it to False if you are not using the file structure of University of Miami
+parallel_num = 8     # max core number used in parallel processing
 
 ###################### Do not change below this line ###################
 import _datetime
