@@ -417,7 +417,7 @@ def box_geo2pixel(geo_box, meta_dict):
 
 
 ################################################################
-def subset_file(File, subset_dict, outFile=None):
+def subset_file(File, subset_dict_input, outFile=None):
     '''Subset file with
     Inputs:
         File        : str, path/name of file
@@ -444,6 +444,7 @@ def subset_file(File, subset_dict, outFile=None):
     k = atr_dict['FILE_TYPE']
     print 'subset '+k+' file: '+File+' ...'
 
+    subset_dict = subset_dict_input.copy()
     # Read Subset Inputs into 4-tuple box in pixel and geo coord
     pix_box, geo_box = subset_input_dict2box(subset_dict, atr_dict)
 

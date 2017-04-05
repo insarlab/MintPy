@@ -167,6 +167,20 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
         h5out.close()
 
     # Single-dataset file
+    elif atr['PROCESSOR'] == 'roipac':
+        rmCmd = 'rm geo_'+infile+' geo_'+infile+'.rsc'
+        os.system(rmCmd)
+        print rmCmd
+
+        geoCmd = 'geocode.pl '+geomap_file2+' '+infile+' geo_'+infile
+        os.system(geoCmd)
+        print geoCmd
+
+        atr_rdr = readfile.read_roipac_rsc(infile+'.rsc')
+        atr_geo = readfile.read_roipac_rsc('geo_'+infile+'.rsc')
+        atr_geo = geocode_attribute(atr_rdr, atr_geo)
+        writefile.write_roipac_rsc(atr_geo, 'geo_'+infile+'.rsc')
+
     else:
         rmCmd = 'rm '+outfile+' '+outfile+'.rsc';    os.system(rmCmd);    print rmCmd
         data, atr = readfile.read(infile)
@@ -204,7 +218,7 @@ def cmdLineParse():
                              'i.e. geomap_*rlks.trans for roi_pac product')
     parser.add_argument('file', nargs='+', help='File(s) to be geocoded')
     parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
-    parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
+    parser.add_argument('--parallel',dest='parallel',action='store_true',\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
     
     inps = parser.parse_args()
