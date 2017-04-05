@@ -756,7 +756,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}):
         x = np.array([dates[idx1], dates[idx2]])
         y = np.array([pbase_list[idx1], pbase_list[idx2]])
         if plot_dict['coherence_list']:
-            coh_idx = (plot_dict['coherence_list'][i] - plot_dict['disp_min']) /\
+            coh_idx = (plot_dict['coherence_list'][date12_list.index(date12)] - plot_dict['disp_min']) /\
                       (plot_dict['disp_max'] - plot_dict['disp_min'])
             ax.plot(x, y, lw=plot_dict['linewidth'], alpha=0.7, c=cmap(coh_idx)) 
         else:

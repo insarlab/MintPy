@@ -335,7 +335,7 @@ def check_multilook_input(pixel_box, row_num, col_num):
 def get_epoch_full_list_from_input(all_epoch_list, epoch_input_list=[], epoch_num_input_list=[]):
     '''Read/Get input epoch list from input epoch and epoch_num'''
     epoch_input_list = sorted(epoch_input_list)
-    epoch_num_input_list = sorted(epoch_num_input_list)
+    epoch_num_input_list = sorted([i-1 for i in epoch_num_input_list])
 
     # Default value
     epoch_list = []
