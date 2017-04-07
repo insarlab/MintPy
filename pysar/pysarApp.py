@@ -341,7 +341,7 @@ def main(argv):
     except:  inps.mask_file = None
     if not inps.mask_file:
         print 'No mask file found. Creating one using non-zero pixels in file: '+inps.ifgram_file
-        inps.mask_file = ut.nonzero_mask(inps.ifgram_file, inps.mask_file)
+        inps.mask_file = ut.nonzero_mask(inps.ifgram_file, 'Mask.h5')
     print 'Mask: '+inps.mask_file
 
     ## Find initial files name/path - recommended files (None if not found)
@@ -356,8 +356,8 @@ def main(argv):
     inps.spatial_coherence_file = 'average_spatial_coherence.h5'
     try:    inps.spatial_coherence_file = glob.glob(inps.work_dir+'/'+inps.spatial_coherence_file)[0]
     except: inps.spatial_coherence_file = None
-    if not inps.coherence_file:
-        inps.spatial_coherence_file = ut.temporal_average(inps.coherence_file, inps.spatial_coherence_file)
+    if not inps.spatial_coherence_file and inps.coherence_file:
+        inps.spatial_coherence_file = ut.temporal_average(inps.coherence_file, 'average_spatial_coherence.h5')
 
     # 5. DEM in geo coord
     try:    inps.dem_geo_file = os.path.basename(template['pysar.dem.geoCoord'])
@@ -426,18 +426,27 @@ def main(argv):
         if check_isfile(outName):
             print '\n'+outName+' already existed, no need to re-modify network.\n'
         else:
-            networkCmd = 'modify_network.py '+inps.ifgram_file+' '+inps.coherence_file+\
-                         ' --template '+inps.template_file+' --mask '+inps.mask_file+' --plot' 
+            networkCmd = 'modify_network.py --template '+inps.template_file+' --mask '+inps.mask_file+' --plot '+\
+                         inps.ifgram_file
+            if inps.coherence_file:
+                networkCmd += ' '+inps.coherence_file
             print networkCmd
             os.system(networkCmd)
         
-        if check_isfile(outName):  inps.ifgram_file = outName
+        if check_isfile(outName):
+            inps.ifgram_file = outName
         outName = 'Modified_'+os.path.basename(inps.mask_file)
-        if check_isfile(outName):  inps.mask_file = outName
-        outName = 'Modified_'+os.path.basename(inps.coherence_file)
-        if check_isfile(outName):  inps.coherence_file = outName
-        outName = 'Modified_'+os.path.basename(inps.spatial_coherence_file)
-        if check_isfile(outName):  inps.spatial_coherence_file = outName
+        if check_isfile(outName):
+            inps.mask_file = outName
+        
+        if inps.coherence_file:
+            outName = 'Modified_'+os.path.basename(inps.coherence_file)
+            if check_isfile(outName):
+                inps.coherence_file = outName
+        if inps.spatial_coherence_file:
+            outName = 'Modified_'+os.path.basename(inps.spatial_coherence_file)
+            if check_isfile(outName):
+                inps.spatial_coherence_file = outName
 
 
     #########################################
@@ -450,8 +459,9 @@ def main(argv):
         print inps.ifgram_file + ' already exists, no need to re-seed.'
     else:
         print 'referncing all interferograms to the same pixel.'
-        seedCmd = 'seed_data.py '+inps.ifgram_file+' -t '+inps.template_file+' -m '+inps.mask_file+\
-                  ' -c '+inps.spatial_coherence_file
+        seedCmd = 'seed_data.py '+inps.ifgram_file+' -t '+inps.template_file+' -m '+inps.mask_file
+        if inps.spatial_coherence_file:
+            seedCmd += ' -c '+inps.spatial_coherence_file
         if inps.geomap_file:
             seedCmd = seedCmd+' --trans '+inps.geomap_file
         print seedCmd

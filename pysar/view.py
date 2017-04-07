@@ -55,6 +55,7 @@ from matplotlib.patheffects import withStroke
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
+import pysar
 import pysar._datetime as ptime
 import pysar._readfile as readfile
 import pysar._pysar_utilities as ut
@@ -1203,7 +1204,7 @@ def main(argv):
         if not inps.fig_size:
             # Auto size proportional to data size, with min len = 8.0 inches
             inps.fig_size = [data.shape[1]*1.2, data.shape[0]]
-            fig_scale = 8.0/min(inps.fig_size)
+            fig_scale = pysar.figsize_single_min/min(inps.fig_size)
             inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in inps.fig_size]
             #inps.fig_size = [12.5,8.0]
         print 'create figure in size: '+str(inps.fig_size)
@@ -1231,7 +1232,13 @@ def main(argv):
         ##### Figure Setting 
         if not inps.font_size:  inps.font_size = 12
         if not inps.fig_size:
-            inps.fig_size = [30.0,16.0]
+            # Get screen size in inch
+            #screen_dpi = plt.figure().dpi
+            #import Tkinter as tk
+            #root = tk.Tk()
+            #screen_width_res = root.winfo_screenwidth() / screen_dpi
+            #screen_height_res = root.winfo_screenheight() / screen_dpi
+            inps.fig_size = pysar.figsize_multi
         print 'create figure in size: '+str(inps.fig_size)
 
         # Row/Column number

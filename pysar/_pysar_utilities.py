@@ -343,7 +343,7 @@ def temporal_average(File, outFile=None):
 
 
 ######################################################################################################
-def get_file_list(fileList):
+def get_file_list(fileList, abspath=False):
     '''Get all existed files matching the input list of file pattern
     Example:
     fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
@@ -354,6 +354,8 @@ def get_file_list(fileList):
         file0 = fileList[i]
         fileList0 = glob.glob(file0)
         fileListOut += list(set(fileList0) - set(fileListOut))
+    if abspath:
+        fileListOut = [os.path.abspath(i) for i in fileListOut]
     return fileListOut
 
 
