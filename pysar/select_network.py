@@ -338,7 +338,7 @@ def main(argv):
     fig2, ax2 = plt.subplots()
     ax2 = pnet.plot_perp_baseline_hist(ax2, date8_list, pbase_list)
     plt.savefig(os.path.dirname(inps.outfile)+'/'+out_fig_name, bbox_inches='tight')
-        
+
     out_fig_name = 'Network.pdf'
     print 'plotting network in temp/perp baseline domain to file: '+out_fig_name
     fig1, ax1 = plt.subplots()

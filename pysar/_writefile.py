@@ -68,7 +68,6 @@ def write(*args):
         for key , value in atr.iteritems():
             group.attrs[key]=value
         h5file.close()
-  
         return outname
 
     ##### ISCE / ROI_PAC GAMMA / Image product
@@ -92,7 +91,6 @@ def write(*args):
   
         ##### Write .rsc File
         write_roipac_rsc(atr, outname+'.rsc')
-        
         return outname
 
 

@@ -166,6 +166,7 @@ def subset_attribute(atr_dict, subset_box):
     atr['YMAX']        = str(sub_y[1]-sub_y[0] - 1)
     atr['XMAX']        = str(sub_x[1]-sub_x[0] - 1)
 
+    # Subset atribute
     try:
         subset_y0_ori = int(atr['subset_y0'])
         atr['subset_y0'] = str(sub_y[0] + subset_y0_ori)
@@ -180,15 +181,23 @@ def subset_attribute(atr_dict, subset_box):
     except:
         atr['subset_x0'] = str(sub_x[0])
         atr['subset_x1'] = str(sub_x[1])
+    
+    # Geo coord
     try:
         atr['Y_FIRST'] = str(float(atr['Y_FIRST'])+sub_y[0]*float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST'])+sub_x[0]*float(atr['X_STEP']))
     except: pass
 
+    # Reference in space
     try:
         atr['ref_y'] = str(int(atr['ref_y']) - sub_y[0])
         atr['ref_x'] = str(int(atr['ref_x']) - sub_x[0])
     except: pass
+
+    # Starting Range for file in radar coord
+    if not 'Y_FIRST' in atr_dict.keys():
+        try: atr['STARTING_RANGE'] = float(atr['STARTING_RANGE']) + float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
+        except: pass
 
     return atr
 
