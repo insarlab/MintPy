@@ -22,18 +22,20 @@ import pysar._pysar_utilities as ut
 
 def usage():
     print '''
-***************************************************************
-Generates incidence angles (in Radar Coordinate) for each pixel,
+usage:  incidence_angle.py  file  [outfile]
+
+Generates incidence angles (in Radar Coordinate) for each pixel
   with required attributes read from the h5 file
 
-Usage:
-  incidence_angle.py  file  [output_file]
+input arguments:
+  file    : string, input file name/path
+  outfile : string, output file name/path for 2D incidence angle 
+            calculated from file in radar coord
 
-Example:
-  incidence_angle.py velocity.h5
-  incidence_angle.py timeseries.h5
-  incidence_angle.py temporal_coherence.h5
-***************************************************************
+example:
+  incidence_angle.py  velocity.h5
+  incidence_angle.py  timeseries.h5
+  incidence_angle.py  temporal_coherence.h5
     '''
     return
 
@@ -47,15 +49,22 @@ def main(argv):
     try:    outFile = argv[1]
     except: outFile = 'incidence_angle.h5'
     
-    #print '\n*************** Generate Incidence Angle *****************'
-    ##### Calculate look angle
-    angle = ut.incidence_angle(atr)
+    # Calculate look angle
+    angle = ut.incidence_angle(atr, dimension=2)
     
-    ##### Output
-    print 'writing >>> '+outFile
-    atr['FILE_TYPE'] = 'mask'
-    atr['UNIT'] = 'degree'
-    writefile.write(angle, atr, outFile)
+    # Geo coord
+    if 'Y_FIRST' in atr.keys():
+        print 'Input file is geocoded, only center incident angle is calculated: '
+        print angle
+        return angle
+
+    # Radar coord
+    else:
+        print 'writing >>> '+outFile
+        atr['FILE_TYPE'] = 'mask'
+        atr['UNIT'] = 'degree'
+        writefile.write(angle, atr, outFile)
+        return outFile
 
 ############################################################
 if __name__ == '__main__':

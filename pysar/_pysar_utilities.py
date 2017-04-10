@@ -92,9 +92,39 @@ def check_parallel(file_num=1):
     else:
         print 'parallel processing using %d cores ...'%(num_cores)
     
-    try:    return num_cores, enable_parallel, Parallel, delayed
-    except: return num_cores, enable_parallel, None, None
+    try:
+        return num_cores, enable_parallel, Parallel, delayed
+    except:
+        return num_cores, enable_parallel, None, None
+
+
+def range_distance(atr, dimension=2):
+    '''Calculate range distance from input attribute dict'''
+    # return center value for geocoded input file
+    if 'Y_FIRST' in atr.keys() and dimension > 0:
+        dimension = 0
+        print 'input file is geocoded, return center range distance for the whole area'
     
+    near_range = float(atr['STARTING_RANGE'])
+    dR = float(atr['RANGE_PIXEL_SIZE'])
+    length = int(atr['FILE_LENGTH'])
+    width  = int(atr['WIDTH'])
+    
+    far_range = near_range + dR*width
+    center_range = (far_range + near_range)/2.0
+    print 'near    range : '+ str(near_range)
+    print 'far     range : '+ str(far_range)
+    print 'average range : '+ str(center_range)
+    if dimension == 0:
+        return center_range
+
+    range_x = np.linspace(near_range, far_range, num=width, endpoint='FALSE')
+    if dimension == 1:
+        return range_x
+    else:
+        range_xy = np.tile(range_x, (length, 1))
+        return range_xy
+
 
 def incidence_angle(atr, dimension=2):
     '''Calculate 2D matrix of incidence angle from ROI_PAC attributes, very accurate.
@@ -112,6 +142,11 @@ def incidence_angle(atr, dimension=2):
                     0 for one center value
     Output: 2D np.array - incidence angle in degree for each pixel
     '''
+    # Return center value for geocoded input file
+    if 'Y_FIRST' in atr.keys() and dimension > 0:
+        dimension = 0
+        print 'input file is geocoded, return center incident angle only'
+    
     ## Read Attributes
     near_range = float(atr['STARTING_RANGE'])
     dR = float(atr['RANGE_PIXEL_SIZE'])
@@ -124,7 +159,7 @@ def incidence_angle(atr, dimension=2):
     far_range = near_range+dR*width
     incidence_n = (np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range)))*180.0/np.pi
     incidence_f = (np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range)))*180.0/np.pi
-    incidence_c = (incidence_f+incidence_n)/2
+    incidence_c = (incidence_f+incidence_n)/2.0
     if dimension == 0:
         return incidence_c
     
@@ -1019,12 +1054,12 @@ def Baseline_timeseries(igramsFile):
         Bp_igram.append((float(h5file[k[0]][igram].attrs['P_BASELINE_BOTTOM_HDR'])+\
                          float(h5file[k[0]][igram].attrs['P_BASELINE_TOP_HDR']))/2)
     
-    A,B=design_matrix(h5file)
-    dateList       = ptime.igram_date_list(igramsFile)
-    tbase,dateDict = ptime.date_list2tbase(dateList)
+    A,B = design_matrix(h5file)
+    dateList = ptime.igram_date_list(igramsFile)
+    tbase = ptime.date_list2tbase(dateList)[0]
     dt = np.diff(tbase)
   
-    Bp_rate=np.dot(np.linalg.pinv(B),Bp_igram)
+    Bp_rate = np.dot(np.linalg.pinv(B),Bp_igram)
     zero = np.array([0.],np.float32)
     Bperp = np.concatenate((zero,np.cumsum([Bp_rate*dt])))
     h5file.close()
