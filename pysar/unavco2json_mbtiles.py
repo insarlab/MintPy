@@ -171,7 +171,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     insarmapsMetadata["mid_lat"] = mid_lat
     insarmapsMetadata["country"] = country
     insarmapsMetadata["region"] = region
-    insarmapsMetadata["chunk_num"] = chunk_num
+    insarmapsMetadata["chunk_num"] = 1
     insarmapsMetadata["attribute_keys"] = attribute_keys
     insarmapsMetadata["attribute_values"] = attribute_values
     insarmapsMetadata["string_dates_sql"] = string_dates_sql
@@ -284,7 +284,7 @@ def main():
 
 # run tippecanoe command to get mbtiles file and then delete the json files to save space
     os.chdir(os.path.abspath(json_path))
-    os.system("tippecanoe *.json -x d -pf -pk -Bg -d9 -D12 -g12 -r0 -o " + folder_name + ".mbtiles")
+    os.system("tippecanoe *.json -l chunk_1 -x d -pf -pk -Bg -d9 -D12 -g12 -r0 -o " + folder_name + ".mbtiles")
 
 # move mbtiles file from json folder to main json output folder
     os.system("mv " + folder_name + ".mbtiles " + os.path.abspath(main_json_path))
