@@ -112,12 +112,12 @@ def range_distance(atr, dimension=2):
     
     far_range = near_range + dR*width
     center_range = (far_range + near_range)/2.0
-    print 'near    range : '+ str(near_range)
-    print 'far     range : '+ str(far_range)
-    print 'average range : '+ str(center_range)
+    print 'center range : '+ str(center_range)
     if dimension == 0:
-        return center_range
-
+        return np.array(center_range)
+    
+    print 'near   range : '+ str(near_range)
+    print 'far    range : '+ str(far_range)
     range_x = np.linspace(near_range, far_range, num=width, endpoint='FALSE')
     if dimension == 1:
         return range_x
@@ -157,16 +157,15 @@ def incidence_angle(atr, dimension=2):
     
     ## Calculation
     far_range = near_range+dR*width
-    incidence_n = (np.pi-np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range)))*180.0/np.pi
-    incidence_f = (np.pi-np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range)))*180.0/np.pi
+    incidence_n = (np.pi - np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))) * 180.0/np.pi
+    incidence_f = (np.pi - np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))) * 180.0/np.pi
     incidence_c = (incidence_f+incidence_n)/2.0
+    print 'center incidence angle : '+ str(incidence_c)
     if dimension == 0:
-        return incidence_c
+        return np.array(incidence_c)
     
-    print 'near    incidence angle : '+ str(incidence_n)
-    print 'far     incidence angle : '+ str(incidence_f)
-    print 'average incidence angle : '+ str(incidence_c)
-    
+    print 'near   incidence angle : '+ str(incidence_n)
+    print 'far    incidence angle : '+ str(incidence_f)
     incidence_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
     if dimension == 1:
         return incidence_x
