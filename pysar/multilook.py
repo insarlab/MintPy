@@ -24,7 +24,7 @@ import numpy as np
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
-from pysar._pysar_utilities import get_file_list
+import pysar._pysar_utilities as ut
 
 
 ######################################## Sub Functions ############################################
@@ -192,7 +192,7 @@ def main(argv):
 
     inps = cmdLineParse()
     #print '\n**************** Multilook *********************'
-    inps.file = get_file_list(inps.file)
+    inps.file = ut.get_file_list(inps.file)
 
     # check outfile and parallel option
     if inps.parallel:
