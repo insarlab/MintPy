@@ -63,6 +63,7 @@ def main(argv):
         data=(-4*pi/wvl)*data
     
         outname=File.split('.')[0]+'.unw'
+        print 'writing >>> '+outname
         writefile.write(data,atr,outname)
   
     elif k == 'timeseries':
@@ -111,6 +112,7 @@ def main(argv):
         atr['DATE12']                = master_d+'-'+d
         
         ## Writing
+        print 'writing >>> '+outname
         writefile.write(data,atr,outname)
 
     elif k in ['interferograms','coherence','wrapped']:
@@ -135,9 +137,14 @@ def main(argv):
     else:
         dset = h5file[k].get(k)
         data = dset[0:dset.shape[0],0:dset.shape[1]]
-        if k == 'temporal_coherence': outname=File.split('.')[0]+'.cor'
-        else:                         outname=File.split('.')[0]+'.unw'
-    
+        if k in ['temporal_coherence']:
+            outname=File.split('.')[0]+'.cor'
+        elif k in ['dem','.hgt','.dem']:
+            atr['FILE_TYPE'] = '.dem'
+            outname=os.path.splitext(File)[0]+'.dem'
+        else:
+            outname=File.split('.')[0]+'.unw'
+        print 'writing >>> '+ outname
         writefile.write(data,atr,outname)
   
   
