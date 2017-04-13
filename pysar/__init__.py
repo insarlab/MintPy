@@ -4,7 +4,7 @@
 miami_path = True    # Package-wide variable, Auto setting for University of Miami
                      # change it to False if you are not using the file structure of University of Miami
 parallel_num = 8     # max core number used in parallel processing
-figsize_single_min = 8.0        # default min size in inch, for single plot
+figsize_single_min = 6.0        # default min size in inch, for single plot
 figsize_multi = [20.0, 12.0]    # default size in inch, for multiple subplots
 
 

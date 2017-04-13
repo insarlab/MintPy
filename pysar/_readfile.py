@@ -395,7 +395,7 @@ def read_gamma_par(File):
             par_dict[l[0].strip()] = str.replace(l[1],'\n','').split("#")[0].strip()
     
     # Attributes: Gamma to ROI_PAC
-    par_dict = attribute_gamma2roipac(par_dict, par_dict)
+    #par_dict = attribute_gamma2roipac(par_dict, par_dict)
     
     return par_dict
 

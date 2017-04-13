@@ -103,11 +103,23 @@ def write_roipac_rsc(atr, outname, sorting=True):
     Output:
         outname
     '''
+    # sorting by key name
     keyList = atr.iterkeys()
     if sorting:
         keyList = sorted(keyList)
+    
+    # Convert 3.333e-4 to 0.0003333
+    if 'X_STEP' in keyList:
+        atr['X_STEP'] = str(float(atr['X_STEP']))
+        atr['Y_STEP'] = str(float(atr['Y_STEP']))
+        atr['X_FIRST'] = str(float(atr['X_FIRST']))
+        atr['Y_FIRST'] = str(float(atr['Y_FIRST']))
+    
+    # max digit for space formating
     digits = max([len(key) for key in keyList]+[2])
     f = '{0:<%d}    {1}'%(digits)
+    
+    # writing .rsc file
     frsc = open(outname,'w')
     for key in keyList:
         frsc.write(f.format(str(key), str(atr[key]))+'\n')

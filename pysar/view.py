@@ -101,7 +101,7 @@ class Basemap2(Basemap):
             ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d km'%(distance/1000.0),\
                     verticalalignment='top', horizontalalignment='center',fontsize=font_size) 
     
-    def auto_lalo_sequence(self, geo_box, max_tick_num=4, step_candidate=[1,2,4,5]):
+    def auto_lalo_sequence(self, geo_box, max_tick_num=4, step_candidate=[1,2,3,4,5]):
         '''Auto calculate lat/lon label sequence based on input geo_box
         Inputs:
             geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
