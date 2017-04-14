@@ -79,18 +79,21 @@ def yymmdd(dates):
 
 
 #################################################################
-def igram_date_list(igramFile):
+def igram_date_list(ifgramFile, fmt='YYYYMMDD'):
     '''Read Date List from Interferogram file
         for timeseries file, use h5file['timeseries'].keys() directly
+    Inputs:
+        ifgramFile - string, name/path of interferograms file
+        fmt        - string, output date format, choices=['YYYYMMDD','YYMMDD']
+    Output:
+        dateList   - list of string, date included in ifgramFile in YYYYMMDD or YYMMDD format
     '''
-
-    h5file = h5py.File(igramFile,'r')
+    h5file = h5py.File(ifgramFile,'r')
     k = h5file.keys()
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
     if k[0] not in  ['interferograms','coherence','wrapped']:
         print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
-    #print 'reading date list from '+k[0]
   
     dateList = []
     ifgramList = h5file[k[0]].keys()
@@ -100,8 +103,10 @@ def igram_date_list(igramFile):
         if not dates[0] in dateList: dateList.append(dates[0])
         if not dates[1] in dateList: dateList.append(dates[1])
     dateList.sort()
+    h5file.close()
   
-    #dateList6 = yymmdd(dateList)
+    if fmt == 'YYMMDD':
+        dateList = yymmdd(dateList)
 
     return dateList
 
@@ -128,7 +133,14 @@ def date_index(dateList):
 
 ################################################################
 def date_list2tbase(dateList):
-    '''Get temporal Baseline in days with respect to the 1st date'''
+    '''Get temporal Baseline in days with respect to the 1st date
+    Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
+    Output:
+        tbase    - list of int, temporal baseline in days
+        dateDict - dict with key   - string, date in YYYYMMDD format
+                             value - int, temporal baseline in days
+    '''
+    dateList = yyyymmdd(dateList)
     tbase=[]
     d1 = dt(*time.strptime(dateList[0],"%Y%m%d")[0:5])
     for ni in range(len(dateList)):
@@ -145,7 +157,13 @@ def date_list2tbase(dateList):
 
 ################################################################
 def date_list2vector(dateList):
-    '''Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)'''
+    '''Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
+    Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
+    Outputs:
+        dates      - list of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+        datevector - list of float, years, i.e. 2010.8020547945205
+    '''
+    dateList = yyyymmdd(dateList)
     dates=[]
     for ni in range(len(dateList)):
         d = dt(*time.strptime(dateList[ni],"%Y%m%d")[0:5])

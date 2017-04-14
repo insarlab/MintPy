@@ -99,7 +99,7 @@ def main(argv):
         try:      master_d = d_ref
         except:
             try:    master_d = atr['ref_date']
-            except: master_d = atr['DATE']
+            except: master_d = dateList[0]
         if len(master_d)==8:  master_d=master_d[2:8]
         if len(d)==8:         d=d[2:8]
         outname = master_d+'_'+d+'.unw'

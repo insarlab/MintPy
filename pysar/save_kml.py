@@ -164,7 +164,7 @@ def main(argv):
 
             #### Out name
             try:    ref_date = atr['ref_date']
-            except: ref_date = ut.yyyymmdd(atr['DATE'])[0]
+            except: ref_date = epochList[0]
             #ref_date=h5file['timeseries'].attrs['ref_date']
             if len(epoch_date)==8:  outName=ref_date[2:]+'-'+epoch_date[2:]
             else:                   outName=ref_date[2:]+'-'+epoch_date
