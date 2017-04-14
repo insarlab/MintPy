@@ -11,7 +11,8 @@
 #
 # Yunjun, Jun 2016: Add phase velocity approach from the paper.
 #                   Use different range and look angle for each column
-#
+# Yunjun, Apr 2017: use variable P_BASELINE(_TOP/BOTTOM)_TIMESERIES
+#                   support geocoded file
 
 
 import os
@@ -93,26 +94,27 @@ def main(argv):
     h5.close()
     print '-------------------------------------------'
 
-    # Temporal Baseline
-    print 'read temporal baseline'
-    tbase = ptime.date_list2tbase(date_list)[0]
-    tbase = np.array(tbase).reshape(date_num,1)
     # Perpendicular Baseline
+    print 'read perpendicular baseline'
     try:
-        pbase = [float(i) for i in atr['P_BASELINE_TIMESERIES'].split()]
-        pbase = np.array(pbase).reshape(date_num,1)
+        inps.pbase = ut.perp_baseline_timeseries(atr, dimension=1)
+        if inps.pbase.shape[1] > 1:
+            print '\tconsider P_BASELINE variation in azimuth direction'
+        else:
+            pbase = inps.pbase
     except:
-        print 'Cannot find P_BASELINE_TIMESERIES from timeseries file.'
-        print 'Trying to calculate it from interferograms file'
+        print '\tCannot find P_BASELINE_TIMESERIES from timeseries file.'
+        print '\tTrying to calculate it from interferograms file'
         if inps.ifgram_file:
-            pbase = ut.Baseline_timeseries(inps.ifgram_file)
-            pbase = np.array(pbase).reshape(date_num,1)
+            inps.pbase = np.array(ut.perp_baseline_ifgram2timeseries(inps.ifgram_file)[0]).reshape(date_num,1)
         else:
             message = 'No interferogram file input!\n'+\
                       'Can not correct for DEM residula without perpendicular base info!'
             raise Exception(message)
-    # perpendicular baseline velocity
-    pbase_v = np.diff(pbase, axis=0) / np.diff(tbase, axis=0)
+
+    # Temporal Baseline
+    print 'read temporal baseline'
+    inps.tbase = np.array(ptime.date_list2tbase(date_list)[0]).reshape(date_num,1)
 
     # Incidence angle (look angle in the paper)
     if inps.incidence_angle:
@@ -120,13 +122,18 @@ def main(argv):
             print 'reading incidence angle from file: '+inps.incidence_angle
             inps.incidence_angle = readfile.read(inps.incidence_angle)[0]
         else:
-            try: inps.incidence_angle = float(inps.incidence_angle)
-            except: raise ValueError('Can not read input incidence angle: '+str(inps.incidence_angle))
+            try:
+                inps.incidence_angle = np.array(float(inps.incidence_angle))
+                print 'use input incidence angle : '+str(inps.incidence_angle)
+            except:
+                raise ValueError('Can not read input incidence angle: '+str(inps.incidence_angle))
     else:
         print 'calculate incidence angle using attributes of time series file'
-        inps.incidence_angle = ut.incidence_angle(atr, dimension=1)
+        if inps.pbase.shape[1] > 1:
+            inps.incidence_angle = ut.incidence_angle(atr, dimension=2)
+        else:
+            inps.incidence_angle = ut.incidence_angle(atr, dimension=1)
     inps.incidence_angle *= np.pi/180.0
-    #inps.incidence_angle = inps.incidence_angle.flatten('F')
 
     # Range distance
     if inps.range_dis:
@@ -134,24 +141,32 @@ def main(argv):
             print 'reading range distance from file: '+inps.range_dis
             inps.range_dis = readfile.read(inps.range_dis)[0]
         else:
-            try: inps.range_dis = float(inps.range_dis)
-            except: raise ValueError('Can not read input incidence angle: '+str(inps.range_dis))
+            try:
+                inps.range_dis = np.array(float(inps.range_dis))
+                print 'use input range distance : '+str(inps.range_dis)
+            except:
+                raise ValueError('Can not read input incidence angle: '+str(inps.range_dis))
     else:
         print 'calculate range distance using attributes from time series file'
-        inps.range_dis = ut.range_distance(atr, dimension=1)
-    #inps.range_dis = inps.range_dis.flatten('F')
-    
+        if inps.pbase.shape[1] > 1:
+            inps.range_dis = ut.range_distance(atr, dimension=2)
+        else:
+            inps.range_dis = ut.range_distance(atr, dimension=1)
+
+
     # Design matrix - temporal deformation model using tbase
     if inps.phase_velocity:
         print 'using phase velocity history'
         A1 = np.ones((date_num-1, 1))
-        A2 = (tbase[1:date_num] + tbase[0:date_num-1]) / 2.0
-        A3 = (tbase[1:date_num]**2 + tbase[1:date_num]*tbase[0:date_num-1] + tbase[0:date_num-1]**2) / 6.0
+        A2 = (inps.tbase[1:date_num] + inps.tbase[0:date_num-1]) / 2.0
+        A3 = (inps.tbase[1:date_num]**3 - inps.tbase[0:date_num-1]**3) / np.diff(inps.tbase, axis=0) / 6.0
+        #A3 = (inps.tbase[1:date_num]**2 + inps.tbase[1:date_num]*inps.tbase[0:date_num-1] +\
+        #      inps.tbase[0:date_num-1]**2) / 6.0
     else:
         print 'using phase history'
-        A1 = np.hstack((np.ones((date_num, 1)), tbase))
-        A2 = tbase**2 / 2.0
-        A3 = tbase**3 / 6.0
+        A1 = np.hstack((np.ones((date_num, 1)), inps.tbase))
+        A2 = inps.tbase**2 / 2.0
+        A3 = inps.tbase**3 / 6.0
     # Polynomial order of model
     print "temporal deformation model's polynomial order = "+str(inps.poly_order)
     if   inps.poly_order == 1:  A_def = A1
@@ -171,10 +186,14 @@ def main(argv):
             col = i/length
             range_dis = inps.range_dis[row, col]
             inc_angle = inps.incidence_angle[row, col]
+            # Consider P_BASELINE variation within one interferogram
+            if inps.pbase.shape[1] > 1:
+                pbase = inps.pbase[:,row].reshape(date_num, 1)
 
             # Design matrix - DEM error using pbase, range distance and incidence angle
             A_delta_z = pbase / (range_dis * np.sin(inc_angle))
             if inps.phase_velocity:
+                pbase_v = np.diff(pbase, axis=0) / np.diff(inps.tbase, axis=0)
                 A_delta_z_v = pbase_v / (range_dis * np.sin(inc_angle))
                 A = np.hstack((A_delta_z_v, A_def))
             else:
@@ -186,7 +205,7 @@ def main(argv):
             # Get unknown parameters X = [delta_z, vel, acc, delta_acc, ...]
             ts_dis = timeseries[:,i]
             if inps.phase_velocity:
-                ts_dis = np.diff(ts_dis, axis=0) / np.diff(tbase, axis=0)
+                ts_dis = np.diff(ts_dis, axis=0) / np.diff(inps.tbase, axis=0)
             X = np.dot(A_inv, ts_dis)
 
             # Update DEM error / timeseries matrix
@@ -206,6 +225,7 @@ def main(argv):
             # Design matrix - DEM error using pbase, range distance and incidence angle
             A_delta_z = pbase / (range_dis * np.sin(inc_angle))
             if inps.phase_velocity:
+                pbase_v = np.diff(pbase, axis=0) / np.diff(inps.tbase, axis=0)
                 A_delta_z_v = pbase_v / (range_dis * np.sin(inc_angle))
                 A = np.hstack((A_delta_z_v, A_def))
             else:
@@ -217,7 +237,7 @@ def main(argv):
             # Get unknown parameters X = [delta_z, vel, acc, delta_acc, ...]
             ts_dis = timeseries[:,i*length:(i+1)*length]
             if inps.phase_velocity:
-                ts_dis = np.diff(ts_dis, axis=0) / np.diff(tbase, axis=0)
+                ts_dis = np.diff(ts_dis, axis=0) / np.diff(inps.tbase, axis=0)
             X = np.dot(A_inv, ts_dis)
 
             # Update DEM error / timeseries matrix
@@ -234,6 +254,7 @@ def main(argv):
         # Design matrix - DEM error using pbase, range distance and incidence angle
         A_delta_z = pbase / (inps.range_dis * np.sin(inps.incidence_angle))
         if inps.phase_velocity:
+            pbase_v = np.diff(pbase, axis=0) / np.diff(inps.tbase, axis=0)
             A_delta_z_v = pbase_v / (inps.range_dis * np.sin(inps.incidence_angle))
             A = np.hstack((A_delta_z_v, A_def))
         else:
@@ -244,7 +265,7 @@ def main(argv):
 
         # Get unknown parameters X = [delta_z, vel, acc, delta_acc, ...]
         if inps.phase_velocity:
-            timeseries = np.diff(timeseries, axis=0) / np.diff(tbase, axis=0)
+            timeseries = np.diff(timeseries, axis=0) / np.diff(inps.tbase, axis=0)
         X = np.dot(A_inv, timeseries)
 
         # Update DEM error / timeseries matrix
@@ -262,7 +283,7 @@ def main(argv):
     
     #C1_v = pbase_v / (center_range * np.sin(center_look_angle))
     #C1   = pbase   / (center_range * np.sin(center_look_angle))
-    #timeseries_v = (timeseries[1:date_num,:] - timeseries[0:date_num-1,:]) / (tbase[1:date_num] - tbase[0:date_num-1])    
+    #timeseries_v = (timeseries[1:date_num,:] - timeseries[0:date_num-1,:]) / (inps.tbase[1:date_num] - inps.tbase[0:date_num-1])    
     ###### Inversion column by column
     #print 'inversing using L2-norm minimization (unweighted least squares)...'
     #dz = np.zeros([1,length*width])
@@ -280,7 +301,7 @@ def main(argv):
     #
     #    ## (Phase) Velocity History
     #    ts_x  = timeseries[:,i*length:(i+1)*length]
-    #    ts_xv = (ts_x[1:date_num,:] - ts_x[0:date_num-1,:]) / (tbase[1:date_num] - tbase[0:date_num-1])
+    #    ts_xv = (ts_x[1:date_num,:] - ts_x[0:date_num-1,:]) / (inps.tbase[1:date_num] - inps.tbase[0:date_num-1])
     #
     #    ## DEM error
     #    if inps.phase_velocity:    par  = np.dot(Cinv,ts_xv)
@@ -297,7 +318,7 @@ def main(argv):
     #dz = np.reshape(dz,[length,width],order='F')
 
 
-    ########## Output
+    ##------------------------------------------------ Output  --------------------------------------------##
     # DEM error file
     if 'Y_FIRST' in atr.keys():
         dem_error_file = 'demGeo_error.h5'
