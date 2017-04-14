@@ -58,7 +58,7 @@ def manual_select_pairs_to_remove(File):
     ax = fig.add_subplot(111)
 
     pairs_idx = pnet.read_igram_pairs(File)
-    bperp_list = ut.Baseline_timeseries(File)
+    bperp_list = ut.perp_baseline_ifgram2timeseries(File)[0].tolist()
     date8_list = ptime.igram_date_list(File)
     ax = pnet.plot_network(ax, pairs_idx, date8_list, bperp_list)
     print 'display the network of interferogram of file: '+File

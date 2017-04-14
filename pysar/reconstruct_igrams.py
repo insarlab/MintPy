@@ -18,8 +18,10 @@ import pysar._pysar_utilities as ut
 
 
 #####################################################################################
-def reconstruct_igrams_from_timeseries(h5timeseries,h5igrams):
-
+def reconstruct_igrams_from_timeseries(tsFile, igramFile):
+    h5igrams     = h5py.File(igramFile,'r')
+    h5timeseries = h5py.File(tsFile,'r')
+    
     dateList = h5timeseries['timeseries'].keys()
   
     dateIndex={}
@@ -36,7 +38,7 @@ def reconstruct_igrams_from_timeseries(h5timeseries,h5igrams):
     del d
   
     lt,numpixels=shape(timeseries)
-    A,B = ut.design_matrix(h5igrams)
+    A,B = ut.design_matrix(igramFile)
   
     lam = float(h5timeseries['timeseries'].attrs['WAVELENGTH'])
     range2phase=-4*pi/lam
@@ -45,6 +47,9 @@ def reconstruct_igrams_from_timeseries(h5timeseries,h5igrams):
     p=-1*ones([A.shape[0],1])
     Ap=hstack((p,A))
     estData=dot(Ap,timeseries)
+    
+    h5igrams.close()
+    h5timeseries.close()
   
     return estData,nrows,ncols
 
@@ -77,20 +82,15 @@ def main(argv):
     except:
         usage() ; sys.exit(1)
   
-    try:
-        h5igrams     = h5py.File(igramFile,'r')
-        h5timeseries = h5py.File(tsFile,'r')
-    except:
-        usage() ; sys.exit(1)
-  
     try:    outName = argv[2]
     except: outName = 'reconstructed_'+igramFile
   
     #####
     print '\n**************** Reconstruct Interferograms ****************'
-    estData,nrows,ncols=reconstruct_igrams_from_timeseries(h5timeseries,h5igrams)
+    estData,nrows,ncols = reconstruct_igrams_from_timeseries(tsFile,igramFile)
     
-    h5estIgram=h5py.File(outName,'w')
+    h5igrams = h5py.File(igramFile,'r')
+    h5estIgram = h5py.File(outName,'w')
     igramList=h5igrams['interferograms'].keys()
     gg = h5estIgram.create_group('interferograms')
     for i in range(len(igramList)):
@@ -105,7 +105,8 @@ def main(argv):
     print 'writing to ' + outName
     print '*****************************'
   
-    h5estIgram.close()   
+    h5estIgram.close()
+    h5igrams.close()
 
 
 #####################################################################################

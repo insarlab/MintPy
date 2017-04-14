@@ -120,7 +120,7 @@ def main(argv):
         if not k in multi_group_hdf5_file:
             print 'ERROR: only the following file type are supported:\n'+str(multi_group_hdf5_file)
             sys.exit(1)
-        Bp = ut.Baseline_timeseries(inps.file)
+        Bp = ut.perp_baseline_ifgram2timeseries(inps.file)[0]
         date8List = ptime.igram_date_list(inps.file)
         date6List = ptime.yymmdd(date8List)
     else:

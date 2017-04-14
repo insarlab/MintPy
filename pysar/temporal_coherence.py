@@ -46,37 +46,6 @@ def date_list(h5file):
 
 
 ######################################################################################################
-def design_matrix(h5file):
-    '''Make the design matrix for the inversion.  '''
-    tbase,dateList,dateDict = date_list(h5file)
-    ifgramList = h5file['interferograms'].keys()
-    numDates   = len(dateDict)
-    numIfgrams = len(ifgramList)
-    A = np.zeros((numIfgrams,numDates))
-    B = np.zeros(np.shape(A))
-    daysList = []
-    for day in tbase:
-        daysList.append(day)
-    tbase = np.array(tbase)
-    t = np.zeros((numIfgrams,2))
-    for ni in range(numIfgrams):
-        date = h5file['interferograms'][ifgramList[ni]].attrs['DATE12'].split('-')
-        if date[0][0] == '9':  date[0] = '19'+date[0]
-        else:                  date[0] = '20'+date[0]
-        if date[1][0] == '9':  date[1] = '19'+date[1]
-        else:                  date[1] = '20'+date[1]
-        ndxt1 = daysList.index(dateDict[date[0]])
-        ndxt2 = daysList.index(dateDict[date[1]])
-        A[ni,ndxt1] = -1
-        A[ni,ndxt2] = 1
-        B[ni,ndxt1:ndxt2] = tbase[ndxt1+1:ndxt2+1]-tbase[ndxt1:ndxt2]
-        t[ni,:] = [dateDict[date[0]],dateDict[date[1]]]
-    A = A[:,1:]
-    B = B[:,:-1]
-    return A,B
-
-
-######################################################################################################
 def usage():
     print '''
 ***************************************************************************************
@@ -87,7 +56,7 @@ def usage():
 
   Example:
       temporal_coherence.py Seeded_unwrapIfgram.h5 timeseries.h5
-      temporal_coherence.py Seeded_unwrapIfgram.h5 timeseries.h5 temporal_coherence.h5
+      temporal_coherence.py Seeded_unwrapIfgram.h5 timeseries.h5 temporalCoherence.h5
 
   Reference:
       Tizzani, P., P. Berardino, F. Casu, P. Euillades, M. Manzo, G. P. Ricciardi, G. Zeni,
@@ -113,7 +82,7 @@ def main(argv):
         usage() ; sys.exit(1)
 
     try:    tempCohFile = argv[2]
-    except: tempCohFile = 'temporal_coherence.h5'
+    except: tempCohFile = 'temporalCoherence.h5'
 
     ########################################################
     #print '\n********** Temporal Coherence ****************'
@@ -151,7 +120,7 @@ def main(argv):
     ifgramList = h5igrams['interferograms'].keys()
     numIfgrams = len(ifgramList)
     print 'number of epochs: '+str(numIfgrams)
-    A,B = design_matrix(h5igrams)
+    A,B = ut.design_matrix(igramsFile)
     p   = -1*np.ones([A.shape[0],1])
     Ap  = np.hstack((p,A))
 

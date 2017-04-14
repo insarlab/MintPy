@@ -197,7 +197,7 @@ def main(argv):
         sx = int(h5file['interferograms'][ifgramList[0]].attrs['WIDTH'])
         sy = int(h5file['interferograms'][ifgramList[0]].attrs['FILE_LENGTH'])
         curls,Triangles,C=ut.get_triangles(h5file)
-        A,B = ut.design_matrix(h5file)   
+        A,B = ut.design_matrix(File)
         ligram,lv=np.shape(B)
         lcurls=np.shape(curls)[0]
         print 'Number of all triangles: '+  str(lcurls)

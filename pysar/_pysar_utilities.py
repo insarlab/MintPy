@@ -73,6 +73,7 @@ def check_parallel(file_num=1):
     if file_num <= 1:
         enable_parallel = False
         print 'parallel processing is diabled for one input file'
+        return 1, enable_parallel, None, None
 
     # Check required python module
     try:
@@ -81,6 +82,7 @@ def check_parallel(file_num=1):
         print 'Can not import joblib'
         print 'parallel is disabled.'
         enable_parallel = False
+        return 1, enable_parallel, None, None
 
     # Find proper number of cores for parallel processing
     num_cores = min(multiprocessing.cpu_count(), file_num, pysar.parallel_num)
@@ -98,8 +100,58 @@ def check_parallel(file_num=1):
         return num_cores, enable_parallel, None, None
 
 
+def perp_baseline_timeseries(atr, dimension=1):
+    '''Calculate perpendicular baseline for each acquisition within timeseries
+    Inputs:
+        atr - dict, including the following PySAR attribute
+              FILE_LENGTH
+              P_BASELINE_TIMESERIES
+              P_BASELINE_TOP_TIMESERIES (optional)
+              P_BASELINE_BOTTOM_TIMESERIES (optional)
+        dimension - int, choices = [0, 1]
+                    0 for constant P_BASELINE in azimuth direction
+                    1 for linear P_BASELINE in azimuth direction, for radar coord only
+    Output:
+        pbase - np.array, with shape = [date_num, 1] or [date_num, length]
+    '''
+    # return constant value for geocoded input file
+    if 'Y_FIRST' in atr.keys() and dimension > 0:
+        dimension = 0
+        print 'input file is geocoded, return constant P_BASELINE in azimuth direction within one interferogram'
+
+    length = int(atr['FILE_LENGTH'])
+    pbase_list = [float(i) for i in atr['P_BASELINE_TIMESERIES'].split()]
+    date_num = len(pbase_list)
+    pbase = np.array(pbase_list).reshape(date_num, 1)
+
+    if dimension > 0:
+        try:
+            pbase_top = np.array([float(i) for i in atr['P_BASELINE_TOP_TIMESERIES'].split()]).reshape(date_num, 1)
+            pbase_bottom = np.array([float(i) for i in atr['P_BASELINE_BOTTOM_TIMESERIES'].split()]).reshape(date_num, 1)
+            pbase = np.zeros((date_num, length))
+            for i in range(date_num):
+                pbase[i,:] = np.linspace(pbase_top[i], pbase_bottom[i], num=length, endpoint='FALSE')
+        except:
+            dimension = 0
+            print 'Can not find P_BASELINE_TOP/BOTTOM_TIMESERIES in input attribute'
+            print 'return constant P_BASELINE in azimuth direction for each acquisition instead'
+    return pbase
+
+
 def range_distance(atr, dimension=2):
-    '''Calculate range distance from input attribute dict'''
+    '''Calculate range distance from input attribute dict
+    Inputs:
+        atr - dict, including the following ROI_PAC attributes:
+              STARTING_RANGE
+              RANGE_PIXEL_SIZE
+              FILE_LENGTH
+              WIDTH
+        dimension - int, choices = [0,1,2]
+                    2 for 2d matrix, vary in range direction, constant in az direction, for radar coord only
+                    1 for 1d matrix, in range direction, for radar coord file
+                    0 for center value
+    Output: np.array (0, 1 or 2 D) - range distance between antenna and ground target in meters
+    '''
     # return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
@@ -382,7 +434,6 @@ def get_file_list(fileList, abspath=False):
     Example:
     fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
     '''
-  
     fileListOut = []
     for i in range(len(fileList)):
         file0 = fileList[i]
@@ -717,40 +768,41 @@ def YYYYMMDD2years(d):
     return dyy
 
 ######################################
-def design_matrix(h5file):
-    '''Make the design matrix for the inversion.  '''
-    tbase,dateList,dateDict,dateList1 = date_list(h5file)
-    k=h5file.keys()
-    if 'interferograms' in k: k[0] = 'interferograms'
-    elif 'coherence'    in k: k[0] = 'coherence'
-    ifgramList = h5file[k[0]].keys()
-    numDates = len(dateDict)
-    numIfgrams = len(ifgramList)
-    A = np.zeros((numIfgrams,numDates))
+def design_matrix(ifgramFile):
+    '''Make the design matrix for the inversion.
+    Input:
+        ifgramFile - string, name/path of interferograms file
+    Outputs:
+        A - 2D np.array in size (igram_num, date_num-1)
+            representing date combination for each interferogram
+        B - 2D np.array in size (igram_num, date_num-1)
+            representing temporal baseline timeseries between master and slave date for each interferogram
+    '''
+    date6_list = ptime.igram_date_list(ifgramFile, fmt='YYMMDD')
+    date12_list = pnet.get_date12_list(ifgramFile)
+
+    date_num = len(date6_list)
+    igram_num = len(date12_list)
+    tbase = np.array(ptime.date_list2tbase(date6_list)[0])
+
+    A = np.zeros((igram_num, date_num))
     B = np.zeros(np.shape(A))
-    daysList = []
-    for day in tbase:
-        daysList.append(day)
-    tbase = np.array(tbase)
-    t = np.zeros((numIfgrams,2))
-    for ni in range(numIfgrams):
-        date = h5file[k[0]][ifgramList[ni]].attrs['DATE12'].split('-')
-        if date[0][0] == '9':      date[0] = '19'+date[0]
-        else:                      date[0] = '20'+date[0]
-        if date[1][0] == '9':      date[1] = '19'+date[1]
-        else:                      date[1] = '20'+date[1]
-        ndxt1 = daysList.index(dateDict[date[0]])
-        ndxt2 = daysList.index(dateDict[date[1]])
-        A[ni,ndxt1] = -1
-        A[ni,ndxt2] = 1
-        B[ni,ndxt1:ndxt2] = tbase[ndxt1+1:ndxt2+1]-tbase[ndxt1:ndxt2]
-        t[ni,:] = [dateDict[date[0]],dateDict[date[1]]]
+    #t = np.zeros((igram_num, 2))
+    for i in range(igram_num):
+        m_idx, s_idx = [date6_list.index(j) for j in date12_list[i].split('-')]
+        A[i, m_idx] = -1
+        A[i, s_idx] = 1
+        B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
+        #t[i,:] = [tbase[m_idx], tbase[s_idx]]
+    # Remove the 1st date assuming it's zero
     A = A[:,1:]
     B = B[:,:-1]
+
     return A,B
 
+
 ######################################
-def timeseries_inversion(igramsFile, timeseriesFile):
+def timeseries_inversion(ifgramFile, timeseriesFile):
     '''Implementation of the SBAS algorithm.
     modified from sbas.py written by scott baker, 2012 
     
@@ -762,8 +814,9 @@ def timeseries_inversion(igramsFile, timeseriesFile):
     total = time.time()
   
     global B1, dt, numDates
-    h5flat = h5py.File(igramsFile,'r')
-    A,B = design_matrix(h5flat)
+    A,B = design_matrix(ifgramFile)
+
+    h5flat = h5py.File(ifgramFile,'r')
     tbase,dateList,dateDict,dateDict2 = date_list(h5flat)
     dt = np.diff(tbase)
     B1 = np.linalg.pinv(B)
@@ -773,7 +826,7 @@ def timeseries_inversion(igramsFile, timeseriesFile):
     ##### Basic Info
     ifgramList = h5flat['interferograms'].keys()
     numIfgrams = len(ifgramList)
-    atr = readfile.read_attribute(igramsFile)
+    atr = readfile.read_attribute(ifgramFile)
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
     numPixels = length * width
@@ -854,11 +907,17 @@ def timeseries_inversion(igramsFile, timeseriesFile):
 
     ## Attributes
     print 'calculating perpendicular baseline timeseries'
-    Bperp = Baseline_timeseries(igramsFile)
-    Bperp = str(Bperp.tolist()).translate(None,'[],')
-    atr['P_BASELINE_TIMESERIES'] = Bperp
+    pbase, pbase_top, pbase_bottom = perp_baseline_ifgram2timeseries(ifgramFile)
+    # convert np.array into string with each item separated by white space
+    pbase = str(pbase.tolist()).translate(None,'[],')
+    pbase_top = str(pbase_top.tolist()).translate(None,'[],')
+    pbase_bottom = str(pbase_bottom.tolist()).translate(None,'[],')
+    atr['P_BASELINE_TIMESERIES'] = pbase
+    atr['P_BASELINE_TOP_TIMESERIES'] = pbase_top
+    atr['P_BASELINE_BOTTOM_TIMESERIES'] = pbase_bottom
     atr['ref_date'] = dateList[0]
-    for key,value in atr.iteritems():   group.attrs[key] = value
+    for key,value in atr.iteritems():
+        group.attrs[key] = value
     h5timeseries.close()
   
     print 'Done.\nTime series inversion took ' + str(time.time()-total) +' secs'
@@ -1042,32 +1101,54 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
     dset=gr.create_dataset('mask',data=L1ORL2,compression='gzip')
     L1orL2h5.close()
 
-def Baseline_timeseries(igramsFile):
-    h5file = h5py.File(igramsFile,'r')
-    k=h5file.keys()
-    if 'interferograms' in k: k[0] = 'interferograms'
-    elif 'coherence'    in k: k[0] = 'coherence'
-    igramList = h5file[k[0]].keys()
-    Bp_igram=[]
-    for igram in igramList:
-        Bp_igram.append((float(h5file[k[0]][igram].attrs['P_BASELINE_BOTTOM_HDR'])+\
-                         float(h5file[k[0]][igram].attrs['P_BASELINE_TOP_HDR']))/2)
+
+def perp_baseline_ifgram2timeseries(ifgramFile):
+    '''Calculate perpendicular baseline timeseries from input interferograms file
+    Input:
+        ifgramFile - string, file name/path of interferograms file
+    Outputs:
+        pbase        - 1D np.array, P_BASELINE_TIMESERIES
+        pbase_top    - 1D np.array, P_BASELINE_TOP_TIMESERIES
+        pbase_bottom - 1D np.array, P_BASELINE_BOTTOM_TIMESERIES
+    '''
+    k = readfile.read_attribute(ifgramFile)['FILE_TYPE']
     
-    A,B = design_matrix(h5file)
-    dateList = ptime.igram_date_list(igramsFile)
-    tbase = ptime.date_list2tbase(dateList)[0]
-    dt = np.diff(tbase)
-  
-    Bp_rate = np.dot(np.linalg.pinv(B),Bp_igram)
-    zero = np.array([0.],np.float32)
-    Bperp = np.concatenate((zero,np.cumsum([Bp_rate*dt])))
+    # P_BASELINE of all interferograms
+    h5file = h5py.File(ifgramFile,'r')
+    igram_list = sorted(h5file[k].keys())
+    pbase_igram = []
+    pbase_top_igram = []
+    pbase_bottom_igram = []
+    for igram in igram_list:
+        pbase_top = float(h5file[k][igram].attrs['P_BASELINE_TOP_HDR'])
+        pbase_bottom = float(h5file[k][igram].attrs['P_BASELINE_BOTTOM_HDR'])
+        pbase_igram.append((pbase_bottom+pbase_top)/2.0)
+        pbase_top_igram.append(pbase_top)
+        pbase_bottom_igram.append(pbase_bottom)
     h5file.close()
+
+    # Temporal baseline velocity
+    date_list = ptime.igram_date_list(ifgramFile)
+    tbase_list = ptime.date_list2tbase(date_list)[0]
+    tbase_v = np.diff(tbase_list)
+
+    A,B = design_matrix(ifgramFile)
+    B_inv = np.linalg.pinv(B)
     
-    return Bperp
+    pbase_rate        = np.dot(B_inv, pbase_igram)
+    pbase_top_rate    = np.dot(B_inv, pbase_top_igram)
+    pbase_bottom_rate = np.dot(B_inv, pbase_bottom_igram)
+    
+    zero = np.array([0.],np.float32)
+    pbase        = np.concatenate((zero,np.cumsum([pbase_rate*tbase_v])))
+    pbase_top    = np.concatenate((zero,np.cumsum([pbase_top_rate*tbase_v])))
+    pbase_bottom = np.concatenate((zero,np.cumsum([pbase_bottom_rate*tbase_v])))
+
+    return pbase, pbase_top, pbase_bottom
 
 
-def dBh_dBv_timeseries(igramsFile):
-    h5file = h5py.File(igramsFile)
+def dBh_dBv_timeseries(ifgramFile):
+    h5file = h5py.File(ifgramFile)
     k=h5file.keys()
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
@@ -1077,9 +1158,8 @@ def dBh_dBv_timeseries(igramsFile):
     for igram in igramList:
         dBh_igram.append(float(h5file[k[0]][igram].attrs['H_BASELINE_RATE_HDR']))
         dBv_igram.append(float(h5file[k[0]][igram].attrs['V_BASELINE_RATE_HDR']))
-    
-  
-    A,B=design_matrix(h5file)
+
+    A,B=design_matrix(ifgramFile)
     tbase,dateList,dateDict,dateList1 = date_list(h5file)
     dt = np.diff(tbase)
   
@@ -1095,8 +1175,8 @@ def dBh_dBv_timeseries(igramsFile):
   
     return dBh,dBv
 
-def Bh_Bv_timeseries(igramsFile):
-    h5file = h5py.File(igramsFile)
+def Bh_Bv_timeseries(ifgramFile):
+    h5file = h5py.File(ifgramFile)
     k=h5file.keys()
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
@@ -1107,8 +1187,7 @@ def Bh_Bv_timeseries(igramsFile):
         Bh_igram.append(float(h5file[k[0]][igram].attrs['H_BASELINE_TOP_HDR']))
         Bv_igram.append(float(h5file[k[0]][igram].attrs['V_BASELINE_TOP_HDR']))
   
-  
-    A,B=design_matrix(h5file)
+    A,B=design_matrix(ifgramFile)
     tbase,dateList,dateDict,dateList1 = date_list(h5file)
     dt = np.diff(tbase)
   
