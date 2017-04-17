@@ -20,6 +20,7 @@ import numpy as np
 
 import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
+import pysar._writefile as writefile
 
 
 ###############################################################
@@ -57,7 +58,7 @@ def get_delay(grib_file, atr, inps_dict):
         aps = pa.PyAPS_rdr(grib_file, inps_dict['dem_file'], grib=inps_dict['grib_source'],\
                            verb=True, Del=inps_dict['delay_type'])
     phs = np.zeros((aps.ny, aps.nx))
-    aps.getdelay(phs)
+    aps.getdelay(phs, inc=0.0)
     
     # Get relative phase delay in space
     yref = int(atr['ref_y'])
@@ -85,8 +86,8 @@ REFERENCE='''reference:
 '''
 
 TEMPLATE='''
-pysar.troposphericDelay.method        = pyaps   #['height-correlation'] 
-pysar.troposphericDelay.weatherModel  = ECMWF   #['ERA', 'MERRA', 'NARR']
+pysar.troposphericDelay.method        = pyaps   #[pyaps, height-correlation] 
+pysar.troposphericDelay.weatherModel  = ECMWF   #[ECMWF, ERA, MERRA, NARR]
 '''
 
 
@@ -99,18 +100,20 @@ def cmdLineParse():
     parser.add_argument('timeseries_file', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-d','--dem', dest='dem_file', required=True,\
                         help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
-    
+    parser.add_argument('-i', dest='incidence_angle',\
+                        help='a file containing all incidence angles, or\n'+\
+                             'one average value presenting the whole area, if not input, average look angle will be used.')
+    parser.add_argument('--weather-dir', dest='weather_dir', \
+                        help='directory to put downloaded weather data, i.e. ./../WEATHER\n'+\
+                             'use directory of input timeseries_file if not specified.')
+
     parser.add_argument('-s', dest='weather_model',\
                         default='ECMWF', choices={'ECMWF','ERA-Interim','ERA','MERRA','MERRA2','NARR'},\
                         help='source of the atmospheric data')
     parser.add_argument('--delay', dest='delay_type', default='comb', choices={'comb','dry','wet'},\
                         help='Delay type to calculate, comb contains both wet and dry delays')
     parser.add_argument('-t','--hour', dest='hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
-    
-    parser.add_argument('-i', dest='incidence_angle',\
-                        help='a file containing all incidence angles, or\n'+\
-                             'one average value presenting the whole area, if not input, average look angle will be used.')
-    
+
     parser.add_argument('--template', dest='template_file',\
                         help='template file with input options below:\n'+TEMPLATE)
     parser.add_argument('-o', dest='out_file', help='Output file name for trospheric corrected timeseries.')
@@ -123,9 +126,17 @@ def cmdLineParse():
 def main(argv):
     
     inps = cmdLineParse()
-    inps.dem_file = ut.get_file_list([inps.dem_file])[0]
     inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
     atr = readfile.read_attribute(inps.timeseries_file)
+
+    inps.dem_file = ut.get_file_list([inps.dem_file])[0]
+    # Convert DEM to ROIPAC format
+    if os.path.splitext(inps.dem_file)[1] in ['.h5']:
+        print 'convert DEM file to ROIPAC format'
+        dem, atr_dem = readfile.read(inps.dem_file)
+        atr_dem['FILE_TYPE'] = '.dem'
+        outname = os.path.splitext(inps.dem_file)[0]+'4pyaps.dem'
+        inps.dem_file = writefile.write(dem, atr_dem, outname)
 
     print '*******************************************************************************'
     print 'Downloading weather model data ...'
@@ -137,14 +148,18 @@ def main(argv):
     elif inps.weather_model == 'NARR' :                 inps.grib_source = 'NARR'
     else: raise Reception('Unrecognized weather model: '+inps.weather_model)
     print 'grib source: '+inps.grib_source
-    
+
+    ## Grib data directory
+    if not inps.weather_dir:
+        inps.weather_dir = os.path.dirname(os.path.abspath(inps.timeseries_file))
+    grib_dir = inps.weather_dir+'/'+inps.grib_source
+    if not os.path.isdir(grib_dir):
+        print 'making directory: '+grib_dir
+        os.makedirs(grib_dir)
+
     ## Get Acquisition time
     inps.hour = closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.grib_source)
     print 'Time of cloest vailable product: '+inps.hour
-    
-    if not os.path.isdir(inps.grib_source):
-        print 'making directory: '+inps.grib_source
-        os.mkdir(inps.grib_source)
     
     ## Loop to download 
     inps.grib_file_list = []
@@ -152,19 +167,19 @@ def main(argv):
     dateList = sorted(h5timeseries['timeseries'].keys())
     for d in dateList:
         print [d]
-        if   inps.grib_source == 'ECMWF':  grib_file = './ECMWF/ERA-Int_'+d+'_'+inps.hour+'.grb'
-        elif inps.grib_source == 'ERA'  :  grib_file = './ERA/ERA_'+d+'_'+inps.hour+'.grb'
-        elif inps.grib_source == 'MERRA':  grib_file = './MERRA/merra-'+d+'-'+inps.hour+'.hdf'
-        elif inps.grib_source == 'NARR' :  grib_file = './NARR/narr-a_221_'+d+'_'+inps.hour+'00_000.grb'
+        if   inps.grib_source == 'ECMWF':  grib_file = grib_dir+'/ERA-Int_'+d+'_'+inps.hour+'.grb'
+        elif inps.grib_source == 'ERA'  :  grib_file = grib_dir+'/ERA_'+d+'_'+inps.hour+'.grb'
+        elif inps.grib_source == 'MERRA':  grib_file = grib_dir+'/merra-'+d+'-'+inps.hour+'.hdf'
+        elif inps.grib_source == 'NARR' :  grib_file = grib_dir+'/narr-a_221_'+d+'_'+inps.hour+'00_000.grb'
         inps.grib_file_list.append(grib_file)
         
         if os.path.isfile(grib_file):
             print grib_file + ' already exists.'
         else:
-            if   inps.grib_source == 'ECMWF':  pa.ECMWFdload([d], inps.hour, './'+inps.grib_source+'/')
-            elif inps.grib_source == 'ERA'  :  pa.ERAdload(  [d], inps.hour, './'+inps.grib_source+'/')
-            elif inps.grib_source == 'MERRA':  pa.MERRAdload([d], inps.hour, './'+inps.grib_source+'/')
-            elif inps.grib_source == 'NARR' :  pa.NARRdload( [d], inps.hour, './'+inps.grib_source+'/')
+            if   inps.grib_source == 'ECMWF':  pa.ECMWFdload([d], inps.hour, grib_dir)
+            elif inps.grib_source == 'ERA'  :  pa.ERAdload(  [d], inps.hour, grib_dir)
+            elif inps.grib_source == 'MERRA':  pa.MERRAdload([d], inps.hour, grib_dir)
+            elif inps.grib_source == 'NARR' :  pa.NARRdload( [d], inps.hour, grib_dir)
 
 
     print '*******************************************************************************'
@@ -203,7 +218,7 @@ def main(argv):
         ref_idx = 0
     print 'calculating phase delay on reference date: '+dateList[ref_idx]
     phs_ref = get_delay(inps.grib_file_list[ref_idx], atr, vars(inps))
-    
+
     ## Loop to calculate phase delay on the other dates
     for i in range(len(inps.grib_file_list)):
         # Get phase delay
@@ -230,6 +245,13 @@ def main(argv):
     h5timeseries.close()
     h5timeseries_tropCor.close()
     h5trop.close()
+
+    # 
+    if '4pyaps.dem' in inps.dem_file:
+        rmCmd = 'rm '+inps.dem_file+' '+inps.dem_file+'.rsc '
+        print rmCmd
+        os.system(rmCmd)
+    
     print 'Done.'
 
     return
