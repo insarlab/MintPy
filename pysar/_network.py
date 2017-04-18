@@ -501,14 +501,18 @@ def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
         dissertation, Univ. of Miami, Section 6.3.
     '''
     # Get all date12
-    date12_list = select_pairs_all(date_list)
+    date12_list_all = select_pairs_all(date_list)
 
     # Loop of Threshold
+    print 'List of temporal and perpendicular spatial baseline thresholds:'
+    print temp_perp_list
+    date12_list = []
     for temp_perp in temp_perp_list:
         tbase_max = temp_perp[0]
         pbase_max = temp_perp[1]
-        date12_list = threshold_temporal_baseline(date12_list, tbase_max, keep_seasonal=False)
-        date12_list = threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max)
+        date12_list_tmp = threshold_temporal_baseline(date12_list_all, tbase_max, keep_seasonal=False)
+        date12_list_tmp = threshold_perp_baseline(date12_list_tmp, date_list, pbase_list, pbase_max)
+        date12_list += date12_list_tmp
     date12_list = sorted(list(set(date12_list)))
     return date12_list
 

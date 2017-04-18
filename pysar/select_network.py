@@ -275,13 +275,20 @@ def main(argv):
         elif inps.method in ['mst','min_spanning_tree','minimum_spanning_tree']:  inps.method = 'mst'
         print 'select method: '+inps.method
 
-        if   inps.method == 'all':          date12_list = pnet.select_pairs_all(date6_list)
-        elif inps.method == 'delaunay':     date12_list = pnet.select_pairs_delaunay(date6_list, pbase_list, inps.norm)
-        elif inps.method == 'star':         date12_list = pnet.select_pairs_star(date6_list)
-        elif inps.method == 'sequential':   date12_list = pnet.select_pairs_sequential(date6_list, inps.increment_num)
-        elif inps.method == 'hierarchical': date12_list = pnet.select_pairs_hierarchical(date6_list, pbase_list, inps.temp_perp_list)
-        elif inps.method == 'mst':          date12_list = pnet.select_pairs_mst(date6_list, pbase_list)
-        else:  raise Exception('Unrecoganized select method: '+inps.method)
+        if   inps.method == 'all':
+            date12_list = pnet.select_pairs_all(date6_list)
+        elif inps.method == 'delaunay':
+            date12_list = pnet.select_pairs_delaunay(date6_list, pbase_list, inps.norm)
+        elif inps.method == 'star':
+            date12_list = pnet.select_pairs_star(date6_list)
+        elif inps.method == 'sequential':
+            date12_list = pnet.select_pairs_sequential(date6_list, inps.increment_num)
+        elif inps.method == 'hierarchical':
+            date12_list = pnet.select_pairs_hierarchical(date6_list, pbase_list, inps.temp_perp_list)
+        elif inps.method == 'mst':
+            date12_list = pnet.select_pairs_mst(date6_list, pbase_list)
+        else:
+            raise Exception('Unrecoganized select method: '+inps.method)
         print 'initial number of interferograms: '+str(len(date12_list))
 
         # Filter pairs (optional) using temp/perp/doppler baseline threshold
@@ -326,6 +333,7 @@ def main(argv):
         try:    inps.work_dir = os.path.dirname(os.path.abspath(inps.reference_file))
         except: inps.work_dir = os.path.dirname(os.path.abspath(inps.baseline_file))
         inps.outfile = inps.work_dir+'/ifgram_list.txt'
+    inps.outfile = os.path.abspath(inps.outfile)
     print 'writing >>> '+inps.outfile
     np.savetxt(inps.outfile, date12_list, fmt='%s')
 
