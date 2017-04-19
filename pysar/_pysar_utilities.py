@@ -65,6 +65,41 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 ############################################################
+def update_file(outFile, inFile=None, overwrite=False):
+    '''Check whether to update outFile or not.
+    return True if any of the following meets:
+        1. if overwrite option set to True
+        2. outFile is empty, e.g. None, []
+        3. outFile is not existed
+        4. outFile is not readable by readfile.read_attribute()
+        5. outFile is older than in File, if inFile is not None
+    Otherwise, return False.
+    
+    If inFile=None and outFile exists and readable, return False
+    '''    
+    if overwrite:
+        return True
+
+    if not outFile or not os.path.isfile(outFile):
+        return True
+
+    try:
+        atr = readfile.read_attribute(outFile)
+    except:
+        print outFile+' exists, but can not read, remove it.'
+        rmCmd = 'rm '+File;  print rmCmd;  os.system(rmCmd)
+        return True
+
+    if inFile:
+        if os.path.getmtime(outFile) < os.path.getmtime(inFile):
+            return True
+        else:
+            print outFile+' exists and is newer than '+inFile+', skip updating.'
+            return False
+
+    return False
+
+
 def check_parallel(file_num=1):
     '''Check parallel option based on pysar setting, file num and installed module'''
     enable_parallel = True
@@ -279,7 +314,7 @@ def get_file_stack(File, maskFile=None):
     return stack
 
 
-def nonzero_mask(File, outFile='Mask.h5'):
+def nonzero_mask(File, outFile='mask.h5'):
     '''Generate mask file for non-zero value of input multi-group hdf5 file'''
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
@@ -434,11 +469,17 @@ def get_file_list(fileList, abspath=False):
     Example:
     fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
     '''
+    if not fileList:
+        return []
+
+    if isinstance(fileList, basestring):
+        fileList = [fileList]
+
     fileListOut = []
     for i in range(len(fileList)):
         file0 = fileList[i]
         fileList0 = glob.glob(file0)
-        fileListOut += list(set(fileList0) - set(fileListOut))
+        fileListOut += sorted(list(set(fileList0) - set(fileListOut)))
     if abspath:
         fileListOut = [os.path.abspath(i) for i in fileListOut]
     return fileListOut
