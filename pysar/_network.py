@@ -191,7 +191,7 @@ def get_date12_list(File):
             date12_list.append(date12)
         h5.close()
     else:
-        date12_list = list(np.loadtxt(File, dtype=str))
+        date12_list = np.loadtxt(File, dtype=str).tolist()
     
     date12_list = sorted(date12_list)
     return date12_list
