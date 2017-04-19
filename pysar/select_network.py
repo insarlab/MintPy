@@ -320,7 +320,7 @@ def main(argv):
     if not date12_list:
         print 'WARNING: No interferogram selected!'
         return None
-    
+
     # date12_list to date_list
     m_dates = [date12.split('-')[0] for date12 in date12_list]
     s_dates = [date12.split('-')[1] for date12 in date12_list]
@@ -328,12 +328,20 @@ def main(argv):
     print 'number of acquisitions   selected: '+str(len(list(set(m_dates + s_dates))))
     print 'number of interferograms selected: '+str(len(date12_list))
     
-    # Write txt file
+    # Output directory/filename
     if not inps.outfile:
-        try:    inps.work_dir = os.path.dirname(os.path.abspath(inps.reference_file))
-        except: inps.work_dir = os.path.dirname(os.path.abspath(inps.baseline_file))
-        inps.outfile = inps.work_dir+'/ifgram_list.txt'
+        if pysar.miami_path and 'SCRATCHDIR' in os.environ:
+            inps.out_dir = os.getenv('SCRATCHDIR')+'/'+project_name+'/PROCESS'
+        else:
+            try:    inps.out_dir = os.path.dirname(os.path.abspath(inps.reference_file))
+            except: inps.out_dir = os.path.dirname(os.path.abspath(inps.baseline_file))
+        inps.outfile = inps.out_dir+'/ifgram_list.txt'
     inps.outfile = os.path.abspath(inps.outfile)
+    inps.out_dir = os.path.dirname(inps.outfile)
+    if not os.path.isdir(inps.out_dir):
+        os.makedirs(inps.out_dir)
+
+    # Write txt file
     print 'writing >>> '+inps.outfile
     np.savetxt(inps.outfile, date12_list, fmt='%s')
 
@@ -345,13 +353,13 @@ def main(argv):
     print 'plotting baseline history in temp/perp baseline domain to file: '+out_fig_name
     fig2, ax2 = plt.subplots()
     ax2 = pnet.plot_perp_baseline_hist(ax2, date8_list, pbase_list)
-    plt.savefig(os.path.dirname(inps.outfile)+'/'+out_fig_name, bbox_inches='tight')
+    plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
 
     out_fig_name = 'Network.pdf'
-    print 'plotting network in temp/perp baseline domain to file: '+out_fig_name
+    print 'plotting network / pairs  in temp/perp baseline domain to file: '+out_fig_name
     fig1, ax1 = plt.subplots()
     ax1 = pnet.plot_network(ax1, date12_list, date8_list, pbase_list)
-    plt.savefig(os.path.dirname(inps.outfile)+'/'+out_fig_name, bbox_inches='tight')
+    plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
     
     if inps.disp_fig:
         plt.show()
