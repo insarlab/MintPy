@@ -374,23 +374,25 @@ def main(argv):
     #########################################
     print '\n*************** Subset ****************'
     if inps.geomap_file:
-        print "Get tight subset of geomap*.trans file and/or DEM file in geo coord"
-        print '--------------------------------------------'
         outName = os.path.splitext(inps.geomap_file)[0]+'_tight'+os.path.splitext(inps.geomap_file)[1]
         # Get bounding box of non-zero area in geomap*.trans file
         trans_rg, trans_atr = readfile.read(inps.geomap_file, (), 'range')
         idx_row, idx_col = np.nonzero(trans_rg)
         pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
-        inps = subset.subset_box2inps(inps, pix_box, None)
-        inps.fill_value = 0.0
-        inps.geomap_file = check_subset_file(inps.geomap_file, vars(inps), outName)
-        
-        # Subset DEM in geo coord
-        outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
-        geomap_atr = readfile.read_attribute(inps.geomap_file)
-        pix_box, geo_box = subset.get_coverage_box(geomap_atr)
-        inps = subset.subset_box2inps(inps, pix_box, geo_box)
-        inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps), outName, overwrite=True)
+        # Subset geomap_file only if it could save > 20% percent of area
+        if abs((pix_box[2]-pix_box[0])*(pix_box[3]-pix_box[1])) < 0.8*(trans_rg.shape[0]*trans_rg.shape[1]):
+            print "Get tight subset of geomap*.trans file and/or DEM file in geo coord"
+            print '--------------------------------------------'
+            inps = subset.subset_box2inps(inps, pix_box, None)
+            inps.fill_value = 0.0
+            inps.geomap_file = check_subset_file(inps.geomap_file, vars(inps), outName)
+            
+            # Subset DEM in geo coord
+            outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
+            geomap_atr = readfile.read_attribute(inps.geomap_file)
+            pix_box, geo_box = subset.get_coverage_box(geomap_atr)
+            inps = subset.subset_box2inps(inps, pix_box, geo_box)
+            inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps), outName, overwrite=True)
 
     # Subset based on input template
     if [key for key in template.keys()\
@@ -617,8 +619,8 @@ def main(argv):
                 print cmdTrop
                 os.system(cmdTrop)
             inps.timeseries_file = outName
-        else RuntimeError:
-            print 'Unrecognized atmospheric correction method: '+template['pysar.troposphericDelay.method']
+        else:
+            sys.exit('Unrecognized atmospheric correction method: '+template['pysar.troposphericDelay.method'])
     else:
         print 'No atmospheric delay correction.'
 

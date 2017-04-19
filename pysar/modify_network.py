@@ -390,12 +390,12 @@ def main(argv):
             # Update Mask File
             if k == 'interferograms':
                 print 'update mask file for input '+k+' file based on '+Modified_File
-                inps.mask_file = 'Modified_Mask.h5'
+                inps.mask_file = 'Modified_mask.h5'
                 print 'writing >>> '+inps.mask_file
                 ut.nonzero_mask(Modified_File, inps.mask_file)
             elif k == 'coherence':
                 print 'update average spatial coherence for input '+k+' file based on: '+Modified_File
-                outFile = 'Modified_average_spatial_coherence.h5'
+                outFile = 'Modified_averageSpatialCoherence.h5'
                 print 'writing >>> '+outFile
                 ut.temporal_average(Modified_File, outFile)
                 Modified_CoherenceFile = Modified_File
