@@ -207,11 +207,11 @@ def main(argv):
     if not inps.outfile:
         inps.outfile = 'velocity.h5'
         if inps.datesNot2include:
-            inps.outfile = os.path.splitext(inps.outfile)[0]+'_ex'+os.path.splitext(inps.outfile)[1]
+            inps.outfile = os.path.splitext(inps.outfile)[0]+'Ex'+os.path.splitext(inps.outfile)[1]
 
-    inps.outfile_rmse = 'rmse_'+inps.outfile
-    inps.outfile_std = 'std_'+inps.outfile
-    inps.outfile_r2 = 'R2_'+inps.outfile
+    inps.outfile_rmse = os.path.splitext(inps.outfile)[0]+'Rmse'+os.path.splitext(inps.outfile)[1]
+    inps.outfile_std = os.path.splitext(inps.outfile)[0]+'Std'+os.path.splitext(inps.outfile)[1]
+    inps.outfile_r2 = os.path.splitext(inps.outfile)[0]+'R2'+os.path.splitext(inps.outfile)[1]
     
     # Attributes
     atr['date1'] = datevector[0]

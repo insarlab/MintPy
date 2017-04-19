@@ -42,6 +42,8 @@ import sys
 import glob
 import time
 import argparse
+import warnings
+import shutil
 
 import h5py
 import numpy as np
@@ -50,27 +52,14 @@ import pysar
 import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar.subset as subset
-
-
-def check_isfile(File):
-    '''Check if input file exists and readable.'''
-    if not File or not os.path.isfile(File):
-        return False
-     
-    try:
-        atr = readfile.read_attribute(File)
-        return True
-    except:
-        print File+' exists, but can not read, remove it.'
-        rmCmd = 'rm '+File
-        print rmCmd
-        os.system(rmCmd)
-        return False
+import pysar.load_data as load
 
 
 def check_subset_file(File, inps_dict, outFile=None, overwrite=False):
     '''Subset input file or use existed subseted file.'''
-    if not File:     return None
+    if not File:
+        return None
+
     if not outFile:
         if os.getcwd() == inps_dict['work_dir']:
             outFile = 'subset_'+os.path.basename(File)
@@ -78,25 +67,23 @@ def check_subset_file(File, inps_dict, outFile=None, overwrite=False):
             # if current dir is not original timeseries directory (e.g. TIMESERIES/subset)
             # use the same filename (but in different directories)
             outFile = os.path.basename(File)
-    
-    if check_isfile(outFile) and not overwrite:
-        print outFile+' already exists, no need to re-subset.'
-    else:
+
+    if ut.update_file(outFile, File, overwrite):
         outFile = subset.subset_file(File, inps_dict, outFile)
+
     return outFile
 
 
 def check_geocode_file(geomapFile, File, outFile=None):
     '''Geocode input file or use existed geocoded file.'''
     if not geomapFile:
-        print 'WARNING: No geomap*.trans file found! Skip geocoding.'
+        warnings.warn('No geomap*.trans file found! Skip geocoding.')
         return None
     if not File:  return None
     
     if not outFile:  outFile = 'geo_'+os.path.basename(File)
-    if check_isfile(outFile):
-        print outFile+' already exists, no need to re-geocode.'
-    else:
+
+    if ut.update_file(outFile, File):
         geocodeCmd = 'geocode.py '+os.path.basename(geomapFile)+' '+File
         print geocodeCmd
         try: os.system(geocodeCmd)
@@ -128,10 +115,10 @@ def subset_dataset(inps, geo_box4geo, pix_box4rdr):
     print 'subseting dataset in radar coord pix_box4rdr: '+str(pix_box4rdr)
     inps = subset.subset_box2inps(inps, pix_box4rdr, None)
     inps.ifgram_file    = check_subset_file(inps.ifgram_file, vars(inps))
-    inps.mask_file      = check_subset_file(inps.mask_file, vars(inps))
+    #inps.mask_file      = check_subset_file(inps.mask_file, vars(inps))
     inps.dem_radar_file = check_subset_file(inps.dem_radar_file, vars(inps))
     inps.coherence_file = check_subset_file(inps.coherence_file, vars(inps))
-    inps.spatial_coherence_file = check_subset_file(inps.spatial_coherence_file, vars(inps))
+    #inps.spatial_coh_file = check_subset_file(inps.spatial_coh_file, vars(inps))
 
     return inps
 
@@ -283,10 +270,26 @@ def main(argv):
     # Initiation
     #########################################
     print LOGO
-    # Read template
+    inps.template_file = os.path.abspath(inps.template_file)
     inps.project_name = os.path.splitext(os.path.basename(inps.template_file))[0]
     print 'Project name: '+inps.project_name
-    inps.template_file = os.path.abspath(inps.template_file)
+
+    # Work directory
+    if not inps.work_dir:
+        if pysar.miami_path and 'SCRATCHDIR' in os.environ:
+            inps.work_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+"/PYSAR"
+            print 'Use file/dir structure in University of Miami.'+\
+                  '(To turn it off, change miami_path value to False in pysar/__init__.py)'
+        else:
+            inps.work_dir = os.getcwd()
+    inps.work_dir = os.path.abspath(inps.work_dir)
+
+    if not os.path.isdir(inps.work_dir):
+        os.makedirs(inps.work_dir)
+    os.chdir(inps.work_dir)
+    print "Go to work directory: "+inps.work_dir
+
+    # Read template
     template = readfile.read_template(inps.template_file)
     for key in template.keys():
         if template[key].lower() == 'default':        template[key] = 'auto'
@@ -297,100 +300,82 @@ def main(argv):
     if 'pysar.troposphericDelay.method' in template.keys():
         template['pysar.troposphericDelay.method'] = template['pysar.troposphericDelay.method'].lower().replace('-','_')
 
-    # work directory
-    if not inps.work_dir:
-        if pysar.miami_path and 'SCRATCHDIR' in os.environ:
-            inps.work_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+"/PYSAR"
-            print 'Use file/dir structure in University of Miami.'+\
-                  '(To turn it off, change miami_path value to False in pysar/__init__.py)'
-        else:
-            inps.work_dir = os.getcwd()
-    else:
-        inps.work_dir = os.path.abspath(inps.work_dir)
-    
-    if not os.path.isdir(inps.work_dir):   os.mkdir(inps.work_dir)
-    os.chdir(inps.work_dir)
-    print "Go to work directory: "+inps.work_dir
-    
     if not os.path.isfile(os.path.basename(inps.template_file)):
-        cpCmd = 'cp '+inps.template_file+' .'
-        print cpCmd
-        os.system(cpCmd)
+        shutil.copy2(inps.template_file, inps.work_dir)
 
 
     #########################################
     # Loading Data
     #########################################
     print '\n*************** Load Data ****************'
-    loadCmd = 'load_data.py '+inps.template_file+' --dir '+inps.work_dir
+    #inps = load.load_data_from_template(inps.template_file, inps)
+    loadCmd = 'load_data.py --template '+inps.template_file+' --dir '+inps.work_dir
     print loadCmd
     os.system(loadCmd)
+    os.chdir(inps.work_dir)
 
     print '--------------------------------------------'
-    ## Find initial files name/path - required files
-    # 1. Unwrapped interferograms
-    inps.ifgram_file = 'unwrapIfgram.h5'
-    try:    inps.ifgram_file = glob.glob(inps.work_dir+'/'+inps.ifgram_file)[0]
-    except: inps.ifgram_file = None
-    if inps.ifgram_file:  print 'Unwrapped interferograms: '+inps.ifgram_file
-    else:  sys.exit('\nERROR: No interferograms file found!\n')
-    
-    # 2. Mask
-    inps.mask_file = 'Mask.h5'
-    try:     inps.mask_file = glob.glob(inps.work_dir+'/'+inps.mask_file)[0]
-    except:  inps.mask_file = None
-    if not inps.mask_file:
-        print 'No mask file found. Creating one using non-zero pixels in file: '+inps.ifgram_file
-        inps.mask_file = ut.nonzero_mask(inps.ifgram_file, 'Mask.h5')
-    print 'Mask: '+inps.mask_file
+    ## 1. Check loading result
+    # Required files
+    try:
+        inps.ifgram_file = ut.get_file_list([inps.work_dir+'/unwrapIfgram.h5', inps.work_dir+'/LoadedData.h5'])[0]
+        atr = readfile.read_attribute(inps.ifgram_file)
+        print 'Unwrapped interferograms: '+inps.ifgram_file
+    except RuntimeError:
+        print '\nNo interferograms file found!\n'
 
-    ## Find initial files name/path - recommended files (None if not found)
-    # 3. Spatial coherence for each interferograms
-    inps.coherence_file = 'coherence.h5'
-    try:    inps.coherence_file = glob.glob(inps.work_dir+'/'+inps.coherence_file)[0]
-    except: inps.coherence_file = None
-    if inps.coherence_file:  print 'Coherences: '+inps.coherence_file
-    else:  print '\nWARNING: No coherences file found. Cannot use coherence-based network modification without it.\n'
-    
-    # 4. Average spatial coherence
-    inps.spatial_coherence_file = 'average_spatial_coherence.h5'
-    try:    inps.spatial_coherence_file = glob.glob(inps.work_dir+'/'+inps.spatial_coherence_file)[0]
-    except: inps.spatial_coherence_file = None
-    if not inps.spatial_coherence_file and inps.coherence_file:
-        inps.spatial_coherence_file = ut.temporal_average(inps.coherence_file, 'average_spatial_coherence.h5')
+    # Recommended files (None if not found)
+    # Spatial coherence for each interferogram
+    try:
+        inps.coherence_file = ut.get_file_list([inps.work_dir+'/coherence.h5', inps.work_dir+'/Coherence.h5'])[0]
+        print 'Coherences: '+inps.coherence_file
+    except:
+        inps.coherence_file = None
+        warnings.warn('No coherences file found. Cannot use coherence-based network modification without it.')
 
-    # 5. DEM in geo coord
-    try:    inps.dem_geo_file = os.path.basename(template['pysar.dem.geoCoord'])
-    except: inps.dem_geo_file = '*.dem'
-    try:    inps.dem_geo_file = glob.glob(inps.work_dir+'/'+inps.dem_geo_file)[0]
-    except: inps.dem_geo_file = None
-    if inps.dem_geo_file:  print 'DEM in geo   coord: '+str(inps.dem_geo_file)
-    else:  print '\nWARNING: No geo coord DEM found.\n'
-    
-    # 6. DEM in radar coord
-    try:    inps.dem_radar_file = os.path.basename(template['pysar.dem.radarCoord'])
-    except: inps.dem_radar_file = 'radar*.hgt'
-    try:    inps.dem_radar_file = glob.glob(inps.work_dir+'/'+inps.dem_radar_file)[-1]
-    except: inps.dem_radar_file = None
-    if inps.dem_radar_file:  print 'DEM in radar coord: '+str(inps.dem_radar_file)
-    else:  print '\nWARNING: No radar coord DEM found! Cannot use tropospheric delay correction without it.\n'
-    
-    # 7. Transform file for geocoding
-    try:    inps.geomap_file = os.path.basename(template['pysar.geomap'])
-    except: inps.geomap_file = 'geomap*.trans'
-    try:    inps.geomap_file = glob.glob(inps.work_dir+'/'+inps.geomap_file)[0]
-    except: inps.geomap_file = None
-    if inps.geomap_file:     print 'Transform     file: '+str(inps.geomap_file)
-    else:  print '\nWARNING: No transform file found! Cannot geocoding without it.\n'
+    # DEM in radar coord
+    file_list = ['demRadar.h5','radar*.hgt']
+    try: file_list.append(os.path.basename(template['pysar.dem.geoCoord']))
+    except: pass
+    try:
+        inps.dem_radar_file = ut.get_file_list(file_list)[0]
+        print 'DEM in radar coord: '+str(inps.dem_radar_file)
+    except:
+        inps.dem_radar_file = None
+        if not 'Y_FIRST' in atr.keys():
+            warnings.warn('No radar coord DEM found.')
+
+    # DEM in geo coord
+    file_list = ['demGeo.h5','*.dem']
+    try: file_list.append(os.path.basename(template['pysar.dem.geoCoord']))
+    except: pass
+    try:
+        inps.dem_geo_file = ut.get_file_list(file_list)[0]
+        print 'DEM in geo   coord: '+inps.dem_geo_file
+    except:
+        inps.dem_geo_file = None
+        warnings.warn('No geo coord DEM found.')
+
+    # Transform file for geocoding
+    file_list = ['geomap*.trans']
+    try: file_list.append(os.path.basename(template['pysar.geomap']))
+    except: pass
+    try:
+        inps.geomap_file = ut.get_file_list(file_list)[0]
+        print 'Transform file: '+str(inps.geomap_file)
+    except:
+        inps.geomap_file = None
+        if not 'Y_FIRST' in atr.keys():
+            warnings.warn('No transform file found! Can not geocoding without it!')
 
 
     #########################################
     # Check the subset (Optional)
     #########################################
     print '\n*************** Subset ****************'
-    print "Get tight subset of geomap*.trans file and/or DEM file in geo coord"
-    print '--------------------------------------------'
     if inps.geomap_file:
+        print "Get tight subset of geomap*.trans file and/or DEM file in geo coord"
+        print '--------------------------------------------'
         outName = os.path.splitext(inps.geomap_file)[0]+'_tight'+os.path.splitext(inps.geomap_file)[1]
         # Get bounding box of non-zero area in geomap*.trans file
         trans_rg, trans_atr = readfile.read(inps.geomap_file, (), 'range')
@@ -418,35 +403,52 @@ def main(argv):
 
 
     #########################################
+    # Generating Aux files
+    #########################################
+    print '\n*************** Generate Initla Mask ****************'
+    # Initial mask
+    inps.mask_file = 'mask.h5'
+    if ut.update_file(inps.mask_file, inps.ifgram_file):
+        print 'creating mask file using non-zero pixels from file: '+inps.ifgram_file
+        inps.mask_file = ut.nonzero_mask(inps.ifgram_file, inps.mask_file)
+
+    # Average spatial coherence
+    if inps.coherence_file:
+        inps.spatial_coh_file = 'averageSpatialCoherence.h5'
+        if ut.update_file(inps.spatial_coh_file, inps.coherence_file):
+            inps.spatial_coh_file = ut.temporal_average(inps.coherence_file, inps.spatial_coh_file)
+    else:
+        inps.spatial_coh_file = None
+
+
+    #########################################
     # Network Modification (Optional)
     #########################################
     if [key for key in template.keys() if 'pysar.network' in key]:
         print '\n*************** Modify Network ****************'
         outName = 'Modified_'+os.path.basename(inps.ifgram_file)
-        if check_isfile(outName):
-            print '\n'+outName+' already existed, no need to re-modify network.\n'
-        else:
+        if ut.update_file(outName, inps.ifgram_file):
             networkCmd = 'modify_network.py --template '+inps.template_file+' --mask '+inps.mask_file+' --plot '+\
                          inps.ifgram_file
             if inps.coherence_file:
                 networkCmd += ' '+inps.coherence_file
             print networkCmd
             os.system(networkCmd)
-        
-        if check_isfile(outName):
+        if not ut.update_file(outName):
             inps.ifgram_file = outName
+        
         outName = 'Modified_'+os.path.basename(inps.mask_file)
-        if check_isfile(outName):
+        if not ut.update_file(outName):
             inps.mask_file = outName
         
         if inps.coherence_file:
             outName = 'Modified_'+os.path.basename(inps.coherence_file)
-            if check_isfile(outName):
+            if not ut.update_file(outName):
                 inps.coherence_file = outName
-        if inps.spatial_coherence_file:
-            outName = 'Modified_'+os.path.basename(inps.spatial_coherence_file)
-            if check_isfile(outName):
-                inps.spatial_coherence_file = outName
+        if inps.spatial_coh_file:
+            outName = 'Modified_'+os.path.basename(inps.spatial_coh_file)
+            if not ut.update_file(outName):
+                inps.spatial_coh_file = outName
 
 
     #########################################
@@ -454,19 +456,16 @@ def main(argv):
     #########################################
     print '\n**********  Reference in space  ***************'
     outName = 'Seeded_'+os.path.basename(inps.ifgram_file)
-    if check_isfile(outName):
-        inps.ifgram_file = outName
-        print inps.ifgram_file + ' already exists, no need to re-seed.'
-    else:
+    if ut.update_file(outName, inps.ifgram_file):
         print 'referncing all interferograms to the same pixel.'
         seedCmd = 'seed_data.py '+inps.ifgram_file+' -t '+inps.template_file+' -m '+inps.mask_file
-        if inps.spatial_coherence_file:
-            seedCmd += ' -c '+inps.spatial_coherence_file
+        if inps.spatial_coh_file:
+            seedCmd += ' -c '+inps.spatial_coh_file
         if inps.geomap_file:
             seedCmd = seedCmd+' --trans '+inps.geomap_file
         print seedCmd
         os.system(seedCmd)
-        inps.ifgram_file = outName
+    inps.ifgram_file = outName
 
 
     ############################################
@@ -477,15 +476,14 @@ def main(argv):
     print '\n**********  Unwrapping Error Correction  **************'
     if 'pysar.unwrapError' in template.keys() and template['pysar.unwrapError'].lower() in ['y','yes']:
         outName = os.path.splitext(inps.ifgram_file)[0]+'_unwCor.h5'
-        if check_isfile(outName):
-            print outName+' exists, no need to re-process.'
-        else:
+        if ut.update_file(outName, inps.ifgram_file):
             print 'This might take a while depending on the size of your data set!'
             unwCmd='unwrap_error.py -f '+inps.ifgram_file+' -m '+inps.mask_file
             print unwCmd
             os.system(unwCmd)
         inps.ifgram_file = outName
-    else:  print 'No unwrapping error correction.'
+    else:
+        print 'No unwrapping error correction.'
 
 
     #########################################
@@ -493,9 +491,7 @@ def main(argv):
     ########################################
     print '\n**********  Network Inversion to Time Series  ********************'
     inps.timeseries_file = 'timeseries.h5'
-    if check_isfile(inps.timeseries_file):
-        print inps.timeseries_file+' already exists, inversion is not needed.'
-    else:
+    if ut.update_file(inps.timeseries_file, inps.ifgram_file):
         invertCmd = 'igram_inversion.py '+inps.ifgram_file
         print invertCmd
         os.system(invertCmd)
@@ -508,7 +504,7 @@ def main(argv):
     else:
         demFile = inps.dem_radar_file
 
-    if not demFile or not check_isfile(demFile):
+    if ut.update_file(demFile):
         print '++++++++++++++++++++++++++++++++++++++++++++++'
         print 'ERROR:'
         print '    DEM file was not found!'
@@ -526,18 +522,16 @@ def main(argv):
     #   of timeseries with the interferograms
     ##############################################
     print '\n********** Temporal Coherence file  *********'
-    inps.temp_coherence_file = 'temporal_coherence.h5'
-    if check_isfile(inps.temp_coherence_file):
-        print inps.temp_coherence_file+' already exists.'
-    else:
-        tempCohCmd = 'temporal_coherence.py '+inps.ifgram_file+' '+inps.timeseries_file
+    inps.temp_coh_file = 'temporalCoherence.h5'
+    if ut.update_file(inps.temp_coh_file, inps.timeseries_file):
+        tempCohCmd = 'temporal_coherence.py '+inps.ifgram_file+' '+inps.timeseries_file+' '+inps.temp_coh_file
         print tempCohCmd
         os.system(tempCohCmd)
 
     print '\n--------------------------------------------'
     print 'Update Mask based on Temporal Coherence ...'
-    outName = 'Mask_tempCoh.h5'
-    maskCmd = 'generate_mask.py -f '+inps.temp_coherence_file+' -m 0.7 -o '+outName
+    outName = 'maskTempCoh.h5'
+    maskCmd = 'generate_mask.py -f '+inps.temp_coh_file+' -m 0.7 -o '+outName
     print maskCmd
     os.system(maskCmd)
     inps.mask_file = outName
@@ -547,11 +541,9 @@ def main(argv):
     # Incident Angle
     ##############################################
     print '\n********** Incident Angle file  *************'
-    inps.inc_angle_file = 'incidence_angle.h5'
-    if check_isfile(inps.inc_angle_file):
-        print inps.inc_angle_file+' already exists, no need to re-generate.'
-    else:
-        incAngleCmd = 'incidence_angle.py '+inps.timeseries_file
+    inps.inc_angle_file = 'incidenceAngle.h5'
+    if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
+        incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
         print incAngleCmd
         os.system(incAngleCmd)
 
@@ -562,23 +554,19 @@ def main(argv):
     #   Coordinate system is radar
     ############################################## 
     print '\n**********  Local Oscillator Drift correction for Envisat  ********'
-    if atr['PLATFORM'].lower() in ['envisat','env']:
+    sar_mission = atr['PLATFORM'].lower()
+    if sar_mission.startswith('env') and 'Y_FIRST' not in atr.keys():
         outName = os.path.splitext(inps.timeseries_file)[0]+'_LODcor.h5'
-        if check_isfile(outName):
-            print inps.timeseries_file+' already exists.'
-            inps.timeseries_file = outName
-        else:
-            if not 'X_FIRST' in atr.keys():
-                LODcmd = 'lod.py '+inps.timeseries_file
-                print LODcmd
-                os.system(LODcmd)
-                inps.timeseries_file = outName
-            else:
-                print 'WARNING: file is in geo coord, LOD correction is only supported for files in radar coord.'
-                print 'Skip LOD correction.'
+        if ut.update_file(outName, inps.timeseries_file):
+            LODcmd = 'lod.py '+inps.timeseries_file
+            print LODcmd
+            os.system(LODcmd)
+        inps.timeseries_file = outName
     else:
-        print '\nLOD correction is not needed for '+atr['PLATFORM']+' data.'
-
+        if not sar_mission.startswith('env'):
+            print '\nLOD correction is not needed for '+sar_mission+' data.'
+        else:
+            warnings.warn('Can not apply LOD correction for file in radar coord.')
 
     ##############################################
     # Tropospheric Delay Correction (Optional)
@@ -586,16 +574,14 @@ def main(argv):
     print '\n**********  Tropospheric Delay Correction  ******************'
     if ('pysar.troposphericDelay.method' in template.keys() and 
         template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']):
-        print '''
-        +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        WARNING:
-            Orbital error correction was BaseTropCor.
-            Tropospheric correction was already applied simultaneous with baseline error correction.
-            Tropospheric correction can not be applied again.
-            To apply the tropospheric correction separated from baseline error correction, \
-               choose other existing options for orbital error correction.
-        +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        message='''
+        Orbital error correction was BaseTropCor.
+        Tropospheric correction was already applied simultaneous with baseline error correction.
+        Tropospheric correction can not be applied again.
+        To apply the tropospheric correction separated from baseline error correction, \
+           choose other existing options for orbital error correction.
         '''
+        warnings.warn(message)
         template.pop('pysar.troposphericDelay.method', None)
     
     if ('pysar.troposphericDelay.method' in template.keys() and 
@@ -605,10 +591,7 @@ def main(argv):
         if trop_method in ['height_correlation']:
             print 'tropospheric delay correction with height-correlation approach'
             outName = os.path.splitext(inps.timeseries_file)[0]+'_tropHgt.h5'
-            if check_isfile(outName):
-                inps.timeseries_file = outName
-                print inps.timeseries_file+' already exists.'
-            else:
+            if ut.update_file(outName, inps.timeseries_file):
                 try:
                     poly_order = template['pysar.troposphericDelay.polyOrder']
                 except:
@@ -618,26 +601,24 @@ def main(argv):
                           demFile+' -p '+poly_order+' -m '+inps.mask_file
                 print cmdTrop
                 os.system(cmdTrop)
-                inps.timeseries_file = outName
+            inps.timeseries_file = outName
         
         # PyAPS
         elif trop_method == 'pyaps':
             print 'Atmospheric correction using Weather Re-analysis dataset (using PyAPS software)'
-            model = template['pysar.troposphericDelay.weatherModel']
+            try:    model = template['pysar.troposphericDelay.weatherModel']
+            except: model = 'ECMWF'
             print 'Weather Re-analysis dataset: '+model
             outName = os.path.splitext(inps.timeseries_file)[0]+'_'+model+'.h5'
-            if check_isfile(outName):
-                inps.timeseries_file = outName
-                print inps.timeseries_file+' already exists.'
-            else:
+            if ut.update_file(outName, inps.timeseries_file):
                 #acquisition_time = template['pysar.acquisitionTime']
-                #print 'acquisition time: '+acquisition_time
-                cmdTrop = 'tropcor_pyaps.py '+inps.timeseries_file+' -d '+demFile+' -s '+model
+                cmdTrop = 'tropcor_pyaps.py '+inps.timeseries_file+' -d '+demFile+' -s '+model+\
+                          ' --weather-dir '+inps.work_dir+'/../WEATHER'
                 print cmdTrop
                 os.system(cmdTrop)
-                inps.timeseries_file = outName
-        else:
-            print 'ERROR: Unrecognized atmospheric correction method: '+template['pysar.troposphericDelay.method']
+            inps.timeseries_file = outName
+        else RuntimeError:
+            print 'Unrecognized atmospheric correction method: '+template['pysar.troposphericDelay.method']
     else:
         print 'No atmospheric delay correction.'
 
@@ -646,17 +627,14 @@ def main(argv):
     # Topographic (DEM) Residuals Correction (Optional)
     ##############################################
     print '\n**********  Topographic Residual (DEM error) correction  *******'
-    outName = os.path.splitext(inps.timeseries_file)[0]+'_demCor.h5'
+    outName = os.path.splitext(inps.timeseries_file)[0]+'_demErr.h5'
     if 'pysar.topoError' in template.keys() and template['pysar.topoError'].lower() in ['y','yes','auto']:
-        if check_isfile(outName):
-            inps.timeseries_file = outName
-            print inps.timeseries_file+' already exists.'
-        else:
+        if ut.update_file(outName, inps.timeseries_file):
             print 'Correcting topographic residuals using method from Fattahi and Amelung, 2013, TGRS ...'
-            topoCmd = 'dem_error.py '+inps.timeseries_file
+            topoCmd = 'dem_error.py '+inps.timeseries_file+' -o '+outName
             print topoCmd
             os.system(topoCmd)
-            inps.timeseries_file = outName
+        inps.timeseries_file = outName
     else:
         print 'No correction for topographic residuals.'
 
@@ -672,56 +650,39 @@ def main(argv):
         if deramp_method in ['plane', 'quadratic', 'plane_range', 'quadratic_range',\
                              'plane_azimuth', 'quadratic_azimuth']:
             outName = os.path.splitext(inps.timeseries_file)[0]+'_'+deramp_method+'.h5'
-            if check_isfile(outName):
-                inps.timeseries_file = outName
-                print inps.timeseries_file+' already exists.'
-            else:
+            if ut.update_file(outName, inps.timeseries_file):
                 derampCmd = 'remove_plane.py '+inps.timeseries_file+' -m '+inps.mask_file+' -s '+deramp_method
                 print derampCmd
                 os.system(derampCmd)
             inps.timeseries_file = outName
 
         elif deramp_method in ['baseline_cor','baselinecor']:
-            outName = os.path.splitext(inps.timeseries_file)[0]+'_baselineCor.h5'
-            if check_isfile(outName):
-                inps.timeseries_file = outName
-                print inps.timeseries_file+' already exists.'
-            else:
-                if not 'X_FIRST' in atr.keys():
+            if not 'X_FIRST' in atr.keys():
+                outName = os.path.splitext(inps.timeseries_file)[0]+'_baselineCor.h5'
+                if ut.update_file(outName, inps.timeseries_file):
                     derampCmd = 'baseline_error.py '+inps.timeseries_file+' '+inps.mask_file
                     print derampCmd
                     os.system(derampCmd)
-                    inps.timeseries_file = outName
-                else:
-                    print 'WARNING!'
-                    print 'Skipping correction.'
-                    print 'baselineCor method can only be applied in radar coordinate'
+                inps.timeseries_file = outName
+            else:
+                warnings.warn('BaselineCor method can only be applied in radar coordinate, skipping correction')
 
         elif deramp_method in ['base_trop_cor','basetropcor','baselinetropcor']:
-            outName = os.path.splitext(inps.timeseries_file)[0]+'_baseTropCor.h5'
-            if check_isfile(outName):
-                inps.timeseries_file = outName
-                print inps.timeseries_file+' already exists.'
-            else:
-                if not 'X_FIRST' in atr.keys():
-                    print 'Joint estimation of Baseline error and tropospheric delay'+\
-                          ' [height-correlation approach]'
-                    try:
-                        poly_order = template['pysar.troposphericDelay.polyOrder']
-                    except:
-                        poly_order = '1'
-                        print 'Deafult polynomial order for troposphreic correction = 1'
+            if not 'X_FIRST' in atr.keys():
+                print 'Joint estimation of Baseline error and tropospheric delay [height-correlation approach]'
+                outName = os.path.splitext(inps.timeseries_file)[0]+'_baseTropCor.h5'
+                if ut.update_file(outName, inps.timeseries_file):
+                    try:    poly_order = template['pysar.troposphericDelay.polyOrder']
+                    except: poly_order = '1'
                     derampCmd = 'baseline_trop.py '+inps.timeseries_file+' '+inps.dem_radar_file+' '+\
                                 poly_order+' range_and_azimuth'
                     print derampCmd
                     os.system(derampCmd)
-                    inps.timeseries_file = outName
-                else:
-                    print 'WARNING!'
-                    print 'Skipping correction.'
-                    print 'baselineCor method can only be applied in radar coordinate'
+                inps.timeseries_file = outName
+            else:
+                warnings.warn('BaselineCor method can only be applied in radar coordinate, skipping correction')
         else:
-            print 'WARNING: Unrecognized phase ramp method: '+template['pysar.deramp']
+            warnings.warn('Unrecognized phase ramp method: '+template['pysar.deramp'])
     else:
         print 'No phaes ramp removal.'
 
@@ -730,10 +691,11 @@ def main(argv):
     # Velocity and rmse maps
     #############################################
     print '\n**********  Velocity estimation  **********************'
-    velCmd = 'timeseries2velocity.py '+inps.timeseries_file
-    print velCmd
-    os.system(velCmd)
     inps.velocity_file = 'velocity.h5'
+    if ut.update_file(inps.velocity_file, inps.timeseries_file):
+        velCmd = 'timeseries2velocity.py '+inps.timeseries_file
+        print velCmd
+        os.system(velCmd)
 
 
     ############################################
@@ -744,7 +706,7 @@ def main(argv):
     if 'pysar.geocode' in template.keys() and template['pysar.geocode'].lower() in ['y','yes','auto']: 
         print '\ngeocoding ...\n'
         inps.geo_velocity_file       = check_geocode_file(inps.geomap_file, inps.velocity_file)
-        inps.geo_temp_coherence_file = check_geocode_file(inps.geomap_file, inps.temp_coherence_file)
+        inps.geo_temp_coherence_file = check_geocode_file(inps.geomap_file, inps.temp_coh_file)
         inps.goe_timeseries_file     = check_geocode_file(inps.geomap_file, inps.timeseries_file)
         
         if inps.geo_velocity_file and inps.geo_temp_coherence_file:
@@ -764,10 +726,12 @@ def main(argv):
             print 'No geocoded velocity file found, skip creating KML file.'
 
     print 'masking velocity file: '+inps.velocity_file
-    maskCmd = 'mask.py '+inps.velocity_file+' -m '+inps.mask_file
-    print maskCmd
-    os.system(maskCmd)
-    inps.velocity_file = os.path.splitext(inps.velocity_file)[0]+'_masked.h5'
+    outName = os.path.splitext(inps.velocity_file)[0]+'_masked.h5'
+    if ut.update_file(outName, inps.velocity_file):
+        maskCmd = 'mask.py '+inps.velocity_file+' -m '+inps.mask_file
+        print maskCmd
+        os.system(maskCmd)
+    inps.velocity_file = outName
 
 
     #############################################
