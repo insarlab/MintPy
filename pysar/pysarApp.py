@@ -708,12 +708,12 @@ def main(argv):
     if 'pysar.geocode' in template.keys() and template['pysar.geocode'].lower() in ['y','yes','auto']: 
         print '\ngeocoding ...\n'
         inps.geo_velocity_file       = check_geocode_file(inps.geomap_file, inps.velocity_file)
-        inps.geo_temp_coherence_file = check_geocode_file(inps.geomap_file, inps.temp_coh_file)
+        inps.geo_temp_coh_file = check_geocode_file(inps.geomap_file, inps.temp_coh_file)
         inps.goe_timeseries_file     = check_geocode_file(inps.geomap_file, inps.timeseries_file)
         
-        if inps.geo_velocity_file and inps.geo_temp_coherence_file:
+        if inps.geo_velocity_file and inps.geo_temp_coh_file:
             print 'masking geocoded velocity file: '+inps.geo_velocity_file+' ...'
-            maskCmd = 'mask.py '+inps.geo_velocity_file+' -m '+inps.geo_temp_coherence_file+' -t 0.7'
+            maskCmd = 'mask.py '+inps.geo_velocity_file+' -m '+inps.geo_temp_coh_file+' -t 0.7'
             print maskCmd
             os.system(maskCmd)
             try: inps.geo_velocity_file = glob.glob(os.path.splitext(inps.geo_velocity_file)[0]+'_masked.h5')[0]

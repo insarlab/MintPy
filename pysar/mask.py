@@ -190,7 +190,7 @@ def main(argv):
 
     # masking
     if len(inps.file) == 1:
-        mask_file(inps.file[0], inps.mask_file, inps.outfile)
+        mask_file(inps.file[0], inps.mask_file, inps.outfile, vars(inps))
     
     elif inps.parallel:
         #num_cores = min(multiprocessing.cpu_count(), len(inps.file))
