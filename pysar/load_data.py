@@ -45,8 +45,10 @@ def auto_path_miami(inps, template_dict={}):
     if not inps.int:   inps.int = process_dir+'/DONE/IFGRAM*/filt_*rlks.int'
 
     # master interferogram for geomap*.trans and DEM in radar coord
-    try:    m_date12 = np.loadtxt(process_dir+'/master_ifgram.txt', dtype=str).tolist()
-    except: m_date12 = os.walk(process_dir+'/GEO').next()[1][0].split('geo_')[1]
+    try:     m_date12 = np.loadtxt(process_dir+'/master_ifgram.txt', dtype=str).tolist()
+    except:
+        try: m_date12 = os.walk(process_dir+'/GEO').next()[1][0].split('geo_')[1]
+        except: warnings.warn('Can not find master/reference interferogram!')
 
     if not inps.geomap:
         try: inps.geomap = process_dir+'/GEO/*'+m_date12+'*/geomap*.trans'
