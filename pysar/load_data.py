@@ -292,6 +292,9 @@ def roipac2single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict(
     Output:
         outfile   : string, output hdf5 file name
     '''
+    if not ut.update_file(outfile, infile):
+        return outfile
+    
     # Read input file
     data, atr = readfile.read(infile)
     
@@ -360,7 +363,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         if k in ['.unw']:  file_type = 'interferograms'
         elif k in ['.cor']:  file_type = 'coherence'
         elif k in ['.int']:  file_type = 'wrapped'
-        elif k in ['.byt']:  file_type = 'snap_connect_component'
+        elif k in ['.byt']:  file_type = 'snaphu_connect_component'
         elif k in ['.msk']:  file_type = 'mask'
         elif k in ['.hgt','.dem','dem']:
             file_type = 'dem'
@@ -375,7 +378,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         if file_type == 'interferograms':  outfile = 'unwrapIfgram.h5'
         elif file_type == 'coherence':  outfile = 'coherence.h5'
         elif file_type == 'wrapped':  outfile = 'wrapIfgram.h5'
-        elif file_type == 'snap_connect_component':  outfile = 'snapConnectComponent.h5'
+        elif file_type == 'snaphu_connect_component':  outfile = 'snaphuConnectComponent.h5'
         elif file_type == 'mask':  outfile = 'mask.h5'
         elif file_type == 'dem':
             if 'Y_FIRST' in atr.keys():
@@ -405,7 +408,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     elif file_type in ['.trans']:
         outfile = copy_file(fileList[0], os.path.dirname(outfile))
     else:
-        raise ValueError('Un-supported file type: '+file_type)
+        warnings.warn('Un-supported file type: '+file_type)
 
     return outfile
 
