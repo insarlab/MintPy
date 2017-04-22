@@ -87,7 +87,7 @@ def update_file(outFile, inFile=None, overwrite=False):
         atr = readfile.read_attribute(outFile)
     except:
         print outFile+' exists, but can not read, remove it.'
-        rmCmd = 'rm '+File;  print rmCmd;  os.system(rmCmd)
+        rmCmd = 'rm '+outFile;  print rmCmd;  os.system(rmCmd)
         return True
 
     if inFile:
@@ -98,6 +98,31 @@ def update_file(outFile, inFile=None, overwrite=False):
             return False
 
     return False
+
+
+def add_attribute(File, atr_new=dict()):
+    '''Add/update input attribute into File
+    Inputs:
+        File - string, path/name of file
+        atr_new - dict, attributes to be added/updated
+    Output:
+        File - string, path/name of updated file
+    '''
+    atr = readfile.read_attribute(File)
+    k = atr['FILE_TYPE']
+    h5 = h5py.File(File,'r+')    
+    if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
+        for key, value in atr_new.iteritems():
+            h5[k].attrs[key] = value
+    elif k in multi_group_hdf5_file:
+        epochList = h5[k].keys()
+        for epoch in epochList:
+            for key, value in atr_new.iteritems():
+                h5[k][epoch].attrs[key] = value
+    else:
+        raise Exception('Un-recognized file type: '+k)
+    h5.close()
+    return File
 
 
 def check_parallel(file_num=1):
@@ -776,8 +801,8 @@ def date_list(h5file):
     k = h5file.keys()
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
-    ifgramList = sorted(h5file[k[0]].keys())
-    for ifgram in  ifgramList:
+    ifgram_list = sorted(h5file[k[0]].keys())
+    for ifgram in  ifgram_list:
         dates = h5file[k[0]][ifgram].attrs['DATE12'].split('-')
         dates1= h5file[k[0]][ifgram].attrs['DATE12'].split('-')
         if dates[0][0] == '9':      dates[0] = '19'+dates[0]
@@ -801,12 +826,6 @@ def date_list(h5file):
     for i in range(len(dateList)): dateDict[dateList[i]] = tbase[i]
     return tbase,dateList,dateDict,dateList1
 
-
-#####################################
-def YYYYMMDD2years(d):
-    dy = datetime.datetime(*time.strptime(d,"%Y%m%d")[0:5])
-    dyy=np.float(dy.year) + np.float(dy.month-1)/12 + np.float(dy.day-1)/365
-    return dyy
 
 ######################################
 def design_matrix(ifgramFile):
@@ -853,97 +872,103 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
       h5timeseries: hdf5 file with the output from the inversion
     '''
     total = time.time()
-  
-    global B1, dt, numDates
-    A,B = design_matrix(ifgramFile)
 
-    h5flat = h5py.File(ifgramFile,'r')
-    tbase,dateList,dateDict,dateDict2 = date_list(h5flat)
-    dt = np.diff(tbase)
-    B1 = np.linalg.pinv(B)
-    B1 = np.array(B1,np.float32)
-    numDates = len(dateList)
-  
-    ##### Basic Info
-    ifgramList = h5flat['interferograms'].keys()
-    numIfgrams = len(ifgramList)
+    # Design matrix
+    A,B = design_matrix(ifgramFile)
+    B_inv = np.array(np.linalg.pinv(B), np.float32)
+
+    # Basic Info
     atr = readfile.read_attribute(ifgramFile)
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
-    numPixels = length * width
-    print 'number of interferograms: '+str(numIfgrams)
-    print 'number of pixels        : '+str(numPixels)
-    #numPixels_step = int(numPixels/10)
+    pixel_num = length * width
+
+    date8_list = pnet.get_date_list(ifgramFile)
+    date_num = len(date8_list)
+    tbase_list = ptime.date_list2tbase(date8_list)[0]
+    dt = np.diff(tbase_list).reshape((date_num-1,1))
+
+    h5ifgram = h5py.File(ifgramFile,'r')
+    ifgram_list = sorted(h5ifgram['interferograms'].keys())
+    ifgram_num = len(ifgram_list)
+    print 'number of interferograms : '+str(ifgram_num)
+    print 'number of pixels in space: '+str(pixel_num)
+    print 'number of acquisitions   : '+str(date_num)
+    
+    # Reference pixel in space
+    try:
+        ref_x = int(atr['ref_x'])
+        ref_y = int(atr['ref_y'])
+        print 'reference pixel in y/x: [%d, %d]'%(ref_y, ref_x)
+    except ValueError:
+        print 'No ref_x/y found! Can not inverse without reference in space.'
 
     ##### Inversion Function
-    def ts_inverse_point(dataPoint):
-        nan_ndx = dataPoint == 0.
-        fin_ndx = dataPoint != 0.
-        nan_fin = dataPoint.copy()
-        nan_fin[nan_ndx] = 1
-        if not nan_fin.sum() == len(nan_fin):
-            B1tmp = np.dot(B1,np.diag(fin_ndx))
-            tmp_rate = np.dot(B1tmp,dataPoint)
-            zero = np.array([0.],np.float32)
-            defo = np.concatenate((zero,np.cumsum([tmp_rate*dt])))
-        else: defo = np.zeros((modelDimension+1,1),np.float32)
-        return defo
+    #def ts_inverse_point(dataPoint):
+    #    nan_ndx = dataPoint == 0.
+    #    fin_ndx = dataPoint != 0.
+    #    nan_fin = dataPoint.copy()
+    #    nan_fin[nan_ndx] = 1
+    #    if not nan_fin.sum() == len(nan_fin):
+    #        B1tmp = np.dot(B_inv, np.diag(fin_ndx))
+    #        tmp_rate = np.dot(B1tmp,dataPoint)
+    #        zero = np.array([0.],np.float32)
+    #        defo = np.concatenate((zero,np.cumsum([tmp_rate*dt])))
+    #    else: defo = np.zeros((date_num,1),np.float32)
+    #    return defo
   
-    def ts_inverse(dataLine):
+    def ts_inverse(dataLine, B_inv, dt, date_num):
         numPoint = dataLine.shape[1]
-        tmp_rate = np.dot(B1,dataLine)
-        defo1 = tmp_rate * np.tile(dt.reshape((numDates-1,1)),(1,numPoint))
+        tmp_rate = np.dot(B_inv, dataLine)
+        defo1 = tmp_rate * np.tile(dt,(1,numPoint))
         defo0 = np.array([0.]*numPoint,np.float32)
         defo  = np.vstack((defo0, np.cumsum(defo1,axis=0)))
         return defo
   
     ##### Read Interferograms
     print 'Reading interferograms ...'
-    data = np.zeros((numIfgrams,numPixels),np.float32)
-    for j in range(numIfgrams):
-        ifgram = ifgramList[j]
-        print_progress(j+1, numIfgrams, prefix='loading: ', suffix=ifgram)
-        d = h5flat['interferograms'][ifgramList[j]].get(ifgramList[j])[:]
+    data = np.zeros((ifgram_num,pixel_num), np.float32)
+    import pdb; pdb.set_trace()
+
+    for j in range(ifgram_num):
+        ifgram = ifgram_list[j]
+        print_progress(j+1, ifgram_num, prefix='loading: ', suffix=ifgram)
+        group = h5ifgram['interferograms'][ifgram]
+        d = group.get(ifgram)[:]
+        d -= d[ref_y, ref_x]
         data[j] = d.flatten(1)
-    h5flat.close()
+    h5ifgram.close()
 
     ##### Inversion
     print 'Inversing time series ...'
-    dataPoint = np.zeros((numIfgrams,1),np.float32)
-    dataLine  = np.zeros((numIfgrams,width),np.float32)
-    modelDimension  = np.shape(B)[1]
-    tempDeformation = np.zeros((modelDimension+1,numPixels),np.float32)
+    dataPoint = np.zeros((ifgram_num,1),np.float32)
+    dataLine  = np.zeros((ifgram_num,width),np.float32)
+    tempDeformation = np.zeros((date_num,pixel_num),np.float32)
+
     for i in range(length):
         dataLine = data[:,i*width:(i+1)*width]
-        defoLine = ts_inverse(dataLine)
+        defoLine = ts_inverse(dataLine, B_inv, dt, date_num)
         tempDeformation[:,i*width:(i+1)*width] = defoLine
-  
-        #for j in range(width):
-        #    dataPoint = data[:,j]
-        #    try: tempDeformation[:,i*length+j] = point_inverse(dataPoint)
-        #    except: pass
-  
         print_progress(i+1,length,prefix='calculating:')
     del data
   
     ##### Time Series Data Preparation
     print 'converting phase to range'
-    timeseries = np.zeros((modelDimension+1,length,width),np.float32)
+    timeseries = np.zeros((date_num,length,width),np.float32)
     phase2range = -1*float(atr['WAVELENGTH'])/(4.*np.pi)
-    for ni in range(modelDimension+1):
-        timeseries[ni] = tempDeformation[ni].reshape(width,length).T
-        timeseries[ni] = timeseries[ni]*phase2range
+    for i in range(date_num):
+        timeseries[i] = tempDeformation[i].reshape(width,length).T
+        timeseries[i] *= phase2range
     del tempDeformation
   
     ##### Output Time Series File
     print 'writing >>> '+timeseriesFile
-    print 'number of dates: '+str(numDates)
+    print 'number of dates: '+str(date_num)
     h5timeseries = h5py.File(timeseriesFile,'w')
     group = h5timeseries.create_group('timeseries')
-    #dateIndex = ptime.date_index(dateList)
-    for i in range(numDates):
-        date = dateList[i]
-        print_progress(i+1, numDates, suffix=date)
+    for i in range(date_num):
+        date = date8_list[i]
+        print_progress(i+1, date_num, prefix='writing: ', suffix=date)
         dset = group.create_dataset(date, data=timeseries[i], compression='gzip')
 
     ## Attributes
@@ -956,7 +981,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     atr['P_BASELINE_TIMESERIES'] = pbase
     atr['P_BASELINE_TOP_TIMESERIES'] = pbase_top
     atr['P_BASELINE_BOTTOM_TIMESERIES'] = pbase_bottom
-    atr['ref_date'] = dateList[0]
+    atr['ref_date'] = date8_list[0]
     for key,value in atr.iteritems():
         group.attrs[key] = value
     h5timeseries.close()
@@ -979,31 +1004,31 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
     dt = np.diff(tbase)
     B1 = np.linalg.pinv(B)
     B1 = np.array(B1,np.float32)
-    ifgramList = h5flat['interferograms'].keys()
-    numIfgrams = len(ifgramList)
-    #dset = h5flat[ifgramList[0]].get(h5flat[ifgramList[0]].keys()[0])
+    ifgram_list = h5flat['interferograms'].keys()
+    ifgram_num = len(ifgram_list)
+    #dset = h5flat[ifgram_list[0]].get(h5flat[ifgram_list[0]].keys()[0])
     #data = dset[0:dset.shape[0],0:dset.shape[1]]
-    dset=h5flat['interferograms'][ifgramList[0]].get(ifgramList[0])
+    dset=h5flat['interferograms'][ifgram_list[0]].get(ifgram_list[0])
     data = dset[0:dset.shape[0],0:dset.shape[1]] 
-    numPixels = np.shape(data)[0]*np.shape(data)[1]
+    pixel_num = np.shape(data)[0]*np.shape(data)[1]
     print 'Reading in the interferograms'
-    #print numIfgrams,numPixels
-    print 'number of interferograms: '+str(numIfgrams)
-    print 'number of pixels: '+str(numPixels)
-    numPixels_step = int(numPixels/10)
+    #print ifgram_num,pixel_num
+    print 'number of interferograms: '+str(ifgram_num)
+    print 'number of pixels: '+str(pixel_num)
+    pixel_num_step = int(pixel_num/10)
   
-    data = np.zeros((numIfgrams,numPixels),np.float32)
-    for ni in range(numIfgrams):
-        dset=h5flat['interferograms'][ifgramList[ni]].get(ifgramList[ni])
-        #dset = h5flat[ifgramList[ni]].get(h5flat[ifgramList[ni]].keys()[0])
+    data = np.zeros((ifgram_num,pixel_num),np.float32)
+    for ni in range(ifgram_num):
+        dset=h5flat['interferograms'][ifgram_list[ni]].get(ifgram_list[ni])
+        #dset = h5flat[ifgram_list[ni]].get(h5flat[ifgram_list[ni]].keys()[0])
         d = dset[0:dset.shape[0],0:dset.shape[1]]
         #print np.shape(d)
 
     del d
-    dataPoint = np.zeros((numIfgrams,1),np.float32)
+    dataPoint = np.zeros((ifgram_num,1),np.float32)
     modelDimension = np.shape(B)[1]
-    tempDeformation = np.zeros((modelDimension+1,numPixels),np.float32)
-    for ni in range(numPixels):
+    tempDeformation = np.zeros((date_num,pixel_num),np.float32)
+    for ni in range(pixel_num):
         dataPoint = data[:,ni]
         nan_ndx = dataPoint == 0.
         fin_ndx = dataPoint != 0.
@@ -1015,18 +1040,18 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
             zero = np.array([0.],np.float32)
             defo = np.concatenate((zero,np.cumsum([tmpe_ratea*dt])))
             tempDeformation[:,ni] = defo
-        #if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,numPixels)
-        if not np.remainder(ni,numPixels_step):
-            print 'Processing point: %8d of %8d, %3d' % (ni,numPixels,(10*ni/numPixels_step))+'%'
+        #if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,pixel_num)
+        if not np.remainder(ni,pixel_num_step):
+            print 'Processing point: %8d of %8d, %3d' % (ni,pixel_num,(10*ni/pixel_num_step))+'%'
     del data
-    timeseries = np.zeros((modelDimension+1,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
-    factor = -1*float(h5flat['interferograms'][ifgramList[0]].attrs['WAVELENGTH'])/(4.*np.pi)
-    for ni in range(modelDimension+1):
+    timeseries = np.zeros((date_num,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
+    factor = -1*float(h5flat['interferograms'][ifgram_list[0]].attrs['WAVELENGTH'])/(4.*np.pi)
+    for ni in range(date_num):
         timeseries[ni] = tempDeformation[ni].reshape(np.shape(dset)[1],np.shape(dset)[0]).T
         timeseries[ni] = timeseries[ni]*factor
     del tempDeformation
     timeseriesDict = {}
-    for key, value in h5flat['interferograms'][ifgramList[0]].attrs.iteritems():
+    for key, value in h5flat['interferograms'][ifgram_list[0]].attrs.iteritems():
         timeseriesDict[key] = value 
   
     dateIndex={}
@@ -1063,33 +1088,33 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
     BL1 = matrix(B)
     B1 = np.linalg.pinv(B)
     B1 = np.array(B1,np.float32)
-    ifgramList = h5flat['interferograms'].keys()
-    numIfgrams = len(ifgramList)
-    #dset = h5flat[ifgramList[0]].get(h5flat[ifgramList[0]].keys()[0])
+    ifgram_list = h5flat['interferograms'].keys()
+    ifgram_num = len(ifgram_list)
+    #dset = h5flat[ifgram_list[0]].get(h5flat[ifgram_list[0]].keys()[0])
     #data = dset[0:dset.shape[0],0:dset.shape[1]]
-    dset=h5flat['interferograms'][ifgramList[0]].get(ifgramList[0]) 
+    dset=h5flat['interferograms'][ifgram_list[0]].get(ifgram_list[0]) 
     data = dset[0:dset.shape[0],0:dset.shape[1]] 
-    numPixels = np.shape(data)[0]*np.shape(data)[1]
+    pixel_num = np.shape(data)[0]*np.shape(data)[1]
     print 'Reading in the interferograms'
-    print numIfgrams,numPixels
+    print ifgram_num,pixel_num
   
-    #data = np.zeros((numIfgrams,numPixels),np.float32)
-    data = np.zeros((numIfgrams,numPixels))
-    for ni in range(numIfgrams):
-        dset=h5flat['interferograms'][ifgramList[ni]].get(ifgramList[ni])
-        #dset = h5flat[ifgramList[ni]].get(h5flat[ifgramList[ni]].keys()[0])
+    #data = np.zeros((ifgram_num,pixel_num),np.float32)
+    data = np.zeros((ifgram_num,pixel_num))
+    for ni in range(ifgram_num):
+        dset=h5flat['interferograms'][ifgram_list[ni]].get(ifgram_list[ni])
+        #dset = h5flat[ifgram_list[ni]].get(h5flat[ifgram_list[ni]].keys()[0])
         d = dset[0:dset.shape[0],0:dset.shape[1]]
         #print np.shape(d)
     
         data[ni] = d.flatten(1)
     del d
-    dataPoint = np.zeros((numIfgrams,1),np.float32)
+    dataPoint = np.zeros((ifgram_num,1),np.float32)
     modelDimension = np.shape(B)[1]
-    tempDeformation = np.zeros((modelDimension+1,numPixels),np.float32)
+    tempDeformation = np.zeros((date_num,pixel_num),np.float32)
     print data.shape
     DataL1=matrix(data)
-    L1ORL2=np.ones((numPixels,1))
-    for ni in range(numPixels):
+    L1ORL2=np.ones((pixel_num,1))
+    for ni in range(pixel_num):
         print ni
         dataPoint = data[:,ni]
         nan_ndx = dataPoint == 0.
@@ -1111,18 +1136,18 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
                 defo = np.concatenate((zero,np.cumsum([tmpe_ratea*dt])))
     
             tempDeformation[:,ni] = defo
-        if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,numPixels)
+        if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,pixel_num)
     del data
-    timeseries = np.zeros((modelDimension+1,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
-    factor = -1*float(h5flat['interferograms'][ifgramList[0]].attrs['WAVELENGTH'])/(4.*np.pi)
-    for ni in range(modelDimension+1):
+    timeseries = np.zeros((date_num,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
+    factor = -1*float(h5flat['interferograms'][ifgram_list[0]].attrs['WAVELENGTH'])/(4.*np.pi)
+    for ni in range(date_num):
         timeseries[ni] = tempDeformation[ni].reshape(np.shape(dset)[1],np.shape(dset)[0]).T
         timeseries[ni] = timeseries[ni]*factor
     del tempDeformation
     L1ORL2=np.reshape(L1ORL2,(np.shape(dset)[1],np.shape(dset)[0])).T
     
     timeseriesDict = {}
-    for key, value in h5flat['interferograms'][ifgramList[0]].attrs.iteritems():
+    for key, value in h5flat['interferograms'][ifgram_list[0]].attrs.iteritems():
             timeseriesDict[key] = value
   
     dateIndex={}
@@ -1370,14 +1395,14 @@ def get_triangles(h5file):
 
 
 def generate_curls(curlfile,h5file,Triangles,curls):
-    ifgramList = h5file['interferograms'].keys()
+    ifgram_list = h5file['interferograms'].keys()
     h5curlfile=h5py.File(curlfile,'w')
     gg = h5curlfile.create_group('interferograms')
     lcurls=np.shape(curls)[0]
     for i in range(lcurls):
-        d1=h5file['interferograms'][ifgramList[curls[i,0]]].get(ifgramList[curls[i,0]])
-        d2=h5file['interferograms'][ifgramList[curls[i,1]]].get(ifgramList[curls[i,1]])
-        d3=h5file['interferograms'][ifgramList[curls[i,2]]].get(ifgramList[curls[i,2]])
+        d1=h5file['interferograms'][ifgram_list[curls[i,0]]].get(ifgram_list[curls[i,0]])
+        d2=h5file['interferograms'][ifgram_list[curls[i,1]]].get(ifgram_list[curls[i,1]])
+        d3=h5file['interferograms'][ifgram_list[curls[i,2]]].get(ifgram_list[curls[i,2]])
         data1=d1[0:d1.shape[0],0:d1.shape[1]]
         data2=d2[0:d2.shape[0],0:d2.shape[1]]
         data3=d3[0:d3.shape[0],0:d3.shape[1]]
@@ -1386,7 +1411,7 @@ def generate_curls(curlfile,h5file,Triangles,curls):
         group = gg.create_group(Triangles[i][0]+'_'+Triangles[i][1]+'_'+Triangles[i][2])
         dset = group.create_dataset(Triangles[i][0]+'_'+Triangles[i][1]+'_'+Triangles[i][2],\
                                     data=data1+data3-data2, compression='gzip')
-        for key, value in h5file['interferograms'][ifgramList[curls[i,0]]].attrs.iteritems():
+        for key, value in h5file['interferograms'][ifgram_list[curls[i,0]]].attrs.iteritems():
             group.attrs[key] = value
  
     h5curlfile.close()

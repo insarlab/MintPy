@@ -457,17 +457,20 @@ def main(argv):
     # Referencing Interferograms in Space
     #########################################
     print '\n**********  Reference in space  ***************'
-    outName = 'Seeded_'+os.path.basename(inps.ifgram_file)
-    if ut.update_file(outName, inps.ifgram_file):
-        print 'referncing all interferograms to the same pixel.'
-        seedCmd = 'seed_data.py '+inps.ifgram_file+' -t '+inps.template_file+' -m '+inps.mask_file
+    atr = readfile.read_attribute(inps.ifgram_file)
+    try:
+        ref_x = int(atr['ref_x'])
+        ref_y = int(atr['ref_y'])
+        print 'find reference pixel in y/x: [%d, %d], skip updating.'%(ref_y, ref_x)
+    except:
+        print 'call seed_data.py to find reference pixel in space'
+        seedCmd = 'seed_data.py '+inps.ifgram_file+' -t '+inps.template_file+' -m '+inps.mask_file+' --no-update-data'
         if inps.spatial_coh_file:
             seedCmd += ' -c '+inps.spatial_coh_file
         if inps.geomap_file:
-            seedCmd = seedCmd+' --trans '+inps.geomap_file
+            seedCmd += ' --trans '+inps.geomap_file
         print seedCmd
         os.system(seedCmd)
-    inps.ifgram_file = outName
 
 
     ############################################

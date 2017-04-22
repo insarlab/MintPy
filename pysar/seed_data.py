@@ -158,7 +158,7 @@ def seed_file_inps(File, inps=None, outFile=None):
         inps.ref_x = ''
         outFile = seed_file_reference_value(File, outFile, meanList, inps.ref_y, inps.ref_x)
         return outFile
-    
+
     # 2. Reference using specific pixel
     # 2.1 Find reference y/x
     if not inps.ref_y or not inps.ref_x:
@@ -171,18 +171,21 @@ def seed_file_inps(File, inps=None, outFile=None):
             inps = manual_select_reference_yx(stack, inps)
 
     # 2.2 Seeding file with reference y/x
-    if inps.ref_y and inps.ref_x:
-        print 'Seed file with input reference y/x ...'
-        if mask[inps.ref_y, inps.ref_x]:
+    if inps.ref_y and inps.ref_x and mask[inps.ref_y, inps.ref_x]:
+        if not inps.update_data:
+            print 'Add/update ref_x/y attribute to file: '+File
+            atr_ref = dict()
+            atr_ref['ref_x'] = inps.ref_x
+            atr_ref['ref_y'] = inps.ref_y
+            print atr_ref
+            outFile = ut.add_attribute(File, atr_ref)
+        else:
             print 'Referencing input file to pixel in y/x: (%d, %d)'%(inps.ref_y, inps.ref_x)
             box = (inps.ref_x, inps.ref_y, inps.ref_x+1, inps.ref_y+1)
             refList = ut.spatial_average(File, mask, box)
             outFile = seed_file_reference_value(File, outFile, refList, inps.ref_y, inps.ref_x)
-        else:
-            print '\nInput reference y/x has NaN value in file stacking, skip seeding.'
-            return None
     else:
-        sys.exit('ERROR: can not find reference y/x! Seeding FAILED.')
+        raise ValueError('Can not find reference y/x or Nan value.')
     
     return outFile
 
@@ -190,37 +193,19 @@ def seed_file_inps(File, inps=None, outFile=None):
 ###############################################################
 def seed_attributes(atr_in,x,y):
     atr = dict()
-    for key, value in atr_in.iteritems():  atr[key] = str(value)
+    for key, value in atr_in.iteritems():
+        atr[key] = str(value)
     
     atr['ref_y']=y
     atr['ref_x']=x
-    try:
-        atr['X_FIRST']
-        lat = subset.coord_radar2geo(y,atr,'y')
-        lon = subset.coord_radar2geo(x,atr,'x')
-        atr['ref_lat']=lat
-        atr['ref_lon']=lon
-        geocoord='yes'
-    except: geocoord='no'
+    if 'X_FIRST' in atr.keys():
+        atr['ref_lat'] = subset.coord_radar2geo(y,atr,'y')
+        atr['ref_lon'] = subset.coord_radar2geo(x,atr,'x')
 
     return atr
 
 
 ###############################################################
-def random_select_reference_yx(data_mat):
-    print '\n---------------------------------------------------------'
-    print   'Random select reference point ...'
-    print   '---------------------------------------------------------'
-    
-    nrow,ncol = np.shape(data_mat)
-    y = random.choice(range(nrow))
-    x = random.choice(range(ncol))
-    while data_mat[y,x] == 0:
-        y = random.choice(range(nrow))
-        x = random.choice(range(ncol))
-    return y,x
-
-
 def manual_select_reference_yx(stack, inps):
     '''
     Input: 
@@ -267,18 +252,36 @@ def manual_select_reference_yx(stack, inps):
     return inps
 
 
-def select_max_coherence_yx(corFile, mask=None):
+def select_max_coherence_yx(cohFile, mask=None, min_coh=0.85):
+    '''Select pixel with coherence > min_coh in random'''
     print '\n---------------------------------------------------------'
-    print   'Searching pixel with max coherence ...'
-    print 'use coherence file: '+corFile
-    coh, coh_atr = readfile.read(corFile)
+    print   'select pixel with coherence > '+str(min_coh)+' in random'
+    print 'use coherence file: '+cohFile
+    coh, coh_atr = readfile.read(cohFile)
     if not mask is None:
         coh[mask==0] = 0.0
-    y, x = np.unravel_index(np.argmax(coh), coh.shape)
+    coh_mask = coh >= min_coh
+    y, x = random_select_reference_yx(coh_mask, print_message=False)
+    #y, x = np.unravel_index(np.argmax(coh), coh.shape)
     print   'y/x: '+str([y, x])
     print   '---------------------------------------------------------'
 
     return y, x
+
+
+def random_select_reference_yx(data_mat, print_message=True):
+    if print_message:
+        print '\n---------------------------------------------------------'
+        print   'Random select reference point ...'
+        print   '---------------------------------------------------------'
+
+    nrow,ncol = np.shape(data_mat)
+    y = random.choice(range(nrow))
+    x = random.choice(range(ncol))
+    while data_mat[y,x] == 0:
+        y = random.choice(range(nrow))
+        x = random.choice(range(ncol))
+    return y,x
 
 
 ###############################################################
@@ -304,16 +307,20 @@ def read_seed_template2inps(template_file, inps=None):
         if 'pysar.seed.yx' in templateKeyList:
             inps.ref_y, inps.ref_x = [int(i) for i in template['pysar.seed.yx'].split(',')]
         elif 'pysar.reference.yx' in templateKeyList:
-            try:  inps.ref_y, inps.ref_x = [int(i) for i in template['pysar.reference.yx'].split(',')]
-            except:  pass
+            try:
+                inps.ref_y, inps.ref_x = [int(i) for i in template['pysar.reference.yx'].split(',')]
+            except: 
+                pass
         else: print 'No y/x input from template'
     
     if not inps.ref_lat or not inps.ref_lon:
         if 'pysar.seed.lalo' in templateKeyList:
             inps.ref_lat, inps.ref_lon = [float(i) for i in template['pysar.seed.lalo'].split(',')]
         elif 'pysar.reference.lalo' in templateKeyList:
-            try:  inps.ref_lat, inps.ref_lon = [float(i) for i in template['pysar.reference.lalo'].split(',')]
-            except:  pass
+            try:
+                inps.ref_lat, inps.ref_lon = [float(i) for i in template['pysar.reference.lalo'].split(',')]
+            except:
+                pass
         else: print 'No lat/lon input from template'
     
     return inps
@@ -415,7 +422,9 @@ def cmdLineParse():
     parser.add_argument('-o', '--outfile', help='output file name, disabled when more than 1 input files.')
     parser.add_argument('--no-parallel', dest='parallel', action='store_false',\
                         help='Disable parallel processing. Diabled auto for 1 input file.\n')
-    
+    parser.add_argument('--no-update-data', dest='update_data', action='store_false',\
+                        help='do not update data matrix value, update reference attributes only.')
+
     coord_group = parser.add_argument_group('input coordinates')
     coord_group.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')
     coord_group.add_argument('-x','--col', dest='ref_x', type=int, help='column/range number of reference pixel')

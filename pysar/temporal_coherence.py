@@ -125,12 +125,21 @@ def main(argv):
     Ap  = np.hstack((p,A))
 
     print 'calculating temporal coherence ...'
+    try:
+        ref_x = int(atr_ts['ref_x'])
+        ref_y = int(atr_ts['ref_y'])
+        print 'find reference pixel in y/x: [%d, %d]'%(ref_y, ref_x)
+    except ValueError:
+        print 'No ref_x/y found! Can not calculate temporal coherence without it.'
+    
     #data = np.zeros((numIfgrams,numpixels),np.float32)
     qq = np.zeros(numpixels)+0j
     for ni in range(numIfgrams):
         ## read interferogram
         igram = ifgramList[ni]
-        data = h5igrams['interferograms'][igram].get(igram)[:].flatten(0)
+        data = h5igrams['interferograms'][igram].get(igram)[:]
+        data -= data[ref_y, ref_x]
+        data = data.flatten(0)
 
         ## calculate difference between observed and estimated data
         ## interferogram by interferogram, less memory, Yunjun - 2016.06.10

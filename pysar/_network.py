@@ -25,6 +25,7 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 
 import pysar._datetime as ptime
 import pysar._readfile as readfile
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ##################################################################
@@ -175,6 +176,8 @@ def date12_list2index(date12_list, date_list=[]):
 
 def get_date12_list(File):
     '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
+    Output:
+        date12_list - list of string in YYMMDD-YYMMDD format
     Example:
         date12List = get_date12_list('unwrapIfgram.h5')
         date12List = get_date12_list('Pairs.list')
@@ -195,6 +198,25 @@ def get_date12_list(File):
     
     date12_list = sorted(date12_list)
     return date12_list
+
+
+def get_date_list(File, fmt='YYYYMMDD'):
+    '''Read date info from input file: Pairs.list or multi-group hdf5 file
+    Input:
+        File - name/path of Pairs.list or multi-group hdf5 file
+    Output:
+        date_list - list of string, date in YYYYMMDD or YYMMDD format
+    '''
+    if not File:
+        return []
+    
+    date12_list = get_date12_list(File)
+    m_dates = [date12.split('-')[0] for date12 in date12_list]
+    s_dates = [date12.split('-')[1] for date12 in date12_list]
+    date_list = sorted(list(set(m_dates + s_dates)))
+    if fmt == 'YYYYMMDD':
+        date_list = ptime.yyyymmdd(date_list)
+    return date_list
 
 
 def igram_perp_baseline_list(File):
