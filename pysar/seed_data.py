@@ -172,7 +172,7 @@ def seed_file_inps(File, inps=None, outFile=None):
 
     # 2.2 Seeding file with reference y/x
     if inps.ref_y and inps.ref_x and mask[inps.ref_y, inps.ref_x]:
-        if not inps.update_data:
+        if inps.mark_attribute:
             print 'Add/update ref_x/y attribute to file: '+File
             atr_ref = dict()
             atr_ref['ref_x'] = inps.ref_x
@@ -342,53 +342,6 @@ def read_seed_reference2inps(reference_file, inps=None):
 
 
 #########################################  Usage  ##############################################
-def usage():
-    print '''
-****************************************************************************************
-  Referencing all interferograms to the same pixel.
-
-  Usage:
-      seed_data.py -f filename -t templateFile               [ -M MaskFile -o out_name]
-      seed_data.py -f filename -y lineNumber -x pixelNumber  [ -M MaskFile]
-      seed_data.py -f filename -l latitude   -L longitude    [ -M MaskFile]
-      seed_data.py -f filename --method                      [ -M MaskFile]
-
-      -f : the interferograms, time-series or velocity file saved in hdf5 format.
-      -M : Mask file 
-           ##### Priority:
-               Input mask file > pysar.mask.file
-      -o : output file name [Seeded_file by default]
-  
-      Input Method:
-      -y : line number  of the reference pixel
-      -x : pixel number of the reference pixel
-      -l : latitude     of the reference pixel (for geocoded file)
-      -L : longitude    of the reference pixel (for geocoded file)
-      -r : reference file, use seeding info of this file to seed input file
-      -t : template file with setting of reference point information
-           Example: pysar.reference.yx   = 1160,300
-                    pysar.reference.lalo = 33.1,130.0
-  
-           Priority:
-           lat/lon > y/x
-           Direct input coordinate (-y/x/l/L) > reference file (-r) > template file (-t)
-  
-      Non-Input Method: 
-      *This is effective only when there is no valid reference value from input coordinate (options above)
-      --manual         : display stack of input file and manually select reference point
-      --max-coherence  : automatically select point with highest coherence value as reference point [default]
-      --global-average : use spatial global average value as reference value for each epoch
-      --random         : random select point as reference point
-      
-      -c : coherence file, used in automatic seeding based on max coherence.
-  
-      Reference value cannot be nan, thus, all selected reference point can not be:
-          a. non zero in mask, if mask is given
-          b. non nan  in data (stack)
-
-    '''
-    return
-
 TEMPLATE='''
 pysar.reference.yx   = 1160,300
 pysar.reference.lalo = 33.1,130.0
@@ -422,8 +375,9 @@ def cmdLineParse():
     parser.add_argument('-o', '--outfile', help='output file name, disabled when more than 1 input files.')
     parser.add_argument('--no-parallel', dest='parallel', action='store_false',\
                         help='Disable parallel processing. Diabled auto for 1 input file.\n')
-    parser.add_argument('--no-update-data', dest='update_data', action='store_false',\
-                        help='do not update data matrix value, update reference attributes only.')
+    parser.add_argument('--mark-attribute', dest='mark_attribute', action='store_true',\
+                        help='mark/update reference attributes in input file only\n'+\
+                             'do not update data matrix value nor write new file')
 
     coord_group = parser.add_argument_group('input coordinates')
     coord_group.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')

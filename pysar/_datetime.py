@@ -10,7 +10,7 @@
 #
 # Recommended Usage:
 #   import pysar._datetime as ptime
-#   dateList = ptime.igram_date_list('unwrapIfgram.h5')
+#   date_list = ptime.ifgram_date_list('unwrapIfgram.h5')
 
 
 import sys
@@ -79,36 +79,39 @@ def yymmdd(dates):
 
 
 #################################################################
-def igram_date_list(ifgramFile, fmt='YYYYMMDD'):
+def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
     '''Read Date List from Interferogram file
         for timeseries file, use h5file['timeseries'].keys() directly
     Inputs:
         ifgramFile - string, name/path of interferograms file
         fmt        - string, output date format, choices=['YYYYMMDD','YYMMDD']
     Output:
-        dateList   - list of string, date included in ifgramFile in YYYYMMDD or YYMMDD format
+        date_list  - list of string, date included in ifgramFile in YYYYMMDD or YYMMDD format
     '''
-    h5file = h5py.File(ifgramFile,'r')
-    k = h5file.keys()
-    if 'interferograms' in k: k[0] = 'interferograms'
-    elif 'coherence'    in k: k[0] = 'coherence'
-    if k[0] not in  ['interferograms','coherence','wrapped']:
-        print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
-  
-    dateList = []
-    ifgramList = h5file[k[0]].keys()
-    for ifgram in  ifgramList:
-        dates = h5file[k[0]][ifgram].attrs['DATE12'].split('-')
-        dates = yyyymmdd(dates)
-        if not dates[0] in dateList: dateList.append(dates[0])
-        if not dates[1] in dateList: dateList.append(dates[1])
-    dateList.sort()
-    h5file.close()
-  
-    if fmt == 'YYMMDD':
-        dateList = yymmdd(dateList)
+    if not ifgramFile:
+        return []
 
-    return dateList
+    h5 = h5py.File(ifgramFile, 'r')
+    k = h5.keys()
+    if 'interferograms' in k: k = 'interferograms'
+    elif 'coherence' in k: k = 'coherence'
+    elif 'wrapped' in k: k = 'wrapped'
+    if k not in  ['interferograms','coherence','wrapped']:
+        raise ValueError('Only interferograms / coherence / wrapped are supported. Input is '+str(k))
+
+    # Get date_list in YYMMDD format
+    date_list = []
+    ifgram_list = sorted(h5[k].keys())
+    for ifgram in  ifgram_list:
+        date12 = h5[k][ifgram].attrs['DATE12'].split('-')
+        date_list.append(date12[0])
+        date_list.append(date12[1])
+    h5.close()
+    date_list = sorted(list(set(date_list)))
+
+    if fmt == 'YYYYMMDD':
+        date_list = yyyymmdd(date_list)
+    return date_list
 
 
 #################################################################
