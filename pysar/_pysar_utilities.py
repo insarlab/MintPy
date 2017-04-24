@@ -362,7 +362,7 @@ def check_drop_ifgram(h5, atr, ifgram_list):
     '''
     # Return all interferogram list if 'drop_ifgram' do not exist
     if 'drop_ifgram' not in atr.keys():
-        return ifgram_list, []
+        return ifgram_list
 
     ifgram_list_out = list(ifgram_list)
     k = atr['FILE_TYPE']

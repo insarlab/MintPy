@@ -28,6 +28,10 @@ CPX_ZERO = np.complex64(0.0)
 def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## Extract UNAVCO format metadata from PySAR attributes dictionary and dateList 
 
+    for key in pysar_meta_dict.keys():
+        if 'unavco.' in key:
+            pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict[key]
+
     unavco_meta_dict = dict()
     
     #################################
@@ -81,13 +85,16 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     except: pass
 
     ##### Grabbed by script
-    unavco_meta_dict['flight_direction'] = pysar_meta_dict['ORBIT_DIRECTION'][0].upper()
+    try: unavco_meta_dict['flight_direction'] = pysar_meta_dict['ORBIT_DIRECTION'][0].upper()
+    except: pass
     if pysar_meta_dict['ANTENNA_SIDE'] == '-1':  unavco_meta_dict['look_direction'] = 'R'
     else:                                        unavco_meta_dict['look_direction'] = 'L'
-    unavco_meta_dict['polarization'] = pysar_meta_dict['POLARIZATION']
-    unavco_meta_dict['prf']         = float(pysar_meta_dict['PRF'])
-    unavco_meta_dict['wavelength']  = float(pysar_meta_dict['WAVELENGTH'])
-
+    try: unavco_meta_dict['polarization'] = pysar_meta_dict['POLARIZATION']
+    except: pass
+    try: unavco_meta_dict['prf'] = float(pysar_meta_dict['PRF'])
+    except: pass
+    try: unavco_meta_dict['wavelength'] = float(pysar_meta_dict['WAVELENGTH'])
+    except: pass
 
     #################################
     ##### insarmaps metadata

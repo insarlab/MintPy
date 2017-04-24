@@ -48,15 +48,15 @@ def auto_path_miami(inps, template_dict={}):
     try:     m_date12 = np.loadtxt(process_dir+'/master_ifgram.txt', dtype=str).tolist()
     except:
         try: m_date12 = os.walk(process_dir+'/GEO').next()[1][0].split('geo_')[1]
-        except: warnings.warn('Can not find master/reference interferogram!')
+        except: pass
 
     if not inps.geomap:
         try: inps.geomap = process_dir+'/GEO/*'+m_date12+'*/geomap*.trans'
-        except: warnings.warn('Can not locate geomap*.trans file for geocoding!')
+        except: warnings.warn('No master interferogram found! Can not locate geomap*.trans file for geocoding!')
     
     if not inps.dem_radar:
         try: inps.dem_radar = process_dir+'/DONE/*'+m_date12+'*/radar*.hgt'
-        except: warnings.warn('Can not locate DEM in radar coord!')
+        except: warnings.warn('No master interferogram found! Can not locate DEM in radar coord!')
 
     # Use DEMg/DEM option if dem_geo is not specified in pysar option
     dem_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/DEM'
