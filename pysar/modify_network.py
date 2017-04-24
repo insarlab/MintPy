@@ -17,6 +17,7 @@
 import os
 import sys
 import argparse
+import re
 
 import h5py
 import numpy as np
@@ -59,7 +60,7 @@ def manual_select_pairs_to_remove(File):
 
     pairs_idx = pnet.read_igram_pairs(File)
     bperp_list = ut.perp_baseline_ifgram2timeseries(File)[0].tolist()
-    date8_list = ptime.igram_date_list(File)
+    date8_list = ptime.ifgram_date_list(File)
     ax = pnet.plot_network(ax, pairs_idx, date8_list, bperp_list)
     print 'display the network of interferogram of file: '+File
 
@@ -128,41 +129,64 @@ def update_inps_with_template(inps, template_file):
     return inps
 
 
-def modify_file_date12_list(File, date12_to_rmv, outFile=None):
-    '''Update multiple group hdf5 file using date12 to remove/keep'''
+def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=None):
+    '''Update multiple group hdf5 file using date12 to remove
+    Inputs:
+        File          - multi_group HDF5 file, i.e. unwrapIfgram.h5, coherence.h5
+        date12_to_rmv - list of string indicating interferograms in YYMMDD-YYMMDD format
+        mark_attribute- bool, if True, change 'drop_ifgram' attribute only; otherwise, write
+                        resutl to a new file
+        outFile       - string, output file name
+    Output:
+        outFile       - string, output file name, if mark_attribute=True, outFile = File
+    '''
     k = readfile.read_attribute(File)['FILE_TYPE']
-    date12_orig = pnet.get_date12_list(File)
-    date12_to_write = sorted(list(set(date12_orig) - set(date12_to_rmv)))
     print '----------------------------------------------------------------------------'
     print 'file: '+File
-    print 'number of interferograms in file      : '+str(len(date12_orig))
-    print 'number of interferograms to keep/write: '+str(len(date12_to_write))
-    print 'list   of interferograms to keep/write: '
-    print date12_to_write
-    date12Num = len(date12_to_write)
 
-    if not outFile:
-        outFile = 'Modified_'+os.path.basename(File)
-    print 'writing >>> '+outFile
-    h5out = h5py.File(outFile, 'w')
-    gg = h5out.create_group(k)
+    if mark_attribute:
+        print "set drop_ifgram to 'yes' for all interferograms to remove, and 'no' for all the others."
+        h5 = h5py.File(File,'r+')
+        ifgram_list = sorted(h5[k].keys())
+        for ifgram in ifgram_list:
+            if h5[k][ifgram].attrs['DATE12'] in date12_to_rmv:
+                h5[k][ifgram].attrs['drop_ifgram'] = 'yes'
+            else:
+                h5[k][ifgram].attrs['drop_ifgram'] = 'no'
+        h5.close()
+        outFile = File
+
+    else:
+        date12_orig = pnet.get_date12_list(File)
+        date12_to_write = sorted(list(set(date12_orig) - set(date12_to_rmv)))
+        print 'number of interferograms in file      : '+str(len(date12_orig))
+        print 'number of interferograms to keep/write: '+str(len(date12_to_write))
+        print 'list   of interferograms to keep/write: '
+        print date12_to_write
+        date12Num = len(date12_to_write)
     
-    h5 = h5py.File(File, 'r')
-    igramList = sorted(h5[k].keys())
-    for i in range(date12Num):
-        date12 = date12_to_write[i]
-        idx = date12_orig.index(date12)
-        igram = igramList[idx]
-        ut.print_progress(i+1, date12Num, prefix='', suffix=igram)
+        if not outFile:
+            outFile = 'Modified_'+os.path.basename(File)
+        print 'writing >>> '+outFile
+        h5out = h5py.File(outFile, 'w')
+        gg = h5out.create_group(k)
 
-        data = h5[k][igram].get(igram)[:]
-        group = gg.create_group(igram)
-        dset = group.create_dataset(igram, data=data, compression='gzip')
-        for key, value in h5[k][igram].attrs.iteritems():
-            group.attrs[key] = value
-    h5.close()
-    h5out.close()
-    print 'finished writing >>> '+outFile
+        h5 = h5py.File(File, 'r')
+        igramList = sorted(h5[k].keys())
+        for i in range(date12Num):
+            date12 = date12_to_write[i]
+            idx = date12_orig.index(date12)
+            igram = igramList[idx]
+            ut.print_progress(i+1, date12Num, prefix='', suffix=igram)
+    
+            data = h5[k][igram].get(igram)[:]
+            group = gg.create_group(igram)
+            dset = group.create_dataset(igram, data=data, compression='gzip')
+            for key, value in h5[k][igram].attrs.iteritems():
+                group.attrs[key] = value
+        h5.close()
+        h5out.close()
+        print 'finished writing >>> '+outFile
     
     return outFile
 
@@ -195,6 +219,9 @@ def cmdLineParse():
     parser.add_argument('file', nargs='+',\
                         help='Files to modify/drop network.\n'\
                              'i.e. unwrapIfgram.h5, wrapIfgram.h5, coherence.h5, ...')
+    parser.add_argument('--mark-attribute', dest='mark_attribute', action='store_true',\
+                        help='mark dropped interferograms in attribute only, do not write new file')
+    
     parser.add_argument('-t', dest='max_temp_baseline', type=float, help='temporal baseline threshold/maximum in days')
     parser.add_argument('-b', dest='max_perp_baseline', type=float, help='perpendicular baseline threshold/maximum in meters')
 
@@ -220,7 +247,7 @@ def cmdLineParse():
                                      'Will use the whole area if not assigned')
     coherenceGroup.add_argument('--min-coherence', dest='min_coherence', type=float, default=0.7,\
                                 help='Minimum coherence value')
-    
+
     # Manually select network
     manualGroup = parser.add_argument_group('Manual Network', 'Manually select/drop/modify network')
     manualGroup.add_argument('--manual', dest='disp_network', action='store_true',\
@@ -236,6 +263,8 @@ def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
     date12_orig = pnet.get_date12_list(inps.file[0])
+    print 'input file(s) to be modified: '+str(inps.file)
+    print 'number of interferograms: '+str(len(date12_orig))
     #print '\n****************** Network Modification ********************'
 
     if (not inps.reference_file and not inps.template_file and\
@@ -328,7 +357,7 @@ def main(argv):
     if inps.max_temp_baseline:
         print '----------------------------------------------------------------------------'
         print 'Drop pairs with temporal baseline > '+str(inps.max_temp_baseline)+' days'
-        date8_list = ptime.igram_date_list(inps.file[0])
+        date8_list = ptime.ifgram_date_list(inps.file[0])
         date6_list = ptime.yymmdd(date8_list)
         tbase_list = ptime.date_list2tbase(date8_list)[0]
         for i in range(len(date12_orig)):
@@ -380,22 +409,38 @@ def main(argv):
     print 'list   of interferograms to remove:'
     print date12_to_rmv
 
+    # Check existing mark for --mark-attribute option
+    if inps.mark_attribute:
+        # Get list of date12 of interferograms already been marked.
+        k = readfile.read_attribute(inps.file[0])['FILE_TYPE']
+        atr = readfile.read_attribute(inps.file[0])
+        h5 = h5py.File(inps.file[0], 'r')
+        ifgram_list_all = sorted(h5[k].keys())
+        ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
+        ifgram_list_dropped = sorted(list(set(ifgram_list_all) - set(ifgram_list_keep)))
+        date12_list_dropped = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list_dropped]
+        h5.close()
+        
+        if date12_to_rmv == date12_list_dropped:
+            date12_to_rmv = []
+            print 'calculated date12 to drop is the same as exsiting marked input file, set it empty.'
+
     if date12_to_rmv:
         ##### Update Input Files with date12_to_rmv
         Modified_CoherenceFile = 'Modified_coherence.h5'
         for File in inps.file:
-            Modified_File = modify_file_date12_list(File, date12_to_rmv)
-            
+            Modified_File = modify_file_date12_list(File, date12_to_rmv, inps.mark_attribute)
+
             k = readfile.read_attribute(File)['FILE_TYPE']
             # Update Mask File
             if k == 'interferograms':
                 print 'update mask file for input '+k+' file based on '+Modified_File
-                inps.mask_file = 'Modified_mask.h5'
+                inps.mask_file = 'maskModified.h5'
                 print 'writing >>> '+inps.mask_file
                 ut.nonzero_mask(Modified_File, inps.mask_file)
             elif k == 'coherence':
                 print 'update average spatial coherence for input '+k+' file based on: '+Modified_File
-                outFile = 'Modified_averageSpatialCoherence.h5'
+                outFile = 'averageSpatialCoherenceModified.h5'
                 print 'writing >>> '+outFile
                 ut.temporal_average(Modified_File, outFile)
                 Modified_CoherenceFile = Modified_File

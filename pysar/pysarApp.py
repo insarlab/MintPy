@@ -428,29 +428,29 @@ def main(argv):
     #########################################
     if [key for key in template.keys() if 'pysar.network' in key]:
         print '\n*************** Modify Network ****************'
-        outName = 'Modified_'+os.path.basename(inps.ifgram_file)
-        if ut.update_file(outName, inps.ifgram_file):
-            networkCmd = 'modify_network.py --template '+inps.template_file+' --mask '+inps.mask_file+' --plot '+\
-                         inps.ifgram_file
-            if inps.coherence_file:
-                networkCmd += ' '+inps.coherence_file
-            print networkCmd
-            os.system(networkCmd)
-        if not ut.update_file(outName):
-            inps.ifgram_file = outName
+        #outName = 'Modified_'+os.path.basename(inps.ifgram_file)
+        #if ut.update_file(outName, inps.ifgram_file):
+        networkCmd = 'modify_network.py --template '+inps.template_file+' --mask '+inps.mask_file+\
+                     ' --plot --mark-attribute '+inps.ifgram_file
+        if inps.coherence_file:
+            networkCmd += ' '+inps.coherence_file
+        print networkCmd
+        os.system(networkCmd)
+        #if not ut.update_file(outName):
+        #    inps.ifgram_file = outName
         
         outName = 'Modified_'+os.path.basename(inps.mask_file)
         if not ut.update_file(outName):
             inps.mask_file = outName
         
-        if inps.coherence_file:
-            outName = 'Modified_'+os.path.basename(inps.coherence_file)
-            if not ut.update_file(outName):
-                inps.coherence_file = outName
         if inps.spatial_coh_file:
             outName = 'Modified_'+os.path.basename(inps.spatial_coh_file)
             if not ut.update_file(outName):
                 inps.spatial_coh_file = outName
+        #if inps.coherence_file:
+        #    outName = 'Modified_'+os.path.basename(inps.coherence_file)
+        #    if not ut.update_file(outName):
+        #        inps.coherence_file = outName
 
 
     #########################################
@@ -464,7 +464,7 @@ def main(argv):
         print 'find reference pixel in y/x: [%d, %d], skip updating.'%(ref_y, ref_x)
     except:
         print 'call seed_data.py to find reference pixel in space'
-        seedCmd = 'seed_data.py '+inps.ifgram_file+' -t '+inps.template_file+' -m '+inps.mask_file+' --no-update-data'
+        seedCmd = 'seed_data.py '+inps.ifgram_file+' -t '+inps.template_file+' -m '+inps.mask_file+' --mark-attribute'
         if inps.spatial_coh_file:
             seedCmd += ' -c '+inps.spatial_coh_file
         if inps.geomap_file:
@@ -542,15 +542,15 @@ def main(argv):
     inps.mask_file = outName
 
 
-    ##############################################
-    # Incident Angle
-    ##############################################
-    print '\n********** Incident Angle file  *************'
-    inps.inc_angle_file = 'incidenceAngle.h5'
-    if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
-        incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
-        print incAngleCmd
-        os.system(incAngleCmd)
+    ###############################################
+    ## Incident Angle
+    ###############################################
+    #print '\n********** Incident Angle file  *************'
+    #inps.inc_angle_file = 'incidenceAngle.h5'
+    #if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
+    #    incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
+    #    print incAngleCmd
+    #    os.system(incAngleCmd)
 
 
     ##############################################

@@ -12,7 +12,9 @@
 import sys
 import os
 import argparse
+import re
 
+import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -104,36 +106,26 @@ def main(argv):
         plt.switch_backend('Agg')
     #print '\n******************** Plot Network **********************'
 
-    # Output figure name
-    figName1 = 'BperpHist'+inps.fig_ext
-    figName2 = 'Network'+inps.fig_ext
-    if 'Modified' in inps.file:
-        figName1 = 'BperpHist_Modified'+inps.fig_ext
-        figName2 = 'Network_Modified'+inps.fig_ext
-
     ##### 1. Read Info
     # Read dateList and bperpList
     ext = os.path.splitext(inps.file)[1]
     if ext in ['.h5']:
-        k = readfile.read_attribute(inps.file)['FILE_TYPE']
+        atr = readfile.read_attribute(inps.file)
+        k = atr['FILE_TYPE']
         print 'reading date and perpendicular baseline from '+k+' file: '+os.path.basename(inps.file)
         if not k in multi_group_hdf5_file:
-            print 'ERROR: only the following file type are supported:\n'+str(multi_group_hdf5_file)
-            sys.exit(1)
-        Bp = ut.perp_baseline_ifgram2timeseries(inps.file)[0]
-        date8List = ptime.igram_date_list(inps.file)
-        date6List = ptime.yymmdd(date8List)
+            raise ValueError('only the following file type are supported:\n'+str(multi_group_hdf5_file))
+        pbase_list = ut.perp_baseline_ifgram2timeseries(inps.file)[0]
+        date8_list = ptime.ifgram_date_list(inps.file)
     else:
         print 'reading date and perpendicular baseline from baseline list file: '+inps.bl_list_file
-        date8List, Bp = pnet.read_baseline_file(inps.bl_list_file)[0:2]
-        date6List = ptime.yymmdd(date8List)
-    print 'number of acquisitions: '+str(len(date8List))
+        date8_list, pbase_list = pnet.read_baseline_file(inps.bl_list_file)[0:2]
+    print 'number of acquisitions  : '+str(len(date8_list))
 
     # Read Pairs Info
     print 'reading pairs info from file: '+inps.file
     date12_list = pnet.get_date12_list(inps.file)
-    #pairs_idx = pnet.date12_list2index(date12_list, date6List)
-    print 'number of pairs       : '+str(len(date12_list))
+    print 'number of interferograms: '+str(len(date12_list))
 
     # Read Coherence List
     inps.coherence_list = None
@@ -165,12 +157,31 @@ def main(argv):
             print 'WARNING: input coherence list has different pairs/date12 from input file'
             print 'turn off the color plotting of interferograms based on coherence'
             inps.coherence_list = None
-    
+
+    # Read drop_ifgram 
+    if ext in ['.h5','.he5']:
+        h5 = h5py.File(inps.file, 'r')
+        ifgram_list_all = sorted(h5[k].keys())
+        ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
+        date12_list_keep = [re.findall('\d{6}-\d{6}', i)[0] for i in ifgram_list_keep]
+        # Get date12_list_drop
+        date12_list_drop = sorted(list(set(date12_list) - set(date12_list_keep)))
+        # Get date_list_drop
+        m_dates = [i.split('-')[0] for i in date12_list_keep]
+        s_dates = [i.split('-')[1] for i in date12_list_keep]
+        date8_list_keep = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
+        date8_list_drop = sorted(list(set(date8_list) - set(date8_list_keep)))
+
+
     ##### 2. Plot
+    # Output figure name
+    figName1 = 'BperpHist'+inps.fig_ext
+    figName2 = 'Network'+inps.fig_ext
+
     # Fig 1 - Baseline History
     fig1 = plt.figure(1)
     ax1 = fig1.add_subplot(111)
-    ax1 = pnet.plot_perp_baseline_hist(ax1, date8List, Bp, vars(inps))
+    ax1 = pnet.plot_perp_baseline_hist(ax1, date8_list, pbase_list, vars(inps), date8_list_drop)
 
     if inps.save_fig:
         fig1.savefig(figName1,bbox_inches='tight')
@@ -179,7 +190,7 @@ def main(argv):
     # Fig 2 - Interferogram Network
     fig2 = plt.figure(2)
     ax2 = fig2.add_subplot(111)
-    ax2 = pnet.plot_network(ax2, date12_list, date8List, Bp, vars(inps))
+    ax2 = pnet.plot_network(ax2, date12_list, date8_list, pbase_list, vars(inps), date12_list_drop)
 
     if inps.save_fig:
         fig2.savefig(figName2,bbox_inches='tight')

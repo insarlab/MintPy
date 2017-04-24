@@ -10,39 +10,15 @@
 
 import sys
 import os
-import getopt
 import time
 import datetime
+import re
 
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
 
 import pysar._readfile as readfile
 import pysar._pysar_utilities as ut
-
-
-######################################################################################################
-def date_list(h5file): 
-    dateList = []
-    tbase    = []
-    for ifgram in h5file['interferograms'].keys():
-        dates = h5file['interferograms'][ifgram].attrs['DATE12'].split('-')
-        if dates[0][0] == '9':  dates[0] = '19'+dates[0]
-        else:                   dates[0] = '20'+dates[0]
-        if dates[1][0] == '9':  dates[1] = '19'+dates[1]
-        else:                   dates[1] = '20'+dates[1]
-        if not dates[0] in dateList: dateList.append(dates[0])
-        if not dates[1] in dateList: dateList.append(dates[1])
-    dateList.sort()
-    d1 = datetime.datetime(*time.strptime(dateList[0],"%Y%m%d")[0:5])
-    for ni in range(len(dateList)):
-        d2 = datetime.datetime(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
-        diff = d2-d1
-        tbase.append(diff.days)
-    dateDict = {}
-    for i in range(len(dateList)): dateDict[dateList[i]] = tbase[i]
-    return tbase,dateList,dateDict
 
 
 ######################################################################################################
@@ -76,7 +52,7 @@ def usage():
 ######################################
 def main(argv):
     try:
-        igramsFile     = argv[0]
+        ifgramFile     = argv[0]
         timeSeriesFile = argv[1]
     except:
         usage() ; sys.exit(1)
@@ -92,13 +68,13 @@ def main(argv):
     dateList = h5timeseries['timeseries'].keys()
     numDates = len(dateList)
 
-    print 'number of epoch: '+str(numDates)
+    print 'number of acquisitions: '+str(numDates)
     dateIndex={}
     for ni in range(numDates):
         dateIndex[dateList[ni]]=ni 
 
     dset = h5timeseries['timeseries'].get(h5timeseries['timeseries'].keys()[0])
-    nrows,ncols=np.shape(dset)
+    nrows,ncols = np.shape(dset)
     timeseries = np.zeros((len(h5timeseries['timeseries'].keys()),np.shape(dset)[0]*np.shape(dset)[1]),np.float32)
 
     for i in range(numDates):
@@ -115,12 +91,15 @@ def main(argv):
     timeseries = range2phase*timeseries
 
     ######################################################
-    print "load interferograms: " + igramsFile
-    h5igrams   = h5py.File(igramsFile)  
-    ifgramList = h5igrams['interferograms'].keys()
+    print "load interferograms: " + ifgramFile
+    atr_ifgram = readfile.read_attribute(ifgramFile)
+    h5ifgram   = h5py.File(ifgramFile)  
+    ifgramList = sorted(h5ifgram['interferograms'].keys())
+    ifgramList = ut.check_drop_ifgram(h5ifgram, atr_ifgram, ifgramList)
+    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgramList]
     numIfgrams = len(ifgramList)
-    print 'number of epochs: '+str(numIfgrams)
-    A,B = ut.design_matrix(igramsFile)
+    print 'number of interferograms: '+str(numIfgrams)
+    A,B = ut.design_matrix(ifgramFile, date12_list)
     p   = -1*np.ones([A.shape[0],1])
     Ap  = np.hstack((p,A))
 
@@ -137,7 +116,7 @@ def main(argv):
     for ni in range(numIfgrams):
         ## read interferogram
         igram = ifgramList[ni]
-        data = h5igrams['interferograms'][igram].get(igram)[:]
+        data = h5ifgram['interferograms'][igram].get(igram)[:]
         data -= data[ref_y, ref_x]
         data = data.flatten(0)
 
@@ -150,7 +129,7 @@ def main(argv):
         ## progress bar
         ut.print_progress(ni+1,numIfgrams,'calculating:',igram)
     del timeseries, data, dataEst, dataDiff
-    h5igrams.close()
+    h5ifgram.close()
 
     #qq=np.absolute(np.sum(np.exp(1j*dataDiff),0))/numIfgrams
     qq = np.absolute(qq)/numIfgrams

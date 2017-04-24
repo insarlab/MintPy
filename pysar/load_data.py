@@ -237,6 +237,7 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
             for key,value in baseline_rsc.iteritems():
                 group.attrs[key] = value
             # Attribute - PySAR
+            group.attrs['drop_ifgram'] = 'no'
             try: group.attrs['PROJECT_NAME'] = extra_meta_dict['project_name']
             except: pass
         
@@ -516,6 +517,7 @@ def cmdLineParse():
     parser = argparse.ArgumentParser(description='Load InSAR data into PySAR',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
+    
     parser.add_argument('--template', dest='template_file', help='template file, to get PROJECT_NAME')
     parser.add_argument('--project', dest='project_name', help='project name of dataset, used in INSARMAPS Web Viewer')
 
@@ -527,7 +529,8 @@ def cmdLineParse():
 
     multiFile = parser.add_argument_group('Load whole dataset using template, i.e.',TEMPLATE)
     multiFile.add_argument('--dir', dest='timeseries_dir',\
-                           help='directory for time series analysis, e.g. KujuAlosAT422F650/PYSAR')
+                           help='directory for time series analysis, e.g. KujuAlosAT422F650/PYSAR\n'+\
+                                'use current directory by default if pysar.miami_path is False')
 
     inps = parser.parse_args()
     # Print usage if no FILE and TEMPLATEF_FILE input

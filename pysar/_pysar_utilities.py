@@ -339,6 +339,31 @@ def get_file_stack(File, maskFile=None):
     return stack
 
 
+def check_drop_ifgram(h5, atr, ifgram_list):
+    '''Update ifgram_list based on 'drop_ifgram' attribute
+    Inputs:
+        h5          - HDF5 file object
+        atr         - dict, file attribute
+        ifgram_list - list of string, all group name existed in file
+    Outputs:
+        ifgram_list_out  - list of string, group name with drop_ifgram = 'yes'
+        ifgram_list_drop - list of string, group name with drop_ifgram = 'no'
+    '''
+    # Return all interferogram list if 'drop_ifgram' do not exist
+    if 'drop_ifgram' not in atr.keys():
+        return ifgram_list, []
+
+    ifgram_list_out = list(ifgram_list)
+    k = atr['FILE_TYPE']
+    for ifgram in ifgram_list:
+        if h5[k][ifgram].attrs['drop_ifgram'] == 'yes':
+            ifgram_list_out.remove(ifgram)
+    
+    if len(ifgram_list) > len(ifgram_list_out):
+        print "remove interferograms with 'drop_ifgram'='yes'"
+    return ifgram_list_out
+
+
 def nonzero_mask(File, outFile='mask.h5'):
     '''Generate mask file for non-zero value of input multi-group hdf5 file'''
     atr = readfile.read_attribute(File)
@@ -350,14 +375,15 @@ def nonzero_mask(File, outFile='mask.h5'):
     
     h5 = h5py.File(File,'r')
     igramList = sorted(h5[k].keys())
+    igramList = check_drop_ifgram(h5, atr, igramList)
     for i in range(len(igramList)):
         igram = igramList[i]
         data = h5[k][igram].get(igram)[:]
-        
         mask[data==0] = 0
         print_progress(i+1, len(igramList))
 
     atr['FILE_TYPE'] = 'mask'
+    print 'writing >>> '+outFile
     writefile.write(mask, atr, outFile)
     
     return outFile
@@ -457,6 +483,7 @@ def temporal_average(File, outFile=None):
 
     h5file = h5py.File(File)
     epochList = sorted(h5file[k].keys())
+    epochList = check_drop_ifgram(h5file, atr, epochList)
     epochNum = len(epochList)
 
     # Calculation
@@ -828,22 +855,32 @@ def date_list(h5file):
 
 
 ######################################
-def design_matrix(ifgramFile):
-    '''Make the design matrix for the inversion.
+def design_matrix(ifgramFile=None, date12_list=[]):
+    '''Make the design matrix for the inversion based on date12_list.
     Input:
-        ifgramFile - string, name/path of interferograms file
+        ifgramFile  - string, name/path of interferograms file
+        date12_list - list of string, date12 used in calculation in YYMMDD-YYMMDD format
+                      use all date12 from ifgramFile if input is empty
     Outputs:
         A - 2D np.array in size (igram_num, date_num-1)
             representing date combination for each interferogram
         B - 2D np.array in size (igram_num, date_num-1)
             representing temporal baseline timeseries between master and slave date for each interferogram
     '''
-    date6_list = ptime.igram_date_list(ifgramFile, fmt='YYMMDD')
-    date12_list = pnet.get_date12_list(ifgramFile)
+    # Check Inputs
+    if not date12_list:
+        if ifgramFile:
+            date12_list = pnet.get_date12_list(ifgramFile)
+        else:
+            raise ValueError
 
+    # date12_list to date6_list
+    m_dates = [i.split('-')[0] for i in date12_list]
+    s_dates = [i.split('-')[1] for i in date12_list]
+    date6_list = sorted(list(set(m_dates + s_dates)))
+    tbase = np.array(ptime.date_list2tbase(date6_list)[0])
     date_num = len(date6_list)
     igram_num = len(date12_list)
-    tbase = np.array(ptime.date_list2tbase(date6_list)[0])
 
     A = np.zeros((igram_num, date_num))
     B = np.zeros(np.shape(A))
@@ -873,28 +910,34 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     '''
     total = time.time()
 
-    # Design matrix
-    A,B = design_matrix(ifgramFile)
-    B_inv = np.array(np.linalg.pinv(B), np.float32)
-
     # Basic Info
     atr = readfile.read_attribute(ifgramFile)
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
     pixel_num = length * width
 
-    date8_list = pnet.get_date_list(ifgramFile)
+    h5ifgram = h5py.File(ifgramFile,'r')
+    ifgram_list = sorted(h5ifgram['interferograms'].keys())
+    ifgram_list = check_drop_ifgram(h5ifgram, atr, ifgram_list)
+    ifgram_num = len(ifgram_list)
+
+    # Convert ifgram_list to date12/8_list
+    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list]
+    m_dates = [i.split('-')[0] for i in date12_list]
+    s_dates = [i.split('-')[1] for i in date12_list]
+    date8_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
     date_num = len(date8_list)
     tbase_list = ptime.date_list2tbase(date8_list)[0]
     dt = np.diff(tbase_list).reshape((date_num-1,1))
 
-    h5ifgram = h5py.File(ifgramFile,'r')
-    ifgram_list = sorted(h5ifgram['interferograms'].keys())
-    ifgram_num = len(ifgram_list)
     print 'number of interferograms : '+str(ifgram_num)
     print 'number of pixels in space: '+str(pixel_num)
     print 'number of acquisitions   : '+str(date_num)
-    
+
+    # Design matrix
+    A,B = design_matrix(ifgramFile, date12_list)
+    B_inv = np.array(np.linalg.pinv(B), np.float32)
+
     # Reference pixel in space
     try:
         ref_x = int(atr['ref_x'])
@@ -904,19 +947,6 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
         print 'No ref_x/y found! Can not inverse without reference in space.'
 
     ##### Inversion Function
-    #def ts_inverse_point(dataPoint):
-    #    nan_ndx = dataPoint == 0.
-    #    fin_ndx = dataPoint != 0.
-    #    nan_fin = dataPoint.copy()
-    #    nan_fin[nan_ndx] = 1
-    #    if not nan_fin.sum() == len(nan_fin):
-    #        B1tmp = np.dot(B_inv, np.diag(fin_ndx))
-    #        tmp_rate = np.dot(B1tmp,dataPoint)
-    #        zero = np.array([0.],np.float32)
-    #        defo = np.concatenate((zero,np.cumsum([tmp_rate*dt])))
-    #    else: defo = np.zeros((date_num,1),np.float32)
-    #    return defo
-  
     def ts_inverse(dataLine, B_inv, dt, date_num):
         numPoint = dataLine.shape[1]
         tmp_rate = np.dot(B_inv, dataLine)
@@ -924,11 +954,10 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
         defo0 = np.array([0.]*numPoint,np.float32)
         defo  = np.vstack((defo0, np.cumsum(defo1,axis=0)))
         return defo
-  
+
     ##### Read Interferograms
     print 'Reading interferograms ...'
     data = np.zeros((ifgram_num,pixel_num), np.float32)
-    import pdb; pdb.set_trace()
 
     for j in range(ifgram_num):
         ifgram = ifgram_list[j]
@@ -973,7 +1002,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
 
     ## Attributes
     print 'calculating perpendicular baseline timeseries'
-    pbase, pbase_top, pbase_bottom = perp_baseline_ifgram2timeseries(ifgramFile)
+    pbase, pbase_top, pbase_bottom = perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list)
     # convert np.array into string with each item separated by white space
     pbase = str(pbase.tolist()).translate(None,'[],')
     pbase_top = str(pbase_top.tolist()).translate(None,'[],')
@@ -1168,43 +1197,50 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
     L1orL2h5.close()
 
 
-def perp_baseline_ifgram2timeseries(ifgramFile):
+def perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list=[]):
     '''Calculate perpendicular baseline timeseries from input interferograms file
     Input:
         ifgramFile - string, file name/path of interferograms file
+        ifgram_list - list of string, group name that is used for calculation
+                      use all if it's empty
     Outputs:
         pbase        - 1D np.array, P_BASELINE_TIMESERIES
         pbase_top    - 1D np.array, P_BASELINE_TOP_TIMESERIES
         pbase_bottom - 1D np.array, P_BASELINE_BOTTOM_TIMESERIES
     '''
     k = readfile.read_attribute(ifgramFile)['FILE_TYPE']
-    
-    # P_BASELINE of all interferograms
     h5file = h5py.File(ifgramFile,'r')
-    igram_list = sorted(h5file[k].keys())
-    pbase_igram = []
-    pbase_top_igram = []
-    pbase_bottom_igram = []
-    for igram in igram_list:
-        pbase_top = float(h5file[k][igram].attrs['P_BASELINE_TOP_HDR'])
-        pbase_bottom = float(h5file[k][igram].attrs['P_BASELINE_BOTTOM_HDR'])
-        pbase_igram.append((pbase_bottom+pbase_top)/2.0)
-        pbase_top_igram.append(pbase_top)
-        pbase_bottom_igram.append(pbase_bottom)
+
+    if not ifgram_list:
+        ifgram_list = sorted(h5file[k].keys())
+
+    # P_BASELINE of all interferograms
+    pbase_ifgram = []
+    pbase_top_ifgram = []
+    pbase_bottom_ifgram = []
+    for ifgram in ifgram_list:
+        pbase_top    = float(h5file[k][ifgram].attrs['P_BASELINE_TOP_HDR'])
+        pbase_bottom = float(h5file[k][ifgram].attrs['P_BASELINE_BOTTOM_HDR'])
+        pbase_ifgram.append((pbase_bottom+pbase_top)/2.0)
+        pbase_top_ifgram.append(pbase_top)
+        pbase_bottom_ifgram.append(pbase_bottom)
     h5file.close()
 
     # Temporal baseline velocity
-    date_list = ptime.igram_date_list(ifgramFile)
-    tbase_list = ptime.date_list2tbase(date_list)[0]
+    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list]
+    m_dates = [i.split('-')[0] for i in date12_list]
+    s_dates = [i.split('-')[1] for i in date12_list]
+    date8_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
+    tbase_list = ptime.date_list2tbase(date8_list)[0]
     tbase_v = np.diff(tbase_list)
 
-    A,B = design_matrix(ifgramFile)
+    A,B = design_matrix(ifgramFile, date12_list)
     B_inv = np.linalg.pinv(B)
-    
-    pbase_rate        = np.dot(B_inv, pbase_igram)
-    pbase_top_rate    = np.dot(B_inv, pbase_top_igram)
-    pbase_bottom_rate = np.dot(B_inv, pbase_bottom_igram)
-    
+
+    pbase_rate        = np.dot(B_inv, pbase_ifgram)
+    pbase_top_rate    = np.dot(B_inv, pbase_top_ifgram)
+    pbase_bottom_rate = np.dot(B_inv, pbase_bottom_ifgram)
+
     zero = np.array([0.],np.float32)
     pbase        = np.concatenate((zero,np.cumsum([pbase_rate*tbase_v])))
     pbase_top    = np.concatenate((zero,np.cumsum([pbase_top_rate*tbase_v])))
