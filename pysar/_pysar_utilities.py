@@ -109,6 +109,17 @@ def add_attribute(File, atr_new=dict()):
         File - string, path/name of updated file
     '''
     atr = readfile.read_attribute(File)
+    # Compare new attributes with exsiting ones
+    update = False
+    for key in atr_new.keys():
+        if key in atr.keys() and str(atr_new[key]) == str(atr[key]):
+            next
+        else:
+            update = True
+    if not update:
+        print 'All new attributes already exists in file and have the same value, skip update.'
+        return File
+
     k = atr['FILE_TYPE']
     h5 = h5py.File(File,'r+')    
     if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:

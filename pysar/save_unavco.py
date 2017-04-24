@@ -106,6 +106,34 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
 
     return unavco_meta_dict
 
+
+def get_unavco_filename(timeseriesFile):
+    '''Get output file name of UNAVCO InSAR Archive'''
+    ##### Prepare Metadata
+    pysar_meta_dict = readfile.read_attribute(timeseriesFile)
+    k = pysar_meta_dict['FILE_TYPE']
+    h5_timeseries = h5py.File(timeseriesFile,'r')
+    dateList = sorted(h5_timeseries[k].keys())
+    unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
+    h5_timeseries.close()
+
+    meta_dict = pysar_meta_dict.copy()
+    meta_dict.update(unavco_meta_dict)
+
+    #### Open HDF5 File
+    SAT = meta_dict['mission']
+    SW  = meta_dict['beam_mode']    # should be like FB08 for ALOS, need to find out, Yunjun, 2016-12-26
+    RELORB = "%03d"%(int(meta_dict['relative_orbit']))
+    FRAME  = "%04d"%(int(meta_dict['frame']))
+    DATE1 = dt.strptime(meta_dict['first_date'],'%Y-%m-%d').strftime('%Y%m%d')
+    DATE2 = dt.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
+    TBASE = "%04d"%(0)
+    BPERP = "%05d"%(0)
+    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
+
+    return outName
+
+
 ################################################################
 EXAMPLE='''example:
   save_unavco.py timeseries.h5 -i incidence_angle -d dem.h5 -c temporal_coherence.h5 -m mask.h5

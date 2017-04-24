@@ -53,6 +53,7 @@ import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar.subset as subset
 import pysar.load_data as load
+import pysar.save_unavco as unavco
 
 
 def check_subset_file(File, inps_dict, outFile=None, overwrite=False):
@@ -214,9 +215,13 @@ pysar.troposphericDelay.method        = pyaps   #[height_correlation], auto for 
 pysar.troposphericDelay.polyOrder     = 1       #for height_correlation method
 pysar.troposphericDelay.weatherModel  = ECMWF   #[ERA, MERRA, NARR], for pyaps method
 
-pysar.topoError = yes               #[no], auto for yes
-pysar.deramp    = plane             #[plane, quadratic, baseline_cor, base_trop_cor], auto for no
-pysar.geocode   = yes               #[no], auto for yes
+pysar.topoError = yes        #[no], auto for yes
+pysar.deramp    = plane      #[plane, quadratic, baseline_cor, base_trop_cor], auto for no
+pysar.geocode   = yes        #[no], auto for yes
+
+pysar.save.kml     = yes     #[no], auto for yes
+pysar.save.geotiff = no      #[yes], auto for no, not implemented yet
+pysar.save.unavco  = no      #[yes], auto for no
 '''
 
 EXAMPLE='''example:
@@ -302,6 +307,18 @@ def main(argv):
 
     if not os.path.isfile(os.path.basename(inps.template_file)):
         shutil.copy2(inps.template_file, inps.work_dir)
+
+    # Copy UNAVCO attribute txt file
+    file_list = ['unavco_attributes.txt']
+    try: inps.unavco_atr_file = ut.get_file_list(file_list)[0]
+    except:
+        try:
+            process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
+            shutil.copy2(process_dir+'/'+file_list[0], inps.work_dir)
+            inps.unavco_atr_file = inps.work_dir+'/'+file_list[0]
+        except:
+            inps.unavco_atr_file = None
+            print 'No UNAVCO attributes file found in PROCESS directory, skip copy'
 
 
     #########################################
@@ -710,9 +727,9 @@ def main(argv):
     print '\n**********  Post-processing  ********************************'
     if 'pysar.geocode' in template.keys() and template['pysar.geocode'].lower() in ['y','yes','auto']: 
         print '\ngeocoding ...\n'
-        inps.geo_velocity_file       = check_geocode_file(inps.geomap_file, inps.velocity_file)
-        inps.geo_temp_coh_file = check_geocode_file(inps.geomap_file, inps.temp_coh_file)
-        inps.goe_timeseries_file     = check_geocode_file(inps.geomap_file, inps.timeseries_file)
+        inps.geo_velocity_file   = check_geocode_file(inps.geomap_file, inps.velocity_file)
+        inps.geo_temp_coh_file   = check_geocode_file(inps.geomap_file, inps.temp_coh_file)
+        inps.goe_timeseries_file = check_geocode_file(inps.geomap_file, inps.timeseries_file)
         
         if inps.geo_velocity_file and inps.geo_temp_coh_file:
             print 'masking geocoded velocity file: '+inps.geo_velocity_file+' ...'
@@ -737,6 +754,46 @@ def main(argv):
         print maskCmd
         os.system(maskCmd)
     inps.velocity_file = outName
+
+
+    #############################################
+    # Save to UNAVCO InSAR Archive format
+    #############################################
+    if 'pysar.save.unavco' in template.keys() and template['pysar.save.unavco'].lower() in ['y','yes']:
+        print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
+        if not inps.geomap_file or not inps.dem_geo_file:
+            warnings.warn('No geomap*.tran file or DEM in geo coord found! Skip saving.')
+        else:
+            inps.geo_timeseries_file = check_geocode_file(inps.geomap_file, inps.timeseries_file)
+            # Add UNAVCO attributes
+            if inps.unavco_atr_file:
+                atrCmd = 'add_attribute.py '+inps.geo_timeseries_file+' '+inps.unavco_atr_file
+                print atrCmd
+                os.system(atrCmd)
+
+            inps.unavco_file = unavco.get_unavco_filename(inps.geo_timeseries_file)
+            if ut.update_file(inps.unavco_file, inps.geo_timeseries_file):
+                # Temporal Coherence and Mask
+                inps.geo_temp_coh_file = check_geocode_file(inps.geomap_file, inps.temp_coh_file)
+                inps.geo_mask_file = 'geo_maskTempCoh.h5'
+                # Mask file in geo coord
+                if inps.geo_temp_coh_file and ut.update_file(inps.geo_mask_file, inps.geo_temp_coh_file):
+                    maskCmd = 'generate_mask.py -f '+inps.geo_temp_coh_file+' -m 0.7 -o '+inps.geo_mask_file
+                    print maskCmd
+                    os.system(maskCmd)
+                # Incidence Angle
+                inps.inc_angle_file = 'incidenceAngle.h5'
+                if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
+                    incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
+                    print incAngleCmd
+                    os.system(incAngleCmd)
+                inps.geo_inc_angle_file = check_geocode_file(inps.geomap_file, inps.inc_angle_file)
+
+                # Save to UNAVCO format
+                unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
+                            ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file
+                print unavcoCmd
+                os.system(unavcoCmd)
 
 
     #############################################
