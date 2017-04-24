@@ -644,7 +644,6 @@ def read_multiple(File,box=''):  # Not ready yet
     epochList = h5file[k].keys()
     epochNum  = len(epochList)
     if epochNum == 0:   print "There is no data in the file";  sys.exit(1)
-    print 'number of epochs: '+str(epochNum)
  
     data = np.zeros([length,width])
     for igram in igramList:

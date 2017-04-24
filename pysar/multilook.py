@@ -114,12 +114,12 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     if k in ['interferograms','coherence','wrapped','timeseries']:
         h5 = h5py.File(infile,'r')
         epochList = sorted(h5[k].keys())
-        print 'number of epochs: '+str(len(epochList))
 
         h5out = h5py.File(outfile,'w')
         group = h5out.create_group(k)
 
         if k in ['interferograms','coherence','wrapped']:
+            print 'number of interferograms: '+str(len(epochList))
             for epoch in epochList:
                 print epoch
                 data = h5[k][epoch].get(epoch)[:]
@@ -134,6 +134,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                     gg.attrs[key] = value
 
         elif k == 'timeseries':
+            print 'number of acquisitions: '+str(len(epochList))
             for epoch in epochList:
                 print epoch
                 data = h5[k].get(epoch)[:]

@@ -153,13 +153,13 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
     if k in ['interferograms','coherence','wrapped','timeseries']:
         h5file = h5py.File(File,'r')
         ifgramList = sorted(h5file[k].keys())
-        print 'number of epochs: '+str(len(ifgramList))
   
         h5flat = h5py.File(outFile,'w')
         group  = h5flat.create_group(k)
         print 'writing >>> '+outFile
   
     if k in ['timeseries']:
+        print 'number of acquisitions: '+str(len(ifgramList))
         for ifgram in ifgramList:
             print "Removing " + surf_type  +" from " + ifgram
             data = h5file[k].get(ifgram)[:]
@@ -174,6 +174,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
             group.attrs[key] = value
   
     elif k in ['interferograms','wrapped','coherence']:
+        print 'number of interferograms: '+str(len(ifgramList))
         for ifgram in ifgramList:
             print "Removing " + surf_type  +" from " + ifgram
             data = h5file[k][ifgram].get(ifgram)[:]

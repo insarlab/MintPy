@@ -59,7 +59,6 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
         h5file = h5py.File(File,'r')
         epochList = sorted(h5file[k].keys())
         epochNum  = len(epochList)
-        print 'number of epochs: '+str(epochNum)
         
         ##### Check Epoch Number
         if not epochNum == len(refList):
@@ -76,6 +75,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
 
     ## Loop
     if k == 'timeseries':
+        print 'number of acquisitions: '+str(epochNum)
         for i in range(epochNum):
             epoch = epochList[i]
             print epoch
@@ -89,6 +89,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
         for key,value in atr.iteritems():   group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
+        print 'number of interferograms: '+str(epochNum)
         for i in range(epochNum):
             epoch = epochList[i]
             #print epoch

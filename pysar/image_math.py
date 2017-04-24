@@ -131,7 +131,8 @@ def main(argv):
                 group.attrs[key]=value
    
         elif k[0] == 'timeseries':
-            dateList = h5file[k[0]].keys();  print 'number of dates: '+str(len(dateList))
+            dateList = h5file[k[0]].keys()
+            print 'number of acquisitions: '+str(len(dateList))
             for date in dateList:
                 print date
                 dset = h5file[k[0]].get(date)
@@ -144,7 +145,8 @@ def main(argv):
                 group.attrs[key] = value
    
         elif k[0] in ['interferograms','coherence','wrapped']:
-            ifgramList = h5file[k[0]].keys();  print 'number of epochs: '+str(len(ifgramList))
+            ifgramList = h5file[k[0]].keys()
+            print 'number of interferograms: '+str(len(ifgramList))
             for igram in ifgramList:
                 print igram
                 dset = h5file[k[0]][igram].get(igram)

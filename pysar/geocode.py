@@ -27,6 +27,7 @@ import numpy as np
 import pysar._readfile  as readfile
 import pysar._writefile as writefile
 import pysar._pysar_utilities as ut
+import pysar.subset as subset
 
 
 def geomap4subset_radar_file(radar_atr, geomap_file):
@@ -95,7 +96,9 @@ def geocode_attribute(atr_rdr, atr_geo, transFile=None):
         ref_lat, ref_lon = ut.radar2glob(ref_y, ref_x, transFile, atr_rdr)[0:2]
         atr['ref_lat'] = ref_lat
         atr['ref_lon'] = ref_lon
-        print 'update reference point info in lat/lon'
+        atr['ref_y'] = np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
+        atr['ref_x'] = np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP']))
+        print 'update reference point info from radar coord to geo coord.'
     return atr
 
 
@@ -130,12 +133,12 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
     if k in ['timeseries','interferograms','coherence','wrapped']:
         h5 = h5py.File(infile, 'r')
         epochList = sorted(h5[k].keys())
-        print 'number of epochs: '+str(len(epochList))
         
         h5out = h5py.File(outfile, 'w')
         group = h5out.create_group(k)
         
         if k in ['interferograms','coherence','wrapped']:
+            print 'number of interferograms: '+str(len(epochList))
             for epoch in epochList:
                 print epoch
                 data = h5[k][epoch].get(epoch)[:]
@@ -151,6 +154,7 @@ def geocode_file_roipac(infile, geomap_file, outfile=None):
                     gg.attrs[key] = value
 
         elif k in ['timeseries']:
+            print 'number of acquisitions: '+str(len(epochList))
             for epoch in epochList:
                 print epoch
                 data = h5[k].get(epoch)[:]

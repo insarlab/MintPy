@@ -61,12 +61,12 @@ def correct_lod_file(File, outFile=None):
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         h5 = h5py.File(File,'r')
         epochList = sorted(h5[k].keys())
-        print 'number of epochs/interferograms: '+str(len(epochList))
         
         h5out = h5py.File(outFile,'w')
         group = h5out.create_group(k)
 
         if k in ['interferograms','wrapped']:
+            print 'number of interferograms: '+str(len(epochList))
             wvl = float(atr['WAVELENGTH'])
             Ramp *= -4*np.pi/wvl
             for epoch in epochList:
@@ -85,6 +85,7 @@ def correct_lod_file(File, outFile=None):
                     gg.attrs[key] = value
 
         elif k == 'timeseries':
+            print 'number of acquisitions: '+str(len(epochList))
             tbase = [float(dy)/365.25 for dy in ptime.date_list2tbase(epochList)[0]]
             for i in range(len(epochList)):
                 epoch = epochList[i]
