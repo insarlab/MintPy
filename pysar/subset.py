@@ -181,7 +181,7 @@ def subset_attribute(atr_dict, subset_box):
     except:
         atr['subset_x0'] = str(sub_x[0])
         atr['subset_x1'] = str(sub_x[1])
-    
+
     # Geo coord
     try:
         atr['Y_FIRST'] = str(float(atr['Y_FIRST'])+sub_y[0]*float(atr['Y_STEP']))

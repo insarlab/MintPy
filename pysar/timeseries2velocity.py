@@ -48,7 +48,7 @@ EXAMPLE='''example:
   timeseries2velocity.py  timeseries.h5 -m 20080201
   timeseries2velocity.py  timeseries.h5 -m 20080201 -M 20100508
   timeseries2velocity.py  timeseries.h5 --ex 20040502 20060708 20090103
-  timeseries2velocity.py  timeseries.h5 --ex drop_date.txt
+  timeseries2velocity.py  timeseries.h5 --exclude drop_date.txt
 '''
 
 TEMPLATE='''
@@ -70,10 +70,10 @@ def cmdLineParse():
     parser.add_argument('timeseries_file', help='Time series file for velocity inversion.')
     parser.add_argument('-m', dest='min_date', help='earliest date for velocity estimation')
     parser.add_argument('-M', dest='max_date', help='latest   date for velocity estimation')
-    parser.add_argument('--ex', dest='ex_date', nargs='+',\
+    parser.add_argument('--exclude','--ex', dest='ex_date', nargs='+',\
                         help='date(s) not included in velocity estimation, could be list of string or text file, i.e.:\n'+\
-                             '--ex 20040502 20060708 20090103\n'+\
-                             '--ex drop_date.txt\n'+DROP_DATE_TXT)
+                             '--exclude 20040502 20060708 20090103\n'+\
+                             '--exclude drop_date.txt\n'+DROP_DATE_TXT)
     parser.add_argument('-t','--template', dest='template_file',\
                         help='template file with the following items:'+TEMPLATE)
     parser.add_argument('-o','--output', dest='outfile', help='output file name')
