@@ -134,8 +134,11 @@ def main(argv):
     if os.path.splitext(inps.dem_file)[1] in ['.h5']:
         print 'convert DEM file to ROIPAC format'
         dem, atr_dem = readfile.read(inps.dem_file)
-        atr_dem['FILE_TYPE'] = '.dem'
-        outname = os.path.splitext(inps.dem_file)[0]+'4pyaps.dem'
+        if 'Y_FIRST' in atr_dem.keys():
+            atr_dem['FILE_TYPE'] = '.dem'
+        else:
+            atr_dem['FILE_TYPE'] = '.hgt'
+        outname = os.path.splitext(inps.dem_file)[0]+'4pyaps'+atr_dem['FILE_TYPE']
         inps.dem_file = writefile.write(dem, atr_dem, outname)
 
     print '*******************************************************************************'

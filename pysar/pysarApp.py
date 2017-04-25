@@ -335,7 +335,7 @@ def main(argv):
     ## 1. Check loading result
     # Required files
     try:
-        inps.ifgram_file = ut.get_file_list([inps.work_dir+'/unwrapIfgram.h5', inps.work_dir+'/LoadedData.h5'])[0]
+        inps.ifgram_file = ut.get_file_list([inps.work_dir+'/unwrapIfgram.h5', inps.work_dir+'/LoadedData.h5'], abspath=True)[0]
         atr = readfile.read_attribute(inps.ifgram_file)
         print 'Unwrapped interferograms: '+inps.ifgram_file
     except RuntimeError:
@@ -344,7 +344,7 @@ def main(argv):
     # Recommended files (None if not found)
     # Spatial coherence for each interferogram
     try:
-        inps.coherence_file = ut.get_file_list([inps.work_dir+'/coherence.h5', inps.work_dir+'/Coherence.h5'])[0]
+        inps.coherence_file = ut.get_file_list([inps.work_dir+'/coherence.h5', inps.work_dir+'/Coherence.h5'], abspath=True)[0]
         print 'Coherences: '+inps.coherence_file
     except:
         inps.coherence_file = None
@@ -355,7 +355,7 @@ def main(argv):
     try: file_list.append(os.path.basename(template['pysar.dem.geoCoord']))
     except: pass
     try:
-        inps.dem_radar_file = ut.get_file_list(file_list)[0]
+        inps.dem_radar_file = ut.get_file_list(file_list, abspath=True)[0]
         print 'DEM in radar coord: '+str(inps.dem_radar_file)
     except:
         inps.dem_radar_file = None
@@ -367,7 +367,7 @@ def main(argv):
     try: file_list.append(os.path.basename(template['pysar.dem.geoCoord']))
     except: pass
     try:
-        inps.dem_geo_file = ut.get_file_list(file_list)[0]
+        inps.dem_geo_file = ut.get_file_list(file_list, abspath=True)[0]
         print 'DEM in geo   coord: '+inps.dem_geo_file
     except:
         inps.dem_geo_file = None
@@ -378,7 +378,7 @@ def main(argv):
     try: file_list.append(os.path.basename(template['pysar.geomap']))
     except: pass
     try:
-        inps.geomap_file = ut.get_file_list(file_list)[0]
+        inps.geomap_file = ut.get_file_list(file_list, abspath=True)[0]
         print 'Transform file: '+str(inps.geomap_file)
     except:
         inps.geomap_file = None
@@ -725,6 +725,10 @@ def main(argv):
     # Geocodeing, masking and save to KML 
     ############################################
     print '\n**********  Post-processing  ********************************'
+    if 'Y_FIRST' in atr.keys() and 'pysar.geocode' in template.keys() and template['pysar.geocode'].lower() in ['y','yes','auto']:
+        template['pysar.geocode'] = 'no'
+        print 'dataset is in geo coordinate, no need for geocoding.'
+
     if 'pysar.geocode' in template.keys() and template['pysar.geocode'].lower() in ['y','yes','auto']: 
         print '\ngeocoding ...\n'
         inps.geo_velocity_file   = check_geocode_file(inps.geomap_file, inps.velocity_file)

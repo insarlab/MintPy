@@ -159,6 +159,8 @@ def main(argv):
             inps.coherence_list = None
 
     # Read drop_ifgram 
+    date8_list_drop = []
+    date12_list_drop = []
     if ext in ['.h5','.he5']:
         h5 = h5py.File(inps.file, 'r')
         ifgram_list_all = sorted(h5[k].keys())

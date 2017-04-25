@@ -392,9 +392,9 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
             outfile = os.path.basename(fileList[0])
         else:
             warnings.warn('Un-recognized file type: '+file_type)
-        
+
         # output directory
-        if 'timeseries_dir' in inps_dict.keys():
+        if 'timeseries_dir' in inps_dict.keys() and inps_dict['timeseries_dir']:
             outdir = inps_dict['timeseries_dir']
         else:
             outdir = os.path.abspath(os.getcwd())
