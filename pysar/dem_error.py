@@ -85,14 +85,15 @@ def main(argv):
     print 'number of acquisitions: '+str(date_num)
 
     timeseries = np.zeros((len(date_list),length*width),np.float32)
+    prog_bar = ut.progress_bar(maxValue=date_num, prefix='loading:')
     for i in range(date_num):
         date = date_list[i]
-        ut.print_progress(i+1, date_num, prefix='loading:', suffix=date)
         d = h5['timeseries'].get(date)[:]
         timeseries[i][:] = d.flatten('F')
+        prog_bar.update(i+1, suffix=date)
     del d
     h5.close()
-    print '-------------------------------------------'
+    prog_bar.close()
 
     # Perpendicular Baseline
     print 'read perpendicular baseline'
@@ -180,7 +181,9 @@ def main(argv):
     delta_z_mat = np.zeros([length, width])
     #delta_a_mat = np.zeros([length, width])
     if inps.incidence_angle.ndim == 2 and inps.range_dis.ndim == 2:
-        print 'inversing using L2-norm minimization (unweighted least squares) pixel by pixel'
+        print 'inversing using L2-norm minimization (unweighted least squares)'\
+              ' pixel by pixel: %d loops in total' % (length*width)
+        prog_bar = ut.progress_bar(maxValue=length*width, prefix='calculating:')
         for i in range(length*width):
             row = i%length
             col = i/length
@@ -213,11 +216,14 @@ def main(argv):
             delta_z_mat[row, col] = delta_z
             if inps.update_timeseries:
                 timeseries[:,i] -= np.dot(A_delta_z, delta_z).flatten()
-            ut.print_progress(i+1, length*width)
+            prog_bar.update(i+1, every=length*width/100)
+        prog_bar.close()
 
 
     elif inps.incidence_angle.ndim == 1 and inps.range_dis.ndim == 1:
-        print 'inversing using L2-norm minimization (unweighted least squares) column by column'
+        print 'inversing using L2-norm minimization (unweighted least squares)'\
+              ' column by column: %d loops in total' % (width)
+        prog_bar = ut.progress_bar(maxValue=width, prefix='calculating:')
         for i in range(width):
             range_dis = inps.range_dis[i]
             inc_angle = inps.incidence_angle[i]
@@ -245,7 +251,8 @@ def main(argv):
             delta_z_mat[:, i] = delta_z
             if inps.update_timeseries:
                 timeseries[:,i*length:(i+1)*length] -= np.dot(A_delta_z, delta_z)
-            ut.print_progress(i+1, width)
+            prog_bar.update(i+1, every=width/100)
+        prog_bar.close()
 
 
     elif inps.incidence_angle.ndim == 0 and inps.range_dis.ndim == 0:
@@ -280,43 +287,6 @@ def main(argv):
         print 'dimension of range distance: '+str(inps.range_dis.ndim)
         sys.exit(1)
 
-    
-    #C1_v = pbase_v / (center_range * np.sin(center_look_angle))
-    #C1   = pbase   / (center_range * np.sin(center_look_angle))
-    #timeseries_v = (timeseries[1:date_num,:] - timeseries[0:date_num-1,:]) / (inps.tbase[1:date_num] - inps.tbase[0:date_num-1])    
-    ###### Inversion column by column
-    #print 'inversing using L2-norm minimization (unweighted least squares)...'
-    #dz = np.zeros([1,length*width])
-    #
-    #for i in range(width):
-    #    ## Design Matrix Inversion
-    #    C1_v = pbase_v / (range_x[i] * np.sin(look_angle_x[i]))
-    #    C1   = pbase   / (range_x[i] * np.sin(look_angle_x[i]))
-    #    if inps.phase_velocity:  C = np.hstack((M,C1_v))
-    #    else:                    C = np.hstack((M,C1))
-    #
-    #    #print '    rank of the design matrix : '+str(np.linalg.matrix_rank(C))
-    #    #if np.linalg.matrix_rank(C) == 4:  print '    design matrix has full rank'
-    #    Cinv = np.linalg.pinv(C)
-    #
-    #    ## (Phase) Velocity History
-    #    ts_x  = timeseries[:,i*length:(i+1)*length]
-    #    ts_xv = (ts_x[1:date_num,:] - ts_x[0:date_num-1,:]) / (inps.tbase[1:date_num] - inps.tbase[0:date_num-1])
-    #
-    #    ## DEM error
-    #    if inps.phase_velocity:    par  = np.dot(Cinv,ts_xv)
-    #    else:                      par  = np.dot(Cinv,ts_x)
-    #    dz_x = par[3].reshape((1,length))
-    #
-    #    ## Update DEM error matrix and timeseries matrix
-    #    dz[0][i*length:(i+1)*length]         = dz_x
-    #    timeseries[:,i*length:(i+1)*length] -= np.dot(C1,dz_x)
-    #
-    #    ut.print_progress(i+1,width)
-    #
-    ##dz[0][:] = par[3][:]
-    #dz = np.reshape(dz,[length,width],order='F')
-
 
     ##------------------------------------------------ Output  --------------------------------------------##
     # DEM error file
@@ -327,7 +297,6 @@ def main(argv):
     #if inps.phase_velocity:  suffix = '_pha_poly'+str(inps.poly_order)
     #else:                    suffix = '_vel_poly'+str(inps.poly_order)
     #dem_error_file = os.path.splitext(dem_error_file)[0]+suffix+os.path.splitext(dem_error_file)[1]
-    print '--------------------------------------'
     print 'writing >>> '+dem_error_file
     atr_dem_error = atr.copy()
     atr_dem_error['FILE_TYPE'] = 'dem'
@@ -352,16 +321,17 @@ def main(argv):
 
     # Corrected Time Series
     if inps.update_timeseries:
-        print '--------------------------------------'
         print 'writing >>> '+inps.outfile
         print 'number of dates: '+str(len(date_list))
         h5out = h5py.File(inps.outfile,'w')
         group = h5out.create_group('timeseries')
+        prog_bar = ut.progress_bar(maxValue=date_num, prefix='writing:')
         for i in range(date_num):
             date = date_list[i]
-            ut.print_progress(i+1, date_num, prefix='writing:', suffix=date)
             d = np.reshape(timeseries[i][:], [length,width], order='F')
             dset = group.create_dataset(date, data=d, compression='gzip')
+            prog_bar.update(i+1, suffix=date)
+        prog_bar.close()
         for key,value in atr.iteritems():
             group.attrs[key] = value
         h5out.close()
