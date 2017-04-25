@@ -158,7 +158,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     for k in attributes:
         v = attributes[k]
         if k in needed_attributes:
-            print k + ": " + str(v)
+            print str(k) + ": " + str(v)
             attribute_keys += (str(k) + ",")
             attribute_values += (str(v) + ',')
     attribute_keys = attribute_keys[:len(attribute_keys)-1] + '}'
