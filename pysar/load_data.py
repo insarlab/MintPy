@@ -61,7 +61,7 @@ def auto_path_miami(inps, template_dict={}):
     # Use DEMg/DEM option if dem_geo is not specified in pysar option
     dem_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/DEM'
     if not inps.dem_geo:
-        if os.path.isdir(dem_dir):            inps.dem_geo = dem_dir+'*.dem'
+        if os.path.isdir(dem_dir):            inps.dem_geo = dem_dir+'/*.dem'
         elif 'DEMg' in template_dict.keys():  inps.dem_geo = template_dict['DEMg']
         elif 'DEM'  in template_dict.keys():  inps.dem_geo = template_dict['DEM']
         else:  warnings.warn('Can not locate DEM in geo coord!')
@@ -299,6 +299,7 @@ def roipac2single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict(
         return outfile
     
     # Read input file
+    print 'loading file: '+infile
     data, atr = readfile.read(infile)
     
     # Write output file - data
@@ -406,10 +407,10 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         outfile = roipac2multi_group_hdf5(file_type, fileList, outfile, inps_dict)[0]
 
     elif file_type in single_dataset_hdf5_file:
-        outfile = roipac2single_dataset_hdf5(file_type, fileList[0], outfile, inps_dict)
+        outfile = roipac2single_dataset_hdf5(file_type, fileList[-1], outfile, inps_dict)
 
     elif file_type in ['.trans']:
-        outfile = copy_file(fileList[0], os.path.dirname(outfile))
+        outfile = copy_file(fileList[-1], os.path.dirname(outfile))
     else:
         warnings.warn('Un-supported file type: '+file_type)
 

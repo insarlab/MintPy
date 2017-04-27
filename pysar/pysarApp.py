@@ -413,7 +413,7 @@ def main(argv):
 
     # Subset based on input template
     if [key for key in template.keys()\
-        if ('pysar.subset' in key and template[key].lower() not in ['auto','no'])]:
+        if ('pysar.subset' in key and template[key].lower() not in ['auto','no',''])]:
         # Read subset option from template file, and return None if lalo/yx is not specified.
         pix_box, geo_box = subset.read_subset_template2box(inps.template_file)
         inps = create_subset_dataset(inps, pix_box, geo_box)
