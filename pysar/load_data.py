@@ -338,7 +338,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     '''Load input file(s) into one HDF5 file 
     It supports ROI_PAC files only for now.
     Inputs:
-        fileList  - list of string, path of files to load
+        fileList  - string / list of string, path of files to load
         inps_dict - dict, including the following attributes
                     PROJECT_NAME   : KujuAlosAT422F650  (extra attribute dictionary to add to output file)
                     timeseries_dir : directory of time series analysis, e.g. KujuAlosAT422F650/PYSAR

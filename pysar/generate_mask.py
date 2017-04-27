@@ -128,7 +128,7 @@ def main(argv):
         except:
             try:    V, atr = readfile.read(File,epoch_num)
             except: V, atr = readfile.read(File)
-  
+
         ##### Calculating Mask
         ## threshold
         try:

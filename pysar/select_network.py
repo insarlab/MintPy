@@ -12,6 +12,8 @@ import sys
 import argparse
 import re
 import glob
+import datetime
+import inspect
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,6 +27,16 @@ import pysar._network as pnet
 sar_sensor_list=['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','S1','Kmps5','G3']
 
 #########################################################################
+def log(msg):
+    '''Log function writen by Falk'''
+    f = open('log','a')
+    callingFunction = os.path.basename(inspect.stack()[1][1])
+    dateStr = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H:%M:%S')
+    string = dateStr+" * "+msg
+    print string
+    f.write(string+"\n")
+    f.close()
+
 def project_name2sensor(projectName):
     if    re.search('Ers'    , projectName):  sensor = 'Ers'
     elif  re.search('Env'    , projectName):  sensor = 'Env'
@@ -239,6 +251,7 @@ def main(argv):
     # Read inputs
     inps = cmdLineParse()
     inps = read_template2inps(inps.template_file, inps)
+    log(os.path.basename(sys.argv[0])+' '+inps.template_file)
 
     project_name = os.path.splitext(os.path.basename(inps.template_file))[0]
     print 'project name: '+project_name

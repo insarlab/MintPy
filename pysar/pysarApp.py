@@ -308,6 +308,13 @@ def main(argv):
     if not os.path.isfile(os.path.basename(inps.template_file)):
         shutil.copy2(inps.template_file, inps.work_dir)
 
+    # Copy bl_list.txt file from PROCESS directory
+    if not os.path.isfile('bl_list.txt'):
+        try:
+            process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
+            shutil.copy2(process_dir+'/bl_list.txt', inps.work_dir)
+        except: pass
+
     # Copy UNAVCO attribute txt file
     file_list = ['unavco_attributes.txt']
     try: inps.unavco_atr_file = ut.get_file_list(file_list)[0]
@@ -443,7 +450,16 @@ def main(argv):
     #########################################
     # Network Modification (Optional)
     #########################################
-    if [key for key in template.keys() if 'pysar.network' in key]:
+    atr = readfile.read_attribute(inps.ifgram_file)
+    h5 = h5py.File(inps.ifgram_file, 'r')
+    ifgram_list_all = h5[atr['FILE_TYPE']].keys()
+    ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
+    h5.close()
+    ifgram_num_drop = len(ifgram_list_all) - len(ifgram_list_keep)
+    if ifgram_num_drop > 0:
+        print '\n*************** Modify Network ****************'
+        print 'find number of dropped interferograms: %d, skip updating.' % (ifgram_num_drop)
+    elif [key for key in template.keys() if 'pysar.network' in key]:
         print '\n*************** Modify Network ****************'
         #outName = 'Modified_'+os.path.basename(inps.ifgram_file)
         #if ut.update_file(outName, inps.ifgram_file):
