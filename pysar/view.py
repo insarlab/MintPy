@@ -420,7 +420,8 @@ def plot_dem_yx(ax, dem, inps_dict):
     if inps_dict['disp_dem_shade']:
         print 'show shaded relief DEM'
         ls = LightSource(azdeg=315, altdeg=45)
-        ax.imshow(ls.hillshade(dem, vert_exag=0.3), cmap='gray', interpolation='nearest')
+        dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+2000)
+        ax.imshow(dem_shade, interpolation='spline16')
 
     if inps_dict['disp_dem_contour']:
         print 'show contour in step: '+str(inps_dict['dem_contour_step'])+' m'+\

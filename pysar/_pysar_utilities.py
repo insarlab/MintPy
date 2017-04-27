@@ -92,8 +92,6 @@ class progress_bar:
         self.width = totalWidth
         self.suffix = ''
         self.prefix = prefix
-        if self.prefix:
-            self.prefix += ' '
         self.reset()
 
     def reset(self):
@@ -1065,15 +1063,16 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     ##### Read Interferograms
     print 'Reading interferograms ...'
     data = np.zeros((ifgram_num,pixel_num), np.float32)
-
+    prog_bar = progress_bar(maxValue=ifgram_num, prefix='loading: ')
     for j in range(ifgram_num):
         ifgram = ifgram_list[j]
-        print_progress(j+1, ifgram_num, prefix='loading: ', suffix=ifgram)
         group = h5ifgram['interferograms'][ifgram]
         d = group.get(ifgram)[:]
         d -= d[ref_y, ref_x]
         data[j] = d.flatten(1)
+        prog_bar.update(j+1, suffix=date12_list[j])
     h5ifgram.close()
+    prog_bar.close()
 
     ##### Inversion
     print 'Inversing time series ...'
@@ -1081,13 +1080,15 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     dataLine  = np.zeros((ifgram_num,width),np.float32)
     tempDeformation = np.zeros((date_num,pixel_num),np.float32)
 
+    prog_bar = progress_bar(maxValue=length, prefix='calculating: ')
     for i in range(length):
         dataLine = data[:,i*width:(i+1)*width]
         defoLine = ts_inverse(dataLine, B_inv, dt, date_num)
         tempDeformation[:,i*width:(i+1)*width] = defoLine
-        print_progress(i+1,length,prefix='calculating:')
+        prog_bar.update(i+1, every=length/100)
+    prog_bar.close()
     del data
-  
+
     ##### Time Series Data Preparation
     print 'converting phase to range'
     timeseries = np.zeros((date_num,length,width),np.float32)
@@ -1102,10 +1103,12 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     print 'number of dates: '+str(date_num)
     h5timeseries = h5py.File(timeseriesFile,'w')
     group = h5timeseries.create_group('timeseries')
+    prog_bar = progress_bar(maxValue=date_num, prefix='writing: ')
     for i in range(date_num):
         date = date8_list[i]
-        print_progress(i+1, date_num, prefix='writing: ', suffix=date)
         dset = group.create_dataset(date, data=timeseries[i], compression='gzip')
+        prog_bar.update(i+1, suffix=date)
+    prog_bar.close()
 
     ## Attributes
     print 'calculating perpendicular baseline timeseries'
@@ -1121,8 +1124,9 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     for key,value in atr.iteritems():
         group.attrs[key] = value
     h5timeseries.close()
-  
-    print 'Done.\nTime series inversion took ' + str(time.time()-total) +' secs'
+    print 'Time series inversion took ' + str(time.time()-total) +' secs\nDone.'
+    return timeseriesFile
+
     
 ###################################################
 def timeseries_inversion_FGLS(h5flat,h5timeseries):
