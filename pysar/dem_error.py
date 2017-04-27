@@ -85,7 +85,7 @@ def main(argv):
     print 'number of acquisitions: '+str(date_num)
 
     timeseries = np.zeros((len(date_list),length*width),np.float32)
-    prog_bar = ut.progress_bar(maxValue=date_num, prefix='loading:')
+    prog_bar = ut.progress_bar(maxValue=date_num, prefix='loading: ')
     for i in range(date_num):
         date = date_list[i]
         d = h5['timeseries'].get(date)[:]
@@ -183,7 +183,7 @@ def main(argv):
     if inps.incidence_angle.ndim == 2 and inps.range_dis.ndim == 2:
         print 'inversing using L2-norm minimization (unweighted least squares)'\
               ' pixel by pixel: %d loops in total' % (length*width)
-        prog_bar = ut.progress_bar(maxValue=length*width, prefix='calculating:')
+        prog_bar = ut.progress_bar(maxValue=length*width, prefix='calculating: ')
         for i in range(length*width):
             row = i%length
             col = i/length
@@ -223,7 +223,7 @@ def main(argv):
     elif inps.incidence_angle.ndim == 1 and inps.range_dis.ndim == 1:
         print 'inversing using L2-norm minimization (unweighted least squares)'\
               ' column by column: %d loops in total' % (width)
-        prog_bar = ut.progress_bar(maxValue=width, prefix='calculating:')
+        prog_bar = ut.progress_bar(maxValue=width, prefix='calculating: ')
         for i in range(width):
             range_dis = inps.range_dis[i]
             inc_angle = inps.incidence_angle[i]
@@ -325,7 +325,7 @@ def main(argv):
         print 'number of dates: '+str(len(date_list))
         h5out = h5py.File(inps.outfile,'w')
         group = h5out.create_group('timeseries')
-        prog_bar = ut.progress_bar(maxValue=date_num, prefix='writing:')
+        prog_bar = ut.progress_bar(maxValue=date_num, prefix='writing: ')
         for i in range(date_num):
             date = date_list[i]
             d = np.reshape(timeseries[i][:], [length,width], order='F')

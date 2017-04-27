@@ -9,7 +9,9 @@ import sys
 import os
 
 import h5py
+
 import pysar._datetime as ptime
+import pysar._pysar_utilities as ut
 
 
 ##################################################################
@@ -57,6 +59,7 @@ def main(argv):
 
     h5t=h5py.File(timeSeriesFile)
     dateList = sorted(h5t['timeseries'].keys())
+    date_num = len(dateList)
   
     if not refDate in dateList:
         print '''**********************
@@ -73,11 +76,13 @@ def main(argv):
 
     h5t2=h5py.File(outName,'w'); print 'writing >>> '+outName
     group = h5t2.create_group('timeseries')
-    for d in dateList:
-        print d
-        ds=h5t['timeseries'].get(d)
-        data=ds[0:ds.shape[0],0:ds.shape[1]]
-        dset = group.create_dataset(d, data=data-refData, compression='gzip')
+    prog_bar = ut.progress_bar(maxValue=date_num, prefix='writing: ')
+    for i in range(date_num):
+        date = dateList[i]
+        data = h5t['timeseries'].get(date)[:]
+        dset = group.create_dataset(date, data=data-refData, compression='gzip')
+        prog_bar.update(i+1, suffix=date)
+    prog_bar.close()
 
     ## Attributes
     for key,value in h5t['timeseries'].attrs.iteritems():

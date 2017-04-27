@@ -42,10 +42,12 @@ def mask_matrix(data_mat,mask_mat):
 def update_mask(mask, inps_dict=None):
     '''Update mask matrix from input options: subset_x/y and threshold'''
     if inps_dict['subset_x']:
-        mask[:,inps_dict['subset_x'][0]:inps_dict['subset_x'][1]] = 0
+        mask[:,0:inps_dict['subset_x'][0]] = 0
+        mask[:,inps_dict['subset_x'][1]:] = 0
         print 'mask out area not in x: '+str(inps_dict['subset_x'])
     if inps_dict['subset_y']:
-        mask[inps_dict['subset_y'][0]:inps_dict['subset_y'][1],:] = 0
+        mask[0:inps_dict['subset_y'][0],:] = 0
+        mask[inps_dict['subset_y'][1]:,:] = 0
         print 'mask out area not in y: '+str(inps_dict['subset_y'])
     if inps_dict['thr']:
         mask[mask<inps_dict['thr']] = 0
