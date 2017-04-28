@@ -13,13 +13,15 @@ dbUsername = "INSERT"
 dbPassword = "INSERT"
 dbHost = "INSERT"
 
-def get_file_name(fullPath):
-    pathComponents = fullPath.split("/")
-    for name in reversed(pathComponents):
-        if name != "":
-            return name
+# use pickle file to get unavco_name of dataset
+def get_unavco_name(json_path):
+    insarmapsMetadata = None
+    fileName = json_path + "/metadata.pickle"
 
-    return None
+    with open(fileName, "r") as file:
+        insarmapsMetadata = cPickle.load(file)
+
+    return insarmapsMetadata["area"]
 
 def upload_insarmaps_metadata(fileName):
     insarmapsMetadata = None
@@ -63,23 +65,23 @@ def upload_json(folder_path):
     attributesController = InsarDatabaseController(dbUsername, dbPassword,     dbHost, 'pgis')
     attributesController.connect()
     print "Clearing old dataset, if it is there"
-    area_name = get_file_name(folder_path)
+    area_name = get_unavco_name(folder_path)
     attributesController.remove_dataset_if_there(area_name)
     attributesController.close()
 
-    area_name = get_file_name(folder_path)
-    for json_chunk in os.listdir(folder_path):
+    for file in os.listdir(folder_path):
         # insert json file to pgsql using ogr2ogr
-        if json_chunk != "metadata.pickle":
-            command = 'ogr2ogr -lco LAUNDER=NO -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + area_name + '" ' + folder_path + '/' + json_chunk
+        file_extension = file.split(".")[1]
+        if file != "metadata.pickle" and file_extension != "mbtiles":
+            command = 'ogr2ogr -lco LAUNDER=NO -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + area_name + '" ' + folder_path + '/' + file
 
             res = os.system(command)
 
             if res != 0:
-                print "Error inserting into the database. This is most often due to running out of Memory (RAM), or incorrect database credentials... quitting"
+                sys.stderr.write("Error inserting into the database. This is most often due to running out of Memory (RAM), or incorrect database credentials... quitting")
                 sys.exit()
 
-            print "Inserted " + json_chunk + " to db"
+            print "Inserted " + file + " to db"
 
     # uploading metadata for area 
     upload_insarmaps_metadata(folder_path + "/metadata.pickle")
@@ -113,18 +115,20 @@ def upload_mbtiles(fileName, username, password):
     if responseCode == 200:
         print "Successfully uploaded " + fileName
     elif responseCode == 302:
-        print "Server redirected us... Please check username and password, and try again"
+        sys.stderr.write("Server redirected us... Please check username and password, and try again")
     else:
-        print "The server responded with code: " + str(responseCode)
+        sys.stderr.write("The server responded with code: " + str(responseCode))
 
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Convert a Unavco format     H5 file for ingestion into insarmaps.')
-    parser.add_argument("-f", "--folder", help="folder containing json to upload. The folder name will be used as the table name in the db to upload, so it should be as provided by unavco2json_mbtiles.py", required=False)
+    parser.add_argument("--json_folder", help="folder containing json to upload.", required=False)
+    parser.add_argument("json_folder_positional", help="folder containing json to upload.", nargs="?")
     parser.add_argument("-U", "--server_user", help="username for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
     parser.add_argument("-r", "--dataset_to_remove", help="UNAVCO name of dataset to remove from insarmaps website", required=False)
     parser.add_argument("-P", "--server_password", help="password for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
-    parser.add_argument("-m", "--mbtiles", help="mbtiles file to upload", required=False)
+    parser.add_argument("--mbtiles_file", help="mbtiles file to upload", required=False)
+    parser.add_argument("mbtiles_file_positional", help="mbtiles file to upload, as a positional argument", nargs="?")
     required = parser.add_argument_group("required arguments")
     required.add_argument("-u", "--user", help="username for the insarmaps database", required=True)
     required.add_argument("-p", "--password", help="password for the insarmaps database", required=True)
@@ -139,18 +143,24 @@ def main():
     dbUsername = parseArgs.user
     dbPassword = parseArgs.password
     dbHost = parseArgs.host
-    folder_path = parseArgs.folder
 
-    if parseArgs.folder:
+    if parseArgs.json_folder:
         print "Uploading json chunks..."
-        upload_json(parseArgs.folder)
+        upload_json(parseArgs.json_folder)
+    elif parseArgs.json_folder_positional:
+        print "Uploading json chunks...."
+        upload_json(parseArgs.json_folder_positional)
 
-    if parseArgs.mbtiles:
+    if parseArgs.mbtiles_file or parseArgs.mbtiles_file_positional:
         if not parseArgs.server_user or not parseArgs.server_password:
-            print "Error: credentials for the insarmaps server not provided"
-        else:
+            sys.stderr.write("Error: credentials for the insarmaps server not provided")
+        elif parseArgs.mbtiles_file:
             print "Uploading mbtiles..."
-            upload_mbtiles(parseArgs.mbtiles, parseArgs.server_user, parseArgs.server_password)
+            upload_mbtiles(parseArgs.mbtiles_file, parseArgs.server_user, parseArgs.server_password)
+        else:
+            print "Uploading mbtiles...."
+            upload_mbtiles(parseArgs.mbtiles_file_positional, parseArgs.server_user, parseArgs.server_password)
+
 
     if parseArgs.dataset_to_remove:
         print "Removing " + parseArgs.dataset_to_remove

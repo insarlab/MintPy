@@ -137,7 +137,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
         g = geocoder.google([mid_lat,mid_long], method='reverse', timeout=60.0)
         country = str(g.country_long)
     except Exception, e:
-        print "timeout reverse geocoding country name"
+        sys.stderr.write("timeout reverse geocoding country name")
 
     area = folder_name
 
@@ -203,9 +203,9 @@ def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Convert a Unavco format H5 file for ingestion into insarmaps.')
-    parser.add_argument("-m", "--mask", help="mask dataset before ingestion", action="store_true", required=False)
     required = parser.add_argument_group("required arguments")
-    required.add_argument("-f", "--file", help="unavco file to ingest", required=True)
+    required.add_argument("file", help="unavco file to ingest")
+    required.add_argument("outputDir", help="directory to place json files and mbtiles file")
 
     return parser
 
@@ -216,6 +216,8 @@ def main():
     parser = build_parser()
     parseArgs = parser.parse_args()
     file_name = parseArgs.file
+    output_folder = parseArgs.outputDir
+    should_mask = True
 
     path_name_and_extension = os.path.basename(file_name).split(".")
     path_name = path_name_and_extension[0]
@@ -247,7 +249,7 @@ def main():
     timeseries_datasets = {}
     for key in dataset_keys:
         dataset = group["GRIDS"][key][:]
-        if parseArgs.mask:
+        if should_mask:
             print "Masking " + str(key)
             mask = group["GRIDS"].get('mask')[:]
             dataset = mask_matrix(dataset, mask)
@@ -260,34 +262,20 @@ def main():
 # close h5 file
     file.close()
 
-# create folder named after h5 file to store json files in mbtiles folder
-    con = None
-    cur = None
-
     path_list = path_name.split("/")
-    main_json_path = os.getcwd() + "/json"
     folder_name = path_name.split("/")[len(path_list)-1]
-    json_path = main_json_path + "/" + folder_name
 
-    try: # create path for folder that stores all mbtiles
-        os.mkdir(main_json_path)
+    try: # create path for output
+        os.mkdir(output_folder)
     except:
-        print main_json_path + " already exists"
-
-    try: # create path for this dataset's json
-        os.mkdir(json_path)
-    except:
-        print json_path + " already exists"
+        print output_folder + " already exists"
 
 # read and convert the datasets, then write them into json files and insert into database
-    convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name)
+    convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, output_folder, folder_name)
 
-# run tippecanoe command to get mbtiles file and then delete the json files to save space
-    os.chdir(os.path.abspath(json_path))
+# run tippecanoe command to get mbtiles file
+    os.chdir(os.path.abspath(output_folder))
     os.system("tippecanoe *.json -l chunk_1 -x d -pf -pk -Bg -d9 -D12 -g12 -r0 -o " + folder_name + ".mbtiles")
-
-# move mbtiles file from json folder to main json output folder
-    os.system("mv " + folder_name + ".mbtiles " + os.path.abspath(main_json_path))
 
 # ---------------------------------------------------------------------------------------
 # check how long it took to read h5 file data and create json files
