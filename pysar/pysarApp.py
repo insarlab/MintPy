@@ -811,7 +811,7 @@ def main(argv):
 
                 # Save to UNAVCO format
                 unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
-                            ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.mask_file
+                            ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file
                 print unavcoCmd
                 os.system(unavcoCmd)
 
