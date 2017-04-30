@@ -178,8 +178,7 @@ pysar.network.tempBaseMin   = 0                # min       emporal baseline
 pysar.network.keepSeasonal  = yes              # keep pairs with seasonal temporal baseline
 pysar.network.dopOverlapMin = 15               # min dopploer overlap percentage
 
-pysar.network.referenceFile = ifgram_list.txt  # reference pairs list file
-pysar.network.referenceFile = unwrapIfgram.h5  # reference HDF5 file with pairs info
+pysar.network.referenceFile = unwrapIfgram.h5  # [ifgram_list.txt] reference HDF5/list file with pairs info
 pysar.network.excludeDate   = 080520,100726    # exclude dates for pairs selection
 pysar.network.incrementNum  = 2                # for sequential method, pairs num per new acquisition
 pysar.network.tempPerpList  = 16,1600;32,800;48,600;64,200  # for hierarchical method, list of max temp/perp baseline
