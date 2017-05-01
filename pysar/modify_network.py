@@ -58,13 +58,12 @@ def manual_select_pairs_to_remove(File):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    pairs_idx = pnet.read_igram_pairs(File)
+    date12_orig = pnet.get_date12_list(File)
     bperp_list = ut.perp_baseline_ifgram2timeseries(File)[0].tolist()
     date8_list = ptime.ifgram_date_list(File)
-    ax = pnet.plot_network(ax, pairs_idx, date8_list, bperp_list)
+    ax = pnet.plot_network(ax, date12_orig, date8_list, bperp_list)
     print 'display the network of interferogram of file: '+File
 
-    date12_orig = pnet.get_date12_list(File)
     date6_list = ptime.yymmdd(date8_list)
     dates_array = np.array(ptime.date_list2vector(date8_list)[0])
     dateNum_array = mdates.date2num(dates_array)

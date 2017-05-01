@@ -341,8 +341,10 @@ def main(argv):
     print '--------------------------------------------'
     ## 1. Check loading result
     # Required files
+    fileList = [inps.work_dir+'/'+i for i in ['Modified_unwrapIfgram.h5','unwrapIfgram.h5',\
+                                              'Modified_LoadedData.h5','LoadedData.h5']]
     try:
-        inps.ifgram_file = ut.get_file_list([inps.work_dir+'/unwrapIfgram.h5', inps.work_dir+'/LoadedData.h5'], abspath=True)[0]
+        inps.ifgram_file = ut.get_file_list(fileList, abspath=True)[0]
         atr = readfile.read_attribute(inps.ifgram_file)
         print 'Unwrapped interferograms: '+inps.ifgram_file
     except RuntimeError:
@@ -350,8 +352,9 @@ def main(argv):
 
     # Recommended files (None if not found)
     # Spatial coherence for each interferogram
+    fileList = [inps.work_dir+'/'+i for i in ['coherence.h5','Coherence.h5']]
     try:
-        inps.coherence_file = ut.get_file_list([inps.work_dir+'/coherence.h5', inps.work_dir+'/Coherence.h5'], abspath=True)[0]
+        inps.coherence_file = ut.get_file_list(fileList, abspath=True)[0]
         print 'Coherences: '+inps.coherence_file
     except:
         inps.coherence_file = None
