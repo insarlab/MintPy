@@ -13,6 +13,7 @@
 
 import os
 import sys
+import re
 import argparse
 
 import h5py
@@ -59,7 +60,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
         h5file = h5py.File(File,'r')
         epochList = sorted(h5file[k].keys())
         epochNum  = len(epochList)
-        
+
         ##### Check Epoch Number
         if not epochNum == len(refList):
             print '\nERROR: Reference value has different epoch number'+\
@@ -72,24 +73,24 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
         print 'writing >>> '+outName
+        prog_bar = ut.progress_bar(maxValue=epochNum, prefix='seeding: ')
 
     ## Loop
     if k == 'timeseries':
         print 'number of acquisitions: '+str(epochNum)
         for i in range(epochNum):
             epoch = epochList[i]
-            print epoch
             data = h5file[k].get(epoch)[:]
-            
             data -= refList[i]
-  
             dset = group.create_dataset(epoch, data=data, compression='gzip')
-
+            prog_bar.update(i+1, suffix=epoch)
         atr  = seed_attributes(atr,ref_x,ref_y)
-        for key,value in atr.iteritems():   group.attrs[key] = value
+        for key,value in atr.iteritems():
+            group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
         print 'number of interferograms: '+str(epochNum)
+        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in epochList]
         for i in range(epochNum):
             epoch = epochList[i]
             #print epoch
@@ -101,9 +102,10 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
 
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in atr.iteritems():    gg.attrs[key] = value
+            for key, value in atr.iteritems():
+                gg.attrs[key] = value
 
-            ut.print_progress(i+1,epochNum,'seeding:',epoch)
+            prog_bar.update(i+1, suffix=date12_list[i])
   
     ##### Single Dataset File
     else:
@@ -115,9 +117,11 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
   
     ##### End & Cleaning
     try:
+        prog_bar.close()
         h5file.close()
         h5out.close()
-    except: pass
+    except:
+        pass
 
     return outName
 

@@ -173,11 +173,12 @@ def main(argv):
     length = int(atr['FILE_LENGTH'])
     dateNum = len(dateList)
     timeseries = np.zeros([dateNum,length*width],np.float32)
-    start_time = time.time()
+    prog_bar = ut.progress_bar(maxValue=dateNum, prefix='loading: ')
     for i in range(dateNum):
         date = dateList[i]
-        ut.print_progress(i+1, dateNum, prefix='loading:', suffix=date, elapsed_time=time.time()-start_time)
         timeseries[i,:] = h5file[k].get(date)[:].flatten()
+        prog_bar.update(i+1, suffix=date)
+    prog_bar.close()
     h5file.close()
 
     # Velocity Inversion

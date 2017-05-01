@@ -78,9 +78,11 @@ class progress_bar:
     
     example:
     import pysar._pysar_utilities as ut
+    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list]
     prog_bar = ut.progress_bar(maxValue=1000, prefix='calculating:')
     for i in range(1000):
         prog_bar.update(i+1, suffix=date)
+        prog_bar.update(i+1, suffix=date12_list[i])
     prog_bar.close()
     '''
 
@@ -514,11 +516,14 @@ def nonzero_mask(File, outFile='mask.h5'):
     h5 = h5py.File(File,'r')
     igramList = sorted(h5[k].keys())
     igramList = check_drop_ifgram(h5, atr, igramList)
+    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in igramList]
+    prog_bar = progress_bar(maxValue=len(igramList), prefix='loading: ')
     for i in range(len(igramList)):
         igram = igramList[i]
         data = h5[k][igram].get(igram)[:]
         mask[data==0] = 0
-        print_progress(i+1, len(igramList))
+        prog_bar.update(i+1, suffix=date12_list[i])
+    prog_bar.close()
 
     atr['FILE_TYPE'] = 'mask'
     print 'writing >>> '+outFile
@@ -562,6 +567,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
         epochNum  = len(epochList)
 
         meanList   = []
+        prog_bar = progress_bar(maxValue=epochNum, prefix='calculating: ')
         for i in range(epochNum):
             epoch = epochList[i]
             if k in multi_group_hdf5_file:
@@ -578,7 +584,8 @@ def spatial_average(File, mask=None, box=None, saveList=False):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 meanList.append(np.nanmean(data))
-            print_progress(i+1, epochNum, suffix=epoch)
+            prog_bar.update(i+1)
+        prog_bar.close()
         del data
         h5file.close()
     else:
@@ -626,6 +633,7 @@ def temporal_average(File, outFile=None):
 
     # Calculation
     dMean = np.zeros((length,width))
+    prog_bar = progress_bar(maxValue=epochNum, prefix='calculating: ')
     for i in range(epochNum):
         epoch = epochList[i]
         if k in multi_group_hdf5_file:
@@ -634,7 +642,8 @@ def temporal_average(File, outFile=None):
             d = h5file[k].get(epoch)[:]
         else: print k+' type is not supported currently.'; sys.exit(1)
         dMean += d
-        print_progress(i+1, epochNum, suffix=epoch)
+        prog_bar.update(i+1)
+    prog_bar.close()
     dMean /= float(len(epochList))
     del d
     h5file.close()
@@ -1434,12 +1443,14 @@ def stacking(File):
         h5file = h5py.File(File,'r')
         epochList = sorted(h5file[k].keys())
         epochNum  = len(epochList)
+        prog_bar = progress_bar(maxValue=epochNum, prefix='calculating: ')
         for i in range(epochNum):
             epoch = epochList[i]
             if k == 'timeseries':  data = h5file[k].get(epoch)[:]
             else:                  data = h5file[k][epoch].get(epoch)[:]
             stack += data
-            print_progress(i+1,epochNum)
+            prog_bar.update(i+1)
+        prog_bar.close()
         h5file.close()
 
     else:

@@ -116,7 +116,7 @@ def read_template2inps(templateFile, inps=None):
         inps.temp_perp_list = [[float(j) for j in i.split(',')] for i in inps.temp_perp_list.split(';')]
 
     if not inps.exclude_date and 'excludeDate' in keyList:
-        ex_date_list = [i for i in template_dict[prefix+'excludeDate'].split(',')]
+        ex_date_list = [i for i in template_dict['excludeDate'].split(',')]
         inps.exclude_date = ptime.yymmdd(ex_date_list)
 
     if not inps.m_date and 'masterDate' in keyList: inps.m_date = ptime.yymmdd(template_dict['masterDate'])
@@ -175,7 +175,7 @@ pysar.network.method        = all              # all,hierarchical,sequential,mst
 pysar.network.perpBaseMax   = 500              # max perpendicular baseline
 pysar.network.tempBaseMax   = 365              # max      temporal baseline
 pysar.network.tempBaseMin   = 0                # min       emporal baseline
-pysar.network.keepSeasonal  = yes              # keep pairs with seasonal temporal baseline
+pysar.network.keepSeasonal  = yes              # keep pairs with seasonal temporal baseline, default: no
 pysar.network.dopOverlapMin = 15               # min dopploer overlap percentage
 
 pysar.network.referenceFile = unwrapIfgram.h5  # [ifgram_list.txt] reference HDF5/list file with pairs info
@@ -232,8 +232,9 @@ def cmdLineParse():
                            help='min temporal baseline in days')
     threshold.add_argument('--btemp-max', dest='temp_base_max', type=float, \
                            help='max temporal baseline in days')
-    threshold.add_argument('--noseasonal', dest='keep_seasonal', action='store_false',\
-                           help='do not keep seasonal pairs, i.e. pairs in same/adjcent month within 3 years.')
+    threshold.add_argument('--keep-seasonal', dest='keep_seasonal', action='store_true',\
+                           help='keep seasonal pairs, even they are out of temporal baseline limit\n'+\
+                                'i.e. pairs in same/adjcent month within 3 years.')
 
     inps = parser.parse_args()
     try:    inps.reference_file = glob.glob(inps.reference_file)[0]

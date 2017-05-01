@@ -173,17 +173,20 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
 
         h5 = h5py.File(File, 'r')
         igramList = sorted(h5[k].keys())
+        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in igramList]
+        prog_bar = ut.progress_bar(maxValue=date12Num, prefix='writing: ')
         for i in range(date12Num):
             date12 = date12_to_write[i]
             idx = date12_orig.index(date12)
             igram = igramList[idx]
-            ut.print_progress(i+1, date12Num, prefix='', suffix=igram)
     
             data = h5[k][igram].get(igram)[:]
             group = gg.create_group(igram)
             dset = group.create_dataset(igram, data=data, compression='gzip')
             for key, value in h5[k][igram].attrs.iteritems():
                 group.attrs[key] = value
+            prog_bar.update(i+1, suffix=date12_list[i])
+        prog_bar.close()
         h5.close()
         h5out.close()
         print 'finished writing >>> '+outFile

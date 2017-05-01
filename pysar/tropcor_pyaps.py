@@ -249,8 +249,8 @@ def main(argv):
     h5timeseries_tropCor.close()
     h5trop.close()
 
-    # 
-    if '4pyaps.dem' in inps.dem_file:
+    # Delete temporary DEM file in ROI_PAC format
+    if '4pyaps' in inps.dem_file:
         rmCmd = 'rm '+inps.dem_file+' '+inps.dem_file+'.rsc '
         print rmCmd
         os.system(rmCmd)

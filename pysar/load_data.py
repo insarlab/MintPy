@@ -16,6 +16,7 @@ import sys
 import glob
 import argparse
 import warnings
+import re
 
 import h5py
 import numpy as np
@@ -257,12 +258,15 @@ def roipac_nonzero_mask(unwFileList, maskFile='mask.h5'):
 
         # Update mask from input .unw file list
         fileNum = len(unwFileList)
+        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in unwFileList]
+        prog_bar = ut.progress_bar(maxValue=fileNum, prefix='calculating: ')
         for i in range(fileNum):
             file = unwFileList[i]
             amp, unw, rsc = readfile.read_float32(file)
             
             maskZero *= amp
-            ut.print_progress(i+1, fileNum, prefix='loading', suffix=os.path.basename(file))
+            prog_bar.update(i+1, suffix=date12_list[i])
+        prog_bar.close()
         mask = np.ones([int(length), int(width)])
         mask[maskZero==0] = 0
         

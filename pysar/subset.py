@@ -25,6 +25,7 @@
 
 import os
 import sys
+import re
 import argparse
 
 import h5py
@@ -508,13 +509,12 @@ def subset_file(File, subset_dict_input, outFile=None):
         ##### Open Output File
         h5out = h5py.File(outFile)
         group = h5out.create_group(k)
+        prog_bar = ut.progress_bar(maxValue=epochNum)
 
     ## Loop
     if k == 'timeseries':
         for i in range(epochNum):
             epoch = epochList[i]
-            ut.print_progress(i+1, epochNum, prefix='', suffix=epoch)
-            
             dset = h5file[k].get(epoch)
             data_overlap = dset[pix_box4data[1]:pix_box4data[3],pix_box4data[0]:pix_box4data[2]]
 
@@ -522,15 +522,16 @@ def subset_file(File, subset_dict_input, outFile=None):
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
             dset = group.create_dataset(epoch, data=data, compression='gzip')
+            prog_bar.update(i+1, suffix=epoch)
 
-        atr_dict  = subset_attribute(atr_dict, pix_box)
-        for key,value in atr_dict.iteritems():   group.attrs[key] = value
+        atr_dict = subset_attribute(atr_dict, pix_box)
+        for key,value in atr_dict.iteritems():
+            group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
+        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in epochList]
         for i in range(epochNum):
             epoch = epochList[i]
-            ut.print_progress(i+1, epochNum, prefix='', suffix=epoch)
-            
             dset = h5file[k][epoch].get(epoch)
             atr_dict  = h5file[k][epoch].attrs
             data_overlap = dset[pix_box4data[1]:pix_box4data[3],pix_box4data[0]:pix_box4data[2]]
@@ -541,7 +542,9 @@ def subset_file(File, subset_dict_input, outFile=None):
             atr_dict  = subset_attribute(atr_dict, pix_box)
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in atr_dict.iteritems():    gg.attrs[key] = value
+            for key, value in atr_dict.iteritems():
+                gg.attrs[key] = value
+            prog_bar.update(i+1, suffix=date12_list[i])
 
     ##### Single Dataset File
     elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
@@ -571,6 +574,7 @@ def subset_file(File, subset_dict_input, outFile=None):
 
     ##### End Cleaning
     try:
+        prog_bar.close()
         h5file.close()
         h5out.close()
     except: pass

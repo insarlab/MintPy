@@ -43,11 +43,13 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     print "load time series: "+timeseriesFile
     print 'number of acquisitions: '+str(date_num)
     timeseries = np.zeros((date_num, pixel_num), np.float32)
+    prog_bar = ut.progress_bar(maxValue=date_num, prefix='loading: ')
     for i in range(date_num):
         date = date_list[i]
         d = h5timeseries['timeseries'].get(date)[:]
         timeseries[i][:] = d.flatten(0)
-        ut.print_progress(i+1, date_num, 'loading:', date)
+        prog_bar.update(i+1, suffix=date)
+    prog_bar.close()
     h5timeseries.close()
 
     # Convert displacement from meter to radian
@@ -79,9 +81,9 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     print 'calculating temporal coherence interferogram by interferogram ...'
     print 'number of interferograms: '+str(ifgram_num)
     temp_coh = np.zeros(pixel_num)+0j
+    prog_bar = ut.progress_bar(maxValue=ifgram_num, prefix='calculating: ')
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
-        ut.print_progress(i+1, ifgram_num, 'calculating:', ifgram)
         # read interferogram
         data = h5ifgram['interferograms'][ifgram].get(ifgram)[:]
         data -= data[ref_y, ref_x]
@@ -91,6 +93,8 @@ def temporal_coherence(timeseriesFile, ifgramFile):
         dataEst  = np.dot(A[i,:], timeseries)
         dataDiff = data - dataEst
         temp_coh += np.exp(1j*dataDiff)
+        prog_bar.update(i+1, suffix=date12_list[i])
+    prog_bar.close()
     del timeseries, data, dataEst, dataDiff
     h5ifgram.close()
 

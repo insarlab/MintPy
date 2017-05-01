@@ -1328,10 +1328,11 @@ def main(argv):
             i_start = (j-1)*inps.fig_row_num*inps.fig_col_num
             i_end   = min([epochNum, i_start+inps.fig_row_num*inps.fig_col_num])
             ##### Loop 2 - Subplots
+            prog_bar = ut.progress_bar(maxValue=i_end-i_start, prefix='loading: ')
             for i in range(i_start, i_end):
                 epoch = inps.epoch[i]
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
-                ut.print_progress(i-i_start+1, i_end-i_start, prefix='loading', suffix=epoch)
+                prog_bar.update(i-i_start+1, suffix=str(i+1))
 
                 # Read Data
                 h5file = h5py.File(inps.file, 'r')
@@ -1386,9 +1387,11 @@ def main(argv):
                 if inps.flip_lr:        ax.invert_xaxis()
                 if inps.flip_ud:        ax.invert_yaxis()
                 # Turn off axis
-                if not inps.disp_axis:  ax.axis('off')
+                if not inps.disp_axis:
+                    ax.axis('off')
 
             ##### Figure Setting - End of Loop 2
+            prog_bar.close()
             fig.tight_layout()
             # Min and Max for this figure
             all_data_min = np.nanmin([all_data_min, fig_data_min])
