@@ -2,11 +2,8 @@
 
 import sys
 import argparse
-from pysar.add_attribute_insarmaps import InsarDatabaseController
+from pysar.add_attribute_insarmaps import InsarDatabaseController, InsarDatasetController
 import os
-import pycurl
-from cStringIO import StringIO
-import urllib
 import cPickle
 
 dbUsername = "INSERT"
@@ -92,33 +89,6 @@ def upload_json(folder_path):
     attributesController.index_table_on(area_name, "p", None)
     attributesController.close()
 
-def upload_mbtiles(fileName, username, password):
-    curl = pycurl.Curl()
-    curl.setopt(curl.POST, 1)
-    loginParams =  urllib.urlencode([("email", username), ("password", password)])
-    curl.setopt(curl.POSTFIELDS, loginParams)
-    loginURL = dbHost + "/auth/login"
-    curl.setopt(curl.URL, loginURL)
-    bodyOutput = StringIO()
-    headersOutput = StringIO()
-    curl.setopt(curl.WRITEFUNCTION, bodyOutput.write)
-    curl.setopt(curl.HEADERFUNCTION, headersOutput.write)
-    curl.setopt(pycurl.COOKIEFILE, "")
-    curl.perform()
-    curl.setopt(curl.HTTPPOST, [('title', fileName), (('file', (curl.FORM_FILE, fileName)))])
-    uploadURL = dbHost + "/WebServices/uploadMbtiles"
-    curl.setopt(curl.URL, uploadURL)
-    #curl.setopt(curl.VERBOSE, 1)
-    curl.perform()
-    
-    responseCode = curl.getinfo(pycurl.HTTP_CODE)
-    if responseCode == 200:
-        print "Successfully uploaded " + fileName
-    elif responseCode == 302:
-        sys.stderr.write("Server redirected us... Please check username and password, and try again")
-    else:
-        sys.stderr.write("The server responded with code: " + str(responseCode))
-
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Convert a Unavco format     H5 file for ingestion into insarmaps.')
@@ -152,22 +122,26 @@ def main():
         upload_json(parseArgs.json_folder_positional)
 
     if parseArgs.mbtiles_file or parseArgs.mbtiles_file_positional:
+        dbContoller = InsarDatasetController(dbUsername, dbPassword, dbHost, 'pgis', parseArgs.server_user, parseArgs.server_password)
         if not parseArgs.server_user or not parseArgs.server_password:
             sys.stderr.write("Error: credentials for the insarmaps server not provided")
         elif parseArgs.mbtiles_file:
             print "Uploading mbtiles..."
-            upload_mbtiles(parseArgs.mbtiles_file, parseArgs.server_user, parseArgs.server_password)
+            dbContoller.upload_mbtiles(parseArgs.mbtiles_file)
         else:
             print "Uploading mbtiles...."
-            upload_mbtiles(parseArgs.mbtiles_file_positional, parseArgs.server_user, parseArgs.server_password)
-
+            dbContoller.upload_mbtiles(parseArgs.mbtiles_file_positional)
 
     if parseArgs.dataset_to_remove:
-        print "Removing " + parseArgs.dataset_to_remove
-        attributesController = InsarDatabaseController(dbUsername, dbPassword,     dbHost, 'pgis')
-        attributesController.connect()
-        attributesController.remove_dataset_if_there(parseArgs.dataset_to_remove)
-        attributesController.close()
+        if not parseArgs.server_user or not parseArgs.server_password:
+            sys.stderr.write("Error: credentials for the insarmaps server not provided")
+        else:
+            print "Removing " + parseArgs.dataset_to_remove
+            dbContoller = InsarDatasetController(dbUsername, dbPassword, dbHost, 'pgis', parseArgs.server_user, parseArgs.server_password)
+            dbContoller.connect()
+            dbContoller.remove_dataset_if_there(parseArgs.dataset_to_remove)
+            dbContoller.close()
+            dbContoller.remove_mbtiles(parseArgs.dataset_to_remove + ".mbtiles")
 
 if __name__ == '__main__':
     main()

@@ -7,8 +7,11 @@ import os
 import argparse
 import pysar._readfile as readfile
 import json
+import pycurl
+from cStringIO import StringIO
+import urllib
 
-class InsarDatabaseController:
+class InsarDatabaseController(object):
     def __init__(self, username, password, host, db):
         self.username = username
         self.password = password
@@ -156,6 +159,64 @@ class InsarDatabaseController:
             self.con.commit()
         except Exception, e:
             pass
+
+class InsarDatasetController(InsarDatabaseController):
+    def __init__(self, username, password, host, db, serverUsername, serverPassword):
+        super(InsarDatasetController, self).__init__(username, password, host, db)
+        self.bodyOutput = StringIO()
+        self.headersOutput = StringIO()
+        self.serverUsername = serverUsername
+        self.serverPassword = serverPassword
+
+    def setup_curl(self):
+        curl = pycurl.Curl()
+        curl.setopt(curl.WRITEFUNCTION, self.bodyOutput.write)
+        curl.setopt(curl.HEADERFUNCTION, self.headersOutput.write)
+        curl.setopt(pycurl.COOKIEFILE, "")
+
+        return curl
+
+    def curl_login(self, username, password):
+        curl = self.setup_curl()
+        curl.setopt(curl.POST, 1)
+        loginParams =  urllib.urlencode([("email", username), ("password", password)])
+        curl.setopt(curl.POSTFIELDS, loginParams)
+        loginURL = self.host + "/auth/login"
+        curl.setopt(curl.URL, loginURL)
+        curl.perform()
+
+        return curl
+
+    def upload_mbtiles(self, fileName):
+        curl = self.curl_login(self.serverUsername, self.serverPassword)
+
+        curl.setopt(curl.HTTPPOST, [('title', fileName), (('file', (curl.FORM_FILE, fileName)))])
+        uploadURL = self.host + "/WebServices/uploadMbtiles"
+        curl.setopt(curl.URL, uploadURL)
+        #curl.setopt(curl.VERBOSE, 1)
+        curl.perform()
+
+        responseCode = curl.getinfo(pycurl.HTTP_CODE)
+        if responseCode == 200:
+            print "Successfully uploaded " + fileName
+        elif responseCode == 302:
+            sys.stderr.write("Server redirected us... Please check username and password, and try again")
+        else:
+            sys.stderr.write("The server responded with code: " + str(responseCode))
+
+    def remove_mbtiles(self, fileName):
+        curl = self.curl_login(self.serverUsername, self.serverPassword)
+
+        curl.setopt(curl.HTTPPOST, [('fileName', fileName)])
+        deleteURL = self.host + "/WebServices/deleteMbtiles"
+        curl.setopt(curl.URL, deleteURL)
+        #curl.setopt(curl.VERBOSE, 1)
+        curl.perform()
+
+        responseCode = curl.getinfo(pycurl.HTTP_CODE)
+
+        if responseCode == 302:
+            sys.stderr.write("Server redirected us... Please check username and password, and try again")
             
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
