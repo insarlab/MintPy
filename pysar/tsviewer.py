@@ -160,6 +160,7 @@ if __name__ == '__main__':
     #ax_v = fig_v.add_subplot(111)
     #ax_v.set_position([0.125,0.25,0.75,0.65])
     #This works on OSX. Original worked on Linux.
+    # rect[left, bottom, width, height]
     ax_v = fig_v.add_axes([0.125,0.25,0.75,0.65])
     img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim)
 
@@ -176,12 +177,15 @@ if __name__ == '__main__':
     if inps.yx:
         ax_v.plot(inps.yx[1], inps.yx[0], 'ro', markeredgecolor='black')
 
+    ax_v.set_xlim(0, np.shape(d_v)[1])
+    ax_v.set_ylim(np.shape(d_v)[0], 0)
+
     # Status Bar
     def format_coord(x,y):
         global d_v
         col = int(x+0.5)
         row = int(y+0.5)
-        if 0<=col<=width and 0<=row<=length:
+        if 0<=col<width and 0<=row<length:
             z = d_v[row,col]
             try:
                 lon = ullon + x*lon_step
@@ -210,7 +214,7 @@ if __name__ == '__main__':
     cbar.set_label('Displacement [%s]' % inps.disp_unit)
 
     # Axes 2 - Time Slider
-    ax_time = fig_v.add_axes([0.2,0.1,0.6,0.07], facecolor='lightgoldenrodyellow', yticks=[])
+    ax_time = fig_v.add_axes([0.125,0.1,0.6,0.07], axisbg='lightgoldenrodyellow', yticks=[])
     tslider = Slider(ax_time, 'Years', tims[0], tims[-1], valinit=tims[inps.epoch_num])
     tslider.ax.bar(tims, np.ones(len(tims)), facecolor='black', width=0.01, ecolor=None)
     tslider.ax.set_xticks(np.round(np.linspace(tims[0],tims[-1],num=5)*100)/100)
