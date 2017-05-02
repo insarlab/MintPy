@@ -196,19 +196,25 @@ def main(argv):
     print '-----------------------------------------'
     print 'writing >>> '+outName
     f = h5py.File(outName,'w')
-    group = f.create_group('timeseries')
-    grid = group.create_group('GRIDS')
+    hdfeos = f.create_group('HDFEOS')
+    if 'Y_FIRST' in meta_dict.keys():
+        gg_coord = hdfeos.create_group('GRIDS')
+    else:
+        gg_coord = hdfeos.create_group('SWATHS')
+    group = gg_coord.create_group('timeseries')
 
     ##### Write Attributes to the HDF File
+    print 'write metadata to '+str(f)
     for key,value in meta_dict.iteritems():
-        group.attrs[key] = value
+        f.attrs[key] = value
 
+    print 'write data to '+str(group)
     ##### Write Time Series Data
-    print inps.timeseries
+    print 'reading file: '+inps.timeseries
     for date in dateList:
         print date
         data = h5_timeseries[k].get(date)[:,:]
-        dset = grid.create_dataset(date, data=data, compression='gzip')
+        dset = group.create_dataset(date, data=data, compression='gzip')
         dset.attrs['Title'] = 'Time series displacement'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'meters'
@@ -216,9 +222,9 @@ def main(argv):
 
     ##### Write Incidence_Angle
     if os.path.isfile(inps.incidence_angle):
-        print inps.incidence_angle
+        print 'reading file: '+inps.incidence_angle
         inc_angle, inc_angle_meta = readfile.read(inps.incidence_angle)
-        dset = grid.create_dataset('incidence_angle', data=inc_angle, compression='gzip')
+        dset = group.create_dataset('incidence_angle', data=inc_angle, compression='gzip')
         dset.attrs['Title'] = 'Incidence angle'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'degrees'
@@ -226,9 +232,9 @@ def main(argv):
 
     ##### Write DEM
     if os.path.isfile(inps.dem):
-        print inps.dem
+        print 'reading file: '+inps.dem
         dem, dem_meta = readfile.read(inps.dem)
-        dset = grid.create_dataset('dem', data=dem, compression='gzip')
+        dset = group.create_dataset('dem', data=dem, compression='gzip')
         dset.attrs['Title'] = 'Digital elevatino model'
         dset.attrs['MissingValue'] = INT_ZERO
         dset.attrs['Units'] = 'meters'
@@ -236,9 +242,9 @@ def main(argv):
 
     ##### Write Coherence
     if os.path.isfile(inps.coherence):
-        print inps.coherence
+        print 'reading file: '+inps.coherence
         coherence, coherence_meta = readfile.read(inps.coherence)
-        dset = grid.create_dataset('coherence', data=coherence, compression='gzip')
+        dset = group.create_dataset('coherence', data=coherence, compression='gzip')
         dset.attrs['Title'] = 'Temporal Coherence'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'None'
@@ -246,9 +252,9 @@ def main(argv):
 
     ##### Write Mask
     if os.path.isfile(inps.mask):
-        print inps.mask
+        print 'reading file: '+inps.mask
         mask, mask_meta = readfile.read(inps.mask)
-        dset = grid.create_dataset('mask', data=mask, compression='gzip')
+        dset = group.create_dataset('mask', data=mask, compression='gzip')
         dset.attrs['Title'] = 'Mask'
         dset.attrs['MissingValue'] = INT_ZERO
         dset.attrs['Units'] = 'None'
