@@ -467,26 +467,33 @@ def main(argv):
         #outName = 'Modified_'+os.path.basename(inps.ifgram_file)
         #if ut.update_file(outName, inps.ifgram_file):
         networkCmd = 'modify_network.py --template '+inps.template_file+' --mask '+inps.mask_file+\
-                     ' --plot --mark-attribute '+inps.ifgram_file
+                     ' --mark-attribute '+inps.ifgram_file
         if inps.coherence_file:
             networkCmd += ' '+inps.coherence_file
         print networkCmd
         os.system(networkCmd)
+
         #if not ut.update_file(outName):
         #    inps.ifgram_file = outName
-        
-        outName = 'Modified_'+os.path.basename(inps.mask_file)
-        if not ut.update_file(outName):
-            inps.mask_file = outName
-        
-        if inps.spatial_coh_file:
-            outName = 'Modified_'+os.path.basename(inps.spatial_coh_file)
-            if not ut.update_file(outName):
-                inps.spatial_coh_file = outName
+        #outName = 'Modified_'+os.path.basename(inps.mask_file)
+        #if not ut.update_file(outName):
+        #    inps.mask_file = outName
+        #if inps.spatial_coh_file:
+        #    outName = 'Modified_'+os.path.basename(inps.spatial_coh_file)
+        #    if not ut.update_file(outName):
+        #        inps.spatial_coh_file = outName
         #if inps.coherence_file:
         #    outName = 'Modified_'+os.path.basename(inps.coherence_file)
         #    if not ut.update_file(outName):
         #        inps.coherence_file = outName
+
+    # Plot network colored in spatial coherence
+    if any(ut.update_file('Network.pdf', i, check_readable=False) \
+           for i in [inps.ifgram_file, inps.coherence_file, inps.mask_file]):
+        plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+\
+                  ' --mask '+inps.mask_file+' --nodisplay'
+        print plotCmd
+        os.system(plotCmd)
 
 
     #########################################
@@ -591,23 +598,21 @@ def main(argv):
 
     ##############################################
     # LOD (Local Oscillator Drift) Correction
-    #   when Satellite is Envisat and
-    #   Coordinate system is radar
+    #   for Envisat data in radar coord only
     ############################################## 
-    print '\n**********  Local Oscillator Drift correction for Envisat  ********'
     sar_mission = atr['PLATFORM'].lower()
-    if sar_mission.startswith('env') and 'Y_FIRST' not in atr.keys():
-        outName = os.path.splitext(inps.timeseries_file)[0]+'_LODcor.h5'
-        if ut.update_file(outName, inps.timeseries_file):
-            LODcmd = 'lod.py '+inps.timeseries_file
-            print LODcmd
-            os.system(LODcmd)
-        inps.timeseries_file = outName
-    else:
-        if not sar_mission.startswith('env'):
-            print '\nLOD correction is not needed for '+sar_mission+' data.'
+    if sar_mission.startswith('env'):
+        print '\n**********  Local Oscillator Drift correction for Envisat  ********'
+        if 'Y_FIRST' not in atr.keys():
+            outName = os.path.splitext(inps.timeseries_file)[0]+'_LODcor.h5'
+            if ut.update_file(outName, inps.timeseries_file):
+                LODcmd = 'lod.py '+inps.timeseries_file
+                print LODcmd
+                os.system(LODcmd)
+            inps.timeseries_file = outName
         else:
-            warnings.warn('Can not apply LOD correction for file in radar coord.')
+            warnings.warn('Can not apply LOD correction for file in radar coord. Skip it for now.')
+
 
     ##############################################
     # Tropospheric Delay Correction (Optional)

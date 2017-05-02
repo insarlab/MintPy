@@ -194,13 +194,13 @@ def print_progress(iteration, total, prefix='calculating:', suffix='complete', d
 
 
 ############################################################
-def update_file(outFile, inFile=None, overwrite=False):
+def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
     '''Check whether to update outFile or not.
     return True if any of the following meets:
         1. if overwrite option set to True
         2. outFile is empty, e.g. None, []
         3. outFile is not existed
-        4. outFile is not readable by readfile.read_attribute()
+        4. outFile is not readable by readfile.read_attribute() when check_readable=True
         5. outFile is older than in File, if inFile is not None
     Otherwise, return False.
     
@@ -212,12 +212,13 @@ def update_file(outFile, inFile=None, overwrite=False):
     if not outFile or not os.path.isfile(outFile):
         return True
 
-    try:
-        atr = readfile.read_attribute(outFile)
-    except:
-        print outFile+' exists, but can not read, remove it.'
-        rmCmd = 'rm '+outFile;  print rmCmd;  os.system(rmCmd)
-        return True
+    if check_readable:
+        try:
+            atr = readfile.read_attribute(outFile)
+        except:
+            print outFile+' exists, but can not read, remove it.'
+            rmCmd = 'rm '+outFile;  print rmCmd;  os.system(rmCmd)
+            return True
 
     if inFile:
         if os.path.getmtime(outFile) < os.path.getmtime(inFile):
@@ -238,18 +239,35 @@ def add_attribute(File, atr_new=dict()):
         File - string, path/name of updated file
     '''
     atr = readfile.read_attribute(File)
+    k = atr['FILE_TYPE']
+
     # Compare new attributes with exsiting ones
+    def check_attribute_update(atr_new, atr_orig, update=False):
+        for key in atr_new.keys():
+            if key in atr.keys() and str(atr_new[key]) == str(atr_orig[key]):
+                next
+            else:
+                update = True
+        return update
+
     update = False
-    for key in atr_new.keys():
-        if key in atr.keys() and str(atr_new[key]) == str(atr[key]):
-            next
-        else:
-            update = True
+    if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
+        update = check_attribute_update(atr_new, atr, update)
+    elif k in multi_group_hdf5_file:
+        h5 = h5py.File(File, 'r')
+        epochList = h5[k].keys()
+        for epoch in epochList:
+            atr = h5[k][epoch].attrs
+            update = check_attribute_update(atr_new, atr, update)
+        h5.close()
+    else:
+        raise Exception('Un-recognized file type: '+k)
+
     if not update:
         print 'All new attributes already exists in file and have the same value, skip update.'
         return File
 
-    k = atr['FILE_TYPE']
+    # Update attributes
     h5 = h5py.File(File,'r+')    
     if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
         for key, value in atr_new.iteritems():
@@ -259,8 +277,6 @@ def add_attribute(File, atr_new=dict()):
         for epoch in epochList:
             for key, value in atr_new.iteritems():
                 h5[k][epoch].attrs[key] = value
-    else:
-        raise Exception('Un-recognized file type: '+k)
     h5.close()
     return File
 
