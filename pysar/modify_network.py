@@ -98,19 +98,19 @@ def manual_select_pairs_to_remove(File):
 def update_inps_with_template(inps, template_file):
     template_dict = readfile.read_template(inps.template_file)
     keyList = template_dict.keys()
-    
-    if not inps.max_temp_baseline and 'pysar.network.maxTempBaseline' in keyList:
-        inps.max_temp_baseline = float(template_dict['pysar.network.maxTempBaseline'])
-    if not inps.max_perp_baseline and 'pysar.network.maxPerpBaseline' in keyList:
-        inps.max_perp_baseline = float(template_dict['pysar.network.maxPerpBaseline'])
+
+    if not inps.max_temp_baseline and 'pysar.network.tempBaseMax' in keyList:
+        inps.max_temp_baseline = float(template_dict['pysar.network.tempBaseMax'])
+    if not inps.max_perp_baseline and 'pysar.network.perpBaseMax' in keyList:
+        inps.max_perp_baseline = float(template_dict['pysar.network.perpBaseMax'])
     
     if not inps.drop_date and 'pysar.network.dropDate' in keyList:
         inps.drop_date = [i for i in template_dict['pysar.network.dropDate'].replace(',',' ').split()]
     if not inps.drop_ifg_index and 'pysar.network.dropIfgramIndex' in keyList:
         inps.drop_ifg_index = [i for i in template_dict['pysar.network.dropDate'].replace(',',' ').split()]
     
-    if not inps.reference_file and 'pysar.network.reference' in keyList:
-        inps.reference_file = template_dict['pysar.network.reference']
+    if not inps.reference_file and 'pysar.network.referenceFile' in keyList:
+        inps.reference_file = template_dict['pysar.network.referenceFile']
     
     # Coherence-Based 
     if 'pysar.network.coherenceBase' in keyList:
@@ -199,6 +199,7 @@ EXAMPLE='''example:
   modify_network.py unwrapIfgram.h5 coherence.h5 -t 365 -b 200
   modify_network.py unwrapIfgram.h5 coherence.h5 --coherence-base coherence.h5 --mask Mask.h5 --min-coherence 0.7
   modify_network.py unwrapIfgram.h5 -r Modified_coherence.h5
+  modify_network.py unwrapIfgram.h5 --start-date 20080520  --end-date 20110101
   modify_network.py unwrapIfgram.h5 --drop-date 20080520 20090816
   modify_network.py unwrapIfgram.h5 --drop-ifg-index 3:9 11 23
   modify_network.py unwrapIfgram.h5 --manual
@@ -207,9 +208,11 @@ EXAMPLE='''example:
 TEMPLATE='''
 pysar.network.dropIfgramIndex = 7:9 15 25 26      #start from 1
 pysar.network.dropDate        = 20080520 20090816
-pysar.network.maxTempBaseline = 720
-pysar.network.maxPerpBaseline = 2000
-pysar.network.reference       = Modified_unwrapIfgram.h5
+pysar.network.startDate       = 20080101
+pysar.network.endDate         = 20110101
+pysar.network.tempBaseMax     = 720
+pysar.network.perpBaseMax     = 2000
+pysar.network.referenceFile   = Modified_unwrapIfgram.h5
 pysar.network.reference       = Paris.list
 pysar.network.coherenceBase   = yes    #search and use input coherence file, set to no or comment the line to disable
 '''
@@ -223,6 +226,7 @@ def cmdLineParse():
                              'i.e. unwrapIfgram.h5, wrapIfgram.h5, coherence.h5, ...')
     parser.add_argument('--mark-attribute', dest='mark_attribute', action='store_true',\
                         help='mark dropped interferograms in attribute only, do not write new file')
+    parser.add_argument('--plot', action='store_true', help='plot and save the result to image files.')
     
     parser.add_argument('-t', dest='max_temp_baseline', type=float, help='temporal baseline threshold/maximum in days')
     parser.add_argument('-b', dest='max_perp_baseline', type=float, help='perpendicular baseline threshold/maximum in meters')
@@ -236,8 +240,11 @@ def cmdLineParse():
                         help='index of interferograms to remove/drop.\n1 as the first')
     parser.add_argument('--drop-date', dest='drop_date', nargs='*',\
                         help='date(s) to remove/drop, all interferograms included date(s) will be removed')
-    parser.add_argument('--plot', action='store_true', help='plot and save the result to image files.')
-    
+    parser.add_argument('--start-date','--min-date', dest='start_date',\
+                        help='remove/drop interferograms with date earlier than start-date in YYMMDD or YYYYMMDD format')
+    parser.add_argument('--end-date','--max-date', dest='end_date',\
+                        help='remove/drop interferograms with date later than end-date in YYMMDD or YYYYMMDD format')
+
     # Coherence-based network
     coherenceGroup = parser.add_argument_group('Coherence-based Network',\
                                                'Drop/modify network based on spatial coherence')
@@ -269,10 +276,8 @@ def main(argv):
     print 'number of interferograms: '+str(len(date12_orig))
     #print '\n****************** Network Modification ********************'
 
-    if (not inps.reference_file and not inps.template_file and\
-        not inps.max_temp_baseline and not inps.max_perp_baseline and\
-        not inps.drop_ifg_index and not inps.drop_date and \
-        not inps.coherence_file):
+    if all(not i for i in [inps.reference_file, inps.template_file, inps.max_temp_baseline, inps.max_perp_baseline,\
+                           inps.drop_ifg_index, inps.drop_date, inps.coherence_file, inps.start_date, inps.end_date]):
         # Display network for manually modification when there is no other modification input.
         print 'No input found to remove interferogram, continue by display the network to select it manually ...'
         inps.disp_network = True
@@ -390,6 +395,30 @@ def main(argv):
             date1, date2 = date12_orig[i].split('-')
             if (date1 in inps.drop_date) or (date2 in inps.drop_date):
                 date12 = date12_orig[i]
+                date12_to_rmv.append(date12)
+                print date12
+
+    # 2.6 Update date12_to_rmv from start_date
+    if inps.start_date:
+        inps.start_date = ptime.yymmdd(inps.start_date)
+        print '----------------------------------------------------------------------------'
+        print 'Drop pairs with date earlier than start-date: '+inps.start_date
+        min_date = int(ptime.yyyymmdd(inps.start_date))
+        for i in range(len(date12_orig)):
+            date12 = date12_orig[i]
+            if any(int(j) < min_date for j in ptime.yyyymmdd(date12.split('-'))):
+                date12_to_rmv.append(date12)
+                print date12
+
+    # 2.7 Update date12_to_rmv from end_date
+    if inps.end_date:
+        inps.end_date = ptime.yymmdd(inps.end_date)
+        print '----------------------------------------------------------------------------'
+        print 'Drop pairs with date earlier than end-date: '+inps.end_date
+        max_date = int(ptime.yyyymmdd(inps.end_date))
+        for i in range(len(date12_orig)):
+            date12 = date12_orig[i]
+            if any(int(j) > max_date for j in ptime.yyyymmdd(date12.split('-'))):
                 date12_to_rmv.append(date12)
                 print date12
 

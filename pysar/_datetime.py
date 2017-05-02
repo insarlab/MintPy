@@ -65,7 +65,7 @@ def yyyymmdd(dates):
 
 def yymmdd(dates):
     if isinstance(dates,basestring):
-        if len(dates) == 8:  datesOut = date[2:8]
+        if len(dates) == 8:  datesOut = dates[2:8]
         else:                datesOut = dates
     elif isinstance(dates,list):
         datesOut = []

@@ -177,7 +177,7 @@ def main(argv):
 
     ##### 2. Plot
     # Output figure name
-    figName1 = 'BperpHist'+inps.fig_ext
+    figName1 = 'BperpHistory'+inps.fig_ext
     figName2 = 'Network'+inps.fig_ext
 
     # Fig 1 - Baseline History
