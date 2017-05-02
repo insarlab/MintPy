@@ -127,6 +127,25 @@ def main(argv):
     date12_list = pnet.get_date12_list(inps.file)
     print 'number of interferograms: '+str(len(date12_list))
 
+    # Read drop_ifgram 
+    date8_list_drop = []
+    date12_list_drop = []
+    if ext in ['.h5','.he5']:
+        h5 = h5py.File(inps.file, 'r')
+        ifgram_list_all = sorted(h5[k].keys())
+        ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
+        date12_list_keep = [re.findall('\d{6}-\d{6}', i)[0] for i in ifgram_list_keep]
+        # Get date12_list_drop
+        date12_list_drop = sorted(list(set(date12_list) - set(date12_list_keep)))
+        print 'number of interferograms marked as dropped: '+str(len(date12_list_drop))
+
+        # Get date_list_drop
+        m_dates = [i.split('-')[0] for i in date12_list_keep]
+        s_dates = [i.split('-')[1] for i in date12_list_keep]
+        date8_list_keep = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
+        date8_list_drop = sorted(list(set(date8_list) - set(date8_list_keep)))
+        print 'number of acquisitions marked as dropped: '+str(len(date8_list_drop))
+
     # Read Coherence List
     inps.coherence_list = None
     if inps.coherence_file and os.path.isfile(inps.coherence_file):
@@ -157,22 +176,6 @@ def main(argv):
             print 'WARNING: input coherence list has different pairs/date12 from input file'
             print 'turn off the color plotting of interferograms based on coherence'
             inps.coherence_list = None
-
-    # Read drop_ifgram 
-    date8_list_drop = []
-    date12_list_drop = []
-    if ext in ['.h5','.he5']:
-        h5 = h5py.File(inps.file, 'r')
-        ifgram_list_all = sorted(h5[k].keys())
-        ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
-        date12_list_keep = [re.findall('\d{6}-\d{6}', i)[0] for i in ifgram_list_keep]
-        # Get date12_list_drop
-        date12_list_drop = sorted(list(set(date12_list) - set(date12_list_keep)))
-        # Get date_list_drop
-        m_dates = [i.split('-')[0] for i in date12_list_keep]
-        s_dates = [i.split('-')[1] for i in date12_list_keep]
-        date8_list_keep = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
-        date8_list_drop = sorted(list(set(date8_list) - set(date8_list_keep)))
 
 
     ##### 2. Plot
