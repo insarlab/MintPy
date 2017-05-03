@@ -76,12 +76,12 @@ def get_delay(grib_file, atr, inps_dict):
 
 ###############################################################
 EXAMPLE='''example:
-  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt
-  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s NARR
-  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s MERRA --delay dry -i 23
-  tropcor_pyaps.py timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF 
+  tropcor_pyaps.py --timeseries timeseries.h5 -d radar_8rlks.hgt
+  tropcor_pyaps.py --timeseries timeseries.h5 -d radar_8rlks.hgt -s NARR
+  tropcor_pyaps.py --timeseries timeseries.h5 -d radar_8rlks.hgt -s MERRA --delay dry -i 23
+  tropcor_pyaps.py --timeseries timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF 
   
-  tropcor_pyaps.py -d demRadar.h5 -s ECMWF -h 18:00 --date-list date_list.txt --download
+  tropcor_pyaps.py -s ECMWF --hour 18:00 --date-list date_list.txt --download
 '''
 
 REFERENCE='''reference:
@@ -103,7 +103,7 @@ def cmdLineParse():
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('--timeseries', dest='timeseries_file', help='timeseries HDF5 file, i.e. timeseries.h5')
-    parser.add_argument('-d','--dem', dest='dem_file', required=True,\
+    parser.add_argument('-d','--dem', dest='dem_file',\
                         help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
     parser.add_argument('--weather-dir', dest='weather_dir', \
                         help='directory to put downloaded weather data, i.e. ./../WEATHER\n'+\
@@ -120,35 +120,40 @@ def cmdLineParse():
     parser.add_argument('-i', dest='incidence_angle',\
                         help='a file containing all incidence angles, or\n'+\
                              'one average value presenting the whole area, if not input, average look angle will be used.')
-    parser.add_argument('-h','--hour', dest='hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
+    parser.add_argument('--hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
 
     parser.add_argument('--template', dest='template_file',\
                         help='template file with input options below:\n'+TEMPLATE)
     parser.add_argument('-o', dest='out_file', help='Output file name for trospheric corrected timeseries.')
 
     inps = parser.parse_args()
+    # Correcting TIMESERIES or DOWNLOAD DATA ONLY, required one of them
+    if not inps.timeseries_file and not inps.download:
+        parser.print_help()
+        sys.exit(1)
     return inps
 
 
 ###############################################################
 def main(argv):
-    
     inps = cmdLineParse()
+
     if inps.timeseries_file:
         inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
         atr = readfile.read_attribute(inps.timeseries_file)
 
-    inps.dem_file = ut.get_file_list([inps.dem_file])[0]
-    # Convert DEM to ROIPAC format
-    if os.path.splitext(inps.dem_file)[1] in ['.h5']:
-        print 'convert DEM file to ROIPAC format'
-        dem, atr_dem = readfile.read(inps.dem_file)
-        if 'Y_FIRST' in atr_dem.keys():
-            atr_dem['FILE_TYPE'] = '.dem'
-        else:
-            atr_dem['FILE_TYPE'] = '.hgt'
-        outname = os.path.splitext(inps.dem_file)[0]+'4pyaps'+atr_dem['FILE_TYPE']
-        inps.dem_file = writefile.write(dem, atr_dem, outname)
+    if inps.dem_file:
+        inps.dem_file = ut.get_file_list([inps.dem_file])[0]
+        # Convert DEM to ROIPAC format
+        if os.path.splitext(inps.dem_file)[1] in ['.h5']:
+            print 'convert DEM file to ROIPAC format'
+            dem, atr_dem = readfile.read(inps.dem_file)
+            if 'Y_FIRST' in atr_dem.keys():
+                atr_dem['FILE_TYPE'] = '.dem'
+            else:
+                atr_dem['FILE_TYPE'] = '.hgt'
+            outname = os.path.splitext(inps.dem_file)[0]+'4pyaps'+atr_dem['FILE_TYPE']
+            inps.dem_file = writefile.write(dem, atr_dem, outname)
 
     print '*******************************************************************************'
     print 'Downloading weather model data ...'
