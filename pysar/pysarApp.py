@@ -658,7 +658,7 @@ def main(argv):
             outName = os.path.splitext(inps.timeseries_file)[0]+'_'+model+'.h5'
             if ut.update_file(outName, inps.timeseries_file):
                 #acquisition_time = template['pysar.acquisitionTime']
-                cmdTrop = 'tropcor_pyaps.py '+inps.timeseries_file+' -d '+demFile+' -s '+model+\
+                cmdTrop = 'tropcor_pyaps.py --timeseries '+inps.timeseries_file+' -d '+demFile+' -s '+model+\
                           ' --weather-dir '+inps.work_dir+'/../WEATHER'
                 print cmdTrop
                 os.system(cmdTrop)

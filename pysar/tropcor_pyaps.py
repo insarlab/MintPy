@@ -80,6 +80,8 @@ EXAMPLE='''example:
   tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s NARR
   tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s MERRA --delay dry -i 23
   tropcor_pyaps.py timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF 
+  
+  tropcor_pyaps.py -d demRadar.h5 -s ECMWF -h 18:00 --date-list date_list.txt --download
 '''
 
 REFERENCE='''reference:
@@ -100,7 +102,7 @@ def cmdLineParse():
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
-    parser.add_argument('timeseries_file', help='timeseries HDF5 file, i.e. timeseries.h5')
+    parser.add_argument('--timeseries', dest='timeseries_file', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-d','--dem', dest='dem_file', required=True,\
                         help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
     parser.add_argument('--weather-dir', dest='weather_dir', \
@@ -108,7 +110,9 @@ def cmdLineParse():
                              'use directory of input timeseries_file if not specified.')
     parser.add_argument('--delay', dest='delay_type', default='comb', choices={'comb','dry','wet'},\
                         help='Delay type to calculate, comb contains both wet and dry delays')
-    parser.add_argument('--download', action='store_true', help='Download weather data only. Not implemented yet.')
+    parser.add_argument('--download', action='store_true', help='Download weather data only.')
+    parser.add_argument('--date-list', dest='date_list_file',\
+                        help='List of date to download data, in YYYYMMDD format in txt file')
 
     parser.add_argument('-s', dest='weather_model',\
                         default='ECMWF', choices={'ECMWF','ERA-Interim','ERA','MERRA','MERRA2','NARR'},\
@@ -116,7 +120,7 @@ def cmdLineParse():
     parser.add_argument('-i', dest='incidence_angle',\
                         help='a file containing all incidence angles, or\n'+\
                              'one average value presenting the whole area, if not input, average look angle will be used.')
-    parser.add_argument('-t','--hour', dest='hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
+    parser.add_argument('-h','--hour', dest='hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
 
     parser.add_argument('--template', dest='template_file',\
                         help='template file with input options below:\n'+TEMPLATE)
@@ -130,8 +134,9 @@ def cmdLineParse():
 def main(argv):
     
     inps = cmdLineParse()
-    inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
-    atr = readfile.read_attribute(inps.timeseries_file)
+    if inps.timeseries_file:
+        inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
+        atr = readfile.read_attribute(inps.timeseries_file)
 
     inps.dem_file = ut.get_file_list([inps.dem_file])[0]
     # Convert DEM to ROIPAC format
@@ -177,8 +182,15 @@ def main(argv):
     
     ## Loop to download 
     inps.grib_file_list = []
-    h5timeseries = h5py.File(inps.timeseries_file, 'r')
-    dateList = sorted(h5timeseries['timeseries'].keys())
+    if not inps.date_list_file:
+        h5timeseries = h5py.File(inps.timeseries_file, 'r')
+        dateList = sorted(h5timeseries['timeseries'].keys())
+        h5timeseries.close()
+        print 'read date list info from: '+inps.timeseries_file
+    else:
+        dateList = np.loadtxt(inps.date_list_file, dtype=str).tolist()
+        print 'read date list info from: '+inps.date_list_file
+
     for d in dateList:
         print [d]
         if   inps.grib_source == 'ECMWF':  grib_file = grib_dir+'/ERA-Int_'+d+'_'+inps.hour+'.grb'
@@ -195,6 +207,9 @@ def main(argv):
             elif inps.grib_source == 'MERRA':  pa.MERRAdload([d], inps.hour, grib_dir)
             elif inps.grib_source == 'NARR' :  pa.NARRdload( [d], inps.hour, grib_dir)
 
+    if inps.download:
+        print 'Download completed, exit as planned.'
+        return
 
     print '*******************************************************************************'
     print 'Calcualting delay for each epoch.'
@@ -234,6 +249,7 @@ def main(argv):
     phs_ref = get_delay(inps.grib_file_list[ref_idx], atr, vars(inps))
 
     ## Loop to calculate phase delay on the other dates
+    h5timeseries = h5py.File(inps.timeseries_file, 'r')
     for i in range(len(inps.grib_file_list)):
         # Get phase delay
         grib_file = inps.grib_file_list[i] 
