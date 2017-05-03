@@ -68,6 +68,9 @@ def get_delay(grib_file, atr, inps_dict):
     # project into LOS direction
     phs /= np.cos(inps_dict['incidence_angle'])
     
+    # reverse the sign for consistency between different phase correction steps/methods
+    phs *= -1
+    
     return phs
 
 
@@ -100,18 +103,19 @@ def cmdLineParse():
     parser.add_argument('timeseries_file', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-d','--dem', dest='dem_file', required=True,\
                         help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
-    parser.add_argument('-i', dest='incidence_angle',\
-                        help='a file containing all incidence angles, or\n'+\
-                             'one average value presenting the whole area, if not input, average look angle will be used.')
     parser.add_argument('--weather-dir', dest='weather_dir', \
                         help='directory to put downloaded weather data, i.e. ./../WEATHER\n'+\
                              'use directory of input timeseries_file if not specified.')
+    parser.add_argument('--delay', dest='delay_type', default='comb', choices={'comb','dry','wet'},\
+                        help='Delay type to calculate, comb contains both wet and dry delays')
+    parser.add_argument('--download', action='store_true', help='Download weather data only. Not implemented yet.')
 
     parser.add_argument('-s', dest='weather_model',\
                         default='ECMWF', choices={'ECMWF','ERA-Interim','ERA','MERRA','MERRA2','NARR'},\
                         help='source of the atmospheric data')
-    parser.add_argument('--delay', dest='delay_type', default='comb', choices={'comb','dry','wet'},\
-                        help='Delay type to calculate, comb contains both wet and dry delays')
+    parser.add_argument('-i', dest='incidence_angle',\
+                        help='a file containing all incidence angles, or\n'+\
+                             'one average value presenting the whole area, if not input, average look angle will be used.')
     parser.add_argument('-t','--hour', dest='hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
 
     parser.add_argument('--template', dest='template_file',\
@@ -154,15 +158,22 @@ def main(argv):
 
     ## Grib data directory
     if not inps.weather_dir:
-        inps.weather_dir = os.path.dirname(os.path.abspath(inps.timeseries_file))
+        if inps.timeseries_file:
+            inps.weather_dir = os.path.dirname(os.path.abspath(inps.timeseries_file))+'/../WEATHER'
+        elif inps.dem_file:
+            inps.weather_dir = os.path.dirname(os.path.abspath(inps.dem_file))+'/../WEATHER'
+        else:
+            inps.weather_dir = os.path.dirname(os.path.abspath(os.getcwd()))
+    print 'Store weather data into directory: '+inps.weather_dir
     grib_dir = inps.weather_dir+'/'+inps.grib_source
     if not os.path.isdir(grib_dir):
         print 'making directory: '+grib_dir
         os.makedirs(grib_dir)
 
     ## Get Acquisition time
-    inps.hour = closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.grib_source)
-    print 'Time of cloest vailable product: '+inps.hour
+    if not inps.hour:
+        inps.hour = closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.grib_source)
+    print 'Time of cloest available product: '+inps.hour
     
     ## Loop to download 
     inps.grib_file_list = []
@@ -187,7 +198,7 @@ def main(argv):
 
     print '*******************************************************************************'
     print 'Calcualting delay for each epoch.'
-    
+
     ## Get Incidence angle: to map the zenith delay to the slant delay
     if inps.incidence_angle:
         if os.path.isfile(inps.incidence_angle):
@@ -237,7 +248,7 @@ def main(argv):
         # Write dataset
         print 'writing hdf5 file ...'
         data = h5timeseries['timeseries'].get(dateList[i])[:]
-        dset  = group_tropCor.create_dataset(dateList[i], data=data+phs, compression='gzip')
+        dset  = group_tropCor.create_dataset(dateList[i], data=data-phs, compression='gzip')
         dset  = group_trop.create_dataset(dateList[i], data=phs, compression='gzip')
     
     ## Write Attributes

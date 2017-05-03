@@ -305,7 +305,7 @@ def main(argv):
         print 'initial number of interferograms: '+str(len(date12_list))
 
         # Filter pairs (optional) using temp/perp/doppler baseline threshold
-        if inps.method in ['star','sequential','hierarchical','mst']:
+        if inps.method in ['star','hierarchical','mst']:
             inps.threshold = False
         if inps.threshold:
             # Temporal baseline
