@@ -95,7 +95,7 @@ def build_parser():
     parser.add_argument("--json_folder", help="folder containing json to upload.", required=False)
     parser.add_argument("json_folder_positional", help="folder containing json to upload.", nargs="?")
     parser.add_argument("-U", "--server_user", help="username for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
-    parser.add_argument("-r", "--dataset_to_remove", help="UNAVCO name of dataset to remove from insarmaps website", required=False)
+    parser.add_argument("--remove", help="UNAVCO name of dataset to remove from insarmaps website", required=False)
     parser.add_argument("-P", "--server_password", help="password for the insarmaps server (the machine where the tileserver and http server reside)", required=False)
     parser.add_argument("--mbtiles_file", help="mbtiles file to upload", required=False)
     parser.add_argument("mbtiles_file_positional", help="mbtiles file to upload, as a positional argument", nargs="?")
