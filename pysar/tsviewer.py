@@ -167,6 +167,7 @@ if __name__ == '__main__':
     # Reference Pixel
     if inps.ref_yx:
         d_v -= d_v[inps.ref_yx[0], inps.ref_yx[1]]
+        ax_v.plot(inps.ref_yx[1], inps.ref_yx[0], 'ks', ms=6)
     else:
         try:
             ax_v.plot(int(atr['ref_x']), int(atr['ref_y']), 'ks', ms=6)
@@ -247,7 +248,7 @@ if __name__ == '__main__':
         for date in dateList:
             d = h5[k].get(date)[y,x]
             if inps.ref_yx:
-                d -= h5[k].get(date)[inps.yx[0], inps.yx[1]]
+                d -= h5[k].get(date)[inps.ref_yx[0], inps.ref_yx[1]]
             d_ts.append(d*inps.unit_fac)
         
         if inps.zero_first:

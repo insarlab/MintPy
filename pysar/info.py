@@ -105,13 +105,15 @@ def main(argv):
     k = atr['FILE_TYPE']
 
     # Print out date list for timeseries HDF5 file
-    if k in ['timeseries'] and argv[1] in ['--date']:
-        h5 = h5py.File(File, 'r')
-        dateList = h5[k].keys()
-        for date in dateList:
-            print date
-        h5.close()
-        return
+    try:
+        if k in ['timeseries'] and argv[1] in ['--date']:
+            h5 = h5py.File(File, 'r')
+            dateList = h5[k].keys()
+            for date in dateList:
+                print date
+            h5.close()
+            return
+    except: pass
 
     print '\n************************ File Info *****************************'
     print 'File name   : '+os.path.basename(File)
