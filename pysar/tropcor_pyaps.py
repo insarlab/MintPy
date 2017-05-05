@@ -173,7 +173,7 @@ def main(argv):
         elif inps.dem_file:
             inps.weather_dir = os.path.dirname(os.path.abspath(inps.dem_file))+'/../WEATHER'
         else:
-            inps.weather_dir = os.path.dirname(os.path.abspath(os.getcwd()))
+            inps.weather_dir = os.path.abspath(os.getcwd())
     print 'Store weather data into directory: '+inps.weather_dir
     grib_dir = inps.weather_dir+'/'+inps.grib_source
     if not os.path.isdir(grib_dir):
