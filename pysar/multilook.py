@@ -105,8 +105,11 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
     ## output file name
     if not outfile:
-        ext = os.path.splitext(infile)[1]
-        outfile = os.path.splitext(infile)[0]+'_'+str(lks_y)+'alks_'+str(lks_x)+'rlks'+ext
+        if os.getcwd() == os.path.dirname(os.path.abspath(infile)):
+            ext = os.path.splitext(infile)[1]
+            outfile = os.path.splitext(infile)[0]+'_'+str(lks_y)+'alks_'+str(lks_x)+'rlks'+ext
+        else:
+            outfile = os.path.basename(infile)
     print 'writing >>> '+outfile
 
     ###############################################################################

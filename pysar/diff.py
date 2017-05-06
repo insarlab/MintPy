@@ -65,7 +65,7 @@ def diff_file(file1, file2, outName=None):
         for i in range(len(epochList)):
             print epochList[i]
             data1 = h5_1[k].get(epochList[i])[:]
-            data2 = h5_1[k2].get(epochList2[i])[:]
+            data2 = h5_2[k2].get(epochList2[i])[:]
             data = diff_data(data1, data2)
             dset = group.create_dataset(epochList[i], data=data, compression='gzip')
         for key,value in atr.iteritems():
