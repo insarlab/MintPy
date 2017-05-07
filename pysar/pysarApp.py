@@ -373,7 +373,7 @@ def main(argv):
             warnings.warn('No radar coord DEM found.')
 
     # DEM in geo coord
-    file_list = ['demGeo.h5','*.dem']
+    file_list = ['demGeo_tight.h5','demGeo.h5','*.dem']
     try: file_list.append(os.path.basename(template['pysar.dem.geoCoord']))
     except: pass
     try:
@@ -384,7 +384,7 @@ def main(argv):
         warnings.warn('No geo coord DEM found.')
 
     # Transform file for geocoding
-    file_list = ['geomap*.trans']
+    file_list = ['geomap*lks_tight.trans','geomap*lks.trans']
     try: file_list.append(os.path.basename(template['pysar.geomap']))
     except: pass
     try:
