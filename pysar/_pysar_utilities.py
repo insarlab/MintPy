@@ -64,6 +64,21 @@ import pysar._network as pnet
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
+def normalize_timeseries(ts_mat, nanValue=0):
+    '''Normalize timeseries of 2D matrix in time domain'''
+    ts_mat -= np.min(ts_mat, 0)
+    ts_mat *= 1/np.max(ts_mat, 0)
+    ts_mat[np.isnan(ts_mat)] = 0
+    return ts_mat
+
+def normalize_timeseries_old(ts_mat, nanValue=0):
+    ts_mat -= np.max(ts_mat, 0)
+    ts_mat *= -1
+    ts_mat /= np.max(ts_mat, 0)
+    ts_mat[np.isnan(ts_mat)] = 1
+    return ts_mat
+
+
 ###########################Simple progress bar######################
 class progress_bar:
     '''Creates a text-based progress bar. Call the object with 
@@ -130,17 +145,20 @@ class progress_bar:
             if suffix:
                 self.progBar += ' %s' % (suffix)
         else:
-            self.progBar = '%s[%s>%s]' % (self.prefix, '='*(numHashes-1), ' '*(allFull-numHashes))
-            if suffix:
-                self.progBar += ' %s' % (suffix)
+            self.progBar = '[%s>%s]' % ('='*(numHashes-1), ' '*(allFull-numHashes))
             # figure out where to put the percentage, roughly centered
             percentPlace = (len(self.progBar) / 2) - len(str(percentDone))
             percentString = ' ' + str(percentDone) + '% '
-            elapsed_time = time.time() - self.start_time
             # slice the percentage into the bar
             self.progBar = ''.join([self.progBar[0:percentPlace], percentString,
                     self.progBar[percentPlace+len(percentString):], ])
+            # prefix and suffix
+            self.progBar = self.prefix + self.progBar
+            if suffix:
+                self.progBar += ' %s' % (suffix)
+            # time info - elapsed time and estimated remaining time
             if percentDone > 0:
+                elapsed_time = time.time() - self.start_time
                 self.progBar += ' %6ds / %6ds' % (int(elapsed_time),
                         int(elapsed_time*(100./percentDone-1)))
 
@@ -698,6 +716,33 @@ def get_file_list(fileList, abspath=False):
     if abspath:
         fileListOut = [os.path.abspath(i) for i in fileListOut]
     return fileListOut
+
+
+def mode (thelist):
+    '''Find Mode (most common) item in the list'''
+    if not thelist:
+        return None
+    if len(thelist) == 1:
+        return thelist[0]
+
+    counts = {}
+    for item in thelist:
+        counts[item] = counts.get(item, 0) + 1
+    maxcount = 0
+    maxitem  = None
+    for k, v in counts.items():
+        if v > maxcount:
+            maxitem  = k
+            maxcount = v
+
+    if maxcount == 1:
+        print "All values only appear once"
+        return None
+    elif counts.values().count(maxcount) > 1:
+        print "List has multiple modes"
+        return None
+    else:
+        return maxitem
 
 
 ######################################################################################################

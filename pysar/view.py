@@ -951,7 +951,8 @@ def cmdLineParse(argv):
                                help='optional - order number of date/epoch(s) to display')
     infile_parser.add_argument('--ex','--exclude',dest='exclude_epoch', metavar='EPOCH', nargs='*',\
                                help='dates will not be displayed')
-    infile_parser.add_argument('--mask', dest='mask_file', metavar='FILE', help='mask file for display')
+    infile_parser.add_argument('--mask', dest='mask_file', metavar='FILE', default='maskTempCoh.h5',\
+                               help='mask file for display, default: maskTempCoh.h5')
 
     ##### Output
     outfile_parser = parser.add_argument_group('Output', 'Save figure and write to file(s)')
@@ -1183,8 +1184,12 @@ def main(argv):
 
     # Read mask file if inputed
     if inps.mask_file:
-        msk = readfile.read(inps.mask_file, inps.pix_box)[0]
-        print 'mask data with: '+os.path.basename(inps.mask_file)        
+        try:
+            msk = readfile.read(inps.mask_file, inps.pix_box)[0]
+            print 'mask data with: '+os.path.basename(inps.mask_file)
+        except:
+            print 'Can not open mask file: '+inps.mask_file
+            inps.mask_file = None
 
     ############################### Read Data and Display ###############################
     ##### Display One Dataset

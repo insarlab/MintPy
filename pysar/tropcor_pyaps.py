@@ -12,9 +12,13 @@
 import os
 import sys
 import argparse
+import re
 
-try: import pyaps as pa
-except: print 'Cannot import pyaps into Python!'; sys.exit(1)
+try:
+    import pyaps as pa
+except:
+    sys.exit('Cannot import pyaps into Python!')
+
 import h5py
 import numpy as np
 
@@ -185,7 +189,7 @@ def main(argv):
         inps.hour = closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.grib_source)
     print 'Time of cloest available product: '+inps.hour
     
-    ## Loop to download 
+    ## Get grib file list and date list
     inps.grib_file_list = []
     if not inps.date_list_file:
         h5timeseries = h5py.File(inps.timeseries_file, 'r')
@@ -197,20 +201,39 @@ def main(argv):
         print 'read date list info from: '+inps.date_list_file
 
     for d in dateList:
-        print [d]
         if   inps.grib_source == 'ECMWF':  grib_file = grib_dir+'/ERA-Int_'+d+'_'+inps.hour+'.grb'
         elif inps.grib_source == 'ERA'  :  grib_file = grib_dir+'/ERA_'+d+'_'+inps.hour+'.grb'
         elif inps.grib_source == 'MERRA':  grib_file = grib_dir+'/merra-'+d+'-'+inps.hour+'.hdf'
         elif inps.grib_source == 'NARR' :  grib_file = grib_dir+'/narr-a_221_'+d+'_'+inps.hour+'00_000.grb'
         inps.grib_file_list.append(grib_file)
-        
-        if os.path.isfile(grib_file):
-            print grib_file + ' already exists.'
-        else:
-            if   inps.grib_source == 'ECMWF':  pa.ECMWFdload([d], inps.hour, grib_dir)
-            elif inps.grib_source == 'ERA'  :  pa.ERAdload(  [d], inps.hour, grib_dir)
-            elif inps.grib_source == 'MERRA':  pa.MERRAdload([d], inps.hour, grib_dir)
-            elif inps.grib_source == 'NARR' :  pa.NARRdload( [d], inps.hour, grib_dir)
+
+    ## Get date list to download
+    grib_file_existed = ut.get_file_list(inps.grib_file_list)
+    if grib_file_existed:
+        grib_filesize_mode = ut.mode([os.path.getsize(i) for i in grib_file_existed])
+        grib_file_corrupted = [i for i in grib_file_existed if os.path.getsize(i) != grib_filesize_mode]
+        print 'number of grib files existed    : %d' % len(grib_file_existed)
+        print 'file size mode: %d' % grib_filesize_mode
+        if grib_file_corrupted:
+            print '------------------------------------------------------------------------------'
+            print 'corrupted grib files detected! Delete them and re-download...'
+            print 'number of grib files corrupted  : %d' % len(grib_file_corrupted)
+            for i in grib_file_corrupted:
+                rmCmd = 'rm '+i
+                print rmCmd
+                os.system(rmCmd)
+                grib_file_existed.remove(i)
+            print '------------------------------------------------------------------------------'
+    grib_file2download = sorted(list(set(inps.grib_file_list) - set(grib_file_existed)))
+    date_list2download = [str(re.findall('\d{8}', i)[0]) for i in grib_file2download]
+    print 'number of grib files to download: %d' % len(date_list2download)
+    print '------------------------------------------------------------------------------\n'
+
+    ## Download grib file using PyAPS
+    if   inps.grib_source == 'ECMWF':  pa.ECMWFdload(date_list2download, inps.hour, grib_dir)
+    elif inps.grib_source == 'ERA'  :  pa.ERAdload(  date_list2download, inps.hour, grib_dir)
+    elif inps.grib_source == 'MERRA':  pa.MERRAdload(date_list2download, inps.hour, grib_dir)
+    elif inps.grib_source == 'NARR' :  pa.NARRdload( date_list2download, inps.hour, grib_dir)
 
     if inps.download:
         print 'Download completed, exit as planned.'

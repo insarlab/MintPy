@@ -38,7 +38,8 @@ def cmdLineParse():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='File(s) for ramp removal')
-    parser.add_argument('-m','--mask', dest='mask_file', help='mask for pixels used in ramp estimation')
+    parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5',\
+                        help='mask for pixels used in ramp estimation, default: maskTempCoh.h5')
     parser.add_argument('-s', dest='surface_type', default='plane', \
                         choices={'plane','quadratic','plane_range','quadratic_range','plane_azimuth','quadratic_azimuth'},\
                         help='type of surface/ramp to remove, plane by default')
@@ -67,6 +68,14 @@ def main(argv):
     atr = readfile.read_attribute(inps.file[0])
     length = int(atr['FILE_LENGTH'])
     width = int(atr['WIDTH'])
+
+    # Read mask file if inputed
+    if inps.mask_file:
+        try:
+            mask_atr = readfile.read_attribute(inps.mask_file)
+        except:
+            print 'Can not open mask file: '+inps.mask_file
+            inps.mask_file = None
 
     # Update mask for multiple surfaces
     if inps.ysub:

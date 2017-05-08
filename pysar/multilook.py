@@ -16,6 +16,7 @@ import sys
 import os
 import argparse
 import warnings
+import re
 
 import h5py
 import numpy as np
@@ -101,7 +102,9 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## input file info
     atr = readfile.read_attribute(infile)
     k = atr['FILE_TYPE']
-    print 'multilooking '+k+' file '+infile+' ...'
+    print 'multilooking '+k+' file '+infile
+    print 'number of looks in y / azimuth direction: %d' % lks_y
+    print 'number of looks in x / range   direction: %d' % lks_x
 
     ## output file name
     if not outfile:
@@ -117,14 +120,17 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     if k in ['interferograms','coherence','wrapped','timeseries']:
         h5 = h5py.File(infile,'r')
         epochList = sorted(h5[k].keys())
+        epoch_num = len(epochList)
+        prog_bar = ut.progress_bar(maxValue=epoch_num)
 
         h5out = h5py.File(outfile,'w')
         group = h5out.create_group(k)
 
         if k in ['interferograms','coherence','wrapped']:
+            date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in epochList]
             print 'number of interferograms: '+str(len(epochList))
-            for epoch in epochList:
-                print epoch
+            for i in range(epoch_num):
+                epoch = epochList[i]
                 data = h5[k][epoch].get(epoch)[:]
                 atr = h5[k][epoch].attrs
 
@@ -135,16 +141,18 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 dset = gg.create_dataset(epoch, data=data_mli, compression='gzip')
                 for key, value in atr_mli.iteritems():
                     gg.attrs[key] = value
+                prog_bar.update(i+1, suffix=date12_list[i])
 
         elif k == 'timeseries':
             print 'number of acquisitions: '+str(len(epochList))
-            for epoch in epochList:
-                print epoch
+            for i in range(epoch_num):
+                epoch = epochList[i]
                 data = h5[k].get(epoch)[:]
 
                 data_mli = multilook_matrix(data,lks_y,lks_x)
                 
                 dset = group.create_dataset(epoch, data=data_mli, compression='gzip')
+                prog_bar.update(i+1, suffix=epoch)
             atr = h5[k].attrs
             atr_mli = multilook_attribute(atr,lks_y,lks_x)
             for key, value in atr_mli.iteritems():
@@ -152,6 +160,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
         h5.close()
         h5out.close()
+        prog_bar.close()
 
     ## Read/Write single-dataset files
     elif k == '.trans':        

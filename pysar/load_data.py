@@ -86,7 +86,7 @@ def mode (thelist):
         if v > maxcount:
             maxitem  = k
             maxcount = v
-    
+
     if maxcount == 1:
         print "All values only appear once"
         return None
