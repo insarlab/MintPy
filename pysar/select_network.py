@@ -68,8 +68,9 @@ def read_template2inps(templateFile, inps=None):
 
     # Read network option regardless of prefix
     for key in keyList:
-        if 'selectPairs.'   in key:   template_dict[key.split('selectPairs.')[1]]   = template_dict[key]
-        if 'pysar.network.' in key:   template_dict[key.split('pysar.network.')[1]] = template_dict[key]
+        if 'selectPairs.'    in key:   template_dict[key.split('selectPairs.')[1]]    = template_dict[key]
+        if 'pysar.network.'  in key:   template_dict[key.split('pysar.network.')[1]]  = template_dict[key]
+        if 'select.network.' in key:   template_dict[key.split('select.network.')[1]] = template_dict[key]
     keyList = template_dict.keys()
     for key, value in template_dict.iteritems():
         if value.lower() in ['off','false','n']:  template_dict[key] = 'no'
@@ -88,7 +89,7 @@ def read_template2inps(templateFile, inps=None):
     if not inps.temp_base_max:
         if 'lengthDayMax'   in keyList:  inps.temp_base_max = float(template_dict['lengthDayMax'])
         elif 'tempBaseMax'  in keyList:  inps.temp_base_max = float(template_dict['tempBaseMax'])
-        else: inps.temp_base_max = 365.0
+        else: inps.temp_base_max = 1800.0
 
     if not inps.temp_base_min:
         if 'lengthDayMin'   in keyList:  inps.temp_base_min = float(template_dict['lengthDayMin'])
@@ -119,8 +120,13 @@ def read_template2inps(templateFile, inps=None):
         ex_date_list = [i for i in template_dict['excludeDate'].split(',')]
         inps.exclude_date = ptime.yymmdd(ex_date_list)
 
-    if not inps.m_date and 'masterDate' in keyList: inps.m_date = ptime.yymmdd(template_dict['masterDate'])
+    if not inps.start_date and 'startDate' in keyList:
+        inps.start_date = ptime.yyyymmdd(template_dict['startDate'])
+    if not inps.end_date and 'endDate' in keyList:
+        inps.end_date = ptime.yyyymmdd(template_dict['endDate'])
 
+    if not inps.m_date and 'masterDate' in keyList:
+        inps.m_date = ptime.yymmdd(template_dict['masterDate'])
 
     return inps
 
@@ -171,18 +177,21 @@ EXAMPLE='''Examples:
 '''
 
 TEMPLATE='''Template:
-pysar.network.method        = all              # all,hierarchical,sequential,mst,delaunay,star
-pysar.network.perpBaseMax   = 500              # max perpendicular baseline
-pysar.network.tempBaseMax   = 365              # max      temporal baseline
-pysar.network.tempBaseMin   = 0                # min       emporal baseline
-pysar.network.keepSeasonal  = yes              # keep pairs with seasonal temporal baseline, default: no
-pysar.network.dopOverlapMin = 15               # min dopploer overlap percentage
+select.network.method        = all              # all,hierarchical,sequential,mst,delaunay,star
+select.network.perpBaseMax   = 500              # max perpendicular baseline
+select.network.tempBaseMax   = 365              # max      temporal baseline
+select.network.tempBaseMin   = 0                # min       emporal baseline
+select.network.keepSeasonal  = yes              # keep pairs with seasonal temporal baseline, default: no
+select.network.dopOverlapMin = 15               # min dopploer overlap percentage
 
-pysar.network.referenceFile = unwrapIfgram.h5  # [ifgram_list.txt] reference HDF5/list file with pairs info
-pysar.network.excludeDate   = 080520,100726    # exclude dates for pairs selection
-pysar.network.incrementNum  = 2                # for sequential method, pairs num per new acquisition
-pysar.network.tempPerpList  = 16,1600;32,800;48,600;64,200  # for hierarchical method, list of max temp/perp baseline
-pysar.network.masterDate    = 100102           # master date for star/ps network
+select.network.startDate     = 20070101
+select.network.endDate       = 20110101
+select.network.excludeDate   = 080520,100726    # exclude dates for pairs selection
+
+select.network.referenceFile = unwrapIfgram.h5  # [ifgram_list.txt] reference HDF5/list file with pairs info
+select.network.incrementNum  = 2                # for sequential method, pairs num per new acquisition
+select.network.tempPerpList  = 16,1600;32,800;48,600;64,200  # for hierarchical method, list of max temp/perp baseline
+select.network.masterDate    = 100102           # master date for star/ps network
 '''
 
 def cmdLineParse():
@@ -209,6 +218,8 @@ def cmdLineParse():
                              'plot_network.py unwrapIfgram.h5 --list\n\n')
     method.add_argument('--ex','--exclude', dest='exclude_date', nargs='*', \
                         help='date(s) excluded for network selection, e.g. -ex 060713 070831')
+    method.add_argument('--start-date', dest='start_date', type=str, help='start/min date of network')
+    method.add_argument('--end-date', dest='end_date', type=str, help='end/max date of network')
     method.add_argument('--increment-num', dest='increment_num', type=int,\
                         help='number of new pairs for each new acquisition, for sequential method')
     method.add_argument('--temp-perp-list', dest='temp_perp_list',\
@@ -272,10 +283,28 @@ def main(argv):
                 except: inps.baseline_file = None
         if not inps.baseline_file:
             raise Exception('ERROR: No baseline file found!')
-        
-        # Read baseline list file: bl_list.txt
+
+        # Check start/end/exclude date
+        date8_list = pnet.read_baseline_file(inps.baseline_file)[0]
+        inps.exclude_date = ptime.yyyymmdd(inps.exclude_date)
+        if not inps.exclude_date:
+            inps.exclude_date = []
+        else:
+            print 'input exclude dates: '+str(inps.exclude_date)
+        if inps.start_date:
+            print 'input start date: '+inps.start_date
+            inps.exclude_date += [i for i in date8_list if float(i) < float(ptime.yyyymmdd(inps.start_date))]
+            inps.exclude_date = sorted(inps.exclude_date)
+        if inps.end_date:
+            print 'input end   date: '+inps.end_date
+            inps.exclude_date += [i for i in date8_list if float(i) > float(ptime.yyyymmdd(inps.end_date))]
+            inps.exclude_date = sorted(inps.exclude_date)
         if inps.exclude_date:
-            print 'exclude dates: '+str(inps.exclude_date)
+            print 'exclude    dates: '
+            print inps.exclude_date
+
+        # Read baseline list file: bl_list.txt
+        inps.exclude_date = ptime.yymmdd(inps.exclude_date)
         date8_list, pbase_list, dop_list = pnet.read_baseline_file(inps.baseline_file, inps.exclude_date)[0:3]
         date6_list = ptime.yymmdd(date8_list)
         tbase_list = ptime.date_list2tbase(date8_list)[0]
@@ -362,7 +391,7 @@ def main(argv):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
-    out_fig_name = 'BperpHist.pdf'
+    out_fig_name = 'BperpHistory.pdf'
     print 'plotting baseline history in temp/perp baseline domain to file: '+out_fig_name
     fig2, ax2 = plt.subplots()
     ax2 = pnet.plot_perp_baseline_hist(ax2, date8_list, pbase_list)

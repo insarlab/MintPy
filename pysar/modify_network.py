@@ -104,11 +104,11 @@ def update_inps_with_template(inps, template_file):
     if not inps.max_perp_baseline and 'pysar.network.perpBaseMax' in keyList:
         inps.max_perp_baseline = float(template_dict['pysar.network.perpBaseMax'])
     
-    if not inps.drop_date and 'pysar.network.dropDate' in keyList:
-        inps.drop_date = [i for i in template_dict['pysar.network.dropDate'].replace(',',' ').split()]
-    if not inps.drop_ifg_index and 'pysar.network.dropIfgramIndex' in keyList:
-        inps.drop_ifg_index = [i for i in template_dict['pysar.network.dropDate'].replace(',',' ').split()]
-    
+    if not inps.exclude_date and 'pysar.network.excludeDate' in keyList:
+        inps.exclude_date = [i for i in template_dict['pysar.network.excludeDate'].replace(',',' ').split()]
+    if not inps.exclude_ifg_index and 'pysar.network.excludeIfgramIndex' in keyList:
+        inps.exclude_ifg_index = [i for i in template_dict['pysar.network.excludeIfgramIndex'].replace(',',' ').split()]
+
     if not inps.reference_file and 'pysar.network.referenceFile' in keyList:
         inps.reference_file = template_dict['pysar.network.referenceFile']
     
@@ -120,10 +120,14 @@ def update_inps_with_template(inps, template_file):
             try:  cohFileIdx = k_list.index('coherence')
             except:  sys.exit("ERROR: No coherence found in input files, cannot use coherence-based approach without it.")
             inps.coherence_file = inps.file[cohFileIdx]
-            
-            # Search mask file
-            if not inps.mask_file and os.path.isfile('Mask.h5'):
-                inps.mask_file = 'Mask.h5'
+
+            if 'pysar.network.minCoherence' in keyList:
+                inps.min_coherence = float(template_dict['pysar.network.minCoherence'])
+
+            if 'pysar.network.maskFile' in keyList:
+                inps.mask_file = template_dict['pysar.network.maskFile']
+            elif not inps.mask_file and os.path.isfile('mask.h5'):
+                inps.mask_file = 'mask.h5'
     
     return inps
 
@@ -200,21 +204,23 @@ EXAMPLE='''example:
   modify_network.py unwrapIfgram.h5 coherence.h5 --coherence-base coherence.h5 --mask Mask.h5 --min-coherence 0.7
   modify_network.py unwrapIfgram.h5 -r Modified_coherence.h5
   modify_network.py unwrapIfgram.h5 --start-date 20080520  --end-date 20110101
-  modify_network.py unwrapIfgram.h5 --drop-date 20080520 20090816
-  modify_network.py unwrapIfgram.h5 --drop-ifg-index 3:9 11 23
+  modify_network.py unwrapIfgram.h5 --exclude-date 20080520 20090816
+  modify_network.py unwrapIfgram.h5 --exclude-ifg-index 3:9 11 23
   modify_network.py unwrapIfgram.h5 --manual
 '''
 
 TEMPLATE='''
-pysar.network.dropIfgramIndex = 7:9 15 25 26      #start from 1
-pysar.network.dropDate        = 20080520 20090816
+pysar.network.excludeIfgramIndex = 7:9 15 25 26      #start from 1
+pysar.network.excludeDate     = 20080520 20090816
 pysar.network.startDate       = 20080101
 pysar.network.endDate         = 20110101
 pysar.network.tempBaseMax     = 720
 pysar.network.perpBaseMax     = 2000
-pysar.network.referenceFile   = Modified_unwrapIfgram.h5
-pysar.network.reference       = Paris.list
+pysar.network.referenceFile   = Paris.list     # Modified_unwrapIfgram.h5
+
 pysar.network.coherenceBase   = yes    #search and use input coherence file, set to no or comment the line to disable
+pysar.network.minCoherence    = 0.7
+pysar.network.maskFile        = mask.h5
 '''
 
 def cmdLineParse():
@@ -235,10 +241,10 @@ def cmdLineParse():
                         help='Reference hdf5 / list file with network information.\n'\
                              'i.e. Modified_unwrapIfgram.h5, Pairs.list')
     parser.add_argument('--template', dest='template_file', help='Template file with input options:\n'+TEMPLATE+'\n')
-    
-    parser.add_argument('--drop-ifg-index', dest='drop_ifg_index', nargs='*',\
+
+    parser.add_argument('--exclude-ifg-index', dest='exclude_ifg_index', nargs='*',\
                         help='index of interferograms to remove/drop.\n1 as the first')
-    parser.add_argument('--drop-date', dest='drop_date', nargs='*',\
+    parser.add_argument('--exclude-date', dest='exclude_date', nargs='*',\
                         help='date(s) to remove/drop, all interferograms included date(s) will be removed')
     parser.add_argument('--start-date','--min-date', dest='start_date',\
                         help='remove/drop interferograms with date earlier than start-date in YYMMDD or YYYYMMDD format')
@@ -277,7 +283,7 @@ def main(argv):
     #print '\n****************** Network Modification ********************'
 
     if all(not i for i in [inps.reference_file, inps.template_file, inps.max_temp_baseline, inps.max_perp_baseline,\
-                           inps.drop_ifg_index, inps.drop_date, inps.coherence_file, inps.start_date, inps.end_date]):
+                           inps.exclude_ifg_index, inps.exclude_date, inps.coherence_file, inps.start_date, inps.end_date]):
         # Display network for manually modification when there is no other modification input.
         print 'No input found to remove interferogram, continue by display the network to select it manually ...'
         inps.disp_network = True
@@ -287,23 +293,23 @@ def main(argv):
         inps = update_inps_with_template(inps, inps.template_file)
     
     # Convert index : input to continous index list
-    if inps.drop_ifg_index:
-        ifg_index = list(inps.drop_ifg_index)
-        inps.drop_ifg_index = []
+    if inps.exclude_ifg_index:
+        ifg_index = list(inps.exclude_ifg_index)
+        inps.exclude_ifg_index = []
         for index in ifg_index:
             index_temp = [int(i) for i in index.split(':')]
             index_temp.sort()
             if len(index_temp)==2:
                 for j in range(index_temp[0], index_temp[1]+1):
-                    inps.drop_ifg_index.append(j)
+                    inps.exclude_ifg_index.append(j)
             elif len(index_temp)==1:
-                inps.drop_ifg_index.append(int(index))
+                inps.exclude_ifg_index.append(int(index))
             else:
                 print 'Unrecoganized input: '+index
-        inps.drop_ifg_index = sorted(inps.drop_ifg_index)
-        if max(inps.drop_ifg_index) > len(date12_orig):
+        inps.exclude_ifg_index = sorted(inps.exclude_ifg_index)
+        if max(inps.exclude_ifg_index) > len(date12_orig):
             raise Exception('Input index out of range!\n'+\
-                            'input index:'+str(inps.drop_ifg_index)+'\n'+\
+                            'input index:'+str(inps.exclude_ifg_index)+'\n'+\
                             'index range of file: '+str(len(date12_orig)))
 
     ##### Get date12_to_rmv
@@ -377,23 +383,23 @@ def main(argv):
                 date12_to_rmv.append(date12)
                 print date12
 
-    # 2.4 Update date12_to_rmv from drop_ifg_index
-    if inps.drop_ifg_index:
+    # 2.4 Update date12_to_rmv from exclude_ifg_index
+    if inps.exclude_ifg_index:
         print '----------------------------------------------------------------------------'
         print 'drop date12/pair with the following index number:'
-        for index in inps.drop_ifg_index:
+        for index in inps.exclude_ifg_index:
             date12 = date12_orig[index-1]
             date12_to_rmv.append(date12)
             print str(index)+'    '+date12
 
-    # 2.5 Update date12_to_rmv from drop_date
-    if inps.drop_date:
-        inps.drop_date = ptime.yymmdd(inps.drop_date)
+    # 2.5 Update date12_to_rmv from exclude_date
+    if inps.exclude_date:
+        inps.exclude_date = ptime.yymmdd(inps.exclude_date)
         print '----------------------------------------------------------------------------'
-        print 'Drop pairs including the following dates: \n'+str(inps.drop_date)
+        print 'Drop pairs including the following dates: \n'+str(inps.exclude_date)
         for i in range(len(date12_orig)):
             date1, date2 = date12_orig[i].split('-')
-            if (date1 in inps.drop_date) or (date2 in inps.drop_date):
+            if (date1 in inps.exclude_date) or (date2 in inps.exclude_date):
                 date12 = date12_orig[i]
                 date12_to_rmv.append(date12)
                 print date12

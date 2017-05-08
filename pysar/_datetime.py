@@ -58,7 +58,7 @@ def yyyymmdd(dates):
             if len(date) == 6:   date = yymmdd2yyyymmdd(date)
             datesOut.append(date)
     else:
-        print 'Un-recognized date input!'
+        #print 'Un-recognized date input!'
         return None
     return datesOut
 
@@ -73,7 +73,7 @@ def yymmdd(dates):
             if len(date) == 8:   date = date[2:8]
             datesOut.append(date)
     else:
-        print 'Un-recognized date input!'
+        #print 'Un-recognized date input!'
         return None
     return datesOut
 

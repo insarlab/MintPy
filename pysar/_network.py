@@ -112,7 +112,7 @@ def read_igram_pairs(igramFile):
     return pairs
 
 
-def read_baseline_file(baselineFile,exDateList=[]):
+def read_baseline_file(baselineFile, exDateList=[]):
     '''Read bl_list.txt without dates listed in exDateList
     # Date  Bperp    dop0/PRF  dop1/PRF   dop2/PRF      PRF    slcDir
     070106     0.0   0.03      0.0000000  0.00000000000 2155.2 /scratch/KyushuT422F650AlosA/SLC/070106/
@@ -125,6 +125,7 @@ def read_baseline_file(baselineFile,exDateList=[]):
         date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile,['080520','100726'])
         date8List, perpBaseList = read_baseline_file(baselineFile)[0:2]
     '''
+    exDateList = ptime.yymmdd(exDateList)
     if not exDateList:  exDateList = []
 
     ## Read baseline file into lines

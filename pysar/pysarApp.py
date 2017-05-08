@@ -203,6 +203,8 @@ pysar.dem.geoCoord   = /SanAndreasT356EnvD/DEM/srtm1_30m.dem                   #
 
 pysar.network.reference       = date12.list         #optional
 pysar.network.coherenceBase   = yes                 #optional, auto for yes
+pysar.network.minCoherence    = 0.7
+pysar.network.maskFile        = mask.h5
 
 pysar.subset.yx          = 1800:2000,700:800        #optional, auto/no/off for whole area
 pysar.subset.lalo        = 31.5:32.5,130.5:131.0    #optional, auto/no/off for whole area
@@ -466,8 +468,7 @@ def main(argv):
         print '\n*************** Modify Network ****************'
         #outName = 'Modified_'+os.path.basename(inps.ifgram_file)
         #if ut.update_file(outName, inps.ifgram_file):
-        networkCmd = 'modify_network.py --template '+inps.template_file+' --mask '+inps.mask_file+\
-                     ' --mark-attribute '+inps.ifgram_file
+        networkCmd = 'modify_network.py --template '+inps.template_file+' --mark-attribute '+inps.ifgram_file
         if inps.coherence_file:
             networkCmd += ' '+inps.coherence_file
         print networkCmd
