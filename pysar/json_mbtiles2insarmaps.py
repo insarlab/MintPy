@@ -132,16 +132,16 @@ def main():
             print "Uploading mbtiles...."
             dbContoller.upload_mbtiles(parseArgs.mbtiles_file_positional)
 
-    if parseArgs.dataset_to_remove:
+    if parseArgs.remove:
         if not parseArgs.server_user or not parseArgs.server_password:
             sys.stderr.write("Error: credentials for the insarmaps server not provided")
         else:
-            print "Removing " + parseArgs.dataset_to_remove
+            print "Removing " + parseArgs.remove
             dbContoller = InsarDatasetController(dbUsername, dbPassword, dbHost, 'pgis', parseArgs.server_user, parseArgs.server_password)
             dbContoller.connect()
-            dbContoller.remove_dataset_if_there(parseArgs.dataset_to_remove)
+            dbContoller.remove_dataset_if_there(parseArgs.remove)
             dbContoller.close()
-            dbContoller.remove_mbtiles(parseArgs.dataset_to_remove + ".mbtiles")
+            dbContoller.remove_mbtiles(parseArgs.remove + ".mbtiles")
 
 if __name__ == '__main__':
     main()
