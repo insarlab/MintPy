@@ -65,12 +65,17 @@ def upload_json(folder_path):
     area_name = get_unavco_name(folder_path)
     attributesController.remove_dataset_if_there(area_name)
     attributesController.close()
+    firstJsonFile = True
 
     for file in os.listdir(folder_path):
         # insert json file to pgsql using ogr2ogr
         file_extension = file.split(".")[1]
         if file != "metadata.pickle" and file_extension != "mbtiles":
-            command = 'ogr2ogr -lco LAUNDER=NO -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + area_name + '" ' + folder_path + '/' + file
+            command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + area_name + '" ' + folder_path + '/' + file
+            # only provide layer creation options if this is the first file
+            if firstJsonFile:
+                command = 'ogr2ogr -lco LAUNDER=NO -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + area_name + '" ' + folder_path + '/' + file
+                firstJsonFile = False
 
             res = os.system(command)
 
