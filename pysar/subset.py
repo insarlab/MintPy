@@ -30,11 +30,10 @@ import argparse
 
 import h5py
 import numpy as np
-#import multiprocessing
-#from joblib import Parallel, delayed
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
+import pysar._datetime as ptime
 import pysar._pysar_utilities as ut
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
@@ -166,8 +165,10 @@ def subset_attribute(atr_dict, subset_box):
     atr['WIDTH']       = str(sub_x[1]-sub_x[0])
     atr['YMAX']        = str(sub_y[1]-sub_y[0] - 1)
     atr['XMAX']        = str(sub_x[1]-sub_x[0] - 1)
+    print 'update FILE_LENGTH, WIDTH, Y/XMAX'
 
     # Subset atribute
+    print 'update/add subset_y0/y1/x0/x1'
     try:
         subset_y0_ori = int(atr['subset_y0'])
         atr['subset_y0'] = str(sub_y[0] + subset_y0_ori)
@@ -187,17 +188,21 @@ def subset_attribute(atr_dict, subset_box):
     try:
         atr['Y_FIRST'] = str(float(atr['Y_FIRST'])+sub_y[0]*float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST'])+sub_x[0]*float(atr['X_STEP']))
+        print 'update Y/X_FIRST'
     except: pass
 
     # Reference in space
     try:
         atr['ref_y'] = str(int(atr['ref_y']) - sub_y[0])
         atr['ref_x'] = str(int(atr['ref_x']) - sub_x[0])
+        print 'update ref_y/x'
     except: pass
 
     # Starting Range for file in radar coord
     if not 'Y_FIRST' in atr_dict.keys():
-        try: atr['STARTING_RANGE'] = float(atr['STARTING_RANGE']) + float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
+        try:
+            atr['STARTING_RANGE'] = float(atr['STARTING_RANGE']) + float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
+            print 'update STARTING_RANGE'
         except: pass
 
     return atr
@@ -509,7 +514,7 @@ def subset_file(File, subset_dict_input, outFile=None):
         ##### Open Output File
         h5out = h5py.File(outFile)
         group = h5out.create_group(k)
-        prog_bar = ut.progress_bar(maxValue=epochNum)
+        prog_bar = ptime.progress_bar(maxValue=epochNum)
 
     ## Loop
     if k == 'timeseries':

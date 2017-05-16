@@ -85,7 +85,7 @@ def main(argv):
     print 'number of acquisitions: '+str(date_num)
 
     timeseries = np.zeros((len(date_list),length*width),np.float32)
-    prog_bar = ut.progress_bar(maxValue=date_num, prefix='loading: ')
+    prog_bar = ptime.progress_bar(maxValue=date_num, prefix='loading: ')
     for i in range(date_num):
         date = date_list[i]
         d = h5['timeseries'].get(date)[:]
@@ -156,6 +156,7 @@ def main(argv):
 
 
     # Design matrix - temporal deformation model using tbase
+    print '-------------------------------------------------'
     if inps.phase_velocity:
         print 'using phase velocity history'
         A1 = np.ones((date_num-1, 1))
@@ -170,6 +171,7 @@ def main(argv):
         A3 = inps.tbase**3 / 6.0
     # Polynomial order of model
     print "temporal deformation model's polynomial order = "+str(inps.poly_order)
+    print '-------------------------------------------------'
     if   inps.poly_order == 1:  A_def = A1
     elif inps.poly_order == 2:  A_def = np.hstack((A1,A2))
     elif inps.poly_order == 3:  A_def = np.hstack((A1,A2,A3))
@@ -179,11 +181,13 @@ def main(argv):
 
     ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
     delta_z_mat = np.zeros([length, width])
+    resid_n = np.zeros([A_def.shape[0], length*width])
+    constC = np.zeros([length, width])
     #delta_a_mat = np.zeros([length, width])
     if inps.incidence_angle.ndim == 2 and inps.range_dis.ndim == 2:
         print 'inversing using L2-norm minimization (unweighted least squares)'\
               ' pixel by pixel: %d loops in total' % (length*width)
-        prog_bar = ut.progress_bar(maxValue=length*width, prefix='calculating: ')
+        prog_bar = ptime.progress_bar(maxValue=length*width, prefix='calculating: ')
         for i in range(length*width):
             row = i%length
             col = i/length
@@ -211,6 +215,9 @@ def main(argv):
                 ts_dis = np.diff(ts_dis, axis=0) / np.diff(inps.tbase, axis=0)
             X = np.dot(A_inv, ts_dis)
 
+            # Residual vector n
+            resid_n[:, i] = ts_dis - np.dot(A, X)
+
             # Update DEM error / timeseries matrix
             delta_z = X[0]
             delta_z_mat[row, col] = delta_z
@@ -223,7 +230,7 @@ def main(argv):
     elif inps.incidence_angle.ndim == 1 and inps.range_dis.ndim == 1:
         print 'inversing using L2-norm minimization (unweighted least squares)'\
               ' column by column: %d loops in total' % (width)
-        prog_bar = ut.progress_bar(maxValue=width, prefix='calculating: ')
+        prog_bar = ptime.progress_bar(maxValue=width, prefix='calculating: ')
         for i in range(width):
             range_dis = inps.range_dis[i]
             inc_angle = inps.incidence_angle[i]
@@ -246,11 +253,15 @@ def main(argv):
                 ts_dis = np.diff(ts_dis, axis=0) / np.diff(inps.tbase, axis=0)
             X = np.dot(A_inv, ts_dis)
 
+            # Residual vector n
+            resid_n[:, i*length:(i+1)*length] = ts_dis - np.dot(A, X)
+            constC[:, i] = X[1].reshape((1, length))
+
             # Update DEM error / timeseries matrix
             delta_z = X[0].reshape((1,length))
             delta_z_mat[:, i] = delta_z
             if inps.update_timeseries:
-                timeseries[:,i*length:(i+1)*length] -= np.dot(A_delta_z, delta_z)
+                timeseries[:, i*length:(i+1)*length] -= np.dot(A_delta_z, delta_z)
             prog_bar.update(i+1, every=width/100)
         prog_bar.close()
 
@@ -274,6 +285,9 @@ def main(argv):
         if inps.phase_velocity:
             timeseries = np.diff(timeseries, axis=0) / np.diff(inps.tbase, axis=0)
         X = np.dot(A_inv, timeseries)
+
+        # Residual vector n
+        resid_n = ts_dis - np.dot(A, X)
 
         # Update DEM error / timeseries matrix
         delta_z_mat = X[0].reshape((1, length*width))
@@ -302,7 +316,13 @@ def main(argv):
     atr_dem_error['FILE_TYPE'] = 'dem'
     atr_dem_error['UNIT'] = 'm'
     writefile.write(delta_z_mat, atr_dem_error, dem_error_file)
-    
+
+    ## Phase Constant C = resid_n[0,:]
+    #atrC = atr.copy()
+    #atrC['FILE_TYPE'] = 'mask'
+    #atrC['UNIT'] = 'm'
+    #writefile.write(constC, atrC, 'constD.h5')
+
     ## Corrected DEM file
     #if inps.dem_file:
     #    inps.dem_outfile = os.path.splitext(inps.dem_file)[0]+suffix+os.path.splitext(inps.dem_file)[1]
@@ -325,7 +345,7 @@ def main(argv):
         print 'number of dates: '+str(len(date_list))
         h5out = h5py.File(inps.outfile,'w')
         group = h5out.create_group('timeseries')
-        prog_bar = ut.progress_bar(maxValue=date_num, prefix='writing: ')
+        prog_bar = ptime.progress_bar(maxValue=date_num, prefix='writing: ')
         for i in range(date_num):
             date = date_list[i]
             d = np.reshape(timeseries[i][:], [length,width], order='F')
@@ -335,7 +355,28 @@ def main(argv):
         for key,value in atr.iteritems():
             group.attrs[key] = value
         h5out.close()
-    
+
+    outFile = os.path.splitext(inps.outfile)[0]+'InvResid.h5'
+    print 'writing >>> '+outFile
+    print 'number of dates: '+str(A_def.shape[0])
+    h5out = h5py.File(outFile,'w')
+    group = h5out.create_group('timeseries')
+    prog_bar = ptime.progress_bar(maxValue=A_def.shape[0], prefix='writing: ')
+    for i in range(A_def.shape[0]):
+        date = date_list[i]
+        d = np.reshape(resid_n[i][:], [length,width], order='F')
+        dset = group.create_dataset(date, data=d, compression='gzip')
+        prog_bar.update(i+1, suffix=date)
+    prog_bar.close()
+    # Attribute
+    for key,value in atr.iteritems():
+        group.attrs[key] = value
+    if A_def.shape[0] == date_num:
+        group.attrs['UNIT'] = 'm'
+    else:
+        group.attrs['UNIT'] = 'm/yr'
+    h5out.close()
+
     return
 
 ################################################################################

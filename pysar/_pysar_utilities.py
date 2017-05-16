@@ -35,8 +35,7 @@
 # Yunjun, Dec 2015: Use k[0] instead of 'interferograms' in some functions for 
 #                       better support of interferograms, coherence and wrapped
 # Yunjun, Jan 2016: Add yyyymmdd() and yymmdd()
-# Yunjun, Jun 2016: Add print_progress() written by Greenstick from Stack Overflow
-#                   Removed remove_plane functions since a better version in _remove_plane
+# Yunjun, Jun 2016: Removed remove_plane functions since a better version in _remove_plane
 #                   Add inner function ts_inverse() to faster time series inversion
 #                   Add P_BASELINE_TIMESERIES attribute to timeseries file.
 # Yunjun, Jul 2016: add get_file_list() to support multiple files input
@@ -61,7 +60,139 @@ import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._datetime as ptime
 import pysar._network as pnet
+import pysar._remove_surface as rm
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+
+
+
+def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
+    '''Calculate deramped standard deviation in space for each epoch of input timeseries file.
+    Inputs:
+        timeseries_resid_file - string, timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
+        mask_file - string, mask file, e.g. maskTempCoh.h5
+        ramp_type - string, ramp type, e.g. plane, quadratic
+    outputs:
+        std_list  - list of float, standard deviation of deramped input timeseries file
+        date_list - list of string in YYYYMMDD format, corresponding dates
+    Example:
+        import pysar._pysar_utilities as ut
+        std_list, date_list = ut.get_residual_std('timeseries_ECMWF_demErrInvResid.h5', 'maskTempCoh.h5')
+    '''
+    # Intermediate files name
+    deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_'+ramp_type+'.h5'
+    std_file = os.path.splitext(deramp_file)[0]+'_std.txt'
+
+    # Get residual std text file
+    if update_file(std_file, deramp_file, check_readable=False) or update_file(std_file, mask_file, check_readable=False):
+        if update_file(deramp_file, timeseries_resid_file):
+            if not os.path.isfile(timeseries_resid_file):
+                msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
+                msg += '\nRe-run dem_error.py to generate it.'
+                raise Exception(msg)
+            else:
+                print 'removing a '+ramp_type+' ramp from file: '+timeseries_resid_file
+                deramp_file = rm.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
+        print 'Calculating residual standard deviation for each epoch from file: '+deramp_file
+        std_file = timeseries_std(deramp_file, mask_file, std_file)
+
+    # Read residual std text file
+    print 'read timeseries RSD from file: '+std_file
+    std_fileContent = np.loadtxt(std_file, dtype=str)
+    std_list = std_fileContent[:,1].astype(np.float).tolist()
+    date_list = list(std_fileContent[:,0]) 
+    
+    return std_list, date_list
+
+
+def timeseries_std(inFile, maskFile='maskTempCoh.h5', outFile=None):
+    '''Calculate the standard deviation for each epoch of input timeseries file
+    and output result to a text file.
+    '''
+    try:
+        mask = readfile.read(maskFile)[0]
+        print 'read mask from file: '+maskFile
+    except:
+        maskFile = None
+        print 'no mask input, use all pixels'
+
+    if not outFile:
+        outFile = os.path.splitext(inFile)[0]+'_std.txt'
+
+    atr = readfile.read_attribute(inFile)
+    k = atr['FILE_TYPE']
+    if not k in ['timeseries']:
+        raise Exception('Only timeseries file is supported, input file is: '+k)
+
+    h5 = h5py.File(inFile, 'r')
+    date_list = sorted(h5[k].keys())
+    date_num = len(date_list)
+
+    f = open(outFile, 'w')
+    f.write('# Residual Standard Deviation in space for each epoch of timeseries\n')
+    f.write('# Timeseries file: '+inFile+'\n')
+    f.write('# Mask file: '+maskFile+'\n')
+    f.write('# Date      STD(m)\n')
+    for i in range(date_num):
+        date = date_list[i]
+        data = h5[k].get(date)[:]
+        if maskFile:
+            data[mask==0] = np.nan
+        std = np.nanstd(data)
+        msg = '%s    %.4f' % (date, std)
+        f.write(msg+'\n')
+        print msg
+    h5.close()
+    f.close()
+    print 'write to '+outFile
+
+    return outFile
+
+def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
+    '''Calculate spatial average coherence for each epoch of input time series file
+    Inputs:
+        inFile   - string, timeseries HDF5 file
+        maskFile - string, mask file 
+        outFile  - string, output text file 
+    Example:
+        txtFile = timeseries_coherence('timeseries_ECMWF_demErrInvResid_quadratic.h5')
+    '''
+    try:
+        mask = readfile.read(maskFile)[0]
+        print 'read mask from file: '+maskFile
+    except:
+        maskFile = None
+        print 'no mask input, use all pixels'
+
+    if not outFile:
+        outFile = os.path.splitext(inFile)[0]+'_coh.txt'
+
+    atr = readfile.read_attribute(inFile)
+    k = atr['FILE_TYPE']
+    if not k in ['timeseries']:
+        raise Exception('Only timeseries file is supported, input file is: '+k)
+    range2phase = -4*np.pi/float(atr['WAVELENGTH'])
+
+    h5 = h5py.File(inFile, 'r')
+    date_list = sorted(h5[k].keys())
+    date_num = len(date_list)
+
+    f = open(outFile, 'w')
+    f.write('# Date      spatial_average_coherence\n')
+    for i in range(date_num):
+        date = date_list[i]
+        data = h5[k].get(date)[:]
+        data = np.exp(1j*range2phase*data)
+        if maskFile:
+            data[mask==0] = np.nan
+        coh = np.absolute(np.nanmean(data))
+        msg = '%s    %.4f' % (date, coh)
+        f.write(msg+'\n')
+        print msg
+    h5.close()
+    f.close()
+    print 'write to '+outFile
+
+    return outFile
 
 
 def normalize_timeseries(ts_mat, nanValue=0):
@@ -77,138 +208,6 @@ def normalize_timeseries_old(ts_mat, nanValue=0):
     ts_mat /= np.max(ts_mat, 0)
     ts_mat[np.isnan(ts_mat)] = 1
     return ts_mat
-
-
-###########################Simple progress bar######################
-class progress_bar:
-    '''Creates a text-based progress bar. Call the object with 
-    the simple `print'command to see the progress bar, which looks 
-    something like this:
-    [=======> 22% ]
-    You may specify the progress bar's width, min and max values on init.
-    
-    note:
-        modified from PyAPS release 1.0 (http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
-        Code originally from http://code.activestate.com/recipes/168639/
-    
-    example:
-    import pysar._pysar_utilities as ut
-    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list]
-    prog_bar = ut.progress_bar(maxValue=1000, prefix='calculating:')
-    for i in range(1000):
-        prog_bar.update(i+1, suffix=date)
-        prog_bar.update(i+1, suffix=date12_list[i])
-    prog_bar.close()
-    '''
-
-    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=80):
-        self.progBar = "[]" # This holds the progress bar string
-        self.min = minValue
-        self.max = maxValue
-        self.span = maxValue - minValue
-        self.width = totalWidth
-        self.suffix = ''
-        self.prefix = prefix
-        self.reset()
-
-    def reset(self):
-        self.start_time = time.time()
-        self.amount = 0 # When amount == max, we are 100% done
-        self.update_amount(0) # Build progress bar string
-
-    def update_amount(self, newAmount=0, suffix=''):
-        """ Update the progress bar with the new amount (with min and max
-        values set at initialization; if it is over or under, it takes the
-        min or max value as a default. """
-        if newAmount < self.min:
-            newAmount = self.min
-        if newAmount > self.max:
-            newAmount = self.max
-        self.amount = newAmount
-
-        # Figure out the new percent done, round to an integer
-        diffFromMin = np.float(self.amount - self.min)
-        percentDone = (diffFromMin / np.float(self.span)) * 100.0
-        percentDone = np.int(np.round(percentDone))
-
-        # Figure out how many hash bars the percentage should be
-        allFull = self.width - 2 - 18
-        numHashes = (percentDone / 100.0) * allFull
-        numHashes = np.int(np.round(numHashes))
-
-        # Build a progress bar with an arrow of equal signs; special cases for
-        # empty and full
-        if numHashes == 0:
-            self.progBar = '%s[>%s]' % (self.prefix, ' '*(allFull-1))
-        elif numHashes == allFull:
-            self.progBar = '%s[%s]' % (self.prefix, '='*allFull)
-            if suffix:
-                self.progBar += ' %s' % (suffix)
-        else:
-            self.progBar = '[%s>%s]' % ('='*(numHashes-1), ' '*(allFull-numHashes))
-            # figure out where to put the percentage, roughly centered
-            percentPlace = (len(self.progBar) / 2) - len(str(percentDone))
-            percentString = ' ' + str(percentDone) + '% '
-            # slice the percentage into the bar
-            self.progBar = ''.join([self.progBar[0:percentPlace], percentString,
-                    self.progBar[percentPlace+len(percentString):], ])
-            # prefix and suffix
-            self.progBar = self.prefix + self.progBar
-            if suffix:
-                self.progBar += ' %s' % (suffix)
-            # time info - elapsed time and estimated remaining time
-            if percentDone > 0:
-                elapsed_time = time.time() - self.start_time
-                self.progBar += ' %6ds / %6ds' % (int(elapsed_time),
-                        int(elapsed_time*(100./percentDone-1)))
-
-    def update(self, value, every=1, suffix=''):
-        """ Updates the amount, and writes to stdout. Prints a
-         carriage return first, so it will overwrite the current
-          line in stdout."""
-        if value % every == 0 or value >= self.max:
-            self.update_amount(newAmount=value, suffix=suffix)
-            sys.stdout.write('\r' + self.progBar)
-            sys.stdout.flush()
-
-    def close(self):
-        """Prints a blank space at the end to ensure proper printing
-        of future statements."""
-        print ' '
-
-def print_progress(iteration, total, prefix='calculating:', suffix='complete', decimals=1, barLength=50, elapsed_time=None):
-    """Print iterations progress - Greenstick from Stack Overflow
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : number of decimals in percent complete (Int) 
-        barLength   - Optional  : character length of bar (Int) 
-        elapsed_time- Optional  : elapsed time in seconds (Int/Float)
-    
-    Reference: http://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
-    """
-    filledLength    = int(round(barLength * iteration / float(total)))
-    percents        = round(100.00 * (iteration / float(total)), decimals)
-    bar             = '#' * filledLength + '-' * (barLength - filledLength)
-    if elapsed_time:
-        sys.stdout.write('%s [%s] %s%s    %s    %s secs\r' % (prefix, bar, percents, '%', suffix, int(elapsed_time)))
-    else:
-        sys.stdout.write('%s [%s] %s%s    %s\r' % (prefix, bar, percents, '%', suffix))
-    sys.stdout.flush()
-    if iteration == total:
-        print("\n")
-
-    '''
-    Sample Useage:
-    for i in range(len(dateList)):
-        print_progress(i+1,len(dateList))
-    '''
-    return
-
-################################End of progress bar class####################################
 
 
 ############################################################
@@ -238,7 +237,7 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
             rmCmd = 'rm '+outFile;  print rmCmd;  os.system(rmCmd)
             return True
 
-    if inFile:
+    if inFile and os.path.isfile(inFile):
         if os.path.getmtime(outFile) < os.path.getmtime(inFile):
             return True
         else:
@@ -551,7 +550,7 @@ def nonzero_mask(File, outFile='mask.h5'):
     igramList = sorted(h5[k].keys())
     igramList = check_drop_ifgram(h5, atr, igramList)
     date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in igramList]
-    prog_bar = progress_bar(maxValue=len(igramList), prefix='loading: ')
+    prog_bar = ptime.progress_bar(maxValue=len(igramList), prefix='loading: ')
     for i in range(len(igramList)):
         igram = igramList[i]
         data = h5[k][igram].get(igram)[:]
@@ -601,7 +600,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
         epochNum  = len(epochList)
 
         meanList   = []
-        prog_bar = progress_bar(maxValue=epochNum, prefix='calculating: ')
+        prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='calculating: ')
         for i in range(epochNum):
             epoch = epochList[i]
             if k in multi_group_hdf5_file:
@@ -667,7 +666,7 @@ def temporal_average(File, outFile=None):
 
     # Calculation
     dMean = np.zeros((length,width))
-    prog_bar = progress_bar(maxValue=epochNum, prefix='calculating: ')
+    prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='calculating: ')
     for i in range(epochNum):
         epoch = epochList[i]
         if k in multi_group_hdf5_file:
@@ -700,7 +699,8 @@ def temporal_average(File, outFile=None):
 def get_file_list(fileList, abspath=False):
     '''Get all existed files matching the input list of file pattern
     Example:
-    fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
+        fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
+        fileList = get_file_list('timeseries*.h5')
     '''
     if not fileList:
         return []
@@ -906,7 +906,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
         if atr_rdr:
             az_step = azimuth_resolution(atr_rdr)
             rg_step = range_resolution(atr_rdr)
-        
+
             x_factor = 2*np.ceil(abs(lon_step)/rg_step)
             y_factor = 2*np.ceil(abs(lat_step)/az_step)
         else:
@@ -1133,7 +1133,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     ##### Read Interferograms
     print 'Reading interferograms ...'
     data = np.zeros((ifgram_num,pixel_num), np.float32)
-    prog_bar = progress_bar(maxValue=ifgram_num, prefix='loading: ')
+    prog_bar = ptime.progress_bar(maxValue=ifgram_num, prefix='loading: ')
     for j in range(ifgram_num):
         ifgram = ifgram_list[j]
         group = h5ifgram['interferograms'][ifgram]
@@ -1150,7 +1150,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     dataLine  = np.zeros((ifgram_num,width),np.float32)
     tempDeformation = np.zeros((date_num,pixel_num),np.float32)
 
-    prog_bar = progress_bar(maxValue=length, prefix='calculating: ')
+    prog_bar = ptime.progress_bar(maxValue=length, prefix='calculating: ')
     for i in range(length):
         dataLine = data[:,i*width:(i+1)*width]
         defoLine = ts_inverse(dataLine, B_inv, dt, date_num)
@@ -1173,7 +1173,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     print 'number of dates: '+str(date_num)
     h5timeseries = h5py.File(timeseriesFile,'w')
     group = h5timeseries.create_group('timeseries')
-    prog_bar = progress_bar(maxValue=date_num, prefix='writing: ')
+    prog_bar = ptime.progress_bar(maxValue=date_num, prefix='writing: ')
     for i in range(date_num):
         date = date8_list[i]
         dset = group.create_dataset(date, data=timeseries[i], compression='gzip')
@@ -1504,7 +1504,7 @@ def stacking(File):
         h5file = h5py.File(File,'r')
         epochList = sorted(h5file[k].keys())
         epochNum  = len(epochList)
-        prog_bar = progress_bar(maxValue=epochNum, prefix='calculating: ')
+        prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='calculating: ')
         for i in range(epochNum):
             epoch = epochList[i]
             if k == 'timeseries':  data = h5file[k].get(epoch)[:]

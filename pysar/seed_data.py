@@ -20,9 +20,8 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-#import multiprocessing
-#from joblib import Parallel, delayed
 
+import pysar._datetime as ptime
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._pysar_utilities as ut
@@ -73,7 +72,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
         print 'writing >>> '+outName
-        prog_bar = ut.progress_bar(maxValue=epochNum, prefix='seeding: ')
+        prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='seeding: ')
 
     ## Loop
     if k == 'timeseries':

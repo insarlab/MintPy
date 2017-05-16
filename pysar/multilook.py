@@ -26,6 +26,7 @@ import numpy as np
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._pysar_utilities as ut
+import pysar._datetime as ptime
 
 
 ######################################## Sub Functions ############################################
@@ -71,25 +72,30 @@ def multilook_attribute(atr_dict,lks_y,lks_x):
     atr['YMIN'] = '0'
     atr['XMAX'] = str(width_mli-1)
     atr['YMAX'] = str(length_mli-1)
+    print 'update FILE_LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX'
     
     try:
         atr['Y_STEP'] = str(lks_y*float(atr['Y_STEP']))
         atr['X_STEP'] = str(lks_x*float(atr['X_STEP']))
+        print 'update Y/X_STEP'
     except: pass
     try:
         atr['AZIMUTH_PIXEL_SIZE'] = str(lks_y*float(atr['AZIMUTH_PIXEL_SIZE']))
         atr['RANGE_PIXEL_SIZE']   = str(lks_x*float(atr['RANGE_PIXEL_SIZE']))
+        print 'update AZIMUTH/RANGE_PIXEL_SIZE'
     except: pass
     
     try:
         atr['ref_y'] = str(int(int(atr['ref_y'])/lks_y))
         atr['ref_x'] = str(int(int(atr['ref_x'])/lks_x))
+        print 'update ref_y/x'
     except: pass
     try:
         atr['subset_y0'] = str(int(int(atr['subset_y0'])/lks_y))
         atr['subset_y1'] = str(int(int(atr['subset_y1'])/lks_y))
         atr['subset_x0'] = str(int(int(atr['subset_x0'])/lks_x))
         atr['subset_x1'] = str(int(int(atr['subset_x1'])/lks_x))
+        print 'update subset_y0/y1/x0/x1'
     except: pass
   
     return atr
@@ -121,7 +127,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         h5 = h5py.File(infile,'r')
         epochList = sorted(h5[k].keys())
         epoch_num = len(epochList)
-        prog_bar = ut.progress_bar(maxValue=epoch_num)
+        prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
         h5out = h5py.File(outfile,'w')
         group = h5out.create_group(k)

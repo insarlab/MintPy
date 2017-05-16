@@ -88,6 +88,7 @@ def geocode_attribute(atr_rdr, atr_geo, transFile=None):
     atr['YMAX'] = str(int(atr['FILE_LENGTH'])-1)
     atr['XMIN'] = str(0)
     atr['XMAX'] = str(int(atr['WIDTH'])-1)
+    print 'update FILE_LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX'
 
     # Reference point from y/x to lat/lon
     if transFile and ('ref_x' and 'ref_y' in atr_rdr.keys()):
@@ -98,7 +99,7 @@ def geocode_attribute(atr_rdr, atr_geo, transFile=None):
         atr['ref_lon'] = ref_lon
         atr['ref_y'] = np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
         atr['ref_x'] = np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP']))
-        print 'update reference point info from radar coord to geo coord.'
+        print 'update ref_lat/lon/y/x'
     return atr
 
 

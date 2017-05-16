@@ -7,18 +7,20 @@
 # Yunjun, Jun 2016: merge functions for interferograms, timeseries
 #                   into one, and use read() for all the others
 # Yunjun, Aug 2016: add remove*multiple_surface()
+# Recommend usage:
+#     import pysar._remove_surface as rm
 
 
 import os
 import time
 import re
 
-import numpy as np
 import h5py
+import numpy as np
 
+import pysar._datetime as ptime
 import pysar._readfile as readfile
 import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
 
 
 ##################################################################
@@ -159,7 +161,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
         h5file = h5py.File(File,'r')
         epochList = sorted(h5file[k].keys())
         epoch_num = len(epochList)
-        prog_bar = ut.progress_bar(maxValue=epoch_num)
+        prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
         h5flat = h5py.File(outFile,'w')
         group  = h5flat.create_group(k)

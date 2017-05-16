@@ -177,7 +177,7 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
         h5 = h5py.File(File, 'r')
         igramList = sorted(h5[k].keys())
         date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in igramList]
-        prog_bar = ut.progress_bar(maxValue=date12Num, prefix='writing: ')
+        prog_bar = ptime.progress_bar(maxValue=date12Num, prefix='writing: ')
         for i in range(date12Num):
             date12 = date12_to_write[i]
             idx = date12_orig.index(date12)

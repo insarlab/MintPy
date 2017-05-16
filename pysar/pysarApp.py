@@ -53,6 +53,7 @@ import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar.subset as subset
 import pysar.load_data as load
+import pysar.timeseries2velocity as ts2vel
 import pysar.save_unavco as unavco
 
 
@@ -116,10 +117,8 @@ def subset_dataset(inps, geo_box4geo, pix_box4rdr):
     print 'subseting dataset in radar coord pix_box4rdr: '+str(pix_box4rdr)
     inps = subset.subset_box2inps(inps, pix_box4rdr, None)
     inps.ifgram_file    = check_subset_file(inps.ifgram_file, vars(inps))
-    #inps.mask_file      = check_subset_file(inps.mask_file, vars(inps))
     inps.dem_radar_file = check_subset_file(inps.dem_radar_file, vars(inps))
     inps.coherence_file = check_subset_file(inps.coherence_file, vars(inps))
-    #inps.spatial_coh_file = check_subset_file(inps.spatial_coh_file, vars(inps))
 
     return inps
 
@@ -161,6 +160,7 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
         else:
             print 'use subset input in y/x'
             print 'calculate corresponding bounding box in geo coordinate.'
+            pix_box = subset.check_box_within_data_coverage(pix_box, atr)
             geo_box = subset.bbox_radar2geo(pix_box, atr, geomap_file_orig)
         
         # subset
@@ -193,7 +193,7 @@ _________________________________________________
 #generate_from: http://patorjk.com/software/taag/
 
 TEMPLATE='''template:
-# Input Data (not needed for Miami user)
+# Load Data (not needed for Miami user)
 pysar.unwrapFiles    = /SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*.unw
 pysar.corFiles       = /SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*rlks.cor
 pysar.wrapFiles      = /SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*rlks.int     #optional
@@ -211,15 +211,27 @@ pysar.subset.lalo        = 31.5:32.5,130.5:131.0    #optional, auto/no/off for w
 
 pysar.reference.yx       = 257 , 151                #optional, auto for max coherence selection
 pysar.reference.lalo     = 31.8, 130.8              #optional, auto for max coherence selection
-pysar.reference.date     = 20090120                 #optional, auto for the first date
- 
+
+# Time Series Analysis
 pysar.troposphericDelay.method        = pyaps   #[height_correlation], auto for no tropospheric correction
 pysar.troposphericDelay.polyOrder     = 1       #for height_correlation method
 pysar.troposphericDelay.weatherModel  = ECMWF   #[ERA, MERRA, NARR], for pyaps method
 
 pysar.topoError = yes        #[no], auto for yes
-pysar.deramp    = plane      #[plane, quadratic, baseline_cor, base_trop_cor], auto for no
-pysar.geocode   = yes        #[no], auto for yes
+
+pysar.residualStd.maskFile  = maskTempCoh.h5
+pysar.residualStd.ramp      = quadratic
+pysar.residualStd.minStd    = 0.02
+
+pysar.reference.date        = 20090120   #optional, auto for date with min residual STD
+
+pysar.deramp                = plane      #[plane, quadratic, baseline_cor, base_trop_cor], auto for no
+
+# Velocity Estimation
+pysar.velocity.excludeDate  = exclude_date.txt  #[no], auto for exclude_date.txt
+
+# Post-processing
+pysar.geocode      = yes        #[no], auto for yes
 
 pysar.save.kml     = yes     #[no], auto for yes
 pysar.save.geotiff = no      #[yes], auto for no, not implemented yet
@@ -423,6 +435,8 @@ def main(argv):
             inps = subset.subset_box2inps(inps, pix_box, geo_box)
             inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps), outName, overwrite=True)
 
+            
+
     # Subset based on input template
     if [key for key in template.keys()\
         if ('pysar.subset' in key and template[key].lower() not in ['auto','no',''])]:
@@ -489,11 +503,10 @@ def main(argv):
         #        inps.coherence_file = outName
 
     # Plot network colored in spatial coherence
+    plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+' --mask '+inps.mask_file+' --nodisplay'
+    print plotCmd
     if any(ut.update_file('Network.pdf', i, check_readable=False) \
            for i in [inps.ifgram_file, inps.coherence_file, inps.mask_file]):
-        plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+\
-                  ' --mask '+inps.mask_file+' --nodisplay'
-        print plotCmd
         os.system(plotCmd)
 
 
@@ -525,10 +538,10 @@ def main(argv):
     print '\n**********  Unwrapping Error Correction  **************'
     if 'pysar.unwrapError' in template.keys() and template['pysar.unwrapError'].lower() in ['y','yes']:
         outName = os.path.splitext(inps.ifgram_file)[0]+'_unwCor.h5'
+        unwCmd='unwrap_error.py -f '+inps.ifgram_file+' -m '+inps.mask_file
+        print unwCmd
         if ut.update_file(outName, inps.ifgram_file):
             print 'This might take a while depending on the size of your data set!'
-            unwCmd='unwrap_error.py -f '+inps.ifgram_file+' -m '+inps.mask_file
-            print unwCmd
             os.system(unwCmd)
         inps.ifgram_file = outName
     else:
@@ -540,9 +553,9 @@ def main(argv):
     ########################################
     print '\n**********  Network Inversion to Time Series  ********************'
     inps.timeseries_file = 'timeseries.h5'
+    invertCmd = 'igram_inversion.py '+inps.ifgram_file
+    print invertCmd
     if ut.update_file(inps.timeseries_file, inps.ifgram_file):
-        invertCmd = 'igram_inversion.py '+inps.ifgram_file
-        print invertCmd
         os.system(invertCmd)
 
     ## Check DEM file for tropospheric delay setting
@@ -572,9 +585,9 @@ def main(argv):
     ##############################################
     print '\n********** Temporal Coherence file  *********'
     inps.temp_coh_file = 'temporalCoherence.h5'
+    tempCohCmd = 'temporal_coherence.py '+inps.ifgram_file+' '+inps.timeseries_file+' '+inps.temp_coh_file
+    print tempCohCmd
     if ut.update_file(inps.temp_coh_file, inps.timeseries_file):
-        tempCohCmd = 'temporal_coherence.py '+inps.ifgram_file+' '+inps.timeseries_file+' '+inps.temp_coh_file
-        print tempCohCmd
         os.system(tempCohCmd)
 
     print '\n--------------------------------------------'
@@ -591,9 +604,9 @@ def main(argv):
     ###############################################
     #print '\n********** Incident Angle file  *************'
     #inps.inc_angle_file = 'incidenceAngle.h5'
+    #incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
+    #print incAngleCmd
     #if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
-    #    incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
-    #    print incAngleCmd
     #    os.system(incAngleCmd)
 
 
@@ -606,10 +619,10 @@ def main(argv):
         print '\n**********  Local Oscillator Drift correction for Envisat  ********'
         if 'Y_FIRST' not in atr.keys():
             outName = os.path.splitext(inps.timeseries_file)[0]+'_LODcor.h5'
+            lodCmd = 'lod.py '+inps.timeseries_file
+            print lodCmd
             if ut.update_file(outName, inps.timeseries_file):
-                LODcmd = 'lod.py '+inps.timeseries_file
-                print LODcmd
-                os.system(LODcmd)
+                os.system(lodCmd)
             inps.timeseries_file = outName
         else:
             warnings.warn('Can not apply LOD correction for file in radar coord. Skip it for now.')
@@ -630,44 +643,54 @@ def main(argv):
         '''
         warnings.warn(message)
         template.pop('pysar.troposphericDelay.method', None)
-    
+
+    try:    inps.trop_model = template['pysar.troposphericDelay.weatherModel']
+    except: inps.trop_model = 'ECMWF'
+
     if ('pysar.troposphericDelay.method' in template.keys() and 
         template['pysar.troposphericDelay.method'] not in ['no', 'auto']):
         trop_method = template['pysar.troposphericDelay.method']
         # Height-Correlation
         if trop_method in ['height_correlation']:
             print 'tropospheric delay correction with height-correlation approach'
+            try:
+                poly_order = template['pysar.troposphericDelay.polyOrder']
+            except:
+                poly_order = '1'
+                print 'Deafult polynomial order for troposphreic correction = 1'
+            tropCmd = 'tropcor_phase_elevation.py'+' -f '+inps.timeseries_file+' -d '+\
+                      demFile+' -p '+poly_order+' -m '+inps.mask_file
+            print tropCmd
             outName = os.path.splitext(inps.timeseries_file)[0]+'_tropHgt.h5'
             if ut.update_file(outName, inps.timeseries_file):
-                try:
-                    poly_order = template['pysar.troposphericDelay.polyOrder']
-                except:
-                    poly_order = '1'
-                    print 'Deafult polynomial order for troposphreic correction = 1'
-                cmdTrop = 'tropcor_phase_elevation.py'+' -f '+inps.timeseries_file+' -d '+\
-                          demFile+' -p '+poly_order+' -m '+inps.mask_file
-                print cmdTrop
-                os.system(cmdTrop)
+                os.system(tropCmd)
             inps.timeseries_file = outName
-        
+
         # PyAPS
         elif trop_method == 'pyaps':
             print 'Atmospheric correction using Weather Re-analysis dataset (using PyAPS software)'
-            try:    model = template['pysar.troposphericDelay.weatherModel']
-            except: model = 'ECMWF'
-            print 'Weather Re-analysis dataset: '+model
-            outName = os.path.splitext(inps.timeseries_file)[0]+'_'+model+'.h5'
+            print 'Weather Re-analysis dataset: '+inps.trop_model
+            tropCmd = 'tropcor_pyaps.py --timeseries '+inps.timeseries_file+' -d '+demFile+' -s '+inps.trop_model+\
+                      ' --weather-dir '+inps.work_dir+'/../WEATHER'
+            print tropCmd
+            outName = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.trop_model+'.h5'
             if ut.update_file(outName, inps.timeseries_file):
-                #acquisition_time = template['pysar.acquisitionTime']
-                cmdTrop = 'tropcor_pyaps.py --timeseries '+inps.timeseries_file+' -d '+demFile+' -s '+model+\
-                          ' --weather-dir '+inps.work_dir+'/../WEATHER'
-                print cmdTrop
-                os.system(cmdTrop)
+                try:
+                    inps.trop_file = ut.get_file_list(inps.trop_model+'.h5')[0]
+                    diffCmd = 'diff.py '+inps.timeseries_file+' '+inps.trop_file+' '+outName
+                    print 'Use existed tropospheric delay file: '+inps.trop_file
+                    print diffCmd
+                    os.system(diffCmd)
+                except:
+                    os.system(tropCmd)
             inps.timeseries_file = outName
         else:
             sys.exit('Unrecognized atmospheric correction method: '+template['pysar.troposphericDelay.method'])
     else:
         print 'No atmospheric delay correction.'
+
+    try:    inps.trop_file = ut.get_file_list(inps.trop_model+'.h5')[0]
+    except: inps.trop_file = None
 
 
     ##############################################
@@ -675,15 +698,43 @@ def main(argv):
     ##############################################
     print '\n**********  Topographic Residual (DEM error) correction  *******'
     outName = os.path.splitext(inps.timeseries_file)[0]+'_demErr.h5'
+    inps.timeseries_resid_file = None
     if 'pysar.topoError' in template.keys() and template['pysar.topoError'].lower() in ['y','yes','auto']:
+        print 'Correcting topographic residuals using method from Fattahi and Amelung, 2013, TGRS ...'
+        topoCmd = 'dem_error.py '+inps.timeseries_file+' -o '+outName
+        print topoCmd
         if ut.update_file(outName, inps.timeseries_file):
-            print 'Correcting topographic residuals using method from Fattahi and Amelung, 2013, TGRS ...'
-            topoCmd = 'dem_error.py '+inps.timeseries_file+' -o '+outName
-            print topoCmd
             os.system(topoCmd)
         inps.timeseries_file = outName
+        inps.timeseries_resid_file = os.path.splitext(outName)[0]+'InvResid.h5'
     else:
         print 'No correction for topographic residuals.'
+
+    ##############################################
+    # Timeseries Residual Standard Deviation
+    ##############################################
+    print '\n**********  Timeseries Residual Standard Deviation  *******'
+    if inps.timeseries_resid_file:
+        stdCmd = 'timeseries_std.py '+inps.timeseries_resid_file+' --template '+inps.template_file
+        print stdCmd
+        os.system(stdCmd)
+    else:
+        print 'No timeseries residual file found! Skip residual STD analysis.'
+
+
+    ##############################################
+    # Reference in Time
+    ##############################################
+    print '\n**********  Reference in Time  *******'
+    outName = os.path.splitext(inps.timeseries_file)[0]+'_refDate.h5'
+    refCmd = 'reference_epoch.py '+inps.timeseries_file+' --template '+inps.template_file
+    print refCmd
+
+    if ut.update_file(outName, inps.timeseries_file):
+        os.system(refCmd)
+
+    if not ut.update_file(outName):
+        inps.timeseries_file = outName
 
 
     ##############################################
@@ -696,19 +747,21 @@ def main(argv):
         
         if deramp_method in ['plane', 'quadratic', 'plane_range', 'quadratic_range',\
                              'plane_azimuth', 'quadratic_azimuth']:
+            derampCmd = 'remove_plane.py '+inps.timeseries_file+' -m '+inps.mask_file+' -s '+deramp_method
+            print derampCmd
+
             outName = os.path.splitext(inps.timeseries_file)[0]+'_'+deramp_method+'.h5'
             if ut.update_file(outName, inps.timeseries_file):
-                derampCmd = 'remove_plane.py '+inps.timeseries_file+' -m '+inps.mask_file+' -s '+deramp_method
-                print derampCmd
                 os.system(derampCmd)
             inps.timeseries_file = outName
 
         elif deramp_method in ['baseline_cor','baselinecor']:
             if not 'X_FIRST' in atr.keys():
+                derampCmd = 'baseline_error.py '+inps.timeseries_file+' '+inps.mask_file
+                print derampCmd
+
                 outName = os.path.splitext(inps.timeseries_file)[0]+'_baselineCor.h5'
                 if ut.update_file(outName, inps.timeseries_file):
-                    derampCmd = 'baseline_error.py '+inps.timeseries_file+' '+inps.mask_file
-                    print derampCmd
                     os.system(derampCmd)
                 inps.timeseries_file = outName
             else:
@@ -717,13 +770,14 @@ def main(argv):
         elif deramp_method in ['base_trop_cor','basetropcor','baselinetropcor']:
             if not 'X_FIRST' in atr.keys():
                 print 'Joint estimation of Baseline error and tropospheric delay [height-correlation approach]'
+                try:    poly_order = template['pysar.troposphericDelay.polyOrder']
+                except: poly_order = '1'
+                derampCmd = 'baseline_trop.py '+inps.timeseries_file+' '+inps.dem_radar_file+' '+\
+                            poly_order+' range_and_azimuth'
+                print derampCmd
+
                 outName = os.path.splitext(inps.timeseries_file)[0]+'_baseTropCor.h5'
                 if ut.update_file(outName, inps.timeseries_file):
-                    try:    poly_order = template['pysar.troposphericDelay.polyOrder']
-                    except: poly_order = '1'
-                    derampCmd = 'baseline_trop.py '+inps.timeseries_file+' '+inps.dem_radar_file+' '+\
-                                poly_order+' range_and_azimuth'
-                    print derampCmd
                     os.system(derampCmd)
                 inps.timeseries_file = outName
             else:
@@ -738,11 +792,24 @@ def main(argv):
     # Velocity and rmse maps
     #############################################
     print '\n**********  Velocity estimation  **********************'
-    inps.velocity_file = 'velocity.h5'
+    inps.velocity_file = ts2vel.get_velocity_filename(inps.timeseries_file, inps.template_file)
+    #inps.velocity_file = 'velocity.h5'
+    velCmd = 'timeseries2velocity.py '+inps.timeseries_file+' --template '+inps.template_file+' -o '+inps.velocity_file
+    print velCmd
     if ut.update_file(inps.velocity_file, inps.timeseries_file):
-        velCmd = 'timeseries2velocity.py '+inps.timeseries_file
-        print velCmd
         os.system(velCmd)
+
+    # Velocity from Tropospheric delay
+    if inps.trop_file:
+        suffix = os.path.splitext(os.path.basename(inps.trop_file))[0].lower()
+        outName = 'velocity'+suffix[0].upper()+suffix[1:]+'.h5'
+        inps.trop_vel_file = ts2vel.get_velocity_filename(inps.trop_file, inps.template_file, outName)
+        velCmd = 'timeseries2velocity.py '+inps.trop_file+' --template '+inps.template_file+' -o '+inps.trop_vel_file
+        print velCmd
+        if ut.update_file(inps.trop_vel_file, inps.trop_file):
+            os.system(velCmd)
+
+        
 
 
     ############################################
@@ -778,9 +845,10 @@ def main(argv):
 
     print 'masking velocity file: '+inps.velocity_file
     outName = os.path.splitext(inps.velocity_file)[0]+'_masked.h5'
+    maskCmd = 'mask.py '+inps.velocity_file+' -m '+inps.mask_file
+    print maskCmd
+
     if ut.update_file(outName, inps.velocity_file):
-        maskCmd = 'mask.py '+inps.velocity_file+' -m '+inps.mask_file
-        print maskCmd
         os.system(maskCmd)
     inps.velocity_file = outName
 

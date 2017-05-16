@@ -267,7 +267,7 @@ if __name__ == '__main__':
             pass
         ax_ts.set_title(title_ts)
 
-        ax_ts = ptime.auto_adjust_xaxis_date(ax_ts, tims)
+        ax_ts = ptime.auto_adjust_xaxis_date(ax_ts, tims)[0]
         ax_ts.set_xlabel('Time')
         ax_ts.set_ylabel('Displacement [%s]' % inps.disp_unit)
 

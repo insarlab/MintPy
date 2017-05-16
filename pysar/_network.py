@@ -823,7 +823,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
 
     ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
     # axis format
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
     ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perpendicular Baseline [m]',fontsize=plot_dict['fontsize'])
@@ -886,7 +886,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
     ax.set_title('Perpendicular Baseline History',fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
     ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perpendicular Baseline [m]',fontsize=plot_dict['fontsize'])
@@ -894,21 +894,27 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
     return ax
 
 
-def auto_adjust_yaxis(ax, dataList, fontSize=12):
+def auto_adjust_yaxis(ax, dataList, fontSize=12, ymin=None, ymax=None):
     '''Adjust Y axis
     Input:
-        ax - matplot figure axes object
+        ax       : matplot figure axes object
         dataList : list of float, value in y axis
+        fontSize : float, font size
+        ymin     : float, lower y axis limit
+        ymax     : float, upper y axis limit
+    Output:
+        ax
     '''
     # Min/Max
     dataRange = max(dataList) - min(dataList)
-    ax.set_ylim(min(dataList) - 0.1*dataRange,\
-                max(dataList) + 0.1*dataRange)
+    if ymin is None:  ymin = min(dataList) - 0.1*dataRange
+    if ymax is None:  ymax = max(dataList) + 0.1*dataRange
+    ax.set_ylim([ymin, ymax])
     ## Tick/Label setting
     #xticklabels = plt.getp(ax, 'xticklabels')
     #yticklabels = plt.getp(ax, 'yticklabels')
     #plt.setp(yticklabels, 'color', 'k', fontsize=fontSize)
     #plt.setp(xticklabels, 'color', 'k', fontsize=fontSize)
-    
+
     return ax
 

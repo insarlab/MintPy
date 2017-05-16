@@ -11,13 +11,14 @@
 
 import sys
 import os
-import getopt
+import re
 
 import numpy as np
 import h5py
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
+import pysar._datetime as ptime
 
 
 #####################################################################################
@@ -59,28 +60,31 @@ def diff_file(file1, file2, outName=None):
             print 'number of datasets in '+file1+' : '+str(len(epochList))
             print 'number of datasets in '+file2+' : '+str(len(epochList2))
             sys.exit(1)
+        epoch_num = len(epochList)
+        prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
     if k in ['timeseries']:
         print 'number of acquisitions: '+str(len(epochList))
-        for i in range(len(epochList)):
-            print epochList[i]
+        for i in range(epoch_num):
             data1 = h5_1[k].get(epochList[i])[:]
             data2 = h5_2[k2].get(epochList2[i])[:]
             data = diff_data(data1, data2)
             dset = group.create_dataset(epochList[i], data=data, compression='gzip')
+            prog_bar.update(i+1, suffix=epochList[i])
         for key,value in atr.iteritems():
             group.attrs[key] = value
 
+        prog_bar.close()
         h5out.close()
         h5_1.close()
         h5_2.close()
 
     elif k in ['interferograms','coherence','wrapped']:
         print 'number of interferograms: '+str(len(epochList))
-        for i in range(len(epochList)):
+        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in epochList]
+        for i in range(epoch_num):
             epoch1 = epochList[i]
             epoch2 = epochList2[i]
-            print epoch1
             data1 = h5_1[k][epoch1].get(epoch1)[:]
             data2 = h5_2[k2][epoch2].get(epoch2)[:]
             data = diff_data(data1, data2)  
@@ -88,7 +92,9 @@ def diff_file(file1, file2, outName=None):
             dset = gg.create_dataset(epoch1, data=data, compression='gzip')
             for key, value in h5_1[k][epoch1].attrs.iteritems():
                 gg.attrs[key] = value
+            prog_bar.update(i+1, suffix=date12_list[i])
 
+        prog_bar.close()
         h5out.close()
         h5_1.close()
         h5_2.close()

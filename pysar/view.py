@@ -1209,7 +1209,7 @@ def main(argv):
         if not inps.font_size:  inps.font_size = 16
         if not inps.fig_size:
             # Auto size proportional to data size, with min len = 8.0 inches
-            fig_scale = pysar.figsize_single_min/min(data.shape)
+            fig_scale = min(pysar.figsize_single_min/min(data.shape), pysar.figsize_single_max/max(data.shape))
             inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in [data.shape[1]*1.25, data.shape[0]]]
             #inps.fig_size = [12.5,8.0]
         print 'create figure in size: '+str(inps.fig_size)
@@ -1333,7 +1333,7 @@ def main(argv):
             i_start = (j-1)*inps.fig_row_num*inps.fig_col_num
             i_end   = min([epochNum, i_start+inps.fig_row_num*inps.fig_col_num])
             ##### Loop 2 - Subplots
-            prog_bar = ut.progress_bar(maxValue=i_end-i_start, prefix='loading: ')
+            prog_bar = ptime.progress_bar(maxValue=i_end-i_start, prefix='loading: ')
             for i in range(i_start, i_end):
                 epoch = inps.epoch[i]
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
@@ -1401,8 +1401,8 @@ def main(argv):
             # Min and Max for this figure
             all_data_min = np.nanmin([all_data_min, fig_data_min])
             all_data_max = np.nanmax([all_data_max, fig_data_max])
-            print 'data    range: '+str(fig_data_min)+' - '+str(fig_data_max)
-            try:  print 'display range: '+str(disp_min)+' - '+str(disp_max)
+            print 'data    range: [%.2f, %.2f] %s' % (fig_data_min, fig_data_max, inps.disp_unit)
+            try:  print 'display range: [%.2f, %.2f] %s' % (disp_min, disp_max, inps.disp_unit)
             except: pass
 
             # Colorbar
@@ -1431,9 +1431,9 @@ def main(argv):
         ##### End of Loop 1
         h5file.close()
         print '----------------------------------------'
-        print 'all data range: '+str(all_data_min)+' - '+str(all_data_max)
+        print 'all data range: [%.2f, %.2f] %s' % (all_data_min, all_data_max, inps.disp_unit)
         if inps.disp_min and inps.disp_max:
-            print 'display  range: '+str(inps.disp_min)+' - '+str(inps.disp_max)
+            print 'display  range: [%.2f, %.2f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit)
 
         # Display Figure
         if inps.disp_fig:

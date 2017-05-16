@@ -25,6 +25,7 @@ import shutil
 import pysar
 import pysar._readfile as readfile
 import pysar._pysar_utilities as ut
+import pysar._datetime as ptime
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -259,7 +260,7 @@ def roipac_nonzero_mask(unwFileList, maskFile='mask.h5'):
         # Update mask from input .unw file list
         fileNum = len(unwFileList)
         date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in unwFileList]
-        prog_bar = ut.progress_bar(maxValue=fileNum, prefix='calculating: ')
+        prog_bar = ptime.progress_bar(maxValue=fileNum, prefix='calculating: ')
         for i in range(fileNum):
             file = unwFileList[i]
             amp, unw, rsc = readfile.read_float32(file)
