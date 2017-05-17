@@ -22,6 +22,7 @@ except:
 import h5py
 import numpy as np
 
+import pysar._datetime as ptime
 import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -84,8 +85,9 @@ EXAMPLE='''example:
   tropcor_pyaps.py --timeseries timeseries.h5 -d radar_8rlks.hgt -s NARR
   tropcor_pyaps.py --timeseries timeseries.h5 -d radar_8rlks.hgt -s MERRA --delay dry -i 23
   tropcor_pyaps.py --timeseries timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF 
-  
+
   tropcor_pyaps.py -s ECMWF --hour 18:00 --date-list date_list.txt --download
+  tropcor_pyaps.py -s ECMWF --hour 18:00 --date-list bl_list.txt   --download
 '''
 
 REFERENCE='''reference:
@@ -116,7 +118,8 @@ def cmdLineParse():
                         help='Delay type to calculate, comb contains both wet and dry delays')
     parser.add_argument('--download', action='store_true', help='Download weather data only.')
     parser.add_argument('--date-list', dest='date_list_file',\
-                        help='List of date to download data, in YYYYMMDD format in txt file')
+                        help='Read the first column of text file as list of date to download data\n'+\
+                             'in YYYYMMDD or YYMMDD format')
 
     parser.add_argument('-s', dest='weather_model',\
                         default='ECMWF', choices={'ECMWF','ERA-Interim','ERA','MERRA','MERRA2','NARR'},\
@@ -197,7 +200,7 @@ def main(argv):
         h5timeseries.close()
         print 'read date list info from: '+inps.timeseries_file
     else:
-        dateList = np.loadtxt(inps.date_list_file, dtype=str).tolist()
+        dateList = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
         print 'read date list info from: '+inps.date_list_file
 
     for d in dateList:

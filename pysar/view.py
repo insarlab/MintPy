@@ -949,7 +949,7 @@ def cmdLineParse(argv):
     infile_parser.add_argument('epoch', nargs='*', help='optional - date/epoch(s) to display')
     infile_parser.add_argument('-n','--epoch-num', dest='epoch_num', metavar='NUM', type=int, nargs='*', default=[],\
                                help='optional - order number of date/epoch(s) to display')
-    infile_parser.add_argument('--ex','--exclude',dest='exclude_epoch', metavar='EPOCH', nargs='*',\
+    infile_parser.add_argument('--exclude','--ex', dest='exclude_epoch', metavar='EPOCH', nargs='*',\
                                help='dates will not be displayed')
     infile_parser.add_argument('--mask', dest='mask_file', metavar='FILE', default='maskTempCoh.h5',\
                                help='mask file for display, default: maskTempCoh.h5')

@@ -216,7 +216,7 @@ def cmdLineParse():
                              'ifgram_list.txt with content as below:'+pnet.IFGRAM_LIST_FILE+\
                              '\nIt could also be generated using plot_network.py --list option, e.g.\n'+\
                              'plot_network.py unwrapIfgram.h5 --list\n\n')
-    method.add_argument('--ex','--exclude', dest='exclude_date', nargs='*', \
+    method.add_argument('--exclude','--ex', dest='exclude_date', nargs='*', \
                         help='date(s) excluded for network selection, e.g. -ex 060713 070831')
     method.add_argument('--start-date', dest='start_date', type=str, help='start/min date of network')
     method.add_argument('--end-date', dest='end_date', type=str, help='end/max date of network')
