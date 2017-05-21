@@ -168,7 +168,7 @@ def seed_file_inps(File, inps=None, outFile=None):
     if not inps.ref_y or not inps.ref_x:
         if inps.coherence_file:
             inps.method = 'max-coherence'
-            inps.ref_y, inps.ref_x = select_max_coherence_yx(inps.coherence_file, mask)
+            inps.ref_y, inps.ref_x = select_max_coherence_yx(inps.coherence_file, mask, inps.min_coherence)
         elif inps.method == 'random':
             inps.ref_y, inps.ref_x = random_select_reference_yx(mask)
         elif inps.method == 'manual':
@@ -305,28 +305,48 @@ def read_seed_template2inps(template_file, inps=None):
         inps = cmdLineParse([''])
     
     template = readfile.read_template(template_file)
-    templateKeyList = template.keys()
-    
-    if not inps.ref_y or not inps.ref_x:
-        if 'pysar.seed.yx' in templateKeyList:
-            inps.ref_y, inps.ref_x = [int(i) for i in template['pysar.seed.yx'].split(',')]
-        elif 'pysar.reference.yx' in templateKeyList:
-            try:
-                inps.ref_y, inps.ref_x = [int(i) for i in template['pysar.reference.yx'].split(',')]
-            except: 
-                pass
-        else: print 'No y/x input from template'
-    
-    if not inps.ref_lat or not inps.ref_lon:
-        if 'pysar.seed.lalo' in templateKeyList:
-            inps.ref_lat, inps.ref_lon = [float(i) for i in template['pysar.seed.lalo'].split(',')]
-        elif 'pysar.reference.lalo' in templateKeyList:
-            try:
-                inps.ref_lat, inps.ref_lon = [float(i) for i in template['pysar.reference.lalo'].split(',')]
-            except:
-                pass
-        else: print 'No lat/lon input from template'
-    
+    key_list = template.keys()
+
+    prefix = 'pysar.reference.'
+
+    key = prefix+'yx'
+    if key in key_list:
+        value = template[key]
+        if value not in ['auto','no']:
+            inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
+
+    key = prefix+'lalo'
+    if key in key_list:
+        value = template[key]
+        if value not in ['auto','no']:
+            inps.ref_y, inps.ref_x = [float(i) for i in value.split(',')]
+
+    key = prefix+'maskFile'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.mask_file = 'mask.h5'
+        elif value == 'no':
+            inps.mask_file = None
+        else:
+            inps.mask_file = value
+
+    key = prefix+'coherenceFile'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.coherence_file = 'averageSpatialCoherence.h5'
+        else:
+            inps.coherence_file = value
+
+    key = prefix+'minCoherence'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.min_coherence = 0.85
+        else:
+            inps.min_coherence = float(value)
+
     return inps
 
 
@@ -347,8 +367,14 @@ def read_seed_reference2inps(reference_file, inps=None):
 
 #########################################  Usage  ##############################################
 TEMPLATE='''
-pysar.reference.yx   = 1160,300
-pysar.reference.lalo = 33.1,130.0
+## reference all interferograms to one common point in space
+## auto - randomly select a pixel with coherence > minCoherence
+pysar.reference.yx            = auto   #[257,151 / auto]
+pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
+
+pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
+pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
+pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
 '''
 
 NOTE='''note: Reference value cannot be nan, thus, all selected reference point must be:
@@ -357,7 +383,8 @@ NOTE='''note: Reference value cannot be nan, thus, all selected reference point 
 '''
 
 EXAMPLE='''example:
-  seed_data.py .h5 -t ShikokuT417F650_690AlosA.template
+  seed_data.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --trans geomap_4rlks.trans
+
   seed_data.py timeseries.h5     -r Seeded_velocity.h5
   seed_data.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
   seed_data.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
@@ -393,11 +420,13 @@ def cmdLineParse():
     coord_group.add_argument('--trans', dest='trans_file',\
                              help='Mapping transformation file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
                                   'Needed for radar coord input file with --lat/lon seeding option.')
-    coord_group.add_argument('-t','-template', dest='template_file',\
+    coord_group.add_argument('-t','--template', dest='template_file',\
                              help='template with reference info as below:\n'+TEMPLATE)
 
     parser.add_argument('-c','--coherence', dest='coherence_file',\
                         help='use input coherence file to find the pixel with max coherence for reference pixel.')
+    parser.add_argument('--min-coherence', dest='min_coherence', type=float, default=0.85,\
+                        help='minimum coherence of reference pixel for max-coherence method.')
     parser.add_argument('--method', default='random',\
                         choices=['input-coord','max-coherence','manual','random','global-average'], \
                         help='method to select reference pixel:\n\n'+\
@@ -415,7 +444,6 @@ def cmdLineParse():
 
 #######################################  Main Function  ########################################
 def main(argv):
-    
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
     
@@ -468,7 +496,7 @@ def main(argv):
             inps.ref_x = None
             print 'WARNING: input reference point is in masked OUT area!'
             print 'Continue with other method to select reference point.'
-    
+
     ##### Select method
     if inps.ref_y and inps.ref_x:
         inps.method = 'input-coord'

@@ -65,12 +65,37 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 
+def update_template_file(template_file, template_dict):
+    '''Update option value in template_file with value from input template_dict'''
+    tmp_file = template_file+'.tmp'
+    f_orig = open(template_file, 'r')
+    f_tmp = open(tmp_file, 'w')
+    for line in f_orig:
+        line = line.strip()
+        c = [i.strip() for i in line.split('=', 1)]
+        if not line.startswith('%') and not line.startswith('#') and len(c) > 1:
+            key = c[0]
+            value = str.replace(c[1],'\n','').split("#")[0].strip()
+            if key in template_dict.keys() and template_dict[key] != value:
+                line = line.replace(value, template_dict[key], 1)
+                print '    '+key+': '+value+' --> '+template_dict[key]
+        f_tmp.write(line+'\n')
+    f_orig.close()
+    f_tmp.close()
+
+    # Overwrite exsting original template file
+    mvCmd = 'mv '+tmp_file+' '+template_file
+    os.system(mvCmd)
+
+    return template_file
+
+
 def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
     '''Calculate deramped standard deviation in space for each epoch of input timeseries file.
     Inputs:
         timeseries_resid_file - string, timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
         mask_file - string, mask file, e.g. maskTempCoh.h5
-        ramp_type - string, ramp type, e.g. plane, quadratic
+        ramp_type - string, ramp type, e.g. plane, quadratic, no for do not remove ramp
     outputs:
         std_list  - list of float, standard deviation of deramped input timeseries file
         date_list - list of string in YYYYMMDD format, corresponding dates
@@ -79,7 +104,11 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         std_list, date_list = ut.get_residual_std('timeseries_ECMWF_demErrInvResid.h5', 'maskTempCoh.h5')
     '''
     # Intermediate files name
-    deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_'+ramp_type+'.h5'
+    if ramp_type == 'no':
+        print 'No ramp removal'
+        deramp_file = timeseries_resid_file
+    else:
+        deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_'+ramp_type+'.h5'
     std_file = os.path.splitext(deramp_file)[0]+'_std.txt'
 
     # Get residual std text file
@@ -506,13 +535,14 @@ def get_file_stack(File, maskFile=None):
 
     # set masked out area into NaN
     if maskFile:
+        print 'read mask from file: '+maskFile
         mask = readfile.read(maskFile)[0]
         stack[mask==0] = np.nan
     
     return stack
 
 
-def check_drop_ifgram(h5, atr, ifgram_list):
+def check_drop_ifgram(h5, atr, ifgram_list, print_message=True):
     '''Update ifgram_list based on 'drop_ifgram' attribute
     Inputs:
         h5          - HDF5 file object
@@ -532,7 +562,7 @@ def check_drop_ifgram(h5, atr, ifgram_list):
         if h5[k][ifgram].attrs['drop_ifgram'] == 'yes':
             ifgram_list_out.remove(ifgram)
     
-    if len(ifgram_list) > len(ifgram_list_out):
+    if len(ifgram_list) > len(ifgram_list_out) and print_message:
         print "remove interferograms with 'drop_ifgram'='yes'"
     return ifgram_list_out
 
@@ -566,6 +596,47 @@ def nonzero_mask(File, outFile='mask.h5'):
 
 
 ######################################################################################################
+
+def get_spatial_average(File, maskFile=None, box=None, saveList=True):
+    '''Get spatial average info from input File.
+    Inputs:
+        File     - string, path of HDF5 file or txt file
+        maskFile - string, path of mask file, e.g. maskTempCoh.h5
+        box      - 4-tuple defining the left, upper, right, and lower pixel coordinate
+        saveList - bool, save (list of) mean value into text file
+    outputs:
+        mean_list - list of float, spatial average value of file
+        date_list - list of string for date info
+    Example:
+        import pysar._pysar_utilities as ut
+        mean_list, date_list = ut.get_spatial_average('coherence.h5', 'maskTempCoh.h5')
+    '''
+    suffix='_spatialAverage.txt'
+    if File.endswith(suffix):
+        print 'Input file is spatial average txt already, read it directly'
+        txtFile = File
+
+    else:
+        txtFile = os.path.splitext(File)[0]+suffix
+        if os.path.isfile(txtFile):
+            print 'spatial average file exists: '+txtFile
+            print 'read it directly, or delete it and re-run the script to re-calculate the list'
+        else:
+            print 'calculating spatial average from file: '+File
+            if maskFile:
+                mask = readfile.read(maskFile)[0]
+                print 'read mask from file: '+maskFile
+            else:
+                mask = None
+            mean_list = spatial_average(File, mask, box, saveList)
+
+    # Read txt file
+    txtContent = np.loadtxt(txtFile, dtype=str)
+    mean_list = [float(i) for i in txtContent[:,1]]
+    date_list = [i for i in txtContent[:,0]]
+    return mean_list, date_list
+
+
 def spatial_average(File, mask=None, box=None, saveList=False):
     '''Calculate  Spatial Average.
         Only non-nan pixel is considered.
@@ -631,7 +702,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
 
     # Write mean coherence list into text file
     if saveList:
-        txtFile = os.path.splitext(File)[0]+'_spatialAverage.list'
+        txtFile = os.path.splitext(File)[0]+'_spatialAverage.txt'
         print 'write average coherence in space into text file: '+txtFile
         fl = open(txtFile, 'w')
         # 1st column of file
@@ -1118,8 +1189,10 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
         print 'reference pixel in y/x: [%d, %d]'%(ref_y, ref_x)
-    except ValueError:
-        print 'No ref_x/y found! Can not inverse without reference in space.'
+    except:
+        print 'ERROR: No ref_x/y found! Can not inverse interferograms without reference in space.'
+        print 'run seed_data.py '+ifgramFile+' --mark-attribute for a quick referencing.'
+        sys.exit(1)
 
     ##### Inversion Function
     def ts_inverse(dataLine, B_inv, dt, date_num):

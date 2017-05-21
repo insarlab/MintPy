@@ -362,7 +362,7 @@ def read_template(File, delimiter='='):
                     plotAttributes.append(plotAttributeDict)
                     template_dict[atrName] = atrValue
 
-            else:
+            elif atrValue != '':
                 template_dict[atrName] = atrValue
 
     # what if no \n at end of file? write out last plot attributes dict

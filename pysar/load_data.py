@@ -42,9 +42,9 @@ def auto_path_miami(inps, template_dict={}):
     # .unw/.cor/.int files
     process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
     print "PROCESS directory: "+process_dir
-    if not inps.unw:   inps.unw = process_dir+'/DONE/IFGRAM*/filt_*.unw'
-    if not inps.cor:   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
-    if not inps.int:   inps.int = process_dir+'/DONE/IFGRAM*/filt_*rlks.int'
+    if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/filt_*.unw'
+    if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
+    if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/filt_*rlks.int'
 
     # master interferogram for geomap*.trans and DEM in radar coord
     try:     m_date12 = np.loadtxt(process_dir+'/master_ifgram.txt', dtype=str).tolist()
@@ -52,17 +52,17 @@ def auto_path_miami(inps, template_dict={}):
         try: m_date12 = os.walk(process_dir+'/GEO').next()[1][0].split('geo_')[1]
         except: pass
 
-    if not inps.geomap:
-        try: inps.geomap = process_dir+'/GEO/*'+m_date12+'*/geomap*.trans'
+    if not inps.trans or inps.trans == 'auto':
+        try: inps.trans = process_dir+'/GEO/*'+m_date12+'*/geomap*.trans'
         except: warnings.warn('No master interferogram found! Can not locate geomap*.trans file for geocoding!')
     
-    if not inps.dem_radar:
+    if not inps.dem_radar or inps.dem_radar == 'auto':
         try: inps.dem_radar = process_dir+'/DONE/*'+m_date12+'*/radar*.hgt'
         except: warnings.warn('No master interferogram found! Can not locate DEM in radar coord!')
 
     # Use DEMg/DEM option if dem_geo is not specified in pysar option
     dem_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/DEM'
-    if not inps.dem_geo:
+    if not inps.dem_geo or inps.dem_geo == 'auto':
         if os.path.isdir(dem_dir):            inps.dem_geo = dem_dir+'/*.dem'
         elif 'DEMg' in template_dict.keys():  inps.dem_geo = template_dict['DEMg']
         elif 'DEM'  in template_dict.keys():  inps.dem_geo = template_dict['DEM']
@@ -433,7 +433,7 @@ def load_data_from_template(template_file, inps):
     inps.unw = None
     inps.cor = None
     inps.int = None
-    inps.geomap = None
+    inps.trans = None
     inps.dem_radar = None
     inps.dem_geo = None
 
@@ -444,12 +444,12 @@ def load_data_from_template(template_file, inps):
         template_dict[key] = ut.check_variable_name(value)
     keyList = template_dict.keys()
 
-    if 'pysar.unwrapFiles'    in keyList:   inps.unw       = template_dict['pysar.unwrapFiles']
-    if 'pysar.corFiles'       in keyList:   inps.cor       = template_dict['pysar.corFiles']
-    if 'pysar.wrapFiles'      in keyList:   inps.int       = template_dict['pysar.wrapFiles']
-    if 'pysar.geomap'         in keyList:   inps.geomap    = template_dict['pysar.geomap']
-    if 'pysar.dem.radarCoord' in keyList:   inps.dem_radar = template_dict['pysar.dem.radarCoord']
-    if 'pysar.dem.geoCoord'   in keyList:   inps.dem_geo   = template_dict['pysar.dem.geoCoord']
+    if 'pysar.unwrapFiles'    in keyList:   inps.unw   = template_dict['pysar.unwrapFiles']
+    if 'pysar.corFiles'       in keyList:   inps.cor   = template_dict['pysar.corFiles']
+    if 'pysar.wrapFiles'      in keyList:   inps.int   = template_dict['pysar.wrapFiles']
+    if 'pysar.transFile'      in keyList:   inps.trans = template_dict['pysar.transFile']
+    if 'pysar.demFile.radarCoord' in keyList:   inps.dem_radar = template_dict['pysar.demFile.radarCoord']
+    if 'pysar.demFile.geoCoord'   in keyList:   inps.dem_geo   = template_dict['pysar.demFile.geoCoord']
 
     # 1.2 Auto Setting for Geodesy Lab - University of Miami 
     if pysar.miami_path and 'SCRATCHDIR' in os.environ:
@@ -474,8 +474,8 @@ def load_data_from_template(template_file, inps):
     print 'Go to TEMPLATE directory: '+inps.template_dir
     print 'unwrapped interferograms to load: '+str(inps.unw)
     print 'wrapped   interferograms to load: '+str(inps.int)
-    print 'spatial       coherences to load: '+str(inps.cor)
-    print 'geomap*.trans      file to load: '+str(inps.geomap)
+    print 'spatial coherence  files to load: '+str(inps.cor)
+    print 'transformation     file to load: '+str(inps.trans)
     print 'DEM file in radar coord to load: '+str(inps.dem_radar)
     print 'DEM file in geo   coord to load: '+str(inps.dem_geo)
 
@@ -490,7 +490,7 @@ def load_data_from_template(template_file, inps):
         inps.snap_connect_file = load_file(inps.snap_connect, vars(inps))
 
     # optional but recommend files - single_dataset file
-    inps.geomap_file = load_file(inps.geomap, vars(inps))
+    inps.trans_file = load_file(inps.trans, vars(inps))
     inps.dem_radar_file = load_file(inps.dem_radar, vars(inps))
     inps.dem_geo_file = load_file(inps.dem_geo, vars(inps))
 
@@ -510,12 +510,28 @@ EXAMPLE='''example:
 '''
 
 TEMPLATE='''
-pysar.unwrapFiles     = filt*.unw
-pysar.corFiles        = filt*rlks.cor
-pysar.wrapFiles       = filt*rlks.int
-pysar.geomap          = geomap*.trans
-pysar.dem.radarCoord  = radar*.hgt
-pysar.dem.geoCoord    = srtm1.dem
+## recommend input files for data in radar coordinate:
+##     pysar.unwrapFiles
+##     pysar.corFiles
+##     pysar.transFile
+##     pysar.demFile.radarCoord
+##     pysar.demFile.geoCoord
+## recommend input files for data in geo coordinate:
+##     pysar.unwrapFiles 
+##     pysar.corFiles    
+##     pysar.dem.geoCoord
+## auto - automatic path pattern for Univ of Miami file structure, which are:
+##     pysar.unwrapFiles = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
+##     pysar.corFiles    = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
+##     pysar.intFiles    = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.int  #for backup purpose, not used in PySAR
+##     pysar.transFile   = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
+##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
+##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
+pysar.unwrapFiles        = auto  #[filt*.unw, auto], path of all unwrapped interferograms
+pysar.corFiles           = auto  #[filt*.cor, auto], path of all coherence files
+pysar.transFile          = auto  #[geomap*.trans, sim*.UTM_TO_RDC, auto], path of mapping transformation file
+pysar.demFile.radarCoord = auto  #[radar*.hgt], path of DEM in radar coordinate
+pysar.demFile.geoCoord   = auto  #[*.dem],      path of DEM in geo   coordinate
 '''
 
 

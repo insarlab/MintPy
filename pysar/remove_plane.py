@@ -39,7 +39,9 @@ def cmdLineParse():
 
     parser.add_argument('file', nargs='+', help='File(s) for ramp removal')
     parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5',\
-                        help='mask for pixels used in ramp estimation, default: maskTempCoh.h5')
+                        help='mask for pixels used in ramp estimation\n'+\
+                             'default - maskTempCoh.h5\n'+\
+                             'no - use the whole area')
     parser.add_argument('-s', dest='surface_type', default='plane', \
                         choices={'plane','quadratic','plane_range','quadratic_range','plane_azimuth','quadratic_azimuth'},\
                         help='type of surface/ramp to remove, plane by default')
@@ -70,6 +72,7 @@ def main(argv):
     width = int(atr['WIDTH'])
 
     # Read mask file if inputed
+    if inps.mask_file == 'no':  inps.mask_file = None
     if inps.mask_file:
         try:
             mask_atr = readfile.read_attribute(inps.mask_file)
@@ -116,12 +119,13 @@ def main(argv):
 
     if len(inps.file) == 1:
         rm.remove_surface(inps.file[0], inps.surface_type, inps.mask_file, inps.outfile, inps.ysub)
-        
+
     elif inps.parallel:
         #num_cores = min(multiprocessing.cpu_count(), len(inps.file))
         #print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(rm.remove_surface)(file, inps.surface_type, inps.mask_file, ysub=inps.ysub)\
                                    for file in inps.file)
+
     else:
         for File in inps.file:
             print '------------------------------------------'

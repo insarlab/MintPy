@@ -156,6 +156,7 @@ def main(argv):
    
   
     ##### Writing mask file
+    print 'writing >>> '+outName
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask,atr,outName)
 

@@ -110,25 +110,48 @@ def read_template2inps(templateFile, inps=None):
     if not inps:
         inps = cmdLineParse()
 
-    template_dict = readfile.read_template(templateFile)
-    key_list = template_dict.keys()
+    template = readfile.read_template(templateFile)
+    key_list = template.keys()
 
     key = 'pysar.reference.date'
     if key in key_list:
-        inps.ref_date = template_dict[key]
+        inps.ref_date = template[key]
 
     prefix = 'pysar.residualStd.'
-    if prefix+'maskFile' in key_list:  inps.mask_file = template_dict[prefix+'maskFile']
-    if prefix+'ramp'     in key_list:  inps.ramp_type = template_dict[prefix+'ramp']
+    key = prefix+'maskFile'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.mask_file = 'maskTempCoh.h5'
+        elif value == 'no':
+            inps.mask_file = None
+        else:
+            inps.mask_file = value
+
+    key = prefix+'ramp'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.ramp_type = 'quadratic'
+        else:
+            inps.ramp_type = 'no'
 
     return inps
 
 
 ##################################################################
 TEMPLATE='''
-pysar.reference.date       = 20101120             #[20101120, reference_date.txt, auto]
-pysar.residualStd.maskFile = maskTempCoh_aoi.h5   #for timeseries residual std
-pysar.residualStd.ramp     = quadratic            #for timeseries residual std
+## 8.1 Residual Standard Deviation (RSD)
+## calculate the deramped standard deviation (STD) for each epoch of timeseries residual from DEM error inversion
+## To get rid of long wavelength component in space, a ramp is removed for each epoch.
+pysar.residualStd.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
+pysar.residualStd.ramp            = auto  #[quadratic / plane / no], auto for quadratic
+
+## 9. Reference in Time
+## reference all timeseries to one date in time
+## auto - choose date with minimum residual STD using value from step 8.1
+## no   - do not change reference date, keep the defaut one (1st date usually) and skip this step
+pysar.reference.date = auto   #[auto / txtFile / 20090214 / no]
 '''
 
 EXAMPLE='''example:
@@ -156,7 +179,9 @@ def cmdLineParse():
                       help='timeseries of phase residual file from DEM error inversion.\n'+\
                            'Deramped Residual Standard Deviation')
     auto.add_argument('--deramp', dest='ramp_type', default='quadratic',\
-                      help='ramp type to remove for each epoch from phase residual\n'+'default: quadratic')
+                      help='ramp type to remove for each epoch from phase residual\n'+\
+                           'default: quadratic\n'+\
+                           'no - do not remove ramp')
     auto.add_argument('--mask', dest='mask_file', default='maskTempCoh.h5',\
                       help='mask file used for ramp estimation\n'+'default: maskTempCoh.h5')
     parser.add_argument('-o','--outfile', help='Output file name.')
@@ -171,7 +196,11 @@ def main(argv):
     if inps.template_file:
         inps = read_template2inps(inps.template_file)
 
-    if inps.ref_date.lower() in ['auto']:
+    if inps.ref_date == 'no':
+        print 'No reference date input, skip this step.'
+        return inps.timeseries_file
+
+    elif inps.ref_date.lower() in ['auto']:
         print '------------------------------------------------------------'
         print 'auto choose reference date based on minimum Residual Standard Deviation (RSD)'
         if not inps.resid_file:
@@ -181,11 +210,11 @@ def main(argv):
         inps.ref_date = date_list[ref_idx]
         print 'date with minimum residual std: %s - %.4f' % (inps.ref_date, std_list[ref_idx])
 
-        txtFile = 'reference_date.txt'
-        f = open(txtFile, 'w')
-        f.write(inps.ref_date+'\n')
-        f.close()
-        print 'save date to file: '+txtFile
+        #txtFile = 'reference_date.txt'
+        #f = open(txtFile, 'w')
+        #f.write(inps.ref_date+'\n')
+        #f.close()
+        #print 'save date to file: '+txtFile
         print '------------------------------------------------------------'
 
     elif os.path.isfile(inps.ref_date):

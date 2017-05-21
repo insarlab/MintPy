@@ -25,32 +25,6 @@ import pysar._pysar_utilities as ut
 
 
 ############################################################################
-def read_template2inps(template_file, inps=None):
-    '''Read input template file into inps.ex_date'''
-    if not inps:
-        inps = cmdLineParse()
-    template_dict = readfile.read_template(template_file)
-    key_list = template_dict.keys()
-
-    # Read template option
-    key = 'pysar.velocity.excludeDate'
-    if key in key_list:
-        # auto option
-        if template_dict[key] in ['auto']:
-            if os.path.isfile('exclude_date.txt'):
-                template_dict[key] = 'exclude_date.txt'
-            else:
-                template_dict[key] = ''
-        # convert ',' separation to ' '; and to list
-        template_dict[key] = template_dict[key].replace(',',' ').split()
-
-        # Update inps
-        if template_dict[key]:
-            inps.ex_date += template_dict[key]
-
-    return inps
-
-
 def get_exclude_date(inps, date_list_all):
     '''Get inps.ex_date full list
     Inputs:
@@ -121,6 +95,40 @@ def get_velocity_filename(timeseries_file, template_file=None, vel_file='velocit
     return vel_file
 
 
+def read_template2inps(template_file, inps=None):
+    '''Read input template file into inps.ex_date'''
+    if not inps:
+        inps = cmdLineParse()
+    template = readfile.read_template(template_file)
+    key_list = template.keys()
+
+    # Read template option
+    prefix = 'pysar.velocity.'
+    key = prefix+'excludeDate'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.ex_date = ['exclude_date.txt']
+        elif value == 'no':
+            inps.ex_date = []
+        else:
+            inps.ex_date = value.replace(',',' ').split()
+
+    key = prefix+'startDate'
+    if key in key_list:
+        value = template[key]
+        if value not in ['auto','no']:
+            inps.min_date = ptime.yyyymmdd(value)
+
+    key = prefix+'endDate'
+    if key in key_list:
+        value = template[key]
+        if value not in ['auto','no']:
+            inps.max_date = ptime.yyyymmdd(value)
+
+    return inps
+
+
 ############################################################################
 EXAMPLE='''example:
   timeseries2velocity.py  timeSeries_ECMWF_demCor.h5
@@ -132,7 +140,10 @@ EXAMPLE='''example:
 '''
 
 TEMPLATE='''
-pysar.velocity.excludeDate = 20040502 20060708 20090103   #[exclude_date.txt], auto for exclude_date.txt
+## estimate linear velocity from timeseries, and from tropospheric delay file if exists.
+pysar.velocity.excludeDate = auto   #[exclude_date.txt / 20080520,20090817 / no], auto for exclude_date.txt
+pysar.velocity.startDate   = auto   #[20070101 / no], auto for no
+pysar.velocity.endDate     = auto   #[20101230 / no], auto for no
 '''
 
 DROP_DATE_TXT='''exclude_date.txt:
@@ -144,8 +155,8 @@ DROP_DATE_TXT='''exclude_date.txt:
 def cmdLineParse():
     parser = argparse.ArgumentParser(description='Inverse velocity from time series.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=EXAMPLE)
-    
+                                     epilog=TEMPLATE+'\n'+EXAMPLE)
+
     parser.add_argument('timeseries_file', help='Time series file for velocity inversion.')
     parser.add_argument('--start-date', dest='min_date', help='start date for velocity estimation')
     parser.add_argument('--end-date', dest='max_date', help='end date for velocity estimation')
@@ -166,6 +177,7 @@ def cmdLineParse():
 ############################################################################
 def main(argv):
     inps = cmdLineParse()
+
     #print '\n********** Inversion: Time Series to Velocity ***********'
     atr = readfile.read_attribute(inps.timeseries_file)
     k = atr['FILE_TYPE']
@@ -243,7 +255,7 @@ def main(argv):
     #####################################
     # Output file name
     if not inps.outfile:
-        inps.outfile = get_velocity_filename(inps.timeseries_file, inps.template_file, inps)
+        inps.outfile = 'velocity.h5'
 
     inps.outfile_rmse = os.path.splitext(inps.outfile)[0]+'Rmse'+os.path.splitext(inps.outfile)[1]
     inps.outfile_std = os.path.splitext(inps.outfile)[0]+'Std'+os.path.splitext(inps.outfile)[1]
