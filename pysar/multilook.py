@@ -39,13 +39,13 @@ def multilook_matrix(matrix,lks_y,lks_x):
     #thr = np.floor(lks_x*lks_y/2)
     matrix_Cmli=np.zeros((rows,    cols_mli))
     matrix_mli =np.zeros((rows_mli,cols_mli))
-  
+
     #for c in range(lks_x):   matrix_Cmli = matrix_Cmli + matrix[:,range(c,cols_mli*lks_x,lks_x)]
     #for r in range(lks_y):   matrix_mli  = matrix_mli  + matrix_Cmli[  range(r,rows_mli*lks_y,lks_y),:]
     #for c in range(int(cols_mli)):  matrix_Cmli[:,c]=np.nansum(matrix[:,(c)*lks_x:(c+1)*lks_x],1)
     #for r in range(int(rows_mli)):  matrix_mli[r,:] =np.nansum(matrix_Cmli[(r)*lks_y:(r+1)*lks_y,:],0)
     #matrix_mli=matrix_mli/(lks_y*lks_x)
-    
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         for c in range(cols_mli):  matrix_Cmli[:,c] = np.nanmean(matrix[:,(c)*lks_x:(c+1)*lks_x],1)
@@ -54,7 +54,7 @@ def multilook_matrix(matrix,lks_y,lks_x):
     return matrix_mli
 
 
-def multilook_attribute(atr_dict,lks_y,lks_x):
+def multilook_attribute(atr_dict,lks_y,lks_x, print_message=True):
     #####
     atr = dict()
     for key, value in atr_dict.iteritems():  atr[key] = str(value)
@@ -72,32 +72,40 @@ def multilook_attribute(atr_dict,lks_y,lks_x):
     atr['YMIN'] = '0'
     atr['XMAX'] = str(width_mli-1)
     atr['YMAX'] = str(length_mli-1)
-    print 'update FILE_LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX'
+    if print_message:
+        print 'update FILE_LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX'
     
     try:
         atr['Y_STEP'] = str(lks_y*float(atr['Y_STEP']))
         atr['X_STEP'] = str(lks_x*float(atr['X_STEP']))
-        print 'update Y/X_STEP'
+        if print_message: print 'update Y/X_STEP'
     except: pass
     try:
         atr['AZIMUTH_PIXEL_SIZE'] = str(lks_y*float(atr['AZIMUTH_PIXEL_SIZE']))
         atr['RANGE_PIXEL_SIZE']   = str(lks_x*float(atr['RANGE_PIXEL_SIZE']))
-        print 'update AZIMUTH/RANGE_PIXEL_SIZE'
+        if print_message: print 'update AZIMUTH/RANGE_PIXEL_SIZE'
     except: pass
-    
+
+    if not 'Y_FIRST' in atr.keys():
+        try:
+            atr['RLOOKS'] = str(int(atr['RLOOKS'])*lks_x)
+            atr['ALOOKS'] = str(int(atr['ALOOKS'])*lks_y)
+            if print_message: print 'update R/ALOOKS'
+        except: pass
+
     try:
         atr['ref_y'] = str(int(int(atr['ref_y'])/lks_y))
         atr['ref_x'] = str(int(int(atr['ref_x'])/lks_x))
-        print 'update ref_y/x'
+        if print_message: print 'update ref_y/x'
     except: pass
     try:
         atr['subset_y0'] = str(int(int(atr['subset_y0'])/lks_y))
         atr['subset_y1'] = str(int(int(atr['subset_y1'])/lks_y))
         atr['subset_x0'] = str(int(int(atr['subset_x0'])/lks_x))
         atr['subset_x1'] = str(int(int(atr['subset_x1'])/lks_x))
-        print 'update subset_y0/y1/x0/x1'
+        if print_message: print 'update subset_y0/y1/x0/x1'
     except: pass
-  
+
     return atr
 
 
@@ -141,7 +149,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 atr = h5[k][epoch].attrs
 
                 data_mli = multilook_matrix(data,lks_y,lks_x)
-                atr_mli = multilook_attribute(atr,lks_y,lks_x)
+                atr_mli = multilook_attribute(atr,lks_y,lks_x,print_message=False)
 
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data_mli, compression='gzip')
@@ -171,8 +179,8 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## Read/Write single-dataset files
     elif k == '.trans':        
         rg,az,atr = readfile.read(infile)
-        rgmli = multilook_matrix(rg,lks_y,lks_x);
-        azmli = multilook_matrix(az,lks_y,lks_x);
+        rgmli = multilook_matrix(rg,lks_y,lks_x);  rgmli *= 1/lks_x
+        azmli = multilook_matrix(az,lks_y,lks_x);  azmli *= 1/lks_y
         atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(rgmli,azmli,atr,outfile)
     else:

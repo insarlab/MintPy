@@ -622,8 +622,7 @@ def main(argv):
     print '--------------------------------------------'
     plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+' --mask '+inps.mask_file+' --nodisplay'
     print plotCmd
-    if any(ut.update_file('Network.pdf', i, check_readable=False) \
-           for i in [inps.ifgram_file, inps.coherence_file, inps.mask_file]):
+    if ut.update_file('Network.pdf', [inps.ifgram_file, inps.coherence_file, inps.mask_file], check_readable=False):
         os.system(plotCmd)
 
 
@@ -962,7 +961,7 @@ def main(argv):
     inps.vel_file = 'velocity.h5'
     velCmd = 'timeseries2velocity.py '+inps.timeseries_file+' --template '+inps.template_file+' -o '+inps.vel_file
     print velCmd
-    if ut.update_file(inps.vel_file, inps.timeseries_file) or ut.update_file(inps.vel_file, inps.template_file):
+    if ut.update_file(inps.vel_file, [inps.timeseries_file, inps.template_file]):
         os.system(velCmd)
 
     # Velocity from Tropospheric delay
@@ -972,7 +971,7 @@ def main(argv):
         inps.trop_vel_file = 'velocity'+suffix+'.h5'
         velCmd = 'timeseries2velocity.py '+inps.trop_file+' --template '+inps.template_file+' -o '+inps.trop_vel_file
         print velCmd
-        if ut.update_file(inps.trop_vel_file, inps.trop_file):
+        if ut.update_file(inps.trop_vel_file, [inps.trop_file, inps.template_file]):
             os.system(velCmd)
 
 

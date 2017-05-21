@@ -55,22 +55,26 @@ def diff_file(file1, file2, outName=None):
         h5_2  = h5py.File(file2)
         epochList = sorted(h5_1[k].keys())
         epochList2 = sorted(h5_2[k2].keys())
-        if not len(epochList) == len(epochList2):
-            print 'ERROR: input files have different number of datasets: '
-            print 'number of datasets in '+file1+' : '+str(len(epochList))
-            print 'number of datasets in '+file2+' : '+str(len(epochList2))
+        if not all(i in epochList2 for i in epochList):
+            print file2+' does not contain all group of '+file1
             sys.exit(1)
+        #if not len(epochList) == len(epochList2):
+        #    print 'ERROR: input files have different number of datasets: '
+        #    print 'number of datasets in '+file1+' : '+str(len(epochList))
+        #    print 'number of datasets in '+file2+' : '+str(len(epochList2))
+        #    sys.exit(1)
         epoch_num = len(epochList)
         prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
     if k in ['timeseries']:
         print 'number of acquisitions: '+str(len(epochList))
         for i in range(epoch_num):
-            data1 = h5_1[k].get(epochList[i])[:]
-            data2 = h5_2[k2].get(epochList2[i])[:]
+            date = epochList[i]
+            data1 = h5_1[k].get(date)[:]
+            data2 = h5_2[k2].get(date)[:]
             data = diff_data(data1, data2)
-            dset = group.create_dataset(epochList[i], data=data, compression='gzip')
-            prog_bar.update(i+1, suffix=epochList[i])
+            dset = group.create_dataset(date, data=data, compression='gzip')
+            prog_bar.update(i+1, suffix=date)
         for key,value in atr.iteritems():
             group.attrs[key] = value
 

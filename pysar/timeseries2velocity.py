@@ -279,7 +279,7 @@ def main(argv):
     print 'writing >>> '+inps.outfile_std
     writefile.write(std, atr, inps.outfile_std)
 
-    print 'Done.'
+    print 'Done.\n'
     return inps.outfile
 
 

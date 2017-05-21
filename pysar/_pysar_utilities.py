@@ -112,7 +112,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     std_file = os.path.splitext(deramp_file)[0]+'_std.txt'
 
     # Get residual std text file
-    if update_file(std_file, deramp_file, check_readable=False) or update_file(std_file, mask_file, check_readable=False):
+    if update_file(std_file, [deramp_file,mask_file], check_readable=False):
         if update_file(deramp_file, timeseries_resid_file):
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
@@ -247,11 +247,14 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
         2. outFile is empty, e.g. None, []
         3. outFile is not existed
         4. outFile is not readable by readfile.read_attribute() when check_readable=True
-        5. outFile is older than in File, if inFile is not None
+        5. outFile is older than inFile, if inFile is not None
     Otherwise, return False.
     
     If inFile=None and outFile exists and readable, return False
-    '''    
+    
+    Inputs:
+        inFile - string or list of string, input file(s)
+    '''
     if overwrite:
         return True
 
@@ -266,12 +269,24 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
             rmCmd = 'rm '+outFile;  print rmCmd;  os.system(rmCmd)
             return True
 
-    if inFile and os.path.isfile(inFile):
-        if os.path.getmtime(outFile) < os.path.getmtime(inFile):
-            return True
-        else:
-            print outFile+' exists and is newer than '+inFile+', skip updating.'
-            return False
+    if inFile:
+        # Convert string to list
+        if isinstance(inFile, basestring):
+            inFile = [inFile]
+
+        # Check existance of each item
+        fileList = list(inFile)
+        for File in fileList:
+            if not os.path.isfile(File):
+                inFile.remove(File)
+
+        # Check modification time
+        if inFile:
+            if any(os.path.getmtime(outFile) < os.path.getmtime(File) for File in inFile):
+                return True
+            else:
+                print outFile+' exists and is newer than '+str(inFile)+', skip updating.'
+                return False
 
     return False
 
