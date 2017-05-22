@@ -225,6 +225,10 @@ pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no - use
 
 
 ## 2. Modify Network (optional)
+## Coherence-based network modification = MST + Threshold
+## 1) calculate a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
+## 2) find a minimum spanning tree network with inverse of average coherence as weight
+## 3) for all interferograms except for MST's, exclude those with average coherence < minCoherence.
 pysar.network.coherenceBased  = auto  #[yes / no], auto for yes
 pysar.network.coherenceFile   = auto  #[filename], auto for coherence.h5
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7

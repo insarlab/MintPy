@@ -429,6 +429,68 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     return date12_list_out
 
 
+def coherence_matrix(date12_list, coh_list):
+    '''Return coherence matrix based on input date12 list and its coherence
+    Inputs:
+        date12_list - list of string in YYMMDD-YYMMDD format
+        coh_list    - list of float, average coherence for each interferograms
+    Output:
+        coh_matrix  - 2D np.array with dimension length = date num
+                      np.nan value for interferograms non-existed.
+                      1.0 for diagonal elements
+    '''
+    # Get date list
+    m_dates = [date12.split('-')[0] for date12 in date12_list]
+    s_dates = [date12.split('-')[1] for date12 in date12_list]
+    date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(list(set(m_dates + s_dates)))))
+    date_num = len(date6_list)
+
+    coh_mat = np.zeros([date_num, date_num])
+    coh_mat[:] = np.nan
+    for date12 in date12_list:
+        date1, date2 = date12.split('-')
+        idx1 = date6_list.index(date1)
+        idx2 = date6_list.index(date2)
+        coh = coh_list[date12_list.index(date12)]
+        coh_mat[idx1, idx2] = coh    #symmetric
+        coh_mat[idx2, idx1] = coh
+
+    #for i in range(date_num):    # diagonal value
+    #    coh_mat[i, i] = 1.0
+
+    return coh_mat
+
+
+def threshold_coherence_based_mst(date12_list, coh_list):
+    '''Return a minimum spanning tree of network based on the coherence inverse.
+    Inputs:
+        date12_list - list of string in YYMMDD-YYMMDD format
+        coh_list    - list of float, average coherence for each interferogram
+    Output:
+        mst_date12_list - list of string in YYMMDD-YYMMDD format, for MST network of interferograms 
+    '''
+    # coh_list --> coh_mat --> weight_mat
+    coh_mat = coherence_matrix(date12_list, coh_list)
+    mask = ~np.isnan(coh_mat)
+    wei_mat = np.zeros(coh_mat.shape)
+    wei_mat[:] = np.inf
+    wei_mat[mask] = 1/coh_mat[mask]
+
+    # MST path based on weight matrix
+    wei_mat_csr = csr_matrix(wei_mat)
+    mst_mat_csr = minimum_spanning_tree(wei_mat_csr)
+
+    # Get date6_list
+    m_dates = [date12.split('-')[0] for date12 in date12_list]
+    s_dates = [date12.split('-')[1] for date12 in date12_list]
+    date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(list(set(m_dates + s_dates)))))
+
+    # Convert MST index matrix into date12 list
+    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in find(mst_mat_csr)[0:2]]
+    mst_date12_list = [date6_list[m_idx_list[i]]+'-'+date6_list[s_idx_list[i]] for i in range(len(m_idx_list))]
+    return mst_date12_list
+
+
 def pair_sort(pairs):
     for idx in range(len(pairs)):
         if pairs[idx][0] > pairs[idx][1]:
@@ -720,7 +782,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
     # For colorful display of coherence
     if not 'coherence_list' in keyList:  plot_dict['coherence_list'] = None
-    if not 'disp_min'       in keyList:  plot_dict['disp_min']       = 0.4
+    if not 'disp_min'       in keyList:  plot_dict['disp_min']       = 0.2
     if not 'disp_max'       in keyList:  plot_dict['disp_max']       = 1.0
     if not 'colormap'       in keyList:  plot_dict['colormap']       = 'RdBu'
     transparency = 0.7
@@ -771,11 +833,22 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         print 'data    range: '+str([data_min, data_max])
         
         # Use lower/upper part of colormap to emphasis dropped interferograms
+        # Find proper cut percentage so that all keep pairs are blue and drop pairs are red
+        coh_list_keep = [plot_dict['coherence_list'][i] for i in idx_date12_keep]
+        coh_list_drop = [plot_dict['coherence_list'][i] for i in idx_date12_drop]
+        coh_thres = min(coh_list_keep)
+        if coh_list_drop:
+            coh_thres += max(coh_list_drop)
+            coh_thres /= 2
+        coh_thres = round(coh_thres, -int(np.floor(np.log10(abs(coh_thres)))))
+        print 'color jump at '+str(coh_thres)
+        c1_num = (coh_thres - plot_dict['disp_min']) / (plot_dict['disp_max'] - plot_dict['disp_min']) * 200
+
         cmap = plt.get_cmap(plot_dict['colormap'])
-        colors1 = cmap(np.linspace(0.0, 0.3, 100))
-        colors2 = cmap(np.linspace(0.55, 1.0, 100))
+        colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
+        colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
         cmap = colors.LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
-        
+
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "5%", pad="3%")
         norm = mpl.colors.Normalize(vmin=plot_dict['disp_min'], vmax=plot_dict['disp_max'])
@@ -890,6 +963,92 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
     ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perpendicular Baseline [m]',fontsize=plot_dict['fontsize'])
+
+    return ax
+
+
+def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
+    '''Plot Coherence Matrix of input network'''
+    # Figure Setting
+    keyList = plot_dict.keys()
+    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
+    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
+    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
+    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
+ 
+    coh_mat = coherence_matrix(date12_list, coherence_list)
+    im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0)
+    ax.set_xlabel('Image Number', fontsize=plot_dict['fontsize'])
+    ax.set_ylabel('Image Number', fontsize=plot_dict['fontsize'])
+    ax.set_title('Coherence Matrix')
+
+    # Colorbar
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", "3%", pad="3%")
+    cbar = plt.colorbar(im, cax=cax)
+    cbar.set_label('Coherence', fontsize=plot_dict['fontsize'])
+    return ax
+
+
+def mode (thelist):
+    '''Find Mode (most common) item in the list
+    Borrowded from pysar._pysar_utilities
+    '''
+    if not thelist:
+        return None
+    if len(thelist) == 1:
+        return thelist[0]
+
+    counts = {}
+    for item in thelist:
+        counts[item] = counts.get(item, 0) + 1
+    maxcount = 0
+    maxitem  = None
+    for k, v in counts.items():
+        if v > maxcount:
+            maxitem  = k
+            maxcount = v
+
+    if maxcount == 1:
+        print "All values only appear once"
+        return None
+    elif counts.values().count(maxcount) > 1:
+        print "List has multiple modes"
+        return None
+    else:
+        return maxitem
+
+
+def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
+    '''Plot min/max Coherence of all interferograms for each date'''
+    # Figure Setting
+    keyList = plot_dict.keys()
+    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
+    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
+    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
+    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
+
+    # Get date list
+    m_dates = [date12.split('-')[0] for date12 in date12_list]
+    s_dates = [date12.split('-')[1] for date12 in date12_list]
+    date8_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
+
+    dates, datevector = ptime.date_list2vector(date8_list)
+    bar_width = mode(np.diff(dates).tolist())*3/4
+    x_list = [i-bar_width/2 for i in dates]
+
+    coh_mat = coherence_matrix(date12_list, coherence_list)
+
+    ax.bar(x_list, np.nanmax(coh_mat, axis=0), bar_width.days, label='Max Coherence')
+    ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min Coherence')
+    ax.set_title('Coherence History of All Related Interferograms')
+
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
+    ax.set_ylim([0.0,1.0])
+
+    ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
+    ax.set_ylabel('Coherence',fontsize=plot_dict['fontsize'])
+    ax.legend(loc='lower right')
 
     return ax
 

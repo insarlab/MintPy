@@ -194,7 +194,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12):
         dss - datetime.date object, xmin
         dee - datetime.date object, xmax
     '''
-    
+
     # Min/Max
     ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12.0)
     te=datevector[-1]+0.3;  ye=int(te);  me=int((te-ye)*12.0)
@@ -205,13 +205,13 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12):
     dss=datetime.date(ys,ms,1)
     dee=datetime.date(ye,me,1)
     ax.set_xlim(dss,dee)
-    
+
     # Label/Tick format
     ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
     ax.xaxis.set_minor_locator(mdates.MonthLocator())
-    
+
     # Label font size
     for tick in ax.xaxis.get_major_ticks():
         tick.label.set_fontsize(fontSize)

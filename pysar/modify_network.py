@@ -447,14 +447,19 @@ def main(argv):
             inps.aoi_pix_box = subset.bbox_geo2radar(inps.aoi_geo_box, atr, inps.trans_file) 
         if inps.aoi_pix_box:
             print 'input AOI in (x0,y0,x1,y1): '+str(inps.aoi_pix_box)
+
         # Calculate spatial average coherence
         coh_list, coh_date12_list = ut.get_spatial_average(inps.coherence_file, inps.mask_file,\
                                                            inps.aoi_pix_box, saveList=True)
 
-        print 'date12 with average coherence < '+str(inps.min_coherence)+': '
+        # MST network
+        print 'Get minimum spanning tree (MST) of interferograms with inverse of coherence.'
+        mst_date12_list = pnet.threshold_coherence_based_mst(coh_date12_list, coh_list)
+
+        print 'date12 with average coherence < '+str(inps.min_coherence)+' and not in MST: '
         for i in range(len(coh_date12_list)):
-            if coh_list[i] < inps.min_coherence:
-                date12 = coh_date12_list[i]
+            date12 = coh_date12_list[i]
+            if coh_list[i] < inps.min_coherence and date12 not in mst_date12_list:
                 date12_to_rmv.append(date12)
                 print date12
 

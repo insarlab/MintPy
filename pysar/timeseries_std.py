@@ -158,7 +158,7 @@ def main(argv):
     font_size = 12
 
     dates, datevector = ptime.date_list2vector(date_list)
-    bar_width = np.min(np.diff(dates))*3/4
+    bar_width = ut.mode(np.diff(dates).tolist())*3/4
     x_list = [i-bar_width/2 for i in dates]
 
     # Plot all dates
