@@ -176,6 +176,94 @@ def timeseries_std(inFile, maskFile='maskTempCoh.h5', outFile=None):
 
     return outFile
 
+
+def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
+    '''Calculate deramped Root Mean Square in space for each epoch of input timeseries file.
+    Inputs:
+        timeseries_resid_file - string, timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
+        mask_file - string, mask file, e.g. maskTempCoh.h5
+        ramp_type - string, ramp type, e.g. plane, quadratic, no for do not remove ramp
+    outputs:
+        rms_list  - list of float, Root Mean Square of deramped input timeseries file
+        date_list - list of string in YYYYMMDD format, corresponding dates
+    Example:
+        import pysar._pysar_utilities as ut
+        rms_list, date_list = ut.get_residual_rms('timeseries_ECMWF_demErrInvResid.h5', 'maskTempCoh.h5')
+    '''
+    # Intermediate files name
+    if ramp_type == 'no':
+        print 'No ramp removal'
+        deramp_file = timeseries_resid_file
+    else:
+        deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_'+ramp_type+'.h5'
+    rms_file = os.path.splitext(deramp_file)[0]+'_rms.txt'
+
+    # Get residual RMS text file
+    if update_file(rms_file, [deramp_file,mask_file], check_readable=False):
+        if update_file(deramp_file, timeseries_resid_file):
+            if not os.path.isfile(timeseries_resid_file):
+                msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
+                msg += '\nRe-run dem_error.py to generate it.'
+                raise Exception(msg)
+            else:
+                print 'removing a '+ramp_type+' ramp from file: '+timeseries_resid_file
+                deramp_file = rm.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
+        print 'Calculating residual RMS for each epoch from file: '+deramp_file
+        rms_file = timeseries_rms(deramp_file, mask_file, rms_file)
+
+    # Read residual RMS text file
+    print 'read timeseries RSD from file: '+rms_file
+    rms_fileContent = np.loadtxt(rms_file, dtype=str)
+    rms_list = rms_fileContent[:,1].astype(np.float).tolist()
+    date_list = list(rms_fileContent[:,0]) 
+    
+    return rms_list, date_list
+
+
+def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None):
+    '''Calculate the Root Mean Square for each epoch of input timeseries file
+    and output result to a text file.
+    '''
+    try:
+        mask = readfile.read(maskFile)[0]
+        print 'read mask from file: '+maskFile
+    except:
+        maskFile = None
+        print 'no mask input, use all pixels'
+
+    if not outFile:
+        outFile = os.path.splitext(inFile)[0]+'_rms.txt'
+
+    atr = readfile.read_attribute(inFile)
+    k = atr['FILE_TYPE']
+    if not k in ['timeseries']:
+        raise Exception('Only timeseries file is supported, input file is: '+k)
+
+    h5 = h5py.File(inFile, 'r')
+    date_list = sorted(h5[k].keys())
+    date_num = len(date_list)
+
+    f = open(outFile, 'w')
+    f.write('# Root Mean Square in space for each epoch of timeseries\n')
+    f.write('# Timeseries file: '+inFile+'\n')
+    f.write('# Mask file: '+maskFile+'\n')
+    f.write('# Date      RMS(m)\n')
+    for i in range(date_num):
+        date = date_list[i]
+        data = h5[k].get(date)[:]
+        if maskFile:
+            data[mask==0] = np.nan
+        rms = np.sqrt(np.nanmean(np.square(data)))
+        msg = '%s    %.4f' % (date, rms)
+        f.write(msg+'\n')
+        print msg
+    h5.close()
+    f.close()
+    print 'write to '+outFile
+
+    return outFile
+
+
 def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
     '''Calculate spatial average coherence for each epoch of input time series file
     Inputs:

@@ -23,14 +23,14 @@ import pysar._pysar_utilities as ut
 
 ######################################################################################################
 def read_template2inps(templateFile, inps=None):
-    '''Update inps with pysar.residualStd.* option from templateFile'''
+    '''Update inps with pysar.residualRms.* option from templateFile'''
     if not inps:
         inps = cmdLineParse()
 
     template = readfile.read_template(templateFile)
     key_list = template.keys()
 
-    prefix = 'pysar.residualStd.'
+    prefix = 'pysar.residualRms.'
 
     key = prefix+'maskFile'
     if key in key_list:
@@ -54,9 +54,9 @@ def read_template2inps(templateFile, inps=None):
     if key in key_list:
         value = template[key]
         if value == 'auto':
-            inps.min_std = 0.02
+            inps.min_rms = 0.02
         else:
-            inps.min_std = float(value)
+            inps.min_rms = float(value)
 
     key = prefix+'saveRefDate'
     if key in key_list:
@@ -79,23 +79,23 @@ def read_template2inps(templateFile, inps=None):
 
 ######################################################################################################
 TEMPLATE='''
-## calculate the deramped standard deviation (STD) for each epoch of timeseries residual from DEM error inversion
+## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
-pysar.residualStd.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
-pysar.residualStd.ramp            = auto  #[quadratic / plane / no], auto for quadratic
-pysar.residualStd.threshold       = auto  #[0.0-inf], auto for 0.02, minimum STD in meter for exclude date(s)
-pysar.residualStd.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RSD to txt/pdf file.
-pysar.residualStd.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RSD > minStd to txt/pdf file.
+pysar.residualRms.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
+pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
+pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
+pysar.residualRms.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RMS to txt/pdf file.
+pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > minStd to txt/pdf file.
 '''
 
 EXAMPLE='''example:
-  timeseries_std.py  timeseries_ECMWF_demErrInvResid.h5 
-  timeseries_std.py  timeseries_ECMWF_demErrInvResid.h5  --template pysarApp_template.txt
-  timeseries_std.py  timeseries_ECMWF_demErrInvResid.h5  -m maskTempCoh.h5  --min-std 0.03
+  timeseries_rms.py  timeseries_ECMWF_demErrInvResid.h5 
+  timeseries_rms.py  timeseries_ECMWF_demErrInvResid.h5  --template pysarApp_template.txt
+  timeseries_rms.py  timeseries_ECMWF_demErrInvResid.h5  -m maskTempCoh.h5  --min-std 0.03
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Calculate standard deviation of deramped phase residual for time series.',\
+    parser = argparse.ArgumentParser(description='Calculate Root Mean Square of deramped phase residual for time series.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
 
@@ -103,10 +103,10 @@ def cmdLineParse():
     parser.add_argument('--template', dest='template_file', help='template file with options below:\n'+TEMPLATE+'\n')
     parser.add_argument('-m', dest='mask_file', default='maskTempCoh.h5', help='mask file for estimation')
     parser.add_argument('-s', dest='ramp_type', default='quadratic',\
-                        help='ramp type to be remove for STD calculation.\n'+\
+                        help='ramp type to be remove for RMS calculation.\n'+\
                              'default - quadratic; no - do not remove ramp')
-    parser.add_argument('--min-std', dest='min_std', default='0.02', type=float,\
-                        help='minimum standard deviation in m, threshold used to exclude dates, default: 0.02 m')
+    parser.add_argument('--min-rms', dest='min_rms', default='0.02', type=float,\
+                        help='minimum RMS in m, threshold used to exclude dates, default: 0.02 m')
     inps = parser.parse_args()
     inps.save_reference_date = True
     inps.save_exclude_date = True
@@ -119,14 +119,15 @@ def main(argv):
     if inps.template_file:
         inps = read_template2inps(inps.template_file)
 
-    ##### calculate timeseries of residual standard deviation
-    std_list, date_list = ut.get_residual_std(inps.timeseries_file, inps.mask_file, inps.ramp_type)
+    ##### calculate timeseries of residual Root Mean Square
+    #std_list, date_list = ut.get_residual_std(inps.timeseries_file, inps.mask_file, inps.ramp_type)
+    rms_list, date_list = ut.get_residual_rms(inps.timeseries_file, inps.mask_file, inps.ramp_type)
 
     ##### reference_date.txt
     print '------------------------------------------------------------'
-    ref_idx = np.argmin(std_list)
+    ref_idx = np.argmin(rms_list)
     ref_date = date_list[ref_idx]
-    print 'date with minimum residual std: %s - %.4f' % (ref_date, std_list[ref_idx])
+    print 'date with minimum residual RMS: %s - %.4f' % (ref_date, rms_list[ref_idx])
 
     if inps.save_reference_date:
         txtFile = 'reference_date.txt'
@@ -137,15 +138,17 @@ def main(argv):
 
     ##### exclude_date.txt
     print '------------------------------------------------------------'
-    ex_idx_list = [std_list.index(i) for i in std_list if i > inps.min_std]
-    print 'date(s) with residual std > '+str(inps.min_std)
+    ex_idx_list = [rms_list.index(i) for i in rms_list if i > inps.min_rms]
+    print 'date(s) with residual RMS > '+str(inps.min_rms)
+    ex_idx_list = []
+
 
     if ex_idx_list:
         if inps.save_exclude_date:
             txtFile = 'exclude_date.txt'
             f = open(txtFile, 'w')
             for i in ex_idx_list:
-                print '%s - %.4f' % (date_list[i], std_list[i])
+                print '%s - %.4f' % (date_list[i], rms_list[i])
                 f.write(date_list[i]+'\n')
             f.close()
             print 'save date(s) to file: '+txtFile
@@ -162,26 +165,27 @@ def main(argv):
     x_list = [i-bar_width/2 for i in dates]
 
     # Plot all dates
-    ax.bar(x_list, std_list, bar_width.days)
+    ax.bar(x_list, rms_list, bar_width.days)
+    #ax.bar(x_list, rms_list, bar_width.days)
 
     # Plot reference date
     if inps.save_reference_date:
-        ax.bar(x_list[ref_idx], std_list[ref_idx], bar_width.days, label='Reference date')
+        ax.bar(x_list[ref_idx], rms_list[ref_idx], bar_width.days, label='Reference date')
 
     # Plot exclude dates
     if ex_idx_list and inps.save_exclude_date:
         ex_x_list = [x_list[i] for i in ex_idx_list]
-        ex_std_list = [std_list[i] for i in ex_idx_list]
-        ax.bar(ex_x_list, ex_std_list, bar_width.days, color='darkgray', label='Exclude date(s)')
+        ex_rms_list = [rms_list[i] for i in ex_idx_list]
+        ax.bar(ex_x_list, ex_rms_list, bar_width.days, color='darkgray', label='Exclude date(s)')
 
-    # Plot min_std line
+    # Plot min_rms line
     ax, xmin, xmax = ptime.auto_adjust_xaxis_date(ax, datevector, font_size)
-    ax.plot(np.array([xmin, xmax]), np.array([inps.min_std, inps.min_std]), '-')
+    ax.plot(np.array([xmin, xmax]), np.array([inps.min_rms, inps.min_rms]), '-')
 
     # axis format
-    ax = pnet.auto_adjust_yaxis(ax, std_list+[inps.min_std], font_size, ymin=0.0)
+    ax = pnet.auto_adjust_yaxis(ax, rms_list+[inps.min_rms], font_size, ymin=0.0)
     ax.set_xlabel('Time [years]',fontsize=font_size)
-    ax.set_ylabel('Standard Deviation (m)',fontsize=font_size)
+    ax.set_ylabel('Root Mean Square (m)',fontsize=font_size)
     ax.yaxis.set_ticks_position('both')
 
     if inps.save_reference_date or inps.save_exclude_date:
@@ -189,9 +193,9 @@ def main(argv):
 
     # save figure
     if inps.ramp_type != 'no':
-        fig_name = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.ramp_type+'_std.pdf'
+        fig_name = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.ramp_type+'_rms.pdf'
     else:
-        fig_name = os.path.splitext(inps.timeseries_file)[0]+'_std.pdf'
+        fig_name = os.path.splitext(inps.timeseries_file)[0]+'_rms.pdf'
     fig.savefig(fig_name, bbox_inches='tight')
     print 'save figure to file: '+fig_name
 

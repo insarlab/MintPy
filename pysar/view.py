@@ -540,6 +540,10 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     width = int(float(meta_dict['WIDTH']))
     length = int(float(meta_dict['FILE_LENGTH']))
 
+    # default mask file:
+    if not inps.mask_file and k in ['velocity','timeseries','rmse','interferograms']:
+        inps.mask_file = 'maskTempCoh.h5'
+
     # Subset
     ## Convert subset input into bounding box in radar / geo coordinate
     ## geo_box = None if atr is not geocoded. 
@@ -951,8 +955,8 @@ def cmdLineParse(argv):
                                help='optional - order number of date/epoch(s) to display')
     infile_parser.add_argument('--exclude','--ex', dest='exclude_epoch', metavar='EPOCH', nargs='*',\
                                help='dates will not be displayed')
-    infile_parser.add_argument('--mask', dest='mask_file', metavar='FILE', default='maskTempCoh.h5',\
-                               help='mask file for display, default: maskTempCoh.h5')
+    infile_parser.add_argument('--mask', dest='mask_file', metavar='FILE',\
+                               help='mask file for display')
 
     ##### Output
     outfile_parser = parser.add_argument_group('Output', 'Save figure and write to file(s)')

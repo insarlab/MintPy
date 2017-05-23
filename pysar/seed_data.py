@@ -319,13 +319,13 @@ def read_seed_template2inps(template_file, inps=None):
     if key in key_list:
         value = template[key]
         if value not in ['auto','no']:
-            inps.ref_y, inps.ref_x = [float(i) for i in value.split(',')]
+            inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
 
     key = prefix+'maskFile'
     if key in key_list:
         value = template[key]
         if value == 'auto':
-            inps.mask_file = 'mask.h5'
+            inps.mask_file = None
         elif value == 'no':
             inps.mask_file = None
         else:

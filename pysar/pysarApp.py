@@ -293,14 +293,14 @@ pysar.topoError.polyOrder  = auto    #[1 / 2 / 3], auto for 2, polynomial order 
 
 
 ## 8.1 Residual Standard Deviation (RSD)
-## calculate the deramped standard deviation (STD) for each epoch of timeseries residual from DEM error inversion
+## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Recommendation: quadratic for whole image, plane for local/small area
-pysar.residualStd.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
-pysar.residualStd.ramp            = auto  #[quadratic / plane / no], auto for quadratic
-pysar.residualStd.threshold       = auto  #[0.0-inf], auto for 0.02, minimum STD in meter for exclude date(s)
-pysar.residualStd.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RSD to txt/pdf file.
-pysar.residualStd.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RSD > threshold to txt/pdf file.
+pysar.residualRms.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
+pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
+pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
+pysar.residualRms.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RMS to txt/pdf file.
+pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > minStd to txt/pdf file.
 
 
 ## 9. Reference in Time
@@ -871,13 +871,13 @@ def main(argv):
     ##############################################
     # Timeseries Residual Standard Deviation
     ##############################################
-    print '\n**********  Timeseries Residual Standard Deviation  *******'
+    print '\n**********  Timeseries Residual Root Mean Square  *******'
     if inps.timeseries_resid_file:
-        stdCmd = 'timeseries_std.py '+inps.timeseries_resid_file+' --template '+inps.template_file
-        print stdCmd
-        os.system(stdCmd)
+        rmsCmd = 'timeseries_rms.py '+inps.timeseries_resid_file+' --template '+inps.template_file
+        print rmsCmd
+        os.system(rmsCmd)
     else:
-        print 'No timeseries residual file found! Skip residual STD analysis.'
+        print 'No timeseries residual file found! Skip residual RMS analysis.'
 
 
     ##############################################
