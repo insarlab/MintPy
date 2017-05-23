@@ -180,7 +180,7 @@ def main(argv):
 
     ##### 2. Plot
     # Fig 1 - Baseline History
-    fig = plt.figure(1)
+    fig = plt.figure()
     ax = fig.add_subplot(111)
     ax = pnet.plot_perp_baseline_hist(ax, date8_list, pbase_list, vars(inps), date8_list_drop)
 
@@ -192,7 +192,7 @@ def main(argv):
     # Fig 2 - Coherence Matrix
     if inps.coherence_list:
         figName = 'CoherenceMatrix'+inps.fig_ext
-        fig = plt.figure(2)
+        fig = plt.figure()
         ax = fig.add_subplot(111)
         ax = pnet.plot_coherence_matrix(ax, date12_list, inps.coherence_list)
 
@@ -201,17 +201,18 @@ def main(argv):
             print 'save figure to '+figName
 
     # Fig 3 - Min/Max Coherence History
-    figName = 'CoherenceHistory'+inps.fig_ext
-    fig = plt.figure(3)
-    ax = fig.add_subplot(111)
-    ax = pnet.plot_coherence_history(ax, date12_list, inps.coherence_list)
+    if inps.coherence_list:
+        figName = 'CoherenceHistory'+inps.fig_ext
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax = pnet.plot_coherence_history(ax, date12_list, inps.coherence_list)
 
-    if inps.save_fig:
-        fig.savefig(figName, bbox_inches='tight')
-        print 'save figure to '+figName
+        if inps.save_fig:
+            fig.savefig(figName, bbox_inches='tight')
+            print 'save figure to '+figName
 
     # Fig 4 - Interferogram Network
-    fig = plt.figure(4)
+    fig = plt.figure()
     ax = fig.add_subplot(111)
     ax = pnet.plot_network(ax, date12_list, date8_list, pbase_list, vars(inps), date12_list_drop)
 

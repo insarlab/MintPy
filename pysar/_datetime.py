@@ -241,7 +241,7 @@ class progress_bar:
     prog_bar.close()
     '''
 
-    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=80):
+    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=60):
         self.progBar = "[]" # This holds the progress bar string
         self.min = minValue
         self.max = maxValue
@@ -299,7 +299,7 @@ class progress_bar:
             # time info - elapsed time and estimated remaining time
             if percentDone > 0:
                 elapsed_time = time.time() - self.start_time
-                self.progBar += ' %6ds / %6ds' % (int(elapsed_time),
+                self.progBar += '%5ds / %5ds' % (int(elapsed_time),
                         int(elapsed_time*(100./percentDone-1)))
 
     def update(self, value, every=1, suffix=''):

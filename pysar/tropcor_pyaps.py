@@ -81,10 +81,10 @@ def get_delay(grib_file, atr, inps_dict):
 
 ###############################################################
 EXAMPLE='''example:
-  tropcor_pyaps.py --timeseries timeseries.h5 -d radar_8rlks.hgt
-  tropcor_pyaps.py --timeseries timeseries.h5 -d radar_8rlks.hgt -s NARR
-  tropcor_pyaps.py --timeseries timeseries.h5 -d radar_8rlks.hgt -s MERRA --delay dry -i 23
-  tropcor_pyaps.py --timeseries timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF 
+  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt
+  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s NARR
+  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s MERRA --delay dry -i 23
+  tropcor_pyaps.py timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF 
 
   tropcor_pyaps.py -s ECMWF --hour 18:00 --date-list date_list.txt --download
   tropcor_pyaps.py -s ECMWF --hour 18:00 --date-list bl_list.txt   --download
@@ -108,7 +108,7 @@ def cmdLineParse():
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
-    parser.add_argument('--timeseries', dest='timeseries_file', help='timeseries HDF5 file, i.e. timeseries.h5')
+    parser.add_argument(dest='timeseries_file', nargs='?', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-d','--dem', dest='dem_file',\
                         help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
     parser.add_argument('--weather-dir', dest='weather_dir', \
@@ -134,6 +134,7 @@ def cmdLineParse():
     parser.add_argument('-o', dest='out_file', help='Output file name for trospheric corrected timeseries.')
 
     inps = parser.parse_args()
+
     # Correcting TIMESERIES or DOWNLOAD DATA ONLY, required one of them
     if not inps.timeseries_file and not inps.download:
         parser.print_help()

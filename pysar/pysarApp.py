@@ -592,6 +592,7 @@ def main(argv):
     # Average spatial coherence
     if inps.coherence_file:
         inps.spatial_coh_file = 'averageSpatialCoherence.h5'
+        print 'creating average spatial coherence from file: '+inps.coherence_file
         if ut.update_file(inps.spatial_coh_file, inps.coherence_file):
             inps.spatial_coh_file = ut.temporal_average(inps.coherence_file, inps.spatial_coh_file)
     else:
@@ -816,7 +817,7 @@ def main(argv):
     elif inps.trop_method == 'pyaps':
         print 'Atmospheric correction using Weather Re-analysis dataset (using PyAPS software)'
         print 'Weather Re-analysis dataset: '+inps.trop_model
-        tropCmd = 'tropcor_pyaps.py --timeseries '+inps.timeseries_file+' -d '+demFile+' -s '+inps.trop_model+\
+        tropCmd = 'tropcor_pyaps.py '+inps.timeseries_file+' -d '+demFile+' -s '+inps.trop_model+\
                   ' --weather-dir '+inps.work_dir+'/../WEATHER'
         print tropCmd
         outName = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.trop_model+'.h5'
