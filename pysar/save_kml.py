@@ -89,7 +89,7 @@ def main(argv):
     disp_opposite = 'no'
     disp_colorbar = 'yes'
     rewrapping    = 'no'
-    fig_dpi       = 500
+    fig_dpi       = 300
     #fig_size      = [6.0,9.0]
     fig_unit      = 'mm/yr'
     disp_ref      = 'yes'
@@ -309,7 +309,8 @@ def main(argv):
     cb_N = (North+South)/2.0 + 0.5*0.5*cb_rg
     cb_W = East  + 0.1*cb_rg
     slc1 = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),\
-                             KML.altitude('2000'),KML.altitudeMode('absolute'),\
+                             #KML.altitude('6000'),KML.altitudeMode('absolute'),\
+                             KML.altitudeMode('clampToGround'),\
                              KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
                                            KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
     doc.Folder.append(slc1)

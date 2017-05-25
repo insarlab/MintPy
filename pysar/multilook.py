@@ -179,8 +179,8 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## Read/Write single-dataset files
     elif k == '.trans':        
         rg,az,atr = readfile.read(infile)
-        rgmli = multilook_matrix(rg,lks_y,lks_x);  rgmli *= 1/lks_x
-        azmli = multilook_matrix(az,lks_y,lks_x);  azmli *= 1/lks_y
+        rgmli = multilook_matrix(rg,lks_y,lks_x)
+        azmli = multilook_matrix(az,lks_y,lks_x)
         atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(rgmli,azmli,atr,outfile)
     else:

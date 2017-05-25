@@ -51,7 +51,7 @@ def write(*args):
         data    = args[0]
         atr     = args[1]
         outname = args[2]
-  
+
     ext = os.path.splitext(outname)[1].lower()
     ############### Read ###############
     #print 'writing >>> '+outname
@@ -88,7 +88,7 @@ def write(*args):
         elif ext == '.int':
             write_complex64(data, outname)
         else: print 'Un-supported file type: '+ext; return 0;
-  
+
         ##### Write .rsc File
         write_roipac_rsc(atr, outname+'.rsc')
         return outname
@@ -103,6 +103,7 @@ def write_roipac_rsc(atr, outname, sorting=True):
     Output:
         outname
     '''
+
     # sorting by key name
     keyList = atr.iterkeys()
     if sorting:

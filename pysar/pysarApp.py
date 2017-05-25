@@ -51,7 +51,9 @@ import numpy as np
 import pysar
 import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
+import pysar._writefile as writefile
 import pysar.subset as subset
+import pysar.multilook as mli
 import pysar.load_data as load
 import pysar.save_unavco as unavco
 
@@ -105,19 +107,49 @@ def subset_dataset(inps, geo_box4geo, pix_box4rdr):
     Output:
         inps - Namespace, update file name/path info
     '''
-    
-    print '--------------------------------------------'
-    print 'subseting dataset in geo coord geo_box4geo: '+str(geo_box4geo)
-    inps = subset.subset_box2inps(inps, None, geo_box4geo)
-    inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps))
-    inps.trans_file  = check_subset_file(inps.trans_file, vars(inps))
- 
+    # Subset directory
+    subset_dir = inps.work_dir+'/SUBSET_Y%d_%dX%d_%d' % (pix_box4rdr[1], pix_box4rdr[3], pix_box4rdr[0], pix_box4rdr[2])
+    if not os.path.isdir(subset_dir):
+        os.mkdir(subset_dir)
+    os.chdir(subset_dir)
+    print '\n--------------------------------------------'
+    print 'Creating subset datasets ...'
+    print "Go to subset directory: "+subset_dir
+
+    # Subset files
     print '--------------------------------------------'
     print 'subseting dataset in radar coord pix_box4rdr: '+str(pix_box4rdr)
     inps = subset.subset_box2inps(inps, pix_box4rdr, None)
     inps.ifgram_file    = check_subset_file(inps.ifgram_file, vars(inps))
     inps.dem_radar_file = check_subset_file(inps.dem_radar_file, vars(inps))
     inps.coherence_file = check_subset_file(inps.coherence_file, vars(inps))
+    inps.trop_file      = check_subset_file(inps.trop_file, vars(inps))
+
+    print '--------------------------------------------'
+    print 'subseting dataset in geo coord geo_box4geo: '+str(geo_box4geo)
+    inps = subset.subset_box2inps(inps, None, geo_box4geo)
+    inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps))
+    inps.trans_file  = check_subset_file(inps.trans_file, vars(inps))
+
+    # adjust trans file value due to subsetted radar file
+    if inps.trans_file:
+        [rg_offset, az_offset] = pix_box4rdr[0:2]
+        print 'shiftting the mapping transformation file due to subsetted dataset in'+\
+              ' radar coord: rg/az - %d/%d' % (rg_offset, az_offset)
+        rg, az, trans_atr = readfile.read_float32(inps.trans_file)
+        rg -= rg_offset
+        az -= az_offset
+        print 'writing >>> '+inps.trans_file
+        writefile.write(rg, az, trans_atr, inps.trans_file)
+        #writefile.write_roipac_rsc(trans_atr, inps.trans_file+'.rsc')
+
+    # Remove subset_x0/y0/x1/y1
+    for File in [inps.ifgram_file, inps.coherence_file, inps.trop_file,\
+                 inps.dem_radar_file, inps.dem_geo_file, inps.trans_file]:
+        if File:
+            atrCmd = 'add_attribute.py '+File+' subset_x0=None subset_x1=None subset_y0=None subset_y1=None'
+            print atrCmd
+            os.system(atrCmd)
 
     return inps
 
@@ -127,19 +159,11 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
     For dataset (unwrapped interferograms) in radar coord, only support subset in row/col or y/x
     For dataset (unwrapped interferograms) in geo coord, lalo has higher priority than yx, if both are specified.
     '''
-    # Subset directory
-    subset_dir = inps.work_dir+'/subset'
-    if not os.path.isdir(subset_dir):  os.mkdir(subset_dir)
-    os.chdir(subset_dir)
-    print '\n--------------------------------------------'
-    print 'Creating subset datasets ...'
-    print "Go to directory: "+subset_dir
-    
     atr = readfile.read_attribute(inps.ifgram_file)
     if not 'X_FIRST' in atr.keys():
         print 'Loaded dataset is in radar coordinate.'
         trans_file_orig = inps.trans_file
-        
+
         # subset.lalo has higher priority than subset.yx, except when no geomap*.trans exists.
         # don't subset if only subset.lalo without geomap*.trans exsits, because glob2radar won't be accurate.
         if geo_box:
@@ -150,7 +174,7 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
                 print 'turn off subset.lalo because no geomap*.trans file exsits.'
         if not geo_box and not pix_box:
             sys.exit('ERROR: no valid subset input!')
-        
+
         # Calculate subset range in lat/lon for geo files and y/x for radar files
         if geo_box:
             print 'use subset input in lat/lon'
@@ -171,6 +195,9 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
     return inps
 
 
+def multilook_dataset(inps, lks_y=None, lks_x=None):
+    '''Create a multilooked dataset'''
+    return inps
     
 
 ##########################################################################
@@ -192,7 +219,7 @@ _________________________________________________
 #generate_from: http://patorjk.com/software/taag/
 
 TEMPLATE='''##------------------------ pysarApp_template.txt ------------------------##
-## 1. Load Data
+## 1. Load Data (--load to exit after this step)
 ## recommend input files for data in radar coordinate:
 ##     pysar.unwrapFiles         = 'path of all unwrapped interferograms'
 ##     pysar.corFiles            = 'path of all coherence files'
@@ -217,11 +244,12 @@ pysar.demFile.radarCoord = auto  #[radar*.hgt]
 pysar.demFile.geoCoord   = auto  #[*.dem]
 
 
-## 1.1 Subset (optional)
+## 1.1 Subset (optional, --subset to exit after this step)
 ## if both yx and lalo are specified, use lalo option
 pysar.subset.tightBox = auto    #[yes / no], auto for yes
 pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no - use the whole area
 pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no - use the whole area
+pysar.multilook.yx    = auto    #[4,4 / no], auto for no [not implemented yet]
 
 
 ## 2. Modify Network (optional)
@@ -334,6 +362,9 @@ pysar.save.unavco  = auto   #[yes / no], auto for no, save timeseries to UNAVCO 
 EXAMPLE='''example:
   pysarApp.py
   pysarApp.py  SanAndreasT356EnvD.template
+  pysarApp.py  SanAndreasT356EnvD.template  --load-data
+  pysarApp.py  SanAndreasT356EnvD.template  --subset-data
+  pysarApp.py  SanAndreasT356EnvD.template  --modify-network
   pysarApp.py  SanAndreasT356EnvD.template  --dir ~/insarlab/SanAndreasT356EnvD/PYSAR
 
   # Generate template file:
@@ -374,6 +405,12 @@ def cmdLineParse():
                              '     3) input custom template with basename same as projectName\n')
     parser.add_argument('-g', dest='generate_template', action='store_true',\
                         help='Generate default template (and merge with custom template), then exit.')
+    parser.add_argument('--load-data', dest='load_dataset', action='store_true',\
+                        help='Step 1. Load/check dataset, then exit')
+    parser.add_argument('--subset-data', dest='subset_dataset', action='store_true',\
+                        help='Step 1.1 Subset the whole dataset with setting in template, then exit')
+    parser.add_argument('--modify-network', dest='modify_network', action='store_true',\
+                        help='Step 2. Modify the network, then exit')
 
     inps = parser.parse_args()
     return inps
@@ -470,11 +507,23 @@ def main(argv):
         inps.template_file = ut.update_template_file(inps.template_file, custom_template)
 
     if inps.generate_template:
-        print 'Exit after template file generation.'
-        sys.exit()
+        sys.exit('Exit as planed after template file generation.')
 
     print 'read default template file: '+inps.template_file
     template = readfile.read_template(inps.template_file)
+
+    # Get existing tropo delay file
+    inps.trop_model = 'ECMWF'
+    key = 'pysar.troposphericDelay.weatherModel'
+    if key in template.keys():
+        value = template[key]
+        if value == 'auto':
+            inps.trop_model = 'ECMWF'
+        else:
+            inps.trop_model = value
+    # Grab tropospheric delay file
+    try:    inps.trop_file = ut.get_file_list(inps.trop_model+'.h5', abspath=True)[0]
+    except: inps.trop_file = None
 
 
     #########################################
@@ -543,6 +592,9 @@ def main(argv):
         if not 'Y_FIRST' in atr.keys():
             warnings.warn('No transform file found! Can not geocoding without it!')
 
+    if inps.load_dataset:
+        sys.exit('Exit as planed after loading/checking the dataset')
+
 
     #########################################
     # Check the subset (Optional)
@@ -577,6 +629,9 @@ def main(argv):
         inps = create_subset_dataset(inps, pix_box, geo_box)
     else:
         print '\nNo Subset selected. Processing the whole area.'
+
+    if inps.subset_dataset:
+        sys.exit('Exit as planed after subsetting the dataset')
 
 
     #########################################
@@ -629,6 +684,9 @@ def main(argv):
     print plotCmd
     if ut.update_file('Network.pdf', [inps.ifgram_file, inps.coherence_file, inps.mask_file], check_readable=False):
         os.system(plotCmd)
+
+    if inps.modify_network:
+        sys.exit('Exit as planed after network modification.')
 
 
     #########################################
@@ -793,15 +851,6 @@ def main(argv):
             inps.trop_poly_order = '1'
         else:
             inps.trop_poly_order = value
-
-    inps.trop_model = 'ECMWF'
-    key = 'pysar.troposphericDelay.weatherModel'
-    if key in template.keys():
-        value = template[key]
-        if value == 'auto':
-            inps.trop_model = 'ECMWF'
-        else:
-            inps.trop_model = value
 
     # Call scripts
     if inps.trop_method == 'height_correction':

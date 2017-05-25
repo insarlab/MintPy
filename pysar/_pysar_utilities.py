@@ -378,12 +378,24 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
 
     return False
 
+def update_attribute_or_not(atr_new, atr_orig, update=False):
+    '''Compare new attributes with exsiting ones'''
+    for key in atr_new.keys():
+        value = str(atr_new[key])
+        if (key in atr_orig.keys() and value == str(atr_orig[key]) or\
+            key not in atr_orig.keys() and value == 'None'):
+            next
+        else:
+            update = True
+    return update
+
 
 def add_attribute(File, atr_new=dict()):
     '''Add/update input attribute into File
     Inputs:
         File - string, path/name of file
         atr_new - dict, attributes to be added/updated
+                  if value is None, delete the item from input File attributes
     Output:
         File - string, path/name of updated file
     '''
@@ -391,41 +403,42 @@ def add_attribute(File, atr_new=dict()):
     k = atr['FILE_TYPE']
 
     # Compare new attributes with exsiting ones
-    def check_attribute_update(atr_new, atr_orig, update=False):
-        for key in atr_new.keys():
-            if key in atr.keys() and str(atr_new[key]) == str(atr_orig[key]):
-                next
-            else:
-                update = True
-        return update
-
     update = False
     if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
-        update = check_attribute_update(atr_new, atr, update)
+        update = update_attribute_or_not(atr_new, atr, update)
     elif k in multi_group_hdf5_file:
         h5 = h5py.File(File, 'r')
         epochList = h5[k].keys()
         for epoch in epochList:
             atr = h5[k][epoch].attrs
-            update = check_attribute_update(atr_new, atr, update)
+            update = update_attribute_or_not(atr_new, atr, update)
         h5.close()
     else:
         raise Exception('Un-recognized file type: '+k)
 
     if not update:
-        print 'All new attributes already exists in file and have the same value, skip update.'
+        print 'All updated (removed) attributes already exists (do not exists) and have the same value, skip update.'
         return File
 
     # Update attributes
-    h5 = h5py.File(File,'r+')    
+    h5 = h5py.File(File,'r+')
     if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
         for key, value in atr_new.iteritems():
-            h5[k].attrs[key] = value
+            # delete the item is new value is None
+            if value == 'None':
+                try: h5[k].attrs.pop(key)
+                except: pass
+            else:
+                h5[k].attrs[key] = value
     elif k in multi_group_hdf5_file:
         epochList = h5[k].keys()
         for epoch in epochList:
             for key, value in atr_new.iteritems():
-                h5[k][epoch].attrs[key] = value
+                if value == 'None':
+                    try: h5[k][epoch].attrs.pop(key)
+                    except: pass
+                else:
+                    h5[k][epoch].attrs[key] = value
     h5.close()
     return File
 
@@ -969,7 +982,7 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict()):
         lon_step_deg = float(trans_atr['X_STEP'])
         lat_step = lat_step_deg*np.pi/180.0*earth_radius
         lon_step = lon_step_deg*np.pi/180.0*earth_radius*np.sin(lat_center*np.pi/180)
-        
+
         # Get range/azimuth ground resolution/step in meter
         if atr_rdr:
             az_step = azimuth_resolution(atr_rdr)
@@ -978,7 +991,7 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict()):
             except: az0 = 0
             try:    rg0 = int(atr_rdr['subset_x0'])
             except: rg0 = 0
-            
+
             x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
             y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
         else:
@@ -986,7 +999,7 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict()):
             y_factor = 10
             az0 = 0
             rg0 = 0
-        
+
         width  = int(trans_atr['WIDTH'])
         row = np.rint((lat - lat_first)/lat_step_deg).astype(int)
         col = np.rint((lon - lon_first)/lon_step_deg).astype(int)
@@ -1086,7 +1099,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
         else:
             x_factor = 10
             y_factor = 10
-        
+
         trans_row = np.zeros(rg.shape)
         trans_col = np.zeros(rg.shape)
         if rg.size == 1:
