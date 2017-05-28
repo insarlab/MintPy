@@ -461,7 +461,8 @@ def load_data_from_template(inps):
         inps.template_filename = [os.path.basename(i) for i in inps.template_file]
         try:  inps.template_filename.remove('pysarApp_template.txt')
         except:  pass
-        inps.project_name = os.path.splitext(inps.template_filename[0])[0]
+        if inps.template_filename:
+            inps.project_name = os.path.splitext(inps.template_filename[0])[0]
 
     if 'pysar.unwrapFiles'    in keyList:   inps.unw   = template['pysar.unwrapFiles']
     if 'pysar.corFiles'       in keyList:   inps.cor   = template['pysar.corFiles']

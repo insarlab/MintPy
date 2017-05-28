@@ -510,6 +510,7 @@ def main(argv):
         sys.exit('Exit as planed after template file generation.')
 
     print 'read default template file: '+inps.template_file
+    inps.template_file = os.path.abspath(inps.template_file)
     template = readfile.read_template(inps.template_file)
 
     # Get existing tropo delay file
