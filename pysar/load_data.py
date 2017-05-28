@@ -30,7 +30,7 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 ############################ Sub Functions ###################################
 ##################################################################
-def auto_path_miami(inps, template_dict={}):
+def auto_path_miami(inps, template={}):
     '''Auto File Path Setting for Geodesy Lab - University of Miami'''
     print 'Use auto path setting in University of Miami.'+\
           '(To turn it off, change miami_path value to False in pysar/__init__.py)'
@@ -62,9 +62,9 @@ def auto_path_miami(inps, template_dict={}):
     # Use DEMg/DEM option if dem_geo is not specified in pysar option
     dem_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/DEM'
     if not inps.dem_geo or inps.dem_geo == 'auto':
-        if os.path.isdir(dem_dir):            inps.dem_geo = dem_dir+'/*.dem'
-        elif 'DEMg' in template_dict.keys():  inps.dem_geo = template_dict['DEMg']
-        elif 'DEM'  in template_dict.keys():  inps.dem_geo = template_dict['DEM']
+        if os.path.isdir(dem_dir):       inps.dem_geo = dem_dir+'/*.dem'
+        elif 'DEMg' in template.keys():  inps.dem_geo = template['DEMg']
+        elif 'DEM'  in template.keys():  inps.dem_geo = template['DEM']
         else:  warnings.warn('Can not locate DEM in geo coord!')
 
     return inps
@@ -360,7 +360,11 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     '''
     # Get project_name from input template file
     if not 'project_name' in inps_dict.keys() and 'template_file' in inps_dict.keys():
-        inps_dict['project_name'] = os.path.splitext(os.path.basename(inps_dict['template_file']))[0]
+        template_filename_list = [os.path.basename(i) for i in inps_dict['template_file']]
+        try:  template_filename_list.remove('pysarApp_template.txt')
+        except:  pass
+        if template_filename_list:
+            inps_dict['project_name'] = os.path.splitext(template_filename_list[0])[0]
 
     # Input file(s) info
     fileList = ut.get_file_list(fileList, abspath=True)
@@ -426,12 +430,8 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     return outfile
 
 
-def load_data_from_template(template_file, inps):
+def load_data_from_template(inps):
     '''Load dataset for PySAR time series using input template'''
-    # Project Name
-    if not inps.project_name:
-        inps.project_name = os.path.splitext(os.path.basename(template_file))[0]
-    
     ##------------------------------------ Read Input Path -------------------------------------##
     # Initial value
     inps.unw = None
@@ -442,22 +442,37 @@ def load_data_from_template(template_file, inps):
     inps.dem_geo = None
 
     # 1.1 Read template contents
-    template_file = os.path.abspath(template_file)
-    template_dict = readfile.read_template(template_file)
-    for key, value in template_dict.iteritems():
-        template_dict[key] = ut.check_variable_name(value)
-    keyList = template_dict.keys()
+    inps.template_file = [os.path.abspath(i) for i in inps.template_file]
+    # Move default template file pysarApp_template.txt to the end of list, so that it has highest priority
+    default_template_file = [i for i in inps.template_file if 'pysarApp' in i]
+    if default_template_file:
+        inps.template_file.remove(default_template_file[0])
+        inps.template_file.append(default_template_file[0])
+    template = dict()
+    for File in inps.template_file:
+        temp_dict = readfile.read_template(File)
+        for key, value in temp_dict.iteritems():
+            temp_dict[key] = ut.check_variable_name(value)
+        template.update(temp_dict)
+    keyList = template.keys()
 
-    if 'pysar.unwrapFiles'    in keyList:   inps.unw   = template_dict['pysar.unwrapFiles']
-    if 'pysar.corFiles'       in keyList:   inps.cor   = template_dict['pysar.corFiles']
-    if 'pysar.wrapFiles'      in keyList:   inps.int   = template_dict['pysar.wrapFiles']
-    if 'pysar.transFile'      in keyList:   inps.trans = template_dict['pysar.transFile']
-    if 'pysar.demFile.radarCoord' in keyList:   inps.dem_radar = template_dict['pysar.demFile.radarCoord']
-    if 'pysar.demFile.geoCoord'   in keyList:   inps.dem_geo   = template_dict['pysar.demFile.geoCoord']
+    # Project Name
+    if not inps.project_name:
+        inps.template_filename = [os.path.basename(i) for i in inps.template_file]
+        try:  inps.template_filename.remove('pysarApp_template.txt')
+        except:  pass
+        inps.project_name = os.path.splitext(inps.template_filename[0])[0]
+
+    if 'pysar.unwrapFiles'    in keyList:   inps.unw   = template['pysar.unwrapFiles']
+    if 'pysar.corFiles'       in keyList:   inps.cor   = template['pysar.corFiles']
+    if 'pysar.wrapFiles'      in keyList:   inps.int   = template['pysar.wrapFiles']
+    if 'pysar.transFile'      in keyList:   inps.trans = template['pysar.transFile']
+    if 'pysar.demFile.radarCoord' in keyList:   inps.dem_radar = template['pysar.demFile.radarCoord']
+    if 'pysar.demFile.geoCoord'   in keyList:   inps.dem_geo   = template['pysar.demFile.geoCoord']
 
     # 1.2 Auto Setting for Geodesy Lab - University of Miami 
     if pysar.miami_path and 'SCRATCHDIR' in os.environ:
-        inps = auto_path_miami(inps, template_dict)
+        inps = auto_path_miami(inps, template)
 
     # 1.3 get snap_connect.byt path if .unw is input
     if inps.unw:
@@ -473,7 +488,7 @@ def load_data_from_template(template_file, inps):
     #print "PySAR working directory: "+inps.timeseries_dir
     
     # TEMPLATE file directory (to support relative path input)
-    inps.template_dir = os.path.dirname(template_file)
+    inps.template_dir = os.path.dirname(inps.template_file[-1])
     os.chdir(inps.template_dir)
     print 'Go to TEMPLATE directory: '+inps.template_dir
     print 'unwrapped interferograms to load: '+str(inps.unw)
@@ -510,7 +525,7 @@ EXAMPLE='''example:
   load_data.py  -f $SC/SanAndreasT356EnvD/PROCESS/DONE/IFG*/filt*rlks.cor
   load_data.py  -f radar_4rlks.hgt  -o demRadar.h5
   load_data.py  -f srtm1.dem        -o demGeo.h5
-  load_data.py  --template SanAndreasT356EnvD.tempalte
+  load_data.py  --template pysarApp_template.txt SanAndreasT356EnvD.tempalte
 '''
 
 TEMPLATE='''
@@ -544,7 +559,7 @@ def cmdLineParse():
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
     
-    parser.add_argument('--template', dest='template_file', help='template file, to get PROJECT_NAME')
+    parser.add_argument('--template', dest='template_file', nargs='*', help='template file, to get PROJECT_NAME')
     parser.add_argument('--project', dest='project_name', help='project name of dataset, used in INSARMAPS Web Viewer')
 
     singleFile = parser.add_argument_group('Load into single HDF5 file')
@@ -576,7 +591,7 @@ def main(argv):
 
     else:
         # Load the whole dataset for PySAR time series analysis, e.g. call from pysarApp.py
-        inps = load_data_from_template(inps.template_file, inps)
+        inps = load_data_from_template(inps)
 
         
     return inps.outfile

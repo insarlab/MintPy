@@ -530,7 +530,9 @@ def main(argv):
     # Loading Data
     #########################################
     print '\n*************** Load Data ****************'
-    loadCmd = 'load_data.py --template '+inps.template_file+' --dir '+inps.work_dir
+    loadCmd = 'load_data.py --dir '+inps.work_dir+' --template '+inps.template_file
+    if inps.custom_template_file:
+        loadCmd += ' '+inps.custom_template_file+' --project '+inps.project_name
     print loadCmd
     os.system(loadCmd)
     os.chdir(inps.work_dir)
@@ -616,11 +618,12 @@ def main(argv):
             inps.trans_file = check_subset_file(inps.trans_file, vars(inps), outName)
 
             # Subset DEM in geo coord
-            outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
-            geomap_atr = readfile.read_attribute(inps.trans_file)
-            pix_box, geo_box = subset.get_coverage_box(geomap_atr)
-            inps = subset.subset_box2inps(inps, pix_box, geo_box)
-            inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps), outName, overwrite=True)
+            if inps.dem_geo_file:
+                outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
+                geomap_atr = readfile.read_attribute(inps.trans_file)
+                pix_box, geo_box = subset.get_coverage_box(geomap_atr)
+                inps = subset.subset_box2inps(inps, pix_box, geo_box)
+                inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps), outName, overwrite=True)
 
 
     # Subset based on input template
