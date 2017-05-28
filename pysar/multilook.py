@@ -141,7 +141,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         group = h5out.create_group(k)
 
         if k in ['interferograms','coherence','wrapped']:
-            date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in epochList]
+            date12_list = ptime.list_ifgram2date12(epochList)
             print 'number of interferograms: '+str(len(epochList))
             for i in range(epoch_num):
                 epoch = epochList[i]
@@ -179,8 +179,8 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## Read/Write single-dataset files
     elif k == '.trans':        
         rg,az,atr = readfile.read(infile)
-        rgmli = multilook_matrix(rg,lks_y,lks_x)
-        azmli = multilook_matrix(az,lks_y,lks_x)
+        rgmli = multilook_matrix(rg,lks_y,lks_x); #rgmli *= 1.0/lks_x
+        azmli = multilook_matrix(az,lks_y,lks_x); #azmli *= 1.0/lks_y
         atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(rgmli,azmli,atr,outfile)
     else:

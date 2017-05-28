@@ -17,7 +17,6 @@
 import os
 import sys
 import argparse
-import re
 
 import h5py
 import numpy as np
@@ -152,7 +151,7 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
 
         h5 = h5py.File(File, 'r')
         igramList = sorted(h5[k].keys())
-        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in igramList]
+        date12_list = ptime.list_ifgram2date12(igramList)
         prog_bar = ptime.progress_bar(maxValue=date12Num, prefix='writing: ')
         for i in range(date12Num):
             date12 = date12_to_write[i]
@@ -562,7 +561,7 @@ def main(argv):
         ifgram_list_all = sorted(h5[k].keys())
         ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all, print_message=False)
         ifgram_list_dropped = sorted(list(set(ifgram_list_all) - set(ifgram_list_keep)))
-        date12_list_dropped = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list_dropped]
+        date12_list_dropped = ptime.list_ifgram2date12(ifgram_list_dropped)
         h5.close()
 
         if date12_to_rmv == date12_list_dropped:

@@ -16,7 +16,6 @@ import sys
 import glob
 import argparse
 import warnings
-import re
 
 import h5py
 import numpy as np
@@ -144,7 +143,12 @@ def check_existed_hdf5_file(roipacFileList, hdf5File):
     # if previous hdf5 file existed
     if os.path.isfile(hdf5File):
         print os.path.basename(hdf5File)+'  already exists.'
-        atr = readfile.read_attribute(hdf5File)
+        try:
+            atr = readfile.read_attribute(hdf5File)
+        except:
+            print 'File exists but not readable, delete it.'
+            rmCmd = 'rm '+hdf5File; print rmCmd; os.system(rmCmd)
+            return outFileList
         k = atr['FILE_TYPE']
         h5 = h5py.File(hdf5File, 'r')
         epochList = sorted(h5[k].keys())
@@ -259,7 +263,7 @@ def roipac_nonzero_mask(unwFileList, maskFile='mask.h5'):
 
         # Update mask from input .unw file list
         fileNum = len(unwFileList)
-        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in unwFileList]
+        date12_list = ptime.list_ifgram2date12(unwFileList)
         prog_bar = ptime.progress_bar(maxValue=fileNum, prefix='calculating: ')
         for i in range(fileNum):
             file = unwFileList[i]

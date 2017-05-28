@@ -602,9 +602,10 @@ def main(argv):
     print '\n*************** Subset ****************'
     if inps.trans_file and template['pysar.subset.tightBox'] in ['yes','auto']:
         outName = os.path.splitext(inps.trans_file)[0]+'_tight'+os.path.splitext(inps.trans_file)[1]
-        # Get bounding box of non-zero area in geomap*.trans file
+        # Get bounding box of valid area in geomap*.trans file
         trans_rg, trans_atr = readfile.read(inps.trans_file, (), 'range')
-        idx_row, idx_col = np.nonzero(trans_rg)
+        rg_unique, rg_pos = np.unique(trans_rg, return_inverse=True)
+        idx_row, idx_col = np.where(trans_rg != rg_unique[np.bincount(rg_pos).argmax()])
         pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
         # Subset geomap_file only if it could save > 20% percent of area
         if abs((pix_box[2]-pix_box[0])*(pix_box[3]-pix_box[1])) < 0.8*(trans_rg.shape[0]*trans_rg.shape[1]):

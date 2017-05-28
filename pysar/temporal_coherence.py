@@ -9,7 +9,6 @@
 
 import sys
 import os
-import re
 
 import h5py
 import numpy as np
@@ -66,7 +65,7 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     ifgram_num = len(ifgram_list)
 
     # Design matrix
-    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list]
+    date12_list = ptime.list_ifgram2date12(ifgram_list)
     A1,B = ut.design_matrix(ifgramFile, date12_list)
     A0 = -1*np.ones([ifgram_num,1])
     A = np.hstack((A0, A1))

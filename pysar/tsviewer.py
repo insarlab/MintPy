@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # Adopted from plotts.py from GIAnT v1.0 for PySAR products
 
+import os
 import sys
 import argparse
 from datetime import datetime as dt
@@ -49,6 +50,8 @@ def cmdLineParse():
 
     display = parser.add_argument_group('Display Setting')
     display.add_argument('--ylim', dest='ylim', nargs=2, type=float, help='Y Limits for plotting.')
+    display.add_argument('--ref-date', dest='ref_date', help='Change reference date for display')
+    display.add_argument('--exclude','--ex', dest='ex_date_list', nargs='*', help='Exclude date shown as gray.')
     display.add_argument('--zero-first', dest='zero_first', action='store_true',\
                          help='Set displacement at first acquisition to zero.')
     display.add_argument('-u', dest='disp_unit', metavar='UNIT', default='cm',\
@@ -84,6 +87,23 @@ if __name__ == '__main__':
     h5 = h5py.File(inps.timeseries_file,'r')
     dateList = sorted(h5[k].keys())
     dates, tims = ptime.date_list2vector(dateList)
+
+    # Read exclude dates
+    if inps.ex_date_list:
+        input_ex_date = list(inps.ex_date_list)
+        inps.ex_date_list = []
+        if input_ex_date:
+            for ex_date in input_ex_date:
+                if os.path.isfile(ex_date):
+                    ex_date = ptime.read_date_list(ex_date)
+                else:
+                    ex_date = [ptime.yyyymmdd(ex_date)]
+                inps.ex_date_list += list(set(ex_date) - set(inps.ex_date_list))
+            # delete dates not existed in input file
+            inps.ex_date_list = list(set(inps.ex_date_list).intersection(dateList))
+            inps.ex_dates = ptime.date_list2vector(inps.ex_date_list)[0]
+            inps.ex_idx_list = [dateList.index(i) for i in inps.ex_date_list]
+            print 'exclude date:'+str(inps.ex_date_list)
 
     # File Size
     length = int(atr['FILE_LENGTH'])
@@ -139,6 +159,9 @@ if __name__ == '__main__':
 
     # Initial Map
     d_v = h5[k].get(dateList[inps.epoch_num])[:]*inps.unit_fac
+    if inps.ref_date:
+        inps.ref_d_v = h5[k].get(inps.ref_date)[:]*inps.unit_fac
+        d_v -= inps.ref_d_v
     if mask is not None:
         d_v = mask_matrix(d_v, mask)
     if inps.ref_yx:
@@ -197,7 +220,7 @@ if __name__ == '__main__':
     ax_v.format_coord = format_coord
 
     # Title and Axis Label
-    ax_v.set_title('Time = %s' % dates[inps.epoch_num].strftime('%Y-%m-%d'))
+    ax_v.set_title('N = %d, Time = %s' % (inps.epoch_num, dates[inps.epoch_num].strftime('%Y-%m-%d')))
     if not 'Y_FIRST' in atr.keys():
         ax_v.set_xlabel('Range')
         ax_v.set_ylabel('Azimuth')
@@ -225,8 +248,10 @@ if __name__ == '__main__':
         global fig_v,ax_v,img,mask,inps,dates,tims
         timein = tslider.val
         idx_nearest = np.argmin(np.abs(np.array(tims)-timein))
-        ax_v.set_title('Time = %s' % dates[idx_nearest].strftime('%Y-%m-%d'))
+        ax_v.set_title('N = %d, Time = %s' % (idx_nearest, dates[idx_nearest].strftime('%Y-%m-%d')))
         d_v = h5[k].get(dateList[idx_nearest])[:]*inps.unit_fac
+        if inps.ref_date:
+            d_v -= inps.ref_d_v
         if mask is not None:
             d_v = mask_matrix(d_v, mask)
         if inps.ref_yx:
@@ -256,6 +281,9 @@ if __name__ == '__main__':
 
         ax_ts.cla()
         ax_ts.scatter(dates, d_ts)
+        if inps.ex_date_list:
+            ex_d_ts = [d_ts[i] for i in inps.ex_idx_list]
+            ax_ts.scatter(inps.ex_dates, ex_d_ts, color='gray')
         ax_ts.set_ylim(inps.ylim)
         # Title
         title_ts = 'Y = %d, X = %d'%(y,x)
@@ -285,6 +313,8 @@ if __name__ == '__main__':
         d_ts = update_timeseries(inps.yx[0], inps.yx[1])
     else:
         ax_ts.scatter(dates, np.zeros(len(tims)))
+        if inps.ex_date_list:
+            ax_ts.scatter(inps.ex_dates, np.zeros(len(inps.ex_date_list)), color='gray')
 
     def plot_timeseries_event(event):
         '''Event function to get y/x from button press'''

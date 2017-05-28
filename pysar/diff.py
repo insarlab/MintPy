@@ -11,7 +11,6 @@
 
 import sys
 import os
-import re
 
 import numpy as np
 import h5py
@@ -72,6 +71,8 @@ def diff_file(file1, file2, outName=None):
             date = epochList[i]
             data1 = h5_1[k].get(date)[:]
             data2 = h5_2[k2].get(date)[:]
+            if atr2['ref_date'] != atr['ref_date']:
+                data2 -= h5_2[k2].get(atr['ref_date'])[:]
             data = diff_data(data1, data2)
             dset = group.create_dataset(date, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=date)
@@ -85,7 +86,7 @@ def diff_file(file1, file2, outName=None):
 
     elif k in ['interferograms','coherence','wrapped']:
         print 'number of interferograms: '+str(len(epochList))
-        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in epochList]
+        date12_list = ptime.list_ifgram2date12(epochList)
         for i in range(epoch_num):
             epoch1 = epochList[i]
             epoch2 = epochList2[i]

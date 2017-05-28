@@ -45,7 +45,6 @@
 
 import os
 import sys
-import re
 import time
 import datetime
 import glob
@@ -63,6 +62,40 @@ import pysar._network as pnet
 import pysar._remove_surface as rm
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
+
+
+def circle_index(atr,circle_par):
+    ## Return Index of Elements within a Circle
+    ## Inputs:
+    ##     atr        : (dictionary) attributes containging width, length info
+    ##     circle_par : (string) center_x,center_y,radius
+
+    width  = int(atr['WIDTH'])
+    length = int(atr['FILE_LENGTH'])
+    cir_par = circle_par.split(',')
+    #import pdb; pdb.set_trace()
+    try:
+        c_y    = int(cir_par[0])
+        c_x    = int(cir_par[1])
+        radius = int(float(cir_par[2]))
+    except:
+        try:
+            c_lat  = float(cir_par[0])
+            c_lon  = float(cir_par[1])
+            radius = int(float(cir_par[2]))
+            c_y = subset.coord_geo2radar(c_lat,atr,'lat')
+            c_x = subset.coord_geo2radar(c_lon,atr,'lon')
+        except:
+            print '\nERROR: Unrecognized circle index format: '+circle_par
+            print 'Supported format:'
+            print '--circle 200,300,20            for radar coord input'
+            print '--circle 31.0214,130.5699,20   for geo   coord input\n'
+            return 0
+
+    y,x = np.ogrid[-c_y:length-c_y, -c_x:width-c_x]
+    idx = x**2 + y**2 <= radius**2
+
+    return idx
 
 
 def update_template_file(template_file, template_dict):
@@ -220,7 +253,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     return rms_list, date_list
 
 
-def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None):
+def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None, dimension=2):
     '''Calculate the Root Mean Square for each epoch of input timeseries file
     and output result to a text file.
     '''
@@ -247,21 +280,33 @@ def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None):
     f.write('# Root Mean Square in space for each epoch of timeseries\n')
     f.write('# Timeseries file: '+inFile+'\n')
     f.write('# Mask file: '+maskFile+'\n')
-    f.write('# Date      RMS(m)\n')
-    for i in range(date_num):
-        date = date_list[i]
-        data = h5[k].get(date)[:]
-        if maskFile:
-            data[mask==0] = np.nan
-        rms = np.sqrt(np.nanmean(np.square(data)))
-        msg = '%s    %.4f' % (date, rms)
-        f.write(msg+'\n')
-        print msg
-    h5.close()
-    f.close()
-    print 'write to '+outFile
+    if dimension == 2:
+        f.write('# Date      RMS(m)\n')
+        for i in range(date_num):
+            date = date_list[i]
+            data = h5[k].get(date)[:]
+            if maskFile:
+                data[mask==0] = np.nan
+            rms = np.sqrt(np.nanmean(np.square(data)))
+            msg = '%s    %.4f' % (date, rms)
+            f.write(msg+'\n')
+            print msg
+        h5.close()
+        f.close()
+        print 'write to '+outFile
+        return outFile
 
-    return outFile
+    elif dimension == 3:
+        length = int(atr['FILE_LENGTH'])
+        width = int(atr['WIDTH'])
+        ts_data = np.zeros((date_num, length*width))
+        for i in range(date_num):
+            data = h5[k].get(date_list[i])[:]
+            if maskFile:
+                data[mask==0] = np.nan
+            ts_data[i,:] = data.flatten()
+        rms = np.sqrt(np.nanmean(np.square(ts_data)))
+        return rms
 
 
 def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
@@ -695,7 +740,7 @@ def nonzero_mask(File, outFile='mask.h5'):
     h5 = h5py.File(File,'r')
     igramList = sorted(h5[k].keys())
     igramList = check_drop_ifgram(h5, atr, igramList)
-    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in igramList]
+    date12_list = ptime.list_ifgram2date12(igramList)
     prog_bar = ptime.progress_bar(maxValue=len(igramList), prefix='loading: ')
     for i in range(len(igramList)):
         igram = igramList[i]
@@ -1284,7 +1329,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     ifgram_num = len(ifgram_list)
 
     # Convert ifgram_list to date12/8_list
-    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list]
+    date12_list = ptime.list_ifgram2date12(ifgram_list)
     m_dates = [i.split('-')[0] for i in date12_list]
     s_dates = [i.split('-')[1] for i in date12_list]
     date8_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
@@ -1597,7 +1642,7 @@ def perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list=[]):
     h5file.close()
 
     # Temporal baseline velocity
-    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list]
+    date12_list = ptime.list_ifgram2date12(ifgram_list)
     m_dates = [i.split('-')[0] for i in date12_list]
     s_dates = [i.split('-')[1] for i in date12_list]
     date8_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))

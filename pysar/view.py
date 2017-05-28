@@ -123,6 +123,8 @@ class Basemap2(Basemap):
         lalo_step_candidate = [i*10**digit for i in step_candidate]
         distance = [(i - max_lalo_dist/max_tick_num)**2 for i in lalo_step_candidate]
         lalo_step = lalo_step_candidate[distance.index(min(distance))]
+        #lalo_step = 0.1
+
 
         # Auto tick sequence
         lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
@@ -625,11 +627,12 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     # Seed Point
     # If value of new seed point is not nan, re-seed the data and update inps.seed_yx/lalo
     # Otherwise, try to read seed info from atrributes into inps.seed_yx/lalo
-    if inps.seed_yx and not inps.seed_yx == [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]:
+    if inps.seed_yx and inps.seed_yx != [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]:
         inps.seed_value = data[inps.seed_yx[0]-inps.pix_box[1], inps.seed_yx[1]-inps.pix_box[0]]
         if not np.isnan(inps.seed_value):
             data -= inps.seed_value
-            print 'set reference point to: '+str(inps.seed_yx)
+            if meta_dict['FILE_TYPE'] in multi_group_hdf5_file+multi_dataset_hdf5_file:
+                print 'set reference point to: '+str(inps.seed_yx)
             if inps.geo_box:
                 inps.seed_lalo = [subset.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
                                   subset.coord_radar2geo(inps.seed_yx[1], meta_dict, 'x')]
@@ -1140,7 +1143,7 @@ def main(argv):
             if os.path.isfile(inps.exclude_epoch[0]):
                 inps.exclude_epoch = ptime.read_date_list(inps.exclude_epoch[0])
             inps.exclude_epoch = get_epoch_full_list_from_input(epochList, inps.exclude_epoch)[0]
-            inps.epoch -= inps.exclude_epoch
+            inps.epoch = sorted(list(set(inps.epoch) - set(inps.exclude_epoch)))
         else:
             inps.exclude_epoch = []
         epochNum = len(inps.epoch)

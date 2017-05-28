@@ -14,6 +14,7 @@
 
 
 import sys
+import re
 import time
 import datetime
 from datetime import datetime as dt
@@ -219,6 +220,21 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12):
     return ax, dss, dee
 
 
+def list_ifgram2date12(ifgram_list):
+    '''Convert ifgram list into date12 list
+    Input:
+        ifgram_list  - list of string in *YYMMDD-YYMMDD* or *YYMMDD_YYMMDD* format
+    Output:
+        date12_list  - list of string in YYMMDD-YYMMDD format
+    Example:
+        h5 = h5py.File('unwrapIfgram.h5','r')
+        ifgram_list = sorted(h5['interferograms'].keys())
+        date12_list = ptime.list_ifgram2date12(ifgram_list)
+    '''
+    date12_list = [str(re.findall('\d{6}[-_]\d{6}', i)[0]).replace('_','-') for i in ifgram_list]
+    return date12_list
+
+
 ###########################Simple progress bar######################
 class progress_bar:
     '''Creates a text-based progress bar. Call the object with 
@@ -233,7 +249,7 @@ class progress_bar:
     
     example:
     import pysar._datetime as ptime
-    date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in ifgram_list]
+    date12_list = ptime.list_ifgram2date12(ifgram_list)
     prog_bar = ptime.progress_bar(maxValue=1000, prefix='calculating:')
     for i in range(1000):
         prog_bar.update(i+1, suffix=date)

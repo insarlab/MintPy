@@ -13,7 +13,6 @@
 
 import os
 import time
-import re
 
 import h5py
 import numpy as np
@@ -185,7 +184,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
   
     elif k in ['interferograms','wrapped','coherence']:
         print 'number of interferograms: '+str(len(epochList))
-        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in epochList]
+        date12_list = ptime.list_ifgram2date12(epochList)
         for i in range(epoch_num):
             epoch = epochList[i]
             data = h5file[k][epoch].get(epoch)[:]

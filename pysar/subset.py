@@ -25,7 +25,6 @@
 
 import os
 import sys
-import re
 import argparse
 
 import h5py
@@ -534,7 +533,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
-        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in epochList]
+        date12_list = ptime.list_ifgram2date12(epochList)
         for i in range(epochNum):
             epoch = epochList[i]
             dset = h5file[k][epoch].get(epoch)

@@ -13,7 +13,6 @@
 
 import os
 import sys
-import re
 import argparse
 
 import h5py
@@ -89,7 +88,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
 
     elif k in ['interferograms','wrapped','coherence']:
         print 'number of interferograms: '+str(epochNum)
-        date12_list = [str(re.findall('\d{6}-\d{6}', i)[0]) for i in epochList]
+        date12_list = ptime.list_ifgram2date12(epochList)
         for i in range(epochNum):
             epoch = epochList[i]
             #print epoch

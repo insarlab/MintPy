@@ -12,7 +12,6 @@
 import sys
 import os
 import argparse
-import re
 
 import h5py
 import numpy as np
@@ -134,7 +133,7 @@ def main(argv):
         h5 = h5py.File(inps.file, 'r')
         ifgram_list_all = sorted(h5[k].keys())
         ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
-        date12_list_keep = [re.findall('\d{6}-\d{6}', i)[0] for i in ifgram_list_keep]
+        date12_list_keep = ptime.list_ifgram2date12(ifgram_list_keep)
         # Get date12_list_drop
         date12_list_drop = sorted(list(set(date12_list) - set(date12_list_keep)))
         print 'number of interferograms marked as dropped: '+str(len(date12_list_drop))

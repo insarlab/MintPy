@@ -24,7 +24,7 @@ def operation(data,operator,operand):
     elif operator == 'multiply': data2 = data * operand;
     elif operator == 'divide':   data2 = data / operand;
     elif operator == 'exp':      data2 = data ^ operand;      ## not working, come back later
-  
+
     return data2
 
 #####################  Image Add  ####################
@@ -92,7 +92,7 @@ def main(argv):
         operand  = float(sys.argv[3])
     except:
         usage();sys.exit(1)
-  
+
     if   operator in ['+','plus',  'add',      'addition']:        operator = 'plus'
     elif operator in ['-','minus', 'substract','substraction']:    operator = 'minus'
     elif operator in ['*','times', 'multiply', 'multiplication']:  operator = 'multiply'
