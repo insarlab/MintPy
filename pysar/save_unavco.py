@@ -143,7 +143,8 @@ def get_unavco_filename(timeseriesFile):
 
 ################################################################
 EXAMPLE='''example:
-  save_unavco.py timeseries.h5 -i incidence_angle -d dem.h5 -c temporal_coherence.h5 -m mask.h5
+  save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geo_incidenceAngle
+                 -d demGeo.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
 '''
 
 def cmdLineParse():

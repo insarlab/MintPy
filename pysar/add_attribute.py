@@ -52,7 +52,7 @@ def main(argv):
     ##### Check Inputs
     if not argv or argv[0] in ['-h','--help']:
         usage();  sys.exit(1)
-    if len(argv) < 2:
+    if len(argv) < 2 or not argv[1]:
         raise Exception('\nAt lease 2 inputs are needed.\n')
 
     ##### Read Original Attributes

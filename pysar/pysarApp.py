@@ -460,7 +460,7 @@ def main(argv):
 
     # Copy UNAVCO attribute txt file
     file_list = ['unavco_attributes.txt']
-    try: inps.unavco_atr_file = ut.get_file_list(file_list)[0]
+    try: inps.unavco_atr_file = ut.get_file_list(file_list, abspath=True)[0]
     except:
         try:
             process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
@@ -1076,8 +1076,8 @@ def main(argv):
     #############################################
     # Save to UNAVCO InSAR Archive format
     #############################################
+    print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
     if template['pysar.save.unavco'] in ['yes']:
-        print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
         if not inps.trans_file or not inps.dem_geo_file:
             warnings.warn('No geomap*.tran file or DEM in geo coord found! Skip saving.')
         else:
