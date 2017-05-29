@@ -27,13 +27,78 @@ import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 
+def read_template2inps(template_file, inps=None):
+    '''Read input template file into inps.ex_date'''
+    if not inps:
+        inps = cmdLineParse()
+    template = readfile.read_template(template_file)
+    key_list = template.keys()
+
+    # Read template option
+    prefix = 'pysar.topoError.'
+
+    key = prefix+'polyOrder'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.poly_order = 2
+        else:
+            inps.poly_order = int(value)
+
+    key = prefix+'excludeDate'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto','no']:
+            inps.ex_date = []
+        else:
+            inps.ex_date = value.replace(',',' ').split()
+
+    key = prefix+'stepFuncDate'
+    if key in key_list:
+        value = template[key]
+        if value not in ['auto','no']:
+            inps.step_date = ptime.yyyymmdd(value)
+        else:
+            inps.step_date = None
+
+
+    return inps
+
+
+def get_exclude_date(inps, date_list_all):
+    input_ex_date = list(inps.ex_date)
+    inps.ex_date = []
+    if input_ex_date:
+        for ex_date in input_ex_date:
+            if os.path.isfile(ex_date):
+                ex_date = ptime.read_date_list(ex_date)
+            else:
+                ex_date = [ptime.yyyymmdd(ex_date)]
+            inps.ex_date += list(set(ex_date) - set(inps.ex_date))
+        # delete dates not existed in input file
+        inps.ex_date = sorted(list(set(inps.ex_date).intersection(date_list_all)))
+        print 'Exclude date for DEM error estimation:'
+        print inps.ex_date
+
+    return inps
+
 
 ######################################
+TEMPLATE='''
+## 8. Topographic (DEM) Residual Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
+pysar.topoError              = auto    #[yes / no], auto for yes
+pysar.topoError.polyOrder    = auto    #[1 / 2 / 3], auto for 2, polynomial order of temporal deformation model
+pysar.topoError.excludeDate  = auto    #[20101120 / txtFile / no], auto for no, date not used for error estimation
+pysar.topoError.stepFuncDate = auto    #[20080529 / no], auto for no, date of step jump, i.e. eruption/earthquade date
+'''
+
 EXAMPLE='''example:
   dem_error.py  timeseries_ECMWF.h5
   dem_error.py  timeseries_ECMWF.h5  --phase-velocity
   dem_error.py  timeseries_ECMWF.h5  -d dem_radar.h5
   dem_error.py  geo_timeseries.h5    -i geo_incidence_angle.h5  -r geo_range.h5
+
+  dem_error.py  timeseries_ECMWF.h5 --template pysarApp_template.txt
 '''
 
 REFERENCE='''reference:
@@ -48,7 +113,14 @@ def cmdLineParse():
 
     parser.add_argument('timeseries_file', help='Timeseries file to be corrrected')
     parser.add_argument('-o','--outfile', help='Output file name for corrected time series')
-    
+    parser.add_argument('--exclude','--ex', dest='ex_date',\
+                        help='Exclude date(s) for DEM error estimation.\n'+\
+                             'All dates will be corrected for DEM residual phase still.')
+    parser.add_argument('--template', dest='template_file',\
+                        help='template file with the following items:'+TEMPLATE)
+    parser.add_argument('--step-date', dest='step_date',\
+                        help='Date of step jump for temporal deformation model, i.e. date of earthquake/volcanic eruption')
+
     parser.add_argument('-i', dest='incidence_angle', help='Incidence angle value/file in degrees')
     parser.add_argument('-r','--range-distance', dest='range_dis', help='Range distance value/file')
     #parser.add_argument('-d','--dem', dest='dem_file', help='DEM file to be updated')
@@ -63,7 +135,7 @@ def cmdLineParse():
                         help='polynomial order number of temporal deformation model, default = 2')
 
     inps = parser.parse_args()
-    return inps
+    return inps  
 
 
 ######################################
@@ -72,6 +144,11 @@ def main(argv):
     suffix = '_demErr'
     if not inps.outfile:
         inps.outfile = os.path.splitext(inps.timeseries_file)[0]+suffix+os.path.splitext(inps.timeseries_file)[1]
+
+    # 1. template_file
+    if inps.template_file:
+        print 'read option from template file: '+inps.template_file
+        inps = read_template2inps(inps.template_file, inps)
 
     # Read Time Series
     print "loading time series: " + inps.timeseries_file
@@ -83,6 +160,13 @@ def main(argv):
     date_list = sorted(h5['timeseries'].keys())
     date_num = len(date_list)
     print 'number of acquisitions: '+str(date_num)
+
+    # Exclude date info
+    #inps.ex_date = ['20070115','20100310']
+    if inps.ex_date:
+        inps = get_exclude_date(inps, date_list)
+        if inps.ex_date:
+            inps.ex_flag = np.array([i not in inps.ex_date for i in date_list])
 
     timeseries = np.zeros((len(date_list),length*width),np.float32)
     prog_bar = ptime.progress_bar(maxValue=date_num, prefix='loading: ')
@@ -169,14 +253,26 @@ def main(argv):
         A1 = np.hstack((np.ones((date_num, 1)), inps.tbase))
         A2 = inps.tbase**2 / 2.0
         A3 = inps.tbase**3 / 6.0
+            
     # Polynomial order of model
     print "temporal deformation model's polynomial order = "+str(inps.poly_order)
-    print '-------------------------------------------------'
     if   inps.poly_order == 1:  A_def = A1
     elif inps.poly_order == 2:  A_def = np.hstack((A1,A2))
     elif inps.poly_order == 3:  A_def = np.hstack((A1,A2,A3))
+
+    # step function
+    if inps.step_date:
+        print "temporal deformation model's step function step at "+inps.step_date
+        step_yy = ptime.yyyymmdd2years(inps.step_date)
+        yy_list = ptime.yyyymmdd2years(date_list)
+        flag_array = np.array(yy_list) >= step_yy
+        A_step = np.zeros((date_num, 1))
+        A_step[flag_array] = 1.0
+        A_def = np.hstack((A_def, A_step))
+
     # Heresh's original code for phase history approach
     #A_def = np.hstack((A2,A1,np.ones((date_num,1))))
+    print '-------------------------------------------------'
 
 
     ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
@@ -207,13 +303,20 @@ def main(argv):
                 A = np.hstack((A_delta_z, A_def))
 
             # L-2 norm inversion
-            A_inv = np.linalg.pinv(A)
+            if inps.ex_date:
+                A_inv = np.linalg.pinv(A[inps.ex_flag,:])
+            else:
+                A_inv = np.linalg.pinv(A)
 
             # Get unknown parameters X = [delta_z, vel, acc, delta_acc, ...]
             ts_dis = timeseries[:,i]
             if inps.phase_velocity:
                 ts_dis = np.diff(ts_dis, axis=0) / np.diff(inps.tbase, axis=0)
-            X = np.dot(A_inv, ts_dis)
+
+            if inps.ex_date:
+                X = np.dot(A_inv, ts_dis[inps.ex_flag])
+            else:
+                X = np.dot(A_inv, ts_dis)
 
             # Residual vector n
             resid_n[:, i] = ts_dis - np.dot(A, X)
@@ -245,13 +348,20 @@ def main(argv):
                 A = np.hstack((A_delta_z, A_def))
 
             # L-2 norm inversion
-            A_inv = np.linalg.pinv(A)
+            if inps.ex_date:
+                A_inv = np.linalg.pinv(A[inps.ex_flag,:])
+            else:
+                A_inv = np.linalg.pinv(A)
 
             # Get unknown parameters X = [delta_z, vel, acc, delta_acc, ...]
             ts_dis = timeseries[:,i*length:(i+1)*length]
             if inps.phase_velocity:
                 ts_dis = np.diff(ts_dis, axis=0) / np.diff(inps.tbase, axis=0)
-            X = np.dot(A_inv, ts_dis)
+
+            if inps.ex_date:
+                X = np.dot(A_inv, ts_dis[inps.ex_flag,:])
+            else:
+                X = np.dot(A_inv, ts_dis)
 
             # Residual vector n
             resid_n[:, i*length:(i+1)*length] = ts_dis - np.dot(A, X)
@@ -279,12 +389,19 @@ def main(argv):
             A = np.hstack((A_delta_z, A_def))
 
         # L-2 norm inversion
-        A_inv = np.linalg.pinv(A)
+            if inps.ex_date:
+                A_inv = np.linalg.pinv(A[inps.ex_flag,:])
+            else:
+                A_inv = np.linalg.pinv(A)
 
         # Get unknown parameters X = [delta_z, vel, acc, delta_acc, ...]
         if inps.phase_velocity:
             timeseries = np.diff(timeseries, axis=0) / np.diff(inps.tbase, axis=0)
-        X = np.dot(A_inv, timeseries)
+
+        if inps.ex_date:
+            X = np.dot(A_inv, timeseries[inps.ex_flag,:])
+        else:
+            X = np.dot(A_inv, timeseries)
 
         # Residual vector n
         resid_n = ts_dis - np.dot(A, X)

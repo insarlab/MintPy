@@ -209,7 +209,7 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
     elif fileList2:
         # Open existed hdf5 file with r+ mode
         print 'Continue by adding the following new epochs ...'
-        print 'number of '+ext+' to add: '+str(len(fileList))
+        print 'number of '+ext+' to add: '+str(len(fileList2))
         print 'open '+hdf5File+' with r+ mode'
         h5file = h5py.File(hdf5File, 'r+')
         fileList = list(fileList2)

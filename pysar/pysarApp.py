@@ -316,8 +316,10 @@ pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECM
 
 
 ## 8. Topographic (DEM) Residual Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
-pysar.topoError            = auto    #[yes / no], auto for yes
-pysar.topoError.polyOrder  = auto    #[1 / 2 / 3], auto for 2, polynomial order of temporal deformation model
+pysar.topoError              = auto    #[yes / no], auto for yes
+pysar.topoError.polyOrder    = auto    #[1 / 2 / 3], auto for 2, polynomial order of temporal deformation model
+pysar.topoError.excludeDate  = auto    #[20101120 / txtFile / no], auto for no, date not used for error estimation
+pysar.topoError.stepFuncDate = auto    #[20080529 / no], auto for no, date of step jump, i.e. eruption/earthquade date
 
 
 ## 8.1 Residual Standard Deviation (RSD)
@@ -555,7 +557,7 @@ def main(argv):
     fileList = [inps.work_dir+'/'+i for i in ['coherence.h5','Coherence.h5']]
     try:
         inps.coherence_file = ut.get_file_list(fileList, abspath=True)[0]
-        print 'Coherences: '+inps.coherence_file
+        print 'Spatial coherence  files: '+inps.coherence_file
     except:
         inps.coherence_file = None
         warnings.warn('No coherences file found. Cannot use coherence-based network modification without it.')
@@ -566,7 +568,7 @@ def main(argv):
     except: pass
     try:
         inps.dem_radar_file = ut.get_file_list(file_list, abspath=True)[0]
-        print 'DEM in radar coord: '+str(inps.dem_radar_file)
+        print 'DEM in  radar coordinate: '+str(inps.dem_radar_file)
     except:
         inps.dem_radar_file = None
         if not 'Y_FIRST' in atr.keys():
@@ -578,7 +580,7 @@ def main(argv):
     except: pass
     try:
         inps.dem_geo_file = ut.get_file_list(file_list, abspath=True)[0]
-        print 'DEM in geo   coord: '+inps.dem_geo_file
+        print 'DEM in  geo   coordinate: '+inps.dem_geo_file
     except:
         inps.dem_geo_file = None
         warnings.warn('No geo coord DEM found.')
@@ -589,7 +591,7 @@ def main(argv):
     except: pass
     try:
         inps.trans_file = ut.get_file_list(file_list, abspath=True)[0]
-        print 'Mapping transform file: '+str(inps.trans_file)
+        print 'Mapping transform   file: '+str(inps.trans_file)
     except:
         inps.trans_file = None
         if not 'Y_FIRST' in atr.keys():
@@ -897,23 +899,13 @@ def main(argv):
     ##############################################
     # Topographic (DEM) Residuals Correction (Optional)
     ##############################################
-    # read template option
-    inps.def_poly_order = 2
-    key = 'pysar.topoError.polyOrder'
-    if key in template.keys():
-        value = template[key]
-        if value == 'auto':
-            inps.def_poly_order = 2
-        else:
-            inps.def_poly_order = int(value)
-
     print '\n**********  Topographic Residual (DEM error) correction  *******'
     outName = os.path.splitext(inps.timeseries_file)[0]+'_demErr.h5'
+    topoCmd = 'dem_error.py '+inps.timeseries_file+' -o '+outName+' --template '+inps.template_file
+    print topoCmd
     inps.timeseries_resid_file = None
     if template['pysar.topoError'] in ['yes','auto']:
         print 'Correcting topographic residuals using method from Fattahi and Amelung, 2013, TGRS ...'
-        topoCmd = 'dem_error.py '+inps.timeseries_file+' -o '+outName+' --poly-order '+str(inps.def_poly_order)
-        print topoCmd
         if ut.update_file(outName, inps.timeseries_file):
             os.system(topoCmd)
         inps.timeseries_file = outName
