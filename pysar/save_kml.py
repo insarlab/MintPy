@@ -221,8 +221,8 @@ def main(argv):
     try:
         lon_step = float(atr['X_STEP'])
         lat_step = float(atr['Y_STEP'])
-        lon_unit = atr['Y_UNIT']
-        lat_unit = atr['X_UNIT']
+        #lon_unit = atr['Y_UNIT']
+        #lat_unit = atr['X_UNIT']
         West     = float(atr['X_FIRST'])
         North    = float(atr['Y_FIRST'])
         South    = North+lat_step*(data.shape[0]-1)

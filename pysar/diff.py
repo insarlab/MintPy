@@ -49,7 +49,7 @@ def diff_file(file1, file2, outName=None):
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
         print 'writing >>> '+outName
-  
+
         h5_1  = h5py.File(file1)
         h5_2  = h5py.File(file2)
         epochList = sorted(h5_1[k].keys())
@@ -67,12 +67,31 @@ def diff_file(file1, file2, outName=None):
 
     if k in ['timeseries']:
         print 'number of acquisitions: '+str(len(epochList))
+        # check reference date
+        if atr['ref_date'] == atr2['ref_date']:
+            ref_date = None
+        else:
+            ref_date = atr['ref_date']
+            data2_ref = h5_2[k2].get(ref_date)[:]
+            print 'consider different reference date'
+        # check reference pixel
+        ref_y = int(atr['ref_y'])
+        ref_x = int(atr['ref_x'])
+        if ref_y == int(atr2['ref_y']) and ref_x == int(atr2['ref_x']):
+            ref_y = None
+            ref_x = None
+        else:
+            print 'consider different reference pixel'
+
+        # calculate difference in loop
         for i in range(epoch_num):
             date = epochList[i]
             data1 = h5_1[k].get(date)[:]
             data2 = h5_2[k2].get(date)[:]
-            if atr2['ref_date'] != atr['ref_date']:
-                data2 -= h5_2[k2].get(atr['ref_date'])[:]
+            if ref_date:
+                data2 -= data2_ref
+            if ref_x and ref_y:
+                data2 -= data2[ref_y, ref_x]
             data = diff_data(data1, data2)
             dset = group.create_dataset(date, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=date)

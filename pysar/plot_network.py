@@ -154,29 +154,29 @@ def main(argv):
             if os.path.isfile(listFile):
                 print 'reading coherence value from existed '+listFile
                 fcoh = np.loadtxt(listFile, dtype=str)
-                inps.coherence_list = [float(i) for i in fcoh[:,1]]
-                coh_date12_list     = [i        for i in fcoh[:,0]]
+                inps.coherence_list  = [float(i) for i in fcoh[:,1]]
+                inps.coh_date12_list = [i        for i in fcoh[:,0]]
             else:
                 print 'calculating average coherence value from '+inps.coherence_file
                 if inps.mask_file:
                     mask = readfile.read(inps.mask_file)[0]
                 else:
                     mask = None
-                inps.coherence_list = ut.spatial_average(inps.coherence_file, mask, saveList=True)
-                coh_date12_list = pnet.get_date12_list(inps.coherence_file)
+                inps.coherence_list  = ut.spatial_average(inps.coherence_file, mask, saveList=True)
+                inps.coh_date12_list = pnet.get_date12_list(inps.coherence_file)
         else:
             print 'reading coherence value from '+inps.coherence_file
             fcoh = np.loadtxt(inps.coherence_file, dtype=str)
-            inps.coherence_list = [float(i) for i in fcoh[:,1]]
-            coh_date12_list     = [i        for i in fcoh[:,0]]
+            inps.coherence_list  = [float(i) for i in fcoh[:,1]]
+            inps.coh_date12_list = [i        for i in fcoh[:,0]]
 
         # Check length of coherence file and input file
-        if not set(coh_date12_list) == set(date12_list):
+        if not set(inps.coh_date12_list) == set(date12_list):
             print 'WARNING: input coherence list has different pairs/date12 from input file'
             print 'turn off the color plotting of interferograms based on coherence'
             inps.coherence_list = None
 
-
+    #inps.coh_thres = 0.7
     ##### 2. Plot
     # Fig 1 - Baseline History
     fig = plt.figure()
@@ -191,7 +191,10 @@ def main(argv):
     # Fig 2 - Coherence Matrix
     if inps.coherence_list:
         figName = 'CoherenceMatrix'+inps.fig_ext
-        fig = plt.figure()
+        if inps.fig_size:
+            fig = plt.figure(figsize=inps.fig_size)
+        else:
+            fig = plt.figure()
         ax = fig.add_subplot(111)
         ax = pnet.plot_coherence_matrix(ax, date12_list, inps.coherence_list)
 
@@ -211,7 +214,10 @@ def main(argv):
             print 'save figure to '+figName
 
     # Fig 4 - Interferogram Network
-    fig = plt.figure()
+    if inps.fig_size:
+        fig = plt.figure(figsize=inps.fig_size)
+    else:
+        fig = plt.figure()
     ax = fig.add_subplot(111)
     ax = pnet.plot_network(ax, date12_list, date8_list, pbase_list, vars(inps), date12_list_drop)
 
