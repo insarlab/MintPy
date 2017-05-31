@@ -36,6 +36,7 @@
 
 import os
 import sys
+import re
 
 import h5py
 import numpy as np
@@ -337,7 +338,7 @@ def read_template(File, delimiter='='):
     for line in open(File):
         line = line.strip()
         c = [i.strip() for i in line.split(delimiter, 1)]  #split on the 1st occurrence of delimiter
-        if len(c) < 2 or line.startswith('%') or line.startswith('#'):
+        if len(c) < 2 or line.startswith(('%','#')):
             if line.startswith(">"):
                 plotAttributeDict = {}
                 insidePlotObject = True
@@ -381,31 +382,217 @@ def read_roipac_rsc(File):
     return rsc_dict
 
 
-def read_gamma_par(File):
-    '''Read GAMMA .par file into a python dictionary structure.'''
+def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
+    '''Read GAMMA .par/.off file into a python dictionary structure.
+    Parameters: fname : file, str, or path. 
+                    File path of .par, .off file.
+                delimiter : str, optional
+                    String used to separate values.
+                skiprows : int, optional
+                    Skip the first skiprows lines.
+    Returns:    par_dict : dict
+                    Attributes dictionary
+    '''
     par_dict = {}
-    
-    f = open(File)
-    next(f); next(f);
-    for line in f:
-        l = line.split()
-        if len(l) < 2 or line.startswith('%') or line.startswith('#'):
-            next #ignore commented lines or those without variables
+
+    # Read txt file
+    f = open(fname,'r')
+    lines = f.readlines()[skiprows:]
+    for line in lines:
+        line = line.strip()
+        c = [i.strip() for i in line.split(delimiter, 1)]
+        if len(c) < 2 or line.startswith(('%','#')):
+            next
         else:
-            par_dict[l[0].strip()] = str.replace(l[1],'\n','').split("#")[0].strip()
-    
-    # Attributes: Gamma to ROI_PAC
-    #par_dict = attribute_gamma2roipac(par_dict, par_dict)
-    
+            key = c[0]
+            value = str.replace(c[1],'\n','').split("#")[0].split()[0].strip()
+            par_dict[key] = value
+    f.close()
+
     return par_dict
 
-def attribute_gamma2roipac(par_dict, rsc_dict=dict()):
+
+def attribute_gamma2roipac(par_dict):
     '''Convert Gamma par attribute into ROI_PAC format'''
-    try:    rsc_dict['WIDTH'] = par_dict['range_samples:']
-    except: rsc_dict['WIDTH'] = par_dict['interferogram_width:']
-    try:    rsc_dict['FILE_LENGTH'] = par_dict['azimuth_lines:']
-    except: rsc_dict['FILE_LENGTH'] = par_dict['interferogram_azimuth_lines:']
-    return rsc_dict
+    key_list = par_dict.keys()
+
+    # Length - number of rows
+    key = 'azimuth_lines'
+    if key in key_list:
+        par_dict['FILE_LENGTH'] = par_dict[key]
+
+    key = 'interferogram_azimuth_lines'
+    if key in key_list:
+        par_dict['FILE_LENGTH'] = par_dict[key]
+
+    # Width - number of columns
+    key = 'range_samples'
+    if key in key_list:
+        par_dict['WIDTH'] = par_dict[key]
+
+    key = 'interferogram_width'
+    if key in key_list:
+        par_dict['WIDTH'] = par_dict[key]
+
+    # WAVELENGTH
+    speed_of_light = 299792458.0   # meter/second
+    key = 'radar_frequency'
+    if key in key_list:
+        par_dict['WAVELENGTH'] = str(speed_of_light/float(par_dict[key]))
+
+    # HEIGHT & EARTH_RADIUS
+    key = 'earth_radius_below_sensor'
+    if key in key_list:
+        par_dict['EARTH_RADIUS'] = par_dict[key]
+
+        key2 = 'sar_to_earth_center'
+        if key2 in key_list:
+            par_dict['HEIGHT'] = str(float(par_dict[key2]) - float(par_dict[key]))
+
+    # UTC TIME
+    key = 'center_time'
+    if key in key_list:
+        par_dict['CENTER_LINE_UTC'] = par_dict[key]
+
+    # STARTING_RANGE
+    key = 'near_range_slc'
+    if key in key_list:
+        par_dict['STARTING_RANGE'] = par_dict[key]
+
+    # RANGE_PIXEL_SIZE
+    key = 'range_pixel_spacing'
+    if key in key_list:
+        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
+
+    # PLATFORM
+    key = 'sensor'
+    if key in key_list:
+        par_dict['PLATFORM'] = par_dict[key]
+
+    # ORBIT_DIRECTION
+    key = 'heading'
+    if key in key_list:
+        value = float(par_dict[key])
+        if 270 < value < 360 or -90 < value < 90:
+            par_dict['ORBIT_DIRECTION'] = 'ascending'
+        else:
+            par_dict['ORBIT_DIRECTION'] = 'descending'
+
+        par_dict['HEADING'] = str(value)
+
+    ##### Optional attributes for PySAR from ROI_PAC
+    key = 'azimuth_angle'
+    if key in key_list:
+        value = float(par_dict[key])
+        if 0 < value < 180:
+            par_dict['ANTENNA_SIDE'] = '-1'
+        else:
+            par_dict['ANTENNA_SIDE'] = '1'
+
+    key = 'prf'
+    if key in key_list:
+        par_dict['PRF'] = par_dict['prf']
+
+    return par_dict
+
+
+def read_gamma_attribute(fname):
+    '''Read/extract attributes for PySAR from Gamma product
+    Parameters: fname : str
+                    Gamma interferogram filename or path, i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
+    Returns:    atr : dict
+                    Attributes dictionary
+    '''
+    atr = {}
+
+    ## Get info: dir, date12, num of loooks
+    file_dir = os.path.dirname(fname)
+    file_basename = os.path.basename(fname)
+    date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0]).replace('_','-')
+    m_date, s_date = date12.split('-')
+    lks = os.path.splitext(file_basename.split(date12)[1])[0]
+    atr['DATE12'] = date12
+
+    ## Read .off and .par file
+    off_file   = file_dir+'/'+date12+lks+'.off'
+    m_par_file = file_dir+'/'+m_date+lks+'.amp.par'
+    s_par_file = file_dir+'/'+s_date+lks+'.amp.par'
+
+    par_dict = read_gamma_par(m_par_file)
+    off_dict = read_gamma_par(off_file)
+
+    atr.update(par_dict)
+    atr.update(off_dict)
+    atr = attribute_gamma2roipac(atr)
+
+    ## Perp Baseline Info
+    # Call Gamma command to calculate Bperp
+    base_perp_file = file_dir+'/'+date12+lks+'.base_perp'
+    if not os.path.isfile(base_perp_file):
+        baseline_file  = file_dir+'/'+date12+lks+'.baseline'
+        if not os.path.isfile(baseline_file):
+            baseCmd = 'base_orbit '+m_par_file+' '+s_par_file+' '+baseline_file
+            print baseCmd
+            os.system(baseCmd)
+        bperpCmd = 'base_perp '+baseline_file+' '+m_par_file+' '+off_file+' > '+base_perp_file
+        print bperpCmd
+        os.system(bperpCmd)
+
+    # Read bperp txt file
+    f = open(base_perp_file,'r')
+    line = f.readlines()[12]
+    bperp = line.split()[7]
+    f.close()
+
+    atr['P_BASELINE_TOP_HDR'] = str(bperp)
+    atr['P_BASELINE_BOTTOM_HDR'] = str(bperp)
+
+
+    ## LAT/LON_REF1/2/3/4
+    # Call Gamma command to calculate LAT/LON_REF
+    m_corner_file = os.path.splitext(m_par_file)[0]+'.corner'
+    if not os.path.isfile(m_corner_file):
+        m_corner_full_file = m_corner_file+'_full'
+        if not os.path.isfile(m_corner_full_file):
+            cornerCmd = 'SLC_corners '+m_par_file+' > '+m_corner_full_file
+            print cornerCmd
+            os.system(cornerCmd)
+        extractCmd = "awk 'NR==3,NR==6 {print $3,$6} ' "+m_corner_full_file+' > '+m_corner_file
+        print extractCmd
+        os.system(extractCmd)
+
+    # Read corner txt file
+    lalo_ref = np.loadtxt(m_corner_file, dtype='str')
+    atr['LAT_REF1'] = lalo_ref[0,0]
+    atr['LAT_REF2'] = lalo_ref[1,0]
+    atr['LAT_REF3'] = lalo_ref[2,0]
+    atr['LAT_REF4'] = lalo_ref[3,0]
+    atr['LON_REF1'] = lalo_ref[0,1]
+    atr['LON_REF2'] = lalo_ref[1,1]
+    atr['LON_REF3'] = lalo_ref[2,1]
+    atr['LON_REF4'] = lalo_ref[3,1]
+
+    return atr
+
+
+def read_gamma_file(fname):
+    '''Read/extract attributes for PySAR from Gamma product
+    Parameters: fname : str
+                    Gamma interferogram filename or path, i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
+    Returns:    data : 2D np.array
+                    2D matrix in np.array format
+                atr : dict
+                    Attributes dictionary
+    '''
+    ext = os.path.splitext(fname)[1]
+    if ext in ['.unw', '.cor']:   
+        atr = read_gamma_attribute(fname)
+        length = int(atr['FILE_LENGTH'])
+        width = int(atr['WIDTH'])
+
+        data = np.fromfile(fname, dtype='>f4').reshape(length,width)
+
+    return data, atr
 
 
 def read_isce_xml(File):
