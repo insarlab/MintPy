@@ -22,9 +22,10 @@ import numpy as np
 import shutil
 
 import pysar
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
 import pysar._datetime as ptime
+import pysar._readfile as readfile
+import pysar._writefile as writefile
+import pysar._pysar_utilities as ut
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -41,9 +42,14 @@ def auto_path_miami(inps, template={}):
     # .unw/.cor/.int files
     process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
     print "PROCESS directory: "+process_dir
-    if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/filt_*.unw'
-    if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
-    if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/filt_*rlks.int'
+    if inps.insar_processor == 'roipac':
+        if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/filt_*.unw'
+        if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
+        if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/filt_*rlks.int'
+    elif inps.insar_processor == 'gamma':
+        if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/diff_*rlks.unw'
+        if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
+        if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/diff_*rlks.int'
 
     # master interferogram for geomap*.trans and DEM in radar coord
     try:     m_date12 = np.loadtxt(process_dir+'/master_ifgram.txt', dtype=str).tolist()
@@ -52,12 +58,22 @@ def auto_path_miami(inps, template={}):
         except: pass
 
     if not inps.trans or inps.trans == 'auto':
-        try: inps.trans = process_dir+'/GEO/*'+m_date12+'*/geomap*.trans'
-        except: warnings.warn('No master interferogram found! Can not locate geomap*.trans file for geocoding!')
+        try:
+            if inps.insar_processor == 'roipac':
+                inps.trans = process_dir+'/GEO/*'+m_date12+'*/geomap*.trans'
+            elif inps.insar_processor == 'gamma':
+                inps.trans = process_dir+'/sim_'+m_date12+'/sim_*.UTM_TO_RDC'
+        except:
+            warnings.warn('No master interferogram found! Can not locate mapping transformation file for geocoding!')
     
     if not inps.dem_radar or inps.dem_radar == 'auto':
-        try: inps.dem_radar = process_dir+'/DONE/*'+m_date12+'*/radar*.hgt'
-        except: warnings.warn('No master interferogram found! Can not locate DEM in radar coord!')
+        try:
+            if inps.insar_processor == 'roipac':
+                inps.dem_radar = process_dir+'/DONE/*'+m_date12+'*/radar*.hgt'
+            elif inps.insar_processor == 'gamma':
+                inps.dem_radar = process_dir+'/sim_'+m_date12+'/sim_*.hgt_sim'
+        except:
+            warnings.warn('No master interferogram found! Can not locate DEM in radar coord!')
 
     # Use DEMg/DEM option if dem_geo is not specified in pysar option
     dem_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/DEM'
@@ -188,7 +204,7 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
 
     '''
     ext = os.path.splitext(fileList[0])[1]
-    print 'loading ROI_PAC '+ext+' files into '+fileType+' HDF5 file ...'
+    print 'loading '+ext+' files into '+fileType+' HDF5 file ...'
     print 'number of '+ext+' input: '+str(len(fileList))
 
     # Check width/length mode of input files
@@ -314,17 +330,17 @@ def roipac2single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict(
     '''
     if not ut.update_file(outfile, infile):
         return outfile
-    
+
     # Read input file
     print 'loading file: '+infile
     data, atr = readfile.read(infile)
-    
+
     # Write output file - data
     print 'writing >>> '+outfile
     h5 = h5py.File(outfile, 'w')
     group = h5.create_group(file_type)
     dset = group.create_dataset(file_type, data=data, compression='gzip')
-    
+
     # Write output file - attributes
     for key, value in atr.iteritems():
         group.attrs[key] = value
@@ -400,7 +416,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         elif k in ['.int']:  file_type = 'wrapped'
         elif k in ['.byt']:  file_type = 'snaphu_connect_component'
         elif k in ['.msk']:  file_type = 'mask'
-        elif k in ['.hgt','.dem','dem']:
+        elif k in ['.hgt','.dem','dem','.hgt_sim']:
             file_type = 'dem'
         elif k in ['.trans']:
             file_type = '.trans'
@@ -482,7 +498,14 @@ def load_data_from_template(inps):
         if inps.template_filename:
             inps.project_name = os.path.splitext(inps.template_filename[0])[0]
 
-    if 'pysar.insarProcessor' in keyList:   inps.insar_processor = template['pysar.insarProcessor']
+    key = 'pysar.insarProcessor'
+    if key in keyList:
+        value = template[key]
+        if value == 'auto':
+            inps.insar_processor = 'roipac'
+        else:
+            inps.insar_processor = value
+
     if 'pysar.unwrapFiles'    in keyList:   inps.unw   = template['pysar.unwrapFiles']
     if 'pysar.corFiles'       in keyList:   inps.cor   = template['pysar.corFiles']
     if 'pysar.wrapFiles'      in keyList:   inps.int   = template['pysar.wrapFiles']
@@ -521,6 +544,15 @@ def load_data_from_template(inps):
     ##------------------------------------ Loading into HDF5 ---------------------------------------##
     # required - unwrapped interferograms
     inps.ifgram_file = load_file(inps.unw, vars(inps))
+
+    # Copy unwrap ifgram atr for Gamma DEM file in radar coord
+    if inps.insar_processor == 'gamma' and ut.get_file_list(inps.dem_radar, abspath=True):
+        inps.dem_radar = ut.get_file_list(inps.dem_radar, abspath=True)[0]
+        dem_rsc = readfile.read_attribute(inps.ifgram_file)
+        dem_rsc['FILE_TYPE'] = '.hgt_sim'
+        dem_rsc['PROCESSOR'] = 'gamma'
+        dem_rsc_file = inps.dem_radar+'.rsc'
+        writefile.write_roipac_rsc(dem_rsc, dem_rsc_file)
 
     # optional but recommended files - multi_group_hdf5_file
     inps.coherence_file = load_file(inps.cor, vars(inps))

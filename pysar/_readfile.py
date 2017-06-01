@@ -207,7 +207,7 @@ def read(File, box=(), epoch=''):
 
         ##### Gamma
     elif processor == 'gamma':
-        if ext in ['.unw','.cor']:
+        if ext in ['.unw','.cor','.hgt_sim']:
             data, atr = read_real_float32(File, byteorder='ieee-be')
             if box: data = data[box[1]:box[3],box[0]:box[2]]
             return data, atr
