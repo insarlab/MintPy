@@ -182,7 +182,7 @@ def main(argv):
     # Perpendicular Baseline
     print 'read perpendicular baseline'
     try:
-        inps.pbase = ut.perp_baseline_timeseries(atr, dimension=1)
+        inps.pbase = ut.perp_baseline_timeseries(atr, dimension=0)
         if inps.pbase.shape[1] > 1:
             print '\tconsider P_BASELINE variation in azimuth direction'
         else:
