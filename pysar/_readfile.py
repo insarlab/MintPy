@@ -161,7 +161,7 @@ def read(File, box=(), epoch=''):
         return data, atr
 
     ##### ROI_PAC
-    elif processor in ['roipac','gamma']:
+    elif processor in ['roipac']:
         if ext in ['.unw','.cor','.hgt', '.msk']:
             if box:
                 amp,pha,atr = read_float32(File,box)
@@ -206,7 +206,12 @@ def read(File, box=(), epoch=''):
                 return az, atr
 
         ##### Gamma
-        #elif processor == 'gamma':
+    elif processor == 'gamma':
+        if ext in ['.unw','.cor']:
+            data, atr = read_real_float32(File, byteorder='ieee-be')
+            if box: data = data[box[1]:box[3],box[0]:box[2]]
+            return data, atr
+
         elif ext == '.mli':
             data,atr = read_real_float32(File)
             if box: data = data[box[1]:box[3],box[0]:box[2]]
@@ -262,7 +267,7 @@ def read_attribute(File, epoch=''):
             except: atr['ref_date'] = sorted(h5f[k[0]].keys())[0]
 
         h5f.close()
-    
+
     else:
         # attribute file list
         try:
@@ -273,15 +278,19 @@ def read_attribute(File, epoch=''):
         ##### GAMMA
         if os.path.isfile(File+'.par'):
             atr = read_gamma_par(File+'.par')
-            atr['PROCESSOR'] = 'gamma'
-            atr['FILE_TYPE'] = ext
-        
+            if 'FILE_TYPE' not in atr.keys():
+                atr['FILE_TYPE'] = ext
+            if 'PROCESSOR' not in atr.keys():
+                atr['PROCESSOR'] = 'gamma'
+
         ##### ROI_PAC
         elif rscFile:
             atr = read_roipac_rsc(rscFile)
-            atr['PROCESSOR'] = 'roipac'
-            atr['FILE_TYPE'] = ext
-    
+            if 'FILE_TYPE' not in atr.keys():
+                atr['FILE_TYPE'] = ext
+            if 'PROCESSOR' not in atr.keys():
+                atr['PROCESSOR'] = 'roipac'
+
         ##### ISCE
         elif os.path.isfile(File+'.xml'):
             atr = read_isce_xml(File+'.xml')
@@ -382,6 +391,33 @@ def read_roipac_rsc(File):
     return rsc_dict
 
 
+def load_roipac_attribute(fname):
+    '''Read/extract attributes for PySAR from ROI_PAC product
+    Parameters: fname : str
+                    ROIPAC interferogram filename or path, i.e. /PopoSLT143TsxD/filt_130118-130129_4rlks.unw
+    Returns:    atr : dict
+                    Attributes dictionary
+    '''
+    atr = {}
+
+    ## Get info: dir, date12, num of loooks
+    file_dir = os.path.dirname(fname)
+    file_basename = os.path.basename(fname)
+    date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0]).replace('_','-')
+    m_date, s_date = date12.split('-')
+
+    data_rsc_file = fname+'.rsc'
+    baseline_rsc_file = file_dir+'/'+m_date+'_'+s_date+'_baseline.rsc'
+
+    data_rsc_dict     = read_roipac_rsc(data_rsc_file)
+    baseline_rsc_dict = read_roipac_rsc(baseline_rsc_file)
+
+    atr.update(data_rsc_dict)
+    atr.update(baseline_rsc_dict)
+
+    return atr
+
+
 def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
     '''Read GAMMA .par/.off file into a python dictionary structure.
     Parameters: fname : file, str, or path. 
@@ -410,189 +446,6 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
     f.close()
 
     return par_dict
-
-
-def attribute_gamma2roipac(par_dict):
-    '''Convert Gamma par attribute into ROI_PAC format'''
-    key_list = par_dict.keys()
-
-    # Length - number of rows
-    key = 'azimuth_lines'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
-
-    key = 'interferogram_azimuth_lines'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
-
-    # Width - number of columns
-    key = 'range_samples'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
-
-    key = 'interferogram_width'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
-
-    # WAVELENGTH
-    speed_of_light = 299792458.0   # meter/second
-    key = 'radar_frequency'
-    if key in key_list:
-        par_dict['WAVELENGTH'] = str(speed_of_light/float(par_dict[key]))
-
-    # HEIGHT & EARTH_RADIUS
-    key = 'earth_radius_below_sensor'
-    if key in key_list:
-        par_dict['EARTH_RADIUS'] = par_dict[key]
-
-        key2 = 'sar_to_earth_center'
-        if key2 in key_list:
-            par_dict['HEIGHT'] = str(float(par_dict[key2]) - float(par_dict[key]))
-
-    # UTC TIME
-    key = 'center_time'
-    if key in key_list:
-        par_dict['CENTER_LINE_UTC'] = par_dict[key]
-
-    # STARTING_RANGE
-    key = 'near_range_slc'
-    if key in key_list:
-        par_dict['STARTING_RANGE'] = par_dict[key]
-
-    # RANGE_PIXEL_SIZE
-    key = 'range_pixel_spacing'
-    if key in key_list:
-        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
-
-    # PLATFORM
-    key = 'sensor'
-    if key in key_list:
-        par_dict['PLATFORM'] = par_dict[key]
-
-    # ORBIT_DIRECTION
-    key = 'heading'
-    if key in key_list:
-        value = float(par_dict[key])
-        if 270 < value < 360 or -90 < value < 90:
-            par_dict['ORBIT_DIRECTION'] = 'ascending'
-        else:
-            par_dict['ORBIT_DIRECTION'] = 'descending'
-
-        par_dict['HEADING'] = str(value)
-
-    ##### Optional attributes for PySAR from ROI_PAC
-    key = 'azimuth_angle'
-    if key in key_list:
-        value = float(par_dict[key])
-        if 0 < value < 180:
-            par_dict['ANTENNA_SIDE'] = '-1'
-        else:
-            par_dict['ANTENNA_SIDE'] = '1'
-
-    key = 'prf'
-    if key in key_list:
-        par_dict['PRF'] = par_dict['prf']
-
-    return par_dict
-
-
-def read_gamma_attribute(fname):
-    '''Read/extract attributes for PySAR from Gamma product
-    Parameters: fname : str
-                    Gamma interferogram filename or path, i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
-    Returns:    atr : dict
-                    Attributes dictionary
-    '''
-    atr = {}
-
-    ## Get info: dir, date12, num of loooks
-    file_dir = os.path.dirname(fname)
-    file_basename = os.path.basename(fname)
-    date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0]).replace('_','-')
-    m_date, s_date = date12.split('-')
-    lks = os.path.splitext(file_basename.split(date12)[1])[0]
-    atr['DATE12'] = date12
-
-    ## Read .off and .par file
-    off_file   = file_dir+'/'+date12+lks+'.off'
-    m_par_file = file_dir+'/'+m_date+lks+'.amp.par'
-    s_par_file = file_dir+'/'+s_date+lks+'.amp.par'
-
-    par_dict = read_gamma_par(m_par_file)
-    off_dict = read_gamma_par(off_file)
-
-    atr.update(par_dict)
-    atr.update(off_dict)
-    atr = attribute_gamma2roipac(atr)
-
-    ## Perp Baseline Info
-    # Call Gamma command to calculate Bperp
-    base_perp_file = file_dir+'/'+date12+lks+'.base_perp'
-    if not os.path.isfile(base_perp_file):
-        baseline_file  = file_dir+'/'+date12+lks+'.baseline'
-        if not os.path.isfile(baseline_file):
-            baseCmd = 'base_orbit '+m_par_file+' '+s_par_file+' '+baseline_file
-            print baseCmd
-            os.system(baseCmd)
-        bperpCmd = 'base_perp '+baseline_file+' '+m_par_file+' '+off_file+' > '+base_perp_file
-        print bperpCmd
-        os.system(bperpCmd)
-
-    # Read bperp txt file
-    f = open(base_perp_file,'r')
-    line = f.readlines()[12]
-    bperp = line.split()[7]
-    f.close()
-
-    atr['P_BASELINE_TOP_HDR'] = str(bperp)
-    atr['P_BASELINE_BOTTOM_HDR'] = str(bperp)
-
-
-    ## LAT/LON_REF1/2/3/4
-    # Call Gamma command to calculate LAT/LON_REF
-    m_corner_file = os.path.splitext(m_par_file)[0]+'.corner'
-    if not os.path.isfile(m_corner_file):
-        m_corner_full_file = m_corner_file+'_full'
-        if not os.path.isfile(m_corner_full_file):
-            cornerCmd = 'SLC_corners '+m_par_file+' > '+m_corner_full_file
-            print cornerCmd
-            os.system(cornerCmd)
-        extractCmd = "awk 'NR==3,NR==6 {print $3,$6} ' "+m_corner_full_file+' > '+m_corner_file
-        print extractCmd
-        os.system(extractCmd)
-
-    # Read corner txt file
-    lalo_ref = np.loadtxt(m_corner_file, dtype='str')
-    atr['LAT_REF1'] = lalo_ref[0,0]
-    atr['LAT_REF2'] = lalo_ref[1,0]
-    atr['LAT_REF3'] = lalo_ref[2,0]
-    atr['LAT_REF4'] = lalo_ref[3,0]
-    atr['LON_REF1'] = lalo_ref[0,1]
-    atr['LON_REF2'] = lalo_ref[1,1]
-    atr['LON_REF3'] = lalo_ref[2,1]
-    atr['LON_REF4'] = lalo_ref[3,1]
-
-    return atr
-
-
-def read_gamma_file(fname):
-    '''Read/extract attributes for PySAR from Gamma product
-    Parameters: fname : str
-                    Gamma interferogram filename or path, i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
-    Returns:    data : 2D np.array
-                    2D matrix in np.array format
-                atr : dict
-                    Attributes dictionary
-    '''
-    ext = os.path.splitext(fname)[1]
-    if ext in ['.unw', '.cor']:   
-        atr = read_gamma_attribute(fname)
-        length = int(atr['FILE_LENGTH'])
-        width = int(atr['WIDTH'])
-
-        data = np.fromfile(fname, dtype='>f4').reshape(length,width)
-
-    return data, atr
 
 
 def read_isce_xml(File):
@@ -703,14 +556,23 @@ def read_complex_float32(File, real_imag=False):
         return data, atr
 
 
-def read_real_float32(File):
+def read_real_float32(fname, byteorder=None):
     '''Read real float 32 data matrix, i.e. GAMMA .mli file
-    Usage:  data, atr = read_real_float32('20070603.mli')
+    Parameters: fname     : str, path, filename to be read
+                byteorder : str, optional, order of reading byte in the file
+    Returns: data : 2D np.array, data matrix 
+             atr  : dict, attribute dictionary
+    Usage: data, atr = read_real_float32('20070603.mli')
+           data, atr = read_real_float32('diff_filt_130118-130129_4rlks.unw')
     '''
-    atr = read_attribute(File)
+    atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-    data = np.fromfile(File,dtype=np.float32).reshape(length,width)
+
+    if byteorder in ['big-endian','b','ieee-be']:
+        data = np.fromfile(fname, dtype='>f4').reshape(length, width)
+    else:
+        data = np.fromfile(fname, dtype=np.float32).reshape(length, width)
     return data, atr
 
 

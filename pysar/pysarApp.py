@@ -237,6 +237,7 @@ TEMPLATE='''##------------------------ pysarApp_template.txt -------------------
 ##     pysar.transFile   = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
 ##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
+pysar.insarProcessor     = auto  #[roipac, isce, gamma, doris, gmtsar], auto for roipac, InSAR processor
 pysar.unwrapFiles        = auto  #[filt*.unw]
 pysar.corFiles           = auto  #[filt*.cor]
 pysar.transFile          = auto  #[geomap*.trans / sim*.UTM_TO_RDC]

@@ -226,27 +226,35 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
             gg = h5file[fileType]                  # existing hdf5 file
         
         for file in fileList:
+            # Read data and attributes
             print 'Adding ' + file
-            data, rsc = readfile.read(file)
-            
-            # Dataset
+            data, atr = readfile.read(file)
+
+            if 'PROCESSOR' in atr.keys() and atr['PROCESSOR'] == 'roipac':
+                try:
+                    d1, d2 = rsc['DATE12'].split('-')
+                    baseline_file = os.path.dirname(file)+'/'+d1+'_'+d2+'_baseline.rsc'
+                    baseline_rsc = readfile.read_roipac_rsc(baseline_file)
+                    atr.update(baseline_rsc)
+                except:
+                    print 'No *_baseline.rsc file found!'
+
+            # PySAR attributes
+            atr['drop_ifgram'] = 'no'
+            try:
+                atr['PROJECT_NAME'] = extra_meta_dict['project_name']
+            except:
+                pass
+
+            # Write dataset
             group = gg.create_group(os.path.basename(file))
             dset = group.create_dataset(os.path.basename(file), data=data, compression='gzip')
-            
-            # Attribute - *.unw.rsc
-            for key,value in rsc.iteritems():
-                group.attrs[key] = value
-            # Attribute - *baseline.rsc
-            d1, d2 = rsc['DATE12'].split('-')
-            baseline_file = os.path.dirname(file)+'/'+d1+'_'+d2+'_baseline.rsc'
-            baseline_rsc = readfile.read_roipac_rsc(baseline_file)
-            for key,value in baseline_rsc.iteritems():
-                group.attrs[key] = value
-            # Attribute - PySAR
-            group.attrs['drop_ifgram'] = 'no'
-            try: group.attrs['PROJECT_NAME'] = extra_meta_dict['project_name']
-            except: pass
-        
+
+            # Write attributes
+            for key, value in atr.iteritems():
+                if key and value:
+                    group.attrs[key] = str(value)
+
         # End of Loop
         h5file.close()
         print 'finished writing to '+hdf5File
@@ -351,6 +359,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         inps_dict - dict, including the following attributes
                     PROJECT_NAME   : KujuAlosAT422F650  (extra attribute dictionary to add to output file)
                     timeseries_dir : directory of time series analysis, e.g. KujuAlosAT422F650/PYSAR
+                    insar_processor: InSAR processor, roipac, isce, gamma, doris
         outfile   - string, output file name
         file_type - string, group name for output HDF5 file, interferograms, coherence, dem, etc.
     Output:
@@ -370,6 +379,15 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     fileList = ut.get_file_list(fileList, abspath=True)
     if not fileList:
         return None
+
+    # Prepare .rsc file for Gamma product, if it's not prepared yet.
+    if inps_dict['insar_processor'] == 'gamma':
+        for File in fileList:
+            if not os.path.isfile(File+'.rsc'):
+                prepCmd = 'prep_gamma.py '+File
+                print prepCmd
+                os.system(prepCmd)
+
     atr = readfile.read_attribute(fileList[0])
     k = atr['FILE_TYPE']
     print '--------------------------------------------'
@@ -464,6 +482,7 @@ def load_data_from_template(inps):
         if inps.template_filename:
             inps.project_name = os.path.splitext(inps.template_filename[0])[0]
 
+    if 'pysar.insarProcessor' in keyList:   inps.insar_processor = template['pysar.insarProcessor']
     if 'pysar.unwrapFiles'    in keyList:   inps.unw   = template['pysar.unwrapFiles']
     if 'pysar.corFiles'       in keyList:   inps.cor   = template['pysar.corFiles']
     if 'pysar.wrapFiles'      in keyList:   inps.int   = template['pysar.wrapFiles']
@@ -547,6 +566,7 @@ TEMPLATE='''
 ##     pysar.transFile   = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
 ##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
+pysar.insarProcessor     = auto  #[roipac, isce, gamma, doris], auto for roipac, InSAR processor
 pysar.unwrapFiles        = auto  #[filt*.unw, auto], path of all unwrapped interferograms
 pysar.corFiles           = auto  #[filt*.cor, auto], path of all coherence files
 pysar.transFile          = auto  #[geomap*.trans, sim*.UTM_TO_RDC, auto], path of mapping transformation file
@@ -562,6 +582,9 @@ def cmdLineParse():
     
     parser.add_argument('--template', dest='template_file', nargs='*', help='template file, to get PROJECT_NAME')
     parser.add_argument('--project', dest='project_name', help='project name of dataset, used in INSARMAPS Web Viewer')
+    parser.add_argument('--processor', dest='insar_processor',\
+                        default='roipac', choices={'roipac','gamma','isce','doris','gmtsar'},\
+                        help='InSAR processor/software of the file')
 
     singleFile = parser.add_argument_group('Load into single HDF5 file')
     singleFile.add_argument('-f','--file', nargs='*', help='file(s) to be loaded, processed by ROI_PAC, Gamma, DORIS or ISCE.')
@@ -585,7 +608,6 @@ def cmdLineParse():
 #############################  Main Function  ################################
 def main(argv):
     inps = cmdLineParse()
-
     if inps.file:
         # Load data into one hdf5 file
         inps.outfile = load_file(inps.file, vars(inps), inps.outfile)
