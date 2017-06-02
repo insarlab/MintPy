@@ -257,10 +257,8 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
 
             # PySAR attributes
             atr['drop_ifgram'] = 'no'
-            try:
-                atr['PROJECT_NAME'] = extra_meta_dict['project_name']
-            except:
-                pass
+            try:     atr['PROJECT_NAME'] = extra_meta_dict['project_name']
+            except:  atr['PROJECT_NAME'] = 'PYSAR'
 
             # Write dataset
             group = gg.create_group(os.path.basename(file))
@@ -268,8 +266,7 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
 
             # Write attributes
             for key, value in atr.iteritems():
-                if key and value:
-                    group.attrs[key] = str(value)
+                group.attrs[key] = str(value)
 
         # End of Loop
         h5file.close()
