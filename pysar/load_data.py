@@ -248,7 +248,7 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
 
             if 'PROCESSOR' in atr.keys() and atr['PROCESSOR'] == 'roipac':
                 try:
-                    d1, d2 = rsc['DATE12'].split('-')
+                    d1, d2 = atr['DATE12'].split('-')
                     baseline_file = os.path.dirname(file)+'/'+d1+'_'+d2+'_baseline.rsc'
                     baseline_rsc = readfile.read_roipac_rsc(baseline_file)
                     atr.update(baseline_rsc)
