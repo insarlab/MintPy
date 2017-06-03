@@ -10,6 +10,17 @@
 
 PySAR is an InSAR (Interferometric Synthetic Aperture Radar) time series package to produce three dimensional (space and time) ground displacement from InSAR data. 
 
+### 1. Installation   
+
+We recommend using Anaconda to install the python environment and the prerequisite packages. You will need:   
+- Python2.7 
+- Numpy
+- Scipy
+- h5py
+- Matplotlib
+- 
+
+
 To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path. Depending on your shell you may use commands such as the following examples to setup pysar:   
 
 Using bash:   
