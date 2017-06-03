@@ -8,20 +8,22 @@
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/yunjunz/PySAR)
 [![Badges](http://img.shields.io/:badges-7/7-ff6799.svg)](https://github.com/yunjunz/PySAR)
 
-PySAR is an InSAR (Interferometric Synthetic Aperture Radar) time series package to produce three dimensional (space and time) ground displacement from InSAR data. To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path   
+PySAR is an InSAR (Interferometric Synthetic Aperture Radar) time series package to produce three dimensional (space and time) ground displacement from InSAR data. 
 
-Depending on your shell you may use commands such as the following examples to setup pysar:   
+To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path. Depending on your shell you may use commands such as the following examples to setup pysar:   
 
 Using bash:   
-export PYTHONPATH=/nethome/hfattahi/development/PySAR:${PYTHONPATH}   
-export PATH="/nethome/hfattahi/development/PySAR/pysar:$PATH"   
-export TSSARDIR=/nethome/timeseries/   
+
+    export PYSAR_HOME="~/Documents/development/python/PySAR"
+    export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
+    export PATH="${PYSAR_HOME}/pysar:$PATH"   
 
 Using csh:   
-setenv PYTHONPATH "/nethome/hfattahi/development/PySAR"    
-set path = (/nethome/hfattahi/development/PySAR/pysar $path)   
-setenv TSSARDIR "/nethome/timeseries/"   
 
+    setenv PYSAR_HOME ~/Documents/development/python/PySAR
+    setenv PYTHONPATH ${PYSAR_HOME}
+    set path = ( $PYSAR_HOME/pysar $path)
+ 
 Run pysarApp.py to see the examples of processing options.   
 
 ##########################################################   
