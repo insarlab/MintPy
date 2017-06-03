@@ -82,7 +82,7 @@ def main(argv):
     #    sys.exit(1)
     #h5timeseries = h5py.File(timeseriesFile,'w')
   
-    print '\n************** Inverse Time Series ****************'
+    #print '\n************** Inverse Time Series ****************'
     if not inversion_method == 'l1':
         print 'Inverse time series using L2 norm minimization'
         ut.timeseries_inversion(igramsFile,timeseriesFile)

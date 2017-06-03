@@ -86,6 +86,7 @@ def usage():
       info.py unwrapIfgram.h5    3
 
       info.py timeseries.h5 --tree
+      info.py timeseries.h5 --date   # print out date list of timeseries HDF5 file
 
 ***************************************************************
     '''
@@ -96,18 +97,29 @@ def main(argv):
     ##### Check Inputs
     try:    File = argv[0]
     except: usage();sys.exit(1)
-    print '\n************************ File Info *****************************'
 
     #################### Basic Info #####################
     try: atr = readfile.read_attribute(File)
     except: print 'Can not read file: '+File; sys.exit(1)
     ext = os.path.splitext(File)[1].lower()
     k = atr['FILE_TYPE']
+
+    # Print out date list for timeseries HDF5 file
+    try:
+        if k in ['timeseries'] and argv[1] in ['--date']:
+            h5 = h5py.File(File, 'r')
+            dateList = h5[k].keys()
+            for date in dateList:
+                print date
+            h5.close()
+            return
+    except: pass
+
+    print '\n************************ File Info *****************************'
     print 'File name   : '+os.path.basename(File)
     print 'File type   : '+atr['PROCESSOR']+' '+atr['FILE_TYPE']
     try:  atr['X_FIRST'];  print 'Coordinates : GEO'
     except:                print 'Coordinates : radar'
-
 
     #################### File Structure #####################
     try:
@@ -132,7 +144,6 @@ def main(argv):
     if k == 'timeseries':
         try: print_timseries_date_info(epochList)
         except: pass
-
         print '*************** Attributes **************'
         print_attributes(atr)
 

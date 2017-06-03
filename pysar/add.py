@@ -95,7 +95,8 @@ def main(argv):
             if not r['FILE_TYPE'] == k:
                 print 'Input file type is not the same: '+r['FILE_TYPE']
                 sys.exit(1)
-  
+
+        print 'writing >>> '+outName
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
   
@@ -146,6 +147,7 @@ def main(argv):
             print 'loading '+File
             d,r = readfile.read(File)
             data = add(data,d)
+        print 'writing >>> '+outName
         writefile.write(data,atr,outName)
 
 

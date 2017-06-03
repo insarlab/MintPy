@@ -51,7 +51,7 @@ def write(*args):
         data    = args[0]
         atr     = args[1]
         outname = args[2]
-  
+
     ext = os.path.splitext(outname)[1].lower()
     ############### Read ###############
     #print 'writing >>> '+outname
@@ -68,7 +68,6 @@ def write(*args):
         for key , value in atr.iteritems():
             group.attrs[key]=value
         h5file.close()
-  
         return outname
 
     ##### ISCE / ROI_PAC GAMMA / Image product
@@ -86,18 +85,47 @@ def write(*args):
             write_real_float32(data,outname)
         elif ext == '.slc':
             write_complex_int16(data,outname)
+        elif ext == '.int':
+            write_complex64(data, outname)
         else: print 'Un-supported file type: '+ext; return 0;
-  
+
         ##### Write .rsc File
-        digits = max([len(key) for key in atr.keys()]+[0])
-        f = '{0:<%d}    {1}'%(digits)
-        
-        frsc = open(outname+'.rsc','w')
-        for key in atr.keys():
-            frsc.write(f.format(str(key), str(atr[key]))+'\n')
-        frsc.close()
-  
+        write_roipac_rsc(atr, outname+'.rsc')
         return outname
+
+
+def write_roipac_rsc(atr, outname, sorting=True):
+    '''Write attribute dict into ROI_PAC .rsc file
+    Inputs:
+        atr     - dict, attributes dictionary
+        outname - rsc file name, to which attribute is writen
+        sorting - bool, sort attributes in alphabetic order while writing
+    Output:
+        outname
+    '''
+
+    # sorting by key name
+    keyList = atr.iterkeys()
+    if sorting:
+        keyList = sorted(keyList)
+    
+    # Convert 3.333e-4 to 0.0003333
+    if 'X_STEP' in keyList:
+        atr['X_STEP'] = str(float(atr['X_STEP']))
+        atr['Y_STEP'] = str(float(atr['Y_STEP']))
+        atr['X_FIRST'] = str(float(atr['X_FIRST']))
+        atr['Y_FIRST'] = str(float(atr['Y_FIRST']))
+    
+    # max digit for space formating
+    digits = max([len(key) for key in keyList]+[2])
+    f = '{0:<%d}    {1}'%(digits)
+    
+    # writing .rsc file
+    frsc = open(outname,'w')
+    for key in keyList:
+        frsc.write(f.format(str(key), str(atr[key]))+'\n')
+    frsc.close()
+    return outname
 
 
 def write_float32(*args):
@@ -134,7 +162,7 @@ def write_float32(*args):
     return outname
 
 
-def write_complex64(data,outname):   
+def write_complex64(data,outname):
     '''Writes roi_pac .int data'''
     nlines=data.shape[0]
     WIDTH=data.shape[1]

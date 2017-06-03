@@ -1,19 +1,40 @@
 ## Welcome to PySAR!
 
-PySAR is an InSAR (Interferometric Synthetic Aperture Radar) time series package to produce three dimensional (space and time) ground displacement from InSAR data. To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path   
+[![Build Status](http://img.shields.io/travis/doge/wow.svg)](https://github.com/yunjunz/PySAR)
+[![Dependency Status](http://img.shields.io/gemnasium/doge/wow.svg)](https://github.com/yunjunz/PySAR)
+[![Coverage Status](http://img.shields.io/coveralls/doge/wow.svg)](https://github.com/yunjunz/PySAR)
+[![Code Climate](http://img.shields.io/codeclimate/github/doge/wow.svg)](https://github.com/yunjunz/PySAR)
+[![Gem Version](http://img.shields.io/gem/v/suchgem.svg)](https://github.com/yunjunz/PySAR)
+[![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/yunjunz/PySAR)
+[![Badges](http://img.shields.io/:badges-7/7-ff6799.svg)](https://github.com/yunjunz/PySAR)
 
-Depending on your shell you may use commands such as the following examples to setup pysar:   
+PySAR is an InSAR (Interferometric Synthetic Aperture Radar) time series package to produce three dimensional (space and time) ground displacement from InSAR data. 
+
+### 1. Installation   
+
+We recommend using Anaconda to install the python environment and the prerequisite packages. You will need:   
+- Python2.7 
+- Numpy
+- Scipy
+- h5py
+- Matplotlib
+- 
+
+
+To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path. Depending on your shell you may use commands such as the following examples to setup pysar:   
 
 Using bash:   
-export PYTHONPATH=/nethome/hfattahi/development/PySAR:${PYTHONPATH}   
-export PATH="/nethome/hfattahi/development/PySAR/pysar:$PATH"   
-export TSSARDIR=/nethome/timeseries/   
+
+    export PYSAR_HOME="~/Documents/development/python/PySAR"
+    export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
+    export PATH="${PYSAR_HOME}/pysar:$PATH"   
 
 Using csh:   
-setenv PYTHONPATH "/nethome/hfattahi/development/PySAR"    
-set path = (/nethome/hfattahi/development/PySAR/pysar $path)   
-setenv TSSARDIR "/nethome/timeseries/"   
 
+    setenv PYSAR_HOME ~/Documents/development/python/PySAR
+    setenv PYTHONPATH ${PYSAR_HOME}
+    set path = ( $PYSAR_HOME/pysar $path)
+ 
 Run pysarApp.py to see the examples of processing options.   
 
 ##########################################################   

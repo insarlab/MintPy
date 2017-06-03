@@ -20,7 +20,7 @@
 # Yunjun, Jul 2016: add parallel support
 #                   add outlier fill option
 # Yunjun, Aug 2016: add coord_geo2radar()
-# Yunjun, Dec 2016: add cmdLineParse(), --footprint option
+# Yunjun, Dec 2016: add cmdLineParse(), --tight option
 
 
 import os
@@ -29,11 +29,10 @@ import argparse
 
 import h5py
 import numpy as np
-import multiprocessing
-from joblib import Parallel, delayed
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
+import pysar._datetime as ptime
 import pysar._pysar_utilities as ut
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
@@ -145,7 +144,7 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
 
 
 ################################################################
-def subset_attribute(atr_dict, subset_box):
+def subset_attribute(atr_dict, subset_box, print_message=True):
     '''Update attributes dictionary due to subset
     Inputs:
         atr_dict   : dict, data attributes to update
@@ -165,7 +164,10 @@ def subset_attribute(atr_dict, subset_box):
     atr['WIDTH']       = str(sub_x[1]-sub_x[0])
     atr['YMAX']        = str(sub_y[1]-sub_y[0] - 1)
     atr['XMAX']        = str(sub_x[1]-sub_x[0] - 1)
+    if print_message:  print 'update FILE_LENGTH, WIDTH, Y/XMAX'
 
+    # Subset atribute
+    if print_message:  print 'update/add subset_y0/y1/x0/x1'
     try:
         subset_y0_ori = int(atr['subset_y0'])
         atr['subset_y0'] = str(sub_y[0] + subset_y0_ori)
@@ -180,15 +182,27 @@ def subset_attribute(atr_dict, subset_box):
     except:
         atr['subset_x0'] = str(sub_x[0])
         atr['subset_x1'] = str(sub_x[1])
+
+    # Geo coord
     try:
         atr['Y_FIRST'] = str(float(atr['Y_FIRST'])+sub_y[0]*float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST'])+sub_x[0]*float(atr['X_STEP']))
+        if print_message:  print 'update Y/X_FIRST'
     except: pass
 
+    # Reference in space
     try:
         atr['ref_y'] = str(int(atr['ref_y']) - sub_y[0])
         atr['ref_x'] = str(int(atr['ref_x']) - sub_x[0])
+        if print_message:  print 'update ref_y/x'
     except: pass
+
+    # Starting Range for file in radar coord
+    if not 'Y_FIRST' in atr_dict.keys():
+        try:
+            atr['STARTING_RANGE'] = float(atr['STARTING_RANGE']) + float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
+            if print_message:  print 'update STARTING_RANGE'
+        except: pass
 
     return atr
 
@@ -382,7 +396,6 @@ def subset_input_dict2box(subset_dict, meta_dict):
     # Get subset box in y/x
     sub_x = sorted(sub_x)
     sub_y = sorted(sub_y)
-    #import pdb; pdb.set_trace()
     pixel_box = (sub_x[0],sub_y[0],sub_x[1],sub_y[1])
 
     # Get subset box in lat/lon from subset box in y/x
@@ -418,7 +431,7 @@ def box_geo2pixel(geo_box, meta_dict):
 
 
 ################################################################
-def subset_file(File, subset_dict, outFile=None):
+def subset_file(File, subset_dict_input, outFile=None):
     '''Subset file with
     Inputs:
         File        : str, path/name of file
@@ -430,12 +443,13 @@ def subset_file(File, subset_dict, outFile=None):
                       subset_lon : list of 2 float, subset in lon direction, default=None
                       fill_value : float, optional. filled value for area outside of data coverage. default=None
                                    None/not-existed to subset within data coverage only.
+                      tight  : bool, tight subset or not, for lookup table file, i.e. geomap*.trans
     Outputs:
         outFile :  str, path/name of output file; 
                    outFile = 'subset_'+File, if File is in current directory;
                    outFile = File, if File is not in the current directory.
     '''
-    
+
     # Input File Info
     try:  atr_dict = readfile.read_attribute(File)
     except:  return None
@@ -444,17 +458,16 @@ def subset_file(File, subset_dict, outFile=None):
     k = atr_dict['FILE_TYPE']
     print 'subset '+k+' file: '+File+' ...'
 
+    subset_dict = subset_dict_input.copy()
     # Read Subset Inputs into 4-tuple box in pixel and geo coord
     pix_box, geo_box = subset_input_dict2box(subset_dict, atr_dict)
 
     # if fill_value exists and not None, subset data and fill assigned value for area out of its coverage.
     # otherwise, re-check subset to make sure it's within data coverage and initialize the matrix with np.nan
     outfill = False
-    try:
-        subset_dict['fill_value']
-        if subset_dict['fill_value']:
-            outfill = True
-    except:
+    if 'fill_value' in subset_dict.keys() and subset_dict['fill_value']:
+        outfill = True
+    else:
         outfill = False
     if not outfill:
         pix_box = check_box_within_data_coverage(pix_box, atr_dict)
@@ -478,7 +491,10 @@ def subset_file(File, subset_dict, outFile=None):
     # Output File Name
     if not outFile:
         if os.getcwd() == os.path.dirname(os.path.abspath(File)):
-            outFile = 'subset_'+os.path.basename(File)
+            if 'tight' in subset_dict.keys() and subset_dict['tight']:
+                outFile = os.path.splitext(File)[0]+'_tight'+os.path.splitext(File)[1]
+            else:
+                outFile = 'subset_'+os.path.basename(File)
         else:
             outFile = os.path.basename(File)
     print 'writing >>> '+outFile
@@ -497,13 +513,12 @@ def subset_file(File, subset_dict, outFile=None):
         ##### Open Output File
         h5out = h5py.File(outFile)
         group = h5out.create_group(k)
+        prog_bar = ptime.progress_bar(maxValue=epochNum)
 
     ## Loop
     if k == 'timeseries':
         for i in range(epochNum):
             epoch = epochList[i]
-            ut.print_progress(i+1, epochNum, prefix='', suffix=epoch)
-            
             dset = h5file[k].get(epoch)
             data_overlap = dset[pix_box4data[1]:pix_box4data[3],pix_box4data[0]:pix_box4data[2]]
 
@@ -511,15 +526,16 @@ def subset_file(File, subset_dict, outFile=None):
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
             dset = group.create_dataset(epoch, data=data, compression='gzip')
+            prog_bar.update(i+1, suffix=epoch)
 
-        atr_dict  = subset_attribute(atr_dict, pix_box)
-        for key,value in atr_dict.iteritems():   group.attrs[key] = value
+        atr_dict = subset_attribute(atr_dict, pix_box)
+        for key,value in atr_dict.iteritems():
+            group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
+        date12_list = ptime.list_ifgram2date12(epochList)
         for i in range(epochNum):
             epoch = epochList[i]
-            ut.print_progress(i+1, epochNum, prefix='', suffix=epoch)
-            
             dset = h5file[k][epoch].get(epoch)
             atr_dict  = h5file[k][epoch].attrs
             data_overlap = dset[pix_box4data[1]:pix_box4data[3],pix_box4data[0]:pix_box4data[2]]
@@ -527,10 +543,12 @@ def subset_file(File, subset_dict, outFile=None):
             data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-            atr_dict  = subset_attribute(atr_dict, pix_box)
+            atr_dict  = subset_attribute(atr_dict, pix_box, print_message=False)
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in atr_dict.iteritems():    gg.attrs[key] = value
+            for key, value in atr_dict.iteritems():
+                gg.attrs[key] = value
+            prog_bar.update(i+1, suffix=date12_list[i])
 
     ##### Single Dataset File
     elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
@@ -560,6 +578,7 @@ def subset_file(File, subset_dict, outFile=None):
 
     ##### End Cleaning
     try:
+        prog_bar.close()
         h5file.close()
         h5out.close()
     except: pass
@@ -570,21 +589,21 @@ def subset_file(File, subset_dict, outFile=None):
 def subset_file_list(fileList, inps):
     '''Subset file list'''
     # check outfile and parallel option
-    if len(fileList) > 1:
-        inps.outfile = None
-    elif len(fileList) == 1 and inps.parallel:
-        inps.parallel =  False
-        print 'parallel processing is diabled for one input file'
+    if inps.parallel:
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(fileList))
 
     ##### Subset files
-    if inps.parallel:
-        num_cores = min(multiprocessing.cpu_count(), len(fileList))
-        print 'parallel processing using %d cores ...'%(num_cores)
+    if len(fileList) == 1:
+        subset_file(fileList[0], vars(inps), inps.outfile)
+    
+    elif inps.parallel:
+        #num_cores = min(multiprocessing.cpu_count(), len(fileList))
+        #print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(subset_file)(file, vars(inps)) for file in fileList)
     else:
         for File in fileList:
             print '----------------------------------------------------'
-            subset_file(File, vars(inps), inps.outfile)
+            subset_file(File, vars(inps))
     return
 
 
@@ -598,7 +617,7 @@ EXAMPLE='''example:
   subset.py *velocity*.h5 timeseries*.h5  -y 400 1500  -x 200 600
   subset.py geo_velocity.h5    -l 32.2:33.5  --outfill-nan
   subset.py Mask.h5            -x 500:3500   --outfill 0
-  subset.py geomap_4rlks.trans --footprint
+  subset.py geomap_4rlks.trans --tight
   
   subset.py unwrapIfgram.h5 coherence.h5 geomap*.trans  -l 33.10 33.50 -L 131.30 131.80 --bbox geomap_4rlks.trans
   subset.py *.unw *.cor *.trans *.dem  -y 50 450 -x 1300 1800 --bbox geomap_4rlks.trans
@@ -621,8 +640,9 @@ def cmdLineParse():
                              'pysar.subset.lalo  = 30.2:30.5,130.1:131.3')
     parser.add_argument('-r','--reference',\
                         help='reference file, subset to the same lalo as reference file')
-    parser.add_argument('--footprint', action='store_true',\
-                        help='subset geomap_*.trans file based on footprint - non-zero values.\n'
+    parser.add_argument('--tight', action='store_true',\
+                        help='subset geomap_*.trans file based on non-zero values.\n'+\
+                             'For geocoded file(s) only'
                              'A convenient way to get rid of extra wide space due to "too large" DEM.\n\n')
 
     parser.add_argument('--outfill', dest='fill_value', type=float,\
@@ -653,12 +673,14 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
+    print 'number of input files: '+str(len(inps.file))
+    print inps.file
 
     #print '\n**************** Subset *********************'
     atr = readfile.read_attribute(inps.file[0])
 
     ##### Convert All Inputs into subset_y/x/lat/lon
-    # Input Priority: subset_y/x/lat/lon > reference > template > footprint
+    # Input Priority: subset_y/x/lat/lon > reference > template > tight
     if not inps.subset_x and not inps.subset_y and not inps.subset_lat and not inps.subset_lon:
         # 1. Read subset info from Reference File
         if inps.reference:
@@ -671,8 +693,8 @@ def main(argv):
             pix_box, geo_box = read_subset_template2box(inps.template_file)
             print 'using subset info from '+inps.template_file
 
-        # 3. Use subset from footprint info
-        elif inps.footprint:
+        # 3. Use subset from tight info
+        elif inps.tight:
             if atr['FILE_TYPE']=='.trans':
                 # Non-zero area in geomap_*.trans file, accurate
                 trans_rg, trans_atr = readfile.read(inps.file[0], (), 'range')
@@ -680,8 +702,8 @@ def main(argv):
                 pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
                 geo_box = box_pixel2geo(pix_box, trans_atr)
             else:
-                print 'ERROR: --footprint option only works for geomap_*.trans file.\n'
-                inps.footprint = False
+                print 'ERROR: --tight option only works for geomap_*.trans file.\n'
+                inps.tight = False
                 sys.exit(1)
 
             ## from LAT/LON_REF*, which is not accurate

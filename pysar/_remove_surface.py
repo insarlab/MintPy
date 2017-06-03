@@ -7,14 +7,17 @@
 # Yunjun, Jun 2016: merge functions for interferograms, timeseries
 #                   into one, and use read() for all the others
 # Yunjun, Aug 2016: add remove*multiple_surface()
+# Recommend usage:
+#     import pysar._remove_surface as rm
 
 
 import os
 import time
 
-import numpy as np
 import h5py
+import numpy as np
 
+import pysar._datetime as ptime
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 
@@ -141,52 +144,61 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
     
     if maskFile:
         Mask = readfile.read(maskFile)[0]
+        print 'read mask file: '+maskFile
     else:
         Mask = np.ones((int(atr['FILE_LENGTH']), int(atr['WIDTH'])))
+        print 'use mask of the whole area'
     
     ##### Input File Info
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     print 'Input file is '+k
+    print 'remove ramp type: '+surf_type
     
     ## Multiple Datasets File
     if k in ['interferograms','coherence','wrapped','timeseries']:
         h5file = h5py.File(File,'r')
-        ifgramList = sorted(h5file[k].keys())
-        print 'number of epochs: '+str(len(ifgramList))
-  
+        epochList = sorted(h5file[k].keys())
+        epoch_num = len(epochList)
+        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+
         h5flat = h5py.File(outFile,'w')
         group  = h5flat.create_group(k)
         print 'writing >>> '+outFile
-  
+
     if k in ['timeseries']:
-        for ifgram in ifgramList:
-            print "Removing " + surf_type  +" from " + ifgram
-            data = h5file[k].get(ifgram)[:]
+        print 'number of acquisitions: '+str(len(epochList))
+        for i in range(epoch_num):
+            epoch = epochList[i]
+            data = h5file[k].get(epoch)[:]
             
             if not ysub:
                 data_n,ramp = remove_data_surface(data, Mask, surf_type) 
             else:
                 data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
   
-            dset = group.create_dataset(ifgram, data=data_n, compression='gzip')
+            dset = group.create_dataset(epoch, data=data_n, compression='gzip')
+            prog_bar.update(i+1, suffix=epoch)
         for key,value in h5file[k].attrs.iteritems():
             group.attrs[key] = value
   
     elif k in ['interferograms','wrapped','coherence']:
-        for ifgram in ifgramList:
-            print "Removing " + surf_type  +" from " + ifgram
-            data = h5file[k][ifgram].get(ifgram)[:]
+        print 'number of interferograms: '+str(len(epochList))
+        date12_list = ptime.list_ifgram2date12(epochList)
+        for i in range(epoch_num):
+            epoch = epochList[i]
+            data = h5file[k][epoch].get(epoch)[:]
             
             if not ysub:
                 data_n,ramp = remove_data_surface(data,Mask,surf_type)
             else:
                 data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
   
-            gg   = group.create_group(ifgram)
-            dset = gg.create_dataset(ifgram, data=data_n, compression='gzip')
-            for key,value in h5file[k][ifgram].attrs.iteritems():
-                 gg.attrs[key] = value
+            gg   = group.create_group(epoch)
+            dset = gg.create_dataset(epoch, data=data_n, compression='gzip')
+            for key,value in h5file[k][epoch].attrs.iteritems():
+                gg.attrs[key] = value
+            prog_bar.update(i+1, suffix=date12_list[i])
 
     ## Single Dataset File
     else:
@@ -204,6 +216,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
     try:
         h5file.close()
         h5flat.close()
+        prog_bar.close()
     except: pass
   
     print 'Remove '+surf_type+' took ' + str(time.time()-start) +' secs'

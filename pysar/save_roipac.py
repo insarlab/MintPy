@@ -63,6 +63,7 @@ def main(argv):
         data=(-4*pi/wvl)*data
     
         outname=File.split('.')[0]+'.unw'
+        print 'writing >>> '+outname
         writefile.write(data,atr,outname)
   
     elif k == 'timeseries':
@@ -98,7 +99,7 @@ def main(argv):
         try:      master_d = d_ref
         except:
             try:    master_d = atr['ref_date']
-            except: master_d = atr['DATE']
+            except: master_d = dateList[0]
         if len(master_d)==8:  master_d=master_d[2:8]
         if len(d)==8:         d=d[2:8]
         outname = master_d+'_'+d+'.unw'
@@ -111,6 +112,7 @@ def main(argv):
         atr['DATE12']                = master_d+'-'+d
         
         ## Writing
+        print 'writing >>> '+outname
         writefile.write(data,atr,outname)
 
     elif k in ['interferograms','coherence','wrapped']:
@@ -135,9 +137,14 @@ def main(argv):
     else:
         dset = h5file[k].get(k)
         data = dset[0:dset.shape[0],0:dset.shape[1]]
-        if k == 'temporal_coherence': outname=File.split('.')[0]+'.cor'
-        else:                         outname=File.split('.')[0]+'.unw'
-    
+        if k in ['temporal_coherence']:
+            outname=File.split('.')[0]+'.cor'
+        elif k in ['dem','.hgt','.dem']:
+            atr['FILE_TYPE'] = '.dem'
+            outname=os.path.splitext(File)[0]+'.dem'
+        else:
+            outname=File.split('.')[0]+'.unw'
+        print 'writing >>> '+ outname
         writefile.write(data,atr,outname)
   
   

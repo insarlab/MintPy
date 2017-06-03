@@ -15,8 +15,8 @@ import argparse
 
 import h5py
 import numpy as np
-import multiprocessing
-from joblib import Parallel, delayed
+#import multiprocessing
+#from joblib import Parallel, delayed
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -42,10 +42,12 @@ def mask_matrix(data_mat,mask_mat):
 def update_mask(mask, inps_dict=None):
     '''Update mask matrix from input options: subset_x/y and threshold'''
     if inps_dict['subset_x']:
-        mask[:,inps_dict['subset_x'][0]:inps_dict['subset_x'][1]] = 0
+        mask[:,0:inps_dict['subset_x'][0]] = 0
+        mask[:,inps_dict['subset_x'][1]:] = 0
         print 'mask out area not in x: '+str(inps_dict['subset_x'])
     if inps_dict['subset_y']:
-        mask[inps_dict['subset_y'][0]:inps_dict['subset_y'][1],:] = 0
+        mask[0:inps_dict['subset_y'][0],:] = 0
+        mask[inps_dict['subset_y'][1]:,:] = 0
         print 'mask out area not in y: '+str(inps_dict['subset_y'])
     if inps_dict['thr']:
         mask[mask<inps_dict['thr']] = 0
@@ -185,21 +187,21 @@ def main(argv):
     print inps.file
 
     # check outfile and parallel option
-    if len(inps.file) > 1:
-        inps.outfile = None
-    elif len(inps.file) == 1 and inps.parallel:
-        inps.parallel =  False
-        print 'parallel processing is diabled for one input file'
+    if inps.parallel:
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
 
     # masking
-    if inps.parallel:
-        num_cores = multiprocessing.cpu_count()
-        print 'parallel processing using %d cores ...'%(num_cores)
+    if len(inps.file) == 1:
+        mask_file(inps.file[0], inps.mask_file, inps.outfile, vars(inps))
+    
+    elif inps.parallel:
+        #num_cores = min(multiprocessing.cpu_count(), len(inps.file))
+        #print 'parallel processing using %d cores ...'%(num_cores)
         Parallel(n_jobs=num_cores)(delayed(mask_file)(File, inps.mask_file, inps_dict=vars(inps)) for File in inps.file)
     else:
         for File in inps.file:
             print '-------------------------------------------'
-            mask_file(File, inps.mask_file, inps.outfile, vars(inps))
+            mask_file(File, inps.mask_file, inps_dict=vars(inps))
 
     print 'Done.'
     return

@@ -36,11 +36,13 @@
 
 import os
 import sys
+import re
 
 import h5py
 import numpy as np
 import xml.etree.ElementTree as ET
 from PIL import Image
+import json
 
 
 #########################################################################
@@ -159,7 +161,7 @@ def read(File, box=(), epoch=''):
         return data, atr
 
     ##### ROI_PAC
-    elif processor in ['roipac','gamma']:
+    elif processor in ['roipac']:
         if ext in ['.unw','.cor','.hgt', '.msk']:
             if box:
                 amp,pha,atr = read_float32(File,box)
@@ -204,7 +206,12 @@ def read(File, box=(), epoch=''):
                 return az, atr
 
         ##### Gamma
-        #elif processor == 'gamma':
+    elif processor == 'gamma':
+        if ext in ['.unw','.cor','.hgt_sim']:
+            data, atr = read_real_float32(File, byteorder='ieee-be')
+            if box: data = data[box[1]:box[3],box[0]:box[2]]
+            return data, atr
+
         elif ext == '.mli':
             data,atr = read_real_float32(File)
             if box: data = data[box[1]:box[3],box[0]:box[2]]
@@ -260,7 +267,7 @@ def read_attribute(File, epoch=''):
             except: atr['ref_date'] = sorted(h5f[k[0]].keys())[0]
 
         h5f.close()
-    
+
     else:
         # attribute file list
         try:
@@ -271,15 +278,19 @@ def read_attribute(File, epoch=''):
         ##### GAMMA
         if os.path.isfile(File+'.par'):
             atr = read_gamma_par(File+'.par')
-            atr['PROCESSOR'] = 'gamma'
-            atr['FILE_TYPE'] = ext
-        
+            if 'FILE_TYPE' not in atr.keys():
+                atr['FILE_TYPE'] = ext
+            if 'PROCESSOR' not in atr.keys():
+                atr['PROCESSOR'] = 'gamma'
+
         ##### ROI_PAC
         elif rscFile:
             atr = read_roipac_rsc(rscFile)
-            atr['PROCESSOR'] = 'roipac'
-            atr['FILE_TYPE'] = ext
-    
+            if 'FILE_TYPE' not in atr.keys():
+                atr['FILE_TYPE'] = ext
+            if 'PROCESSOR' not in atr.keys():
+                atr['PROCESSOR'] = 'roipac'
+
         ##### ISCE
         elif os.path.isfile(File+'.xml'):
             atr = read_isce_xml(File+'.xml')
@@ -310,6 +321,12 @@ def check_variable_name(path):
         path=path.replace(path.split("/")[0],p0)
     return path
 
+def is_plot_attribute(attribute):
+    tokens = attribute.split(".")
+    if tokens is None:
+        return False
+
+    return tokens[0] == "plot" and len(tokens) > 1
 
 def read_template(File, delimiter='='):
     '''Reads the template file into a python dictionary structure.
@@ -320,16 +337,51 @@ def read_template(File, delimiter='='):
         tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
     '''
     template_dict = {}
+    plotAttributeDict = {}
+    insidePlotObject = False
+    plotAttributes = []
+    # the below logic for plotattributes object can be made much more simple
+    # if we assume that any plot attribute coming after a > belongs to the
+    # same object. Must Ask Falk and Yunjung if we can assume this to eliminate
+    # all these conditionals
     for line in open(File):
         line = line.strip()
         c = [i.strip() for i in line.split(delimiter, 1)]  #split on the 1st occurrence of delimiter
-        if len(c) < 2 or line.startswith('%') or line.startswith('#'):
+        if len(c) < 2 or line.startswith(('%','#')):
+            if line.startswith(">"):
+                plotAttributeDict = {}
+                insidePlotObject = True
+            # otherwise, if previously inside attributes object, we are now outsid    e
+            # unless the line is a comment
+            elif insidePlotObject and not line.startswith('%') and not line.startswith('#'):
+                # just came from being inside plot object, but now we are outside
+                insidePlotObject = False
+                plotAttributes.append(plotAttributeDict)
             next #ignore commented lines or those without variables
         else:
             atrName  = c[0]
             atrValue = str.replace(c[1],'\n','').split("#")[0].strip()
             atrValue = check_variable_name(atrValue)
-            template_dict[atrName] = atrValue
+
+            if insidePlotObject:
+                if is_plot_attribute(atrName):
+                    plotAttributeDict[atrName] = atrValue
+                else:
+                    # just came from being inside plot object, but now we are outside
+                    insidePlotObject = False
+                    plotAttributes.append(plotAttributeDict)
+                    template_dict[atrName] = atrValue
+
+            elif atrValue != '':
+                template_dict[atrName] = atrValue
+
+    # what if no \n at end of file? write out last plot attributes dict
+    if insidePlotObject:
+        plotAttributes.append(plotAttributeDict)
+
+    if len(plotAttributes) > 0:
+        template_dict["plotAttributes"] = json.dumps(plotAttributes)
+
     return template_dict
 
 
@@ -339,31 +391,61 @@ def read_roipac_rsc(File):
     return rsc_dict
 
 
-def read_gamma_par(File):
-    '''Read GAMMA .par file into a python dictionary structure.'''
-    par_dict = {}
-    
-    f = open(File)
-    next(f); next(f);
-    for line in f:
-        l = line.split()
-        if len(l) < 2 or line.startswith('%') or line.startswith('#'):
-            next #ignore commented lines or those without variables
-        else:
-            par_dict[l[0].strip()] = str.replace(l[1],'\n','').split("#")[0].strip()
-    
-    # Attributes: Gamma to ROI_PAC
-    par_dict = attribute_gamma2roipac(par_dict, par_dict)
-    
-    return par_dict
+def load_roipac_attribute(fname):
+    '''Read/extract attributes for PySAR from ROI_PAC product
+    Parameters: fname : str
+                    ROIPAC interferogram filename or path, i.e. /PopoSLT143TsxD/filt_130118-130129_4rlks.unw
+    Returns:    atr : dict
+                    Attributes dictionary
+    '''
+    atr = {}
 
-def attribute_gamma2roipac(par_dict, rsc_dict=dict()):
-    '''Convert Gamma par attribute into ROI_PAC format'''
-    try:    rsc_dict['WIDTH'] = par_dict['range_samples:']
-    except: rsc_dict['WIDTH'] = par_dict['interferogram_width:']
-    try:    rsc_dict['FILE_LENGTH'] = par_dict['azimuth_lines:']
-    except: rsc_dict['FILE_LENGTH'] = par_dict['interferogram_azimuth_lines:']
-    return rsc_dict
+    ## Get info: dir, date12, num of loooks
+    file_dir = os.path.dirname(fname)
+    file_basename = os.path.basename(fname)
+    date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0]).replace('_','-')
+    m_date, s_date = date12.split('-')
+
+    data_rsc_file = fname+'.rsc'
+    baseline_rsc_file = file_dir+'/'+m_date+'_'+s_date+'_baseline.rsc'
+
+    data_rsc_dict     = read_roipac_rsc(data_rsc_file)
+    baseline_rsc_dict = read_roipac_rsc(baseline_rsc_file)
+
+    atr.update(data_rsc_dict)
+    atr.update(baseline_rsc_dict)
+
+    return atr
+
+
+def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
+    '''Read GAMMA .par/.off file into a python dictionary structure.
+    Parameters: fname : file, str, or path. 
+                    File path of .par, .off file.
+                delimiter : str, optional
+                    String used to separate values.
+                skiprows : int, optional
+                    Skip the first skiprows lines.
+    Returns:    par_dict : dict
+                    Attributes dictionary
+    '''
+    par_dict = {}
+
+    # Read txt file
+    f = open(fname,'r')
+    lines = f.readlines()[skiprows:]
+    for line in lines:
+        line = line.strip()
+        c = [i.strip() for i in line.split(delimiter, 1)]
+        if len(c) < 2 or line.startswith(('%','#')):
+            next
+        else:
+            key = c[0]
+            value = str.replace(c[1],'\n','').split("#")[0].split()[0].strip()
+            par_dict[key] = value
+    f.close()
+
+    return par_dict
 
 
 def read_isce_xml(File):
@@ -474,14 +556,23 @@ def read_complex_float32(File, real_imag=False):
         return data, atr
 
 
-def read_real_float32(File):
+def read_real_float32(fname, byteorder=None):
     '''Read real float 32 data matrix, i.e. GAMMA .mli file
-    Usage:  data, atr = read_real_float32('20070603.mli')
+    Parameters: fname     : str, path, filename to be read
+                byteorder : str, optional, order of reading byte in the file
+    Returns: data : 2D np.array, data matrix 
+             atr  : dict, attribute dictionary
+    Usage: data, atr = read_real_float32('20070603.mli')
+           data, atr = read_real_float32('diff_filt_130118-130129_4rlks.unw')
     '''
-    atr = read_attribute(File)
+    atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-    data = np.fromfile(File,dtype=np.float32).reshape(length,width)
+
+    if byteorder in ['big-endian','b','ieee-be']:
+        data = np.fromfile(fname, dtype='>f4').reshape(length, width)
+    else:
+        data = np.fromfile(fname, dtype=np.float32).reshape(length, width)
     return data, atr
 
 
@@ -602,7 +693,6 @@ def read_multiple(File,box=''):  # Not ready yet
     epochList = h5file[k].keys()
     epochNum  = len(epochList)
     if epochNum == 0:   print "There is no data in the file";  sys.exit(1)
-    print 'number of epochs: '+str(epochNum)
  
     data = np.zeros([length,width])
     for igram in igramList:

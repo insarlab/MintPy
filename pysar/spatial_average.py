@@ -44,6 +44,7 @@ def main(argv):
     print '\n*************** Spatial Average ******************'
 
     if inps.mask_file:
+        print 'reading mask file: '+inps.mask_file
         mask, mask_atr = readfile.read(inps.mask_file)
     else:
         mask = None
@@ -64,7 +65,7 @@ def main(argv):
             ax = fig.add_subplot(111)
             ax.plot(dates, mean_list, '-ko', lw=2, ms=16, alpha=0.7, mfc='crimson')
             ax.set_title('Spatial Average',fontsize=12)
-            ax = ptime.auto_adjust_xaxis_date(ax, datevector)
+            ax = ptime.auto_adjust_xaxis_date(ax, datevector)[0]
             ax.set_xlabel('Time [years]',fontsize=12)
             ax.set_ylabel('Mean',fontsize=12)
             plt.show()

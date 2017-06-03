@@ -16,6 +16,7 @@ import h5py
 import numpy as np
 
 import pysar._readfile as readfile
+import pysar._pysar_utilities as ut
 
 
 #####################################################################
@@ -55,6 +56,7 @@ def main(argv):
     print "Loading time series: " + timeSeriesFile
     h5timeseries=h5py.File(timeSeriesFile)
     dateList = sorted(h5timeseries['timeseries'].keys())
+    date_num = len(dateList)
 
     dateIndex={}
     for ni in range(len(dateList)):
@@ -64,19 +66,23 @@ def main(argv):
     width  = int(atr['WIDTH'])
     D = np.zeros((len(dateList),length*width),np.float32)
 
-    for date in dateList:
-        print date
+    prog_bar = ut.progress_bar(maxValue=date_num, prefix='loading: ')
+    for i in range(date_num):
+        date = dateList[i]
         d = h5timeseries['timeseries'].get(date)[:]
         D[dateIndex[date]][:]=d.flatten(0)
+        prog_bar.update(i+1, suffix=date)
+    prog_bar.close()
 
     ##################################################
     ## Calculate Sum
-    lt=len(dateList)
     sumD=np.zeros(D.shape)
     print 'calculating epochs sum ...'
-    for j in range(lt):
-        print j
-        sumD[j,:] = np.sum(np.abs(D-D[j,:]),0)/lt
+    prog_bar = ut.progress_bar(maxValue=date_num, prefix='calculating: ')
+    for j in range(date_num):
+        sumD[j,:] = np.sum(np.abs(D-D[j,:]),0)/date_num
+        prog_bar.update(j+1)
+    prog_bar.close()
 
     ## Normalize to 0 and 1
     ## with high atmosphere equal to 0 and no atmosphere equal to 1
@@ -89,10 +95,12 @@ def main(argv):
     print 'writing to >>> '+outname
     h5sum = h5py.File(outname,'w')
     group = h5sum.create_group('timeseries')
-    for date in dateList:
-        print date
+    for i in range(date_num):
+        date = dateList[i]
         d = np.reshape(sumD[dateIndex[date]][:],[length,width])
         dset = group.create_dataset(date, data=d, compression='gzip')
+        prog_bar.update(i+1, suffix=date)
+    prog_bar.close()
 
     for key,value in atr.iteritems():
         group.attrs[key] = value

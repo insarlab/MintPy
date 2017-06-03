@@ -89,7 +89,7 @@ def main(argv):
     disp_opposite = 'no'
     disp_colorbar = 'yes'
     rewrapping    = 'no'
-    fig_dpi       = 500
+    fig_dpi       = 300
     #fig_size      = [6.0,9.0]
     fig_unit      = 'mm/yr'
     disp_ref      = 'yes'
@@ -164,7 +164,7 @@ def main(argv):
 
             #### Out name
             try:    ref_date = atr['ref_date']
-            except: ref_date = ut.yyyymmdd(atr['DATE'])[0]
+            except: ref_date = epochList[0]
             #ref_date=h5file['timeseries'].attrs['ref_date']
             if len(epoch_date)==8:  outName=ref_date[2:]+'-'+epoch_date[2:]
             else:                   outName=ref_date[2:]+'-'+epoch_date
@@ -221,8 +221,8 @@ def main(argv):
     try:
         lon_step = float(atr['X_STEP'])
         lat_step = float(atr['Y_STEP'])
-        lon_unit = atr['Y_UNIT']
-        lat_unit = atr['X_UNIT']
+        #lon_unit = atr['Y_UNIT']
+        #lat_unit = atr['X_UNIT']
         West     = float(atr['X_FIRST'])
         North    = float(atr['Y_FIRST'])
         South    = North+lat_step*(data.shape[0]-1)
@@ -245,10 +245,11 @@ def main(argv):
     width  = data.shape[1]
     try:fig_size
     except:
-        fig_size_0 = 6.0           ## min figure dimension: 6.0
-        ratio = float(length)/float(width)
-        fig_size = [fig_size_0,fig_size_0*ratio]
-    print 'figure size:  %.1f, %.1f'%(fig_size[0],fig_size[1])
+        # Auto size proportional to data size, with min len = 8.0 inches
+        fig_size = list(data.shape)
+        fig_scale = 8.0/min(fig_size)
+        fig_size = [np.rint(i*fig_scale) for i in fig_size]
+    print 'figure size: '+str(fig_size)
     ccmap = plt.get_cmap(color_map)
     fig = plt.figure(figsize=fig_size,frameon=False)
     ax = fig.add_axes([0., 0., 1., 1.])
@@ -308,7 +309,8 @@ def main(argv):
     cb_N = (North+South)/2.0 + 0.5*0.5*cb_rg
     cb_W = East  + 0.1*cb_rg
     slc1 = KML.GroundOverlay(KML.name('colorbar'),KML.Icon(KML.href('colorbar.png')),\
-                             KML.altitude('2000'),KML.altitudeMode('absolute'),\
+                             #KML.altitude('6000'),KML.altitudeMode('absolute'),\
+                             KML.altitudeMode('clampToGround'),\
                              KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
                                            KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
     doc.Folder.append(slc1)

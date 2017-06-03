@@ -28,27 +28,19 @@ CPX_ZERO = np.complex64(0.0)
 def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## Extract UNAVCO format metadata from PySAR attributes dictionary and dateList 
 
+    for key in pysar_meta_dict.keys():
+        if 'unavco.' in key:
+            pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict[key]
+
     unavco_meta_dict = dict()
     
     #################################
     ##### Required metadata
     #################################
-
+    ##### Given manually
     ## mission
+    # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
     unavco_meta_dict['mission'] = pysar_meta_dict['mission']
-    #tmp = [atr['PLATFORM'],atr['PROJECT_NAME']]
-    #if   'alos'  in tmp:  atr['mission'] = 'ALOS'
-    #elif 'alos2' in tmp:  atr['mission'] = 'ALOS2'
-    #elif 'csk'   in tmp:  atr['mission'] = 'CSK'
-    #elif 'env'   in tmp:  atr['mission'] = 'ENV'
-    #elif 'ers'   in tmp:  atr['mission'] = 'ERS'
-    #elif 'rast'  in tmp:  atr['mission'] = 'RSAT'
-    #elif 'rsat2' in tmp:  atr['mission'] = 'RSAT2'
-    #elif 'sen'   in tmp:  atr['mission'] = 'SEN'
-    #elif 's1'    in tmp:  atr['mission'] = 'SEN'
-    #elif 'tdx'   in tmp:  atr['mission'] = 'TSX'
-    #elif 'tsx'   in tmp:  atr['mission'] = 'TSX'
-    #else: raise Exception('Cannot find mission name!')
 
     ## beam_mode/swath
     unavco_meta_dict['beam_mode']  = pysar_meta_dict['beam_mode']
@@ -58,37 +50,101 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     #atr_dict['relative_orbit'] = int(re.match(r'(\w+)T([0-9+])',atr['PROJECT_NAME']).groups()[1])
     unavco_meta_dict['relative_orbit'] = int(pysar_meta_dict['relative_orbit'])
     
+    ## processing info
+    unavco_meta_dict['processing_type']     = pysar_meta_dict['processing_type']
+    unavco_meta_dict['processing_software'] = pysar_meta_dict['processing_software']
+
+    ##### Grabbed by script
     ## date info
     unavco_meta_dict['first_date'] = dt.strptime(dateList[0], '%Y%m%d').isoformat()[0:10]
     unavco_meta_dict['last_date']  = dt.strptime(dateList[-1],'%Y%m%d').isoformat()[0:10]
 
     ## footprint
-    lats = [pysar_meta_dict['LAT_REF1'], pysar_meta_dict['LAT_REF3'], pysar_meta_dict['LAT_REF4'],\
-            pysar_meta_dict['LAT_REF2'], pysar_meta_dict['LAT_REF1']]
     lons = [pysar_meta_dict['LON_REF1'], pysar_meta_dict['LON_REF3'], pysar_meta_dict['LON_REF4'],\
             pysar_meta_dict['LON_REF2'], pysar_meta_dict['LON_REF1']]
-    unavco_meta_dict['scene_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lat,lon in zip(lats,lons)]) + "))"
+    lats = [pysar_meta_dict['LAT_REF1'], pysar_meta_dict['LAT_REF3'], pysar_meta_dict['LAT_REF4'],\
+            pysar_meta_dict['LAT_REF2'], pysar_meta_dict['LAT_REF1']]
+    unavco_meta_dict['scene_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
 
-    ## processing info
-    unavco_meta_dict['processing_type']     = pysar_meta_dict['processing_type']
-    unavco_meta_dict['processing_software'] = pysar_meta_dict['processing_software']
     unavco_meta_dict['history'] = dt.utcnow().isoformat()[0:10]
+
 
     #################################
     ##### Recommended metadata
     #################################
-    unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
-    unavco_meta_dict['flight_direction'] = pysar_meta_dict['ORBIT_DIRECTION'][0].upper()
+    ##### Given manually
+    try:    unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
+    except: pass
+    try:    unavco_meta_dict['atmos_correct_method'] = pysar_meta_dict['atmos_correct_method']
+    except: pass
+    try:    unavco_meta_dict['post_processing_method'] = pysar_meta_dict['post_processing_method']
+    except: unavco_meta_dict['post_processing_method'] = 'PySAR'
+    try:  unavco_meta_dict['processing_dem'] = pysar_meta_dict['processing_dem']
+    except: pass
+    try:  unavco_meta_dict['unwrap_method'] = pysar_meta_dict['unwrap_method']
+    except: pass
+
+    ##### Grabbed by script
+    try: unavco_meta_dict['flight_direction'] = pysar_meta_dict['ORBIT_DIRECTION'][0].upper()
+    except: pass
     if pysar_meta_dict['ANTENNA_SIDE'] == '-1':  unavco_meta_dict['look_direction'] = 'R'
     else:                                        unavco_meta_dict['look_direction'] = 'L'
-    unavco_meta_dict['prf']         = float(pysar_meta_dict['PRF'])
-    unavco_meta_dict['wavelength']  = float(pysar_meta_dict['WAVELENGTH'])
+    try: unavco_meta_dict['polarization'] = pysar_meta_dict['POLARIZATION']
+    except: pass
+    try: unavco_meta_dict['prf'] = float(pysar_meta_dict['PRF'])
+    except: pass
+    try: unavco_meta_dict['wavelength'] = float(pysar_meta_dict['WAVELENGTH'])
+    except: pass
+
+    #################################
+    ##### insarmaps metadata
+    #################################
+    # footprint for data coverage
+    if 'X_FIRST' in pysar_meta_dict.keys():
+        lon0 = float(pysar_meta_dict['X_FIRST'])
+        lat0 = float(pysar_meta_dict['Y_FIRST'])
+        lon1 = lon0 + float(pysar_meta_dict['X_STEP'])*int(pysar_meta_dict['WIDTH'])
+        lat1 = lat0 + float(pysar_meta_dict['Y_STEP'])*int(pysar_meta_dict['FILE_LENGTH'])
+        lons = [str(lon0), str(lon1), str(lon1), str(lon0), str(lon0)]
+        lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
+        unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
+    else:
+        print 'Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info.'
 
     return unavco_meta_dict
 
+
+def get_unavco_filename(timeseriesFile):
+    '''Get output file name of UNAVCO InSAR Archive'''
+    ##### Prepare Metadata
+    pysar_meta_dict = readfile.read_attribute(timeseriesFile)
+    k = pysar_meta_dict['FILE_TYPE']
+    h5_timeseries = h5py.File(timeseriesFile,'r')
+    dateList = sorted(h5_timeseries[k].keys())
+    unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
+    h5_timeseries.close()
+
+    meta_dict = pysar_meta_dict.copy()
+    meta_dict.update(unavco_meta_dict)
+
+    #### Open HDF5 File
+    SAT = meta_dict['mission']
+    SW  = meta_dict['beam_mode']    # should be like FB08 for ALOS, need to find out, Yunjun, 2016-12-26
+    RELORB = "%03d"%(int(meta_dict['relative_orbit']))
+    FRAME  = "%04d"%(int(meta_dict['frame']))
+    DATE1 = dt.strptime(meta_dict['first_date'],'%Y-%m-%d').strftime('%Y%m%d')
+    DATE2 = dt.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
+    TBASE = "%04d"%(0)
+    BPERP = "%05d"%(0)
+    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
+
+    return outName
+
+
 ################################################################
 EXAMPLE='''example:
-  save_unavco.py timeseries.h5 -i incidence_angle -d dem.h5 -c temporal_coherence.h5 -m mask.h5
+  save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geo_incidenceAngle
+                 -d demGeo.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
 '''
 
 def cmdLineParse():
@@ -141,19 +197,25 @@ def main(argv):
     print '-----------------------------------------'
     print 'writing >>> '+outName
     f = h5py.File(outName,'w')
-    group = f.create_group('timeseries')
-    grid = group.create_group('GRIDS')
+    hdfeos = f.create_group('HDFEOS')
+    if 'Y_FIRST' in meta_dict.keys():
+        gg_coord = hdfeos.create_group('GRIDS')
+    else:
+        gg_coord = hdfeos.create_group('SWATHS')
+    group = gg_coord.create_group('timeseries')
 
     ##### Write Attributes to the HDF File
+    print 'write metadata to '+str(f)
     for key,value in meta_dict.iteritems():
-        group.attrs[key] = value
+        f.attrs[key] = value
 
+    print 'write data to '+str(group)
     ##### Write Time Series Data
-    print inps.timeseries
+    print 'reading file: '+inps.timeseries
     for date in dateList:
         print date
         data = h5_timeseries[k].get(date)[:,:]
-        dset = grid.create_dataset(date, data=data, compression='gzip')
+        dset = group.create_dataset(date, data=data, compression='gzip')
         dset.attrs['Title'] = 'Time series displacement'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'meters'
@@ -161,9 +223,9 @@ def main(argv):
 
     ##### Write Incidence_Angle
     if os.path.isfile(inps.incidence_angle):
-        print inps.incidence_angle
+        print 'reading file: '+inps.incidence_angle
         inc_angle, inc_angle_meta = readfile.read(inps.incidence_angle)
-        dset = grid.create_dataset('incidence_angle', data=inc_angle, compression='gzip')
+        dset = group.create_dataset('incidence_angle', data=inc_angle, compression='gzip')
         dset.attrs['Title'] = 'Incidence angle'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'degrees'
@@ -171,9 +233,9 @@ def main(argv):
 
     ##### Write DEM
     if os.path.isfile(inps.dem):
-        print inps.dem
+        print 'reading file: '+inps.dem
         dem, dem_meta = readfile.read(inps.dem)
-        dset = grid.create_dataset('dem', data=dem, compression='gzip')
+        dset = group.create_dataset('dem', data=dem, compression='gzip')
         dset.attrs['Title'] = 'Digital elevatino model'
         dset.attrs['MissingValue'] = INT_ZERO
         dset.attrs['Units'] = 'meters'
@@ -181,9 +243,9 @@ def main(argv):
 
     ##### Write Coherence
     if os.path.isfile(inps.coherence):
-        print inps.coherence
+        print 'reading file: '+inps.coherence
         coherence, coherence_meta = readfile.read(inps.coherence)
-        dset = grid.create_dataset('coherence', data=coherence, compression='gzip')
+        dset = group.create_dataset('coherence', data=coherence, compression='gzip')
         dset.attrs['Title'] = 'Temporal Coherence'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'None'
@@ -191,9 +253,9 @@ def main(argv):
 
     ##### Write Mask
     if os.path.isfile(inps.mask):
-        print inps.mask
+        print 'reading file: '+inps.mask
         mask, mask_meta = readfile.read(inps.mask)
-        dset = grid.create_dataset('mask', data=mask, compression='gzip')
+        dset = group.create_dataset('mask', data=mask, compression='gzip')
         dset.attrs['Title'] = 'Mask'
         dset.attrs['MissingValue'] = INT_ZERO
         dset.attrs['Units'] = 'None'

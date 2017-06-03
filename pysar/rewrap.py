@@ -6,12 +6,12 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
-import sys
 import os
-#import re
+import sys
+
 import h5py
 from numpy import pi,round
-#import getopt
+
 
 def usage():
     print '''
