@@ -1,10 +1,5 @@
 ## Welcome to PySAR!
 
-[![Build Status](http://img.shields.io/travis/doge/wow.svg)](https://github.com/yunjunz/PySAR)
-[![Dependency Status](http://img.shields.io/gemnasium/doge/wow.svg)](https://github.com/yunjunz/PySAR)
-[![Coverage Status](http://img.shields.io/coveralls/doge/wow.svg)](https://github.com/yunjunz/PySAR)
-[![Code Climate](http://img.shields.io/codeclimate/github/doge/wow.svg)](https://github.com/yunjunz/PySAR)
-[![Gem Version](http://img.shields.io/gem/v/suchgem.svg)](https://github.com/yunjunz/PySAR)
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/yunjunz/PySAR)
 [![Badges](http://img.shields.io/:badges-7/7-ff6799.svg)](https://github.com/yunjunz/PySAR)
 
@@ -12,29 +7,56 @@ PySAR is an InSAR (Interferometric Synthetic Aperture Radar) time series package
 
 ### 1. Installation   
 
+#### 1.1 Pre-requisite
 We recommend using Anaconda to install the python environment and the prerequisite packages. You will need:   
-- Python2.7 
+- [Python2.7](https://www.continuum.io/downloads)
 - Numpy
 - Scipy
 - h5py
 - Matplotlib
-- 
+- Basemap
+- pykml (optional, for Google Earth KMZ file output)
+- joblib (optional, for parallel processing)
+- [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) (optional, for tropospheric correction using weather re-analysis models)
 
+Here is a example on Linux and Mac OSX using csh/tcsh:   
 
+Add the following in ~/.cshrc file and source it.   
+
+    ############################ Python ############################### 
+    setenv PYTHON2DIR /Users/jeromezhang/Documents/development/python/anaconda2
+    set path = ( ${PYTHON2DIR}/bin $path )
+
+Then run the following in your terminal:   
+
+    cd ~/Documents/development/python
+    wget https://repo.continuum.io/archive/Anaconda2-4.2.0-MacOSX-x86_64.sh
+    chmod +x Anaconda2-4.2.0-MacOSX-x86_64.sh
+    ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p ${PYTHON2DIR}
+    ${PYTHON2DIR}/bin/conda config --add channels conda-forge
+    ${PYTHON2DIR}/bin/conda install basemap joblib pykml --yes    #For view.py to plot in geo-coordinate 
+
+##### 1.2 PySAR   
 To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path. Depending on your shell you may use commands such as the following examples to setup pysar:   
 
-Using bash:   
+    cd ~/Documents/development/python
+    git clone https://github.com/yunjunz/PySAR.git
+   
+Then add the following to your source file:
+For bash user, add to your .bashrc file:   
 
     export PYSAR_HOME="~/Documents/development/python/PySAR"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
     export PATH="${PYSAR_HOME}/pysar:$PATH"   
 
-Using csh:   
+For csh/tcsh user, add to your .cshrc file:   
 
     setenv PYSAR_HOME ~/Documents/development/python/PySAR
     setenv PYTHONPATH ${PYSAR_HOME}
     set path = ( $PYSAR_HOME/pysar $path)
  
+
+
 Run pysarApp.py to see the examples of processing options.   
 
 ##########################################################   
