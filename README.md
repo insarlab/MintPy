@@ -34,7 +34,7 @@ Then run the following in your terminal:
     chmod +x Anaconda2-4.2.0-MacOSX-x86_64.sh
     ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p ${PYTHON2DIR}
     ${PYTHON2DIR}/bin/conda config --add channels conda-forge
-    ${PYTHON2DIR}/bin/conda install basemap joblib pykml --yes    #For view.py to plot in geo-coordinate 
+    ${PYTHON2DIR}/bin/conda install basemap joblib pykml --yes   
    
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
 
