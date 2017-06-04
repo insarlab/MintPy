@@ -32,7 +32,7 @@ def cmdLineParse():
     parser.add_argument('timeseries_file', help='time series file to display')
     parser.add_argument('-n', dest='epoch_num', metavar='NUM', type=int, default='-2',\
                         help='Epoch/slice number to display, default: the 2nd last.')
-    parser.add_argument('-m', dest='mask_file', default='mask.h5', help='mask to use. Default: mask.h5')
+    parser.add_argument('-m','--mask', dest='mask_file', default='mask.h5', help='mask to use. Default: mask.h5')
 
     pixel = parser.add_argument_group('Pixel Input')
     pixel.add_argument('--yx', type=int, nargs=2, help='initial pixel to plot in Y/X coord')
@@ -59,6 +59,8 @@ def cmdLineParse():
     display.add_argument('-c','--colormap', dest='colormap', default='jet',\
                          help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
                               'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
+    display.add_argument('-s','--fontsize', dest='font_size', type=int, default=10, help='Font size for display')
+    display.add_argument('--notitle', dest='disp_title', action='store_false', help='Do not display title in TS plot.')
     display.add_argument('--no-flip', dest='auto_flip', action='store_false',\
                          help='Turn off auto flip based on orbit direction.\n'+\
                               'Default: flip left-right for descending data in radar coord\n'+\
@@ -263,7 +265,7 @@ if __name__ == '__main__':
 
 
     ########## Fig 2 - Time Series Displacement - Point
-    fig_ts = plt.figure('Time series - point', figsize=(10,5))
+    fig_ts = plt.figure('Time series - point', figsize=(3.5,2))
     ax_ts = fig_ts.add_subplot(111)
 
     def update_timeseries(y, x):
@@ -285,6 +287,7 @@ if __name__ == '__main__':
             ex_d_ts = [d_ts[i] for i in inps.ex_idx_list]
             ax_ts.scatter(inps.ex_dates, ex_d_ts, color='gray')
         ax_ts.set_ylim(inps.ylim)
+
         # Title
         title_ts = 'Y = %d, X = %d'%(y,x)
         try:
@@ -293,11 +296,12 @@ if __name__ == '__main__':
             title_ts += ', lat = %.4f, lon = %.4f' % (lat, lon)
         except:
             pass
-        ax_ts.set_title(title_ts)
+        if inps.disp_title:
+            ax_ts.set_title(title_ts)
 
-        ax_ts = ptime.auto_adjust_xaxis_date(ax_ts, tims)[0]
-        ax_ts.set_xlabel('Time')
-        ax_ts.set_ylabel('Displacement [%s]' % inps.disp_unit)
+        ax_ts = ptime.auto_adjust_xaxis_date(ax_ts, tims, fontSize=inps.font_size)[0]
+        ax_ts.set_xlabel('Time', fontsize=inps.font_size)
+        ax_ts.set_ylabel('Displacement [%s]' % inps.disp_unit, fontsize=inps.font_size)
 
         fig_ts.canvas.draw()
 

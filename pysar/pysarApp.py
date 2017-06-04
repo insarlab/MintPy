@@ -233,7 +233,7 @@ TEMPLATE='''##------------------------ pysarApp_template.txt -------------------
 ## auto - automatic path pattern for Univ of Miami file structure, which are:
 ##     pysar.unwrapFiles = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
 ##     pysar.corFiles    = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
-##     pysar.intFiles    = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.int
+##     pysar.wrapFiles   = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.int
 ##     pysar.transFile   = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
 ##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
@@ -759,9 +759,9 @@ def main(argv):
         print '    DEM file was not found!'
         if 'pysar.troposphericDelay.method' in template.keys():
             print '    Continue without tropospheric correction ...'
-            template.pop('pysar.troposphericDelay.method', None)
+            template['pysar.troposphericDelay.method'] = 'no'
         if template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']:
-            template.pop('pysar.deramp', None)
+            template['pysar.deramp' = 'no'
         print '++++++++++++++++++++++++++++++++++++++++++++++'
 
 

@@ -511,7 +511,7 @@ def load_data_from_template(inps):
     if 'pysar.demFile.geoCoord'   in keyList:   inps.dem_geo   = template['pysar.demFile.geoCoord']
 
     # 1.2 Auto Setting for Geodesy Lab - University of Miami 
-    if pysar.miami_path and 'SCRATCHDIR' in os.environ:
+    if pysar.miami_path and 'SCRATCHDIR' in os.environ and inps.project_name:
         inps = auto_path_miami(inps, template)
 
     # 1.3 get snap_connect.byt path if .unw is input

@@ -578,7 +578,7 @@ def range_distance(atr, dimension=2):
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
         print 'input file is geocoded, return center range distance for the whole area'
-    
+
     near_range = float(atr['STARTING_RANGE'])
     dR = float(atr['RANGE_PIXEL_SIZE'])
     length = int(atr['FILE_LENGTH'])
