@@ -225,7 +225,7 @@ def read(File, box=(), epoch=''):
             del phase
             return amplitude, atr
 
-        else: print 'Un-supported '+processfor+' file format: '+ext
+        else: print 'Un-supported '+process+' for file format: '+ext
     else: print 'Unrecognized file format: '+ext; return 0
 
 
