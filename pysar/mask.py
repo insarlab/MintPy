@@ -32,6 +32,8 @@ def mask_matrix(data_mat,mask_mat):
         mask_value = np.ma.masked
     else:
         mask_value = np.nan
+    #data_mat = data_mat.astype(np.float32)
+    #mask_value = np.nan
 
     data_mat[mask_mat==0]  = mask_value
 

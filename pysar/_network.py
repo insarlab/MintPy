@@ -992,6 +992,22 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
     if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
 
     coh_mat = coherence_matrix(date12_list, coherence_list)
+
+    ## Plot coherence matrix for 1 or 2 ifgrams only
+    #m_dates = [i.split('-')[0] for i in date12_list]
+    #s_dates = [i.split('-')[1] for i in date12_list]
+    #date6_list = sorted(list(set(m_dates + s_dates)))
+    #coh_mat[:] = np.nan
+    #example_date12_list = ['070718-080720']
+    ##example_date12_list = ['070718-080720', '070115-110126']
+    #for date12 in example_date12_list:
+    #    d1,d2 = date12.split('-')
+    #    idx1 = date6_list.index(d1)
+    #    idx2 = date6_list.index(d2)
+    #    coh = coherence_list[date12_list.index(date12)]
+    #    coh_mat[idx1,idx2] = coh
+    #    coh_mat[idx2,idx1] = coh
+
     im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0)
     ax.get_xaxis().set_ticks([0,5,10,15,20])
     ax.get_yaxis().set_ticks([0,5,10,15,20])

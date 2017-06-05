@@ -761,7 +761,7 @@ def main(argv):
             print '    Continue without tropospheric correction ...'
             template['pysar.troposphericDelay.method'] = 'no'
         if template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']:
-            template['pysar.deramp' = 'no'
+            template['pysar.deramp'] = 'no'
         print '++++++++++++++++++++++++++++++++++++++++++++++'
 
 

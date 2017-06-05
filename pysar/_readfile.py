@@ -205,7 +205,7 @@ def read(File, box=(), epoch=''):
                 #print 'read azimuth from '+File
                 return az, atr
 
-        ##### Gamma
+    ##### Gamma
     elif processor == 'gamma':
         if ext in ['.unw','.cor','.hgt_sim']:
             data, atr = read_real_float32(File, byteorder='ieee-be')
