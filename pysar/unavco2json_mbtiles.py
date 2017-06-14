@@ -229,15 +229,15 @@ def main():
 # use h5py to open specified group(s) in the h5 file 
 # then read datasets from h5 file into memory for faster reading of data
     file = h5py.File(file_name,  "r")
-    group = file['timeseries']
+    group = file['HDFEOS']['GRIDS']['timeseries']
 
 # get attributes (stored at root) of UNAVCO timeseries file
-    attributes = dict(group.attrs)
+    attributes = dict(file.attrs)
 
 # in timeseries group, there are datasets
 # need to get datasets with dates - strings that can be converted to integers
     dataset_keys = []
-    for k in group["GRIDS"].keys():
+    for k in group.keys():
         if k.isdigit():
             dataset_keys.append(k)
     dataset_keys.sort()
@@ -248,10 +248,10 @@ def main():
 # read datasets in the group into a dictionary of 2d arrays and intialize decimal dates
     timeseries_datasets = {}
     for key in dataset_keys:
-        dataset = group["GRIDS"][key][:]
+        dataset = group[key][:]
         if should_mask:
             print "Masking " + str(key)
-            mask = group["GRIDS"].get('mask')[:]
+            mask = group['mask'][:]
             dataset = mask_matrix(dataset, mask)
 
         timeseries_datasets[key] = dataset
