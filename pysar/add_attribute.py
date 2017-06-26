@@ -70,7 +70,7 @@ def main(argv):
         else:
             atr_tmp = argv[i].split('=')
             atr_new[atr_tmp[0].strip()] = atr_tmp[1].strip()
-    print "The following attributes will be added/updated or removed if new value is 'None':"
+    print "The following attributes will be added/updated, or removed if new value is 'None':"
     info.print_attributes(atr_new)
 
     ext = os.path.splitext(File)[1]

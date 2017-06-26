@@ -373,6 +373,10 @@ EXAMPLE='''example:
   # Generate template file:
   pysarApp.py -g
   pysarApp.py SanAndreasT356EnvD.template -g
+
+  --------------------------------------------
+  Open pysar_template.txt file for details.
+  --------------------------------------------
 '''
 
 UM_FILE_STRUCT='''
@@ -720,8 +724,8 @@ def main(argv):
     #    based on the consistency of triplets
     #    of interferograms
     ############################################
-    print '\n**********  Unwrapping Error Correction  **************'
     if template['pysar.unwrapError'] not in ['auto','no']:
+        print '\n**********  Unwrapping Error Correction  **************'
         outName = os.path.splitext(inps.ifgram_file)[0]+'_unwCor.h5'
         unwCmd='unwrap_error.py -f '+inps.ifgram_file+' -m '+inps.mask_file
         print unwCmd
@@ -729,8 +733,6 @@ def main(argv):
             print 'This might take a while depending on the size of your data set!'
             os.system(unwCmd)
         inps.ifgram_file = outName
-    else:
-        print 'No unwrapping error correction.'
 
 
     #########################################
@@ -1049,27 +1051,41 @@ def main(argv):
 
     # Geocoding
     if template[key] in ['yes','auto']: 
-        print '\ngeocoding ...\n'
+        print '\n--------------------------------------------'
         inps.geo_vel_file        = check_geocode_file(inps.trans_file, inps.vel_file)
         inps.geo_temp_coh_file   = check_geocode_file(inps.trans_file, inps.temp_coh_file)
         inps.goe_timeseries_file = check_geocode_file(inps.trans_file, inps.timeseries_file)
 
-    if inps.geo_vel_file and inps.geo_temp_coh_file:
-        print 'masking geocoded velocity file: '+inps.geo_vel_file+' ...'
-        maskCmd = 'mask.py '+inps.geo_vel_file+' -m '+inps.geo_temp_coh_file+' -t '+str(inps.min_temp_coh)
+    # Mask in geo coord
+    if inps.geo_temp_coh_file:
+        # Generate mask in geo coord
+        print '\n--------------------------------------------'
+        outName = 'geo_maskTempCoh.h5'
+        maskCmd = 'generate_mask.py -f '+inps.geo_temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
         print maskCmd
-        os.system(maskCmd)
-        try:
-            inps.geo_vel_file = glob.glob(os.path.splitext(inps.geo_vel_file)[0]+'_masked.h5')[0]
-        except:
-            pass
+        if ut.update_file(outName, inps.geo_temp_coh_file):
+            os.system(maskCmd)
+        inps.geo_mask_file = outName
+
+        # Mask geo_velocity file
+        if inps.geo_vel_file and inps.geo_mask_file:
+            outName = os.path.splitext(inps.geo_vel_file)[0]+'_masked.h5'
+            maskCmd = 'mask.py '+inps.geo_vel_file+' -m '+inps.geo_mask_file+' -o '+outName
+            print maskCmd
+            if ut.update_file(outName, [inps.geo_vel_file, inps.geo_mask_file]):
+                os.system(maskCmd)
+            try:  inps.geo_vel_file = glob.glob(outName)[0]
+            except:  pass
 
     # Save to Google Earth KML file
     if inps.geo_vel_file and template['pysar.save.kml'] in ['auto','yes']:
+        print '\n--------------------------------------------'
         print 'creating Google Earth KMZ file for geocoded velocity file: '+inps.geo_vel_file+' ...'
+        outName = os.path.splitext(inps.geo_vel_file)[0]+'.kmz'
         kmlCmd = 'save_kml.py '+inps.geo_vel_file
         print kmlCmd
-        os.system(kmlCmd)
+        if ut.update_file(outName, inps.geo_vel_file):
+            os.system(kmlCmd)
 
 
     #############################################
@@ -1080,6 +1096,7 @@ def main(argv):
         if not inps.trans_file or not inps.dem_geo_file:
             warnings.warn('No geomap*.tran file or DEM in geo coord found! Skip saving.')
         else:
+            # 1. Time series file
             inps.geo_timeseries_file = check_geocode_file(inps.trans_file, inps.timeseries_file)
             # Add UNAVCO attributes
             if inps.unavco_atr_file:
@@ -1087,29 +1104,31 @@ def main(argv):
                 print atrCmd
                 os.system(atrCmd)
 
+            # 2. Temporal Coherence
+            inps.geo_temp_coh_file = check_geocode_file(inps.trans_file, inps.temp_coh_file)
+
+            # 3. Mask file
+            inps.geo_mask_file = 'geo_maskTempCoh.h5'
+            if inps.geo_temp_coh_file and ut.update_file(inps.geo_mask_file, inps.geo_temp_coh_file):
+                maskCmd = 'generate_mask.py -f '+inps.geo_temp_coh_file+' -m 0.7 -o '+inps.geo_mask_file
+                print maskCmd
+                os.system(maskCmd)
+
+            # 4. Incidence Angle
+            inps.inc_angle_file = 'incidenceAngle.h5'
+            if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
+                incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
+                print incAngleCmd
+                os.system(incAngleCmd)
+            inps.geo_inc_angle_file = check_geocode_file(inps.trans_file, inps.inc_angle_file)
+
+            # Save to UNAVCO format
             inps.unavco_file = unavco.get_unavco_filename(inps.geo_timeseries_file)
-            if ut.update_file(inps.unavco_file, inps.geo_timeseries_file):
-                # Temporal Coherence and Mask
-                inps.geo_temp_coh_file = check_geocode_file(inps.trans_file, inps.temp_coh_file)
-                inps.geo_mask_file = 'geo_maskTempCoh.h5'
-                # Mask file in geo coord
-                if inps.geo_temp_coh_file and ut.update_file(inps.geo_mask_file, inps.geo_temp_coh_file):
-                    maskCmd = 'generate_mask.py -f '+inps.geo_temp_coh_file+' -m 0.7 -o '+inps.geo_mask_file
-                    print maskCmd
-                    os.system(maskCmd)
-
-                # Incidence Angle
-                inps.inc_angle_file = 'incidenceAngle.h5'
-                if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
-                    incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
-                    print incAngleCmd
-                    os.system(incAngleCmd)
-                inps.geo_inc_angle_file = check_geocode_file(inps.trans_file, inps.inc_angle_file)
-
-                # Save to UNAVCO format
-                unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
-                            ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file
-                print unavcoCmd
+            unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
+                        ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file
+            print unavcoCmd
+            if ut.update_file(inps.unavco_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
+                                                 inps.geo_inc_angle_file, inps.dem_geo_file], check_readable=False):
                 os.system(unavcoCmd)
 
 

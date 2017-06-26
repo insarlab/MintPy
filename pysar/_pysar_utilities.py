@@ -386,6 +386,12 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
     
     Inputs:
         inFile - string or list of string, input file(s)
+    Output:
+        True/False - bool, whether to update output file or not
+    Example:
+        if ut.update_file('timeseries_ECMWF_demErr.h5', 'timeseries_ECMWF.h5'):
+        if ut.update_file('exclude_date.txt', ['timeseries_ECMWF_demErrInvResid.h5','maskTempCoh.h5','pysar_template.txt'],\
+                          check_readable=False):
     '''
     if overwrite:
         return True
@@ -402,15 +408,7 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
             return True
 
     if inFile:
-        # Convert string to list
-        if isinstance(inFile, basestring):
-            inFile = [inFile]
-
-        # Check existance of each item
-        fileList = list(inFile)
-        for File in fileList:
-            if not os.path.isfile(File):
-                inFile.remove(File)
+        inFile = get_file_list(inFile)
 
         # Check modification time
         if inFile:
@@ -929,6 +927,11 @@ def temporal_average(File, outFile=None):
 ######################################################################################################
 def get_file_list(fileList, abspath=False):
     '''Get all existed files matching the input list of file pattern
+    Inputs:
+        fileList - string or list of string, input file pattern
+        abspath  - bool, return absolute path or not
+    Output:
+        fileListOut - list of string, existed file path/name
     Example:
         fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
         fileList = get_file_list('timeseries*.h5')
@@ -947,6 +950,45 @@ def get_file_list(fileList, abspath=False):
     if abspath:
         fileListOut = [os.path.abspath(i) for i in fileListOut]
     return fileListOut
+
+
+##################################################################
+def check_file_size(fname_list, mode_width=None, mode_length=None):
+    '''Check file size in the list of files, and drop those not in the same size with majority.'''
+    # If input file list is empty
+    if not fname_list:
+        return fname_list, None, None
+
+    # Read Width/Length list
+    width_list = []
+    length_list = []
+    for fname in fname_list:
+        atr = readfile.read_attribute(fname)
+        width_list.append(atr['WIDTH'])
+        length_list.append(atr['FILE_LENGTH'])
+
+    # Mode of Width and Length
+    if not mode_width:
+        mode_width = mode(width_list)
+    if not mode_length:
+        mode_length = mode(length_list)
+    
+    # Update Input List
+    fname_list_out = list(fname_list)
+    if width_list.count(mode_width)!=len(width_list) or length_list.count(mode_length)!=len(length_list):
+        print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+        print 'WARNING: Some files may have the wrong dimensions!'
+        print 'All files should have the same size.'
+        print 'The width and length of the majority of files are: %s, %s' % (mode_width, mode_length)
+        print 'But the following files have different dimensions and thus will not be loaded:'
+        for i in range(len(fname_list)):
+            if width_list[i] != mode_width or length_list[i] != mode_length:
+                print '%s    width: %s  length: %s' % (fname_list[i], width_list[i], length_list[i])
+                fname_list_out.remove(fname_list[i])
+        print '\nNumber of files left: '+str(len(fname_list_out))
+        print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+
+    return fname_list_out, mode_width, mode_length
 
 
 def mode (thelist):
