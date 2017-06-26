@@ -278,16 +278,18 @@ def read_attribute(File, epoch=''):
         ##### GAMMA
         if os.path.isfile(File+'.par'):
             atr = read_gamma_par(File+'.par')
-            if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = ext
+            atr['FILE_TYPE'] = ext
+            #if 'FILE_TYPE' not in atr.keys():
+            #    atr['FILE_TYPE'] = ext
             if 'PROCESSOR' not in atr.keys():
                 atr['PROCESSOR'] = 'gamma'
 
         ##### ROI_PAC
         elif rscFile:
             atr = read_roipac_rsc(rscFile)
-            if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = ext
+            atr['FILE_TYPE'] = ext
+            #if 'FILE_TYPE' not in atr.keys():
+            #    atr['FILE_TYPE'] = ext
             if 'PROCESSOR' not in atr.keys():
                 atr['PROCESSOR'] = 'roipac'
 

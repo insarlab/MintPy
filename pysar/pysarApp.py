@@ -605,7 +605,6 @@ def main(argv):
     #########################################
     # Check the subset (Optional)
     #########################################
-    print '\n*************** Subset ****************'
     if inps.trans_file and template['pysar.subset.tightBox'] in ['yes','auto']:
         outName = os.path.splitext(inps.trans_file)[0]+'_tight'+os.path.splitext(inps.trans_file)[1]
         # Get bounding box of valid area in geomap*.trans file
@@ -632,11 +631,10 @@ def main(argv):
 
     # Subset based on input template
     if not all(template[key] in ['auto', 'no'] for key in ['pysar.subset.yx','pysar.subset.lalo']):
+        print '\n*************** Subset ****************'
         # Read subset option from template file, and return None if lalo/yx is not specified.
         pix_box, geo_box = subset.read_subset_template2box(inps.template_file)
         inps = create_subset_dataset(inps, pix_box, geo_box)
-    else:
-        print '\nNo Subset selected. Processing the whole area.'
 
     if inps.subset_dataset:
         sys.exit('Exit as planed after subsetting the dataset')

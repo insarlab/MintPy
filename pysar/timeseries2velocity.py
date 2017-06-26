@@ -271,11 +271,11 @@ def main(argv):
     print 'writing >>> '+inps.outfile
     writefile.write(velocity, atr, inps.outfile)
     
-    atr['FILE_TYPE'] = 'rmse'
+    #atr['FILE_TYPE'] = 'rmse'
     print 'writing >>> '+inps.outfile_rmse
     writefile.write(rmse, atr, inps.outfile_rmse)
     
-    atr['FILE_TYPE'] = 'rmse'
+    #atr['FILE_TYPE'] = 'rmse'
     print 'writing >>> '+inps.outfile_std
     writefile.write(std, atr, inps.outfile_std)
 
