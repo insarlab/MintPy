@@ -1084,7 +1084,7 @@ def main(argv):
         outName = os.path.splitext(inps.geo_vel_file)[0]+'.kmz'
         kmlCmd = 'save_kml.py '+inps.geo_vel_file
         print kmlCmd
-        if ut.update_file(outName, inps.geo_vel_file):
+        if ut.update_file(outName, inps.geo_vel_file, check_readable=False):
             os.system(kmlCmd)
 
 
