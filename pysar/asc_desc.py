@@ -4,271 +4,185 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-
+# Yunjun, Jun 2017: rewrite using pysar module
 
 import os
 import sys
-import getopt
+import argparse
 
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-def usage():
-    print'''
-***************************************************************
-  Projecting Asc and Desc LOS velocities to Horizontal and Vertical 
-  components. Horizontal component is parallel to the azimuth angle.
+import pysar._readfile as readfile
+import pysar._writefile as writefile
+import pysar._pysar_utilities as ut
+import pysar.subset as subset
 
 
-  Usage: asc_des.py  V1.h5 V2.h5 azimuth incidence1 incidence2
+################################################################################
+def four_corners(atr):
+    '''Return 4 corners lat/lon'''
+    west  = float(atr['X_FIRST'])
+    north = float(atr['Y_FIRST'])
+    lon_step = float(atr['X_STEP'])
+    lat_step = float(atr['Y_STEP'])
 
-  Example: 
-      asc_des.py seeded_T134_masked.h5 seeded_T256.h5 16  23 38
-      asc_des.py seeded_T134_masked.h5 seeded_T256.h5 16
+    width  = int(atr['WIDTH'])
+    length = int(atr['FILE_LENGTH'])
 
-***************************************************************  
+    south = north + lat_step*length
+    east  = west  + lon_step*width
+
+    return west, east, south, north
+
+
+def get_overlap_lalo(atr1, atr2):
+    '''Find overlap area in lat/lon of two geocoded files
+    Inputs:
+        atr1/2 - dict, attribute dictionary of two input files in geo coord
+    Outputs:
+        W/E/S/N - float, West/East/South/North in deg 
     '''
+    W1, E1, S1, N1 = four_corners(atr1)
+    W2, E2, S2, N2 = four_corners(atr2)
+    
+    west = max(W1,W2)
+    east = min(E1,E2)
+    north = min(N1,N2)
+    south = max(S1,S2)
+
+    return west, east, south, north
 
 
-def corners(h5V1):
-    k=h5V1.keys()
-    WIDTH=int(h5V1[k[0]].attrs['WIDTH'])
-    LENGTH=int(h5V1[k[0]].attrs['FILE_LENGTH'])
-    West=float(h5V1[k[0]].attrs['X_FIRST'])
-    North=float(h5V1[k[0]].attrs['Y_FIRST'])
-    lon_step=float(h5V1[k[0]].attrs['X_STEP'])
-    lat_step=float(h5V1[k[0]].attrs['Y_STEP'])
-    South=North+lat_step*(LENGTH-1)
-    East=West+lon_step*(WIDTH-1)
- 
-    lon=np.arange(West,West+WIDTH*lon_step,lon_step)
-    lat=np.arange(North,North+LENGTH*lat_step,lat_step)
- 
- 
-    return West,East,North,South,lon,lat,WIDTH,LENGTH
+################################################################################
+REFERENCE='''reference:
+  Wright, T. J., B. E. Parsons, and Z. Lu (2004), Toward mapping 
+  surface deformation in three dimensions using InSAR, GRL, 31(1),
+'''
+
+EXAMPLE='''example:
+  asc_desc.py  vel_AlosAT424_masked.h5  vel_AlosDT73_masked.h5
+  asc_desc.py  vel_EnvAT134_masked.h5   vel_EnvAT256_masked.h5  16
+'''
+
+def cmdLineParse():
+    parser = argparse.ArgumentParser(description='Project Asc and Desc LOS displacement to Horizontal and Vertical direction',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
+
+    parser.add_argument('file', nargs=2,\
+                        help='ascending and descending files\n'+\
+                             'Both files need to be geocoded in the same spatial resolution.')
+    parser.add_argument('--azimuth','--az', dest='azimuth', type=float, default=90.0,\
+                        help='azimuth angle (clockwise) of the direction of the horizontal movement\n'+\
+                             'default is 90.0 for E-W component, assuming no N-S displacement.\n'+\
+                             'i.e. azimuth angle of strike-slip fault\n\n'+\
+                             'Note:\n'+\
+                             'a. This assumes no deformation in its perpendicular direction\n'+\
+                             'b. Near north direction can not be well resolved due to the lack of\n'+\
+                             '   diversity in viewing geometry. Check exact dilution of precision for \n'+\
+                             '   each component in Wright et al., 2004, GRL')
+    parser.add_argument('-o','--output', dest='outfile', nargs=2, default=['up.h5','hz.h5'],\
+                        help='output file name for vertical and horizontal components')
+
+    inps = parser.parse_args()
+    if inps.azimuth < 0.:
+        inps.azimuth += 360.
+    inps.azimuth *= np.pi/180.
+    return inps
 
 
-#################################
-def nearest_neighbor(x,y, tbase, pbase):
-    """ find nearest neighbour """
-    dist = np.sqrt((tbase -x)**2+(pbase -y)**2)
-    indx=dist==min(dist)
-    return indx
-
-##################################
-
-def nearest(x, X):
-    """ find nearest neighbour """
-    dist = np.sqrt((X -x)**2)
-    indx=np.where(dist==min(dist))
-  
-    return indx[0]
-
-#################################
-
-def find_row_column(Lon,Lat,h5file):
-    ################################################
-    # finding row and column numbers of the GPS point
-  
-    lat,lon,lat_step,lon_step = get_lat_lon(h5file)
-    idx= nearest(Lon, lon, lon_step)
-    idy= nearest(Lat, lat, lat_step)
-    if idx !=[] and idy != []:
-        IDX=np.where(idx==True)[0][0]
-        IDY=np.where(idy==True)[0][0]
-    else:
-        IDX=np.nan
-        IDY=np.nan
-    return IDY, IDX
-
-###############################################
-
-def get_lat_lon(h5file):
-
-    k=h5file.keys()
- 
-    if 'interferograms' in k:
- 
-        ifgramList = h5file['interferograms'].keys()
-        Width=float(h5file['interferograms'][ifgramList[0]].attrs['WIDTH'])
-        Length= float(h5file['interferograms'][ifgramList[0]].attrs['FILE_LENGTH'])
-        ullon=float(h5file['interferograms'][ifgramList[0]].attrs['X_FIRST'])
-        ullat=float(h5file['interferograms'][ifgramList[0]].attrs['Y_FIRST'])
-        lon_step=float(h5file['interferograms'][ifgramList[0]].attrs['X_STEP'])
-        lat_step=float(h5file['interferograms'][ifgramList[0]].attrs['Y_STEP'])
-        lon_unit=h5file['interferograms'][ifgramList[0]].attrs['Y_UNIT']
-        lat_unit=h5file['interferograms'][ifgramList[0]].attrs['X_UNIT']
- 
-    elif 'timeseries' in k:
-        Width=float(h5file['timeseries'].attrs['WIDTH'])
-        Length= float(h5file['timeseries'].attrs['FILE_LENGTH'])
-        ullon=float(h5file['timeseries'].attrs['X_FIRST'])
-        ullat=float(h5file['timeseries'].attrs['Y_FIRST'])
-        lon_step=float(h5file['timeseries'].attrs['X_STEP'])
-        lat_step=float(h5file['timeseries'].attrs['Y_STEP'])
-        lon_unit=h5file['timeseries'].attrs['Y_UNIT']
-        lat_unit=h5file['timeseries'].attrs['X_UNIT']
- 
-    elif 'velocity' in k:
-        Width=float(h5file['velocity'].attrs['WIDTH'])
-        Length= float(h5file['velocity'].attrs['FILE_LENGTH'])
-        ullon=float(h5file['velocity'].attrs['X_FIRST'])
-        ullat=float(h5file['velocity'].attrs['Y_FIRST'])
-        lon_step=float(h5file['velocity'].attrs['X_STEP'])
-        lat_step=float(h5file['velocity'].attrs['Y_STEP'])
-        lon_unit=h5file['velocity'].attrs['Y_UNIT']
-        lat_unit=h5file['velocity'].attrs['X_UNIT']
- 
-    lllat=ullat+Length*lat_step
-    urlon=ullon+Width*lon_step
-    lat=np.arange(ullat,lllat,lat_step)
-    lon=np.arange(ullon,urlon,lon_step)
-    return lat,lon,lat_step,lon_step
-
-
-
-
-
+################################################################################
 def main(argv):
+    inps = cmdLineParse()
 
-    try: 
-        V1file=sys.argv[1]
-        V2file=sys.argv[2]
-    except:
-        usage();sys.exit(1)
- 
-    h5V1=h5py.File(V1file,'r')
-    h5V2=h5py.File(V2file,'r')
- 
-    k=h5V1.keys()
-    V1set = h5V1[k[0]].get(k[0])
-    V2set = h5V2[k[0]].get(k[0])
-    
-    V1=V1set[0:V1set.shape[0],0:V1set.shape[1]]
-    V2=V2set[0:V2set.shape[0],0:V2set.shape[1]]
+    ##### 1. Extract the common area of two input files
+    # Basic info
+    atr1 = readfile.read_attribute(inps.file[0])
+    atr2 = readfile.read_attribute(inps.file[1])
+    if any('X_FIRST' not in i for i in [atr1,atr2]):
+        sys.exit('ERROR: Not all input files are geocoded.')
 
-    ####################################################
-    West1,East1,North1,South1,lon1,lat1,WIDTH1,LENGTH1 = corners(h5V1)
-    West2,East2,North2,South2,lon2,lat2,WIDTH2,LENGTH2 = corners(h5V2)
-    ####################################################
-    print 'finding the corners of the whole area'
-    West = max(West1,West2)
-    East = min(East1,East2)
-    North = min(North1,North2)
-    South = max(South1,South2)
-    # width and length of the whole area
-    lon_step=float(h5V1[k[0]].attrs['X_STEP'])
-    lat_step=float(h5V1[k[0]].attrs['Y_STEP'])
- 
-    WIDTH  = int(round((East  - West )/lon_step + 1.0))
-    LENGTH = int(round((South - North)/lat_step + 1.0))
+    k1 = atr1['FILE_TYPE']
+    print 'Input 1st file is '+k1
 
-    ####################################################
-    indx11=nearest(West, lon1)
-    indy11=nearest(North, lat1)
-    indx12=nearest(East, lon1)
-    indy12=nearest(South, lat1)
- 
-    indx21=nearest(West, lon2)
-    indy21=nearest(North, lat2)
-    indx22=nearest(East, lon2)
-    indy22=nearest(South, lat2)
+    # Common AOI in lalo
+    west, east, south, north = get_overlap_lalo(atr1, atr2)
+    lon_step = float(atr1['X_STEP'])
+    lat_step = float(atr1['Y_STEP'])
+    width  = int(round((east  - west )/lon_step))
+    length = int(round((south - north)/lat_step))
 
+    # Read data in common AOI: LOS displacement, heading angle, incident angle
+    u_los = np.zeros((2, width*length))
+    heading = []
+    incidence = []
+    for i in range(len(inps.file)):
+        fname = inps.file[i]
+        print '---------------------'
+        print 'reading '+fname
+        atr = readfile.read_attribute(fname)
 
-    ####################################################
+        [x0,x1] = subset.coord_geo2radar([west,east], atr, 'lon')
+        [y0,y1] = subset.coord_geo2radar([north,south], atr, 'lat')
+        V = readfile.read(fname, (x0,y0,x1,y1))[0]
+        u_los[i,:] = V.flatten(0)
 
-    VV1=V1[indy11:indy12+1,indx11:indx12+1]
-    VV2=V2[indy21:indy22+1,indx21:indx22+1]
- 
-    
-    data=np.zeros((2,WIDTH*LENGTH))
-    data[0,:]=VV1.flatten(0)
-    data[1,:]=VV2.flatten(0)
- 
-    # theta1=np.pi*41./180.
-    # theta2=np.pi*23./180.
- 
-    heading1 = float(h5V1['velocity'].attrs['HEADING'])
-    if heading1 < 0:
-        heading1=heading1+360.
-    heading1=heading1*np.pi/180.
- 
-    heading2 = float(h5V2['velocity'].attrs['HEADING'])
-    if heading2 < 0:
-        heading2=heading2+360.
-    heading2=heading2*np.pi/180.
-
-    #   heading1=np.pi*346.8/180.
-    #   heading2=np.pi*193.4/180.
-    azimuth=float(sys.argv[3])
-    print 'azimuth = '+str(azimuth)
-    azimuth=np.pi*azimuth/180.
- 
-    try:     theta1=float(sys.argv[4])
-    except:  theta1=float(h5V1['velocity'].attrs['LOOK_REF2'])
-    print 'Look angle 1: '+str(theta1)
- 
-    try:     theta2=float(sys.argv[5])
-    except:  theta2=float(h5V2['velocity'].attrs['LOOK_REF2'])
-    print 'Look angle 2: '+str(theta2)  
-    theta1=theta1*np.pi/180.
-    theta2=theta2*np.pi/180.
-    # azimuth=np.pi*29.5/180.
-
-    A=np.zeros((2,2));
-    A[0,0]=np.cos(theta1);A[0,1]=np.sin(theta1)*np.sin(heading1-azimuth);
-    A[1,0]=np.cos(theta2);A[1,1]=np.sin(theta2)*np.sin(heading2-azimuth);
- 
-    A1=np.linalg.pinv(A)
-    Luh=np.dot(A1,data)
-    
-    ######
-    outName='Up.h5'
-    print 'writing '+outName
-    h5velocity = h5py.File(outName,'w')
-    group=h5velocity.create_group('velocity')
-    dset = group.create_dataset('velocity', data=np.reshape(Luh[0,:],(LENGTH,WIDTH)), compression='gzip')
-    
-    for key , value in h5V1[k[0]].attrs.iteritems():
-        group.attrs[key]=value
- 
-    group.attrs['WIDTH']=WIDTH
-    group.attrs['FILE_LENGTH']=LENGTH
-    group.attrs['X_FIRST']=West
-    group.attrs['Y_FIRST']=North
-    group.attrs['X_STEP']=lon_step
-    group.attrs['Y_STEP']=lat_step
-  
-    h5velocity.close()
-
-    ########
-    outName='Hz.h5'
-    print 'writing '+outName
-    h5velocity = h5py.File(outName,'w')
-    group=h5velocity.create_group('velocity')
-    dset = group.create_dataset('velocity', data=np.reshape(Luh[1,:],(LENGTH,WIDTH)), compression='gzip')
- 
-    for key , value in h5V1[k[0]].attrs.iteritems():
-        group.attrs[key]=value
-
-    group.attrs['WIDTH']=WIDTH
-    group.attrs['FILE_LENGTH']=LENGTH
-    group.attrs['X_FIRST']=West
-    group.attrs['Y_FIRST']=North
-    group.attrs['X_STEP']=lon_step
-    group.attrs['Y_STEP']=lat_step
- 
-    h5velocity.close()
- 
-    h5V1.close()
-    h5V2.close()
+        heading_angle = float(atr['HEADING'])
+        if heading_angle < 0.:
+            heading_angle += 360.
+        print 'heading angle: '+str(heading_angle)
+        heading_angle *= np.pi/180.
+        heading.append(heading_angle)
+        
+        inc_angle = float(ut.incidence_angle(atr, dimension=0))
+        #print 'incidence angle: '+str(inc_angle)
+        inc_angle *= np.pi/180.
+        incidence.append(inc_angle)
 
 
-####################################
+    ##### 2. Project displacement from LOS to Horizontal and Vertical components
+    # math for 3D: cos(theta)*Uz - cos(alpha)*sin(theta)*Ux + sin(alpha)*sin(theta)*Uy = Ulos
+    # math for 2D: cos(theta)*Uv - sin(alpha-az)*sin(theta)*Uh = Ulos   #Uh_perp = 0.0
+    # This could be easily modified to support multiple view geometry (e.g. two adjcent tracks from asc & desc) to resolve 3D
+
+    # Design matrix
+    A = np.zeros((2,2));
+    for i in range(len(inps.file)):
+        A[i,0] = np.cos(incidence[i])
+        A[i,1] = np.sin(incidence[i]) * np.sin(heading[i]-inps.azimuth)
+
+    A_inv = np.linalg.pinv(A)
+    u_vh = np.dot(A_inv, u_los)
+
+    u_v = np.reshape(u_vh[0,:], (length, width))
+    u_h = np.reshape(u_vh[1,:], (length, width))
+
+    ##### 3. Output
+    # Attributes
+    atr = atr1.copy()
+    atr['WIDTH'] = str(width)
+    atr['FILE_LENGTH'] = str(length)
+    atr['X_FIRST'] = str(west)
+    atr['Y_FIRST'] = str(north)
+    atr['X_STEP'] = str(lon_step)
+    atr['Y_STEP'] = str(lat_step)
+
+    print '---------------------'
+    outname = inps.outfile[0]
+    print 'writing   vertical component to file: '+outname
+    writefile.write(u_v, atr, outname)
+
+    outname = inps.outfile[1]
+    print 'writing horizontal component to file: '+outname
+    writefile.write(u_h, atr, outname)
+
+    print 'Done.'
+    return
+
+
+################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-
 
