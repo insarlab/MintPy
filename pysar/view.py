@@ -125,7 +125,6 @@ class Basemap2(Basemap):
         lalo_step = lalo_step_candidate[distance.index(min(distance))]
         #lalo_step = 0.1
 
-
         # Auto tick sequence
         lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
         lats = np.unique(np.hstack((np.arange(lat_major, lat_major-max_lalo_dist, -lalo_step),\
@@ -144,6 +143,7 @@ class Basemap2(Basemap):
         Inputs:
             geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
             labels  : list of 4 int, positions where the labels are drawn as in [left, right, top, bottom]
+                      default: [1,0,0,1]
             ax      : axes object the labels are drawn
             draw    : bool, do not draw if False
         Outputs:
@@ -153,6 +153,8 @@ class Basemap2(Basemap):
             m.draw_lalo_label(geo_box)
         '''
         lats, lons, step = self.auto_lalo_sequence(geo_box)
+        #lats = np.array([-0.18,-0.17,-0.16,-0.15])
+        
         digit = np.int(np.floor(np.log10(step)))
         fmt = '%.'+'%d'%(abs(min(digit, 0)))+'f'
         # Change the 2 lines below for customized label
@@ -160,7 +162,9 @@ class Basemap2(Basemap):
         #lons = np.linspace(130.60, 130.70, 3)
 
         # Plot x/y tick without label
-        if not ax:  ax = plt.gca()
+        if not ax:
+            ax = plt.gca()
+        ax.tick_params(direction='in')
         ax.set_xticks(lons)
         ax.set_yticks(lats)
         ax.set_xticklabels([])
@@ -215,38 +219,87 @@ def auto_flip_direction(atr_dict):
 
 
 ##################################################################################################
-def auto_figure_title(meta_dict, inps):
-    '''Get auto figure title from meta dict and input options'''
+def auto_figure_title(fname, epoch=None, inps_dict=None):
+    '''Get auto figure title from meta dict and input options
+    Inputs:
+        fname - string, input file name
+        epoch - string, optional, epoch to read for multi dataset/group files
+        inps_dict - dict, optional, processing attributes, including:
+                    ref_date
+                    pix_box
+                    wrap
+                    disp_scale
+                    opposite
+    Output:
+        fig_title - string, output figure title
+    Example:
+        'geo_velocity.h5' = auto_figure_title('geo_velocity.h5', None, vars(inps))
+        '101020-110220_ECMWF_demErr_quadratic' = auto_figure_title('timeseries_ECMWF_demErr_quadratic.h5', '110220')
+    '''
+    atr = readfile.read_attribute(fname)
+    k = atr['FILE_TYPE']
+    width = int(atr['WIDTH'])
+    length = int(atr['FILE_LENGTH'])
 
-    k = meta_dict['FILE_TYPE']
-    width = int(float(meta_dict['WIDTH']))
-    length = int(float(meta_dict['FILE_LENGTH']))
+    if not epoch and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
+        print "No date/date12 input.\nIt's required for "+k+" file\nReturn None"
+        return None
 
-    if k in ['coherence','interferograms','wrapped']:
-        inps.fig_title = inps.epoch[0]
-        if 'unwCor' in inps.file:
-            inps.fig_title += '_unwCor'
-    elif k == 'timeseries':
-        if inps.ref_date:
-            inps.fig_title = inps.ref_date+'_'+inps.epoch[0]
-        else:
-            inps.fig_title = meta_dict['ref_date']+'_'+inps.epoch[0]
+    if k in multi_group_hdf5_file:
+        fig_title = epoch
+        if 'unwCor' in fname:
+            fig_title += '_unwCor'
+
+    elif k in ['timeseries']:
         try:
-            processMark = '_'+os.path.basename(inps.file).split('timeseries')[1].split(ext)[0]
-            inps.fig_title += processMark
-        except: pass
-    else:  inps.fig_title = inps.file
-    
-    if (inps.pix_box[2]-inps.pix_box[0])*(inps.pix_box[3]-inps.pix_box[1]) < width*length:
-        inps.fig_title += '_sub'
-    if inps.wrap:
-        inps.fig_title += '_wrap'
-    if not inps.disp_scale == 1.0:
-        inps.fig_title += '_scale'+str(inps.disp_scale)
-    if inps.opposite:
-        inps.fig_title += '_oppo'
+            ref_date = inps_dict['ref_date']
+        except:
+            try:
+                ref_date = atr['ref_date']
+            except:
+                h5 = h5py.File(fname, 'r')
+                epoch_list = sorted(h5[k].keys())
+                h5.close()
+                ref_date = epoch_list[0]
+        fig_title = ptime.yymmdd(ref_date)+'-'+ptime.yymmdd(epoch)
 
-    return inps
+        try:
+            ext = os.path.splitext(fname)[1]
+            processMark = os.path.basename(fname).split('timeseries')[1].split(ext)[0]
+            fig_title += processMark
+        except: pass
+    else:
+        fig_title = fname
+
+    # mark - subset
+    try:
+        pix_box = inps_dict['pix_box']
+        if (pix_box[2]-pix_box[0])*(pix_box[3]-pix_box[1]) < width*length:
+            fig_title += '_sub'
+    except: pass
+
+    # mark - rewrapping
+    try:
+        rewrapping = inps_dict['wrap']
+        if rewrapping:
+            fig_title += '_wrap'
+    except: pass
+
+    # mark - scale
+    try:
+        scaling = inps_dict['disp_scale']
+        if not scaling == 1.0:
+            fig_title += '_scale'+str(scaling)
+    except: pass
+
+    # mark - opposite
+    try:
+        disp_opposite = inps_dict['opposite']
+        if disp_opposite:
+            fig_title += '_oppo'
+    except: pass
+
+    return fig_title
 
 
 ##################################################################################################
@@ -383,6 +436,13 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
         print 'show shaded relief DEM'
         ls = LightSource(azdeg=315, altdeg=45)
         dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+2000)
+
+        ### mask out water
+        #dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+500)
+        #mask_file = '/Users/jeromezhang/Documents/insarlab/Kyushu/Velocity/mask_land.h5'
+        #mask_mat = readfile.read(mask_file, inps_dict['dem_pix_box'])[0]
+        #dem_shade = mask.mask_matrix(dem_shade, mask_mat)
+
         bmap.imshow(dem_shade, origin='upper', interpolation='spline16')
 
     if inps_dict['disp_dem_contour']:
@@ -436,6 +496,57 @@ def plot_dem_yx(ax, dem, inps_dict):
 
 
 ##################################################################################################
+def scale_data4disp_unit_and_rewrap(data, atr, disp_unit=None, rewrapping=False):
+    '''Scale 2D matrix value according to display unit and re-wrapping flag
+    Disable rewrapping option 1) for specific data types, which rewrapping has no physical meaning;
+                              2) if disp_unit exists and != 'radian'; priority: disp_unit > rewrapping 
+    Inputs:
+        data - 2D np.array
+        atr  - dict, including the following attributes:
+               UNIT
+               FILE_TYPE
+               WAVELENGTH
+        disp_unit  - string, optional
+        rewrapping - bool, optional
+    Outputs:
+        data
+        disp_unit
+        rewrapping
+    '''
+
+    # Check re-wrap's conflict with disp_unit
+    k = atr['FILE_TYPE']
+    if not disp_unit and rewrapping:
+        if k not in ['coherence','temporal_coherence','mask', 'dem', '.dem','.hgt',\
+                     '.slc','.mli','.trans','.cor']:
+            disp_unit = 'radian'
+        else:
+            rewrapping = False
+            print 'WARNING: re-wrap is disabled for '+k
+    elif disp_unit not in ['radian'] and rewrapping:
+        print 'WARNING: re-wrap is disabled because display unit is not radian.'
+        rewrapping = False
+
+    # Default unit
+    if not disp_unit:
+        if k in ['.mli','.slc','.amp']:
+            disp_unit = 'dB'
+        else:
+            disp_unit = atr['UNIT']
+
+    # Data Operation - Scale to display unit
+    if not disp_unit == atr['UNIT']:
+        data, disp_unit = scale_data2disp_unit(data, atr, disp_unit)        
+    print 'display in unit: '+disp_unit
+
+    # Data Operation - Rewrapping
+    if rewrapping and 'radian' in disp_unit:
+        print 're-wrapping data to [-pi, pi]'
+        data -= np.round(data/(2*np.pi)) * (2*np.pi)
+
+    return data, disp_unit, rewrapping
+
+
 def scale_data2disp_unit(matrix, atr_dict, disp_unit):
     '''Scale data based on data unit and display unit
     Inputs:
@@ -587,7 +698,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
             inps.disp_unit = 'radian'
             print 're-wrap data to [-pi, pi] for display'
         else:
-            inps.disp_wrap = False
+            inps.wrap = False
             print 'WARNING: re-wrap is disabled for '+k
     elif inps.disp_unit not in ['radian'] and inps.wrap:
         print 'WARNING: re-wrap is disabled because display unit is not radian.'
@@ -596,7 +707,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     # Default unit for amplitude image
     if not inps.disp_unit and k in ['.mli','.slc','.amp']:
         inps.disp_unit = 'dB'
-        
+
     # Min / Max - Display
     if not inps.disp_min and not inps.disp_max:
         if k in ['coherence','temporal_coherence','.cor']:
@@ -881,10 +992,11 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     cbar = plt.colorbar(im, cax=cax, extend=cb_extend)
     cbar.ax.tick_params(labelsize=inps.font_size)
     cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
+    #cbar.set_label('Temporal Coherence', fontsize=inps.font_size)
 
     # 3.2 Title
     if not inps.fig_title:
-        inps = auto_figure_title(meta_dict, inps)
+        inps.fig_title = auto_figure_title(meta_dict['FILE_PATH'], None, vars(inps))
     if inps.disp_title:
         ax.set_title(inps.fig_title, fontsize=inps.font_size)
 
@@ -900,6 +1012,13 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     if not inps.disp_axis:
         ax.axis('off')
         print 'turn off axis display'
+
+    # 3.5 Turn off tick label
+    if not inps.disp_tick:
+        #ax.set_xticklabels([])
+        #ax.set_yticklabels([])
+        ax.get_xaxis().set_ticks([])
+        ax.get_yaxis().set_ticks([])
 
     return ax, inps
 
@@ -1051,7 +1170,7 @@ def cmdLineParse(argv):
     ref_group.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',\
                            help='marker symbol of reference point')
     ref_group.add_argument('--ref-size', dest='seed_size', metavar='SIZE_NUM', type=int, default=10,\
-                           help='marker size of reference point')
+                           help='marker size of reference point, default: 10')
 
     ##### Vectors
     #vec_parser = parser.add_argument_group('Vectors','Plot vector geometry')
@@ -1066,6 +1185,7 @@ def cmdLineParse(argv):
     fig_group.add_argument('-p','--col', dest='fig_col_num', type=int, default=1, help='subplot number in column')
     fig_group.add_argument('--noaxis', dest='disp_axis', action='store_false', help='do not display axis')
     fig_group.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
+    fig_group.add_argument('--notick', dest='disp_tick', action='store_false', help='do not display tick in x/y axis')
     fig_group.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
     fig_group.add_argument('--figtitle', dest='fig_title', help='Title shown in the figure.')
     fig_group.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\

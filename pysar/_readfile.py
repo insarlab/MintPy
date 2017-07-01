@@ -60,12 +60,12 @@ single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
 
 
 #########################################################################
-def read(File, box=(), epoch=''):
+def read(File, box=(), epoch=None):
     '''Read one dataset and its attributes from input file.
     
     Read one dataset, i.e. interferogram, coherence, velocity, dem ...
     return 0 if failed.
-    
+
     Inputs:
         File  : str, path of file to read
                 PySAR   file: interferograms, timeseries, velocity, etc.
@@ -78,11 +78,11 @@ def read(File, box=(), epoch=''):
                 '' - return both dataset
                 rg, range   - for geomap_*.trans file
                 az, azimuth - for geomap_*.trans file
-        
+
     Outputs:
         data : 2-D matrix in numpy.array format, return None if failed
         atr  : dictionary, attributes of data, return None if failed
-        
+
     Examples:
         data, atr = read('velocity.h5')
         data, atr = read('100120-110214.unw', (100,1100, 500, 2500))
@@ -111,22 +111,26 @@ def read(File, box=(), epoch=''):
 
         # Read Dataset
         if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-            epochList = sorted(h5file[k].keys())
+            # Check input epoch exists or not
+            epoch_list = sorted(h5file[k].keys())
+            try:    epoch2read = [i for i in epoch_list if epoch in i][0]
+            except: epoch2read = None
+            if not epoch2read:
+                print 'ERROR: no input epoch found!'
+                print 'input epoch: '+str(epoch)
+                print 'available epoches: '+str(epoch_list)
+                sys.exit(1)
 
-            if not epoch in epochList:
-                print 'input epoch is not included in file: '+File
-                print 'input epoch: '+epoch
-                print 'epoch in file '+File
-                print epochList
-
-            if k in multi_dataset_hdf5_file:
-                dset = h5file[k].get(epoch)
+            elif k in multi_dataset_hdf5_file:
+                dset = h5file[k].get(epoch2read)
             else:
-                dset = h5file[k][epoch].get(epoch)
+                dset = h5file[k][epoch2read].get(epoch2read)
 
         elif k in single_dataset_hdf5_file:
             dset = h5file[k].get(k)
-        else: print 'Unrecognized h5 file type: '+k
+        else:
+            print 'ERROR: Unrecognized h5 file type: '+k
+            sys.exit(1)
 
         # Crop
         if box:
@@ -155,7 +159,9 @@ def read(File, box=(), epoch=''):
             #ind = np.nonzero(data)
             #data[ind] = np.log10(data[ind])     # dB
             #atr['UNIT'] = 'dB'
-        else: print 'Un-supported '+processfor+' file format: '+ext
+        else:
+            print 'Un-supported '+processfor+' file format: '+ext
+            sys.exit(1)
   
         if box:  data = data[box[1]:box[3],box[0]:box[2]]
         return data, atr
@@ -204,6 +210,9 @@ def read(File, box=(), epoch=''):
             elif epoch in ['az','azimuth']:
                 #print 'read azimuth from '+File
                 return az, atr
+            else:
+                print 'Un-recognized epoch input: '+epoch
+                sys.exit(1)
 
     ##### Gamma
     elif processor == 'gamma':
@@ -225,12 +234,16 @@ def read(File, box=(), epoch=''):
             del phase
             return amplitude, atr
 
-        else: print 'Un-supported '+process+' for file format: '+ext
-    else: print 'Unrecognized file format: '+ext; return 0
+        else:
+            print 'Un-supported '+process+' for file format: '+ext
+            sys.exit(1)
+    else:
+        print 'Unrecognized file format: '+ext
+        sys.exit(1)
 
 
 #########################################################################
-def read_attribute(File, epoch=''):
+def read_attribute(File, epoch=None):
     '''Read attributes of input file into a dictionary
     Input  : string, file name and epoch (optional)
     Output : dictionary, attributes dictionary
@@ -243,19 +256,32 @@ def read_attribute(File, epoch=''):
 
     ##### PySAR
     if ext in ['.h5','.he5']:
-        h5f = h5py.File(File,'r')
-        k = h5f.keys()
+        h5 = h5py.File(File,'r')
+        k = h5.keys()
         if   'interferograms' in k: k[0] = 'interferograms'
         elif 'coherence'      in k: k[0] = 'coherence'
         elif 'timeseries'     in k: k[0] = 'timeseries'
-        if   k[0] in multi_group_hdf5_file:
-            if epoch:
-                attrs  = h5f[k[0]][epoch].attrs
+
+        if k[0] in multi_group_hdf5_file:
+            # Check input epoch exists or not
+            epoch_list = sorted(h5[k[0]].keys())
+            try:    epoch2read = [i for i in epoch_list if epoch in i][0]
+            except: epoch2read = None
+            if not epoch2read:
+                print 'ERROR: no input epoch found!'
+                print 'input epoch: '+str(epoch)
+                print 'available epoches: '+str(epoch_list)
+                sys.exit(1)
+
+            if epoch2read:
+                attrs  = h5[k[0]][epoch2read].attrs
             else:
-                attrs  = h5f[k[0]][h5f[k[0]].keys()[0]].attrs
+                attrs  = h5[k[0]][h5[k[0]].keys()[0]].attrs
+
         elif k[0] in multi_dataset_hdf5_file+single_dataset_hdf5_file:
-            attrs  = h5f[k[0]].attrs
-        else: print 'Unrecognized h5 file key: '+k[0]
+            attrs  = h5[k[0]].attrs
+        else:
+            sys.exit('Unrecognized h5 file key: '+k[0])
 
         atr = dict()
         for key, value in attrs.iteritems():  atr[key] = str(value)
@@ -263,10 +289,10 @@ def read_attribute(File, epoch=''):
         atr['FILE_TYPE'] = str(k[0])
 
         if k[0] == 'timeseries':
-            try: atr['ref_date']
-            except: atr['ref_date'] = sorted(h5f[k[0]].keys())[0]
+            try:    atr['ref_date']
+            except: atr['ref_date'] = sorted(h5[k[0]].keys())[0]
 
-        h5f.close()
+        h5.close()
 
     else:
         # attribute file list
@@ -311,6 +337,8 @@ def read_attribute(File, epoch=''):
         atr['UNIT'] = 'm/yr'
     else:
         atr['UNIT'] = '1'
+
+    atr['FILE_PATH'] = os.path.abspath(File)
 
     return atr
 

@@ -21,22 +21,6 @@ import pysar.subset as subset
 
 
 ################################################################################
-def four_corners(atr):
-    '''Return 4 corners lat/lon'''
-    west  = float(atr['X_FIRST'])
-    north = float(atr['Y_FIRST'])
-    lon_step = float(atr['X_STEP'])
-    lat_step = float(atr['Y_STEP'])
-
-    width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
-
-    south = north + lat_step*length
-    east  = west  + lon_step*width
-
-    return west, east, south, north
-
-
 def get_overlap_lalo(atr1, atr2):
     '''Find overlap area in lat/lon of two geocoded files
     Inputs:
@@ -44,8 +28,8 @@ def get_overlap_lalo(atr1, atr2):
     Outputs:
         W/E/S/N - float, West/East/South/North in deg 
     '''
-    W1, E1, S1, N1 = four_corners(atr1)
-    W2, E2, S2, N2 = four_corners(atr2)
+    W1, E1, S1, N1 = ut.four_corners(atr1)
+    W2, E2, S2, N2 = ut.four_corners(atr2)
     
     west = max(W1,W2)
     east = min(E1,E2)

@@ -63,6 +63,19 @@ import pysar._remove_surface as rm
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
+def four_corners(atr):
+    '''Return 4 corners lat/lon'''
+    width  = int(atr['WIDTH'])
+    length = int(atr['FILE_LENGTH'])
+    lon_step = float(atr['X_STEP'])
+    lat_step = float(atr['Y_STEP'])
+    west  = float(atr['X_FIRST'])
+    north = float(atr['Y_FIRST'])
+    south = north + lat_step*length
+    east  = west  + lon_step*width
+
+    return west, east, south, north
+
 
 def circle_index(atr,circle_par):
     ## Return Index of Elements within a Circle
