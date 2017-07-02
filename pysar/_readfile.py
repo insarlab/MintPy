@@ -263,20 +263,16 @@ def read_attribute(File, epoch=None):
         elif 'timeseries'     in k: k[0] = 'timeseries'
 
         if k[0] in multi_group_hdf5_file:
-            # Check input epoch exists or not
-            epoch_list = sorted(h5[k[0]].keys())
-            try:    epoch2read = [i for i in epoch_list if epoch in i][0]
-            except: epoch2read = None
-            if not epoch2read:
-                print 'ERROR: no input epoch found!'
-                print 'input epoch: '+str(epoch)
-                print 'available epoches: '+str(epoch_list)
-                sys.exit(1)
+            if epoch:
+                # Check input epoch exists or not
+                epoch_list = sorted(h5[k[0]].keys())
+                try:    epoch = [i for i in epoch_list if epoch in i][0]
+                except: epoch = None
 
-            if epoch2read:
-                attrs  = h5[k[0]][epoch2read].attrs
+            if epoch:
+                attrs = h5[k[0]][epoch2read].attrs
             else:
-                attrs  = h5[k[0]][h5[k[0]].keys()[0]].attrs
+                attrs = h5[k[0]][h5[k[0]].keys()[0]].attrs
 
         elif k[0] in multi_dataset_hdf5_file+single_dataset_hdf5_file:
             attrs  = h5[k[0]].attrs

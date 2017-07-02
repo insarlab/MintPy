@@ -31,46 +31,44 @@ def to_percent(y, position):
     else:
         return s + '%'
 
+
 ####################################################################################
 def usage():
-    print '''
-******************************************************************************************************
-  Simultaneously correcting the baseline error and stratified tropospheric delay correlated with DEM.
-  
-  Usage:
-      baseline_trop.py  time-series  dem polynomial_order  mask baseline_error_direction
-  
-  Example:
-      baseline_trop.py  timeseries.h5 radar.hgt 1
-      baseline_trop.py  timeseries.h5 radar.hgt 1 range
-      baseline_trop.py  timeseries.h5 radar.hgt 1 range_and_azimuth mask.h5
+    print '''usage: baseline_trop.py timeseries_file dem_file poly_order {range_and_azimuth|range|azimuth} mask_file
 
-  Reference:
-  Jo, M.-J., J.-S. Won, S.-W. Kim, and H.-S. Jung (2010), A time-series SAR observation of surface deformation at the
-      southern end of the San Andreas Fault Zone, Geosciences Journal, 14(3), 277-287, doi:10.1007/s12303-010-0028-y.
+Simultaneously correcting the baseline error and stratified tropospheric delay correlated with DEM.
 
-******************************************************************************************************
+reference:
+  Jo, M.-J., J.-S. Won, S.-W. Kim, and H.-S. Jung (2010), A time-series SAR observation of surface 
+  deformation at the southern end of the San Andreas Fault Zone, Geos J., 14(3), 277-287..
+
+example:
+  baseline_trop.py  timeseries.h5 radar.hgt 1
+  baseline_trop.py  timeseries.h5 radar.hgt 1 range
+  baseline_trop.py  timeseries.h5 radar.hgt 1 range_and_azimuth mask.h5
     '''
+    return
+
 
 ####################################################################################
 def main(argv):
   
     try:
-        File = argv[0]
-        demFile=argv[1]
-        p=int(argv[2])
+        File    = argv[0]
+        demFile = argv[1]
+        p       = int(argv[2])
     except:
-        usage() ; sys.exit(1)
+        usage(); sys.exit(1)
   
-    try:    baseline_error=argv[3]
-    except: baseline_error='range_and_azimuth'
-    print baseline_error  
+    try:    baseline_error = argv[3]
+    except: baseline_error = 'range_and_azimuth'
+    print baseline_error
     ##################################
     h5file = h5py.File(File)
     dateList = h5file['timeseries'].keys()
     ##################################
   
-    try: maskFile=argv[4]
+    try: maskFile = argv[4]
     except:
         if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
         elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
@@ -223,6 +221,7 @@ def main(argv):
   
     h5file.close()
     h5orbCor.close()
+    return
 
 
 ####################################################################################

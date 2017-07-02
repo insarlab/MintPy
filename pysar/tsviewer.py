@@ -48,29 +48,34 @@ def cmdLineParse():
     output.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,\
                         help='DPI - dot per inch - for display/write')
 
-    display = parser.add_argument_group('Display Setting')
-    display.add_argument('--ylim', dest='ylim', nargs=2, type=float, help='Y Limits for plotting.')
-    display.add_argument('--ref-date', dest='ref_date', help='Change reference date for display')
-    display.add_argument('--exclude','--ex', dest='ex_date_list', nargs='*', help='Exclude date shown as gray.')
-    display.add_argument('--zero-first', dest='zero_first', action='store_true',\
-                         help='Set displacement at first acquisition to zero.')
-    display.add_argument('-u', dest='disp_unit', metavar='UNIT', default='cm',\
-                         help='unit for display. Default: cm')
-    display.add_argument('-c','--colormap', dest='colormap', default='jet',\
-                         help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
-                              'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
-    display.add_argument('-s','--fontsize', dest='font_size', type=int, default=10, help='Font size for display')
-    display.add_argument('--notitle', dest='disp_title', action='store_false', help='Do not display title in TS plot.')
-    display.add_argument('--no-flip', dest='auto_flip', action='store_false',\
-                         help='Turn off auto flip based on orbit direction.\n'+\
-                              'Default: flip left-right for descending data in radar coord\n'+\
-                              '         flip up-down    for ascending  data in radar coord\n'+\
-                              '         no flip for data in geo coord')
+    disp = parser.add_argument_group('Display Setting')
+    disp.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2, default=[10.0,5.0],\
+                      help='Figure size in inches - width and length. Default: 10.0 5.0\n'+\
+                           'i.e. 3.5 2 for ppt; ')
+    disp.add_argument('--ylim', dest='ylim', nargs=2, type=float, help='Y Limits for plotting.')
+    disp.add_argument('--ref-date', dest='ref_date', help='Change reference date for display')
+    disp.add_argument('--exclude','--ex', dest='ex_date_list', nargs='*', help='Exclude date shown as gray.')
+    disp.add_argument('--zf','--zero-first', dest='zero_first', action='store_true',\
+                      help='Set displacement at first acquisition to zero.')
+    disp.add_argument('-u', dest='disp_unit', metavar='UNIT', default='cm',\
+                      help='unit for display. Default: cm')
+    disp.add_argument('-c','--colormap', dest='colormap', default='jet',\
+                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
+                           'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
+    disp.add_argument('-s','--fontsize', dest='font_size', type=int, default=10, help='Font size for display')
+    disp.add_argument('--notitle', dest='disp_title', action='store_false', help='Do not display title in TS plot.')
+    disp.add_argument('--no-flip', dest='auto_flip', action='store_false',\
+                      help='Turn off auto flip based on orbit direction.\n'+\
+                           'Default: flip left-right for descending data in radar coord\n'+\
+                           '         flip up-down    for ascending  data in radar coord\n'+\
+                           '         no flip for data in geo coord')
 
 
     inps = parser.parse_args()
     if not inps.disp_fig and not inps.save_fig:
         inps.save_fig = True
+    if inps.ylim:
+        inps.ylim = sorted(inps.ylim)
     return inps
 
 
@@ -265,7 +270,7 @@ if __name__ == '__main__':
 
 
     ########## Fig 2 - Time Series Displacement - Point
-    fig_ts = plt.figure('Time series - point', figsize=(3.5,2))
+    fig_ts = plt.figure('Time series - point', figsize=inps.fig_size)
     ax_ts = fig_ts.add_subplot(111)
 
     def update_timeseries(y, x):
@@ -285,7 +290,7 @@ if __name__ == '__main__':
         ax_ts.scatter(dates, d_ts)
         if inps.ex_date_list:
             ex_d_ts = [d_ts[i] for i in inps.ex_idx_list]
-            ax_ts.scatter(inps.ex_dates, ex_d_ts, color='gray')
+            ax_ts.scatter(inps.ex_dates, ex_d_ts, color='gray')   # color='crimson'
         ax_ts.set_ylim(inps.ylim)
 
         # Title
@@ -318,7 +323,7 @@ if __name__ == '__main__':
     else:
         ax_ts.scatter(dates, np.zeros(len(tims)))
         if inps.ex_date_list:
-            ax_ts.scatter(inps.ex_dates, np.zeros(len(inps.ex_date_list)), color='gray')
+            ax_ts.scatter(inps.ex_dates, np.zeros(len(inps.ex_date_list)), color='gray')  # color='crimson'
 
     def plot_timeseries_event(event):
         '''Event function to get y/x from button press'''

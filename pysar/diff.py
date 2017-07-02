@@ -136,8 +136,7 @@ def diff_file(file1, file2, outName=None):
 
 #####################################################################################
 def usage():
-    print '''
-usage:  diff.py  file1  file2  [ outfile ]
+    print '''usage:  diff.py  file1  file2  [ outfile ]
 
 Generates the difference of two input files.
 

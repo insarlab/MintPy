@@ -19,6 +19,7 @@ from scipy.linalg import pinv as pinv
 import pysar._readfile as readfile
 
 
+############################################################
 def to_percent(y, position):
     # Ignore the passed in position. This has the effect of scaling the default
     # tick locations.
@@ -30,32 +31,40 @@ def to_percent(y, position):
     else:
         return s + '%'
 
+
+############################################################
 def usage():
-    print '''
-********************************************************
-  Estimating the errors in baseline components (bh,bv,dbh,dbv), 
-  and correcting the time-series. 
-  
-  Usage:
+    print '''usage: baseline_error.py [-h] timeseries_file [mask_file] [exclude_date]
 
-      baseline_error.py  time-series mask 
- 
-      time-series: The timeseries in HDF5 format.
-      mask       : a mask file to mask out points with high deformation or located in noisy areas
- 
-  Example:
-      baseline_error.py  timeseries.h5 Mask.h5
+Estimating the errors in baseline components (bh,bv,dbh,dbv), and correcting the time-series. 
+
+arguments:
+  timeseries_file : The timeseries in HDF5 format.
+  mask_file       : a mask file to mask out points with high deformation or located in noisy areas
       
-  Reference:
-  Gourmelen, N., F. Amelung, and R. Lanari (2010), Interferometric synthetic aperture radar-GPS integration: Interseismic
-      strain accumulation across the Hunter Mountain fault in the eastern California shear zone, JGR, 115(B9).
-********************************************************
-    '''
+reference:
+  Gourmelen, N., F. Amelung, and R. Lanari (2010), Interferometric synthetic aperture radar-GPS 
+  integration: Interseismic strain accumulation across the Hunter Mountain fault in the eastern
+  California shear zone, JGR, 115(B9).
 
+example:
+  baseline_error.py  timeseries.h5 Mask.h5
+    '''
+    return
+
+
+############################################################
 def main(argv):
-    try:  File = argv[0]
-    except:  usage() ; sys.exit(1)
-    try:  maskFile = argv[1]
+    try:
+        if argv[0] in ['-h','--help']:
+            usage(); sys.exit(1)
+        else:
+            File = argv[0]
+    except:
+        usage(); sys.exit(1)
+
+    try:
+        maskFile = argv[1]
     except: pass
   
     ##################################
@@ -114,8 +123,8 @@ def main(argv):
     Bhrate=[]
     Bvrate=[]
     Be=np.zeros([len(dateList),4])
-    try:     excludedDates=argv[2] 
-    except:  excludedDates=[]
+    try:     excludedDates = argv[2] 
+    except:  excludedDates = []
   
     print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     for i in range(1,len(dateList)):
@@ -152,7 +161,7 @@ def main(argv):
     print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     print 'Estimating Baseline error from each differences ...'
   
-    Bedif=np.zeros([len(dateList),4])
+    Bedif=np.zeros([len(dateList), 4])
     for i in range(1,len(dateList)):
         dset1 = h5file['timeseries'].get(dateList[i-1])
         data1 = dset1[0:dset1.shape[0],0:dset1.shape[1]]

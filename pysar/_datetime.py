@@ -151,6 +151,7 @@ def date_list2tbase(dateList):
         d2 = dt(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
         diff = d2-d1
         tbase.append(diff.days)
+
     ## Dictionary: key - date, value - temporal baseline
     dateDict = {}
     for i in range(len(dateList)):

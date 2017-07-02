@@ -269,7 +269,7 @@ def auto_figure_title(fname, epoch=None, inps_dict=None):
             fig_title += processMark
         except: pass
     else:
-        fig_title = fname
+        fig_title = os.path.basename(fname)
 
     # mark - subset
     try:
