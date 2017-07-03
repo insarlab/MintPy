@@ -789,7 +789,7 @@ def main(argv):
         else:
             inps.min_temp_coh = float(value)
     outName = 'maskTempCoh.h5'
-    maskCmd = 'generate_mask.py -f '+inps.temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
+    maskCmd = 'generate_mask.py '+inps.temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
     print maskCmd
     if ut.update_file(outName, inps.temp_coh_file):
         os.system(maskCmd)
@@ -1061,7 +1061,7 @@ def main(argv):
         # Generate mask in geo coord
         print '\n--------------------------------------------'
         outName = 'geo_maskTempCoh.h5'
-        maskCmd = 'generate_mask.py -f '+inps.geo_temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
+        maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
         print maskCmd
         if ut.update_file(outName, inps.geo_temp_coh_file):
             os.system(maskCmd)
@@ -1110,7 +1110,7 @@ def main(argv):
             # 3. Mask file
             inps.geo_mask_file = 'geo_maskTempCoh.h5'
             if inps.geo_temp_coh_file and ut.update_file(inps.geo_mask_file, inps.geo_temp_coh_file):
-                maskCmd = 'generate_mask.py -f '+inps.geo_temp_coh_file+' -m 0.7 -o '+inps.geo_mask_file
+                maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m 0.7 -o '+inps.geo_mask_file
                 print maskCmd
                 os.system(maskCmd)
 

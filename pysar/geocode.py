@@ -21,8 +21,6 @@ import argparse
 
 import h5py
 import numpy as np
-#from joblib import Parallel, delayed
-#import multiprocessing
 
 import pysar._readfile  as readfile
 import pysar._writefile as writefile

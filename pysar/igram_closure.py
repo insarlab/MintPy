@@ -1,9 +1,8 @@
 #! /usr/bin/env python
 
-import sys
 import os
+import sys
 import h5py
-import getopt
 import pysar._pysar_utilities as ut
 
 
@@ -18,14 +17,16 @@ def usage():
 
 def main(argv):
 
-    try:  file=argv[0]
-    except:  usage();sys.exit(1)
+    try:
+        file=argv[0]
+    except:
+        usage(); sys.exit(1)
  
-    h5file=h5py.File(file)
-    curls,Triangles,C=ut.get_triangles(h5file)
+    h5file = h5py.File(file)
+    curls,Triangles,C = ut.get_triangles(h5file)
  
-    try:     curlfile=argv[1]
-    except:  curlfile='curls.h5'
+    try:     curlfile = argv[1]
+    except:  curlfile = 'curls.h5'
  
     if not os.path.isfile(curlfile):
         ut.generate_curls(curlfile,h5file,Triangles,curls)

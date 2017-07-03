@@ -30,12 +30,9 @@ import add
 import asc_desc
 import baseline_error
 import baseline_trop
-import convert2mat
 #import correlation_with_dem
 import dem_error
 import diff
-#import filter_spatial
-import filter_temporal
 #import generate_mask
 import geocode
 #import igram_closure
@@ -63,10 +60,13 @@ import reconstruct_igrams
 #import save_gmt
 #import save_kml
 #import save_unw
+#import save_mat
 import save_unavco
 import seed_data
 import simulation
+#import spatial_filter
 import sum_epochs
+#import temporal_filter
 #import temporal_coherence
 #import temporal_derivative
 import timeseries2velocity
