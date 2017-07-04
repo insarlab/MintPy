@@ -180,15 +180,16 @@ def cmdLineParse():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='File to be filtered')
-    parser.add_argument('filter_type',\
+    parser.add_argument('filter_type', default='lowpass_gaussian',\
                         choices=['lowpass_gaussian','highpass_gaussian','lowpass_avg','highpass_avg',\
                                  'sobel','roberts','canny'],\
-                        help='Type of filter. For more filters, check the link below:\n'+\
+                        help='Type of filter. Default: lowpass_gaussian.\n'+\
+                             'For more filters, check the link below:\n'+\
                              'http://scikit-image.org/docs/dev/api/skimage.filters.html')
     parser.add_argument('filter_par', nargs='?', type=float,\
-                        help='Filter parameter for low/high pass filter\n'+\
-                             'Sigma       for low/high pass gaussian filter\n'+\
-                             'Kernel Size for low/high pass average filter')
+                        help='Filter parameter for low/high pass filter. Default=\n'+\
+                             'Sigma       for low/high pass gaussian filter, default: 3.0\n'+\
+                             'Kernel Size for low/high pass average filter, default: 5')
     parser.add_argument('-o','--outfile', help='Output file name.')
 
     inps = parser.parse_args()

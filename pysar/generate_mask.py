@@ -72,6 +72,8 @@ def main(argv):
             inps.outfile = 'maskTempCoh.h5'
         else:
             inps.outfile = 'mask.h5'
+        if inps.file.startswith('geo_'):
+            inps.outfile = 'geo_'+inps.outfile
 
     ##### Mask: Non-zero
     if inps.nonzero:

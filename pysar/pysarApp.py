@@ -198,7 +198,126 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
 def multilook_dataset(inps, lks_y=None, lks_x=None):
     '''Create a multilooked dataset'''
     return inps
-    
+
+
+def is_file_exist(file_list, abspath=True):
+    '''Check if any file in the file list 1) exists and 2) readable
+    Inputs:
+        file_list : list of string, file name with/without wildcards
+        abspath   : bool, return absolute file name/path or not
+    Output:
+        file_path : string, found file name/path; None if not.
+    '''
+    try:
+        file_path = ut.get_file_list(file_list, abspath=abspath)[0]
+        atr_temp = readfile.read_attribute(file_path)
+    except:
+        file_path = None
+    return file_path
+
+
+def check_loaded_dataset(work_dir='./', inps=None):
+    '''Check the result of loading data for the following two rules:
+        1. file existance
+        2. file attribute readability
+
+    If inps is valid/not_empty: return updated inps;
+    Otherwise, return True/False if all recommended file are loaded and readably or not
+
+    Inputs:
+        work_dir : string, PySAR working directory
+        inps     : Namespace, optional, variable for pysarApp.py. Not needed for check loading result.
+    Outputs:
+        load_complete  : bool, complete loading or not
+        ifgram_file    : string, file name/path of unwrapped interferograms
+        coherence_file : string, file name/path of spatial coherence
+        dem_file_radar : string, file name/path of DEM file in radara coord (for interferograms in radar coord)
+        dem_file_geo   : string, file name/path of DEM file in geo coord
+        trans_file     : string, file name/path of transformation mapping file (for interferograms in radar coord)
+    Example:
+        from pysar.pysarApp import check_loaded_dataset
+        True = check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR')
+        inps = check_loaded_dataset(inps.work_dir, inps)
+    '''
+    ##### Find file name/path of all loaded files
+    work_dir = os.path.abspath(work_dir)
+
+    # Required files - 1. unwrapped interferograms
+    file_list = [work_dir+'/Modified_unwrapIfgram.h5',\
+                 work_dir+'/unwrapIfgram.h5',\
+                 work_dir+'/Modified_LoadedData.h5',\
+                 work_dir+'/LoadedData.h5']
+    ifgram_file = is_file_exist(file_list, abspath=True)
+
+    if not ifgram_file:
+        print '\nERROR: No interferograms file found!\n'
+        if inps:
+            inps.ifgram_file = None
+            return inps
+        else:
+            return False
+    else:
+        print 'Unwrapped interferograms: '+ifgram_file
+        atr = readfile.read_attribute(ifgram_file)
+
+    # Recommended files (None if not found)
+    # 2. Spatial coherence for each interferogram
+    file_list = [work_dir+'/Modified_coherence.h5',\
+                 work_dir+'/coherence.h5',\
+                 work_dir+'/Modified_Coherence.h5',\
+                 work_dir+'/Coherence.h5']
+    coherence_file = is_file_exist(file_list, abspath=True)
+
+    # 3. DEM in radar coord
+    file_list = [work_dir+'/demRadar.h5',\
+                 work_dir+'/radar*.hgt']
+    dem_radar_file = is_file_exist(file_list, abspath=True)
+
+    # 4. DEM in geo coord
+    file_list = [work_dir+'/demGeo_tight.h5',\
+                 work_dir+'/demGeo.h5',\
+                 work_dir+'/*.dem']
+    dem_geo_file = is_file_exist(file_list, abspath=True)
+
+    # 5. Transform file for geocoding
+    file_list = [work_dir+'/geomap*lks_tight.trans',\
+                 work_dir+'/geomap*lks.trans']
+    trans_file = is_file_exist(file_list, abspath=True)
+
+    ##### Print searching result
+    if 'X_FIRST' in atr.keys():
+        geocoded = True
+    else:
+        geocoded = False
+
+    if coherence_file: print 'Spatial       coherences: '+coherence_file
+    else:              print 'WARNING: No coherences file found. Cannot use coherence-based network modification without it.'
+    if dem_geo_file:   print 'DEM in geo    coordinate: '+dem_geo_file
+    else:              print 'WARNING: No DEM in geo coord found.'
+    if dem_radar_file: print 'DEM in radar  coordinate: '+dem_radar_file
+    elif not geocoded: print 'WARNING: No DEM in radar coord found.'
+    if trans_file:     print 'Mapping transform   file: '+trans_file
+    elif not geocoded: print 'No transform file found! Can not geocoding without it!'
+
+    ##### Update namespace inps if inputed
+    if inps:
+        inps.ifgram_file = ifgram_file
+        inps.coherence_file = coherence_file
+        inps.dem_radar_file = dem_radar_file
+        inps.dem_geo_file = dem_geo_file
+        inps.trans_file = trans_file
+        return inps
+
+    ##### Check 
+    else:
+        if None in [ifgram_file, coherence_file, dem_geo_file]:
+            return False
+
+        if not geocoded and None in [dem_radar_file, trans_file]:
+            return False
+        else:
+            return True
+
 
 ##########################################################################
 LOGO='''
@@ -223,26 +342,26 @@ TEMPLATE='''##------------------------ pysarApp_template.txt -------------------
 ## recommend input files for data in radar coordinate:
 ##     pysar.unwrapFiles         = 'path of all unwrapped interferograms'
 ##     pysar.corFiles            = 'path of all coherence files'
-##     pysar.transFile           = 'path of mapping transformation file'
-##     pysar.demFile.radarCoord  = 'path of DEM in radar coordinate'
 ##     pysar.demFile.geoCoord    = 'path of DEM in geo   coordinate'
+##     pysar.demFile.radarCoord  = 'path of DEM in radar coordinate'
+##     pysar.transFile           = 'path of mapping transformation file'
 ## recommend input files for data in geo coordinate:
 ##     pysar.unwrapFiles 
 ##     pysar.corFiles    
 ##     pysar.dem.geoCoord
 ## auto - automatic path pattern for Univ of Miami file structure, which are:
-##     pysar.unwrapFiles = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
-##     pysar.corFiles    = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
-##     pysar.wrapFiles   = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.int
-##     pysar.transFile   = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
-##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
+##     pysar.unwrapFiles        = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
+##     pysar.corFiles           = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
+##     pysar.wrapFiles          = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.int
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
+##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
+##     pysar.transFile          = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
 pysar.insarProcessor     = auto  #[roipac, isce, gamma, doris, gmtsar], auto for roipac, InSAR processor
 pysar.unwrapFiles        = auto  #[filt*.unw]
 pysar.corFiles           = auto  #[filt*.cor]
-pysar.transFile          = auto  #[geomap*.trans / sim*.UTM_TO_RDC]
-pysar.demFile.radarCoord = auto  #[radar*.hgt]
 pysar.demFile.geoCoord   = auto  #[*.dem]
+pysar.demFile.radarCoord = auto  #[radar*.hgt]
+pysar.transFile          = auto  #[geomap*.trans / sim*.UTM_TO_RDC]
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)
@@ -546,61 +665,9 @@ def main(argv):
     os.chdir(inps.work_dir)
 
     print '--------------------------------------------'
-    ## 1. Check loading result
-    # Required files
-    fileList = [inps.work_dir+'/'+i for i in ['Modified_unwrapIfgram.h5','unwrapIfgram.h5',\
-                                              'Modified_LoadedData.h5','LoadedData.h5']]
-    try:
-        inps.ifgram_file = ut.get_file_list(fileList, abspath=True)[0]
-        atr = readfile.read_attribute(inps.ifgram_file)
-        print 'Unwrapped interferograms: '+inps.ifgram_file
-    except RuntimeError:
-        print '\nNo interferograms file found!\n'
-
-    # Recommended files (None if not found)
-    # Spatial coherence for each interferogram
-    fileList = [inps.work_dir+'/'+i for i in ['coherence.h5','Coherence.h5']]
-    try:
-        inps.coherence_file = ut.get_file_list(fileList, abspath=True)[0]
-        print 'Spatial coherence  files: '+inps.coherence_file
-    except:
-        inps.coherence_file = None
-        warnings.warn('No coherences file found. Cannot use coherence-based network modification without it.')
-
-    # DEM in radar coord
-    file_list = ['demRadar.h5','radar*.hgt']
-    try: file_list.append(os.path.basename(template['pysar.dem.geoCoord']))
-    except: pass
-    try:
-        inps.dem_radar_file = ut.get_file_list(file_list, abspath=True)[0]
-        print 'DEM in  radar coordinate: '+str(inps.dem_radar_file)
-    except:
-        inps.dem_radar_file = None
-        if not 'Y_FIRST' in atr.keys():
-            warnings.warn('No radar coord DEM found.')
-
-    # DEM in geo coord
-    file_list = ['demGeo_tight.h5','demGeo.h5','*.dem']
-    try: file_list.append(os.path.basename(template['pysar.dem.geoCoord']))
-    except: pass
-    try:
-        inps.dem_geo_file = ut.get_file_list(file_list, abspath=True)[0]
-        print 'DEM in  geo   coordinate: '+inps.dem_geo_file
-    except:
-        inps.dem_geo_file = None
-        warnings.warn('No geo coord DEM found.')
-
-    # Transform file for geocoding
-    file_list = ['geomap*lks_tight.trans','geomap*lks.trans']
-    try: file_list.append(os.path.basename(template['pysar.geomap']))
-    except: pass
-    try:
-        inps.trans_file = ut.get_file_list(file_list, abspath=True)[0]
-        print 'Mapping transform   file: '+str(inps.trans_file)
-    except:
-        inps.trans_file = None
-        if not 'Y_FIRST' in atr.keys():
-            warnings.warn('No transform file found! Can not geocoding without it!')
+    inps = check_loaded_dataset(inps.work_dir, inps)
+    if not inps.ifgram_file:
+        sys.exit('Exit.')
 
     if inps.load_dataset:
         sys.exit('Exit as planed after loading/checking the dataset')
