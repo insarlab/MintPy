@@ -3,7 +3,7 @@
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/yunjunz/PySAR)
 [![Badges](http://img.shields.io/:badges-7/7-ff6799.svg)](https://github.com/yunjunz/PySAR)
 
-PySAR is an InSAR (Interferometric Synthetic Aperture Radar) time series package to produce three dimensional (space and time) ground displacement from InSAR data. 
+PySAR is a Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of unwrapped interferograms in ROI_PAC, Gamma and ISCE format, and produces three dimensional (2D in space and 1D in time) ground displacement.   
 
 ### 1. Installation   
 
@@ -100,9 +100,10 @@ Use tsviewer.py to plot the time-series for each point (relative to the refernce
 PySAR is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentaion or simple run it with -h to see its usage, you could build your own customized processing recipe!
 
    
-### 3. Wiki
-
-Check our [Github Wiki](https://github.com/yunjunz/PySAR/wiki) to see the example data, paper references, file naming convention and more.
+### 3. Documentation
+   
+- API Documentation: [PDF](https://github.com/yunjunz/PySAR/blob/master/docs/PySAR-1.2.pdf)
+- Wiki: Check our [Github Wiki](https://github.com/yunjunz/PySAR/wiki) to see the example data, paper references, file naming convention and more.
    
 ### 4. Google Group
 
