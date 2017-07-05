@@ -292,9 +292,9 @@ def check_loaded_dataset(work_dir='./', inps=None):
 
     if coherence_file: print 'Spatial       coherences: '+coherence_file
     else:              print 'WARNING: No coherences file found. Cannot use coherence-based network modification without it.'
-    if dem_geo_file:   print 'DEM in geo    coordinate: '+dem_geo_file
+    if dem_geo_file:   print 'DEM in geo   coordinates: '+dem_geo_file
     else:              print 'WARNING: No DEM in geo coord found.'
-    if dem_radar_file: print 'DEM in radar  coordinate: '+dem_radar_file
+    if dem_radar_file: print 'DEM in radar coordinates: '+dem_radar_file
     elif not geocoded: print 'WARNING: No DEM in radar coord found.'
     if trans_file:     print 'Mapping transform   file: '+trans_file
     elif not geocoded: print 'No transform file found! Can not geocoding without it!'
@@ -339,13 +339,13 @@ _________________________________________________
 
 TEMPLATE='''##------------------------ pysarApp_template.txt ------------------------##
 ## 1. Load Data (--load to exit after this step)
-## recommend input files for data in radar coordinate:
+## recommended input files for data in radar coordinates:
 ##     pysar.unwrapFiles         = 'path of all unwrapped interferograms'
 ##     pysar.corFiles            = 'path of all coherence files'
-##     pysar.demFile.geoCoord    = 'path of DEM in geo   coordinate'
-##     pysar.demFile.radarCoord  = 'path of DEM in radar coordinate'
+##     pysar.demFile.geoCoord    = 'path of DEM in geo   coordinates'
+##     pysar.demFile.radarCoord  = 'path of DEM in radar coordinates'
 ##     pysar.transFile           = 'path of mapping transformation file'
-## recommend input files for data in geo coordinate:
+## recommended input files for data in geo coordinates:
 ##     pysar.unwrapFiles 
 ##     pysar.corFiles    
 ##     pysar.dem.geoCoord
@@ -361,7 +361,7 @@ pysar.unwrapFiles        = auto  #[filt*.unw]
 pysar.corFiles           = auto  #[filt*.cor]
 pysar.demFile.geoCoord   = auto  #[*.dem]
 pysar.demFile.radarCoord = auto  #[radar*.hgt]
-pysar.transFile          = auto  #[geomap*.trans / sim*.UTM_TO_RDC]
+pysar.transFile          = auto  #[geomap*.trans for roipac / sim*.UTM_TO_RDC for gamma]
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)

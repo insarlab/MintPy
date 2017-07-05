@@ -160,7 +160,7 @@ def read(File, box=(), epoch=None):
             #data[ind] = np.log10(data[ind])     # dB
             #atr['UNIT'] = 'dB'
         else:
-            print 'Un-supported '+processfor+' file format: '+ext
+            print 'Un-supported '+processor+' file format: '+ext
             sys.exit(1)
   
         if box:  data = data[box[1]:box[3],box[0]:box[2]]

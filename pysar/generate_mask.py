@@ -24,7 +24,7 @@ import pysar._pysar_utilities as ut
 
 ################################################################################################
 EXAMPLE='''example:
-  generate_mask.py  temporal_coherence.h5 -m 0.7 -o maskTempCoh.h5
+  generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
   generate_mask.py  081018_090118.unw     -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
   generate_mask.py  srtm1.dem             -m 0.5 -o maskLand.h5
   generate_mask.py  unwrapIfgram.h5 101120-110220 -m 4
