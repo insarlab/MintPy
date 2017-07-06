@@ -1,61 +1,62 @@
 #! /usr/bin/env python
-
 ############################################################
 # Program is part of PySAR v1.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
+
 import os
 import sys
 
 import h5py
-from numpy import pi,round
+import numpy as np
 
 
 def usage():
-    print '''
-************************************************************************
+    print '''usage: rewrap.py  ifgram_file   [output_name]
 
-  Usage: rewrap.py  interferograms  output
+Re-wrap unwraped interferograms to wrapped interferograms.
 
-  Example:
-         rewrap.py  interferograms.h5
-
-************************************************************************
+example:
+  rewrap.py  interferograms.h5
     '''
+    return
+
 
 def rewrap(unw):
-    rewrapped = unw - round(unw/(2*pi)) * 2*pi
+    rewrapped = unw - np.round(unw/(2*np.pi)) * 2*np.pi
     return rewrapped
 
-def main(argv):
 
-    try:     file=argv[0]
-    except:  usage();sys.exit(1)
- 
-    h5file=h5py.File(file)
-    try:     OutName=argv[1]
-    except:  OutName='rewrapped_'+file
-    h5file_rewarap=h5py.File(OutName,'w')
-    gg = h5file_rewarap.create_group('interferograms')
-    ifgramList = h5file['interferograms'].keys()
+def main(argv):
+    try:
+        file = argv[0]
+    except:
+        usage(); sys.exit(1)
+
+    try:    outfile = argv[1]
+    except: outfile = 'rewrapped_'+file
+
+    print 'writing >>> '+outfile
+    h5 = h5py.File(file, 'r')
+    h5out = h5py.File(outfile,'w')
+    gg = h5out.create_group('interferograms')
+    ifgramList = h5['interferograms'].keys()
+    print 'number of interferograms: '+str(len(ifgramList))
     for ifgram in ifgramList:
         print ifgram
-        unwset=h5file['interferograms'][ifgram].get(ifgram)
-        unw=unwset[0:unwset.shape[0],0:unwset.shape[1]]
-        rewrapped=rewrap(unw)
+        unw = h5['interferograms'][ifgram].get(ifgram)[:]
+        rewrapped = rewrap(unw)
         group = gg.create_group(ifgram)
         dset = group.create_dataset(ifgram, data=rewrapped, compression='gzip')
-        for key, value in h5file['interferograms'][ifgram].attrs.iteritems():
+        for key, value in h5['interferograms'][ifgram].attrs.iteritems():
             group.attrs[key] = value
- 
-    try:
-        gm = h5file_rewarap.create_group('mask')
-        mask = h5file['mask'].get('mask')
-        dset = gm.create_dataset('mask', data=mask, compression='gzip')
-    except:
-        print 'mask not found'
+
+    h5.close()
+    h5out.close()
+    print 'Done.'
+    return outfile
 
 
 if __name__ == '__main__':

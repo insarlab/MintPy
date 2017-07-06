@@ -108,15 +108,15 @@ USAGE='''usage: temporal_coherence.py [-h] interferograms_file timeseries_file [
 DESCRIPTION='''Generates temporal coherence map.'''
 
 REFERENCE='''reference:
-Tizzani, P., P. Berardino, F. Casu, P. Euillades, M. Manzo, G. P. Ricciardi, G. Zeni,
-and R. Lanari (2007), Surface deformation of Long Valley Caldera and Mono Basin, 
-California, investigated with the SBAS-InSAR approach, Remote Sens. Environ., 108(3),
-277-289, doi:10.1016/j.rse.2006.11.015.
+  Tizzani, P., P. Berardino, F. Casu, P. Euillades, M. Manzo, G. P. Ricciardi, G. Zeni,
+  and R. Lanari (2007), Surface deformation of Long Valley Caldera and Mono Basin, 
+  California, investigated with the SBAS-InSAR approach, Remote Sens. Environ., 108(3),
+  277-289, doi:10.1016/j.rse.2006.11.015.
 '''
 
 EXAMPLE='''example:
-temporal_coherence.py  unwrapIfgram.h5  timeseries.h5
-temporal_coherence.py  unwrapIfgram.h5  timeseries.h5  temporalCoherence.h5
+  temporal_coherence.py  unwrapIfgram.h5  timeseries.h5
+  temporal_coherence.py  unwrapIfgram.h5  timeseries.h5  temporalCoherence.h5
 '''
 
 def usage():
@@ -142,6 +142,9 @@ def main(argv):
     atr['FILE_TYPE'] = 'temporal_coherence'
     atr['UNIT'] = '1'
     writefile.write(temp_coherence, atr, tempCohFile)
+    print 'Done.'
+    return tempCohFile
+
 
 ######################################################################################################
 if __name__ == '__main__':

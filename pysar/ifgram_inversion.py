@@ -16,7 +16,7 @@ import pysar._pysar_utilities as ut
 
 ################################################################################################
 EXAMPLE='''example:
-  igram_inversion.py  unwrapIfgram.h5
+  ifgram_inversion.py  unwrapIfgram.h5
 '''
 
 def cmdLineParse():

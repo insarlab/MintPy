@@ -18,42 +18,43 @@ import h5py
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._datetime as ptime
- 
 
+
+##############################################################################
 def usage():
-    print '''
-**************************************************************************
-  To converts the PySAR hdf5 file formats to the roipac unw format 
+    print '''usage: save_roipac.py  file  [date_info]
 
-  Usage: 
-      save_unw.py file.h5 [date_info]
+Convert PySAR hdf5 file to ROI_PAC format 
 
-      for velocity:   the ouput will be a one year interferogram.
-      for timeseries: if date is not specified, the last date will be used
-                      if two dates are specified, the earlier date will be
-                         used as the reference date.
+argument:
+  file : file to be converted.
+         for velocity  : the ouput will be a one year interferogram.
+         for timeseries: if date is not specified, the last date will be used
+                         if two dates are specified, the earlier date will be
+                             used as the reference date.
 
-  Example:
-      save_unw.py velocity.h5
-      save_unw.py timeseries.h5 20050601
-      save_unw.py timeseries.h5 040728 050601
-      save_unw.py unwrapIfgram.h5 filt_091225-100723-sim_HDR_8rlks_c10.unw
-      save_unw.py unwrapIfgram.h5 091225-100723
-      save_unw.py temporal_coherence.h5
-
-***************************************************************************
+example:
+  save_roipac.py  velocity.h5
+  save_roipac.py  timeseries.h5    20050601
+  save_roipac.py  timeseries.h5    040728    050601
+  save_roipac.py  unwrapIfgram.h5  filt_091225-100723-sim_HDR_8rlks_c10.unw
+  save_roipac.py  unwrapIfgram.h5  091225-100723
+  save_roipac.py  temporal_coherence.h5
     '''
+    return
 
 
+##############################################################################
 def main(argv):
-    try:    File=argv[0]
-    except: usage();sys.exit(1)
+    try:
+        File=argv[0]
+    except:
+        usage();sys.exit(1)
   
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
   
-    h5file=h5py.File(File,'r')
-    print '\n************* Output to ROI_PAC format ***************'
+    h5file = h5py.File(File,'r')
   
     if k == 'velocity':
         dset = h5file['velocity'].get('velocity')
@@ -61,11 +62,11 @@ def main(argv):
         print "converting velocity to a 1 year interferogram."
         wvl=float(h5file[k].attrs['WAVELENGTH'])
         data=(-4*pi/wvl)*data
-    
+
         outname=File.split('.')[0]+'.unw'
         print 'writing >>> '+outname
         writefile.write(data,atr,outname)
-  
+
     elif k == 'timeseries':
         dateList=h5file['timeseries'].keys() 
         ## Input
@@ -83,7 +84,7 @@ def main(argv):
         d = ptime.yyyymmdd(d)
         try: d_ref = ptime.yyyymmdd(d_ref)
         except: pass
-    
+
         ## Data
         print 'reading '+d+' ... '
         data = h5file['timeseries'].get(d)[:]
@@ -94,7 +95,7 @@ def main(argv):
         except: pass
         wvl=float(atr['WAVELENGTH'])
         data *= -4*pi/wvl
-    
+
         ## outName
         try:      master_d = d_ref
         except:
@@ -103,14 +104,14 @@ def main(argv):
         if len(master_d)==8:  master_d=master_d[2:8]
         if len(d)==8:         d=d[2:8]
         outname = master_d+'_'+d+'.unw'
-    
+
         ## Attributes
         atr['FILE_TYPE']             = '.unw'
         atr['P_BASELINE_TIMESERIES'] = '0.0'
         atr['UNIT']                  = 'radian'
         atr['DATE']                  = master_d
         atr['DATE12']                = master_d+'-'+d
-        
+
         ## Writing
         print 'writing >>> '+outname
         writefile.write(data,atr,outname)
@@ -124,7 +125,9 @@ def main(argv):
                 if d in igramList[i]:
                     igram = igramList[i]
         except:
-            igram = igramList[-1];   print 'No input date specified >>> continue with the last date'
+            igram = igramList[-1]
+            print 'No input date specified >>> continue with the last date'
+
         ## Read and Write
         print 'reading '+igram+' ... '
         data = h5file[k][igram].get(igram)[:]
@@ -133,7 +136,7 @@ def main(argv):
         
         print 'writing >>> '+ outname
         writefile.write(data, atr, outname)  
-  
+
     else:
         dset = h5file[k].get(k)
         data = dset[0:dset.shape[0],0:dset.shape[1]]
@@ -146,8 +149,8 @@ def main(argv):
             outname=File.split('.')[0]+'.unw'
         print 'writing >>> '+ outname
         writefile.write(data,atr,outname)
-  
-  
+
+
     h5file.close()
     return
 

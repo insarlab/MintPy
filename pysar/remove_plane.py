@@ -13,10 +13,8 @@ import os
 import sys
 import argparse
 
-import numpy as np
 import h5py
-#import multiprocessing
-#from joblib import Parallel, delayed
+import numpy as np
 
 import pysar._pysar_utilities as ut
 import pysar._remove_surface as rm

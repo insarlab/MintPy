@@ -35,8 +35,10 @@ import dem_error
 import diff
 #import generate_mask
 #import geocode
-#import igram_closure
-#import igram_inversion
+#import ifgram_closure
+#import ifgram_inversion
+#import ifgram_reconstruction
+#import ifgram_simulation
 import image_math
 import incidence_angle
 import info
@@ -54,7 +56,6 @@ import modify_network
 #import plot_network
 #import pysarApp
 #import quality_map
-import reconstruct_igrams
 #import reference_epoch
 #import remove_plane
 #import save_gmt
@@ -63,7 +64,6 @@ import reconstruct_igrams
 #import save_mat
 import save_unavco
 import seed_data
-import simulation
 #import spatial_filter
 import sum_epochs
 #import temporal_filter

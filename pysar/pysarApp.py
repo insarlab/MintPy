@@ -807,7 +807,7 @@ def main(argv):
     ########################################
     print '\n**********  Network Inversion to Time Series  ********************'
     inps.timeseries_file = 'timeseries.h5'
-    invertCmd = 'igram_inversion.py '+inps.ifgram_file
+    invertCmd = 'ifgram_inversion.py '+inps.ifgram_file
     print invertCmd
     if ut.update_file(inps.timeseries_file, inps.ifgram_file):
         os.system(invertCmd)

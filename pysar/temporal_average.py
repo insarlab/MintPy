@@ -15,32 +15,35 @@ import pysar._pysar_utilities as ut
 
 #################################  Usage  ####################################
 def usage():
-    print '''
-******************************************************************************
-  Calculate temporal average/mean of multi-temporal datasets.
+    print '''usage:  temporal_average.py  file  [output_file]
 
-  Usage:
-      temporal_average.py multi_temporal_file [output_filename]
+Calculate temporal average/mean of multi-temporal datasets.
 
-  Example:
-      temporal_average.py Coherence.h5 average_spatial_coherence.h5
+arguments:
+  file        : string, file with multiple datasets/groups, e.g. timeseries.h5, coherence.h5, unwrapIfgram.h5
+  output_file : string, path/name of output temporal average file
 
-******************************************************************************
+example:
+  temporal_average.py  coherence.h5  averageSpatialCoherence.h5
     '''
+    return
 
 
 #############################  Main Function  ################################
 def main(argv):
 
-    try: File = argv[0]
-    except: usage(); sys.exit(1)
+    try:
+        File = argv[0]
+    except:
+        usage(); sys.exit(1)
 
     try:    outName = argv[1]
     except: outName = os.path.splitext(File)[0]+'_tempAverage.h5'
-    #except: outName = 'average_spatial_coherence.h5'
 
-    print '\n*************** Average in Time Domain ******************'
-    ut.temporal_average(File, outName)
+    outName = ut.temporal_average(File, outName)
+    print 'Done.'
+    return outName
+
 
 ##############################################################################
 if __name__ == '__main__':
