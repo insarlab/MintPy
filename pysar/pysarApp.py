@@ -236,7 +236,7 @@ def check_loaded_dataset(work_dir='./', inps=None):
         trans_file     : string, file name/path of transformation mapping file (for interferograms in radar coord)
     Example:
         from pysar.pysarApp import check_loaded_dataset
-        True = check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR')
+        True = check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR') #if True, PROCESS, SLC folder could be removed.
         inps = check_loaded_dataset(inps.work_dir, inps)
     '''
     ##### Find file name/path of all loaded files

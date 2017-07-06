@@ -20,8 +20,6 @@ import re
 
 import h5py
 import numpy as np
-#from joblib import Parallel, delayed
-#import multiprocessing
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -216,9 +214,7 @@ def cmdLineParse():
 
 ##################################################################################################
 def main(argv):
-
     inps = cmdLineParse()
-    #print '\n**************** Multilook *********************'
     inps.file = ut.get_file_list(inps.file)
 
     # check outfile and parallel option

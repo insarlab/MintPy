@@ -654,8 +654,13 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     length = int(float(meta_dict['FILE_LENGTH']))
 
     # default mask file:
-    if not inps.mask_file and k in ['velocity','timeseries','rmse','interferograms']:
-        inps.mask_file = 'maskTempCoh.h5'
+    if not inps.mask_file and k in ['velocity','timeseries','interferograms']:
+        if 'X_FIRST' in meta_dict.keys():
+            inps.mask_file = 'geo_maskTempCoh.h5'
+        else:
+            inps.mask_file = 'maskTempCoh.h5'
+        if not os.path.isfile(inps.mask_file):
+            inps.mask_file = None
 
     # Subset
     ## Convert subset input into bounding box in radar / geo coordinate

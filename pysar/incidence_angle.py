@@ -21,8 +21,7 @@ import pysar._pysar_utilities as ut
 
 
 def usage():
-    print '''
-usage:  incidence_angle.py  file  [outfile]
+    print '''usage:  incidence_angle.py  file  [outfile]
 
 Generates incidence angles (in Radar Coordinate) for each pixel
   with required attributes read from the h5 file

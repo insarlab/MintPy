@@ -611,7 +611,7 @@ def range_distance(atr, dimension=2):
         return range_xy
 
 
-def incidence_angle(atr, dimension=2):
+def incidence_angle(atr, dimension=2, print_message=True):
     '''Calculate 2D matrix of incidence angle from ROI_PAC attributes, very accurate.
     Input:
         dictionary - ROI_PAC attributes including the following items:
@@ -630,7 +630,8 @@ def incidence_angle(atr, dimension=2):
     # Return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
-        print 'input file is geocoded, return center incident angle only'
+        if print_message:
+            print 'input file is geocoded, return center incident angle only'
     
     ## Read Attributes
     near_range = float(atr['STARTING_RANGE'])
@@ -645,12 +646,14 @@ def incidence_angle(atr, dimension=2):
     incidence_n = (np.pi - np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))) * 180.0/np.pi
     incidence_f = (np.pi - np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))) * 180.0/np.pi
     incidence_c = (incidence_f+incidence_n)/2.0
-    print 'center incidence angle : %.4f degree' % (incidence_c)
+    if print_message:
+        print 'center incidence angle : %.4f degree' % (incidence_c)
     if dimension == 0:
         return np.array(incidence_c)
-    
-    print 'near   incidence angle : %.4f degree' % (incidence_n)
-    print 'far    incidence angle : %.4f degree' % (incidence_f)
+
+    if print_message:
+        print 'near   incidence angle : %.4f degree' % (incidence_n)
+        print 'far    incidence angle : %.4f degree' % (incidence_f)
     incidence_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
     if dimension == 1:
         return incidence_x
@@ -1032,12 +1035,12 @@ def mode (thelist):
 
 
 ######################################################################################################
-def range_resolution(atr):
+def range_resolution(atr, print_message=True):
     '''Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
     if 'X_FIRST' in atr.keys():
         print 'Input file is in geo coord, no range resolution info.'
         return
-    inc_angle = incidence_angle(atr, 0)
+    inc_angle = incidence_angle(atr, 0, print_message)
     rg_step = float(atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
     return rg_step
 
@@ -1053,7 +1056,7 @@ def azimuth_resolution(atr):
 
 
 #########################################################################
-def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict()):
+def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_message=True):
     '''Convert geo coordinates into radar coordinates.
     Inputs:
         lat/lon    - np.array, float, latitude/longitude
@@ -1085,7 +1088,7 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict()):
         # Get range/azimuth ground resolution/step in meter
         if atr_rdr:
             az_step = azimuth_resolution(atr_rdr)
-            rg_step = range_resolution(atr_rdr)
+            rg_step = range_resolution(atr_rdr, print_message)
             try:    az0 = int(atr_rdr['subset_y0'])
             except: az0 = 0
             try:    rg0 = int(atr_rdr['subset_x0'])
@@ -1151,14 +1154,14 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict()):
     return az, rg, az_resid, rg_resid
 
 
-def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
+def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_message=True):
     '''Convert radar coordinates into geo coordinates
     Inputs:
         rg/az      - np.array, int, range/azimuth pixel number
         transFile - string, trans/look up file
         atr_rdr    - dict, attributes of file in radar coord, optional but recommended.
     Output:
-        lon/lat    - np.array, float, longitude/latitude of input point (rg,az)
+        lon/lat    - np.array, float, longitude/latitude of input point (rg,az); nan if not found.
         latlon_res - float, residul/uncertainty of coordinate conversion
     '''
     try:    transFile = glob.glob(transFile)[0]
@@ -1169,15 +1172,20 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
         mask_rg = np.multiply(trans_rg>=max(rg-x_factor,0.5), trans_rg<=rg+x_factor)
         mask_az = np.multiply(trans_az>=max(az-y_factor,0.5), trans_az<=az+y_factor)
         idx = np.where(np.multiply(mask_rg, mask_az))
-        trans_row, trans_col = np.mean(idx,1)
+        trans_row, trans_col = np.nanmean(idx,1)
         return trans_row, trans_col
-
 
     ## by searching pixels in trans file with value falling buffer lat/lon value
     if transFile:
+        # if
+        if 'subset_x0' in atr_rdr.keys():
+            rg += int(atr_rdr['subset_x0'])
+            az += int(atr_rdr['subset_y0'])        
+
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
-        print 'reading file: '+transFile
+        if print_message:
+            print 'reading file: '+transFile
         trans_rg, trans_atr = readfile.read(transFile, (), 'range')
         trans_az = readfile.read(transFile, (), 'azimuth')[0]
         lat_first = float(trans_atr['Y_FIRST'])
@@ -1191,7 +1199,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
         # Get range/azimuth ground resolution/step
         if atr_rdr:
             az_step = azimuth_resolution(atr_rdr)
-            rg_step = range_resolution(atr_rdr)
+            rg_step = range_resolution(atr_rdr, print_message)
 
             x_factor = 2*np.ceil(abs(lon_step)/rg_step)
             y_factor = 2*np.ceil(abs(lat_step)/az_step)
@@ -1201,6 +1209,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
 
         trans_row = np.zeros(rg.shape)
         trans_col = np.zeros(rg.shape)
+
         if rg.size == 1:
             trans_row, trans_col = get_trans_row_col4radar(az, rg, trans_az, trans_rg, x_factor, y_factor)
         else:
@@ -1244,7 +1253,8 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
         res_mean = np.mean(np.abs(res),0)
         lat_resid = res_mean[0]
         lon_resid = res_mean[1]
-        print 'Residul - lat: '+str(lat_resid)+', lon: '+str(lon_resid)
+        if print_message:
+            print 'Residul - lat: '+str(lat_resid)+', lon: '+str(lon_resid)
         
         ### calculate geo coordinate of inputs
         N = len(rg)
@@ -1255,7 +1265,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict()):
     else:
         print 'No geomap*.trans or radar coord file found!'
         return None
-        
+
     return lat, lon, lat_resid, lon_resid
 
 

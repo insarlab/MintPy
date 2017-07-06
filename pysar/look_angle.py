@@ -12,17 +12,20 @@ import getopt
 import h5py
 
 
+############################################################
 def usage():
-    print '''
-***************************************************************
-  Generating look angle for each pixel
+    print '''usage: look_angle.py  file_radarCoord
 
-  Usage:
-       look_angke velocity.h5
+Generating look angle for each pixel
 
-***************************************************************
+example:
+  look_angle.py  timeseries.h5
+  look_angle.py  velocity.h5
     '''
+    return
 
+
+############################################################
 def main(argv):
     try:  opts, args = getopt.getopt(argv,"f:h")
     except getopt.GetoptError:  usage() ; sys.exit(1)
@@ -60,13 +63,9 @@ def main(argv):
     
         h5file.close()
         h5file2.close()
+    return
 
         
-        
+############################################################  
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-
-
-
-

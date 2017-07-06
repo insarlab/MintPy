@@ -168,6 +168,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
 
 ################################################################################################
 EXAMPLE='''example:
+  spatial_filter.py  velocity.h5
   spatial_filter.py  timeseries.h5  lowpass_avg        5
   spatial_filter.py  velocity.h5    lowpass_avg        5
   spatial_filter.py  velocity.h5    highpass_gaussian  3
@@ -180,7 +181,7 @@ def cmdLineParse():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='File to be filtered')
-    parser.add_argument('filter_type', default='lowpass_gaussian',\
+    parser.add_argument('filter_type', nargs='?', default='lowpass_gaussian',\
                         choices=['lowpass_gaussian','highpass_gaussian','lowpass_avg','highpass_avg',\
                                  'sobel','roberts','canny'],\
                         help='Type of filter. Default: lowpass_gaussian.\n'+\

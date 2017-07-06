@@ -4,7 +4,6 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-#
 # Yunjun, Jul 2015: add 'coherence','wrapped' option, eNum
 # Yunjun, Oct 2015: merge 'interferograms','coherence','wrapped' into one
 # Yunjun, Oct 2016: add --tree option to check hdf5 tree/structure
@@ -18,8 +17,8 @@ import time
 import h5py
 from numpy import std
 
-import pysar._readfile as readfile
 import pysar._datetime as ptime
+import pysar._readfile as readfile
 
 
 ############################################################
@@ -66,30 +65,27 @@ def print_timseries_date_info(dateList):
 
 ############################################################
 def usage():
-    print '''
-***************************************************************
-  Displayes the general information of the PySAR product h5 file.
+    print '''usage: info.py file [eNum] [--tree/structure]
 
-  Usage:
-      info.py hdf5File  [eNum]
+Display the general information of File
 
-      file : HDF5 file, support all .h5 files
-      eNum : number of interferogram/coherence in the group
-             (1 as the first)
-      --struct/structure/tree : show the structure tree
+arguments:
+  file : HDF5 file, support all .h5 files
+  eNum : number of interferogram/coherence in the group
+         (1 as the first)
+  --struct/structure/tree : show the structure tree
 
-  Example:
+example:
+  info.py timeseries.h5
+  info.py velocity.h5
+  info.py unwrapIfgram.h5
+  info.py unwrapIfgram.h5    3
 
-      info.py timeseries.h5
-      info.py velocity_demCor_masked.h5
-      info.py unwrapIfgram.h5
-      info.py unwrapIfgram.h5    3
-
-      info.py timeseries.h5 --tree
-      info.py timeseries.h5 --date   # print out date list of timeseries HDF5 file
-
-***************************************************************
+  info.py timeseries.h5 --tree
+  info.py timeseries.h5 --date   # print out date list of timeseries HDF5 file
     '''
+    return
+
 
 ############################################################
 def main(argv):
@@ -183,6 +179,4 @@ def main(argv):
 ############################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-
 
