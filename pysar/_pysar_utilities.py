@@ -1880,7 +1880,7 @@ def get_triangles(h5file):
             if igram1_date2==d.split('-')[0]:
                 igram2.append(d)
                 igram2_date2.append(d.split('-')[1])
-    
+
         igram3=[]
         igram3_date2=[]
         for d in dates12:
@@ -1911,26 +1911,29 @@ def get_triangles(h5file):
     return curls,Triangles,C
 
 
-def generate_curls(curlfile,h5file,Triangles,curls):
+def generate_curls(curlfile, h5file, Triangles, curls):
     ifgram_list = h5file['interferograms'].keys()
-    h5curlfile=h5py.File(curlfile,'w')
+    h5curlfile = h5py.File(curlfile,'w')
     gg = h5curlfile.create_group('interferograms')
-    lcurls=np.shape(curls)[0]
-    for i in range(lcurls):
-        d1=h5file['interferograms'][ifgram_list[curls[i,0]]].get(ifgram_list[curls[i,0]])
-        d2=h5file['interferograms'][ifgram_list[curls[i,1]]].get(ifgram_list[curls[i,1]])
-        d3=h5file['interferograms'][ifgram_list[curls[i,2]]].get(ifgram_list[curls[i,2]])
-        data1=d1[0:d1.shape[0],0:d1.shape[1]]
-        data2=d2[0:d2.shape[0],0:d2.shape[1]]
-        data3=d3[0:d3.shape[0],0:d3.shape[1]]
- 
-        print i
-        group = gg.create_group(Triangles[i][0]+'_'+Triangles[i][1]+'_'+Triangles[i][2])
-        dset = group.create_dataset(Triangles[i][0]+'_'+Triangles[i][1]+'_'+Triangles[i][2],\
-                                    data=data1+data3-data2, compression='gzip')
-        for key, value in h5file['interferograms'][ifgram_list[curls[i,0]]].attrs.iteritems():
-            group.attrs[key] = value
- 
-    h5curlfile.close()
 
+    curl_num = np.shape(curls)[0]
+    prog_bar = ptime.progress_bar(maxValue=curl_num)
+    for i in range(curl_num):
+        ifgram1 = ifgram_list[curls[i,0]]
+        ifgram2 = ifgram_list[curls[i,1]]
+        ifgram3 = ifgram_list[curls[i,2]]
+        d1 = h5file['interferograms'][ifgram1].get(ifgram1)[:]
+        d2 = h5file['interferograms'][ifgram2].get(ifgram2)[:]
+        d3 = h5file['interferograms'][ifgram3].get(ifgram3)[:]
+
+        triangle_date = Triangles[i][0]+'_'+Triangles[i][1]+'_'+Triangles[i][2]
+        group = gg.create_group(triangle_date)
+        dset = group.create_dataset(triangle_date, data=d1+d3-d2, compression='gzip')
+        for key, value in h5file['interferograms'][ifgram1].attrs.iteritems():
+            group.attrs[key] = value
+        prog_bar.update(i+1)
+
+    h5curlfile.close()
+    prog_bar.close()
+    return curlfile
 

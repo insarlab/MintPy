@@ -140,11 +140,17 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     cb_rg = min(north-south, east-west)
     cb_N = (north+south)/2.0 + 0.5*0.5*cb_rg
     cb_W = east  + 0.1*cb_rg
-    slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),\
-                             #KML.altitude('6000'),KML.altitudeMode('absolute'),\
-                             KML.altitudeMode('clampToGround'),\
-                             KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
-                                           KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
+
+    if inps.cbar_height:
+        slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),\
+                                 KML.altitude(str(inps.cbar_height)),KML.altitudeMode('absolute'),\
+                                 KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
+                                               KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
+    else:
+        slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),\
+                                 KML.altitudeMode('clampToGround'),\
+                                 KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
+                                               KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
     doc.Folder.append(slc1)
 
     # Write KML file
@@ -203,6 +209,8 @@ def cmdLineParse():
                      help='Colorbar bin number. Default: 9')
     fig.add_argument('--cbar-label', dest='cbar_label', metavar='LABEL', default='Mean LOS velocity',\
                      help='Colorbar label. Default: Mean LOS velocity')
+    fig.add_argument('--cbar-height', dest='cbar_height', metavar='NUM', type=float,\
+                     help='Colorbar height/elevation/altitude in meters. clampToGround if not specified.')
     fig.add_argument('--dpi', dest='fig_dpi', metavar='NUM', type=int, default=300,\
                      help='Figure DPI (dots per inch). Default: 300')
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\

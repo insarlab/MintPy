@@ -4,266 +4,224 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-
+# Yunjun, Jul 2017: re-write using pysar module
     
-import sys
 import os
-import getopt
+import sys
 import time
 import datetime
+import argparse
 
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
+import pysar._datetime as ptime
 import pysar._readfile as readfile
+import pysar._pysar_utilities as ut
 
 
-######################################
-def usage():
-    print '''
-***************************************************************************
-  Tropospheric correction with height-correlation approach
+############################################################################
+EXAMPLE='''example:
+  tropcor_phase_elevation.py  timeseries_demErr.h5
+  tropcor_phase_elevation.py  timeseries_demErr.h5      -d demRadar.h5  -m maskTempCoh.h5      -p 1
+  tropcor_phase_elevation.py  geo_timeseries_demErr.h5  -d demGeo.h5    -m geo_maskTempCoh.h5  -p 1
+'''
 
-  Usage:
-      tropcor_phase_eleveation.py -f timeSeriesFile -d demfile -p polynomial_order
-           -m maskFile [ -M maskThreshold -t corelation_threshold -o outputFile ]
+REFERENCE='''reference:
+  Doin, M. P., C. Lasserre, G. Peltzer, O. Cavalie, and C. Doubre (2009), Corrections of stratified 
+  tropospheric delays in SAR interferometry: Validation with global atmospheric models, J App. Geophy.,
+  69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
+'''
 
-      -t     : correlation threshold, correct topo-related phase only when that 
-               epoch-dem's correlation < threshold; if not set, all epochs will be corrected.
-      --plot : save dem - data plot into files.
+def cmdLineParse():
+    parser = argparse.ArgumentParser(description='Stratified tropospheric delay correction using height-correlation approach',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
 
-  Example:
-      tropcor_phase_elevation.py -f timeseries_demCor.h5 -d radar_8rlks.hgt -p 1 -m temporal_coherence.h5 -M 0.9 -t 0.5
-      tropcor_phase_elevation.py -f timeseries_demCor.h5 -d radar_8rlks.hgt -p 2 -m Mask.h5 -t 0.5
-      tropcor_phase_elevation.py -f timeseries_demCor.h5 -d radar_8rlks.hgt -p 1 -m Mask.h5
+    parser.add_argument('timeseries_file', help='time-series file to be corrected')
+    parser.add_argument('-d','--dem', dest='dem_file', help='DEM file used for correlation calculation.')
+    parser.add_argument('-t','--threshold', type=float,\
+                        help='correlation threshold to apply phase correction.\n'+\
+                             'if not set, all dates will be corrected.')
+    parser.add_argument('-m','--mask', dest='mask_file', help='mask file for pixels used for correlation calculation')
+    parser.add_argument('--poly-order','-p', dest='poly_order', type=int, default=1, choices=[1,2,3],\
+                        help='polynomial order of phase-height correlation. Default: 1')
+    parser.add_argument('-o','--outfile', help='output corrected timeseries file name')
 
-***************************************************************************
-    '''
+    inps = parser.parse_args()
+    if inps.threshold and (not 0.0 <= inps.threshold <= 1.0):
+        raise argparse.ArgumentTypeError('%r not in range [0.0, 1.0]' % inps.threshold)
+    return inps
 
-######################################
+
+############################################################################
 def main(argv):
+    inps = cmdLineParse()
 
-    ##### Default Values
-    save_plot = 'no'
-    maskThr  = 0.7
+    ##### Check default input arguments
+    # default output filename
+    if not inps.outfile:
+        inps.outfile = os.path.splitext(inps.timeseries_file)[0]+'_tropHgt.h5'
 
-    ##### Check Inputs
-    try:  opts, args = getopt.getopt(argv,"f:d:p:m:M:t:o:",['plot'])
-    except getopt.GetoptError:  usage() ; sys.exit(1)
+    # Basic info
+    atr = readfile.read_attribute(inps.timeseries_file)
+    k = atr['FILE_TYPE']
+    length = int(atr['FILE_LENGTH'])
+    width = int(atr['WIDTH'])
+    pix_num = length*width
 
-    for opt,arg in opts:
-        if   opt == '-f':        timeSeriesFile = arg
-        elif opt == '-d':        demFile        = arg
-        elif opt == '-p':        p              = int(arg)
-        elif opt == '-m':        maskFile       = arg
-        elif opt == '-M':        maskThr        = float(arg)
-        elif opt == '-t':        corThr         = float(arg)
-        elif opt == '-o':        outName        = arg
-        elif opt == '--plot':    save_plot      = 'yes'
-
+    # default DEM file
+    if not inps.dem_file:
+        if 'X_FIRST' in atr.keys():
+            inps.dem_file = ['demGeo_tight.h5', 'demGeo.h5']
+        else:
+            inps.dem_file = ['demRadar.h5']
     try:
-        timeSeriesFile
-        demFile
+        inps.dem_file = ut.get_file_list(inps.dem_file)[0]
     except:
-        usage() ; sys.exit(1)
-    
-    try:       p
-    except:    p=1
-    
-    try:    outName
-    except: outName = timeSeriesFile.split('.')[0]+'_tropHgt.h5'
+        inps.dem_file = None
+        sys.exit('ERROR: No DEM file found!')
 
-    ##### Read Mask File 
-    ## Priority:
-    ## Input mask file > pysar.mask.file > existed Modified_Mask.h5 > existed Mask.h5
-    try:       maskFile
-    except:
-        try:    maskFile = templateContents['pysar.mask.file']
-        except:
-            if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
-            elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
-            else: print 'No mask found!'; sys.exit(1)
-    try:    Mask,Matr = readfile.read(maskFile);   print 'mask: '+maskFile
-    except: print 'Can not open mask file: '+maskFile; sys.exit(1)
+    # default Mask file
+    if not inps.mask_file:
+        if 'X_FIRST' in atr.keys():
+            inps.mask_file = 'geo_maskTempCoh.h5'
+        else:
+            inps.mask_file = 'maskTempCoh.h5'
+        if not os.path.isfile(inps.mask_file):
+            inps.mask_file = None
+            sys.exit('ERROR: No mask file found!')
 
-    #try:       maskFile
-    #except:    maskFile='Mask.h5'
-    #print 'Mask file: ' + maskFile 
+    ##### Read Mask
+    print 'reading mask from file: '+inps.mask_file
+    mask = readfile.read(inps.mask_file)[0].flatten(1)
+    ndx = mask != 0
+    msk_num = np.sum(ndx)
+    print 'total            pixel number: %d' % pix_num
+    print 'estimating using pixel number: %d' % msk_num
 
-    #h5Mask=h5py.File(maskFile)
-    #kMask=h5Mask.keys()
-    #dset = h5Mask[kMask[0]].get(kMask[0])
-    #Mask = dset[0:dset.shape[0],0:dset.shape[1]]
-    kMask = Matr['FILE_TYPE']
-    Mask=Mask.flatten(1)
+    ##### Read DEM
+    print 'read DEM from file: '+inps.dem_file
+    dem = readfile.read(inps.dem_file)[0]
 
-    #print maskThr
+    ref_y = int(atr['ref_y'])
+    ref_x = int(atr['ref_x'])
+    dem -= dem[ref_y,ref_x]
 
-    if   kMask=='mask':                 ndx = Mask != 0
-    elif kMask=='temporal_coherence':   ndx = Mask >  maskThr
-    else:  print 'Mask file not recognized!';  usage();  sys.exit(1)    
+    print 'considering the incidence angle of each pixel ...'
+    inc_angle = ut.incidence_angle(atr, dimension=2)
+    dem *= 1.0/np.cos(inc_angle*np.pi/180.0)
 
-    #h5Mask.close()
+    ##### Design matrix for elevation v.s. phase
+    dem = dem.flatten(1)
+    if inps.poly_order == 1:
+        A = np.vstack((dem[ndx], np.ones(msk_num))).T
+        B = np.vstack((dem,      np.ones(pix_num))).T
+    elif inps.poly_order == 2: 
+        A = np.vstack((dem[ndx]**2, dem[ndx], np.ones(msk_num))).T
+        B = np.vstack((dem**2,      dem,      np.ones(pix_num))).T  
+    elif inps.poly_order == 3:
+        A = np.vstack((dem[ndx]**3, dem[ndx]**2, dem[ndx], np.ones(msk_num))).T
+        B = np.vstack((dem**3,      dem**2,      dem,      np.ones(pix_num))).T
+    print 'polynomial order: %d' % inps.poly_order
 
-    #print '\n************ Tropospheric Delay Correction - Topo-related *************'
+    A_inv = np.linalg.pinv(A)
 
-    ###################################################
-    h5timeseries = h5py.File(timeSeriesFile)
-    yref=h5timeseries['timeseries'].attrs['ref_y']
-    xref=h5timeseries['timeseries'].attrs['ref_x']
-    ###################################################
-    dem,demRsc = readfile.read(demFile)
-    dem -= dem[yref,xref]
+    ##### Calculate correlation coefficient
+    print 'Estimating the tropospheric effect between the differences of the subsequent epochs and DEM'
 
-    print 'considering the look angle of each resolution cell...'
-    near_LA=float(h5timeseries['timeseries'].attrs['LOOK_REF1'])
-    far_LA=float(h5timeseries['timeseries'].attrs['LOOK_REF2'])
-    Length,Width=np.shape(dem)
-    LA=np.linspace(near_LA,far_LA,Width)
-    LA=np.tile(LA,[Length,1])
-    dem=dem/np.cos(LA*np.pi/180.0)       
-       
-    dem=dem.flatten(1)
-    print np.shape(dem)
-    ###################################################
-    if p==1:
-        A=np.vstack((dem[ndx],np.ones(len(dem[ndx])))).T
-        B = np.vstack((dem,np.ones(len(dem)))).T
-    elif p==2: 
-        A=np.vstack((dem[ndx]**2,dem[ndx],np.ones(len(dem[ndx])))).T
-        B = np.vstack((dem**2,dem,np.ones(len(dem)))).T  
-    elif p==3:
-        A = np.vstack((dem[ndx]**3,dem[ndx]**2,dem[ndx],np.ones(len(dem[ndx])))).T
-        B = np.vstack((dem**3,dem**2,dem,np.ones(len(dem)))).T
-    print np.shape(A)
+    h5 = h5py.File(inps.timeseries_file)
+    date_list = sorted(h5[k].keys())
+    date_num = len(date_list)
+    print 'number of acquisitions: '+str(date_num)
+    try:    ref_date = atr['ref_date']
+    except: ref_date = date_list[0]
 
-    Ainv=np.linalg.pinv(A)
-    ###################################################
-    print 'Estimating the tropospheric effect using the differences of the subsequent epochs and DEM'
-    
-    dateList = sorted(h5timeseries['timeseries'].keys())
-    nrows,ncols=np.shape(h5timeseries['timeseries'].get(dateList[0]))
-    PAR_EPOCH_DICT_2={} 
-    par_diff_Dict={}
-    Correlation_Dict={}
-    Correlation_Dict[dateList[0]]=0
-    Correlation_diff_Dict={}
+    print '----------------------------------------------------------'
+    print 'correlation of DEM with each time-series epoch:'
+    corr_array = np.zeros(date_num)
+    par_dict = {}
+    for i in range(date_num):
+        date = date_list[i]
+        if date == ref_date:
+            cc = 0.0
+            par = np.zeros(inps.poly_order+1)
+        else:
+            data = h5[k].get(date)[:].flatten(1)
 
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    print 'correlation of dem with :'
-    print '******************************'
+            C = np.zeros((2, msk_num))
+            C[0,:] = dem[ndx]
+            C[1,:] = data[ndx]
+            cc = np.corrcoef(C)[0,1]
 
-    for i in range(len(dateList)-1):
-        dset1 = h5timeseries['timeseries'].get(dateList[i])
-        dset2 = h5timeseries['timeseries'].get(dateList[i+1])
-        data1 = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-        data2 = dset2[0:dset2.shape[0],0:dset2.shape[1]]
-        d = dset2[0:dset2.shape[0],0:dset2.shape[1]] - dset1[0:dset1.shape[0],0:dset1.shape[1]]
-         
-        del dset1
-        del dset2
-        d=d.flatten(1)
-        data1=data1.flatten(1)
-        data2=data2.flatten(1)
-        ##############################
-        C1=np.zeros([2,len(dem[ndx])])
-        C1[0][:]=dem[ndx]
-        C1[1][:]=data1[ndx]
-        print dateList[i]+': '+str(np.corrcoef(C1)[0][1])
- 
-        C2=np.zeros([2,len(dem[ndx])])
-        C2[0][:]=dem[ndx]
-        C2[1][:]=data2[ndx]
-        print dateList[i+1]+': '+str(np.corrcoef(C2)[0][1])
-        Correlation_Dict[dateList[i+1]]=np.corrcoef(C2)[0][1]
- 
-        C=np.zeros([2,len(dem[ndx])])
-        C[0][:]=dem[ndx]
-        C[1][:]=d[ndx]
-        print dateList[i]+'-'+dateList[i+1]+': '+str(np.corrcoef(C)[0][1])
-        print '******************************'
-        Correlation_diff_Dict[dateList[i]+'-'+dateList[i+1]]=np.corrcoef(C)[0][1]
-
-        ##############################
-        par=np.dot(Ainv,d[ndx])
-        par_diff_Dict[dateList[i]+'-'+dateList[i+1]]=par  
- 
-        try:
-            if np.abs(np.corrcoef(C2)[0][1]) >= corThr:        
-                PAR2=np.dot(Ainv,data2[ndx])
+            corr_array[i] = cc
+            if inps.threshold and np.abs(cc) < inps.threshold:
+                par = np.zeros(inps.poly_order+1)
             else:
-                PAR2=list(np.zeros(p+1))
-        except:
-             PAR2=np.dot(Ainv,data2[ndx])
-  
-        PAR_EPOCH_DICT_2[dateList[i+1]]=PAR2
-    ###################################################
-    print'****************************************'
-    print 'Correlation of DEM with each time-series epoch:'
-    average_phase_height_cor=0
-    for date in dateList:
-        print date + ' : '+str(Correlation_Dict[date])
-        average_phase_height_cor=average_phase_height_cor+np.abs(Correlation_Dict[date])
-    print'****************************************'
-    print'****************************************'
-    print ''
-    print 'Average Correlation of DEM with time-series epochs: ' + str(average_phase_height_cor/(len(dateList)-1))
-    print ''
-    print '****************************************'
-    print'****************************************'
+                par = np.dot(A_inv, data[ndx])
+        print '%s: %.2f' % (date, cc)
+        par_dict[date] = par
 
-    ###################################################
-    if save_plot == 'yes':
-        fig=plt.figure(1)
-        ax = fig.add_subplot(3,1,1)
-        ax.plot(dem[ndx],data1[ndx],'o',ms=1)
-        ax = fig.add_subplot(3,1,2)
-        ax.plot(dem[ndx],data2[ndx],'o',ms=1)
-        ax = fig.add_subplot(3,1,3)
-        ax.plot(dem[ndx],d[ndx],'o',ms=1)
-        plt.show()
+    average_phase_height_corr = np.nansum(np.abs(corr_array))/(date_num-1)
+    print '----------------------------------------------------------'
+    print 'Average Correlation of DEM with time-series epochs: %.2f' % average_phase_height_corr
 
-    ###################################################
-    # print par_diff_Dict
-    par_epoch_Dict={}
-    par_epoch_Dict[dateList[1]]=par_diff_Dict[dateList[0]+'-'+dateList[1]]
+    # Correlation of DEM with Difference of subsequent epochs (Not used for now)
+    corr_diff_dict = {}
+    par_diff_dict = {}
+    for i in range(date_num-1):
+        date1 = date_list[i]
+        date2 = date_list[i+1]
+        date12 = date1+'-'+date2
 
-    for i in range(2,len(dateList)):
-        par_epoch_Dict[dateList[i]]=par_epoch_Dict[dateList[i-1]]+par_diff_Dict[dateList[i-1]+'-'+dateList[i]]
+        data1 = h5[k].get(date1)[:].flatten(1)
+        data2 = h5[k].get(date2)[:].flatten(1)
+        data_diff = data2-data1
 
-    yref=h5timeseries['timeseries'].attrs['ref_y']
-    xref=h5timeseries['timeseries'].attrs['ref_x']
-    print 'removing the tropospheric delay from each epoch'
-    print 'writing >>> '+outName
-    h5tropCor = h5py.File(outName,'w')
-    group = h5tropCor.create_group('timeseries')
-    dset = group.create_dataset(dateList[0], data=h5timeseries['timeseries'].get(dateList[0]), compression='gzip')
-    for date in dateList:
-        if not date in h5tropCor['timeseries']:
-            print date
-            dset = h5timeseries['timeseries'].get(date) 
-            data = dset[0:dset.shape[0],0:dset.shape[1]]
-            par=PAR_EPOCH_DICT_2[date]
-   
-            tropo_effect = np.reshape(np.dot(B,par),[dset.shape[1],dset.shape[0]]).T
-            tropo_effect -= tropo_effect[yref,xref]
-            dset = group.create_dataset(date, data=data-tropo_effect, compression='gzip')
+        C_diff = np.zeros((2, msk_num))
+        C_diff[0,:] = dem[ndx]
+        C_diff[1,:] = data_diff[ndx]
+        cc_diff = np.corrcoef(C_diff)[0,1]
 
-    for key,value in h5timeseries['timeseries'].attrs.iteritems():
+        corr_diff_dict[date12] = cc_diff
+        par = np.dot(A_inv, data_diff[ndx])
+        par_diff_dict[date12] = par
+
+
+    ##### Correct and write time-series file
+    print '----------------------------------------------------------'
+    print 'removing the stratified tropospheric delay from each epoch'
+    print 'writing >>> '+inps.outfile
+    h5out = h5py.File(inps.outfile,'w')
+    group = h5out.create_group(k)
+
+    prog_bar = ptime.progress_bar(maxValue=date_num)
+    for i in range(date_num):
+        date = date_list[i]
+        data = h5[k].get(date)[:]
+
+        if date != ref_date:
+            par = par_dict[date]
+            trop_delay = np.reshape(np.dot(B, par), [width, length]).T
+            trop_delay -= trop_delay[ref_y, ref_x]
+            data -= trop_delay
+
+        dset = group.create_dataset(date, data=data, compression='gzip')
+        prog_bar.update(i+1, suffix=date)
+
+    for key,value in atr.iteritems():
         group.attrs[key] = value
-   
-    try: 
-        dset1 = h5timeseries['mask'].get('mask')
-        group=h5tropCor.create_group('mask')
-        dset = group.create_dataset('mask', data=dset1, compression='gzip')
-    except: pass
 
-    h5tropCor.close()
-    h5timeseries.close()
+    prog_bar.close()
+    h5out.close()
+    h5.close()
 
-    
-###################################################
+    print 'Done.'
+    return inps.outfile
+
+
+############################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
 

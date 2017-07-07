@@ -230,50 +230,51 @@ def cmdLineParse():
                         help='interpolation method while extacting profile along the line')
 
     # Start / End Point
-    end_group = parser.add_argument_group('Start and End Point of Profile')
-    end_group.add_argument('-s','--start-yx', dest='start_yx', type=int, nargs=2,\
-                           help='start point of the profile in pixel number [y, x]')
-    end_group.add_argument('-e','--end-yx', dest='end_yx', type=int, nargs=2,\
-                           help='end   point of the profile in pixel number [y, x]')
-    end_group.add_argument('--start-lalo', dest='start_lalo', type=float, nargs=2,\
-                           help='start point of the profile in [lat, lon]')
-    end_group.add_argument('--end-lalo', dest='end_lalo', type=float, nargs=2,\
-                           help='end   point of the profile in [lat, lon]')
-    end_group.add_argument('--line-file', dest='lola_file',\
-                           help='file with start and end point info in lon lat, same as GMT format.\n'
-                                'i.e. transect_lonlat.xy:\n'
-                                '>\n'
-                                '131.1663    33.1157\n'
-                                '131.2621    33.0860')
+    end = parser.add_argument_group('Start and End Point of Profile')
+    end.add_argument('-s','--start-yx', dest='start_yx', type=int, nargs=2,\
+                     help='start point of the profile in pixel number [y, x]')
+    end.add_argument('-e','--end-yx', dest='end_yx', type=int, nargs=2,\
+                     help='end   point of the profile in pixel number [y, x]')
+    end.add_argument('--start-lalo', dest='start_lalo', type=float, nargs=2,\
+                     help='start point of the profile in [lat, lon]')
+    end.add_argument('--end-lalo', dest='end_lalo', type=float, nargs=2,\
+                     help='end   point of the profile in [lat, lon]')
+    end.add_argument('--line-file', dest='lola_file',\
+                     help='file with start and end point info in lon lat, same as GMT format.\n'
+                          'i.e. transect_lonlat.xy:\n'
+                          '>\n'
+                          '131.1663    33.1157\n'
+                          '131.2621    33.0860')
 
     # DEM
-    dem_group = parser.add_argument_group('DEM','display topography in the bottom')
-    dem_group.add_argument('-d','--dem', help='DEM file')
-    dem_group.add_argument('--dem-min', dest='dem_disp_min', type=float, help='min display value for DEM display, in km')
-    dem_group.add_argument('--dem-max', dest='dem_disp_max', type=float, help='max display value for DEM display, in km')
+    dem = parser.add_argument_group('DEM','display topography in the bottom')
+    dem.add_argument('-d','--dem', help='DEM file')
+    dem.add_argument('--dem-min', dest='dem_disp_min', type=float, help='min display value for DEM display, in km')
+    dem.add_argument('--dem-max', dest='dem_disp_max', type=float, help='max display value for DEM display, in km')
 
     # Output
-    outfile_parser = parser.add_argument_group('Output', 'Save figure and write to file(s)')
-    outfile_parser.add_argument('--save', dest='save_fig', action='store_true',\
-                                help='save the figure')
-    outfile_parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',\
-                                help='save and do not display the figure')
-    outfile_parser.add_argument('-o','--outfile',\
+    outfile = parser.add_argument_group('Output', 'Save figure and write to file(s)')
+    outfile.add_argument('--save', dest='save_fig', action='store_true',\
+                         help='save the figure')
+    outfile.add_argument('--nodisplay', dest='disp_fig', action='store_false',\
+                         help='save and do not display the figure')
+    outfile.add_argument('-o','--outfile',\
                                 help="save the figure with assigned filename.\n"
                                      "By default, it's calculated based on inputs.")
 
     # Figure 
-    fig_group = parser.add_argument_group('Figure','Figure settings for display')
-    fig_group.add_argument('--dpi', dest='fig_dpi', type=int, default=300, help='DPI - dot per inch - for display/write')
-    fig_group.add_argument('--figsize', dest='fig_size', type=float, nargs=2, default=[7.0, 6.0],\
-                            help='figure size in inches - width and length')
-    fig_group.add_argument('--figext', dest='outfile_ext',\
-                           default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
-                           help='File extension for figure output file')
+    fig = parser.add_argument_group('Figure','Figure settings for display')
+    fig.add_argument('--dpi', dest='fig_dpi', type=int, default=300, help='DPI - dot per inch - for display/write')
+    fig.add_argument('--figsize', dest='fig_size', type=float, nargs=2, default=[7.0, 6.0],\
+                     help='figure size in inches - width and length')
+    fig.add_argument('--figext', dest='outfile_ext',\
+                     default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
+                     help='File extension for figure output file')
 
     inps = parser.parse_args()
     inps.file = ut.get_file_list(inps.file)
-    if inps.outfile or not inps.disp_fig:  inps.save_fig = True
+    if inps.outfile or not inps.disp_fig:
+        inps.save_fig = True
     return inps
 
 

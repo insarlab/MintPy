@@ -269,10 +269,9 @@ def read_attribute(File, epoch=None):
                 try:    epoch = [i for i in epoch_list if epoch in i][0]
                 except: epoch = None
 
-            if epoch:
-                attrs = h5[k[0]][epoch2read].attrs
-            else:
-                attrs = h5[k[0]][h5[k[0]].keys()[0]].attrs
+            if not epoch:
+                epoch = h5[k[0]].keys()[0]
+            attrs = h5[k[0]][epoch].attrs
 
         elif k[0] in multi_dataset_hdf5_file+single_dataset_hdf5_file:
             attrs  = h5[k[0]].attrs

@@ -87,7 +87,7 @@ def check_geocode_file(geomapFile, File, outFile=None):
     if not outFile:  outFile = 'geo_'+os.path.basename(File)
 
     if ut.update_file(outFile, File):
-        geocodeCmd = 'geocode.py '+os.path.basename(geomapFile)+' '+File
+        geocodeCmd = 'geocode.py '+File+' -l '+os.path.basename(geomapFile)
         print geocodeCmd
         try: os.system(geocodeCmd)
         except: pass
@@ -794,7 +794,7 @@ def main(argv):
     if template['pysar.unwrapError'] not in ['auto','no']:
         print '\n**********  Unwrapping Error Correction  **************'
         outName = os.path.splitext(inps.ifgram_file)[0]+'_unwCor.h5'
-        unwCmd='unwrap_error.py -f '+inps.ifgram_file+' -m '+inps.mask_file
+        unwCmd='unwrap_error.py '+inps.ifgram_file+' '+inps.mask_file
         print unwCmd
         if ut.update_file(outName, inps.ifgram_file):
             print 'This might take a while depending on the size of your data set!'
@@ -930,8 +930,8 @@ def main(argv):
     # Call scripts
     if inps.trop_method == 'height_correction':
         print 'tropospheric delay correction with height-correlation approach'
-        tropCmd = 'tropcor_phase_elevation.py'+' -f '+inps.timeseries_file+' -d '+\
-                  demFile+' -p '+inps.trop_poly_order+' -m '+inps.mask_file
+        tropCmd = 'tropcor_phase_elevation.py '+inps.timeseries_file+' -d '+demFile+\
+                  ' -p '+inps.trop_poly_order+' -m '+inps.mask_file
         print tropCmd
         outName = os.path.splitext(inps.timeseries_file)[0]+'_tropHgt.h5'
         if ut.update_file(outName, inps.timeseries_file):
@@ -1112,9 +1112,9 @@ def main(argv):
             inps.geo_vel_file        = inps.vel_file
             inps.geo_temp_coh_file   = inps.temp_coh_file
             inps.geo_timeseries_file = inps.timeseries_file
-        elif not ut.which('geocode.pl'):
-            print 'Can not find executable geocode.pl from ROI_PAC, skip geocoding.'
-            template[key] = 'no'
+        #elif not ut.which('geocode.pl'):
+        #    print 'Can not find executable geocode.pl from ROI_PAC, skip geocoding.'
+        #    template[key] = 'no'
 
     # Geocoding
     if template[key] in ['yes','auto']: 

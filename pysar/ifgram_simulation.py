@@ -80,10 +80,6 @@ def main(argv):
     velocity = readfile.read(inps.velocity_file)[0]
     print 'read velocity file: '+inps.velocity_file
 
-    ##### Select interferograms with unwrapping error
-    mask = readfile.read(inps.mask_file)[0]
-    print 'read mask for pixels with unwrapping error from file: '+inps.mask_file
-
     k = 'interferograms'
     h5 = h5py.File(inps.ifgram_file, 'r')
     ifgram_list = sorted(h5[k].keys())
@@ -91,13 +87,21 @@ def main(argv):
     date12_list = ptime.list_ifgram2date12(ifgram_list)
     print 'number of interferograms: '+str(ifgram_num)
 
-    unw_err_ifgram_num = int(np.rint(inps.percentage*ifgram_num))
-    unw_err_ifgram_idx = random.sample(range(ifgram_num), unw_err_ifgram_num)
-    unw_err_ifgram_list = [ifgram_list[i] for i in unw_err_ifgram_idx]
-    unw_err_date12_list = [date12_list[i] for i in unw_err_ifgram_idx]
-    print 'randomly choose the following %d interferograms with unwrapping error' % unw_err_ifgram_num
-    print unw_err_date12_list
-    unit_unw_err = 2.0*np.pi*mask
+    ##### Select interferograms with unwrapping error
+    if inps.percentage > 0.0:
+        mask = readfile.read(inps.mask_file)[0]
+        print 'read mask for pixels with unwrapping error from file: '+inps.mask_file
+
+        unw_err_ifgram_num = int(np.rint(inps.percentage*ifgram_num))
+        unw_err_ifgram_idx = random.sample(range(ifgram_num), unw_err_ifgram_num)
+        unw_err_ifgram_list = [ifgram_list[i] for i in unw_err_ifgram_idx]
+        unw_err_date12_list = [date12_list[i] for i in unw_err_ifgram_idx]
+        print 'randomly choose the following %d interferograms with unwrapping error' % unw_err_ifgram_num
+        print unw_err_date12_list
+
+        unit_unw_err = 2.0*np.pi*mask
+    else:
+        unw_err_ifgram_list = []
 
     ###### Generate simulated interferograms
     m_dates = ptime.yyyymmdd([i.split('-')[0] for i in date12_list])
