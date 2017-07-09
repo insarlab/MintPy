@@ -32,6 +32,9 @@ def multilook_matrix(matrix,lks_y,lks_x):
     rows,cols = matrix.shape
     lks_x = int(lks_x)
     lks_y = int(lks_y)
+    if lks_x == 1 and lks_y == 1:
+        return matrix
+
     rows_mli=int(np.floor(rows/lks_y))
     cols_mli=int(np.floor(cols/lks_x))
     #thr = np.floor(lks_x*lks_y/2)
@@ -48,7 +51,7 @@ def multilook_matrix(matrix,lks_y,lks_x):
         warnings.simplefilter("ignore", category=RuntimeWarning)
         for c in range(cols_mli):  matrix_Cmli[:,c] = np.nanmean(matrix[:,(c)*lks_x:(c+1)*lks_x],1)
         for r in range(rows_mli):  matrix_mli[r,:]  = np.nanmean(matrix_Cmli[(r)*lks_y:(r+1)*lks_y,:],0)
-  
+    del matrix, matrix_Cmli
     return matrix_mli
 
 

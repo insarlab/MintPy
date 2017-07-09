@@ -352,16 +352,15 @@ TEMPLATE='''##------------------------ pysarApp_template.txt -------------------
 ## auto - automatic path pattern for Univ of Miami file structure, which are:
 ##     pysar.unwrapFiles        = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
 ##     pysar.corFiles           = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
-##     pysar.wrapFiles          = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.int
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
 ##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
 ##     pysar.transFile          = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
-pysar.insarProcessor     = auto  #[roipac, isce, gamma, doris, gmtsar], auto for roipac, InSAR processor
-pysar.unwrapFiles        = auto  #[filt*.unw]
-pysar.corFiles           = auto  #[filt*.cor]
-pysar.demFile.geoCoord   = auto  #[*.dem]
-pysar.demFile.radarCoord = auto  #[radar*.hgt]
-pysar.transFile          = auto  #[geomap*.trans for roipac / sim*.UTM_TO_RDC for gamma]
+pysar.insarProcessor     = auto  #[roipac, gamma, isce, doris], auto for roipac, InSAR processor
+pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw], path of all unwrapped interferograms
+pysar.corFiles           = auto  #[filt*.cor, filt_*.cor], path of all coherence files
+pysar.transFile          = auto  #[geomap*.trans, sim*.UTM_TO_RDC], path of mapping transformation file
+pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim], path of DEM in radar coordinate
+pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem],      path of DEM in geo   coordinate
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)
@@ -521,7 +520,9 @@ def cmdLineParse():
                                      #epilog=TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('-v','--version', action='version', version='%(prog)s 1.2')
-    parser.add_argument('custom_template_file', nargs='?', help='custom template with option settings.')
+    parser.add_argument('custom_template_file', nargs='?',\
+                        help='custom template with option settings.\n'+\
+                             "It's equivalent to None, if pysarApp_template.txt is input, as it will be read always.")
     parser.add_argument('--dir', dest='work_dir',\
                         help='PySAR working directory, default is:\n'+\
                              'a) current directory, or\n'+\
@@ -539,6 +540,8 @@ def cmdLineParse():
                         help='Step 2. Modify the network, then exit')
 
     inps = parser.parse_args()
+    if inps.custom_template_file and os.path.basename(inps.custom_template_file) == 'pysarApp_template.txt':
+        inps.custom_template_file = None
     return inps
 
 

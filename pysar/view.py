@@ -739,7 +739,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
 
 ##################################################################################################
 def update_matrix_with_plot_inps(data, meta_dict, inps):
-    
+
     # Seed Point
     # If value of new seed point is not nan, re-seed the data and update inps.seed_yx/lalo
     # Otherwise, try to read seed info from atrributes into inps.seed_yx/lalo
@@ -764,7 +764,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
         except: inps.seed_lalo = None
 
     # Multilook
-    if inps.multilook:
+    if inps.multilook and inps.multilook_num > 1:
         data = multilook_matrix(data, inps.multilook_num, inps.multilook_num)
 
     # Convert data to display unit
@@ -773,7 +773,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     if not inps.disp_unit == meta_dict['UNIT']:
         data, inps.disp_unit = scale_data2disp_unit(data, meta_dict, inps.disp_unit)        
     #print 'display in unit: '+inps.disp_unit
-    
+
     # Re-wrap
     if inps.wrap and 'radian' in inps.disp_unit:
         #print 're-wrapping data to [-pi, pi]'
@@ -858,6 +858,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
                 print 'area is too large (lat or lon > 1 deg), turn off the DEM contour display'
 
     print 'display data in transparency: '+str(inps.transparency)
+
 
     #-------------------- 2.1 Plot in Geo-coordinate using Basemap --------------------------------#
     if inps.geo_box and inps.fig_coord=='geo':
@@ -1302,12 +1303,13 @@ def main(argv):
         if epochNum == 0:
             raise Exception('Zero epoch found!')
     # for single-dataset file
-    elif k in ['.trans']:
+    elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
         if not inps.epoch:
             inps.epoch = ['range']
     else:
         inps.epoch = ['']
     epochNum = len(inps.epoch)
+
 
     #------------------------------ Update Plot Inps with metadata dict ----------------#
     if inps.disp_setting_file:
