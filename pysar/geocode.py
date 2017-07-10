@@ -22,7 +22,7 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 ######################################################################################
-def update_attribute(atr_rdr, inps, geo_data):
+def update_attribute4isce(atr_rdr, inps, geo_data):
     '''Get attributes in geo coord from atr_rdr dict and geo_data matrix
     Inputs:
         atr_rdr - dict, attribute of file in radar coord
@@ -68,14 +68,14 @@ def update_attribute(atr_rdr, inps, geo_data):
     return atr
 
 
-def geocode_attribute_roipac(atr_rdr, atr_trans, print_message=True):
-    '''Get attributes in geo coord from atr_rdr dict and geo_data matrix
+def geocode_attribute_with_geo_lookup_table(atr_rdr, atr_lut, print_message=True):
+    '''Get attributes in geo coord from atr_rdr dict and atr_lut dict
     Inputs:
-        atr_rdr   - dict, attributes of file in radar coord
-        atr_trans - dict, attributes of mapping transformation file
-        print_message _ bool, print out message or not
+        atr_rdr : dict, attributes of file in radar coord
+        atr_lut : dict, attributes of mapping transformation file
+        print_message : bool, print out message or not
     Output:
-        atr - dict, attributes of output file in geo coord.
+        atr : dict, attributes of output file in geo coord.
     '''
 
     # copy atr_rdr
@@ -83,20 +83,22 @@ def geocode_attribute_roipac(atr_rdr, atr_trans, print_message=True):
     for key, value in atr_rdr.iteritems():
         atr[key] = str(value)
 
-    atr['FILE_LENGTH'] = atr_trans['FILE_LENGTH']
-    atr['WIDTH']   = atr_trans['WIDTH']
-    atr['Y_FIRST'] = atr_trans['Y_FIRST'] 
-    atr['X_FIRST'] = atr_trans['X_FIRST'] 
-    atr['Y_STEP']  = atr_trans['Y_STEP']
-    atr['X_STEP']  = atr_trans['X_STEP']
-    atr['Y_UNIT']  = atr_trans['Y_UNIT']
-    atr['X_UNIT']  = atr_trans['X_UNIT']
+    atr['FILE_LENGTH'] = atr_lut['FILE_LENGTH']
+    atr['WIDTH']   = atr_lut['WIDTH']
+    atr['Y_FIRST'] = atr_lut['Y_FIRST'] 
+    atr['X_FIRST'] = atr_lut['X_FIRST'] 
+    atr['Y_STEP']  = atr_lut['Y_STEP']
+    atr['X_STEP']  = atr_lut['X_STEP']
+    try:    atr['Y_UNIT'] = atr_lut['Y_UNIT']
+    except: atr['Y_UNIT'] = 'degrees'
+    try:    atr['X_UNIT'] = atr_lut['X_UNIT']
+    except: atr['X_UNIT'] = 'degrees'
 
     # Reference point from y/x to lat/lon
     if 'ref_y' in atr_rdr.keys() and 'ref_x' in atr_rdr.keys():
         ref_x_rdr = np.array(int(atr_rdr['ref_x']))
         ref_y_rdr = np.array(int(atr_rdr['ref_y']))
-        trans_file = atr_trans['FILE_PATH']
+        trans_file = atr_lut['FILE_PATH']
         ref_lat, ref_lon = ut.radar2glob(ref_y_rdr, ref_x_rdr, trans_file, atr_rdr, print_message=False)[0:2]
         if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
             ref_y = np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
@@ -120,24 +122,35 @@ def geocode_attribute_roipac(atr_rdr, atr_trans, print_message=True):
     return atr
 
 
-def geocode_file_roipac(fname, lookup_file=None, fname_out=None, interp_method='nearest'):
-    '''Geocode file using ROI_PAC lookup table file.
+def geocode_file_with_geo_lookup_table(fname, lookup_file=None, interp_method='nearest', fname_out=None):
+    '''Geocode file using ROI_PAC/Gamma lookup table file.
     Inputs:
-        fname       - string, file to be geocoded
-        lookup_file - string, lookup table file genereated by ROIPAC
-    
+        fname         : string, file to be geocoded
+        lookup_file   : string, optional, lookup table file genereated by ROIPAC or Gamma
+                        i.e. geomap_4rlks.trans           from ROI_PAC
+                             sim_150911-150922.UTM_TO_RDC from Gamma
+        interp_method : string, optional, interpolation/resampling method, supporting nearest, linear, cubic
+        fname_out : string, optional, output geocoded filename
+    Output:
+        fname_out
+
     A faster way is as below:
     https://stackoverflow.com/questions/20915502/speedup-scipy-griddata-for-multiple-interpolations-between-two-irregular-grids
     '''
-    # Default values:
-    if not lookup_file:
-        lookup_file = ['geomap*lks_tight.trans','geomap*lks.trans']
-
+    atr_rdr = readfile.read_attribute(fname)
     if not fname_out:
         fname_out = 'geo_'+fname
 
+    # Default values:
+    if not lookup_file:
+        if atr_rdr['INSAR_PROCESSOR'] == 'roipac':
+            lookup_file = ['geomap*lks_tight.trans','geomap*lks.trans']
+        elif atr_rdr['INSAR_PROCESSOR'] == 'gamma':
+            lookup_file = ['sim*_tight.UTM_TO_RDC','sim*.UTM_TO_RDC']
+
     # Check lookup table file
-    lookup_file = ut.get_file_list(lookup_file)[0]
+    try:    lookup_file = ut.get_file_list(lookup_file)[0]
+    except: lookup_file = None
     if not lookup_file:
         sys.exit('ERROR: No lookup table file found! Can not geocoded without it.')
 
@@ -145,7 +158,6 @@ def geocode_file_roipac(fname, lookup_file=None, fname_out=None, interp_method='
     print '------------------------------------------------------'
     print 'geocoding file: '+fname
     print 'getting Y/X coordinates from file in radar coordinates'
-    atr_rdr = readfile.read_attribute(fname)
     len_rdr = int(atr_rdr['FILE_LENGTH'])
     wid_rdr = int(atr_rdr['WIDTH'])
     yy, xx = np.mgrid[0:len_rdr:len_rdr*1j, 0:wid_rdr:wid_rdr*1j]
@@ -153,9 +165,9 @@ def geocode_file_roipac(fname, lookup_file=None, fname_out=None, interp_method='
 
     ##### 2. Get Y/X coordinates in geo*trans file
     print 'reading '+lookup_file
-    rg, az, atr_trans = readfile.read(lookup_file)
-    len_geo = int(atr_trans['FILE_LENGTH'])
-    wid_geo = int(atr_trans['WIDTH'])
+    rg, az, atr_lut = readfile.read(lookup_file)
+    len_geo = int(atr_lut['FILE_LENGTH'])
+    wid_geo = int(atr_lut['WIDTH'])
 
     # adjustment if input radar file has been subseted.
     if 'subset_x0' in atr_rdr.keys():
@@ -191,7 +203,7 @@ def geocode_file_roipac(fname, lookup_file=None, fname_out=None, interp_method='
                 date = epoch_list[i]
                 data = h5[k].get(date)[:].flatten()
 
-                data_geo = np.zeros(len_geo*wid_geo)
+                data_geo = np.zeros(len_geo*wid_geo, dtype=data.dtype)
                 data_geo[idx] = griddata(yx_rdr, data, yx_geo, method=interp_method)
 
                 dset = group.create_dataset(date, data=data_geo.reshape((len_geo,wid_geo)), compression='gzip')
@@ -199,7 +211,7 @@ def geocode_file_roipac(fname, lookup_file=None, fname_out=None, interp_method='
             prog_bar.close()
 
             print 'update attributes'
-            atr = geocode_attribute_roipac(atr_rdr, atr_trans)
+            atr = geocode_attribute_with_geo_lookup_table(atr_rdr, atr_lut)
             for key,value in atr.iteritems():
                 group.attrs[key] = value
 
@@ -210,12 +222,12 @@ def geocode_file_roipac(fname, lookup_file=None, fname_out=None, interp_method='
                 ifgram = epoch_list[i]
                 data = h5[k][ifgram].get(ifgram)[:].flatten()
 
-                data_geo = np.zeros(len_geo*wid_geo)
+                data_geo = np.zeros(len_geo*wid_geo, dtype=data.dtype)
                 data_geo[idx] = griddata(yx_rdr, data, yx_geo, method=interp_method)
 
                 gg = group.create_group(ifgram)
                 dset = gg.create_dataset(ifgram, data=data_geo.reshape((len_geo,wid_geo)), compression='gzip')
-                atr = geocode_attribute_roipac(h5[k][ifgram].attrs, atr_trans, print_message=False)
+                atr = geocode_attribute_with_geo_lookup_table(h5[k][ifgram].attrs, atr_lut, print_message=False)
                 for key, value in atr.iteritems():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
@@ -227,10 +239,10 @@ def geocode_file_roipac(fname, lookup_file=None, fname_out=None, interp_method='
         print 'reading '+fname
         data = readfile.read(fname)[0].flatten()
         print 'geocoding'
-        data_geo = np.zeros(len_geo*wid_geo)
+        data_geo = np.zeros(len_geo*wid_geo, dtype=data.dtype)
         data_geo[idx] = griddata(yx_rdr, data, yx_geo, method=interp_method)
         print 'update attributes'
-        atr = geocode_attribute_roipac(atr_rdr, atr_trans)
+        atr = geocode_attribute_with_geo_lookup_table(atr_rdr, atr_lut)
         print 'writing >>> '+fname_out
         writefile.write(data_geo.reshape((len_geo,wid_geo)), atr, fname_out)
 
@@ -243,6 +255,8 @@ EXAMPLE='''example:
   geocode.py  timeseries_ECMWF_demErr_refDate.h5  -l geomap_4rlks.trans
   geocode.py  101120-110220.unw   -i linear       -l geomap_4rlks.trans
   geocode.py  velocity.h5 temporalCoherence.h5 incidenceAngle.h5
+
+  geocode.py  velocity.h5  -l sim_150911-150922.UTM_TO_RDC
 '''
 
 def cmdLineParse():
@@ -276,13 +290,13 @@ def main(argv):
 
     #####
     if len(inps.file) == 1:
-        geocode_file_roipac(inps.file[0], inps.lookup_file, inps.outfile, interp_method=inps.interp_method)
+        geocode_file_with_geo_lookup_table(inps.file[0], inps.lookup_file, inps.interp_method, inps.outfile)
     elif inps.parallel:
-        Parallel(n_jobs=num_cores)(delayed(geocode_file_roipac)\
-                                   (fname, inps.lookup_file, interp_method=inps.interp_method) for fname in inps.file)
+        Parallel(n_jobs=num_cores)(delayed(geocode_file_with_geo_lookup_table)\
+                                   (fname, inps.lookup_file, inps.interp_method) for fname in inps.file)
     else:
         for fname in inps.file:
-            geocode_file_roipac(fname, inps.lookup_file, interp_method=inps.interp_method)
+            geocode_file_with_geo_lookup_table(fname, inps.lookup_file, inps.interp_method)
 
     print 'Done.'
     return

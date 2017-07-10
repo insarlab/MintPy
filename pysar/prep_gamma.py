@@ -19,158 +19,6 @@ import pysar._pysar_utilities as ut
 
 
 ######################################## Sub Functions ############################################
-def attribute_gamma2roipac(par_dict):
-    '''Convert Gamma par attribute into ROI_PAC format'''
-    key_list = par_dict.keys()
-
-    # Length - number of rows
-    key = 'azimuth_lines'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
-
-    key = 'interferogram_azimuth_lines'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
-
-    key = 'nlines'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
-
-    key = 'az_samp_1'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
-
-    # Width - number of columns
-    key = 'range_samples'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
-
-    key = 'interferogram_width'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
-
-    key = 'width'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
-
-    key = 'range_samp_1'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
-
-    # WAVELENGTH
-    speed_of_light = 299792458.0   # meter/second
-    key = 'radar_frequency'
-    if key in key_list:
-        par_dict['WAVELENGTH'] = str(speed_of_light/float(par_dict[key]))
-
-    # HEIGHT & EARTH_RADIUS
-    key = 'earth_radius_below_sensor'
-    if key in key_list:
-        par_dict['EARTH_RADIUS'] = par_dict[key]
-
-        key2 = 'sar_to_earth_center'
-        if key2 in key_list:
-            par_dict['HEIGHT'] = str(float(par_dict[key2]) - float(par_dict[key]))
-
-    # UTC TIME
-    key = 'center_time'
-    if key in key_list:
-        par_dict['CENTER_LINE_UTC'] = par_dict[key]
-
-    # STARTING_RANGE
-    key = 'near_range_slc'
-    if key in key_list:
-        par_dict['STARTING_RANGE'] = par_dict[key]
-
-    # RANGE_PIXEL_SIZE
-    key = 'range_pixel_spacing'
-    if key in key_list:
-        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
-
-    key = 'interferogram_range_pixel_spacing'
-    if key in key_list:
-        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
-
-    key = 'range_pixel_spacing_1'
-    if key in key_list:
-        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
-
-    # PLATFORM
-    key = 'sensor'
-    if key in key_list:
-        par_dict['PLATFORM'] = par_dict[key]
-
-    # ORBIT_DIRECTION
-    key = 'heading'
-    if key in key_list:
-        value = float(par_dict[key])
-        if 270 < value < 360 or -90 < value < 90:
-            par_dict['ORBIT_DIRECTION'] = 'ascending'
-        else:
-            par_dict['ORBIT_DIRECTION'] = 'descending'
-
-        par_dict['HEADING'] = str(value)
-
-
-    ##### attributes in geo coordinates
-    key = 'corner_lat'
-    if key in key_list:
-        par_dict['Y_FIRST'] = par_dict[key]
-
-    key = 'corner_lon'
-    if key in key_list:
-        par_dict['X_FIRST'] = par_dict[key]
-
-    key = 'post_lat'
-    if key in key_list:
-        par_dict['Y_STEP'] = par_dict[key]
-
-    key = 'post_lon'
-    if key in key_list:
-        par_dict['X_STEP'] = par_dict[key]
-
-
-    ##### Optional attributes for PySAR from ROI_PAC
-    # ANTENNA_SIDE
-    key = 'azimuth_angle'
-    if key in key_list:
-        value = float(par_dict[key])
-        if 0 < value < 180:
-            par_dict['ANTENNA_SIDE'] = '-1'
-        else:
-            par_dict['ANTENNA_SIDE'] = '1'
-
-    # AZIMUTH_PIXEL_SIZE
-    key = 'azimuth_pixel_spacing'
-    if key in key_list:
-        par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
-
-    key = 'interferogram_azimuth_pixel_spacing'
-    if key in key_list:
-        par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
-
-    key = 'az_pixel_spacing_1'
-    if key in key_list:
-        par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
-
-    # RLOOKS
-    key = 'interferogram_range_looks'
-    if key in key_list:
-        par_dict['RLOOKS'] = par_dict[key]
-
-    # ALOOKS
-    key = 'interferogram_azimuth_looks'
-    if key in key_list:
-        par_dict['ALOOKS'] = par_dict[key]
-
-    # PRF
-    key = 'prf'
-    if key in key_list:
-        par_dict['PRF'] = par_dict['prf']
-
-    return par_dict
-
-
 def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
     '''Get perpendicular baseline info from master/slave par file and off file.
     Parameters: m_par_file : str, path, master parameter file, i.e. 130118_4rlks.amp.par
@@ -261,6 +109,7 @@ def extract_attribute_interferogram(fname):
 
     atr = {}
     atr['PROCESSOR'] = 'gamma'
+    atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
 
     ## Get info: date12, num of loooks
@@ -282,7 +131,7 @@ def extract_attribute_interferogram(fname):
     #print 'convert Gamma attribute to ROI_PAC style'
     atr.update(par_dict)
     atr.update(off_dict)
-    atr = attribute_gamma2roipac(atr)
+    atr = readfile.attribute_gamma2roipac(atr)
 
     ## Perp Baseline Info
     #print 'extract baseline info from %s, %s and %s file' % (m_par_file, s_par_file, off_file)
@@ -308,13 +157,16 @@ def extract_attribute_lookup_table(fname):
     convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.UTM_TO_RDC.rsc'''
     atr = {}
     atr['PROCESSOR'] = 'gamma'
+    atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
+    atr['Y_UNIT'] = 'degrees'
+    atr['X_UNIT'] = 'degrees'
 
     par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
     print 'read '+os.path.basename(par_file)
     print 'convert Gamma attribute to ROI_PAC style'
     par_dict = readfile.read_gamma_par(par_file)
-    par_dict = attribute_gamma2roipac(par_dict)
+    par_dict = readfile.attribute_gamma2roipac(par_dict)
     atr.update(par_dict)
 
     ## Write to .rsc file
@@ -332,13 +184,16 @@ def extract_attribute_dem_geo(fname):
     '''
     atr = {}
     atr['PROCESSOR'] = 'gamma'
+    atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
+    atr['Y_UNIT'] = 'degrees'
+    atr['X_UNIT'] = 'degrees'
 
     par_file = fname+'.par'
     print 'read '+os.path.basename(par_file)
     print 'convert Gamma attribute to ROI_PAC style'
     par_dict = readfile.read_gamma_par(par_file)
-    par_dict = attribute_gamma2roipac(par_dict)
+    par_dict = readfile.attribute_gamma2roipac(par_dict)
     atr.update(par_dict)
 
     ## Write to .rsc file
@@ -356,13 +211,14 @@ def extract_attribute_dem_radar(fname):
     '''
     atr = {}
     atr['PROCESSOR'] = 'gamma'
+    atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
 
     par_file = os.path.splitext(fname)[0]+'.diff_par'
     print 'read '+os.path.basename(par_file)
     print 'convert Gamma attribute to ROI_PAC style'
     par_dict = readfile.read_gamma_par(par_file)
-    par_dict = attribute_gamma2roipac(par_dict)
+    par_dict = readfile.attribute_gamma2roipac(par_dict)
     atr.update(par_dict)
 
     ## Write to .rsc file

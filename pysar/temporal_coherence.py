@@ -80,7 +80,7 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     
     print 'calculating temporal coherence interferogram by interferogram ...'
     print 'number of interferograms: '+str(ifgram_num)
-    temp_coh = np.zeros(pixel_num)+0j
+    temp_coh = np.zeros(pixel_num, dtype=np.float32)+0j
     prog_bar = ptime.progress_bar(maxValue=ifgram_num, prefix='calculating: ')
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
@@ -98,9 +98,9 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     del timeseries, data, dataEst, dataDiff
     h5ifgram.close()
 
-    temp_coh = (np.absolute(temp_coh)/ifgram_num).reshape((length,width))
+    temp_coh = np.array((np.absolute(temp_coh)/ifgram_num).reshape((length,width)), dtype=np.float32)
     return temp_coh
-    
+
 
 ######################################################################################################
 USAGE='''usage: temporal_coherence.py [-h] interferograms_file timeseries_file [ output_file ]'''

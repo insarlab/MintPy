@@ -296,9 +296,12 @@ def read_attribute(File, epoch=None):
             sys.exit('Unrecognized h5 file key: '+k[0])
 
         atr = dict()
-        for key, value in attrs.iteritems():  atr[key] = str(value)
-        atr['PROCESSOR'] = 'pysar'
+        for key, value in attrs.iteritems():
+            atr[key] = str(value)
         atr['FILE_TYPE'] = str(k[0])
+        atr['PROCESSOR'] = 'pysar'
+        if not 'INSAR_PROCESSOR' in atr.keys():
+            atr['INSAR_PROCESSOR'] = 'roipac'
 
         if k[0] == 'timeseries':
             try:    atr['ref_date']
@@ -321,6 +324,8 @@ def read_attribute(File, epoch=None):
             #    atr['FILE_TYPE'] = ext
             if 'PROCESSOR' not in atr.keys():
                 atr['PROCESSOR'] = 'roipac'
+            if not 'INSAR_PROCESSOR' not in atr.keys():
+                atr['INSAR_PROCESSOR'] = 'roipac'
 
         ##### GAMMA
         elif os.path.isfile(File+'.par'):
@@ -330,14 +335,19 @@ def read_attribute(File, epoch=None):
             #    atr['FILE_TYPE'] = ext
             if 'PROCESSOR' not in atr.keys():
                 atr['PROCESSOR'] = 'gamma'
+            if not 'INSAR_PROCESSOR' in atr.keys():
+                atr['INSAR_PROCESSOR'] = 'gamma'
 
         ##### ISCE
         elif os.path.isfile(File+'.xml'):
             atr = read_isce_xml(File+'.xml')
-            atr['PROCESSOR'] = 'isce'
             atr['FILE_TYPE'] = ext
+            atr['PROCESSOR'] = 'isce'
+            if not 'INSAR_PROCESSOR' in atr.keys():
+                atr['INSAR_PROCESSOR'] = 'isce'
 
-        else: print 'Unrecognized file extension: '+ext; sys.exit(1)
+        else:
+            sys.exit('Unrecognized file extension: '+ext)
 
     # Unit - str
     #if 'UNIT' not in atr.keys():
@@ -351,7 +361,8 @@ def read_attribute(File, epoch=None):
         atr['UNIT'] = '1'
 
     atr['FILE_PATH'] = os.path.abspath(File)
-
+    if not 'INSAR_PROCESSOR' in atr.keys():
+        atr['INSAR_PROCESSOR'] = 'roipac'
     return atr
 
 
@@ -716,6 +727,158 @@ def read_GPS_USGS(File):
     up=np.array(data[:,3])
  
     return east,north,up,dates,YYYYMMDD
+
+
+def attribute_gamma2roipac(par_dict):
+    '''Convert Gamma par attribute into ROI_PAC format'''
+    key_list = par_dict.keys()
+
+    # Length - number of rows
+    key = 'azimuth_lines'
+    if key in key_list:
+        par_dict['FILE_LENGTH'] = par_dict[key]
+
+    key = 'interferogram_azimuth_lines'
+    if key in key_list:
+        par_dict['FILE_LENGTH'] = par_dict[key]
+
+    key = 'nlines'
+    if key in key_list:
+        par_dict['FILE_LENGTH'] = par_dict[key]
+
+    key = 'az_samp_1'
+    if key in key_list:
+        par_dict['FILE_LENGTH'] = par_dict[key]
+
+    # Width - number of columns
+    key = 'range_samples'
+    if key in key_list:
+        par_dict['WIDTH'] = par_dict[key]
+
+    key = 'interferogram_width'
+    if key in key_list:
+        par_dict['WIDTH'] = par_dict[key]
+
+    key = 'width'
+    if key in key_list:
+        par_dict['WIDTH'] = par_dict[key]
+
+    key = 'range_samp_1'
+    if key in key_list:
+        par_dict['WIDTH'] = par_dict[key]
+
+    # WAVELENGTH
+    speed_of_light = 299792458.0   # meter/second
+    key = 'radar_frequency'
+    if key in key_list:
+        par_dict['WAVELENGTH'] = str(speed_of_light/float(par_dict[key]))
+
+    # HEIGHT & EARTH_RADIUS
+    key = 'earth_radius_below_sensor'
+    if key in key_list:
+        par_dict['EARTH_RADIUS'] = par_dict[key]
+
+        key2 = 'sar_to_earth_center'
+        if key2 in key_list:
+            par_dict['HEIGHT'] = str(float(par_dict[key2]) - float(par_dict[key]))
+
+    # UTC TIME
+    key = 'center_time'
+    if key in key_list:
+        par_dict['CENTER_LINE_UTC'] = par_dict[key]
+
+    # STARTING_RANGE
+    key = 'near_range_slc'
+    if key in key_list:
+        par_dict['STARTING_RANGE'] = par_dict[key]
+
+    # RANGE_PIXEL_SIZE
+    key = 'range_pixel_spacing'
+    if key in key_list:
+        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
+
+    key = 'interferogram_range_pixel_spacing'
+    if key in key_list:
+        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
+
+    key = 'range_pixel_spacing_1'
+    if key in key_list:
+        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
+
+    # PLATFORM
+    key = 'sensor'
+    if key in key_list:
+        par_dict['PLATFORM'] = par_dict[key]
+
+    # ORBIT_DIRECTION
+    key = 'heading'
+    if key in key_list:
+        value = float(par_dict[key])
+        if 270 < value < 360 or -90 < value < 90:
+            par_dict['ORBIT_DIRECTION'] = 'ascending'
+        else:
+            par_dict['ORBIT_DIRECTION'] = 'descending'
+
+        par_dict['HEADING'] = str(value)
+
+
+    ##### attributes in geo coordinates
+    key = 'corner_lat'
+    if key in key_list:
+        par_dict['Y_FIRST'] = par_dict[key]
+
+    key = 'corner_lon'
+    if key in key_list:
+        par_dict['X_FIRST'] = par_dict[key]
+
+    key = 'post_lat'
+    if key in key_list:
+        par_dict['Y_STEP'] = par_dict[key]
+
+    key = 'post_lon'
+    if key in key_list:
+        par_dict['X_STEP'] = par_dict[key]
+
+
+    ##### Optional attributes for PySAR from ROI_PAC
+    # ANTENNA_SIDE
+    key = 'azimuth_angle'
+    if key in key_list:
+        value = float(par_dict[key])
+        if 0 < value < 180:
+            par_dict['ANTENNA_SIDE'] = '-1'
+        else:
+            par_dict['ANTENNA_SIDE'] = '1'
+
+    # AZIMUTH_PIXEL_SIZE
+    key = 'azimuth_pixel_spacing'
+    if key in key_list:
+        par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
+
+    key = 'interferogram_azimuth_pixel_spacing'
+    if key in key_list:
+        par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
+
+    key = 'az_pixel_spacing_1'
+    if key in key_list:
+        par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
+
+    # RLOOKS
+    key = 'interferogram_range_looks'
+    if key in key_list:
+        par_dict['RLOOKS'] = par_dict[key]
+
+    # ALOOKS
+    key = 'interferogram_azimuth_looks'
+    if key in key_list:
+        par_dict['ALOOKS'] = par_dict[key]
+
+    # PRF
+    key = 'prf'
+    if key in key_list:
+        par_dict['PRF'] = par_dict['prf']
+
+    return par_dict
 
 
 #########################################################################

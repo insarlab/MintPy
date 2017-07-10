@@ -43,6 +43,7 @@ def extract_attribute(fname):
 
     atr = {}
     atr['PROCESSOR'] = 'roipac'
+    atr['INSAR_PROCESSOR'] = 'roipac'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
 
     ## 2. Read baseline metadata file
