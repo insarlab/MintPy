@@ -77,7 +77,7 @@ def auto_path_miami(inps, template={}):
     # Use DEMg/DEM option if dem_geo is not specified in pysar option
     dem_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/DEM'
     if not inps.dem_geo or inps.dem_geo == 'auto':
-        inps.dem_geo = None
+        inps.dem_geo = []
         if os.path.isdir(dem_dir):
             inps.dem_geo = [dem_dir+'/*.dem']
         elif inps.insar_processor == 'gamma':
