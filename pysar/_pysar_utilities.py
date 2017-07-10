@@ -1049,9 +1049,13 @@ def azimuth_resolution(atr):
     if 'X_FIRST' in atr.keys():
         print 'Input file is in geo coord, no azimuth resolution info.'
         return
-    Re = float(atr['EARTH_RADIUS'])
-    Height = float(atr['HEIGHT'])
-    az_step = float(atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
+    if atr['INSAR_PROCESSOR'] == 'roipac':
+        Re = float(atr['EARTH_RADIUS'])
+        Height = float(atr['HEIGHT'])
+        az_step = float(atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
+    elif atr['INSAR_PROCESSOR'] == 'gamma':
+        atr = readfile.attribute_gamma2roipac(atr)
+        az_step = float(atr['AZIMUTH_PIXEL_SIZE'])
     return az_step
 
 

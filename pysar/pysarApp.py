@@ -280,8 +280,12 @@ def check_loaded_dataset(work_dir='./', inps=None):
     dem_geo_file = is_file_exist(file_list, abspath=True)
 
     # 5. Transform file for geocoding
-    file_list = [work_dir+'/geomap*lks_tight.trans',\
-                 work_dir+'/geomap*lks.trans']
+    if atr['INSAR_PROCESSOR'] == 'roipac':
+        file_list = [work_dir+'/geomap*lks_tight.trans',\
+                     work_dir+'/geomap*lks.trans']
+    elif atr['INSAR_PROCESSOR'] == 'gamma':
+        file_list = [work_dir+'/sim*_tight.UTM_TO_RDC',\
+                     work_dir+'/sim*.UTM_TO_RDC']
     trans_file = is_file_exist(file_list, abspath=True)
 
     ##### Print searching result

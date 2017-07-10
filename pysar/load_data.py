@@ -81,10 +81,12 @@ def auto_path_miami(inps, template={}):
         if os.path.isdir(dem_dir):
             inps.dem_geo = [dem_dir+'/*.dem']
         elif inps.insar_processor == 'gamma':
-            inps.dem_geo = [process_dir+'/SIM/sim_'+m_date12+'/sim_*.hgt_sim']
+            inps.dem_geo = [process_dir+'/SIM/sim_'+m_date12+'/sim_*.utm.dem']
 
         if   'DEMg' in template.keys():  inps.dem_geo.append(template['DEMg'])
         elif 'DEM'  in template.keys():  inps.dem_geo.append(template['DEM'])
+        try:    inps.dem_geo = ut.get_file_list(inps.dem_geo)[0]
+        except: inps.dem_geo = None
 
         if not inps.dem_geo:
             warnings.warn('Can not locate DEM in geo coord!')
@@ -148,7 +150,7 @@ def check_file_size(fileList, mode_width=None, mode_length=None):
         print 'But the following '+ext+' have different dimensions and thus will not be loaded:'
         for i in range(len(fileList)):
             if widthList[i] != mode_width or lengthList[i] != mode_length:
-                print fileList[i]+'    width: '+widthList[i]+'  length: '+lengthList[i]
+                print '%s    width: %s    length: %s' % (os.path.basename(fileList[i]), widthList[i], lengthList[i])
                 fileListOut.remove(fileList[i])
         print '\nNumber of '+ext+' left: '+str(len(fileListOut))
         print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
@@ -255,6 +257,8 @@ def load_multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extra_
             atr['drop_ifgram'] = 'no'
             try:     atr['PROJECT_NAME'] = extra_meta_dict['project_name']
             except:  atr['PROJECT_NAME'] = 'PYSAR'
+            #try:     atr['INSAR_PROCESSOR'] = extra_meta_dict['insar_processor']
+            #except:  atr['INSAR_PROCESSOR'] = 'roipac'
 
             # Write dataset
             group = gg.create_group(os.path.basename(file))
@@ -300,6 +304,8 @@ def load_single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict())
         group.attrs[key] = value
     try: group.attrs['PROJECT_NAME'] = extra_meta_dict['project_name']
     except: pass
+    #try:    group.attrs['INSAR_PROCESSOR'] = extra_meta_dict['insar_processor']
+    #except: group.attrs['INSAR_PROCESSOR'] = 'roipac'
     h5.close()
     return outfile
 
