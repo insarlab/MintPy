@@ -83,7 +83,7 @@ def main(argv):
 
     ##### Mask: Threshold 
     print 'create initial mask with the same size as the input file and all = 1'
-    mask = np.ones((length, width))
+    mask = np.ones((length, width), dtype=np.float32)
 
     data, atr = readfile.read(inps.file, inps.epoch)
 

@@ -926,7 +926,6 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             ax.plot(inps.seed_lalo[1], inps.seed_lalo[0], inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
             print 'plot reference point'
 
-
         # Status bar
         def format_coord(x,y):
             col = subset.coord_geo2radar(x, meta_dict, 'lon') - inps.pix_box[0]
@@ -1338,7 +1337,8 @@ def main(argv):
         # Mask Data
         if inps.mask_file:
             data = mask.mask_matrix(data, msk)
-        
+            del msk
+
         # Figure Setting 
         if not inps.font_size:  inps.font_size = 16
         if not inps.fig_size:
@@ -1349,9 +1349,10 @@ def main(argv):
         print 'create figure in size: '+str(inps.fig_size)
         fig = plt.figure(figsize=inps.fig_size)
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
-        
+
         # Plotting
         ax, inps = plot_matrix(ax, data, atr, inps)
+        del data
 
         # Figure Output
         if inps.save_fig:
