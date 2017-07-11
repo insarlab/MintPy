@@ -78,14 +78,23 @@ def four_corners(atr):
 
 
 def circle_index(atr,circle_par):
-    ## Return Index of Elements within a Circle
-    ## Inputs:
-    ##     atr        : (dictionary) attributes containging width, length info
-    ##     circle_par : (string) center_x,center_y,radius
+    '''Return Index of Elements within a Circle centered at input pixel
+    Inputs: atr : dictionary
+                containging the following attributes:
+                WIDT
+                FILE_LENGTH
+            circle_par : string in the format of 'y,x,radius'
+                i.e. '200,300,20'          for radar coord
+                     '31.0214,130.5699,20' for geo   coord
+    Output: idx : 2D np.array in bool type
+                mask matrix for those pixel falling into the circle defined by circle_par
+    Examples: idx_mat = ut.circle_index(atr, '200,300,20')
+              idx_mat = ut.circle_index(atr, '31.0214,130.5699,20')
+    '''
 
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
-    cir_par = circle_par.split(',')
+    cir_par = circle_par.replace(',',' ').split()
     try:
         c_y    = int(cir_par[0])
         c_x    = int(cir_par[1])
