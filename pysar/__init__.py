@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 ########################################################################
 miami_path = True    # Package-wide variable, Auto setting for University of Miami

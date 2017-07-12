@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 # Adopted from plotts.py from GIAnT v1.0 for PySAR products
 
 import os

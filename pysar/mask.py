@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
 # Program is part of PySAR v1.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
