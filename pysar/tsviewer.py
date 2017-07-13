@@ -38,6 +38,30 @@ def read_timeseries_yx(timeseries_file, y, x):
     return dis_ts
 
 
+def read_timeseries_lalo(timeseries_file, lat, lon):
+    '''Read time-series displacement on point (y,x) from timeseries_file
+    Inputs:
+        timeseries_file : string, name/path of timeseries hdf5 file
+        lat/lon : float, latitude/longitude of point of interest
+    Output:
+        dis_ts : list of float, displacement time-series of point of interest
+    '''
+
+    atr = readfile.read_attribute(timeseries_file)
+    if 'X_FIRST' not in atr.keys():
+        print 'ERROR: input file is not geocoded'
+        return None
+
+    lat0 = float(atr['Y_FIRST'])
+    lat_step = float(atr['Y_STEP'])
+    lon0 = float(atr['Y_FIRST'])
+    lon_step = float(atr['Y_STEP'])
+    y = int(np.rint(lat-lat0)/lat_step)
+    x = int(np.rint(lon-lon0)/lon_step)
+    dis_ts = read_timeseries_yx(timeseries_file, y, x)
+    return dis_ts
+
+
 ###########################################################################################
 EXAMPLE='''example:
   tsviewer.py timeseries.h5 --ylim -10 10

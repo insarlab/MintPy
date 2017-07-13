@@ -260,6 +260,11 @@ def check_loaded_dataset(work_dir='./', inps=None):
         print 'Unwrapped interferograms: '+ifgram_file
         atr = readfile.read_attribute(ifgram_file)
 
+    if 'X_FIRST' in atr.keys():
+        geocoded = True
+    else:
+        geocoded = False
+
     # Recommended files (None if not found)
     # 2. Spatial coherence for each interferogram
     file_list = [work_dir+'/Modified_coherence.h5',\
@@ -267,17 +272,32 @@ def check_loaded_dataset(work_dir='./', inps=None):
                  work_dir+'/Modified_Coherence.h5',\
                  work_dir+'/Coherence.h5']
     coherence_file = is_file_exist(file_list, abspath=True)
+    if coherence_file:
+        print 'Spatial       coherences: '+coherence_file
+    else:
+        print 'WARNING: No coherences file found. Cannot use coherence-based network modification without it.'
+        print "It's supposed to be like: "+str(file_list)
 
     # 3. DEM in radar coord
     file_list = [work_dir+'/demRadar.h5',\
                  work_dir+'/radar*.hgt']
     dem_radar_file = is_file_exist(file_list, abspath=True)
+    if dem_radar_file:
+        print 'DEM in radar coordinates: '+dem_radar_file
+    elif not geocoded:
+        print 'WARNING: No DEM file in radar coord found.'
+        print "It's supposed to be like: "+str(file_list)
 
     # 4. DEM in geo coord
     file_list = [work_dir+'/demGeo_tight.h5',\
                  work_dir+'/demGeo.h5',\
                  work_dir+'/*.dem']
     dem_geo_file = is_file_exist(file_list, abspath=True)
+    if dem_geo_file:
+        print 'DEM in geo   coordinates: '+dem_geo_file
+    else:
+        print 'WARNING: No DEM file in geo coord found.'
+        print "It's supposed to be like: "+str(file_list)
 
     # 5. Transform file for geocoding
     if atr['INSAR_PROCESSOR'] == 'roipac':
@@ -287,21 +307,11 @@ def check_loaded_dataset(work_dir='./', inps=None):
         file_list = [work_dir+'/sim*_tight.UTM_TO_RDC',\
                      work_dir+'/sim*.UTM_TO_RDC']
     trans_file = is_file_exist(file_list, abspath=True)
-
-    ##### Print searching result
-    if 'X_FIRST' in atr.keys():
-        geocoded = True
-    else:
-        geocoded = False
-
-    if coherence_file: print 'Spatial       coherences: '+coherence_file
-    else:              print 'WARNING: No coherences file found. Cannot use coherence-based network modification without it.'
-    if dem_geo_file:   print 'DEM in geo   coordinates: '+dem_geo_file
-    else:              print 'WARNING: No DEM in geo coord found.'
-    if dem_radar_file: print 'DEM in radar coordinates: '+dem_radar_file
-    elif not geocoded: print 'WARNING: No DEM in radar coord found.'
-    if trans_file:     print 'Mapping transform   file: '+trans_file
-    elif not geocoded: print 'No transform file found! Can not geocoding without it!'
+    if trans_file:
+        print 'Mapping transform   file: '+trans_file
+    elif not geocoded:
+        print 'No transform file found! Can not geocode without it!'
+        print "It's supposed to be like: "+str(file_list)
 
     ##### Update namespace inps if inputed
     if inps:
@@ -721,7 +731,7 @@ def main(argv):
     #########################################
     # Generating Aux files
     #########################################
-    print '\n*************** Generate Initla Mask ****************'
+    print '\n*************** Generate Initial Mask ****************'
     # Initial mask
     inps.mask_file = 'mask.h5'
     if ut.update_file(inps.mask_file, inps.ifgram_file):
