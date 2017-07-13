@@ -160,7 +160,7 @@ def geocode_file_with_geo_lookup_table(fname, lookup_file=None, interp_method='n
     print 'getting Y/X coordinates from file in radar coordinates'
     len_rdr = int(atr_rdr['FILE_LENGTH'])
     wid_rdr = int(atr_rdr['WIDTH'])
-    yy, xx = np.mgrid[0:len_rdr:len_rdr*1j, 0:wid_rdr:wid_rdr*1j]
+    yy, xx = np.mgrid[0:len_rdr-1:len_rdr*1j, 0:wid_rdr-1:wid_rdr*1j]
     yx_rdr = np.hstack((yy.reshape(-1,1), xx.reshape(-1,1)))
 
     ##### 2. Get Y/X coordinates in geo*trans file

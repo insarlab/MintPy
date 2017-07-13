@@ -198,7 +198,7 @@ def read(File, box=(), epoch=None):
         elif ext in ['.flg', '.byt']:
             flag, atr = read_flag(File)
             return flag, atr
-  
+
         elif ext == '.trans':
             if box:
                 rg,az,atr = read_float32(File,box)
@@ -304,8 +304,6 @@ def read_attribute(File, epoch=None):
             atr[key] = str(value)
         atr['FILE_TYPE'] = str(k[0])
         atr['PROCESSOR'] = 'pysar'
-        if not 'INSAR_PROCESSOR' in atr.keys():
-            atr['INSAR_PROCESSOR'] = 'roipac'
 
         if k[0] == 'timeseries':
             try:    atr['ref_date']
@@ -329,7 +327,7 @@ def read_attribute(File, epoch=None):
             #    atr['FILE_TYPE'] = ext
             if 'PROCESSOR' not in atr.keys():
                 atr['PROCESSOR'] = 'roipac'
-            if not 'INSAR_PROCESSOR' not in atr.keys():
+            if 'INSAR_PROCESSOR' not in atr.keys():
                 atr['INSAR_PROCESSOR'] = 'roipac'
 
         ##### GAMMA
@@ -340,7 +338,7 @@ def read_attribute(File, epoch=None):
             #    atr['FILE_TYPE'] = ext
             if 'PROCESSOR' not in atr.keys():
                 atr['PROCESSOR'] = 'gamma'
-            if not 'INSAR_PROCESSOR' in atr.keys():
+            if 'INSAR_PROCESSOR' not in atr.keys():
                 atr['INSAR_PROCESSOR'] = 'gamma'
 
         ##### ISCE
@@ -349,7 +347,7 @@ def read_attribute(File, epoch=None):
             if 'FILE_TYPE' not in atr.keys():  ## ISCE file extension could be .geo or .rdr - note related with file type
                 atr['FILE_TYPE'] = ext
             atr['PROCESSOR'] = 'isce'
-            if not 'INSAR_PROCESSOR' in atr.keys():
+            if 'INSAR_PROCESSOR' not in atr.keys():
                 atr['INSAR_PROCESSOR'] = 'isce'
 
         else:
@@ -367,8 +365,11 @@ def read_attribute(File, epoch=None):
         atr['UNIT'] = '1'
 
     atr['FILE_PATH'] = os.path.abspath(File)
-    if not 'INSAR_PROCESSOR' in atr.keys():
-        atr['INSAR_PROCESSOR'] = 'roipac'
+    if 'INSAR_PROCESSOR' not in atr.keys():
+        if atr['PROCESSOR'] == 'pysar':
+            atr['INSAR_PROCESSOR'] = 'roipac'
+        else:
+            atr['INSAR_PROCESSOR'] = atr['PROCESSOR']
     return atr
 
 

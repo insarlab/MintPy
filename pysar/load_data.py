@@ -257,8 +257,10 @@ def load_multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extra_
             atr['drop_ifgram'] = 'no'
             try:     atr['PROJECT_NAME'] = extra_meta_dict['project_name']
             except:  atr['PROJECT_NAME'] = 'PYSAR'
-            #try:     atr['INSAR_PROCESSOR'] = extra_meta_dict['insar_processor']
-            #except:  atr['INSAR_PROCESSOR'] = 'roipac'
+            key = 'INSAR_PROCESSOR'
+            if key not in atr.keys():
+                try:  atr[key] = extra_meta_dict['insar_processor']
+                except:  pass
 
             # Write dataset
             group = gg.create_group(os.path.basename(file))
@@ -304,8 +306,10 @@ def load_single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict())
         group.attrs[key] = value
     try: group.attrs['PROJECT_NAME'] = extra_meta_dict['project_name']
     except: pass
-    #try:    group.attrs['INSAR_PROCESSOR'] = extra_meta_dict['insar_processor']
-    #except: group.attrs['INSAR_PROCESSOR'] = 'roipac'
+    key = 'INSAR_PROCESSOR'
+    if key not in atr.keys():
+        try:  atr[key] = extra_meta_dict['insar_processor']
+        except:  pass
     h5.close()
     return outfile
 
@@ -358,7 +362,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     ##### Prepare attributes file
     processor = inps_dict['insar_processor']
     print '--------------------------------------------'
-    print 'preparing attributes files using prepare_%s.py ...' % processor
+    print 'preparing attributes files using prep_%s.py ...' % processor
     # prepare multiple files input for cmd calling
     files_input = ''
     for x in fileList:
@@ -368,7 +372,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     elif processor == 'roipac':  prepCmd = 'prep_roipac.py '+files_input;   os.system(prepCmd)
     else:
         print 'Un-supported InSAR processor: '+processor
-        return None
+        print 'Skip preparing attributes files'
 
     print '----------------------------'
     print 'loading files ...'
@@ -471,6 +475,8 @@ def load_data_from_template(inps):
         else:
             inps.insar_processor = value
 
+    print '--------------------------------------------'
+    print 'InSAR processing software: '+inps.insar_processor
     if 'pysar.unwrapFiles'    in keyList:   inps.unw   = template['pysar.unwrapFiles']
     if 'pysar.corFiles'       in keyList:   inps.cor   = template['pysar.corFiles']
     if 'pysar.transFile'      in keyList:   inps.trans = template['pysar.transFile']

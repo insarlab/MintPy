@@ -54,10 +54,10 @@ def read_timeseries_lalo(timeseries_file, lat, lon):
 
     lat0 = float(atr['Y_FIRST'])
     lat_step = float(atr['Y_STEP'])
-    lon0 = float(atr['Y_FIRST'])
-    lon_step = float(atr['Y_STEP'])
-    y = int(np.rint(lat-lat0)/lat_step)
-    x = int(np.rint(lon-lon0)/lon_step)
+    lon0 = float(atr['X_FIRST'])
+    lon_step = float(atr['X_STEP'])
+    y = int(np.rint((lat-lat0)/lat_step))
+    x = int(np.rint((lon-lon0)/lon_step))
     dis_ts = read_timeseries_yx(timeseries_file, y, x)
     return dis_ts
 
