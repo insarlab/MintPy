@@ -94,7 +94,14 @@ def circle_index(atr,circle_par):
 
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
-    cir_par = circle_par.replace(',',' ').split()
+
+    if type(circle_par) == tuple:
+        cir_par = circle_par
+    elif type(circle_par) == list:
+        cir_par = circle_par
+    else:
+        cir_par = circle_par.replace(',',' ').split()
+
     try:
         c_y    = int(cir_par[0])
         c_x    = int(cir_par[1])
