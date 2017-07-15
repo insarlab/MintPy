@@ -276,9 +276,9 @@ def main(argv):
 
 
     ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
-    delta_z_mat = np.zeros([length, width])
-    resid_n = np.zeros([A_def.shape[0], length*width])
-    constC = np.zeros([length, width])
+    delta_z_mat = np.zeros([length, width], dtype=np.float32)
+    resid_n = np.zeros([A_def.shape[0], length*width], dtype=np.float32)
+    constC = np.zeros([length, width], dtype=np.float32)
     #delta_a_mat = np.zeros([length, width])
     if inps.incidence_angle.ndim == 2 and inps.range_dis.ndim == 2:
         print 'inversing using L2-norm minimization (unweighted least squares)'\

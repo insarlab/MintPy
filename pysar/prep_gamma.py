@@ -104,8 +104,8 @@ def extract_attribute_interferogram(fname):
     file_basename = os.path.basename(fname)
 
     atr_file = fname+'.rsc'
-    if os.path.isfile(atr_file):
-        return atr_file
+    #if os.path.isfile(atr_file):
+    #    return atr_file
 
     atr = {}
     atr['PROCESSOR'] = 'gamma'

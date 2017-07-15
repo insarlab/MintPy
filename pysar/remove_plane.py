@@ -83,13 +83,13 @@ def main(argv):
         # Read mask
         if not inps.mask_file:
             Mask_temp = readfile.read(inps.mask_file)[0]
-            Mask = np.zeros((length, width))
+            Mask = np.zeros((length, width), dtype=np.float32)
             Mask[Mask_temp!=0] = 1
         else:
             Mask = np.ones((length, width))
         
         # Update mask for multiple surface from inps.ysub
-        mask_multiSurface = np.zeros((length,width))
+        mask_multiSurface = np.zeros((length,width), dtype=np.float32)
         surfNum = len(inps.ysub)/2
         if surfNum == 1:
             mask_multiSurface = Mask

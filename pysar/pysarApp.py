@@ -260,10 +260,13 @@ def check_loaded_dataset(work_dir='./', inps=None):
         print 'Unwrapped interferograms: '+ifgram_file
         atr = readfile.read_attribute(ifgram_file)
 
+    print 'Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR']
     if 'X_FIRST' in atr.keys():
         geocoded = True
+        print 'Loaded dataset are in geo coordinates'
     else:
         geocoded = False
+        print 'Loaded dataset are in radar coordinates'
 
     # Recommended files (None if not found)
     # 2. Spatial coherence for each interferogram
@@ -314,6 +317,16 @@ def check_loaded_dataset(work_dir='./', inps=None):
         print "It's supposed to be like: "+str(file_list)
 
     ##### Update namespace inps if inputed
+    load_complete = True
+    if None in [ifgram_file, coherence_file, dem_geo_file]:
+        load_complete = False
+    if not geocoded and None in [dem_radar_file, trans_file]:
+        load_complete = False
+    if load_complete:
+        print '-----------------------------------------------------------------------------------'
+        print 'All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.'
+        print '-----------------------------------------------------------------------------------'
+
     if inps:
         inps.ifgram_file = ifgram_file
         inps.coherence_file = coherence_file
@@ -324,13 +337,7 @@ def check_loaded_dataset(work_dir='./', inps=None):
 
     ##### Check 
     else:
-        if None in [ifgram_file, coherence_file, dem_geo_file]:
-            return False
-
-        if not geocoded and None in [dem_radar_file, trans_file]:
-            return False
-        else:
-            return True
+        return load_complete
 
 
 ##########################################################################

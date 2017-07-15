@@ -62,7 +62,7 @@ def get_delay(grib_file, atr, inps_dict):
     else:
         aps = pa.PyAPS_rdr(grib_file, inps_dict['dem_file'], grib=inps_dict['grib_source'],\
                            verb=True, Del=inps_dict['delay_type'])
-    phs = np.zeros((aps.ny, aps.nx))
+    phs = np.zeros((aps.ny, aps.nx), dtype=np.float32)
     aps.getdelay(phs, inc=0.0)
     
     # Get relative phase delay in space
