@@ -1172,7 +1172,7 @@ def main(argv):
     if inps.geo_vel_file and template['pysar.save.kml'] in ['auto','yes']:
         print '\n--------------------------------------------'
         print 'creating Google Earth KMZ file for geocoded velocity file: '+inps.geo_vel_file+' ...'
-        outName = os.path.splitext(inps.geo_vel_file)[0]+'.kmz'
+        outName = inps.geo_vel_file+'.kmz'
         kmlCmd = 'save_kml.py '+inps.geo_vel_file
         print kmlCmd
         if ut.update_file(outName, inps.geo_vel_file, check_readable=False):
@@ -1214,7 +1214,15 @@ def main(argv):
             inps.geo_inc_angle_file = check_geocode_file(inps.trans_file, inps.inc_angle_file)
 
             # Save to UNAVCO format
-            inps.unavco_file = unavco.get_unavco_filename(inps.geo_timeseries_file)
+            print '--------------------------------------------'
+            SAT = unavco.get_mission_name(atr)
+            try:
+                inps.unavco_file = ut.get_file_list(SAT+'_*.he5')[0]
+                print 'Find existed UNAVCO time-series file: '+inps.unavco_file
+            except:
+                inps.unavco_file = None
+                print 'No UNAVCO time-series file exists yet.'
+            #inps.unavco_file = unavco.get_unavco_filename(inps.geo_timeseries_file)
             unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
                         ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file
             print unavcoCmd
