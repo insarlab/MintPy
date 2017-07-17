@@ -115,9 +115,12 @@ def correct_lod_file(File, outFile=None):
 def usage():
     print '''usage: lod.py file_radarCoord [out_name]
 
-Applying an empirical model to correct the Local Oscilator Drift 
-of Envisat ASAR instrument. The empiriocal model was suggested 
-by Petar Marinkovic and Yngvar Larsen, 2013.
+Local Oscilator Drift correction of Envisat ASAR instrument with an empirical model.
+
+reference:
+  Marinkovic, P., and Y. Larsen (2013), Consequences of long-term ASAR local oscillator 
+  frequency decay - An empirical study of 10 years of data, in Living Planet Symposium,
+  Edinburgh, U. K.
 
 example:
   lod.py timeseries.h5

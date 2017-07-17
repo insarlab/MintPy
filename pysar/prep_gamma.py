@@ -242,7 +242,7 @@ EXAMPLE='''example:
 DESCRIPTION='''
   For each interferogram, including unwrapped/wrapped interferograms and coherence, 3 metadata files are required:
   1) master .par file, e.g. 130118.amp.par
-  2) slave  .par file, e.g. 130129.amp.cor
+  2) slave  .par file, e.g. 130129.amp.par
   3) interferogram .off file, e.g. 130118-130129_4rlks.off
 
   Other metadata files are recommended and can be generated from the above 3 if not existed, more specifically:
