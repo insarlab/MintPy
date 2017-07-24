@@ -7,7 +7,7 @@
 # Created: July 2013
 #
 ###############################################################################
-# Copyright (c) 2013, Heresh Fattahi
+# Copyright (c) 2013, Heresh Fattahi, Zhang Yunjun
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -952,7 +952,7 @@ def main(argv):
             inps.trop_poly_order = value
 
     # Call scripts
-    if inps.trop_method == 'height_correction':
+    if inps.trop_method == 'height_correlation':
         print 'tropospheric delay correction with height-correlation approach'
         tropCmd = 'tropcor_phase_elevation.py '+inps.timeseries_file+' -d '+demFile+\
                   ' -p '+inps.trop_poly_order+' -m '+inps.mask_file
@@ -1182,8 +1182,8 @@ def main(argv):
     #############################################
     # Save to UNAVCO InSAR Archive format
     #############################################
-    print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
     if template['pysar.save.unavco'] in ['yes']:
+        print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
         if not inps.trans_file or not inps.dem_geo_file:
             warnings.warn('No geomap*.tran file or DEM in geo coord found! Skip saving.')
         else:

@@ -1,43 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2017, Zhang Yunjun, Heresh Fattahi          #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
-# Yunjun, Aug 2015: Add 'contour','dispFig' options
-#                   Finish 'saveFig' option
-# Yunjun, Sep 2015: merge all casees into 'plot one' and 'plot all'
-#                   Add 'sub_lat/sub_lon' option
-#                   Enable '-G' option to display lon/lat
-# Yunjun, Oct 2015: Add support of ROI_PAC products, modifiedy from
-#                       basic_viewer.py written by Scott
-#                   Add extend to colorbar, show value in status bar
-# Yunjun, Nov 2015: Add data range output
-# Yunjun, Dec 2015: Add double-date -d option for timeseries file
-#                   Add long options
-# Yunjun, Jan 2016: Support multiple epoch display for -d -e option
-#                   Change -R option from show reference point to set reference date
-#                   Add -t template option 
-# Yunjun, May 2016: Add unit_and_scale(), -u option
-#                   Change seldom used/bool judge option from - to -- option
-#                   Use pysar.subset, readfile.read and box option
-# Yunjun, Jun 2016: Use multilook from pysar.multi_looking for multiple display
-#                   Add --point/line option to plot points and lines
-#                   Add orbit_direction(), default flip based on asc_desc
-#                   Simplified code for multiple plots
-# Yunjun, Jul 2016: add --mask input option
-#                   add plot_dem_lalo() and plot_dem_yx(), auto_flip_check()
-#                   use LightSource from plt.colors for shaded relief DEM
-# Yunjun, Aug 2016: add reference point input
-# Yunjun, Dec 2016: add --projection option
-# Yunjun, Jan 2016: major updates including:
-#                   use cmdLineParse() and Namespace for plot input options
-#                   add auto_row_col_num() and plt.tight_layout() for multi-dataset display
-#                   clean up disp_wrap/unit/scale conflict
-#                   update_plot_inps_with_meta_dict() and update_matrix_with_plot_inps()
-#                   introduce plot_matrxi() for easy external call
-#                   add scalebar
-
 
 import os
 import sys
@@ -734,6 +700,14 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     if not inps.flip_lr and not inps.flip_ud:
         inps.flip_lr, inps.flip_ud = auto_flip_direction(meta_dict)
 
+    # Figure Title
+    if not inps.fig_title:
+        inps.fig_title = auto_figure_title(meta_dict['FILE_PATH'], None, vars(inps))
+
+    # Figure output file name
+    if not inps.outfile:
+        inps.outfile = inps.fig_title+inps.fig_ext
+
     return inps
 
 
@@ -958,7 +932,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         print 'plotting Data ...'
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.disp_min, vmax=inps.disp_max,\
                        alpha=inps.transparency, interpolation='nearest')
-        
+
         # Plot Seed Point
         if inps.disp_seed and inps.seed_yx:
             ax.plot(inps.seed_yx[1]-inps.pix_box[0], inps.seed_yx[0]-inps.pix_box[1],\
@@ -967,7 +941,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
         ax.set_xlim(0,np.shape(data)[1])
         ax.set_ylim(np.shape(data)[0],0)
-        
+
         # Status bar
         def format_coord(x,y):
             col = int(x)
@@ -1000,8 +974,6 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     #cbar.set_label('Temporal Coherence', fontsize=inps.font_size)
 
     # 3.2 Title
-    if not inps.fig_title:
-        inps.fig_title = auto_figure_title(meta_dict['FILE_PATH'], None, vars(inps))
     if inps.disp_title:
         ax.set_title(inps.fig_title, fontsize=inps.font_size)
 
@@ -1010,7 +982,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         print 'flip figure left and right'
         ax.invert_xaxis()
     if inps.flip_ud:
-        print 'flip figure up   and down'
+        print 'flip figure up and down'
         ax.invert_yaxis()
 
     # 3.4 Turn off axis
@@ -1024,6 +996,11 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         #ax.set_yticklabels([])
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
+
+    # Figure Output
+    if inps.save_fig:
+        plt.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+        print 'Saved figure to '+inps.outfile
 
     return ax, inps
 
@@ -1075,136 +1052,136 @@ def cmdLineParse(argv):
                                      epilog=EXAMPLE)
 
     ##### Input 
-    infile_parser = parser.add_argument_group('Input File', 'File/Dataset to display')
-    infile_parser.add_argument('file', help='file for display')
-    infile_parser.add_argument('epoch', nargs='*', help='optional - date/epoch(s) to display')
-    infile_parser.add_argument('-n','--epoch-num', dest='epoch_num', metavar='NUM', type=int, nargs='*', default=[],\
-                               help='optional - order number of date/epoch(s) to display')
-    infile_parser.add_argument('--exclude','--ex', dest='exclude_epoch', metavar='EPOCH', nargs='*',\
-                               help='dates will not be displayed')
-    infile_parser.add_argument('--mask', dest='mask_file', metavar='FILE',\
-                               help='mask file for display')
+    infile = parser.add_argument_group('Input File', 'File/Dataset to display')
+    infile.add_argument('file', help='file for display')
+    infile.add_argument('epoch', nargs='*', help='optional - date/epoch(s) to display')
+    infile.add_argument('-n','--epoch-num', dest='epoch_num', metavar='NUM', type=int, nargs='*', default=[],\
+                        help='optional - order number of date/epoch(s) to display')
+    infile.add_argument('--exclude','--ex', dest='exclude_epoch', metavar='EPOCH', nargs='*',\
+                        help='dates will not be displayed')
+    infile.add_argument('--mask', dest='mask_file', metavar='FILE',\
+                        help='mask file for display')
 
     ##### Output
-    outfile_parser = parser.add_argument_group('Output', 'Save figure and write to file(s)')
-    outfile_parser.add_argument('--save', dest='save_fig', action='store_true',\
-                                help='save the figure')
-    outfile_parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',\
-                                help='save and do not display the figure')
-    outfile_parser.add_argument('-o','--outfile',\
-                                help="save the figure with assigned filename.\n"
-                                     "By default, it's calculated based on the input file name.")
+    outfile = parser.add_argument_group('Output', 'Save figure and write to file(s)')
+    outfile.add_argument('--save', dest='save_fig', action='store_true',\
+                         help='save the figure')
+    outfile.add_argument('--nodisplay', dest='disp_fig', action='store_false',\
+                         help='save and do not display the figure')
+    outfile.add_argument('-o','--outfile',\
+                         help="save the figure with assigned filename.\n"
+                              "By default, it's calculated based on the input file name.")
 
     ###### Data Display Option
-    disp_parser = parser.add_argument_group('Display Options', 'Options to adjust the dataset display')
-    disp_parser.add_argument('-m', dest='disp_min', type=float, help='minimum value of color scale')
-    disp_parser.add_argument('-M', dest='disp_max', type=float, help='maximum value of color scale')
-    disp_parser.add_argument('-u','--unit', dest='disp_unit', metavar='UNIT',\
-                             help='unit for display.  Its priority > wrap')
-    disp_parser.add_argument('--scale', dest='disp_scale', metavar='NUM', type=float, default=1.0,\
-                             help='display data in a scaled range. \n'
-                                  'Equivelant to data*input_scale')
-    disp_parser.add_argument('-c','--colormap', dest='colormap',\
-                             help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
-                                  'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
-    disp_parser.add_argument('--projection', dest='map_projection', default='cyl',\
-                             help='map projection when plotting in geo-coordinate. \n'
-                                  'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
+    disp = parser.add_argument_group('Display Options', 'Options to adjust the dataset display')
+    disp.add_argument('-m', dest='disp_min', type=float, help='minimum value of color scale')
+    disp.add_argument('-M', dest='disp_max', type=float, help='maximum value of color scale')
+    disp.add_argument('-u','--unit', dest='disp_unit', metavar='UNIT',\
+                      help='unit for display.  Its priority > wrap')
+    disp.add_argument('--scale', dest='disp_scale', metavar='NUM', type=float, default=1.0,\
+                      help='display data in a scaled range. \n'
+                           'Equivelant to data*input_scale')
+    disp.add_argument('-c','--colormap', dest='colormap',\
+                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
+                           'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
+    disp.add_argument('--projection', dest='map_projection', default='cyl',\
+                      help='map projection when plotting in geo-coordinate. \n'
+                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
 
-    disp_parser.add_argument('--wrap', action='store_true',\
-                             help='re-wrap data to display data in fringes.')
-    disp_parser.add_argument('--opposite', action='store_true',\
-                             help='display in opposite sign, equivalent to multiply data by -1.')
-    disp_parser.add_argument('--flip-lr', dest='flip_lr', action='store_true', help='flip left-right')
-    disp_parser.add_argument('--flip-ud', dest='flip_ud', action='store_true', help='flip up-down')
-    disp_parser.add_argument('--multilook-num', dest='multilook_num', type=int, default=1, \
-                             help='multilook data in X and Y direction with a factor for display')
-    disp_parser.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',\
-                             help='do not multilook, for high quality display. \n'
-                                  'If multilook and multilook_num=1, multilook_num will be estimated automatically.\n'
-                                  'Useful when displaying big datasets.')
-    disp_parser.add_argument('--alpha', dest='transparency', type=float,\
-                             help='Data transparency. \n'
-                                  '0.0 - fully transparent, 1.0 - no transparency.')
-    disp_parser.add_argument('--plot-setting', dest='disp_setting_file',\
-                             help='Template file with plot setting.\n'+PLOT_TEMPLATE)
+    disp.add_argument('--wrap', action='store_true',\
+                      help='re-wrap data to display data in fringes.')
+    disp.add_argument('--opposite', action='store_true',\
+                      help='display in opposite sign, equivalent to multiply data by -1.')
+    disp.add_argument('--flip-lr', dest='flip_lr', action='store_true', help='flip left-right')
+    disp.add_argument('--flip-ud', dest='flip_ud', action='store_true', help='flip up-down')
+    disp.add_argument('--multilook-num', dest='multilook_num', type=int, default=1, \
+                      help='multilook data in X and Y direction with a factor for display')
+    disp.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',\
+                      help='do not multilook, for high quality display. \n'
+                           'If multilook and multilook_num=1, multilook_num will be estimated automatically.\n'
+                           'Useful when displaying big datasets.')
+    disp.add_argument('--alpha', dest='transparency', type=float,\
+                      help='Data transparency. \n'
+                           '0.0 - fully transparent, 1.0 - no transparency.')
+    disp.add_argument('--plot-setting', dest='disp_setting_file',\
+                      help='Template file with plot setting.\n'+PLOT_TEMPLATE)
 
     ##### DEM
-    dem_group = parser.add_argument_group('DEM','display topography in the background')
-    dem_group.add_argument('-d','--dem', dest='dem_file', metavar='FILE',\
-                           help='DEM file to show topography as background')
-    dem_group.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',\
-                           help='do not show DEM shaded relief')
-    dem_group.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',\
-                           help='do not show DEM contour lines')
-    dem_group.add_argument('--contour-smooth', dest='dem_contour_smooth', type=float, default=3.0,\
-                           help='Background topography contour smooth factor - sigma of Gaussian filter. \n'
-                                'Default is 3.0; set to 0.0 for no smoothing.')
-    dem_group.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,\
-                           help='Background topography contour step in meters. \n'
-                                'Default is 200 meters.')
+    dem = parser.add_argument_group('DEM','display topography in the background')
+    dem.add_argument('-d','--dem', dest='dem_file', metavar='FILE',\
+                     help='DEM file to show topography as background')
+    dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',\
+                     help='do not show DEM shaded relief')
+    dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',\
+                     help='do not show DEM contour lines')
+    dem.add_argument('--contour-smooth', dest='dem_contour_smooth', type=float, default=3.0,\
+                     help='Background topography contour smooth factor - sigma of Gaussian filter. \n'
+                          'Default is 3.0; set to 0.0 for no smoothing.')
+    dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,\
+                     help='Background topography contour step in meters. \n'
+                          'Default is 200 meters.')
 
     ###### Subset
-    subset_group = parser.add_argument_group('Subset','Display dataset in subset range')
-    subset_group.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar='X', \
-                              help='subset display in x/cross-track/range direction')
-    subset_group.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar='Y', \
-                              help='subset display in y/along-track/azimuth direction')
-    subset_group.add_argument('-l','--lat', dest='subset_lat', type=float, nargs=2, metavar='LAT', \
-                              help='subset display in latitude')
-    subset_group.add_argument('-L','--lon', dest='subset_lon', type=float, nargs=2, metavar='LON', \
-                              help='subset display in longitude')
-    #subset_group.add_argument('--pixel-box', dest='pix_box', type=tuple,\
-    #                          help='subset display in box define in pixel coord (x_start, y_start, x_end, y_end).\n'
-    #                               'i.e. (100, 500, 1100, 2500)')
-    #subset_group.add_argument('--geo-box', dest='geo_box', type=tuple,\
-    #                          help='subset display in box define in geo coord (UL_lon, UL_lat, LR_lon, LR_lat).\n'
-    #                               'i.e. (130.2, 33.8, 131.2, 31.8)')
+    subset = parser.add_argument_group('Subset','Display dataset in subset range')
+    subset.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar='X', \
+                        help='subset display in x/cross-track/range direction')
+    subset.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar='Y', \
+                        help='subset display in y/along-track/azimuth direction')
+    subset.add_argument('-l','--lat', dest='subset_lat', type=float, nargs=2, metavar='LAT', \
+                        help='subset display in latitude')
+    subset.add_argument('-L','--lon', dest='subset_lon', type=float, nargs=2, metavar='LON', \
+                        help='subset display in longitude')
+    #subset.add_argument('--pixel-box', dest='pix_box', type=tuple,\
+    #                    help='subset display in box define in pixel coord (x_start, y_start, x_end, y_end).\n'
+    #                         'i.e. (100, 500, 1100, 2500)')
+    #subset.add_argument('--geo-box', dest='geo_box', type=tuple,\
+    #                    help='subset display in box define in geo coord (UL_lon, UL_lat, LR_lon, LR_lat).\n'
+    #                         'i.e. (130.2, 33.8, 131.2, 31.8)')
 
     ##### Reference
-    ref_group = parser.add_argument_group('Reference','Show / Modify reference in time and space for display')
-    ref_group.add_argument('--ref-date', dest='ref_date', metavar='DATE', \
-                           help='Change reference date for display')
-    ref_group.add_argument('--ref-lalo', dest='seed_lalo', metavar=('LAT','LON'), type=float, nargs=2,\
-                           help='Change referene point LAT LON for display')
-    ref_group.add_argument('--ref-yx', dest='seed_yx', metavar=('Y','X'), type=int, nargs=2,\
-                           help='Change referene point Y X for display')
-    ref_group.add_argument('--noreference', dest='disp_seed', action='store_false', help='do not show reference point')
-    ref_group.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',\
-                           help='marker color of reference point')
-    ref_group.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',\
-                           help='marker symbol of reference point')
-    ref_group.add_argument('--ref-size', dest='seed_size', metavar='SIZE_NUM', type=int, default=10,\
-                           help='marker size of reference point, default: 10')
+    ref = parser.add_argument_group('Reference','Show / Modify reference in time and space for display')
+    ref.add_argument('--ref-date', dest='ref_date', metavar='DATE', \
+                     help='Change reference date for display')
+    ref.add_argument('--ref-lalo', dest='seed_lalo', metavar=('LAT','LON'), type=float, nargs=2,\
+                     help='Change referene point LAT LON for display')
+    ref.add_argument('--ref-yx', dest='seed_yx', metavar=('Y','X'), type=int, nargs=2,\
+                     help='Change referene point Y X for display')
+    ref.add_argument('--noreference', dest='disp_seed', action='store_false', help='do not show reference point')
+    ref.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',\
+                     help='marker color of reference point')
+    ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',\
+                     help='marker symbol of reference point')
+    ref.add_argument('--ref-size', dest='seed_size', metavar='SIZE_NUM', type=int, default=10,\
+                     help='marker size of reference point, default: 10')
 
     ##### Vectors
-    #vec_parser = parser.add_argument_group('Vectors','Plot vector geometry')
-    #vec_parser.add_argument('--point-yx', dest='point_yx', type=int, nargs='')
+    #vec = parser.add_argument_group('Vectors','Plot vector geometry')
+    #vec.add_argument('--point-yx', dest='point_yx', type=int, nargs='')
 
     ##### Figure 
-    fig_group = parser.add_argument_group('Figure','Figure settings for display')
-    fig_group.add_argument('-s','--fontsize', dest='font_size', type=int, help='font size')
-    fig_group.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,\
-                           help='DPI - dot per inch - for display/write')
-    fig_group.add_argument('-r','--row', dest='fig_row_num', type=int, default=1, help='subplot number in row')
-    fig_group.add_argument('-p','--col', dest='fig_col_num', type=int, default=1, help='subplot number in column')
-    fig_group.add_argument('--noaxis', dest='disp_axis', action='store_false', help='do not display axis')
-    fig_group.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
-    fig_group.add_argument('--notick', dest='disp_tick', action='store_false', help='do not display tick in x/y axis')
-    fig_group.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
-    fig_group.add_argument('--figtitle', dest='fig_title', help='Title shown in the figure.')
-    fig_group.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\
-                            help='figure size in inches - width and length')
-    fig_group.add_argument('--figext', dest='fig_ext',\
-                           default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
-                           help='File extension for figure output file')
-    fig_group.add_argument('--fignum', dest='fig_num', type=int, default=1, help='number of figure windows')
-    fig_group.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,\
-                           help='width space between subplots in inches')
-    fig_group.add_argument('--hspace', dest='fig_hei_space', type=float, default=0.05,\
-                           help='height space between subplots in inches')
-    fig_group.add_argument('--coord', dest='fig_coord', choices=['radar','geo'], default='geo',\
-                           help='Display in radar/geo coordination system, for geocoded file only.')
+    fig = parser.add_argument_group('Figure','Figure settings for display')
+    fig.add_argument('-s','--fontsize', dest='font_size', type=int, help='font size')
+    fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,\
+                     help='DPI - dot per inch - for display/write')
+    fig.add_argument('-r','--row', dest='fig_row_num', type=int, default=1, help='subplot number in row')
+    fig.add_argument('-p','--col', dest='fig_col_num', type=int, default=1, help='subplot number in column')
+    fig.add_argument('--noaxis', dest='disp_axis', action='store_false', help='do not display axis')
+    fig.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
+    fig.add_argument('--notick', dest='disp_tick', action='store_false', help='do not display tick in x/y axis')
+    fig.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
+    fig.add_argument('--figtitle', dest='fig_title', help='Title shown in the figure.')
+    fig.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\
+                      help='figure size in inches - width and length')
+    fig.add_argument('--figext', dest='fig_ext',\
+                     default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
+                     help='File extension for figure output file')
+    fig.add_argument('--fignum', dest='fig_num', type=int, default=1, help='number of figure windows')
+    fig.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,\
+                     help='width space between subplots in inches')
+    fig.add_argument('--hspace', dest='fig_hei_space', type=float, default=0.05,\
+                     help='height space between subplots in inches')
+    fig.add_argument('--coord', dest='fig_coord', choices=['radar','geo'], default='geo',\
+                     help='Display in radar/geo coordination system, for geocoded file only.')
     
     ##### Map
     map_group = parser.add_argument_group('Map', 'Map settings for display')
@@ -1315,6 +1292,13 @@ def main(argv):
         inps = update_plot_inps_with_display_setting_file(inps, inps.disp_setting_file)
     inps = update_plot_inps_with_meta_dict(inps, atr)
 
+    ## Exit if 1) save and do not display figure, a.k.a. generate figure file,
+    ##     and 2) figure file exists and newer than data file
+    #if (inps.save_fig\
+    #    and not inps.disp_fig\
+    #    and not ut.update_file(inps.outfile, inps.file, check_readable=False)):
+    #    return inps.outfile
+
     # Read mask file if inputed
     if inps.mask_file:
         try:
@@ -1353,13 +1337,6 @@ def main(argv):
         # Plotting
         ax, inps = plot_matrix(ax, data, atr, inps)
         del data
-
-        # Figure Output
-        if inps.save_fig:
-            if not inps.outfile:
-                inps.outfile = inps.fig_title+inps.fig_ext
-            plt.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-            print 'Saved figure to '+inps.outfile
 
         if inps.disp_fig:
             print 'showing ...'

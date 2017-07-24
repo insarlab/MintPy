@@ -31,39 +31,44 @@ def get_mission_name(meta_dict):
     Output: mission   : string, mission name in standard UNAVCO format.
     '''
     mission = None
+
     key_list = meta_dict.keys()
     if 'mission' in key_list:
-        mission = meta_dict['mission']
+        value = meta_dict['mission'].lower()
     elif 'PLATFORM' in key_list:
         value = meta_dict['PLATFORM'].lower()
-        if value.startswith('ers'):
-            mission = 'ERS'
-        elif value.startswith(('env','asar')):
-            mission = 'ENV'
-        elif value.startswith(('s1','sen')):
-            mission = 'S1'
-        elif value.startswith(('rs','rsat','radarsat')):
-            mission = 'RS'
-            if value.endswith('1'):
-                mission += '1'
-            else:
-                mission += '2'
-        elif value.startswith(('csk','cos')):
-            mission = 'CSK'
-        elif value.startswith(('tsx','tdx','terra','tandem')):
-            mission = 'TSX'
-        elif value.startswith('jers'):
-            mission = 'JERS'
-        elif value.startswith(('alos','palsar')):
-            if value.endswith('2'):
-                mission = 'ALOS2'
-            else:
-                mission = 'ALOS'
-        else:
-            print 'Un-recognized PLATFORM attribute: '+value
-            print 'return None'
     else:
         print 'No PLATFORM nor mission attribute found, can not identify mission name.'
+        print 'return None'
+        return mission
+
+    ## Convert to UNAVCO Mission name
+    ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
+    if value.startswith('ers'):
+        mission = 'ERS'
+    elif value.startswith(('env','asar')):
+        mission = 'ENV'
+    elif value.startswith(('s1','sen')):
+        mission = 'S1'
+    elif value.startswith(('rs','rsat','radarsat')):
+        mission = 'RS'
+        if value.endswith('1'):
+            mission += '1'
+        else:
+            mission += '2'
+    elif value.startswith(('csk','cos')):
+        mission = 'CSK'
+    elif value.startswith(('tsx','tdx','terra','tandem')):
+        mission = 'TSX'
+    elif value.startswith('jers'):
+        mission = 'JERS'
+    elif value.startswith(('alos','palsar')):
+        if value.endswith('2'):
+            mission = 'ALOS2'
+        else:
+            mission = 'ALOS'
+    else:
+        print 'Un-recognized PLATFORM attribute: '+value
         print 'return None'
     return mission
 
