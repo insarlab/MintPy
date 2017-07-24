@@ -53,6 +53,7 @@ def main(argv):
   
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
+    atr['PROCESSOR'] = 'roipac'
   
     h5file = h5py.File(File,'r')
   
@@ -132,8 +133,9 @@ def main(argv):
         print 'reading '+igram+' ... '
         data = h5file[k][igram].get(igram)[:]
         atr = h5file[k][igram].attrs
+        atr['PROCESSOR'] = 'roipac'
         outname = igram
-        
+
         print 'writing >>> '+ outname
         writefile.write(data, atr, outname)  
 
