@@ -50,13 +50,13 @@ For bash user, add to your .bashrc file:
 
     export PYSAR_HOME="~/Documents/development/python/PySAR"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
-    export PATH="${PYSAR_HOME}/pysar:$PATH"   
+    export PATH="${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh:$PATH"   
 
 For csh/tcsh user, add to your .cshrc file:   
 
     setenv PYSAR_HOME ~/Documents/development/python/PySAR
     setenv PYTHONPATH ${PYSAR_HOME}
-    set path = ( $PYSAR_HOME/pysar $path)
+    set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/sh $path)
    
    
 ### 2. Running PySAR
