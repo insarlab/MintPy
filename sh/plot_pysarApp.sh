@@ -3,9 +3,7 @@
 # Plot pysarApp routine processing results.
 # Author: Zhang Yunjun, 2017-07-23
 ###############################################################
-echo "------------------------------------------"
-echo "plot pysarApp results"
-echo "------------------------------------------"
+
 
 ## Change to 0 if you do not want to re-plot loaded dataset again
 plot_key_files=1
