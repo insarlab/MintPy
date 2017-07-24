@@ -1,8 +1,8 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 #This program is modified from the software originally written by Scott Baker with 
 #the following licence:
@@ -27,12 +27,6 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 ###############################################################################
-# Yunjun, Sep 2015: Add read_par_file()
-#                   Add read_gamma_float() and read_gamma_scomplex()
-# Yunjun, Oct 2015: Add box option for read_float32()
-# Heresh, Nov 2015: Add ISCE xml reader
-# Yunjun, Jan 2016: Add read()
-# Yunjun, May 2016: Add read_attribute() and 'PROCESSOR','FILE_TYPE','UNIT' attributes
 
 
 import os

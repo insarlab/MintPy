@@ -207,16 +207,16 @@ def auto_figure_title(fname, epoch=None, inps_dict=None):
     width = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
 
-    if not epoch and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-        print "No date/date12 input.\nIt's required for "+k+" file\nReturn None"
-        return None
+    #if not epoch and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
+    #    print "No date/date12 input.\nIt's required for "+k+" file\nReturn None"
+    #    return None
 
-    if k in multi_group_hdf5_file:
+    if epoch and k in multi_group_hdf5_file:
         fig_title = epoch
         if 'unwCor' in fname:
             fig_title += '_unwCor'
 
-    elif k in ['timeseries']:
+    elif epoch and k in ['timeseries']:
         try:
             ref_date = inps_dict['ref_date']
         except:
@@ -1401,7 +1401,13 @@ def main(argv):
         # Reference date for timeseries
         if k == 'timeseries':
             if inps.ref_date:
+                print 'consider input reference date: '+inps.ref_date
                 ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)[0]
+
+        ref_yx = None
+        if k in ['interferograms'] and 'ref_y' in atr.keys():
+            ref_yx = [int(atr[i]) for i in ['ref_y','ref_x']]
+            print 'consider reference pixel of interferograms in y/x: %d/%d' % (ref_yx[0], ref_yx[1])
 
         # Read DEM
         if inps.dem_file:
@@ -1460,12 +1466,14 @@ def main(argv):
                         data -= ref_data
                     subplot_title = dt.strptime(epoch, '%Y%m%d').isoformat()[0:10]
                 elif k in multi_group_hdf5_file:
-                    if   inps.fig_row_num*inps.fig_col_num > 100:
+                    if inps.fig_row_num*inps.fig_col_num > 100:
                         subplot_title = str(epochList.index(epoch)+1)
                     else:
                         subplot_title = str(epochList.index(epoch)+1)+'\n'+h5file[k][epoch].attrs['DATE12']
                     dset = h5file[k][epoch].get(epoch)
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
+                    if ref_yx:
+                        data -= data[ref_yx[0], ref_yx[1]]
                 # mask
                 if inps.mask_file:
                     data = mask.mask_matrix(data, msk)
