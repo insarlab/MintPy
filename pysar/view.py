@@ -1432,6 +1432,14 @@ def main(argv):
         all_data_min=0
         all_data_max=0
 
+        h5file = h5py.File(inps.file, 'r')
+        # Check dropped interferograms
+        drop_epoch_list = []
+        if k in multi_group_hdf5_file and inps.disp_title:
+            drop_epoch_list = sorted(list(set(inps.epoch) - \
+                                          set(ut.check_drop_ifgram(h5file, atr, inps.epoch, print_message=False))))
+            print "mark interferograms with 'drop_ifgram'='yes' in red colored title"
+
         ##### Loop 1 - Figures
         for j in range(1, inps.fig_num+1):
             # Output file name for current figure
@@ -1454,11 +1462,11 @@ def main(argv):
             prog_bar = ptime.progress_bar(maxValue=i_end-i_start, prefix='loading: ')
             for i in range(i_start, i_end):
                 epoch = inps.epoch[i]
+                atr_i = h5file[k][epoch].attrs
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
                 prog_bar.update(i-i_start+1, suffix=str(i+1))
 
                 # Read Data
-                h5file = h5py.File(inps.file, 'r')
                 if k in multi_dataset_hdf5_file:
                     dset = h5file[k].get(epoch)
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
@@ -1469,7 +1477,7 @@ def main(argv):
                     if inps.fig_row_num*inps.fig_col_num > 100:
                         subplot_title = str(epochList.index(epoch)+1)
                     else:
-                        subplot_title = str(epochList.index(epoch)+1)+'\n'+h5file[k][epoch].attrs['DATE12']
+                        subplot_title = str(epochList.index(epoch)+1)+'\n'+atr_i['DATE12']
                     dset = h5file[k][epoch].get(epoch)
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
                     if ref_yx:
@@ -1492,9 +1500,11 @@ def main(argv):
                     ax.contour(dem_contour, contour_sequence, origin='lower',colors='black',alpha=0.5)
 
                 # Plot Data
-                try:     im = ax.imshow(data, cmap=inps.colormap, vmin=inps.disp_min, vmax=inps.disp_max,\
-                                        alpha=inps.transparency, interpolation='nearest')
-                except:  im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest')
+                try:
+                    im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest', alpha=inps.transparency,\
+                                   vmin=inps.disp_min, vmax=inps.disp_max)
+                except:
+                    im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest', alpha=inps.transparency)
 
                 ###### Subplot Setting
                 # Tick and Label
@@ -1505,7 +1515,10 @@ def main(argv):
                 # Title
                 if inps.disp_title:
                     if not inps.fig_title_in:
-                        ax.set_title(subplot_title, fontsize=inps.font_size)
+                        font_color = 'k'
+                        if epoch in drop_epoch_list:
+                            font_color = 'crimson'
+                        ax.set_title(subplot_title, fontsize=inps.font_size, color=font_color)
                     else:
                         add_inner_title(ax, subplot_title, loc=1)   
                 # Flip Left-Right / Up-Down
