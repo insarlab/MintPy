@@ -1515,10 +1515,10 @@ def main(argv):
                 # Title
                 if inps.disp_title:
                     if not inps.fig_title_in:
-                        font_color = 'k'
                         if epoch in drop_epoch_list:
-                            font_color = 'crimson'
-                        ax.set_title(subplot_title, fontsize=inps.font_size, color=font_color)
+                            ax.set_title(subplot_title, fontsize=inps.font_size, color='crimson', fontweight='bold')
+                        else:
+                            ax.set_title(subplot_title, fontsize=inps.font_size)
                     else:
                         add_inner_title(ax, subplot_title, loc=1)   
                 # Flip Left-Right / Up-Down
