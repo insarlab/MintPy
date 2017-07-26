@@ -273,7 +273,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         rms_file = timeseries_rms(deramp_file, mask_file, rms_file)
 
     # Read residual RMS text file
-    print 'read timeseries RSD from file: '+rms_file
+    print 'read timeseries residual RMS from file: '+rms_file
     rms_fileContent = np.loadtxt(rms_file, dtype=str)
     rms_list = rms_fileContent[:,1].astype(np.float).tolist()
     date_list = list(rms_fileContent[:,0]) 

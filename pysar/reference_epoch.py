@@ -141,17 +141,22 @@ def read_template2inps(templateFile, inps=None):
 
 ##################################################################
 TEMPLATE='''
-## 8.1 Residual Standard Deviation (RSD)
-## calculate the deramped standard deviation (STD) for each epoch of timeseries residual from DEM error inversion
+## 8.1 Phase Residual Root Mean Square
+## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
-pysar.residualStd.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
-pysar.residualStd.ramp            = auto  #[quadratic / plane / no], auto for quadratic
+## Recommendation: quadratic for whole image, plane for local/small area
+pysar.residualRms.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
+pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
+pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
+pysar.residualRms.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RMS to txt/pdf file.
+pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > minStd to txt/pdf file.
+
 
 ## 9. Reference in Time
 ## reference all timeseries to one date in time
-## auto - choose date with minimum residual STD using value from step 8.1
+## auto - choose date with minimum residual RMS using value from step 8.1
 ## no   - do not change reference date, keep the defaut one (1st date usually) and skip this step
-pysar.reference.date = auto   #[auto / txtFile / 20090214 / no]
+pysar.reference.date = auto   #[auto / reference_date.txt / 20090214 / no]
 '''
 
 EXAMPLE='''example:
@@ -177,7 +182,7 @@ def cmdLineParse():
     auto = parser.add_argument_group('Auto referencing in time based on max phase residual coherence')
     auto.add_argument('--residual-file', dest='resid_file',\
                       help='timeseries of phase residual file from DEM error inversion.\n'+\
-                           'Deramped Residual Standard Deviation')
+                           'Deramped Residual RMS')
     auto.add_argument('--deramp', dest='ramp_type', default='quadratic',\
                       help='ramp type to remove for each epoch from phase residual\n'+\
                            'default: quadratic\n'+\
@@ -202,19 +207,13 @@ def main(argv):
 
     elif inps.ref_date.lower() in ['auto']:
         print '------------------------------------------------------------'
-        print 'auto choose reference date based on minimum Residual Standard Deviation (RSD)'
+        print 'auto choose reference date based on minimum residual RMS'
         if not inps.resid_file:
             inps.resid_file = os.path.splitext(inps.timeseries_file)[0]+'InvResid.h5'
-        std_list, date_list = ut.get_residual_std(inps.resid_file, inps.mask_file, inps.ramp_type)
-        ref_idx = np.argmin(std_list)
+        rms_list, date_list = ut.get_residual_rms(inps.resid_file, inps.mask_file, inps.ramp_type)
+        ref_idx = np.argmin(rms_list)
         inps.ref_date = date_list[ref_idx]
-        print 'date with minimum residual std: %s - %.4f' % (inps.ref_date, std_list[ref_idx])
-
-        #txtFile = 'reference_date.txt'
-        #f = open(txtFile, 'w')
-        #f.write(inps.ref_date+'\n')
-        #f.close()
-        #print 'save date to file: '+txtFile
+        print 'date with minimum residual RMS: %s - %.4f' % (inps.ref_date, rms_list[ref_idx])
         print '------------------------------------------------------------'
 
     elif os.path.isfile(inps.ref_date):

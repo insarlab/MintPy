@@ -450,6 +450,8 @@ def main(argv):
             print 'input AOI in (lon0, lat1, lon1, lat0): '+str(inps.aoi_geo_box)
             inps.aoi_pix_box = subset.bbox_geo2radar(inps.aoi_geo_box, atr, inps.trans_file) 
         if inps.aoi_pix_box:
+            # check mask AOI within the data coverage
+            inps.aoi_pix_box = subset.check_box_within_data_coverage(inps.aoi_pix_box, atr)
             print 'input AOI in (x0,y0,x1,y1): '+str(inps.aoi_pix_box)
 
         # Calculate spatial average coherence

@@ -462,7 +462,7 @@ pysar.topoError.excludeDate  = auto    #[20101120 / txtFile / no], auto for no, 
 pysar.topoError.stepFuncDate = auto    #[20080529 / no], auto for no, date of step jump, i.e. eruption/earthquade date
 
 
-## 8.1 Residual Standard Deviation (RSD)
+## 8.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Recommendation: quadratic for whole image, plane for local/small area
@@ -475,7 +475,7 @@ pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s
 
 ## 9. Reference in Time
 ## reference all timeseries to one date in time
-## auto - choose date with minimum residual STD using value from step 8.1
+## auto - choose date with minimum residual RMS using value from step 8.1
 ## no   - do not change reference date, keep the defaut one (1st date usually) and skip this step
 pysar.reference.date = auto   #[auto / reference_date.txt / 20090214 / no]
 
@@ -1031,7 +1031,7 @@ def main(argv):
         outName = os.path.splitext(inps.timeseries_file)[0]+'_refDate.h5'
         refCmd = 'reference_epoch.py '+inps.timeseries_file+' --template '+inps.template_file
         print refCmd
-    
+
         if ut.update_file(outName, inps.timeseries_file):
             os.system(refCmd)
 
@@ -1241,9 +1241,15 @@ def main(argv):
     #############################################
     if template['pysar.plot'] in ['yes','auto']:
         print '\n*********  Plot and Save pysarApp runing results to PIC  ***********'
-        plotCmd = 'plot_pysarApp.sh'
+        print 'copy plot_pysarApp.sh to working directory'
+        print 'for better performance, edit the input parameter in plot_pysarApp.sh and re-run this script.'
+        plotCmd = './plot_pysarApp.sh'
         print plotCmd
-        os.system(plotCmd)
+        try:
+            shutil.copy2(ut.which('plot_pysarApp.sh'), inps.work_dir)
+            os.system(plotCmd)
+        except:
+            print 'WARNING: no plot_pysarApp.sh found in the environment variable path, skip plotting.'
 
 
     #############################################

@@ -199,7 +199,7 @@ def main(argv):
         ax = pnet.plot_coherence_matrix(ax, date12_list, inps.coherence_list)
 
         if inps.save_fig:
-            fig.savefig(figName, bbox_inches='tight')
+            fig.savefig(figName, bbox_inches='tight', dpi=150)
             print 'save figure to '+figName
 
     # Fig 3 - Min/Max Coherence History

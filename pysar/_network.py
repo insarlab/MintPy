@@ -1009,8 +1009,13 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
     #    coh_mat[idx2,idx1] = coh
 
     im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0)
-    ax.get_xaxis().set_ticks([0,5,10,15,20])
-    ax.get_yaxis().set_ticks([0,5,10,15,20])
+    date_num = coh_mat.shape[0]
+    if date_num < 30:
+        tick_list = range(0,date_num,5)
+    else:
+        tick_list = range(0,date_num,10)
+    ax.get_xaxis().set_ticks(tick_list)
+    ax.get_yaxis().set_ticks(tick_list)
     ax.set_xlabel('Image Number', fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Image Number', fontsize=plot_dict['fontsize'])
 
