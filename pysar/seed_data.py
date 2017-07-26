@@ -364,6 +364,29 @@ def read_seed_reference2inps(reference_file, inps=None):
     return inps
 
 
+def remove_reference_pixel(File):
+    '''Remove reference pixel info from input file'''
+    print "remove ref_y/x and/or ref_lat/lon from file: "+File
+    ext = os.path.splitext(File)[1]
+    if ext not in ['.h5','.he5']:
+        sys.exit('ERROR: only hdf5 file supported for this function!')
+
+    k = readfile.read_attribute(File)['FILE_TYPE']
+    h5 = h5py.File(File,'r+')
+    if k in multi_group_hdf5_file:
+        ifgram_list = sorted(h5[k].keys())
+        for ifgram in ifgram_list:
+            for key in ['ref_y','ref_x','ref_lat','ref_lon']:
+                try: h5[k][ifgram].attrs.pop(key)
+                except: pass
+    else:
+        for key in ['ref_y','ref_x','ref_lat','ref_lon']:
+            try: h5[k].attrs.pop(key)
+            except: pass        
+    h5.close()
+    return File
+
+
 #########################################  Usage  ##############################################
 TEMPLATE='''
 ## reference all interferograms to one common point in space
@@ -408,6 +431,8 @@ def cmdLineParse():
     parser.add_argument('--mark-attribute', dest='mark_attribute', action='store_true',\
                         help='mark/update reference attributes in input file only\n'+\
                              'do not update data matrix value nor write new file')
+    parser.add_argument('--reset', action='store_true',\
+                        help='remove reference pixel information from attributes in the file')
 
     coord_group = parser.add_argument_group('input coordinates')
     coord_group.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')
@@ -449,6 +474,12 @@ def main(argv):
     atr = readfile.read_attribute(inps.file[0])
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
+
+    if inps.reset:
+        print '----------------------------------------------------------------------------'
+        for file in inps.file:
+            remove_reference_pixel(file)
+        return
 
     ##### Check Input Coordinates
     # Read ref_y/x/lat/lon from reference/template

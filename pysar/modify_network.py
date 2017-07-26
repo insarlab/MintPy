@@ -382,17 +382,22 @@ def main(argv):
     print 'number of interferograms: '+str(len(date12_orig))
     atr = readfile.read_attribute(inps.file[0])
 
-    #print '\n****************** Network Modification ********************'
+    # Update inps if template is input
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
 
     if inps.reset:
         print '----------------------------------------------------------------------------'
         for file in inps.file:
             reset_pairs(file)
-        return
 
-    # Update inps if template is input
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
+        mean_coh_txt_file = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.txt'
+        if os.path.isfile(mean_coh_txt_file):
+            rmCmd = 'rm '+mean_coh_txt_file
+            print rmCmd
+            os.system(rmCmd)
+
+        return
 
     if all(not i for i in [inps.reference_file, inps.max_temp_baseline, inps.max_perp_baseline,\
                            inps.exclude_ifg_index, inps.exclude_date, inps.coherence_based, inps.start_date, inps.end_date]):

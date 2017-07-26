@@ -769,7 +769,11 @@ def main(argv):
         print '\n*************** Modify Network ****************'
         print 'find number of dropped interferograms: %d, skip updating.' % (ifgram_num_drop)
         print 'To re-modify the network, use modify_network.py --reset option to restore all pairs info.'
-        print 'modify_network.py '+inps.ifgram_file+' --reset'
+        msg_str = 'modify_network.py '+inps.ifgram_file
+        if inps.coherence_file:
+            msg_str +=  ' '+inps.coherence_file
+        msg_str += ' --reset'
+        print msg_str
     else:
         print '\n*************** Modify Network ****************'
         networkCmd = 'modify_network.py --template '+inps.template_file+' '+inps.ifgram_file
@@ -800,8 +804,8 @@ def main(argv):
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
         print 'find reference pixel in y/x: [%d, %d], skip updating.'%(ref_y, ref_x)
-        print 'To re-select reference pixel, use the following commands and re-run'
-        print 'add_attribute.py '+inps.ifgram_file+' ref_y=None ref_x=None'
+        print 'To re-select reference pixel, use seed_data.py --reset option to remove reference pixel info.'
+        print 'seed_data.py '+inps.ifgram_file+' --reset'
     except:
         print 'call seed_data.py to find reference pixel in space'
         seedCmd = 'seed_data.py '+inps.ifgram_file+' --template '+inps.template_file+' --mark-attribute'
