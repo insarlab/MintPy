@@ -1241,15 +1241,20 @@ def main(argv):
     #############################################
     if template['pysar.plot'] in ['yes','auto']:
         print '\n*********  Plot and Save pysarApp runing results to PIC  ***********'
-        print 'copy plot_pysarApp.sh to working directory'
-        print 'for better performance, edit the input parameter in plot_pysarApp.sh and re-run this script.'
-        plotCmd = './plot_pysarApp.sh'
+        inps.plot_sh_file = 'plot_pysarApp.sh'
+
+        # Copy to workding directory if not existed yet.
+        if not os.path.isfile(inps.work_dir+'/'+inps.plot_sh_file):
+            print 'copy $PYSAR_HOME/shellscripts/'+inps.plot_sh_file+' to working directory'
+            try:
+                shutil.copy2(ut.which(inps.plot_sh_file), inps.work_dir)
+            except:
+                print 'WARNING: no '+inps.plot_sh_file+' found in the environment variable path, skip plotting.'
+
+        print 'for better performance, edit the input parameters in '+inps.plot_sh_file+' and re-run this script.'
+        plotCmd = './'+inps.plot_sh_file
         print plotCmd
-        try:
-            shutil.copy2(ut.which('plot_pysarApp.sh'), inps.work_dir)
-            os.system(plotCmd)
-        except:
-            print 'WARNING: no plot_pysarApp.sh found in the environment variable path, skip plotting.'
+        os.system(plotCmd)
 
 
     #############################################
