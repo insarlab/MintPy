@@ -1,8 +1,8 @@
 #! /usr/bin/env python2
 ############################################################
 # Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
 # timeseries_inversion and Remove_plaane are modified 
@@ -61,6 +61,156 @@ import pysar._datetime as ptime
 import pysar._network as pnet
 import pysar._remove_surface as rm
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+
+
+###############################################################################
+def check_loaded_dataset(work_dir='./', inps=None, print_message=True):
+    '''Check the result of loading data for the following two rules:
+        1. file existance
+        2. file attribute readability
+
+    If inps is valid/not_empty: return updated inps;
+    Otherwise, return True/False if all recommended file are loaded and readably or not
+
+    Inputs:
+        work_dir : string, PySAR working directory
+        inps     : Namespace, optional, variable for pysarApp.py. Not needed for check loading result.
+    Outputs:
+        load_complete  : bool, complete loading or not
+        ifgram_file    : string, file name/path of unwrapped interferograms
+        coherence_file : string, file name/path of spatial coherence
+        dem_file_radar : string, file name/path of DEM file in radara coord (for interferograms in radar coord)
+        dem_file_geo   : string, file name/path of DEM file in geo coord
+        trans_file     : string, file name/path of transformation mapping file (for interferograms in radar coord)
+    Example:
+        from pysar.pysarApp import check_loaded_dataset
+        True = check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR') #if True, PROCESS, SLC folder could be removed.
+        inps = check_loaded_dataset(inps.work_dir, inps)
+    '''
+    ##### Find file name/path of all loaded files
+    work_dir = os.path.abspath(work_dir)
+
+    if inps:
+        inps.ifgram_file    = None
+        inps.coherence_file = None
+        inps.dem_radar_file = None
+        inps.dem_geo_file   = None
+        inps.trans_file     = None
+
+    # Required files - 1. unwrapped interferograms
+    file_list = [work_dir+'/Modified_unwrapIfgram.h5',\
+                 work_dir+'/unwrapIfgram.h5',\
+                 work_dir+'/Modified_LoadedData.h5',\
+                 work_dir+'/LoadedData.h5']
+    ifgram_file = is_file_exist(file_list, abspath=True)
+
+    if not ifgram_file:
+        if inps:
+            return inps
+        else:
+            return False
+    else:
+        atr = readfile.read_attribute(ifgram_file)
+        if print_message:  print 'Unwrapped interferograms: '+ifgram_file
+
+    if print_message:  print 'Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR']
+    if 'X_FIRST' in atr.keys():
+        geocoded = True
+        if print_message:  print 'Loaded dataset are in geo coordinates'
+    else:
+        geocoded = False
+        if print_message:  print 'Loaded dataset are in radar coordinates'
+
+    # Recommended files (None if not found)
+    # 2. Spatial coherence for each interferogram
+    file_list = [work_dir+'/Modified_coherence.h5',\
+                 work_dir+'/coherence.h5',\
+                 work_dir+'/Modified_Coherence.h5',\
+                 work_dir+'/Coherence.h5']
+    coherence_file = is_file_exist(file_list, abspath=True)
+    if print_message:
+        if coherence_file:
+            print 'Spatial       coherences: '+coherence_file
+        else:
+            print 'WARNING: No coherences file found. Cannot use coherence-based network modification without it.'
+            print "It's supposed to be like: "+str(file_list)
+
+    # 3. DEM in radar coord
+    file_list = [work_dir+'/demRadar.h5',\
+                 work_dir+'/radar*.hgt']
+    dem_radar_file = is_file_exist(file_list, abspath=True)
+    if print_message:
+        if dem_radar_file:
+            print 'DEM in radar coordinates: '+dem_radar_file
+        elif not geocoded:
+            print 'WARNING: No DEM file in radar coord found.'
+            print "It's supposed to be like: "+str(file_list)
+
+    # 4. DEM in geo coord
+    file_list = [work_dir+'/demGeo_tight.h5',\
+                 work_dir+'/demGeo.h5',\
+                 work_dir+'/*.dem']
+    dem_geo_file = is_file_exist(file_list, abspath=True)
+    if print_message:
+        if dem_geo_file:
+            print 'DEM in geo   coordinates: '+dem_geo_file
+        else:
+            print 'WARNING: No DEM file in geo coord found.'
+            print "It's supposed to be like: "+str(file_list)
+
+    # 5. Transform file for geocoding
+    if atr['INSAR_PROCESSOR'] == 'roipac':
+        file_list = [work_dir+'/geomap*lks_tight.trans',\
+                     work_dir+'/geomap*lks.trans']
+    elif atr['INSAR_PROCESSOR'] == 'gamma':
+        file_list = [work_dir+'/sim*_tight.UTM_TO_RDC',\
+                     work_dir+'/sim*.UTM_TO_RDC']
+    trans_file = is_file_exist(file_list, abspath=True)
+    if print_message:
+        if trans_file:
+            print 'Mapping transform   file: '+trans_file
+        elif not geocoded:
+            print 'No transform file found! Can not geocode without it!'
+            print "It's supposed to be like: "+str(file_list)
+
+    ##### Update namespace inps if inputed
+    load_complete = True
+    if None in [ifgram_file, coherence_file, dem_geo_file]:
+        load_complete = False
+    if not geocoded and None in [dem_radar_file, trans_file]:
+        load_complete = False
+    if load_complete and print_message:
+        print '-----------------------------------------------------------------------------------'
+        print 'All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.'
+        print '-----------------------------------------------------------------------------------'
+
+    if inps:
+        inps.ifgram_file    = ifgram_file
+        inps.coherence_file = coherence_file
+        inps.dem_radar_file = dem_radar_file
+        inps.dem_geo_file   = dem_geo_file
+        inps.trans_file     = trans_file
+        return inps
+
+    ##### Check 
+    else:
+        return load_complete
+
+
+def is_file_exist(file_list, abspath=True):
+    '''Check if any file in the file list 1) exists and 2) readable
+    Inputs:
+        file_list : list of string, file name with/without wildcards
+        abspath   : bool, return absolute file name/path or not
+    Output:
+        file_path : string, found file name/path; None if not.
+    '''
+    try:
+        file_path = get_file_list(file_list, abspath=abspath)[0]
+        atr_temp = readfile.read_attribute(file_path)
+    except:
+        file_path = None
+    return file_path
 
 
 def four_corners(atr):

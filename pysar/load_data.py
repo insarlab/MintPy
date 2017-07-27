@@ -51,6 +51,9 @@ def auto_path_miami(inps, template={}):
         #if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/diff_*rlks.int'
 
     ##### master interferogram for geomap*.trans and DEM in radar coord
+    if all(fname and fname != 'auto' for fname in [inps.trans, inps.dem_radar, inps.dem_geo]):
+        return inps
+
     try:     m_date12 = np.loadtxt(process_dir+'/master_ifgram.txt', dtype=str).tolist()
     except:
         try: m_date12 = os.walk(process_dir+'/GEO').next()[1][0].split('geo_')[1]
@@ -482,6 +485,13 @@ def load_data_from_template(inps):
     if 'pysar.transFile'      in keyList:   inps.trans = template['pysar.transFile']
     if 'pysar.demFile.radarCoord' in keyList:   inps.dem_radar = template['pysar.demFile.radarCoord']
     if 'pysar.demFile.geoCoord'   in keyList:   inps.dem_geo   = template['pysar.demFile.geoCoord']
+
+    # Check existed single dataset files
+    inps_tmp = argparse.Namespace()
+    inps_tmp = ut.check_loaded_dataset(inps.timeseries_dir, inps_tmp, print_message=False)
+    if (not inps.trans     or inps.trans     == 'auto') and inps_tmp.trans_file    :  inps.trans     = inps_tmp.trans_file
+    if (not inps.dem_radar or inps.dem_radar == 'auto') and inps_tmp.dem_radar_file:  inps.dem_radar = inps_tmp.dem_radar_file
+    if (not inps.dem_geo   or inps.dem_geo   == 'auto') and inps_tmp.dem_geo_file  :  inps.dem_geo   = inps_tmp.dem_geo_file
 
     # 1.2 Auto Setting for Geodesy Lab - University of Miami 
     if pysar.miami_path and 'SCRATCHDIR' in os.environ and inps.project_name:

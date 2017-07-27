@@ -31,6 +31,7 @@ if [ $plot_key_files -eq 1 ]; then
     view.py --nodisplay velocity.h5           $opt               | tee -a $log_file
     view.py --nodisplay temporalCoherence.h5  -c gray -m 0 -M 1  | tee -a $log_file
     view.py --nodisplay maskTempCoh.h5        -c gray -m 0 -M 1  | tee -a $log_file
+    view.py --nodisplay demRadar_error.h5 --mask $mask_file      | tee -a $log_file
 fi
 
 

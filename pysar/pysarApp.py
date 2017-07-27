@@ -53,8 +53,6 @@ import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar.subset as subset
-import pysar.multilook as mli
-import pysar.load_data as load
 import pysar.save_unavco as unavco
 
 
@@ -198,146 +196,6 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
 def multilook_dataset(inps, lks_y=None, lks_x=None):
     '''Create a multilooked dataset'''
     return inps
-
-
-def is_file_exist(file_list, abspath=True):
-    '''Check if any file in the file list 1) exists and 2) readable
-    Inputs:
-        file_list : list of string, file name with/without wildcards
-        abspath   : bool, return absolute file name/path or not
-    Output:
-        file_path : string, found file name/path; None if not.
-    '''
-    try:
-        file_path = ut.get_file_list(file_list, abspath=abspath)[0]
-        atr_temp = readfile.read_attribute(file_path)
-    except:
-        file_path = None
-    return file_path
-
-
-def check_loaded_dataset(work_dir='./', inps=None):
-    '''Check the result of loading data for the following two rules:
-        1. file existance
-        2. file attribute readability
-
-    If inps is valid/not_empty: return updated inps;
-    Otherwise, return True/False if all recommended file are loaded and readably or not
-
-    Inputs:
-        work_dir : string, PySAR working directory
-        inps     : Namespace, optional, variable for pysarApp.py. Not needed for check loading result.
-    Outputs:
-        load_complete  : bool, complete loading or not
-        ifgram_file    : string, file name/path of unwrapped interferograms
-        coherence_file : string, file name/path of spatial coherence
-        dem_file_radar : string, file name/path of DEM file in radara coord (for interferograms in radar coord)
-        dem_file_geo   : string, file name/path of DEM file in geo coord
-        trans_file     : string, file name/path of transformation mapping file (for interferograms in radar coord)
-    Example:
-        from pysar.pysarApp import check_loaded_dataset
-        True = check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR') #if True, PROCESS, SLC folder could be removed.
-        inps = check_loaded_dataset(inps.work_dir, inps)
-    '''
-    ##### Find file name/path of all loaded files
-    work_dir = os.path.abspath(work_dir)
-
-    # Required files - 1. unwrapped interferograms
-    file_list = [work_dir+'/Modified_unwrapIfgram.h5',\
-                 work_dir+'/unwrapIfgram.h5',\
-                 work_dir+'/Modified_LoadedData.h5',\
-                 work_dir+'/LoadedData.h5']
-    ifgram_file = is_file_exist(file_list, abspath=True)
-
-    if not ifgram_file:
-        print '\nERROR: No interferograms file found!\n'
-        if inps:
-            inps.ifgram_file = None
-            return inps
-        else:
-            return False
-    else:
-        print 'Unwrapped interferograms: '+ifgram_file
-        atr = readfile.read_attribute(ifgram_file)
-
-    print 'Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR']
-    if 'X_FIRST' in atr.keys():
-        geocoded = True
-        print 'Loaded dataset are in geo coordinates'
-    else:
-        geocoded = False
-        print 'Loaded dataset are in radar coordinates'
-
-    # Recommended files (None if not found)
-    # 2. Spatial coherence for each interferogram
-    file_list = [work_dir+'/Modified_coherence.h5',\
-                 work_dir+'/coherence.h5',\
-                 work_dir+'/Modified_Coherence.h5',\
-                 work_dir+'/Coherence.h5']
-    coherence_file = is_file_exist(file_list, abspath=True)
-    if coherence_file:
-        print 'Spatial       coherences: '+coherence_file
-    else:
-        print 'WARNING: No coherences file found. Cannot use coherence-based network modification without it.'
-        print "It's supposed to be like: "+str(file_list)
-
-    # 3. DEM in radar coord
-    file_list = [work_dir+'/demRadar.h5',\
-                 work_dir+'/radar*.hgt']
-    dem_radar_file = is_file_exist(file_list, abspath=True)
-    if dem_radar_file:
-        print 'DEM in radar coordinates: '+dem_radar_file
-    elif not geocoded:
-        print 'WARNING: No DEM file in radar coord found.'
-        print "It's supposed to be like: "+str(file_list)
-
-    # 4. DEM in geo coord
-    file_list = [work_dir+'/demGeo_tight.h5',\
-                 work_dir+'/demGeo.h5',\
-                 work_dir+'/*.dem']
-    dem_geo_file = is_file_exist(file_list, abspath=True)
-    if dem_geo_file:
-        print 'DEM in geo   coordinates: '+dem_geo_file
-    else:
-        print 'WARNING: No DEM file in geo coord found.'
-        print "It's supposed to be like: "+str(file_list)
-
-    # 5. Transform file for geocoding
-    if atr['INSAR_PROCESSOR'] == 'roipac':
-        file_list = [work_dir+'/geomap*lks_tight.trans',\
-                     work_dir+'/geomap*lks.trans']
-    elif atr['INSAR_PROCESSOR'] == 'gamma':
-        file_list = [work_dir+'/sim*_tight.UTM_TO_RDC',\
-                     work_dir+'/sim*.UTM_TO_RDC']
-    trans_file = is_file_exist(file_list, abspath=True)
-    if trans_file:
-        print 'Mapping transform   file: '+trans_file
-    elif not geocoded:
-        print 'No transform file found! Can not geocode without it!'
-        print "It's supposed to be like: "+str(file_list)
-
-    ##### Update namespace inps if inputed
-    load_complete = True
-    if None in [ifgram_file, coherence_file, dem_geo_file]:
-        load_complete = False
-    if not geocoded and None in [dem_radar_file, trans_file]:
-        load_complete = False
-    if load_complete:
-        print '-----------------------------------------------------------------------------------'
-        print 'All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.'
-        print '-----------------------------------------------------------------------------------'
-
-    if inps:
-        inps.ifgram_file = ifgram_file
-        inps.coherence_file = coherence_file
-        inps.dem_radar_file = dem_radar_file
-        inps.dem_geo_file = dem_geo_file
-        inps.trans_file = trans_file
-        return inps
-
-    ##### Check 
-    else:
-        return load_complete
 
 
 ##########################################################################
@@ -514,6 +372,10 @@ EXAMPLE='''example:
   pysarApp.py -g
   pysarApp.py SanAndreasT356EnvD.template -g
 
+  # Reset and re-run right after loading data
+  pysarApp.py --reset
+  pysarApp.py
+
   --------------------------------------------
   Open pysar_template.txt file for details.
   --------------------------------------------
@@ -554,6 +416,9 @@ def cmdLineParse():
                              '     3) input custom template with basename same as projectName\n')
     parser.add_argument('-g', dest='generate_template', action='store_true',\
                         help='Generate default template (and merge with custom template), then exit.')
+    parser.add_argument('--reset', action='store_true',\
+                        help='Reset files attributes to re-run pysarApp.py after loading data\n'+\
+                             '    by removing ref_y/x/lat/lon and set drop_ifgram=no for unwrapIfgram.h5 and coherence.h5')
     parser.add_argument('--load-data', dest='load_dataset', action='store_true',\
                         help='Step 1. Load/check dataset, then exit')
     parser.add_argument('--subset-data', dest='subset_dataset', action='store_true',\
@@ -690,12 +555,32 @@ def main(argv):
     os.chdir(inps.work_dir)
 
     print '--------------------------------------------'
-    inps = check_loaded_dataset(inps.work_dir, inps)
+    inps = ut.check_loaded_dataset(inps.work_dir, inps)
     if not inps.ifgram_file:
+        print '\nERROR: No interferograms file found!\n'
         sys.exit('Exit.')
 
     if inps.load_dataset:
         sys.exit('Exit as planed after loading/checking the dataset')
+
+    if inps.reset:
+        print '\nReset dataset attributtes for a fresh re-run.\n'
+        # Reset network
+        networkCmd = 'modify_network.py '+inps.ifgram_file
+        if inps.coherence_file:
+            networkCmd +=  ' '+inps.coherence_file
+        networkCmd += ' --reset'
+        print networkCmd
+        os.system(networkCmd)
+
+        # Reset reference pixel
+        seedCmd = 'seed_data.py '+inps.ifgram_file+' --reset'
+        print seedCmd
+        os.system(seedCmd)
+
+        print 'Exit as planed after reset.'
+        print 'Now run pysarApp.py to re-processing this dataset.'
+        sys.exit()
 
 
     #########################################
