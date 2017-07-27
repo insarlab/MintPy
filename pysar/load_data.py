@@ -314,6 +314,13 @@ def load_single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict())
         try:  atr[key] = extra_meta_dict['insar_processor']
         except:  pass
     h5.close()
+
+    if os.path.dirname(infile) == os.path.dirname(outfile):
+        print 'remove obsolete '+atr['FILE_TYPE']+' file in the same directory'
+        rmCmd = 'rm '+infile
+        print rmCmd
+        os.system(rmCmd)
+
     return outfile
 
 

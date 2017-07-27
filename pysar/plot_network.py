@@ -170,6 +170,10 @@ def main(argv):
             inps.coherence_list  = [float(i) for i in fcoh[:,1]]
             inps.coh_date12_list = [i        for i in fcoh[:,0]]
 
+        if all(np.isnan(inps.coherence_list)):
+            print 'WARNING: all coherence value are nan! Do not use this and continue.'
+            inps.coherence_list = None
+
         # Check length of coherence file and input file
         if not set(inps.coh_date12_list) == set(date12_list):
             print 'WARNING: input coherence list has different pairs/date12 from input file'
