@@ -294,33 +294,38 @@ def load_single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict())
     atr = readfile.read_attribute(infile)
 
     if ut.update_file(outfile, infile):
-        # Read input file
-        print 'loading file: '+infile
-        data = readfile.read(infile)[0]
+        if os.path.dirname(infile) == os.path.dirname(outfile):
+            print infile+' already in working directory, no need to re-load.'
+            outfile = infile
 
-        # Write output file - data
-        print 'writing >>> '+outfile
-        h5 = h5py.File(outfile, 'w')
-        group = h5.create_group(file_type)
-        dset = group.create_dataset(file_type, data=data, compression='gzip')
+        else:
+            # Read input file
+            print 'loading file: '+infile
+            data = readfile.read(infile)[0]
 
-        # Write output file - attributes
-        for key, value in atr.iteritems():
-            group.attrs[key] = value
-        try: group.attrs['PROJECT_NAME'] = extra_meta_dict['project_name']
-        except: pass
-        key = 'INSAR_PROCESSOR'
-        if key not in atr.keys():
-            try:  atr[key] = extra_meta_dict['insar_processor']
-            except:  pass
-        h5.close()
+            # Write output file - data
+            print 'writing >>> '+outfile
+            h5 = h5py.File(outfile, 'w')
+            group = h5.create_group(file_type)
+            dset = group.create_dataset(file_type, data=data, compression='gzip')
 
-    if (os.path.abspath(infile) != os.path.abspath(outfile) and \
-        os.path.dirname(infile) == os.path.dirname(outfile)):
-        print 'remove the duplicated, obsolete '+atr['FILE_TYPE']+' file in the same directory'
-        rmCmd = 'rm '+infile
-        print rmCmd
-        os.system(rmCmd)
+            # Write output file - attributes
+            for key, value in atr.iteritems():
+                group.attrs[key] = value
+            try: group.attrs['PROJECT_NAME'] = extra_meta_dict['project_name']
+            except: pass
+            key = 'INSAR_PROCESSOR'
+            if key not in atr.keys():
+                try:  atr[key] = extra_meta_dict['insar_processor']
+                except:  pass
+            h5.close()
+
+    #if (os.path.abspath(infile) != os.path.abspath(outfile) and \
+    #    os.path.dirname(infile) == os.path.dirname(outfile)):
+    #    print 'remove the duplicated, obsolete '+atr['FILE_TYPE']+' file in the same directory'
+    #    rmCmd = 'rm '+infile
+    #    print rmCmd
+    #    os.system(rmCmd)
 
     return outfile
 

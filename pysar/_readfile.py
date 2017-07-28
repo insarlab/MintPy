@@ -290,6 +290,8 @@ def read_attribute(File, epoch=None):
 
         elif k[0] in multi_dataset_hdf5_file+single_dataset_hdf5_file:
             attrs  = h5[k[0]].attrs
+        elif k[0] in ['HDFEOS']:
+            attrs = h5.attrs
         else:
             sys.exit('Unrecognized h5 file key: '+k[0])
 

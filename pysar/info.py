@@ -93,11 +93,23 @@ def main(argv):
     ##### Check Inputs
     try:    File = argv[0]
     except: usage();sys.exit(1)
+    ext = os.path.splitext(File)[1].lower()
+
+
+    #################### File Structure #####################
+    #import pdb; pdb.set_trace()
+    try:
+        argv[1]
+        if argv[1] in ['--struct','--structure','--tree'] and ext in ['.h5','.he5']:
+            print '***** HDF5 File Structure *****'
+            print_hdf5_structure(File)
+            return
+    except: pass
+
 
     #################### Basic Info #####################
     try: atr = readfile.read_attribute(File)
     except: print 'Can not read file: '+File; sys.exit(1)
-    ext = os.path.splitext(File)[1].lower()
     k = atr['FILE_TYPE']
 
     # Print out date list for timeseries HDF5 file
@@ -117,14 +129,6 @@ def main(argv):
     try:  atr['X_FIRST'];  print 'Coordinates : GEO'
     except:                print 'Coordinates : radar'
 
-    #################### File Structure #####################
-    try:
-        argv[1]
-        if argv[1] in ['--struct','--structure','--tree'] and ext in ['.h5','.he5']:
-            print '***** HDF5 File Structure *****'
-            print_hdf5_structure(File)
-            return
-    except: pass
 
     #################### HDF5 File Info #####################
     if ext in ['.h5','.he5']:
