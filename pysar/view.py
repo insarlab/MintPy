@@ -1228,10 +1228,13 @@ def main(argv):
 
     #------------------------------ Epoch/Date Info -------------------------------------------#
     # Read "epoch list to display' and 'reference date' for multi-dataset files
-    if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
+    if k in multi_group_hdf5_file+multi_dataset_hdf5_file+['HDFEOS']:
         # Read Epoch List
         h5file = h5py.File(inps.file,'r')
-        epochList = sorted(h5file[k].keys())
+        if k in ['HDFEOS']:
+            epochList = h5file[k]['GRIDS']['timeseries'].keys()
+        else:
+            epochList = sorted(h5file[k].keys())
         h5file.close()
 
         # Epochs to display
@@ -1462,7 +1465,6 @@ def main(argv):
             prog_bar = ptime.progress_bar(maxValue=i_end-i_start, prefix='loading: ')
             for i in range(i_start, i_end):
                 epoch = inps.epoch[i]
-                atr_i = h5file[k][epoch].attrs
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
                 prog_bar.update(i-i_start+1, suffix=str(i+1))
 
@@ -1477,11 +1479,15 @@ def main(argv):
                     if inps.fig_row_num*inps.fig_col_num > 100:
                         subplot_title = str(epochList.index(epoch)+1)
                     else:
-                        subplot_title = str(epochList.index(epoch)+1)+'\n'+atr_i['DATE12']
+                        subplot_title = str(epochList.index(epoch)+1)+'\n'+h5file[k][epoch].attrs['DATE12']
                     dset = h5file[k][epoch].get(epoch)
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
                     if ref_yx:
                         data -= data[ref_yx[0], ref_yx[1]]
+                elif k in ['HDFEOS']:
+                    dset = h5file[k]['GRIDS']['timeseries'].get(epoch)
+                    data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
+                    subplot_title = str(epoch)
                 # mask
                 if inps.mask_file:
                     data = mask.mask_matrix(data, msk)
