@@ -101,5 +101,6 @@ fi
 echo "Move *.png *.pdf into PIC folder"
 mv *.png PIC/
 mv *.pdf PIC/
+mv *.kmz PIC/
 mv $log_file PIC/
 

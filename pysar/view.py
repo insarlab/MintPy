@@ -1423,9 +1423,9 @@ def main(argv):
             if inps.disp_dem_shade: 
                 print 'show shaded relief DEM'
                 ls = LightSource(azdeg=315, altdeg=45)
-                dem_hillshade = ls.hillshade(dem, vert_exag=1.0, vmin=-5000, vmax=np.nanmax(dem)+2000)
+                dem_hillshade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+2000)
             if inps.disp_dem_contour:
-                print 'show contour: step = '+str(contour_step)+' m'
+                print 'show contour: step = '+str(inps.dem_contour_step)+' m'
                 dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
                 contour_sequence = np.arange(-6000, 9000, inps.dem_contour_step)
 
