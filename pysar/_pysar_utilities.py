@@ -276,8 +276,21 @@ def circle_index(atr,circle_par):
     return idx
 
 
-def update_template_file(template_file, template_dict):
-    '''Update option value in template_file with value from input template_dict'''
+def update_template_file(template_file, extra_dict):
+    '''Update option value in template_file with value from input extra_dict'''
+    extra_key_list = extra_dict.keys()
+
+    ## Compare and skip updating template_file is no new option value found.
+    update = False
+    orig_dict = readfile.read_template(template_file)
+    for key, value in orig_dict.iteritems():
+        if key in extra_key_list and extra_dict[key] != value:
+            update = True
+    if not update:
+        print 'No new option value found, skip updating '+template_file
+        return template_file
+
+    ## Update template_file with new value from extra_dict
     tmp_file = template_file+'.tmp'
     f_orig = open(template_file, 'r')
     f_tmp = open(tmp_file, 'w')
@@ -287,9 +300,9 @@ def update_template_file(template_file, template_dict):
         if not line.startswith('%') and not line.startswith('#') and len(c) > 1:
             key = c[0]
             value = str.replace(c[1],'\n','').split("#")[0].strip()
-            if key in template_dict.keys() and template_dict[key] != value:
-                line = line.replace(value, template_dict[key], 1)
-                print '    '+key+': '+value+' --> '+template_dict[key]
+            if key in extra_key_list and extra_dict[key] != value:
+                line = line.replace(value, extra_dict[key], 1)
+                print '    '+key+': '+value+' --> '+extra_dict[key]
         f_tmp.write(line+'\n')
     f_orig.close()
     f_tmp.close()
