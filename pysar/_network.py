@@ -1008,7 +1008,7 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
     #    coh_mat[idx1,idx2] = coh
     #    coh_mat[idx2,idx1] = coh
 
-    im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0)
+    im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0, interpolation='nearest')
     date_num = coh_mat.shape[0]
     if date_num < 30:
         tick_list = range(0,date_num,5)

@@ -294,8 +294,9 @@ def load_single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict())
     atr = readfile.read_attribute(infile)
 
     if ut.update_file(outfile, infile):
-        if os.path.dirname(infile) == os.path.dirname(outfile):
-            print infile+' already in working directory, no need to re-load.'
+        if (os.path.dirname(infile) == os.path.dirname(outfile) and \
+            os.path.splitext(infile)[1] == os.path.splitext(outfile)[1]):
+            print infile+' already in working directory with recommended format, no need to re-load.'
             outfile = infile
 
         else:

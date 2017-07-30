@@ -119,7 +119,7 @@ def main(argv):
 
     elif k in ['interferograms','coherence','wrapped']:
         ## Check input
-        igramList=h5file[k].keys()
+        igramList = h5file[k].keys()
         try:
             d = sys.argv[2]
             for i in range(len(igramList)):
@@ -132,7 +132,7 @@ def main(argv):
         ## Read and Write
         print 'reading '+igram+' ... '
         data = h5file[k][igram].get(igram)[:]
-        atr = h5file[k][igram].attrs
+        atr = dict(h5file[k][igram].attrs)
         atr['PROCESSOR'] = 'roipac'
         outname = igram
 

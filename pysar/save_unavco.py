@@ -262,6 +262,7 @@ def main(argv):
     print 'write data to '+str(group)
     ##### Write Time Series Data
     print 'reading file: '+inps.timeseries
+    print 'number of acquisitions: %d' % len(dateList)
     for date in dateList:
         print date
         data = h5_timeseries[k].get(date)[:,:]
