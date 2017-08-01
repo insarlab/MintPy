@@ -9,8 +9,9 @@
 # Yunjun, Apr 2017: add diff_file()
 # Yunjun, test comment
 
-import sys
 import os
+import sys
+import argparse
 
 import numpy as np
 import h5py
@@ -28,7 +29,7 @@ def diff_data(data1,data2):
     return data
 
 
-def diff_file(file1, file2, outName=None):
+def diff_file(file1, file2, outName=None, force=False):
     '''Subtraction/difference of two input files'''
     if not outName:
         outName = os.path.splitext(file1)[0]+'_diff_'+os.path.splitext(os.path.basename(file2))[0]+\
@@ -39,29 +40,28 @@ def diff_file(file1, file2, outName=None):
     atr  = readfile.read_attribute(file1)
     print 'Input first file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']
     k = atr['FILE_TYPE']
-  
+
     # Multi-dataset/group file
     if k in ['timeseries','interferograms','coherence','wrapped']:
         # Check input files type for multi_dataset/group files
         atr2 = readfile.read_attribute(file2)
         k2 = atr2['FILE_TYPE']
   
-        h5out = h5py.File(outName,'w')
-        group = h5out.create_group(k)
-        print 'writing >>> '+outName
-
         h5_1  = h5py.File(file1)
         h5_2  = h5py.File(file2)
         epochList = sorted(h5_1[k].keys())
         epochList2 = sorted(h5_2[k2].keys())
         if not all(i in epochList2 for i in epochList):
-            print file2+' does not contain all group of '+file1
-            sys.exit(1)
-        #if not len(epochList) == len(epochList2):
-        #    print 'ERROR: input files have different number of datasets: '
-        #    print 'number of datasets in '+file1+' : '+str(len(epochList))
-        #    print 'number of datasets in '+file2+' : '+str(len(epochList2))
-        #    sys.exit(1)
+            print 'ERROR: '+file2+' does not contain all group of '+file1
+            if force and k in ['timeseries']:
+                print 'Continue and enforce the differencing for their shared dates only!'
+            else:
+                sys.exit(1)
+
+        h5out = h5py.File(outName,'w')
+        group = h5out.create_group(k)
+        print 'writing >>> '+outName
+
         epoch_num = len(epochList)
         prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
@@ -87,12 +87,15 @@ def diff_file(file1, file2, outName=None):
         for i in range(epoch_num):
             date = epochList[i]
             data1 = h5_1[k].get(date)[:]
-            data2 = h5_2[k2].get(date)[:]
-            if ref_date:
-                data2 -= data2_ref
-            if ref_x and ref_y:
-                data2 -= data2[ref_y, ref_x]
-            data = diff_data(data1, data2)
+            try:
+                data2 = h5_2[k2].get(date)[:]
+                if ref_date:
+                    data2 -= data2_ref
+                if ref_x and ref_y:
+                    data2 -= data2[ref_y, ref_x]
+                data = diff_data(data1, data2)
+            except:
+                data = data1
             dset = group.create_dataset(date, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=date)
         for key,value in atr.iteritems():
@@ -136,7 +139,7 @@ def diff_file(file1, file2, outName=None):
 
 #####################################################################################
 def usage():
-    print '''usage:  diff.py  file1  file2  [ outfile ]
+    print '''usage:  diff.py  file1  file2  [ outfile ] [--force]
 
 Generates the difference of two input files.
 
@@ -144,28 +147,35 @@ positional arguments:
   file1/2               file 1 and 2 used for differencing
 
 optional argument:
-  outfile               output file name, default is file1_diff_file2.h5
+  outfile               
 
 example:
-  diff.py velocity_masked.h5  velocity_demCor_masked.h5    demCor.h5
-  diff.py timeseries.h5       timeseries_demCor.h5         demCor.h5
-  diff.py unwrapIfgram.h5     reconstruct_unwrapIfgram.h5
     '''
     return
+EXAMPLE='''example:
+  diff.py  velocity.h5      velocity_demCor.h5
+  diff.py  timeseries.h5    ECMWF.h5  -o timeseries_ECMWF.h5  --force
+  diff.py  unwrapIfgram.h5  reconstruct_unwrapIfgram.h5
+'''
 
+def cmdLineParse():
+    parser = argparse.ArgumentParser(description='Generates the difference of two input files.',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('file1', help='file to be substracted.')
+    parser.add_argument('file2', help='file used to substract')
+    parser.add_argument('-o','--output', dest='outfile', help='output file name, default is file1_diff_file2.h5')
+    parser.add_argument('--force', action='store_true',\
+                        help='Enforce the differencing for the shared dates only for time-series files')
+    inps = parser.parse_args()
+    return inps
 
 #####################################################################################
 def main(argv):
-    if 3 <= len(sys.argv) <= 4:
-        file1 = argv[0]
-        file2 = argv[1]
-        try:    outName = argv[2]
-        except: outName = None
-    else:
-        usage(); sys.exit(1)
-  
-    outName = diff_file(file1, file2, outName)
-    return outName
+    inps = cmdLineParse()
+    inps.outfile = diff_file(inps.file1, inps.file2, inps.outfile, force=inps.force)
+    return inps.outfile
 
 
 #####################################################################################

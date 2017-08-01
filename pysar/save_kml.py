@@ -141,12 +141,24 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     cb_N = (north+south)/2.0 + 0.5*0.5*cb_rg
     cb_W = east  + 0.1*cb_rg
 
+    ## Use mean height from existed DEM file
+    if not inps.cbar_height:
+        try:
+            dem_file = ut.get_file_list(['demGeo*.h5','*.dem','demRadar.h5','radar*.hgt'])[0]
+            print 'use mean height from file: '+dem_file+' + 1000 m as colorbar height.'
+            inps.cbar_height = np.rint(np.nanmean(readfile.read(dem_file)[0])) + 1000.0
+        except: pass
+    elif str(inps.cbar_height).lower().endswith('ground'):
+        inps.cbar_height = None
+
     if inps.cbar_height:
+        print 'set colorbar in height: %.2f m' % inps.cbar_height
         slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),\
                                  KML.altitude(str(inps.cbar_height)),KML.altitudeMode('absolute'),\
                                  KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
                                                KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
     else:
+        print 'set colorbar clampToGround'
         slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),\
                                  KML.altitudeMode('clampToGround'),\
                                  KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
@@ -209,8 +221,10 @@ def cmdLineParse():
                      help='Colorbar bin number. Default: 9')
     fig.add_argument('--cbar-label', dest='cbar_label', metavar='LABEL', default='Mean LOS velocity',\
                      help='Colorbar label. Default: Mean LOS velocity')
-    fig.add_argument('--cbar-height', dest='cbar_height', metavar='NUM', type=float,\
-                     help='Colorbar height/elevation/altitude in meters. clampToGround if not specified.')
+    fig.add_argument('--cbar-height', dest='cbar_height',\
+                     help='Colorbar height/elevation/altitude in meters;\n'+\
+                          'if not specified and DEM file exists in current directory, use mean DEM height + 1000m;\n'+\
+                          'if not specified nor DEM exists, clampToGround.')
     fig.add_argument('--dpi', dest='fig_dpi', metavar='NUM', type=int, default=300,\
                      help='Figure DPI (dots per inch). Default: 300')
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\

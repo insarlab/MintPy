@@ -261,8 +261,8 @@ def circle_index(atr,circle_par):
             c_lat  = float(cir_par[0])
             c_lon  = float(cir_par[1])
             radius = int(float(cir_par[2]))
-            c_y = subset.coord_geo2radar(c_lat,atr,'lat')
-            c_x = subset.coord_geo2radar(c_lon,atr,'lon')
+            c_y = np.rint((c_lat-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
+            c_x = np.rint((c_lon-float(atr['X_FIRST']))/float(atr['X_STEP']))
         except:
             print '\nERROR: Unrecognized circle index format: '+circle_par
             print 'Supported format:'
