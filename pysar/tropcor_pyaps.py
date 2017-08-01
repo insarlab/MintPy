@@ -1,12 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR v1.2                            #
 # Copyright(c) 2015, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Feb 2017: add closest_weather_product_time()
-#                   add get_delay()
-#                   use argparse instead of getopt
 
 
 import os
@@ -39,12 +36,12 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
     '''
     # Get hour/min of SAR acquisition time
     sar_time = float(sar_acquisition_time)
-    sar_hh = int(sar_time/3600.0)
-    sar_mm = int((sar_time-3600.0*sar_hh) / 60.0)
+    #sar_hh = int(sar_time/3600.0)
+    #sar_mm = int((sar_time-3600.0*sar_hh) / 60.0)
     
     # Find closest time in available weather products
     grib_hr_list = [0, 6, 12, 18]
-    grib_hr = min(grib_hr_list, key=lambda x:abs(x-sar_hh))
+    grib_hr = int(min(grib_hr_list, key=lambda x:abs(x-sar_time/3600.)))
     
     # Adjust time output format
     if grib_source == 'NARR':
@@ -79,12 +76,72 @@ def get_delay(grib_file, atr, inps_dict):
     return phs
 
 
+def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
+    '''Download weather re-analysis grib files using PyAPS
+    Inputs:
+        date_list   : list of string in YYYYMMDD format
+        hour        : string in HH:MM or HH format
+        grib_source : string, 
+        weather_dir : string,
+    Output:
+        grib_file_list : list of string
+    '''
+
+    ## Grib data directory
+    weather_dir = os.path.abspath(weather_dir)
+    grib_dir = weather_dir+'/'+grib_source
+    if not os.path.isdir(grib_dir):
+        print 'making directory: '+grib_dir
+        os.makedirs(grib_dir)
+
+    ## Date list to grib file list
+    grib_file_list = []
+    for d in date_list:
+        if   grib_source == 'ECMWF':  grib_file = grib_dir+'/ERA-Int_'+d+'_'+hour+'.grb'
+        elif grib_source == 'ERA'  :  grib_file = grib_dir+'/ERA_'+d+'_'+hour+'.grb'
+        elif grib_source == 'MERRA':  grib_file = grib_dir+'/merra-'+d+'-'+hour+'.hdf'
+        elif grib_source == 'NARR' :  grib_file = grib_dir+'/narr-a_221_'+d+'_'+hour+'00_000.grb'
+        grib_file_list.append(grib_file)
+
+    ## Get date list to download (skip already downloaded files)
+    grib_file_existed = ut.get_file_list(grib_file_list)
+    if grib_file_existed:
+        grib_filesize_mode = ut.mode([os.path.getsize(i) for i in grib_file_existed])
+        grib_file_corrupted = [i for i in grib_file_existed if os.path.getsize(i) != grib_filesize_mode]
+        print 'number of grib files existed    : %d' % len(grib_file_existed)
+        print 'file size mode: %d' % grib_filesize_mode
+        if grib_file_corrupted:
+            print '------------------------------------------------------------------------------'
+            print 'corrupted grib files detected! Delete them and re-download...'
+            print 'number of grib files corrupted  : %d' % len(grib_file_corrupted)
+            for i in grib_file_corrupted:
+                rmCmd = 'rm '+i
+                print rmCmd
+                os.system(rmCmd)
+                grib_file_existed.remove(i)
+            print '------------------------------------------------------------------------------'
+    grib_file2download = sorted(list(set(grib_file_list) - set(grib_file_existed)))
+    date_list2download = [str(re.findall('\d{8}', i)[0]) for i in grib_file2download]
+    print 'number of grib files to download: %d' % len(date_list2download)
+    print '------------------------------------------------------------------------------\n'
+
+    ## Download grib file using PyAPS
+    if   grib_source == 'ECMWF':  pa.ECMWFdload(date_list2download, hour, grib_dir)
+    elif grib_source == 'ERA'  :  pa.ERAdload(  date_list2download, hour, grib_dir)
+    elif grib_source == 'MERRA':  pa.MERRAdload(date_list2download, hour, grib_dir)
+    elif grib_source == 'NARR' :  pa.NARRdload( date_list2download, hour, grib_dir)
+
+    return grib_file_existed
+
+
 ###############################################################
 EXAMPLE='''example:
-  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt
-  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s NARR
-  tropcor_pyaps.py timeseries.h5 -d radar_8rlks.hgt -s MERRA --delay dry -i 23
-  tropcor_pyaps.py timeseries_LODcor.h5 -d radar_8rlks.hgt -s ECMWF 
+  tropcor_pyaps.py timeseries.h5 -d demRadar.h5
+  tropcor_pyaps.py timeseries.h5 -d demRadar.h5 --weather-dir /famelung/data/WEATHER
+
+  tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s NARR
+  tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s MERRA --delay dry -i 23
+  tropcor_pyaps.py timeseries_LODcor.h5 -d demRadar.h5
 
   tropcor_pyaps.py -s ECMWF --hour 18:00 --date-list date_list.txt --download
   tropcor_pyaps.py -s ECMWF --hour 18:00 --date-list bl_list.txt   --download
@@ -165,16 +222,16 @@ def main(argv):
 
     print '*******************************************************************************'
     print 'Downloading weather model data ...'
-    
+
     ## Get Grib Source
-    if inps.weather_model in ['ECMWF','ERA-Interim']:   inps.grib_source = 'ECMWF'
-    elif inps.weather_model == 'ERA'  :                 inps.grib_source = 'ERA'
-    elif inps.weather_model == 'MERRA':                 inps.grib_source = 'MERRA'
-    elif inps.weather_model == 'NARR' :                 inps.grib_source = 'NARR'
+    if   inps.weather_model in ['ECMWF','ERA-Interim']:   inps.grib_source = 'ECMWF'
+    elif inps.weather_model == 'ERA'  :                   inps.grib_source = 'ERA'
+    elif inps.weather_model == 'MERRA':                   inps.grib_source = 'MERRA'
+    elif inps.weather_model == 'NARR' :                   inps.grib_source = 'NARR'
     else: raise Reception('Unrecognized weather model: '+inps.weather_model)
     print 'grib source: '+inps.grib_source
 
-    ## Grib data directory
+    # Get weather directory
     if not inps.weather_dir:
         if inps.timeseries_file:
             inps.weather_dir = os.path.dirname(os.path.abspath(inps.timeseries_file))+'/../WEATHER'
@@ -183,18 +240,8 @@ def main(argv):
         else:
             inps.weather_dir = os.path.abspath(os.getcwd())
     print 'Store weather data into directory: '+inps.weather_dir
-    grib_dir = inps.weather_dir+'/'+inps.grib_source
-    if not os.path.isdir(grib_dir):
-        print 'making directory: '+grib_dir
-        os.makedirs(grib_dir)
 
-    ## Get Acquisition time
-    if not inps.hour:
-        inps.hour = closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.grib_source)
-    print 'Time of cloest available product: '+inps.hour
-    
-    ## Get grib file list and date list
-    inps.grib_file_list = []
+    # Get date list to download
     if not inps.date_list_file:
         h5timeseries = h5py.File(inps.timeseries_file, 'r')
         dateList = sorted(h5timeseries['timeseries'].keys())
@@ -204,40 +251,13 @@ def main(argv):
         dateList = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
         print 'read date list info from: '+inps.date_list_file
 
-    for d in dateList:
-        if   inps.grib_source == 'ECMWF':  grib_file = grib_dir+'/ERA-Int_'+d+'_'+inps.hour+'.grb'
-        elif inps.grib_source == 'ERA'  :  grib_file = grib_dir+'/ERA_'+d+'_'+inps.hour+'.grb'
-        elif inps.grib_source == 'MERRA':  grib_file = grib_dir+'/merra-'+d+'-'+inps.hour+'.hdf'
-        elif inps.grib_source == 'NARR' :  grib_file = grib_dir+'/narr-a_221_'+d+'_'+inps.hour+'00_000.grb'
-        inps.grib_file_list.append(grib_file)
+    # Get Acquisition time - hour
+    if not inps.hour:
+        inps.hour = closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.grib_source)
+    print 'Time of cloest available product: '+inps.hour
 
-    ## Get date list to download
-    grib_file_existed = ut.get_file_list(inps.grib_file_list)
-    if grib_file_existed:
-        grib_filesize_mode = ut.mode([os.path.getsize(i) for i in grib_file_existed])
-        grib_file_corrupted = [i for i in grib_file_existed if os.path.getsize(i) != grib_filesize_mode]
-        print 'number of grib files existed    : %d' % len(grib_file_existed)
-        print 'file size mode: %d' % grib_filesize_mode
-        if grib_file_corrupted:
-            print '------------------------------------------------------------------------------'
-            print 'corrupted grib files detected! Delete them and re-download...'
-            print 'number of grib files corrupted  : %d' % len(grib_file_corrupted)
-            for i in grib_file_corrupted:
-                rmCmd = 'rm '+i
-                print rmCmd
-                os.system(rmCmd)
-                grib_file_existed.remove(i)
-            print '------------------------------------------------------------------------------'
-    grib_file2download = sorted(list(set(inps.grib_file_list) - set(grib_file_existed)))
-    date_list2download = [str(re.findall('\d{8}', i)[0]) for i in grib_file2download]
-    print 'number of grib files to download: %d' % len(date_list2download)
-    print '------------------------------------------------------------------------------\n'
-
-    ## Download grib file using PyAPS
-    if   inps.grib_source == 'ECMWF':  pa.ECMWFdload(date_list2download, inps.hour, grib_dir)
-    elif inps.grib_source == 'ERA'  :  pa.ERAdload(  date_list2download, inps.hour, grib_dir)
-    elif inps.grib_source == 'MERRA':  pa.MERRAdload(date_list2download, inps.hour, grib_dir)
-    elif inps.grib_source == 'NARR' :  pa.NARRdload( date_list2download, inps.hour, grib_dir)
+    ## Download data using PyAPS
+    inps.grib_file_list = dload_grib(dateList, inps.hour, inps.weather_model, inps.weather_dir)
 
     if inps.download:
         print 'Download completed, exit as planned.'
@@ -257,13 +277,13 @@ def main(argv):
         print 'calculating incidence angle ...'
         inps.incidence_angle = ut.incidence_angle(atr)
     inps.incidence_angle = inps.incidence_angle*np.pi/180.0
-    
+
     ## Create delay hdf5 file
     tropFile = inps.grib_source+'.h5'
     print 'writing >>> '+tropFile
     h5trop = h5py.File(tropFile, 'w')
     group_trop = h5trop.create_group('timeseries')
-    
+
     ## Create tropospheric corrected timeseries hdf5 file
     if not inps.out_file:
         ext = os.path.splitext(inps.timeseries_file)[1]
@@ -273,32 +293,36 @@ def main(argv):
     group_tropCor = h5timeseries_tropCor.create_group('timeseries')
 
     ## Calculate phase delay on reference date
-    if 'ref_date' in atr.keys():
-        ref_idx = dateList.index(atr['ref_date'])
-    else:
-        ref_idx = 0
-    print 'calculating phase delay on reference date: '+dateList[ref_idx]
-    phs_ref = get_delay(inps.grib_file_list[ref_idx], atr, vars(inps))
+    try:    ref_date = atr['ref_date']
+    except: ref_date = dateList[0]
+    print 'calculating phase delay on reference date: '+ref_date
+    ref_date_grib_file = None
+    for fname in inps.grib_file_list:
+        if ref_date in fname:
+            ref_date_grib_file = fname
+    phs_ref = get_delay(ref_date_grib_file, atr, vars(inps))
 
     ## Loop to calculate phase delay on the other dates
     h5timeseries = h5py.File(inps.timeseries_file, 'r')
     for i in range(len(inps.grib_file_list)):
-        # Get phase delay
         grib_file = inps.grib_file_list[i] 
-        if not i == ref_idx:
-            print dateList[i]
+        date = re.findall('\d{8}', grib_file)[0]
+
+        # Get phase delay
+        if date != ref_date:
+            print 'calculate phase delay on %s from file %s' % (date, os.path.basename(grib_file))
             phs = get_delay(grib_file, atr, vars(inps))
         else:
             phs = np.copy(phs_ref)
         # Get relative phase delay in time
         phs -= phs_ref
-        
+
         # Write dataset
-        print 'writing hdf5 file ...'
-        data = h5timeseries['timeseries'].get(dateList[i])[:]
-        dset  = group_tropCor.create_dataset(dateList[i], data=data-phs, compression='gzip')
-        dset  = group_trop.create_dataset(dateList[i], data=phs, compression='gzip')
-    
+        print 'writing to HDF5 files ...'
+        data = h5timeseries['timeseries'].get(date)[:]
+        dset  = group_tropCor.create_dataset(date, data=data-phs, compression='gzip')
+        dset  = group_trop.create_dataset(date, data=phs, compression='gzip')
+
     ## Write Attributes
     for key,value in atr.iteritems():
         group_tropCor.attrs[key] = value
