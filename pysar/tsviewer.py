@@ -81,10 +81,14 @@ def cmdLineParse():
     parser.add_argument('--error', dest='error_file', help='txt file with error for each date.')
 
     pixel = parser.add_argument_group('Pixel Input')
-    pixel.add_argument('--yx', type=int, nargs=2, help='initial pixel to plot in Y/X coord')
-    pixel.add_argument('--lalo', type=float, nargs=2, help='initial pixel to plot in lat/lon coord')
-    pixel.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='change reference pixel to input location')
-    pixel.add_argument('--ref-lalo', dest='ref_lalo', type=float, nargs=2, help='change reference pixel to input location')
+    pixel.add_argument('--yx', type=int, metavar=('Y','X'), nargs=2,\
+                       help='initial pixel to plot in Y/X coord')
+    pixel.add_argument('--lalo', type=float, metavar=('LAT','LON'), nargs=2,\
+                       help='initial pixel to plot in lat/lon coord')
+    pixel.add_argument('--ref-yx', dest='ref_yx', type=int, metavar=('Y','X'), nargs=2,\
+                       help='change reference pixel to input location')
+    pixel.add_argument('--ref-lalo', dest='ref_lalo', type=float, metavar=('LAT','LON'), nargs=2,\
+                       help='change reference pixel to input location')
 
     output = parser.add_argument_group('Output Setting')
     output.add_argument('-o','--output', dest='fig_base', help='Figure base name for output files')
@@ -99,7 +103,7 @@ def cmdLineParse():
     disp.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2, default=[10.0,5.0],\
                       help='Figure size in inches - width and length. Default: 10.0 5.0\n'+\
                            'i.e. 3.5 2 for ppt; ')
-    disp.add_argument('--ylim', dest='ylim', nargs=2, type=float, help='Y Limits for plotting.')
+    disp.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN','YMAX'), type=float, help='Y Limits for plotting.')
     disp.add_argument('--ref-date', dest='ref_date', help='Change reference date for display')
     disp.add_argument('--exclude','--ex', dest='ex_date_list', nargs='*', help='Exclude date shown as gray.')
     disp.add_argument('--zf','--zero-first', dest='zero_first', action='store_true',\

@@ -185,11 +185,11 @@ def auto_flip_direction(atr_dict):
 
 
 ##################################################################################################
-def auto_figure_title(fname, epoch=None, inps_dict=None):
+def auto_figure_title(fname, epoch=[], inps_dict=None):
     '''Get auto figure title from meta dict and input options
     Inputs:
         fname - string, input file name
-        epoch - string, optional, epoch to read for multi dataset/group files
+        epoch - list of string, optional, epoch to read for multi dataset/group files
         inps_dict - dict, optional, processing attributes, including:
                     ref_date
                     pix_box
@@ -211,12 +211,12 @@ def auto_figure_title(fname, epoch=None, inps_dict=None):
     #    print "No date/date12 input.\nIt's required for "+k+" file\nReturn None"
     #    return None
 
-    if epoch and k in multi_group_hdf5_file:
-        fig_title = epoch
+    if len(epoch)==1 and k in multi_group_hdf5_file:
+        fig_title = epoch[0]
         if 'unwCor' in fname:
             fig_title += '_unwCor'
 
-    elif epoch and k in ['timeseries']:
+    elif len(epoch)==1 and k in ['timeseries']:
         try:
             ref_date = inps_dict['ref_date']
         except:
@@ -227,7 +227,7 @@ def auto_figure_title(fname, epoch=None, inps_dict=None):
                 epoch_list = sorted(h5[k].keys())
                 h5.close()
                 ref_date = epoch_list[0]
-        fig_title = ptime.yymmdd(ref_date)+'-'+ptime.yymmdd(epoch)
+        fig_title = ptime.yymmdd(ref_date)+'-'+ptime.yymmdd(epoch[0])
 
         try:
             ext = os.path.splitext(fname)[1]
@@ -702,7 +702,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
 
     # Figure Title
     if not inps.fig_title:
-        inps.fig_title = auto_figure_title(meta_dict['FILE_PATH'], None, vars(inps))
+        inps.fig_title = auto_figure_title(meta_dict['FILE_PATH'], inps.epoch, vars(inps))
 
     # Figure output file name
     if not inps.outfile:

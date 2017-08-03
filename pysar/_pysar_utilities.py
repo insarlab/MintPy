@@ -1137,6 +1137,8 @@ def get_file_list(fileList, abspath=False):
     if isinstance(fileList, basestring):
         fileList = [fileList]
 
+    # Get rid of None element
+    fileList = filter(lambda x: x!=None, fileList)
     fileListOut = []
     for i in range(len(fileList)):
         file0 = fileList[i]

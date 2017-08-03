@@ -101,7 +101,7 @@ def cmdLineParse():
 
     parser.add_argument('timeseries_file', help='Timeseries file')
     parser.add_argument('--template', dest='template_file', help='template file with options below:\n'+TEMPLATE+'\n')
-    parser.add_argument('-m', dest='mask_file', default='maskTempCoh.h5', help='mask file for estimation')
+    parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5', help='mask file for estimation')
     parser.add_argument('-s', dest='ramp_type', default='quadratic',\
                         help='ramp type to be remove for RMS calculation.\n'+\
                              'default - quadratic; no - do not remove ramp')
