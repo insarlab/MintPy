@@ -484,13 +484,13 @@ def load_data_from_template(inps):
         if inps.template_filename:
             inps.project_name = os.path.splitext(inps.template_filename[0])[0]
 
-    key = 'pysar.insarProcessor'
-    if key in keyList:
-        value = template[key]
-        if value == 'auto':
-            inps.insar_processor = 'roipac'
-        else:
-            inps.insar_processor = value
+    for key in ['processor','processing_software','unavco.processing_software','pysar.insarProcessor']:
+        if key in keyList:
+            value = template[key]
+            if value == 'auto':
+                inps.insar_processor = 'roipac'
+            else:
+                inps.insar_processor = value
 
     print '--------------------------------------------'
     print 'InSAR processing software: '+inps.insar_processor
