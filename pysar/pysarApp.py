@@ -27,14 +27,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 ###############################################################################
-#
-# Yunjun, Feb 2015: Update mask, generate incident angle file
-# Yunjun, Oct 2015: Add find_filename(), check_subset()
-#                   Update name for pysar.dem.* and pysar.trop*
-#                   Finished pysar.subset.yx option.
-#                   Add check_mask(), check_geocode()
-# Yunjun, Nov 2015: Add pysar.kml option, workDir input option
-# Yunjun, Dec 2016: Add command line parser
 
 
 import os
@@ -210,7 +202,7 @@ ____/________(___/_(____/___/____|_/_____|_______
             (_ /                            
 
  A Python package for InSAR time series analysis.
-               PySAR v1.2, Jan 2017
+               PySAR v1.2, Aug 2017
  Geodesy Lab, University of Miami, Maimi FL, USA
 _________________________________________________
 '''
