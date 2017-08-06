@@ -40,21 +40,28 @@ For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthde
 
 
 ##### 1.2 PySAR   
-To use the package add the path to PySAR directory to your $PYTHONPATH and add PySAR/pysar to your $path. Depending on your shell you may use commands such as the following examples to setup pysar:   
-
+Download the latest released version at https://github.com/yunjunz/PySAR/releases, or use the command below.    
+   
+    cd ~/Documents/development/python
+    wget https://github.com/yunjunz/PySAR/archive/v1.2.0.tar.gz
+    tar -zxvf v1.2.0.tar.gz
+   
+or download the development version using git:   
+   
     cd ~/Documents/development/python
     git clone https://github.com/yunjunz/PySAR.git
    
-Then add the following to your source file:
+To use the package, you need to: 1) add the path to PySAR directory to your $PYTHONPATH and 2) add ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/shellscripts to your $path. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file.   
+   
 For bash user, add to your .bashrc file:   
 
-    export PYSAR_HOME="~/Documents/development/python/PySAR"
+    export PYSAR_HOME="~/Documents/development/python/PySAR"   #for released version, "~/Documents/development/python/PySAR-v1.2.0"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
     export PATH="${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:$PATH"   
 
 For csh/tcsh user, add to your .cshrc file:   
 
-    setenv PYSAR_HOME ~/Documents/development/python/PySAR
+    setenv PYSAR_HOME ~/Documents/development/python/PySAR   #for released version, "~/Documents/development/python/PySAR-v1.2.0"
     setenv PYTHONPATH ${PYSAR_HOME}
     set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/shellscripts $path)
    
