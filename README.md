@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://github.com/yunjunz/PySAR/blob/master/docs/resources/logo.jpg">
-</p>   
-
 ## Welcome to PySAR!   
    
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/yunjunz/PySAR)
