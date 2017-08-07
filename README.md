@@ -109,7 +109,7 @@ PySAR is a toolbox with a lot of individual utility scripts, highly modulized in
    
 ### 3. Documentation
    
-- API Documentation: [PDF](https://github.com/yunjunz/PySAR/blob/master/docs/PySAR-1.2.pdf)
+- API Documentation: [PDF](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-1.2.0_201708.pdf)
 - Wiki: Check our [Github Wiki](https://github.com/yunjunz/PySAR/wiki) to see the example data, paper references, file naming convention and more.
    
 ### 4. Google Group
