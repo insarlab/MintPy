@@ -22,15 +22,15 @@
           </p>
         </header>
         <section id="downloads" class="clearfix">
-          {% if site.show_downloads %}
-          <a href="{{ site.github.zip_url }}" id="download-zip" class="button"><span>Download .zip</span></a>
-          <a href="{{ site.github.tar_url }}" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
-          {% endif %}
 	  {% if site.github.is_project_page %}
-          <a href="{{ site.github.repository_url }}" id="view-on-github" class="button"><span>View on GitHub</span></a>
+          <a href="{{ site.github.repository_url }}" class="button"><span style="text-align:center">View on GitHub</span></a>
 	  {% else %}
-          <a href="{{ site.github.owner_url }}" id="view-on-github" class="button"><span>View on GitHub</span></a>
-	  {% endif %}
+          <a href="{{ site.github.owner_url }}" class="button"><span style="text-align:center">View on GitHub</span></a>
+  	  {% endif %}
+	  <a href="{{ site.github.wiki_url }}" class="button"><span style="text-align:center">Wiki</span></a>
+	  {% if site.show_downloads %}
+	  <a href="{{ site.github.releases_url }}" class="button"><span style="text-align:center">Download</span></a>
+          {% endif %}
         </section>
         <hr>
         <section id="main_content">
