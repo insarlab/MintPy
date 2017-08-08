@@ -55,13 +55,13 @@ To use the package, you need to: 1) add the path to PySAR directory to your $PYT
    
 For bash user, add to your .bashrc file:   
 
-    export PYSAR_HOME="~/Documents/development/python/PySAR"   #for released version, "~/Documents/development/python/PySAR-v1.2.0"
+    export PYSAR_HOME="~/Documents/development/python/PySAR"   #for released version, "~/Documents/development/python/PySAR-1.2.0"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
     export PATH="${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:$PATH"   
 
 For csh/tcsh user, add to your .cshrc file:   
 
-    setenv PYSAR_HOME ~/Documents/development/python/PySAR   #for released version, "~/Documents/development/python/PySAR-v1.2.0"
+    setenv PYSAR_HOME ~/Documents/development/python/PySAR   #for released version, "~/Documents/development/python/PySAR-1.2.0"
     setenv PYTHONPATH ${PYSAR_HOME}
     set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/shellscripts $path)
    
@@ -109,7 +109,7 @@ PySAR is a toolbox with a lot of individual utility scripts, highly modulized in
    
 ### 3. Documentation
    
-- API Documentation: [PDF](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-1.2.0_201708.pdf)
+- Manual: [PDF](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-1.2.0_201708.pdf), [HTML](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-1.2.0_201708.html.zip)
 - Wiki: Check our [Github Wiki](https://github.com/yunjunz/PySAR/wiki) to see the example data, paper references, file naming convention and more.
    
 ### 4. Google Group
