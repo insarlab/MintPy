@@ -217,9 +217,9 @@ def auto_figure_title(fname, epoch=[], inps_dict=None):
             fig_title += '_unwCor'
 
     elif len(epoch)==1 and k in ['timeseries']:
-        try:
+        if inps_dict['ref_date']:
             ref_date = inps_dict['ref_date']
-        except:
+        else:
             try:
                 ref_date = atr['ref_date']
             except:
@@ -702,7 +702,8 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
 
     # Figure Title
     if not inps.fig_title:
-        inps.fig_title = auto_figure_title(meta_dict['FILE_PATH'], inps.epoch, vars(inps))
+        try:    inps.fig_title = auto_figure_title(meta_dict['FILE_PATH'], inps.epoch, vars(inps))
+        except: inps.fig_title = os.path.splitext(os.path.basename(meta_dict['FILE_PATH']))[0]
 
     # Figure output file name
     if not inps.outfile:
