@@ -13,6 +13,7 @@ import re
 
 import numpy as np
 
+import pysar._datetime as ptime
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._pysar_utilities as ut
@@ -113,15 +114,29 @@ def extract_attribute_interferogram(fname):
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
 
     ## Get info: date12, num of loooks
-    date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0]).replace('_','-')
-    atr['DATE12'] = date12
-    m_date, s_date = date12.split('-')
+    try:    date12 = str(re.findall('\d{8}[-_]\d{8}', file_basename)[0])
+    except: date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0])
+    m_date, s_date = date12.replace('_','-').split('-')
+    atr['DATE12'] = ptime.yymmdd(m_date)+'-'+ptime.yymmdd(s_date)
     lks = os.path.splitext(file_basename.split(date12)[1])[0]
 
     ## Read .off and .par file
-    off_file   = file_dir+'/'+date12+lks+'.off'
-    m_par_file = file_dir+'/'+m_date+lks+'.amp.par'
-    s_par_file = file_dir+'/'+s_date+lks+'.amp.par'
+    off_file   = file_dir+'/*'+date12+lks+'.off'
+    m_par_file = file_dir+'/*'+m_date+lks+'.amp.par'
+    s_par_file = file_dir+'/*'+s_date+lks+'.amp.par'
+
+    try:
+        off_file   = ut.get_file_list(off_file)[0]
+    except:
+        print '\nERROR: Can not find .off file, it supposed to be like: '+off_file
+    try:
+        m_par_file = ut.get_file_list(m_par_file)[0]
+    except:
+        print '\nERROR: Can not find master date .par file, it supposed to be like: '+m_par_file
+    try:
+        s_par_file = ut.get_file_list(s_par_file)[0]
+    except:
+        print '\nERROR: Can not find slave date .par file, it supposed to be like: '+s_par_file
 
     #print 'read '+m_par_file
     #print 'read '+off_file
@@ -258,8 +273,27 @@ DESCRIPTION='''
 
   For DEM file in radar/geo coordinates (.utm.dem/.hgt_sim) and lookup table file for geocoding (.UTM_TO_RDC), 2 metadata
   files are required:
-  1) .par      file for file in geo   coordinates, e.g. sim_150911-150922.utm.dem.par
-  2) .diff_par file for file in radar coordinates, e.g. sim_150911-150922.diff_par
+  1) .par file, contains geo coordinates info, for DEM in geo coordinates and lookup table, e.g. sim_150911-150922.utm.dem.par
+  2) .diff_par file, contains radar coordinates info, for DEM in radar coordinates, e.g. sim_150911-150922.diff_par
+
+
+  Here is an example of how your Gamma files should look like, after all interferograms/SLCs are coregistered:
+  For each interferogram, 5 files are needed:
+      diff_130118-130129_4rlks.unw
+      filt_130118-130129_4rlks.cor
+      130118-130129_4rlks.off
+      130118_4rlks.amp.par
+      130129_4rlks.amp.par
+  For each dataset, only one sim* folder with 5 files are needed, 
+      sim_130118-130129.hgt_sim
+      sim_130118-130129.hgt_sim.diff_par
+      sim_130118-130129.utm.dem
+      sim_130118-130129.utm.dem.par
+      sim_130118-130129.UTM_TO_RDC
+
+  Notes: both - and _ are supported; 
+         both YYMMDD and YYYYMMDD naming are also supported;
+         if no multilooking applied, do not "_4rlks" in your file names.
 '''
 
 def cmdLineParse():
