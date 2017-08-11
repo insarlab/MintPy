@@ -2,7 +2,7 @@ title: PySAR
 description: A Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis
 show_downloads: true
 google_analytics: UA-104225904-1
-theme: jekyll-theme-tactile
+theme: jekyll-theme-cayman
 author:
   name: Zhang Yunjun, Heresh Fattahi
   url: https://yunjunzhang.wordpress.com
