@@ -10,6 +10,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+import scipy.stats as stats
 
 import pysar._datetime as ptime
 import pysar._readfile as readfile
@@ -164,10 +165,17 @@ if __name__ == '__main__':
                     ex_date = [ptime.yyyymmdd(ex_date)]
                 inps.ex_date_list += list(set(ex_date) - set(inps.ex_date_list))
             # delete dates not existed in input file
-            inps.ex_date_list = list(set(inps.ex_date_list).intersection(dateList))
+            inps.ex_date_list = sorted(list(set(inps.ex_date_list).intersection(dateList)))
             inps.ex_dates = ptime.date_list2vector(inps.ex_date_list)[0]
-            inps.ex_idx_list = [dateList.index(i) for i in inps.ex_date_list]
+            inps.ex_idx_list = sorted([dateList.index(i) for i in inps.ex_date_list])
             print 'exclude date:'+str(inps.ex_date_list)
+
+    ##
+    if inps.zero_first:
+        if inps.ex_date_list:
+            inps.zero_idx = min(list(set(range(date_num)) - set(inps.ex_idx_list)))
+        else:
+            inps.zero_idx = 0
 
     # File Size
     length = int(atr['FILE_LENGTH'])
@@ -386,7 +394,7 @@ if __name__ == '__main__':
             d_ts.append(d*inps.unit_fac)
         
         if inps.zero_first:
-            d_ts -= d_ts[0]
+            d_ts -= d_ts[inps.zero_idx]
 
         ax_ts.cla()
         if inps.error_file:
@@ -394,6 +402,8 @@ if __name__ == '__main__':
         else:
             ax_ts = plot_timeseries_scatter(ax_ts, d_ts, inps)
         ax_ts.set_ylim(inps.ylim)
+        for tick in ax_ts.yaxis.get_major_ticks():
+            tick.label.set_fontsize(inps.font_size)
 
         # Title
         title_ts = 'Y = %d, X = %d'%(y,x)
@@ -416,6 +426,15 @@ if __name__ == '__main__':
         print '\n---------------------------------------'
         print title_ts
         print d_ts
+
+        # Slope estimation
+        if inps.ex_date_list:
+            tims_kept = [tims[i] for i in range(date_num) if i not in inps.ex_idx_list]
+            d_ts_kept = [d_ts[i] for i in range(date_num) if i not in inps.ex_idx_list]
+            d_slope = stats.linregress(np.array(tims_kept), np.array(d_ts_kept))
+        else:
+            d_slope = stats.linregress(np.array(tims), np.array(d_ts))
+        print 'linear velocity: %.2f +/- %.2f [%s/yr]' % (d_slope[0], d_slope[4], inps.disp_unit)
 
         return d_ts
 

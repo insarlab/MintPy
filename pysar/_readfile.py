@@ -91,7 +91,7 @@ def read(File, box=(), epoch=None):
     ext = os.path.splitext(File)[1].lower()
     atr = read_attribute(File, epoch)
     k = atr['FILE_TYPE']
-    processor = atr['PROCESSOR']
+    processor = atr['INSAR_PROCESSOR']
 
     ## Update attributes if subset
     #if box:

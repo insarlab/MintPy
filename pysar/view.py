@@ -961,18 +961,19 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
     #-------------------- 3 Figure Setting --------------------------------------------------------#
     # 3.1 Colorbar
-    # Colorbar Extend
-    if   inps.disp_min <= data_min and inps.disp_max >= data_max:  cb_extend='neither'
-    elif inps.disp_min >  data_min and inps.disp_max >= data_max:  cb_extend='min'
-    elif inps.disp_min <= data_min and inps.disp_max <  data_max:  cb_extend='max'
-    else:  cb_extend='both'
+    if inps.disp_cbar:
+        # Colorbar Extend
+        if   inps.disp_min <= data_min and inps.disp_max >= data_max:  cb_extend='neither'
+        elif inps.disp_min >  data_min and inps.disp_max >= data_max:  cb_extend='min'
+        elif inps.disp_min <= data_min and inps.disp_max <  data_max:  cb_extend='max'
+        else:  cb_extend='both'
 
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", "3%", pad="3%")
-    cbar = plt.colorbar(im, cax=cax, extend=cb_extend)
-    cbar.ax.tick_params(labelsize=inps.font_size)
-    cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
-    #cbar.set_label('Temporal Coherence', fontsize=inps.font_size)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", "3%", pad="3%")
+        cbar = plt.colorbar(im, cax=cax, extend=cb_extend)
+        cbar.ax.tick_params(labelsize=inps.font_size)
+        cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
+        #cbar.set_label('Temporal Coherence', fontsize=inps.font_size)
 
     # 3.2 Title
     if inps.disp_title:
@@ -1167,6 +1168,7 @@ def cmdLineParse(argv):
     fig.add_argument('-r','--row', dest='fig_row_num', type=int, default=1, help='subplot number in row')
     fig.add_argument('-p','--col', dest='fig_col_num', type=int, default=1, help='subplot number in column')
     fig.add_argument('--noaxis', dest='disp_axis', action='store_false', help='do not display axis')
+    fig.add_argument('--nocbar','--nocolorbar', dest='disp_cbar', action='store_false', help='do not display colorbar')
     fig.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
     fig.add_argument('--notick', dest='disp_tick', action='store_false', help='do not display tick in x/y axis')
     fig.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
@@ -1193,6 +1195,7 @@ def cmdLineParse(argv):
     map_group.add_argument('--lalo-label', dest='lalo_label', action='store_true',\
                            help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
                                 'Useful for final figure output.')
+    map_group.add_argument('--lalo-step', dest='lalo_step', type=float, help='Lat/lon step for lalo-label option.')
     map_group.add_argument('--scalebar', nargs=3, metavar=('DISTANCE','LAT_C','LON_C'), type=float,\
                            help='set scale bar with DISTANCE in meters centered at [LAT_C, LON_C]\n'+\
                                 'set to 999 to use automatic value, e.g.\n'+\

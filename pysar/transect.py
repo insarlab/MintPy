@@ -224,7 +224,7 @@ def cmdLineParse():
     parser.add_argument('file', nargs='+', help='input file to show transection')
     parser.add_argument('-m','--min', dest='disp_min', type=float, help='minimum value for data display')
     parser.add_argument('-M','--max', dest='disp_max', type=float, help='maximum value for data display')
-    parser.add_argument('-u','--unit', dest='disp_unit', default='cm', help='unit for data display')
+    parser.add_argument('-u','--unit', dest='disp_unit', default='cm', help='unit for data display. Default: cm')
     parser.add_argument('--offset', dest='disp_offset', type=float, default=3.0, help='offset between each data profile')
     parser.add_argument('--interpolation', default='nearest', choices=['nearest','bilinear','cubic'],\
                         help='interpolation method while extacting profile along the line')
@@ -270,6 +270,9 @@ def cmdLineParse():
     fig.add_argument('--figext', dest='outfile_ext',\
                      default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
                      help='File extension for figure output file')
+    fig.add_argument('--fontsize', dest='font_size', type=int, help='font size')
+    fig.add_argument('--ms','--markersize', dest='marker_size', type=float, default=2.0,\
+                     help='Point marker size. Default: 2.0')
 
     inps = parser.parse_args()
     inps.file = ut.get_file_list(inps.file)
@@ -284,6 +287,7 @@ def main(argv):
     print '\n**************** Transect *********************'
     print 'number of file: '+str(len(inps.file))
     print inps.file
+    
 
     ##### Start / End Point Input
     # 1. lonlat file
@@ -327,6 +331,23 @@ def main(argv):
     ax0.set_ylim(np.shape(data0)[0],0)
     ax0.set_title('Transect Line in '+inps.file[0])
 
+    # Status bar
+    def format_coord(x,y):
+        col = int(x)
+        row = int(y)
+        if 0 <= col < data0.shape[1] and 0 <= row < data0.shape[0]:
+            z = data0[row,col]
+            if 'X_FIRST' in atr0.keys():
+                lat = sub.coord_radar2geo(row, atr0, 'row')
+                lon = sub.coord_radar2geo(col, atr0, 'col')
+                return 'lon=%.4f, lat=%.4f, x=%.0f,  y=%.0f,  value=%.4f' % (lon, lat, x,y,z)
+            else:
+                return 'x=%.0f,  y=%.0f,  value=%.4f'%(x,y,z)
+        else:
+            return 'x=%.0f,  y=%.0f'%(x,y)
+    ax0.format_coord = format_coord
+
+
     # Figure 2 - Transections/Profiles
     print 'plot profiles'
     fig,ax = plt.subplots(figsize = inps.fig_size)
@@ -346,7 +367,7 @@ def main(argv):
         # Plot
         distance = transectList[i][:,0]/1000.0          # km
         value = transectList[i][:,1]*inps.disp_scale - inps.disp_offset*i
-        ax.plot(distance, value, '.', color=p_color)
+        ax.plot(distance, value, '.', color=p_color, markersize=inps.marker_size)
         # Y Stat
         value_min = np.nanmin([value_min, np.nanmin(value)])
         value_max = np.nanmax([value_max, np.nanmax(value)])
@@ -357,10 +378,10 @@ def main(argv):
     if not inps.disp_max:
         inps.disp_max = np.ceil(value_max)
     ax.set_ylim(inps.disp_min, inps.disp_max)
-    ax.set_ylabel('Mean LOS Velocity ('+inps.disp_unit+')')
+    ax.set_ylabel('Mean LOS Velocity ('+inps.disp_unit+')', fontsize=inps.font_size)
     # X axis
-    ax.set_xlabel('Distance (km)')
-    ax.tick_params(which='both', direction='out')
+    ax.set_xlabel('Distance (km)', fontsize=inps.font_size)
+    ax.tick_params(which='both', direction='out', labelsize=inps.font_size)
 
     # Plot 2.2 - DEM
     if inps.dem:
@@ -381,8 +402,8 @@ def main(argv):
         #dem_tick = ax2.yaxis.get_majorticklocs()
         #dem_tick = dem_tick[:len(dem_tick)/2]
         #ax2.set_yticks(dem_tick)
-        ax2.set_ylabel('Elevation (km)')
-        ax2.tick_params(which='both', direction='out')
+        ax2.set_ylabel('Elevation (km)', fontsize=inps.font_size)
+        ax2.tick_params(which='both', direction='out', labelsize=inps.font_size)
 
     ## X axis - Shared
     distanceMax = np.nanmax(transectList[0][:,0]/1000.0)   # in km
@@ -390,7 +411,12 @@ def main(argv):
     plt.tight_layout()
 
     ##### Output
-    figBase = 'transect_x'+str(x0)+'y'+str(y0)+'_x'+str(x1)+'y'+str(y1)
+    if not inps.outfile:
+        figBase = 'transect_x'+str(x0)+'y'+str(y0)+'_x'+str(x1)+'y'+str(y1)
+    else:
+        figBase, inps.outfile_ext = os.path.splitext(inps.outfile)
+        if not inps.outfile_ext:
+            inps.outfile_ext = '.png'
     if inps.save_fig:
         print 'writing >>> '+figBase+inps.outfile_ext
         fig0.savefig(inps.file[-1]+inps.outfile_ext, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
