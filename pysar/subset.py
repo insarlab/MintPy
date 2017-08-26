@@ -144,7 +144,7 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
 
 
 ################################################################
-def subset_attribute(atr_dict, subset_box, print_message=True):
+def subset_attribute(atr_dict, subset_box, print_msg=True):
     '''Update attributes dictionary due to subset
     Inputs:
         atr_dict   : dict, data attributes to update
@@ -164,10 +164,10 @@ def subset_attribute(atr_dict, subset_box, print_message=True):
     atr['WIDTH']       = str(sub_x[1]-sub_x[0])
     atr['YMAX']        = str(sub_y[1]-sub_y[0] - 1)
     atr['XMAX']        = str(sub_x[1]-sub_x[0] - 1)
-    if print_message:  print 'update FILE_LENGTH, WIDTH, Y/XMAX'
+    if print_msg:  print 'update FILE_LENGTH, WIDTH, Y/XMAX'
 
     # Subset atribute
-    if print_message:  print 'update/add subset_y0/y1/x0/x1'
+    if print_msg:  print 'update/add subset_y0/y1/x0/x1'
     try:
         subset_y0_ori = int(atr['subset_y0'])
         atr['subset_y0'] = str(sub_y[0] + subset_y0_ori)
@@ -187,21 +187,21 @@ def subset_attribute(atr_dict, subset_box, print_message=True):
     try:
         atr['Y_FIRST'] = str(float(atr['Y_FIRST'])+sub_y[0]*float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST'])+sub_x[0]*float(atr['X_STEP']))
-        if print_message:  print 'update Y/X_FIRST'
+        if print_msg:  print 'update Y/X_FIRST'
     except: pass
 
     # Reference in space
     try:
         atr['ref_y'] = str(int(atr['ref_y']) - sub_y[0])
         atr['ref_x'] = str(int(atr['ref_x']) - sub_x[0])
-        if print_message:  print 'update ref_y/x'
+        if print_msg:  print 'update ref_y/x'
     except: pass
 
     # Starting Range for file in radar coord
     if not 'Y_FIRST' in atr_dict.keys():
         try:
             atr['STARTING_RANGE'] = float(atr['STARTING_RANGE']) + float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
-            if print_message:  print 'update STARTING_RANGE'
+            if print_msg:  print 'update STARTING_RANGE'
         except: pass
 
     return atr
@@ -543,7 +543,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-            atr_dict  = subset_attribute(atr_dict, pix_box, print_message=False)
+            atr_dict  = subset_attribute(atr_dict, pix_box, print_msg=False)
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
             for key, value in atr_dict.iteritems():

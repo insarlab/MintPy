@@ -502,7 +502,7 @@ def load_data_from_template(inps):
 
     # Check existed single dataset files
     inps_tmp = argparse.Namespace()
-    inps_tmp = ut.check_loaded_dataset(inps.timeseries_dir, inps_tmp, print_message=False)
+    inps_tmp = ut.check_loaded_dataset(inps.timeseries_dir, inps_tmp, print_msg=False)
     if (not inps.trans     or inps.trans     == 'auto') and inps_tmp.trans_file    :  inps.trans     = inps_tmp.trans_file
     if (not inps.dem_radar or inps.dem_radar == 'auto') and inps_tmp.dem_radar_file:  inps.dem_radar = inps_tmp.dem_radar_file
     if (not inps.dem_geo   or inps.dem_geo   == 'auto') and inps_tmp.dem_geo_file  :  inps.dem_geo   = inps_tmp.dem_geo_file

@@ -556,7 +556,8 @@ def main(argv):
         sys.exit('Exit as planed after loading/checking the dataset')
 
     if inps.reset:
-        print '\nReset dataset attributtes for a fresh re-run.\n'
+        print 'Reset dataset attributtes for a fresh re-run with options from %s' % os.path.basename(inps.template_file)
+        print '-----------------------------------------------------------------------------------'
         # Reset network
         networkCmd = 'modify_network.py '+inps.ifgram_file
         if inps.coherence_file:
@@ -570,9 +571,9 @@ def main(argv):
         print seedCmd
         os.system(seedCmd)
 
-        print 'Exit as planed after reset.'
-        print 'Now run pysarApp.py to re-processing this dataset.'
-        sys.exit()
+        #print 'Exit as planed after reset.'
+        #print 'Now run pysarApp.py to re-processing this dataset.'
+        #sys.exit()
 
 
     #########################################
@@ -854,7 +855,7 @@ def main(argv):
         if ut.update_file(outName, inps.timeseries_file):
             try:
                 inps.trop_file = ut.get_file_list(inps.trop_model+'.h5')[0]
-                diffCmd = 'diff.py '+inps.timeseries_file+' '+inps.trop_file+' '+outName
+                diffCmd = 'diff.py '+inps.timeseries_file+' '+inps.trop_file+' -o '+outName
                 print 'Use existed tropospheric delay file: '+inps.trop_file
                 print diffCmd
                 os.system(diffCmd)

@@ -210,6 +210,8 @@ def auto_figure_title(fname, epoch=[], inps_dict=None):
     #if not epoch and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
     #    print "No date/date12 input.\nIt's required for "+k+" file\nReturn None"
     #    return None
+    if not epoch:
+        epoch = []
 
     if len(epoch)==1 and k in multi_group_hdf5_file:
         fig_title = epoch[0]
@@ -1444,7 +1446,7 @@ def main(argv):
         drop_epoch_list = []
         if k in multi_group_hdf5_file and inps.disp_title:
             drop_epoch_list = sorted(list(set(inps.epoch) - \
-                                          set(ut.check_drop_ifgram(h5file, atr, inps.epoch, print_message=False))))
+                                          set(ut.check_drop_ifgram(h5file, atr, inps.epoch, print_msg=False))))
             print "mark interferograms with 'drop_ifgram'='yes' in red colored title"
 
         ##### Loop 1 - Figures

@@ -13,7 +13,7 @@ import warnings
 
 import h5py
 import numpy as np
-import scipy.interpolate as spint
+from scipy.interpolate import RegularGridInterpolator as RGI
 
 import pysar._datetime as ptime
 import pysar._readfile as readfile
@@ -206,11 +206,10 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
             for i in range(epoch_num):
                 date = epoch_list[i]
                 data = h5[k].get(date)[:]
-                RGI = spint.RegularGridInterpolator(pts_rdr, data, method, \
-                                                    bounds_error=False, fill_value)
+                RGI_func = RGI(pts_rdr, data, method, bounds_error=False, fill_value=fill_value)
 
                 data_geo.fill(fill_value)
-                data_geo[idx] = RGI(pts_geo)
+                data_geo[idx] = RGI_func(pts_geo)
 
                 dset = group.create_dataset(date, data=data_geo, compression='gzip')
                 prog_bar.update(i+1, suffix=date)
@@ -227,11 +226,10 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
             for i in range(epoch_num):
                 ifgram = epoch_list[i]
                 data = h5[k][ifgram].get(ifgram)[:]
-                RGI = spint.RegularGridInterpolator(pts_rdr, data, method, \
-                                                    bounds_error=False, fill_value)
+                RGI_func = RGI(pts_rdr, data, method, bounds_error=False, fill_value=fill_value)
 
                 data_geo.fill(fill_value)
-                data_geo[idx] = RGI(pts_geo)
+                data_geo[idx] = RGI_func(pts_geo)
 
                 gg = group.create_group(ifgram)
                 dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
@@ -247,11 +245,10 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
     else:
         print 'reading '+fname
         data = readfile.read(fname)[0]
-        RGI = spint.RegularGridInterpolator(pts_rdr, data, method, \
-                                            bounds_error=False, fill_value)
+        RGI_func = RGI(pts_rdr, data, method, bounds_error=False, fill_value=fill_value)
 
         data_geo.fill(fill_value)
-        data_geo[idx] = RGI(pts_geo)
+        data_geo[idx] = RGI_func(pts_geo)
 
         print 'update attributes'
         atr = geocode_attribute_with_geo_lut(atr_rdr, atr_lut)

@@ -64,7 +64,7 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 ###############################################################################
-def check_loaded_dataset(work_dir='./', inps=None, print_message=True):
+def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     '''Check the result of loading data for the following two rules:
         1. file existance
         2. file attribute readability
@@ -111,15 +111,15 @@ def check_loaded_dataset(work_dir='./', inps=None, print_message=True):
             return False
     else:
         atr = readfile.read_attribute(ifgram_file)
-        if print_message:  print 'Unwrapped interferograms: '+ifgram_file
+        if print_msg:  print 'Unwrapped interferograms: '+ifgram_file
 
-    if print_message:  print 'Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR']
+    if print_msg:  print 'Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR']
     if 'X_FIRST' in atr.keys():
         geocoded = True
-        if print_message:  print 'Loaded dataset are in geo coordinates'
+        if print_msg:  print 'Loaded dataset are in geo coordinates'
     else:
         geocoded = False
-        if print_message:  print 'Loaded dataset are in radar coordinates'
+        if print_msg:  print 'Loaded dataset are in radar coordinates'
 
     # Recommended files (None if not found)
     # 2. Spatial coherence for each interferogram
@@ -128,7 +128,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_message=True):
                  work_dir+'/Modified_Coherence.h5',\
                  work_dir+'/Coherence.h5']
     coherence_file = is_file_exist(file_list, abspath=True)
-    if print_message:
+    if print_msg:
         if coherence_file:
             print 'Spatial       coherences: '+coherence_file
         else:
@@ -139,7 +139,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_message=True):
     file_list = [work_dir+'/demRadar.h5',\
                  work_dir+'/radar*.hgt']
     dem_radar_file = is_file_exist(file_list, abspath=True)
-    if print_message:
+    if print_msg:
         if dem_radar_file:
             print 'DEM in radar coordinates: '+dem_radar_file
         elif not geocoded:
@@ -151,7 +151,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_message=True):
                  work_dir+'/demGeo.h5',\
                  work_dir+'/*.dem']
     dem_geo_file = is_file_exist(file_list, abspath=True)
-    if print_message:
+    if print_msg:
         if dem_geo_file:
             print 'DEM in geo   coordinates: '+dem_geo_file
         else:
@@ -166,7 +166,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_message=True):
         file_list = [work_dir+'/sim*_tight.UTM_TO_RDC',\
                      work_dir+'/sim*.UTM_TO_RDC']
     trans_file = is_file_exist(file_list, abspath=True)
-    if print_message:
+    if print_msg:
         if trans_file:
             print 'Mapping transform   file: '+trans_file
         elif not geocoded:
@@ -179,7 +179,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_message=True):
         load_complete = False
     if not geocoded and None in [dem_radar_file, trans_file]:
         load_complete = False
-    if load_complete and print_message:
+    if load_complete and print_msg:
         print '-----------------------------------------------------------------------------------'
         print 'All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.'
         print '-----------------------------------------------------------------------------------'
@@ -790,7 +790,7 @@ def range_distance(atr, dimension=2):
         return range_xy
 
 
-def incidence_angle(atr, dimension=2, print_message=True):
+def incidence_angle(atr, dimension=2, print_msg=True):
     '''Calculate 2D matrix of incidence angle from ROI_PAC attributes, very accurate.
     Input:
         dictionary - ROI_PAC attributes including the following items:
@@ -809,7 +809,7 @@ def incidence_angle(atr, dimension=2, print_message=True):
     # Return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
-        if print_message:
+        if print_msg:
             print 'input file is geocoded, return center incident angle only'
     
     ## Read Attributes
@@ -825,12 +825,12 @@ def incidence_angle(atr, dimension=2, print_message=True):
     incidence_n = (np.pi - np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))) * 180.0/np.pi
     incidence_f = (np.pi - np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))) * 180.0/np.pi
     incidence_c = (incidence_f+incidence_n)/2.0
-    if print_message:
+    if print_msg:
         print 'center incidence angle : %.4f degree' % (incidence_c)
     if dimension == 0:
         return np.array(incidence_c)
 
-    if print_message:
+    if print_msg:
         print 'near   incidence angle : %.4f degree' % (incidence_n)
         print 'far    incidence angle : %.4f degree' % (incidence_f)
     incidence_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
@@ -895,7 +895,7 @@ def get_file_stack(File, maskFile=None):
     return stack
 
 
-def check_drop_ifgram(h5, atr, ifgram_list, print_message=True):
+def check_drop_ifgram(h5, atr, ifgram_list, print_msg=True):
     '''Update ifgram_list based on 'drop_ifgram' attribute
     Inputs:
         h5          - HDF5 file object
@@ -915,7 +915,7 @@ def check_drop_ifgram(h5, atr, ifgram_list, print_message=True):
         if h5[k][ifgram].attrs['drop_ifgram'] == 'yes':
             ifgram_list_out.remove(ifgram)
     
-    if len(ifgram_list) > len(ifgram_list_out) and print_message:
+    if len(ifgram_list) > len(ifgram_list_out) and print_msg:
         print "remove interferograms with 'drop_ifgram'='yes'"
     return ifgram_list_out
 
@@ -1216,12 +1216,12 @@ def mode (thelist):
 
 
 ######################################################################################################
-def range_resolution(atr, print_message=True):
+def range_resolution(atr, print_msg=True):
     '''Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
     if 'X_FIRST' in atr.keys():
         print 'Input file is in geo coord, no range resolution info.'
         return
-    inc_angle = incidence_angle(atr, 0, print_message)
+    inc_angle = incidence_angle(atr, 0, print_msg)
     rg_step = float(atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
     return rg_step
 
@@ -1241,7 +1241,7 @@ def azimuth_resolution(atr):
 
 
 #########################################################################
-def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_message=True):
+def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True):
     '''Convert geo coordinates into radar coordinates.
     Inputs:
         lat/lon    - np.array, float, latitude/longitude
@@ -1273,7 +1273,7 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_messag
         # Get range/azimuth ground resolution/step in meter
         if atr_rdr:
             az_step = azimuth_resolution(atr_rdr)
-            rg_step = range_resolution(atr_rdr, print_message)
+            rg_step = range_resolution(atr_rdr, print_msg)
             try:    az0 = int(atr_rdr['subset_y0'])
             except: az0 = 0
             try:    rg0 = int(atr_rdr['subset_x0'])
@@ -1339,7 +1339,7 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_messag
     return az, rg, az_resid, rg_resid
 
 
-def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_message=True):
+def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True):
     '''Convert radar coordinates into geo coordinates
     Inputs:
         rg/az      - np.array, int, range/azimuth pixel number
@@ -1369,7 +1369,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_message=
 
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
-        if print_message:
+        if print_msg:
             print 'reading file: '+transFile
         trans_rg, trans_atr = readfile.read(transFile, (), 'range')
         trans_az = readfile.read(transFile, (), 'azimuth')[0]
@@ -1384,7 +1384,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_message=
         # Get range/azimuth ground resolution/step
         if atr_rdr:
             az_step = azimuth_resolution(atr_rdr)
-            rg_step = range_resolution(atr_rdr, print_message)
+            rg_step = range_resolution(atr_rdr, print_msg)
 
             x_factor = 2*np.ceil(abs(lon_step)/rg_step)
             y_factor = 2*np.ceil(abs(lat_step)/az_step)
@@ -1438,7 +1438,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_message=
         res_mean = np.mean(np.abs(res),0)
         lat_resid = res_mean[0]
         lon_resid = res_mean[1]
-        if print_message:
+        if print_msg:
             print 'Residul - lat: '+str(lat_resid)+', lon: '+str(lon_resid)
         
         ### calculate geo coordinate of inputs
