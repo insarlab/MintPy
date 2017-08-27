@@ -37,8 +37,8 @@ def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
     baseline_file  = file_dir+'/'+file_base+'.baseline'
 
     # Call Gamma command to calculate Bperp
-    if not os.path.isfile(base_perp_file):
-        if not os.path.isfile(baseline_file):
+    if not os.path.isfile(base_perp_file)  or os.stat(base_perp_file).st_size == 0:
+        if not os.path.isfile(baseline_file) or os.stat(baseline_file).st_size == 0:
             baseCmd = 'base_orbit '+m_par_file+' '+s_par_file+' '+baseline_file
             print baseCmd
             os.system(baseCmd)
@@ -47,13 +47,20 @@ def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
         os.system(bperpCmd)
 
     # Read bperp txt file
+    bperp_list = []
+
     f = open(base_perp_file,'r')
-    line = f.readlines()[12]
-    bperp = line.split()[7]
+    lines = f.readlines()
     f.close()
 
-    atr_dict['P_BASELINE_TOP_HDR'] = str(bperp)
-    atr_dict['P_BASELINE_BOTTOM_HDR'] = str(bperp)
+    start_line_idx = [lines.index(i)+2 for i in lines if 'bpara       bperp       blen' in i][0]
+    for i in range(start_line_idx, len(lines)):
+        c = lines[i].strip().split()
+        if len(c) == 9:
+            bperp_list.append(float(c[7]))
+
+    atr_dict['P_BASELINE_TOP_HDR'] = str(bperp_list[0])
+    atr_dict['P_BASELINE_BOTTOM_HDR'] = str(bperp_list[-1])
 
     return atr_dict
 

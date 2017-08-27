@@ -232,8 +232,15 @@ def list_ifgram2date12(ifgram_list):
         ifgram_list = sorted(h5['interferograms'].keys())
         date12_list = ptime.list_ifgram2date12(ifgram_list)
     '''
-    date12_list = [str(re.findall('\d{6}[-_]\d{6}', i)[0]).replace('_','-') for i in ifgram_list]
-    return date12_list
+    try:    date12_list = [str(re.findall('\d{8}[-_]\d{8}', i)[0]).replace('_','-') for i in ifgram_list]
+    except: date12_list = [str(re.findall('\d{6}[-_]\d{6}', i)[0]).replace('_','-') for i in ifgram_list]
+
+    date12_list_out = []
+    for date12 in date12_list:
+        m_date, s_date = yymmdd(date12.split('-'))
+        date12_list_out.append(m_date+'-'+s_date)
+
+    return date12_list_out
 
 
 ###########################Simple progress bar######################

@@ -134,7 +134,7 @@ def main(argv):
     if ext in ['.h5','.he5']:
         h5file=h5py.File(File,'r')
         ##### Group Info
-        print 'Al groups in this file:'
+        print 'All groups in this file:'
         print h5file.keys()
 
         ##### DateList / IgramList

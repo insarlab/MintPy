@@ -1130,9 +1130,8 @@ def main(argv):
                 print 'WARNING: no '+inps.plot_sh_file+' found in the environment variable path, skip plotting.'
 
         print 'for better performance, edit the input parameters in '+inps.plot_sh_file+' and re-run this script.'
-        plotCmd = './'+inps.plot_sh_file
-        print plotCmd
-        os.system(plotCmd)
+        plotCmd = 'chmod +x '+inps.plot_sh_file;    print plotCmd;     os.system(plotCmd)
+        plotCmd = './'+inps.plot_sh_file;           print plotCmd;     os.system(plotCmd)
 
 
     #############################################
