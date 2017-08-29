@@ -144,7 +144,8 @@ def seed_file_inps(File, inps=None, outFile=None):
         print   'Check the file!'
         print   'Seeding failed'
         sys.exit(1)
-    
+
+    atr = readfile.read_attribute(File)
     # 1. Reference using global average 
     if inps.method == 'global-average':
         print '\n---------------------------------------------------------'
@@ -152,7 +153,6 @@ def seed_file_inps(File, inps=None, outFile=None):
         print '---------------------------------------------------------'
         print 'Calculating the global spatial average value for each epoch'+\
               ' of all valid pixels ...'
-        atr = readfile.read_attribute(File)
         width = int(atr['WIDTH'])
         length = int(atr['FILE_LENGTH'])
         box = (0,0,width,length)
@@ -176,12 +176,17 @@ def seed_file_inps(File, inps=None, outFile=None):
     # 2.2 Seeding file with reference y/x
     if inps.ref_y and inps.ref_x and mask[inps.ref_y, inps.ref_x]:
         if inps.mark_attribute:
-            print 'Add/update ref_x/y attribute to file: '+File
-            atr_ref = dict()
-            atr_ref['ref_x'] = inps.ref_x
-            atr_ref['ref_y'] = inps.ref_y
-            print atr_ref
-            outFile = ut.add_attribute(File, atr_ref)
+            try:
+                inps.ref_x == int(atr['ref_x'])
+                inps.ref_y == int(atr['ref_y'])
+                print 'Same reference pixel is already selected/saved in file, skip updating file attributes'
+            except:
+                print 'Add/update ref_x/y attribute to file: '+File
+                atr_ref = dict()
+                atr_ref['ref_x'] = str(inps.ref_x)
+                atr_ref['ref_y'] = str(inps.ref_y)
+                print atr_ref
+                outFile = ut.add_attribute(File, atr_ref)
         else:
             print 'Referencing input file to pixel in y/x: (%d, %d)'%(inps.ref_y, inps.ref_x)
             box = (inps.ref_x, inps.ref_y, inps.ref_x+1, inps.ref_y+1)
@@ -189,7 +194,7 @@ def seed_file_inps(File, inps=None, outFile=None):
             outFile = seed_file_reference_value(File, outFile, refList, inps.ref_y, inps.ref_x)
     else:
         raise ValueError('Can not find reference y/x or Nan value.')
-    
+
     return outFile
 
 
@@ -199,11 +204,11 @@ def seed_attributes(atr_in,x,y):
     for key, value in atr_in.iteritems():
         atr[key] = str(value)
     
-    atr['ref_y']=y
-    atr['ref_x']=x
+    atr['ref_y'] = str(y)
+    atr['ref_x'] = str(x)
     if 'X_FIRST' in atr.keys():
-        atr['ref_lat'] = subset.coord_radar2geo(y,atr,'y')
-        atr['ref_lon'] = subset.coord_radar2geo(x,atr,'x')
+        atr['ref_lat'] = str(subset.coord_radar2geo(y,atr,'y'))
+        atr['ref_lon'] = str(subset.coord_radar2geo(x,atr,'x'))
 
     return atr
 
@@ -470,7 +475,7 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
-    
+
     atr = readfile.read_attribute(inps.file[0])
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
@@ -490,13 +495,13 @@ def main(argv):
     if inps.reference_file:
         print 'reading reference info from reference: '+inps.reference_file
         inps = read_seed_reference2inps(inps.reference_file, inps)
-    
+
     ## Do not use ref_lat/lon input for file in radar-coord
     #if not 'X_FIRST' in atr.keys() and (inps.ref_lat or inps.ref_lon):
     #    print 'Lat/lon reference input is disabled for file in radar coord.'
     #    inps.ref_lat = None
     #    inps.ref_lon = None
-    
+
     # Convert ref_lat/lon to ref_y/x
     if inps.ref_lat and inps.ref_lon:
         if 'X_FIRST' in atr.keys():
@@ -508,7 +513,7 @@ def main(argv):
                                                    inps.trans_file, atr)[0:2]
         print 'Input reference point in lat/lon: '+str([inps.ref_lat, inps.ref_lon])
     print 'Input reference point in   y/x  : '+str([inps.ref_y, inps.ref_x])
-    
+
     # Do not use ref_y/x outside of data coverage
     if (inps.ref_y and inps.ref_x and
         not (0<= inps.ref_y <= length and 0<= inps.ref_x <= width)):
@@ -516,7 +521,7 @@ def main(argv):
         inps.ref_x = None
         print 'WARNING: input reference point is OUT of data coverage!'
         print 'Continue with other method to select reference point.'
-        
+
     # Do not use ref_y/x in masked out area
     if inps.ref_y and inps.ref_x and inps.mask_file:
         print 'mask: '+inps.mask_file
@@ -535,7 +540,7 @@ def main(argv):
             inps.method = 'max-coherence'
         else: 
             inps.coherence_file = None
-    
+
     if inps.method == 'manual':
         inps.parallel = False
         print 'Parallel processing is disabled for manual seeding method.'

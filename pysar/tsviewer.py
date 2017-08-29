@@ -14,6 +14,7 @@ import scipy.stats as stats
 
 import pysar._datetime as ptime
 import pysar._readfile as readfile
+import pysar._pysar_utilities as ut
 import pysar.view as view
 from pysar.mask import mask_matrix
 
@@ -78,7 +79,8 @@ def cmdLineParse():
     parser.add_argument('timeseries_file', help='time series file to display')
     parser.add_argument('-n', dest='epoch_num', metavar='NUM', type=int, default='-2',\
                         help='Epoch/slice number to display, default: the 2nd last.')
-    parser.add_argument('-m','--mask', dest='mask_file', default='mask.h5', help='mask to use. Default: mask.h5')
+    parser.add_argument('-m','--mask', dest='mask_file',\
+                        help='mask to use. Default: geo_maskTempCoh.h5 for geocoded file and maskTempCoh.h5 for radar file')
     parser.add_argument('--error', dest='error_file', help='txt file with error for each date.')
 
     pixel = parser.add_argument_group('Pixel Input')
@@ -170,7 +172,7 @@ if __name__ == '__main__':
             inps.ex_idx_list = sorted([dateList.index(i) for i in inps.ex_date_list])
             print 'exclude date:'+str(inps.ex_date_list)
 
-    ##
+    ## Zero displacement for 1st acquisition
     if inps.zero_first:
         if inps.ex_date_list:
             inps.zero_idx = min(list(set(range(date_num)) - set(inps.ex_idx_list)))
@@ -191,7 +193,7 @@ if __name__ == '__main__':
         print 'data size in [lat0,lat1,lon0,lon1]: [%.4f, %.4f, %.4f, %.4f]' % (lrlat, ullat, ullon, lrlon)
     except:
         pass
-    
+
     # Initial Pixel Coord
     if inps.lalo and 'Y_FIRST' in atr.keys():
         y = int((inps.lalo[0] - ullat) / lat_step + 0.5)
@@ -221,10 +223,17 @@ if __name__ == '__main__':
         inps.left_lr = False
 
     # Mask file
+    if not inps.mask_file:
+        if 'X_FIRST' in atr.keys():
+            file_list = ['geo_maskTempCoh.h5']
+        else:
+            file_list = ['maskTempCoh.h5','mask.h5']
+        try:    inps.mask_file = ut.get_file_list(file_list)[0]
+        except: inps.mask_file = None
     try:
         mask = readfile.read(inps.mask_file)[0]
-        print 'load mask from file: '+inps.mask_file
         mask[mask!=0] = 1
+        print 'load mask from file: '+inps.mask_file
     except:
         mask = None
         print 'No mask used.'
@@ -257,7 +266,7 @@ if __name__ == '__main__':
     #This works on OSX. Original worked on Linux.
     # rect[left, bottom, width, height]
     ax_v = fig_v.add_axes([0.125,0.25,0.75,0.65])
-    img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim)
+    img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim, interpolation='nearest')
 
     # Reference Pixel
     if inps.ref_yx:

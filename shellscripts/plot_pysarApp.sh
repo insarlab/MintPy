@@ -57,6 +57,13 @@ view='view.py --nodisplay --mask '$mask_file' --noaxis -u cm '
 #view='view.py --nodisplay --mask '$mask_file' --noaxis -u cm -m -10 -M 10 '
 if [ $plot_timeseries -eq 1 ]; then
     $view timeseries.h5        | tee -a $log_file
+
+    $view timeseries_LODcor_ECMWF.h5                           | tee -a $log_file
+    $view timeseries_LODcor_ECMWF_demErr.h5                    | tee -a $log_file
+    $view timeseries_LODcor_ECMWF_demErr_refDate.h5            | tee -a $log_file
+    $view timeseries_LODcor_ECMWF_demErr_refDate_plane.h5      | tee -a $log_file
+    $view timeseries_LODcor_ECMWF_demErr_refDate_quadratic.h5  | tee -a $log_file
+
     $view timeseries_ECMWF.h5                           | tee -a $log_file
     $view timeseries_ECMWF_demErr.h5                    | tee -a $log_file
     $view timeseries_ECMWF_demErr_refDate.h5            | tee -a $log_file
@@ -69,6 +76,7 @@ if [ $plot_timeseries -eq 1 ]; then
     $view timeseries_demErr_refDate_quadratic.h5  | tee -a $log_file
 
     $view timeseries_demErr.h5                            | tee -a $log_file
+    $view timeseries_demErr_tropHgt.h5                    | tee -a $log_file
     $view timeseries_demErr_tropHgt_refDate.h5            | tee -a $log_file
     $view timeseries_demErr_tropHgt_refDate_plane.h5      | tee -a $log_file
     $view timeseries_demErr_tropHgt_refDate_quadratic.h5  | tee -a $log_file
@@ -81,7 +89,9 @@ if [ $plot_geocoded_data -eq 1 ]; then
     view.py --nodisplay --lalo-label geo_maskTempCoh.h5          -c gray -m 0 -M 1            | tee -a $log_file
     view.py --nodisplay --lalo-label geo_temporalCoherence.h5    -c gray -m 0 -M 1            | tee -a $log_file
     view.py --nodisplay --lalo-label geo_velocity.h5             --mask $geo_mask_file -u cm  | tee -a $log_file
-    view.py --nodisplay --lalo-label geo_timeseries*.h5 --noaxis --mask $geo_mask_file -u cm  | tee -a $log_file
+    view.py --nodisplay --lalo-label geo_timeseries_LODcor*.h5 --noaxis --mask $geo_mask_file -u cm  | tee -a $log_file
+    view.py --nodisplay --lalo-label geo_timeseries_ECMWF*.h5  --noaxis --mask $geo_mask_file -u cm  | tee -a $log_file
+    view.py --nodisplay --lalo-label geo_timeseries_demErr*.h5 --noaxis --mask $geo_mask_file -u cm  | tee -a $log_file
 fi
 
 

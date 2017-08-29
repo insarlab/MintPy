@@ -309,7 +309,7 @@ pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECM
 pysar.topoError              = auto    #[yes / no], auto for yes
 pysar.topoError.polyOrder    = auto    #[1 / 2 / 3], auto for 2, polynomial order of temporal deformation model
 pysar.topoError.excludeDate  = auto    #[20101120 / txtFile / no], auto for no, date not used for error estimation
-pysar.topoError.stepFuncDate = auto    #[20080529 / no], auto for no, date of step jump, i.e. eruption/earthquade date
+pysar.topoError.stepFuncDate = auto    #[20080529 / no], auto for no, date of step jump, i.e. eruption/earthquake date
 
 
 ## 8.1 Phase Residual Root Mean Square
@@ -458,24 +458,25 @@ def main(argv):
 
     #####for Univ of Miami
     # Copy bl_list.txt file from PROCESS directory
-    if not os.path.isfile('bl_list.txt'):
-        try:
-            process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
+    try:
+        process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
+        if ut.update_file('bl_list.txt', process_dir+'/bl_list.txt', check_readable=False):
             shutil.copy2(process_dir+'/bl_list.txt', inps.work_dir)
-        except: pass
+    except: pass
 
     # Copy UNAVCO attribute txt file
     file_list = ['unavco_attributes.txt']
-    try: inps.unavco_atr_file = ut.get_file_list(file_list, abspath=True)[0]
-    except:
-        try:
-            process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
+    try:
+        process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
+        if ut.update_file(file_list[0], process_dir+'/'+file_list[0], check_readable=False):
             shutil.copy2(process_dir+'/'+file_list[0], inps.work_dir)
-            inps.unavco_atr_file = inps.work_dir+'/'+file_list[0]
-        except:
-            inps.unavco_atr_file = None
-            if pysar.miami_path and 'SCRATCHDIR' in os.environ and inps.project_name:
-                print 'No UNAVCO attributes file found in PROCESS directory, skip copy'
+    except: pass
+    try:
+        inps.unavco_atr_file = ut.get_file_list(file_list, abspath=True)[0]
+    except:
+        inps.unavco_atr_file = None
+        if pysar.miami_path and 'SCRATCHDIR' in os.environ and inps.project_name:
+            print 'No UNAVCO attributes file found in PROCESS directory, skip copy'
 
 
     #########################################
@@ -495,7 +496,7 @@ def main(argv):
     # custom template
     if inps.custom_template_file:
         # Copy custom template file to work directory
-        if not os.path.isfile(os.path.basename(inps.custom_template_file)):
+        if ut.update_file(os.path.basename(inps.custom_template_file), inps.custom_template_file, check_readable=False):
             shutil.copy2(inps.custom_template_file, inps.work_dir)
 
         # Read custom template
@@ -677,18 +678,29 @@ def main(argv):
     # Referencing Interferograms in Space
     #########################################
     print '\n**********  Reference in space  ***************'
+    seedCmd = 'seed_data.py '+inps.ifgram_file+' --template '+inps.template_file+' --mark-attribute'
+    if inps.trans_file:
+        seedCmd += ' --trans '+inps.trans_file
+    run_seedCmd = True
+
+    ## Skip calling seed command only if 1) ref_y/x exists AND 2) pysar.reference.yx/lalo == auto
     atr = readfile.read_attribute(inps.ifgram_file)
     try:
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
-        print 'find reference pixel in y/x: [%d, %d], skip updating.'%(ref_y, ref_x)
-        print 'To re-select reference pixel, use seed_data.py --reset option to remove reference pixel info.'
-        print 'seed_data.py '+inps.ifgram_file+' --reset'
-    except:
-        print 'call seed_data.py to find reference pixel in space'
-        seedCmd = 'seed_data.py '+inps.ifgram_file+' --template '+inps.template_file+' --mark-attribute'
-        if inps.trans_file:
-            seedCmd += ' --trans '+inps.trans_file
+        print 'Find reference pixel info from %s in y/x: [%d, %d]' % (os.path.basename(inps.ifgram_file), ref_y, ref_x)
+        print '    To remove reference pixel info, use seed_data.py --reset option:'
+        print '    seed_data.py '+inps.ifgram_file+' --reset'
+        prefix = 'pysar.reference.'
+        if all(template[prefix+i] in ['auto','no'] for i in ['yx','lalo']):
+            run_seedCmd = False
+            print 'No specific coordinates input found, no need to re-select reference pixel'
+        else:
+            print 'Specific coordinates input found, re-select reference pixel with options from template file'
+    except: pass
+
+    if run_seedCmd:
+        print 'Call seed_data.py to find reference pixel in space'
         print seedCmd
         os.system(seedCmd)
 
