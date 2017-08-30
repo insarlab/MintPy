@@ -1,17 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-#
-# Yunjun, Jul 2015: Update Coherence file
-# Yunjun, Oct 2015: Add 'T' option for template file input
-#                   and pysar.dropIfgIndex in template content
-# Yunjun, Jan 2017: add spatial_average(), update_inps_from_template()
-#                   modify_file_date12_list(), cmdLineParse()
-#                   merge update_network() into this.
-#                   add coherence-based network modification.
 
 
 import os
@@ -163,6 +155,7 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
             dset = group.create_dataset(igram, data=data, compression='gzip')
             for key, value in h5[k][igram].attrs.iteritems():
                 group.attrs[key] = value
+            group.attrs['drop_ifgram'] = 'no'
             prog_bar.update(i+1, suffix=date12_list[i])
         prog_bar.close()
         h5.close()
@@ -186,6 +179,10 @@ def read_template2inps(template_file, inps=None):
     key = prefix+'coherenceBased'
     if key in key_list and template[key] in ['auto','yes']:
         inps.coherence_based = True
+
+    key = prefix+'keepMinSpanTree'
+    if key in key_list and template[key] in ['no']:
+        inps.keep_mst = False
 
     key = prefix+'coherenceFile'
     if key in key_list:
@@ -250,6 +247,7 @@ def read_template2inps(template_file, inps=None):
                 print 'skip this option.'
                 inps.aoi_pix_box = None
 
+
     ## Network Modification based on thresholds
     key = prefix+'tempBaseMax'
     if key in key_list:
@@ -283,6 +281,18 @@ def read_template2inps(template_file, inps=None):
         if value not in ['auto','no']:
             inps.exclude_ifg_index = [i for i in value.replace(',',' ').split()]
 
+    key = prefix+'startDate'
+    if key in key_list:
+        value = template[key]
+        if value not in ['auto','no']:
+            inps.start_date = ptime.yymmdd(value)
+
+    key = prefix+'endDate'
+    if key in key_list:
+        value = template[key]
+        if value not in ['auto','no']:
+            inps.end_date = ptime.yymmdd(value)
+
     return inps
 
 
@@ -299,18 +309,26 @@ EXAMPLE='''example:
 '''
 
 TEMPLATE='''
-pysar.network.coherenceBased     = yes      #[yes / no], auto for yes
-pysar.network.coherenceFile      = auto     #[filename], auto for coherence.h5
-pysar.network.minCoherence       = auto     #[0.0-1.0], auto for 0.7
-pysar.network.maskFile           = auto     #[file name, no], auto for mask.h5, no for all pixels
-pysar.network.maskAoi.yx         = no       #[y0:y1,x0:x1 / no], area of interest for coherence calculation, auto for no
-pysar.network.maskAoi.lalo       = no       #[lat0:lat1,lon0:lon1 / no], similar to maskAoi.yx but in lat/lon, auto for no
+## 2. Modify Network (optional)
+## Coherence-based network modification = MST + Threshold, by default
+## 1) calculate a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
+## 2) find a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
+## 3) for all interferograms except for MST's, exclude those with average coherence < minCoherence.
+pysar.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
+pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
+pysar.network.coherenceFile   = auto  #[filename], auto for coherence.h5
+pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
+pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
+pysar.network.maskAoi.yx      = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
+pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
-pysar.network.tempBaseMax        = 36500    #[1-inf], day, maximum temporal baseline, auto for 3.65e4
-pysar.network.perpBaseMax        = 10e3     #[1-inf], meter, maximum perpendicular spatial baseline, auto for 10e3
-pysar.network.referenceFile      = no       #[date12_list.txt / Modified_unwrapIfgram.h5 / no], auto for no
-pysar.network.excludeDate        = no       #[20080520,20090817 / no], auto for no
-pysar.network.excludeIfgIndex = no       #[1,3,25 / no], list of interferogram number starting from 1, auto for no
+pysar.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
+pysar.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpendicular spatial baseline in meter
+pysar.network.referenceFile   = auto  #[date12_list.txt / Modified_unwrapIfgram.h5 / no], auto for no
+pysar.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
+pysar.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of interferogram number starting from 1
+pysar.network.startDate       = auto  #[20090101 / no], auto for no
+pysar.network.endDate         = auto  #[20110101 / no], auto for no
 '''
 
 def cmdLineParse():
@@ -348,6 +366,8 @@ def cmdLineParse():
                                                'Drop/modify network based on spatial coherence')
     cohBased.add_argument('--coherence-based', dest='coherence_based', action='store_true',\
                           help='Enable coherence-based network modification')
+    cohBased.add_argument('--no-mst', dest='keep_mst', action='store_false',\
+                          help='Do not keep interferograms in Min Span Tree network based on inversed mean coherene')
     cohBased.add_argument('--coherence', dest='coherence_file', default='coherence.h5',\
                           help='Coherence file used to calculate average value for each interferograms\n'+\
                                'Input coherence file should have the same network as input file(s)\n'+\
@@ -455,14 +475,18 @@ def main(argv):
             print 'input AOI in (x0,y0,x1,y1): '+str(inps.aoi_pix_box)
 
         # Calculate spatial average coherence
-        coh_list, coh_date12_list = ut.get_spatial_average(inps.coherence_file, inps.mask_file,\
+        coh_list, coh_date12_list = ut.spatial_average(inps.coherence_file, inps.mask_file,\
                                                            inps.aoi_pix_box, saveList=True)
 
         # MST network
-        print 'Get minimum spanning tree (MST) of interferograms with inverse of coherence.'
-        mst_date12_list = pnet.threshold_coherence_based_mst(coh_date12_list, coh_list)
+        if inps.keep_mst:
+            print 'Get minimum spanning tree (MST) of interferograms with inverse of coherence.'
+            print 'date12 with 1) average coherence < '+str(inps.min_coherence)+' AND 2) not in MST network: '
+            mst_date12_list = pnet.threshold_coherence_based_mst(coh_date12_list, coh_list)
+        else:
+            print 'date12 with average coherence < '+str(inps.min_coherence)
+            mst_date12_list = []
 
-        print 'date12 with average coherence < '+str(inps.min_coherence)+' and not in MST: '
         for i in range(len(coh_date12_list)):
             date12 = coh_date12_list[i]
             if coh_list[i] < inps.min_coherence and date12 not in mst_date12_list:
@@ -560,21 +584,22 @@ def main(argv):
     print 'list   of interferograms to remove:'
     print date12_to_rmv
 
-    # Check existing mark for --mark-attribute option
-    if inps.mark_attribute:
-        # Get list of date12 of interferograms already been marked.
-        k = readfile.read_attribute(inps.file[0])['FILE_TYPE']
-        h5 = h5py.File(inps.file[0], 'r')
-        ifgram_list_all = sorted(h5[k].keys())
-        ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all, print_msg=False)
-        ifgram_list_dropped = sorted(list(set(ifgram_list_all) - set(ifgram_list_keep)))
-        date12_list_dropped = ptime.list_ifgram2date12(ifgram_list_dropped)
-        h5.close()
+    ##### Calculated date12_to_drop v.s. existing date12_to_drop
+    # Get list of date12 of interferograms already been marked to drop
+    k = readfile.read_attribute(inps.file[0])['FILE_TYPE']
+    h5 = h5py.File(inps.file[0], 'r')
+    ifgram_list_all = sorted(h5[k].keys())
+    ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all, print_msg=False)
+    ifgram_list_dropped = sorted(list(set(ifgram_list_all) - set(ifgram_list_keep)))
+    date12_list_dropped = ptime.list_ifgram2date12(ifgram_list_dropped)
+    h5.close()
 
-        if date12_to_rmv == date12_list_dropped:
-            date12_to_rmv = []
-            print 'calculated date12 to drop is the same as exsiting marked input file, set it empty.'
+    if date12_to_rmv == date12_list_dropped and inps.mark_attribute:
+        print 'Calculated date12 to drop is the same as exsiting marked input file, skip update file attributes.'
+        return
 
+
+    ##### Update date12 to drop
     if date12_to_rmv:
         ##### Update Input Files with date12_to_rmv
         Modified_CoherenceFile = 'Modified_coherence.h5'
@@ -607,7 +632,7 @@ def main(argv):
         print 'Done.'
         return
     else:
-        print 'No interferogram dropped, skip update.'
+        print 'No new interferograms to drop, skip update.'
         return
 
 

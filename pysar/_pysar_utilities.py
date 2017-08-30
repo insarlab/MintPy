@@ -30,17 +30,6 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 ############################################################################### 
-# Yunjun, Oct 2015: Add glob2radar() and radar2glob() (modified from radar2geo.py
-#                       written by Heresh)
-# Yunjun, Dec 2015: Use k[0] instead of 'interferograms' in some functions for 
-#                       better support of interferograms, coherence and wrapped
-# Yunjun, Jan 2016: Add yyyymmdd() and yymmdd()
-# Yunjun, Jun 2016: Removed remove_plane functions since a better version in _remove_plane
-#                   Add inner function ts_inverse() to faster time series inversion
-#                   Add P_BASELINE_TIMESERIES attribute to timeseries file.
-# Yunjun, Jul 2016: add get_file_list() to support multiple files input
-# Yunjun, Aug 2016: add spatial_average()
-# Yunjun, Jan 2017: add temporal_average(), nonzero_mask()
 
 
 import os
@@ -891,7 +880,7 @@ def get_file_stack(File, maskFile=None):
         print 'read mask from file: '+maskFile
         mask = readfile.read(maskFile)[0]
         stack[mask==0] = np.nan
-    
+
     return stack
 
 
@@ -949,62 +938,44 @@ def nonzero_mask(File, outFile='mask.h5'):
 
 
 ######################################################################################################
+def spatial_average(File, maskFile=None, box=None, saveList=False):
+    '''Read/Calculate Spatial Average of input file.
 
-def get_spatial_average(File, maskFile=None, box=None, saveList=True):
-    '''Get spatial average info from input File.
-    Inputs:
-        File     - string, path of HDF5 file or txt file
-        maskFile - string, path of mask file, e.g. maskTempCoh.h5
-        box      - 4-tuple defining the left, upper, right, and lower pixel coordinate
-        saveList - bool, save (list of) mean value into text file
-    outputs:
-        mean_list - list of float, spatial average value of file
-        date_list - list of string for date info
+    If input file is text file, read it directly;
+    If input file is data matrix file:
+        If corresponding text file exists with the same mask file/AOI info, read it directly;
+        Otherwise, calculate it from data file.
+
+        Only non-nan pixel is considered.
+    Input:
+        File     : string, path of input file
+        maskFile : string, path of mask file, e.g. maskTempCoh.h5
+        box      : 4-tuple defining the left, upper, right, and lower pixel coordinate
+        saveList : bool, save (list of) mean value into text file
+    Output:
+        mean_list : list for float, average value in space for each epoch of input file
+        date_list : list of string for date info
+                    date12_list, e.g. 101120-110220, for interferograms/coherence
+                    date8_list, e.g. 20101120, for timeseries
+                    file name, e.g. velocity.h5, for all the other file types
     Example:
-        import pysar._pysar_utilities as ut
-        mean_list, date_list = ut.get_spatial_average('coherence.h5', 'maskTempCoh.h5')
+        mean_list = spatial_average('coherence.h5')[0]
+        ref_list  = spatial_average('unwrapIfgram.h5', box=(100,200,101,201))[0]
+        mean_list, date12_list = spatial_average('coherence.h5', 'maskTempCoh.h5', saveList=True)
+        
+        stack = ut.get_file_stack('unwrapIfgram.h5', 'mask.h5')
+        mask = ~np.isnan(stack)
+        ref_list = ut.spatial_average('unwrapIfgram.h5', mask, (100,200,101,201))
     '''
     suffix='_spatialAverage.txt'
     if File.endswith(suffix):
         print 'Input file is spatial average txt already, read it directly'
         txtFile = File
+        txtContent = np.loadtxt(txtFile, dtype=str)
+        mean_list = [float(i) for i in txtContent[:,1]]
+        date_list = [i for i in txtContent[:,0]]
+        return mean_list, date_list
 
-    else:
-        txtFile = os.path.splitext(File)[0]+suffix
-        if os.path.isfile(txtFile):
-            print 'spatial average file exists: '+txtFile
-            print 'read it directly, or delete it and re-run the script to re-calculate the list'
-        else:
-            print 'calculating spatial average from file: '+File
-            if maskFile:
-                mask = readfile.read(maskFile)[0]
-                print 'read mask from file: '+maskFile
-            else:
-                mask = None
-            mean_list = spatial_average(File, mask, box, saveList)
-
-    # Read txt file
-    txtContent = np.loadtxt(txtFile, dtype=str)
-    mean_list = [float(i) for i in txtContent[:,1]]
-    date_list = [i for i in txtContent[:,0]]
-    return mean_list, date_list
-
-
-def spatial_average(File, mask=None, box=None, saveList=False):
-    '''Calculate  Spatial Average.
-        Only non-nan pixel is considered.
-    Input:
-        File : string, path of input file
-        mask : 2D np.array, mask file 
-        box  : 4-tuple defining the left, upper, right, and lower pixel coordinate
-        saveList: bool, save (list of) mean value into text file
-    Output:
-        meanList : list for float, average value in space for each epoch of input file
-    Example:
-        meanList = spatial_average('coherence.h5')
-        meanList = spatial_average('coherence.h5', mask, saveList=True)
-        refList = spatial_average('unwrapIfgram.h5', box=(100,200,101,201))
-    '''
 
     # Baic File Info
     atr  = readfile.read_attribute(File)
@@ -1014,8 +985,52 @@ def spatial_average(File, mask=None, box=None, saveList=False):
 
     if not box:
         box = (0,0,width,length)
-    if not mask is None:
+
+    # Convert input mask argument (maskFile) to mask file name (maskFile) and matrix (mask)
+    if not maskFile:
+        maskFile = None
+        mask = None
+    elif type(maskFile) is str:
+        print 'read mask from file: '+maskFile
+        mask = readfile.read(maskFile)[0]
         mask = mask[box[1]:box[3],box[0]:box[2]]
+    elif type(maskFile) is np.ndarray:
+        mask = maskFile
+        mask = mask[box[1]:box[3],box[0]:box[2]]
+        maskFile = 'np.ndarray matrix'
+    else:
+        print 'Unsupported mask input format: '+str(type(maskFile))
+        return None, None
+
+    # Read existing txt file only if 1) data file is older AND 2) same AOI
+    read_txt = False
+    txtFile = os.path.splitext(File)[0]+suffix
+    file_line = '# Data file: %s\n' % os.path.basename(str(File))
+    mask_line = '# Mask file: %s\n' % os.path.basename(str(maskFile))
+    aoi_line = '# AOI box: %s\n' % str(box)
+
+    try:
+        # Read AOI line from existing txt file
+        fl = open(txtFile,'r')
+        lines = fl.readlines()
+        fl.close()
+        try:    aoi_line_orig = [i for i in lines if '# AOI box:' in i][0]
+        except: aoi_line_orig = ''
+        try:    mask_line_orig = [i for i in lines if '# Mask file:' in i][0]
+        except: mask_line_orig = ''
+        if (aoi_line_orig == aoi_line \
+            and mask_line_orig == mask_line \
+            and not update_file(txtFile, [File, maskFile], check_readable=False)):
+            read_txt = True
+    except: pass
+
+    if read_txt:
+        print txtFile+' already exists, read it directly'
+        txtContent = np.loadtxt(txtFile, dtype=str)
+        mean_list = [float(i) for i in txtContent[:,1]]
+        date_list = [i for i in txtContent[:,0]]
+        return mean_list, date_list
+
 
     # Calculate mean coherence list
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
@@ -1023,7 +1038,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
         epochList = sorted(h5file[k].keys())
         epochNum  = len(epochList)
 
-        meanList   = []
+        mean_list   = []
         prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='calculating: ')
         for i in range(epochNum):
             epoch = epochList[i]
@@ -1040,7 +1055,7 @@ def spatial_average(File, mask=None, box=None, saveList=False):
             ## url - http://stackoverflow.com/questions/29688168/mean-nanmean-and-warning-mean-of-empty-slice
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                meanList.append(np.nanmean(data))
+                mean_list.append(np.nanmean(data))
             prog_bar.update(i+1)
         prog_bar.close()
         del data
@@ -1051,28 +1066,34 @@ def spatial_average(File, mask=None, box=None, saveList=False):
             data[mask==0] = np.nan
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            meanList = [np.nanmean(data)]
+            mean_list = [np.nanmean(data)]
+
+    # Get date/pair list
+    if k in multi_group_hdf5_file:
+        date_list = pnet.get_date12_list(File)
+    elif k in multi_dataset_hdf5_file:
+        date_list = epochList
+    else:
+        date_list = [os.path.basename(File)]
 
     # Write mean coherence list into text file
     if saveList:
-        txtFile = os.path.splitext(File)[0]+'_spatialAverage.txt'
         print 'write average coherence in space into text file: '+txtFile
         fl = open(txtFile, 'w')
-        # 1st column of file
-        if k in multi_group_hdf5_file:
-            str1_list = pnet.get_date12_list(File)
-        elif k in multi_dataset_hdf5_file:
-            str1_list = epochList
-        else:
-            str1_list = [os.path.basename(File)]
-        for i in range(len(str1_list)):
-            line = str1_list[i]+'    '+str(meanList[i])+'\n'
+        # Write comments
+        fl.write(file_line)
+        fl.write(mask_line)
+        fl.write(aoi_line)
+        # Write data list
+        for i in range(len(date_list)):
+            line = date_list[i]+'    '+str(mean_list[i])+'\n'
             fl.write(line)
         fl.close()
 
-    if len(meanList) == 1:
-        meanList = meanList[0]
-    return meanList
+    if len(mean_list) == 1:
+        mean_list = mean_list[0]
+        date_list = date_list[0]
+    return mean_list, date_list
 
 
 def temporal_average(File, outFile=None):

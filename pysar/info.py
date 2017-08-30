@@ -97,7 +97,6 @@ def main(argv):
 
 
     #################### File Structure #####################
-    #import pdb; pdb.set_trace()
     try:
         argv[1]
         if argv[1] in ['--struct','--structure','--tree'] and ext in ['.h5','.he5']:

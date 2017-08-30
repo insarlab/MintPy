@@ -1,12 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Dec 2015: Add support for coherence/wrapped, update display
-# Yunjun, Jun 2016: Add plot_network(), plot_bperp_hist(),
-#                   axis_adjust_date_length(), igram_pairs()
 
 
 import sys
@@ -148,27 +145,7 @@ def main(argv):
     # Read Coherence List
     inps.coherence_list = None
     if inps.coherence_file and os.path.isfile(inps.coherence_file):
-        ext = os.path.splitext(inps.coherence_file)[1]
-        if ext in ['.h5']:
-            listFile = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.txt'
-            if os.path.isfile(listFile):
-                print 'reading coherence value from existed '+listFile
-                fcoh = np.loadtxt(listFile, dtype=str)
-                inps.coherence_list  = [float(i) for i in fcoh[:,1]]
-                inps.coh_date12_list = [i        for i in fcoh[:,0]]
-            else:
-                print 'calculating average coherence value from '+inps.coherence_file
-                if inps.mask_file:
-                    mask = readfile.read(inps.mask_file)[0]
-                else:
-                    mask = None
-                inps.coherence_list  = ut.spatial_average(inps.coherence_file, mask, saveList=True)
-                inps.coh_date12_list = pnet.get_date12_list(inps.coherence_file)
-        else:
-            print 'reading coherence value from '+inps.coherence_file
-            fcoh = np.loadtxt(inps.coherence_file, dtype=str)
-            inps.coherence_list  = [float(i) for i in fcoh[:,1]]
-            inps.coh_date12_list = [i        for i in fcoh[:,0]]
+        inps.coherence_list, inps.coh_date12_list = ut.spatial_average(inps.coherence_file, inps.mask_file, saveList=True)
 
         if all(np.isnan(inps.coherence_list)):
             print 'WARNING: all coherence value are nan! Do not use this and continue.'

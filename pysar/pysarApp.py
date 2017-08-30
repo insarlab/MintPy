@@ -243,11 +243,12 @@ pysar.multilook.yx    = auto    #[4,4 / no], auto for no [not implemented yet]
 
 
 ## 2. Modify Network (optional)
-## Coherence-based network modification = MST + Threshold
+## Coherence-based network modification = MST + Threshold, by default
 ## 1) calculate a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
-## 2) find a minimum spanning tree network with inverse of average coherence as weight
+## 2) find a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
 ## 3) for all interferograms except for MST's, exclude those with average coherence < minCoherence.
-pysar.network.coherenceBased  = auto  #[yes / no], auto for yes
+pysar.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
+pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.coherenceFile   = auto  #[filename], auto for coherence.h5
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
 pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
@@ -259,6 +260,8 @@ pysar.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpend
 pysar.network.referenceFile   = auto  #[date12_list.txt / Modified_unwrapIfgram.h5 / no], auto for no
 pysar.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
 pysar.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of interferogram number starting from 1
+pysar.network.startDate       = auto  #[20090101 / no], auto for no
+pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 
 ## 3. Reference in Space
@@ -363,10 +366,6 @@ EXAMPLE='''example:
   # Generate template file:
   pysarApp.py -g
   pysarApp.py SanAndreasT356EnvD.template -g
-
-  # Reset and re-run right after loading data
-  pysarApp.py --reset
-  pysarApp.py
 
   --------------------------------------------
   Open pysar_template.txt file for details.
@@ -572,10 +571,6 @@ def main(argv):
         print seedCmd
         os.system(seedCmd)
 
-        #print 'Exit as planed after reset.'
-        #print 'Now run pysarApp.py to re-processing this dataset.'
-        #sys.exit()
-
 
     #########################################
     # Check the subset (Optional)
@@ -638,30 +633,22 @@ def main(argv):
     #########################################
     # Network Modification (Optional)
     #########################################
-    atr = readfile.read_attribute(inps.ifgram_file)
-    h5 = h5py.File(inps.ifgram_file, 'r')
-    ifgram_list_all = h5[atr['FILE_TYPE']].keys()
-    ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
-    h5.close()
-    ifgram_num_drop = len(ifgram_list_all) - len(ifgram_list_keep)
-    if ifgram_num_drop > 0:
-        print '\n*************** Modify Network ****************'
-        print 'find number of dropped interferograms: %d, skip updating.' % (ifgram_num_drop)
-        print 'To re-modify the network, use modify_network.py --reset option to restore all pairs info.'
-        msg_str = 'modify_network.py '+inps.ifgram_file
-        if inps.coherence_file:
-            msg_str +=  ' '+inps.coherence_file
-        msg_str += ' --reset'
-        print msg_str
-    else:
-        print '\n*************** Modify Network ****************'
-        networkCmd = 'modify_network.py --template '+inps.template_file+' '+inps.ifgram_file
-        if inps.coherence_file:
-            networkCmd += ' '+inps.coherence_file
-        if inps.trans_file:
-            networkCmd += ' --trans '+inps.trans_file
-        print networkCmd
-        os.system(networkCmd)
+    print '\n*************** Modify Network ****************'
+    networkCmd = 'modify_network.py --template '+inps.template_file+' '+inps.ifgram_file
+    if inps.coherence_file:
+        networkCmd += ' '+inps.coherence_file
+    if inps.trans_file:
+        networkCmd += ' --trans '+inps.trans_file
+    print networkCmd
+    print '----------------------------------------------------------------------------------------'
+    print 'To use all interferograms in the file, run modify_network.py with --reset option to restore all pairs info.'
+    msg_str = 'modify_network.py '+inps.ifgram_file
+    if inps.coherence_file:
+        msg_str +=  ' '+inps.coherence_file
+    msg_str += ' --reset'
+    print msg_str
+    print '----------------------------------------------------------------------------------------'
+    os.system(networkCmd)
 
     # Plot network colored in spatial coherence
     print '--------------------------------------------'
@@ -689,8 +676,10 @@ def main(argv):
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
         print 'Find reference pixel info from %s in y/x: [%d, %d]' % (os.path.basename(inps.ifgram_file), ref_y, ref_x)
-        print '    To remove reference pixel info, use seed_data.py --reset option:'
-        print '    seed_data.py '+inps.ifgram_file+' --reset'
+        print '----------------------------------------------------------------------------------------'
+        print 'To remove reference pixel info, use seed_data.py --reset option:'
+        print 'seed_data.py '+inps.ifgram_file+' --reset'
+        print '----------------------------------------------------------------------------------------'
         prefix = 'pysar.reference.'
         if all(template[prefix+i] in ['auto','no'] for i in ['yx','lalo']):
             run_seedCmd = False

@@ -1,14 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Dec 2015: Add find_lat_lon(), add 'ref_lat','ref_lon' for geocoded file
-# Yunjun, Jan 2016: Add input option for template file
-# Yunjun, Apr 2016: Add maskFile input option
-# Yunjun, Jun 2016: Add seed_attributes(), support to all file types
-#                   Add reference file option
 
 
 import os
@@ -156,7 +151,7 @@ def seed_file_inps(File, inps=None, outFile=None):
         width = int(atr['WIDTH'])
         length = int(atr['FILE_LENGTH'])
         box = (0,0,width,length)
-        meanList = ut.spatial_average(File, mask, box)
+        meanList = ut.spatial_average(File, mask, box)[0]
         inps.ref_y = ''
         inps.ref_x = ''
         outFile = seed_file_reference_value(File, outFile, meanList, inps.ref_y, inps.ref_x)
@@ -190,7 +185,7 @@ def seed_file_inps(File, inps=None, outFile=None):
         else:
             print 'Referencing input file to pixel in y/x: (%d, %d)'%(inps.ref_y, inps.ref_x)
             box = (inps.ref_x, inps.ref_y, inps.ref_x+1, inps.ref_y+1)
-            refList = ut.spatial_average(File, mask, box)
+            refList = ut.spatial_average(File, mask, box)[0]
             outFile = seed_file_reference_value(File, outFile, refList, inps.ref_y, inps.ref_x)
     else:
         raise ValueError('Can not find reference y/x or Nan value.')

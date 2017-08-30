@@ -42,23 +42,12 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     print '\n*************** Spatial Average ******************'
-
-    if inps.mask_file:
-        print 'reading mask file: '+inps.mask_file
-        mask, mask_atr = readfile.read(inps.mask_file)
-    else:
-        mask = None
-    
     for File in inps.file:
-        mean_list = ut.spatial_average(File, mask, saveList=True)
+        mean_list, date_list = ut.spatial_average(File, inps.mask_file, saveList=True)
         atr = readfile.read_attribute(File)
         k = atr['FILE_TYPE']
         if inps.disp_fig and k == 'timeseries':
-            # Get date list
-            h5file = h5py.File(File)
-            dateList = sorted(h5file[k].keys())
-            h5file.close()
-            dates, datevector = ptime.date_list2vector(dateList)
+            dates, datevector = ptime.date_list2vector(date_list)
 
             # plot
             fig = plt.figure()
