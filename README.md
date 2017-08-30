@@ -24,12 +24,12 @@ Here is a example on Mac OSX using csh/tcsh:
 Add the following in ~/.cshrc file and source it.   
 
     ############################ Python ############################### 
-    setenv PYTHON2DIR /Users/jeromezhang/Documents/development/python/anaconda2
+    setenv PYTHON2DIR ~/python/anaconda2
     set path = ( ${PYTHON2DIR}/bin $path )
 
 Then run the following in your terminal:   
 
-    cd ~/Documents/development/python
+    cd ~/python
     wget https://repo.continuum.io/archive/Anaconda2-4.2.0-MacOSX-x86_64.sh
     chmod +x Anaconda2-4.2.0-MacOSX-x86_64.sh
     ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p ${PYTHON2DIR}
@@ -42,26 +42,26 @@ For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthde
 ##### 1.2 PySAR   
 Download the latest released version at https://github.com/yunjunz/PySAR/releases, or use the command below.    
    
-    cd ~/Documents/development/python
+    cd ~/python
     wget https://github.com/yunjunz/PySAR/archive/v1.2.0.tar.gz
     tar -zxvf v1.2.0.tar.gz
    
 or download the development version using git:   
    
-    cd ~/Documents/development/python
+    cd ~/python
     git clone https://github.com/yunjunz/PySAR.git
    
 To use the package, you need to: 1) add the path to PySAR directory to your $PYTHONPATH and 2) add ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/shellscripts to your $path. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file.   
    
 For bash user, add to your .bashrc file:   
 
-    export PYSAR_HOME="~/Documents/development/python/PySAR"   #for released version, "~/Documents/development/python/PySAR-1.2.0"
+    export PYSAR_HOME="~/python/PySAR"   #for released version, "~/python/PySAR-1.2.0"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
     export PATH="${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:$PATH"   
 
 For csh/tcsh user, add to your .cshrc file:   
 
-    setenv PYSAR_HOME ~/Documents/development/python/PySAR   #for released version, "~/Documents/development/python/PySAR-1.2.0"
+    setenv PYSAR_HOME ~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
     setenv PYTHONPATH ${PYSAR_HOME}
     set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/shellscripts $path)
    
@@ -79,18 +79,18 @@ Download the test data: [Download Link](https://miami.app.box.com/v/pysar-demo-K
 
 Create a custom template file:   
 
-    cd ~/Documents/insarlab/KujuAlosAT422F650/PYSAR
+    cd ~/KujuAlosAT422F650/PYSAR
     vi KujuAlosAT422F650.template
    
 Include the following pysar options in your template:   
 
     ##———————————————————————————————— Data Loading ——————————————————————————————##
     # RADAR COORD ROIPAC PRODUCTS
-    pysar.unwrapFiles    = ~/Documents/insarlab/KujuAlosAT422F650/ROIPAC/RADAR/filt_*.unw
-    pysar.corFiles       = ~/Documents/insarlab/KujuAlosAT422F650/ROIPAC/RADAR/filt_*.cor
-    pysar.geomap         = ~/Documents/insarlab/KujuAlosAT422F650/ROIPAC/RADAR/geomap*.trans
-    pysar.dem.radarCoord = ~/Documents/insarlab/KujuAlosAT422F650/ROIPAC/RADAR/radar*.hgt
-    pysar.dem.geoCoord   = ~/Documents/insarlab/KujuAlosAT422F650/ROIPAC/RADAR/*.dem
+    pysar.unwrapFiles    = ~/KujuAlosAT422F650/ROIPAC/RADAR/filt_*.unw
+    pysar.corFiles       = ~/KujuAlosAT422F650/ROIPAC/RADAR/filt_*.cor
+    pysar.geomap         = ~/KujuAlosAT422F650/ROIPAC/RADAR/geomap*.trans
+    pysar.dem.radarCoord = ~/KujuAlosAT422F650/ROIPAC/RADAR/radar*.hgt
+    pysar.dem.geoCoord   = ~/KujuAlosAT422F650/ROIPAC/RADAR/*.dem
 
 Save your template file and run PySAR as:   
 
