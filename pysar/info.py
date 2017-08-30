@@ -1,12 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jul 2015: add 'coherence','wrapped' option, eNum
-# Yunjun, Oct 2015: merge 'interferograms','coherence','wrapped' into one
-# Yunjun, Oct 2016: add --tree option to check hdf5 tree/structure
 
 
 import os

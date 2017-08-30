@@ -1,18 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Reference:
-# Fattahi, H. and F. Amelung, (2013), DEM-error correction in 
-# InSAR time-series analysis, IEEE TGRS, vol. no.99,
-# doi: 10.1109/TGRS.2012.2227761.
-#
-# Yunjun, Jun 2016: Add phase velocity approach from the paper.
-#                   Use different range and look angle for each column
-# Yunjun, Apr 2017: use variable P_BASELINE(_TOP/BOTTOM)_TIMESERIES
-#                   support geocoded file
 
 
 import os

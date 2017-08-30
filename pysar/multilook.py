@@ -1,15 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Oct 2015: Merge timeseries/velocity into one
-#                   Merge all non-hdf5 into one
-# Yunjun, Nov 2015: Support geomap*.trans file
-# Yunjun, May 2015: add multilook() and multilook_attribute()
-# Yunjun, Dec 2016: add multilook_file(), cmdLineParse() and parallel option
-#                   rename multi_looking.py to multilook.py
 
 
 import sys

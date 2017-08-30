@@ -1,14 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jan 2016: add bonding points correction
-# Yunjun, Jul 2016: add ramp removal step
-# Yunjun, Jul 2017: put code into two functions: 
-#                   unwrap_error_correction_phase_closure()
-#                   unwrap_error_correction_bridging()
 
 
 import os

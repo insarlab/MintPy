@@ -1,26 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
-# Yunjun, Mar 2015: Add lat/lon option
-# Yunjun, Jul 2015: Add 'coherence' option
-# Yunjun, Sep 2015: Read .par file for jpg
-#                   Add '.mli' and '.slc' option for Gamma product
-#                   Make x/y/l/L option independent
-#                   Add min/max check for input x/y/lat/lon
-#                   Merge all files into PySAR, ROI_PAC, Image and GAMMA
-#                   Merge 'interferograms','coherence','wrapped' into one
-#                   Merge ROI_APC, Image and GAMMA into one
-# Yunjun, Oct 2015: Support '.trans' file
-# Yunjun, May 2016: Add -t and -- option, simplied code
-#                   Add coord_geo2radar(),check_subset(),subset_attribute()
-# Yunjun, Jun 2016: Add geo_box()
-# Yunjun, Jul 2016: add parallel support
-#                   add outlier fill option
-# Yunjun, Aug 2016: add coord_geo2radar()
-# Yunjun, Dec 2016: add cmdLineParse(), --tight option
 
 
 import os

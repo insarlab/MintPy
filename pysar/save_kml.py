@@ -1,16 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-#
-# Yunjun, Jul 2015: add 'timeseries'/'wrapped' option
-# Yunjun, Oct 2015: merge all HDF5 option into one
-#                   add support for ROI_PAC product
-# Yunjun, Nov 2015: support different fig unit
-#                   update colorbar
-# Yunjun, Jul 2017: re-write using argparse and more pysar module
 
 
 import os

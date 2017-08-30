@@ -1,13 +1,9 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jul 2015: Add check_num/check_file_size to .int/.cor file
-# Yunjun, Jan 2017: Add auto_path_miami(), copy_roipac_file()
-#                   Add roipac2pysar_multi_group_hdf5()
-#                   Add r+ mode loading of multi_group hdf5 file
 
 
 import os
