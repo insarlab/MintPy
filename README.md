@@ -9,7 +9,7 @@ PySAR is a Python package for InSAR (Interferometric Synthetic Aperture Radar) t
 
 #### 1.1 Pre-requisite
 We recommend using Anaconda to install the python environment and the prerequisite packages. You will need:   
-- [Python2.7](https://www.continuum.io/downloads)
+- [Python2.7](https://www.anaconda.com/download/)
 - Numpy
 - Scipy
 - h5py
@@ -30,8 +30,8 @@ Add the following in ~/.cshrc file and source it.
 Then run the following in your terminal:   
 
     cd ~/python
-    wget https://repo.continuum.io/archive/Anaconda2-4.2.0-MacOSX-x86_64.sh
-    chmod +x Anaconda2-4.2.0-MacOSX-x86_64.sh
+    wget https://repo.continuum.io/archive/Anaconda2-4.4.0-MacOSX-x86_64.sh
+    chmod +x Anaconda2-4.4.0-MacOSX-x86_64.sh
     ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p ${PYTHON2DIR}
     ${PYTHON2DIR}/bin/conda config --add channels conda-forge
     ${PYTHON2DIR}/bin/conda install basemap joblib pykml --yes   
