@@ -171,11 +171,15 @@ def seed_file_inps(File, inps=None, outFile=None):
     # 2.2 Seeding file with reference y/x
     if inps.ref_y and inps.ref_x and mask[inps.ref_y, inps.ref_x]:
         if inps.mark_attribute:
+            re_select = True
             try:
-                inps.ref_x == int(atr['ref_x'])
-                inps.ref_y == int(atr['ref_y'])
-                print 'Same reference pixel is already selected/saved in file, skip updating file attributes'
-            except:
+                ref_x_orig == int(atr['ref_x'])
+                ref_y_orig == int(atr['ref_y'])
+                if inps.ref_x == ref_x_orig and inps.ref_y == ref_y_orig:
+                    re_select = False
+                    print 'Same reference pixel is already selected/saved in file, skip updating file attributes'
+            except: pass
+            if re_select:
                 print 'Add/update ref_x/y attribute to file: '+File
                 atr_ref = dict()
                 atr_ref['ref_x'] = str(inps.ref_x)
