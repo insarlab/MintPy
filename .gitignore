@@ -1,2 +1,4 @@
-
-pysar/tsviewer_orig.py
+*.DS_Store
+*.pyc
+*checkpoint.ipynb
+examples/*

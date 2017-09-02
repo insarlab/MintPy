@@ -104,6 +104,7 @@ class Basemap2(Basemap):
  
         return lats, lons, lalo_step
 
+
     def draw_lalo_label(self, geo_box, ax=None, labels=[1,0,0,1], font_size=12):
         '''Auto draw lat/lon label/tick based on coverage from geo_box
         Inputs:
@@ -131,6 +132,7 @@ class Basemap2(Basemap):
         if not ax:
             ax = plt.gca()
         ax.tick_params(direction='in')
+
         ax.set_xticks(lons)
         ax.set_yticks(lats)
         ax.set_xticklabels([])
@@ -140,8 +142,8 @@ class Basemap2(Basemap):
         # Plot x/y label
         labels_lat = np.multiply(labels, [1,1,0,0])
         labels_lon = np.multiply(labels, [0,0,1,1])
-        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.0, fontsize=font_size)
-        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.0, fontsize=font_size)
+        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05, fontsize=font_size)
+        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05, fontsize=font_size)
 
 
 ##########################################  Sub Function  ########################################

@@ -373,8 +373,11 @@ def read_attribute(File, epoch=None):
 def check_variable_name(path):
     s=path.split("/")[0]
     if len(s)>0 and s[0]=="$":
-        p0=os.getenv(s[1:])
-        path=path.replace(path.split("/")[0],p0)
+        try:
+            p0 = os.getenv(s[1:])
+            path = path.replace(path.split("/")[0], p0)
+        except:
+            print 'WARNING: Un-recognized environmental variable: '+s
     return path
 
 def is_plot_attribute(attribute):
