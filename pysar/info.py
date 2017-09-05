@@ -48,10 +48,10 @@ def print_hdf5_structure(File):
 def print_timseries_date_info(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
     print '*************** Date Info ***************'
-    print 'Start       Date: '+dateList[0]
-    print 'End         Date: '+dateList[-1]
-    print 'Number             of acquisitions      : '+str(len(dateList))
-    print 'Standard deviation of acquisition times : '+str(std(datevector))+' years'
+    print 'Start Date: '+dateList[0]
+    print 'End   Date: '+dateList[-1]
+    print 'Number of acquisitions      : %d' % len(dateList)
+    print 'Std.   of acquisition times : %.2f yeras' % std(datevector)
     print '----------------------'
     print 'List of dates:'
     print dateList

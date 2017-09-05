@@ -403,14 +403,15 @@ def cmdLineParse():
                         help='PySAR working directory, default is:\n'+\
                              'a) current directory, or\n'+\
                              'b) $SCRATCHDIR/projectName/PYSAR, if meets the following 3 requirements:\n'+\
-                             '     1) miami_path = True in pysar/__init__.py\n'+\
-                             '     2) environmental variable $SCRATCHDIR exists\n'+\
-                             '     3) input custom template with basename same as projectName\n')
+                             '    1) miami_path = True in pysar/__init__.py\n'+\
+                             '    2) environmental variable $SCRATCHDIR exists\n'+\
+                             '    3) input custom template with basename same as projectName\n')
     parser.add_argument('-g', dest='generate_template', action='store_true',\
                         help='Generate default template (and merge with custom template), then exit.')
     parser.add_argument('--reset', action='store_true',\
-                        help='Reset files attributes to re-run pysarApp.py after loading data\n'+\
-                             '    by removing ref_y/x/lat/lon and set drop_ifgram=no for unwrapIfgram.h5 and coherence.h5')
+                        help='Reset files attributes to re-run pysarApp.py after loading data by:\n'+\
+                             '    1) removing ref_y/x/lat/lon for unwrapIfgram.h5 and coherence.h5\n'+\
+                             '    2) set drop_ifgram=no for unwrapIfgram.h5 and coherence.h5')
     parser.add_argument('--load-data', dest='load_dataset', action='store_true',\
                         help='Step 1. Load/check dataset, then exit')
     parser.add_argument('--subset-data', dest='subset_dataset', action='store_true',\

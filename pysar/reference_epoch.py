@@ -73,15 +73,24 @@ def ref_date_file(inFile, ref_date, outFile=None):
     # Input reference date
     h5 = h5py.File(inFile, 'r')
     date_list = sorted(h5[k].keys())
+    h5.close()
     date_num = len(date_list)
+    try:    ref_date_orig = atr['ref_date']
+    except: ref_date_orig = date_list[0]
 
     ref_date = ptime.yyyymmdd(ref_date)
     print 'input reference date: '+ref_date
     if not ref_date in date_list:
         print 'Input reference date was not found!\nAll dates available: '+str(date_list)
         return None
+    if ref_date == ref_date_orig:
+        print 'Same reference date chosen as existing reference date.'
+        print 'Copy %s to %s' % (inFile, outFile)
+        shutil.copy2(inFile, outFile)
+        return outFile
 
     # Referencing in time
+    h5 = h5py.File(inFile, 'r')
     ref_data = h5[k].get(ref_date)[:]
 
     print 'writing >>> '+outFile
