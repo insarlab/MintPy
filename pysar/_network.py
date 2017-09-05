@@ -19,6 +19,7 @@ import matplotlib as mpl
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+import matplotlib.lines as mlines
 from matplotlib.tri import Triangulation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.sparse import csr_matrix, find
@@ -904,11 +905,17 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
 
     if plot_dict['disp_title']:
         ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
+
     # axis format
     ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
     ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perp Baseline [m]',fontsize=plot_dict['fontsize'])
+
+    # Legend
+    solid_line = mlines.Line2D([],[],color='k',ls='solid', label='Interferograms')
+    dash_line  = mlines.Line2D([],[],color='k',ls='dashed', label='Interferograms dropped')
+    ax.legend(handles=[solid_line,dash_line])
 
     return ax
 
