@@ -208,7 +208,8 @@ _________________________________________________
 '''
 #generate_from: http://patorjk.com/software/taag/
 
-TEMPLATE='''##------------------------ pysarApp_template.txt ------------------------##
+TEMPLATE='''# vim: set filetype=cfg:
+##------------------------ pysarApp_template.txt ------------------------##
 ## 1. Load Data (--load to exit after this step)
 ## recommended input files for data in radar coordinates:
 ##     pysar.unwrapFiles         = 'path of all unwrapped interferograms'
@@ -456,26 +457,28 @@ def main(argv):
 
 
     #####for Univ of Miami
-    # Copy bl_list.txt file from PROCESS directory
+    # Copy from PROCESS directory
+    file_list = ['unavco_attributes.txt', 'bl_list.txt']
     try:
         process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
-        if ut.update_file('bl_list.txt', process_dir+'/bl_list.txt', check_readable=False):
-            shutil.copy2(process_dir+'/bl_list.txt', inps.work_dir)
+        file_list = [process_dir+'/'+i for i in file_list]
+        file_list = ut.get_file_list(file_list, abspath=True)
+        for file in file_list:
+            if ut.update_file(os.path.basename(file), file, check_readable=False):
+                shutil.copy2(file, inps.work_dir)
+                print 'copy '+os.path.basename(file)+' to work directory'
     except: pass
 
-    # Copy UNAVCO attribute txt file
-    file_list = ['unavco_attributes.txt']
+    # Copy from SLC directory
+    file_list = ['summary*slc.jpg']
     try:
-        process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
-        if ut.update_file(file_list[0], process_dir+'/'+file_list[0], check_readable=False):
-            shutil.copy2(process_dir+'/'+file_list[0], inps.work_dir)
+        slc_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/SLC'
+        file_list = [slc_dir+'/'+i for i in file_list]
+        for file in file_list:
+            if ut.update_file(os.path.basename(file), file, check_readable=False):
+                shutil.copy2(file, inps.work_dir)
+                print 'copy '+os.path.basename(file)+' to work directory'
     except: pass
-    try:
-        inps.unavco_atr_file = ut.get_file_list(file_list, abspath=True)[0]
-    except:
-        inps.unavco_atr_file = None
-        if pysar.miami_path and 'SCRATCHDIR' in os.environ and inps.project_name:
-            print 'No UNAVCO attributes file found in PROCESS directory, skip copy'
 
 
     #########################################
@@ -533,6 +536,10 @@ def main(argv):
     # Grab tropospheric delay file
     try:    inps.trop_file = ut.get_file_list(inps.trop_model+'.h5', abspath=True)[0]
     except: inps.trop_file = None
+
+    # Get unavco_attributes.txt file name
+    try:    inps.unavco_atr_file = ut.get_file_list('unavco_attributes.txt', abspath=True)[0]
+    except: inps.unavco_atr_file = None;   print 'No UNAVCO attributes file found.'
 
 
     #########################################
@@ -652,9 +659,10 @@ def main(argv):
 
     # Plot network colored in spatial coherence
     print '--------------------------------------------'
-    plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+' --mask '+inps.mask_file+' --nodisplay'
+    plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+\
+              ' --template '+inps.template_file+' --nodisplay'
     print plotCmd
-    if ut.update_file('Network.pdf', [inps.ifgram_file, inps.coherence_file, inps.mask_file], check_readable=False):
+    if ut.update_file('Network.pdf', [inps.ifgram_file, inps.coherence_file, inps.template_file], check_readable=False):
         os.system(plotCmd)
 
     if inps.modify_network:

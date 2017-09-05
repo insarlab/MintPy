@@ -432,7 +432,7 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
 
 
 ##################################################################################################
-def plot_dem_yx(ax, dem, inps_dict):
+def plot_dem_yx(ax, dem, inps_dict=dict()):
     '''Plot DEM in radar coordinate
     Inputs:
         ax         : matplotlib axes object
@@ -442,12 +442,17 @@ def plot_dem_yx(ax, dem, inps_dict):
                     'disp_dem_contour'  : bool,  True/False
                     'dem_contour_step'  : float, 200.0
                     'dem_contour_smooth': float, 3.0
-    
+
     Examples:
         dem_disp_dict = {'dem': 'gsi10m_30m.dem', 'disp_dem_shade': True, 'disp_dem_contour': True,\
                          'dem_contour_step': 200.0, 'dem_contour_smooth': 3.0}
         ax = plot_dem_yx(ax,dem,dem_disp_dict)
     '''
+    if not inps_dict:
+        inps_dict['disp_dem_shade']     = True
+        inps_dict['disp_dem_contour']   = True
+        inps_dict['dem_contour_smooth'] = 3.0
+        inps_dict['dem_contour_step']   = 200.0
 
     if inps_dict['disp_dem_shade']:
         print 'show shaded relief DEM'

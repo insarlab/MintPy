@@ -938,7 +938,7 @@ def nonzero_mask(File, outFile='mask.h5'):
 
 
 ######################################################################################################
-def spatial_average(File, maskFile=None, box=None, saveList=False):
+def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True):
     '''Read/Calculate Spatial Average of input file.
 
     If input file is text file, read it directly;
@@ -1014,8 +1014,11 @@ def spatial_average(File, maskFile=None, box=None, saveList=False):
         fl = open(txtFile,'r')
         lines = fl.readlines()
         fl.close()
-        try:    aoi_line_orig = [i for i in lines if '# AOI box:' in i][0]
-        except: aoi_line_orig = ''
+        if checkAoi:
+            try:    aoi_line_orig = [i for i in lines if '# AOI box:' in i][0]
+            except: aoi_line_orig = ''
+        else:
+            aoi_line_orig = aoi_line
         try:    mask_line_orig = [i for i in lines if '# Mask file:' in i][0]
         except: mask_line_orig = ''
         if (aoi_line_orig == aoi_line \

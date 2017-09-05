@@ -82,6 +82,7 @@ def cmdLineParse():
     parser.add_argument('-m','--mask', dest='mask_file',\
                         help='mask to use. Default: geo_maskTempCoh.h5 for geocoded file and maskTempCoh.h5 for radar file')
     parser.add_argument('--error', dest='error_file', help='txt file with error for each date.')
+    parser.add_argument('--dem', dest='dem_file', help='DEM file for background shaed relief')
 
     pixel = parser.add_argument_group('Pixel Input')
     pixel.add_argument('--yx', type=int, metavar=('Y','X'), nargs=2,\
@@ -266,6 +267,9 @@ if __name__ == '__main__':
     #This works on OSX. Original worked on Linux.
     # rect[left, bottom, width, height]
     ax_v = fig_v.add_axes([0.125,0.25,0.75,0.65])
+    if inps.dem_file:
+        dem = readfile.read(inps.dem_file)[0]
+        ax_v = view.plot_dem_yx(ax_v, dem)
     img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim, interpolation='nearest')
 
     # Reference Pixel
