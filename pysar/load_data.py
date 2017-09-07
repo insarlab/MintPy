@@ -1,14 +1,9 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-#
-# Yunjun, Jul 2015: Add check_num/check_file_size to .int/.cor file
-# Yunjun, Jan 2017: Add auto_path_miami(), copy_roipac_file()
-#                   Add roipac2pysar_multi_group_hdf5()
-#                   Add r+ mode loading of multi_group hdf5 file
 
 
 import os
@@ -39,19 +34,22 @@ def auto_path_miami(inps, template={}):
     if not inps.timeseries_dir:
         inps.timeseries_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PYSAR'
 
-    # .unw/.cor/.int files
+    ##### .unw/.cor/.int files
     process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
     print "PROCESS directory: "+process_dir
     if inps.insar_processor == 'roipac':
         if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/filt_*.unw'
         if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
-        if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/filt_*rlks.int'
+        #if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/filt_*rlks.int'
     elif inps.insar_processor == 'gamma':
         if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/diff_*rlks.unw'
         if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
-        if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/diff_*rlks.int'
+        #if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/diff_*rlks.int'
 
-    # master interferogram for geomap*.trans and DEM in radar coord
+    ##### master interferogram for geomap*.trans and DEM in radar coord
+    if all(fname and fname != 'auto' for fname in [inps.trans, inps.dem_radar, inps.dem_geo]):
+        return inps
+
     try:     m_date12 = np.loadtxt(process_dir+'/master_ifgram.txt', dtype=str).tolist()
     except:
         try: m_date12 = os.walk(process_dir+'/GEO').next()[1][0].split('geo_')[1]
@@ -62,26 +60,35 @@ def auto_path_miami(inps, template={}):
             if inps.insar_processor == 'roipac':
                 inps.trans = process_dir+'/GEO/*'+m_date12+'*/geomap*.trans'
             elif inps.insar_processor == 'gamma':
-                inps.trans = process_dir+'/sim_'+m_date12+'/sim_*.UTM_TO_RDC'
+                inps.trans = process_dir+'/SIM/sim_'+m_date12+'/sim_*.UTM_TO_RDC'
         except:
             warnings.warn('No master interferogram found! Can not locate mapping transformation file for geocoding!')
-    
+
     if not inps.dem_radar or inps.dem_radar == 'auto':
         try:
             if inps.insar_processor == 'roipac':
                 inps.dem_radar = process_dir+'/DONE/*'+m_date12+'*/radar*.hgt'
             elif inps.insar_processor == 'gamma':
-                inps.dem_radar = process_dir+'/sim_'+m_date12+'/sim_*.hgt_sim'
+                inps.dem_radar = process_dir+'/SIM/sim_'+m_date12+'/sim_*.hgt_sim'
         except:
             warnings.warn('No master interferogram found! Can not locate DEM in radar coord!')
 
     # Use DEMg/DEM option if dem_geo is not specified in pysar option
     dem_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/DEM'
     if not inps.dem_geo or inps.dem_geo == 'auto':
-        if os.path.isdir(dem_dir):       inps.dem_geo = dem_dir+'/*.dem'
-        elif 'DEMg' in template.keys():  inps.dem_geo = template['DEMg']
-        elif 'DEM'  in template.keys():  inps.dem_geo = template['DEM']
-        else:  warnings.warn('Can not locate DEM in geo coord!')
+        inps.dem_geo = []
+        if os.path.isdir(dem_dir):
+            inps.dem_geo = [dem_dir+'/*.dem']
+        elif inps.insar_processor == 'gamma':
+            inps.dem_geo = [process_dir+'/SIM/sim_'+m_date12+'/sim_*.utm.dem']
+
+        if   'DEMg' in template.keys():  inps.dem_geo.append(template['DEMg'])
+        elif 'DEM'  in template.keys():  inps.dem_geo.append(template['DEM'])
+        try:    inps.dem_geo = ut.get_file_list(inps.dem_geo)[0]
+        except: inps.dem_geo = None
+
+        if not inps.dem_geo:
+            warnings.warn('Can not locate DEM in geo coord!')
 
     return inps
 
@@ -142,7 +149,7 @@ def check_file_size(fileList, mode_width=None, mode_length=None):
         print 'But the following '+ext+' have different dimensions and thus will not be loaded:'
         for i in range(len(fileList)):
             if widthList[i] != mode_width or lengthList[i] != mode_length:
-                print fileList[i]+'    width: '+widthList[i]+'  length: '+lengthList[i]
+                print '%s    width: %s    length: %s' % (os.path.basename(fileList[i]), widthList[i], lengthList[i])
                 fileListOut.remove(fileList[i])
         print '\nNumber of '+ext+' left: '+str(len(fileListOut))
         print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
@@ -191,7 +198,7 @@ def check_existed_hdf5_file(roipacFileList, hdf5File):
     return outFileList
 
 
-def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extra_meta_dict=dict()):
+def load_multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extra_meta_dict=dict()):
     '''Load multiple ROI_PAC files into HDF5 file (Multi-group, one dataset and one attribute dict per group).
     Inputs:
         fileType : string, i.e. interferograms, coherence, snaphu_connect_component, etc.
@@ -214,9 +221,8 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
 
     # Check conflict with existing hdf5 file
     fileList2 = check_existed_hdf5_file(fileList, hdf5File)
-    
+
     # Open(Create) HDF5 file with r+/w mode based on fileList2
-    
     if fileList2 == fileList:
         # Create and open new hdf5 file with w mode
         print 'number of '+ext+' to add: '+str(len(fileList))
@@ -240,25 +246,20 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
             gg = h5file.create_group(fileType)     # new hdf5 file
         else:
             gg = h5file[fileType]                  # existing hdf5 file
-        
+
         for file in fileList:
             # Read data and attributes
             print 'Adding ' + file
             data, atr = readfile.read(file)
 
-            if 'PROCESSOR' in atr.keys() and atr['PROCESSOR'] == 'roipac':
-                try:
-                    d1, d2 = atr['DATE12'].split('-')
-                    baseline_file = os.path.dirname(file)+'/'+d1+'_'+d2+'_baseline.rsc'
-                    baseline_rsc = readfile.read_roipac_rsc(baseline_file)
-                    atr.update(baseline_rsc)
-                except:
-                    print 'No *_baseline.rsc file found!'
-
             # PySAR attributes
             atr['drop_ifgram'] = 'no'
             try:     atr['PROJECT_NAME'] = extra_meta_dict['project_name']
             except:  atr['PROJECT_NAME'] = 'PYSAR'
+            key = 'INSAR_PROCESSOR'
+            if key not in atr.keys():
+                try:  atr[key] = extra_meta_dict['insar_processor']
+                except:  pass
 
             # Write dataset
             group = gg.create_group(os.path.basename(file))
@@ -275,46 +276,7 @@ def roipac2multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extr
     return hdf5File, fileList
 
 
-def roipac_nonzero_mask(unwFileList, maskFile='mask.h5'):
-    '''Generate mask for non-zero amplitude pixel of ROI_PAC .unw file list.'''
-    unwFileList, width, length = check_file_size(unwFileList)
-    if unwFileList:
-        # Initial mask value
-        maskZero = np.ones([int(length), int(width)])
-
-        # Update mask from input .unw file list
-        fileNum = len(unwFileList)
-        date12_list = ptime.list_ifgram2date12(unwFileList)
-        prog_bar = ptime.progress_bar(maxValue=fileNum, prefix='calculating: ')
-        for i in range(fileNum):
-            file = unwFileList[i]
-            amp, unw, rsc = readfile.read_float32(file)
-            
-            maskZero *= amp
-            prog_bar.update(i+1, suffix=date12_list[i])
-        prog_bar.close()
-        mask = np.ones([int(length), int(width)])
-        mask[maskZero==0] = 0
-        
-        # write mask hdf5 file
-        print 'writing >>> '+maskFile
-        h5 = h5py.File(maskFile,'w')
-        group = h5.create_group('mask')
-        dset = group.create_dataset('mask', data=mask, compression='gzip')
-        # Attribute - *.unw.rsc
-        for key,value in rsc.iteritems():
-            group.attrs[key] = value
-        # Attribute - *baseline.rsc
-        d1, d2 = rsc['DATE12'].split('-')
-        baseline_file = os.path.dirname(file)+'/'+d1+'_'+d2+'_baseline.rsc'
-        baseline_rsc = readfile.read_roipac_rsc(baseline_file)
-        for key,value in baseline_rsc.iteritems():
-            group.attrs[key] = value
-
-    return maskFile, unwFileList
-
-
-def roipac2single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict()):
+def load_single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict()):
     '''Convert ROI_PAC .dem / .hgt file to hdf5 file
     Based on load_dem.py written by Emre Havazli
     Inputs:
@@ -325,26 +287,43 @@ def roipac2single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict(
     Output:
         outfile   : string, output hdf5 file name
     '''
-    if not ut.update_file(outfile, infile):
-        return outfile
+    atr = readfile.read_attribute(infile)
 
-    # Read input file
-    print 'loading file: '+infile
-    data, atr = readfile.read(infile)
+    if ut.update_file(outfile, infile):
+        if (os.path.dirname(infile) == os.path.dirname(outfile) and \
+            os.path.splitext(infile)[1] == os.path.splitext(outfile)[1]):
+            print infile+' already in working directory with recommended format, no need to re-load.'
+            outfile = infile
 
-    # Write output file - data
-    print 'writing >>> '+outfile
-    h5 = h5py.File(outfile, 'w')
-    group = h5.create_group(file_type)
-    dset = group.create_dataset(file_type, data=data, compression='gzip')
+        else:
+            # Read input file
+            print 'loading file: '+infile
+            data = readfile.read(infile)[0]
 
-    # Write output file - attributes
-    for key, value in atr.iteritems():
-        group.attrs[key] = value
-    try: group.attrs['PROJECT_NAME'] = extra_meta_dict['project_name']
-    except: pass
-    
-    h5.close()
+            # Write output file - data
+            print 'writing >>> '+outfile
+            h5 = h5py.File(outfile, 'w')
+            group = h5.create_group(file_type)
+            dset = group.create_dataset(file_type, data=data, compression='gzip')
+
+            # Write output file - attributes
+            for key, value in atr.iteritems():
+                group.attrs[key] = value
+            try: group.attrs['PROJECT_NAME'] = extra_meta_dict['project_name']
+            except: pass
+            key = 'INSAR_PROCESSOR'
+            if key not in atr.keys():
+                try:  atr[key] = extra_meta_dict['insar_processor']
+                except:  pass
+            h5.close()
+
+    #if (os.path.abspath(infile) != os.path.abspath(outfile) and \
+    #    os.path.dirname(infile) == os.path.dirname(outfile)):
+    #    print 'remove the duplicated, obsolete '+atr['FILE_TYPE']+' file in the same directory'
+    #    rmCmd = 'rm '+infile
+    #    print rmCmd
+    #    os.system(rmCmd)
+
     return outfile
 
 
@@ -393,17 +372,25 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     if not fileList:
         return None
 
-    # Prepare .rsc file for Gamma product, if it's not prepared yet.
-    if inps_dict['insar_processor'] == 'gamma':
-        for File in fileList:
-            if not os.path.isfile(File+'.rsc'):
-                prepCmd = 'prep_gamma.py '+File
-                print prepCmd
-                os.system(prepCmd)
+    ##### Prepare attributes file
+    processor = inps_dict['insar_processor']
+    print '--------------------------------------------'
+    print 'preparing attributes files using prep_%s.py ...' % processor
+    # prepare multiple files input for cmd calling
+    files_input = ''
+    for x in fileList:
+        files_input += x+' '
+    # call prepare_*.py
+    if   processor == 'gamma' :  prepCmd = 'prep_gamma.py ' +files_input;   os.system(prepCmd)
+    elif processor == 'roipac':  prepCmd = 'prep_roipac.py '+files_input;   os.system(prepCmd)
+    else:
+        print 'Un-supported InSAR processor: '+processor
+        print 'Skip preparing attributes files'
 
+    print '----------------------------'
+    print 'loading files ...'
     atr = readfile.read_attribute(fileList[0])
     k = atr['FILE_TYPE']
-    print '--------------------------------------------'
     print 'Input file(s) is '+atr['PROCESSOR']+' '+k
 
     # Get output file type
@@ -415,8 +402,6 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         elif k in ['.msk']:  file_type = 'mask'
         elif k in ['.hgt','.dem','dem','.hgt_sim']:
             file_type = 'dem'
-        elif k in ['.trans']:
-            file_type = '.trans'
         else:
             file_type = k
 
@@ -433,7 +418,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
                 outfile = 'demGeo.h5'
             else:
                 outfile = 'demRadar.h5'
-        elif file_type == '.trans':
+        elif file_type in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
             outfile = os.path.basename(fileList[0])
         else:
             warnings.warn('Un-recognized file type: '+file_type)
@@ -448,12 +433,12 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
 
     # Convert 
     if file_type in multi_group_hdf5_file:
-        outfile = roipac2multi_group_hdf5(file_type, fileList, outfile, inps_dict)[0]
+        outfile = load_multi_group_hdf5(file_type, fileList, outfile, inps_dict)[0]
 
     elif file_type in single_dataset_hdf5_file:
-        outfile = roipac2single_dataset_hdf5(file_type, fileList[-1], outfile, inps_dict)
+        outfile = load_single_dataset_hdf5(file_type, fileList[-1], outfile, inps_dict)
 
-    elif file_type in ['.trans']:
+    elif file_type in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
         outfile = copy_file(fileList[-1], os.path.dirname(outfile))
     else:
         warnings.warn('Un-supported file type: '+file_type)
@@ -467,12 +452,11 @@ def load_data_from_template(inps):
     # Initial value
     inps.unw = None
     inps.cor = None
-    inps.int = None
     inps.trans = None
     inps.dem_radar = None
     inps.dem_geo = None
 
-    # 1.1 Read template contents
+    # 1.1 Read template contents (support multiple template files input)
     inps.template_file = [os.path.abspath(i) for i in inps.template_file]
     # Move default template file pysarApp_template.txt to the end of list, so that it has highest priority
     default_template_file = [i for i in inps.template_file if 'pysarApp' in i]
@@ -480,6 +464,7 @@ def load_data_from_template(inps):
         inps.template_file.remove(default_template_file[0])
         inps.template_file.append(default_template_file[0])
     template = dict()
+    # Read file by file
     for File in inps.template_file:
         temp_dict = readfile.read_template(File)
         for key, value in temp_dict.iteritems():
@@ -495,23 +480,31 @@ def load_data_from_template(inps):
         if inps.template_filename:
             inps.project_name = os.path.splitext(inps.template_filename[0])[0]
 
-    key = 'pysar.insarProcessor'
-    if key in keyList:
-        value = template[key]
-        if value == 'auto':
-            inps.insar_processor = 'roipac'
-        else:
-            inps.insar_processor = value
+    for key in ['processor','processing_software','unavco.processing_software','pysar.insarProcessor']:
+        if key in keyList:
+            value = template[key]
+            if value == 'auto':
+                inps.insar_processor = 'roipac'
+            else:
+                inps.insar_processor = value
 
+    print '--------------------------------------------'
+    print 'InSAR processing software: '+inps.insar_processor
     if 'pysar.unwrapFiles'    in keyList:   inps.unw   = template['pysar.unwrapFiles']
     if 'pysar.corFiles'       in keyList:   inps.cor   = template['pysar.corFiles']
-    if 'pysar.wrapFiles'      in keyList:   inps.int   = template['pysar.wrapFiles']
     if 'pysar.transFile'      in keyList:   inps.trans = template['pysar.transFile']
     if 'pysar.demFile.radarCoord' in keyList:   inps.dem_radar = template['pysar.demFile.radarCoord']
     if 'pysar.demFile.geoCoord'   in keyList:   inps.dem_geo   = template['pysar.demFile.geoCoord']
 
+    # Check existed single dataset files
+    inps_tmp = argparse.Namespace()
+    inps_tmp = ut.check_loaded_dataset(inps.timeseries_dir, inps_tmp, print_msg=False)
+    if (not inps.trans     or inps.trans     == 'auto') and inps_tmp.trans_file    :  inps.trans     = inps_tmp.trans_file
+    if (not inps.dem_radar or inps.dem_radar == 'auto') and inps_tmp.dem_radar_file:  inps.dem_radar = inps_tmp.dem_radar_file
+    if (not inps.dem_geo   or inps.dem_geo   == 'auto') and inps_tmp.dem_geo_file  :  inps.dem_geo   = inps_tmp.dem_geo_file
+
     # 1.2 Auto Setting for Geodesy Lab - University of Miami 
-    if pysar.miami_path and 'SCRATCHDIR' in os.environ:
+    if pysar.miami_path and 'SCRATCHDIR' in os.environ and inps.project_name:
         inps = auto_path_miami(inps, template)
 
     # 1.3 get snap_connect.byt path if .unw is input
@@ -526,13 +519,13 @@ def load_data_from_template(inps):
     if not os.path.isdir(inps.timeseries_dir):
         os.makedirs(inps.timeseries_dir)
     #print "PySAR working directory: "+inps.timeseries_dir
-    
+
     # TEMPLATE file directory (to support relative path input)
     inps.template_dir = os.path.dirname(inps.template_file[-1])
     os.chdir(inps.template_dir)
     print 'Go to TEMPLATE directory: '+inps.template_dir
     print 'unwrapped interferograms to load: '+str(inps.unw)
-    print 'wrapped   interferograms to load: '+str(inps.int)
+    #print 'wrapped   interferograms to load: '+str(inps.int)
     print 'spatial coherence  files to load: '+str(inps.cor)
     print 'transformation     file to load: '+str(inps.trans)
     print 'DEM file in radar coord to load: '+str(inps.dem_radar)
@@ -542,18 +535,9 @@ def load_data_from_template(inps):
     # required - unwrapped interferograms
     inps.ifgram_file = load_file(inps.unw, vars(inps))
 
-    # Copy unwrap ifgram atr for Gamma DEM file in radar coord
-    if inps.insar_processor == 'gamma' and ut.get_file_list(inps.dem_radar, abspath=True):
-        inps.dem_radar = ut.get_file_list(inps.dem_radar, abspath=True)[0]
-        dem_rsc = readfile.read_attribute(inps.ifgram_file)
-        dem_rsc['FILE_TYPE'] = '.hgt_sim'
-        dem_rsc['PROCESSOR'] = 'gamma'
-        dem_rsc_file = inps.dem_radar+'.rsc'
-        writefile.write_roipac_rsc(dem_rsc, dem_rsc_file)
-
     # optional but recommended files - multi_group_hdf5_file
     inps.coherence_file = load_file(inps.cor, vars(inps))
-    inps.wrap_ifgram_file = load_file(inps.int, vars(inps))
+    #inps.wrap_ifgram_file = load_file(inps.int, vars(inps))
     if inps.snap_connect:
         inps.snap_connect_file = load_file(inps.snap_connect, vars(inps))
 
@@ -578,29 +562,28 @@ EXAMPLE='''example:
 '''
 
 TEMPLATE='''
-## recommend input files for data in radar coordinate:
-##     pysar.unwrapFiles
-##     pysar.corFiles
-##     pysar.transFile
-##     pysar.demFile.radarCoord
-##     pysar.demFile.geoCoord
-## recommend input files for data in geo coordinate:
+## recommended input files for data in radar coordinates:
+##     pysar.unwrapFiles         = 'path of all unwrapped interferograms'
+##     pysar.corFiles            = 'path of all coherence files'
+##     pysar.demFile.geoCoord    = 'path of DEM in geo   coordinates'
+##     pysar.demFile.radarCoord  = 'path of DEM in radar coordinates'
+##     pysar.transFile           = 'path of mapping transformation file'
+## recommended input files for data in geo coordinates:
 ##     pysar.unwrapFiles 
 ##     pysar.corFiles    
 ##     pysar.dem.geoCoord
 ## auto - automatic path pattern for Univ of Miami file structure, which are:
-##     pysar.unwrapFiles = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
-##     pysar.corFiles    = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
-##     pysar.intFiles    = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.int  #for backup purpose, not used in PySAR
-##     pysar.transFile   = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
-##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
+##     pysar.unwrapFiles        = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
+##     pysar.corFiles           = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
-pysar.insarProcessor     = auto  #[roipac, isce, gamma, doris], auto for roipac, InSAR processor
-pysar.unwrapFiles        = auto  #[filt*.unw, auto], path of all unwrapped interferograms
-pysar.corFiles           = auto  #[filt*.cor, auto], path of all coherence files
-pysar.transFile          = auto  #[geomap*.trans, sim*.UTM_TO_RDC, auto], path of mapping transformation file
-pysar.demFile.radarCoord = auto  #[radar*.hgt], path of DEM in radar coordinate
-pysar.demFile.geoCoord   = auto  #[*.dem],      path of DEM in geo   coordinate
+##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
+##     pysar.transFile          = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
+pysar.insarProcessor     = auto  #[roipac, gamma, isce, doris], auto for roipac, InSAR processor
+pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw], path of all unwrapped interferograms
+pysar.corFiles           = auto  #[filt*.cor, filt_*.cor], path of all coherence files
+pysar.transFile          = auto  #[geomap*.trans, sim*.UTM_TO_RDC], path of mapping transformation file
+pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim], path of DEM in radar coordinate
+pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem],      path of DEM in geo   coordinate
 '''
 
 
@@ -637,15 +620,15 @@ def cmdLineParse():
 #############################  Main Function  ################################
 def main(argv):
     inps = cmdLineParse()
+
+    # Load data into one hdf5 file
     if inps.file:
-        # Load data into one hdf5 file
         inps.outfile = load_file(inps.file, vars(inps), inps.outfile)
 
+    # Load the whole dataset for PySAR time series analysis, e.g. call from pysarApp.py
     else:
-        # Load the whole dataset for PySAR time series analysis, e.g. call from pysarApp.py
         inps = load_data_from_template(inps)
 
-        
     return inps.outfile
 
 ##############################################################################

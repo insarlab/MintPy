@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR v1.2                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -113,22 +113,21 @@ def correct_lod_file(File, outFile=None):
 
 
 def usage():
-    print '''
-*****************************************************************
-  Applying an empirical model to correct the Local Oscilator Drift 
-  of Envisat ASAR instrument. The empiriocal model was suggested 
-  by Petar Marinkovic and Yngvar Larsen, 2013.
+    print '''usage: lod.py file_radarCoord [out_name]
 
-  Usage:
-      lod.py file_radarCoord [out_name]
+Local Oscilator Drift correction of Envisat ASAR instrument with an empirical model.
 
-  Example:
-      lod.py timeseries.h5
-      lod.py timeseries.h5 timeseries_LODcor.h5
-      lod.py Seeded_unwrapIfgram.h5
+reference:
+  Marinkovic, P., and Y. Larsen (2013), Consequences of long-term ASAR local oscillator 
+  frequency decay - An empirical study of 10 years of data, in Living Planet Symposium,
+  Edinburgh, U. K.
 
-*****************************************************************
+example:
+  lod.py timeseries.h5
+  lod.py timeseries.h5 timeseries_LODcor.h5
+  lod.py Seeded_unwrapIfgram.h5
     '''
+    return
 
 
 #########################################################################################

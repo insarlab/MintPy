@@ -101,7 +101,7 @@ def cmdLineParse():
 
     parser.add_argument('timeseries_file', help='Timeseries file')
     parser.add_argument('--template', dest='template_file', help='template file with options below:\n'+TEMPLATE+'\n')
-    parser.add_argument('-m', dest='mask_file', default='maskTempCoh.h5', help='mask file for estimation')
+    parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5', help='mask file for estimation')
     parser.add_argument('-s', dest='ramp_type', default='quadratic',\
                         help='ramp type to be remove for RMS calculation.\n'+\
                              'default - quadratic; no - do not remove ramp')
@@ -129,75 +129,78 @@ def main(argv):
     ref_date = date_list[ref_idx]
     print 'date with minimum residual RMS: %s - %.4f' % (ref_date, rms_list[ref_idx])
 
-    if inps.save_reference_date:
-        txtFile = 'reference_date.txt'
-        f = open(txtFile, 'w')
+    refTxtFile = 'reference_date.txt'
+    if (inps.save_reference_date and \
+        ut.update_file(refTxtFile, [inps.timeseries_file, inps.mask_file, inps.template_file], check_readable=False)):
+        f = open(refTxtFile, 'w')
         f.write(ref_date+'\n')
         f.close()
-        print 'save date to file: '+txtFile
+        print 'save date to file: '+refTxtFile
 
     ##### exclude_date.txt
     print '------------------------------------------------------------'
     ex_idx_list = [rms_list.index(i) for i in rms_list if i > inps.min_rms]
     print 'date(s) with residual RMS > '+str(inps.min_rms)
-    ex_idx_list = []
 
 
+    exTxtFile = 'exclude_date.txt'
     if ex_idx_list:
-        if inps.save_exclude_date:
-            txtFile = 'exclude_date.txt'
-            f = open(txtFile, 'w')
+        if (inps.save_exclude_date and \
+            ut.update_file(exTxtFile, [inps.timeseries_file, inps.mask_file, inps.template_file], check_readable=False)):
+            f = open(exTxtFile, 'w')
             for i in ex_idx_list:
                 print '%s - %.4f' % (date_list[i], rms_list[i])
                 f.write(date_list[i]+'\n')
             f.close()
-            print 'save date(s) to file: '+txtFile
+            print 'save date(s) to file: '+exTxtFile
     else:
         print 'None.'
 
     ##### Plot
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    font_size = 12
-
-    dates, datevector = ptime.date_list2vector(date_list)
-    bar_width = ut.mode(np.diff(dates).tolist())*3/4
-    x_list = [i-bar_width/2 for i in dates]
-
-    # Plot all dates
-    ax.bar(x_list, rms_list, bar_width.days)
-    #ax.bar(x_list, rms_list, bar_width.days)
-
-    # Plot reference date
-    if inps.save_reference_date:
-        ax.bar(x_list[ref_idx], rms_list[ref_idx], bar_width.days, label='Reference date')
-
-    # Plot exclude dates
-    if ex_idx_list and inps.save_exclude_date:
-        ex_x_list = [x_list[i] for i in ex_idx_list]
-        ex_rms_list = [rms_list[i] for i in ex_idx_list]
-        ax.bar(ex_x_list, ex_rms_list, bar_width.days, color='darkgray', label='Exclude date(s)')
-
-    # Plot min_rms line
-    ax, xmin, xmax = ptime.auto_adjust_xaxis_date(ax, datevector, font_size)
-    ax.plot(np.array([xmin, xmax]), np.array([inps.min_rms, inps.min_rms]), '-')
-
-    # axis format
-    ax = pnet.auto_adjust_yaxis(ax, rms_list+[inps.min_rms], font_size, ymin=0.0)
-    ax.set_xlabel('Time [years]',fontsize=font_size)
-    ax.set_ylabel('Root Mean Square (m)',fontsize=font_size)
-    ax.yaxis.set_ticks_position('both')
-
-    if inps.save_reference_date or inps.save_exclude_date:
-        plt.legend()
-
-    # save figure
     if inps.ramp_type != 'no':
         fig_name = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.ramp_type+'_rms.pdf'
     else:
         fig_name = os.path.splitext(inps.timeseries_file)[0]+'_rms.pdf'
-    fig.savefig(fig_name, bbox_inches='tight')
-    print 'save figure to file: '+fig_name
+
+    if ut.update_file(fig_name, [exTxtFile, refTxtFile, inps.template_file], check_readable=False):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        font_size = 12
+
+        dates, datevector = ptime.date_list2vector(date_list)
+        bar_width = ut.mode(np.diff(dates).tolist())*3/4
+        x_list = [i-bar_width/2 for i in dates]
+
+        # Plot all dates
+        ax.bar(x_list, rms_list, bar_width.days)
+        #ax.bar(x_list, rms_list, bar_width.days)
+
+        # Plot reference date
+        if inps.save_reference_date:
+            ax.bar(x_list[ref_idx], rms_list[ref_idx], bar_width.days, label='Reference date')
+
+        # Plot exclude dates
+        if ex_idx_list and inps.save_exclude_date:
+            ex_x_list = [x_list[i] for i in ex_idx_list]
+            ex_rms_list = [rms_list[i] for i in ex_idx_list]
+            ax.bar(ex_x_list, ex_rms_list, bar_width.days, color='darkgray', label='Exclude date(s)')
+
+        # Plot min_rms line
+        ax, xmin, xmax = ptime.auto_adjust_xaxis_date(ax, datevector, font_size)
+        ax.plot(np.array([xmin, xmax]), np.array([inps.min_rms, inps.min_rms]), '-')
+
+        # axis format
+        ax = pnet.auto_adjust_yaxis(ax, rms_list+[inps.min_rms], font_size, ymin=0.0)
+        ax.set_xlabel('Time [years]',fontsize=font_size)
+        ax.set_ylabel('Root Mean Square (m)',fontsize=font_size)
+        ax.yaxis.set_ticks_position('both')
+
+        if inps.save_reference_date or inps.save_exclude_date:
+            plt.legend()
+
+        # save figure
+        fig.savefig(fig_name, bbox_inches='tight')
+        print 'save figure to file: '+fig_name
 
     return
 

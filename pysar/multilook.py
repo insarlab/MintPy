@@ -1,15 +1,9 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Oct 2015: Merge timeseries/velocity into one
-#                   Merge all non-hdf5 into one
-# Yunjun, Nov 2015: Support geomap*.trans file
-# Yunjun, May 2015: add multilook() and multilook_attribute()
-# Yunjun, Dec 2016: add multilook_file(), cmdLineParse() and parallel option
-#                   rename multi_looking.py to multilook.py
 
 
 import sys
@@ -20,8 +14,6 @@ import re
 
 import h5py
 import numpy as np
-#from joblib import Parallel, delayed
-#import multiprocessing
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
@@ -34,6 +26,9 @@ def multilook_matrix(matrix,lks_y,lks_x):
     rows,cols = matrix.shape
     lks_x = int(lks_x)
     lks_y = int(lks_y)
+    if lks_x == 1 and lks_y == 1:
+        return matrix
+
     rows_mli=int(np.floor(rows/lks_y))
     cols_mli=int(np.floor(cols/lks_x))
     #thr = np.floor(lks_x*lks_y/2)
@@ -50,11 +45,11 @@ def multilook_matrix(matrix,lks_y,lks_x):
         warnings.simplefilter("ignore", category=RuntimeWarning)
         for c in range(cols_mli):  matrix_Cmli[:,c] = np.nanmean(matrix[:,(c)*lks_x:(c+1)*lks_x],1)
         for r in range(rows_mli):  matrix_mli[r,:]  = np.nanmean(matrix_Cmli[(r)*lks_y:(r+1)*lks_y,:],0)
-  
+    del matrix, matrix_Cmli
     return matrix_mli
 
 
-def multilook_attribute(atr_dict,lks_y,lks_x, print_message=True):
+def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
     #####
     atr = dict()
     for key, value in atr_dict.iteritems():  atr[key] = str(value)
@@ -72,38 +67,38 @@ def multilook_attribute(atr_dict,lks_y,lks_x, print_message=True):
     atr['YMIN'] = '0'
     atr['XMAX'] = str(width_mli-1)
     atr['YMAX'] = str(length_mli-1)
-    if print_message:
+    if print_msg:
         print 'update FILE_LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX'
     
     try:
         atr['Y_STEP'] = str(lks_y*float(atr['Y_STEP']))
         atr['X_STEP'] = str(lks_x*float(atr['X_STEP']))
-        if print_message: print 'update Y/X_STEP'
+        if print_msg: print 'update Y/X_STEP'
     except: pass
     try:
         atr['AZIMUTH_PIXEL_SIZE'] = str(lks_y*float(atr['AZIMUTH_PIXEL_SIZE']))
         atr['RANGE_PIXEL_SIZE']   = str(lks_x*float(atr['RANGE_PIXEL_SIZE']))
-        if print_message: print 'update AZIMUTH/RANGE_PIXEL_SIZE'
+        if print_msg: print 'update AZIMUTH/RANGE_PIXEL_SIZE'
     except: pass
 
     if not 'Y_FIRST' in atr.keys():
         try:
             atr['RLOOKS'] = str(int(atr['RLOOKS'])*lks_x)
             atr['ALOOKS'] = str(int(atr['ALOOKS'])*lks_y)
-            if print_message: print 'update R/ALOOKS'
+            if print_msg: print 'update R/ALOOKS'
         except: pass
 
     try:
         atr['ref_y'] = str(int(int(atr['ref_y'])/lks_y))
         atr['ref_x'] = str(int(int(atr['ref_x'])/lks_x))
-        if print_message: print 'update ref_y/x'
+        if print_msg: print 'update ref_y/x'
     except: pass
     try:
         atr['subset_y0'] = str(int(int(atr['subset_y0'])/lks_y))
         atr['subset_y1'] = str(int(int(atr['subset_y1'])/lks_y))
         atr['subset_x0'] = str(int(int(atr['subset_x0'])/lks_x))
         atr['subset_x1'] = str(int(int(atr['subset_x1'])/lks_x))
-        if print_message: print 'update subset_y0/y1/x0/x1'
+        if print_msg: print 'update subset_y0/y1/x0/x1'
     except: pass
 
     return atr
@@ -149,7 +144,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 atr = h5[k][epoch].attrs
 
                 data_mli = multilook_matrix(data,lks_y,lks_x)
-                atr_mli = multilook_attribute(atr,lks_y,lks_x,print_message=False)
+                atr_mli = multilook_attribute(atr,lks_y,lks_x,print_msg=False)
 
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data_mli, compression='gzip')
@@ -216,9 +211,7 @@ def cmdLineParse():
 
 ##################################################################################################
 def main(argv):
-
     inps = cmdLineParse()
-    #print '\n**************** Multilook *********************'
     inps.file = ut.get_file_list(inps.file)
 
     # check outfile and parallel option

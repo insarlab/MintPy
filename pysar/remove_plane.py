@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR v1.2                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -13,10 +13,8 @@ import os
 import sys
 import argparse
 
-import numpy as np
 import h5py
-#import multiprocessing
-#from joblib import Parallel, delayed
+import numpy as np
 
 import pysar._pysar_utilities as ut
 import pysar._remove_surface as rm
@@ -85,13 +83,13 @@ def main(argv):
         # Read mask
         if not inps.mask_file:
             Mask_temp = readfile.read(inps.mask_file)[0]
-            Mask = np.zeros((length, width))
+            Mask = np.zeros((length, width), dtype=np.float32)
             Mask[Mask_temp!=0] = 1
         else:
             Mask = np.ones((length, width))
         
         # Update mask for multiple surface from inps.ysub
-        mask_multiSurface = np.zeros((length,width))
+        mask_multiSurface = np.zeros((length,width), dtype=np.float32)
         surfNum = len(inps.ysub)/2
         if surfNum == 1:
             mask_multiSurface = Mask

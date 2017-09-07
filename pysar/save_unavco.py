@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR v1.2                            #
 # Copyright(c) 2016, Yunjun Zhang                          #
 # Author:  Yunjun Zhang                                    #
 ############################################################
@@ -25,6 +25,54 @@ FLOAT_ZERO = np.float32(0.0)
 CPX_ZERO = np.complex64(0.0)
 
 ################################################################
+def get_mission_name(meta_dict):
+    '''Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
+    Input:  meta_dict : dict, attributes
+    Output: mission   : string, mission name in standard UNAVCO format.
+    '''
+    mission = None
+
+    key_list = meta_dict.keys()
+    if 'mission' in key_list:
+        value = meta_dict['mission'].lower()
+    elif 'PLATFORM' in key_list:
+        value = meta_dict['PLATFORM'].lower()
+    else:
+        print 'No PLATFORM nor mission attribute found, can not identify mission name.'
+        print 'return None'
+        return mission
+
+    ## Convert to UNAVCO Mission name
+    ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
+    if value.startswith('ers'):
+        mission = 'ERS'
+    elif value.startswith(('env','asar')):
+        mission = 'ENV'
+    elif value.startswith(('s1','sen')):
+        mission = 'S1'
+    elif value.startswith(('rs','rsat','radarsat')):
+        mission = 'RS'
+        if value.endswith('1'):
+            mission += '1'
+        else:
+            mission += '2'
+    elif value.startswith(('csk','cos')):
+        mission = 'CSK'
+    elif value.startswith(('tsx','tdx','terra','tandem')):
+        mission = 'TSX'
+    elif value.startswith('jers'):
+        mission = 'JERS'
+    elif value.startswith(('alos','palsar')):
+        if value.endswith('2'):
+            mission = 'ALOS2'
+        else:
+            mission = 'ALOS'
+    else:
+        print 'Un-recognized PLATFORM attribute: '+value
+        print 'return None'
+    return mission
+
+
 def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## Extract UNAVCO format metadata from PySAR attributes dictionary and dateList 
 
@@ -40,7 +88,9 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ##### Given manually
     ## mission
     # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
-    unavco_meta_dict['mission'] = pysar_meta_dict['mission']
+    try: unavco_meta_dict['mission'] = get_mission_name(pysar_meta_dict)
+    except ValueError:
+        print 'Missing required attribute: mission'
 
     ## beam_mode/swath
     unavco_meta_dict['beam_mode']  = pysar_meta_dict['beam_mode']
@@ -169,7 +219,7 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
 
-    print '\n**************** Output to UNAVCO **************'
+    #print '\n**************** Output to UNAVCO **************'
     ##### Prepare Metadata
     pysar_meta_dict = readfile.read_attribute(inps.timeseries)
     k = pysar_meta_dict['FILE_TYPE']
@@ -212,6 +262,7 @@ def main(argv):
     print 'write data to '+str(group)
     ##### Write Time Series Data
     print 'reading file: '+inps.timeseries
+    print 'number of acquisitions: %d' % len(dateList)
     for date in dateList:
         print date
         data = h5_timeseries[k].get(date)[:,:]

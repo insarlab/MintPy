@@ -1,3 +1,5 @@
+#! /usr/bin/env python2
+
 from cvxopt import blas, lapack, solvers
 from cvxopt import matrix, spdiag, mul, div, sparse 
 from cvxopt import spmatrix, sqrt, base

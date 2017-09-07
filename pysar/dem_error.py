@@ -1,18 +1,9 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Reference:
-# Fattahi, H. and F. Amelung, (2013), DEM-error correction in 
-# InSAR time-series analysis, IEEE TGRS, vol. no.99,
-# doi: 10.1109/TGRS.2012.2227761.
-#
-# Yunjun, Jun 2016: Add phase velocity approach from the paper.
-#                   Use different range and look angle for each column
-# Yunjun, Apr 2017: use variable P_BASELINE(_TOP/BOTTOM)_TIMESERIES
-#                   support geocoded file
 
 
 import os
@@ -276,9 +267,9 @@ def main(argv):
 
 
     ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
-    delta_z_mat = np.zeros([length, width])
-    resid_n = np.zeros([A_def.shape[0], length*width])
-    constC = np.zeros([length, width])
+    delta_z_mat = np.zeros([length, width], dtype=np.float32)
+    resid_n = np.zeros([A_def.shape[0], length*width], dtype=np.float32)
+    constC = np.zeros([length, width], dtype=np.float32)
     #delta_a_mat = np.zeros([length, width])
     if inps.incidence_angle.ndim == 2 and inps.range_dis.ndim == 2:
         print 'inversing using L2-norm minimization (unweighted least squares)'\

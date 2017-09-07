@@ -1,13 +1,9 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-#
-# Yunjun, Jul 2015: add 'coherence','wrapped' option, eNum
-# Yunjun, Oct 2015: merge 'interferograms','coherence','wrapped' into one
-# Yunjun, Oct 2016: add --tree option to check hdf5 tree/structure
 
 
 import os
@@ -18,8 +14,8 @@ import time
 import h5py
 from numpy import std
 
-import pysar._readfile as readfile
 import pysar._datetime as ptime
+import pysar._readfile as readfile
 
 
 ############################################################
@@ -52,10 +48,10 @@ def print_hdf5_structure(File):
 def print_timseries_date_info(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
     print '*************** Date Info ***************'
-    print 'Start       Date: '+dateList[0]
-    print 'End         Date: '+dateList[-1]
-    print 'Number             of acquisitions      : '+str(len(dateList))
-    print 'Standard deviation of acquisition times : '+str(std(datevector))+' years'
+    print 'Start Date: '+dateList[0]
+    print 'End   Date: '+dateList[-1]
+    print 'Number of acquisitions      : %d' % len(dateList)
+    print 'Std.   of acquisition times : %.2f yeras' % std(datevector)
     print '----------------------'
     print 'List of dates:'
     print dateList
@@ -66,30 +62,27 @@ def print_timseries_date_info(dateList):
 
 ############################################################
 def usage():
-    print '''
-***************************************************************
-  Displayes the general information of the PySAR product h5 file.
+    print '''usage: info.py file [eNum] [--tree/structure]
 
-  Usage:
-      info.py hdf5File  [eNum]
+Display the general information of File
 
-      file : HDF5 file, support all .h5 files
-      eNum : number of interferogram/coherence in the group
-             (1 as the first)
-      --struct/structure/tree : show the structure tree
+arguments:
+  file : HDF5 file, support all .h5 files
+  eNum : number of interferogram/coherence in the group
+         (1 as the first)
+  --struct/structure/tree : show the structure tree
 
-  Example:
+example:
+  info.py timeseries.h5
+  info.py velocity.h5
+  info.py unwrapIfgram.h5
+  info.py unwrapIfgram.h5    3
 
-      info.py timeseries.h5
-      info.py velocity_demCor_masked.h5
-      info.py unwrapIfgram.h5
-      info.py unwrapIfgram.h5    3
-
-      info.py timeseries.h5 --tree
-      info.py timeseries.h5 --date   # print out date list of timeseries HDF5 file
-
-***************************************************************
+  info.py timeseries.h5 --tree
+  info.py timeseries.h5 --date   # print out date list of timeseries HDF5 file
     '''
+    return
+
 
 ############################################################
 def main(argv):
@@ -97,11 +90,22 @@ def main(argv):
     ##### Check Inputs
     try:    File = argv[0]
     except: usage();sys.exit(1)
+    ext = os.path.splitext(File)[1].lower()
+
+
+    #################### File Structure #####################
+    try:
+        argv[1]
+        if argv[1] in ['--struct','--structure','--tree'] and ext in ['.h5','.he5']:
+            print '***** HDF5 File Structure *****'
+            print_hdf5_structure(File)
+            return
+    except: pass
+
 
     #################### Basic Info #####################
     try: atr = readfile.read_attribute(File)
     except: print 'Can not read file: '+File; sys.exit(1)
-    ext = os.path.splitext(File)[1].lower()
     k = atr['FILE_TYPE']
 
     # Print out date list for timeseries HDF5 file
@@ -121,20 +125,12 @@ def main(argv):
     try:  atr['X_FIRST'];  print 'Coordinates : GEO'
     except:                print 'Coordinates : radar'
 
-    #################### File Structure #####################
-    try:
-        argv[1]
-        if argv[1] in ['--struct','--structure','--tree'] and ext in ['.h5','.he5']:
-            print '***** HDF5 File Structure *****'
-            print_hdf5_structure(File)
-            return
-    except: pass
 
     #################### HDF5 File Info #####################
     if ext in ['.h5','.he5']:
         h5file=h5py.File(File,'r')
         ##### Group Info
-        print 'Al groups in this file:'
+        print 'All groups in this file:'
         print h5file.keys()
 
         ##### DateList / IgramList
@@ -183,6 +179,4 @@ def main(argv):
 ############################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-
 

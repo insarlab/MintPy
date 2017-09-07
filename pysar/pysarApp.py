@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ###############################################################################
 # 
 # Project: PySAR 
@@ -7,7 +7,7 @@
 # Created: July 2013
 #
 ###############################################################################
-# Copyright (c) 2013, Heresh Fattahi
+# Copyright (c) 2013, Heresh Fattahi, Zhang Yunjun
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -27,14 +27,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 ###############################################################################
-#
-# Yunjun, Feb 2015: Update mask, generate incident angle file
-# Yunjun, Oct 2015: Add find_filename(), check_subset()
-#                   Update name for pysar.dem.* and pysar.trop*
-#                   Finished pysar.subset.yx option.
-#                   Add check_mask(), check_geocode()
-# Yunjun, Nov 2015: Add pysar.kml option, workDir input option
-# Yunjun, Dec 2016: Add command line parser
 
 
 import os
@@ -53,8 +45,6 @@ import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar.subset as subset
-import pysar.multilook as mli
-import pysar.load_data as load
 import pysar.save_unavco as unavco
 
 
@@ -87,7 +77,7 @@ def check_geocode_file(geomapFile, File, outFile=None):
     if not outFile:  outFile = 'geo_'+os.path.basename(File)
 
     if ut.update_file(outFile, File):
-        geocodeCmd = 'geocode.py '+os.path.basename(geomapFile)+' '+File
+        geocodeCmd = 'geocode.py '+File+' -l '+os.path.basename(geomapFile)
         print geocodeCmd
         try: os.system(geocodeCmd)
         except: pass
@@ -198,7 +188,7 @@ def create_subset_dataset(inps, pix_box=None, geo_box=None):
 def multilook_dataset(inps, lks_y=None, lks_x=None):
     '''Create a multilooked dataset'''
     return inps
-    
+
 
 ##########################################################################
 LOGO='''
@@ -212,37 +202,37 @@ ____/________(___/_(____/___/____|_/_____|_______
             (_ /                            
 
  A Python package for InSAR time series analysis.
-               PySAR v1.2, Jan 2017
+               PySAR v1.2, Aug 2017
  Geodesy Lab, University of Miami, Maimi FL, USA
 _________________________________________________
 '''
 #generate_from: http://patorjk.com/software/taag/
 
-TEMPLATE='''##------------------------ pysarApp_template.txt ------------------------##
+TEMPLATE='''# vim: set filetype=cfg:
+##------------------------ pysarApp_template.txt ------------------------##
 ## 1. Load Data (--load to exit after this step)
-## recommend input files for data in radar coordinate:
+## recommended input files for data in radar coordinates:
 ##     pysar.unwrapFiles         = 'path of all unwrapped interferograms'
 ##     pysar.corFiles            = 'path of all coherence files'
+##     pysar.demFile.geoCoord    = 'path of DEM in geo   coordinates'
+##     pysar.demFile.radarCoord  = 'path of DEM in radar coordinates'
 ##     pysar.transFile           = 'path of mapping transformation file'
-##     pysar.demFile.radarCoord  = 'path of DEM in radar coordinate'
-##     pysar.demFile.geoCoord    = 'path of DEM in geo   coordinate'
-## recommend input files for data in geo coordinate:
+## recommended input files for data in geo coordinates:
 ##     pysar.unwrapFiles 
 ##     pysar.corFiles    
 ##     pysar.dem.geoCoord
 ## auto - automatic path pattern for Univ of Miami file structure, which are:
-##     pysar.unwrapFiles = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
-##     pysar.corFiles    = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
-##     pysar.intFiles    = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.int
-##     pysar.transFile   = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
-##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
+##     pysar.unwrapFiles        = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
+##     pysar.corFiles           = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
-pysar.insarProcessor     = auto  #[roipac, isce, gamma, doris, gmtsar], auto for roipac, InSAR processor
-pysar.unwrapFiles        = auto  #[filt*.unw]
-pysar.corFiles           = auto  #[filt*.cor]
-pysar.transFile          = auto  #[geomap*.trans / sim*.UTM_TO_RDC]
-pysar.demFile.radarCoord = auto  #[radar*.hgt]
-pysar.demFile.geoCoord   = auto  #[*.dem]
+##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
+##     pysar.transFile          = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
+pysar.insarProcessor     = auto  #[roipac, gamma, isce, doris], auto for roipac, InSAR processor
+pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw], path of all unwrapped interferograms
+pysar.corFiles           = auto  #[filt*.cor, filt_*.cor], path of all coherence files
+pysar.transFile          = auto  #[geomap*.trans, sim*.UTM_TO_RDC], path of mapping transformation file
+pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim], path of DEM in radar coordinate
+pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem],      path of DEM in geo   coordinate
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)
@@ -254,11 +244,12 @@ pysar.multilook.yx    = auto    #[4,4 / no], auto for no [not implemented yet]
 
 
 ## 2. Modify Network (optional)
-## Coherence-based network modification = MST + Threshold
+## Coherence-based network modification = MST + Threshold, by default
 ## 1) calculate a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
-## 2) find a minimum spanning tree network with inverse of average coherence as weight
+## 2) find a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
 ## 3) for all interferograms except for MST's, exclude those with average coherence < minCoherence.
-pysar.network.coherenceBased  = auto  #[yes / no], auto for yes
+pysar.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
+pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.coherenceFile   = auto  #[filename], auto for coherence.h5
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
 pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
@@ -270,6 +261,8 @@ pysar.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpend
 pysar.network.referenceFile   = auto  #[date12_list.txt / Modified_unwrapIfgram.h5 / no], auto for no
 pysar.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
 pysar.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of interferogram number starting from 1
+pysar.network.startDate       = auto  #[20090101 / no], auto for no
+pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 
 ## 3. Reference in Space
@@ -320,10 +313,10 @@ pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECM
 pysar.topoError              = auto    #[yes / no], auto for yes
 pysar.topoError.polyOrder    = auto    #[1 / 2 / 3], auto for 2, polynomial order of temporal deformation model
 pysar.topoError.excludeDate  = auto    #[20101120 / txtFile / no], auto for no, date not used for error estimation
-pysar.topoError.stepFuncDate = auto    #[20080529 / no], auto for no, date of step jump, i.e. eruption/earthquade date
+pysar.topoError.stepFuncDate = auto    #[20080529 / no], auto for no, date of step jump, i.e. eruption/earthquake date
 
 
-## 8.1 Residual Standard Deviation (RSD)
+## 8.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Recommendation: quadratic for whole image, plane for local/small area
@@ -336,7 +329,7 @@ pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s
 
 ## 9. Reference in Time
 ## reference all timeseries to one date in time
-## auto - choose date with minimum residual STD using value from step 8.1
+## auto - choose date with minimum residual RMS using value from step 8.1
 ## no   - do not change reference date, keep the defaut one (1st date usually) and skip this step
 pysar.reference.date = auto   #[auto / reference_date.txt / 20090214 / no]
 
@@ -360,6 +353,7 @@ pysar.geocode      = auto   #[yes / no], auto for yes
 pysar.save.kml     = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 pysar.save.geotiff = auto   #[yes / no], auto for no, save geocoded velocity to Geotiff format [not implemented yet]
 pysar.save.unavco  = auto   #[yes / no], auto for no, save timeseries to UNAVCO InSAR Archive format
+pysar.plot         = auto   #[yes / no], auto for yes, plot files generated by pysarApp default processing to PIC folder
 '''
 
 EXAMPLE='''example:
@@ -373,6 +367,10 @@ EXAMPLE='''example:
   # Generate template file:
   pysarApp.py -g
   pysarApp.py SanAndreasT356EnvD.template -g
+
+  --------------------------------------------
+  Open pysar_template.txt file for details.
+  --------------------------------------------
 '''
 
 UM_FILE_STRUCT='''
@@ -398,16 +396,22 @@ def cmdLineParse():
                                      #epilog=TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('-v','--version', action='version', version='%(prog)s 1.2')
-    parser.add_argument('custom_template_file', nargs='?', help='custom template with option settings.')
+    parser.add_argument('custom_template_file', nargs='?',\
+                        help='custom template with option settings.\n'+\
+                             "It's equivalent to None, if pysarApp_template.txt is input, as it will be read always.")
     parser.add_argument('--dir', dest='work_dir',\
                         help='PySAR working directory, default is:\n'+\
                              'a) current directory, or\n'+\
                              'b) $SCRATCHDIR/projectName/PYSAR, if meets the following 3 requirements:\n'+\
-                             '     1) miami_path = True in pysar/__init__.py\n'+\
-                             '     2) environmental variable $SCRATCHDIR exists\n'+\
-                             '     3) input custom template with basename same as projectName\n')
+                             '    1) miami_path = True in pysar/__init__.py\n'+\
+                             '    2) environmental variable $SCRATCHDIR exists\n'+\
+                             '    3) input custom template with basename same as projectName\n')
     parser.add_argument('-g', dest='generate_template', action='store_true',\
                         help='Generate default template (and merge with custom template), then exit.')
+    parser.add_argument('--reset', action='store_true',\
+                        help='Reset files attributes to re-run pysarApp.py after loading data by:\n'+\
+                             '    1) removing ref_y/x/lat/lon for unwrapIfgram.h5 and coherence.h5\n'+\
+                             '    2) set drop_ifgram=no for unwrapIfgram.h5 and coherence.h5')
     parser.add_argument('--load-data', dest='load_dataset', action='store_true',\
                         help='Step 1. Load/check dataset, then exit')
     parser.add_argument('--subset-data', dest='subset_dataset', action='store_true',\
@@ -416,6 +420,8 @@ def cmdLineParse():
                         help='Step 2. Modify the network, then exit')
 
     inps = parser.parse_args()
+    if inps.custom_template_file and os.path.basename(inps.custom_template_file) == 'pysarApp_template.txt':
+        inps.custom_template_file = None
     return inps
 
 
@@ -452,25 +458,28 @@ def main(argv):
 
 
     #####for Univ of Miami
-    # Copy bl_list.txt file from PROCESS directory
-    if not os.path.isfile('bl_list.txt'):
-        try:
-            process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
-            shutil.copy2(process_dir+'/bl_list.txt', inps.work_dir)
-        except: pass
+    # Copy from PROCESS directory
+    file_list = ['unavco_attributes.txt', 'bl_list.txt']
+    try:
+        process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
+        file_list = [process_dir+'/'+i for i in file_list]
+        file_list = ut.get_file_list(file_list, abspath=True)
+        for file in file_list:
+            if ut.update_file(os.path.basename(file), file, check_readable=False):
+                shutil.copy2(file, inps.work_dir)
+                print 'copy '+os.path.basename(file)+' to work directory'
+    except: pass
 
-    # Copy UNAVCO attribute txt file
-    file_list = ['unavco_attributes.txt']
-    try: inps.unavco_atr_file = ut.get_file_list(file_list, abspath=True)[0]
-    except:
-        try:
-            process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
-            shutil.copy2(process_dir+'/'+file_list[0], inps.work_dir)
-            inps.unavco_atr_file = inps.work_dir+'/'+file_list[0]
-        except:
-            inps.unavco_atr_file = None
-            if pysar.miami_path and 'SCRATCHDIR' in os.environ and inps.project_name:
-                print 'No UNAVCO attributes file found in PROCESS directory, skip copy'
+    # Copy from SLC directory
+    file_list = ['summary*slc.jpg']
+    try:
+        slc_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/SLC'
+        file_list = [slc_dir+'/'+i for i in file_list]
+        for file in file_list:
+            if ut.update_file(os.path.basename(file), file, check_readable=False):
+                shutil.copy2(file, inps.work_dir)
+                print 'copy '+os.path.basename(file)+' to work directory'
+    except: pass
 
 
     #########################################
@@ -490,7 +499,7 @@ def main(argv):
     # custom template
     if inps.custom_template_file:
         # Copy custom template file to work directory
-        if not os.path.isfile(os.path.basename(inps.custom_template_file)):
+        if ut.update_file(os.path.basename(inps.custom_template_file), inps.custom_template_file, check_readable=False):
             shutil.copy2(inps.custom_template_file, inps.work_dir)
 
         # Read custom template
@@ -529,6 +538,10 @@ def main(argv):
     try:    inps.trop_file = ut.get_file_list(inps.trop_model+'.h5', abspath=True)[0]
     except: inps.trop_file = None
 
+    # Get unavco_attributes.txt file name
+    try:    inps.unavco_atr_file = ut.get_file_list('unavco_attributes.txt', abspath=True)[0]
+    except: inps.unavco_atr_file = None;   print 'No UNAVCO attributes file found.'
+
 
     #########################################
     # Loading Data
@@ -542,70 +555,34 @@ def main(argv):
     os.chdir(inps.work_dir)
 
     print '--------------------------------------------'
-    ## 1. Check loading result
-    # Required files
-    fileList = [inps.work_dir+'/'+i for i in ['Modified_unwrapIfgram.h5','unwrapIfgram.h5',\
-                                              'Modified_LoadedData.h5','LoadedData.h5']]
-    try:
-        inps.ifgram_file = ut.get_file_list(fileList, abspath=True)[0]
-        atr = readfile.read_attribute(inps.ifgram_file)
-        print 'Unwrapped interferograms: '+inps.ifgram_file
-    except RuntimeError:
-        print '\nNo interferograms file found!\n'
-
-    # Recommended files (None if not found)
-    # Spatial coherence for each interferogram
-    fileList = [inps.work_dir+'/'+i for i in ['coherence.h5','Coherence.h5']]
-    try:
-        inps.coherence_file = ut.get_file_list(fileList, abspath=True)[0]
-        print 'Spatial coherence  files: '+inps.coherence_file
-    except:
-        inps.coherence_file = None
-        warnings.warn('No coherences file found. Cannot use coherence-based network modification without it.')
-
-    # DEM in radar coord
-    file_list = ['demRadar.h5','radar*.hgt']
-    try: file_list.append(os.path.basename(template['pysar.dem.geoCoord']))
-    except: pass
-    try:
-        inps.dem_radar_file = ut.get_file_list(file_list, abspath=True)[0]
-        print 'DEM in  radar coordinate: '+str(inps.dem_radar_file)
-    except:
-        inps.dem_radar_file = None
-        if not 'Y_FIRST' in atr.keys():
-            warnings.warn('No radar coord DEM found.')
-
-    # DEM in geo coord
-    file_list = ['demGeo_tight.h5','demGeo.h5','*.dem']
-    try: file_list.append(os.path.basename(template['pysar.dem.geoCoord']))
-    except: pass
-    try:
-        inps.dem_geo_file = ut.get_file_list(file_list, abspath=True)[0]
-        print 'DEM in  geo   coordinate: '+inps.dem_geo_file
-    except:
-        inps.dem_geo_file = None
-        warnings.warn('No geo coord DEM found.')
-
-    # Transform file for geocoding
-    file_list = ['geomap*lks_tight.trans','geomap*lks.trans']
-    try: file_list.append(os.path.basename(template['pysar.geomap']))
-    except: pass
-    try:
-        inps.trans_file = ut.get_file_list(file_list, abspath=True)[0]
-        print 'Mapping transform   file: '+str(inps.trans_file)
-    except:
-        inps.trans_file = None
-        if not 'Y_FIRST' in atr.keys():
-            warnings.warn('No transform file found! Can not geocoding without it!')
+    inps = ut.check_loaded_dataset(inps.work_dir, inps)
+    if not inps.ifgram_file:
+        print '\nERROR: No interferograms file found!\n'
+        sys.exit('Exit.')
 
     if inps.load_dataset:
         sys.exit('Exit as planed after loading/checking the dataset')
+
+    if inps.reset:
+        print 'Reset dataset attributtes for a fresh re-run with options from %s' % os.path.basename(inps.template_file)
+        print '-----------------------------------------------------------------------------------'
+        # Reset network
+        networkCmd = 'modify_network.py '+inps.ifgram_file
+        if inps.coherence_file:
+            networkCmd +=  ' '+inps.coherence_file
+        networkCmd += ' --reset'
+        print networkCmd
+        os.system(networkCmd)
+
+        # Reset reference pixel
+        seedCmd = 'seed_data.py '+inps.ifgram_file+' --reset'
+        print seedCmd
+        os.system(seedCmd)
 
 
     #########################################
     # Check the subset (Optional)
     #########################################
-    print '\n*************** Subset ****************'
     if inps.trans_file and template['pysar.subset.tightBox'] in ['yes','auto']:
         outName = os.path.splitext(inps.trans_file)[0]+'_tight'+os.path.splitext(inps.trans_file)[1]
         # Get bounding box of valid area in geomap*.trans file
@@ -632,11 +609,10 @@ def main(argv):
 
     # Subset based on input template
     if not all(template[key] in ['auto', 'no'] for key in ['pysar.subset.yx','pysar.subset.lalo']):
+        print '\n*************** Subset ****************'
         # Read subset option from template file, and return None if lalo/yx is not specified.
         pix_box, geo_box = subset.read_subset_template2box(inps.template_file)
         inps = create_subset_dataset(inps, pix_box, geo_box)
-    else:
-        print '\nNo Subset selected. Processing the whole area.'
 
     if inps.subset_dataset:
         sys.exit('Exit as planed after subsetting the dataset')
@@ -645,7 +621,7 @@ def main(argv):
     #########################################
     # Generating Aux files
     #########################################
-    print '\n*************** Generate Initla Mask ****************'
+    print '\n*************** Generate Initial Mask ****************'
     # Initial mask
     inps.mask_file = 'mask.h5'
     if ut.update_file(inps.mask_file, inps.ifgram_file):
@@ -665,32 +641,29 @@ def main(argv):
     #########################################
     # Network Modification (Optional)
     #########################################
-    atr = readfile.read_attribute(inps.ifgram_file)
-    h5 = h5py.File(inps.ifgram_file, 'r')
-    ifgram_list_all = h5[atr['FILE_TYPE']].keys()
-    ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
-    h5.close()
-    ifgram_num_drop = len(ifgram_list_all) - len(ifgram_list_keep)
-    if ifgram_num_drop > 0:
-        print '\n*************** Modify Network ****************'
-        print 'find number of dropped interferograms: %d, skip updating.' % (ifgram_num_drop)
-        print 'To re-modify the network, use modify_network.py --reset option to restore all pairs info.'
-        print 'modify_network.py '+inps.ifgram_file+' --reset'
-    else:
-        print '\n*************** Modify Network ****************'
-        networkCmd = 'modify_network.py --template '+inps.template_file+' '+inps.ifgram_file
-        if inps.coherence_file:
-            networkCmd += ' '+inps.coherence_file
-        if inps.trans_file:
-            networkCmd += ' --trans '+inps.trans_file
-        print networkCmd
-        os.system(networkCmd)
+    print '\n*************** Modify Network ****************'
+    networkCmd = 'modify_network.py --template '+inps.template_file+' '+inps.ifgram_file
+    if inps.coherence_file:
+        networkCmd += ' '+inps.coherence_file
+    if inps.trans_file:
+        networkCmd += ' --trans '+inps.trans_file
+    print networkCmd
+    print '----------------------------------------------------------------------------------------'
+    print 'To use all interferograms in the file, run modify_network.py with --reset option to restore all pairs info.'
+    msg_str = 'modify_network.py '+inps.ifgram_file
+    if inps.coherence_file:
+        msg_str +=  ' '+inps.coherence_file
+    msg_str += ' --reset'
+    print msg_str
+    print '----------------------------------------------------------------------------------------'
+    os.system(networkCmd)
 
     # Plot network colored in spatial coherence
     print '--------------------------------------------'
-    plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+' --mask '+inps.mask_file+' --nodisplay'
+    plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+\
+              ' --template '+inps.template_file+' --nodisplay'
     print plotCmd
-    if ut.update_file('Network.pdf', [inps.ifgram_file, inps.coherence_file, inps.mask_file], check_readable=False):
+    if ut.update_file('Network.pdf', [inps.ifgram_file, inps.coherence_file, inps.template_file], check_readable=False):
         os.system(plotCmd)
 
     if inps.modify_network:
@@ -701,18 +674,31 @@ def main(argv):
     # Referencing Interferograms in Space
     #########################################
     print '\n**********  Reference in space  ***************'
+    seedCmd = 'seed_data.py '+inps.ifgram_file+' --template '+inps.template_file+' --mark-attribute'
+    if inps.trans_file:
+        seedCmd += ' --trans '+inps.trans_file
+    run_seedCmd = True
+
+    ## Skip calling seed command only if 1) ref_y/x exists AND 2) pysar.reference.yx/lalo == auto
     atr = readfile.read_attribute(inps.ifgram_file)
     try:
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
-        print 'find reference pixel in y/x: [%d, %d], skip updating.'%(ref_y, ref_x)
-        print 'To re-select reference pixel, use the following commands and re-run'
-        print 'add_attribute.py '+inps.ifgram_file+' ref_y=None ref_x=None'
-    except:
-        print 'call seed_data.py to find reference pixel in space'
-        seedCmd = 'seed_data.py '+inps.ifgram_file+' --template '+inps.template_file+' --mark-attribute'
-        if inps.trans_file:
-            seedCmd += ' --trans '+inps.trans_file
+        print 'Find reference pixel info from %s in y/x: [%d, %d]' % (os.path.basename(inps.ifgram_file), ref_y, ref_x)
+        print '----------------------------------------------------------------------------------------'
+        print 'To remove reference pixel info, use seed_data.py --reset option:'
+        print 'seed_data.py '+inps.ifgram_file+' --reset'
+        print '----------------------------------------------------------------------------------------'
+        prefix = 'pysar.reference.'
+        if all(template[prefix+i] in ['auto','no'] for i in ['yx','lalo']):
+            run_seedCmd = False
+            print 'No specific coordinates input found, no need to re-select reference pixel'
+        else:
+            print 'Specific coordinates input found, re-select reference pixel with options from template file'
+    except: pass
+
+    if run_seedCmd:
+        print 'Call seed_data.py to find reference pixel in space'
         print seedCmd
         os.system(seedCmd)
 
@@ -722,17 +708,15 @@ def main(argv):
     #    based on the consistency of triplets
     #    of interferograms
     ############################################
-    print '\n**********  Unwrapping Error Correction  **************'
     if template['pysar.unwrapError'] not in ['auto','no']:
+        print '\n**********  Unwrapping Error Correction  **************'
         outName = os.path.splitext(inps.ifgram_file)[0]+'_unwCor.h5'
-        unwCmd='unwrap_error.py -f '+inps.ifgram_file+' -m '+inps.mask_file
+        unwCmd='unwrap_error.py '+inps.ifgram_file+' '+inps.mask_file
         print unwCmd
         if ut.update_file(outName, inps.ifgram_file):
             print 'This might take a while depending on the size of your data set!'
             os.system(unwCmd)
         inps.ifgram_file = outName
-    else:
-        print 'No unwrapping error correction.'
 
 
     #########################################
@@ -740,7 +724,7 @@ def main(argv):
     ########################################
     print '\n**********  Network Inversion to Time Series  ********************'
     inps.timeseries_file = 'timeseries.h5'
-    invertCmd = 'igram_inversion.py '+inps.ifgram_file
+    invertCmd = 'ifgram_inversion.py '+inps.ifgram_file
     print invertCmd
     if ut.update_file(inps.timeseries_file, inps.ifgram_file):
         os.system(invertCmd)
@@ -759,9 +743,9 @@ def main(argv):
         print '    DEM file was not found!'
         if 'pysar.troposphericDelay.method' in template.keys():
             print '    Continue without tropospheric correction ...'
-            template.pop('pysar.troposphericDelay.method', None)
+            template['pysar.troposphericDelay.method'] = 'no'
         if template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']:
-            template.pop('pysar.deramp', None)
+            template['pysar.deramp'] = 'no'
         print '++++++++++++++++++++++++++++++++++++++++++++++'
 
 
@@ -789,7 +773,7 @@ def main(argv):
         else:
             inps.min_temp_coh = float(value)
     outName = 'maskTempCoh.h5'
-    maskCmd = 'generate_mask.py -f '+inps.temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
+    maskCmd = 'generate_mask.py '+inps.temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
     print maskCmd
     if ut.update_file(outName, inps.temp_coh_file):
         os.system(maskCmd)
@@ -861,10 +845,10 @@ def main(argv):
             inps.trop_poly_order = value
 
     # Call scripts
-    if inps.trop_method == 'height_correction':
+    if inps.trop_method == 'height_correlation':
         print 'tropospheric delay correction with height-correlation approach'
-        tropCmd = 'tropcor_phase_elevation.py'+' -f '+inps.timeseries_file+' -d '+\
-                  demFile+' -p '+inps.trop_poly_order+' -m '+inps.mask_file
+        tropCmd = 'tropcor_phase_elevation.py '+inps.timeseries_file+' -d '+demFile+\
+                  ' -p '+inps.trop_poly_order+' -m '+inps.mask_file
         print tropCmd
         outName = os.path.splitext(inps.timeseries_file)[0]+'_tropHgt.h5'
         if ut.update_file(outName, inps.timeseries_file):
@@ -881,7 +865,7 @@ def main(argv):
         if ut.update_file(outName, inps.timeseries_file):
             try:
                 inps.trop_file = ut.get_file_list(inps.trop_model+'.h5')[0]
-                diffCmd = 'diff.py '+inps.timeseries_file+' '+inps.trop_file+' '+outName
+                diffCmd = 'diff.py '+inps.timeseries_file+' '+inps.trop_file+' -o '+outName
                 print 'Use existed tropospheric delay file: '+inps.trop_file
                 print diffCmd
                 os.system(diffCmd)
@@ -935,7 +919,7 @@ def main(argv):
         outName = os.path.splitext(inps.timeseries_file)[0]+'_refDate.h5'
         refCmd = 'reference_epoch.py '+inps.timeseries_file+' --template '+inps.template_file
         print refCmd
-    
+
         if ut.update_file(outName, inps.timeseries_file):
             os.system(refCmd)
 
@@ -1045,43 +1029,58 @@ def main(argv):
             inps.geo_vel_file        = inps.vel_file
             inps.geo_temp_coh_file   = inps.temp_coh_file
             inps.geo_timeseries_file = inps.timeseries_file
-        elif not ut.which('geocode.pl'):
-            print 'Can not find executable geocode.pl from ROI_PAC, skip geocoding.'
-            template[key] = 'no'
+        #elif not ut.which('geocode.pl'):
+        #    print 'Can not find executable geocode.pl from ROI_PAC, skip geocoding.'
+        #    template[key] = 'no'
 
     # Geocoding
     if template[key] in ['yes','auto']: 
-        print '\ngeocoding ...\n'
+        print '\n--------------------------------------------'
         inps.geo_vel_file        = check_geocode_file(inps.trans_file, inps.vel_file)
         inps.geo_temp_coh_file   = check_geocode_file(inps.trans_file, inps.temp_coh_file)
         inps.goe_timeseries_file = check_geocode_file(inps.trans_file, inps.timeseries_file)
 
-    if inps.geo_vel_file and inps.geo_temp_coh_file:
-        print 'masking geocoded velocity file: '+inps.geo_vel_file+' ...'
-        maskCmd = 'mask.py '+inps.geo_vel_file+' -m '+inps.geo_temp_coh_file+' -t '+str(inps.min_temp_coh)
+    # Mask in geo coord
+    if inps.geo_temp_coh_file:
+        # Generate mask in geo coord
+        print '\n--------------------------------------------'
+        outName = 'geo_maskTempCoh.h5'
+        maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
         print maskCmd
-        os.system(maskCmd)
-        try:
-            inps.geo_vel_file = glob.glob(os.path.splitext(inps.geo_vel_file)[0]+'_masked.h5')[0]
-        except:
-            pass
+        if ut.update_file(outName, inps.geo_temp_coh_file):
+            os.system(maskCmd)
+        inps.geo_mask_file = outName
+
+        # Mask geo_velocity file
+        if inps.geo_vel_file and inps.geo_mask_file:
+            outName = os.path.splitext(inps.geo_vel_file)[0]+'_masked.h5'
+            maskCmd = 'mask.py '+inps.geo_vel_file+' -m '+inps.geo_mask_file+' -o '+outName
+            print maskCmd
+            if ut.update_file(outName, [inps.geo_vel_file, inps.geo_mask_file]):
+                os.system(maskCmd)
+            try:  inps.geo_vel_file = glob.glob(outName)[0]
+            except:  pass
 
     # Save to Google Earth KML file
     if inps.geo_vel_file and template['pysar.save.kml'] in ['auto','yes']:
+        print '\n--------------------------------------------'
         print 'creating Google Earth KMZ file for geocoded velocity file: '+inps.geo_vel_file+' ...'
+        outName = os.path.splitext(inps.geo_vel_file)[0]+'.kmz'
         kmlCmd = 'save_kml.py '+inps.geo_vel_file
         print kmlCmd
-        os.system(kmlCmd)
+        if ut.update_file(outName, inps.geo_vel_file, check_readable=False):
+            os.system(kmlCmd)
 
 
     #############################################
     # Save to UNAVCO InSAR Archive format
     #############################################
-    print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
     if template['pysar.save.unavco'] in ['yes']:
+        print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
         if not inps.trans_file or not inps.dem_geo_file:
             warnings.warn('No geomap*.tran file or DEM in geo coord found! Skip saving.')
         else:
+            # 1. Time series file
             inps.geo_timeseries_file = check_geocode_file(inps.trans_file, inps.timeseries_file)
             # Add UNAVCO attributes
             if inps.unavco_atr_file:
@@ -1089,34 +1088,64 @@ def main(argv):
                 print atrCmd
                 os.system(atrCmd)
 
-            inps.unavco_file = unavco.get_unavco_filename(inps.geo_timeseries_file)
-            if ut.update_file(inps.unavco_file, inps.geo_timeseries_file):
-                # Temporal Coherence and Mask
-                inps.geo_temp_coh_file = check_geocode_file(inps.trans_file, inps.temp_coh_file)
-                inps.geo_mask_file = 'geo_maskTempCoh.h5'
-                # Mask file in geo coord
-                if inps.geo_temp_coh_file and ut.update_file(inps.geo_mask_file, inps.geo_temp_coh_file):
-                    maskCmd = 'generate_mask.py -f '+inps.geo_temp_coh_file+' -m 0.7 -o '+inps.geo_mask_file
-                    print maskCmd
-                    os.system(maskCmd)
+            # 2. Temporal Coherence
+            inps.geo_temp_coh_file = check_geocode_file(inps.trans_file, inps.temp_coh_file)
 
-                # Incidence Angle
-                inps.inc_angle_file = 'incidenceAngle.h5'
-                if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
-                    incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
-                    print incAngleCmd
-                    os.system(incAngleCmd)
-                inps.geo_inc_angle_file = check_geocode_file(inps.trans_file, inps.inc_angle_file)
+            # 3. Mask file
+            inps.geo_mask_file = 'geo_maskTempCoh.h5'
+            if inps.geo_temp_coh_file and ut.update_file(inps.geo_mask_file, inps.geo_temp_coh_file):
+                maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m 0.7 -o '+inps.geo_mask_file
+                print maskCmd
+                os.system(maskCmd)
 
-                # Save to UNAVCO format
-                unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
-                            ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file
-                print unavcoCmd
+            # 4. Incidence Angle
+            inps.inc_angle_file = 'incidenceAngle.h5'
+            if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
+                incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
+                print incAngleCmd
+                os.system(incAngleCmd)
+            inps.geo_inc_angle_file = check_geocode_file(inps.trans_file, inps.inc_angle_file)
+
+            # Save to UNAVCO format
+            print '--------------------------------------------'
+            SAT = unavco.get_mission_name(atr)
+            try:
+                inps.unavco_file = ut.get_file_list(SAT+'_*.he5')[0]
+                print 'Find existed UNAVCO time-series file: '+inps.unavco_file
+            except:
+                inps.unavco_file = None
+                print 'No UNAVCO time-series file exists yet.'
+            #inps.unavco_file = unavco.get_unavco_filename(inps.geo_timeseries_file)
+            unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
+                        ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file
+            print unavcoCmd
+            if ut.update_file(inps.unavco_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
+                                                 inps.geo_inc_angle_file, inps.dem_geo_file], check_readable=False):
                 os.system(unavcoCmd)
 
 
     #############################################
-    #                PySAR v1.0                 #
+    # Plot Figures
+    #############################################
+    if template['pysar.plot'] in ['yes','auto']:
+        print '\n*********  Plot and Save pysarApp runing results to PIC  ***********'
+        inps.plot_sh_file = 'plot_pysarApp.sh'
+
+        # Copy to workding directory if not existed yet.
+        if not os.path.isfile(inps.work_dir+'/'+inps.plot_sh_file):
+            print 'copy $PYSAR_HOME/shellscripts/'+inps.plot_sh_file+' to working directory'
+            try:
+                shutil.copy2(ut.which(inps.plot_sh_file), inps.work_dir)
+            except:
+                print 'WARNING: no '+inps.plot_sh_file+' found in the environment variable path, skip plotting.'
+
+        print 'for better performance, edit the input parameters in '+inps.plot_sh_file+' and re-run this script.'
+        plotCmd = 'chmod +x '+inps.plot_sh_file;    print plotCmd;     os.system(plotCmd)
+        plotCmd = './'+inps.plot_sh_file;           print plotCmd;     os.system(plotCmd)
+
+
+    #############################################
+    #                PySAR v1.2                 #
     #############################################
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
     print '\nTime used: %02d hours %02d mins %02d secs' % (h, m, s)

@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR v1.2                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -9,8 +9,9 @@
 #                   Add nonzero method, equivalent to Mask.h5
 
 
-import sys
 import os
+import sys
+import argparse
 import getopt
 
 import numpy as np
@@ -18,150 +19,110 @@ import h5py
 
 import pysar._readfile as readfile
 import pysar._writefile as writefile
-
-def usage():
-    print '''
-**********************************************************************************
-  Generating a mask file with the same size of the input file
-
-  Usage:
-
-     generate_mask.py -f file [ -m min -M max -y ymin:ymax -x xmin:xmax -o output_file ]
-
-     -f: file used to generate mask, supported file format:
-             PySAR HDF5 files: temporal_coherence, velocity, dem, mask, rmse
-             ROI_PAC    files: .unw .cor .hgt .dem
-     -d: epoch date   for timeseries/interferograms file
-     -e: epoch number for timeseries/interferograms file (start from 1)
-     -y: bounding box in y direction
-     -x: boudning box in x direction
-     -m: minimum value
-     -M: maximum value
-     -o: output file, in HDF5 format [default name is mask.h5]
-
-     --nonzero : mask of all nonzero pixels, equivalent to Mask.h5 from unwrapIfgram.h5
+import pysar._pysar_utilities as ut
 
 
-  Example:
-     generate_mask.py -f temporal_coherence.h5 -m 0.3 -M 0.8 -o mask_temp_coh.h5
-     generate_mask.py -f temporal_coherence.h5 -m 0.3 -M 0.8 -y 100:700 -x 200:800
-     generate_mask.py -f temporal_coherence.h5 -y 100:700 -x 200:800
-     generate_mask.py -f Mask.h5               -y 100:700 -x 200:800
-     generate_mask.py -f 081018_090118.unw     -m 2    -M 4
-     generate_mask.py -f 081018_090118.cor     -m 0.5
-     generate_mask.py -f srtm1.dem             -m 1000 -M 1500
-     generate_mask.py -f Seed_unwrapIfgram_masked.h5 -e 50 -m 4
+################################################################################################
+EXAMPLE='''example:
+  generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
+  generate_mask.py  081018_090118.unw     -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
+  generate_mask.py  srtm1.dem             -m 0.5 -o maskLand.h5
+  generate_mask.py  unwrapIfgram.h5 101120-110220 -m 4
+  generate_mask.py  unwrapIfgram.h5 --nonzero
+'''
 
-     generate_mask.py -f unwrapIfgram.h5 --nonzero
+def cmdLineParse():
+    parser = argparse.ArgumentParser(description='Generate mask file from input file',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=EXAMPLE)
 
-**********************************************************************************
-    '''
+    parser.add_argument('file', help='input file')
+    parser.add_argument('epoch', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-o','--output', dest='outfile', help='output file name.')
+    
+    parser.add_argument('-m','--min', dest='vmin', type=float, help='minimum value for selected pixels')
+    parser.add_argument('-M','--max', dest='vmax', type=float, help='maximum value for selected pixels')
+    parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN','XMAX'), \
+                              help='selection range in x/cross-track/range direction')
+    parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN','YMAX'), \
+                              help='selection range in y/along-track/azimuth direction')
 
+    parser.add_argument('--nonzero', dest='nonzero', action='store_true',\
+                        help='Select all non-zero pixels.\n'+\
+                             'i.e. mask.h5 from unwrapIfgram.h5')
+
+    inps = parser.parse_args()
+    return inps
+
+
+################################################################################################
 def main(argv):
+    inps = cmdLineParse()
 
-    outName = 'mask.h5'
-    method  = 'threshold'
+    # Input File Info
+    atr = readfile.read_attribute(inps.file)
+    length = int(atr['FILE_LENGTH'])
+    width = int(atr['WIDTH'])
+    k = atr['FILE_TYPE']
+    print 'Input file is '+k+': '+inps.file
 
-    ##### Check Inputs
-    if len(sys.argv)>2:
-        try:   opts, args = getopt.getopt(argv,'h:f:m:M:x:y:o:d:e:',['nonzero'])
-        except getopt.GetoptError:      usage() ; sys.exit(1)
-  
-        for opt,arg in opts:
-            if opt in ("-h","--help"):   usage();   sys.exit()
-            elif opt == '-f':         File = arg
-            elif opt == '-m':         minV = float(arg)
-            elif opt == '-M':         maxV = float(arg)
-            elif opt == '-y':         ysub = sorted([int(i) for i in arg.split(':')])
-            elif opt == '-x':         xsub = sorted([int(i) for i in arg.split(':')])
-            elif opt == '-o':         outName    = arg
-            elif opt == '-d':         epoch_date = arg
-            elif opt == '-e':         epoch_num  = int(arg) - 1
-            elif opt == '--nonzero':  method     = 'nonzero'
-
-    elif len(sys.argv)==2:
-        if   argv[0] in ['-h','--help']:    usage(); sys.exit(1)
-        elif os.path.isfile(argv[0]):       File = argv[0]
-        else:    print 'Input file does not existed: '+argv[0];  sys.exit(1)
-    else:                                   usage(); sys.exit(1)
-
-    ##### Input File Info
-    atr = readfile.read_attribute(File)
-    #print '\n****************** Generate Mask *******************'
-    print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File
-    mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
-    print 'Create initial mask with the same size as the input file and all = 1'
-
-    ##### Non-zero Mask #######
-    if method == 'nonzero':
-        k = atr['FILE_TYPE']
-        MaskZero = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
-  
-        ext = os.path.splitext(File)[1].lower()
-        if ext == '.h5' and k in ['interferograms','coherence','wrapped','timeseries']:
-            h5file = h5py.File(File,'r')
-            epochList = h5file[k].keys()
-  
-            for epoch in epochList:
-                print epoch
-                if k in ['interferograms','coherence','wrapped']:
-                    data = h5file[k][epoch].get(epoch)[:]
-                elif k in ['timeseries']:
-                    data = h5file[k].get(epoch)
-                MaskZero *= data
-                MaskZero[np.isnan(data)] = 0
-            h5file.close()
-  
+    # default output filename
+    if not inps.outfile:
+        if k == 'temporal_coherence':
+            inps.outfile = 'maskTempCoh.h5'
         else:
-            data,atr = readfile.read(File)
-            MaskZero *= data
-            MaskZero[np.isnan(data)] = 0
-  
-        mask = np.ones([int(atr['FILE_LENGTH']),int(atr['WIDTH'])])
-        mask[MaskZero==0] = 0
+            inps.outfile = 'mask.h5'
+        if inps.file.startswith('geo_'):
+            inps.outfile = 'geo_'+inps.outfile
 
+    ##### Mask: Non-zero
+    if inps.nonzero:
+        print 'generate mask for all pixels with non-zero value'
+        inps.outfile = ut.nonzero_mask(inps.file, inps.outfile)
+        return inps.outfile
 
-    ##### Threshold ##########
-    else:
-        ##### Read and Initiate Mask
-        try:        V, atr = readfile.read(File,epoch_date)
-        except:
-            try:    V, atr = readfile.read(File,epoch_num)
-            except: V, atr = readfile.read(File)
+    ##### Mask: Threshold 
+    print 'create initial mask with the same size as the input file and all = 1'
+    mask = np.ones((length, width), dtype=np.float32)
 
-        ##### Calculating Mask
-        ## threshold
-        try:
-            mask[V<minV]=0
-            print 'all value < '+str(minV)+' = 0'
-        except:  print 'No min threshold'
-        try:
-            mask[V>maxV]=0
-            print 'all value > '+str(maxV)+' = 0'
-        except:  print 'No max threshold'  
-        ## nan value
-        mask[np.isnan(V)]=0
+    data, atr = readfile.read(inps.file, inps.epoch)
+
+    # min threshold
+    if inps.vmin:
+        mask[data<inps.vmin] = 0
+        print 'all pixels with value < %s = 0' % str(inps.vmin)
+
+    # max threshold
+    if inps.vmax:
+        mask[data>inps.vmax] = 0
+        print 'all pixels with value > %s = 0' % str(inps.vmax)
+
+    # nan value
+    mask[np.isnan(data)] = 0
+    print 'all pixels with nan value = 0'
+
+    # subset in Y
+    if inps.subset_y:
+        y0,y1 = sorted(inps.subset_y)
+        mask[0:y0,:] = 0
+        mask[y1:length,:] = 0
+        print 'all pixels with y OUT of [%d, %d] = 0' % (y0,y1)
+
+    # subset in x
+    if inps.subset_x:
+        x0,x1 = sorted(inps.subset_x)
+        mask[:,0:x0] = 0
+        mask[:,x1:width] = 0
+        print 'all pixels with x OUT of [%d, %d] = 0' % (x0,x1)
   
-    ## subset
-    try:
-        mask[0:ysub[0],:]=0
-        mask[ysub[1]:mask.shape[0],:]=0
-        print 'all y in [0,'+str(ysub[0])+'] and ['+str(ysub[1])+',end] = 0'
-    except:  print 'No subset in y direction'
-    try:
-        mask[:,0:xsub[0]]=0
-        mask[:,xsub[1]:mask.shape[1]]=0
-        print 'all x in [0,'+str(xsub[0])+'] and ['+str(xsub[1])+',end] = 0'
-    except:  print 'No subset in x direction'
-   
-  
-    ##### Writing mask file
-    print 'writing >>> '+outName
+    ## Write mask file
+    print 'writing >>> '+inps.outfile
     atr['FILE_TYPE'] = 'mask'
-    writefile.write(mask,atr,outName)
+    writefile.write(mask, atr, inps.outfile)
+    return inps.outfile
 
 
-############################################################
+################################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
 

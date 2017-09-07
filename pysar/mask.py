@@ -1,12 +1,9 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Oct 2015: add support for ROI_PAC product
-# Yunjun, Jul 2016: add mask_matrix(), mask_file()
-#                   add parallel processing using joblib
 
 
 import os
@@ -32,6 +29,8 @@ def mask_matrix(data_mat,mask_mat):
         mask_value = np.ma.masked
     else:
         mask_value = np.nan
+    #data_mat = data_mat.astype(np.float32)
+    #mask_value = np.nan
 
     data_mat[mask_mat==0]  = mask_value
 

@@ -1,13 +1,10 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Nov 2016: rewrite the script
-#
-#
-#
+
 
 import os
 import sys
@@ -224,56 +221,60 @@ def cmdLineParse():
     parser.add_argument('file', nargs='+', help='input file to show transection')
     parser.add_argument('-m','--min', dest='disp_min', type=float, help='minimum value for data display')
     parser.add_argument('-M','--max', dest='disp_max', type=float, help='maximum value for data display')
-    parser.add_argument('-u','--unit', dest='disp_unit', default='cm', help='unit for data display')
+    parser.add_argument('-u','--unit', dest='disp_unit', default='cm', help='unit for data display. Default: cm')
     parser.add_argument('--offset', dest='disp_offset', type=float, default=3.0, help='offset between each data profile')
     parser.add_argument('--interpolation', default='nearest', choices=['nearest','bilinear','cubic'],\
                         help='interpolation method while extacting profile along the line')
 
     # Start / End Point
-    end_group = parser.add_argument_group('Start and End Point of Profile')
-    end_group.add_argument('-s','--start-yx', dest='start_yx', type=int, nargs=2,\
-                           help='start point of the profile in pixel number [y, x]')
-    end_group.add_argument('-e','--end-yx', dest='end_yx', type=int, nargs=2,\
-                           help='end   point of the profile in pixel number [y, x]')
-    end_group.add_argument('--start-lalo', dest='start_lalo', type=float, nargs=2,\
-                           help='start point of the profile in [lat, lon]')
-    end_group.add_argument('--end-lalo', dest='end_lalo', type=float, nargs=2,\
-                           help='end   point of the profile in [lat, lon]')
-    end_group.add_argument('--line-file', dest='lola_file',\
-                           help='file with start and end point info in lon lat, same as GMT format.\n'
-                                'i.e. transect_lonlat.xy:\n'
-                                '>\n'
-                                '131.1663    33.1157\n'
-                                '131.2621    33.0860')
+    end = parser.add_argument_group('Start and End Point of Profile')
+    end.add_argument('-s','--start-yx', dest='start_yx', type=int, nargs=2,\
+                     help='start point of the profile in pixel number [y, x]')
+    end.add_argument('-e','--end-yx', dest='end_yx', type=int, nargs=2,\
+                     help='end   point of the profile in pixel number [y, x]')
+    end.add_argument('--start-lalo', dest='start_lalo', type=float, nargs=2,\
+                     help='start point of the profile in [lat, lon]')
+    end.add_argument('--end-lalo', dest='end_lalo', type=float, nargs=2,\
+                     help='end   point of the profile in [lat, lon]')
+    end.add_argument('--line-file', dest='lola_file',\
+                     help='file with start and end point info in lon lat, same as GMT format.\n'
+                          'i.e. transect_lonlat.xy:\n'
+                          '>\n'
+                          '131.1663    33.1157\n'
+                          '131.2621    33.0860')
 
     # DEM
-    dem_group = parser.add_argument_group('DEM','display topography in the bottom')
-    dem_group.add_argument('-d','--dem', help='DEM file')
-    dem_group.add_argument('--dem-min', dest='dem_disp_min', type=float, help='min display value for DEM display, in km')
-    dem_group.add_argument('--dem-max', dest='dem_disp_max', type=float, help='max display value for DEM display, in km')
+    dem = parser.add_argument_group('DEM','display topography in the bottom')
+    dem.add_argument('-d','--dem', help='DEM file')
+    dem.add_argument('--dem-min', dest='dem_disp_min', type=float, help='min display value for DEM display, in km')
+    dem.add_argument('--dem-max', dest='dem_disp_max', type=float, help='max display value for DEM display, in km')
 
     # Output
-    outfile_parser = parser.add_argument_group('Output', 'Save figure and write to file(s)')
-    outfile_parser.add_argument('--save', dest='save_fig', action='store_true',\
-                                help='save the figure')
-    outfile_parser.add_argument('--nodisplay', dest='disp_fig', action='store_false',\
-                                help='save and do not display the figure')
-    outfile_parser.add_argument('-o','--outfile',\
+    outfile = parser.add_argument_group('Output', 'Save figure and write to file(s)')
+    outfile.add_argument('--save', dest='save_fig', action='store_true',\
+                         help='save the figure')
+    outfile.add_argument('--nodisplay', dest='disp_fig', action='store_false',\
+                         help='save and do not display the figure')
+    outfile.add_argument('-o','--outfile',\
                                 help="save the figure with assigned filename.\n"
                                      "By default, it's calculated based on inputs.")
 
     # Figure 
-    fig_group = parser.add_argument_group('Figure','Figure settings for display')
-    fig_group.add_argument('--dpi', dest='fig_dpi', type=int, default=300, help='DPI - dot per inch - for display/write')
-    fig_group.add_argument('--figsize', dest='fig_size', type=float, nargs=2, default=[7.0, 6.0],\
-                            help='figure size in inches - width and length')
-    fig_group.add_argument('--figext', dest='outfile_ext',\
-                           default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
-                           help='File extension for figure output file')
+    fig = parser.add_argument_group('Figure','Figure settings for display')
+    fig.add_argument('--dpi', dest='fig_dpi', type=int, default=300, help='DPI - dot per inch - for display/write')
+    fig.add_argument('--figsize', dest='fig_size', type=float, nargs=2, default=[7.0, 6.0],\
+                     help='figure size in inches - width and length')
+    fig.add_argument('--figext', dest='outfile_ext',\
+                     default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
+                     help='File extension for figure output file')
+    fig.add_argument('--fontsize', dest='font_size', type=int, help='font size')
+    fig.add_argument('--ms','--markersize', dest='marker_size', type=float, default=2.0,\
+                     help='Point marker size. Default: 2.0')
 
     inps = parser.parse_args()
     inps.file = ut.get_file_list(inps.file)
-    if inps.outfile or not inps.disp_fig:  inps.save_fig = True
+    if inps.outfile or not inps.disp_fig:
+        inps.save_fig = True
     return inps
 
 
@@ -283,6 +284,7 @@ def main(argv):
     print '\n**************** Transect *********************'
     print 'number of file: '+str(len(inps.file))
     print inps.file
+    
 
     ##### Start / End Point Input
     # 1. lonlat file
@@ -326,6 +328,23 @@ def main(argv):
     ax0.set_ylim(np.shape(data0)[0],0)
     ax0.set_title('Transect Line in '+inps.file[0])
 
+    # Status bar
+    def format_coord(x,y):
+        col = int(x)
+        row = int(y)
+        if 0 <= col < data0.shape[1] and 0 <= row < data0.shape[0]:
+            z = data0[row,col]
+            if 'X_FIRST' in atr0.keys():
+                lat = sub.coord_radar2geo(row, atr0, 'row')
+                lon = sub.coord_radar2geo(col, atr0, 'col')
+                return 'lon=%.4f, lat=%.4f, x=%.0f,  y=%.0f,  value=%.4f' % (lon, lat, x,y,z)
+            else:
+                return 'x=%.0f,  y=%.0f,  value=%.4f'%(x,y,z)
+        else:
+            return 'x=%.0f,  y=%.0f'%(x,y)
+    ax0.format_coord = format_coord
+
+
     # Figure 2 - Transections/Profiles
     print 'plot profiles'
     fig,ax = plt.subplots(figsize = inps.fig_size)
@@ -345,7 +364,7 @@ def main(argv):
         # Plot
         distance = transectList[i][:,0]/1000.0          # km
         value = transectList[i][:,1]*inps.disp_scale - inps.disp_offset*i
-        ax.plot(distance, value, '.', color=p_color)
+        ax.plot(distance, value, '.', color=p_color, markersize=inps.marker_size)
         # Y Stat
         value_min = np.nanmin([value_min, np.nanmin(value)])
         value_max = np.nanmax([value_max, np.nanmax(value)])
@@ -356,10 +375,10 @@ def main(argv):
     if not inps.disp_max:
         inps.disp_max = np.ceil(value_max)
     ax.set_ylim(inps.disp_min, inps.disp_max)
-    ax.set_ylabel('Mean LOS Velocity ('+inps.disp_unit+')')
+    ax.set_ylabel('Mean LOS Velocity ('+inps.disp_unit+')', fontsize=inps.font_size)
     # X axis
-    ax.set_xlabel('Distance (km)')
-    ax.tick_params(which='both', direction='out')
+    ax.set_xlabel('Distance (km)', fontsize=inps.font_size)
+    ax.tick_params(which='both', direction='out', labelsize=inps.font_size)
 
     # Plot 2.2 - DEM
     if inps.dem:
@@ -380,8 +399,8 @@ def main(argv):
         #dem_tick = ax2.yaxis.get_majorticklocs()
         #dem_tick = dem_tick[:len(dem_tick)/2]
         #ax2.set_yticks(dem_tick)
-        ax2.set_ylabel('Elevation (km)')
-        ax2.tick_params(which='both', direction='out')
+        ax2.set_ylabel('Elevation (km)', fontsize=inps.font_size)
+        ax2.tick_params(which='both', direction='out', labelsize=inps.font_size)
 
     ## X axis - Shared
     distanceMax = np.nanmax(transectList[0][:,0]/1000.0)   # in km
@@ -389,7 +408,12 @@ def main(argv):
     plt.tight_layout()
 
     ##### Output
-    figBase = 'transect_x'+str(x0)+'y'+str(y0)+'_x'+str(x1)+'y'+str(y1)
+    if not inps.outfile:
+        figBase = 'transect_x'+str(x0)+'y'+str(y0)+'_x'+str(x1)+'y'+str(y1)
+    else:
+        figBase, inps.outfile_ext = os.path.splitext(inps.outfile)
+        if not inps.outfile_ext:
+            inps.outfile_ext = '.png'
     if inps.save_fig:
         print 'writing >>> '+figBase+inps.outfile_ext
         fig0.savefig(inps.file[-1]+inps.outfile_ext, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)

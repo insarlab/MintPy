@@ -1,14 +1,9 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Dec 2015: Add find_lat_lon(), add 'ref_lat','ref_lon' for geocoded file
-# Yunjun, Jan 2016: Add input option for template file
-# Yunjun, Apr 2016: Add maskFile input option
-# Yunjun, Jun 2016: Add seed_attributes(), support to all file types
-#                   Add reference file option
 
 
 import os
@@ -144,7 +139,8 @@ def seed_file_inps(File, inps=None, outFile=None):
         print   'Check the file!'
         print   'Seeding failed'
         sys.exit(1)
-    
+
+    atr = readfile.read_attribute(File)
     # 1. Reference using global average 
     if inps.method == 'global-average':
         print '\n---------------------------------------------------------'
@@ -152,11 +148,10 @@ def seed_file_inps(File, inps=None, outFile=None):
         print '---------------------------------------------------------'
         print 'Calculating the global spatial average value for each epoch'+\
               ' of all valid pixels ...'
-        atr = readfile.read_attribute(File)
         width = int(atr['WIDTH'])
         length = int(atr['FILE_LENGTH'])
         box = (0,0,width,length)
-        meanList = ut.spatial_average(File, mask, box)
+        meanList = ut.spatial_average(File, mask, box)[0]
         inps.ref_y = ''
         inps.ref_x = ''
         outFile = seed_file_reference_value(File, outFile, meanList, inps.ref_y, inps.ref_x)
@@ -176,20 +171,29 @@ def seed_file_inps(File, inps=None, outFile=None):
     # 2.2 Seeding file with reference y/x
     if inps.ref_y and inps.ref_x and mask[inps.ref_y, inps.ref_x]:
         if inps.mark_attribute:
-            print 'Add/update ref_x/y attribute to file: '+File
-            atr_ref = dict()
-            atr_ref['ref_x'] = inps.ref_x
-            atr_ref['ref_y'] = inps.ref_y
-            print atr_ref
-            outFile = ut.add_attribute(File, atr_ref)
+            re_select = True
+            try:
+                ref_x_orig == int(atr['ref_x'])
+                ref_y_orig == int(atr['ref_y'])
+                if inps.ref_x == ref_x_orig and inps.ref_y == ref_y_orig:
+                    re_select = False
+                    print 'Same reference pixel is already selected/saved in file, skip updating file attributes'
+            except: pass
+            if re_select:
+                print 'Add/update ref_x/y attribute to file: '+File
+                atr_ref = dict()
+                atr_ref['ref_x'] = str(inps.ref_x)
+                atr_ref['ref_y'] = str(inps.ref_y)
+                print atr_ref
+                outFile = ut.add_attribute(File, atr_ref)
         else:
             print 'Referencing input file to pixel in y/x: (%d, %d)'%(inps.ref_y, inps.ref_x)
             box = (inps.ref_x, inps.ref_y, inps.ref_x+1, inps.ref_y+1)
-            refList = ut.spatial_average(File, mask, box)
+            refList = ut.spatial_average(File, mask, box)[0]
             outFile = seed_file_reference_value(File, outFile, refList, inps.ref_y, inps.ref_x)
     else:
         raise ValueError('Can not find reference y/x or Nan value.')
-    
+
     return outFile
 
 
@@ -199,11 +203,11 @@ def seed_attributes(atr_in,x,y):
     for key, value in atr_in.iteritems():
         atr[key] = str(value)
     
-    atr['ref_y']=y
-    atr['ref_x']=x
+    atr['ref_y'] = str(y)
+    atr['ref_x'] = str(x)
     if 'X_FIRST' in atr.keys():
-        atr['ref_lat'] = subset.coord_radar2geo(y,atr,'y')
-        atr['ref_lon'] = subset.coord_radar2geo(x,atr,'x')
+        atr['ref_lat'] = str(subset.coord_radar2geo(y,atr,'y'))
+        atr['ref_lon'] = str(subset.coord_radar2geo(x,atr,'x'))
 
     return atr
 
@@ -264,7 +268,7 @@ def select_max_coherence_yx(cohFile, mask=None, min_coh=0.85):
     if not mask is None:
         coh[mask==0] = 0.0
     coh_mask = coh >= min_coh
-    y, x = random_select_reference_yx(coh_mask, print_message=False)
+    y, x = random_select_reference_yx(coh_mask, print_msg=False)
     #y, x = np.unravel_index(np.argmax(coh), coh.shape)
     print   'y/x: '+str([y, x])
     print   '---------------------------------------------------------'
@@ -272,8 +276,8 @@ def select_max_coherence_yx(cohFile, mask=None, min_coh=0.85):
     return y, x
 
 
-def random_select_reference_yx(data_mat, print_message=True):
-    if print_message:
+def random_select_reference_yx(data_mat, print_msg=True):
+    if print_msg:
         print '\n---------------------------------------------------------'
         print   'Random select reference point ...'
         print   '---------------------------------------------------------'
@@ -364,6 +368,29 @@ def read_seed_reference2inps(reference_file, inps=None):
     return inps
 
 
+def remove_reference_pixel(File):
+    '''Remove reference pixel info from input file'''
+    print "remove ref_y/x and/or ref_lat/lon from file: "+File
+    ext = os.path.splitext(File)[1]
+    if ext not in ['.h5','.he5']:
+        sys.exit('ERROR: only hdf5 file supported for this function!')
+
+    k = readfile.read_attribute(File)['FILE_TYPE']
+    h5 = h5py.File(File,'r+')
+    if k in multi_group_hdf5_file:
+        ifgram_list = sorted(h5[k].keys())
+        for ifgram in ifgram_list:
+            for key in ['ref_y','ref_x','ref_lat','ref_lon']:
+                try: h5[k][ifgram].attrs.pop(key)
+                except: pass
+    else:
+        for key in ['ref_y','ref_x','ref_lat','ref_lon']:
+            try: h5[k].attrs.pop(key)
+            except: pass        
+    h5.close()
+    return File
+
+
 #########################################  Usage  ##############################################
 TEMPLATE='''
 ## reference all interferograms to one common point in space
@@ -408,6 +435,8 @@ def cmdLineParse():
     parser.add_argument('--mark-attribute', dest='mark_attribute', action='store_true',\
                         help='mark/update reference attributes in input file only\n'+\
                              'do not update data matrix value nor write new file')
+    parser.add_argument('--reset', action='store_true',\
+                        help='remove reference pixel information from attributes in the file')
 
     coord_group = parser.add_argument_group('input coordinates')
     coord_group.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')
@@ -445,10 +474,16 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
-    
+
     atr = readfile.read_attribute(inps.file[0])
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
+
+    if inps.reset:
+        print '----------------------------------------------------------------------------'
+        for file in inps.file:
+            remove_reference_pixel(file)
+        return
 
     ##### Check Input Coordinates
     # Read ref_y/x/lat/lon from reference/template
@@ -459,13 +494,13 @@ def main(argv):
     if inps.reference_file:
         print 'reading reference info from reference: '+inps.reference_file
         inps = read_seed_reference2inps(inps.reference_file, inps)
-    
+
     ## Do not use ref_lat/lon input for file in radar-coord
     #if not 'X_FIRST' in atr.keys() and (inps.ref_lat or inps.ref_lon):
     #    print 'Lat/lon reference input is disabled for file in radar coord.'
     #    inps.ref_lat = None
     #    inps.ref_lon = None
-    
+
     # Convert ref_lat/lon to ref_y/x
     if inps.ref_lat and inps.ref_lon:
         if 'X_FIRST' in atr.keys():
@@ -477,7 +512,7 @@ def main(argv):
                                                    inps.trans_file, atr)[0:2]
         print 'Input reference point in lat/lon: '+str([inps.ref_lat, inps.ref_lon])
     print 'Input reference point in   y/x  : '+str([inps.ref_y, inps.ref_x])
-    
+
     # Do not use ref_y/x outside of data coverage
     if (inps.ref_y and inps.ref_x and
         not (0<= inps.ref_y <= length and 0<= inps.ref_x <= width)):
@@ -485,7 +520,7 @@ def main(argv):
         inps.ref_x = None
         print 'WARNING: input reference point is OUT of data coverage!'
         print 'Continue with other method to select reference point.'
-        
+
     # Do not use ref_y/x in masked out area
     if inps.ref_y and inps.ref_x and inps.mask_file:
         print 'mask: '+inps.mask_file
@@ -504,7 +539,7 @@ def main(argv):
             inps.method = 'max-coherence'
         else: 
             inps.coherence_file = None
-    
+
     if inps.method == 'manual':
         inps.parallel = False
         print 'Parallel processing is disabled for manual seeding method.'
