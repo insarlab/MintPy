@@ -111,7 +111,7 @@ class InsarDatabaseController(object):
         # can't remove single quotes from table name, so we do it manually
         sql = None
         if index_name:
-            sql = 'CREATE INDEX ' + index_name + ' ON "' + table + '" (' + on + ');'
+            sql = 'CREATE INDEX "' + index_name + '" ON "' + table + '" (' + on + ');'
         else:
             sql = 'CREATE INDEX ON "' + table + '" (' + on + ');'
 
@@ -120,7 +120,18 @@ class InsarDatabaseController(object):
             self.con.commit()
         # index exists most probably if exception thrown
         except Exception, e:
-            pass
+            print str(e)
+
+    def cluster_table_using(self, table, index_name):
+        sql = None
+        sql = 'CLUSTER "' + table + '" USING "' + index_name + '";'
+
+        try:
+            self.cursor.execute(sql)
+            self.con.commit()
+        # index exists most probably if exception thrown
+        except Exception, e:
+            print str(e)
 
     def remove_point_table_if_there(self, unavco_name): 
         sql = 'DROP TABLE IF EXISTS "' + unavco_name + '"'
@@ -249,7 +260,7 @@ def main(argv):
     unavco_name = parseArgs.unavco_name
     attributes_file = working_dir + "add_Attribute.txt"
     attributes = readfile.read_template(attributes_file)
-    dbController = InsarDatabaseController(username, password, host, db)    
+    dbController = InsarDatabaseController(username, password, host, db)
     dbController.connect()
 
     for key in attributes:
