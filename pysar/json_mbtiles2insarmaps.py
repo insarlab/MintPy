@@ -92,6 +92,7 @@ def upload_json(folder_path):
     attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
     attributesController.connect()
     attributesController.index_table_on(area_name, "p", None)
+    attributesController.cluster_table_using(area_name, area_name + "_p_idx")
     attributesController.close()
 
 def build_parser():
