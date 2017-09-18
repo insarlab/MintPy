@@ -36,6 +36,7 @@ import time
 import argparse
 import warnings
 import shutil
+import subprocess
 
 import h5py
 import numpy as np
@@ -79,8 +80,7 @@ def check_geocode_file(geomapFile, File, outFile=None):
     if ut.update_file(outFile, File):
         geocodeCmd = 'geocode.py '+File+' -l '+os.path.basename(geomapFile)
         print geocodeCmd
-        try: os.system(geocodeCmd)
-        except: pass
+        status = subprocess.Popen(geocodeCmd, shell=True).wait()
 
     try:    outFile = glob.glob(outFile)[0]
     except: outFile = None
@@ -139,7 +139,7 @@ def subset_dataset(inps, geo_box4geo, pix_box4rdr):
         if File:
             atrCmd = 'add_attribute.py '+File+' subset_x0=None subset_x1=None subset_y0=None subset_y1=None'
             print atrCmd
-            os.system(atrCmd)
+            status = subprocess.Popen(atrCmd, shell=True).wait()
 
     return inps
 
@@ -551,7 +551,7 @@ def main(argv):
     if inps.custom_template_file:
         loadCmd += ' '+inps.custom_template_file+' --project '+inps.project_name
     print loadCmd
-    os.system(loadCmd)
+    status = subprocess.Popen(loadCmd, shell=True).wait()
     os.chdir(inps.work_dir)
 
     print '--------------------------------------------'
@@ -572,12 +572,18 @@ def main(argv):
             networkCmd +=  ' '+inps.coherence_file
         networkCmd += ' --reset'
         print networkCmd
-        os.system(networkCmd)
+        status = subprocess.Popen(networkCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while resetting the network of interferograms.\n'
+            sys.exit(-1)
 
         # Reset reference pixel
         seedCmd = 'seed_data.py '+inps.ifgram_file+' --reset'
         print seedCmd
-        os.system(seedCmd)
+        status = subprocess.Popen(seedCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while resetting the reference pixel in space.\n'
+            sys.exit(-1)
 
 
     #########################################
@@ -656,7 +662,10 @@ def main(argv):
     msg_str += ' --reset'
     print msg_str
     print '----------------------------------------------------------------------------------------'
-    os.system(networkCmd)
+    status = subprocess.Popen(networkCmd, shell=True).wait()
+    if status is not 0:
+        print '\nError while modifying the network of interferograms.\n'
+        sys.exit(-1)
 
     # Plot network colored in spatial coherence
     print '--------------------------------------------'
@@ -664,7 +673,7 @@ def main(argv):
               ' --template '+inps.template_file+' --nodisplay'
     print plotCmd
     if ut.update_file('Network.pdf', [inps.ifgram_file, inps.coherence_file, inps.template_file], check_readable=False):
-        os.system(plotCmd)
+        status = subprocess.Popen(plotCmd, shell=True).wait()
 
     if inps.modify_network:
         sys.exit('Exit as planed after network modification.')
@@ -700,7 +709,10 @@ def main(argv):
     if run_seedCmd:
         print 'Call seed_data.py to find reference pixel in space'
         print seedCmd
-        os.system(seedCmd)
+        status = subprocess.Popen(seedCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while finding reference pixel in space.\n'
+            sys.exit(-1)
 
 
     ############################################
@@ -715,7 +727,10 @@ def main(argv):
         print unwCmd
         if ut.update_file(outName, inps.ifgram_file):
             print 'This might take a while depending on the size of your data set!'
-            os.system(unwCmd)
+            status = subprocess.Popen(unwCmd, shell=True).wait()
+            if status is not 0:
+                print '\nError while correcting phase unwrapping errors.\n'
+                sys.exit(-1)
         inps.ifgram_file = outName
 
 
@@ -727,7 +742,10 @@ def main(argv):
     invertCmd = 'ifgram_inversion.py '+inps.ifgram_file
     print invertCmd
     if ut.update_file(inps.timeseries_file, inps.ifgram_file):
-        os.system(invertCmd)
+        status = subprocess.Popen(invertCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while inverting network of interferograms to time-series.\n'
+            sys.exit(-1)
 
     ## Check DEM file for tropospheric delay setting
     ## DEM is needed with same coord (radar/geo) as timeseries file
@@ -759,7 +777,10 @@ def main(argv):
     tempCohCmd = 'temporal_coherence.py '+inps.ifgram_file+' '+inps.timeseries_file+' '+inps.temp_coh_file
     print tempCohCmd
     if ut.update_file(inps.temp_coh_file, inps.timeseries_file):
-        os.system(tempCohCmd)
+        status = subprocess.Popen(tempCohCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while calculating the temporal coherence.\n'
+            sys.exit(-1)
 
     print '\n--------------------------------------------'
     print 'Update Mask based on Temporal Coherence ...'
@@ -776,19 +797,11 @@ def main(argv):
     maskCmd = 'generate_mask.py '+inps.temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
     print maskCmd
     if ut.update_file(outName, inps.temp_coh_file):
-        os.system(maskCmd)
+        status = subprocess.Popen(maskCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while generating mask file from temporal coherence.\n'
+            sys.exit(-1)
     inps.mask_file = outName
-
-
-    ###############################################
-    ## Incident Angle
-    ###############################################
-    #print '\n********** Incident Angle file  *************'
-    #inps.inc_angle_file = 'incidenceAngle.h5'
-    #incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
-    #print incAngleCmd
-    #if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
-    #    os.system(incAngleCmd)
 
 
     ##############################################
@@ -803,7 +816,10 @@ def main(argv):
             lodCmd = 'lod.py '+inps.timeseries_file
             print lodCmd
             if ut.update_file(outName, inps.timeseries_file):
-                os.system(lodCmd)
+                status = subprocess.Popen(lodCmd, shell=True).wait()
+                if status is not 0:
+                    print '\nError while correcting Local Oscillator Drift.\n'
+                    sys.exit(-1)
             inps.timeseries_file = outName
         else:
             warnings.warn('Can not apply LOD correction for file in radar coord. Skip it for now.')
@@ -852,7 +868,10 @@ def main(argv):
         print tropCmd
         outName = os.path.splitext(inps.timeseries_file)[0]+'_tropHgt.h5'
         if ut.update_file(outName, inps.timeseries_file):
-            os.system(tropCmd)
+            status = subprocess.Popen(tropCmd, shell=True).wait()
+            if status is not 0:
+                print '\nError while correcting tropospheric delay.\n'
+                sys.exit(-1)
         inps.timeseries_file = outName
 
     elif inps.trop_method == 'pyaps':
@@ -865,12 +884,17 @@ def main(argv):
         if ut.update_file(outName, inps.timeseries_file):
             try:
                 inps.trop_file = ut.get_file_list(inps.trop_model+'.h5')[0]
-                diffCmd = 'diff.py '+inps.timeseries_file+' '+inps.trop_file+' -o '+outName
+                tropCmd = 'diff.py '+inps.timeseries_file+' '+inps.trop_file+' -o '+outName
                 print 'Use existed tropospheric delay file: '+inps.trop_file
-                print diffCmd
-                os.system(diffCmd)
-            except:
-                os.system(tropCmd)
+                print tropCmd
+            except: pass
+            status = subprocess.Popen(tropCmd, shell=True).wait()
+            if status is not 0:
+                print '\nError while correcting tropospheric delay, try the following:'
+                print '1) Check the installation of PyAPS (http://earthdef.caltech.edu/projects/pyaps/wiki/Main)'
+                print '2) Use other tropospheric correction method, height-correlation, for example'
+                print '3) or turn off the option by setting pysar.troposphericDelay.method = no in template file.\n'
+                sys.exit(-1)
         inps.timeseries_file = outName
 
     else:
@@ -892,7 +916,10 @@ def main(argv):
     if template['pysar.topoError'] in ['yes','auto']:
         print 'Correcting topographic residuals using method from Fattahi and Amelung, 2013, TGRS ...'
         if ut.update_file(outName, inps.timeseries_file):
-            os.system(topoCmd)
+            status = subprocess.Popen(topoCmd, shell=True).wait()
+            if status is not 0:
+                print '\nError while correcting topographic phase residual.\n'
+                sys.exit(-1)
         inps.timeseries_file = outName
         inps.timeseries_resid_file = os.path.splitext(outName)[0]+'InvResid.h5'
     else:
@@ -906,7 +933,10 @@ def main(argv):
     if inps.timeseries_resid_file:
         rmsCmd = 'timeseries_rms.py '+inps.timeseries_resid_file+' --template '+inps.template_file
         print rmsCmd
-        os.system(rmsCmd)
+        status = subprocess.Popen(rmsCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while calculating RMS of time series phase residual.\n'
+            sys.exit(-1)
     else:
         print 'No timeseries residual file found! Skip residual RMS analysis.'
 
@@ -921,7 +951,10 @@ def main(argv):
         print refCmd
 
         if ut.update_file(outName, inps.timeseries_file):
-            os.system(refCmd)
+            status = subprocess.Popen(refCmd, shell=True).wait()
+            if status is not 0:
+                print '\nError while changing reference date.\n'
+                sys.exit(-1)
 
         if not ut.update_file(outName):
             inps.timeseries_file = outName
@@ -946,26 +979,18 @@ def main(argv):
     if template['pysar.deramp'] not in ['no','auto']:
         inps.deramp_method = template['pysar.deramp']
         print 'Phase Ramp Removal method : '+inps.deramp_method
+        derampCmd = None
 
+        # Get executable command and output name
         if inps.deramp_method in ['plane', 'quadratic', 'plane_range', 'quadratic_range',\
                                   'plane_azimuth', 'quadratic_azimuth']:
             derampCmd = 'remove_plane.py '+inps.timeseries_file+' -s '+inps.deramp_method+' -m '+inps.mask_file
-            print derampCmd
-
             outName = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.deramp_method+'.h5'
-            if ut.update_file(outName, inps.timeseries_file):
-                os.system(derampCmd)
-            inps.timeseries_file = outName
 
         elif inps.deramp_method in ['baseline_cor','baselinecor']:
             if not 'X_FIRST' in atr.keys():
                 derampCmd = 'baseline_error.py '+inps.timeseries_file+' '+inps.mask_file
-                print derampCmd
-
                 outName = os.path.splitext(inps.timeseries_file)[0]+'_baselineCor.h5'
-                if ut.update_file(outName, inps.timeseries_file):
-                    os.system(derampCmd)
-                inps.timeseries_file = outName
             else:
                 warnings.warn('BaselineCor method can only be applied in radar coordinate, skipping correction')
 
@@ -976,16 +1001,20 @@ def main(argv):
                 except: poly_order = '1'
                 derampCmd = 'baseline_trop.py '+inps.timeseries_file+' '+inps.dem_radar_file+' '+\
                             poly_order+' range_and_azimuth'
-                print derampCmd
-
                 outName = os.path.splitext(inps.timeseries_file)[0]+'_baseTropCor.h5'
-                if ut.update_file(outName, inps.timeseries_file):
-                    os.system(derampCmd)
-                inps.timeseries_file = outName
             else:
-                warnings.warn('BaselineCor method can only be applied in radar coordinate, skipping correction')
+                warnings.warn('BaselineTropCor method can only be applied in radar coordinate, skipping correction')
         else:
             warnings.warn('Unrecognized phase ramp method: '+template['pysar.deramp'])
+
+        # Execute command
+        if derampCmd and ut.update_file(outName, inps.timeseries_file):
+            print derampCmd
+            status = subprocess.Popen(derampCmd, shell=True).wait()
+            if status is not 0:
+                print '\nError while removing phase ramp for each acquisition of time-series.\n'
+                sys.exit(-1)
+            inps.timeseries_file = outName
     else:
         print 'No phaes ramp removal.'
 
@@ -998,7 +1027,10 @@ def main(argv):
     velCmd = 'timeseries2velocity.py '+inps.timeseries_file+' --template '+inps.template_file+' -o '+inps.vel_file
     print velCmd
     if ut.update_file(inps.vel_file, [inps.timeseries_file, inps.template_file]):
-        os.system(velCmd)
+        status = subprocess.Popen(velCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while estimating linear velocity from time-series.\n'
+            sys.exit(-1)
 
     # Velocity from Tropospheric delay
     if inps.trop_file:
@@ -1008,7 +1040,7 @@ def main(argv):
         velCmd = 'timeseries2velocity.py '+inps.trop_file+' --template '+inps.template_file+' -o '+inps.trop_vel_file
         print velCmd
         if ut.update_file(inps.trop_vel_file, [inps.trop_file, inps.template_file]):
-            os.system(velCmd)
+            status = subprocess.Popen(velCmd, shell=True).wait()
 
 
     ############################################
@@ -1048,7 +1080,7 @@ def main(argv):
         maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
         print maskCmd
         if ut.update_file(outName, inps.geo_temp_coh_file):
-            os.system(maskCmd)
+            status = subprocess.Popen(maskCmd, shell=True).wait()
         inps.geo_mask_file = outName
 
         # Mask geo_velocity file
@@ -1057,7 +1089,7 @@ def main(argv):
             maskCmd = 'mask.py '+inps.geo_vel_file+' -m '+inps.geo_mask_file+' -o '+outName
             print maskCmd
             if ut.update_file(outName, [inps.geo_vel_file, inps.geo_mask_file]):
-                os.system(maskCmd)
+                status = subprocess.Popen(maskCmd, shell=True).wait()
             try:  inps.geo_vel_file = glob.glob(outName)[0]
             except:  pass
 
@@ -1069,7 +1101,7 @@ def main(argv):
         kmlCmd = 'save_kml.py '+inps.geo_vel_file
         print kmlCmd
         if ut.update_file(outName, inps.geo_vel_file, check_readable=False):
-            os.system(kmlCmd)
+            status = subprocess.Popen(kmlCmd, shell=True).wait()
 
 
     #############################################
@@ -1086,7 +1118,10 @@ def main(argv):
             if inps.unavco_atr_file:
                 atrCmd = 'add_attribute.py '+inps.geo_timeseries_file+' '+inps.unavco_atr_file
                 print atrCmd
-                os.system(atrCmd)
+                status = subprocess.Popen(atrCmd, shell=True).wait()
+                if status is not 0:
+                    print '\nError while adding UNAVCO attributes to time series file.\n'
+                    sys.exit(-1)
 
             # 2. Temporal Coherence
             inps.geo_temp_coh_file = check_geocode_file(inps.trans_file, inps.temp_coh_file)
@@ -1096,14 +1131,20 @@ def main(argv):
             if inps.geo_temp_coh_file and ut.update_file(inps.geo_mask_file, inps.geo_temp_coh_file):
                 maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m 0.7 -o '+inps.geo_mask_file
                 print maskCmd
-                os.system(maskCmd)
+                status = subprocess.Popen(maskCmd, shell=True).wait()
+                if status is not 0:
+                    print '\nError while generating mask file.\n'
+                    sys.exit(-1)
 
             # 4. Incidence Angle
             inps.inc_angle_file = 'incidenceAngle.h5'
             if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
                 incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
                 print incAngleCmd
-                os.system(incAngleCmd)
+                status = subprocess.Popen(incAngleCmd, shell=True).wait()
+                if status is not 0:
+                    print '\nError while generating incidence angle file.\n'
+                    sys.exit(-1)
             inps.geo_inc_angle_file = check_geocode_file(inps.trans_file, inps.inc_angle_file)
 
             # Save to UNAVCO format
@@ -1121,7 +1162,10 @@ def main(argv):
             print unavcoCmd
             if ut.update_file(inps.unavco_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
                                                  inps.geo_inc_angle_file, inps.dem_geo_file], check_readable=False):
-                os.system(unavcoCmd)
+                status = subprocess.Popen(unavcoCmd, shell=True).wait()
+                if status is not 0:
+                    print '\nError while generating UNAVCO InSAR arhive time series file.\n'
+                    sys.exit(-1)
 
 
     #############################################
@@ -1138,10 +1182,15 @@ def main(argv):
                 shutil.copy2(ut.which(inps.plot_sh_file), inps.work_dir)
             except:
                 print 'WARNING: no '+inps.plot_sh_file+' found in the environment variable path, skip plotting.'
-
         print 'for better performance, edit the input parameters in '+inps.plot_sh_file+' and re-run this script.'
-        plotCmd = 'chmod +x '+inps.plot_sh_file;    print plotCmd;     os.system(plotCmd)
-        plotCmd = './'+inps.plot_sh_file;           print plotCmd;     os.system(plotCmd)
+
+        plotCmd = 'chmod +x '+inps.plot_sh_file
+        print plotCmd
+        status = subprocess.Popen(plotCmd, shell=True).wait()
+
+        plotCmd = './'+inps.plot_sh_file
+        print plotCmd
+        status = subprocess.Popen(plotCmd, shell=True).wait()
 
 
     #############################################
