@@ -1008,12 +1008,13 @@ def main(argv):
             warnings.warn('Unrecognized phase ramp method: '+template['pysar.deramp'])
 
         # Execute command
-        if derampCmd and ut.update_file(outName, inps.timeseries_file):
+        if derampCmd:
             print derampCmd
-            status = subprocess.Popen(derampCmd, shell=True).wait()
-            if status is not 0:
-                print '\nError while removing phase ramp for each acquisition of time-series.\n'
-                sys.exit(-1)
+            if ut.update_file(outName, inps.timeseries_file):
+                status = subprocess.Popen(derampCmd, shell=True).wait()
+                if status is not 0:
+                    print '\nError while removing phase ramp for each acquisition of time-series.\n'
+                    sys.exit(-1)
             inps.timeseries_file = outName
     else:
         print 'No phaes ramp removal.'

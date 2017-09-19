@@ -177,6 +177,14 @@ def extract_attribute_lookup_table(fname):
     For example, it read input file, sim_150911-150922.UTM_TO_RDC, 
     find its associated par file, sim_150911-150922.utm.dem.par, read it, and
     convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.UTM_TO_RDC.rsc'''
+
+    ## Check existed .rsc file
+    rsc_file_list = ut.get_file_list(fname+'.rsc')
+    if rsc_file_list:
+        rsc_file = rsc_file_list[0]
+        print rsc_file+' is existed, no need to re-extract.'
+        return rsc_file
+
     atr = {}
     atr['PROCESSOR'] = 'gamma'
     atr['INSAR_PROCESSOR'] = 'gamma'
@@ -185,9 +193,11 @@ def extract_attribute_lookup_table(fname):
     atr['X_UNIT'] = 'degrees'
 
     par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
+
     print 'read '+os.path.basename(par_file)
-    print 'convert Gamma attribute to ROI_PAC style'
     par_dict = readfile.read_gamma_par(par_file)
+
+    print 'convert Gamma attribute to ROI_PAC style'
     par_dict = readfile.attribute_gamma2roipac(par_dict)
     atr.update(par_dict)
 

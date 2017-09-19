@@ -1150,7 +1150,7 @@ def get_file_list(fileList, abspath=False):
         fileList - string or list of string, input file pattern
         abspath  - bool, return absolute path or not
     Output:
-        fileListOut - list of string, existed file path/name
+        fileListOut - list of string, existed file path/name, [] if not existed
     Example:
         fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
         fileList = get_file_list('timeseries*.h5')
