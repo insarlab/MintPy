@@ -943,6 +943,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.disp_min, vmax=inps.disp_max,\
                        alpha=inps.transparency, interpolation='nearest')
 
+        ax.tick_params(labelsize=inps.font_size)
+
         # Plot Seed Point
         if inps.disp_seed and inps.seed_yx:
             ax.plot(inps.seed_yx[1]-inps.pix_box[0], inps.seed_yx[0]-inps.pix_box[1],\
@@ -1000,9 +1002,6 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     if not inps.disp_axis:
         ax.axis('off')
         print 'turn off axis display'
-    else:
-        ax.xaxis.label.set_size(inps.font_size)
-        ax.yaxis.label.set_size(inps.font_size)
 
     # 3.5 Turn off tick label
     if not inps.disp_tick:
