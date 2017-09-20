@@ -23,6 +23,12 @@ log_file='plot_pysarApp.log'
 echo "touch log file: "$log_file
 touch $log_file
 
+## Create PIC folder
+if [ ! -d "PIC" ]; then
+    echo 'Create PIC folder'
+    mkdir PIC
+fi
+
 
 ## Plot Key files
 opt=' -d demRadar.h5 --mask '$mask_file' -u cm '
@@ -101,13 +107,7 @@ if [ $plot_the_rest -eq 1 ]; then
 fi
 
 
-
-## Move all figure files to PIC
-if [ ! -d "PIC" ]; then
-    echo 'Create PIC folder'
-    mkdir PIC
-fi
-
+## Move picture files to PIC folder
 echo "Move *.png *.pdf into PIC folder"
 mv *.png PIC/
 mv *.pdf PIC/

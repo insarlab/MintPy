@@ -672,7 +672,9 @@ def main(argv):
     plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+\
               ' --template '+inps.template_file+' --nodisplay'
     print plotCmd
-    if ut.update_file('Network.pdf', [inps.ifgram_file, inps.coherence_file, inps.template_file], check_readable=False):
+    inps.coh_spatialAverage_file = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.txt'
+    if ut.update_file('Network.pdf', check_readable=False, \
+                      inFile=[inps.ifgram_file, inps.coh_spatialAverage_file, inps.template_file]):
         status = subprocess.Popen(plotCmd, shell=True).wait()
 
     if inps.modify_network:
@@ -1185,10 +1187,7 @@ def main(argv):
                 print 'WARNING: no '+inps.plot_sh_file+' found in the environment variable path, skip plotting.'
         print 'for better performance, edit the input parameters in '+inps.plot_sh_file+' and re-run this script.'
 
-        plotCmd = 'chmod +x '+inps.plot_sh_file
-        print plotCmd
-        status = subprocess.Popen(plotCmd, shell=True).wait()
-
+        #if ut.update_file('PIC', [inps.plot_sh_file, inps.template_file], check_readable=False):
         plotCmd = './'+inps.plot_sh_file
         print plotCmd
         status = subprocess.Popen(plotCmd, shell=True).wait()

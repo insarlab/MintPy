@@ -1000,6 +1000,9 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     if not inps.disp_axis:
         ax.axis('off')
         print 'turn off axis display'
+    else:
+        ax.xaxis.label.set_size(inps.font_size)
+        ax.yaxis.label.set_size(inps.font_size)
 
     # 3.5 Turn off tick label
     if not inps.disp_tick:
