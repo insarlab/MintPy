@@ -554,7 +554,7 @@ def normalize_timeseries_old(ts_mat, nanValue=0):
 
 ############################################################
 def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
-    '''Check whether to update outFile or not.
+    '''Check whether to update outFile/outDir or not.
     return True if any of the following meets:
         1. if overwrite option set to True
         2. outFile is empty, e.g. None, []
@@ -566,7 +566,7 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
     If inFile=None and outFile exists and readable, return False
     
     Inputs:
-        inFile - string or list of string, input file(s)
+        inFile - string or list of string, input file(s)/directories
     Output:
         True/False - bool, whether to update output file or not
     Example:
@@ -577,7 +577,7 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
     if overwrite:
         return True
 
-    if not outFile or not os.path.isfile(outFile):
+    if not outFile or (not os.path.isfile(outFile) and not os.path.isdir(outFile)):
         return True
 
     if check_readable:
@@ -1037,6 +1037,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
 
     # Calculate mean coherence list
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
+        print 'calculating spatial average of file: '+os.path.basename(File)
         h5file = h5py.File(File,'r')
         epochList = sorted(h5file[k].keys())
         epochNum  = len(epochList)
@@ -1062,7 +1063,6 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
             prog_bar.update(i+1)
         prog_bar.close()
         del data
-        h5file.close()
     else:
         data,atr = readfile.read(File, box)
         if not mask is None:
@@ -1074,10 +1074,33 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     # Get date/pair list
     if k in multi_group_hdf5_file:
         date_list = pnet.get_date12_list(File)
+        # Temp/Perp Baseline
+        m_dates = [date12.split('-')[0] for date12 in date_list]
+        s_dates = [date12.split('-')[1] for date12 in date_list]
+        date6_list = ptime.yymmdd(sorted(list(set(m_dates + s_dates))))
+        tbase_ts_list = ptime.date_list2tbase(date6_list)[0]
+        tbase_list = []
+        pbase_list = []
+        for i in range(epochNum):
+            ifgram = epochList[i]
+            pbase_top    = float(h5file[k][ifgram].attrs['P_BASELINE_TOP_HDR'])
+            pbase_bottom = float(h5file[k][ifgram].attrs['P_BASELINE_BOTTOM_HDR'])
+            pbase = (pbase_bottom+pbase_top)/2.0
+            pbase_list.append(pbase)
+
+            m_idx = date6_list.index(m_dates[i])
+            s_idx = date6_list.index(s_dates[i])
+            tbase = tbase_ts_list[s_idx] - tbase_ts_list[m_idx]
+            tbase_list.append(tbase)
+
     elif k in multi_dataset_hdf5_file:
         date_list = epochList
     else:
         date_list = [os.path.basename(File)]
+
+    try: h5file.close()
+    except: pass
+
 
     # Write mean coherence list into text file
     if saveList:
@@ -1087,10 +1110,19 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         fl.write(file_line)
         fl.write(mask_line)
         fl.write(aoi_line)
+
         # Write data list
-        for i in range(len(date_list)):
-            line = date_list[i]+'    '+str(mean_list[i])+'\n'
-            fl.write(line)
+        line_num = len(date_list)
+        if k in multi_group_hdf5_file:
+            fl.write('#   DATE12        Mean      Btemp/days   Bperp/m\n')
+            for i in range(line_num):
+                line = '%s    %.4f    %8.0f    %8.1f\n' % (date_list[i], mean_list[i], tbase_list[i], pbase_list[i])
+                fl.write(line)
+        else:
+            fl.write('#   DATE12        Mean\n')
+            for i in range(line_num):
+                line = '%s    %.4f\n' % (date_list[i], mean_list[i])
+                fl.write(line)
         fl.close()
 
     if len(mean_list) == 1:
@@ -1147,7 +1179,7 @@ def temporal_average(File, outFile=None):
 def get_file_list(fileList, abspath=False):
     '''Get all existed files matching the input list of file pattern
     Inputs:
-        fileList - string or list of string, input file pattern
+        fileList - string or list of string, input file/directory pattern
         abspath  - bool, return absolute path or not
     Output:
         fileListOut - list of string, existed file path/name, [] if not existed
@@ -1704,7 +1736,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     print 'Time series inversion took ' + str(time.time()-total) +' secs\nDone.'
     return timeseriesFile
 
-    
+
 ###################################################
 def timeseries_inversion_FGLS(h5flat,h5timeseries):
     '''Implementation of the SBAS algorithm.

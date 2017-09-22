@@ -299,6 +299,8 @@ def read_template2inps(template_file, inps=None):
 ###############################  Usage  ################################
 EXAMPLE='''example:
   modify_network.py unwrapIfgram.h5 coherence.h5 --template pysarApp_template.txt --trans geomap_4rlks.trans
+  modify_network.py unwrapIfgram.h5 coherence.h5 --reset
+
   modify_network.py unwrapIfgram.h5 coherence.h5 -t 365 -b 200
   modify_network.py unwrapIfgram.h5 coherence.h5 --coherence-base coherence.h5 --mask Mask.h5 --min-coherence 0.7
   modify_network.py unwrapIfgram.h5 -r Modified_coherence.h5
@@ -613,13 +615,20 @@ def main(argv):
                 inps.mask_file = 'mask.h5'
                 print 'writing >>> '+inps.mask_file
                 ut.nonzero_mask(Modified_File, inps.mask_file)
+
             elif k == 'coherence':
                 print 'update average spatial coherence for input '+k+' file based on: '+Modified_File
                 outFile = 'averageSpatialCoherence.h5'
                 print 'writing >>> '+outFile
                 ut.temporal_average(Modified_File, outFile)
                 Modified_CoherenceFile = Modified_File
-    
+                # Touch spatial average txt file of coherence if it's existed
+                coh_spatialAverage_file = os.path.splitext(Modified_File)[0]+'_spatialAverage.txt'
+                if os.path.isfile(coh_spatialAverage_file):
+                    touchCmd = 'touch '+coh_spatialAverage_file
+                    print touchCmd
+                    os.system(touchCmd)
+
         # Plot result
         if inps.plot:
             print '\nplot modified network and save to file.'

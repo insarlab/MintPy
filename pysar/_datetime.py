@@ -156,7 +156,7 @@ def date_list2tbase(dateList):
     dateDict = {}
     for i in range(len(dateList)):
         dateDict[dateList[i]] = tbase[i]
-  
+
     return tbase, dateDict
 
 

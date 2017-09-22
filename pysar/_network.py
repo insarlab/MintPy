@@ -811,6 +811,8 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     date12_list_keep = sorted(list(set(date12_list) - set(date12_list_drop)))
     idx_date12_keep = [date12_list.index(i) for i in date12_list_keep]
     idx_date12_drop = [date12_list.index(i) for i in date12_list_drop]
+    if not date12_list_drop:
+        plot_dict['disp_drop'] = False
 
     ## Keep/Drop - date
     m_dates = [i.split('-')[0] for i in date12_list_keep]
@@ -874,20 +876,6 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc='gray')
 
     ## Line - Pair/Interferogram        
-    # interferograms kept
-    for date12 in date12_list_keep:
-        date1, date2 = date12.split('-')
-        idx1 = date6_list.index(date1)
-        idx2 = date6_list.index(date2)
-        x = np.array([dates[idx1], dates[idx2]])
-        y = np.array([pbase_list[idx1], pbase_list[idx2]])
-        if coh_list:
-            coh = coh_list[date12_list.index(date12)]
-            coh_idx = (coh - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
-        else:
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c='k')
-
     # interferograms dropped
     if plot_dict['disp_drop']:
         for date12 in date12_list_drop:
@@ -903,6 +891,20 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             else:
                 ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c='k')
 
+    # interferograms kept
+    for date12 in date12_list_keep:
+        date1, date2 = date12.split('-')
+        idx1 = date6_list.index(date1)
+        idx2 = date6_list.index(date2)
+        x = np.array([dates[idx1], dates[idx2]])
+        y = np.array([pbase_list[idx1], pbase_list[idx2]])
+        if coh_list:
+            coh = coh_list[date12_list.index(date12)]
+            coh_idx = (coh - disp_min) / (disp_max - disp_min)
+            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
+        else:
+            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c='k')
+
     if plot_dict['disp_title']:
         ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
 
@@ -913,9 +915,10 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     ax.set_ylabel('Perp Baseline [m]',fontsize=plot_dict['fontsize'])
 
     # Legend
-    solid_line = mlines.Line2D([],[],color='k',ls='solid', label='Interferograms')
-    dash_line  = mlines.Line2D([],[],color='k',ls='dashed', label='Interferograms dropped')
-    ax.legend(handles=[solid_line,dash_line])
+    if plot_dict['disp_drop']:
+        solid_line = mlines.Line2D([],[],color='k',ls='solid', label='Interferograms')
+        dash_line  = mlines.Line2D([],[],color='k',ls='dashed', label='Interferograms dropped')
+        ax.legend(handles=[solid_line,dash_line])
 
     return ax
 
@@ -986,8 +989,12 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
     return ax
 
 
-def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
-    '''Plot Coherence Matrix of input network'''
+def plot_coherence_matrix(ax, date12_list, coherence_list, date12_list_drop=[], plot_dict={}):
+    '''Plot Coherence Matrix of input network
+    
+    if date12_list_drop is not empty, plot KEPT pairs in the upper triangle and
+                                           ALL  pairs in the lower triangle.
+    '''
     # Figure Setting
     keyList = plot_dict.keys()
     if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
@@ -998,20 +1005,15 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
 
     coh_mat = coherence_matrix(date12_list, coherence_list)
 
-    ## Plot coherence matrix for 1 or 2 ifgrams only
-    #m_dates = [i.split('-')[0] for i in date12_list]
-    #s_dates = [i.split('-')[1] for i in date12_list]
-    #date6_list = sorted(list(set(m_dates + s_dates)))
-    #coh_mat[:] = np.nan
-    #example_date12_list = ['070718-080720']
-    ##example_date12_list = ['070718-080720', '070115-110126']
-    #for date12 in example_date12_list:
-    #    d1,d2 = date12.split('-')
-    #    idx1 = date6_list.index(d1)
-    #    idx2 = date6_list.index(d2)
-    #    coh = coherence_list[date12_list.index(date12)]
-    #    coh_mat[idx1,idx2] = coh
-    #    coh_mat[idx2,idx1] = coh
+    if date12_list_drop:
+        # Date Convert
+        m_dates = [i.split('-')[0] for i in date12_list]
+        s_dates = [i.split('-')[1] for i in date12_list]
+        date6_list = ptime.yymmdd(sorted(list(set(m_dates + s_dates))))
+        # Set dropped pairs' value to nan, in upper triangle only.
+        for date12 in date12_list_drop:
+            idx1, idx2 = [date6_list.index(i) for i in date12.split('-')]
+            coh_mat[idx1, idx2] = np.nan
 
     im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0, interpolation='nearest')
     date_num = coh_mat.shape[0]
@@ -1032,6 +1034,13 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
     cax = divider.append_axes("right", "3%", pad="3%")
     cbar = plt.colorbar(im, cax=cax)
     cbar.set_label('Spatial Coherence', fontsize=plot_dict['fontsize'])
+
+    # Legend
+    if date12_list_drop:
+        ax.plot([],[],label='Upper: used ifgrams')
+        ax.plot([],[],label='Lower: all ifgrams')
+        ax.legend(handlelength=0)
+
     return ax
 
 

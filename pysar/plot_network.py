@@ -36,10 +36,11 @@ def read_template2inps(template_file, inps=None):
 
     key = prefix+'coherenceFile'
     if key in key_list:
-        if template[key] == 'auto':
+        value = template[key]
+        if value == 'auto':
             inps.coherence_file = 'coherence.h5'
         else:
-            inps.coherence_file = template[key]
+            inps.coherence_file = value
 
     key = prefix+'maskFile'
     if key in key_list:
@@ -50,6 +51,14 @@ def read_template2inps(template_file, inps=None):
             inps.mask_file = None
         else:
             inps.mask_file = value
+
+    key = prefix+'minCoherence'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.coh_thres = 0.7
+        else:
+            inps.coh_thres = float(value)
 
     return inps
 
@@ -69,7 +78,9 @@ DATE12_LIST='''
 
 EXAMPLE='''example:
   plot_network.py unwrapIfgram.h5
-  plot_network.py unwrapIfgram.h5 --coherence coherence.h5 --template pysarApp_template.txt
+  plot_network.py unwrapIfgram.h5 --template pysarApp_template.txt
+  plot_network.py unwrapIfgram.h5 --template pysarApp_template.txt --nodrop
+
   plot_network.py unwrapIfgram.h5 --coherence coherence_spatialAverage.txt
   plot_network.py unwrapIfgram.h5 --coherence coherence.h5 --mask Mask.h5
   plot_network.py Modified_coherence.h5 --save
@@ -110,7 +121,10 @@ def cmdLineParse():
     coh.add_argument('-c','--colormap', dest='colormap', default='RdBu',\
                      help='colormap for display, i.e. RdBu, jet, ...')
     coh.add_argument('--mask', dest='mask_file', help='mask file used to calculate the coherence')
-    coh.add_argument('--template','-t', dest='template_file', help='template file with options below:\n'+TEMPLATE)
+    coh.add_argument('--threshold', dest='coh_thres', type=float,\
+                     help='coherence value of where to cut the colormap for display')
+    coh.add_argument('--template','-t', dest='template_file',\
+                     help='template file with options below:\n'+TEMPLATE)
 
     # Figure  Setting
     fig = parser.add_argument_group('Figure','Figure settings for display')
@@ -196,11 +210,14 @@ def main(argv):
             print 'WARNING: all coherence value are nan! Do not use this and continue.'
             inps.coherence_list = None
 
-        # Check length of coherence file and input file
-        if not set(inps.coh_date12_list) == set(date12_list):
-            print 'WARNING: input coherence list has different pairs/date12 from input file'
+        # Check subset of date12 info between input file and coherence file
+        if not set(inps.coh_date12_list) >= set(date12_list):
+            print 'WARNING: not every pair/date12 from input file is in coherence file'
             print 'turn off the color plotting of interferograms based on coherence'
             inps.coherence_list = None
+        elif set(inps.coh_date12_list) > set(date12_list):
+            print 'extract coherence value for all pair/date12 in input file'
+            inps.coherence_list = [inps.coherence_list[inps.coh_date12_list.index(i)] for i in date12_list]
 
     #inps.coh_thres = 0.7
     ##### 2. Plot
@@ -222,7 +239,7 @@ def main(argv):
         else:
             fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax = pnet.plot_coherence_matrix(ax, date12_list, inps.coherence_list)
+        ax = pnet.plot_coherence_matrix(ax, date12_list, inps.coherence_list, date12_list_drop)
 
         if inps.save_fig:
             fig.savefig(figName, bbox_inches='tight', dpi=150)
