@@ -70,6 +70,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     try:
         ref_y = int(atr['ref_y'])
         ref_x = int(atr['ref_x'])
+        print 'reference pixel in y/x: %d/%d' % (ref_y, ref_x)
     except:
         sys.exit('ERROR: Can not find ref_y/x value, input file is not referenced in space!')
 
@@ -234,6 +235,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
     try:
         ref_y = int(atr['ref_y'])
         ref_x = int(atr['ref_x'])
+        print 'reference pixel in y/x: %d/%d' % (ref_y, ref_x)
     except:
         sys.exit('ERROR: Can not find ref_y/x value, input file is not referenced in space!')
 
@@ -310,14 +312,74 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
     return ifgram_cor_file, ifgram_cor_deramp_file
 
 
+def read_template2inps(template_file, inps=None):
+    '''Read input template options into Namespace inps'''
+    if not inps:
+        inps = cmdLineParse()
+
+    print 'read options from tempalte file: '+os.path.basename(inps.template_file)
+    template = readfile.read_template(inps.template_file)
+    key_list = template.keys()
+
+    # Coherence-based network modification
+    prefix = 'pysar.unwrapError.'
+
+    key = prefix+'method'
+    if key in key_list:
+        value = template[key]
+        if value in ['bridging','phase_closure']:
+            inps.method = value
+        elif value not in ['auto','no']:
+            inps.method = None
+        else:
+            print 'Unrecognized input for %s: %s' % (key, value)
+
+    key = prefix+'maskFile'
+    if key in key_list:
+        value = template[key]
+        if value not in ['auto','no']:
+            inps.mask_file = value
+
+    key = prefix+'yx'
+    if key in key_list:
+        value = template[key]
+        yx = value.replace(';',' ').replace(',',' ').split()
+        yx = [int(i) for i in yx]
+        inps.y = yx[0::2]
+        inps.x = yx[1::2]
+
+    key = prefix+'ramp'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto']:
+            inps.ramp_type = 'plane'
+        elif value in ['plane','quadratic']:
+            inps.ramp_type = value
+        else:
+            print 'Unrecognized input for %s: %s' % (key, value)
+
+    return inps
+
+
 ####################################################################################################
 EXAMPLE='''example:
 Phase Closure:
-  unwrap_error.py  Seeded_unwrapIfgram.h5  mask.h5
+  unwrap_error.py  Seeded_unwrapIfgram.h5  --mask mask.h5
 Bridging:
-  unwrap_error.py  Seeded_unwrapIfgram.h5    mask.h5     -t ShikokuT417F650_690AlosA.template
-  unwrap_error.py  Seeded_unwrapIfgram.h5    mask.h5     -x 283 305 -y 1177 1247
-  unwrap_error.py  Seeded_081018_090118.unw  mask_all.h5 -x 283 305 -y 1177 1247 --ramp quadratic
+  unwrap_error.py  unwrapIfgram.h5    -t ShikokuT417F650_690AlosA.template
+  unwrap_error.py  unwrapIfgram.h5    --mask mask.h5     -x 283 305 -y 1177 1247
+  unwrap_error.py  081018_090118.unw  --mask mask_all.h5 -x 283 305 -y 1177 1247 --ramp quadratic
+'''
+
+TEMPLATE='''
+## 4. Unwrapping Error Correction
+## unwrapping error correction based on the following two methods:
+## a. phase closure (Fattahi, 2015, PhD Thesis)
+## b. connecting bridge
+pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
+pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
+pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
+pysar.unwrapError.yx       = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,...], auto for none
 '''
 
 REFERENCE='''reference:
@@ -362,12 +424,14 @@ def cmdLineParse():
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('ifgram_file', help='interferograms file to be corrected')
-    parser.add_argument('mask_file',\
+    parser.add_argument('--mask', dest='mask_file',\
                         help='mask file used for correction.\n'+\
                              'For phase closure method, to specify those pixels to be corrected for unwrapping errors\n'+\
                              'For bridging method, to mark different patches that want to be corrected.\n'+\
                              '    Masked out area is marked with 0, patches/area needed to be corrected marked with\n'+\
                              '    positive integers, i.e. 1, 2, 3, ...')
+    parser.add_argument('--method', dest='method', choices=['bridging','phase_closure'],\
+                        help='method used for error correction.')
     parser.add_argument('-o','--outfile', help="output file name. Default is to add suffix '_unwCor.h5'")
 
     bridging = parser.add_argument_group('Bridging')
@@ -403,20 +467,14 @@ def main(argv):
 
     # read template file
     if inps.template_file:
-        template = readfile.read_template(inps.template_file)
-        key = 'pysar.unwrapError.yx'
-        if key in template.keys():
-            print 'read '+key+' option from template file: '+inps.template_file
-            yx = template[key].replace(';',' ').replace(',',' ').split()
-            yx = [int(i) for i in yx]
-            inps.y = yx[0::2]
-            inps.x = yx[1::2]
+        inps = read_template2inps(inps.template_file, inps)
 
     # Memthod
-    if inps.y and inps.x:
-        inps.method = 'bridging'
-    else:
-        inps.method = 'phase_closure'
+    if not inps.method:
+        if inps.y and inps.x:
+            inps.method = 'bridging'
+        else:
+            inps.method = 'phase_closure'
     print 'unwrapping error correction using method: '+inps.method
 
     #####

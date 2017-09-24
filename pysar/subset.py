@@ -539,7 +539,7 @@ def subset_file(File, subset_dict_input, outFile=None):
         atr_dict = subset_attribute(atr_dict, pix_box)
         writefile.write(data,atr_dict,outFile)
 
-    elif k == '.trans':
+    elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
         rg_overlap,az_overlap,atr_dict = readfile.read(File, pix_box4data)
 
         rg = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
@@ -678,14 +678,16 @@ def main(argv):
 
         # 3. Use subset from tight info
         elif inps.tight:
-            if atr['FILE_TYPE']=='.trans':
+            trans_file_list = ['.trans','.utm_to_rdc','.UTM_TO_RDC']
+            if atr['FILE_TYPE'] in trans_file_list:
                 # Non-zero area in geomap_*.trans file, accurate
+                print 'reading %s ...' % (os.path.basename(inps.file[0]))
                 trans_rg, trans_atr = readfile.read(inps.file[0], (), 'range')
                 idx_row, idx_col = np.nonzero(trans_rg)
                 pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
                 geo_box = box_pixel2geo(pix_box, trans_atr)
             else:
-                print 'ERROR: --tight option only works for geomap_*.trans file.\n'
+                print 'ERROR: --tight option only works for '+str(trans_file_list)+' file.\n'
                 inps.tight = False
                 sys.exit(1)
 

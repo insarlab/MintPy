@@ -78,7 +78,7 @@ def write(*args):
             write_float32(data,outname)
         elif ext == '.dem':
             write_real_int16(data,outname)
-        elif ext == '.trans':
+        elif ext in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
             write_float32(rg,az,outname)
         elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
             data.save(outname)

@@ -172,7 +172,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         prog_bar.close()
 
     ## Read/Write single-dataset files
-    elif k == '.trans':        
+    elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:        
         rg,az,atr = readfile.read(infile)
         rgmli = multilook_matrix(rg,lks_y,lks_x); #rgmli *= 1.0/lks_x
         azmli = multilook_matrix(az,lks_y,lks_x); #azmli *= 1.0/lks_y

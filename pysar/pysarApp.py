@@ -280,7 +280,10 @@ pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
 ## unwrapping error correction based on the following two methods:
 ## a. phase closure (Fattahi, 2015, PhD Thesis)
 ## b. connecting bridge
-pysar.unwrapError  = auto   #[yes / no], auto for no
+pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
+pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
+pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
+pysar.unwrapError.yx       = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,...], auto for none
 
 
 ## 5. Network Inversion
@@ -519,7 +522,7 @@ def main(argv):
         inps.template_file = ut.update_template_file(inps.template_file, custom_template)
 
     if inps.generate_template:
-        sys.exit('Exit as planed after template file generation.')
+        sys.exit('Exit as planned after template file generation.')
 
     print 'read default template file: '+inps.template_file
     inps.template_file = os.path.abspath(inps.template_file)
@@ -561,7 +564,7 @@ def main(argv):
         sys.exit('Exit.')
 
     if inps.load_dataset:
-        sys.exit('Exit as planed after loading/checking the dataset')
+        sys.exit('Exit as planned after loading/checking the dataset')
 
     if inps.reset:
         print 'Reset dataset attributtes for a fresh re-run with options from %s' % os.path.basename(inps.template_file)
@@ -621,7 +624,7 @@ def main(argv):
         inps = create_subset_dataset(inps, pix_box, geo_box)
 
     if inps.subset_dataset:
-        sys.exit('Exit as planed after subsetting the dataset')
+        sys.exit('Exit as planned after subsetting the dataset')
 
 
     #########################################
@@ -678,7 +681,7 @@ def main(argv):
         status = subprocess.Popen(plotCmd, shell=True).wait()
 
     if inps.modify_network:
-        sys.exit('Exit as planed after network modification.')
+        sys.exit('Exit as planned after network modification.')
 
 
     #########################################
@@ -722,10 +725,10 @@ def main(argv):
     #    based on the consistency of triplets
     #    of interferograms
     ############################################
-    if template['pysar.unwrapError'] not in ['auto','no']:
+    if template['pysar.unwrapError.method'] not in ['auto','no']:
         print '\n**********  Unwrapping Error Correction  **************'
         outName = os.path.splitext(inps.ifgram_file)[0]+'_unwCor.h5'
-        unwCmd='unwrap_error.py '+inps.ifgram_file+' '+inps.mask_file
+        unwCmd='unwrap_error.py '+inps.ifgram_file+' --template '+inps.template_file
         print unwCmd
         if ut.update_file(outName, inps.ifgram_file):
             print 'This might take a while depending on the size of your data set!'

@@ -51,7 +51,8 @@ def main(argv):
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     atr['PROCESSOR'] = 'roipac'
-  
+    atr['INSAR_PROCESSOR'] = 'roipac'
+
     h5file = h5py.File(File,'r')
   
     if k == 'velocity':
@@ -128,9 +129,18 @@ def main(argv):
 
         ## Read and Write
         print 'reading '+igram+' ... '
-        data = h5file[k][igram].get(igram)[:]
         atr = dict(h5file[k][igram].attrs)
+        data = h5file[k][igram].get(igram)[:]
+        if k == 'interferograms':
+            try:
+                ref_y = int(atr['ref_y'])
+                ref_x = int(atr['ref_x'])
+                data -= data[ref_y,ref_x]
+                print 'consider the reference pixel in y/x: %d/%d' % (ref_y, ref_x)
+            except:
+                print 'No ref_y/x info found in attributes.'
         atr['PROCESSOR'] = 'roipac'
+        atr['INSAR_PROCESSOR'] = 'roipac'
         outname = igram
 
         print 'writing >>> '+ outname

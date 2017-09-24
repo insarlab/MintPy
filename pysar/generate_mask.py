@@ -85,7 +85,7 @@ def main(argv):
     print 'create initial mask with the same size as the input file and all = 1'
     mask = np.ones((length, width), dtype=np.float32)
 
-    data, atr = readfile.read(inps.file, inps.epoch)
+    data, atr = readfile.read(inps.file, epoch=inps.epoch)
 
     # min threshold
     if inps.vmin:
