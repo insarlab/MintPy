@@ -129,8 +129,8 @@ def extract_attribute_interferogram(fname):
 
     ## Read .off and .par file
     off_file   = file_dir+'/*'+date12+lks+'.off'
-    m_par_file = file_dir+'/*'+m_date+lks+'.amp.par'
-    s_par_file = file_dir+'/*'+s_date+lks+'.amp.par'
+    m_par_file = [file_dir+'/*'+m_date+lks+i for i in ['.amp.par','.ramp.par']]
+    s_par_file = [file_dir+'/*'+s_date+lks+i for i in ['.amp.par','.ramp.par']]
 
     try:
         off_file   = ut.get_file_list(off_file)[0]
@@ -237,16 +237,26 @@ def extract_attribute_dem_geo(fname):
 
 def extract_attribute_dem_radar(fname):
     '''Read/extract attribute for .hgt_sim file from Gamma to ROI_PAC
-    For example, it read input file, sim_150911-150922.hgt_sim, 
-    find its associated par file, sim_150911-150922.diff_par, read it, and
-    convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.hgt_sim.rsc
+    Input:
+        sim_150911-150922.hgt_sim
+        sim_150911-150922.rdc.dem
+    Search for:
+        sim_150911-150922.diff_par
+    Output:
+        sim_150911-150922.hgt_sim.rsc
+        sim_150911-150922.rdc.dem.rsc
     '''
     atr = {}
     atr['PROCESSOR'] = 'gamma'
     atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
 
-    par_file = os.path.splitext(fname)[0]+'.diff_par'
+    # Get basename of file
+    fname_base = os.path.splitext(fname)[0]    
+    for i in range(5):
+        fname_base = os.path.splitext(fname_base)[0]
+
+    par_file = fname_base+'.diff_par'
     print 'read '+os.path.basename(par_file)
     print 'convert Gamma attribute to ROI_PAC style'
     par_dict = readfile.read_gamma_par(par_file)
@@ -303,7 +313,7 @@ DESCRIPTION='''
       130129_4rlks.amp.par
   For each dataset, only one sim* folder with 5 files are needed, 
       sim_130118-130129.hgt_sim
-      sim_130118-130129.hgt_sim.diff_par
+      sim_130118-130129.diff_par
       sim_130118-130129.utm.dem
       sim_130118-130129.utm.dem.par
       sim_130118-130129.UTM_TO_RDC
@@ -351,7 +361,7 @@ def main(argv):
     elif ext in ['.dem']:
         for File in inps.file:
             atr_file = extract_attribute_dem_geo(File)
-    elif ext in ['.hgt_sim']:
+    elif ext in ['.hgt_sim'] or inps.file[0].endswith('.rdc.dem'):
         for File in inps.file:
             atr_file = extract_attribute_dem_radar(File)
     elif ext in ['.UTM_TO_RDC']:
