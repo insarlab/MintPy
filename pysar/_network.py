@@ -724,10 +724,11 @@ def select_master_date(date_list, pbase_list=[]):
 
 def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None):
     '''Select reference interferogram based on input temp/perp baseline info
-    If master_date is specified, select its closest slave_date; otherwise, choose the closest pair
-    among all pairs as master interferogram.
+    If master_date is specified, select its closest slave_date, which is newer than master_date;
+        otherwise, choose the closest pair among all pairs as master interferogram.
     Example:
-        master_date12 = pnet.select_master_ifgram(date12_list, date_list, pbase_list)
+        master_date12   = pnet.select_master_ifgram(date12_list, date_list, pbase_list)
+        '080211-080326' = pnet.select_master_ifgram(date12_list, date_list, pbase_list, m_date='080211')
     '''
     pbase_array = np.array(pbase_list, dtype='float64')
     # Get temporal baseline
@@ -746,11 +747,11 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
     # Get master interferogram index
     if not m_date:
         # Choose pair with shortest temp/perp baseline
-        m_date12_idx = np.argmin(base_distance)        
+        m_date12_idx = np.argmin(base_distance)
     else:
         m_date = ptime.yymmdd(m_date)
         # Choose pair contains m_date with shortest temp/perp baseline
-        m_date12_idx_array = np.array([date12_list.index(date12) for date12 in date12_list if m_date in date12])
+        m_date12_idx_array = np.array([date12_list.index(date12) for date12 in date12_list if m_date+'-' in date12])
         min_base_distance = np.min(base_distance[m_date12_idx_array])
         m_date12_idx = np.where(base_distance == min_base_distance)[0][0]
     

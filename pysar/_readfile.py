@@ -193,7 +193,7 @@ def read(File, box=(), epoch=None):
             flag, atr = read_flag(File)
             return flag, atr
 
-        elif ext in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
+        elif ext in ['.trans']:
             if box:
                 rg,az,atr = read_float32(File,box)
             else:

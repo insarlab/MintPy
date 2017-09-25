@@ -1354,7 +1354,8 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_msg=Tr
     ########## Simple conversion using 2D linear transformation, with 4 corners' lalo info
     elif atr_rdr:
         print 'finding approximate radar coordinate with 2D linear transformation estimation.'
-        print '    using four corner lat/lon info from '+rdrFile+' file.'
+        print '    using four corner lat/lon info from file: %s ' % \
+              os.path.basename(atr_rdr['FILE_PATH'])
         # This method only works for whole frame/track, thus input file cannot be subsetted before.
         if 'subset_x0' in atr_rdr.keys():
             print 'WARNING: Cannot use subset file as input! No coordinate converted.'

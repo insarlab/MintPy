@@ -733,7 +733,7 @@ def main(argv):
             geo_box = bbox_radar2geo(pix_box, atr_rdr, inps.trans_file)
         print 'geo   box: '+str(geo_box)
         print 'pixel box: '+str(pix_box)
-        
+
         ## Subset files
         inps.fill_value = 0
         print '--------------------------------------------'
