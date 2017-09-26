@@ -165,9 +165,12 @@ def extract_attribute_interferogram(fname):
 
     ## Write to .rsc file
     #print 'writing >>> '+atr_file
-    print 'merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),\
-                                           os.path.basename(off_file), os.path.basename(atr_file))
-    writefile.write_roipac_rsc(atr, atr_file)
+    try:    atr_orig = readfile.read_roipac_rsc(atr_file)
+    except: atr_orig = None
+    if atr_orig != atr:
+        print 'merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),\
+                                               os.path.basename(off_file), os.path.basename(atr_file))
+        writefile.write_roipac_rsc(atr, atr_file)
 
     return atr_file
 
@@ -358,10 +361,10 @@ def main(argv):
                 extract_attribute_interferogram(File)
 
     ##### Single dataset files
-    elif ext in ['.dem']:
+    elif inps.file[0].endswith('.utm.dem'):
         for File in inps.file:
             atr_file = extract_attribute_dem_geo(File)
-    elif ext in ['.hgt_sim'] or inps.file[0].endswith('.rdc.dem'):
+    elif inps.file[0].endswith(('.rdc.dem','.hgt_sim')):
         for File in inps.file:
             atr_file = extract_attribute_dem_radar(File)
     elif ext in ['.UTM_TO_RDC']:
