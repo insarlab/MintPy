@@ -57,12 +57,16 @@ To use the package, you need to: 1) add the path to PySAR directory to your $PYT
    
 For bash user, add to your .bashrc file:   
 
-    export PYSAR_HOME="~/python/PySAR"   #for released version, "~/python/PySAR-1.2.0"
+    if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
+    export PYSAR_HOME=~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
-    export PATH="${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:$PATH"   
+    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:$PATH   
 
 For csh/tcsh user, add to your .cshrc file:   
 
+    if ( ! $?PYTHONPATH ) then
+        setenv PYTHONPATH ""
+    endif
     setenv PYSAR_HOME ~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
     setenv PYTHONPATH ${PYSAR_HOME}
     set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/shellscripts $path)
