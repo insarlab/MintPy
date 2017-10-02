@@ -43,7 +43,8 @@ fi
 
 ## Loaded Dataset
 if [ $plot_loaded_data -eq 1 ]; then
-    view.py --nodisplay unwrapIfgram.h5 --mask $mask_file  | tee -a $log_file
+    view.py --nodisplay unwrapIfgram.h5        --mask no   | tee -a $log_file
+    view.py --nodisplay unwrapIfgram_unwCor.h5 --mask no   | tee -a $log_file
     view.py --nodisplay coherence.h5 -c gray -m 0 -M 1     | tee -a $log_file
     view.py --nodisplay demRadar.h5                        | tee -a $log_file
     view.py --nodisplay demGeo.h5 --lalo-label             | tee -a $log_file

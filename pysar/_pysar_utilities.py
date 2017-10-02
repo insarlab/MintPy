@@ -77,6 +77,8 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
         inps = check_loaded_dataset(inps.work_dir, inps)
     '''
     ##### Find file name/path of all loaded files
+    if not work_dir:
+        work_dir = os.getcwd()
     work_dir = os.path.abspath(work_dir)
 
     if inps:
@@ -409,7 +411,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         deramp_file = timeseries_resid_file
     else:
         deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_'+ramp_type+'.h5'
-    rms_file = os.path.splitext(deramp_file)[0]+'_rms.txt'
+    rms_file = os.path.dirname(os.path.abspath(deramp_file))+'/rms_'+os.path.splitext(deramp_file)[0]+'.txt'
 
     # Get residual RMS text file
     if update_file(rms_file, [deramp_file,mask_file], check_readable=False):
@@ -445,7 +447,7 @@ def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None, dimension=2)
         print 'no mask input, use all pixels'
 
     if not outFile:
-        outFile = os.path.splitext(inFile)[0]+'_rms.txt'
+        outFile = os.path.dirname(os.path.abspath(inFile))+'/rms_'+os.path.splitext(inFile)[0]+'.txt'
 
     atr = readfile.read_attribute(inFile)
     k = atr['FILE_TYPE']
@@ -857,7 +859,7 @@ def get_file_stack(File, maskFile=None):
     stack = None
     atr = readfile.read_attribute(File)
     stackFile = os.path.splitext(File)[0]+'_stack.h5'
-    
+
     # Read stack from existed file
     if os.path.isfile(stackFile):
         atrStack = readfile.read_attribute(stackFile)
@@ -1286,11 +1288,13 @@ def azimuth_resolution(atr):
     if 'X_FIRST' in atr.keys():
         print 'Input file is in geo coord, no azimuth resolution info.'
         return
-    if atr['INSAR_PROCESSOR'] == 'roipac':
+    try:    processor = atr['INSAR_PROCESSOR']
+    except: processor = atr['PROCESSOR']
+    if processor == 'roipac':
         Re = float(atr['EARTH_RADIUS'])
         Height = float(atr['HEIGHT'])
         az_step = float(atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
-    elif atr['INSAR_PROCESSOR'] == 'gamma':
+    elif processor == 'gamma':
         atr = readfile.attribute_gamma2roipac(atr)
         az_step = float(atr['AZIMUTH_PIXEL_SIZE'])
     return az_step
@@ -1316,15 +1320,14 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_msg=Tr
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
         print 'reading file: '+transFile
-        trans_rg, trans_atr = readfile.read(transFile, (), 'range')
-        trans_az = readfile.read(transFile, (), 'azimuth')[0]
+        trans_rg, trans_az, trans_atr = readfile.read(transFile)
         lat_first = float(trans_atr['Y_FIRST'])
         lon_first = float(trans_atr['X_FIRST'])
         lat_center = lat_first + float(trans_atr['Y_STEP'])*float(trans_atr['FILE_LENGTH'])/2
         lat_step_deg = float(trans_atr['Y_STEP'])
         lon_step_deg = float(trans_atr['X_STEP'])
         lat_step = lat_step_deg*np.pi/180.0*earth_radius
-        lon_step = lon_step_deg*np.pi/180.0*earth_radius*np.sin(lat_center*np.pi/180)
+        lon_step = lon_step_deg*np.pi/180.0*earth_radius*np.cos(lat_center*np.pi/180)
 
         # Get range/azimuth ground resolution/step in meter
         if atr_rdr:
@@ -1411,15 +1414,14 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True
 
     ##### Use geomap*.trans file for precious (pixel-level) coord conversion
     def get_trans_row_col4radar(az, rg, trans_az, trans_rg, x_factor=10, y_factor=10):
-        mask_rg = np.multiply(trans_rg>=max(rg-x_factor,0.5), trans_rg<=rg+x_factor)
-        mask_az = np.multiply(trans_az>=max(az-y_factor,0.5), trans_az<=az+y_factor)
+        mask_rg = np.multiply(trans_rg >= max(rg-x_factor,0.5), trans_rg <= (rg+x_factor))
+        mask_az = np.multiply(trans_az >= max(az-y_factor,0.5), trans_az <= (az+y_factor))
         idx = np.where(np.multiply(mask_rg, mask_az))
         trans_row, trans_col = np.nanmean(idx,1)
         return trans_row, trans_col
 
     ## by searching pixels in trans file with value falling buffer lat/lon value
     if transFile:
-        # if
         if 'subset_x0' in atr_rdr.keys():
             rg += int(atr_rdr['subset_x0'])
             az += int(atr_rdr['subset_y0'])        
@@ -1428,15 +1430,14 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True
         earth_radius = 6371.0e3;    # in meter
         if print_msg:
             print 'reading file: '+transFile
-        trans_rg, trans_atr = readfile.read(transFile, (), 'range')
-        trans_az = readfile.read(transFile, (), 'azimuth')[0]
+        trans_rg, trans_az, trans_atr = readfile.read(transFile)
         lat_first = float(trans_atr['Y_FIRST'])
         lon_first = float(trans_atr['X_FIRST'])
         lat_center = lat_first + float(trans_atr['Y_STEP'])*float(trans_atr['FILE_LENGTH'])/2
         lat_step_deg = float(trans_atr['Y_STEP'])
         lon_step_deg = float(trans_atr['X_STEP'])
         lat_step = lat_step_deg*np.pi/180.0*earth_radius
-        lon_step = lon_step_deg*np.pi/180.0*earth_radius*np.sin(lat_center*np.pi/180)
+        lon_step = lon_step_deg*np.pi/180.0*earth_radius*np.cos(lat_center*np.pi/180)
 
         # Get range/azimuth ground resolution/step
         if atr_rdr:
@@ -1570,6 +1571,11 @@ def date_list(h5file):
 ######################################
 def design_matrix(ifgramFile=None, date12_list=[]):
     '''Make the design matrix for the inversion based on date12_list.
+    Reference:
+        Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002).
+        A new algorithm for surface deformation monitoring based on small
+        baseline differential SAR interferograms. IEEE TGRS, 40(11), 2375-2383.
+
     Input:
         ifgramFile  - string, name/path of interferograms file
         date12_list - list of string, date12 used in calculation in YYMMDD-YYMMDD format
@@ -1611,133 +1617,6 @@ def design_matrix(ifgramFile=None, date12_list=[]):
     return A,B
 
 
-######################################
-def timeseries_inversion(ifgramFile, timeseriesFile):
-    '''Implementation of the SBAS algorithm.
-    modified from sbas.py written by scott baker, 2012 
-    
-    Usage:
-    timeseries_inversion(h5flat,h5timeseries)
-      h5flat: hdf5 file with the interferograms 
-      h5timeseries: hdf5 file with the output from the inversion
-    '''
-    total = time.time()
-
-    # Basic Info
-    atr = readfile.read_attribute(ifgramFile)
-    length = int(atr['FILE_LENGTH'])
-    width  = int(atr['WIDTH'])
-    pixel_num = length * width
-
-    h5ifgram = h5py.File(ifgramFile,'r')
-    ifgram_list = sorted(h5ifgram['interferograms'].keys())
-    ifgram_list = check_drop_ifgram(h5ifgram, atr, ifgram_list)
-    ifgram_num = len(ifgram_list)
-
-    # Convert ifgram_list to date12/8_list
-    date12_list = ptime.list_ifgram2date12(ifgram_list)
-    m_dates = [i.split('-')[0] for i in date12_list]
-    s_dates = [i.split('-')[1] for i in date12_list]
-    date8_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
-    date_num = len(date8_list)
-    tbase_list = ptime.date_list2tbase(date8_list)[0]
-    dt = np.diff(tbase_list).reshape((date_num-1,1))
-
-    print 'number of interferograms : '+str(ifgram_num)
-    print 'number of pixels in space: '+str(pixel_num)
-    print 'number of acquisitions   : '+str(date_num)
-
-    # Design matrix
-    A,B = design_matrix(ifgramFile, date12_list)
-    B_inv = np.array(np.linalg.pinv(B), np.float32)
-
-    # Reference pixel in space
-    try:
-        ref_x = int(atr['ref_x'])
-        ref_y = int(atr['ref_y'])
-        print 'reference pixel in y/x: [%d, %d]'%(ref_y, ref_x)
-    except:
-        print 'ERROR: No ref_x/y found! Can not inverse interferograms without reference in space.'
-        print 'run seed_data.py '+ifgramFile+' --mark-attribute for a quick referencing.'
-        sys.exit(1)
-
-    ##### Inversion Function
-    def ts_inverse(dataLine, B_inv, dt, date_num):
-        numPoint = dataLine.shape[1]
-        tmp_rate = np.dot(B_inv, dataLine)
-        defo1 = tmp_rate * np.tile(dt,(1,numPoint))
-        defo0 = np.array([0.]*numPoint,np.float32)
-        defo  = np.vstack((defo0, np.cumsum(defo1,axis=0)))
-        return defo
-
-    ##### Read Interferograms
-    print 'Reading interferograms ...'
-    data = np.zeros((ifgram_num,pixel_num), np.float32)
-    prog_bar = ptime.progress_bar(maxValue=ifgram_num, prefix='loading: ')
-    for j in range(ifgram_num):
-        ifgram = ifgram_list[j]
-        group = h5ifgram['interferograms'][ifgram]
-        d = group.get(ifgram)[:]
-        d -= d[ref_y, ref_x]
-        data[j] = d.flatten(1)
-        prog_bar.update(j+1, suffix=date12_list[j])
-    h5ifgram.close()
-    prog_bar.close()
-
-    ##### Inversion
-    print 'Inversing time series ...'
-    dataPoint = np.zeros((ifgram_num,1),np.float32)
-    dataLine  = np.zeros((ifgram_num,width),np.float32)
-    tempDeformation = np.zeros((date_num,pixel_num),np.float32)
-
-    prog_bar = ptime.progress_bar(maxValue=length, prefix='calculating: ')
-    for i in range(length):
-        dataLine = data[:,i*width:(i+1)*width]
-        defoLine = ts_inverse(dataLine, B_inv, dt, date_num)
-        tempDeformation[:,i*width:(i+1)*width] = defoLine
-        prog_bar.update(i+1, every=length/100)
-    prog_bar.close()
-    del data
-
-    ##### Time Series Data Preparation
-    print 'converting phase to range'
-    timeseries = np.zeros((date_num,length,width),np.float32)
-    phase2range = -1*float(atr['WAVELENGTH'])/(4.*np.pi)
-    for i in range(date_num):
-        timeseries[i] = tempDeformation[i].reshape(width,length).T
-        timeseries[i] *= phase2range
-    del tempDeformation
-  
-    ##### Output Time Series File
-    print 'writing >>> '+timeseriesFile
-    print 'number of dates: '+str(date_num)
-    h5timeseries = h5py.File(timeseriesFile,'w')
-    group = h5timeseries.create_group('timeseries')
-    prog_bar = ptime.progress_bar(maxValue=date_num, prefix='writing: ')
-    for i in range(date_num):
-        date = date8_list[i]
-        dset = group.create_dataset(date, data=timeseries[i], compression='gzip')
-        prog_bar.update(i+1, suffix=date)
-    prog_bar.close()
-
-    ## Attributes
-    print 'calculating perpendicular baseline timeseries'
-    pbase, pbase_top, pbase_bottom = perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list)
-    # convert np.array into string with each item separated by white space
-    pbase = str(pbase.tolist()).translate(None,'[],')
-    pbase_top = str(pbase_top.tolist()).translate(None,'[],')
-    pbase_bottom = str(pbase_bottom.tolist()).translate(None,'[],')
-    atr['P_BASELINE_TIMESERIES'] = pbase
-    atr['P_BASELINE_TOP_TIMESERIES'] = pbase_top
-    atr['P_BASELINE_BOTTOM_TIMESERIES'] = pbase_bottom
-    atr['ref_date'] = date8_list[0]
-    for key,value in atr.iteritems():
-        group.attrs[key] = value
-    h5timeseries.close()
-    print 'Time series inversion took ' + str(time.time()-total) +' secs\nDone.'
-    return timeseriesFile
-
-
 ###################################################
 def timeseries_inversion_FGLS(h5flat,h5timeseries):
     '''Implementation of the SBAS algorithm.
@@ -1777,7 +1656,7 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
     del d
     dataPoint = np.zeros((ifgram_num,1),np.float32)
     modelDimension = np.shape(B)[1]
-    tempDeformation = np.zeros((date_num,pixel_num),np.float32)
+    ts_data = np.zeros((date_num,pixel_num),np.float32)
     for ni in range(pixel_num):
         dataPoint = data[:,ni]
         nan_ndx = dataPoint == 0.
@@ -1789,7 +1668,7 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
             tmpe_ratea = np.dot(B1tmp,dataPoint)
             zero = np.array([0.],np.float32)
             defo = np.concatenate((zero,np.cumsum([tmpe_ratea*dt])))
-            tempDeformation[:,ni] = defo
+            ts_data[:,ni] = defo
         #if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,pixel_num)
         if not np.remainder(ni,pixel_num_step):
             print 'Processing point: %8d of %8d, %3d' % (ni,pixel_num,(10*ni/pixel_num_step))+'%'
@@ -1797,9 +1676,9 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
     timeseries = np.zeros((date_num,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
     factor = -1*float(h5flat['interferograms'][ifgram_list[0]].attrs['WAVELENGTH'])/(4.*np.pi)
     for ni in range(date_num):
-        timeseries[ni] = tempDeformation[ni].reshape(np.shape(dset)[1],np.shape(dset)[0]).T
+        timeseries[ni] = ts_data[ni].reshape(np.shape(dset)[1],np.shape(dset)[0]).T
         timeseries[ni] = timeseries[ni]*factor
-    del tempDeformation
+    del ts_data
     timeseriesDict = {}
     for key, value in h5flat['interferograms'][ifgram_list[0]].attrs.iteritems():
         timeseriesDict[key] = value 
@@ -1860,7 +1739,7 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
     del d
     dataPoint = np.zeros((ifgram_num,1),np.float32)
     modelDimension = np.shape(B)[1]
-    tempDeformation = np.zeros((date_num,pixel_num),np.float32)
+    ts_data = np.zeros((date_num,pixel_num),np.float32)
     print data.shape
     DataL1=matrix(data)
     L1ORL2=np.ones((pixel_num,1))
@@ -1885,15 +1764,15 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
                 zero = np.array([0.],np.float32)
                 defo = np.concatenate((zero,np.cumsum([tmpe_ratea*dt])))
     
-            tempDeformation[:,ni] = defo
+            ts_data[:,ni] = defo
         if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,pixel_num)
     del data
     timeseries = np.zeros((date_num,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
     factor = -1*float(h5flat['interferograms'][ifgram_list[0]].attrs['WAVELENGTH'])/(4.*np.pi)
     for ni in range(date_num):
-        timeseries[ni] = tempDeformation[ni].reshape(np.shape(dset)[1],np.shape(dset)[0]).T
+        timeseries[ni] = ts_data[ni].reshape(np.shape(dset)[1],np.shape(dset)[0]).T
         timeseries[ni] = timeseries[ni]*factor
-    del tempDeformation
+    del ts_data
     L1ORL2=np.reshape(L1ORL2,(np.shape(dset)[1],np.shape(dset)[0])).T
     
     timeseriesDict = {}
@@ -2035,10 +1914,10 @@ def stacking(File):
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     length = int(atr['FILE_LENGTH'])
-    width  = int(atr['WIDTH'])
+    width = int(atr['WIDTH'])
 
     ## Calculation
-    stack  = np.zeros([length,width])
+    stack = np.zeros([length,width])
     if k in ['timeseries','interferograms','wrapped','coherence']:
         ##### Input File Info
         h5file = h5py.File(File,'r')
@@ -2047,16 +1926,20 @@ def stacking(File):
         prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='calculating: ')
         for i in range(epochNum):
             epoch = epochList[i]
-            if k == 'timeseries':  data = h5file[k].get(epoch)[:]
-            else:                  data = h5file[k][epoch].get(epoch)[:]
+            if k == 'timeseries':
+                data = h5file[k].get(epoch)[:]
+            else:
+                data = h5file[k][epoch].get(epoch)[:]
             stack += data
             prog_bar.update(i+1)
         prog_bar.close()
         h5file.close()
 
     else:
-        try: stack, atrStack = readfile.read(File)
-        except: print 'Cannot read file: '+File; sys.exit(1)
+        try:
+            stack, atrStack = readfile.read(File)
+        except:
+            print 'Cannot read file: '+File; sys.exit(1)
 
     return stack
 

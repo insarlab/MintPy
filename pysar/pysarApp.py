@@ -70,10 +70,16 @@ def check_subset_file(File, inps_dict, outFile=None, overwrite=False):
 
 def check_geocode_file(geomapFile, File, outFile=None):
     '''Geocode input file or use existed geocoded file.'''
+    if not File:
+        return None
+    else:
+        atr = readfile.read_attribute(File)
+        if 'Y_FIRST' in atr.keys():
+            return File
+    
     if not geomapFile:
         warnings.warn('No geomap*.trans file found! Skip geocoding.')
         return None
-    if not File:  return None
 
     if not outFile:  outFile = 'geo_'+os.path.basename(File)
 
@@ -243,7 +249,28 @@ pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no - use
 pysar.multilook.yx    = auto    #[4,4 / no], auto for no [not implemented yet]
 
 
-## 2. Modify Network (optional)
+## 2. Reference in Space
+## reference all interferograms to one common point in space
+## auto - randomly select a pixel with coherence > minCoherence
+pysar.reference.yx            = auto   #[257,151 / auto]
+pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
+
+pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
+pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
+pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
+
+
+## 3. Unwrapping Error Correction
+## unwrapping error correction based on the following two methods:
+## a. phase closure (Fattahi, 2015, PhD Thesis)
+## b. connecting bridge
+pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
+pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
+pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
+pysar.unwrapError.yx       = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,...], auto for none
+
+
+## 4. Modify Network (optional)
 ## Coherence-based network modification = MST + Threshold, by default
 ## 1) calculate a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
 ## 2) find a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
@@ -252,7 +279,7 @@ pysar.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interfe
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.coherenceFile   = auto  #[filename], auto for coherence.h5
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
+pysar.network.maskFile        = auto  #[file name, no], auto for [maskLand.h5, mask.h5][0], no for all pixels
 pysar.network.maskAoi.yx      = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
@@ -265,36 +292,21 @@ pysar.network.startDate       = auto  #[20090101 / no], auto for no
 pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 
-## 3. Reference in Space
-## reference all interferograms to one common point in space
-## auto - randomly select a pixel with coherence > minCoherence
-pysar.reference.yx            = auto   #[257,151 / auto]
-pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
-
-pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
-pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
-pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
-
-
-## 4. Unwrapping Error Correction
-## unwrapping error correction based on the following two methods:
-## a. phase closure (Fattahi, 2015, PhD Thesis)
-## b. connecting bridge
-pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
-pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
-pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
-pysar.unwrapError.yx       = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,...], auto for none
-
-
 ## 5. Network Inversion
-## invert network of interferograms into time series
-## if network are not fully connected (multiple subsets), Singular-Value Decomposition (SVD) is applied.
-
-
-## 5.1 Temporal Coherence
-## calculate temporal coherence based on Tizzani et al., 2007 (IEEE-TGRS)
-## and generate a mask file with temporal coherence > minCoherence
-pysar.temporalCoherence.threshold  = auto    #[0.0-1.0], auto for 0.7
+## Invert network of interferograms into time series
+## For no/uniform weight approach, use Singular-Value Decomposition (SVD) if network are not fully connected
+## For weighted approach, use weighted least square (WLS) solution.
+## Temporal coherence (weighted) is calculated using Tazzani et al. (2007, IEEE-TGRS)
+pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
+pysar.timeseriesInv.coherenceFile = auto #[fname / no], auto for coherence.h5, file to read weight data
+pysar.timeseriesInv.minCoherence  = auto #[0.0-1.0], auto for 0.20, put 0 weight for pixels with coherence < input
+pysar.timeseriesInv.maxCoherence  = auto #[0.0-1.0], auto for 0.85, put 1 weight for pixels with coherence > input
+pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
+                                         #variance - phase variance due to temporal decorrelation
+                                         #no - no weight, or ordinal inversion with uniform weight
+                                         #linear - uniform distribution CDF function
+                                         #normal - normal  distribution CDF function
+pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 
 
 ## 6. Local Oscillator Drift (LOD) Correction (for Envisat only, no need to setup, it runs automatically)
@@ -355,7 +367,8 @@ pysar.velocity.endDate     = auto   #[20101230 / no], auto for no
 pysar.geocode      = auto   #[yes / no], auto for yes
 pysar.save.kml     = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 pysar.save.geotiff = auto   #[yes / no], auto for no, save geocoded velocity to Geotiff format [not implemented yet]
-pysar.save.unavco  = auto   #[yes / no], auto for no, save timeseries to UNAVCO InSAR Archive format
+pysar.save.unavco  = auto   #[yes / update / no], auto for no, save timeseries to UNAVCO InSAR Archive format
+                            #update for enabling update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year
 pysar.plot         = auto   #[yes / no], auto for yes, plot files generated by pysarApp default processing to PIC folder
 '''
 
@@ -420,7 +433,9 @@ def cmdLineParse():
     parser.add_argument('--subset-data', dest='subset_dataset', action='store_true',\
                         help='Step 1.1 Subset the whole dataset with setting in template, then exit')
     parser.add_argument('--modify-network', dest='modify_network', action='store_true',\
-                        help='Step 2. Modify the network, then exit')
+                        help='Step 4. Modify the network, then exit')
+    parser.add_argument('--inverse-network', dest='inverse_network', action='store_true',\
+                        help='Step 5. Inverse network of interferograms into time-series, then exit')
 
     inps = parser.parse_args()
     if inps.custom_template_file and os.path.basename(inps.custom_template_file) == 'pysarApp_template.txt':
@@ -648,43 +663,6 @@ def main(argv):
 
 
     #########################################
-    # Network Modification (Optional)
-    #########################################
-    print '\n*************** Modify Network ****************'
-    networkCmd = 'modify_network.py --template '+inps.template_file+' '+inps.ifgram_file
-    if inps.coherence_file:
-        networkCmd += ' '+inps.coherence_file
-    if inps.trans_file:
-        networkCmd += ' --trans '+inps.trans_file
-    print networkCmd
-    print '----------------------------------------------------------------------------------------'
-    print 'To use all interferograms in the file, run modify_network.py with --reset option to restore all pairs info.'
-    msg_str = 'modify_network.py '+inps.ifgram_file
-    if inps.coherence_file:
-        msg_str +=  ' '+inps.coherence_file
-    msg_str += ' --reset'
-    print msg_str
-    print '----------------------------------------------------------------------------------------'
-    status = subprocess.Popen(networkCmd, shell=True).wait()
-    if status is not 0:
-        print '\nError while modifying the network of interferograms.\n'
-        sys.exit(-1)
-
-    # Plot network colored in spatial coherence
-    print '--------------------------------------------'
-    plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+\
-              ' --template '+inps.template_file+' --nodisplay'
-    print plotCmd
-    inps.coh_spatialAverage_file = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.txt'
-    if ut.update_file('Network.pdf', check_readable=False, \
-                      inFile=[inps.ifgram_file, inps.coh_spatialAverage_file, inps.template_file]):
-        status = subprocess.Popen(plotCmd, shell=True).wait()
-
-    if inps.modify_network:
-        sys.exit('Exit as planned after network modification.')
-
-
-    #########################################
     # Referencing Interferograms in Space
     #########################################
     print '\n**********  Reference in space  ***************'
@@ -730,6 +708,7 @@ def main(argv):
         outName = os.path.splitext(inps.ifgram_file)[0]+'_unwCor.h5'
         unwCmd='unwrap_error.py '+inps.ifgram_file+' --template '+inps.template_file
         print unwCmd
+        #if ut.update_file(outName):
         if ut.update_file(outName, inps.ifgram_file):
             print 'This might take a while depending on the size of your data set!'
             status = subprocess.Popen(unwCmd, shell=True).wait()
@@ -740,17 +719,81 @@ def main(argv):
 
 
     #########################################
+    # Network Modification (Optional)
+    #########################################
+    print '\n*************** Modify Network ****************'
+    networkCmd = 'modify_network.py --template '+inps.template_file+' '+inps.ifgram_file
+    if inps.coherence_file:
+        networkCmd += ' '+inps.coherence_file
+    if inps.trans_file:
+        networkCmd += ' --trans '+inps.trans_file
+    print networkCmd
+    print '----------------------------------------------------------------------------------------'
+    print 'To use all interferograms in the file, run modify_network.py with --reset option to restore all pairs info.'
+    msg_str = 'modify_network.py '+inps.ifgram_file
+    if inps.coherence_file:
+        msg_str +=  ' '+inps.coherence_file
+    msg_str += ' --reset'
+    print msg_str
+    print '----------------------------------------------------------------------------------------'
+    status = subprocess.Popen(networkCmd, shell=True).wait()
+    if status is not 0:
+        print '\nError while modifying the network of interferograms.\n'
+        sys.exit(-1)
+
+    # Plot network colored in spatial coherence
+    print '--------------------------------------------'
+    plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+\
+              ' --template '+inps.template_file+' --nodisplay'
+    print plotCmd
+    inps.coh_spatialAverage_file = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.txt'
+    if ut.update_file('Network.pdf', check_readable=False, \
+                      inFile=[inps.ifgram_file, inps.coh_spatialAverage_file, inps.template_file]):
+        status = subprocess.Popen(plotCmd, shell=True).wait()
+
+    if inps.modify_network:
+        sys.exit('Exit as planned after network modification.')
+
+
+    #########################################
     # Inversion of Interferograms
     ########################################
     print '\n**********  Network Inversion to Time Series  ********************'
     inps.timeseries_file = 'timeseries.h5'
-    invertCmd = 'ifgram_inversion.py '+inps.ifgram_file
+    inps.temp_coh_file = 'temporalCoherence.h5'
+    invertCmd = 'ifgram_inversion.py '+inps.ifgram_file+' --template '+inps.template_file
     print invertCmd
     if ut.update_file(inps.timeseries_file, inps.ifgram_file):
         status = subprocess.Popen(invertCmd, shell=True).wait()
         if status is not 0:
             print '\nError while inverting network of interferograms to time-series.\n'
             sys.exit(-1)
+
+    print '\n--------------------------------------------'
+    print 'Update Mask based on Temporal Coherence ...'
+    # Read template option
+    inps.min_temp_coh = 0.7
+    key = 'pysar.timeseriesInv.minTempCoh'
+    if key in template.keys():
+        value = template[key]
+        if value == 'auto':
+            inps.min_temp_coh = 0.7
+        else:
+            inps.min_temp_coh = float(value)
+
+    outName = 'maskTempCoh.h5'
+    maskCmd = 'generate_mask.py '+inps.temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
+    print maskCmd
+    if ut.update_file(outName, inps.temp_coh_file):
+        status = subprocess.Popen(maskCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while generating mask file from temporal coherence.\n'
+            sys.exit(-1)
+    inps.mask_file = outName
+
+    if inps.inverse_network:
+        sys.exit('Exit as planned after network inversion.')
+
 
     ## Check DEM file for tropospheric delay setting
     ## DEM is needed with same coord (radar/geo) as timeseries file
@@ -770,43 +813,6 @@ def main(argv):
         if template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']:
             template['pysar.deramp'] = 'no'
         print '++++++++++++++++++++++++++++++++++++++++++++++'
-
-
-    ##############################################
-    # Temporal Coherence: 
-    #   A parameter to evaluate the consistency 
-    #   of timeseries with the interferograms
-    ##############################################
-    print '\n********** Temporal Coherence file  *********'
-    inps.temp_coh_file = 'temporalCoherence.h5'
-    tempCohCmd = 'temporal_coherence.py '+inps.ifgram_file+' '+inps.timeseries_file+' '+inps.temp_coh_file
-    print tempCohCmd
-    if ut.update_file(inps.temp_coh_file, inps.timeseries_file):
-        status = subprocess.Popen(tempCohCmd, shell=True).wait()
-        if status is not 0:
-            print '\nError while calculating the temporal coherence.\n'
-            sys.exit(-1)
-
-    print '\n--------------------------------------------'
-    print 'Update Mask based on Temporal Coherence ...'
-    # Read template option
-    inps.min_temp_coh = 0.7
-    key = 'pysar.temporalCoherence.threshold'
-    if key in template.keys():
-        value = template[key]
-        if value == 'auto':
-            inps.min_temp_coh = 0.7
-        else:
-            inps.min_temp_coh = float(value)
-    outName = 'maskTempCoh.h5'
-    maskCmd = 'generate_mask.py '+inps.temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
-    print maskCmd
-    if ut.update_file(outName, inps.temp_coh_file):
-        status = subprocess.Popen(maskCmd, shell=True).wait()
-        if status is not 0:
-            print '\nError while generating mask file from temporal coherence.\n'
-            sys.exit(-1)
-    inps.mask_file = outName
 
 
     ##############################################
@@ -1054,35 +1060,32 @@ def main(argv):
     # Geocodeing, masking and save to KML 
     ############################################
     print '\n**********  Post-processing  ********************************'
-    inps.geo_vel_file = None
-    inps.geo_temp_coh_file = None
-    inps.geo_timeseries_file = None
-
-    # Check geocoding requirement
-    key = 'pysar.geocode'
-    if template[key] in ['auto','yes']:
-        if 'Y_FIRST' in atr.keys():
-            print 'dataset is in geo coordinate, no need to geocode.'
-            template[key] = 'no'
-            inps.geo_vel_file        = inps.vel_file
-            inps.geo_temp_coh_file   = inps.temp_coh_file
-            inps.geo_timeseries_file = inps.timeseries_file
-        #elif not ut.which('geocode.pl'):
-        #    print 'Can not find executable geocode.pl from ROI_PAC, skip geocoding.'
-        #    template[key] = 'no'
 
     # Geocoding
-    if template[key] in ['yes','auto']: 
+    if 'Y_FIRST' in atr.keys():
+        inps.geo_vel_file = inps.vel_file
+        inps.geo_temp_coh_file = inps.temp_coh_file
+        inps.geo_timeseries_file = inps.timeseries_file
+    else:
+        inps.geo_vel_file = None
+        inps.geo_temp_coh_file = None
+        inps.geo_timeseries_file = None
+
+    key = 'pysar.geocode'
+    if template[key] in ['auto','yes'] and 'Y_FIRST' not in atr.keys():
         print '\n--------------------------------------------'
         inps.geo_vel_file        = check_geocode_file(inps.trans_file, inps.vel_file)
         inps.geo_temp_coh_file   = check_geocode_file(inps.trans_file, inps.temp_coh_file)
         inps.goe_timeseries_file = check_geocode_file(inps.trans_file, inps.timeseries_file)
 
+
     # Mask in geo coord
     if inps.geo_temp_coh_file:
         # Generate mask in geo coord
         print '\n--------------------------------------------'
-        outName = 'geo_maskTempCoh.h5'
+        outName = 'maskTempCoh.h5'
+        if os.path.basename(inps.geo_temp_coh_file).startswith('geo_'):
+            outName = 'geo_'+outName
         maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
         print maskCmd
         if ut.update_file(outName, inps.geo_temp_coh_file):
@@ -1113,10 +1116,12 @@ def main(argv):
     #############################################
     # Save to UNAVCO InSAR Archive format
     #############################################
-    if template['pysar.save.unavco'] in ['yes']:
+    if template['pysar.save.unavco'] in ['yes','update']:
         print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
-        if not inps.trans_file or not inps.dem_geo_file:
-            warnings.warn('No geomap*.tran file or DEM in geo coord found! Skip saving.')
+        if 'Y_FIRST' not in atr.keys() and not inps.trans_file:
+            warnings.warn('Dataset is in radar coordinates without lookup table file.'+\
+                          'Can not geocode.'+\
+                          'Skip saving.')
         else:
             # 1. Time series file
             inps.geo_timeseries_file = check_geocode_file(inps.trans_file, inps.timeseries_file)
@@ -1165,6 +1170,8 @@ def main(argv):
             #inps.unavco_file = unavco.get_unavco_filename(inps.geo_timeseries_file)
             unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
                         ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file
+            if template['pysar.save.unavco'] == 'update':
+                unavcoCmd += ' --update '
             print unavcoCmd
             if ut.update_file(inps.unavco_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
                                                  inps.geo_inc_angle_file, inps.dem_geo_file], check_readable=False):

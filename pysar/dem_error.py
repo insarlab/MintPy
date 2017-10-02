@@ -386,7 +386,7 @@ def main(argv):
                 A_inv = np.linalg.pinv(A)
 
         # Get unknown parameters X = [delta_z, vel, acc, delta_acc, ...]
-        if inps.phase_velocity:
+        if inps.phase_velocity: 
             timeseries = np.diff(timeseries, axis=0) / np.diff(inps.tbase, axis=0)
 
         if inps.ex_date:
@@ -395,7 +395,7 @@ def main(argv):
             X = np.dot(A_inv, timeseries)
 
         # Residual vector n
-        resid_n = ts_dis - np.dot(A, X)
+        resid_n = timeseries - np.dot(A, X)
 
         # Update DEM error / timeseries matrix
         delta_z_mat = X[0].reshape((1, length*width))

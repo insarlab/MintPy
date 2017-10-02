@@ -111,9 +111,9 @@ def extract_attribute_interferogram(fname):
     file_dir = os.path.dirname(fname)
     file_basename = os.path.basename(fname)
 
-    atr_file = fname+'.rsc'
-    #if os.path.isfile(atr_file):
-    #    return atr_file
+    rsc_file = fname+'.rsc'
+    #if os.path.isfile(rsc_file):
+    #    return rsc_file
 
     atr = {}
     atr['PROCESSOR'] = 'gamma'
@@ -164,15 +164,15 @@ def extract_attribute_interferogram(fname):
     atr = get_lalo_ref(m_par_file, atr)
 
     ## Write to .rsc file
-    #print 'writing >>> '+atr_file
-    try:    atr_orig = readfile.read_roipac_rsc(atr_file)
+    #print 'writing >>> '+rsc_file
+    try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
     except: atr_orig = None
     if atr_orig != atr:
         print 'merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),\
-                                               os.path.basename(off_file), os.path.basename(atr_file))
-        writefile.write_roipac_rsc(atr, atr_file)
+                                               os.path.basename(off_file), os.path.basename(rsc_file))
+        writefile.write_roipac_rsc(atr, rsc_file)
 
-    return atr_file
+    return rsc_file
 
 
 def extract_attribute_lookup_table(fname):
@@ -206,8 +206,11 @@ def extract_attribute_lookup_table(fname):
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
-    print 'writing >>> '+os.path.basename(rsc_file)
-    writefile.write_roipac_rsc(atr, rsc_file)
+    try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
+    except: atr_orig = None
+    if atr_orig != atr:
+        print 'writing >>> '+os.path.basename(rsc_file)
+        writefile.write_roipac_rsc(atr, rsc_file)
     return rsc_file
 
 
@@ -233,8 +236,11 @@ def extract_attribute_dem_geo(fname):
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
-    print 'writing >>> '+os.path.basename(rsc_file)
-    writefile.write_roipac_rsc(atr, rsc_file)
+    try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
+    except: atr_orig = None
+    if atr_orig != atr:
+        print 'writing >>> '+os.path.basename(rsc_file)
+        writefile.write_roipac_rsc(atr, rsc_file)
     return rsc_file
 
 
@@ -268,8 +274,11 @@ def extract_attribute_dem_radar(fname):
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
-    print 'writing >>> '+os.path.basename(rsc_file)
-    writefile.write_roipac_rsc(atr, rsc_file)
+    try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
+    except: atr_orig = None
+    if atr_orig != atr:
+        print 'writing >>> '+os.path.basename(rsc_file)
+        writefile.write_roipac_rsc(atr, rsc_file)
     return rsc_file
 
 

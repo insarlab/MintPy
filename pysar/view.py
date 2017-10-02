@@ -67,7 +67,7 @@ class Basemap2(Basemap):
             ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d km'%(distance/1000.0),\
                     verticalalignment='top', horizontalalignment='center',fontsize=font_size) 
     
-    def auto_lalo_sequence(self, geo_box, max_tick_num=4, step_candidate=[1,2,3,4,5]):
+    def auto_lalo_sequence(self, geo_box, lalo_step=None, max_tick_num=4, step_candidate=[1,2,3,4,5]):
         '''Auto calculate lat/lon label sequence based on input geo_box
         Inputs:
             geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -80,18 +80,21 @@ class Basemap2(Basemap):
             geo_box = (128.0, 37.0, 138.0, 30.0)
             lats, lons, step = m.auto_lalo_sequence(geo_box)
         '''
-        # Initial tick step
         max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
-        lalo_step = round_to_1(max_lalo_dist/max_tick_num)
-        
-        # Final tick step - choose from candidate list
-        digit = np.int(np.floor(np.log10(lalo_step)))
-        lalo_step_candidate = [i*10**digit for i in step_candidate]
-        distance = [(i - max_lalo_dist/max_tick_num)**2 for i in lalo_step_candidate]
-        lalo_step = lalo_step_candidate[distance.index(min(distance))]
-        #lalo_step = 0.1
+
+        if not lalo_step:
+            # Initial tick step
+            lalo_step = round_to_1(max_lalo_dist/max_tick_num)
+
+            # Final tick step - choose from candidate list
+            digit = np.int(np.floor(np.log10(lalo_step)))
+            lalo_step_candidate = [i*10**digit for i in step_candidate]
+            distance = [(i - max_lalo_dist/max_tick_num)**2 for i in lalo_step_candidate]
+            lalo_step = lalo_step_candidate[distance.index(min(distance))]
+        print 'label step - '+str(lalo_step)+' degree'
 
         # Auto tick sequence
+        digit = np.int(np.floor(np.log10(lalo_step)))
         lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
         lats = np.unique(np.hstack((np.arange(lat_major, lat_major-max_lalo_dist, -lalo_step),\
                                     np.arange(lat_major, lat_major+max_lalo_dist, lalo_step))))
@@ -105,7 +108,7 @@ class Basemap2(Basemap):
         return lats, lons, lalo_step
 
 
-    def draw_lalo_label(self, geo_box, ax=None, labels=[1,0,0,1], font_size=12):
+    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1,0,0,1], font_size=12):
         '''Auto draw lat/lon label/tick based on coverage from geo_box
         Inputs:
             geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -119,9 +122,8 @@ class Basemap2(Basemap):
             geo_box = (128.0, 37.0, 138.0, 30.0)
             m.draw_lalo_label(geo_box)
         '''
-        lats, lons, step = self.auto_lalo_sequence(geo_box)
-        #lats = np.array([-0.18,-0.17,-0.16,-0.15])
-        
+        lats, lons, step = self.auto_lalo_sequence(geo_box, lalo_step=lalo_step)
+
         digit = np.int(np.floor(np.log10(step)))
         fmt = '%.'+'%d'%(abs(min(digit, 0)))+'f'
         # Change the 2 lines below for customized label
@@ -630,7 +632,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
 
     # default mask file:
     if not inps.mask_file and k in ['velocity','timeseries','interferograms']:
-        if 'X_FIRST' in meta_dict.keys():
+        if os.path.basename(meta_dict['FILE_PATH']).startswith('geo_'):
             inps.mask_file = 'geo_maskTempCoh.h5'
         else:
             inps.mask_file = 'maskTempCoh.h5'
@@ -820,8 +822,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     data_max = np.nanmax(data)
     if inps.disp_min is None:  inps.disp_min = data_min
     if inps.disp_max is None:  inps.disp_max = data_max
-    print 'data    range: '+str(data_min)+' - '+str(data_max)
-    print 'display range: '+str(inps.disp_min)+' - '+str(inps.disp_max)
+    print 'data    range: %f - %f' % (data_min, data_max)
+    print 'display range: %f - %f' % (inps.disp_min, inps.disp_max)
 
     # 1.7 DEM
     if inps.dem_file:
@@ -902,7 +904,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         # Lat Lon labels
         if inps.lalo_label:
             print 'plot lat/lon labels'
-            m.draw_lalo_label(inps.geo_box, ax=ax, font_size=inps.font_size)
+            m.draw_lalo_label(inps.geo_box, ax=ax, lalo_step=inps.lalo_step, font_size=inps.font_size)
         else:
             ax.tick_params(labelsize=inps.font_size)
         
@@ -1190,7 +1192,7 @@ def cmdLineParse(argv):
     fig.add_argument('--figext', dest='fig_ext',\
                      default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
                      help='File extension for figure output file')
-    fig.add_argument('--fignum', dest='fig_num', type=int, default=1, help='number of figure windows')
+    fig.add_argument('--fignum', dest='fig_num', type=int, help='number of figure windows')
     fig.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,\
                      help='width space between subplots in inches')
     fig.add_argument('--hspace', dest='fig_hei_space', type=float, default=0.05,\
@@ -1222,6 +1224,8 @@ def cmdLineParse(argv):
         inps.save_fig = True
     if inps.coastline and inps.resolution in ['c','l']:
         inps.resolution = 'i'
+    if inps.lalo_step:
+        inps.lalo_label = True
     return inps
 
 
@@ -1377,6 +1381,12 @@ def main(argv):
             inps.fig_size = pysar.figsize_multi
         print 'create figure in size: '+str(inps.fig_size)
 
+        # Figure number (<= 200 subplots per figure)
+        if not inps.fig_num:
+            inps.fig_num = 1
+            while epochNum/float(inps.fig_num) > 200.0:
+                inps.fig_num += 1
+
         # Row/Column number
         if inps.fig_row_num==1 and inps.fig_col_num==1:
             # calculate row and col number based on input info
@@ -1466,7 +1476,7 @@ def main(argv):
                 inps.outfile = inps.outfile_base+'_'+str(j)+inps.fig_ext
             else:
                 inps.outfile = inps.outfile_base+inps.fig_ext
-            fig_title = 'Figure '+str(j)+' - '+inps.outfile_base
+            fig_title = 'Figure '+str(j)+' - '+inps.outfile
             print '----------------------------------------'
             print fig_title
             # Open a new figure object

@@ -55,15 +55,17 @@ def main(argv):
     if 'Y_FIRST' in atr.keys():
         print 'Input file is geocoded, only center incident angle is calculated: '
         print angle
-        return angle
+        length = int(atr['FILE_LENGTH'])
+        width = int(atr['WIDTH'])
+        angle_mat = np.zeros((length, width), np.float32)
+        angle_mat[:] = angle
+        angle = angle_mat
 
-    # Radar coord
-    else:
-        print 'writing >>> '+outFile
-        atr['FILE_TYPE'] = 'mask'
-        atr['UNIT'] = 'degree'
-        writefile.write(angle, atr, outFile)
-        return outFile
+    print 'writing >>> '+outFile
+    atr['FILE_TYPE'] = 'mask'
+    atr['UNIT'] = 'degree'
+    writefile.write(angle, atr, outFile)
+    return outFile
 
 ############################################################
 if __name__ == '__main__':

@@ -61,7 +61,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
             print 'Reference List epoch number: '+str(refList)
             print 'Input file     epoch number: '+str(epochNum)
             sys.exit(1)
-  
+
         ##### Output File Info
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
@@ -90,7 +90,10 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
             data = h5file[k][epoch].get(epoch)[:]
             atr  = h5file[k][epoch].attrs
 
-            data -= refList[i]
+            if k == 'interferograms':
+                data[data != 0.] -= refList[i]
+            else:
+                data -= refList[i]
             atr  = seed_attributes(atr,ref_x,ref_y)
 
             gg = group.create_group(epoch)
@@ -184,6 +187,9 @@ def seed_file_inps(File, inps=None, outFile=None):
                 atr_ref = dict()
                 atr_ref['ref_x'] = str(inps.ref_x)
                 atr_ref['ref_y'] = str(inps.ref_y)
+                if 'X_FIRST' in atr.keys():
+                    atr_ref['ref_lat'] = str(subset.coord_radar2geo(inps.ref_y, atr, 'y'))
+                    atr_ref['ref_lon'] = str(subset.coord_radar2geo(inps.ref_x, atr, 'x'))
                 print atr_ref
                 outFile = ut.add_attribute(File, atr_ref)
         else:
@@ -202,7 +208,7 @@ def seed_attributes(atr_in,x,y):
     atr = dict()
     for key, value in atr_in.iteritems():
         atr[key] = str(value)
-    
+
     atr['ref_y'] = str(y)
     atr['ref_x'] = str(x)
     if 'X_FIRST' in atr.keys():

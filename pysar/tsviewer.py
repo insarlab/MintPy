@@ -225,7 +225,7 @@ if __name__ == '__main__':
 
     # Mask file
     if not inps.mask_file:
-        if 'X_FIRST' in atr.keys():
+        if os.path.basename(inps.timeseries_file).startswith('geo_'):
             file_list = ['geo_maskTempCoh.h5']
         else:
             file_list = ['maskTempCoh.h5','mask.h5']

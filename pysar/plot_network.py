@@ -46,7 +46,8 @@ def read_template2inps(template_file, inps=None):
     if key in key_list:
         value = template[key]
         if value == 'auto':
-            inps.mask_file = 'mask.h5'
+            try:    inps.mask_file = ut.get_file_list(['maskLand.h5','mask.h5'])[0]
+            except: inps.mask_file = None
         elif value == 'no':
             inps.mask_file = None
         else:
@@ -169,6 +170,8 @@ def main(argv):
         print 'reading date and perpendicular baseline from '+k+' file: '+os.path.basename(inps.file)
         if not k in multi_group_hdf5_file:
             raise ValueError('only the following file type are supported:\n'+str(multi_group_hdf5_file))
+        if not inps.coherence_file and k == 'coherence':
+            inps.coherence_file = inps.file
         pbase_list = ut.perp_baseline_ifgram2timeseries(inps.file)[0]
         date8_list = ptime.ifgram_date_list(inps.file)
     else:
@@ -192,6 +195,7 @@ def main(argv):
         # Get date12_list_drop
         date12_list_drop = sorted(list(set(date12_list) - set(date12_list_keep)))
         print 'number of interferograms marked as dropped: '+str(len(date12_list_drop))
+        print 'number of interferograms marked as kept   : '+str(len(date12_list_keep))
 
         # Get date_list_drop
         m_dates = [i.split('-')[0] for i in date12_list_keep]

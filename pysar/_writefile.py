@@ -121,7 +121,7 @@ def write_roipac_rsc(atr, outname, sorting=True):
         atr['Y_STEP'] = str(float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST']))
         atr['Y_FIRST'] = str(float(atr['Y_FIRST']))
-    
+
     # max digit for space formating
     digits = max([len(key) for key in keyList]+[2])
     f = '{0:<%d}    {1}'%(digits)

@@ -95,13 +95,15 @@ EXAMPLE='''example:
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Calculate Root Mean Square of deramped phase residual for time series.',\
+    parser = argparse.ArgumentParser(description='Calculate Root Mean Square of deramped time series.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
 
     parser.add_argument('timeseries_file', help='Timeseries file')
-    parser.add_argument('--template', dest='template_file', help='template file with options below:\n'+TEMPLATE+'\n')
-    parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5', help='mask file for estimation')
+    parser.add_argument('--template', dest='template_file',\
+                        help='template file with options below:\n'+TEMPLATE+'\n')
+    parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5',\
+                        help='mask file for estimation')
     parser.add_argument('-s', dest='ramp_type', default='quadratic',\
                         help='ramp type to be remove for RMS calculation.\n'+\
                              'default - quadratic; no - do not remove ramp')
@@ -131,7 +133,8 @@ def main(argv):
 
     refTxtFile = 'reference_date.txt'
     if (inps.save_reference_date and \
-        ut.update_file(refTxtFile, [inps.timeseries_file, inps.mask_file, inps.template_file], check_readable=False)):
+        ut.update_file(refTxtFile, [inps.timeseries_file, inps.mask_file, inps.template_file],\
+                       check_readable=False)):
         f = open(refTxtFile, 'w')
         f.write(ref_date+'\n')
         f.close()
@@ -146,7 +149,8 @@ def main(argv):
     exTxtFile = 'exclude_date.txt'
     if ex_idx_list:
         if (inps.save_exclude_date and \
-            ut.update_file(exTxtFile, [inps.timeseries_file, inps.mask_file, inps.template_file], check_readable=False)):
+            ut.update_file(exTxtFile, [inps.timeseries_file, inps.mask_file, inps.template_file],\
+                           check_readable=False)):
             f = open(exTxtFile, 'w')
             for i in ex_idx_list:
                 print '%s - %.4f' % (date_list[i], rms_list[i])
@@ -157,10 +161,11 @@ def main(argv):
         print 'None.'
 
     ##### Plot
+    fig_name = os.path.dirname(os.path.abspath(inps.timeseries_file))+\
+               '/rms_'+os.path.splitext(inps.timeseries_file)[0]
     if inps.ramp_type != 'no':
-        fig_name = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.ramp_type+'_rms.pdf'
-    else:
-        fig_name = os.path.splitext(inps.timeseries_file)[0]+'_rms.pdf'
+        fig_name += '_'+inps.ramp_type
+    fig_name += '.pdf'
 
     if ut.update_file(fig_name, [exTxtFile, refTxtFile, inps.template_file], check_readable=False):
         fig = plt.figure()

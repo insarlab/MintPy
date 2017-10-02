@@ -107,8 +107,8 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
     if sub_y[0]>=length or sub_y[1]<=0 or sub_x[0]>=width or sub_x[1]<=0:
         print 'ERROR: input index is out of data range!'
         data_box = (0,0,width,length)
-        print '\tdata   range in y/x: '+str(data_box)
-        print '\tsubset range in y/x: '+str(pixel_box)
+        print '\tdata   range in x/y: '+str(data_box)
+        print '\tsubset range in x/y: '+str(pixel_box)
         print '\tdata   range in lat/lon: '+str(box_pixel2geo(data_box, atr_dict))
         print '\tsubset range in lat/lon: '+str(box_pixel2geo(pixel_box, atr_dict))
         sys.exit(1)
@@ -494,7 +494,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             print 'number of interferograms: '+str(epochNum)
 
         ##### Open Output File
-        h5out = h5py.File(outFile)
+        h5out = h5py.File(outFile,'w')
         group = h5out.create_group(k)
         prog_bar = ptime.progress_bar(maxValue=epochNum)
 

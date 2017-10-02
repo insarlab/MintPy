@@ -10,7 +10,7 @@ import os
 import sys
 import argparse
 import re
-from datetime import datetime as dt
+import datetime as dt
 
 import h5py
 import numpy as np
@@ -106,8 +106,8 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
 
     ##### Grabbed by script
     ## date info
-    unavco_meta_dict['first_date'] = dt.strptime(dateList[0], '%Y%m%d').isoformat()[0:10]
-    unavco_meta_dict['last_date']  = dt.strptime(dateList[-1],'%Y%m%d').isoformat()[0:10]
+    unavco_meta_dict['first_date'] = dt.datetime.strptime(dateList[0], '%Y%m%d').isoformat()[0:10]
+    unavco_meta_dict['last_date']  = dt.datetime.strptime(dateList[-1],'%Y%m%d').isoformat()[0:10]
 
     ## footprint
     lons = [pysar_meta_dict['LON_REF1'], pysar_meta_dict['LON_REF3'], pysar_meta_dict['LON_REF4'],\
@@ -116,7 +116,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
             pysar_meta_dict['LAT_REF2'], pysar_meta_dict['LAT_REF1']]
     unavco_meta_dict['scene_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
 
-    unavco_meta_dict['history'] = dt.utcnow().isoformat()[0:10]
+    unavco_meta_dict['history'] = dt.datetime.utcnow().isoformat()[0:10]
 
 
     #################################
@@ -182,8 +182,8 @@ def get_unavco_filename(timeseriesFile):
     SW  = meta_dict['beam_mode']    # should be like FB08 for ALOS, need to find out, Yunjun, 2016-12-26
     RELORB = "%03d"%(int(meta_dict['relative_orbit']))
     FRAME  = "%04d"%(int(meta_dict['frame']))
-    DATE1 = dt.strptime(meta_dict['first_date'],'%Y-%m-%d').strftime('%Y%m%d')
-    DATE2 = dt.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
+    DATE1 = dt.datetime.strptime(meta_dict['first_date'],'%Y-%m-%d').strftime('%Y%m%d')
+    DATE2 = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
     TBASE = "%04d"%(0)
     BPERP = "%05d"%(0)
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
@@ -192,6 +192,11 @@ def get_unavco_filename(timeseriesFile):
 
 
 ################################################################
+TEMPALTE='''
+pysar.save.unavco  = auto   #[yes / update / no], auto for no, save timeseries to UNAVCO InSAR Archive format
+                            #update for enabling update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year
+'''
+
 EXAMPLE='''example:
   save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geo_incidenceAngle
                  -d demGeo.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
@@ -209,9 +214,10 @@ def cmdLineParse():
     parser.add_argument('-c','--coherence', default='temporal_coherence.h5',
                         help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
     parser.add_argument('-m','--mask', default='mask.h5',help='Mask file')
+    parser.add_argument('--update', action='store_true',\
+                        help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
 
     inps = parser.parse_args()
-    
     return inps
 
 
@@ -238,10 +244,14 @@ def main(argv):
     SW  = meta_dict['beam_mode']    # should be like FB08 for ALOS, need to find out, Yunjun, 2016-12-26
     RELORB = "%03d"%(int(meta_dict['relative_orbit']))
     FRAME  = "%04d"%(int(meta_dict['frame']))
-    DATE1 = dt.strptime(meta_dict['first_date'],'%Y-%m-%d').strftime('%Y%m%d')
-    DATE2 = dt.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
     TBASE = "%04d"%(0)
     BPERP = "%05d"%(0)
+    DATE1 = dt.datetime.strptime(meta_dict['first_date'],'%Y-%m-%d').strftime('%Y%m%d')
+    end_date = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d')
+    if inps.update and (dt.datetime.utcnow() - end_date) < dt.timedelta(days=365):
+        DATE2 = 'XXXXXXXX'
+    else:
+        DATE2 = end_date.strftime('%Y%m%d')
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
 
     print '-----------------------------------------'

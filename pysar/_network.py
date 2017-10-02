@@ -177,12 +177,16 @@ def date12_list2index(date12_list, date_list=[]):
     return pairs_idx
 
 
-def get_date12_list(File):
+def get_date12_list(File, check_drop_ifgram=False):
     '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
+    Inputs:
+        File - string, path/name of input multi-group hdf5 file or text file
+        check_drop_ifgram - bool, check the "drop_ifgram" attribute or not for multi-group hdf5 file
     Output:
         date12_list - list of string in YYMMDD-YYMMDD format
     Example:
         date12List = get_date12_list('unwrapIfgram.h5')
+        date12List = get_date12_list('unwrapIfgram.h5', check_drop_ifgram=True)
         date12List = get_date12_list('Pairs.list')
     '''
     #print 'read pairs info from '+File
@@ -193,8 +197,9 @@ def get_date12_list(File):
         h5 = h5py.File(File, 'r')
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
-            date12 = h5[k][epoch].attrs['DATE12']
-            date12_list.append(date12)
+            if not check_drop_ifgram or h5[k][epoch].attrs['drop_ifgram'] == 'no':
+                date12 = h5[k][epoch].attrs['DATE12']
+                date12_list.append(date12)
         h5.close()
     else:
         date12_list = np.loadtxt(File, dtype=str).tolist()
@@ -852,6 +857,9 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             else:
                 coh_thres = min(coh_list_keep)
 
+        if coh_thres < disp_min:
+            print 'data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)
+            disp_min = 0.0
         c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
         coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
         cmap = plt.get_cmap(plot_dict['colormap'])

@@ -272,8 +272,9 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
             data_deramp, ramp = rm.remove_data_surface(data, ramp_mask, ramp_type)
             data_derampCor = bridging_data(data_deramp, mask, x_list, y_list)
 
+            ramp[data == 0.] = 0.
             gg = group.create_group(ifgram)
-            dset = gg.create_dataset(ifgram, data=data_derampCor-ramp, compression='gzip')
+            dset = gg.create_dataset(ifgram, data=data_derampCor+ramp, compression='gzip')
             for key, value in h5[k][ifgram].attrs.iteritems():
                 gg.attrs[key]=value
 
@@ -298,10 +299,10 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 
         data_deramp,ramp = rm.remove_data_surface(data,ramp_mask,ramp_type)
         data_derampCor = bridging_data(data_deramp,mask,x_list,y_list)
-        data_cor = data_derampCor - ramp
 
         print 'writing >>> '+ifgram_cor_file
-        ifgram_cor_file        = writefile.write(data_cor,       atr, ifgram_cor_file)
+        ramp[data == 0.] = 0.
+        ifgram_cor_file = writefile.write(data_derampCor+ramp, atr, ifgram_cor_file)
         if save_cor_deramp_file:
             print 'writing >>> '+ifgram_cor_deramp_file
             ifgram_cor_deramp_file = writefile.write(data_derampCor, atr, ifgram_cor_deramp_file)
