@@ -53,7 +53,9 @@ or download the development version using git:
     cd ~/python
     git clone https://github.com/yunjunz/PySAR.git
    
-To use the package, you need to: 1) add the path to PySAR directory to your $PYTHONPATH and 2) add ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/shellscripts to your $path. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file.   
+To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file. They are for:   
+1. To make pysar importable in python, by adding the path to PySAR directory to your $PYTHONPATH    
+2. To make utility scripts available in command line, by adding ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/shellscripts to your $path.   
    
 For bash user, add to your .bashrc file:   
 
