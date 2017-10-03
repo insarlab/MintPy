@@ -25,7 +25,7 @@ Add the following in ~/.cshrc file and source it.
 
     ############################ Python ############################### 
     setenv PYTHON2DIR ~/python/anaconda2
-    set path = ( ${PYTHON2DIR}/bin $path )
+    set path = ( $PYTHON2DIR/bin $path )
 
 Install Xcode with command line tools, follow instructions [here](https://github.com/yunjunz/macOS_Setup).
 
@@ -34,9 +34,9 @@ Then run the following in your terminal:
     cd ~/python
     wget https://repo.continuum.io/archive/Anaconda2-4.4.0-MacOSX-x86_64.sh
     chmod +x Anaconda2-4.4.0-MacOSX-x86_64.sh
-    ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p ${PYTHON2DIR}
-    ${PYTHON2DIR}/bin/conda config --add channels conda-forge
-    ${PYTHON2DIR}/bin/conda install basemap joblib pykml --yes   
+    ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p $PYTHON2DIR
+    $PYTHON2DIR/bin/conda config --add channels conda-forge
+    $PYTHON2DIR/bin/conda install basemap joblib pykml --yes   
    
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
 
@@ -59,8 +59,8 @@ For bash user, add to your .bashrc file:
 
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
     export PYSAR_HOME=~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
-    export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
-    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:$PATH   
+    export PYTHONPATH=$PYSAR_HOME:$PYTHONPATH}  
+    export PATH=$PYSAR_HOME/pysar:$PYSAR_HOME/shellscripts:$PATH   
 
 For csh/tcsh user, add to your .cshrc file:   
 
@@ -68,8 +68,8 @@ For csh/tcsh user, add to your .cshrc file:
         setenv PYTHONPATH ""
     endif
     setenv PYSAR_HOME ~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
-    setenv PYTHONPATH ${PYSAR_HOME}
-    set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/shellscripts $path)
+    set PYTHONPATH = ( $PYSAR_HOME $PYTHONPATH )
+    set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/shellscripts $path )
    
    
 ### 2. Running PySAR
