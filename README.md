@@ -24,8 +24,8 @@ Here is a example on Mac OSX using csh/tcsh:
 Add the following in ~/.cshrc file and source it.   
 
     ############################ Python ############################### 
-    setenv PYTHON2DIR ~/python/anaconda2
-    set path = ( $PYTHON2DIR/bin $path )
+    setenv PYTHON2DIR  ~/python/anaconda2
+    setenv PATH        ${PYTHON2DIR}/bin:${PATH}
 
 Install Xcode with command line tools, follow instructions [here](https://github.com/yunjunz/macOS_Setup).
 
@@ -58,18 +58,18 @@ To use the package, you need to: 1) add the path to PySAR directory to your $PYT
 For bash user, add to your .bashrc file:   
 
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
-    export PYSAR_HOME=~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
-    export PYTHONPATH=$PYSAR_HOME:$PYTHONPATH}  
-    export PATH=$PYSAR_HOME/pysar:$PYSAR_HOME/shellscripts:$PATH   
+    export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-1.2.0"
+    export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}  
+    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}   
 
 For csh/tcsh user, add to your .cshrc file:   
 
     if ( ! $?PYTHONPATH ) then
         setenv PYTHONPATH ""
     endif
-    setenv PYSAR_HOME ~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
-    set PYTHONPATH = ( $PYSAR_HOME $PYTHONPATH )
-    set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/shellscripts $path )
+    setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-1.2.0"
+    setenv PYTHONPATH  ${PYSAR_HOME}:${PYTHONPATH}
+    setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}
    
    
 ### 2. Running PySAR
