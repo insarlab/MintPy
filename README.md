@@ -24,8 +24,8 @@ Here is a example on Mac OSX using csh/tcsh:
 Add the following in ~/.cshrc file and source it.   
 
     ############################ Python ############################### 
-    setenv PYTHON2DIR ~/python/anaconda2
-    set path = ( ${PYTHON2DIR}/bin $path )
+    setenv PYTHON2DIR  ~/python/anaconda2
+    setenv PATH        ${PYTHON2DIR}/bin:${PATH}
 
 Install Xcode with command line tools, follow instructions [here](https://github.com/yunjunz/macOS_Setup).
 
@@ -34,9 +34,9 @@ Then run the following in your terminal:
     cd ~/python
     wget https://repo.continuum.io/archive/Anaconda2-4.4.0-MacOSX-x86_64.sh
     chmod +x Anaconda2-4.4.0-MacOSX-x86_64.sh
-    ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p ${PYTHON2DIR}
-    ${PYTHON2DIR}/bin/conda config --add channels conda-forge
-    ${PYTHON2DIR}/bin/conda install basemap joblib pykml --yes   
+    ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p $PYTHON2DIR
+    $PYTHON2DIR/bin/conda config --add channels conda-forge
+    $PYTHON2DIR/bin/conda install basemap joblib pykml --yes   
    
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
 
@@ -53,23 +53,25 @@ or download the development version using git:
     cd ~/python
     git clone https://github.com/yunjunz/PySAR.git
    
-To use the package, you need to: 1) add the path to PySAR directory to your $PYTHONPATH and 2) add ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/shellscripts to your $path. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file.   
+To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file. They are for:   
+1. To make pysar importable in python, by adding the path to PySAR directory to your $PYTHONPATH    
+2. To make utility scripts available in command line, by adding ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/shellscripts to your $path.   
    
 For bash user, add to your .bashrc file:   
 
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
-    export PYSAR_HOME=~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
-    export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
-    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:$PATH   
+    export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-1.2.0"
+    export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}  
+    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}   
 
 For csh/tcsh user, add to your .cshrc file:   
 
     if ( ! $?PYTHONPATH ) then
         setenv PYTHONPATH ""
     endif
-    setenv PYSAR_HOME ~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
-    setenv PYTHONPATH ${PYSAR_HOME}
-    set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/shellscripts $path)
+    setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-1.2.0"
+    setenv PYTHONPATH  ${PYSAR_HOME}:${PYTHONPATH}
+    setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}
    
    
 ### 2. Running PySAR
