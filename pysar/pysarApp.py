@@ -1080,6 +1080,7 @@ def main(argv):
 
 
     # Mask in geo coord
+    inps.geo_mask_file = None
     if inps.geo_temp_coh_file:
         # Generate mask in geo coord
         print '\n--------------------------------------------'
@@ -1138,14 +1139,18 @@ def main(argv):
             inps.geo_temp_coh_file = check_geocode_file(inps.trans_file, inps.temp_coh_file)
 
             # 3. Mask file
-            inps.geo_mask_file = 'geo_maskTempCoh.h5'
-            if inps.geo_temp_coh_file and ut.update_file(inps.geo_mask_file, inps.geo_temp_coh_file):
-                maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m 0.7 -o '+inps.geo_mask_file
+            if not inps.geo_mask_file:
+                outName = 'maskTempCoh.h5'
+                if os.path.basename(inps.geo_temp_coh_file).startswith('geo_'):
+                    outName = 'geo_'+outName
+                maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
                 print maskCmd
-                status = subprocess.Popen(maskCmd, shell=True).wait()
-                if status is not 0:
-                    print '\nError while generating mask file.\n'
-                    sys.exit(-1)
+                if ut.update_file(outName, inps.geo_temp_coh_file):
+                    status = subprocess.Popen(maskCmd, shell=True).wait()
+                    if status is not 0:
+                        print '\nError while generating mask file.\n'
+                        sys.exit(-1)
+                inps.geo_mask_file = outName
 
             # 4. Incidence Angle
             inps.inc_angle_file = 'incidenceAngle.h5'

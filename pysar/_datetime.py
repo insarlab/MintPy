@@ -1,13 +1,10 @@
 #! /usr/bin/env python2
 ############################################################
 # Program is part of PySAR v1.2                            #
-# Copyright(c) 2016, Yunjun Zhang                          #
-# Author:  Yunjun Zhang                                    #
+# Copyright(c) 2016, Zhang Yunjun                          #
+# Author:  Zhang Yunjun                                    #
 ############################################################
 # Based on scripts writen by Heresh Fattahi
-# Yunjun, Aug 2016: add read_date_list()
-# Yunjun, Oct 2016: update yymmdd() for string and list input
-#
 # Recommended Usage:
 #   import pysar._datetime as ptime
 #   date_list = ptime.ifgram_date_list('unwrapIfgram.h5')

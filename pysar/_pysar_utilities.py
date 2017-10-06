@@ -53,6 +53,30 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 ###############################################################################
+def touch(fname_list, times=None):
+    '''python equivalent function to Unix utily - touch
+    It sets the modification and access times of files to the current time of day.
+    If the file doesn't exist, it is created with default permissions.
+    Inputs/Output:
+        fname_list - string / list of string
+    '''
+    if not fname_list:
+        return None
+
+    if isinstance(fname_list, basestring):
+        fname_list = [fname_list]
+
+    fname_list = filter(lambda x: x!=None, fname_list)
+    for fname in fname_list:
+        with open(fname, 'a'):
+            os.utime(fname, times)
+            print 'touch '+fname
+
+    if len(fname_list) == 1:
+        fname_list = fname_list[0]
+    return fname_list
+
+
 def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     '''Check the result of loading data for the following two rules:
         1. file existance
@@ -851,41 +875,6 @@ def which(program):
     return None
 
 
-def get_file_stack(File, maskFile=None):
-    '''Get stack file of input File and return the stack 2D matrix
-    Input:   File/maskFile - string
-    Output:  stack - 2D np.array matrix
-    '''
-    stack = None
-    atr = readfile.read_attribute(File)
-    stackFile = os.path.splitext(File)[0]+'_stack.h5'
-
-    # Read stack from existed file
-    if os.path.isfile(stackFile):
-        atrStack = readfile.read_attribute(stackFile)
-        if atrStack['WIDTH'] == atr['WIDTH'] and atrStack['FILE_LENGTH'] == atr['FILE_LENGTH']:
-            print 'reading stack from existed file: '+stackFile
-            stack = readfile.read(stackFile)[0]
-    # Calculate stack
-    else:
-        print 'calculating stack of input file ...'
-        stack = stacking(File)
-        # Write stack file is input file is multi-dataset (large file size usually)
-        if atr['FILE_TYPE'] in multi_group_hdf5_file+multi_dataset_hdf5_file:
-            atrStack = atr.copy()
-            atrStack['FILE_TYPE'] = 'mask'
-            print 'writing stack file >>> '+stackFile
-            writefile.write(stack, atrStack, stackFile)
-
-    # set masked out area into NaN
-    if maskFile:
-        print 'read mask from file: '+maskFile
-        mask = readfile.read(maskFile)[0]
-        stack[mask==0] = np.nan
-
-    return stack
-
-
 def check_drop_ifgram(h5, atr, ifgram_list, print_msg=True):
     '''Update ifgram_list based on 'drop_ifgram' attribute
     Inputs:
@@ -1581,9 +1570,9 @@ def design_matrix(ifgramFile=None, date12_list=[]):
         date12_list - list of string, date12 used in calculation in YYMMDD-YYMMDD format
                       use all date12 from ifgramFile if input is empty
     Outputs:
-        A - 2D np.array in size (igram_num, date_num-1)
-            representing date combination for each interferogram
-        B - 2D np.array in size (igram_num, date_num-1)
+        A - 2D np.array in size of (ifgram_num, date_num-1)
+            representing date combination for each interferogram (-1 for master, 1 for slave, 0 for others)
+        B - 2D np.array in size of (ifgram_num, date_num-1)
             representing temporal baseline timeseries between master and slave date for each interferogram
     '''
     # Check Inputs
@@ -1599,12 +1588,12 @@ def design_matrix(ifgramFile=None, date12_list=[]):
     date6_list = sorted(list(set(m_dates + s_dates)))
     tbase = np.array(ptime.date_list2tbase(date6_list)[0])
     date_num = len(date6_list)
-    igram_num = len(date12_list)
+    ifgram_num = len(date12_list)
 
-    A = np.zeros((igram_num, date_num))
+    A = np.zeros((ifgram_num, date_num))
     B = np.zeros(np.shape(A))
-    #t = np.zeros((igram_num, 2))
-    for i in range(igram_num):
+    #t = np.zeros((ifgram_num, 2))
+    for i in range(ifgram_num):
         m_idx, s_idx = [date6_list.index(j) for j in date12_list[i].split('-')]
         A[i, m_idx] = -1
         A[i, s_idx] = 1
@@ -1904,6 +1893,42 @@ def Bh_Bv_timeseries(ifgramFile):
     h5file.close()
   
     return Bh,Bv
+
+
+def get_file_stack(File, maskFile=None):
+    '''Get stack file of input File and return the stack 2D matrix
+    Input:   File/maskFile - string
+    Output:  stack - 2D np.array matrix
+    '''
+    stack = None
+    atr = readfile.read_attribute(File)
+    stackFile = os.path.splitext(File)[0]+'_stack.h5'
+
+    # Read stack from existed file
+    if os.path.isfile(stackFile):
+        atrStack = readfile.read_attribute(stackFile)
+        if atrStack['WIDTH'] == atr['WIDTH'] and atrStack['FILE_LENGTH'] == atr['FILE_LENGTH']:
+            print 'reading stack from existed file: '+stackFile
+            stack = readfile.read(stackFile)[0]
+    # Calculate stack
+    else:
+        print 'calculating stack of input file ...'
+        stack = stacking(File)
+        # Write stack file is input file is multi-dataset (large file size usually)
+        if atr['FILE_TYPE'] in multi_group_hdf5_file+multi_dataset_hdf5_file:
+            atrStack = atr.copy()
+            atrStack['FILE_TYPE'] = 'mask'
+            print 'writing stack file >>> '+stackFile
+            writefile.write(stack, atrStack, stackFile)
+
+    # set masked out area into NaN
+    if maskFile:
+        print 'read mask from file: '+maskFile
+        mask = readfile.read(maskFile)[0]
+        stack[mask==0] = np.nan
+
+    return stack
+
 
 def stacking(File):
     '''Stack multi-temporal dataset into one

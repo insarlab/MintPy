@@ -192,11 +192,13 @@ def seed_file_inps(File, inps=None, outFile=None):
                     atr_ref['ref_lon'] = str(subset.coord_radar2geo(inps.ref_x, atr, 'x'))
                 print atr_ref
                 outFile = ut.add_attribute(File, atr_ref)
+                ut.touch([inps.coherence_file, inps.mask_file])
         else:
             print 'Referencing input file to pixel in y/x: (%d, %d)'%(inps.ref_y, inps.ref_x)
             box = (inps.ref_x, inps.ref_y, inps.ref_x+1, inps.ref_y+1)
             refList = ut.spatial_average(File, mask, box)[0]
             outFile = seed_file_reference_value(File, outFile, refList, inps.ref_y, inps.ref_x)
+            ut.touch([inps.coherence_file, inps.mask_file])
     else:
         raise ValueError('Can not find reference y/x or Nan value.')
 

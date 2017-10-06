@@ -1,0 +1,50 @@
+#! /usr/bin/env python2
+############################################################
+# Program is part of PySAR v1.2                            #
+# Copyright(c) 2017, Zhang Yunjun                          #
+# Author:  Zhang Yunjun                                    #
+############################################################
+# 
+
+import sys
+import argparse
+
+import h5py
+
+import pysar._readfile as readfile
+import pysar._pysar_utilities as ut
+import pysar._datetime as ptime
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+
+
+#################################  Usage  ####################################
+EXAMPLE='''example:
+  stack.py unwrapIfgram.h5
+  stack.py coherence.h5 -m mask.h5
+'''
+
+def cmdLineParse():
+    parser = argparse.ArgumentParser(description='Stack multiple layers dataset into one.',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('file', nargs='+', help='File(s) to be stacked')
+    parser.add_argument('-m','--mask', dest='mask_file', help='Mask file for the calculation')
+
+    inps = parser.parse_args()
+    return inps
+
+
+#############################  Main Function  ################################
+def main(argv):
+    inps = cmdLineParse()
+    print '\n*************** Stacking ******************'
+    for File in inps.file:
+        ut.get_file_stack(File, inps.mask_file)
+
+    return
+
+
+##############################################################################
+if __name__ == '__main__':
+    main(sys.argv[1:])

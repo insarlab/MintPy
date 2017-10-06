@@ -1,9 +1,12 @@
 #! /usr/bin/env python2
 ############################################################
 # Program is part of PySAR v1.2                            #
-# Copyright(c) 2016, Yunjun Zhang                          #
-# Author:  Yunjun Zhang                                    #
+# Copyright(c) 2016, Zhang Yunjun                          #
+# Author:  Zhang Yunjun                                    #
 ############################################################
+# Based on ProductArchive/he5_converters/isce2he5.py written
+# by Scott Baker
+#
 
 
 import os

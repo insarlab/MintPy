@@ -2,9 +2,10 @@
 ############################################################
 # Program is part of PySAR v1.2                            #
 # Copyright(c) 2017, Zhang Yunjun                          #
-# Author:  Yunjun Zhang, 2017 Mar 24                       #
-# based on selectPairs.py written by Scott Baker at 2010   #
+# Author:  Zhang Yunjun, 2017 Mar 24                       #
 ############################################################
+# Based on selectPairs.py written by Scott Baker at 2010
+#
 
 
 import os
