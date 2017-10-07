@@ -8,6 +8,7 @@
 import sys
 import os
 import argparse
+import shutil
 
 import h5py
 import numpy as np

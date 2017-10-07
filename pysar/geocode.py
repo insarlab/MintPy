@@ -134,7 +134,6 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
                           sim_150911-150922.UTM_TO_RDC from Gamma
         method     : string, optional, interpolation/resampling method, supporting nearest, linear
         fill_value : value used for points outside of the interpolation domain.
-                     If None, values outside the domain are extrapolated.
         fname_out  : string, optional, output geocoded filename
     Output:
         fname_out  : string, optional, output geocoded filename
@@ -188,7 +187,8 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
 
 
     print 'geocoding using scipy.interpolate.RegularGridInterpolator ...'
-    data_geo = np.empty((len_geo, wid_geo)) * fill_value
+    data_geo = np.empty((len_geo, wid_geo))
+    data_geo.fill(fill_value)
     k = atr_rdr['FILE_TYPE']
     ##### Multiple Dataset File
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
@@ -206,9 +206,8 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
             for i in range(epoch_num):
                 date = epoch_list[i]
                 data = h5[k].get(date)[:]
-                RGI_func = RGI(pts_rdr, data, method, bounds_error=False, fill_value=fill_value)
 
-                data_geo.fill(fill_value)
+                RGI_func = RGI(pts_rdr, data, method, bounds_error=False, fill_value=fill_value)
                 data_geo[idx] = RGI_func(pts_geo)
 
                 dset = group.create_dataset(date, data=data_geo, compression='gzip')
@@ -226,9 +225,8 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
             for i in range(epoch_num):
                 ifgram = epoch_list[i]
                 data = h5[k][ifgram].get(ifgram)[:]
-                RGI_func = RGI(pts_rdr, data, method, bounds_error=False, fill_value=fill_value)
 
-                data_geo.fill(fill_value)
+                RGI_func = RGI(pts_rdr, data, method, bounds_error=False, fill_value=fill_value)
                 data_geo[idx] = RGI_func(pts_geo)
 
                 gg = group.create_group(ifgram)
@@ -246,8 +244,6 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
         print 'reading '+fname
         data = readfile.read(fname)[0]
         RGI_func = RGI(pts_rdr, data, method, bounds_error=False, fill_value=fill_value)
-
-        data_geo.fill(fill_value)
         data_geo[idx] = RGI_func(pts_geo)
 
         print 'update attributes'
@@ -282,8 +278,9 @@ def cmdLineParse():
     parser.add_argument('-i','--interpolate', dest='method',\
                         choices={'nearest','linear'}, default='nearest',\
                         help='interpolation/resampling method. Default: nearest')
-    parser.add_argument('--fill', dest='fill_value', default=np.nan,\
-                        help='Value used for points outside of the interpolation domain. Default: np.nan')
+    parser.add_argument('--fill', dest='fill_value', type=float, default=np.nan,\
+                        help='Value used for points outside of the interpolation domain.\n'+\
+                             'Default: np.nan')
     parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
     parser.add_argument('-o','--output', dest='outfile', help="output file name. Default: add prefix 'geo_'")

@@ -1,7 +1,7 @@
 #! /usr/bin/env python2
 ############################################################
 # Program is part of PySAR v1.2                            #
-# Copyright(c) 2015, Heresh Fattahi                        #
+# Copyright(c) 2015, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
@@ -52,7 +52,18 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
 
 def get_delay(grib_file, atr, inps_dict):
-    # Get delay matrix using PyAPS
+    '''Get delay matrix using PyAPS for one acquisition
+    Inputs:
+        grib_file - strng, grib file path
+        atr       - dict, including the following attributes:
+                    dem_file    - string, DEM file path
+                    grib_source - string, Weather re-analysis data source
+                    delay_type  - string, comb/dry/wet
+                    ref_y/x     - string, reference pixel row/col number
+                    incidence_angle - np.array, 0/1/2 D
+    Output:
+        phs - 2D np.array, absolute tropospheric phase delay relative to ref_y/x
+    '''
     if 'X_FIRST' in atr.keys():
         aps = pa.PyAPS_geo(grib_file, inps_dict['dem_file'], grib=inps_dict['grib_source'],\
                            verb=True, Del=inps_dict['delay_type'])
@@ -61,12 +72,12 @@ def get_delay(grib_file, atr, inps_dict):
                            verb=True, Del=inps_dict['delay_type'])
     phs = np.zeros((aps.ny, aps.nx), dtype=np.float32)
     aps.getdelay(phs, inc=0.0)
-    
+
     # Get relative phase delay in space
     yref = int(atr['ref_y'])
     xref = int(atr['ref_x'])
     phs -= phs[yref, xref]
-    
+
     # project into LOS direction
     phs /= np.cos(inps_dict['incidence_angle'])
     
@@ -244,11 +255,11 @@ def main(argv):
     # Get date list to download
     if not inps.date_list_file:
         h5timeseries = h5py.File(inps.timeseries_file, 'r')
-        dateList = sorted(h5timeseries['timeseries'].keys())
+        date_list = sorted(h5timeseries['timeseries'].keys())
         h5timeseries.close()
         print 'read date list info from: '+inps.timeseries_file
     else:
-        dateList = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
+        date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
         print 'read date list info from: '+inps.date_list_file
 
     # Get Acquisition time - hour
@@ -257,7 +268,7 @@ def main(argv):
     print 'Time of cloest available product: '+inps.hour
 
     ## Download data using PyAPS
-    inps.grib_file_list = dload_grib(dateList, inps.hour, inps.weather_model, inps.weather_dir)
+    inps.grib_file_list = dload_grib(date_list, inps.hour, inps.weather_model, inps.weather_dir)
 
     if inps.download:
         print 'Download completed, exit as planned.'
@@ -278,69 +289,59 @@ def main(argv):
         inps.incidence_angle = ut.incidence_angle(atr)
     inps.incidence_angle = inps.incidence_angle*np.pi/180.0
 
-    ## Create delay hdf5 file
-    tropFile = inps.grib_source+'.h5'
-    print 'writing >>> '+tropFile
-    h5trop = h5py.File(tropFile, 'w')
-    group_trop = h5trop.create_group('timeseries')
-
-    ## Create tropospheric corrected timeseries hdf5 file
-    if not inps.out_file:
-        ext = os.path.splitext(inps.timeseries_file)[1]
-        inps.out_file = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.grib_source+'.h5'
-    print 'writing >>> '+inps.out_file
-    h5timeseries_tropCor = h5py.File(inps.out_file, 'w')
-    group_tropCor = h5timeseries_tropCor.create_group('timeseries')
-
-    ## Calculate phase delay on reference date
-    try:    ref_date = atr['ref_date']
-    except: ref_date = dateList[0]
-    print 'calculating phase delay on reference date: '+ref_date
-    ref_date_grib_file = None
-    for fname in inps.grib_file_list:
-        if ref_date in fname:
-            ref_date_grib_file = fname
-    phs_ref = get_delay(ref_date_grib_file, atr, vars(inps))
-
-    ## Loop to calculate phase delay on the other dates
-    h5timeseries = h5py.File(inps.timeseries_file, 'r')
-    for i in range(len(inps.grib_file_list)):
+    ## Calculate tropo delay using pyaps
+    length = int(atr['FILE_LENGTH'])
+    width = int(atr['WIDTH'])
+    date_num = len(date_list)
+    trop_ts = np.zeros((date_num, length, width), np.float32)
+    for i in range(date_num):
         grib_file = inps.grib_file_list[i] 
-        date = re.findall('\d{8}', grib_file)[0]
+        date = date_list[i]
+        print 'calculate phase delay on %s from file %s' % (date, os.path.basename(grib_file))
+        trop_ts[i] = get_delay(grib_file, atr, vars(inps))
 
-        # Get phase delay
-        if date != ref_date:
-            print 'calculate phase delay on %s from file %s' % (date, os.path.basename(grib_file))
-            phs = get_delay(grib_file, atr, vars(inps))
-        else:
-            phs = np.copy(phs_ref)
-        # Get relative phase delay in time
-        phs -= phs_ref
+    ## Convert relative phase delay on reference date
+    try:    ref_date = atr['ref_date']
+    except: ref_date = date_list[0]
+    print 'convert to relative phase delay with reference date: '+ref_date
+    ref_idx = date_list.index(ref_date)
+    trop_ts -= np.tile(trop_ts[ref_idx,:,:], (date_num, 1, 1))
 
-        # Write dataset
-        print 'writing to HDF5 files ...'
-        data = h5timeseries['timeseries'].get(date)[:]
-        dset  = group_tropCor.create_dataset(date, data=data-phs, compression='gzip')
-        dset  = group_trop.create_dataset(date, data=phs, compression='gzip')
+    ## Correct Timeseries and Write to HDF5
+    tropFile = inps.grib_source+'.h5'
+    if not inps.out_file:
+        inps.out_file = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.grib_source+'.h5'
+    print 'writing >>> %s, %s' % (tropFile, inps.out_file)
+    h5ts = h5py.File(inps.timeseries_file, 'r')
+    h5trop = h5py.File(tropFile, 'w')
+    h5tsCor = h5py.File(inps.out_file, 'w')    
+    group_trop = h5trop.create_group('timeseries')
+    group_tsCor = h5tsCor.create_group('timeseries')
+    print 'number of acquisitions: '+str(date_num)
+    prog_bar = ptime.progress_bar(maxValue=date_num)
+    for i in range(date_num):
+        date = date_list[i]
+        ts = h5ts['timeseries'].get(date)[:]
+        group_trop.create_dataset(date, data=trop_ts[i], compression='gzip')
+        group_tsCor.create_dataset(date, data=ts-trop_ts[i], compression='gzip')
+        prog_bar.update(i+1, suffix=date)
+    prog_bar.close()
+    h5ts.close()
 
     ## Write Attributes
     for key,value in atr.iteritems():
-        group_tropCor.attrs[key] = value
         group_trop.attrs[key] = value
-    
-    h5timeseries.close()
-    h5timeseries_tropCor.close()
+        group_tsCor.attrs[key] = value
     h5trop.close()
+    h5tsCor.close()
 
     # Delete temporary DEM file in ROI_PAC format
     if '4pyaps' in inps.dem_file:
-        rmCmd = 'rm '+inps.dem_file+' '+inps.dem_file+'.rsc '
+        rmCmd = 'rm %s %s.rsc' % (inps.dem_file, inps.dem_file)
         print rmCmd
         os.system(rmCmd)
-    
     print 'Done.'
-
-    return
+    return inps.out_file
 
 
 ###############################################################

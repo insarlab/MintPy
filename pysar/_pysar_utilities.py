@@ -692,8 +692,12 @@ def add_attribute(File, atr_new=dict()):
     return File
 
 
-def check_parallel(file_num=1):
-    '''Check parallel option based on pysar setting, file num and installed module'''
+def check_parallel(file_num=1, print_msg=True):
+    '''Check parallel option based on pysar setting, file num and installed module
+    Examples:
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(1000)
+    '''
     enable_parallel = True
 
     # Disable parallel option for one input file
@@ -718,9 +722,9 @@ def check_parallel(file_num=1):
         print 'parallel processing is disabled because min of the following two numbers <= 1:'
         print 'available cpu number of the computer: '+str(multiprocessing.cpu_count())
         print 'pysar.__init__.py: parallel_num: '+str(pysar.parallel_num)
-    else:
+    elif print_msg:
         print 'parallel processing using %d cores ...'%(num_cores)
-    
+
     try:
         return num_cores, enable_parallel, Parallel, delayed
     except:
@@ -1284,7 +1288,8 @@ def azimuth_resolution(atr):
         Height = float(atr['HEIGHT'])
         az_step = float(atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
     elif processor == 'gamma':
-        atr = readfile.attribute_gamma2roipac(atr)
+        try: atr = readfile.attribute_gamma2roipac(atr)
+        except: pass
         az_step = float(atr['AZIMUTH_PIXEL_SIZE'])
     return az_step
 

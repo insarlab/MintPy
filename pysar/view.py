@@ -1275,9 +1275,9 @@ def main(argv):
 
         # Output message
         if k in multi_dataset_hdf5_file:
-            print 'dates in file '+inps.file+':\n'+str(epochList)
-            print 'dates to exclude:'+'\n'+str(inps.exclude_epoch)
-            print 'dates to display:'+'\n'+str(inps.epoch)
+            print 'num of dates in file %s : %d' % (inps.file, len(epochList))
+            print 'dates to exclude (%d):' % (len(inps.exclude_epoch));     print inps.exclude_epoch
+            print 'dates to display (%d):' % (len(inps.epoch));             print inps.epoch
         else:
             print 'num of dates in file   :'+str(len(epochList))
             print 'num of dates to exclude:'+str(len(inps.exclude_epoch))

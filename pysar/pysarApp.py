@@ -294,29 +294,29 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 ## 5. Network Inversion
 ## Invert network of interferograms into time series
-## For no/uniform weight approach, use Singular-Value Decomposition (SVD) if network are not fully connected
-## For weighted approach, use weighted least square (WLS) solution.
 ## Temporal coherence (weighted) is calculated using Tazzani et al. (2007, IEEE-TGRS)
-pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
+## For no/uniform weight approach, use Singular-Value Decomposition (SVD) if network are not fully connected
+## For weighted approach, use weighted least square (WLS) solution with the following weighting functions:
+##     variance - phase variance due to temporal decorrelation (Yunjun et al., 2017, in prep)
+##     no       - no weight, or ordinal inversion with uniform weight (Berardino et al., 2002, IEEE-TGRS)
+##     linear   - uniform distribution CDF function (Tong et al., 2016, RSE)
+##     normal   - normal  distribution CDF function (Perissin, SARProZ)
+pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
 pysar.timeseriesInv.coherenceFile = auto #[fname / no], auto for coherence.h5, file to read weight data
 pysar.timeseriesInv.minCoherence  = auto #[0.0-1.0], auto for 0.20, put 0 weight for pixels with coherence < input
 pysar.timeseriesInv.maxCoherence  = auto #[0.0-1.0], auto for 0.85, put 1 weight for pixels with coherence > input
-pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
-                                         #variance - phase variance due to temporal decorrelation
-                                         #no - no weight, or ordinal inversion with uniform weight
-                                         #linear - uniform distribution CDF function
-                                         #normal - normal  distribution CDF function
+pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 
 
-## 6. Local Oscillator Drift (LOD) Correction (for Envisat only, no need to setup, it runs automatically)
+## 6. Local Oscillator Drift (LOD) Correction (for Envisat only, Marinkovic and Larsen, 2013, Proc. LPS)
 ## correct LOD if input dataset comes from Envisat and in radar coordinate
 ## skip this step for all the other satellites.
 
 
 ## 7. Tropospheric Delay Correction
 ## correct tropospheric delay using the following methods:
-## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS)
+## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS; Dee et al., 2011)
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
 ## c. base_trop_cor - (not recommend) baseline error and stratified tropo simultaneously (Jo et al., 2010, Geo J)
 pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / base_trop_cor / no], auto for pyaps

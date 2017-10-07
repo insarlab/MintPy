@@ -516,8 +516,11 @@ def read_isce_xml(File):
     return xml_dict
 
 
-def attribute_gamma2roipac(par_dict):
+def attribute_gamma2roipac(par_dict_in):
     '''Convert Gamma par attribute into ROI_PAC format'''
+    par_dict = dict()
+    for key, value in par_dict_in.iteritems():
+        par_dict[key] = value
     key_list = par_dict.keys()
 
     # Length - number of rows
