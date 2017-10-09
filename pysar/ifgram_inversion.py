@@ -47,8 +47,13 @@ import pysar._pysar_utilities as ut
 ################################################################################################
 def round_to_1(x):
     '''Return the most significant digit of input number'''
-    return round(x, -int(np.floor(np.log10(abs(x)))))
+    digit = int(np.floor(np.log10(abs(x))))
+    return round(x, -digit)
 
+def ceil_to_1(x):
+    '''Return the most significant digit of input number and ceiling it'''
+    digit = int(np.floor(np.log10(abs(x))))
+    return round(x, -digit)+10**digit
 
 def network_inversion_sbas(B, ifgram, tbase_diff, B_inv=None):
     ''' Network inversion based on Small BAseline Subsets (SBAS) algorithm (Berardino et al.,
@@ -122,15 +127,15 @@ def temporal_coherence(A, ts, ifgram, weight=None, chunk_size=500):
         temp_coh = np.zeros(pixel_num, np.float32)
 
         chunk_num = int((pixel_num-1)/chunk_size) + 1
-        prog_bar = ptime.progress_bar(maxValue=chunk_num)
+        #prog_bar = ptime.progress_bar(maxValue=chunk_num)
         for i in range(chunk_num):
             p0 = i*chunk_size
             p1 = min([p0+chunk_size, pixel_num])
             ifgram_diff = ifgram[:,p0:p1] - np.dot(A, ts[:,p0:p1])
             temp_coh[p0:p1] = np.abs(np.sum(np.multiply(weight[:,p0:p1], np.exp(1j*ifgram_diff)), axis=0)) /\
                               np.sum(weight[:,p0:p1], axis=0)
-            prog_bar.update(i+1, every=10, suffix=str(p1)+'/'+str(pixel_num))
-        prog_bar.close()
+            #prog_bar.update(i+1, every=10, suffix=str(p1)+'/'+str(pixel_num))
+        #prog_bar.close()
     return temp_coh
 
 
@@ -163,6 +168,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
     if not box:
         box = (0,0,meta['width'],meta['length'])
     c0,r0,c1,r1 = box
+    print 'processing %8d/%d lines ...' % (r1, meta['length'])
 
     ## Initiate output data matrixs
     row_num = r1-r0
@@ -192,14 +198,14 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
 
     print 'reading interferograms ...'
     h5ifgram = h5py.File(ifgramFile,'r')
-    prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+    #prog_bar = ptime.progress_bar(maxValue=ifgram_num)
     for j in range(ifgram_num):
         ifgram = meta['ifgram_list'][j]
         d = h5ifgram['interferograms'][ifgram].get(ifgram)[r0:r1,c0:c1]
         ifgram_data[j] = d.flatten()[mask]
-        prog_bar.update(j+1, suffix=date12_list[j])
+        #prog_bar.update(j+1, suffix=date12_list[j])
     h5ifgram.close()
-    prog_bar.close()
+    #prog_bar.close()
     ifgram_data -= meta['ref_value']
 
     ##### Design matrix
@@ -220,15 +226,15 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
         print 'reading coherence ...'
         h5coh = h5py.File(coherenceFile,'r')
         coh_list = sorted(h5coh['coherence'].keys())
-        prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+        #prog_bar = ptime.progress_bar(maxValue=ifgram_num)
         for j in range(ifgram_num):
             ifgram = coh_list[j]
             d = h5coh['coherence'][ifgram].get(ifgram)[r0:r1,c0:c1]
             d[np.isnan(d)] = 0.
             coh_data[j] = d.flatten()[mask]
-            prog_bar.update(j+1, suffix=date12_list[j])
+            #prog_bar.update(j+1, suffix=date12_list[j])
         h5coh.close()
-        prog_bar.close()
+        #prog_bar.close()
 
         ##### Calculate Weight matrix
         weight = coh_data
@@ -253,13 +259,13 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
             print 'convert coherence to weight using CDF of normal distribution: N(%f, %f)' % (mu, std)
             chunk_size = 1000
             chunk_num = int(pixel_num2inv-1/chunk_size)+1
-            prog_bar = ptime.progress_bar(maxValue=chunk_num)
+            #prog_bar = ptime.progress_bar(maxValue=chunk_num)
             for k in range(chunk_num):
                 p0 = (k-1)*chunk_size
                 p1 = min([pixel_num2inv, p0+chunk_size])
                 weight[:,p0:p1] = norm.cdf(weight[:,p0:p1], mu, std)
-                prog_bar.update(k+1, every=10)
-            prog_bar.close()
+                #prog_bar.update(k+1, every=10)
+            #prog_bar.close()
             #weight = norm.cdf(weight, mu, std)
         else:
             print 'Un-recognized weight function: %s' % meta['weight_function']
@@ -278,7 +284,20 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
 
     ts = ts.reshape(date_num, row_num, col_num)
     temp_coh = temp_coh.reshape(row_num, col_num)
-    return ts, temp_coh
+
+    ##Write to temp hdf5 files for parallel processing
+    if meta['parallel']:
+        fname = meta['ftemp_base']+str(int(r0/meta['row_step']))+'.h5'
+        print 'writing >>> '+fname
+        h5temp = h5py.File(fname, 'w')
+        group = h5temp.create_group('timeseries')
+        dset = group.create_dataset('timeseries', shape=(date_num+1, row_num, col_num), dtype=np.float32)
+        dset[0:-1,:,:] = ts
+        dset[1,:,:] = temp_coh
+        h5temp.close()
+        return
+    else:
+        return ts, temp_coh
 
 
 def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5', meta=None):
@@ -380,23 +399,72 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
 
 
     ##### Inverse time-series phase
-    timeseries = np.zeros((date_num, length, width), np.float32)
-    temp_coh = np.zeros((length, width), np.float32)
+    ##Check parallel environment
+    if meta['weight_function'] in ['no','uniform']:
+        meta['parallel'] = False
+    if meta['parallel']:
+        num_cores, meta['parallel'], Parallel, delayed = ut.check_parallel(1000, print_msg=False)
 
-    r_step = meta['chunk_size']/ifgram_num/width
-    if meta['weight_function'] not in ['no','uniform']:
-        r_step /= 2
-    r_step = int(round_to_1(r_step))
+    ##Split into chunks to reduce memory usage
+    r_step = meta['chunk_size']/ifgram_num/width         #split in lines
+    if meta['weight_function'] not in ['no','uniform']:  #more memory usage (coherence) for WLS
+        r_step /= 2.0
+        if meta['parallel']:
+            r_step /= num_cores
+    r_step = int(ceil_to_1(r_step))
+    meta['row_step'] = r_step
     chunk_num = int((length-1)/r_step)+1
-    print 'maximum chunk size: %.1E' % (meta['chunk_size'])
-    print 'divide the whole dataset into %d patches for processing' % (chunk_num)
-    print 'each patch has up to %d*%d pixels' % (r_step, width)
+
+    if chunk_num > 1:
+        print 'maximum chunk size: %.1E' % (meta['chunk_size'])
+        print 'split %d lines into %d patches for processing' % (length, chunk_num)
+        print '    with each patch up to %d lines' % (r_step)
+        if meta['parallel']:
+            print 'parallel processing using %d cores ...' % (min([num_cores,chunk_num]))
+
+    ##Computing the inversion
+    box_list = []
     for i in range(chunk_num):
         r0 = i*r_step
         r1 = min([length, r0+r_step])
-        print 'processing %8d/%d lines ...' % (r1, length)
         box = (0,r0,width,r1)
-        timeseries[:,r0:r1,:], temp_coh[r0:r1,:] = ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box)
+        box_list.append(box)
+
+    if not meta['parallel']:
+        timeseries = np.zeros((date_num, length, width), np.float32)
+        temp_coh = np.zeros((length, width), np.float32)
+        for box in box_list:
+            ts, tcoh = ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box)
+            timeseries[:,box[1]:box[3],box[0]:box[2]] = ts
+            temp_coh[box[1]:box[3],box[0]:box[2]] = tcoh
+
+    else:
+        ##Temp file list
+        meta['ftemp_base'] = 'timeseries_temp_'
+        temp_file_list = [meta['ftemp_base']+str(i)+'.h5' for i in range(chunk_num)]
+
+        ##Computation
+        Parallel(n_jobs=num_cores)(delayed(ifgram_inversion_patch)\
+                                   (ifgramFile, coherenceFile, meta, box) for box in box_list)
+
+        ##Concatenate temp files
+        print 'concatenating temporary timeseries files ...'
+        timeseries = np.zeros((date_num, length, width), np.float32)
+        temp_coh = np.zeros((length, width), np.float32)
+        rmCmd = 'rm'
+        for i in range(chunk_num):
+            fname = temp_file_list[i]
+            box = box_list[i]
+            print 'reading '+fname
+            h5temp = h5py.File(fname, 'r')
+            dset = h5temp['timeseries'].get('timeseries')
+            timeseries[:,box[1]:box[3],box[0]:box[2]] = dset[0:-1,:,:]
+            temp_coh[box[1]:box[3],box[0]:box[2]] = dset[-1,:,:]
+            h5temp.close()
+            rmCmd += ' '+fname
+        print rmCmd
+        os.system(rmCmd)
+
 
     ##### Calculate time-series attributes
     print 'calculating perpendicular baseline timeseries'
@@ -542,15 +610,20 @@ EXAMPLE='''example:
 '''
 
 TEMPLATE='''
-pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
+## Invert network of interferograms into time series
+## Temporal coherence (weighted) is calculated using Tazzani et al. (2007, IEEE-TGRS)
+## For no/uniform weight approach, use Singular-Value Decomposition (SVD) if network are not fully connected
+## For weighted approach, use weighted least square (WLS) solution with the following weighting functions:
+##     variance - phase variance due to temporal decorrelation (Yunjun et al., 2017, in prep)
+##     no       - no weight, or ordinal inversion with uniform weight (Berardino et al., 2002, IEEE-TGRS)
+##     linear   - uniform distribution CDF function (Tong et al., 2016, RSE)
+##     normal   - normal  distribution CDF function (Perissin, SARProZ)
+pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
 pysar.timeseriesInv.coherenceFile = auto #[fname / no], auto for coherence.h5, file to read weight data
 pysar.timeseriesInv.minCoherence  = auto #[0.0-1.0], auto for 0.20, put 0 weight for pixels with coherence < input
 pysar.timeseriesInv.maxCoherence  = auto #[0.0-1.0], auto for 0.85, put 1 weight for pixels with coherence > input
-pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
-                                         #variance - phase variance due to temporal decorrelation
-                                         #no - no weight, or ordinal inversion with uniform weight
-                                         #linear - uniform distribution CDF function
-                                         #normal - normal  distribution CDF function
+pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
+pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 '''
 
 REFERENCE='''references:
@@ -593,10 +666,11 @@ def cmdLineParse():
     parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.5e9,\
                         help='max number of data (= ifgram_num * row_num * col_num) to read per loop\n'+\
                              'default: 0.5G; adjust it according to your computer memory.')
-    #parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
-    #                    help='Disable parallel processing.')
+    parser.add_argument('--parallel', dest='parallel',action='store_true',\
+                        help='Enable parallel processing for the pixelwise weighted inversion. [not working yet]')
 
     inps = parser.parse_args()
+    inps.parallel = False
     return inps
 
 

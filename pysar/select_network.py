@@ -58,76 +58,152 @@ def project_name2sensor(projectName):
 
 def read_template2inps(templateFile, inps=None):
     '''Read network options from template file into Namespace variable inps'''
-    template_dict = readfile.read_template(templateFile)
-    if not template_dict:
+    if not inps:
+        inps = cmdLineParse()
+
+    ##Read template file
+    template = readfile.read_template(templateFile)
+    key_list = template.keys()
+    if not template:
         print 'Empty template: '+templateFile
         return None
-    keyList = template_dict.keys()
+    prefix = 'select.network.'
 
-    if not inps:
-        inps = cmdLineParse([''])
+    ##Extra keys
+    #extra_key_list = ['masterDate','startDate','endDate']
+    #for extra_key in extra_key_list:
+    #    if extra_key in key_list:
+    #        template[prefix+extra_key] = template[extra_key]
 
-    # Read network option regardless of prefix
-    for key in keyList:
-        if 'selectPairs.'    in key:   template_dict[key.split('selectPairs.')[1]]    = template_dict[key]
-        if 'pysar.network.'  in key:   template_dict[key.split('pysar.network.')[1]]  = template_dict[key]
-        if 'select.network.' in key:   template_dict[key.split('select.network.')[1]] = template_dict[key]
-    keyList = template_dict.keys()
-    for key, value in template_dict.iteritems():
-        if value.lower() in ['off','false','n']:  template_dict[key] = 'no'
-        if value.lower() in ['on', 'true', 'y']:  template_dict[key] = 'yes'
+    #Check option prefix
+    for i in ['selectPairs.']:
+        if any(i in key for key in key_list):
+            print '\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+            print 'WARNING: un-supported option prefix detected: selectPairs.'
+            print "         Use selectNetwork. instead"
+            print '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
 
-    # Update inps value if not existed
-    if not inps.method:
-        if   'selectMethod' in keyList:  inps.method = template_dict['selectMethod']
-        elif 'method'       in keyList:  inps.method = template_dict['method']
-        else: inps.method = 'all'
+    if all(prefix not in key for key in key_list):
+        print '\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+        print 'ERROR: no valid input option deteced in template file!'
+        print 'Check the template below for supported options:'
+        print '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
+        print TEMPLATE
+        sys.exit(-1)
 
-    if not inps.perp_base_max:
-        if 'perpBaseMax'  in keyList:  inps.perp_base_max = float(template_dict['perpBaseMax'])
-        else: inps.perp_base_max = 500.0
 
-    if not inps.temp_base_max:
-        if 'lengthDayMax'   in keyList:  inps.temp_base_max = float(template_dict['lengthDayMax'])
-        elif 'tempBaseMax'  in keyList:  inps.temp_base_max = float(template_dict['tempBaseMax'])
-        else: inps.temp_base_max = 1800.0
+    ##Read template dict into inps namespace
+    key = prefix+'method'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.method = 'all'
+        else:
+            inps.method = value
 
-    if not inps.temp_base_min:
-        if 'lengthDayMin'   in keyList:  inps.temp_base_min = float(template_dict['lengthDayMin'])
-        elif 'tempBaseMin'  in keyList:  inps.temp_base_min = float(template_dict['tempBaseMin'])
-        else: inps.temp_base_min = 0.0
+    key = prefix+'referenceFile'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto','no']:
+            inps.reference_file = None
+        else:
+            inps.reference_file = value
 
-    if 'seasonal'     in keyList and template_dict['seasonal'].lower()     == 'no': inps.keep_seasonal = False
-    if 'keepSeasonal' in keyList and template_dict['keepSeasonal'].lower() == 'no': inps.keep_seasonal = False
+    key = prefix+'perpBaseMax'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.perp_base_max = 500.0
+        elif value == 'no':
+            inps.perp_base_max = 1e5
+        else:
+            inps.perp_base_max = float(value)
 
-    if not inps.dop_overlap_min:
-        if 'DopOverlapThresh'   in keyList:  inps.dop_overlap_min = float(template_dict['DopOverlapThresh'])
-        elif 'dopOverlapThresh' in keyList:  inps.dop_overlap_min = float(template_dict['dopOverlapThresh'])
-        elif 'dopOverlapMin'    in keyList:  inps.dop_overlap_min = float(template_dict['dopOverlapMin'])
-        else: inps.dop_overlap_min = 15.0
+    key = prefix+'tempBaseMax'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.temp_base_max = 1800.0
+        elif value == 'no':
+            inps.temp_base_max = 3.65e5
+        else:
+            inps.temp_base_max = float(value)
 
-    if not inps.reference_file and 'referenceFile' in keyList:  inps.reference_file = template_dict['referenceFile']
-    if not inps.increment_num:
-        if 'incrementNum'  in keyList:  inps.increment_num  = int(template_dict['incrementNum'])
-        else: inps.increment_num = 3
+    key = prefix+'tempBaseMin'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto','no']:
+            inps.temp_base_min = 0.0
+        else:
+            inps.temp_base_min = float(value)
 
-    if not inps.temp_perp_list:
-        if 'dayPerpList'    in keyList:  inps.temp_perp_list = template_dict['dayPerpList']
-        elif 'tempPerpList' in keyList:  inps.temp_perp_list = template_dict['tempPerpList']
-        else: inps.temp_perp_list = '16,1600;32,800;48,600;64,200'
+    key = prefix+'keepSeasonal'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto','no']:
+            inps.keep_seasonal = False
+        else:
+            inps.keep_seasonal = True
+
+    key = prefix+'dopOverlapMin'
+    if key in key_list:
+        value = template[key]
+        if value == 'auto':
+            inps.dop_overlap_min = 15.0
+        elif value == 'no':
+            inps.dop_overlap_min = 0.0
+        else:
+            inps.dop_overlap_min = float(value)
+
+    key = prefix+'masterDate'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto','no']:
+            inps.m_date = None
+        else:
+            inps.m_date = ptime.yymmdd(value)
+
+    key = prefix+'startDate'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto','no']:
+            inps.start_date = None
+        else:
+            inps.start_date = ptime.yyyymmdd(value)
+
+    key = prefix+'endDate'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto','no']:
+            inps.end_date = None
+        else:
+            inps.end_date = ptime.yyyymmdd(value)
+
+    key = prefix+'excludeDate'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto','no']:
+            inps.exclude_date = []
+        else:
+            inps.exclude_date = ptime.yyyymmdd([i for i in value.split(',')])
+
+    key = prefix+'incrementNum'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto']:
+            inps.increment_num = 3
+        else:
+            inps.increment_num = int(value)
+
+    key = prefix+'tempPerpList'
+    if key in key_list:
+        value = template[key]
+        if value in ['auto']:
+            inps.temp_perp_list = '16,1600;32,800;48,600;64,200'
+        else:
+            inps.temp_perp_list = value
+    if isinstance(inps.temp_perp_list, basestring):
         inps.temp_perp_list = [[float(j) for j in i.split(',')] for i in inps.temp_perp_list.split(';')]
-
-    if not inps.exclude_date and 'excludeDate' in keyList:
-        ex_date_list = [i for i in template_dict['excludeDate'].split(',')]
-        inps.exclude_date = ptime.yymmdd(ex_date_list)
-
-    if not inps.start_date and 'startDate' in keyList:
-        inps.start_date = ptime.yyyymmdd(template_dict['startDate'])
-    if not inps.end_date and 'endDate' in keyList:
-        inps.end_date = ptime.yyyymmdd(template_dict['endDate'])
-
-    if not inps.m_date and 'masterDate' in keyList:
-        inps.m_date = ptime.yymmdd(template_dict['masterDate'])
 
     return inps
 
@@ -146,29 +222,6 @@ REFERENCE='''References:
     dissertation, Univ. of Miami, Section 6.3.
 '''
 
-METHOD='''
-all          - all possible pairs, pair number = N*(N-1)/2 where N is acquisition num 
-               default, (Berardino et al., 2002, TGRS).
-delaunay     - Delaunay triangulation (Fattahi and Amelung, 2013, TGRS).
-               By default, temporal baseline is normalized using a maxPerpDiff/maxTempDiff
-               ratio (Pepe and Lanari, 2006, TGRS);
-               to disable this, use 'delaunay-noweight' option.
-hierarchical - Select pairs in a hierarchical way using a list of temp/perp thresholds
-               (Zhao, 2015, PhD Thesis)
-               i.e. 16 days, 1600 m
-                    32 days, 800  m
-                    48 days, 600  m
-                    64 days, 200  m
-mst          - Minimum Spanning Tree (Perissin and Wang, 2012, TGRS).
-               Find the MST based on the graph of temporal and perpendicular matrix.
-sequential   - for each acquisition, select its incrementNum nearest neighbors in the past
-               (Fattahi and Amelung, 2013, TGRS). 
-               Pair number = N*m - m*(m-1)/2; it's N when m = 1.
-               Designed for new satellites like Sentinel-1 and ALOS-2.
-star         - Star-like/PS-like network/pairs, single common master interferogram
-               (Ferretti et al., 2001, TGRS)
-'''
-
 EXAMPLE='''Examples:
   select_network.py KirishimaT246EnvD2.template
   select_network.py KirishimaT246EnvD2.template -b bl_list.txt
@@ -178,22 +231,48 @@ EXAMPLE='''Examples:
 '''
 
 TEMPLATE='''Template:
-select.network.method        = all              # all,hierarchical,sequential,mst,delaunay,star
-select.network.perpBaseMax   = 500              # max perpendicular baseline
-select.network.tempBaseMax   = 365              # max      temporal baseline
-select.network.tempBaseMin   = 0                # min       emporal baseline
-select.network.keepSeasonal  = yes              # keep pairs with seasonal temporal baseline, default: no
-select.network.dopOverlapMin = 15               # min dopploer overlap percentage
+## Select network (interferogram combination) in two steps
+## 1) select initial network using method / reference File
+## 2) filter network/pairs using temp/perp baseline, doppler overlap threshold, etc.
+## selection method includes:
+##     all          - all possible pairs, pair number = N*(N-1)/2 where N is acquisition num 
+##                    default, (Berardino et al., 2002, TGRS).
+##     delaunay     - Delaunay triangulation (Fattahi and Amelung, 2013, TGRS).
+##                    By default, temporal baseline is normalized using a maxPerpDiff/maxTempDiff
+##                    ratio (Pepe and Lanari, 2006, TGRS), use 'delaunay-noweight' to disable normalization. 
+##     hierarchical - Select pairs in a hierarchical way using a list of temp/perp thresholds
+##                    select.network.tempPerpList
+##                    (Zhao, 2015, PhD Thesis)
+##                    i.e. 16 days, 1600 m
+##                         32 days, 800  m
+##                         48 days, 600  m
+##                         64 days, 200  m
+##     mst          - Minimum Spanning Tree (Perissin and Wang, 2012, TGRS).
+##                    Find the MST based on the graph of temporal and perpendicular matrix.
+##     sequential   - for each acquisition, select its incrementNum nearest neighbors in the past
+##                    (Fattahi and Amelung, 2013, TGRS). 
+##                    Pair number = N*m - m*(m-1)/2; it's N when m = 1.
+##                    Designed for new satellites like Sentinel-1 and ALOS-2.
+##     star / ps    - Star-like/PS-like network/pairs, single common master interferogram
+##                    (Ferretti et al., 2001, TGRS)
+select.network.method        = auto  #[all / hierarchical / sequential / mst / delaunay / star], auto for all
+select.network.referenceFile = auto  #[fname / no], auto for no, HDF5 or text file with pairs info
 
-select.network.startDate     = 20070101
-select.network.endDate       = 20110101
-select.network.excludeDate   = 080520,100726    # exclude dates for pairs selection
+select.network.perpBaseMax   = auto  #[1-inf / no], auto for 500., max perpendicular spatial baseline
+select.network.tempBaseMax   = auto  #[1-inf / no], auto for 1800., max temporal baseline
+select.network.tempBaseMin   = auto  #[1-inf], auto for 0.,   min temporal baseline
+select.network.keepSeasonal  = auto  #[yes / no], auto for no, keep pairs with seasonal temporal baseline
+select.network.dopOverlapMin = auto  #[1-inf / no], auto for 15., min dopploer overlap percentage
 
-select.network.referenceFile = unwrapIfgram.h5  # [ifgram_list.txt] reference HDF5/list file with pairs info
-select.network.incrementNum  = 2                # for sequential method, pairs num per new acquisition
-select.network.tempPerpList  = 16,1600;32,800;48,600;64,200  # for hierarchical method, list of max temp/perp baseline
-select.network.masterDate    = 100102           # master date for star/ps network
+select.network.masterDate    = auto  #[100102 / no], auto for no, master date for star/ps network and reference interferogram
+select.network.startDate     = auto  #[070101 / no], auto for no, date in YYMMDD or YYYYMMDD format
+select.network.endDate       = auto  #[110101 / no], auto for no
+select.network.excludeDate   = auto  #[080520,100726 / no], auto for no, exclude dates for pairs selection
+
+select.network.incrementNum  = auto  #[1-inf], auto for 3, for sequential method, pairs num per new acquisition
+select.network.tempPerpList  = auto  #[btemp1,bperp1;...], auto for '16,1600;32,800;48,600;64,200'; max temp/perp baseline
 '''
+
 
 def cmdLineParse():
     parser = argparse.ArgumentParser(description='Select Interferometric Network / Pairs.',\
@@ -210,7 +289,7 @@ def cmdLineParse():
     # Method
     method = parser.add_argument_group('Methods to generate the initial network')
     method.add_argument('--method', \
-                        help='network type with info on temp/perp baseline and doppler centroid frequency.'+METHOD)
+                        help='network type with info on temp/perp baseline and doppler centroid frequency.')
     method.add_argument('-r', dest='reference_file',\
                         help='Reference hdf5 / list file with network information. e.g.\n'+\
                              'unwrapIfgram.h5\n'+\
@@ -223,7 +302,7 @@ def cmdLineParse():
     method.add_argument('--end-date', dest='end_date', type=str, help='end/max date of network')
     method.add_argument('--increment-num', dest='increment_num', type=int,\
                         help='number of new pairs for each new acquisition, for sequential method')
-    method.add_argument('--temp-perp-list', dest='temp_perp_list',\
+    method.add_argument('--temp-perp-list', dest='temp_perp_list', default='16,1600;32,800;48,600;64,200',\
                         help='list of max temp/perp baselines, for hierarchical method, e.g.\n'+\
                              '--temp-perp-list 16,1600;32,800;48,600;64,200')
     method.add_argument('--no-norm', dest='norm', action='store_false',\
@@ -403,7 +482,7 @@ def main(argv):
     fig1, ax1 = plt.subplots()
     ax1 = pnet.plot_network(ax1, date12_list, date8_list, pbase_list)
     plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
-    
+
     if inps.disp_fig:
         plt.show()
 
