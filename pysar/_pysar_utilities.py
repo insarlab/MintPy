@@ -982,7 +982,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         box = (0,0,width,length)
 
     # Convert input mask argument (maskFile) to mask file name (maskFile) and matrix (mask)
-    if not maskFile:
+    if maskFile is None:
         maskFile = None
         mask = None
     elif type(maskFile) is str:
