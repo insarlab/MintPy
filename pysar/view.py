@@ -309,7 +309,7 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
 def check_colormap_input(atr_dict, colormap=None):
     if not colormap:
         if atr_dict['FILE_TYPE'] in ['coherence','temporal_coherence','.cor',\
-                                     '.mli','.slc','.amp']:
+                                     '.mli','.slc','.amp','.ramp']:
               colormap = 'gray'
         else: colormap = 'jet'
     print 'colormap: '+colormap
@@ -574,7 +574,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
     elif data_unit[0] == '1':
         if disp_unit[0] == 'db':
             ind = np.nonzero(matrix)
-            matrix[ind] = np.log10(np.absolute(matrix[ind]))
+            matrix[ind] = 10*np.log10(np.absolute(matrix[ind]))
             disp_unit[0] = 'dB'
         else:
             print 'Un-scalable display unit: '+disp_unit[0]
@@ -1500,7 +1500,8 @@ def main(argv):
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
                     if inps.ref_date:
                         data -= ref_data
-                    subplot_title = dt.strptime(epoch, '%Y%m%d').isoformat()[0:10]
+                    try:    subplot_title = dt.strptime(epoch, '%Y%m%d').isoformat()[0:10]
+                    except: subplot_title = epoch
                 elif k in multi_group_hdf5_file:
                     if inps.fig_row_num*inps.fig_col_num > 100:
                         subplot_title = str(epochList.index(epoch)+1)

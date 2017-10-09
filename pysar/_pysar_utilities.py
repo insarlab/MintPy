@@ -1267,7 +1267,7 @@ def mode (thelist):
 
 
 ######################################################################################################
-def range_resolution(atr, print_msg=True):
+def range_ground_resolution(atr, print_msg=False):
     '''Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
     if 'X_FIRST' in atr.keys():
         print 'Input file is in geo coord, no range resolution info.'
@@ -1276,14 +1276,14 @@ def range_resolution(atr, print_msg=True):
     rg_step = float(atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
     return rg_step
 
-def azimuth_resolution(atr):
+def azimuth_ground_resolution(atr):
     '''Get azimuth resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
     if 'X_FIRST' in atr.keys():
         print 'Input file is in geo coord, no azimuth resolution info.'
         return
     try:    processor = atr['INSAR_PROCESSOR']
     except: processor = atr['PROCESSOR']
-    if processor == 'roipac':
+    if processor in ['roipac','isce']:
         Re = float(atr['EARTH_RADIUS'])
         Height = float(atr['HEIGHT'])
         az_step = float(atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
@@ -1325,8 +1325,8 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_msg=Tr
 
         # Get range/azimuth ground resolution/step in meter
         if atr_rdr:
-            az_step = azimuth_resolution(atr_rdr)
-            rg_step = range_resolution(atr_rdr, print_msg)
+            az_step = azimuth_ground_resolution(atr_rdr)
+            rg_step = range_ground_resolution(atr_rdr, print_msg)
             try:    az0 = int(atr_rdr['subset_y0'])
             except: az0 = 0
             try:    rg0 = int(atr_rdr['subset_x0'])
@@ -1435,8 +1435,8 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True
 
         # Get range/azimuth ground resolution/step
         if atr_rdr:
-            az_step = azimuth_resolution(atr_rdr)
-            rg_step = range_resolution(atr_rdr, print_msg)
+            az_step = azimuth_ground_resolution(atr_rdr)
+            rg_step = range_ground_resolution(atr_rdr, print_msg)
 
             x_factor = 2*np.ceil(abs(lon_step)/rg_step)
             y_factor = 2*np.ceil(abs(lat_step)/az_step)

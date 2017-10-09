@@ -50,7 +50,7 @@ Recommend usage:
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 '''
 multi_group_hdf5_file=['interferograms','coherence','wrapped','snaphu_connect_component']
-multi_dataset_hdf5_file=['timeseries']
+multi_dataset_hdf5_file=['timeseries','geometry']
 single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
 
 
@@ -236,8 +236,12 @@ def read(File, box=(), epoch=None):
                 print 'Un-recognized epoch input: '+epoch
                 sys.exit(1)
 
-        elif ext == '.mli':
+        elif ext in ['.mli']:
             data,atr = read_real_float32(File)
+            if box: data = data[box[1]:box[3],box[0]:box[2]]
+            return data, atr
+        elif ext in ['.amp','.ramp']:
+            data,atr = read_real_float32(File, byteorder='ieee-be')
             if box: data = data[box[1]:box[3],box[0]:box[2]]
             return data, atr
 
@@ -476,6 +480,8 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
             value = str.replace(c[1],'\n','').split("#")[0].split()[0].strip()
             par_dict[key] = value
     f.close()
+
+    par_dict = attribute_gamma2roipac(par_dict)
 
     return par_dict
 

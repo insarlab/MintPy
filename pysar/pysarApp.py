@@ -218,27 +218,30 @@ TEMPLATE='''# vim: set filetype=cfg:
 ##------------------------ pysarApp_template.txt ------------------------##
 ## 1. Load Data (--load to exit after this step)
 ## recommended input files for data in radar coordinates:
-##     pysar.unwrapFiles         = 'path of all unwrapped interferograms'
-##     pysar.corFiles            = 'path of all coherence files'
-##     pysar.demFile.geoCoord    = 'path of DEM in geo   coordinates'
-##     pysar.demFile.radarCoord  = 'path of DEM in radar coordinates'
-##     pysar.transFile           = 'path of mapping transformation file'
+##     pysar.insarProcessor     = InSAR processor
+##     pysar.unwrapFiles        = 'path of all unwrapped interferograms'
+##     pysar.corFiles           = 'path of all coherence files'
+##     pysar.transFile          = 'path of mapping transformation file'
+##     pysar.demFile.geoCoord   = 'path of DEM in geo   coordinates'
+##     pysar.demFile.radarCoord = 'path of DEM in radar coordinates'
 ## recommended input files for data in geo coordinates:
+##     pysar.insarProcessor
 ##     pysar.unwrapFiles 
 ##     pysar.corFiles    
 ##     pysar.dem.geoCoord
 ## auto - automatic path pattern for Univ of Miami file structure, which are:
+##     pysar.insarProcessor     = roipac
 ##     pysar.unwrapFiles        = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
 ##     pysar.corFiles           = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
+##     pysar.transFile          = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
 ##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
-##     pysar.transFile          = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
-pysar.insarProcessor     = auto  #[roipac, gamma, isce, doris], auto for roipac, InSAR processor
-pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw], path of all unwrapped interferograms
-pysar.corFiles           = auto  #[filt*.cor, filt_*.cor], path of all coherence files
-pysar.transFile          = auto  #[geomap*.trans, sim*.UTM_TO_RDC], path of mapping transformation file
-pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim], path of DEM in radar coordinate
-pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem],      path of DEM in geo   coordinate
+pysar.insarProcessor     = auto  #[roipac, gamma, isce, doris], auto for roipac
+pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw]
+pysar.corFiles           = auto  #[filt*.cor, filt_*.cor]
+pysar.transFile          = auto  #[geomap*.trans, sim*.UTM_TO_RDC]
+pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim]
+pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem]
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)

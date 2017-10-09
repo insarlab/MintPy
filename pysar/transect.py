@@ -163,8 +163,8 @@ def transect_yx(z,atr,start_yx,end_yx,interpolation='nearest'):
         x_step = float(atr['X_STEP'])*np.pi/180.0*earth_radius*np.sin((lat0+lat1)/2*np.pi/180)
         y_step = float(atr['Y_STEP'])*np.pi/180.0*earth_radius
     except:
-        x_step = ut.range_resolution(atr)
-        y_step = ut.azimuth_resolution(atr)
+        x_step = ut.range_ground_resolution(atr)
+        y_step = ut.azimuth_ground_resolution(atr)
     dis_x = (x-x0)*x_step
     dis_y = (y-y0)*y_step
     transect[:,0] = np.hypot(dis_x,dis_y)
