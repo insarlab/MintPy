@@ -55,7 +55,7 @@ single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
 
 
 #########################################################################
-def read(File, box=(), epoch=None):
+def read(File, box=None, epoch=None):
     '''Read one dataset and its attributes from input file.
     
     Read one dataset, i.e. interferogram, coherence, velocity, dem ...
@@ -89,16 +89,14 @@ def read(File, box=(), epoch=None):
 
     # Basic Info
     ext = os.path.splitext(File)[1].lower()
+    fbase = os.path.splitext(os.path.basename(File))[0]
     atr = read_attribute(File, epoch)
     k = atr['FILE_TYPE']
     processor = atr['INSAR_PROCESSOR']
-
-    ## Update attributes if subset
-    #if box:
-    #    width = float(atr['WIDTH'])
-    #    length = float(atr['FILE_LENGTH'])
-    #    if (box[2]-box[0])*(box[3]-box[1]) < width*length:
-    #        atr = subset_attribute(atr, box)
+    length = int(float(atr['FILE_LENGTH']))
+    width = int(float(atr['WIDTH']))
+    if not box:
+        box = (0, 0, width, length)
 
     ##### HDF5
     if ext in ['.h5','.he5']:
@@ -127,11 +125,7 @@ def read(File, box=(), epoch=None):
             print 'ERROR: Unrecognized h5 file type: '+k
             sys.exit(1)
 
-        # Crop
-        if box:
-            data = dset[box[1]:box[3],box[0]:box[2]]
-        else:
-            data = dset[:,:]
+        data = dset[box[1]:box[3],box[0]:box[2]]
 
         h5file.close()
         return data, atr
@@ -139,126 +133,128 @@ def read(File, box=(), epoch=None):
     ##### Image
     elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
         atr = read_roipac_rsc(File+'.rsc')
-        data  = Image.open(File)
-        if box:  data = data.crop(box)
+        data  = Image.open(File).crop(box)
         return data, atr
 
     ##### ISCE
     elif processor in ['isce']:
         if k in ['.unw','unw']:
-            try:    amp, pha, atr = read_float32(File, box)
-            except: amp, pha, atr = read_float32(File)
+            amp, pha, atr = read_float32(File, box=box)
             return pha, atr
 
-        elif k in ['.flat','cpx']:
-            amp, data, atr = read_complex_float32(File)
         elif k in ['.cor','cor']:
-            data, atr = read_real_float32(File)
-        elif k in ['.slc']:
-            data, pha, atr = read_complex_float32(File)
-        else:
-            print 'Un-supported '+processor+' file format: '+ext
-            sys.exit(1)
+            data, atr = read_real_float32(File, box=box)
+            return data, atr
 
-        if box:
-            data = data[box[1]:box[3],box[0]:box[2]]
-        return data, atr
+        elif k in ['.int','int']:
+            amp, pha, atr = read_complex_float32(File, box=box, cpx=False)
+            return pha, atr
+
+        elif k in ['.slc']:
+            amp, pha, atr = read_complex_float32(File, box=box, cpx=False)
+            return amp, atr
+
+        elif k in ['.flat','cpx']:
+            amp, pha, atr = read_complex_float32(File, box=box, cpx=False)
+            return pha, atr
+
+        elif fbase.startswith('los'):
+            incAngle, azAngle, atr = read_float32(File, box=box)
+            if not epoch:
+                return incAngle, azAngle, atr
+            elif epoch.startswith('inc'):
+                return incAngle, atr
+            elif epoch.startswith(('az','head')):
+                return azAngle, atr
+            else:
+                sys.exit('Un-recognized epoch input: '+epoch)
+
+        elif atr['DATA_TYPE'].lower() in ['float64','double']:
+            data, atr = read_real_float64(File, box=box)
+            return data, atr
+        elif atr['DATA_TYPE'].lower() in ['cfloat32']:
+            data, atr = read_complex_float32(File, box=box, cpx=True)
+            return data, atr
+        elif atr['DATA_TYPE'].lower() in ['float32','float']:
+            data, atr = read_real_float32(File, box=box)
+            return data, atr
+        elif atr['DATA_TYPE'].lower() in ['int16','short']:
+            data, atr = read_real_int16(File, box=box)
+            return data, atr
+        elif atr['DATA_TYPE'].lower() in ['bool','byte','flag']:
+            data, atr = read_bool(File, box=box)
+            return data, atr
+        else:
+            sys.exit('Un-supported '+processor+' file format: '+os.path.basename(File))
 
     ##### ROI_PAC
     elif processor in ['roipac']:
         if ext in ['.unw','.cor','.hgt', '.msk']:
-            if box:
-                amp,pha,atr = read_float32(File,box)
-            else:
-                amp,pha,atr = read_float32(File)
+            amp, pha, atr = read_float32(File, box=box)
             return pha, atr
 
         elif ext in ['.dem']:
-            dem,atr = read_real_int16(File)
-            if box:  dem = dem[box[1]:box[3],box[0]:box[2]]
+            dem, atr = read_real_int16(File, box=box)
             return dem, atr
-  
+
         elif ext in ['.int']:
-            amp, pha, atr = read_complex_float32(File)
-            if box:
-                pha = pha[box[1]:box[3],box[0]:box[2]]
+            amp, pha, atr = read_complex_float32(File, box=box, cpx=False)
             return pha, atr
+
         elif ext in ['.amp']:
-            masterAmplitude, slaveAmplitude, atr = read_complex_float32(File, real_imag=True)
-            if box:
-                masterAmplitude = masterAmplitude[box[1]:box[3],box[0]:box[2]]
-                slaveAmplitude = slaveAmplitude[box[1]:box[3],box[0]:box[2]]
-            return masterAmplitude, slaveAmplitude, atr
+            amp, atr = read_complex_float32(File, box=box, cpx=True)
+            m_amp = amp.real
+            s_amp = amp.imag
+            return m_amp, s_amp, atr
+
         elif ext in ['.flg', '.byt']:
-            flag, atr = read_flag(File)
+            flag, atr = read_bool(File, box=box)
             return flag, atr
 
         elif ext in ['.trans']:
-            if box:
-                rg,az,atr = read_float32(File,box)
-            else:
-                rg,az,atr = read_float32(File)
-
+            rg, az, atr = read_float32(File, box=box)
             if not epoch:
-                #print 'read range and azimuth from '+File
                 return rg, az, atr
             elif epoch in ['rg','range']:
-                #print 'read range from '+File
                 return rg, atr
             elif epoch in ['az','azimuth']:
-                #print 'read azimuth from '+File
                 return az, atr
             else:
-                print 'Un-recognized epoch input: '+epoch
-                sys.exit(1)
+                sys.exit('Un-recognized epoch input: '+epoch)
 
     ##### Gamma
     elif processor == 'gamma':
         if ext in ['.unw','.cor','.hgt_sim','.dem']:
-            data, atr = read_real_float32(File, byteorder='ieee-be')
-            if box: data = data[box[1]:box[3],box[0]:box[2]]
+            data, atr = read_real_float32(File, box=box, byte_order='ieee-be')
             return data, atr
 
         elif ext in ['.UTM_TO_RDC', '.utm_to_rdc']:
-            data, atr = read_complex_float32(File, byteorder='ieee-be', real_imag=True)
-            if box: data = data[box[1]:box[3],box[0]:box[2]]
-
+            data, atr = read_complex_float32(File, box=box, byte_order='ieee-be', cpx=True)
             if not epoch:
-                #print 'read range and azimuth from '+File
                 return data.real, data.imag, atr
             elif epoch in ['rg','range']:
-                #print 'read range from '+File
                 return data.real, atr
             elif epoch in ['az','azimuth']:
-                #print 'read azimuth from '+File
                 return data.imag, atr
             else:
-                print 'Un-recognized epoch input: '+epoch
-                sys.exit(1)
+                sys.exit('Un-recognized epoch input: '+epoch)
 
         elif ext in ['.mli']:
-            data,atr = read_real_float32(File)
-            if box: data = data[box[1]:box[3],box[0]:box[2]]
+            data, atr = read_real_float32(File, box=box)
             return data, atr
+
         elif ext in ['.amp','.ramp']:
-            data,atr = read_real_float32(File, byteorder='ieee-be')
-            if box: data = data[box[1]:box[3],box[0]:box[2]]
+            data, atr = read_real_float32(File, box=box, byte_order='ieee-be')
             return data, atr
 
         elif ext == '.slc':
-            if box:
-                amplitude, phase,atr = read_complex_int16(File, box)
-            else:
-                amplitude, phase, atr = read_complex_int16(File)
-            del phase
-            return amplitude, atr
+            amp, pha, atr = read_complex_int16(File, box=box, cpx=False)
+            return amp, atr
 
         else:
-            print 'Un-supported '+processor+' for file format: '+ext
-            sys.exit(1)
+            sys.exit('Un-supported '+processor+' for file format: '+ext)
     else:
-        print 'Unrecognized file format: '+ext
-        sys.exit(1)
+        sys.exit('Unrecognized file format: '+ext)
 
 
 #########################################################################
@@ -314,12 +310,12 @@ def read_attribute(File, epoch=None):
     else:
         # attribute file list
         try:
-            potentialRscFileList = [File+'.rsc', File.split('_snap_connect.byt')[0]+'.unw.rsc']
-            rscFile = [rscFile for rscFile in potentialRscFileList if os.path.isfile(rscFile)][0]
+            rscFileList = [File+'.rsc', File.split('_snap_connect.byt')[0]+'.unw.rsc']
+            rscFile = [i for i in rscFileList if os.path.isfile(i)][0]
         except:
             rscFile = None
 
-        ##### ROI_PAC
+        ##### RSC File
         if rscFile:
             atr = read_roipac_rsc(rscFile)
             atr['FILE_TYPE'] = ext
@@ -330,7 +326,7 @@ def read_attribute(File, epoch=None):
             if 'INSAR_PROCESSOR' not in atr.keys():
                 atr['INSAR_PROCESSOR'] = 'roipac'
 
-        ##### GAMMA
+        ##### PAR File
         elif os.path.isfile(File+'.par'):
             atr = read_gamma_par(File+'.par')
             atr['FILE_TYPE'] = ext
@@ -341,10 +337,10 @@ def read_attribute(File, epoch=None):
             if 'INSAR_PROCESSOR' not in atr.keys():
                 atr['INSAR_PROCESSOR'] = 'gamma'
 
-        ##### ISCE
+        ##### XML File
         elif os.path.isfile(File+'.xml'):
             atr = read_isce_xml(File+'.xml')
-            if 'FILE_TYPE' not in atr.keys():  ## ISCE file extension could be .geo or .rdr - note related with file type
+            if 'FILE_TYPE' not in atr.keys():
                 atr['FILE_TYPE'] = ext
             atr['PROCESSOR'] = 'isce'
             if 'INSAR_PROCESSOR' not in atr.keys():
@@ -513,12 +509,6 @@ def read_isce_xml(File):
     except: pass
 
     xml_dict = attribute_isce2roipac(xml_dict)
-
-    #Date1=os.path.dirname(File).split('/')[-1].split('_')[0][2:]
-    #Date2=os.path.dirname(File).split('/')[-1].split('_')[1][2:]
-    #xml_dict['DATE12'] = Date1 + '-' + Date2
-    #xml_dict['DATE1'] = Date1
-    #xml_dict['DATE2'] = Date2
     return xml_dict
 
 
@@ -677,30 +667,66 @@ def attribute_gamma2roipac(par_dict_in):
     return par_dict
 
 
-def attribute_isce2roipac(xml_dict):
+def attribute_isce2roipac(metaDict, dates=[], baselineDict={}):
     '''Convert ISCE xml attribute into ROI_PAC format'''
-    key_list = xml_dict.keys()
 
-    # LENGTH
-    key = 'length'
-    if key in key_list:
-        xml_dict['FILE_LENGTH'] = xml_dict['length']
+    rscDict={}
+    for key in metaDict.keys():
+        rscDict[key] = str(metaDict[key]).strip().split()[0]
+    keyList = rscDict.keys()
 
-    # WIDTH
-    key = 'width'
-    if key in key_list:    
-        xml_dict['WIDTH'] = xml_dict['width']
+    rscDict['WIDTH'] = rscDict['width']
+    rscDict['FILE_LENGTH'] = rscDict['length']
 
-    # FILE_TYPE
-    key = 'image_type'
-    if key in key_list:
-        xml_dict['FILE_TYPE'] = xml_dict['image_type']
+    if 'dataType' in keyList:
+        rscDict['DATA_TYPE'] = rscDict['dataType']
+    if 'data_type' in keyList:
+        rscDict['DATA_TYPE'] = rscDict['data_type']
 
-    return xml_dict
+    if 'radarWavelength' in keyList:
+        rscDict['WAVELENGTH'] = rscDict['radarWavelength']
+
+    rscDict['PROCESSOR'] = 'isce'
+    rscDict['INSAR_PROCESSOR'] = 'isce'
+    rscDict['PLATFORM'] = 'Sentinel1'
+
+    if 'rangePixelSize' in keyList:
+        rscDict['RANGE_PIXEL_SIZE'] = rscDict['rangePixelSize']
+
+    if 'azimuthPixelSize' in keyList:
+        rscDict['AZIMUTH_PIXEL_SIZE'] = rscDict['azimuthPixelSize']
+
+    if 'earthRadius' in keyList:
+        rscDict['EARTH_RADIUS'] = rscDict['earthRadius']
+
+    if 'altitude' in keyList:
+        rscDict['HEIGHT'] = rscDict['altitude']
+
+    if 'startingRange' in keyList:
+        rscDict['STARTING_RANGE']  = rscDict['startingRange']
+        rscDict['STARTING_RANGE1'] = rscDict['startingRange']
+
+    rscDict['ANTENNA_SIDE'] = '-1'
+    if 'passDirection' in keyList:
+        rscDict['ORBIT_DIRECTION'] = rscDict['passDirection']
+
+    if dates:
+        rscDict['DATE12'] = str(dates[0][2:]+'-'+dates[1][2:])
+        #rscDict['DATE'] = str(dates[0])
+
+    if dates and baselineDict:
+        bperp = baselineDict['bperp'][dates[1]] - baselineDict['bperp'][dates[0]]
+        bpar  = baselineDict['bpar'][dates[1]]  - baselineDict['bpar'][dates[0]]
+        rscDict['P_BASELINE_TOP_HDR']    = str(bperp)
+        rscDict['P_BASELINE_BOTTOM_HDR'] = str(bperp)
+        rscDict['H_BASELINE_TOP_HDR']    = str(bpar)
+        rscDict['H_BASELINE_BOTTOM_HDR'] = str(bpar)
+
+    return rscDict
 
 
 #########################################################################
-def read_float32(File, box=None):
+def read_float32(File, box=None, byte_order='l'):
     '''Reads roi_pac data (RMG format, interleaved line by line)
     should rename it to read_rmg_float32()
     
@@ -729,33 +755,50 @@ def read_float32(File, box=None):
     if not box:
         box = [0,0,width,length]
 
-    data = np.fromfile(File,np.float32,box[3]*2*width).reshape(box[3],2*width)
-    amplitude = data[box[1]:box[3],box[0]:box[2]]
-    phase     = data[box[1]:box[3],width+box[0]:width+box[2]]
+    data_type = 'f4'
+    if byte_order in ['b','big','big-endian','ieee-be']:
+        data_type = '>f4'
 
-    #oddindices = np.where(np.arange(length*2)&1)[0]
-    #data = np.fromfile(File,np.float32,length*2*width).reshape(length*2,width)
-    #amplitude = np.array([data.take(oddindices-1,axis=0)]).reshape(length,width)
-    #phase     = np.array([data.take(oddindices,  axis=0)]).reshape(length,width)
+    data = np.fromfile(File, dtype=data_type, count=box[3]*2*width).reshape(box[3],2*width)
+    amplitude = data[box[1]:box[3], box[0]:box[2]]
+    phase = data[box[1]:box[3], width+box[0]:width+box[2]]
 
     return amplitude, phase, atr
 
 
-def read_complex_float32(fname, byteorder=None, real_imag=False):
+def read_real_float64(fname, box=None, byte_order='l'):
+    '''Read real float64/double data matrix, i.e. isce lat/lon.rdr
+    '''
+    atr = read_attribute(fname)
+    width = int(float(atr['WIDTH']))
+    length = int(float(atr['FILE_LENGTH']))
+    if not box:
+        box = [0, 0, width, length]
+
+    data_type = 'f8'
+    if byte_order in ['b','big','big-endian','ieee-be']:
+        data_type = '>f8'
+
+    data = np.fromfile(fname, dtype=data_type, count=box[3]*width).reshape(box[3], width)
+    data = data[box[1]:box[3], box[1]:box[2]]
+    return data, atr
+
+def read_complex_float32(fname, box=None, byte_order='l', cpx=False):
     '''Read complex float 32 data matrix, i.e. roi_pac int or slc data.
     old name: read_complex64()
-    
+
     ROI_PAC file: .slc, .int, .amp
     
     Data is sotred as:
     real, imaginary, real, imaginary, ...
     real, imaginary, real, imaginary, ...
     ...
-    
+
     Inputs:
-        fname     : str, input file name
-        byteorder : str, optional, order of reading byte in the file
-        real_imag : flag for output format, 
+        fname      : str, input file name
+        box        : 4-tuple defining (left, upper, right, lower) pixel coordinate.
+        byte_order : str, optional, order of reading byte in the file
+        cpx        : flag for output format, 
                     0 for amplitude and phase [by default], 
                     non-0 : for real and imagery
     Output:
@@ -768,24 +811,28 @@ def read_complex_float32(fname, byteorder=None, real_imag=False):
     atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
+    if not box:
+        box = [0, 0, width, length]
 
-    if byteorder in ['big-endian','b','ieee-be']:
-        data = np.fromfile(fname, dtype='>c8').reshape(length, width)
-    else:
-        data = np.fromfile(fname, dtype=np.complex64).reshape(length,width)
+    data_type = 'c8'
+    if byte_order in ['b','big','big-endian','ieee-be']:
+        data_type = '>c8'
 
-    if not real_imag:
-        amplitude = np.array([np.hypot(  data.real,data.imag)]).reshape(length,width)
-        phase     = np.array([np.arctan2(data.imag,data.real)]).reshape(length,width)
-        return amplitude, phase, atr
-    else:
+    data = np.fromfile(fname, dtype=data_type, count=box[3]*width).reshape(box[3], width)
+    data = data[box[1]:box[3], box[1]:box[2]]
+
+    if cpx:
         return data, atr
+    else:
+        amplitude = np.hypot(data.imag, data.real)
+        phase = np.arctan2(data.imag, data.real)
+        return amplitude, phase, atr
 
 
-def read_real_float32(fname, byteorder=None):
+def read_real_float32(fname, box=None, byte_order='l'):
     '''Read real float 32 data matrix, i.e. GAMMA .mli file
     Parameters: fname     : str, path, filename to be read
-                byteorder : str, optional, order of reading byte in the file
+                byte_order : str, optional, order of reading byte in the file
     Returns: data : 2D np.array, data matrix 
              atr  : dict, attribute dictionary
     Usage: data, atr = read_real_float32('20070603.mli')
@@ -794,15 +841,19 @@ def read_real_float32(fname, byteorder=None):
     atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
+    if not box:
+        box = [0, 0, width, length]
 
-    if byteorder in ['big-endian','b','ieee-be']:
-        data = np.fromfile(fname, dtype='>f4').reshape(length, width)
-    else:
-        data = np.fromfile(fname, dtype=np.float32).reshape(length, width)
+    data_type = 'f4'
+    if byte_order in ['b','big','big-endian','ieee-be']:
+        data_type = '>f4'
+
+    data = np.fromfile(fname, dtype=data_type, count=box[3]*width).reshape(box[3], width)
+    data = data[box[1]:box[3], box[1]:box[2]]
     return data, atr
 
 
-def read_complex_int16(File, box=None, real_imag=False):
+def read_complex_int16(File, box=None, byte_order='l', cpx=False):
     '''Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
     
     Gamma file: .slc
@@ -821,51 +872,42 @@ def read_complex_int16(File, box=None, real_imag=False):
     if not box:
         box = [0,0,width,length]
 
-    data = np.fromfile(File,np.int16,box[3]*2*width).reshape(box[3],2*width)
+    data_type = 'i2'
+    if byte_order in ['b','big','big-endian','ieee-be']:
+        data_type = '>i2'
+
+    data = np.fromfile(File, dtype=data_type, count=box[3]*2*width).reshape(box[3],2*width)
     data = data[box[1]:box[3],2*box[0]:2*box[2]].flatten()
+
     odd_idx = np.arange(1, len(data), 2)
     real = data[odd_idx-1].reshape(box[3]-box[1],box[2]-box[0])
     imag = data[odd_idx].reshape(box[3]-box[1],box[2]-box[0])
 
-    if real_imag:
+    if cpx:
         return real, imag, atr
     else:
-        amplitude = np.array([np.hypot(imag,real)]).reshape(length,width)
-        phase = np.array([np.arctan2(imag,real)]).reshape(length,width)
+        amplitude = np.hypot(imag,real)
+        phase = np.arctan2(imag,real)
         return amplitude, phase, atr
 
-    #data = np.fromfile(File,np.int16,length*2*width).reshape(length*2,width)
-    #oddindices = np.where(np.arange(length*2)&1)[0]
-    #real = np.array([data.take(oddindices-1,axis=0)]).reshape(length,width)
-    #imag = np.array([data.take(oddindices,  axis=0)]).reshape(length,width)
 
-    #amplitude = np.array([np.hypot(  real,imag)]).reshape(length,width)
-    #phase     = np.array([np.arctan2(imag,real)]).reshape(length,width)
-    #return amplitude, phase, parContents
-
-
-def read_dem(File):
-    '''Read real int 16 data matrix, i.e. ROI_PAC .dem file.
-    Input:  roi_pac format dem file
-    Usage:  dem, atr = read_real_int16('gsi10m_30m.dem')
-    '''
+def read_real_int16(File, box=None, byte_order='l'):
     atr = read_attribute(File)
     width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH'])) 
-    dem = np.fromfile(File, dtype=np.int16).reshape(length, width)
-    return dem, atr
+    length = int(float(atr['FILE_LENGTH']))
+    if not box:
+        box = [0,0,width,length]
+
+    data_type = 'i2'
+    if byte_order in ['b','big','big-endian','ieee-be']:
+        data_type = '>i2'
+
+    data = np.fromfile(File, dtype=data_type, count=box[3]*width).reshape(box[3], width)
+    data = data[box[1]:box[3], box[1]:box[2]]
+    return data, atr
 
 
-def read_real_int16(File):
-    '''Same as read_dem() above'''
-    atr = read_attribute(File)
-    width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH'])) 
-    dem = np.fromfile(File, dtype=np.int16).reshape(length, width)
-    return dem, atr
-
-
-def read_flag(File):
+def read_bool(File, box=None):
     '''Read binary file with flags, 1-byte values with flags set in bits
     For ROI_PAC .flg, *_snap_connect.byt file.    
     '''
@@ -876,11 +918,13 @@ def read_flag(File):
         rscFile = File+'.rsc'
     atr = read_attribute(rscFile.split('.rsc')[0])
     width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH'])) 
+    length = int(float(atr['FILE_LENGTH']))
+    if not box:
+        box = [0,0,width,length]
     
-    flag = np.fromfile(File, dtype=bool).reshape(length, width)
-    
-    return flag, atr
+    data = np.fromfile(File, dtype=bool, count=box[3]*width).reshape(box[3], width)
+    data = data[box[1]:box[3], box[1]:box[2]]
+    return data, atr
 
 
 def read_GPS_USGS(File):  

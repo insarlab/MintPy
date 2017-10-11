@@ -49,25 +49,7 @@ import pysar.subset as subset
 import pysar.save_unavco as unavco
 
 
-def check_subset_file(File, inps_dict, outFile=None, overwrite=False):
-    '''Subset input file or use existed subseted file.'''
-    if not File:
-        return None
-
-    if not outFile:
-        if os.getcwd() == inps_dict['work_dir']:
-            outFile = 'subset_'+os.path.basename(File)
-        else:
-            # if current dir is not original timeseries directory (e.g. TIMESERIES/subset)
-            # use the same filename (but in different directories)
-            outFile = os.path.basename(File)
-
-    if ut.update_file(outFile, File, overwrite):
-        outFile = subset.subset_file(File, inps_dict, outFile)
-
-    return outFile
-
-
+###############################################################################
 def check_geocode_file(geomapFile, File, outFile=None):
     '''Geocode input file or use existed geocoded file.'''
     if not File:
@@ -78,7 +60,7 @@ def check_geocode_file(geomapFile, File, outFile=None):
             return File
     
     if not geomapFile:
-        warnings.warn('No geomap*.trans file found! Skip geocoding.')
+        warnings.warn('No lookup file found! Skip geocoding.')
         return None
 
     if not outFile:  outFile = 'geo_'+os.path.basename(File)
@@ -93,101 +75,101 @@ def check_geocode_file(geomapFile, File, outFile=None):
     return outFile
 
 
-def subset_dataset(inps, geo_box4geo, pix_box4rdr):
-    '''Subset all file within dataset
-    with geo_box4geo for all geocoded file and pix_box4rdr for all files in radar coord.
-    Inputs:
-        inps - Namespace with all files that needs to be subseted and work_dir
-        geo_box4geo - tuple of 4 float, subset range in lat/lon for files in geo coord
-        pix_box4rdr - tuple of 4 int, subset range in y/x for files in radar coord
-    Output:
-        inps - Namespace, update file name/path info
+def check_subset_file(File, inps_dict, outFile=None, overwrite=False):
+    '''Subset input file or use existed subseted file.'''
+    if not File:
+        return None
+
+    if not outFile:
+        if os.getcwd() == os.path.dirname(os.path.abspath(File)):
+            outFile = 'subset_'+os.path.basename(File)
+        else:
+            outFile = os.path.basename(File)
+
+    if ut.update_file(outFile, File, overwrite):
+        outFile = subset.subset_file(File, inps_dict, outFile)
+    return outFile
+
+
+def subset_dataset(inps, template_file):
+    '''Create/prepare subset of datasets in different folder for time series analysis.
+    1) Read subset info from lat/lon or y/x, and convert into y/x
+       where lat/lon > y/x in priority unless a) no lookup file AND b) dataset is in radar coord
+       While converting lalo to yx, yx should be the bounding box of lalo.
+    2) for geo-coord dataset, use y/x from 1) to subset all the files
+       for radar-coord dataset, use y/x from 1) to subset all radar-coord files; then get y/x bounding box
+          in lat/lon and use it to subset all geo-coord files.
     '''
-    # Subset directory
-    subset_dir = inps.work_dir+'/SUBSET_Y%d_%dX%d_%d' % (pix_box4rdr[1], pix_box4rdr[3], pix_box4rdr[0], pix_box4rdr[2])
+    pix_box, geo_box = subset.read_subset_template2box(template_file)
+    atr = readfile.read_attribute(inps.ifgram_file)
+
+    #####Step 1: Read subset info into pix_box
+    #Check conflict
+    if geo_box:
+        if not inps.lookup_file and 'Y_FIRST' not in atr.keys():
+            print 'WARNING: turn off pysar.subset.lalo because:'
+            print '    1) no lookup file AND '
+            print '    2) dataset is in radar coord'
+            geo_box = None
+    if not geo_box and not pix_box:
+        sys.exit('ERROR: no valid subset input!\nTry to set pysar.subset.yx/lalo all to auto/no')
+
+    #geo_box --> pix_box
+    if geo_box:
+        if 'Y_FIRST' not in atr.keys():
+            print 'calculate bounding box in y/x from lat/lon input'
+            pix_box = subset.bbox_geo2radar(geo_box, atr, inps.lookup_file)
+        else:
+            pix_box = (0,0,0,0)
+            pix_box[0:3:2] = subset.coord_geo2radar(geo_box[0:3:2], atr, 'lon')
+            pix_box[1:4:2] = subset.coord_geo2radar(geo_box[1:4:2], atr, 'lat')
+        print 'Input subset in (lon0,lat0,lon1,lat1): '+str(geo_box)
+    print 'Input subset in (x0,  y0,  x1,  y1  ): '+str(pix_box)
+
+
+    #####Step 2 - subset
+    subset_dir = os.path.join(inps.work_dir, 'SUBSET_Y%d_%d_X%d_%d'%(pix_box[1], pix_box[3], pix_box[0], pix_box[2]))
     if not os.path.isdir(subset_dir):
         os.mkdir(subset_dir)
     os.chdir(subset_dir)
     print '\n--------------------------------------------'
     print 'Creating subset datasets ...'
     print "Go to subset directory: "+subset_dir
+    lookupFileOld = inps.lookup_file
 
-    # Subset files
-    print '--------------------------------------------'
-    print 'subseting dataset in radar coord pix_box4rdr: '+str(pix_box4rdr)
-    inps = subset.subset_box2inps(inps, pix_box4rdr, None)
-    inps.ifgram_file    = check_subset_file(inps.ifgram_file, vars(inps))
-    inps.dem_radar_file = check_subset_file(inps.dem_radar_file, vars(inps))
-    inps.coherence_file = check_subset_file(inps.coherence_file, vars(inps))
-    inps.trop_file      = check_subset_file(inps.trop_file, vars(inps))
-
-    print '--------------------------------------------'
-    print 'subseting dataset in geo coord geo_box4geo: '+str(geo_box4geo)
-    inps = subset.subset_box2inps(inps, None, geo_box4geo)
-    inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps))
-    inps.trans_file  = check_subset_file(inps.trans_file, vars(inps))
-
-    # adjust trans file value due to subsetted radar file
-    if inps.trans_file:
-        [rg_offset, az_offset] = pix_box4rdr[0:2]
-        print 'shiftting the mapping transformation file due to subsetted dataset in'+\
-              ' radar coord: rg/az - %d/%d' % (rg_offset, az_offset)
-        rg, az, trans_atr = readfile.read_float32(inps.trans_file)
-        rg -= rg_offset
-        az -= az_offset
-        print 'writing >>> '+inps.trans_file
-        writefile.write(rg, az, trans_atr, inps.trans_file)
-        #writefile.write_roipac_rsc(trans_atr, inps.trans_file+'.rsc')
-
-    # Remove subset_x0/y0/x1/y1
-    for File in [inps.ifgram_file, inps.coherence_file, inps.trop_file,\
-                 inps.dem_radar_file, inps.dem_geo_file, inps.trans_file]:
-        if File:
-            atrCmd = 'add_attribute.py '+File+' subset_x0=None subset_x1=None subset_y0=None subset_y1=None'
-            print atrCmd
-            status = subprocess.Popen(atrCmd, shell=True).wait()
-
-    return inps
-
-
-def create_subset_dataset(inps, pix_box=None, geo_box=None):
-    '''Create/prepare subset of datasets in different folder for time series analysis.
-    For dataset (unwrapped interferograms) in radar coord, only support subset in row/col or y/x
-    For dataset (unwrapped interferograms) in geo coord, lalo has higher priority than yx, if both are specified.
-    '''
-    atr = readfile.read_attribute(inps.ifgram_file)
-    if not 'X_FIRST' in atr.keys():
-        print 'Loaded dataset is in radar coordinate.'
-        trans_file_orig = inps.trans_file
-
-        # subset.lalo has higher priority than subset.yx, except when no geomap*.trans exists.
-        # don't subset if only subset.lalo without geomap*.trans exsits, because glob2radar won't be accurate.
-        if geo_box:
-            if inps.trans_file:
-                pix_box = None
-            else:
-                geo_box = None
-                print 'turn off subset.lalo because no geomap*.trans file exsits.'
-        if not geo_box and not pix_box:
-            sys.exit('ERROR: no valid subset input!')
-
-        # Calculate subset range in lat/lon for geo files and y/x for radar files
-        if geo_box:
-            print 'use subset input in lat/lon'
-            print 'calculate corresponding bounding box in radar coordinate.'
-            pix_box = subset.bbox_geo2radar(geo_box, atr, trans_file_orig)
-        else:
-            print 'use subset input in y/x'
-            print 'calculate corresponding bounding box in geo coordinate.'
-            pix_box = subset.check_box_within_data_coverage(pix_box, atr)
-            geo_box = subset.bbox_radar2geo(pix_box, atr, trans_file_orig)
-
-        # subset
-        inps = subset_dataset(inps, geo_box, pix_box)
-
+    if 'Y_FIRST' in atr.keys():
+        print '\n--------------------------------------------'
+        print 'dataset is in geo coordinates'
+        print '    subseting all files in (x0,y0,x1,y1): '+str(pix_box)
+        inps = subset.subset_box2inps(inps, pix_box, None)
+        inps.ifgram_file    = check_subset_file(inps.ifgram_file,    vars(inps))
+        inps.coherence_file = check_subset_file(inps.coherence_file, vars(inps))
+        inps.dem_radar_file = check_subset_file(inps.dem_radar_file, vars(inps))
+        inps.dem_geo_file   = check_subset_file(inps.dem_geo_file,   vars(inps))
+        inps.lookup_file    = check_subset_file(inps.lookup_file,    vars(inps))
+        inps.trop_file      = check_subset_file(inps.trop_file,      vars(inps))
     else:
-        print 'Loaded dataset is in geo coordinate.'
-        
+        atr_lut = readfile.read_attribute(inps.lookup_file)
+        print '\n--------------------------------------------'
+        print 'dataset is in radar coordinates'
+        print '    subseting all radar-coord files in (x0,y0,x1,y1): '+str(pix_box)
+        inps = subset.subset_box2inps(inps, pix_box, None)
+        inps.ifgram_file    = check_subset_file(inps.ifgram_file,    vars(inps))
+        inps.coherence_file = check_subset_file(inps.coherence_file, vars(inps))
+        inps.dem_radar_file = check_subset_file(inps.dem_radar_file, vars(inps))
+        inps.trop_file      = check_subset_file(inps.trop_file,      vars(inps))
+        if 'Y_FIRST' not in atr_lut.keys():
+            inps.lookup_file  = check_subset_file(inps.lookup_file,  vars(inps))
+
+        print ''
+        geo_box = subset.bbox_radar2geo(pix_box, atr, lookupFile=lookupFileOld)
+        print '--------------------------------------------'
+        print 'dataset is in radar coordinates'
+        print '    subseting all geo-coord files in (lon0,lat0,lon1,lat1): '+str(geo_box)
+        inps = subset.subset_box2inps(inps, None, geo_box)
+        inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps))
+        if 'Y_FIRST' in atr_lut.keys():
+            inps.lookup_file = check_subset_file(inps.lookup_file, vars(inps))
     return inps
 
 
@@ -221,7 +203,7 @@ TEMPLATE='''# vim: set filetype=cfg:
 ##     pysar.insarProcessor     = InSAR processor
 ##     pysar.unwrapFiles        = 'path of all unwrapped interferograms'
 ##     pysar.corFiles           = 'path of all coherence files'
-##     pysar.transFile          = 'path of mapping transformation file'
+##     pysar.lookupFile         = 'path of lookup table / mapping transformation file'
 ##     pysar.demFile.geoCoord   = 'path of DEM in geo   coordinates'
 ##     pysar.demFile.radarCoord = 'path of DEM in radar coordinates'
 ## recommended input files for data in geo coordinates:
@@ -233,22 +215,22 @@ TEMPLATE='''# vim: set filetype=cfg:
 ##     pysar.insarProcessor     = roipac
 ##     pysar.unwrapFiles        = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
 ##     pysar.corFiles           = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
-##     pysar.transFile          = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
+##     pysar.lookupFile         = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
 ##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
-pysar.insarProcessor     = auto  #[roipac, gamma, isce, doris], auto for roipac
-pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw]
-pysar.corFiles           = auto  #[filt*.cor, filt_*.cor]
-pysar.transFile          = auto  #[geomap*.trans, sim*.UTM_TO_RDC]
-pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim]
-pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem]
+pysar.insarProcessor     = auto  #[roipac, gamma, isce], auto for roipac
+pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw, filt*.unw]
+pysar.corFiles           = auto  #[filt*.cor, filt_*.cor, filt*.cor]
+pysar.lookupFile         = auto  #[geomap*.trans, sim*.UTM_TO_RDC, l*.rdr]
+pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim, hgt.rdr]
+pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem, demLat*.dem.wgs84]
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)
-## if both yx and lalo are specified, use lalo option
-pysar.subset.tightBox = auto    #[yes / no], auto for yes
-pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no - use the whole area
-pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no - use the whole area
+## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
+pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
+pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
+pysar.subset.tightBox = auto    #[yes / no], auto for yes, tight bounding box for files in geo coord
 pysar.multilook.yx    = auto    #[4,4 / no], auto for no [not implemented yet]
 
 
@@ -610,36 +592,31 @@ def main(argv):
     #########################################
     # Check the subset (Optional)
     #########################################
-    if inps.trans_file and template['pysar.subset.tightBox'] in ['yes','auto']:
-        outName = os.path.splitext(inps.trans_file)[0]+'_tight'+os.path.splitext(inps.trans_file)[1]
-        # Get bounding box of valid area in geomap*.trans file
-        trans_rg, trans_atr = readfile.read(inps.trans_file, (), 'range')
-        rg_unique, rg_pos = np.unique(trans_rg, return_inverse=True)
-        idx_row, idx_col = np.where(trans_rg != rg_unique[np.bincount(rg_pos).argmax()])
-        pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
-        # Subset geomap_file only if it could save > 20% percent of area
-        if abs((pix_box[2]-pix_box[0])*(pix_box[3]-pix_box[1])) < 0.8*(trans_rg.shape[0]*trans_rg.shape[1]):
-            print "Get tight subset of geomap*.trans file and/or DEM file in geo coord"
-            print '--------------------------------------------'
-            inps = subset.subset_box2inps(inps, pix_box, None)
-            inps.fill_value = 0.0
-            inps.trans_file = check_subset_file(inps.trans_file, vars(inps), outName)
+    if inps.lookup_file and template['pysar.subset.tightBox'] in ['yes','auto']:
+        ##Tight subset DEM in geo coord
+        subCmd = 'subset.py '+inps.dem_geo_file+' --tight'
+        print subCmd
+        outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
+        if ut.update_file(outName, inps.dem_geo_file):
+            status = subprocess.Popen(subCmd, shell=True).wait()        
+        if status is 0 and os.path.isfile(outName):
+            inps.dem_geo_file = outName
 
-            # Subset DEM in geo coord
-            if inps.dem_geo_file:
-                outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
-                geomap_atr = readfile.read_attribute(inps.trans_file)
-                pix_box, geo_box = subset.get_coverage_box(geomap_atr)
-                inps = subset.subset_box2inps(inps, pix_box, geo_box)
-                inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps), outName, overwrite=True)
-
+        ##Tight subset lookup table in geo coord (roipac/gamma)
+        atr_lut = readfile.read_attribute(inps.lookup_file)
+        if 'Y_FIRST' in atr_lut.keys():
+            subCmd = 'subset.py '+inps.lookup_file+' --tight'
+            print subCmd
+            outName = os.path.splitext(inps.lookup_file)[0]+'_tight'+os.path.splitext(inps.lookup_file)[1]
+            if ut.update_file(outName, inps.lookup_file):
+                status = subprocess.Popen(subCmd, shell=True).wait()
+            if status is 0 and os.path.isfile(outName):
+                inps.lookup_file = outName
 
     # Subset based on input template
     if not all(template[key] in ['auto', 'no'] for key in ['pysar.subset.yx','pysar.subset.lalo']):
         print '\n*************** Subset ****************'
-        # Read subset option from template file, and return None if lalo/yx is not specified.
-        pix_box, geo_box = subset.read_subset_template2box(inps.template_file)
-        inps = create_subset_dataset(inps, pix_box, geo_box)
+        inps = subset_dataset(inps, inps.template_file)
 
     if inps.subset_dataset:
         sys.exit('Exit as planned after subsetting the dataset')
@@ -670,30 +647,36 @@ def main(argv):
     #########################################
     print '\n**********  Reference in space  ***************'
     seedCmd = 'seed_data.py '+inps.ifgram_file+' --template '+inps.template_file+' --mark-attribute'
-    if inps.trans_file:
-        seedCmd += ' --trans '+inps.trans_file
-    run_seedCmd = True
+    resetCmd = 'seed_data.py '+inps.ifgram_file+' --reset'
 
     ## Skip calling seed command only if 1) ref_y/x exists AND 2) pysar.reference.yx/lalo == auto
+    run_seedCmd = True
     atr = readfile.read_attribute(inps.ifgram_file)
-    try:
+    if 'ref_x' in atr.keys():
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
+        length = int(atr['FILE_LENGTH'])
+        width = int(atr['WIDTH'])
         print 'Find reference pixel info from %s in y/x: [%d, %d]' % (os.path.basename(inps.ifgram_file), ref_y, ref_x)
-        print '----------------------------------------------------------------------------------------'
-        print 'To remove reference pixel info, use seed_data.py --reset option:'
-        print 'seed_data.py '+inps.ifgram_file+' --reset'
-        print '----------------------------------------------------------------------------------------'
-        prefix = 'pysar.reference.'
-        if all(template[prefix+i] in ['auto','no'] for i in ['yx','lalo']):
-            run_seedCmd = False
-            print 'No specific coordinates input found, no need to re-select reference pixel'
+        if not (0 <= ref_y <= length and 0 <= ref_x <= width):
+            print 'existed reference pixel is out of data coverage.'
+            print '1) reset reference pixel info'
+            print resetCmd
+            status = subprocess.Popen(resetCmd, shell=True).wait()
+            print '2) re-run seed_data.py to select new refernce pixel.'
         else:
-            print 'Specific coordinates input found, re-select reference pixel with options from template file'
-    except: pass
+            print '----------------------------------------------------------------------------------------'
+            print 'To remove reference pixel info, use seed_data.py --reset option:'
+            print resetCmd
+            print '----------------------------------------------------------------------------------------'
+            prefix = 'pysar.reference.'
+            if all(template[prefix+i] in ['auto','no'] for i in ['yx','lalo']):
+                run_seedCmd = False
+                print 'No specific coordinates input found, no need to re-select reference pixel'
+            else:
+                print 'Specific coordinates input found, re-select reference pixel with options from template file'
 
     if run_seedCmd:
-        print 'Call seed_data.py to find reference pixel in space'
         print seedCmd
         status = subprocess.Popen(seedCmd, shell=True).wait()
         if status is not 0:
@@ -728,8 +711,6 @@ def main(argv):
     networkCmd = 'modify_network.py --template '+inps.template_file+' '+inps.ifgram_file
     if inps.coherence_file:
         networkCmd += ' '+inps.coherence_file
-    if inps.trans_file:
-        networkCmd += ' --trans '+inps.trans_file
     print networkCmd
     print '----------------------------------------------------------------------------------------'
     print 'To use all interferograms in the file, run modify_network.py with --reset option to restore all pairs info.'
@@ -1077,9 +1058,9 @@ def main(argv):
     key = 'pysar.geocode'
     if template[key] in ['auto','yes'] and 'Y_FIRST' not in atr.keys():
         print '\n--------------------------------------------'
-        inps.geo_vel_file        = check_geocode_file(inps.trans_file, inps.vel_file)
-        inps.geo_temp_coh_file   = check_geocode_file(inps.trans_file, inps.temp_coh_file)
-        inps.goe_timeseries_file = check_geocode_file(inps.trans_file, inps.timeseries_file)
+        inps.geo_vel_file        = check_geocode_file(inps.lookup_file, inps.vel_file)
+        inps.geo_temp_coh_file   = check_geocode_file(inps.lookup_file, inps.temp_coh_file)
+        inps.goe_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file)
 
 
     # Mask in geo coord
@@ -1122,13 +1103,13 @@ def main(argv):
     #############################################
     if template['pysar.save.unavco'] in ['yes','update']:
         print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
-        if 'Y_FIRST' not in atr.keys() and not inps.trans_file:
+        if 'Y_FIRST' not in atr.keys() and not inps.lookup_file:
             warnings.warn('Dataset is in radar coordinates without lookup table file.'+\
                           'Can not geocode.'+\
                           'Skip saving.')
         else:
             # 1. Time series file
-            inps.geo_timeseries_file = check_geocode_file(inps.trans_file, inps.timeseries_file)
+            inps.geo_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file)
             # Add UNAVCO attributes
             if inps.unavco_atr_file:
                 atrCmd = 'add_attribute.py '+inps.geo_timeseries_file+' '+inps.unavco_atr_file
@@ -1139,7 +1120,7 @@ def main(argv):
                     sys.exit(-1)
 
             # 2. Temporal Coherence
-            inps.geo_temp_coh_file = check_geocode_file(inps.trans_file, inps.temp_coh_file)
+            inps.geo_temp_coh_file = check_geocode_file(inps.lookup_file, inps.temp_coh_file)
 
             # 3. Mask file
             if not inps.geo_mask_file:
@@ -1164,7 +1145,7 @@ def main(argv):
                 if status is not 0:
                     print '\nError while generating incidence angle file.\n'
                     sys.exit(-1)
-            inps.geo_inc_angle_file = check_geocode_file(inps.trans_file, inps.inc_angle_file)
+            inps.geo_inc_angle_file = check_geocode_file(inps.lookup_file, inps.inc_angle_file)
 
             # Save to UNAVCO format
             print '--------------------------------------------'
@@ -1197,10 +1178,10 @@ def main(argv):
         inps.plot_sh_file = 'plot_pysarApp.sh'
 
         # Copy to workding directory if not existed yet.
-        if not os.path.isfile(inps.work_dir+'/'+inps.plot_sh_file):
+        if not os.path.isfile('./'+inps.plot_sh_file):
             print 'copy $PYSAR_HOME/shellscripts/'+inps.plot_sh_file+' to working directory'
             try:
-                shutil.copy2(ut.which(inps.plot_sh_file), inps.work_dir)
+                shutil.copy2(ut.which(inps.plot_sh_file), './')
             except:
                 print 'WARNING: no '+inps.plot_sh_file+' found in the environment variable path, skip plotting.'
         print 'for better performance, edit the input parameters in '+inps.plot_sh_file+' and re-run this script.'

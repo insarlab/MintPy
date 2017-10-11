@@ -417,12 +417,12 @@ NOTE='''note: Reference value cannot be nan, thus, all selected reference point 
 '''
 
 EXAMPLE='''example:
-  seed_data.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --trans geomap_4rlks.trans
+  seed_data.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geomap_4rlks.trans
 
   seed_data.py timeseries.h5     -r Seeded_velocity.h5
   seed_data.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
   seed_data.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
-  seed_data.py unwrapIfgram.h5   -l 34.45  -L -116.23  --trans geomap_4rlks.trans
+  seed_data.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
   
   seed_data.py unwrapIfgram.h5 -c average_spatial_coherence.h5
   seed_data.py unwrapIfgram.h5 --method manual
@@ -453,8 +453,8 @@ def cmdLineParse():
     coord_group.add_argument('-L','--lon', dest='ref_lon', type=float, help='longitude of reference pixel')
     
     coord_group.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
-    coord_group.add_argument('--trans', dest='trans_file',\
-                             help='Mapping transformation file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
+    coord_group.add_argument('--lookup', dest='lookup_file',\
+                             help='Lookup table file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
                                   'Needed for radar coord input file with --lat/lon seeding option.')
     coord_group.add_argument('-t','--template', dest='template_file',\
                              help='template with reference info as below:\n'+TEMPLATE)
@@ -517,7 +517,7 @@ def main(argv):
         else:
             # Convert lat/lon to az/rg for radar coord file using geomap*.trans file
             inps.ref_y, inps.ref_x = ut.glob2radar(np.array(inps.ref_lat), np.array(inps.ref_lon),\
-                                                   inps.trans_file, atr)[0:2]
+                                                   inps.lookup_file, atr)[0:2]
         print 'Input reference point in lat/lon: '+str([inps.ref_lat, inps.ref_lon])
     print 'Input reference point in   y/x  : '+str([inps.ref_y, inps.ref_x])
 

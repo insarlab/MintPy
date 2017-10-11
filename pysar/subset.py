@@ -21,11 +21,11 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 ################################################################
-def coord_geo2radar(geoCoord,atr,coordType):
+def coord_geo2radar(geoCoordIn, atr, coordType):
     ## convert geo coordinates into radar coordinates (round to nearest integer)
     ## for Geocoded file only
     ## Inputs:
-    ##     geoCoord  : coordinate (list) in latitude/longitude in float
+    ##     geoCoord  : coordinate (list / tuple) in latitude/longitude in float
     ##     atr       : dictionary of file attributes
     ##     coordType : coordinate type: latitude, longitude
     ##
@@ -33,30 +33,34 @@ def coord_geo2radar(geoCoord,atr,coordType):
     ##      300        = coord_geo2radar(32.104990,    atr,'lat')
     ##     [1000,1500] = coord_geo2radar([130.5,131.4],atr,'lon')
 
-    try: atr['X_FIRST']
-    except: print 'Support geocoded file only!'; sys.exit(1)
+    try:
+        atr['X_FIRST']
+    except:
+        sys.exit('Support geocoded file only!')
 
     ## Convert to List if input is String
-    if isinstance(geoCoord,float):
-        geoCoord = [geoCoord]
+    if isinstance(geoCoordIn, float):
+        geoCoordIn = [geoCoordIn]
+    geoCoord = list(geoCoordIn)
 
     radarCoord = []
     coordType = coordType.lower()
     for i in range(len(geoCoord)):
-        if   coordType in ['lat','latitude' ]:  coord = np.rint((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
-        elif coordType in ['lon','longitude']:  coord = np.rint((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))
+        if   coordType.startswith('lat'):  coord = np.rint((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
+        elif coordType.startswith('lon'):  coord = np.rint((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))
         else: print 'Unrecognized coordinate type: '+coordType
         radarCoord.append(int(coord))
-    #radarCoord.sort()
 
     if len(radarCoord) == 1:
         radarCoord = radarCoord[0]
+    elif isinstance(geoCoordIn, tuple):
+        radarCoord = tuple(radarCoord)
 
     return radarCoord
 
 
 ################################################################
-def coord_radar2geo(radarCoord,atr,coordType):
+def coord_radar2geo(radarCoordIn, atr, coordType):
     ## convert radar coordinates into geo coordinates (pixel UL corner)
     ## for Geocoded file only
     ##
@@ -69,24 +73,29 @@ def coord_radar2geo(radarCoord,atr,coordType):
     ##     32.104990     = coord_radar2geo(300,        atr,'y')
     ##     [130.5,131.4] = coord_radar2geo([1000,1500],atr,'x')
 
-    try: atr['X_FIRST']
-    except: print 'Support geocoded file only!'; sys.exit(1)
+    try:
+        atr['X_FIRST']
+    except:
+        sys.exit('Support geocoded file only!')
 
     ## Convert to List if input is String
-    if isinstance(radarCoord,int):
-        radarCoord = [radarCoord]
+    if isinstance(radarCoordIn, int):
+        radarCoordIn = [radarCoordIn]
+    radarCoord = list(radarCoordIn)
 
     geoCoord = []
     coordType = coordType.lower()
     for i in range(len(radarCoord)):
-        if   coordType in ['row','y']:           coord = radarCoord[i]*float(atr['Y_STEP']) + float(atr['Y_FIRST'])
-        elif coordType in ['col','x','column']:  coord = radarCoord[i]*float(atr['X_STEP']) + float(atr['X_FIRST'])
+        if   coordType.startswith(('row','y')):  coord = radarCoord[i]*float(atr['Y_STEP']) + float(atr['Y_FIRST'])
+        elif coordType.startswith(('col','x')):  coord = radarCoord[i]*float(atr['X_STEP']) + float(atr['X_FIRST'])
         else: print 'Unrecognized coordinate type: '+coordType
         geoCoord.append(coord)
     #geoCoord.sort()
 
     if len(geoCoord) == 1:
         geoCoord = geoCoord[0]
+    elif isinstance(radarCoordIn, tuple):
+        geoCoord = tuple(geoCoord)
 
     return geoCoord
 
@@ -114,12 +123,12 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
         sys.exit(1)
 
     ## Check Y/Azimuth/Latitude subset range
-    if sub_y[0]<0:        sub_y[0]=0;      print 'WARNING: input y < min (0)! Set it to min.'
-    if sub_y[1]>length:   sub_y[1]=length; print 'WARNING: input y > max ('+str(length)+')! Set it to max.'
+    if sub_y[0]<0:       sub_y[0]=0;      print 'WARNING: input y < min (0)! Set it to min.'
+    if sub_y[1]>length:  sub_y[1]=length; print 'WARNING: input y > max ('+str(length)+')! Set it to max.'
 
     ## Check X/Range/Longitude subset range
     if sub_x[0]<0:       sub_x[0]=0;      print 'WARNING: input x < min (0)! Set it to min.'
-    if sub_x[1]>width:   sub_x[1]=width;  print 'WARNING: input x > max ('+str(width)+')! Set it to max x.'
+    if sub_x[1]>width:   sub_x[1]=width;  print 'WARNING: input x > max ('+str(width)+')! Set it to max.'
 
 
     out_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
@@ -243,37 +252,37 @@ def read_subset_template2box(templateFile):
     return pix_box, geo_box
 
 
-def bbox_geo2radar(geo_box, atr_rdr=dict(), transFile='geomap*.trans'):
+def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None):
     '''Calculate bounding box in x/y for file in radar coord, based on input geo box.
     Inputs:
         geo_box   - tuple of 4 float, indicating the UL/LR lon/lat 
         atr_rdr   - dict, attributes of file in radar coord
-        transFile - string, path of transformation file, i.e. geomap_4rlks.trans
+        lookupFile - string, path of transformation file, i.e. geomap_4rlks.trans
     Output:
         pix_box - tuple of 4 int, indicating the UL/LR x/y of the bounding box in radar coord
                   for the corresponding lat/lon coverage.
     '''
     lat = np.array([geo_box[3],geo_box[3],geo_box[1],geo_box[1]])
     lon = np.array([geo_box[0],geo_box[2],geo_box[0],geo_box[2]])
-    y, x, y_res, x_res = ut.glob2radar(lat, lon, transFile, atr_rdr)
-    buf = 10*(np.max([x_res, y_res]))
+    y, x, y_res, x_res = ut.glob2radar(lat, lon, lookupFile, atr_rdr)
+    buf = 2*(np.max(np.abs([x_res, y_res])))
     pix_box = (np.min(x)-buf, np.min(y)-buf, np.max(x)+buf, np.max(y)+buf)
     return pix_box
 
 
-def bbox_radar2geo(pix_box, atr_rdr=dict(), transFile='geomap*.trans'):
+def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None):
     '''Calculate bounding box in lat/lon for file in geo coord, based on input radar/pixel box
     Inputs:
         pix_box   - tuple of 4 int, indicating the UL/LR x/y
         atr_rdr   - dict, attributes of file in radar coord
-        transFile - string, path of transformation file, i.e. geomap_4rlks.trans
+        lookupFile - string, path of transformation file, i.e. geomap_4rlks.trans
     Output:
         geo_box - tuple of 4 float, indicating the UL/LR lon/lat of the bounding box
     '''
     x = np.array([pix_box[0],pix_box[2],pix_box[0],pix_box[2]])
     y = np.array([pix_box[1],pix_box[1],pix_box[3],pix_box[3]])
-    lat, lon, lat_res, lon_res = ut.radar2glob(y, x, transFile, atr_rdr)
-    buf = 10*(np.max([lat_res,lon_res]))
+    lat, lon, lat_res, lon_res = ut.radar2glob(y, x, lookupFile, atr_rdr)
+    buf = 2*(np.max(np.abs([lat_res,lon_res])))
     geo_box = (np.min(lon)-buf, np.max(lat)+buf, np.max(lon)+buf, np.min(lat)-buf)
     return geo_box
 
@@ -483,7 +492,7 @@ def subset_file(File, subset_dict_input, outFile=None):
     print 'writing >>> '+outFile
 
     ##### Multiple Dataset File
-    if k in ['timeseries','interferograms','wrapped','coherence']:
+    if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         ##### Open Input File 
         h5file = h5py.File(File,'r')
         epochList = sorted(h5file[k].keys())
@@ -499,7 +508,7 @@ def subset_file(File, subset_dict_input, outFile=None):
         prog_bar = ptime.progress_bar(maxValue=epochNum)
 
     ## Loop
-    if k == 'timeseries':
+    if k in multi_dataset_hdf5_file:
         for i in range(epochNum):
             epoch = epochList[i]
             dset = h5file[k].get(epoch)
@@ -510,12 +519,12 @@ def subset_file(File, subset_dict_input, outFile=None):
 
             dset = group.create_dataset(epoch, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=epoch)
-
+        prog_bar.close()
         atr_dict = subset_attribute(atr_dict, pix_box)
         for key,value in atr_dict.iteritems():
             group.attrs[key] = value
 
-    elif k in ['interferograms','wrapped','coherence']:
+    elif k in multi_group_hdf5_file:
         date12_list = ptime.list_ifgram2date12(epochList)
         for i in range(epochNum):
             epoch = epochList[i]
@@ -532,6 +541,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             for key, value in atr_dict.iteritems():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
+        prog_bar.close()
 
     ##### Single Dataset File
     elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
@@ -561,11 +571,9 @@ def subset_file(File, subset_dict_input, outFile=None):
 
     ##### End Cleaning
     try:
-        prog_bar.close()
         h5file.close()
         h5out.close()
     except: pass
-    
     return outFile
 
 
@@ -643,7 +651,7 @@ def cmdLineParse():
     dset_group = parser.add_argument_group('Datasets',\
                                            'Create a subset of entire dataset in radar using y/x or lat/lon option\n'+\
                                            'Including *.trans and *.dem in geo coord.')
-    dset_group.add_argument('--bbox', dest='trans_file',\
+    dset_group.add_argument('--lookup', dest='lookup_file',\
                             help='calculate bounding box in geo/radar coord from input radar/geo subset range\n'+\
                                  'using transformation file, i.e. geomap_4rlks.trans\n'+\
                                  'All input radar coord file should be same size/coverage; same for all geo coord files.')
@@ -678,36 +686,32 @@ def main(argv):
 
         # 3. Use subset from tight info
         elif inps.tight:
-            trans_file_list = ['.trans','.utm_to_rdc','.UTM_TO_RDC']
-            if atr['FILE_TYPE'] in trans_file_list:
-                # Non-zero area in geomap_*.trans file, accurate
-                print 'reading %s ...' % (os.path.basename(inps.file[0]))
-                trans_rg, trans_atr = readfile.read(inps.file[0], (), 'range')
-                idx_row, idx_col = np.nonzero(trans_rg)
+            inps.lookup_file = ut.get_lookup_file(inps.lookup_file)
+            if not inps.lookup_file:
+                sys.exit('No lookup file found! Can not use --tight option without it.')
+            atr_lut = readfile.read_attribute(inps.lookup_file)
+            if 'Y_FIRST' in atr_lut.keys():
+                rg_lut = readfile.read(inps.lookup_file, epoch='range')[0]
+                rg_unique, rg_pos = np.unique(rg_lut, return_inverse=True)
+                idx_row, idx_col = np.where(rg_lut != rg_unique[np.bincount(rg_pos).argmax()])
                 pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
-                geo_box = box_pixel2geo(pix_box, trans_atr)
+                geo_box = box_pixel2geo(pix_box, atr_lut)
+                del rg_lut
             else:
-                print 'ERROR: --tight option only works for '+str(trans_file_list)+' file.\n'
-                inps.tight = False
-                sys.exit(1)
-
-            ## from LAT/LON_REF*, which is not accurate
-            #lats = [atr['LAT_REF1'], atr['LAT_REF3'], atr['LAT_REF4'], atr['LAT_REF2']]
-            #lons = [atr['LON_REF1'], atr['LON_REF3'], atr['LON_REF4'], atr['LON_REF2']]
-            #lats = [float(i) for i in lats]
-            #lons = [float(i) for i in lons]
-            #lalo_buff = min([max(lats)-min(lats), max(lons)-min(lons)]) * 0.05
-            #geo_box = (min(lons)-lalo_buff, max(lats)+lalo_buff, max(lons)+lalo_buff, min(lats)-lalo_buff)
-            #pix_box = None
-            #if not inps.fill_value: inps.fill_value = np.nan
-            #print 'using subset info from scene footprint - LAT/LON_REF1/2/3/4'
+                lat = readfile.read(inps.lookup_file, epoch='latitude')[0]
+                lon = readfile.read(inps.lookup_file, epoch='longitude')[0]
+                geo_box = (np.nanmin(lon), np.nanmax(lat), np.nanmax(lon), np.nanmin(lat))
+                pix_box = None
+                del lat, lon
         else:
             raise Exception('No subset inputs found!')
         # Update subset_y/x/lat/lon
         inps = subset_box2inps(inps, pix_box, geo_box)
 
+    subset_file_list(inps.file, inps)
+
     ##### --bbox option
-    if inps.trans_file:
+    if False:
         ## Seperate files in radar and geo coord
         rdrFileList = []
         geoFileList = []
@@ -717,7 +721,7 @@ def main(argv):
                 geoFileList.append(File)
             else:
                 rdrFileList.append(File)
-        
+
         ## Calculate bbox
         rdrFile = rdrFileList[0]
         atr_rdr = readfile.read_attribute(rdrFile)
@@ -725,12 +729,12 @@ def main(argv):
             print 'use subset input in lat/lon'
             print 'calculate corresponding bounding box in radar coordinate.'
             geo_box = (inps.subset_lon[0], inps.subset_lat[1], inps.subset_lon[1], inps.subset_lat[0])
-            pix_box = bbox_geo2radar(geo_box, atr_rdr, inps.trans_file)
+            pix_box = bbox_geo2radar(geo_box, atr_rdr, inps.lookup_file)
         else:
             print 'use subset input in y/x'
             print 'calculate corresponding bounding box in geo coordinate.'
             pix_box = (inps.subset_x[0], inps.subset_y[0], inps.subset_x[1], inps.subset_y[1])
-            geo_box = bbox_radar2geo(pix_box, atr_rdr, inps.trans_file)
+            geo_box = bbox_radar2geo(pix_box, atr_rdr, inps.lookup_file)
         print 'geo   box: '+str(geo_box)
         print 'pixel box: '+str(pix_box)
 
@@ -744,10 +748,6 @@ def main(argv):
         print 'subseting dataset in radar coord pix_box: '+str(pix_box)
         inps = subset_box2inps(inps, pix_box, None)
         subset_file_list(rdrFileList, inps)
-
-    else:
-        ##### Subset files
-        subset_file_list(inps.file, inps)
 
     print 'Done.'
     return

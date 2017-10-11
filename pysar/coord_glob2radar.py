@@ -37,7 +37,7 @@ def main(argv):
     lon = float(argv[1])
 
     try:    trans_file = argv[2]
-    except: trans_file = ut.get_file_list('geomap*.trans')[0]
+    except: trans_file = ut.get_lookup_file()
 
     try:    radar_file = argv[3]
     except: radar_file = 'unwrapIfgram.h5'

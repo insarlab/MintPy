@@ -77,6 +77,48 @@ def touch(fname_list, times=None):
     return fname_list
 
 
+def get_lookup_file(filePattern=None, abspath=False):
+    '''Find lookup table file with/without input file pattern'''
+    ##Files exists
+    if not filePattern:
+        filePattern = ['geometryRadar.h5',\
+                       'geometryGeo_tight.h5', 'geometryGeo.h5',\
+                       'geomap*lks_tight.trans', 'geomap*lks.trans',\
+                       'sim*_tight.UTM_TO_RDC', 'sim*.UTM_TO_RDC']
+    existFiles = []
+    try:
+        existFiles = get_file_list(filePattern)
+    except:
+        print 'ERROR: No geometry / lookup table file found!'
+        print 'It should be like:'
+        print filePattern
+        return None
+
+    ##Files with lookup table info
+    lookupFiles = []
+    for fname in existFiles:
+        atr = readfile.read_attribute(fname)
+        if 'Y_FIRST' in atr.keys():
+            try:
+                dset = readfile.read(fname, epoch='range')[0]
+                lookupFiles.append(fname)
+            except: pass
+        else:
+            try:
+                dset = readfile.read(fname, epoch='lat')[0]
+                lookupFiles.append(fname)
+            except: pass
+
+    if not lookupFiles:
+        print 'No lookup table info range/lat found in files.'
+        return None
+
+    lookupFile = lookupFiles[0]
+    if abspath:
+        lookupFile = os.path.abspath(lookupFile)
+    return lookupFile
+
+
 def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     '''Check the result of loading data for the following two rules:
         1. file existance
@@ -94,7 +136,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
         coherence_file : string, file name/path of spatial coherence
         dem_file_radar : string, file name/path of DEM file in radara coord (for interferograms in radar coord)
         dem_file_geo   : string, file name/path of DEM file in geo coord
-        trans_file     : string, file name/path of transformation mapping file (for interferograms in radar coord)
+        lookup_file    : string, file name/path of lookup table file (for interferograms in radar coord)
     Example:
         from pysar.pysarApp import check_loaded_dataset
         True = check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR') #if True, PROCESS, SLC folder could be removed.
@@ -110,7 +152,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
         inps.coherence_file = None
         inps.dem_radar_file = None
         inps.dem_geo_file   = None
-        inps.trans_file     = None
+        inps.lookup_file    = None
 
     # Required files - 1. unwrapped interferograms
     file_list = [work_dir+'/Modified_unwrapIfgram.h5',\
@@ -126,15 +168,21 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             return False
     else:
         atr = readfile.read_attribute(ifgram_file)
-        if print_msg:  print 'Unwrapped interferograms: '+ifgram_file
 
-    if print_msg:  print 'Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR']
+    if print_msg:
+        print 'Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR']
+
     if 'X_FIRST' in atr.keys():
         geocoded = True
-        if print_msg:  print 'Loaded dataset are in geo coordinates'
+        if print_msg:
+            print 'Loaded dataset are in geo coordinates'
     else:
         geocoded = False
-        if print_msg:  print 'Loaded dataset are in radar coordinates'
+        if print_msg:
+            print 'Loaded dataset are in radar coordinates'
+
+    if print_msg:
+        print 'Unwrapped interferograms: '+ifgram_file
 
     # Recommended files (None if not found)
     # 2. Spatial coherence for each interferogram
@@ -173,38 +221,32 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             print 'WARNING: No DEM file in geo coord found.'
             print "It's supposed to be like: "+str(file_list)
 
-    # 5. Transform file for geocoding
-    if atr['INSAR_PROCESSOR'] == 'roipac':
-        file_list = [work_dir+'/geomap*lks_tight.trans',\
-                     work_dir+'/geomap*lks.trans']
-    elif atr['INSAR_PROCESSOR'] == 'gamma':
-        file_list = [work_dir+'/sim*_tight.UTM_TO_RDC',\
-                     work_dir+'/sim*.UTM_TO_RDC']
-    trans_file = is_file_exist(file_list, abspath=True)
+    # 5. Lookup table file for geocoding
+    lookup_file = get_lookup_file(inps.lookup_file, abspath=True)
     if print_msg:
-        if trans_file:
-            print 'Mapping transform   file: '+trans_file
+        if lookup_file:
+            print 'Lookup table        file: '+lookup_file
         elif not geocoded:
-            print 'No transform file found! Can not geocode without it!'
+            print 'No lookup file found! Can not geocode without it!'
             print "It's supposed to be like: "+str(file_list)
 
     ##### Update namespace inps if inputed
     load_complete = True
     if None in [ifgram_file, coherence_file, dem_geo_file]:
         load_complete = False
-    if not geocoded and None in [dem_radar_file, trans_file]:
+    if not geocoded and None in [dem_radar_file, lookup_file]:
         load_complete = False
     if load_complete and print_msg:
         print '-----------------------------------------------------------------------------------'
         print 'All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.'
-        print '-----------------------------------------------------------------------------------'
+    print '-----------------------------------------------------------------------------------'
 
     if inps:
         inps.ifgram_file    = ifgram_file
         inps.coherence_file = coherence_file
         inps.dem_radar_file = dem_radar_file
         inps.dem_geo_file   = dem_geo_file
-        inps.trans_file     = trans_file
+        inps.lookup_file    = lookup_file
         return inps
 
     ##### Check 
@@ -1295,213 +1337,179 @@ def azimuth_ground_resolution(atr):
 
 
 #########################################################################
-def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True):
+##### Use geomap*.trans file for precious (pixel-level) coord conversion
+def get_lookup_row_col(y, x, lut_y, lut_x, y_factor=10, x_factor=10, geoCoord=False):
+    ymin = y - y_factor
+    xmin = x - x_factor
+    if not geoCoord:
+        ymin = max(ymin, 0.5)
+        xmin = max(xmin, 0.5)
+    mask_y = np.multiply(lut_y >= ymin, lut_y <= (y+y_factor))
+    mask_x = np.multiply(lut_x >= xmin, lut_x <= (x+x_factor))
+    row, col = np.nanmean(np.where(np.multiply(mask_y, mask_x)), axis=1)
+    return row, col
+
+def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
     '''Convert geo coordinates into radar coordinates.
     Inputs:
         lat/lon    - np.array, float, latitude/longitude
-        transFile - string, trans/look up file
+        lookupFile - string, trans/look up file
         atr_rdr    - dict, attributes of file in radar coord, optional but recommended.
     Output:
         az/rg     - np.array, float, range/azimuth pixel number
         az/rg_res - float, residul/uncertainty of coordinate conversion
     '''
+    lookupFile = get_lookup_file(lookupFile)
+    if not lookupFile:
+        print('WARNING: No lookup table found! Can not convert coordinates without it.')
+        return None
+    atr_lut = readfile.read_attribute(lookupFile)
+    if print_msg:
+        print 'reading file: '+lookupFile
 
-    try:    transFile = glob.glob(transFile)[0]
-    except: transFile = None
-
-    ########## Precise conversion using geomap.trans file, if it exists.
-    if transFile:
+    #####For lookup table in geo-coord, read value directly
+    if 'Y_FIRST' in atr_lut.keys():
         # Get lat/lon resolution/step in meter
-        earth_radius = 6371.0e3;    # in meter
-        print 'reading file: '+transFile
-        trans_rg, trans_az, trans_atr = readfile.read(transFile)
-        lat_first = float(trans_atr['Y_FIRST'])
-        lon_first = float(trans_atr['X_FIRST'])
-        lat_center = lat_first + float(trans_atr['Y_STEP'])*float(trans_atr['FILE_LENGTH'])/2
-        lat_step_deg = float(trans_atr['Y_STEP'])
-        lon_step_deg = float(trans_atr['X_STEP'])
+        earth_radius = 6371.0e3
+        lut_x = readfile.read(lookupFile, epoch='range')[0]
+        lut_y = readfile.read(lookupFile, epoch='azimuth')[0]
+        lat0 = float(atr_lut['Y_FIRST'])
+        lon0 = float(atr_lut['X_FIRST'])
+        lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['FILE_LENGTH'])/2
+        lat_step_deg = float(atr_lut['Y_STEP'])
+        lon_step_deg = float(atr_lut['X_STEP'])
         lat_step = lat_step_deg*np.pi/180.0*earth_radius
         lon_step = lon_step_deg*np.pi/180.0*earth_radius*np.cos(lat_center*np.pi/180)
 
         # Get range/azimuth ground resolution/step in meter
+        x_factor = 2
+        y_factor = 2
+        az0 = 0
+        rg0 = 0
         if atr_rdr:
             az_step = azimuth_ground_resolution(atr_rdr)
             rg_step = range_ground_resolution(atr_rdr, print_msg)
-            try:    az0 = int(atr_rdr['subset_y0'])
-            except: az0 = 0
-            try:    rg0 = int(atr_rdr['subset_x0'])
-            except: rg0 = 0
-
             x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
             y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
+            if 'subset_y0' in atr_rdr.keys():
+                az0 = int(atr_rdr['subset_y0'])
+            if 'subset_x0' in atr_rdr.keys():
+                rg0 = int(atr_rdr['subset_x0'])
+
+        width  = int(atr_lut['WIDTH'])
+        row = np.rint((lat - lat0)/lat_step_deg).astype(int)
+        col = np.rint((lon - lon0)/lon_step_deg).astype(int)
+        rg = np.rint(lut_x[row, col]).astype(int) - rg0
+        az = np.rint(lut_y[row, col]).astype(int) - az0
+
+
+    #####For lookup table in radar-coord, search the buffer and use center pixel
+    else:
+        lut_x = readfile.read(lookupFile, epoch='lon')[0]
+        lut_y = readfile.read(lookupFile, epoch='lat')[0]
+        az = np.zeros(lat.shape)
+        rg = np.zeros(lat.shape)
+        x_factor = 10
+        y_factor = 10
+        try:    earth_radius = float(atr_rdr['EARTH_RADIUS'])
+        except: earth_radius = 6371.0e3
+        az_step = azimuth_ground_resolution(atr_rdr)
+        rg_step = range_ground_resolution(atr_rdr)
+        lat0 = np.nanmax(lat)
+        lat1 = np.nanmin(lat)
+        az_step_deg = 180. / np.pi * az_step / earth_radius
+        rg_step_deg = 180. / np.pi * rg_step / (earth_radius*np.cos((lat0+lat1)/2*np.pi/180.))
+
+        if lat.size == 1:
+            az, rg = get_lookup_row_col(lat, lon, lut_y, lut_x,\
+                                        y_factor*az_step_deg, x_factor*rg_step_deg, geoCoord=True)
         else:
-            x_factor = 10
-            y_factor = 10
-            az0 = 0
-            rg0 = 0
-
-        width  = int(trans_atr['WIDTH'])
-        row = np.rint((lat - lat_first)/lat_step_deg).astype(int)
-        col = np.rint((lon - lon_first)/lon_step_deg).astype(int)
-        rg = np.rint(trans_rg[row, col]).astype(int) - rg0
-        az = np.rint(trans_az[row, col]).astype(int) - az0
-        rg_resid = x_factor
-        az_resid = y_factor
-
-    ########## Simple conversion using 2D linear transformation, with 4 corners' lalo info
-    elif atr_rdr:
-        print 'finding approximate radar coordinate with 2D linear transformation estimation.'
-        print '    using four corner lat/lon info from file: %s ' % \
-              os.path.basename(atr_rdr['FILE_PATH'])
-        # This method only works for whole frame/track, thus input file cannot be subsetted before.
-        if 'subset_x0' in atr_rdr.keys():
-            print 'WARNING: Cannot use subset file as input! No coordinate converted.'
-            return None
-
-        LAT_REF1=float(atr_rdr['LAT_REF1'])
-        LAT_REF2=float(atr_rdr['LAT_REF2'])
-        LAT_REF3=float(atr_rdr['LAT_REF3'])
-        LAT_REF4=float(atr_rdr['LAT_REF4'])
-        LON_REF1=float(atr_rdr['LON_REF1'])
-        LON_REF2=float(atr_rdr['LON_REF2'])
-        LON_REF3=float(atr_rdr['LON_REF3'])
-        LON_REF4=float(atr_rdr['LON_REF4'])
-        W =      float(atr_rdr['WIDTH'])
-        L =      float(atr_rdr['FILE_LENGTH'])
-
-        LAT_REF = np.array([LAT_REF1,LAT_REF2,LAT_REF3,LAT_REF4]).reshape(4,1)
-        LON_REF = np.array([LON_REF1,LON_REF2,LON_REF3,LON_REF4]).reshape(4,1)
-        X = np.array([1,W,1,W]).reshape(4,1)
-        Y = np.array([1,1,L,L]).reshape(4,1)
-    
-        ### estimate 2D tranformation from Lease Square
-        A = np.hstack([LAT_REF,LON_REF,np.ones((4,1))])
-        B = np.hstack([X,Y])
-        affine_par = np.linalg.lstsq(A,B)[0]
-        res = B - np.dot(A,affine_par)
-        res_mean = np.mean(np.abs(res),0)
-        rg_resid = (res_mean[0]+0.5).astype(int)
-        az_resid = (res_mean[1]+0.5).astype(int)
-        print 'Residul - rg: '+str(rg_resid)+', az: '+str(az_resid)
-    
-        ### calculate radar coordinate of inputs
-        N = len(lat)
-        A = np.hstack([lat.reshape(N,1), lon.reshape(N,1), np.ones((N,1))])
-        rg = np.rint(np.dot(A, affine_par[:,0])).astype(int)
-        az = np.rint(np.dot(A, affine_par[:,1])).astype(int)
-  
+            for i in range(rg.size):
+                az[i], rg[i] = get_lookup_row_col(lat[i], lon[i], lut_y, lut_x,\
+                                                  y_factor*az_step_deg, x_factor*rg_step_deg, geoCoord=True)
+        az = np.rint(az).astype(int)
+        rg = np.rint(rg).astype(int)
+    rg_resid = x_factor
+    az_resid = y_factor
     return az, rg, az_resid, rg_resid
 
 
-def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True):
+def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
     '''Convert radar coordinates into geo coordinates
     Inputs:
         rg/az      - np.array, int, range/azimuth pixel number
-        transFile - string, trans/look up file
+        lookupFile - string, trans/look up file
         atr_rdr    - dict, attributes of file in radar coord, optional but recommended.
     Output:
         lon/lat    - np.array, float, longitude/latitude of input point (rg,az); nan if not found.
         latlon_res - float, residul/uncertainty of coordinate conversion
     '''
-    try:    transFile = glob.glob(transFile)[0]
-    except: transFile = None
+    lookupFile = get_lookup_file(lookupFile)
+    if not lookupFile:
+        print('WARNING: No lookup table found! Can not convert coordinates without it.')
+        return None
+    atr_lut = readfile.read_attribute(lookupFile)
+    if print_msg:
+        print 'reading file: '+lookupFile
 
-    ##### Use geomap*.trans file for precious (pixel-level) coord conversion
-    def get_trans_row_col4radar(az, rg, trans_az, trans_rg, x_factor=10, y_factor=10):
-        mask_rg = np.multiply(trans_rg >= max(rg-x_factor,0.5), trans_rg <= (rg+x_factor))
-        mask_az = np.multiply(trans_az >= max(az-y_factor,0.5), trans_az <= (az+y_factor))
-        idx = np.where(np.multiply(mask_rg, mask_az))
-        trans_row, trans_col = np.nanmean(idx,1)
-        return trans_row, trans_col
-
-    ## by searching pixels in trans file with value falling buffer lat/lon value
-    if transFile:
+    #####For lookup table in geo-coord, search the buffer and use center pixel
+    if 'Y_FIRST' in atr_lut.keys():
         if 'subset_x0' in atr_rdr.keys():
             rg += int(atr_rdr['subset_x0'])
             az += int(atr_rdr['subset_y0'])        
 
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
-        if print_msg:
-            print 'reading file: '+transFile
-        trans_rg, trans_az, trans_atr = readfile.read(transFile)
-        lat_first = float(trans_atr['Y_FIRST'])
-        lon_first = float(trans_atr['X_FIRST'])
-        lat_center = lat_first + float(trans_atr['Y_STEP'])*float(trans_atr['FILE_LENGTH'])/2
-        lat_step_deg = float(trans_atr['Y_STEP'])
-        lon_step_deg = float(trans_atr['X_STEP'])
+        lut_x = readfile.read(lookupFile, epoch='range')[0]
+        lut_y = readfile.read(lookupFile, epoch='azimuth')[0]
+        lat0 = float(atr_lut['Y_FIRST'])
+        lon0 = float(atr_lut['X_FIRST'])
+        lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['FILE_LENGTH'])/2
+        lat_step_deg = float(atr_lut['Y_STEP'])
+        lon_step_deg = float(atr_lut['X_STEP'])
         lat_step = lat_step_deg*np.pi/180.0*earth_radius
         lon_step = lon_step_deg*np.pi/180.0*earth_radius*np.cos(lat_center*np.pi/180)
 
         # Get range/azimuth ground resolution/step
+        x_factor = 10
+        y_factor = 10
         if atr_rdr:
             az_step = azimuth_ground_resolution(atr_rdr)
             rg_step = range_ground_resolution(atr_rdr, print_msg)
-
             x_factor = 2*np.ceil(abs(lon_step)/rg_step)
             y_factor = 2*np.ceil(abs(lat_step)/az_step)
-        else:
-            x_factor = 10
-            y_factor = 10
 
-        trans_row = np.zeros(rg.shape)
-        trans_col = np.zeros(rg.shape)
-
+        lut_row = np.zeros(rg.shape)
+        lut_col = np.zeros(rg.shape)
         if rg.size == 1:
-            trans_row, trans_col = get_trans_row_col4radar(az, rg, trans_az, trans_rg, x_factor, y_factor)
+            lut_row, lut_col = get_lookup_row_col(az, rg, lut_y, lut_x, y_factor, x_factor)
         else:
             for i in range(rg.size):
-                trans_row[i], trans_col[i] = get_trans_row_col4radar(az[i], rg[i], trans_az, trans_rg, x_factor, y_factor)
+                lut_row[i], lut_col[i] = get_lookup_row_col(az[i], rg[i], lut_y, lut_x, y_factor, x_factor)
+        lat = lut_row*lat_step_deg + lat0
+        lon = lut_col*lon_step_deg + lon0
+        lat_resid = abs(y_factor*lat_step_deg)
+        lon_resid = abs(x_factor*lon_step_deg)
 
-        lat = trans_row*lat_step_deg + lat_first
-        lon = trans_col*lon_step_deg + lon_first
-        lat_resid = y_factor*lat_step_deg
-        lon_resid = x_factor*lon_step_deg
-
-    ##### Use corner lat/lon for rough (ten-pixels or more level) coord conversion
-    ## by estimating a simple 2D linear transformation
-    elif atr_rdr:
-        # This method only works for whole frame/track, thus input file cannot be subsetted before.
-        if 'subset_x0' in atr_rdr.keys():
-            print 'WARNING: Cannot use subset file as input! No coordinate converted.'
-            return None
-        
-        LAT_REF1=float(atr_rdr['LAT_REF1'])
-        LAT_REF2=float(atr_rdr['LAT_REF2'])
-        LAT_REF3=float(atr_rdr['LAT_REF3'])
-        LAT_REF4=float(atr_rdr['LAT_REF4'])
-        LON_REF1=float(atr_rdr['LON_REF1'])
-        LON_REF2=float(atr_rdr['LON_REF2'])
-        LON_REF3=float(atr_rdr['LON_REF3'])
-        LON_REF4=float(atr_rdr['LON_REF4'])
-        W =      float(atr_rdr['WIDTH'])
-        L =      float(atr_rdr['FILE_LENGTH'])
-        
-        LAT_REF = np.array([LAT_REF1,LAT_REF2,LAT_REF3,LAT_REF4]).reshape(4,1)
-        LON_REF = np.array([LON_REF1,LON_REF2,LON_REF3,LON_REF4]).reshape(4,1)
-        X = np.array([1,W,1,W]).reshape(4,1)
-        Y = np.array([1,1,L,L]).reshape(4,1)
-        
-        ### estimate 2D tranformation from Lease Square
-        A = np.hstack([X,Y,np.ones((4,1))])
-        B = np.hstack([LAT_REF,LON_REF])
-        affine_par = np.linalg.lstsq(A,B)[0]
-        res = B - np.dot(A,affine_par)
-        res_mean = np.mean(np.abs(res),0)
-        lat_resid = res_mean[0]
-        lon_resid = res_mean[1]
-        if print_msg:
-            print 'Residul - lat: '+str(lat_resid)+', lon: '+str(lon_resid)
-        
-        ### calculate geo coordinate of inputs
-        N = len(rg)
-        A = np.hstack([rg.reshape(N,1), az.reshape(N,1), np.ones((N,1))])
-        lat = np.dot(A, affine_par[:,0])
-        lon = np.dot(A, affine_par[:,1])
-        
+    #####For lookup table in radar-coord, read the value directly.
     else:
-        print 'No geomap*.trans or radar coord file found!'
-        return None
+        lut_x = readfile.read(lookupFile, epoch='lon')[0]
+        lut_y = readfile.read(lookupFile, epoch='lat')[0]
+        lat = lut_y[az, rg]
+        lon = lut_x[az, rg]
+
+        x_factor = 2
+        y_factor = 2
+        try:    earth_radius = float(atr_rdr['EARTH_RADIUS'])
+        except: earth_radius = 6371.0e3
+        az_step = azimuth_ground_resolution(atr_rdr)
+        rg_step = range_ground_resolution(atr_rdr)
+        lat0 = np.nanmax(lat)
+        lat1 = np.nanmin(lat)
+        az_step_deg = 180. / np.pi * az_step / earth_radius
+        rg_step_deg = 180. / np.pi * rg_step / (earth_radius*np.cos((lat0+lat1)/2*np.pi/180.))
+        lat_resid = abs(y_factor * az_step_deg)
+        lon_resid = abs(x_factor * rg_step_deg)
 
     return lat, lon, lat_resid, lon_resid
 

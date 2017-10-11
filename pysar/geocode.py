@@ -326,46 +326,43 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
     atr_rdr = readfile.read_attribute(fname)
     length = int(atr_rdr['FILE_LENGTH'])
     width = int(atr_rdr['WIDTH'])
-    print 'file size in y/x: %d/%d' % (length, width)
-    if 'subset_x0' in atr_rdr.keys():
-        x0 = int(atr_rdr['subset_x0'])
-        y0 = int(atr_rdr['subset_y0'])
-        print '\tinput radar coord file has been subsetted, read subset of lookup table value'
+    print 'reading lookup table file '+lookup_file
+    lat = readfile.read(lookup_file, epoch='latitude')[0]
+    lon = readfile.read(lookup_file, epoch='longitude')[0]
+
+    #####Prepare output pixel grid: lat/lon range and step
+    if os.path.isfile(inps.lalo_step):
+        print 'use file %s as reference for output grid lat/lon range and step' % (inps.lalo_step)
+        atr_ref = readfile.read_attribute(inps.lalo_step)
+        inps.lat_step = float(atr_ref['Y_STEP'])
+        inps.lon_step = float(atr_ref['X_STEP'])
+        inps.lat_num = int(atr_ref['FILE_LENGTH'])
+        inps.lon_num = int(atr_ref['WIDTH'])
+        inps.lat0 = float(atr_ref['Y_FIRST'])
+        inps.lon0 = float(atr_ref['X_FIRST'])
+        inps.lat1 = inps.lat0 + inps.lat_step*inps.lat_num
+        inps.lon1 = inps.lon0 + inps.lon_step*inps.lon_num
     else:
-        x0 = 0
-        y0 = 0
-    box = (x0, y0, x0+width, y0+length)
-    print 'reading lookup table file '+lookup_file+' with box: '+str(box)
-    lat = readfile.read(lookup_file, box, epoch='latitude')[0]
-    lon = readfile.read(lookup_file, box, epoch='longitude')[0]
+        try:
+            inps.lat_step = -1*abs(float(inps.lalo_step))
+            inps.lon_step = abs(float(inps.lalo_step))
+            inps.lat0 = np.nanmax(lat)
+            inps.lat1 = np.nanmin(lat)
+            inps.lon0 = np.nanmin(lon)
+            inps.lon1 = np.nanmax(lon)
+            inps.lat_num = int((inps.lat1-inps.lat0)/inps.lat_step)
+            inps.lon_num = int((inps.lon1-inps.lon0)/inps.lon_step)
+            inps.lat_step = (inps.lat1 - inps.lat0)/inps.lat_num
+            inps.lon_step = (inps.lon1 - inps.lon0)/inps.lon_num
+        except ValueError:
+            print 'Input lat/lon step is neither a float number nor a file in geo-coord, please try again.'
 
-    ## Prepare coordinates in geo-coordinate
-    inps.lat0 = np.nanmax(lat);    inps.lat1 = np.nanmin(lat)
-    inps.lon0 = np.nanmin(lon);    inps.lon1 = np.nanmax(lon)
-    print 'output lat: %f - %f' % (inps.lat0, inps.lat1)
-    print 'output lon: %f - %f' % (inps.lon0, inps.lon1)
-
-    ## Spatial resolution of output file
-    ## If not assigned, use the min of az/rg_step_deg
-    #if not inps.lalo_step:
-    #    ##Range/azimuth resolution in degree
-    #    try:    earth_radius = float(atr_rdr['EARTH_RADIUS'])
-    #    except: earth_radius = 6371.0e3
-    #    az_step = ut.azimuth_ground_resolution(atr_rdr)
-    #    rg_step = ut.range_ground_resolution(atr_rdr)
-    #    az_step_deg = 180. / np.pi * az_step / earth_radius
-    #    rg_step_deg = 180. / np.pi * rg_step / (earth_radius*np.cos((inps.lat0+inps.lat1)/2*np.pi/180.))
-    #    inps.lalo_step = max([az_step_deg, rg_step_deg])
-    inps.lat_step = -1*inps.lalo_step
-    inps.lon_step = inps.lalo_step
-    inps.lat_num = int((inps.lat1-inps.lat0)/inps.lat_step)
-    inps.lon_num = int((inps.lon1-inps.lon0)/inps.lon_step)
-    inps.lat_step = (inps.lat1 - inps.lat0)/inps.lat_num
-    inps.lon_step = (inps.lon1 - inps.lon0)/inps.lon_num
-    print 'lat_step: %f' % (inps.lat_step)
-    print 'lon_step: %f' % (inps.lon_step)
-    print 'number of pixels in lat: %d' % (inps.lat_num)
-    print 'number of pixels in lon: %d' % (inps.lon_num)
+    print 'output lat range: %f - %f' % (inps.lat0, inps.lat1)
+    print 'output lon range: %f - %f' % (inps.lon0, inps.lon1)
+    print 'output lat_step : %f' % (inps.lat_step)
+    print 'output lon_step : %f' % (inps.lon_step)
+    print 'input  file size in   y/x  : %d/%d' % (length, width)
+    print 'output file size in lat/lon: %d/%d' % (inps.lat_num, inps.lon_num)
 
     grid_lat, grid_lon = np.mgrid[inps.lat0:inps.lat1:inps.lat_num*1j,\
                                   inps.lon0:inps.lon1:inps.lon_num*1j]
@@ -506,9 +503,11 @@ def cmdLineParse():
     parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
     parser.add_argument('-o','--output', dest='outfile', help="output file name. Default: add prefix 'geo_'")
-    parser.add_argument('--lalo-step', dest='lalo_step', type=float, default=0.001,\
+    parser.add_argument('--lalo-step', dest='lalo_step', type=str, default='0.001',\
                         help='output pixel size in degree, for lookup table in radar coord (isce)\n'+\
-                             'Default: 0.001 (~100m)')
+                             'Support 2 types of input:\n'+\
+                             '1) float number - as the output pixel size in degree. Default: 0.001 (~100m)\n'+\
+                             '2) DEM file in geo coord - as reference for a) geo coverage and b) pixel size')
 
     inps = parser.parse_args()
     return inps
@@ -524,27 +523,10 @@ def main(argv):
         inps.outfile = None
     print 'fill_value: '+str(inps.fill_value)
 
-    ##Lookup table: exists or not
-    lut_file_list = ['geometryGeo.h5', 'geometryRadar.h5',\
-                     'geomap*lks_tight.trans', 'geomap*lks.trans',\
-                     'sim*_tight.UTM_TO_RDC', 'sim*.UTM_TO_RDC']
+    ##Check Lookup table
+    inps.lookup_file = ut.get_lookup_file(inps.lookup_file)
     if not inps.lookup_file:
-        try:    inps.lookup_file = ut.get_file_list(lut_file_list)[0]
-        except: inps.lookup_file = None
-    if not inps.lookup_file:
-        print 'ERROR: No geometry / lookup table file found!'
-        print 'It should be like:'
-        print lut_file_list
-        sys.exit('ERROR: ')
-    print 'lookup table file: '+os.path.basename(inps.lookup_file)
-
-    if os.path.splitext(inps.lookup_file)[1] in ['.h5']:
-        h5 = h5py.File(inps.lookup_file, 'r')
-        key_list = h5[h5.keys()[0]].keys()
-        h5.close()
-        if any(i not in key_list for i in ['latitude','longitude']):
-            print 'ERROR: latitude/longitude dataset are missing in lookup table file!'
-            sys.exit(-1)
+        sys.exit('No lookup table found! Can not geocode without it.')
 
     # check outfile and parallel option
     if inps.parallel:

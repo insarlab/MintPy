@@ -222,18 +222,18 @@ def auto_figure_title(fname, epoch=[], inps_dict=None):
         if 'unwCor' in fname:
             fig_title += '_unwCor'
 
-    elif len(epoch)==1 and k in ['timeseries']:
+    elif len(epoch)==1 and k in multi_dataset_hdf5_file:
         if inps_dict['ref_date']:
             ref_date = inps_dict['ref_date']
         else:
             try:
                 ref_date = atr['ref_date']
             except:
-                h5 = h5py.File(fname, 'r')
-                epoch_list = sorted(h5[k].keys())
-                h5.close()
-                ref_date = epoch_list[0]
-        fig_title = ptime.yymmdd(ref_date)+'-'+ptime.yymmdd(epoch[0])
+                ref_date = None
+        if not ref_date:
+            fig_title = epoch[0]
+        else:
+            fig_title = ptime.yymmdd(ref_date)+'-'+ptime.yymmdd(epoch[0])
 
         try:
             ext = os.path.splitext(fname)[1]
@@ -577,7 +577,10 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
             matrix[ind] = 10*np.log10(np.absolute(matrix[ind]))
             disp_unit[0] = 'dB'
         else:
-            print 'Un-scalable display unit: '+disp_unit[0]
+            try:
+                scale /= float(disp_unit[0])
+            except:
+                print 'Un-scalable display unit: '+disp_unit[0]
     else:
         print 'Un-scalable data unit: '+data_unit
 
@@ -1237,9 +1240,14 @@ def main(argv):
     print '\n******************** Display ********************'
 
     # File Basic Info
-    try: atr = readfile.read_attribute(inps.file)
-    except: print 'Can not read file: '+inps.file; sys.exit(1)
     ext = os.path.splitext(inps.file)[1].lower()
+    fbase = os.path.splitext(os.path.basename(inps.file))[0]
+
+    try:
+        atr = readfile.read_attribute(inps.file)
+    except:
+        sys.exit('Can not read file: '+inps.file)
+
     print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+inps.file
     k = atr['FILE_TYPE']
     width = int(float(atr['WIDTH']))
@@ -1255,7 +1263,7 @@ def main(argv):
             epochList = h5file[k]['GRIDS']['timeseries'].keys()
         else:
             epochList = sorted(h5file[k].keys())
-        h5file.close()
+        #h5file.close()
 
         # Epochs to display
         inps.epoch = get_epoch_full_list_from_input(epochList, inps.epoch, inps.epoch_num)[0]
@@ -1302,9 +1310,10 @@ def main(argv):
         if epochNum == 0:
             raise Exception('Zero epoch found!')
     # for single-dataset file
-    elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
-        if not inps.epoch:
-            inps.epoch = ['range']
+    elif k.lower() in ['.trans','.utm_to_rdc'] and not inps.epoch:
+        inps.epoch = ['range','azimuth']
+    elif fbase.startswith('los') and not inps.epoch:
+        inps.epoch = ['inc','az']
     else:
         inps.epoch = ['']
     epochNum = len(inps.epoch)
@@ -1347,12 +1356,12 @@ def main(argv):
             del msk
 
         # Figure Setting 
-        if not inps.font_size:  inps.font_size = 16
+        if not inps.font_size:
+            inps.font_size = 16
         if not inps.fig_size:
-            # Auto size proportional to data size, with min len = 8.0 inches
-            fig_scale = min(pysar.figsize_single_min/min(data.shape), pysar.figsize_single_max/max(data.shape))
-            inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in [data.shape[1]*1.25, data.shape[0]]]
-            #inps.fig_size = [12.5,8.0]
+            plot_shape = [data.shape[1]*1.25, data.shape[0]]
+            fig_scale = min(pysar.figsize_single_min/min(plot_shape), pysar.figsize_single_max/max(plot_shape))
+            inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in plot_shape]
         print 'create figure in size: '+str(inps.fig_size)
         fig = plt.figure(figsize=inps.fig_size)
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
@@ -1370,7 +1379,8 @@ def main(argv):
     else:
         #plt.switch_backend('Agg')   #to depress the warning from tight_layout.
         ##### Figure Setting 
-        if not inps.font_size:  inps.font_size = 12
+        if not inps.font_size:
+            inps.font_size = 12
         if not inps.fig_size:
             # Get screen size in inch
             #screen_dpi = plt.figure().dpi
@@ -1461,7 +1471,7 @@ def main(argv):
         all_data_min=0
         all_data_max=0
 
-        h5file = h5py.File(inps.file, 'r')
+        #h5file = h5py.File(inps.file, 'r')
         # Check dropped interferograms
         drop_epoch_list = []
         if k in multi_group_hdf5_file and inps.disp_title:
@@ -1514,6 +1524,9 @@ def main(argv):
                 elif k in ['HDFEOS']:
                     dset = h5file[k]['GRIDS']['timeseries'].get(epoch)
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
+                    subplot_title = str(epoch)
+                else:
+                    data = readfile.read(inps.file, epoch=epoch)[0]
                     subplot_title = str(epoch)
                 # mask
                 if inps.mask_file:
@@ -1595,7 +1608,8 @@ def main(argv):
                     fig.clf()
 
         ##### End of Loop 1
-        h5file.close()
+        try: h5file.close()
+        except: pass
         print '----------------------------------------'
         print 'all data range: [%.2f, %.2f] %s' % (all_data_min, all_data_max, inps.disp_unit)
         if inps.disp_min and inps.disp_max:

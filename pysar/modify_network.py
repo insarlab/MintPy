@@ -239,12 +239,9 @@ def read_template2inps(template_file, inps=None):
             sub_lat = sorted([float(i.strip()) for i in tmp[0].split(':')])
             sub_lon = sorted([float(i.strip()) for i in tmp[1].split(':')])
             inps.aoi_geo_box = (sub_lon[0], sub_lat[1], sub_lon[1], sub_lat[0])
-            # Check trans file
-            try:
-                inps.trans_file = ut.get_file_list(inps.trans_file)[0]
-            except:
-                inps.trans_file = None
-                print 'Warning: no mapping transformation file found! Can not use '+key+' option without it.'
+            # Check lookup file
+            if not inps.lookup_file:
+                print 'Warning: no lookup table file found! Can not use '+key+' option without it.'
                 print 'skip this option.'
                 inps.aoi_pix_box = None
 
@@ -299,7 +296,7 @@ def read_template2inps(template_file, inps=None):
 
 ###############################  Usage  ################################
 EXAMPLE='''example:
-  modify_network.py unwrapIfgram.h5 coherence.h5 --template pysarApp_template.txt --trans geomap_4rlks.trans
+  modify_network.py unwrapIfgram.h5 coherence.h5 --template pysarApp_template.txt
   modify_network.py unwrapIfgram.h5 coherence.h5 --reset
 
   modify_network.py unwrapIfgram.h5 coherence.h5 -t 365 -b 200
@@ -380,8 +377,8 @@ def cmdLineParse():
                                'Will use the whole area if not assigned')
     cohBased.add_argument('--min-coherence', dest='min_coherence', type=float, default=0.7,\
                           help='Minimum coherence value')
-    cohBased.add_argument('--trans', dest='trans_file', default='geomap*.trans',\
-                          help='mapping transformation file for geo/radar coordinate conversion.\n'+\
+    cohBased.add_argument('--lookup', dest='lookup_file',\
+                          help='Lookup table/mapping transformation file for geo/radar coordinate conversion.\n'+\
                                'Needed for mask AOI in lalo')
 
     # Manually select network
@@ -392,6 +389,9 @@ def cmdLineParse():
     inps = parser.parse_args()
     inps.aoi_geo_box = None
     inps.aoi_pix_box = None
+    if not inps.lookup_file:
+        inps.lookup_file = ut.get_lookup_file()
+
     return inps
 
 
@@ -471,9 +471,9 @@ def main(argv):
         print '----------------------------------------------------------------------------'
         print 'use coherence-based network modification from coherence file: '+inps.coherence_file
         # check mask AOI in lalo
-        if inps.aoi_geo_box and inps.trans_file:
+        if inps.aoi_geo_box and inps.lookup_file:
             print 'input AOI in (lon0, lat1, lon1, lat0): '+str(inps.aoi_geo_box)
-            inps.aoi_pix_box = subset.bbox_geo2radar(inps.aoi_geo_box, atr, inps.trans_file) 
+            inps.aoi_pix_box = subset.bbox_geo2radar(inps.aoi_geo_box, atr, inps.lookup_file) 
         if inps.aoi_pix_box:
             # check mask AOI within the data coverage
             inps.aoi_pix_box = subset.check_box_within_data_coverage(inps.aoi_pix_box, atr)
