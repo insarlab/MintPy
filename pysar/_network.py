@@ -1024,7 +1024,13 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, date12_list_drop=[], 
             idx1, idx2 = [date6_list.index(i) for i in date12.split('-')]
             coh_mat[idx1, idx2] = np.nan
 
+    #Show diagonal value as black, to be distinguished from un-selected interferograms
+    diag_mat = np.diag(np.ones(coh_mat.shape[0]))
+    diag_mat[diag_mat == 0.] = np.nan
+    im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
+    #Show coherence matrix
     im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0, interpolation='nearest')
+
     date_num = coh_mat.shape[0]
     if date_num < 30:
         tick_list = range(0,date_num,5)

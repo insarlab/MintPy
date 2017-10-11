@@ -478,11 +478,11 @@ def geocode_file(fname, lookup_file, fname_out, inps):
 ######################################################################################
 EXAMPLE='''example:
   geocode.py  velocity.h5
-  geocode.py  timeseries_ECMWF_demErr_refDate.h5  -l geomap_4rlks.trans
-  geocode.py  101120-110220.unw   -i linear       -l geomap_4rlks.trans
-  geocode.py  velocity.h5 temporalCoherence.h5 incidenceAngle.h5
-
-  geocode.py  velocity.h5  -l sim_150911-150922.UTM_TO_RDC
+  geocode.py  velocity.h5 temporalCoherence.h5 timeseries_ECMWF_demErr_refDate.h5
+  geocode.py  101120-110220.unw   -l geomap_4rlks.trans
+  geocode.py  velocity.h5         -l sim_150911-150922.UTM_TO_RDC
+  geocode.py  coherence.h5        -l geometryRadar.h5   --lalo-step 0.0003333
+  geocode.py  unwrapIfgram.h5     -l geometryRadar.h5   --lalo-step demGeo_tight.h5
 '''
 
 def cmdLineParse():
