@@ -22,7 +22,7 @@ def usage():
     print '''
 usage:  perp_baseline.py  timeseries_file   date  [outfile]
 
-Generates range distance (in Radar Coordinate) for each pixel
+Generates perpendicular baseline (in Radar Coordinate) for each pixel
   with required attributes read from the h5 file
 
 input arguments:
@@ -43,13 +43,13 @@ def main(argv):
         epoch = argv[1]
     except:
         usage();  sys.exit(1)
-    
+
     try:    outFile = argv[2]
-    except: outFile = 'perpBaseline.h5'
+    except: outFile = None
     
     # Calculate look angle
     pbase = ut.perp_baseline_timeseries(atr, dimension=1)
-    
+
     if pbase.shape[1] == 1:
         print pbase
         return pbase
@@ -66,6 +66,9 @@ def main(argv):
     pbase_y = pbase[epoch_idx,:].reshape(length,1)
     pbase_xy = np.tile(pbase_y, (1, width))
     
+    if not outFile:
+        outFile = 'perpBaseline_'+epoch+'.h5'
+
     print 'writing >>> '+outFile
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'

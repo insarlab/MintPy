@@ -80,10 +80,10 @@ def read(File, box=None, epoch=None):
 
     Examples:
         data, atr = read('velocity.h5')
-        data, atr = read('100120-110214.unw', (100,1100, 500, 2500))
-        data, atr = read('timeseries.h5', (), '20101120')
-        data, atr = read('timeseries.h5', (100,1100, 500, 2500), '20101120')
-        az,   atr = read('geomap*.trans', (), 'azimuth')
+        data, atr = read('100120-110214.unw', box=(100,1100, 500, 2500))
+        data, atr = read('timeseries.h5', epoch='20101120')
+        data, atr = read('timeseries.h5', box=(100,1100, 500, 2500), epoch='20101120')
+        az,   atr = read('geomap*.trans', epoch='azimuth')
         rg,az,atr = read('geomap*.trans')
     '''
 
@@ -215,9 +215,9 @@ def read(File, box=None, epoch=None):
             rg, az, atr = read_float32(File, box=box)
             if not epoch:
                 return rg, az, atr
-            elif epoch in ['rg','range']:
+            elif epoch.startswith(('rg','range')):
                 return rg, atr
-            elif epoch in ['az','azimuth']:
+            elif epoch.startswith(('az','azimuth')):
                 return az, atr
             else:
                 sys.exit('Un-recognized epoch input: '+epoch)
@@ -232,9 +232,9 @@ def read(File, box=None, epoch=None):
             data, atr = read_complex_float32(File, box=box, byte_order='ieee-be', cpx=True)
             if not epoch:
                 return data.real, data.imag, atr
-            elif epoch in ['rg','range']:
+            elif epoch.startswith(('rg','range')):
                 return data.real, atr
-            elif epoch in ['az','azimuth']:
+            elif epoch.startswith(('az','azimuth')):
                 return data.imag, atr
             else:
                 sys.exit('Un-recognized epoch input: '+epoch)
@@ -520,38 +520,16 @@ def attribute_gamma2roipac(par_dict_in):
     key_list = par_dict.keys()
 
     # Length - number of rows
-    key = 'azimuth_lines'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
-
-    key = 'interferogram_azimuth_lines'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
-
-    key = 'nlines'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
-
-    key = 'az_samp_1'
-    if key in key_list:
-        par_dict['FILE_LENGTH'] = par_dict[key]
+    for key in key_list:
+        if any(i in key for i in ['azimuth_lines','nlines','az_samp']):
+            par_dict['FILE_LENGTH'] = par_dict[key]
 
     # Width - number of columns
-    key = 'range_samples'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
-
-    key = 'interferogram_width'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
-
-    key = 'width'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
-
-    key = 'range_samp_1'
-    if key in key_list:
-        par_dict['WIDTH'] = par_dict[key]
+    for key in key_list:
+        if any(i in key for i in ['range_samp','interferogram_width','az_samp']):
+            par_dict['WIDTH'] = par_dict[key]
+        if key in key_list:
+            par_dict['WIDTH'] = par_dict[key]
 
     # WAVELENGTH
     speed_of_light = 299792458.0   # meter/second
@@ -577,19 +555,6 @@ def attribute_gamma2roipac(par_dict_in):
     key = 'near_range_slc'
     if key in key_list:
         par_dict['STARTING_RANGE'] = par_dict[key]
-
-    # RANGE_PIXEL_SIZE
-    key = 'range_pixel_spacing'
-    if key in key_list:
-        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
-
-    key = 'interferogram_range_pixel_spacing'
-    if key in key_list:
-        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
-
-    key = 'range_pixel_spacing_1'
-    if key in key_list:
-        par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
 
     # PLATFORM
     key = 'sensor'
@@ -636,28 +601,23 @@ def attribute_gamma2roipac(par_dict_in):
         else:
             par_dict['ANTENNA_SIDE'] = '1'
 
-    # AZIMUTH_PIXEL_SIZE
-    key = 'azimuth_pixel_spacing'
-    if key in key_list:
-        par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
+    # PIXEL_SIZE in range/azimuth
+    for key in key_list:
+        if any(i in key for i in ['azimuth_pixel_spacing','az_pixel_spacing']):
+            par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
 
-    key = 'interferogram_azimuth_pixel_spacing'
-    if key in key_list:
-        par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
+    for key in key_list:
+        if any(i in key for i in ['range_pixel_spacing','rg_pixel_spacing']):
+            par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
 
-    key = 'az_pixel_spacing_1'
-    if key in key_list:
-        par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
+    # Multilook number in range/azimuth
+    for key in key_list:
+        if any(i in key for i in ['range_looks']):
+            par_dict['RLOOKS'] = par_dict[key]
 
-    # RLOOKS
-    key = 'interferogram_range_looks'
-    if key in key_list:
-        par_dict['RLOOKS'] = par_dict[key]
-
-    # ALOOKS
-    key = 'interferogram_azimuth_looks'
-    if key in key_list:
-        par_dict['ALOOKS'] = par_dict[key]
+    for key in key_list:
+        if any(i in key for i in ['azimuth_looks']):
+            par_dict['ALOOKS'] = par_dict[key]
 
     # PRF
     key = 'prf'

@@ -1371,8 +1371,8 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
     if 'Y_FIRST' in atr_lut.keys():
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3
-        lut_x = readfile.read(lookupFile, epoch='range')[0]
-        lut_y = readfile.read(lookupFile, epoch='azimuth')[0]
+        lut_x = readfile.read(lookupFile, epoch='rangeCoord')[0]
+        lut_y = readfile.read(lookupFile, epoch='azimuthCoord')[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['FILE_LENGTH'])/2
@@ -1460,8 +1460,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
 
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
-        lut_x = readfile.read(lookupFile, epoch='range')[0]
-        lut_y = readfile.read(lookupFile, epoch='azimuth')[0]
+        lut_x = readfile.read(lookupFile, epoch='rangeCoord')[0]
+        lut_y = readfile.read(lookupFile, epoch='azimuthCoord')[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['FILE_LENGTH'])/2

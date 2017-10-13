@@ -217,6 +217,11 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
     print 'loading '+ext+' files into '+fileType+' HDF5 file ...'
     print 'number of '+ext+' input: '+str(len(fileList))
 
+    # Check width/length mode of input files
+    fileList, mode_width, mode_length = check_file_size(fileList)
+    if not fileList:
+        return None, None
+
     # Check conflict with existing hdf5 file
     fileList2 = check_existed_hdf5_file(fileList, outfile)
 
@@ -276,18 +281,18 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
 
 def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
     '''Load multiple geometry files into hdf5 file: geometryGeo.h5 or geometryRadar.h5.
-    File structure for radar coord:
+    File structure:
         /geometry.attrs
-        /geometry/latitude
-        /geometry/longitude
+        /geometry/latitude          #for geometryRadar.h5 only, from ISCE/Doris lookup table
+        /geometry/longitude         #for geometryRadar.h5 only, from ISCE/Doris lookup table
+        /geometry/rangeCoord        #for geometryGeo.h5 only, from ROI_PAC/Gamma lookup table
+        /geometry/azimuthCoord      #for geometryGeo.h5 only, from ROI_PAC/Gamma lookup table
+        /geometry/height
         /geometry/incidenceAngle
-        /geometry/azimuthAngle
-    File structure for geo coord:
-        /geometry.attrs
-        /geometry/range
-        /geometry/azimuth
-        /geometry/incidenceAngle
-        /geometry/azimuthAngle
+        /geometry/headingAngle
+        /geometry/slantRangeDistance
+        /geometry/shadowMask
+        /geometry/waterMask
     '''
     ext = os.path.splitext(fileList[0])[1]
     atr = readfile.read_attribute(fileList[0])
@@ -314,41 +319,38 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
 
     dnameList = []
     fileList2 = list(fileList)
-    for fname in fileList:
+    for fname in fileList2:
         fbase = os.path.basename(fname).lower()
         if ((fbase.startswith('lat') and 'latitude' in h5dnameList) or\
             (fbase.startswith('lon') and 'longitude' in h5dnameList) or\
             (fbase.startswith('los') and 'incidenceAngle' in h5dnameList) or\
-            (fbase.endswith(('.trans','.utm_to_rdc')) and 'range' in h5dnameList) or\
-            (fbase.startswith('geometry') and any(i in h5dnameList for i in ['range','longitude']))):
-            fileList2.remove(fname)
-        else:
-            print 'Un-recognized file type: '+fbase
-
-    # Open(Create) HDF5 file with r+/w mode based on fileList2
-    if fileList2 == fileList:
-        # Create and open new hdf5 file with w mode
-        print 'number of '+ext+' to add: '+str(len(fileList))
-        print 'open '+outfile+' with w mode'
-        h5 = h5py.File(outfile, 'w')
-    elif fileList2:
-        # Open existed hdf5 file with r+ mode
-        print 'Continue by adding the following new epochs ...'
-        print 'number of '+ext+' to add: '+str(len(fileList2))
-        print 'open '+outfile+' with r+ mode'
-        h5 = h5py.File(outfile, 'r+')
-        fileList = list(fileList2)
-    else:
-        print 'All input '+ext+' are included, no need to re-load.'
-        fileList = None
+            (fbase.startswith('shadowmask') and 'shadowMask' in h5dnameList) or\
+            (fbase.startswith('watermask') and 'waterMask' in h5dnameList) or\
+            (fbase.startswith('incidenceang') and 'incidenceAngle' in h5dnameList) or\
+            (fbase.endswith(('.trans','.utm_to_rdc')) and 'rangeCoord' in h5dnameList) or\
+            ((fbase.startswith(('hgt','dem')) or fbase.endswith(('.hgt','.dem','wgs84'))) and 'height' in h5dnameList) or\
+            (fbase.startswith('rangedist') and 'slantRangeDistance' in h5dnameList) or\
+            (fbase.startswith('geometry') and any(i in h5dnameList for i in ['rangeCoord','longitude']))):
+            fileList.remove(fname)
 
     # Loop - Writing files into hdf5 file
     if fileList:
+        print 'number of '+ext+' to add: '+str(len(fileList))
+        ##Open HDF5 file
+        if os.path.isfile(outfile):
+            print 'open '+outfile+' with r+ mode'
+            h5 = h5py.File(outfile, 'r+')
+        else:
+            print 'open '+outfile+' with w mode'
+            h5 = h5py.File(outfile, 'w')            
+
         ##top level group
         if fileType not in h5.keys():
             group = h5.create_group(fileType)
+            print 'create group: '+fileType
         else:
             group = h5[fileType]
+            print 'open group: '+fileType
         ##datasets
         for fname in fileList:
             fbase = os.path.basename(fname).lower()
@@ -356,20 +358,43 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
             if fbase.startswith('lat'):
                 data, atr = readfile.read(fname)
                 dset = group.create_dataset('latitude', data=data, compression='gzip')
-    
+
             elif fbase.startswith('lon'):
                 data, atr = readfile.read(fname)
                 dset = group.create_dataset('longitude', data=data, compression='gzip')
-    
+
             elif fbase.startswith('los'):
                 d0, d1, atr = readfile.read(fname)
                 dset = group.create_dataset('incidenceAngle', data=d0, compression='gzip')
-                dset = group.create_dataset('heading', data=d1, compression='gzip')
-    
+                dset = group.create_dataset('headingAngle', data=d1, compression='gzip')
+
+            elif 'shadowmask' in fbase:
+                data, atr = readfile.read(fname)
+                dset = group.create_dataset('shadowMask', data=data, compression='gzip')
+
+            elif 'watermask' in fbase:
+                data, atr = readfile.read(fname)
+                dset = group.create_dataset('waterMask', data=data, compression='gzip')
+
+            elif 'incidenceang' in fbase:
+                data, atr = readfile.read(fname)
+                dset = group.create_dataset('incidenceAngle', data=data, compression='gzip')
+
+            elif 'rangedist' in fbase:
+                data, atr = readfile.read(fname)
+                dset = group.create_dataset('slantRangeDistance', data=data, compression='gzip')
+
             elif fbase.endswith(('.trans','.utm_to_rdc')):
                 d0, d1, atr = readfile.read(fname)
-                dset = group.create_dataset('range', data=d0, compression='gzip')
-                dset = group.create_dataset('azimuth', data=d1, compression='gzip')
+                dset = group.create_dataset('rangeCoord', data=d0, compression='gzip')
+                dset = group.create_dataset('azimuthCoord', data=d1, compression='gzip')
+
+            elif fbase.startswith(('hgt','dem')) or fbase.endswith(('.hgt','.dem','wgs84')):
+                data, atr = readfile.read(fname)
+                dset = group.create_dataset('height', data=data, compression='gzip')
+
+            else:
+                print 'Un-recognized file type: '+fbase
 
         # PySAR attributes
         try:     atr['PROJECT_NAME'] = exDict['project_name']
@@ -382,6 +407,10 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
         for key, value in atr.iteritems():
             group.attrs[key] = str(value)
         h5.close()
+    else:
+        print 'All input '+ext+' are included, no need to re-load.'
+        fileList = None
+
     return outfile
 
 
@@ -511,6 +540,8 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         elif k in ['.msk']:  file_type = 'mask'
         elif k in ['.hgt','.dem','dem','.hgt_sim']:
             file_type = 'dem'
+        elif k in ['.trans','.utm_to_rdc','geometry']:
+            file_type = 'geometry'
         else:
             file_type = k
 
@@ -669,6 +700,9 @@ EXAMPLE='''example:
   load_data.py  -f radar_4rlks.hgt  -o demRadar.h5
   load_data.py  -f srtm1.dem        -o demGeo.h5
   load_data.py  --template pysarApp_template.txt SanAndreasT356EnvD.tempalte
+
+  load_data.py -f demRadar.h5 ./merged/geom_master/*.rdr rangeDistance.h5       --file-type geometry
+  load_data.py -f sim*.UTM_TO_RDC demGeo.h5 geomap*.trans geo_incidenceAngle.h5 --file-type geometry
 '''
 
 TEMPLATE='''
@@ -737,7 +771,7 @@ def main(argv):
 
     # Load data into one hdf5 file
     if inps.file:
-        inps.outfile = load_file(inps.file, vars(inps), inps.outfile)
+        inps.outfile = load_file(inps.file, vars(inps), outfile=inps.outfile, file_type=inps.file_type)
 
     # Load the whole dataset for PySAR time series analysis, e.g. call from pysarApp.py
     else:

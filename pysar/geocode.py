@@ -86,7 +86,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
 
     Inputs:
         fname      : string, file to be geocoded
-        inps.lookup_file   : string, optional, lookup table file genereated by ROIPAC or Gamma
+        lookup_file   : string, optional, lookup table file genereated by ROIPAC or Gamma
                      i.e. geomap_4rlks.trans           from ROI_PAC
                           sim_150911-150922.UTM_TO_RDC from Gamma
         interp_method     : string, optional, interpolation/resampling method, supporting nearest, linear
@@ -111,10 +111,11 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     wid_rdr = int(atr_rdr['WIDTH'])
     pts_old = (np.arange(len_rdr), np.arange(wid_rdr))
 
-
     ## Irregular coordinates from data value in lookup table
-    print 'reading lookup table file: '+inps.lookup_file
-    rg, az, atr_lut = readfile.read(inps.lookup_file)
+    print 'reading lookup table file: '+lookup_file
+    atr_lut = readfile.read_attribute(lookup_file)
+    rg = readfile.read(lookup_file, epoch='range')[0]
+    az = readfile.read(lookup_file, epoch='azimuth')[0]
     len_geo = int(atr_lut['FILE_LENGTH'])
     wid_geo = int(atr_lut['WIDTH'])
 
@@ -146,8 +147,8 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
         group = h5out.create_group(k)
         print 'writing >>> '+fname_out
 
-        if k == 'timeseries':
-            print 'number of acquisitions: '+str(epoch_num)
+        if k in multi_dataset_hdf5_file:
+            print 'number of datasets: '+str(epoch_num)
             for i in range(epoch_num):
                 date = epoch_list[i]
                 data = h5[k].get(date)[:]
@@ -165,7 +166,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
             for key,value in atr.iteritems():
                 group.attrs[key] = value
 
-        elif k in ['interferograms','wrapped','coherence']:
+        elif k in multi_group_hdf5_file:
             print 'number of interferograms: '+str(epoch_num)
             date12_list = ptime.list_ifgram2date12(epoch_list)
             for i in range(epoch_num):
@@ -463,13 +464,13 @@ def geocode_file(fname, lookup_file, fname_out, inps):
     if 'Y_FIRST' in atr.keys():
         if not inps.interp_method:
             inps.interp_method = 'nearest'
-        print 'lookup table in geo coordinates'
+        print 'lookup table in geo coordinates: '+lookup_file
         print 'interpolation method: '+inps.interp_method
         fname_out = geocode_file_geo_lut(fname, lookup_file, fname_out, inps)
     else:
         if not inps.interp_method:
             inps.interp_method = 'linear'
-        print 'lookup table in radar coordinates'
+        print 'lookup table in radar coordinates: '+lookup_file
         print 'interpolation method: '+inps.interp_method
         fname_out = geocode_file_radar_lut(fname, lookup_file, fname_out, inps)
     return fname_out

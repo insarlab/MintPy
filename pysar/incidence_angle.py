@@ -64,6 +64,8 @@ def main(argv):
     print 'writing >>> '+outFile
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'degree'
+    try: atr.pop('ref_date')
+    except: pass
     writefile.write(angle, atr, outFile)
     return outFile
 
