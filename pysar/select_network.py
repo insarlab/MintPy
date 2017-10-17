@@ -288,9 +288,9 @@ def cmdLineParse():
 
     # Method
     method = parser.add_argument_group('Methods to generate the initial network')
-    method.add_argument('--method', \
+    method.add_argument('--method', default='all',\
                         help='network type with info on temp/perp baseline and doppler centroid frequency.')
-    method.add_argument('-r', dest='reference_file',\
+    method.add_argument('-r', dest='reference_file', default=None,\
                         help='Reference hdf5 / list file with network information. e.g.\n'+\
                              'unwrapIfgram.h5\n'+\
                              'ifgram_list.txt with content as below:'+pnet.IFGRAM_LIST_FILE+\
@@ -300,7 +300,7 @@ def cmdLineParse():
                         help='date(s) excluded for network selection, e.g. -ex 060713 070831')
     method.add_argument('--start-date', dest='start_date', type=str, help='start/min date of network')
     method.add_argument('--end-date', dest='end_date', type=str, help='end/max date of network')
-    method.add_argument('--increment-num', dest='increment_num', type=int,\
+    method.add_argument('--increment-num', dest='increment_num', type=int, default=3,\
                         help='number of new pairs for each new acquisition, for sequential method')
     method.add_argument('--temp-perp-list', dest='temp_perp_list', default='16,1600;32,800;48,600;64,200',\
                         help='list of max temp/perp baselines, for hierarchical method, e.g.\n'+\
@@ -315,13 +315,13 @@ def cmdLineParse():
     threshold.add_argument('--nothreshold', dest='threshold', action='store_false', \
                            help='do not remove pairs using min/max temp/perp baseline and dop\n'+\
                                 'auto applied this option when --reference-file is specified.')
-    threshold.add_argument('--dop-overlap-min', dest='dop_overlap_min', type=float,\
+    threshold.add_argument('--dop-overlap-min', dest='dop_overlap_min', type=float, default=15.0,\
                            help='min doppler overlap percentage')
-    threshold.add_argument('--bperp-max', dest='perp_base_max', type=float, \
+    threshold.add_argument('--bperp-max', dest='perp_base_max', type=float, default=500.0,\
                            help='max perpendicular spatial baseline in meters')
-    threshold.add_argument('--btemp-min', dest='temp_base_min', type=float, \
+    threshold.add_argument('--btemp-min', dest='temp_base_min', type=float, default=0.0, \
                            help='min temporal baseline in days')
-    threshold.add_argument('--btemp-max', dest='temp_base_max', type=float, \
+    threshold.add_argument('--btemp-max', dest='temp_base_max', type=float, default=1800.0,\
                            help='max temporal baseline in days')
     threshold.add_argument('--keep-seasonal', dest='keep_seasonal', action='store_true',\
                            help='keep seasonal pairs, even they are out of temporal baseline limit\n'+\
