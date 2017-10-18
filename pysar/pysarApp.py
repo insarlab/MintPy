@@ -705,7 +705,7 @@ def main(argv):
     if template['pysar.unwrapError.method'] not in ['auto','no']:
         print '\n**********  Unwrapping Error Correction  **************'
         outName = os.path.splitext(inps.ifgram_file)[0]+'_unwCor.h5'
-        unwCmd='unwrap_error.py '+inps.ifgram_file+' --template '+inps.template_file
+        unwCmd='unwrap_error.py '+inps.ifgram_file+' --mask '+inps.mask_file+' --template '+inps.template_file
         print unwCmd
         #if ut.update_file(outName):
         if ut.update_file(outName, inps.ifgram_file):
