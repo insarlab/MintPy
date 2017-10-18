@@ -396,16 +396,17 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
             else:
                 print 'Un-recognized file type: '+fbase
 
-        # PySAR attributes
-        try:     atr['PROJECT_NAME'] = exDict['project_name']
-        except:  atr['PROJECT_NAME'] = 'PYSAR'
-        key = 'INSAR_PROCESSOR'
-        if key not in atr.keys():
-            try:  atr[key] = exDict['insar_processor']
-            except:  pass
-        # Write attributes
-        for key, value in atr.iteritems():
-            group.attrs[key] = str(value)
+            # PySAR attributes
+            try:     atr['PROJECT_NAME'] = exDict['project_name']
+            except:  atr['PROJECT_NAME'] = 'PYSAR'
+            key = 'INSAR_PROCESSOR'
+            if key not in atr.keys():
+                try:  atr[key] = exDict['insar_processor']
+                except:  pass
+            # Write attributes
+            for key in atr.keys():
+                if key not in group.attrs.keys():
+                    group.attrs[key] = str(value)
         h5.close()
     else:
         print 'All input '+ext+' are included, no need to re-load.'

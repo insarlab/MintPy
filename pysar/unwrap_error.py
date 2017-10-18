@@ -344,10 +344,11 @@ def read_template2inps(template_file, inps=None):
     key = prefix+'yx'
     if key in key_list:
         value = template[key]
-        yx = value.replace(';',' ').replace(',',' ').split()
-        yx = [int(i) for i in yx]
-        inps.y = yx[0::2]
-        inps.x = yx[1::2]
+        if value not in ['auto','no']:
+            yx = value.replace(';',' ').replace(',',' ').split()
+            yx = [int(i) for i in yx]
+            inps.y = yx[0::2]
+            inps.x = yx[1::2]
 
     key = prefix+'ramp'
     if key in key_list:
