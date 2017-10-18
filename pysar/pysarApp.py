@@ -50,7 +50,7 @@ import pysar.save_unavco as unavco
 
 
 ###############################################################################
-def check_geocode_file(geomapFile, File, outFile=None):
+def check_geocode_file(geomapFile, File, templateFile=None, outFile=None):
     '''Geocode input file or use existed geocoded file.'''
     if not File:
         return None
@@ -67,6 +67,8 @@ def check_geocode_file(geomapFile, File, outFile=None):
 
     if ut.update_file(outFile, File):
         geocodeCmd = 'geocode.py '+File+' -l '+os.path.basename(geomapFile)
+        if templateFile:
+            geocodedCmd += ' -t '+templateFile
         print geocodeCmd
         status = subprocess.Popen(geocodeCmd, shell=True).wait()
 
@@ -240,9 +242,9 @@ pysar.multilook.yx    = auto    #[4,4 / no], auto for no [not implemented yet]
 pysar.reference.yx            = auto   #[257,151 / auto]
 pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
 
-pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
+pysar.reference.coherenceFile = auto   #[filename], auto for averageSpatialCoherence.h5
 pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
-pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
+pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
 
 
 ## 3. Unwrapping Error Correction
@@ -250,7 +252,7 @@ pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
 ## a. phase closure (Fattahi, 2015, PhD Thesis)
 ## b. connecting bridge
 pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
-pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
+pysar.unwrapError.maskFile = auto   #[filename / no], auto for no
 pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
 pysar.unwrapError.yx       = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,...], auto for none
 
@@ -264,7 +266,7 @@ pysar.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interfe
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.coherenceFile   = auto  #[filename], auto for coherence.h5
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for [maskLand.h5, mask.h5][0], no for all pixels
+pysar.network.maskFile        = auto  #[filename, no], auto for [maskLand.h5, mask.h5][0], no for all pixels
 pysar.network.maskAoi.yx      = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
@@ -287,7 +289,7 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ##     linear   - uniform distribution CDF function (Tong et al., 2016, RSE)
 ##     normal   - normal  distribution CDF function (Perissin, SARProZ)
 pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
-pysar.timeseriesInv.coherenceFile = auto #[fname / no], auto for coherence.h5, file to read weight data
+pysar.timeseriesInv.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
 pysar.timeseriesInv.minCoherence  = auto #[0.0-1.0], auto for 0.20, put 0 weight for pixels with coherence < input
 pysar.timeseriesInv.maxCoherence  = auto #[0.0-1.0], auto for 0.85, put 1 weight for pixels with coherence > input
 pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
@@ -320,7 +322,7 @@ pysar.topoError.stepFuncDate = auto    #[20080529 / no], auto for no, date of st
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Recommendation: quadratic for whole image, plane for local/small area
-pysar.residualRms.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
+pysar.residualRms.maskFile        = auto  #[filename / no], auto for maskTempCoh.h5, mask for ramp estimation
 pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
 pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
 pysar.residualRms.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RMS to txt/pdf file.
@@ -338,7 +340,7 @@ pysar.reference.date = auto   #[auto / reference_date.txt / 20090214 / no]
 ## remove phase ramp for each epoch, useful to check localized deformation, i.e. volcanic, land subsidence, etc.
 ## [plane, quadratic, plane_range, plane_azimuth, quadratic_range, quadratic_azimuth, baseline_cor, base_trop_cor]
 pysar.deramp          = auto  #[no / plane / quadratic], auto for no - no ramp will be removed
-pysar.deramp.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, mask file for ramp estimation
+pysar.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask file for ramp estimation
 
 
 ## 11. Velocity Inversion
@@ -349,12 +351,23 @@ pysar.velocity.endDate     = auto   #[20101230 / no], auto for no
 
 
 ## 12. Post-processing (geocode, output to Google Earth, UNAVCO, etc.)
-pysar.geocode      = auto   #[yes / no], auto for yes
+## 12.1 Geocode
+## For data processed by ROI_PAC/Gamma, output resolution for geocoded file is the same as their lookup table file.
+## For data processed by ISCE/Doris, output resolution is assign by user with resolution option:
+## 1) float number - resolution in degree, 0.001 by default, around 100 m on equator
+## 2) file name    - use the resolution from a file in geo coordinates, e.g. demGeo.h5
+pysar.geocode            = auto  #[yes / no], auto for yes
+pysar.geocode.resolution = auto  #[0.0-inf / filename], auto for 0.001 (~100 m), output resolution for ISCE processor
+
+## 12.2 Export to other formats
+## To update UNAVCO file with new acquisitions, enabling update mode, a.k.a. put XXXXXXXX as endDate 
+## in filename if endDate < 1 year
+pysar.save.unavco  = auto   #[yes / update / no], auto for no, save timeseries to UNAVCO InSAR Archive format
 pysar.save.kml     = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 pysar.save.geotiff = auto   #[yes / no], auto for no, save geocoded velocity to Geotiff format [not implemented yet]
-pysar.save.unavco  = auto   #[yes / update / no], auto for no, save timeseries to UNAVCO InSAR Archive format
-                            #update for enabling update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year
-pysar.plot         = auto   #[yes / no], auto for yes, plot files generated by pysarApp default processing to PIC folder
+
+## 12.3 Plot
+pysar.plot = auto   #[yes / no], auto for yes, plot files generated by pysarApp default processing to PIC folder
 '''
 
 EXAMPLE='''example:
@@ -593,14 +606,14 @@ def main(argv):
     # Check the subset (Optional)
     #########################################
     if inps.lookup_file and template['pysar.subset.tightBox'] in ['yes','auto']:
-        ##Tight subset DEM in geo coord
-        subCmd = 'subset.py '+inps.dem_geo_file+' --tight'
-        print subCmd
-        outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
-        if ut.update_file(outName, inps.dem_geo_file):
-            status = subprocess.Popen(subCmd, shell=True).wait()        
-        if status is 0 and os.path.isfile(outName):
-            inps.dem_geo_file = outName
+        ###Tight subset DEM in geo coord
+        #subCmd = 'subset.py '+inps.dem_geo_file+' --tight'
+        #print subCmd
+        #outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
+        #if ut.update_file(outName, inps.dem_geo_file):
+        #    status = subprocess.Popen(subCmd, shell=True).wait()        
+        #if status is 0 and os.path.isfile(outName):
+        #    inps.dem_geo_file = outName
 
         ##Tight subset lookup table in geo coord (roipac/gamma)
         atr_lut = readfile.read_attribute(inps.lookup_file)
@@ -786,16 +799,15 @@ def main(argv):
         demFile = inps.dem_geo_file
     else:
         demFile = inps.dem_radar_file
-
     if ut.update_file(demFile):
         print '++++++++++++++++++++++++++++++++++++++++++++++'
         print 'ERROR:'
         print '    DEM file was not found!'
-        if 'pysar.troposphericDelay.method' in template.keys():
-            print '    Continue without tropospheric correction ...'
-            template['pysar.troposphericDelay.method'] = 'no'
-        if template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']:
-            template['pysar.deramp'] = 'no'
+        #if 'pysar.troposphericDelay.method' in template.keys():
+        #    print '    Continue without tropospheric correction ...'
+        #    template['pysar.troposphericDelay.method'] = 'no'
+        #if template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']:
+        #    template['pysar.deramp'] = 'no'
         print '++++++++++++++++++++++++++++++++++++++++++++++'
 
 
@@ -1058,9 +1070,9 @@ def main(argv):
     key = 'pysar.geocode'
     if template[key] in ['auto','yes'] and 'Y_FIRST' not in atr.keys():
         print '\n--------------------------------------------'
-        inps.geo_vel_file        = check_geocode_file(inps.lookup_file, inps.vel_file)
-        inps.geo_temp_coh_file   = check_geocode_file(inps.lookup_file, inps.temp_coh_file)
-        inps.goe_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file)
+        inps.geo_vel_file        = check_geocode_file(inps.lookup_file, inps.vel_file,        inps.template_file)
+        inps.geo_temp_coh_file   = check_geocode_file(inps.lookup_file, inps.temp_coh_file,   inps.template_file)
+        inps.goe_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file, inps.template_file)
 
 
     # Mask in geo coord
@@ -1109,7 +1121,7 @@ def main(argv):
                           'Skip saving.')
         else:
             # 1. Time series file
-            inps.geo_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file)
+            inps.geo_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file, inps.template_file)
             # Add UNAVCO attributes
             if inps.unavco_atr_file:
                 atrCmd = 'add_attribute.py '+inps.geo_timeseries_file+' '+inps.unavco_atr_file
@@ -1120,7 +1132,7 @@ def main(argv):
                     sys.exit(-1)
 
             # 2. Temporal Coherence
-            inps.geo_temp_coh_file = check_geocode_file(inps.lookup_file, inps.temp_coh_file)
+            inps.geo_temp_coh_file = check_geocode_file(inps.lookup_file, inps.temp_coh_file, inps.template_file)
 
             # 3. Mask file
             if not inps.geo_mask_file:
@@ -1145,7 +1157,7 @@ def main(argv):
                 if status is not 0:
                     print '\nError while generating incidence angle file.\n'
                     sys.exit(-1)
-            inps.geo_inc_angle_file = check_geocode_file(inps.lookup_file, inps.inc_angle_file)
+            inps.geo_inc_angle_file = check_geocode_file(inps.lookup_file, inps.inc_angle_file, inps.template_file)
 
             # Save to UNAVCO format
             print '--------------------------------------------'
