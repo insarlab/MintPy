@@ -197,7 +197,7 @@ def get_date12_list(File, check_drop_ifgram=False):
         h5 = h5py.File(File, 'r')
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
-            if not check_drop_ifgram or h5[k][epoch].attrs['drop_ifgram'] == 'no':
+            if not check_drop_ifgram or h5[k][epoch].attrs['drop_ifgram'] == 'yes':
                 date12 = h5[k][epoch].attrs['DATE12']
                 date12_list.append(date12)
         h5.close()

@@ -96,13 +96,13 @@ class Basemap2(Basemap):
         # Auto tick sequence
         digit = np.int(np.floor(np.log10(lalo_step)))
         lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
-        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-max_lalo_dist, -lalo_step),\
-                                    np.arange(lat_major, lat_major+max_lalo_dist, lalo_step))))
+        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step),\
+                                    np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step))))
         lats = np.sort(lats[np.where(np.logical_and(lats>=geo_box[3], lats<=geo_box[1]))])
-        
+
         lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
-        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-max_lalo_dist, -lalo_step),\
-                                    np.arange(lon_major, lon_major+max_lalo_dist, lalo_step))))
+        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step),\
+                                    np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step))))
         lons = np.sort(lons[np.where(np.logical_and(lons>=geo_box[0], lons<=geo_box[2]))])
  
         return lats, lons, lalo_step
