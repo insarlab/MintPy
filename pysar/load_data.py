@@ -404,7 +404,7 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
                 try:  atr[key] = exDict['insar_processor']
                 except:  pass
             # Write attributes
-            for key in atr.keys():
+            for key,value in atr.iteritems():
                 if key not in group.attrs.keys():
                     group.attrs[key] = str(value)
         h5.close()
