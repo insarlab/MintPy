@@ -68,7 +68,7 @@ def check_geocode_file(geomapFile, File, templateFile=None, outFile=None):
     if ut.update_file(outFile, File):
         geocodeCmd = 'geocode.py '+File+' -l '+os.path.basename(geomapFile)
         if templateFile:
-            geocodedCmd += ' -t '+templateFile
+            geocodeCmd += ' -t '+templateFile
         print geocodeCmd
         status = subprocess.Popen(geocodeCmd, shell=True).wait()
 

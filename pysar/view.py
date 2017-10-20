@@ -837,7 +837,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             inps.dem_pix_box = subset.box_geo2pixel(inps.geo_box, dem_meta_dict)
         else:
             inps.dem_pix_box = inps.pix_box
-        dem, dem_meta_dict = readfile.read(inps.dem_file, inps.dem_pix_box)
+        dem, dem_meta_dict = readfile.read(inps.dem_file, inps.dem_pix_box, epoch='height')
 
         # If data is too large, do not show DEM contour
         if inps.geo_box:
@@ -1334,8 +1334,13 @@ def main(argv):
     # Read mask file if inputed
     if inps.mask_file:
         try:
-            msk = readfile.read(inps.mask_file, inps.pix_box)[0]
-            print 'mask data with: '+os.path.basename(inps.mask_file)
+            atrMsk = readfile.read_attribute(inps.mask_file)
+            if atrMsk['FILE_LENGTH'] == atr['FILE_LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
+                msk = readfile.read(inps.mask_file, inps.pix_box)[0]
+                print 'mask data with: '+os.path.basename(inps.mask_file)
+            else:
+                print 'WARNING: input file has different size from mask file: %s. Continue without mask' % (inps.mask_file)
+                inps.mask_file = None
         except:
             print 'Can not open mask file: '+inps.mask_file
             inps.mask_file = None
@@ -1451,7 +1456,7 @@ def main(argv):
         # Read DEM
         if inps.dem_file:
             print 'reading DEM: '+os.path.basename(inps.dem_file)+' ...'
-            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box)
+            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box, epoch='height')
             if inps.multilook:
                 dem = multilook_matrix(dem, inps.multilook_num, inps.multilook_num)
 
