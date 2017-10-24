@@ -290,8 +290,6 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ##     normal   - normal  distribution CDF function (Perissin, SARProZ)
 pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
 pysar.timeseriesInv.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
-pysar.timeseriesInv.minCoherence  = auto #[0.0-1.0], auto for 0.20, put 0 weight for pixels with coherence < input
-pysar.timeseriesInv.maxCoherence  = auto #[0.0-1.0], auto for 0.85, put 1 weight for pixels with coherence > input
 pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 

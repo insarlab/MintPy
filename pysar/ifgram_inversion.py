@@ -36,7 +36,7 @@ import argparse
 
 import h5py
 import numpy as np
-from scipy.stats import norm
+from scipy.special import gamma
 
 import pysar._datetime as ptime
 import pysar._readfile as readfile
@@ -45,6 +45,119 @@ import pysar._pysar_utilities as ut
 
 
 ################################################################################################
+def phase_pdf_ds(L, coherence=None, phiNum=1000):
+    '''Marginal PDF of interferometric phase for distributed scatterers (DS)
+    Eq. 66 (Tough et al., 1995) and Eq. 4.2.23 (Hanssen, 2001)
+    Inputs:
+        L         - int, number of independent looks
+        coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
+        phiNum    - int, number of phase sample for the numerical calculation
+    Output:
+        pdf       - 2D np.array, phase pdf in size of (phiNum, len(coherence))
+        coherence - 1D np.array for the range of coherence
+    Example:
+        epsilon = 1e-4
+        coh = np.linspace(0., 1-epsilon, 1000)
+        pdf, coh = phase_pdf_ds(1, coherence=coh)
+    '''
+    epsilon = 1e-4
+    if coherence is None:
+        coherence = np.linspace(0., 1.-epsilon, 1000)
+    coherence = np.array(coherence).reshape(1,-1)
+
+    phi = np.linspace(-np.pi, np.pi, phiNum).reshape(-1,1)
+
+    ### Phase PDF - Eq. 4.2.32 (Hanssen, 2001)
+    A = np.power((1-np.square(coherence)), L) / (2*np.pi)
+    A = np.tile(A, (phiNum, 1))
+    B = gamma(2*L - 1) / ((gamma(L))**2 * 2**(2*(L-1)))
+
+    beta = np.multiply(np.abs(coherence), np.cos(phi), dtype=np.float64)
+    #C1 = np.power((1 - np.square(beta)), L+0.5)
+    #C1[C1 == 0.] = epsilon
+    #C = np.divide((2*L - 1) * beta, C1)
+    C = np.divide((2*L - 1) * beta, np.power((1 - np.square(beta)), L+0.5))
+    C = np.multiply(C, (np.pi/2 + np.arcsin(beta)))
+    #C2 = np.power((1 - np.square(beta)), L)
+    #C2[C2 == 0.0] = epsilon
+    #C += 1 / C2
+    C += 1 / np.power((1 - np.square(beta)), L)
+
+    sumD = 0
+    if L > 1:
+        for r in range(L-1):
+            D = gamma(L-0.5) / gamma(L-0.5-r)
+            D *= gamma(L-1-r) / gamma(L-1)
+            #D1 = np.power((1 - np.square(beta)), r+2)
+            #D1[D1 == 0.] = epsilon
+            #D *= (1 + (2*r+1)*np.square(beta)) / D1
+            D *= (1 + (2*r+1)*np.square(beta)) / np.power((1 - np.square(beta)), r+2)
+            sumD += D
+        sumD /= (2*(L-1))
+
+    pdf = B*C + sumD
+    pdf = np.multiply(A, pdf)
+    return pdf, coherence.flatten()
+
+
+def phase_variance_ds(L,  coherence=None, phiNum=1000):
+    '''Interferometric phase variance for distributed scatterers (DS)
+    Eq. 2.1.2 (Box et al., 2015) and Eq. 4.2.27 (Hanssen, 2001)
+    Inputs:
+        L         - int, number of independent looks
+        coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
+        phiNum    - int, number of phase sample for the numerical calculation
+    Output:
+        var       - 1D np.array, phase variance in size of (len(coherence))
+        coherence - 1D np.array for the range of coherence
+    Example:
+        epsilon = 1e-4
+        coh = np.linspace(0., 1-epsilon, 1000)
+        var, coh = phase_variance_ds(1, coherence=coh)
+    '''
+    epsilon = 1e-4
+    if coherence is None:
+        coherence = np.linspace(0., 1.-epsilon, 1000)
+
+    phi = np.linspace(-np.pi, np.pi, phiNum).reshape(-1,1)
+    phi_step = 2*np.pi/phiNum
+
+    pdf, coherence = phase_pdf_ds(L, coherence=coherence, phiNum=phiNum)
+    var = np.sum(np.multiply(np.square(np.tile(phi, (1, len(coherence)))), pdf)*phi_step, axis=0)
+    return var, coherence
+
+
+def phase_variance_ps(L, coherence=None):
+    '''the Cramer-Rao bound (CRB) of phase variance
+    Given by Eq. 25 (Rodriguez and Martin, 1992)and Eq 4.2.32 (Hanssen, 2001)
+    Valid when coherence is close to 1.
+    '''
+    epsilon = 1e-4
+    if coherence is None:
+        coherence = np.linspace(0.9, 1.-epsilon, 1000)
+    var = (1-coherence**2) / (2*L*coherence**2)
+    return var, coherence
+
+
+def coherence2phase_variance_ds(coherence, L=32):
+    '''Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)'''
+    epsilon = 1e-4
+    coh_num = 1000
+    coh_min = 0.0
+    coh_max = 1.0 - epsilon
+    coh_step = (coh_max - coh_min) / coh_num
+    coh_lut = np.linspace(coh_min, coh_max, coh_num)
+
+    coherence = np.array(coherence)
+    coherence[coherence < coh_min] = coh_min
+    coherence[coherence > coh_max] = coh_max
+    coherence_idx = np.array((coherence - coh_min) / coh_step, np.int16)
+
+    var_lut = phase_variance_ds(L, coh_lut)[0]
+    variance = var_lut[coherence_idx]
+    return variance
+
+
 def round_to_1(x):
     '''Return the most significant digit of input number'''
     digit = int(np.floor(np.log10(abs(x))))
@@ -88,14 +201,15 @@ def network_inversion_wls(A, ifgram, weight, ts=None):
         A      - 2D np.array in size of (ifgram_num, date_num-1)
                  representing date configuration for each interferogram
                  (-1 for master, 1 for slave, 0 for others)
-        ifgram - 1D np.array in size of (ifgram_num,)
+        ifgram - np.array in size of (ifgram_num,) or (ifgram_num, 1)
                  phase of all interferograms
-        weight - 1D np.array in size of (ifgram_num,), weight of ifgram
+        weight - np.array in size of (ifgram_num,) or (ifgram_num, 1)
+                 weight of ifgram
     Output:
         ts - 1D np.array in size of (date_num-1,), phase time series
     '''
-    W = np.diag(weight)
-    ts = np.linalg.inv(A.T.dot(W).dot(A)).dot(A.T).dot(W).dot(ifgram)
+    W = np.diag(weight.flatten())
+    ts = np.linalg.inv(A.T.dot(W).dot(A)).dot(A.T).dot(W).dot(ifgram.reshape(-1,1))
     return ts
 
 
@@ -161,7 +275,6 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
 
                         #Inversion
                         weight_function   - 
-                        max/min_coherence - 
     '''
 
     ##### Get patch size/index
@@ -196,16 +309,16 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
     ifgram_data = np.zeros((ifgram_num, pixel_num2inv), np.float32)
     date12_list = meta['date12_list']
 
-    print 'reading interferograms ...'
+    atr = readfile.read_attribute(ifgramFile)
     h5ifgram = h5py.File(ifgramFile,'r')
-    #prog_bar = ptime.progress_bar(maxValue=ifgram_num)
     for j in range(ifgram_num):
         ifgram = meta['ifgram_list'][j]
         d = h5ifgram['interferograms'][ifgram].get(ifgram)[r0:r1,c0:c1]
         ifgram_data[j] = d.flatten()[mask]
-        #prog_bar.update(j+1, suffix=date12_list[j])
+        sys.stdout.write('\rreading interferograms %s/%s ...' % (j+1, ifgram_num))
+        sys.stdout.flush()
+    print ' '
     h5ifgram.close()
-    #prog_bar.close()
     ifgram_data -= meta['ref_value']
 
     ##### Design matrix
@@ -223,50 +336,29 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
     else:
         ##### Read coherence
         coh_data = np.zeros((ifgram_num, pixel_num2inv), np.float32)
-        print 'reading coherence ...'
         h5coh = h5py.File(coherenceFile,'r')
         coh_list = sorted(h5coh['coherence'].keys())
-        #prog_bar = ptime.progress_bar(maxValue=ifgram_num)
         for j in range(ifgram_num):
             ifgram = coh_list[j]
             d = h5coh['coherence'][ifgram].get(ifgram)[r0:r1,c0:c1]
             d[np.isnan(d)] = 0.
             coh_data[j] = d.flatten()[mask]
-            #prog_bar.update(j+1, suffix=date12_list[j])
+            sys.stdout.write('\rreading coherence %s/%s ...' % (j+1, ifgram_num))
+            sys.stdout.flush()
+        print ' '
         h5coh.close()
-        #prog_bar.close()
 
         ##### Calculate Weight matrix
         weight = coh_data
+        epsilon = 1e-4
         if meta['weight_function'].startswith('var'):
-            print 'convert coherence to weight using inverse of variance: x**2/(1-x**2)'
-            weight[weight > 0.999] = 0.999
-            weight[weight < 0.001] = 0.001
-            #if meta['weight_function'] == 'variance-max-coherence':
-            #    print 'constrain the max coherence to %f' % meta['max_coherence']
-            #    weight[weight > meta['max_coherence']] = meta['max_coherence']
-            weight = np.square(weight)
-            weight *= 1. / (1. - weight)
-            #if meta['weight_function'] == 'variance-log':
-            #    print 'use log(1/variance)+1 as weight'
-            #    weight = np.log(weight+1)
+            print 'convert coherence to weight using inverse of phase variance'
+            print '    with phase PDF for distributed scatterers from Tough et al. (1995, Proc. Math. Phy. Sci.)'
+            L = int(atr['ALOOKS']) * int(atr['RLOOKS'])
+            weight = 1.0 / coherence2phase_variance_ds(weight, L)
         elif meta['weight_function'].startswith('lin'):
-            print 'use coherence as weight directly (Tong et al., 2016, RSE)'
-            weight[weight < 1e-6] = 1e-6
-        elif meta['weight_function'].startswith('norm'):
-            mu  = (meta['min_coherence'] + meta['max_coherence']) / 2.0
-            std = (meta['max_coherence'] - meta['min_coherence']) / 6.0
-            print 'convert coherence to weight using CDF of normal distribution: N(%f, %f)' % (mu, std)
-            chunk_size = 1000
-            chunk_num = int(pixel_num2inv-1/chunk_size)+1
-            #prog_bar = ptime.progress_bar(maxValue=chunk_num)
-            for k in range(chunk_num):
-                p0 = (k-1)*chunk_size
-                p1 = min([pixel_num2inv, p0+chunk_size])
-                weight[:,p0:p1] = norm.cdf(weight[:,p0:p1], mu, std)
-                #prog_bar.update(k+1, every=10)
-            #prog_bar.close()
-            #weight = norm.cdf(weight, mu, std)
+            print 'use coherence as weight directly (Perissin & Wang, 2012, IEEE-TGRS; Tong et al., 2016, RSE)'
+            weight[weight < epsilon] = epsilon
         else:
             print 'Un-recognized weight function: %s' % meta['weight_function']
             sys.exit(-1)
@@ -275,7 +367,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
         print 'inversing time series ...'
         prog_bar = ptime.progress_bar(maxValue=pixel_num2inv)
         for i in range(pixel_num2inv):
-            ts[1:,pixel_idx2inv[i]] = network_inversion_wls(A, ifgram_data[:,i], weight[:,i])
+            ts[1:,pixel_idx2inv[i]] = network_inversion_wls(A, ifgram_data[:,i], weight[:,i]).flatten()
             prog_bar.update(i+1, every=1000, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
         prog_bar.close()
 
@@ -309,13 +401,18 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
         coherenceFile - string, HDF5 file name of the coherence
         meta          - dict, including the following options:
                         weight_function
-                        min_coherence
-                        max_coherence
                         chunk_size - float, max number of data (ifgram_num*row_num*col_num)
                                      to read per loop; to control the memory
     Output:
         timeseriesFile - string, HDF5 file name of the output timeseries
         tempCohFile    - string, HDF5 file name of temporal coherence
+    Example:
+        meta = dict()
+        meta['weight_function'] = 'variance'
+        meta['chunk_size'] = 0.5e9
+        meta['timeseriesFile'] = 'timeseries_var.h5'
+        meta['tempCohFile'] = 'temporalCoherence_var.h5'
+        ifgram_inversion('unwrapIfgram.h5', 'coherence.h5', meta)
     '''
     total = time.time()
 
@@ -348,7 +445,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     meta['date12_list'] = date12_list
 
     tbase_list = ptime.date_list2tbase(date8_list)[0]
-    tbase_diff = np.diff(tbase_list).reshape((date_num-1,1))
+    tbase_diff = np.diff(tbase_list).reshape((-1,1))
     meta['tbase_diff'] = tbase_diff
 
     print 'number of interferograms: %d' % (ifgram_num)
@@ -370,9 +467,13 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
         meta['ref_x'] = ref_x
         meta['ref_value'] = ref_value
     except:
-        print 'ERROR: No ref_x/y found! Can not inverse interferograms without reference in space.'
-        print 'run seed_data.py '+ifgramFile+' --mark-attribute for a quick referencing.'
-        sys.exit(1)
+        if meta['skip_ref']:
+            meta['ref_value'] = 0.0
+            print 'Skip checking reference pixel info - This is for SIMULATION ONLY.'
+        else:
+            print 'ERROR: No ref_x/y found! Can not inverse interferograms without reference in space.'
+            print 'run seed_data.py '+ifgramFile+' --mark-attribute for a quick referencing.'
+            sys.exit(1)
     h5ifgram.close()
 
     ##### Rank of Design matrix for weighted inversion
@@ -482,17 +583,19 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
 
     ##### Output
     ## 1. Write time-series file
-    timeseriesFile = write_timeseries_hdf5_file(timeseries, date8_list, atr)
+    meta['timeseriesFile'] = write_timeseries_hdf5_file(timeseries, date8_list, atr,\
+                                                timeseriesFile=meta['timeseriesFile'])
 
     ## 2. Write Temporal Coherence File
-    tempCohFile = 'temporalCoherence.h5'
-    print 'writing >>> '+tempCohFile
+    if 'tempCohFile' not in meta.keys():
+        meta['tempCohFile'] = 'temporalCoherence.h5'
+    print 'writing >>> '+meta['tempCohFile']
     atr['FILE_TYPE'] = 'temporal_coherence'
     atr['UNIT'] = '1'
-    writefile.write(temp_coh, atr, tempCohFile)
+    meta['tempCohFile'] = writefile.write(temp_coh, atr, meta['tempCohFile'])
 
     print 'Time series inversion took ' + str(time.time()-total) +' secs\nDone.'
-    return timeseriesFile, tempCohFile
+    return meta['timeseriesFile'], meta['tempCohFile']
 
 
 def write_timeseries_hdf5_file(timeseries, date8_list, atr, timeseriesFile=None):
@@ -568,22 +671,6 @@ def read_template2inps(template_file, inps):
         else:
             inps.coherence_file = value
 
-    key = prefix+'minCoherence'
-    if key in key_list:
-        value = template[key]
-        if value in ['auto']:
-            inps.min_coherence = 0.2
-        else:
-            inps.min_coherence = float(value)
-
-    key = prefix+'maxCoherence'
-    if key in key_list:
-        value = template[key]
-        if value in ['auto']:
-            inps.max_coherence = 0.85
-        else:
-            inps.max_coherence = float(value)
-
     key = prefix+'weightFunc'
     if key in key_list:
         value = template[key]
@@ -615,13 +702,10 @@ TEMPLATE='''
 ## For no/uniform weight approach, use Singular-Value Decomposition (SVD) if network are not fully connected
 ## For weighted approach, use weighted least square (WLS) solution with the following weighting functions:
 ##     variance - phase variance due to temporal decorrelation (Yunjun et al., 2017, in prep)
-##     no       - no weight, or ordinal inversion with uniform weight (Berardino et al., 2002, IEEE-TGRS)
 ##     linear   - uniform distribution CDF function (Tong et al., 2016, RSE)
-##     normal   - normal  distribution CDF function (Perissin, SARProZ)
+##     no       - no weight, or ordinal inversion with uniform weight (Berardino et al., 2002, IEEE-TGRS)
 pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
 pysar.timeseriesInv.coherenceFile = auto #[fname / no], auto for coherence.h5, file to read weight data
-pysar.timeseriesInv.minCoherence  = auto #[0.0-1.0], auto for 0.20, put 0 weight for pixels with coherence < input
-pysar.timeseriesInv.maxCoherence  = auto #[0.0-1.0], auto for 0.85, put 1 weight for pixels with coherence > input
 pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 '''
@@ -653,22 +737,18 @@ def cmdLineParse():
     parser.add_argument('--weight-function','-w', dest='weight_function', default='no',\
                         help='function used to convert coherence to weight for inversion:\n'+\
                              'variance - phase variance due to temporal decorrelation\n'+\
-                             'no       - no weight, or ordinal inversion with uniform weight\n'+\
                              'linear   - uniform distribution CDF function\n'+\
-                             'normal   - normal  distribution CDF function')
-    parser.add_argument('--min-coherence','--min-coh', dest='min_coherence', type=float, default=0.2,\
-                        help='set min weight for pixels with coherence < minimum coherence')
-    parser.add_argument('--max-coherence','--max-coh', dest='max_coherence', type=float, default=0.85,\
-                        help='set max weight for pixels with coherence < maximum coherence')
+                             'no       - no weight, or ordinal inversion with uniform weight')
     parser.add_argument('--norm', dest='resid_norm', default='L2', choices=['L1','L2'],\
                         help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
 
     parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.5e9,\
                         help='max number of data (= ifgram_num * row_num * col_num) to read per loop\n'+\
                              'default: 0.5G; adjust it according to your computer memory.')
-    parser.add_argument('--parallel', dest='parallel',action='store_true',\
+    parser.add_argument('--parallel', dest='parallel', action='store_true',\
                         help='Enable parallel processing for the pixelwise weighted inversion. [not working yet]')
-
+    parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',\
+                        help='Skip checking reference pixel value, for simulation testing.')
     inps = parser.parse_args()
     inps.parallel = False
     return inps
@@ -679,6 +759,8 @@ def main(argv):
     inps = cmdLineParse()
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
+    inps.timeseriesFile = 'timeseries.h5'
+    inps.tempCohFile = 'temporalCoherence.h5'
 
     # Input file info
     atr = readfile.read_attribute(inps.ifgram_file)
@@ -692,7 +774,7 @@ def main(argv):
         ifgram_inversion(inps.ifgram_file, inps.coherence_file, meta=vars(inps))
     else:
         print 'inverse time-series using L1 norm minimization'
-        ut.timeseries_inversion_L1(inps.ifgram_file, inps.timeseries_file)
+        ut.timeseries_inversion_L1(inps.ifgram_file, inps.timeseriesFile)
 
     return
 

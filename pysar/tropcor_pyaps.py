@@ -60,7 +60,7 @@ def get_delay(grib_file, atr, inps_dict):
                     grib_source - string, Weather re-analysis data source
                     delay_type  - string, comb/dry/wet
                     ref_y/x     - string, reference pixel row/col number
-                    incidence_angle - np.array, 0/1/2 D
+                    inc_angle   - np.array, 0/1/2 D
     Output:
         phs - 2D np.array, absolute tropospheric phase delay relative to ref_y/x
     '''
@@ -79,7 +79,7 @@ def get_delay(grib_file, atr, inps_dict):
     phs -= phs[yref, xref]
 
     # project into LOS direction
-    phs /= np.cos(inps_dict['incidence_angle'])
+    phs /= np.cos(inps_dict['inc_angle'])
     
     # reverse the sign for consistency between different phase correction steps/methods
     phs *= -1
@@ -147,8 +147,8 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
 
 ###############################################################
 EXAMPLE='''example:
-  tropcor_pyaps.py timeseries.h5 -d demRadar.h5
-  tropcor_pyaps.py timeseries.h5 -d demRadar.h5 --weather-dir /famelung/data/WEATHER
+  tropcor_pyaps.py timeseries.h5 -d geometryRadar.h5 -i geometryRadar.h5
+  tropcor_pyaps.py timeseries.h5 -d geometryGeo.h5   -i geometryGeo.h5   --weather-dir /famelung/data/WEATHER
 
   tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s NARR
   tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s MERRA --delay dry -i 23
@@ -179,6 +179,8 @@ def cmdLineParse():
     parser.add_argument(dest='timeseries_file', nargs='?', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-d','--dem', dest='dem_file',\
                         help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
+    parser.add_argument('-i', dest='inc_angle',\
+                        help='a file containing all incidence angles, or a number representing for the whole image.')
     parser.add_argument('--weather-dir', dest='weather_dir', \
                         help='directory to put downloaded weather data, i.e. ./../WEATHER\n'+\
                              'use directory of input timeseries_file if not specified.')
@@ -192,9 +194,6 @@ def cmdLineParse():
     parser.add_argument('-s', dest='weather_model',\
                         default='ECMWF', choices={'ECMWF','ERA-Interim','ERA','MERRA','MERRA2','NARR'},\
                         help='source of the atmospheric data')
-    parser.add_argument('-i', dest='incidence_angle',\
-                        help='a file containing all incidence angles, or\n'+\
-                             'one average value presenting the whole area, if not input, average look angle will be used.')
     parser.add_argument('--hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
 
     parser.add_argument('--template', dest='template_file',\
@@ -218,13 +217,24 @@ def main(argv):
         inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
         atr = readfile.read_attribute(inps.timeseries_file)
 
+    ##Read Incidence angle: to map the zenith delay to the slant delay
+    if os.path.isfile(inps.inc_angle):
+            inps.inc_angle = readfile.read(inps.inc_angle, epoch='incidenceAngle')[0]
+        else:
+            inps.inc_angle = float(inps.inc_angle)
+            print 'incidence angle: '+str(inps.inc_angle)
+    else:
+        print 'calculating incidence angle ...'
+        inps.inc_angle = ut.inc_angle(atr)
+    inps.inc_angle = inps.inc_angle*np.pi/180.0
+
+    ##Prepare DEM file in ROI_PAC format for PyAPS to read
     if inps.dem_file:
         inps.dem_file = ut.get_file_list([inps.dem_file])[0]
-        # Convert DEM to ROIPAC format
         if os.path.splitext(inps.dem_file)[1] in ['.h5']:
             print 'convert DEM file to ROIPAC format'
-            dem, atr_dem = readfile.read(inps.dem_file)
-            if 'Y_FIRST' in atr_dem.keys():
+            dem, atr_dem = readfile.read(inps.dem_file, epoch='height')
+            if 'Y_FIRST' in atr.keys():
                 atr_dem['FILE_TYPE'] = '.dem'
             else:
                 atr_dem['FILE_TYPE'] = '.hgt'
@@ -276,18 +286,6 @@ def main(argv):
 
     print '*******************************************************************************'
     print 'Calcualting delay for each epoch.'
-
-    ## Get Incidence angle: to map the zenith delay to the slant delay
-    if inps.incidence_angle:
-        if os.path.isfile(inps.incidence_angle):
-            inps.incidence_angle = readfile.read(inps.incidence_angle)[0]
-        else:
-            inps.incidence_angle = float(inps.incidence_angle)
-            print 'incidence angle: '+str(inps.incidence_angle)
-    else:
-        print 'calculating incidence angle ...'
-        inps.incidence_angle = ut.incidence_angle(atr)
-    inps.incidence_angle = inps.incidence_angle*np.pi/180.0
 
     ## Calculate tropo delay using pyaps
     length = int(atr['FILE_LENGTH'])

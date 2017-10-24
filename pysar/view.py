@@ -957,8 +957,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
                     inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
             print 'plot reference point'
 
-        ax.set_xlim(0,np.shape(data)[1])
-        ax.set_ylim(np.shape(data)[0],0)
+        ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
+        ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
 
         # Status bar
         def format_coord(x,y):
