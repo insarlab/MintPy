@@ -521,15 +521,15 @@ def attribute_gamma2roipac(par_dict_in):
 
     # Length - number of rows
     for key in key_list:
-        if any(i in key for i in ['azimuth_lines','nlines','az_samp']):
+        if any(key.startswith(i) for i in ['azimuth_lines','nlines','az_samp']):
             par_dict['FILE_LENGTH'] = par_dict[key]
 
     # Width - number of columns
     for key in key_list:
-        if any(i in key for i in ['width','range_samp','interferogram_width']):
+        if any(key.startswith(i) for i in ['width','range_samp','interferogram_width']):
             par_dict['WIDTH'] = par_dict[key]
-        if key in key_list:
-            par_dict['WIDTH'] = par_dict[key]
+        #if key in key_list:
+        #    par_dict['WIDTH'] = par_dict[key]
 
     # WAVELENGTH
     speed_of_light = 299792458.0   # meter/second
