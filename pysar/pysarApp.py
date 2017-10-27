@@ -220,12 +220,12 @@ TEMPLATE='''# vim: set filetype=cfg:
 ##     pysar.lookupFile         = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
 ##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
-pysar.insarProcessor     = auto  #[roipac, gamma, isce], auto for roipac
-pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw, filt*.unw]
-pysar.corFiles           = auto  #[filt*.cor, filt_*.cor, filt*.cor]
+pysar.insarProcessor     = auto  #[roipac,        gamma,           isce], auto for roipac
+pysar.unwrapFiles        = auto  #[filt*rlks.unw, diff_*rlks.unw,  filt*.unw]
+pysar.corFiles           = auto  #[filt*rlks.cor, filt_*rlks.cor,  filt*.cor]
 pysar.lookupFile         = auto  #[geomap*.trans, sim*.UTM_TO_RDC, l*.rdr]
-pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim, hgt.rdr]
-pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem, demLat*.dem.wgs84]
+pysar.demFile.radarCoord = auto  #[radar*.hgt,    sim*.hgt_sim,    hgt.rdr]
+pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    demLat*.dem.wgs84]
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)

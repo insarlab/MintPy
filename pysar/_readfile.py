@@ -526,7 +526,7 @@ def attribute_gamma2roipac(par_dict_in):
 
     # Width - number of columns
     for key in key_list:
-        if any(i in key for i in ['range_samp','interferogram_width','az_samp']):
+        if any(i in key for i in ['width','range_samp','interferogram_width']):
             par_dict['WIDTH'] = par_dict[key]
         if key in key_list:
             par_dict['WIDTH'] = par_dict[key]
