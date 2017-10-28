@@ -219,13 +219,10 @@ def main(argv):
 
     ##Read Incidence angle: to map the zenith delay to the slant delay
     if os.path.isfile(inps.inc_angle):
-            inps.inc_angle = readfile.read(inps.inc_angle, epoch='incidenceAngle')[0]
-        else:
-            inps.inc_angle = float(inps.inc_angle)
-            print 'incidence angle: '+str(inps.inc_angle)
+        inps.inc_angle = readfile.read(inps.inc_angle, epoch='incidenceAngle')[0]
     else:
-        print 'calculating incidence angle ...'
-        inps.inc_angle = ut.inc_angle(atr)
+        inps.inc_angle = float(inps.inc_angle)
+        print 'incidence angle: '+str(inps.inc_angle)
     inps.inc_angle = inps.inc_angle*np.pi/180.0
 
     ##Prepare DEM file in ROI_PAC format for PyAPS to read

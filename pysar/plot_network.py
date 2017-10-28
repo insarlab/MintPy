@@ -207,7 +207,7 @@ def main(argv):
     # Read Coherence List
     inps.coherence_list = None
     if inps.coherence_file and os.path.isfile(inps.coherence_file):
-        if not os.path.isfile(inps.mask_file):
+        if inps.mask_file and not os.path.isfile(inps.mask_file):
             inps.mask_file = None
         inps.coherence_list, inps.coh_date12_list = ut.spatial_average(inps.coherence_file, inps.mask_file, \
                                                                        saveList=True, checkAoi=False)
