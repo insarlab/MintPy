@@ -822,27 +822,28 @@ def perp_baseline_timeseries(atr, dimension=1):
     Output:
         pbase - np.array, with shape = [date_num, 1] or [date_num, length]
     '''
-    # return constant value for geocoded input file
-    if 'Y_FIRST' in atr.keys() and dimension > 0:
+    if dimension > 0 and 'Y_FIRST' in atr.keys():
         dimension = 0
-        print 'input file is geocoded, return constant P_BASELINE in azimuth direction within one interferogram'
+        print 'file is in geo coordinates, return constant P_BASELINE for one interferogram'
+    if dimension > 0 and any(i not in atr.keys() for i in ['P_BASELINE_TOP_TIMESERIES',\
+                                                           'P_BASELINE_BOTTOM_TIMESERIES']):
+        dimension = 0
+        print 'No P_BASELINE_TOP/BOTTOM_TIMESERIES attributes found, return constant P_BASELINE for one interferogram'
 
-    length = int(atr['FILE_LENGTH'])
-    pbase_list = [float(i) for i in atr['P_BASELINE_TIMESERIES'].split()]
-    date_num = len(pbase_list)
-    pbase = np.array(pbase_list).reshape(date_num, 1)
+    pbase_center = np.array([float(i) for i in atr['P_BASELINE_TIMESERIES'].split()]).reshape(-1,1)
+    if dimension == 0:
+        pbase = pbase_center
+    elif dimension == 1:
+        pbase_top    = np.array([float(i) for i in atr['P_BASELINE_TOP_TIMESERIES'].split()]).reshape(-1, 1)
+        pbase_bottom = np.array([float(i) for i in atr['P_BASELINE_BOTTOM_TIMESERIES'].split()]).reshape(-1, 1)
+        length = int(atr['FILE_LENGTH'])
+        date_num = pbase_center.shape[0]
+        pbase = np.zeros((date_num, length))
+        for i in range(date_num):
+            pbase[i,:] = np.linspace(pbase_top[i], pbase_bottom[i], num=length, endpoint='FALSE')
+    else:
+        raise ValueError('Input pbase dimension: %s, only support 0 and 1.' % (str(dimension)))
 
-    if dimension > 0:
-        try:
-            pbase_top = np.array([float(i) for i in atr['P_BASELINE_TOP_TIMESERIES'].split()]).reshape(date_num, 1)
-            pbase_bottom = np.array([float(i) for i in atr['P_BASELINE_BOTTOM_TIMESERIES'].split()]).reshape(date_num, 1)
-            pbase = np.zeros((date_num, length))
-            for i in range(date_num):
-                pbase[i,:] = np.linspace(pbase_top[i], pbase_bottom[i], num=length, endpoint='FALSE')
-        except:
-            dimension = 0
-            print 'Can not find P_BASELINE_TOP/BOTTOM_TIMESERIES in input attribute'
-            print 'return constant P_BASELINE in azimuth direction for each acquisition instead'
     return pbase
 
 
@@ -956,29 +957,31 @@ def which(program):
     return None
 
 
-def check_drop_ifgram(h5, atr, ifgram_list, print_msg=True):
+def check_drop_ifgram(h5, print_msg=True):
     '''Update ifgram_list based on 'drop_ifgram' attribute
-    Inputs:
+    Input:
         h5          - HDF5 file object
-        atr         - dict, file attribute
-        ifgram_list - list of string, all group name existed in file
-    Outputs:
-        ifgram_list_out  - list of string, group name with drop_ifgram = 'yes'
-        ifgram_list_drop - list of string, group name with drop_ifgram = 'no'
+    Output:
+        dsListOut  - list of string, group name with drop_ifgram = 'yes'
+    Example:
+        h5 = h5py.File('unwrapIfgram.h5','r')
+        ifgram_list = ut.check_drop_ifgram(h5)
     '''
     # Return all interferogram list if 'drop_ifgram' do not exist
+    k = h5.keys()[0]
+    dsList = sorted(h5[k].keys())
+    atr = h5[k][dsList[0]].attrs
     if 'drop_ifgram' not in atr.keys():
-        return ifgram_list
+        return dsList
 
-    ifgram_list_out = list(ifgram_list)
-    k = atr['FILE_TYPE']
-    for ifgram in ifgram_list:
-        if h5[k][ifgram].attrs['drop_ifgram'] == 'yes':
-            ifgram_list_out.remove(ifgram)
-    
-    if len(ifgram_list) > len(ifgram_list_out) and print_msg:
+    dsListOut = list(dsList)
+    for ds in dsList:
+        if h5[k][ds].attrs['drop_ifgram'] == 'yes':
+            dsListOut.remove(ds)
+
+    if len(dsList) > len(dsListOut) and print_msg:
         print "remove interferograms with 'drop_ifgram'='yes'"
-    return ifgram_list_out
+    return dsListOut
 
 
 def nonzero_mask(File, outFile='mask.h5'):
@@ -992,7 +995,7 @@ def nonzero_mask(File, outFile='mask.h5'):
     
     h5 = h5py.File(File,'r')
     igramList = sorted(h5[k].keys())
-    igramList = check_drop_ifgram(h5, atr, igramList)
+    igramList = check_drop_ifgram(h5)
     date12_list = ptime.list_ifgram2date12(igramList)
     prog_bar = ptime.progress_bar(maxValue=len(igramList), prefix='loading: ')
     for i in range(len(igramList)):
@@ -1213,7 +1216,7 @@ def temporal_average(File, outFile=None):
 
     h5file = h5py.File(File)
     epochList = sorted(h5file[k].keys())
-    epochList = check_drop_ifgram(h5file, atr, epochList)
+    epochList = check_drop_ifgram(h5file)
     epochNum = len(epochList)
 
     # Calculation
@@ -1248,11 +1251,13 @@ def temporal_average(File, outFile=None):
 
 
 ######################################################################################################
-def get_file_list(fileList, abspath=False):
+def get_file_list(fileList, abspath=False, coord=None):
     '''Get all existed files matching the input list of file pattern
     Inputs:
         fileList - string or list of string, input file/directory pattern
         abspath  - bool, return absolute path or not
+        coord    - string, return files with specific coordinate type: geo or radar
+                   if none, skip the checking and return all files
     Output:
         fileListOut - list of string, existed file path/name, [] if not existed
     Example:
@@ -1272,8 +1277,23 @@ def get_file_list(fileList, abspath=False):
         file0 = fileList[i]
         fileList0 = glob.glob(file0)
         fileListOut += sorted(list(set(fileList0) - set(fileListOut)))
+
     if abspath:
         fileListOut = [os.path.abspath(i) for i in fileListOut]
+
+    if coord is not None:
+        fileListOutBk = list(fileListOut)
+        for fname in fileListOutBk:
+            atr = readfile.read_attribute(fname)
+            if coord in ['geo']:
+                if 'Y_FIRST' not in atr.keys():
+                    fileListOut.remove(fname)
+            elif coord in ['radar','rdr','rdc']:
+                if 'Y_FIRST' in atr.keys():
+                    fileListOut.remove(fname)
+            else:
+                raise ValueError('Input coord type: '+str(coord)+'\n. Only support geo, radar, rdr, rdc inputs.')
+
     return fileListOut
 
 

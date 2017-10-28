@@ -190,7 +190,7 @@ def main(argv):
     if ext in ['.h5','.he5']:
         h5 = h5py.File(inps.file, 'r')
         ifgram_list_all = sorted(h5[k].keys())
-        ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
+        ifgram_list_keep = ut.check_drop_ifgram(h5)
         date12_list_keep = ptime.list_ifgram2date12(ifgram_list_keep)
         # Get date12_list_drop
         date12_list_drop = sorted(list(set(date12_list) - set(date12_list_keep)))

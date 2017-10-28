@@ -606,7 +606,7 @@ def main(argv):
     k = readfile.read_attribute(inps.file[0])['FILE_TYPE']
     h5 = h5py.File(inps.file[0], 'r')
     ifgram_list_all = sorted(h5[k].keys())
-    ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all, print_msg=False)
+    ifgram_list_keep = ut.check_drop_ifgram(h5, print_msg=False)
     ifgram_list_dropped = sorted(list(set(ifgram_list_all) - set(ifgram_list_keep)))
     date12_list_dropped = ptime.list_ifgram2date12(ifgram_list_dropped)
     h5.close()

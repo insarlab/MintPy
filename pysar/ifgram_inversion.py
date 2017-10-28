@@ -338,6 +338,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
         coh_data = np.zeros((ifgram_num, pixel_num2inv), np.float32)
         h5coh = h5py.File(coherenceFile,'r')
         coh_list = sorted(h5coh['coherence'].keys())
+        coh_list = ut.check_drop_ifgram(h5coh)
         for j in range(ifgram_num):
             ifgram = coh_list[j]
             d = h5coh['coherence'][ifgram].get(ifgram)[r0:r1,c0:c1]
@@ -353,11 +354,16 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
         epsilon = 1e-4
         if meta['weight_function'].startswith('var'):
             print 'convert coherence to weight using inverse of phase variance'
-            print '    with phase PDF for distributed scatterers from Tough et al. (1995, Proc. Math. Phy. Sci.)'
+            print '    with phase PDF for distributed scatterers from Tough et al. (1995)'
             L = int(atr['ALOOKS']) * int(atr['RLOOKS'])
+            lineStr = '    number of multilooks L=%d' % L
+            if L > 80:
+                L = 80
+                lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
+            print lineStr
             weight = 1.0 / coherence2phase_variance_ds(weight, L)
         elif meta['weight_function'].startswith('lin'):
-            print 'use coherence as weight directly (Perissin & Wang, 2012, IEEE-TGRS; Tong et al., 2016, RSE)'
+            print 'use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)'
             weight[weight < epsilon] = epsilon
         else:
             print 'Un-recognized weight function: %s' % meta['weight_function']
@@ -372,7 +378,8 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
         prog_bar.close()
 
         print 'calculating temporal coherence ...'
-        temp_coh[mask] = temporal_coherence(A, ts[1:,mask], ifgram_data, weight)
+        #temp_coh[mask] = temporal_coherence(A, ts[1:,mask], ifgram_data, weight)
+        temp_coh[mask] = temporal_coherence(A, ts[1:,mask], ifgram_data)
 
     ts = ts.reshape(date_num, row_num, col_num)
     temp_coh = temp_coh.reshape(row_num, col_num)
@@ -430,8 +437,9 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     # ifgram_list
     h5ifgram = h5py.File(ifgramFile,'r')
     ifgram_list = sorted(h5ifgram['interferograms'].keys())
-    if meta['weight_function'] in ['no','uniform']:
-        ifgram_list = ut.check_drop_ifgram(h5ifgram, atr, ifgram_list)
+    #if meta['weight_function'] in ['no','uniform']:
+    #    ifgram_list = ut.check_drop_ifgram(h5ifgram)
+    ifgram_list = ut.check_drop_ifgram(h5ifgram)
     meta['ifgram_list'] = ifgram_list
     ifgram_num = len(ifgram_list)
 
@@ -693,7 +701,8 @@ def read_template2inps(template_file, inps):
 EXAMPLE='''example:
   ifgram_inversion.py  unwrapIfgram.h5
   ifgram_inversion.py  unwrapIfgram.h5 -t pysarApp_template.txt
-  ifgram_inversion.py  unwrapIfgram.h5 -c coherence.h5 -w variance
+  ifgram_inversion.py  unwrapIfgram.h5 -w var
+  ifgram_inversion.py  unwrapIfgram.h5 -w lin
 '''
 
 TEMPLATE='''
@@ -749,6 +758,9 @@ def cmdLineParse():
                         help='Enable parallel processing for the pixelwise weighted inversion. [not working yet]')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',\
                         help='Skip checking reference pixel value, for simulation testing.')
+    parser.add_argument('-o','--output', dest='outfile', nargs=2, default=['timeseries.h5','temporalCoherence.h5'],\
+                        help='Output file name for timeseries and temporal coherence, default:\n'+\
+                             'timeseries.h5 temporalCoherence.h5')
     inps = parser.parse_args()
     inps.parallel = False
     return inps
@@ -759,8 +771,8 @@ def main(argv):
     inps = cmdLineParse()
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
-    inps.timeseriesFile = 'timeseries.h5'
-    inps.tempCohFile = 'temporalCoherence.h5'
+    inps.timeseriesFile = inps.outfile[0]
+    inps.tempCohFile = inps.outfile[1]
 
     # Input file info
     atr = readfile.read_attribute(inps.ifgram_file)

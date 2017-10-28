@@ -10,6 +10,7 @@
 
 
 import os
+import sys
 import datetime
 import itertools
 
@@ -349,16 +350,16 @@ def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
 
 
 def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', inc_angle=22.8,\
-                       decor_rate=200.0, cohInf=0.2, display=False):
+                       decor_time=200.0, coh_resid=0.2, display=False):
     '''Simulate coherence for a given set of interferograms
     Inputs:
         date12_list  - list of string in YYMMDD-YYMMDD format, indicating pairs configuration
         baselineFile - string, path of baseline list text file
         sensor     - string, SAR sensor
         inc_angle  - float, incidence angle
-        decor_rate - float / 2D np.array in size of (1, pixel_num)
+        decor_time - float / 2D np.array in size of (1, pixel_num)
                      decorrelation rate in days, time for coherence to drop to 1/e of its initial value
-        cohInf     - float / 2D np.array in size of (1, pixel_num)
+        coh_resid  - float / 2D np.array in size of (1, pixel_num)
                      long-term coherence, minimum attainable coherence value
         display    - bool, display result as matrix or not
     Output:
@@ -390,11 +391,11 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
     bandwidth_az = azimuth_bandwidth(sensor)
 
     ifgram_num = len(date12_list)
-    if isinstance(decor_rate, (int, float)):
+    if isinstance(decor_time, (int, float)):
         pixel_num = 1
-        decor_rate = float(decor_rate)
+        decor_time = float(decor_time)
     else:
-        pixel_num = decor_rate.shape[1]
+        pixel_num = decor_time.shape[1]
     cohs = np.zeros((ifgram_num, pixel_num), np.float32)
     for i in range(ifgram_num):
         if display:
@@ -420,7 +421,7 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
             coh_dc = 0.
 
         #Option 1: Temporal decorrelation - exponential delay model (Parizzi et al., 2009; Morishita and Hanssen, 2015)
-        coh_temp = np.multiply((coh_thermal - cohInf), np.exp(-1*abs(tbase)/decor_rate)) + cohInf
+        coh_temp = np.multiply((coh_thermal - coh_resid), np.exp(-1*abs(tbase)/decor_time)) + coh_resid
 
         coh = coh_geom * coh_dc * coh_temp
         cohs[i,:] = coh
@@ -990,7 +991,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             print 'color jump at '+str(coh_thres)
 
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", "5%", pad="3%")
+        cax = divider.append_axes("right", "3%", pad="3%")
         norm = mpl.colors.Normalize(vmin=disp_min, vmax=disp_max)
         cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
         cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
