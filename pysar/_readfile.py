@@ -272,38 +272,48 @@ def read_attribute(File, epoch=None):
     ##### PySAR
     if ext in ['.h5','.he5']:
         h5 = h5py.File(File,'r')
-        k = h5.keys()
-        if   'interferograms' in k: k[0] = 'interferograms'
-        elif 'coherence'      in k: k[0] = 'coherence'
-        elif 'timeseries'     in k: k[0] = 'timeseries'
+        if   'interferograms' in h5.keys(): k = 'interferograms'
+        elif 'coherence'      in h5.keys(): k = 'coherence'
+        elif 'timeseries'     in h5.keys(): k = 'timeseries'
+        else: k = h5.keys()[0]
 
-        if k[0] in multi_group_hdf5_file:
+        attrs = None
+        if k in multi_group_hdf5_file:
             if epoch:
                 # Check input epoch exists or not
-                epoch_list = sorted(h5[k[0]].keys())
+                epoch_list = sorted(h5[k].keys())
                 try:    epoch = [i for i in epoch_list if epoch in i][0]
                 except: epoch = None
 
             if not epoch:
-                epoch = h5[k[0]].keys()[0]
-            attrs = h5[k[0]][epoch].attrs
+                epoch = h5[k].keys()[0]
+            attrs = h5[k][epoch].attrs
 
-        elif k[0] in multi_dataset_hdf5_file+single_dataset_hdf5_file:
-            attrs  = h5[k[0]].attrs
-        elif k[0] in ['HDFEOS']:
+        elif k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
+            key = 'WIDTH'
+            if key in h5.attrs.keys():
+                attrs = h5.attrs
+            else:
+                for groupK in h5.keys():
+                    if key in h5[groupK].attrs.keys():
+                        attrs = h5[groupK].attrs
+                        break
+            if attrs is None:
+                raise ValueError('No attribute '+key+' found in 1/2 group level!')
+        elif k in ['HDFEOS']:
             attrs = h5.attrs
         else:
-            sys.exit('Unrecognized h5 file key: '+k[0])
+            sys.exit('Unrecognized h5 file key: '+k)
 
         atr = dict()
         for key, value in attrs.iteritems():
             atr[key] = str(value)
-        atr['FILE_TYPE'] = str(k[0])
+        atr['FILE_TYPE'] = str(k)
         atr['PROCESSOR'] = 'pysar'
 
-        if k[0] == 'timeseries':
+        if k == 'timeseries':
             try:    atr['ref_date']
-            except: atr['ref_date'] = sorted(h5[k[0]].keys())[0]
+            except: atr['ref_date'] = sorted(h5[k].keys())[0]
 
         h5.close()
 

@@ -175,7 +175,7 @@ def check_existed_hdf5_file(inFiles, hdf5File):
             rmCmd = 'rm '+hdf5File
             print rmCmd
             os.system(rmCmd)
-            return outFiles, outDsetNames
+            return outFiles
 
         k = atr['FILE_TYPE']
         h5 = h5py.File(hdf5File, 'r')
@@ -741,9 +741,9 @@ def cmdLineParse():
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
 
-    parser.add_argument('--template', dest='template_file', nargs='*', help='template file, to get PROJECT_NAME')
+    parser.add_argument('--template','-t', dest='template_file', nargs='*', help='template file, to get PROJECT_NAME')
     parser.add_argument('--project', dest='project_name', help='project name of dataset, used in INSARMAPS Web Viewer')
-    parser.add_argument('--processor', dest='insar_processor',\
+    parser.add_argument('--processor','-p', dest='insar_processor',\
                         default='roipac', choices={'roipac','gamma','isce','doris','gmtsar'},\
                         help='InSAR processor/software of the file')
 
