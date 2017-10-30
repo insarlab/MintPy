@@ -197,6 +197,10 @@ def read(File, box=None, epoch=None):
             dem, atr = read_real_int16(File, box=box)
             return dem, atr
 
+        elif ext in ['.wgs84']:
+            dem, atr = read_real_int16(File, box=box)
+            return dem, atr
+
         elif ext in ['.int']:
             amp, pha, atr = read_complex_float32(File, box=box, cpx=False)
             return pha, atr
