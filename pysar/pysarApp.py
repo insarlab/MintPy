@@ -289,7 +289,6 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ##     variance - phase variance due to temporal decorrelation (Yunjun et al., 2017, in prep)
 ##     no       - no weight, or ordinal inversion with uniform weight (Berardino et al., 2002, IEEE-TGRS)
 ##     linear   - uniform distribution CDF function (Tong et al., 2016, RSE)
-##     normal   - normal  distribution CDF function (Perissin, SARProZ)
 pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
 pysar.timeseriesInv.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
 pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
@@ -952,7 +951,7 @@ def main(argv):
                 print '\nError while correcting topographic phase residual.\n'
                 sys.exit(-1)
         inps.timeseries_file = outName
-        inps.timeseries_resid_file = os.path.splitext(outName)[0]+'InvResid.h5'
+        inps.timeseries_resid_file = 'timeseriesResidual.h5'
     else:
         print 'No correction for topographic residuals.'
 

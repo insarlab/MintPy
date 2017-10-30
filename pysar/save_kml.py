@@ -137,9 +137,9 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     ## Use mean height from existed DEM file
     if not inps.cbar_height:
         try:
-            dem_file = ut.get_file_list(['demGeo*.h5','*.dem','demRadar.h5','radar*.hgt'])[0]
+            dem_file = ut.get_file_list(['geometry*.h5','dem*.h5','*.dem','radar*.hgt'])[0]
             print 'use mean height from file: '+dem_file+' + 1000 m as colorbar height.'
-            inps.cbar_height = np.rint(np.nanmean(readfile.read(dem_file)[0])) + 1000.0
+            inps.cbar_height = np.rint(np.nanmean(readfile.read(dem_file, epoch='height')[0])) + 1000.0
         except: pass
     elif str(inps.cbar_height).lower().endswith('ground'):
         inps.cbar_height = None

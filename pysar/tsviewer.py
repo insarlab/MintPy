@@ -268,7 +268,7 @@ if __name__ == '__main__':
     # rect[left, bottom, width, height]
     ax_v = fig_v.add_axes([0.125,0.25,0.75,0.65])
     if inps.dem_file:
-        dem = readfile.read(inps.dem_file)[0]
+        dem = readfile.read(inps.dem_file, epoch='height')[0]
         ax_v = view.plot_dem_yx(ax_v, dem)
     img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim, interpolation='nearest')
 

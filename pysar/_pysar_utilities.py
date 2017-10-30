@@ -1065,14 +1065,16 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     if maskFile is None:
         maskFile = None
         mask = None
+        print 'no mask input, use all pixels available'
     elif type(maskFile) is str:
-        print 'read mask from file: '+maskFile
+        print 'mask from file: '+maskFile
         mask = readfile.read(maskFile)[0]
         mask = mask[box[1]:box[3],box[0]:box[2]]
     elif type(maskFile) is np.ndarray:
         mask = maskFile
         mask = mask[box[1]:box[3],box[0]:box[2]]
         maskFile = 'np.ndarray matrix'
+        print 'mask from input matrix'
     else:
         print 'Unsupported mask input format: '+str(type(maskFile))
         return None, None
@@ -1446,7 +1448,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
         y_factor = 2
         az0 = 0
         rg0 = 0
-        if atr_rdr:
+        if 'Y_FIRST' not in atr_rdr.keys():
             az_step = azimuth_ground_resolution(atr_rdr)
             rg_step = range_ground_resolution(atr_rdr, print_msg)
             x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
@@ -1533,7 +1535,7 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
         # Get range/azimuth ground resolution/step
         x_factor = 10
         y_factor = 10
-        if atr_rdr:
+        if 'Y_FIRST' not in atr_rdr.keys():
             az_step = azimuth_ground_resolution(atr_rdr)
             rg_step = range_ground_resolution(atr_rdr, print_msg)
             x_factor = 2*np.ceil(abs(lon_step)/rg_step)

@@ -329,8 +329,8 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
             (fbase.startswith('incidenceang') and 'incidenceAngle' in h5dnameList) or\
             (fbase.endswith(('.trans','.utm_to_rdc')) and 'rangeCoord' in h5dnameList) or\
             ((fbase.startswith(('hgt','dem')) or fbase.endswith(('.hgt','.dem','wgs84'))) and 'height' in h5dnameList) or\
-            (fbase.startswith('rangedist') and 'slantRangeDistance' in h5dnameList) or\
-            (fbase.startswith('geometry') and any(i in h5dnameList for i in ['rangeCoord','longitude']))):
+            #(fbase.startswith('geometry') and any(i in h5dnameList for i in ['rangeCoord','longitude'])) or \
+            (fbase.startswith('rangedist') and 'slantRangeDistance' in h5dnameList)):
             fileList.remove(fname)
 
     # Loop - Writing files into hdf5 file
@@ -596,6 +596,7 @@ def load_data_from_template(inps):
     # Initial value
     inps.unw = None
     inps.cor = None
+    #inps.int = None
     inps.lut = None
     inps.dem_radar = None
     inps.dem_geo = None
@@ -677,9 +678,9 @@ def load_data_from_template(inps):
 
     ##------------------------------------ Loading into HDF5 ---------------------------------------##
     # required - unwrapped interferograms
-    inps.ifgram_file    = load_file(inps.unw, vars(inps), file_type='interferograms')
-    inps.coherence_file = load_file(inps.cor, vars(inps), file_type='coherence')
-    #inps.wrap_ifgram_file = load_file(inps.int, vars(inps))
+    inps.ifgram_file      = load_file(inps.unw, vars(inps), file_type='interferograms')
+    inps.coherence_file   = load_file(inps.cor, vars(inps), file_type='coherence')
+    #inps.wrap_ifgram_file = load_file(inps.int, vars(inps), file_type='wrapped')
     if inps.snap_connect:
         inps.snap_connect_file = load_file(inps.snap_connect, vars(inps))
 

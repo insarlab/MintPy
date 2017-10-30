@@ -1616,9 +1616,9 @@ def main(argv):
         try: h5file.close()
         except: pass
         print '----------------------------------------'
-        print 'all data range: [%.2f, %.2f] %s' % (all_data_min, all_data_max, inps.disp_unit)
+        print 'all data range: [%f, %f] %s' % (all_data_min, all_data_max, inps.disp_unit)
         if inps.disp_min and inps.disp_max:
-            print 'display  range: [%.2f, %.2f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit)
+            print 'display  range: [%f, %f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit)
 
         # Display Figure
         if inps.disp_fig:

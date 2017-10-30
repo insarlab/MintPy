@@ -239,6 +239,10 @@ def read(File, box=None, epoch=None):
             else:
                 sys.exit('Un-recognized epoch input: '+epoch)
 
+        elif ext in ['.int']:
+            amp, pha, atr = read_complex_float32(File, box=box, byte_order='ieee-be', cpx=False)
+            return pha, atr
+
         elif ext in ['.mli']:
             data, atr = read_real_float32(File, box=box)
             return data, atr
@@ -368,7 +372,8 @@ def read_attribute(File, epoch=None):
     elif atr['FILE_TYPE'] in ['velocity']:
         atr['UNIT'] = 'm/yr'
     else:
-        atr['UNIT'] = '1'
+        if 'UNIT' not in atr.keys():
+            atr['UNIT'] = '1'
 
     atr['FILE_PATH'] = os.path.abspath(File)
     if 'INSAR_PROCESSOR' not in atr.keys():
@@ -531,7 +536,7 @@ def attribute_gamma2roipac(par_dict_in):
 
     # Length - number of rows
     for key in key_list:
-        if any(key.startswith(i) for i in ['azimuth_lines','nlines','az_samp']):
+        if any(key.startswith(i) for i in ['azimuth_lines','nlines','az_samp','interferogram_azimuth_lines']):
             par_dict['FILE_LENGTH'] = par_dict[key]
 
     # Width - number of columns

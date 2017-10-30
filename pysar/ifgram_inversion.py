@@ -241,15 +241,15 @@ def temporal_coherence(A, ts, ifgram, weight=None, chunk_size=500):
         temp_coh = np.zeros(pixel_num, np.float32)
 
         chunk_num = int((pixel_num-1)/chunk_size) + 1
-        #prog_bar = ptime.progress_bar(maxValue=chunk_num)
         for i in range(chunk_num):
+            sys.stdout.write('\rcalculating chunk %s/%s ...' % (i+1, chunk_num))
+            sys.stdout.flush()
             p0 = i*chunk_size
             p1 = min([p0+chunk_size, pixel_num])
             ifgram_diff = ifgram[:,p0:p1] - np.dot(A, ts[:,p0:p1])
             temp_coh[p0:p1] = np.abs(np.sum(np.multiply(weight[:,p0:p1], np.exp(1j*ifgram_diff)), axis=0)) /\
                               np.sum(weight[:,p0:p1], axis=0)
-            #prog_bar.update(i+1, every=10, suffix=str(p1)+'/'+str(pixel_num))
-        #prog_bar.close()
+        print ''
     return temp_coh
 
 
