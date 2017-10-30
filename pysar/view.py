@@ -957,8 +957,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
                     inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
             print 'plot reference point'
 
-        ax.set_xlim(0,np.shape(data)[1])
-        ax.set_ylim(np.shape(data)[0],0)
+        ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
+        ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
 
         # Status bar
         def format_coord(x,y):
@@ -1481,7 +1481,7 @@ def main(argv):
         drop_epoch_list = []
         if k in multi_group_hdf5_file and inps.disp_title:
             drop_epoch_list = sorted(list(set(inps.epoch) - \
-                                          set(ut.check_drop_ifgram(h5file, atr, inps.epoch, print_msg=False))))
+                                          set(ut.check_drop_ifgram(h5file, print_msg=False))))
             print "mark interferograms with 'drop_ifgram'='yes' in red colored title"
 
         ##### Loop 1 - Figures
@@ -1616,9 +1616,9 @@ def main(argv):
         try: h5file.close()
         except: pass
         print '----------------------------------------'
-        print 'all data range: [%.2f, %.2f] %s' % (all_data_min, all_data_max, inps.disp_unit)
+        print 'all data range: [%f, %f] %s' % (all_data_min, all_data_max, inps.disp_unit)
         if inps.disp_min and inps.disp_max:
-            print 'display  range: [%.2f, %.2f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit)
+            print 'display  range: [%f, %f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit)
 
         # Display Figure
         if inps.disp_fig:

@@ -11,10 +11,7 @@ import argparse
 
 import h5py
 
-import pysar._readfile as readfile
 import pysar._pysar_utilities as ut
-import pysar._datetime as ptime
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 #################################  Usage  ####################################
@@ -41,7 +38,6 @@ def main(argv):
     print '\n*************** Stacking ******************'
     for File in inps.file:
         ut.get_file_stack(File, inps.mask_file)
-
     return
 
 

@@ -119,6 +119,46 @@ def get_lookup_file(filePattern=None, abspath=False):
     return lookupFile
 
 
+def get_dem_file(coordType='radar', filePattern=None, abspath=False):
+    '''Find DEM file with/without input file pattern'''
+    ##Files exists
+    if not filePattern:
+        if coordType == 'radar':
+            filePattern = ['geometryRadar.h5',\
+                           'demRadar.h5',\
+                           'radar*.hgt']
+        else:
+            filePattern = ['geometryGeo_tight.h5', 'geometryGeo.h5',\
+                           'demRadar.h5', 'demGeo.h5',\
+                           '*.dem', '*.dem.wgs84']
+    existFiles = []
+    try:
+        existFiles = get_file_list(filePattern)
+    except:
+        print 'ERROR: No DEM file found!'
+        print 'It should be like:'
+        print filePattern
+        return None
+
+    ##Files with lookup table info
+    demFiles = []
+    for fname in existFiles:
+        atr = readfile.read_attribute(fname)
+        try:
+            dset = readfile.read(fname, epoch='height')[0]
+            demFiles.append(fname)
+        except: pass
+
+    if not demFiles:
+        print 'No height info found in files.'
+        return None
+
+    demFile = demFiles[0]
+    if abspath:
+        demFile = os.path.abspath(demFile)
+    return demFile
+
+
 def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     '''Check the result of loading data for the following two rules:
         1. file existance
@@ -199,9 +239,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             print "It's supposed to be like: "+str(file_list)
 
     # 3. DEM in radar coord
-    file_list = [work_dir+'/demRadar.h5',\
-                 work_dir+'/radar*.hgt']
-    dem_radar_file = is_file_exist(file_list, abspath=True)
+    dem_radar_file = get_dem_file(coordType='radar', abspath=True)
     if print_msg:
         if dem_radar_file:
             print 'DEM in radar coordinates: '+dem_radar_file
@@ -210,10 +248,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             print "It's supposed to be like: "+str(file_list)
 
     # 4. DEM in geo coord
-    file_list = [work_dir+'/demGeo_tight.h5',\
-                 work_dir+'/demGeo.h5',\
-                 work_dir+'/*.dem']
-    dem_geo_file = is_file_exist(file_list, abspath=True)
+    dem_geo_file = get_dem_file(coordType='geo', abspath=True)
     if print_msg:
         if dem_geo_file:
             print 'DEM in geo   coordinates: '+dem_geo_file
@@ -787,27 +822,28 @@ def perp_baseline_timeseries(atr, dimension=1):
     Output:
         pbase - np.array, with shape = [date_num, 1] or [date_num, length]
     '''
-    # return constant value for geocoded input file
-    if 'Y_FIRST' in atr.keys() and dimension > 0:
+    if dimension > 0 and 'Y_FIRST' in atr.keys():
         dimension = 0
-        print 'input file is geocoded, return constant P_BASELINE in azimuth direction within one interferogram'
+        print 'file is in geo coordinates, return constant P_BASELINE for one interferogram'
+    if dimension > 0 and any(i not in atr.keys() for i in ['P_BASELINE_TOP_TIMESERIES',\
+                                                           'P_BASELINE_BOTTOM_TIMESERIES']):
+        dimension = 0
+        print 'No P_BASELINE_TOP/BOTTOM_TIMESERIES attributes found, return constant P_BASELINE for one interferogram'
 
-    length = int(atr['FILE_LENGTH'])
-    pbase_list = [float(i) for i in atr['P_BASELINE_TIMESERIES'].split()]
-    date_num = len(pbase_list)
-    pbase = np.array(pbase_list).reshape(date_num, 1)
+    pbase_center = np.array([float(i) for i in atr['P_BASELINE_TIMESERIES'].split()]).reshape(-1,1)
+    if dimension == 0:
+        pbase = pbase_center
+    elif dimension == 1:
+        pbase_top    = np.array([float(i) for i in atr['P_BASELINE_TOP_TIMESERIES'].split()]).reshape(-1, 1)
+        pbase_bottom = np.array([float(i) for i in atr['P_BASELINE_BOTTOM_TIMESERIES'].split()]).reshape(-1, 1)
+        length = int(atr['FILE_LENGTH'])
+        date_num = pbase_center.shape[0]
+        pbase = np.zeros((date_num, length))
+        for i in range(date_num):
+            pbase[i,:] = np.linspace(pbase_top[i], pbase_bottom[i], num=length, endpoint='FALSE')
+    else:
+        raise ValueError('Input pbase dimension: %s, only support 0 and 1.' % (str(dimension)))
 
-    if dimension > 0:
-        try:
-            pbase_top = np.array([float(i) for i in atr['P_BASELINE_TOP_TIMESERIES'].split()]).reshape(date_num, 1)
-            pbase_bottom = np.array([float(i) for i in atr['P_BASELINE_BOTTOM_TIMESERIES'].split()]).reshape(date_num, 1)
-            pbase = np.zeros((date_num, length))
-            for i in range(date_num):
-                pbase[i,:] = np.linspace(pbase_top[i], pbase_bottom[i], num=length, endpoint='FALSE')
-        except:
-            dimension = 0
-            print 'Can not find P_BASELINE_TOP/BOTTOM_TIMESERIES in input attribute'
-            print 'return constant P_BASELINE in azimuth direction for each acquisition instead'
     return pbase
 
 
@@ -921,29 +957,31 @@ def which(program):
     return None
 
 
-def check_drop_ifgram(h5, atr, ifgram_list, print_msg=True):
+def check_drop_ifgram(h5, print_msg=True):
     '''Update ifgram_list based on 'drop_ifgram' attribute
-    Inputs:
+    Input:
         h5          - HDF5 file object
-        atr         - dict, file attribute
-        ifgram_list - list of string, all group name existed in file
-    Outputs:
-        ifgram_list_out  - list of string, group name with drop_ifgram = 'yes'
-        ifgram_list_drop - list of string, group name with drop_ifgram = 'no'
+    Output:
+        dsListOut  - list of string, group name with drop_ifgram = 'yes'
+    Example:
+        h5 = h5py.File('unwrapIfgram.h5','r')
+        ifgram_list = ut.check_drop_ifgram(h5)
     '''
     # Return all interferogram list if 'drop_ifgram' do not exist
+    k = h5.keys()[0]
+    dsList = sorted(h5[k].keys())
+    atr = h5[k][dsList[0]].attrs
     if 'drop_ifgram' not in atr.keys():
-        return ifgram_list
+        return dsList
 
-    ifgram_list_out = list(ifgram_list)
-    k = atr['FILE_TYPE']
-    for ifgram in ifgram_list:
-        if h5[k][ifgram].attrs['drop_ifgram'] == 'yes':
-            ifgram_list_out.remove(ifgram)
-    
-    if len(ifgram_list) > len(ifgram_list_out) and print_msg:
+    dsListOut = list(dsList)
+    for ds in dsList:
+        if h5[k][ds].attrs['drop_ifgram'] == 'yes':
+            dsListOut.remove(ds)
+
+    if len(dsList) > len(dsListOut) and print_msg:
         print "remove interferograms with 'drop_ifgram'='yes'"
-    return ifgram_list_out
+    return dsListOut
 
 
 def nonzero_mask(File, outFile='mask.h5'):
@@ -957,7 +995,7 @@ def nonzero_mask(File, outFile='mask.h5'):
     
     h5 = h5py.File(File,'r')
     igramList = sorted(h5[k].keys())
-    igramList = check_drop_ifgram(h5, atr, igramList)
+    igramList = check_drop_ifgram(h5)
     date12_list = ptime.list_ifgram2date12(igramList)
     prog_bar = ptime.progress_bar(maxValue=len(igramList), prefix='loading: ')
     for i in range(len(igramList)):
@@ -1027,14 +1065,16 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     if maskFile is None:
         maskFile = None
         mask = None
+        print 'no mask input, use all pixels available'
     elif type(maskFile) is str:
-        print 'read mask from file: '+maskFile
+        print 'mask from file: '+maskFile
         mask = readfile.read(maskFile)[0]
         mask = mask[box[1]:box[3],box[0]:box[2]]
     elif type(maskFile) is np.ndarray:
         mask = maskFile
         mask = mask[box[1]:box[3],box[0]:box[2]]
         maskFile = 'np.ndarray matrix'
+        print 'mask from input matrix'
     else:
         print 'Unsupported mask input format: '+str(type(maskFile))
         return None, None
@@ -1178,7 +1218,7 @@ def temporal_average(File, outFile=None):
 
     h5file = h5py.File(File)
     epochList = sorted(h5file[k].keys())
-    epochList = check_drop_ifgram(h5file, atr, epochList)
+    epochList = check_drop_ifgram(h5file)
     epochNum = len(epochList)
 
     # Calculation
@@ -1213,11 +1253,13 @@ def temporal_average(File, outFile=None):
 
 
 ######################################################################################################
-def get_file_list(fileList, abspath=False):
+def get_file_list(fileList, abspath=False, coord=None):
     '''Get all existed files matching the input list of file pattern
     Inputs:
         fileList - string or list of string, input file/directory pattern
         abspath  - bool, return absolute path or not
+        coord    - string, return files with specific coordinate type: geo or radar
+                   if none, skip the checking and return all files
     Output:
         fileListOut - list of string, existed file path/name, [] if not existed
     Example:
@@ -1237,8 +1279,23 @@ def get_file_list(fileList, abspath=False):
         file0 = fileList[i]
         fileList0 = glob.glob(file0)
         fileListOut += sorted(list(set(fileList0) - set(fileListOut)))
+
     if abspath:
         fileListOut = [os.path.abspath(i) for i in fileListOut]
+
+    if coord is not None:
+        fileListOutBk = list(fileListOut)
+        for fname in fileListOutBk:
+            atr = readfile.read_attribute(fname)
+            if coord in ['geo']:
+                if 'Y_FIRST' not in atr.keys():
+                    fileListOut.remove(fname)
+            elif coord in ['radar','rdr','rdc']:
+                if 'Y_FIRST' in atr.keys():
+                    fileListOut.remove(fname)
+            else:
+                raise ValueError('Input coord type: '+str(coord)+'\n. Only support geo, radar, rdr, rdc inputs.')
+
     return fileListOut
 
 
@@ -1339,6 +1396,11 @@ def azimuth_ground_resolution(atr):
 #########################################################################
 ##### Use geomap*.trans file for precious (pixel-level) coord conversion
 def get_lookup_row_col(y, x, lut_y, lut_x, y_factor=10, x_factor=10, geoCoord=False):
+    '''Get row/col number in y/x value matrix from input y/x
+    Use overlap mean value between y and x buffer;
+    To support point outside of value pool/matrix, could use np.polyfit to fit a line
+    for y and x value buffer and return the intersection point row/col
+    '''
     ymin = y - y_factor
     xmin = x - x_factor
     if not geoCoord:
@@ -1386,7 +1448,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
         y_factor = 2
         az0 = 0
         rg0 = 0
-        if atr_rdr:
+        if 'Y_FIRST' not in atr_rdr.keys():
             az_step = azimuth_ground_resolution(atr_rdr)
             rg_step = range_ground_resolution(atr_rdr, print_msg)
             x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
@@ -1473,7 +1535,7 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
         # Get range/azimuth ground resolution/step
         x_factor = 10
         y_factor = 10
-        if atr_rdr:
+        if 'Y_FIRST' not in atr_rdr.keys():
             az_step = azimuth_ground_resolution(atr_rdr)
             rg_step = range_ground_resolution(atr_rdr, print_msg)
             x_factor = 2*np.ceil(abs(lon_step)/rg_step)
@@ -1923,16 +1985,11 @@ def get_file_stack(File, maskFile=None):
         if atrStack['WIDTH'] == atr['WIDTH'] and atrStack['FILE_LENGTH'] == atr['FILE_LENGTH']:
             print 'reading stack from existed file: '+stackFile
             stack = readfile.read(stackFile)[0]
+
     # Calculate stack
-    else:
+    if stack is None:
         print 'calculating stack of input file ...'
         stack = stacking(File)
-        # Write stack file is input file is multi-dataset (large file size usually)
-        if atr['FILE_TYPE'] in multi_group_hdf5_file+multi_dataset_hdf5_file:
-            atrStack = atr.copy()
-            atrStack['FILE_TYPE'] = 'mask'
-            print 'writing stack file >>> '+stackFile
-            writefile.write(stack, atrStack, stackFile)
 
     # set masked out area into NaN
     if maskFile:
@@ -1944,8 +2001,8 @@ def get_file_stack(File, maskFile=None):
 
 
 def stacking(File):
-    '''Stack multi-temporal dataset into one
-       equivalent to temporal sum
+    '''Stack multi-temporal dataset into one equivalent to temporal sum
+    For interferograms, the averaged velocity is calculated.
     '''
 
     ## File Info
@@ -1953,6 +2010,12 @@ def stacking(File):
     k = atr['FILE_TYPE']
     length = int(atr['FILE_LENGTH'])
     width = int(atr['WIDTH'])
+    if k in ['interferograms']:
+        phase2range = -1 * float(atr['WAVELENGTH']) / (4.0 * np.pi)
+        atr['FILE_TYPE'] = 'velocity'
+        atr['UNIT'] = 'm/yr'
+    else:
+        atr['FILE_TYPE'] = 'mask'
 
     ## Calculation
     stack = np.zeros([length,width])
@@ -1968,17 +2031,28 @@ def stacking(File):
                 data = h5file[k].get(epoch)[:]
             else:
                 data = h5file[k][epoch].get(epoch)[:]
+                if k in ['interferograms']:
+                    m_date, s_date = h5file[k][epoch].attrs['DATE12'].split('-')
+                    t1 = datetime.datetime(*time.strptime(m_date, "%y%m%d")[0:5])
+                    t2 = datetime.datetime(*time.strptime(s_date, "%y%m%d")[0:5])
+                    dt = float((t2-t1).days)/365.25
+                    data *= phase2range / dt
             stack += data
             prog_bar.update(i+1)
+        stack *= 1.0/float(epochNum)
         prog_bar.close()
         h5file.close()
+
+        # Write stack file is input file is multi-dataset (large file size usually)
+        stackFile = os.path.splitext(File)[0]+'_stack.h5'
+        print 'writing stack file >>> '+stackFile
+        writefile.write(stack, atr, stackFile)
 
     else:
         try:
             stack, atrStack = readfile.read(File)
         except:
             print 'Cannot read file: '+File; sys.exit(1)
-
     return stack
 
 

@@ -190,7 +190,7 @@ def main(argv):
     if ext in ['.h5','.he5']:
         h5 = h5py.File(inps.file, 'r')
         ifgram_list_all = sorted(h5[k].keys())
-        ifgram_list_keep = ut.check_drop_ifgram(h5, atr, ifgram_list_all)
+        ifgram_list_keep = ut.check_drop_ifgram(h5)
         date12_list_keep = ptime.list_ifgram2date12(ifgram_list_keep)
         # Get date12_list_drop
         date12_list_drop = sorted(list(set(date12_list) - set(date12_list_keep)))
@@ -207,6 +207,8 @@ def main(argv):
     # Read Coherence List
     inps.coherence_list = None
     if inps.coherence_file and os.path.isfile(inps.coherence_file):
+        if inps.mask_file and not os.path.isfile(inps.mask_file):
+            inps.mask_file = None
         inps.coherence_list, inps.coh_date12_list = ut.spatial_average(inps.coherence_file, inps.mask_file, \
                                                                        saveList=True, checkAoi=False)
 
@@ -225,6 +227,8 @@ def main(argv):
 
     #inps.coh_thres = 0.7
     ##### 2. Plot
+    inps.cbar_label = 'Average spatial coherence'
+
     # Fig 1 - Baseline History
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -243,7 +247,8 @@ def main(argv):
         else:
             fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax = pnet.plot_coherence_matrix(ax, date12_list, inps.coherence_list, date12_list_drop)
+        ax = pnet.plot_coherence_matrix(ax, date12_list, inps.coherence_list,\
+                                        date12_list_drop, plot_dict=vars(inps))
 
         if inps.save_fig:
             fig.savefig(figName, bbox_inches='tight', dpi=150)

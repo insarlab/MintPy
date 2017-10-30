@@ -134,6 +134,13 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
                 group.attrs[key] = value
 
     ##### Single Dataset File
+    elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
+        rg, az, atr = readfile.read(File)
+        rg = mask_matrix(rg, mask)
+        az = mask_matrix(az, mask)
+        print 'writing >>> '+outFile
+        writefile.write(rg, az, atr, outFile)
+
     else:
         unw,atr = readfile.read(File)
         unw     = mask_matrix(unw,mask)

@@ -10,6 +10,7 @@
 
 
 import os
+import sys
 import datetime
 import itertools
 
@@ -22,8 +23,7 @@ import matplotlib.colors as colors
 import matplotlib.lines as mlines
 from matplotlib.tri import Triangulation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy.sparse import csr_matrix, find
-from scipy.sparse.csgraph import minimum_spanning_tree
+import scipy.sparse as sparse
 
 import pysar._datetime as ptime
 import pysar._readfile as readfile
@@ -203,8 +203,10 @@ def get_date12_list(File, check_drop_ifgram=False):
         h5.close()
     else:
         txtContent = np.loadtxt(File, dtype=str)
+        if len(txtContent.shape) == 1:
+            txtContent = txtContent.reshape(-1,1)
         date12_list = [i for i in txtContent[:,0]]
-    
+
     date12_list = sorted(date12_list)
     return date12_list
 
@@ -229,13 +231,15 @@ def azimuth_bandwidth(sensor):
     '''Find the hardwired azimuth bandwidth in hertz for the given satellite'''
     if    sensor == 'Ers'  :  bandwidth =  1300.0
     elif  sensor == 'Env'  :  bandwidth =  1340.0
-    elif  sensor == 'Jers' :  bandwidth =   900.0   # FA 11/2015 just copied, need to research
-    elif  sensor == 'Alos' :  bandwidth =  1720.0
-    elif  sensor == 'Tsx'  :  bandwidth = 15000.0
-    elif  sensor == 'Csk'  :  bandwidth = 15000.0   # FA 9/2015  shoud be checked
+    elif  sensor == 'S1'   :  bandwidth =  4000.0   # shong 08/2016 sould be checked
     elif  sensor == 'Rsat' :  bandwidth =   900.0
     elif  sensor == 'Rsat2':  bandwidth =   900.0
-    elif  sensor == 'S1'   :  bandwidth =  4000.0   # shong 08/2016 sould be checked
+
+    elif  sensor == 'Jers' :  bandwidth =   900.0   # FA 11/2015 just copied, need to research
+    elif  sensor == 'Alos' :  bandwidth =  1720.0
+
+    elif  sensor == 'Tsx'  :  bandwidth = 15000.0
+    elif  sensor == 'Csk'  :  bandwidth = 15000.0   # FA 9/2015  shoud be checked
     elif  sensor == 'Kmps5':  bandwidth = 15000.0   # shong 08/2016 sould be checked
     else: print 'satellite not found'; bandwidth = None
     return bandwidth
@@ -243,27 +247,45 @@ def azimuth_bandwidth(sensor):
 
 def range_bandwidth(sensor):
     ## Range Bandwidth in Hz for the given satellite
-    if    sensor == 'Alos':  bandwidth = 14e6      # for FBD, 28MHz for FBS
-    elif  sensor == 'Ers' :  bandwidth = 15.55e6
+    if    sensor == 'Ers' :  bandwidth = 15.55e6
+    elif  sensor == 'Env' :  bandwidth = 16.00e6
+
     elif  sensor == 'Jers':  bandwidth = 15e6      # Jers only has HH pol
+    elif  sensor == 'Alos':  bandwidth = 14e6      # for FBD, 28MHz for FBS
+
     elif  sensor == 'Tsx' :  bandwidth = 150e6
     return bandwidth
 
 
 def wavelength(sensor):
+    if    sensor == 'Ers'  :  center_frequency = 5.300e9
+    elif  sensor == 'Env'  :  center_frequency = 5.331e9
+    elif  sensor == 'S1'   :  center_frequency = 5.405e9
+    elif  sensor == 'Rsat' :  center_frequency = 5.300e9
+    elif  sensor == 'Rsat2':  center_frequency = 5.405e9
+
+    elif  sensor == 'Jers' :  center_frequency = 1.275e9
+    elif  sensor == 'Alos' :  center_frequency = 1.270e9
+    elif  sensor == 'Alos2':  center_frequency = 1.270e9
+
+    elif  sensor == 'Tsx'  :  center_frequency = 9.65e9
+    elif  sensor == 'Csk'  :  center_frequency = 9.60e9
+    elif  sensor == 'Kmps5':  center_frequency = 9.66e9
+
     c = 299792458;   # m/s, speed of light
-    if    sensor == 'Alos':  center_frequency = 1.270e9
-    elif  sensor == 'Ers' :  center_frequency = 5.3e9
-    elif  sensor == 'Jers':  center_frequency = 1.275e9  # Hz
-    elif  sensor == 'Tsx' :  center_frequency = 9.65e9
     wavelength = c / center_frequency
     return wavelength
 
 
-def incidence_angle(sensor):
-    if   sensor == 'Alos':  inc_angle = 34.3     # degree, for ALOS PALSAR Fine mode
-    elif sensor == 'Jers':  inc_angle = 35.21
-    elif sensor == 'Tsx' :  inc_angle = 39.23    # Yunjun 5/2016, for TaizhouTsx, not sure it's for all cases.
+def incidence_angle(sensor, inc_angle=None):
+    if not inc_angle:
+        if   sensor == 'Ers' :  inc_angle = 34.3
+        elif sensor == 'Env' :  inc_angle = 34.3
+
+        elif sensor == 'Jers':  inc_angle = 35.21
+        elif sensor == 'Alos':  inc_angle = 34.3     # degree, for ALOS PALSAR Fine mode
+
+        elif sensor == 'Tsx' :  inc_angle = 39.23    # Yunjun 5/2016, for TaizhouTsx, not sure it's for all cases.
     return inc_angle
 
 
@@ -274,14 +296,14 @@ def signal2noise_ratio(sensor):
         Envisat - Guarnieri, A.M., 2013. Introduction to RADAR. POLIMI DEI, Milano.
         JERS - https://directory.eoportal.org/web/eoportal/satellite-missions/j/jers-1
     '''
-    if   sensor == 'Ers' :  SNR = 11.7
-    elif sensor == 'Env' :  SNR = 19.5
-    elif sensor == 'Jers':  SNR = 14
+    if   sensor.startswith('Ers') :  SNR = 11.7
+    elif sensor.startswith('Env') :  SNR = 19.5
+    elif sensor.startswith('Jers'):  SNR = 14
     else: print 'satellite not found'; SNR = None
     return SNR
 
 
-def critical_perp_baseline(sensor):
+def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
     '''Critical Perpendicular Baseline for each satellite'''
     # Jers: 5.712e3 m (near_range=688849.0551m)
     # Alos: 6.331e3 m (near_range=842663.2917m)
@@ -291,9 +313,10 @@ def critical_perp_baseline(sensor):
     wvl = wavelength(sensor)
     near_range = 688849;        # Yunjun 5/2016, case for Jers, need a automatic way to get this number
     rg_bandwidth = range_bandwidth(sensor)
-    inc_angle    = incidence_angle(sensor) / 180 * np.pi;
-    Bperp_c      = wvl * (rg_bandwidth/c) * near_range * math.tan(inc_angle)
-    print 'Critical Perpendicular Baseline: '+str(Bperp_c)+' m'
+    inc_angle    = incidence_angle(sensor, inc_angle) / 180 * np.pi
+    Bperp_c      = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
+    if print_msg:
+        print 'Critical Perpendicular Baseline: '+str(Bperp_c)+' m'
     return Bperp_c
 
 
@@ -321,9 +344,102 @@ def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
     #dopOverlap_percent = np.mean(dopOverlap_percent)
     #return dopOverlap_percent
     
-    # Doppler overlap 
+    # Doppler overlap
     dop_overlap = (bandwidth_az - ddiff_mean) / bandwidth_az
     return dop_overlap
+
+
+def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', inc_angle=22.8,\
+                       decor_time=200.0, coh_resid=0.2, display=False):
+    '''Simulate coherence for a given set of interferograms
+    Inputs:
+        date12_list  - list of string in YYMMDD-YYMMDD format, indicating pairs configuration
+        baselineFile - string, path of baseline list text file
+        sensor     - string, SAR sensor
+        inc_angle  - float, incidence angle
+        decor_time - float / 2D np.array in size of (1, pixel_num)
+                     decorrelation rate in days, time for coherence to drop to 1/e of its initial value
+        coh_resid  - float / 2D np.array in size of (1, pixel_num)
+                     long-term coherence, minimum attainable coherence value
+        display    - bool, display result as matrix or not
+    Output:
+        cohs       - 2D np.array in size of (ifgram_num, pixel_num)
+    Example:
+        date12_list = pnet.get_date12_list('ifgram_list.txt')
+        cohs = simulate_coherences(date12_list, 'bl_list.txt', sensor='Tsx')
+
+    References:
+        Zebker, H. A., & Villasenor, J. (1992). Decorrelation in interferometric radar echoes.
+            IEEE-TGRS, 30(5), 950-959. 
+        Hanssen, R. F. (2001). Radar interferometry: data interpretation and error analysis
+            (Vol. 2). Dordrecht, Netherlands: Kluwer Academic Pub.
+        Morishita, Y., & Hanssen, R. F. (2015). Temporal decorrelation in L-, C-, and X-band satellite
+            radar interferometry for pasture on drained peat soils. IEEE-TGRS, 53(2), 1096-1104. 
+        Parizzi, A., Cong, X., & Eineder, M. (2009). First Results from Multifrequency Interferometry.
+            A comparison of different decorrelation time constants at L, C, and X Band. ESA Scientific
+            Publications(SP-677), 1-5. 
+    '''
+    date8_list, pbase_list, dop_list = read_baseline_file(baselineFile)[0:3]
+    date6_list = ptime.yymmdd(date8_list)
+    tbase_list = ptime.date_list2tbase(date8_list)[0]
+
+    #Thermal decorrelation (Zebker and Villasenor, 1992, Eq.4)
+    SNR = signal2noise_ratio(sensor)
+    coh_thermal = 1. / (1. + 1./SNR)
+
+    pbase_c = critical_perp_baseline(sensor, inc_angle)
+    bandwidth_az = azimuth_bandwidth(sensor)
+
+    ifgram_num = len(date12_list)
+    if isinstance(decor_time, (int, float)):
+        pixel_num = 1
+        decor_time = float(decor_time)
+    else:
+        pixel_num = decor_time.shape[1]
+    cohs = np.zeros((ifgram_num, pixel_num), np.float32)
+    for i in range(ifgram_num):
+        if display:
+            sys.stdout.write('\rinterferogram = %4d/%4d' % (i, ifgram_num))
+            sys.stdout.flush()
+        m_date, s_date = date12_list[i].split('-')
+        m_idx = date6_list.index(m_date)
+        s_idx = date6_list.index(s_date)
+
+        pbase = pbase_list[s_idx] - pbase_list[m_idx]
+        tbase = tbase_list[s_idx] - tbase_list[m_idx]
+        m_dop = dop_list[m_idx]
+        s_dop = dop_list[s_idx]
+
+        #Geometric decorrelation (Hanssen, 2001, Eq. 4.4.12)
+        coh_geom = (pbase_c - abs(pbase)) / pbase_c
+        if coh_geom < 0.:
+            coh_geom = 0.
+
+        #Doppler centroid decorrelation (Hanssen, 2001, Eq. 4.4.13)
+        coh_dc = calculate_doppler_overlap(m_dop, s_dop, bandwidth_az)
+        if coh_dc < 0.:
+            coh_dc = 0.
+
+        #Option 1: Temporal decorrelation - exponential delay model (Parizzi et al., 2009; Morishita and Hanssen, 2015)
+        coh_temp = np.multiply((coh_thermal - coh_resid), np.exp(-1*abs(tbase)/decor_time)) + coh_resid
+
+        coh = coh_geom * coh_dc * coh_temp
+        cohs[i,:] = coh
+    if display:
+        print ''
+
+    if display:
+        print 'critical perp baseline: %.f m' % pbase_c
+        cohs_mat = coherence_matrix(date12_list, cohs)
+        plt.figure()
+        plt.imshow(cohs_mat, vmin=0.0, vmax=1.0, cmap='jet')
+        plt.xlabel('Image number')
+        plt.ylabel('Image number')
+        cbar = plt.colorbar()
+        cbar.set_label('Coherence')
+        plt.title('Coherence matrix')
+        plt.show()
+    return cohs
 
 
 ##################################################################
@@ -436,7 +552,7 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     return date12_list_out
 
 
-def coherence_matrix(date12_list, coh_list):
+def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
     '''Return coherence matrix based on input date12 list and its coherence
     Inputs:
         date12_list - list of string in YYMMDD-YYMMDD format
@@ -462,8 +578,9 @@ def coherence_matrix(date12_list, coh_list):
         coh_mat[idx1, idx2] = coh    #symmetric
         coh_mat[idx2, idx1] = coh
 
-    #for i in range(date_num):    # diagonal value
-    #    coh_mat[i, i] = 1.0
+    if diagValue is not np.nan:
+        for i in range(date_num):    # diagonal value
+            coh_mat[i, i] = diagValue
 
     return coh_mat
 
@@ -484,8 +601,8 @@ def threshold_coherence_based_mst(date12_list, coh_list):
     wei_mat[mask] = 1/coh_mat[mask]
 
     # MST path based on weight matrix
-    wei_mat_csr = csr_matrix(wei_mat)
-    mst_mat_csr = minimum_spanning_tree(wei_mat_csr)
+    wei_mat_csr = sparse.csr_matrix(wei_mat)
+    mst_mat_csr = sparse.csgraph.minimum_spanning_tree(wei_mat_csr)
 
     # Get date6_list
     m_dates = [date12.split('-')[0] for date12 in date12_list]
@@ -493,7 +610,7 @@ def threshold_coherence_based_mst(date12_list, coh_list):
     date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(list(set(m_dates + s_dates)))))
 
     # Convert MST index matrix into date12 list
-    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in find(mst_mat_csr)[0:2]]
+    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in sparse.find(mst_mat_csr)[0:2]]
     mst_date12_list = []
     for i in range(len(m_idx_list)):
         idx = sorted([m_idx_list[i], s_idx_list[i]])
@@ -766,7 +883,7 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
 
 
 ##################################################################
-def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_list_drop=[]):
+def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_list_drop=[], print_msg=True):
     '''Plot Temporal-Perp baseline Network
     Inputs
         ax : matplotlib axes object
@@ -797,6 +914,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
     # For colorful display of coherence
     if not 'coherence_list' in keyList:  plot_dict['coherence_list'] = None
+    if not 'cbar_label'     in keyList:  plot_dict['cbar_label']     = 'Coherence'
     if not 'disp_min'       in keyList:  plot_dict['disp_min']       = 0.2
     if not 'disp_max'       in keyList:  plot_dict['disp_max']       = 1.0
     if not 'colormap'       in keyList:  plot_dict['colormap']       = 'RdBu'
@@ -843,10 +961,11 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             disp_min = data_min
             disp_max = data_max
 
-        print 'showing coherence'
-        print 'colormap: '+plot_dict['colormap']
-        print 'display range: '+str([disp_min, disp_max])
-        print 'data    range: '+str([data_min, data_max])
+        if print_msg:
+            print 'showing coherence'
+            print 'colormap: '+plot_dict['colormap']
+            print 'display range: '+str([disp_min, disp_max])
+            print 'data    range: '+str([data_min, data_max])
 
         # Use lower/upper part of colormap to emphasis dropped interferograms
         if not coh_thres:
@@ -859,21 +978,27 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
                 coh_thres = min(coh_list_keep)
 
         if coh_thres < disp_min:
-            print 'data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)
             disp_min = 0.0
+            if print_msg:
+                print 'data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)
         c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
         coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
         cmap = plt.get_cmap(plot_dict['colormap'])
         colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
         colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
         cmap = colors.LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
-        print 'color jump at '+str(coh_thres)
+        if print_msg:
+            print 'color jump at '+str(coh_thres)
 
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", "5%", pad="3%")
+        cax = divider.append_axes("right", "3%", pad="3%")
         norm = mpl.colors.Normalize(vmin=disp_min, vmax=disp_max)
         cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
-        cbar.set_label('Average Spatial Coherence', fontsize=plot_dict['fontsize'])
+        cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
+
+        #plot low coherent ifgram first and high coherence ifgram later
+        coh_list_keep = [coh_list[date12_list.index(i)] for i in date12_list_keep]
+        date12_list_keep = [x for _,x in sorted(zip(coh_list_keep, date12_list_keep))]
 
     ## Dot - SAR Acquisition
     if idx_date_keep:
@@ -1012,6 +1137,7 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, date12_list_drop=[], 
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
     if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
+    if not 'cbar_label'  in keyList:   plot_dict['cbar_label']  = 'Coherence'
 
     coh_mat = coherence_matrix(date12_list, coherence_list)
 
@@ -1049,7 +1175,7 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, date12_list_drop=[], 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "3%", pad="3%")
     cbar = plt.colorbar(im, cax=cax)
-    cbar.set_label('Spatial Coherence', fontsize=plot_dict['fontsize'])
+    cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
 
     # Legend
     if date12_list_drop:

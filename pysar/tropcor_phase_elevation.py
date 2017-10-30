@@ -103,7 +103,7 @@ def main(argv):
 
     ##### Read DEM
     print 'read DEM from file: '+inps.dem_file
-    dem = readfile.read(inps.dem_file)[0]
+    dem = readfile.read(inps.dem_file, epoch='height')[0]
 
     ref_y = int(atr['ref_y'])
     ref_x = int(atr['ref_x'])

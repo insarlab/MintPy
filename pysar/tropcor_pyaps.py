@@ -60,7 +60,7 @@ def get_delay(grib_file, atr, inps_dict):
                     grib_source - string, Weather re-analysis data source
                     delay_type  - string, comb/dry/wet
                     ref_y/x     - string, reference pixel row/col number
-                    incidence_angle - np.array, 0/1/2 D
+                    inc_angle   - np.array, 0/1/2 D
     Output:
         phs - 2D np.array, absolute tropospheric phase delay relative to ref_y/x
     '''
@@ -79,7 +79,7 @@ def get_delay(grib_file, atr, inps_dict):
     phs -= phs[yref, xref]
 
     # project into LOS direction
-    phs /= np.cos(inps_dict['incidence_angle'])
+    phs /= np.cos(inps_dict['inc_angle'])
     
     # reverse the sign for consistency between different phase correction steps/methods
     phs *= -1
@@ -147,8 +147,8 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
 
 ###############################################################
 EXAMPLE='''example:
-  tropcor_pyaps.py timeseries.h5 -d demRadar.h5
-  tropcor_pyaps.py timeseries.h5 -d demRadar.h5 --weather-dir /famelung/data/WEATHER
+  tropcor_pyaps.py timeseries.h5 -d geometryRadar.h5 -i geometryRadar.h5
+  tropcor_pyaps.py timeseries.h5 -d geometryGeo.h5   -i geometryGeo.h5   --weather-dir /famelung/data/WEATHER
 
   tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s NARR
   tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s MERRA --delay dry -i 23
@@ -179,6 +179,8 @@ def cmdLineParse():
     parser.add_argument(dest='timeseries_file', nargs='?', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-d','--dem', dest='dem_file',\
                         help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
+    parser.add_argument('-i', dest='inc_angle',\
+                        help='a file containing all incidence angles, or a number representing for the whole image.')
     parser.add_argument('--weather-dir', dest='weather_dir', \
                         help='directory to put downloaded weather data, i.e. ./../WEATHER\n'+\
                              'use directory of input timeseries_file if not specified.')
@@ -188,13 +190,11 @@ def cmdLineParse():
     parser.add_argument('--date-list', dest='date_list_file',\
                         help='Read the first column of text file as list of date to download data\n'+\
                              'in YYYYMMDD or YYMMDD format')
+    parser.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='reference pixel in y/x')
 
     parser.add_argument('-s', dest='weather_model',\
                         default='ECMWF', choices={'ECMWF','ERA-Interim','ERA','MERRA','MERRA2','NARR'},\
                         help='source of the atmospheric data')
-    parser.add_argument('-i', dest='incidence_angle',\
-                        help='a file containing all incidence angles, or\n'+\
-                             'one average value presenting the whole area, if not input, average look angle will be used.')
     parser.add_argument('--hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
 
     parser.add_argument('--template', dest='template_file',\
@@ -217,14 +217,27 @@ def main(argv):
     if inps.timeseries_file:
         inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
         atr = readfile.read_attribute(inps.timeseries_file)
+        k = atr['FILE_TYPE']
+        if 'ref_y' not in atr.keys() and inps.ref_yx:
+            print 'No reference info found in input file, use input ref_yx: '+str(inps.ref_yx)
+            atr['ref_y'] = inps.ref_yx[0]
+            atr['ref_x'] = inps.ref_yx[1]
 
+    ##Read Incidence angle: to map the zenith delay to the slant delay
+    if os.path.isfile(inps.inc_angle):
+        inps.inc_angle = readfile.read(inps.inc_angle, epoch='incidenceAngle')[0]
+    else:
+        inps.inc_angle = float(inps.inc_angle)
+        print 'incidence angle: '+str(inps.inc_angle)
+    inps.inc_angle = inps.inc_angle*np.pi/180.0
+
+    ##Prepare DEM file in ROI_PAC format for PyAPS to read
     if inps.dem_file:
         inps.dem_file = ut.get_file_list([inps.dem_file])[0]
-        # Convert DEM to ROIPAC format
         if os.path.splitext(inps.dem_file)[1] in ['.h5']:
             print 'convert DEM file to ROIPAC format'
-            dem, atr_dem = readfile.read(inps.dem_file)
-            if 'Y_FIRST' in atr_dem.keys():
+            dem, atr_dem = readfile.read(inps.dem_file, epoch='height')
+            if 'Y_FIRST' in atr.keys():
                 atr_dem['FILE_TYPE'] = '.dem'
             else:
                 atr_dem['FILE_TYPE'] = '.hgt'
@@ -254,10 +267,19 @@ def main(argv):
 
     # Get date list to download
     if not inps.date_list_file:
-        h5timeseries = h5py.File(inps.timeseries_file, 'r')
-        date_list = sorted(h5timeseries['timeseries'].keys())
-        h5timeseries.close()
         print 'read date list info from: '+inps.timeseries_file
+        h5 = h5py.File(inps.timeseries_file, 'r')
+        if 'timeseries' in h5.keys():
+            date_list = sorted(h5[k].keys())
+        elif k in ['interferograms','coherence','wrapped']:
+            ifgram_list = sorted(h5[k].keys())
+            date12_list = ptime.list_ifgram2date12(ifgram_list)
+            m_dates = [i.split('-')[0] for i in date12_list]
+            s_dates = [i.split('-')[1] for i in date12_list]
+            date_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
+        else:
+            raise ValueError('Un-support input file type:'+k)
+        h5.close()
     else:
         date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
         print 'read date list info from: '+inps.date_list_file
@@ -277,18 +299,6 @@ def main(argv):
     print '*******************************************************************************'
     print 'Calcualting delay for each epoch.'
 
-    ## Get Incidence angle: to map the zenith delay to the slant delay
-    if inps.incidence_angle:
-        if os.path.isfile(inps.incidence_angle):
-            inps.incidence_angle = readfile.read(inps.incidence_angle)[0]
-        else:
-            inps.incidence_angle = float(inps.incidence_angle)
-            print 'incidence angle: '+str(inps.incidence_angle)
-    else:
-        print 'calculating incidence angle ...'
-        inps.incidence_angle = ut.incidence_angle(atr)
-    inps.incidence_angle = inps.incidence_angle*np.pi/180.0
-
     ## Calculate tropo delay using pyaps
     length = int(atr['FILE_LENGTH'])
     width = int(atr['WIDTH'])
@@ -307,33 +317,44 @@ def main(argv):
     ref_idx = date_list.index(ref_date)
     trop_ts -= np.tile(trop_ts[ref_idx,:,:], (date_num, 1, 1))
 
-    ## Correct Timeseries and Write to HDF5
+    ## Write tropospheric delay to HDF5
     tropFile = inps.grib_source+'.h5'
-    if not inps.out_file:
-        inps.out_file = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.grib_source+'.h5'
-    print 'writing >>> %s, %s' % (tropFile, inps.out_file)
-    h5ts = h5py.File(inps.timeseries_file, 'r')
+    print 'writing >>> %s' % (tropFile)
     h5trop = h5py.File(tropFile, 'w')
-    h5tsCor = h5py.File(inps.out_file, 'w')    
     group_trop = h5trop.create_group('timeseries')
-    group_tsCor = h5tsCor.create_group('timeseries')
     print 'number of acquisitions: '+str(date_num)
     prog_bar = ptime.progress_bar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
-        ts = h5ts['timeseries'].get(date)[:]
         group_trop.create_dataset(date, data=trop_ts[i], compression='gzip')
-        group_tsCor.create_dataset(date, data=ts-trop_ts[i], compression='gzip')
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
-    h5ts.close()
-
-    ## Write Attributes
+    # Write Attributes
     for key,value in atr.iteritems():
         group_trop.attrs[key] = value
-        group_tsCor.attrs[key] = value
     h5trop.close()
-    h5tsCor.close()
+
+    ## Write corrected Time series to HDF5
+    if k == 'timeseries':
+        if not inps.out_file:
+            inps.out_file = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.grib_source+'.h5'
+        print 'writing >>> %s' % (inps.out_file)
+        h5ts = h5py.File(inps.timeseries_file, 'r')
+        h5tsCor = h5py.File(inps.out_file, 'w')    
+        group_tsCor = h5tsCor.create_group('timeseries')
+        print 'number of acquisitions: '+str(date_num)
+        prog_bar = ptime.progress_bar(maxValue=date_num)
+        for i in range(date_num):
+            date = date_list[i]
+            ts = h5ts['timeseries'].get(date)[:]
+            group_tsCor.create_dataset(date, data=ts-trop_ts[i], compression='gzip')
+            prog_bar.update(i+1, suffix=date)
+        prog_bar.close()
+        h5ts.close()
+        # Write Attributes
+        for key,value in atr.iteritems():
+            group_tsCor.attrs[key] = value
+        h5tsCor.close()
 
     # Delete temporary DEM file in ROI_PAC format
     if '4pyaps' in inps.dem_file:

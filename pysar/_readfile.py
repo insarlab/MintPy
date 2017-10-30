@@ -243,6 +243,10 @@ def read(File, box=None, epoch=None):
             else:
                 sys.exit('Un-recognized epoch input: '+epoch)
 
+        elif ext in ['.int']:
+            amp, pha, atr = read_complex_float32(File, box=box, byte_order='ieee-be', cpx=False)
+            return pha, atr
+
         elif ext in ['.mli']:
             data, atr = read_real_float32(File, box=box)
             return data, atr
@@ -276,38 +280,48 @@ def read_attribute(File, epoch=None):
     ##### PySAR
     if ext in ['.h5','.he5']:
         h5 = h5py.File(File,'r')
-        k = h5.keys()
-        if   'interferograms' in k: k[0] = 'interferograms'
-        elif 'coherence'      in k: k[0] = 'coherence'
-        elif 'timeseries'     in k: k[0] = 'timeseries'
+        if   'interferograms' in h5.keys(): k = 'interferograms'
+        elif 'coherence'      in h5.keys(): k = 'coherence'
+        elif 'timeseries'     in h5.keys(): k = 'timeseries'
+        else: k = h5.keys()[0]
 
-        if k[0] in multi_group_hdf5_file:
+        attrs = None
+        if k in multi_group_hdf5_file:
             if epoch:
                 # Check input epoch exists or not
-                epoch_list = sorted(h5[k[0]].keys())
+                epoch_list = sorted(h5[k].keys())
                 try:    epoch = [i for i in epoch_list if epoch in i][0]
                 except: epoch = None
 
             if not epoch:
-                epoch = h5[k[0]].keys()[0]
-            attrs = h5[k[0]][epoch].attrs
+                epoch = h5[k].keys()[0]
+            attrs = h5[k][epoch].attrs
 
-        elif k[0] in multi_dataset_hdf5_file+single_dataset_hdf5_file:
-            attrs  = h5[k[0]].attrs
-        elif k[0] in ['HDFEOS']:
+        elif k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
+            key = 'WIDTH'
+            if key in h5.attrs.keys():
+                attrs = h5.attrs
+            else:
+                for groupK in h5.keys():
+                    if key in h5[groupK].attrs.keys():
+                        attrs = h5[groupK].attrs
+                        break
+            if attrs is None:
+                raise ValueError('No attribute '+key+' found in 1/2 group level!')
+        elif k in ['HDFEOS']:
             attrs = h5.attrs
         else:
-            sys.exit('Unrecognized h5 file key: '+k[0])
+            sys.exit('Unrecognized h5 file key: '+k)
 
         atr = dict()
         for key, value in attrs.iteritems():
             atr[key] = str(value)
-        atr['FILE_TYPE'] = str(k[0])
+        atr['FILE_TYPE'] = str(k)
         atr['PROCESSOR'] = 'pysar'
 
-        if k[0] == 'timeseries':
+        if k == 'timeseries':
             try:    atr['ref_date']
-            except: atr['ref_date'] = sorted(h5[k[0]].keys())[0]
+            except: atr['ref_date'] = sorted(h5[k].keys())[0]
 
         h5.close()
 
@@ -362,7 +376,8 @@ def read_attribute(File, epoch=None):
     elif atr['FILE_TYPE'] in ['velocity']:
         atr['UNIT'] = 'm/yr'
     else:
-        atr['UNIT'] = '1'
+        if 'UNIT' not in atr.keys():
+            atr['UNIT'] = '1'
 
     atr['FILE_PATH'] = os.path.abspath(File)
     if 'INSAR_PROCESSOR' not in atr.keys():
@@ -525,15 +540,15 @@ def attribute_gamma2roipac(par_dict_in):
 
     # Length - number of rows
     for key in key_list:
-        if any(i in key for i in ['azimuth_lines','nlines','az_samp']):
+        if any(key.startswith(i) for i in ['azimuth_lines','nlines','az_samp','interferogram_azimuth_lines']):
             par_dict['FILE_LENGTH'] = par_dict[key]
 
     # Width - number of columns
     for key in key_list:
-        if any(i in key for i in ['range_samp','interferogram_width','az_samp']):
+        if any(key.startswith(i) for i in ['width','range_samp','interferogram_width']):
             par_dict['WIDTH'] = par_dict[key]
-        if key in key_list:
-            par_dict['WIDTH'] = par_dict[key]
+        #if key in key_list:
+        #    par_dict['WIDTH'] = par_dict[key]
 
     # WAVELENGTH
     speed_of_light = 299792458.0   # meter/second

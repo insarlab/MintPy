@@ -220,12 +220,12 @@ TEMPLATE='''# vim: set filetype=cfg:
 ##     pysar.lookupFile         = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
 ##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
-pysar.insarProcessor     = auto  #[roipac, gamma, isce], auto for roipac
-pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw, filt*.unw]
-pysar.corFiles           = auto  #[filt*.cor, filt_*.cor, filt*.cor]
+pysar.insarProcessor     = auto  #[roipac,        gamma,           isce], auto for roipac
+pysar.unwrapFiles        = auto  #[filt*rlks.unw, diff_*rlks.unw,  filt*.unw]
+pysar.corFiles           = auto  #[filt*rlks.cor, filt_*rlks.cor,  filt*.cor]
 pysar.lookupFile         = auto  #[geomap*.trans, sim*.UTM_TO_RDC, l*.rdr]
-pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim, hgt.rdr]
-pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem, demLat*.dem.wgs84]
+pysar.demFile.radarCoord = auto  #[radar*.hgt,    sim*.hgt_sim,    hgt.rdr]
+pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    demLat*.dem.wgs84]
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)
@@ -235,6 +235,8 @@ pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 pysar.subset.tightBox = auto    #[yes / no], auto for yes, tight bounding box for files in geo coord
 pysar.multilook.yx    = auto    #[4,4 / no], auto for no [not implemented yet]
 
+## 1.2 Prepare geometry files
+## Prepare incidenceAngle.h5, rangeDistance.h5 files
 
 ## 2. Reference in Space
 ## reference all interferograms to one common point in space
@@ -287,11 +289,8 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ##     variance - phase variance due to temporal decorrelation (Yunjun et al., 2017, in prep)
 ##     no       - no weight, or ordinal inversion with uniform weight (Berardino et al., 2002, IEEE-TGRS)
 ##     linear   - uniform distribution CDF function (Tong et al., 2016, RSE)
-##     normal   - normal  distribution CDF function (Perissin, SARProZ)
 pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
 pysar.timeseriesInv.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
-pysar.timeseriesInv.minCoherence  = auto #[0.0-1.0], auto for 0.20, put 0 weight for pixels with coherence < input
-pysar.timeseriesInv.maxCoherence  = auto #[0.0-1.0], auto for 0.85, put 1 weight for pixels with coherence > input
 pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 
@@ -312,10 +311,12 @@ pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECM
 
 
 ## 8. Topographic (DEM) Residual Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
-pysar.topoError              = auto    #[yes / no], auto for yes
-pysar.topoError.polyOrder    = auto    #[1 / 2 / 3], auto for 2, polynomial order of temporal deformation model
-pysar.topoError.excludeDate  = auto    #[20101120 / txtFile / no], auto for no, date not used for error estimation
-pysar.topoError.stepFuncDate = auto    #[20080529 / no], auto for no, date of step jump, i.e. eruption/earthquake date
+## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
+## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
+pysar.topoError              = auto  #[yes / no], auto for yes
+pysar.topoError.polyOrder    = auto  #[1-inf], auto for 2, polynomial order of temporal deformation model
+pysar.topoError.stepFuncDate = auto  #[20080529,20100611 / no], auto for no, date of step jump
+pysar.topoError.excludeDate  = auto  #[20070321,20101120 / txtFile / no], auto for no, date exlcuded for error estimation
 
 
 ## 8.1 Phase Residual Root Mean Square
@@ -576,6 +577,11 @@ def main(argv):
         print '\nERROR: No interferograms file found!\n'
         sys.exit('Exit.')
 
+    atr = readfile.read_attribute(inps.ifgram_file)
+    inps.coord_type = 'radar'
+    if 'Y_FIRST' in atr.keys():
+        inps.coord_type = 'geo'
+
     if inps.load_dataset:
         sys.exit('Exit as planned after loading/checking the dataset')
 
@@ -653,6 +659,22 @@ def main(argv):
             inps.spatial_coh_file = ut.temporal_average(inps.coherence_file, inps.spatial_coh_file)
     else:
         inps.spatial_coh_file = None
+
+    # Incidence Angle
+    inps.inc_angle_file = 'incidenceAngle.h5'
+    print 'creating incidence angle from file: '+inps.ifgram_file
+    if ut.update_file(inps.inc_angle_file, inps.ifgram_file):
+        incAngleCmd = 'incidence_angle.py %s %s' % (inps.ifgram_file, inps.inc_angle_file)
+        print incAngleCmd
+        status = subprocess.Popen(incAngleCmd, shell=True).wait()
+
+    # Slant range distance
+    inps.range_dist_file = 'rangeDistance.h5'
+    print 'creating slant range distance from file: '+inps.ifgram_file
+    if ut.update_file(inps.range_dist_file, inps.ifgram_file):
+        rangeDistCmd = 'range_distance.py %s %s' % (inps.ifgram_file, inps.range_dist_file)
+        print rangeDistCmd
+        status = subprocess.Popen(rangeDistCmd, shell=True).wait()
 
 
     #########################################
@@ -917,7 +939,8 @@ def main(argv):
     ##############################################
     print '\n**********  Topographic Residual (DEM error) correction  *******'
     outName = os.path.splitext(inps.timeseries_file)[0]+'_demErr.h5'
-    topoCmd = 'dem_error.py '+inps.timeseries_file+' -o '+outName+' --template '+inps.template_file
+    topoCmd = 'dem_error.py %s --template %s -i %s -r %s -o %s' %\
+              (inps.timeseries_file, inps.template_file, inps.inc_angle_file, inps.range_dist_file, outName)
     print topoCmd
     inps.timeseries_resid_file = None
     if template['pysar.topoError'] in ['yes','auto']:
@@ -928,7 +951,7 @@ def main(argv):
                 print '\nError while correcting topographic phase residual.\n'
                 sys.exit(-1)
         inps.timeseries_file = outName
-        inps.timeseries_resid_file = os.path.splitext(outName)[0]+'InvResid.h5'
+        inps.timeseries_resid_file = 'timeseriesResidual.h5'
     else:
         print 'No correction for topographic residuals.'
 
