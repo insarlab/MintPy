@@ -163,7 +163,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
         outFile = os.path.splitext(File)[0]+'_'+surf_type+os.path.splitext(File)[1]
     
     if maskFile:
-        Mask = readfile.read(maskFile)[0]
+        Mask = readfile.read(maskFile, epoch='mask')[0]
         print 'read mask file: '+maskFile
     else:
         Mask = np.ones((int(atr['FILE_LENGTH']), int(atr['WIDTH'])))

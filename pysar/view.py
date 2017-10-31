@@ -412,7 +412,7 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
         ### mask out water
         #dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+500)
         #mask_file = '/Users/jeromezhang/Documents/insarlab/Kyushu/Velocity/mask_land.h5'
-        #mask_mat = readfile.read(mask_file, inps_dict['dem_pix_box'])[0]
+        #mask_mat = readfile.read(mask_file, inps_dict['dem_pix_box'], epoch='mask')[0]
         #dem_shade = mask.mask_matrix(dem_shade, mask_mat)
 
         bmap.imshow(dem_shade, origin='upper', interpolation='spline16')
@@ -1336,7 +1336,7 @@ def main(argv):
         try:
             atrMsk = readfile.read_attribute(inps.mask_file)
             if atrMsk['FILE_LENGTH'] == atr['FILE_LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
-                msk = readfile.read(inps.mask_file, inps.pix_box)[0]
+                msk = readfile.read(inps.mask_file, inps.pix_box, epoch='mask')[0]
                 print 'mask data with: '+os.path.basename(inps.mask_file)
             else:
                 print 'WARNING: input file has different size from mask file: %s. Continue without mask' % (inps.mask_file)

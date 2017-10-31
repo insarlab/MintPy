@@ -82,7 +82,7 @@ def main(argv):
     if inps.ysub:
         # Read mask
         if not inps.mask_file:
-            Mask_temp = readfile.read(inps.mask_file)[0]
+            Mask_temp = readfile.read(inps.mask_file, epoch='mask')[0]
             Mask = np.zeros((length, width), dtype=np.float32)
             Mask[Mask_temp!=0] = 1
         else:

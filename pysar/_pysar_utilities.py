@@ -454,7 +454,7 @@ def timeseries_std(inFile, maskFile='maskTempCoh.h5', outFile=None):
     and output result to a text file.
     '''
     try:
-        mask = readfile.read(maskFile)[0]
+        mask = readfile.read(maskFile, epoch='mask')[0]
         print 'read mask from file: '+maskFile
     except:
         maskFile = None
@@ -541,7 +541,7 @@ def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None, dimension=2)
     and output result to a text file.
     '''
     try:
-        mask = readfile.read(maskFile)[0]
+        mask = readfile.read(maskFile, epoch='mask')[0]
         print 'read mask from file: '+maskFile
     except:
         maskFile = None
@@ -602,7 +602,7 @@ def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
         txtFile = timeseries_coherence('timeseries_ECMWF_demErrInvResid_quadratic.h5')
     '''
     try:
-        mask = readfile.read(maskFile)[0]
+        mask = readfile.read(maskFile, epoch='mask')[0]
         print 'read mask from file: '+maskFile
     except:
         maskFile = None
@@ -1068,7 +1068,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         print 'no mask input, use all pixels available'
     elif type(maskFile) is str:
         print 'mask from file: '+maskFile
-        mask = readfile.read(maskFile)[0]
+        mask = readfile.read(maskFile, epoch='mask')[0]
         mask = mask[box[1]:box[3],box[0]:box[2]]
     elif type(maskFile) is np.ndarray:
         mask = maskFile
@@ -1994,7 +1994,7 @@ def get_file_stack(File, maskFile=None):
     # set masked out area into NaN
     if maskFile:
         print 'read mask from file: '+maskFile
-        mask = readfile.read(maskFile)[0]
+        mask = readfile.read(maskFile, epoch='mask')[0]
         stack[mask==0] = np.nan
 
     return stack

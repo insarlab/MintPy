@@ -95,7 +95,7 @@ def main(argv):
 
     ##### Read Mask
     print 'reading mask from file: '+inps.mask_file
-    mask = readfile.read(inps.mask_file)[0].flatten(1)
+    mask = readfile.read(inps.mask_file, epoch='mask')[0].flatten(1)
     ndx = mask != 0
     msk_num = np.sum(ndx)
     print 'total            pixel number: %d' % pix_num

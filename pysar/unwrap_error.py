@@ -58,7 +58,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
         'unwrapIfgram_unwCor.h5' = unwrap_error_correction_phase_closure('Seeded_unwrapIfgram.h5','mask.h5')
     '''
     print 'read mask from file: '+mask_file
-    mask = readfile.read(mask_file)[0].flatten(1)
+    mask = readfile.read(mask_file, epoch='mask')[0].flatten(1)
 
     atr = readfile.read_attribute(ifgram_file)
     length = int(atr['FILE_LENGTH'])
@@ -191,7 +191,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
         unwrap_error_correction_bridging('unwrapIfgram.h5', 'mask_all.h5', y_list, x_list, 'quadratic')
     '''
     ##### Mask and Ramp
-    mask = readfile.read(mask_file)[0]
+    mask = readfile.read(mask_file, epoch='mask')[0]
     ramp_mask = mask == 1
     print 'estimate phase ramp during the correction'
     print 'ramp type: '+ramp_type

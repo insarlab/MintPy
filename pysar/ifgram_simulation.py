@@ -89,7 +89,7 @@ def main(argv):
 
     ##### Select interferograms with unwrapping error
     if inps.percentage > 0.0:
-        mask = readfile.read(inps.mask_file)[0]
+        mask = readfile.read(inps.mask_file, epoch='mask')[0]
         print 'read mask for pixels with unwrapping error from file: '+inps.mask_file
 
         unw_err_ifgram_num = int(np.rint(inps.percentage*ifgram_num))

@@ -106,7 +106,7 @@ def read(File, box=None, epoch=None):
         if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
             # Check input epoch exists or not
             epoch_list = sorted(h5file[k].keys())
-            try:    epoch2read = [i for i in epoch_list if epoch in i][0]
+            try:    epoch2read = [i for i in epoch_list if epoch in i.lower()][0]
             except: epoch2read = None
             if not epoch2read:
                 print 'ERROR: no input epoch found!'

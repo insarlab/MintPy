@@ -232,7 +232,7 @@ if __name__ == '__main__':
         try:    inps.mask_file = ut.get_file_list(file_list)[0]
         except: inps.mask_file = None
     try:
-        mask = readfile.read(inps.mask_file)[0]
+        mask = readfile.read(inps.mask_file, epoch='mask')[0]
         mask[mask!=0] = 1
         print 'load mask from file: '+inps.mask_file
     except:
