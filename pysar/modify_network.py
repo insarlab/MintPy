@@ -566,7 +566,7 @@ def main(argv):
             date12 = date12_orig[i]
             if any(int(j) < min_date for j in ptime.yyyymmdd(date12.split('-'))):
                 date12_to_rmv.append(date12)
-                date12_to_rmv_temp.append(date)
+                date12_to_rmv_temp.append(date12)
         print date12_to_rmv_temp
 
     # 2.7 Update date12_to_rmv from end_date
