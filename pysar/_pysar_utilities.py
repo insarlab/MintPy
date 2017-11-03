@@ -95,25 +95,24 @@ def get_lookup_file(filePattern=None, abspath=False):
         return None
 
     ##Files with lookup table info
-    lookupFiles = []
+    lookupFile = None
     for fname in existFiles:
         atr = readfile.read_attribute(fname)
         if 'Y_FIRST' in atr.keys():
-            try:
-                dset = readfile.read(fname, epoch='range')[0]
-                lookupFiles.append(fname)
-            except: pass
+            epoch2check = 'rangeCoord'
         else:
-            try:
-                dset = readfile.read(fname, epoch='lat')[0]
-                lookupFiles.append(fname)
-            except: pass
+            epoch2check = 'latitude'
+        try:
+            dset = readfile.read(fname, epoch=epoch2check, print_msg=False)[0]
+            lookupFile = fname
+            break
+        except:
+            pass
 
-    if not lookupFiles:
+    if not lookupFile:
         print 'No lookup table info range/lat found in files.'
         return None
 
-    lookupFile = lookupFiles[0]
     if abspath:
         lookupFile = os.path.abspath(lookupFile)
     return lookupFile

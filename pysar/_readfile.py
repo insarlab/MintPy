@@ -55,7 +55,7 @@ single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
 
 
 #########################################################################
-def read(File, box=None, epoch=None):
+def read(File, box=None, epoch=None, print_msg=True):
     '''Read one dataset and its attributes from input file.
     
     Read one dataset, i.e. interferogram, coherence, velocity, dem ...
@@ -106,12 +106,13 @@ def read(File, box=None, epoch=None):
         if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
             # Check input epoch exists or not
             epoch_list = sorted(h5file[k].keys())
-            try:    epoch2read = [i for i in epoch_list if epoch in i.lower()][0]
+            try:    epoch2read = [i for i in epoch_list if epoch.lower() in i.lower()][0]
             except: epoch2read = None
             if not epoch2read:
-                print 'ERROR: no input epoch found!'
-                print 'input epoch: '+str(epoch)
-                print 'available epoches: '+str(epoch_list)
+                if print_msg:
+                    print 'ERROR: no input epoch found!'
+                    print 'input epoch: '+str(epoch)
+                    print 'available epoches: '+str(epoch_list)
                 sys.exit(1)
 
             elif k in multi_dataset_hdf5_file:

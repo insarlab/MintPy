@@ -779,8 +779,8 @@ def select_pairs_mst(date_list, pbase_list):
     mstMat = minimum_spanning_tree(weightMat)
 
     # Convert MST index matrix into date12 list
-    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in find(mstMat)[0:2]]
-    date12_list = [date6_list[m_idx_list[i]]+'-'+date6_list[s_idx_list[i]] for i in range(len(m_idx_list))]
+    idx_list = [sorted(date_idx_array.tolist()) for date_idx_array in find(mstMat)[0:2]]
+    date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]] for idx in idx_list]
     return date12_list
 
 

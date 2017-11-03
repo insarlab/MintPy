@@ -362,7 +362,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
                 lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
             print lineStr
             weight = 1.0 / coherence2phase_variance_ds(weight, L)
-        elif meta['weight_function'].startswith('lin'):
+        elif meta['weight_function'].startswith(('lin','coh','cor')):
             print 'use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)'
             weight[weight < epsilon] = epsilon
         else:

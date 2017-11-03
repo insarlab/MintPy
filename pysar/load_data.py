@@ -25,6 +25,26 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 ############################ Sub Functions ###################################
+def project_name2sensor(projectName):
+    if not projectName:
+        return None
+    if    re.search('Ers'    , projectName):  sensor = 'Ers'
+    elif  re.search('Env'    , projectName):  sensor = 'Env'
+    elif  re.search('Jers'   , projectName):  sensor = 'Jers'
+    elif  re.search('Alos'   , projectName):  sensor = 'Alos'
+    elif  re.search('Alos2'  , projectName):  sensor = 'Alos2' 
+    elif  re.search('Tsx'    , projectName):  sensor = 'Tsx'
+    elif  re.search('Tdm'    , projectName):  sensor = 'Tsx'
+    elif  re.search('Csk'    , projectName):  sensor = 'Csk'
+    elif  re.search('Rsat'   , projectName):  sensor = 'Rsat'
+    elif  re.search('Rsat2'  , projectName):  sensor = 'Rsat2'
+    elif  re.search('Sen'    , projectName):  sensor = 'S1'
+    elif  re.search('Kmps5'  , projectName):  sensor = 'Kmps5'
+    elif  re.search('Gaofen3', projectName):  sensor = 'G3'
+    else: print 'satellite not found';  sensor = None
+    return sensor
+
+
 ##################################################################
 def auto_path_miami(inps, template={}):
     '''Auto File Path Setting for Geodesy Lab - University of Miami'''
@@ -263,6 +283,10 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
             if key not in atr.keys():
                 try:  atr[key] = exDict['insar_processor']
                 except:  pass
+            key = 'PLATFORM'
+            if key not in atr.keys():
+                try:  atr[key] = exDict['PLATFORM']
+                except:  pass
 
             # Write dataset
             group = gg.create_group(os.path.basename(file))
@@ -489,6 +513,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         fileList  - string / list of string, path of files to load
         inps_dict - dict, including the following attributes
                     PROJECT_NAME   : KujuAlosAT422F650  (extra attribute dictionary to add to output file)
+                    sensor         : (optional)
                     timeseries_dir : directory of time series analysis, e.g. KujuAlosAT422F650/PYSAR
                     insar_processor: InSAR processor, roipac, isce, gamma, doris
         outfile   - string, output file name
@@ -505,6 +530,9 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         except:  pass
         if template_filename_list:
             inps_dict['project_name'] = os.path.splitext(template_filename_list[0])[0]
+
+    #Sensor
+    inps_dict['PLATFORM'] = project_name2sensor(inps_dict['project_name'])        
 
     # Input file(s) info
     fileList = ut.get_file_list(fileList, abspath=True)
