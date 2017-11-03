@@ -316,7 +316,7 @@ def main(argv):
         r = inps.range_dist[idx]
         inc_angle = inps.inc_angle[idx]
         if inps.pbase.shape[1] > 1:
-            pbase = inps.pbase[:, idx%width].reshape(-1,1)
+            pbase = inps.pbase[:, int(idx/width)].reshape(-1,1)
         A_deltaZ = pbase / (r * np.sin(inc_angle))
 
         A = np.hstack((A_deltaZ, A_def))
