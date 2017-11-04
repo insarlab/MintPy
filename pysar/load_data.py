@@ -326,6 +326,13 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
             outfile = 'geometryGeo.h5'
         else:
             outfile = 'geometryRadar.h5'
+        # output directory
+        if 'timeseries_dir' in exDict.keys() and exDict['timeseries_dir']:
+            outdir = exDict['timeseries_dir']
+        else:
+            outdir = os.path.abspath(os.getcwd())
+        outfile = os.path.join(outdir, outfile)
+    outfile = os.path.abspath(outfile)
 
     #####Check overlap with existing hdf5 file
     h5dnameList = []
@@ -436,7 +443,6 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
     else:
         print 'All input '+ext+' are included, no need to re-load.'
         fileList = None
-
     return outfile
 
 
@@ -480,14 +486,6 @@ def load_single_dataset_hdf5(file_type, infile, outfile=None, exDict=dict()):
                 try:  atr[key] = exDict['insar_processor']
                 except:  pass
             h5.close()
-
-    #if (os.path.abspath(infile) != os.path.abspath(outfile) and \
-    #    os.path.dirname(infile) == os.path.dirname(outfile)):
-    #    print 'remove the duplicated, obsolete '+atr['FILE_TYPE']+' file in the same directory'
-    #    rmCmd = 'rm '+infile
-    #    print rmCmd
-    #    os.system(rmCmd)
-
     return outfile
 
 
@@ -588,10 +586,6 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
                 outfile = 'demGeo.h5'
             else:
                 outfile = 'demRadar.h5'
-        #elif file_type in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
-        #    outfile = os.path.basename(fileList[0])
-        #else:
-        #    warnings.warn('Un-recognized file type: '+file_type)
 
         # output directory
         if 'timeseries_dir' in inps_dict.keys() and inps_dict['timeseries_dir']:
@@ -611,8 +605,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         outfile = load_single_dataset_hdf5(file_type, fileList[-1], outfile=outfile, exDict=inps_dict)
 
     elif file_type in ['geometry','.trans','.utm_to_rdc','.UTM_TO_RDC']:
-        outfile = load_geometry_hdf5(file_type, fileList, outfile=None, exDict=inps_dict)
-        #outfile = copy_file(fileList[-1], os.path.dirname(outfile))
+        outfile = load_geometry_hdf5(file_type, fileList, outfile=outfile, exDict=inps_dict)
     else:
         warnings.warn('Un-supported file type: '+file_type)
 

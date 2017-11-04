@@ -634,7 +634,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     length = int(float(meta_dict['FILE_LENGTH']))
 
     # default mask file:
-    if not inps.mask_file and k in ['velocity','timeseries','interferograms']:
+    if not inps.mask_file and k in ['velocity','timeseries']:
         if os.path.basename(meta_dict['FILE_PATH']).startswith('geo_'):
             inps.mask_file = 'geo_maskTempCoh.h5'
         else:
