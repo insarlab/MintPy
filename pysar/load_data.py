@@ -11,6 +11,7 @@ import sys
 import glob
 import argparse
 import warnings
+import re
 
 import h5py
 import numpy as np

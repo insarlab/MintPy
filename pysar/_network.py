@@ -773,14 +773,18 @@ def select_pairs_mst(date_list, pbase_list):
     ppMat = np.abs(ppMat1 - ppMat2)  # spatial distance matrix
 
     weightMat = np.sqrt(np.square(ttMat) + np.square(ppMat))  # 2D distance matrix in temp/perp domain
-    weightMat = csr_matrix(weightMat)  # compress sparse row matrix
+    weightMat = sparse.csr_matrix(weightMat)  # compress sparse row matrix
 
     # MST path based on weight matrix
-    mstMat = minimum_spanning_tree(weightMat)
+    mstMat = sparse.csgraph.minimum_spanning_tree(weightMat)
 
     # Convert MST index matrix into date12 list
-    idx_list = [sorted(date_idx_array.tolist()) for date_idx_array in find(mstMat)[0:2]]
-    date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]] for idx in idx_list]
+    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in sparse.find(mstMat)[0:2]]
+    date12_list = []
+    for i in range(len(m_idx_list)):
+        idx = sorted([m_idx_list[i], s_idx_list[i]])
+        date12 = date6_list[idx[0]]+'-'+date6_list[idx[1]]
+        date12_list.append(date12)
     return date12_list
 
 
@@ -931,6 +935,20 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     date8_list = ptime.yyyymmdd(sorted(date_list))
     date6_list = ptime.yymmdd(date8_list)
     dates, datevector = ptime.date_list2vector(date8_list)
+    tbase_list = ptime.date_list2tbase(date8_list)[0]
+
+    ## maxBperp and maxBtemp
+    ifgram_num = len(date12_list)
+    pbase12 = np.zeros(ifgram_num)
+    tbase12 = np.zeros(ifgram_num)
+    for i in range(ifgram_num):
+        m_date, s_date = date12_list[i].split('-')
+        m_idx = date6_list.index(m_date)
+        s_idx = date6_list.index(s_date)
+        pbase12[i] = pbase_list[s_idx] - pbase_list[m_idx]
+        tbase12[i] = tbase_list[s_idx] - tbase_list[m_idx]
+    print 'max perpendicular baseline: %.2f m' % (np.max(np.abs(pbase12)))
+    print 'max temporal      baseline: %d days' % (np.max(tbase12))
 
     ## Keep/Drop - date12
     date12_list_keep = sorted(list(set(date12_list) - set(date12_list_drop)))
