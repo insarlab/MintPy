@@ -1632,7 +1632,7 @@ def date_list(h5file):
 
 
 ######################################
-def design_matrix(ifgramFile=None, date12_list=[]):
+def design_matrix(ifgramFile=None, date12_list=[], zero_first=True):
     '''Make the design matrix for the inversion based on date12_list.
     Reference:
         Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002).
@@ -1673,9 +1673,11 @@ def design_matrix(ifgramFile=None, date12_list=[]):
         A[i, s_idx] = 1
         B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
         #t[i,:] = [tbase[m_idx], tbase[s_idx]]
+
     # Remove the 1st date assuming it's zero
-    A = A[:,1:]
-    B = B[:,:-1]
+    if zero_first:
+        A = A[:,1:]
+        B = B[:,:-1]
 
     return A,B
 

@@ -63,9 +63,9 @@ def phase_pdf_ds(L, coherence=None, phiNum=1000):
     epsilon = 1e-4
     if coherence is None:
         coherence = np.linspace(0., 1.-epsilon, 1000)
-    coherence = np.array(coherence).reshape(1,-1)
+    coherence = np.array(coherence, np.float64).reshape(1,-1)
 
-    phi = np.linspace(-np.pi, np.pi, phiNum).reshape(-1,1)
+    phi = np.linspace(-np.pi, np.pi, phiNum, dtype=np.float64).reshape(-1,1)
 
     ### Phase PDF - Eq. 4.2.32 (Hanssen, 2001)
     A = np.power((1-np.square(coherence)), L) / (2*np.pi)
@@ -117,9 +117,9 @@ def phase_variance_ds(L,  coherence=None, phiNum=1000):
     '''
     epsilon = 1e-4
     if coherence is None:
-        coherence = np.linspace(0., 1.-epsilon, 1000)
+        coherence = np.linspace(0., 1.-epsilon, 1000, np.float64)
 
-    phi = np.linspace(-np.pi, np.pi, phiNum).reshape(-1,1)
+    phi = np.linspace(-np.pi, np.pi, phiNum, np.float64).reshape(-1,1)
     phi_step = 2*np.pi/phiNum
 
     pdf, coherence = phase_pdf_ds(L, coherence=coherence, phiNum=phiNum)
@@ -134,7 +134,7 @@ def phase_variance_ps(L, coherence=None):
     '''
     epsilon = 1e-4
     if coherence is None:
-        coherence = np.linspace(0.9, 1.-epsilon, 1000)
+        coherence = np.linspace(0.9, 1.-epsilon, 1000, np.float64)
     var = (1-coherence**2) / (2*L*coherence**2)
     return var, coherence
 
@@ -167,6 +167,7 @@ def ceil_to_1(x):
     '''Return the most significant digit of input number and ceiling it'''
     digit = int(np.floor(np.log10(abs(x))))
     return round(x, -digit)+10**digit
+
 
 def network_inversion_sbas(B, ifgram, tbase_diff, B_inv=None):
     ''' Network inversion based on Small BAseline Subsets (SBAS) algorithm (Berardino et al.,
@@ -209,8 +210,9 @@ def network_inversion_wls(A, ifgram, weight, ts=None):
         ts - 1D np.array in size of (date_num-1,), phase time series
     '''
     W = np.diag(weight.flatten())
-    ts = np.linalg.inv(A.T.dot(W).dot(A)).dot(A.T).dot(W).dot(ifgram.reshape(-1,1))
-    return ts
+    tsVar = np.linalg.inv(A.T.dot(W).dot(A))
+    ts = tsVar.dot(A.T).dot(W).dot(ifgram.reshape(-1,1))
+    return ts, tsVar
 
 
 def temporal_coherence(A, ts, ifgram, weight=None, chunk_size=500):
@@ -373,7 +375,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
         print 'inversing time series ...'
         prog_bar = ptime.progress_bar(maxValue=pixel_num2inv)
         for i in range(pixel_num2inv):
-            ts[1:,pixel_idx2inv[i]] = network_inversion_wls(A, ifgram_data[:,i], weight[:,i]).flatten()
+            ts[1:,pixel_idx2inv[i]] = network_inversion_wls(A, ifgram_data[:,i], weight[:,i])[0].flatten()
             prog_bar.update(i+1, every=1000, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
         prog_bar.close()
 
@@ -714,6 +716,7 @@ TEMPLATE='''
 ##     linear   - uniform distribution CDF function (Tong et al., 2016, RSE)
 ##     no       - no weight, or ordinal inversion with uniform weight (Berardino et al., 2002, IEEE-TGRS)
 pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
+pysar.timeseriesInv.minCoherence  = auto #[0.0-1.0 / no], auto for no, 
 pysar.timeseriesInv.coherenceFile = auto #[fname / no], auto for coherence.h5, file to read weight data
 pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask

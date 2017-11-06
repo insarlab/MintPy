@@ -1047,7 +1047,7 @@ def main(argv):
                     sys.exit(-1)
             inps.timeseries_file = outName
     else:
-        print 'No phaes ramp removal.'
+        print 'No phase ramp removal.'
 
 
     #############################################

@@ -425,6 +425,8 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
 
         coh = coh_geom * coh_dc * coh_temp
         cohs[i,:] = coh
+    epsilon = 1e-3
+    cohs[cohs < epsilon] = epsilon
     if display:
         print ''
 
