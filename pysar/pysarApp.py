@@ -907,7 +907,7 @@ def main(argv):
         print 'Atmospheric correction using Weather Re-analysis dataset (using PyAPS software)'
         print 'Weather Re-analysis dataset: '+inps.trop_model
         tropCmd = 'tropcor_pyaps.py '+inps.timeseries_file+' -d '+demFile+' -s '+inps.trop_model+\
-                  ' --weather-dir '+inps.work_dir+'/../WEATHER'
+                  ' --weather-dir '+inps.work_dir+'/../WEATHER'+' -i '+inps.inc_angle_file
         print tropCmd
         outName = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.trop_model+'.h5'
         if ut.update_file(outName, inps.timeseries_file):
