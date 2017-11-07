@@ -549,6 +549,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     # call prepare_*.py
     if   processor == 'gamma' :  prepCmd = 'prep_gamma.py ' +files_input;   os.system(prepCmd)
     elif processor == 'roipac':  prepCmd = 'prep_roipac.py '+files_input;   os.system(prepCmd)
+    elif processor == 'isce'  :  prepCmd = 'prep_isce.py '+files_input;     #os.system(prepCmd)
     else:
         print 'Un-supported InSAR processor: '+processor
         print 'Skip preparing attributes files'
