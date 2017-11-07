@@ -77,7 +77,7 @@ def touch(fname_list, times=None):
     return fname_list
 
 
-def get_lookup_file(filePattern=None, abspath=False):
+def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     '''Find lookup table file with/without input file pattern'''
     ##Files exists
     if not filePattern:
@@ -89,9 +89,10 @@ def get_lookup_file(filePattern=None, abspath=False):
     try:
         existFiles = get_file_list(filePattern)
     except:
-        print 'ERROR: No geometry / lookup table file found!'
-        print 'It should be like:'
-        print filePattern
+        if print_msg:
+            print 'ERROR: No geometry / lookup table file found!'
+            print 'It should be like:'
+            print filePattern
         return None
 
     ##Files with lookup table info
@@ -103,14 +104,15 @@ def get_lookup_file(filePattern=None, abspath=False):
         else:
             epoch2check = 'latitude'
         try:
-            dset = readfile.read(fname, epoch=epoch2check, print_msg=False)[0]
+            dset = readfile.read(fname, epoch=epoch2check, print_msg=print_msg)[0]
             lookupFile = fname
             break
         except:
             pass
 
     if not lookupFile:
-        print 'No lookup table info range/lat found in files.'
+        if print_msg:
+            print 'No lookup table info range/lat found in files.'
         return None
 
     if abspath:
@@ -256,7 +258,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             print "It's supposed to be like: "+str(file_list)
 
     # 5. Lookup table file for geocoding
-    lookup_file = get_lookup_file(inps.lookup_file, abspath=True)
+    lookup_file = get_lookup_file(inps.lookup_file, abspath=True, print_msg=False)
     if print_msg:
         if lookup_file:
             print 'Lookup table        file: '+lookup_file
