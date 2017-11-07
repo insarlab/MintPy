@@ -120,7 +120,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     return lookupFile
 
 
-def get_dem_file(coordType='radar', filePattern=None, abspath=False):
+def get_dem_file(coordType='radar', filePattern=None, abspath=False, print_msg=True):
     '''Find DEM file with/without input file pattern'''
     ##Files exists
     if not filePattern:
@@ -136,9 +136,10 @@ def get_dem_file(coordType='radar', filePattern=None, abspath=False):
     try:
         existFiles = get_file_list(filePattern)
     except:
-        print 'ERROR: No DEM file found!'
-        print 'It should be like:'
-        print filePattern
+        if print_msg:
+            print 'ERROR: No DEM file found!'
+            print 'It should be like:'
+            print filePattern
         return None
 
     ##Files with lookup table info
@@ -146,12 +147,13 @@ def get_dem_file(coordType='radar', filePattern=None, abspath=False):
     for fname in existFiles:
         atr = readfile.read_attribute(fname)
         try:
-            dset = readfile.read(fname, epoch='height')[0]
+            dset = readfile.read(fname, epoch='height', print_msg=print_msg)[0]
             demFiles.append(fname)
         except: pass
 
     if not demFiles:
-        print 'No height info found in files.'
+        if print_msg:
+            print 'No height info found in files.'
         return None
 
     demFile = demFiles[0]
@@ -240,7 +242,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             print "It's supposed to be like: "+str(file_list)
 
     # 3. DEM in radar coord
-    dem_radar_file = get_dem_file(coordType='radar', abspath=True)
+    dem_radar_file = get_dem_file(coordType='radar', abspath=True, print_msg=print_msg)
     if print_msg:
         if dem_radar_file:
             print 'DEM in radar coordinates: '+dem_radar_file
@@ -249,7 +251,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             print "It's supposed to be like: "+str(file_list)
 
     # 4. DEM in geo coord
-    dem_geo_file = get_dem_file(coordType='geo', abspath=True)
+    dem_geo_file = get_dem_file(coordType='geo', abspath=True, print_msg=print_msg)
     if print_msg:
         if dem_geo_file:
             print 'DEM in geo   coordinates: '+dem_geo_file
