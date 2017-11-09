@@ -327,7 +327,7 @@ pysar.residualRms.maskFile        = auto  #[filename / no], auto for maskTempCoh
 pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
 pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
 pysar.residualRms.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RMS to txt/pdf file.
-pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > minStd to txt/pdf file.
+pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > threshold to txt/pdf file.
 
 
 ## 9. Reference in Time

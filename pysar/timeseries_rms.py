@@ -85,17 +85,17 @@ pysar.residualRms.maskFile        = auto  #[file name / no], auto for maskTempCo
 pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
 pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
 pysar.residualRms.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RMS to txt/pdf file.
-pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > minStd to txt/pdf file.
+pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > threshold to txt/pdf file.
 '''
 
 EXAMPLE='''example:
-  timeseries_rms.py  timeseries_ECMWF_demErrInvResid.h5 
-  timeseries_rms.py  timeseries_ECMWF_demErrInvResid.h5  --template pysarApp_template.txt
-  timeseries_rms.py  timeseries_ECMWF_demErrInvResid.h5  -m maskTempCoh.h5  --min-std 0.03
+  timeseries_rms.py  timeseriesResidual.h5 
+  timeseries_rms.py  timeseriesResidual.h5  --template pysarApp_template.txt
+  timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --min-rms 0.03
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Calculate Root Mean Square of deramped time series.',\
+    parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped time series.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
 
@@ -173,7 +173,8 @@ def main(argv):
         font_size = 12
 
         dates, datevector = ptime.date_list2vector(date_list)
-        bar_width = ut.mode(np.diff(dates).tolist())*3/4
+        try:    bar_width = ut.mode(np.diff(dates).tolist())*3/4
+        except: bar_width = np.min(np.diff(dates).tolist())*3/4
         x_list = [i-bar_width/2 for i in dates]
 
         # Plot all dates

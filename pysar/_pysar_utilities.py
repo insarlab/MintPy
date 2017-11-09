@@ -242,7 +242,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             print "It's supposed to be like: "+str(file_list)
 
     # 3. DEM in radar coord
-    dem_radar_file = get_dem_file(coordType='radar', abspath=True, print_msg=print_msg)
+    dem_radar_file = get_dem_file(coordType='radar', abspath=True, print_msg=False)
     if print_msg:
         if dem_radar_file:
             print 'DEM in radar coordinates: '+dem_radar_file
@@ -251,7 +251,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             print "It's supposed to be like: "+str(file_list)
 
     # 4. DEM in geo coord
-    dem_geo_file = get_dem_file(coordType='geo', abspath=True, print_msg=print_msg)
+    dem_geo_file = get_dem_file(coordType='geo', abspath=True, print_msg=False)
     if print_msg:
         if dem_geo_file:
             print 'DEM in geo   coordinates: '+dem_geo_file
@@ -507,7 +507,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         date_list - list of string in YYYYMMDD format, corresponding dates
     Example:
         import pysar._pysar_utilities as ut
-        rms_list, date_list = ut.get_residual_rms('timeseries_ECMWF_demErrInvResid.h5', 'maskTempCoh.h5')
+        rms_list, date_list = ut.get_residual_rms('timeseriesResidual.h5', 'maskTempCoh.h5')
     '''
     # Intermediate files name
     if ramp_type == 'no':
