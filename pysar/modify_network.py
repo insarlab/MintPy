@@ -426,8 +426,11 @@ def main(argv):
                            inps.exclude_ifg_index, inps.exclude_date, inps.coherence_based, inps.start_date, inps.end_date]):
         # Display network for manually modification when there is no other modification input.
         print 'No input option found to remove interferogram'
-        print 'To manually modify network, please use --manual option '
-        return
+        if inps.template_file:
+            print 'Keep all interferograms'
+        else:
+            print 'To manually modify network, please use --manual option '
+            return
     
     # Convert index : input to continous index list
     if inps.exclude_ifg_index:
