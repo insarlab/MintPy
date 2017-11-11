@@ -231,7 +231,12 @@ def main(argv):
         inps.ref_date = ptime.read_date_list(inps.ref_date)[0]
 
     # Referencing input file
-    inps.outfile = ref_date_file(inps.timeseries_file, inps.ref_date, inps.outfile)
+    atr = readfile.read_attribute(inps.timeseries_file)
+    if not inps.outfile:
+        inps.outfile = os.path.splitext(inps.timeseries_file)[0]+'_refDate.h5'
+    if inps.ref_date != atr['ref_date'] or ut.update_file(inps.outfile, inps.timeseries_file):
+        inps.outfile = ref_date_file(inps.timeseries_file, inps.ref_date, inps.outfile)
+
     return inps.outfile
 
 

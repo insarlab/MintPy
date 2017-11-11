@@ -296,7 +296,7 @@ pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal 
 
 
 ## 6. Local Oscillator Drift (LOD) Correction (for Envisat only, Marinkovic and Larsen, 2013, Proc. LPS)
-## correct LOD if input dataset comes from Envisat and in radar coordinate
+## correct LOD if input dataset comes from Envisat
 ## skip this step for all the other satellites.
 
 
@@ -661,20 +661,24 @@ def main(argv):
         inps.spatial_coh_file = None
 
     # Incidence Angle
-    inps.inc_angle_file = 'incidenceAngle.h5'
-    print 'creating incidence angle from file: '+inps.ifgram_file
-    if ut.update_file(inps.inc_angle_file, inps.ifgram_file):
+    inps.inc_angle_file = ut.get_inc_angle_file(abspath=True, print_msg=False)
+    if not inps.inc_angle_file:
+        print 'creating incidence angle from file: '+inps.ifgram_file
+        inps.inc_angle_file = 'incidenceAngle.h5'
         incAngleCmd = 'incidence_angle.py %s %s' % (inps.ifgram_file, inps.inc_angle_file)
         print incAngleCmd
         status = subprocess.Popen(incAngleCmd, shell=True).wait()
+    print 'incidence angle file: %s' % (inps.inc_angle_file)
 
     # Slant range distance
-    inps.range_dist_file = 'rangeDistance.h5'
-    print 'creating slant range distance from file: '+inps.ifgram_file
-    if ut.update_file(inps.range_dist_file, inps.ifgram_file):
+    inps.range_dist_file = ut.get_range_distance_file(abspath=True, print_msg=False)
+    if not inps.range_dist_file:
+        print 'creating slant range distance from file: '+inps.ifgram_file
+        inps.range_dist_file = 'rangeDistance.h5'
         rangeDistCmd = 'range_distance.py %s %s' % (inps.ifgram_file, inps.range_dist_file)
         print rangeDistCmd
         status = subprocess.Popen(rangeDistCmd, shell=True).wait()
+    print 'slant range distance file: %s' % (inps.range_dist_file)
 
 
     #########################################
@@ -840,18 +844,15 @@ def main(argv):
     sar_mission = atr['PLATFORM'].lower()
     if sar_mission.startswith('env'):
         print '\n**********  Local Oscillator Drift correction for Envisat  ********'
-        if 'Y_FIRST' not in atr.keys():
-            outName = os.path.splitext(inps.timeseries_file)[0]+'_LODcor.h5'
-            lodCmd = 'lod.py '+inps.timeseries_file
-            print lodCmd
-            if ut.update_file(outName, inps.timeseries_file):
-                status = subprocess.Popen(lodCmd, shell=True).wait()
-                if status is not 0:
-                    print '\nError while correcting Local Oscillator Drift.\n'
-                    sys.exit(-1)
-            inps.timeseries_file = outName
-        else:
-            warnings.warn('Can not apply LOD correction for file in radar coord. Skip it for now.')
+        outName = os.path.splitext(inps.timeseries_file)[0]+'_LODcor.h5'
+        lodCmd = 'lod.py %s -r %s' % (inps.timeseries_file, inps.range_dist_file)
+        print lodCmd
+        if ut.update_file(outName, [inps.timeseries_file, inps.range_dist_file]):
+            status = subprocess.Popen(lodCmd, shell=True).wait()
+            if status is not 0:
+                print '\nError while correcting Local Oscillator Drift.\n'
+                sys.exit(-1)
+        inps.timeseries_file = outName
 
 
     ##############################################
@@ -979,12 +980,10 @@ def main(argv):
         outName = os.path.splitext(inps.timeseries_file)[0]+'_refDate.h5'
         refCmd = 'reference_epoch.py '+inps.timeseries_file+' --template '+inps.template_file
         print refCmd
-
-        if ut.update_file(outName, inps.timeseries_file):
-            status = subprocess.Popen(refCmd, shell=True).wait()
-            if status is not 0:
-                print '\nError while changing reference date.\n'
-                sys.exit(-1)
+        status = subprocess.Popen(refCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while changing reference date.\n'
+            sys.exit(-1)
 
         if not ut.update_file(outName):
             inps.timeseries_file = outName

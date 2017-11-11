@@ -25,6 +25,8 @@ import pysar._pysar_utilities as ut
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
+sensorList = ['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','Sen','Kmps5','Gaofen3']
+
 ############################ Sub Functions ###################################
 def project_name2sensor(projectName):
     if not projectName:
@@ -39,9 +41,9 @@ def project_name2sensor(projectName):
     elif  re.search('Csk'    , projectName):  sensor = 'Csk'
     elif  re.search('Rsat'   , projectName):  sensor = 'Rsat'
     elif  re.search('Rsat2'  , projectName):  sensor = 'Rsat2'
-    elif  re.search('Sen'    , projectName):  sensor = 'S1'
+    elif  re.search('Sen'    , projectName):  sensor = 'Sen'
     elif  re.search('Kmps5'  , projectName):  sensor = 'Kmps5'
-    elif  re.search('Gaofen3', projectName):  sensor = 'G3'
+    elif  re.search('Gaofen3', projectName):  sensor = 'Gaofen3'
     else: print 'satellite not found';  sensor = None
     return sensor
 
@@ -285,7 +287,7 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
                 try:  atr[key] = exDict['insar_processor']
                 except:  pass
             key = 'PLATFORM'
-            if key not in atr.keys():
+            if key not in atr.keys() or atr[key] not in sensorList:
                 try:  atr[key] = exDict['PLATFORM']
                 except:  pass
 

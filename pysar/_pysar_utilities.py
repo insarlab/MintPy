@@ -96,7 +96,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
         return None
 
     ##Files with lookup table info
-    lookupFile = None
+    outFile = None
     for fname in existFiles:
         atr = readfile.read_attribute(fname)
         if 'Y_FIRST' in atr.keys():
@@ -105,19 +105,19 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
             epoch2check = 'latitude'
         try:
             dset = readfile.read(fname, epoch=epoch2check, print_msg=print_msg)[0]
-            lookupFile = fname
+            outFile = fname
             break
         except:
             pass
 
-    if not lookupFile:
+    if not outFile:
         if print_msg:
             print 'No lookup table info range/lat found in files.'
         return None
 
     if abspath:
-        lookupFile = os.path.abspath(lookupFile)
-    return lookupFile
+        outFile = os.path.abspath(outFile)
+    return outFile
 
 
 def get_dem_file(coordType='radar', filePattern=None, abspath=False, print_msg=True):
@@ -143,23 +143,106 @@ def get_dem_file(coordType='radar', filePattern=None, abspath=False, print_msg=T
         return None
 
     ##Files with lookup table info
-    demFiles = []
+    outFile = None
     for fname in existFiles:
-        atr = readfile.read_attribute(fname)
         try:
             dset = readfile.read(fname, epoch='height', print_msg=print_msg)[0]
-            demFiles.append(fname)
-        except: pass
-
-    if not demFiles:
+            outFile = fname
+            break
+        except:
+            pass
+    if not outFile:
         if print_msg:
             print 'No height info found in files.'
         return None
 
-    demFile = demFiles[0]
+    ##Return path
     if abspath:
-        demFile = os.path.abspath(demFile)
-    return demFile
+        outFile = os.path.abspath(outFile)
+    return outFile
+
+
+def get_inc_angle_file(coordType=None, filePattern=None, abspath=False, print_msg=True):
+    '''Find Incidence Angle file with/without input file pattern'''
+    ##Files exists
+    if not filePattern:
+        filePattern = ['geometry*.h5','*incidenceAngle.h5']
+    existFiles = []
+    try:
+        existFiles = get_file_list(filePattern)
+    except:
+        if print_msg:
+            print 'ERROR: No incidence angle file found!'
+            print 'It should be like:'
+            print filePattern
+        return None
+
+    ##Files with lookup table info
+    outFile = None
+    for fname in existFiles:
+        #Check coord type
+        if coordType:
+            atr = readfile.read_attribute(fname)
+            if ((coordType == 'radar' and 'Y_FIRST'     in atr.keys()) or \
+                (coordType == 'geo'   and 'Y_FIRST' not in atr.keys())):
+                continue
+        #Check dataset
+        try:
+            dset = readfile.read(fname, epoch='incidenceAngle', print_msg=print_msg)[0]
+            outFile = fname
+            break
+        except:
+            pass
+    if not outFile:
+        if print_msg:
+            print 'No incidence angle info found in files.'
+        return None
+
+    ##Return path
+    if abspath:
+        outFile = os.path.abspath(outFile)
+    return outFile
+
+def get_range_distance_file(coordType=None, filePattern=None, abspath=False, print_msg=True):
+    '''Find Slant Range Distance file with/without input file pattern'''
+    ##Files exists
+    if not filePattern:
+        filePattern = ['geometry*.h5','*rangeDistance.h5']
+    existFiles = []
+    try:
+        existFiles = get_file_list(filePattern)
+    except:
+        if print_msg:
+            print 'ERROR: No range distance file found!'
+            print 'It should be like:'
+            print filePattern
+        return None
+
+    ##Files with lookup table info
+    outFile = None
+    for fname in existFiles:
+        #Check coord type
+        if coordType:
+            atr = readfile.read_attribute(fname)
+            if ((coordType == 'radar' and 'Y_FIRST'     in atr.keys()) or \
+                (coordType == 'geo'   and 'Y_FIRST' not in atr.keys())):
+                continue
+        #Check dataset
+        try:
+            dset = readfile.read(fname, epoch='slantRangeDistance', print_msg=print_msg)[0]
+            outFile = fname
+            break
+        except:
+            pass
+    if not outFile:
+        if print_msg:
+            print 'No range distance info found in files.'
+        return None
+
+    ##Return path
+    if abspath:
+        outFile = os.path.abspath(outFile)
+    return outFile
 
 
 def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
@@ -873,16 +956,16 @@ def range_distance(atr, dimension=2):
     dR = float(atr['RANGE_PIXEL_SIZE'])
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
-    
-    far_range = near_range + dR*width
+
+    far_range = near_range + dR*(width-1)
     center_range = (far_range + near_range)/2.0
     print 'center range : %.2f m' % (center_range)
     if dimension == 0:
         return np.array(center_range)
-    
+
     print 'near   range : %.2f m' % (near_range)
     print 'far    range : %.2f m' % (far_range)
-    range_x = np.linspace(near_range, far_range, num=width, endpoint='FALSE')
+    range_x = np.linspace(near_range, far_range, num=width)
     if dimension == 1:
         return range_x
     else:
