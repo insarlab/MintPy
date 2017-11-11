@@ -409,29 +409,30 @@ def main(argv):
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
+    if all(not i for i in [inps.reference_file, inps.max_temp_baseline, inps.max_perp_baseline,\
+                           inps.exclude_ifg_index, inps.exclude_date, inps.coherence_based,\
+                           inps.start_date, inps.end_date, inps.reset]):
+        # Display network for manually modification when there is no other modification input.
+        print 'No input option found to remove interferogram'
+        if inps.template_file:
+            print 'Keep all interferograms by enable --reset option'
+            inps.reset = True
+        else:
+            print 'To manually modify network, please use --manual option '
+            return
+
     if inps.reset:
         print '----------------------------------------------------------------------------'
         for file in inps.file:
             reset_pairs(file)
-
         mean_coh_txt_file = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.txt'
         if os.path.isfile(mean_coh_txt_file):
             rmCmd = 'rm '+mean_coh_txt_file
             print rmCmd
             os.system(rmCmd)
-
         return
 
-    if all(not i for i in [inps.reference_file, inps.max_temp_baseline, inps.max_perp_baseline,\
-                           inps.exclude_ifg_index, inps.exclude_date, inps.coherence_based, inps.start_date, inps.end_date]):
-        # Display network for manually modification when there is no other modification input.
-        print 'No input option found to remove interferogram'
-        if inps.template_file:
-            print 'Keep all interferograms'
-        else:
-            print 'To manually modify network, please use --manual option '
-            return
-    
+
     # Convert index : input to continous index list
     if inps.exclude_ifg_index:
         ifg_index = list(inps.exclude_ifg_index)

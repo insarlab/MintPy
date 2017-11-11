@@ -264,9 +264,14 @@ def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None):
     '''
     lat = np.array([geo_box[3],geo_box[3],geo_box[1],geo_box[1]])
     lon = np.array([geo_box[0],geo_box[2],geo_box[0],geo_box[2]])
-    y, x, y_res, x_res = ut.glob2radar(lat, lon, lookupFile, atr_rdr)
-    buf = 2*(np.max(np.abs([x_res, y_res])))
-    pix_box = (np.min(x)-buf, np.min(y)-buf, np.max(x)+buf, np.max(y)+buf)
+    if 'Y_FIRST' in atr_rdr.keys():
+        y = coord_geo2radar(lat, atr_rdr, 'lat')
+        x = coord_geo2radar(lon, atr_rdr, 'lon')
+        pix_box = (x[0], y[2], x[1], y[0])
+    else:
+        y, x, y_res, x_res = ut.glob2radar(lat, lon, lookupFile, atr_rdr)
+        buf = 2*(np.max(np.abs([x_res, y_res])))
+        pix_box = (np.min(x)-buf, np.min(y)-buf, np.max(x)+buf, np.max(y)+buf)
     return pix_box
 
 
@@ -281,9 +286,14 @@ def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None):
     '''
     x = np.array([pix_box[0],pix_box[2],pix_box[0],pix_box[2]])
     y = np.array([pix_box[1],pix_box[1],pix_box[3],pix_box[3]])
-    lat, lon, lat_res, lon_res = ut.radar2glob(y, x, lookupFile, atr_rdr)
-    buf = 2*(np.max(np.abs([lat_res,lon_res])))
-    geo_box = (np.min(lon)-buf, np.max(lat)+buf, np.max(lon)+buf, np.min(lat)-buf)
+    if 'Y_FIRST' in atr_rdr.keys():
+        lat = coord_radar2geo(y, atr_rdr, 'y')
+        lon = coord_radar2geo(x, atr_rdr, 'x')
+        geo_box = (lon[0], lat[0], lon[1], lat[2])
+    else:
+        lat, lon, lat_res, lon_res = ut.radar2glob(y, x, lookupFile, atr_rdr)
+        buf = 2*(np.max(np.abs([lat_res,lon_res])))
+        geo_box = (np.min(lon)-buf, np.max(lat)+buf, np.max(lon)+buf, np.min(lat)-buf)
     return geo_box
 
 
