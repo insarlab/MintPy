@@ -107,7 +107,10 @@ def cmdLineParse():
     disp.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2, default=[10.0,5.0],\
                       help='Figure size in inches - width and length. Default: 10.0 5.0\n'+\
                            'i.e. 3.5 2 for ppt; ')
-    disp.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN','YMAX'), type=float, help='Y Limits for plotting.')
+    disp.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN','YMAX'), type=float,\
+                      help='Y limits for point plotting.')
+    disp.add_argument('--ylim-mat', dest='ylim_mat', nargs=2, metavar=('YMIN','YMAX'), type=float,\
+                      help='Display limits for matrix plotting.')
     disp.add_argument('--ref-date', dest='ref_date', help='Change reference date for display')
     disp.add_argument('--exclude','--ex', dest='ex_date_list', nargs='*', help='Exclude date shown as gray.')
     disp.add_argument('--zf','--zero-first', dest='zero_first', action='store_true',\
@@ -250,10 +253,10 @@ if __name__ == '__main__':
         d_v -= d_v[inps.ref_yx[0], inps.ref_yx[1]]
     data_lim = [np.nanmin(d_v), np.nanmax(d_v)]
 
-    if not inps.ylim:
-        inps.ylim = data_lim
+    if not inps.ylim_mat:
+        inps.ylim_mat = data_lim
     print 'Initial data range: '+str(data_lim)
-    print 'Display data range: '+str(inps.ylim)
+    print 'Display data range: '+str(inps.ylim_mat)
 
     ########## Fig 1 - Cumulative Displacement Map
     if not inps.disp_fig:
@@ -270,7 +273,7 @@ if __name__ == '__main__':
     if inps.dem_file:
         dem = readfile.read(inps.dem_file, epoch='height')[0]
         ax_v = view.plot_dem_yx(ax_v, dem)
-    img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim, interpolation='nearest')
+    img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim_mat, interpolation='nearest')
 
     # Reference Pixel
     if inps.ref_yx:
@@ -414,7 +417,8 @@ if __name__ == '__main__':
             ax_ts = plot_timeseries_errorbar(ax_ts, d_ts, inps)
         else:
             ax_ts = plot_timeseries_scatter(ax_ts, d_ts, inps)
-        ax_ts.set_ylim(inps.ylim)
+        if inps.ylim:
+            ax_ts.set_ylim(inps.ylim)
         for tick in ax_ts.yaxis.get_major_ticks():
             tick.label.set_fontsize(inps.font_size)
 
