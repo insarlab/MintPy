@@ -582,6 +582,17 @@ def main(argv):
     if 'Y_FIRST' in atr.keys():
         inps.coord_type = 'geo'
 
+    #if inps.unavco_atr_file:
+    #    atrCmd = 'add_attribute.py '+inps.ifgram_file+' '+inps.unavco_atr_file       # FA 11/17: add attributes from template file until unavco_attributes is generated automatically
+    #import pdb; pdb.set_trace()
+    if inps.custom_template_file:
+        atrCmd = 'add_attribute.py '+inps.ifgram_file+' '+inps.custom_template_file
+
+        print atrCmd
+        status = subprocess.Popen(atrCmd, shell=True).wait()
+        if status is not 0:
+            print '\nError while adding UNAVCO attributes to unwrapped interferograms file.\n'
+            sys.exit(-1)
     if inps.load_dataset:
         sys.exit('Exit as planned after loading/checking the dataset')
 
