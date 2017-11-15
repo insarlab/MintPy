@@ -423,10 +423,15 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
         meta['tempCohFile'] = 'temporalCoherence_var.h5'
         ifgram_inversion('unwrapIfgram.h5', 'coherence.h5', meta)
     '''
+    if 'tempCohFile' not in meta.keys():
+        meta['tempCohFile'] = 'temporalCoherence.h5'
     total = time.time()
 
     if not meta:
         meta = vars(cmdLineParse())
+
+    if meta['update_mode'] and not ut.update_file(meta['timeseriesFile'], ifgramFile):
+        return meta['timeseriesFile'], meta['tempCohFile']
 
     ##### Basic Info
     # length/width
@@ -597,8 +602,6 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
                                                 timeseriesFile=meta['timeseriesFile'])
 
     ## 2. Write Temporal Coherence File
-    if 'tempCohFile' not in meta.keys():
-        meta['tempCohFile'] = 'temporalCoherence.h5'
     print 'writing >>> '+meta['tempCohFile']
     atr['FILE_TYPE'] = 'temporal_coherence'
     atr['UNIT'] = '1'
@@ -764,6 +767,9 @@ def cmdLineParse():
     parser.add_argument('-o','--output', dest='outfile', nargs=2, default=['timeseries.h5','temporalCoherence.h5'],\
                         help='Output file name for timeseries and temporal coherence, default:\n'+\
                              'timeseries.h5 temporalCoherence.h5')
+    parser.add_argument('--update-mode', dest='update_mode', action='store_true',\
+                        help='Enable update mode, and skip inversion if output timeseries file already exists,\n'+\
+                             'readable and newer than input interferograms file')
     inps = parser.parse_args()
     inps.parallel = False
     return inps
