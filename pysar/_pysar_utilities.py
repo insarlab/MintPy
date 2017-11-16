@@ -79,7 +79,7 @@ def touch(fname_list, times=None):
 
 def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     '''Find lookup table file with/without input file pattern'''
-    ##Files exists
+    ##Search Existing Files
     if not filePattern:
         filePattern = ['geometryRadar.h5',\
                        'geometryGeo_tight.h5', 'geometryGeo.h5',\
@@ -95,7 +95,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
             print filePattern
         return None
 
-    ##Files with lookup table info
+    ##Check Files Info
     outFile = None
     for fname in existFiles:
         atr = readfile.read_attribute(fname)
@@ -115,6 +115,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
             print 'No lookup table info range/lat found in files.'
         return None
 
+    ##Path Format
     if abspath:
         outFile = os.path.abspath(outFile)
     return outFile
@@ -122,16 +123,11 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
 
 def get_dem_file(coordType='radar', filePattern=None, abspath=False, print_msg=True):
     '''Find DEM file with/without input file pattern'''
-    ##Files exists
+    ##Search Existing Files
     if not filePattern:
-        if coordType == 'radar':
-            filePattern = ['geometryRadar.h5',\
-                           'demRadar.h5',\
-                           'radar*.hgt']
-        else:
-            filePattern = ['geometryGeo_tight.h5', 'geometryGeo.h5',\
-                           'demRadar.h5', 'demGeo.h5',\
-                           '*.dem', '*.dem.wgs84']
+        filePattern = ['geometryRadar.h5', 'geometryGeo_tight.h5', 'geometryGeo.h5',\
+                       'demRadar.h5', 'demGeo.h5',\
+                       'radar*.hgt', '*.dem', '*.dem.wgs84']
     existFiles = []
     try:
         existFiles = get_file_list(filePattern)
@@ -142,9 +138,16 @@ def get_dem_file(coordType='radar', filePattern=None, abspath=False, print_msg=T
             print filePattern
         return None
 
-    ##Files with lookup table info
+    ##Check Files Info
     outFile = None
     for fname in existFiles:
+        #Check coord type
+        if coordType:
+            atr = readfile.read_attribute(fname)
+            if ((coordType == 'radar' and 'Y_FIRST'     in atr.keys()) or \
+                (coordType == 'geo'   and 'Y_FIRST' not in atr.keys())):
+                continue
+        #Check dataset
         try:
             dset = readfile.read(fname, epoch='height', print_msg=print_msg)[0]
             outFile = fname
@@ -156,7 +159,7 @@ def get_dem_file(coordType='radar', filePattern=None, abspath=False, print_msg=T
             print 'No height info found in files.'
         return None
 
-    ##Return path
+    ##Path Format
     if abspath:
         outFile = os.path.abspath(outFile)
     return outFile
@@ -164,7 +167,7 @@ def get_dem_file(coordType='radar', filePattern=None, abspath=False, print_msg=T
 
 def get_inc_angle_file(coordType=None, filePattern=None, abspath=False, print_msg=True):
     '''Find Incidence Angle file with/without input file pattern'''
-    ##Files exists
+    ##Search Existing Files
     if not filePattern:
         filePattern = ['geometry*.h5','*incidenceAngle.h5']
     existFiles = []
@@ -177,7 +180,7 @@ def get_inc_angle_file(coordType=None, filePattern=None, abspath=False, print_ms
             print filePattern
         return None
 
-    ##Files with lookup table info
+    ##Chck Files Info
     outFile = None
     for fname in existFiles:
         #Check coord type
@@ -205,7 +208,7 @@ def get_inc_angle_file(coordType=None, filePattern=None, abspath=False, print_ms
 
 def get_range_distance_file(coordType=None, filePattern=None, abspath=False, print_msg=True):
     '''Find Slant Range Distance file with/without input file pattern'''
-    ##Files exists
+    ##Search Existing Files
     if not filePattern:
         filePattern = ['geometry*.h5','*rangeDistance.h5']
     existFiles = []
@@ -218,7 +221,7 @@ def get_range_distance_file(coordType=None, filePattern=None, abspath=False, pri
             print filePattern
         return None
 
-    ##Files with lookup table info
+    ##Check Files Info
     outFile = None
     for fname in existFiles:
         #Check coord type
@@ -239,7 +242,7 @@ def get_range_distance_file(coordType=None, filePattern=None, abspath=False, pri
             print 'No range distance info found in files.'
         return None
 
-    ##Return path
+    ##Path Format
     if abspath:
         outFile = os.path.abspath(outFile)
     return outFile

@@ -1127,7 +1127,7 @@ def cmdLineParse(argv):
 
     ##### DEM
     dem = parser.add_argument_group('DEM','display topography in the background')
-    dem.add_argument('-d','--dem', dest='dem_file', metavar='FILE',\
+    dem.add_argument('-d','--dem', dest='dem_file', metavar='DEM_FILE',\
                      help='DEM file to show topography as background')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',\
                      help='do not show DEM shaded relief')
