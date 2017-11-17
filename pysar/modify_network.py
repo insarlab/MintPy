@@ -342,7 +342,11 @@ def cmdLineParse():
                         help='restore all interferograms existed in the file, by marking all drop_ifgram=no')
     parser.add_argument('--write-file', dest='mark_attribute', action='store_false',\
                         help='write new file instead of mark dropped interferograms in attribute')
-    parser.add_argument('--plot', action='store_true', help='plot and save the result to image files.')
+    parser.add_argument('--plot', action='store_true',\
+                        help='plot and save the result to image files.')
+    parser.add_argument('--noaux', dest='update_aux', action='store_false',\
+                        help='Do not update auxilary files, e.g.\n'+\
+                             'mask.h5 from unwrapIfgram.h5 or averageSpatialCoherence.h5 from coherence.h5')
 
     parser.add_argument('-t', dest='max_temp_baseline', type=float, help='temporal baseline threshold/maximum in days')
     parser.add_argument('-b', dest='max_perp_baseline', type=float, help='perpendicular baseline threshold/maximum in meters')
@@ -629,13 +633,13 @@ def main(argv):
 
             k = readfile.read_attribute(File)['FILE_TYPE']
             # Update Mask File
-            if k == 'interferograms':
+            if k == 'interferograms' and inps.update_aux:
                 print 'update mask file for input '+k+' file based on '+Modified_File
                 inps.mask_file = 'mask.h5'
                 print 'writing >>> '+inps.mask_file
                 ut.nonzero_mask(Modified_File, inps.mask_file)
 
-            elif k == 'coherence':
+            elif k == 'coherence' and inps.update_aux:
                 inps.coherence_file = Modified_File
                 print 'update average spatial coherence for input '+k+' file based on: '+Modified_File
                 outFile = 'averageSpatialCoherence.h5'
