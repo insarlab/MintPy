@@ -88,7 +88,7 @@ Download the test data: [Download Link](https://miami.app.box.com/v/pysar-demo-K
 Create a custom template file:   
 
     cd ~/KujuAlosAT422F650/PYSAR
-    vi KujuAlosAT422F650.template
+    vi KujuAlosAT422F650_template.txt
    
 Include the following pysar options in your template:   
 
@@ -99,10 +99,13 @@ Include the following pysar options in your template:
     pysar.geomap         = ~/KujuAlosAT422F650/ROIPAC/RADAR/geomap*.trans
     pysar.dem.radarCoord = ~/KujuAlosAT422F650/ROIPAC/RADAR/radar*.hgt
     pysar.dem.geoCoord   = ~/KujuAlosAT422F650/ROIPAC/RADAR/*.dem
-
+    
+    pysar.reference.lalo      = 33.0655, 131.2076
+    pysar.deramp              = plane     
+    
 Save your template file and run PySAR as:   
 
-    pysarApp.py KujuAlosAT422F650.template
+    pysarApp.py KujuAlosAT422F650_template.txt
 
 Inside pysarApp.py, it reads the unwrapped interferograms, refernces all of them to the same coherent pixel (a seed point point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the interferograms, calculates a parameter called "temporal_coherence" which can be used to evaluate the quality of inversion, removes ramps or surface from time-series epochs, corrects dem errors, corrects local oscilator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps and using phase-elevation approach), ... and finally estimates the velocity.   
 
