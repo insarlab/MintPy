@@ -24,6 +24,7 @@ import matplotlib.lines as mlines
 from matplotlib.tri import Triangulation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scipy.sparse as sparse
+from scipy.sparse.csgraph import minimum_spanning_tree
 
 import pysar._datetime as ptime
 import pysar._readfile as readfile
@@ -197,7 +198,7 @@ def get_date12_list(File, check_drop_ifgram=False):
         h5 = h5py.File(File, 'r')
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
-            if not check_drop_ifgram or h5[k][epoch].attrs['drop_ifgram'] == 'yes':
+            if not check_drop_ifgram or h5[k][epoch].attrs['drop_ifgram'] == 'no':
                 date12 = h5[k][epoch].attrs['DATE12']
                 date12_list.append(date12)
         h5.close()
@@ -604,7 +605,7 @@ def threshold_coherence_based_mst(date12_list, coh_list):
 
     # MST path based on weight matrix
     wei_mat_csr = sparse.csr_matrix(wei_mat)
-    mst_mat_csr = sparse.csgraph.minimum_spanning_tree(wei_mat_csr)
+    mst_mat_csr = minimum_spanning_tree(wei_mat_csr)
 
     # Get date6_list
     m_dates = [date12.split('-')[0] for date12 in date12_list]

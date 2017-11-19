@@ -249,7 +249,7 @@ pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum cohere
 pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
 
 
-## 3. Unwrapping Error Correction
+## 3. Unwrapping Error Correction (optional and not recommended)
 ## unwrapping error correction based on the following two methods:
 ## a. phase closure (Fattahi, 2015, PhD Thesis)
 ## b. connecting bridge
@@ -295,12 +295,13 @@ pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization 
 pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 
 
-## 6. Local Oscillator Drift (LOD) Correction (for Envisat only, Marinkovic and Larsen, 2013, Proc. LPS)
+## 6. Local Oscillator Drift (LOD) Correction (for Envisat only)
 ## correct LOD if input dataset comes from Envisat
 ## skip this step for all the other satellites.
+## Reference paper: Marinkovic and Larsen, 2013, Proc. LPS
 
 
-## 7. Tropospheric Delay Correction
+## 7. Tropospheric Delay Correction (optional and recommended)
 ## correct tropospheric delay using the following methods:
 ## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS; Dee et al., 2011)
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
