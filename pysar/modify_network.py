@@ -508,20 +508,8 @@ def main(argv):
                 date12_to_rmv_temp.append(date12)
         print date12_to_rmv_temp
 
-    # 2.2 Update date12_to_rmv from perp baseline threshold
-    if inps.max_perp_baseline:
-        print '----------------------------------------------------------------------------'
-        print 'Drop pairs with perpendicular spatial baseline > '+str(inps.max_perp_baseline)+' meters'
-        ifg_bperp_list = pnet.igram_perp_baseline_list(inps.file[0])
-        date12_to_rmv_temp = []
-        for i in range(len(ifg_bperp_list)):
-            if ifg_bperp_list[i] > inps.max_perp_baseline:
-                date12 = date12_orig[i]
-                date12_to_rmv.append(date12)
-                date12_to_rmv_temp.append(date12)
-        print date12_to_rmv_temp
 
-    # 2.3 Update date12_to_rmv from temp baseline threshold
+    # 2.2 Update date12_to_rmv from temp baseline threshold
     if inps.max_temp_baseline:
         print '----------------------------------------------------------------------------'
         print 'Drop pairs with temporal baseline > '+str(inps.max_temp_baseline)+' days'
@@ -538,6 +526,21 @@ def main(argv):
                 date12 = date12_orig[i]
                 date12_to_rmv.append(date12)
                 date12_to_rmv_temp.append(date12)
+        print 'number of pairs to drop: %d' % (len(date12_to_rmv_temp))
+        print date12_to_rmv_temp
+
+    # 2.3 Update date12_to_rmv from perp baseline threshold
+    if inps.max_perp_baseline:
+        print '----------------------------------------------------------------------------'
+        print 'Drop pairs with perpendicular spatial baseline > '+str(inps.max_perp_baseline)+' meters'
+        ifg_bperp_list = pnet.igram_perp_baseline_list(inps.file[0])
+        date12_to_rmv_temp = []
+        for i in range(len(ifg_bperp_list)):
+            if abs(ifg_bperp_list[i]) > inps.max_perp_baseline:
+                date12 = date12_orig[i]
+                date12_to_rmv.append(date12)
+                date12_to_rmv_temp.append(date12)
+        print 'number of pairs to drop: %d' % (len(date12_to_rmv_temp))
         print date12_to_rmv_temp
 
     # 2.4 Update date12_to_rmv from exclude_ifg_index

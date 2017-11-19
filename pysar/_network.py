@@ -214,10 +214,10 @@ def get_date12_list(File, check_drop_ifgram=False):
 def igram_perp_baseline_list(File):
     '''Get perpendicular baseline list from input multi_group hdf5 file'''
     print 'read perp baseline info from '+File
-    p_baseline_list = []
     k = readfile.read_attribute(File)['FILE_TYPE']
     h5 = h5py.File(File, 'r')
     epochList = sorted(h5[k].keys())
+    p_baseline_list = []
     for epoch in epochList:
         p_baseline = (float(h5[k][epoch].attrs['P_BASELINE_BOTTOM_HDR'])+\
                       float(h5[k][epoch].attrs['P_BASELINE_TOP_HDR']))/2

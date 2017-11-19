@@ -155,6 +155,14 @@ def read_template2inps(templateFile, inps=None):
         else:
             inps.dop_overlap_min = float(value)
 
+    key = 'PLATFORM'
+    if key in key_list and not inps.sensor:
+        inps.sensor = template[key]
+
+    key = 'COH_COLOR_JUMP'
+    if key in key_list:
+        inps.coh_thres = float(template[key])
+
     key = prefix+'masterDate'
     if key in key_list:
         value = template[key]

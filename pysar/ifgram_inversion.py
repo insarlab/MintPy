@@ -376,7 +376,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
         prog_bar = ptime.progress_bar(maxValue=pixel_num2inv)
         for i in range(pixel_num2inv):
             ts[1:,pixel_idx2inv[i]] = network_inversion_wls(A, ifgram_data[:,i], weight[:,i])[0].flatten()
-            prog_bar.update(i+1, every=1000, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
+            prog_bar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
         prog_bar.close()
 
         print 'calculating temporal coherence ...'
@@ -545,11 +545,15 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
         r1 = min([length, r0+r_step])
         box = (0,r0,width,r1)
         box_list.append(box)
+    box_num = len(box_list)
 
     if not meta['parallel']:
         timeseries = np.zeros((date_num, length, width), np.float32)
         temp_coh = np.zeros((length, width), np.float32)
-        for box in box_list:
+        for i in range(box_num):
+            if box_num > 1:
+                print '\n------- Processing Patch %d out of %d --------------' % (i+1, box_num)
+            box = box_list[i]
             ts, tcoh = ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box)
             timeseries[:,box[1]:box[3],box[0]:box[2]] = ts
             temp_coh[box[1]:box[3],box[0]:box[2]] = tcoh
