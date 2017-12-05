@@ -353,7 +353,6 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
 
         ##### Calculate Weight matrix
         weight = coh_data
-        epsilon = 1e-4
         if meta['weight_function'].startswith('var'):
             print 'convert coherence to weight using inverse of phase variance'
             print '    with phase PDF for distributed scatterers from Tough et al. (1995)'
@@ -366,6 +365,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
             weight = 1.0 / coherence2phase_variance_ds(weight, L)
         elif meta['weight_function'].startswith(('lin','coh','cor')):
             print 'use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)'
+            epsilon = 1e-4
             weight[weight < epsilon] = epsilon
         else:
             print 'Un-recognized weight function: %s' % meta['weight_function']
@@ -715,16 +715,15 @@ EXAMPLE='''example:
 '''
 
 TEMPLATE='''
-## Invert network of interferograms into time series
+## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## Temporal coherence (weighted) is calculated using Tazzani et al. (2007, IEEE-TGRS)
-## For no/uniform weight approach, use Singular-Value Decomposition (SVD) if network are not fully connected
-## For weighted approach, use weighted least square (WLS) solution with the following weighting functions:
-##     variance - phase variance due to temporal decorrelation (Yunjun et al., 2017, in prep)
-##     linear   - uniform distribution CDF function (Tong et al., 2016, RSE)
-##     no       - no weight, or ordinal inversion with uniform weight (Berardino et al., 2002, IEEE-TGRS)
-pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
-pysar.timeseriesInv.minCoherence  = auto #[0.0-1.0 / no], auto for no, 
-pysar.timeseriesInv.coherenceFile = auto #[fname / no], auto for coherence.h5, file to read weight data
+## Singular-Value Decomposition (SVD) is applied if network are not fully connected
+## There are 3 options for weighting function:
+## a. variance  - BLUE, use inverse of covariance as weight  (Rocca, 2007, TGRS; Guarnieri & Tebaldini, 2008, TGRS)
+## b. coherence - WLS, use coherence as weight (Perissin and Wang, 2012, IEEE-TGRS; Tong et al., 2016, RSE)
+## c. no        - LS, no/uniform weight (Berardino et al., 2002, TGRS)
+pysar.timeseriesInv.weightFunc    = auto #[variance / no / coherence], auto for no
+pysar.timeseriesInv.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
 pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 '''
@@ -733,6 +732,8 @@ REFERENCE='''references:
 Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface 
     deformation monitoring based on small baseline differential SAR interferograms. IEEE TGRS,
     40(11), 2375-2383. doi:10.1109/TGRS.2002.803792
+Guarnieri, A. M., and S. Tebaldini (2008), On the exploitation of target statistics for SAR 
+    interferometry applications, Geoscience and Remote Sensing, IEEE Transactions on, 46(11), 3436-3443.
 Tizzani, P., Berardino, P., Casu, F., Euillades, P., Manzo, M., Ricciardi, G. P., Lanari, R.
     (2007). Surface deformation of Long Valley caldera and Mono Basin, California, investigated
     with the SBAS-InSAR approach. Remote Sensing of Environment, 108(3), 277-289.
@@ -742,6 +743,8 @@ Tong, X., & Schmidt, D. (2016). Active movement of the Cascade landslide complex
     doi:http://dx.doi.org/10.1016/j.rse.2016.09.008
 Just, D., & Bamler, R. (1994). Phase statistics of interferograms with applications to synthetic
     aperture radar. Applied optics, 33(20), 4361-4368. 
+Rocca, F. (2007), Modeling interferogram stacks, IEEE Transactions on Geoscience and Remote Sensing,
+    45(10), 3289-3299.
 '''
 
 def cmdLineParse():

@@ -282,14 +282,14 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 
 ## 5. Network Inversion
-## Invert network of interferograms into time series
+## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## Temporal coherence (weighted) is calculated using Tazzani et al. (2007, IEEE-TGRS)
-## For no/uniform weight approach, use Singular-Value Decomposition (SVD) if network are not fully connected
-## For weighted approach, use weighted least square (WLS) solution with the following weighting functions:
-##     variance - phase variance due to temporal decorrelation (Yunjun et al., 2017, in prep)
-##     no       - no weight, or ordinal inversion with uniform weight (Berardino et al., 2002, IEEE-TGRS)
-##     linear   - uniform distribution CDF function (Tong et al., 2016, RSE)
-pysar.timeseriesInv.weightFunc    = auto #[variance / no / linear / normal], auto for no, coherence to weight
+## Singular-Value Decomposition (SVD) is applied if network are not fully connected
+## There are 3 options for weighting function:
+## a. variance  - BLUE, use inverse of covariance as weight  (Rocca, 2007, TGRS; Guarnieri & Tebaldini, 2008, TGRS)
+## b. coherence - WLS, use coherence as weight (Perissin and Wang, 2012, IEEE-TGRS; Tong et al., 2016, RSE)
+## c. no        - LS, no/uniform weight (Berardino et al., 2002, TGRS)
+pysar.timeseriesInv.weightFunc    = auto #[variance / no / coherence], auto for no
 pysar.timeseriesInv.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
 pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask

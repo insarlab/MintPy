@@ -149,11 +149,17 @@ def read_baseline_file(baselineFile, exDateList=[]):
         if not date in exDateList:
             date6List.append(date)
             perpBaseList.append(float(c[1]))
-            dop = np.array([float(c[2]), float(c[3]), float(c[4])])
-            prf = float(c[5])
-            dop *= prf
-            dopplerList.append(dop)
-            slcDirList.append(c[6])
+            try:
+                dop = np.array([float(c[2]), float(c[3]), float(c[4])])
+                prf = float(c[5])
+                dop *= prf
+                dopplerList.append(dop)
+            except:
+                pass
+            try:
+                slcDirList.append(c[6])
+            except:
+                pass
 
     date8List = ptime.yyyymmdd(date6List)
     return date8List, perpBaseList, dopplerList, slcDirList
@@ -232,7 +238,7 @@ def azimuth_bandwidth(sensor):
     '''Find the hardwired azimuth bandwidth in hertz for the given satellite'''
     if    sensor == 'Ers'  :  bandwidth =  1300.0
     elif  sensor == 'Env'  :  bandwidth =  1340.0
-    elif  sensor == 'S1'   :  bandwidth =  4000.0   # shong 08/2016 sould be checked
+    elif  sensor == 'Sen'  :  bandwidth =   327.0   #IW1-327; IW2-313; IW3-314 (Yague-Martinez et al., 2016)
     elif  sensor == 'Rsat' :  bandwidth =   900.0
     elif  sensor == 'Rsat2':  bandwidth =   900.0
 
@@ -250,6 +256,7 @@ def range_bandwidth(sensor):
     ## Range Bandwidth in Hz for the given satellite
     if    sensor == 'Ers' :  bandwidth = 15.55e6
     elif  sensor == 'Env' :  bandwidth = 16.00e6
+    elif  sensor == 'Sen' :  bandwidth = 56.5e6    #IW1-56.5; IW2-48.3; IW3-42.79
 
     elif  sensor == 'Jers':  bandwidth = 15e6      # Jers only has HH pol
     elif  sensor == 'Alos':  bandwidth = 14e6      # for FBD, 28MHz for FBS
@@ -261,7 +268,7 @@ def range_bandwidth(sensor):
 def wavelength(sensor):
     if    sensor == 'Ers'  :  center_frequency = 5.300e9
     elif  sensor == 'Env'  :  center_frequency = 5.331e9
-    elif  sensor == 'S1'   :  center_frequency = 5.405e9
+    elif  sensor == 'Sen'  :  center_frequency = 5.405e9
     elif  sensor == 'Rsat' :  center_frequency = 5.300e9
     elif  sensor == 'Rsat2':  center_frequency = 5.405e9
 
@@ -282,6 +289,7 @@ def incidence_angle(sensor, inc_angle=None):
     if not inc_angle:
         if   sensor == 'Ers' :  inc_angle = 34.3
         elif sensor == 'Env' :  inc_angle = 34.3
+        elif sensor == 'Sen' :  inc_angle = 32.9     #IW1 - 32.9; IW2 - 38.3; IW3 - 43.1 (Yague-Martinez et al., 2016)
 
         elif sensor == 'Jers':  inc_angle = 35.21
         elif sensor == 'Alos':  inc_angle = 34.3     # degree, for ALOS PALSAR Fine mode
@@ -296,10 +304,12 @@ def signal2noise_ratio(sensor):
         ERS - Zebker et al., 1994, TGRS
         Envisat - Guarnieri, A.M., 2013. Introduction to RADAR. POLIMI DEI, Milano.
         JERS - https://directory.eoportal.org/web/eoportal/satellite-missions/j/jers-1
+        Sentinel-1 - https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-1-sar/acquisition-modes/interferometric-wide-swath
     '''
     if   sensor.startswith('Ers') :  SNR = 11.7
     elif sensor.startswith('Env') :  SNR = 19.5
     elif sensor.startswith('Jers'):  SNR = 14
+    elif sensor.startswith('S'):     SNR = 22
     else: print 'satellite not found'; SNR = None
     return SNR
 
@@ -408,8 +418,7 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
 
         pbase = pbase_list[s_idx] - pbase_list[m_idx]
         tbase = tbase_list[s_idx] - tbase_list[m_idx]
-        m_dop = dop_list[m_idx]
-        s_dop = dop_list[s_idx]
+
 
         #Geometric decorrelation (Hanssen, 2001, Eq. 4.4.12)
         coh_geom = (pbase_c - abs(pbase)) / pbase_c
@@ -417,17 +426,20 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
             coh_geom = 0.
 
         #Doppler centroid decorrelation (Hanssen, 2001, Eq. 4.4.13)
-        coh_dc = calculate_doppler_overlap(m_dop, s_dop, bandwidth_az)
-        if coh_dc < 0.:
-            coh_dc = 0.
+        if not dop_list:
+            coh_dc = 1.
+        else:
+            coh_dc = calculate_doppler_overlap(dop_list[m_idx], dop_list[s_idx], bandwidth_az)
+            if coh_dc < 0.:
+                coh_dc = 0.
 
         #Option 1: Temporal decorrelation - exponential delay model (Parizzi et al., 2009; Morishita and Hanssen, 2015)
         coh_temp = np.multiply((coh_thermal - coh_resid), np.exp(-1*abs(tbase)/decor_time)) + coh_resid
 
         coh = coh_geom * coh_dc * coh_temp
         cohs[i,:] = coh
-    epsilon = 1e-3
-    cohs[cohs < epsilon] = epsilon
+    #epsilon = 1e-3
+    #cohs[cohs < epsilon] = epsilon
     if display:
         print ''
 

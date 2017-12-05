@@ -396,7 +396,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
         group = h5out.create_group(k)
         print 'writing >>> '+fname_out
 
-        if k == 'timeseries':
+        if k in multi_dataset_hdf5_file:
             print 'number of acquisitions: '+str(epoch_num)
             for i in range(epoch_num):
                 date = epoch_list[i]
@@ -413,7 +413,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
             for key,value in atr.iteritems():
                 group.attrs[key] = value
 
-        elif k in ['interferograms','wrapped','coherence']:
+        elif k in multi_group_hdf5_file:
             print 'number of interferograms: '+str(epoch_num)
             date12_list = ptime.list_ifgram2date12(epoch_list)
             for i in range(epoch_num):

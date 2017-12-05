@@ -25,7 +25,7 @@ import pysar._datetime as ptime
 import pysar._network as pnet
 
 
-sar_sensor_list=['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','S1','Kmps5','G3']
+sar_sensor_list=['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','Sen','Kmps5','G3']
 
 #########################################################################
 def log(msg):
@@ -49,7 +49,7 @@ def project_name2sensor(projectName):
     elif  re.search('Csk'    , projectName):  sensor = 'Csk'
     elif  re.search('Rsat'   , projectName):  sensor = 'Rsat'
     elif  re.search('Rsat2'  , projectName):  sensor = 'Rsat2'
-    elif  re.search('Sen'    , projectName):  sensor = 'S1'
+    elif  re.search('Sen'    , projectName):  sensor = 'Sen'
     elif  re.search('Kmps5'  , projectName):  sensor = 'Kmps5'
     elif  re.search('Gaofen3', projectName):  sensor = 'G3'
     else: print 'satellite not found';  sensor = None

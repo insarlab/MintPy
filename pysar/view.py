@@ -1542,7 +1542,7 @@ def main(argv):
 
                 # Data Min/Max
                 fig_data_min = np.nanmin([fig_data_min, np.nanmin(data)])
-                fig_data_max = np.nanmax([fig_data_min, np.nanmax(data)])
+                fig_data_max = np.nanmax([fig_data_max, np.nanmax(data)])
 
                 # Plot DEM
                 if inps.dem_file and inps.disp_dem_shade:
