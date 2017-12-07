@@ -204,8 +204,9 @@ def get_date12_list(File, check_drop_ifgram=False):
         h5 = h5py.File(File, 'r')
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
-            if not check_drop_ifgram or h5[k][epoch].attrs['drop_ifgram'] == 'no':
-                date12 = h5[k][epoch].attrs['DATE12']
+            atr = h5[k][epoch].attrs
+            if not check_drop_ifgram or 'drop_ifgram' not in atr.keys() or atr['drop_ifgram'] == 'no':
+                date12 = atr['DATE12']
                 date12_list.append(date12)
         h5.close()
     else:
@@ -1232,18 +1233,21 @@ def mode (thelist):
     for item in thelist:
         counts[item] = counts.get(item, 0) + 1
     maxcount = 0
-    maxitem  = None
+    maxitem  = []
     for k, v in counts.items():
-        if v > maxcount:
-            maxitem  = k
+        if v == maxcount and v > 0:
+            maxitem.append(k)
+        elif v > maxcount:
+            maxitem = []
+            maxitem.append(k)
             maxcount = v
 
     if maxcount == 1:
         print "All values only appear once"
         return None
     elif counts.values().count(maxcount) > 1:
-        print "List has multiple modes"
-        return None
+        print "List has multiple modes, return the least/smallest one."
+        return sorted(maxitem)[0]
     else:
         return maxitem
 
