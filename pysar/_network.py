@@ -1243,13 +1243,13 @@ def mode (thelist):
             maxcount = v
 
     if maxcount == 1:
-        print "All values only appear once"
-        return None
+        print "All values only appear once, return the least/smallest one."
+        return sorted(maxitem)[0]
     elif counts.values().count(maxcount) > 1:
         print "List has multiple modes, return the least/smallest one."
         return sorted(maxitem)[0]
     else:
-        return maxitem
+        return maxitem[0]
 
 
 def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
