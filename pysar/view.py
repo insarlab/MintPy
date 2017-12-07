@@ -15,6 +15,7 @@ import numpy as np
 import numpy.matlib as matlib
 import scipy.ndimage as ndimage
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 from matplotlib.colors import LinearSegmentedColormap, LightSource
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.patheffects import withStroke
@@ -733,7 +734,8 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     # Seed Point
     # If value of new seed point is not nan, re-seed the data and update inps.seed_yx/lalo
     # Otherwise, try to read seed info from atrributes into inps.seed_yx/lalo
-    if inps.seed_yx and inps.seed_yx != [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]:
+    if inps.seed_yx and ('ref_y' not in meta_dict.keys() or \
+                         inps.seed_yx != [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]):
         inps.seed_value = data[inps.seed_yx[0]-inps.pix_box[1], inps.seed_yx[1]-inps.pix_box[0]]
         if not np.isnan(inps.seed_value):
             data -= inps.seed_value
@@ -980,14 +982,21 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     # 3.1 Colorbar
     if inps.disp_cbar:
         # Colorbar Extend
-        if   inps.disp_min <= data_min and inps.disp_max >= data_max:  cb_extend='neither'
-        elif inps.disp_min >  data_min and inps.disp_max >= data_max:  cb_extend='min'
-        elif inps.disp_min <= data_min and inps.disp_max <  data_max:  cb_extend='max'
-        else:  cb_extend='both'
-
+        if not inps.cbar_ext:
+            if   inps.disp_min <= data_min and inps.disp_max >= data_max: inps.cbar_ext='neither'
+            elif inps.disp_min >  data_min and inps.disp_max >= data_max: inps.cbar_ext='min'
+            elif inps.disp_min <= data_min and inps.disp_max <  data_max: inps.cbar_ext='max'
+            else:  inps.cbar_ext='both'
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
-        cbar = plt.colorbar(im, cax=cax, extend=cb_extend)
+        if inps.wrap and 'radian' in inps.disp_unit:
+            cbar = plt.colorbar(im, cax=cax, ticks=[-np.pi, 0, np.pi])
+            cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+        else:
+            cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
+        if inps.cbar_nbins:
+            cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
+            cbar.update_ticks()
         cbar.ax.tick_params(labelsize=inps.font_size)
         cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
         #cbar.set_label('Temporal Coherence', fontsize=inps.font_size)
@@ -1186,6 +1195,9 @@ def cmdLineParse(argv):
     fig.add_argument('-p','--col', dest='fig_col_num', type=int, default=1, help='subplot number in column')
     fig.add_argument('--noaxis', dest='disp_axis', action='store_false', help='do not display axis')
     fig.add_argument('--nocbar','--nocolorbar', dest='disp_cbar', action='store_false', help='do not display colorbar')
+    fig.add_argument('--cbar-nbins', dest='cbar_nbins', type=int, help='number of bins for colorbar')
+    fig.add_argument('--cbar-ext', dest='cbar_ext', default=None, choices={'neither','min','max','both',None},\
+                     help='Extend setting of colorbar; based on data stat by default.')
     fig.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
     fig.add_argument('--notick', dest='disp_tick', action='store_false', help='do not display tick in x/y axis')
     fig.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
@@ -1593,15 +1605,23 @@ def main(argv):
             if not inps.disp_min and not inps.disp_max:
                 print 'Note: different color scale for EACH subplot!'
             else:
-                if   inps.disp_min <= fig_data_min and inps.disp_max >= fig_data_max: cb_extend='neither'
-                elif inps.disp_min >  fig_data_min and inps.disp_max >= fig_data_max: cb_extend='min'
-                elif inps.disp_min <= fig_data_min and inps.disp_max <  fig_data_max: cb_extend='max'
-                else:  cb_extend='both'
+                if not inps.cbar_ext:
+                    if   inps.disp_min <= fig_data_min and inps.disp_max >= fig_data_max: inps.cbar_ext='neither'
+                    elif inps.disp_min >  fig_data_min and inps.disp_max >= fig_data_max: inps.cbar_ext='min'
+                    elif inps.disp_min <= fig_data_min and inps.disp_max <  fig_data_max: inps.cbar_ext='max'
+                    else:  inps.cbar_ext='both'
                 print 'show colorbar'
                 #fig.subplots_adjust(wspace=inps.fig_wid_space, hspace=inps.fig_hei_space, right=0.965)
                 fig.subplots_adjust(right=0.95)
                 cax = fig.add_axes([0.96, 0.25, 0.01, 0.5])
-                cbar = fig.colorbar(im, cax=cax, extend=cb_extend)
+                if inps.wrap and 'radian' in inps.disp_unit:
+                    cbar = plt.colorbar(im, cax=cax, ticks=[-np.pi, 0, np.pi])
+                    cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+                else:
+                    cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
+                if inps.cbar_nbins:
+                    cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
+                    cbar.update_ticks()
                 cbar.ax.tick_params(labelsize=inps.font_size)
                 cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
 

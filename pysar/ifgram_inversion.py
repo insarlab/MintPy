@@ -145,8 +145,10 @@ def coherence2phase_variance_ds(coherence, L=32):
     coh_num = 1000
     coh_min = 0.0
     coh_max = 1.0 - epsilon
-    coh_step = (coh_max - coh_min) / coh_num
     coh_lut = np.linspace(coh_min, coh_max, coh_num)
+    coh_min = np.min(coh_lut)
+    coh_max = np.max(coh_lut)
+    coh_step = (coh_max - coh_min) / (coh_num - 1)
 
     coherence = np.array(coherence)
     coherence[coherence < coh_min] = coh_min

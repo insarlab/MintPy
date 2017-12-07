@@ -49,8 +49,7 @@ def topographic_residual_inversion(ts0, A0, inps):
         A = np.diff(A, axis=0) / np.diff(inps.tbase, axis=0)
 
     ##Inverse using L-2 norm to get unknown parameters X = [deltaZ, vel, acc, deltaAcc, ...]
-    A_inv = np.linalg.pinv(A)
-    X = np.dot(A_inv, ts)
+    X = np.linalg.pinv(A).dot(ts)   #equivalent to X = np.linalg.inv(A.T.dot(A)).dot(A.T).dot(ts)
 
     ##Prepare Outputs
     deltaZ = X[0,:]

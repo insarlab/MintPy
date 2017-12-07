@@ -432,11 +432,13 @@ def circle_index(atr,circle_par):
         cir_par = circle_par
     else:
         cir_par = circle_par.replace(',',' ').split()
+    cir_par = [str(i) for i in cir_par]
 
     try:
         c_y    = int(cir_par[0])
         c_x    = int(cir_par[1])
         radius = int(float(cir_par[2]))
+        print 'Input circle index in y/x coord: %d, %d, %d' % (c_y, c_x, radius)
     except:
         try:
             c_lat  = float(cir_par[0])
@@ -444,6 +446,7 @@ def circle_index(atr,circle_par):
             radius = int(float(cir_par[2]))
             c_y = np.rint((c_lat-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
             c_x = np.rint((c_lon-float(atr['X_FIRST']))/float(atr['X_STEP']))
+            print 'Input circle index in lat/lon coord: %.4f, %.4f, %d' % (c_lat, c_lon, radius)
         except:
             print '\nERROR: Unrecognized circle index format: '+circle_par
             print 'Supported format:'
@@ -1280,9 +1283,10 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         # Write data list
         line_num = len(date_list)
         if k in multi_group_hdf5_file:
-            fl.write('#   DATE12        Mean      Btemp/days   Bperp/m\n')
+            fl.write('#   DATE12        Mean      Btemp/days   Bperp/m   Num\n')
             for i in range(line_num):
-                line = '%s    %.4f    %8.0f    %8.1f\n' % (date_list[i], mean_list[i], tbase_list[i], pbase_list[i])
+                line = '%s    %.4f    %8.0f    %8.1f     %d\n' % (date_list[i], mean_list[i],\
+                                                                  tbase_list[i], pbase_list[i], i+1)
                 fl.write(line)
         else:
             fl.write('#   DATE12        Mean\n')

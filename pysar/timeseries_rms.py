@@ -84,8 +84,8 @@ TEMPLATE='''
 pysar.residualRms.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
 pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
 pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
-pysar.residualRms.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RMS to txt/pdf file.
-pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > threshold to txt/pdf file.
+pysar.residualRms.saveRefDate     = auto  #[yes / no], auto for yes, save date with min RMS to txt file.
+pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > threshold to txt file.
 '''
 
 EXAMPLE='''example:
@@ -144,8 +144,6 @@ def main(argv):
     print '------------------------------------------------------------'
     ex_idx_list = [rms_list.index(i) for i in rms_list if i > inps.min_rms]
     print 'date(s) with residual RMS > '+str(inps.min_rms)
-
-
     exTxtFile = 'exclude_date.txt'
     if ex_idx_list:
         if (inps.save_exclude_date and \
@@ -182,11 +180,12 @@ def main(argv):
         #ax.bar(x_list, rms_list, bar_width.days)
 
         # Plot reference date
-        if inps.save_reference_date:
-            ax.bar(x_list[ref_idx], rms_list[ref_idx], bar_width.days, label='Reference date')
+        #if inps.save_reference_date:
+        ax.bar(x_list[ref_idx], rms_list[ref_idx], bar_width.days, label='Reference date')
 
         # Plot exclude dates
-        if ex_idx_list and inps.save_exclude_date:
+        #if ex_idx_list and inps.save_exclude_date:
+        if ex_idx_list:
             ex_x_list = [x_list[i] for i in ex_idx_list]
             ex_rms_list = [rms_list[i] for i in ex_idx_list]
             ax.bar(ex_x_list, ex_rms_list, bar_width.days, color='darkgray', label='Exclude date(s)')
