@@ -109,6 +109,8 @@ def cmdLineParse():
                              'default - quadratic; no - do not remove ramp')
     parser.add_argument('--min-rms', dest='min_rms', default='0.02', type=float,\
                         help='minimum RMS in m, threshold used to exclude dates, default: 0.02 m')
+    parser.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\
+                        help='figure size in inches - width and length')
     inps = parser.parse_args()
     inps.save_reference_date = True
     inps.save_exclude_date = True
@@ -166,7 +168,10 @@ def main(argv):
     fig_name += '.pdf'
 
     if ut.update_file(fig_name, [exTxtFile, refTxtFile, inps.template_file], check_readable=False):
-        fig = plt.figure()
+        if inps.fig_size:
+            fig = plt.figure(figsize=inps.fig_size)
+        else:
+            fig = plt.figure()
         ax = fig.add_subplot(111)
         font_size = 12
 
@@ -175,6 +180,7 @@ def main(argv):
         except: bar_width = np.min(np.diff(dates).tolist())*3/4
         x_list = [i-bar_width/2 for i in dates]
 
+        rms_list = [i*1000. for i in rms_list]
         # Plot all dates
         ax.bar(x_list, rms_list, bar_width.days)
         #ax.bar(x_list, rms_list, bar_width.days)
@@ -197,14 +203,15 @@ def main(argv):
         # axis format
         ax = pnet.auto_adjust_yaxis(ax, rms_list+[inps.min_rms], font_size, ymin=0.0)
         ax.set_xlabel('Time [years]',fontsize=font_size)
-        ax.set_ylabel('Root Mean Square (m)',fontsize=font_size)
+        ax.set_ylabel('Root Mean Square [mm]',fontsize=font_size)
         ax.yaxis.set_ticks_position('both')
+        ax.tick_params(labelsize=font_size)
 
         if inps.save_reference_date or inps.save_exclude_date:
-            plt.legend()
+            plt.legend(fontsize=font_size)
 
         # save figure
-        fig.savefig(fig_name, bbox_inches='tight')
+        fig.savefig(fig_name, bbox_inches='tight', transparent=True)
         print 'save figure to file: '+fig_name
 
     return

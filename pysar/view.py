@@ -889,7 +889,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         # Plot Data
         print 'plotting Data ...'
         im = m.imshow(data, cmap=inps.colormap, origin='upper', vmin=inps.disp_min, vmax=inps.disp_max,\
-                      alpha=inps.transparency, interpolation='nearest')
+                      alpha=inps.transparency, interpolation='nearest', animated=inps.animation)
 
         # Scale Bar
         if inps.disp_scalebar:
@@ -998,7 +998,10 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
             cbar.update_ticks()
         cbar.ax.tick_params(labelsize=inps.font_size)
-        cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
+        if not inps.cbar_label:
+            cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
+        else:
+            cbar.set_label(inps.cbar_label, fontsize=inps.font_size)
         #cbar.set_label('Temporal Coherence', fontsize=inps.font_size)
 
     # 3.2 Title
@@ -1089,6 +1092,7 @@ def cmdLineParse(argv):
                         help='dates will not be displayed')
     infile.add_argument('--mask', dest='mask_file', metavar='FILE',\
                         help='mask file for display')
+    infile.add_argument('--zero-mask', dest='zero_mask', action='store_true', help='mask pixels with zero value.')
 
     ##### Output
     outfile = parser.add_argument_group('Output', 'Save figure and write to file(s)')
@@ -1198,6 +1202,7 @@ def cmdLineParse(argv):
     fig.add_argument('--cbar-nbins', dest='cbar_nbins', type=int, help='number of bins for colorbar')
     fig.add_argument('--cbar-ext', dest='cbar_ext', default=None, choices={'neither','min','max','both',None},\
                      help='Extend setting of colorbar; based on data stat by default.')
+    fig.add_argument('--cbar-label', dest='cbar_label', default=None, help='colorbar label')
     fig.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
     fig.add_argument('--notick', dest='disp_tick', action='store_false', help='do not display tick in x/y axis')
     fig.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
@@ -1214,6 +1219,7 @@ def cmdLineParse(argv):
                      help='height space between subplots in inches')
     fig.add_argument('--coord', dest='fig_coord', choices=['radar','geo'], default='geo',\
                      help='Display in radar/geo coordination system, for geocoded file only.')
+    fig.add_argument('--animation', action='store_true', help='enable animation mode')
     
     ##### Map
     map_group = parser.add_argument_group('Map', 'Map settings for display')
@@ -1363,6 +1369,8 @@ def main(argv):
         # Read Data
         print 'reading data ...'
         data, atr = readfile.read(inps.file, inps.pix_box, inps.epoch[0])
+        if inps.zero_mask:
+            data[data==0] = np.nan
         if inps.ref_date:
             ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)[0]
             data -= ref_data
@@ -1536,6 +1544,8 @@ def main(argv):
                         subplot_title = str(epochList.index(epoch)+1)+'\n'+h5file[k][epoch].attrs['DATE12']
                     dset = h5file[k][epoch].get(epoch)
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
+                    if inps.zero_mask:
+                        data[data==0] = np.nan
                     if ref_yx:
                         data -= data[ref_yx[0], ref_yx[1]]
                 elif k in ['HDFEOS']:
@@ -1623,7 +1633,10 @@ def main(argv):
                     cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
                     cbar.update_ticks()
                 cbar.ax.tick_params(labelsize=inps.font_size)
-                cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
+                if not inps.cbar_label:
+                    cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
+                else:
+                    cbar.set_label(inps.cbar_label, fontsize=inps.font_size)
 
             # Save Figure
             if inps.save_fig:

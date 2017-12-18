@@ -230,7 +230,10 @@ def main(argv):
     inps.cbar_label = 'Average spatial coherence'
 
     # Fig 1 - Baseline History
-    fig = plt.figure()
+    if inps.fig_size:
+        fig = plt.figure(figsize=inps.fig_size)
+    else:
+        fig = plt.figure()
     ax = fig.add_subplot(111)
     ax = pnet.plot_perp_baseline_hist(ax, date8_list, pbase_list, vars(inps), date8_list_drop)
 
@@ -257,7 +260,10 @@ def main(argv):
     # Fig 3 - Min/Max Coherence History
     if inps.coherence_list:
         figName = 'CoherenceHistory'+inps.fig_ext
-        fig = plt.figure()
+        if inps.fig_size:
+            fig = plt.figure(figsize=inps.fig_size)
+        else:
+            fig = plt.figure()
         ax = fig.add_subplot(111)
         ax = pnet.plot_coherence_history(ax, date12_list, inps.coherence_list)
 

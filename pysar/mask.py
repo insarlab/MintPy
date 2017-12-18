@@ -118,14 +118,14 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
             igram = epochList[i]
             print igram
             unw = h5file[k][igram].get(igram)[:]
-            
+
             if km == 'coherence':
                 coh = cohList[i]
                 print coh
                 mask = h5mask[km][coh].get(coh)[:]
                 if not inps_dict:
                     mask = update_mask(mask, inps_dict)                
-            
+
             unw = mask_matrix(unw,mask)
 
             group = gg.create_group(igram)

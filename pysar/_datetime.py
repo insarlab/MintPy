@@ -182,7 +182,7 @@ def date_list2vector(dateList):
 
 
 ################################################################
-def auto_adjust_xaxis_date(ax, datevector, fontSize=12):
+def auto_adjust_xaxis_date(ax, datevector, fontSize=12, every_year=1):
     '''Adjust X axis
     Input:
         ax : matplotlib figure axes object
@@ -207,7 +207,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12):
 
     # Label/Tick format
     ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
-    ax.xaxis.set_major_locator(mdates.YearLocator())
+    ax.xaxis.set_major_locator(mdates.YearLocator(every_year))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
     ax.xaxis.set_minor_locator(mdates.MonthLocator())
 

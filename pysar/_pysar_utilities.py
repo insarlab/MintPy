@@ -1726,7 +1726,7 @@ def date_list(h5file):
 
 
 ######################################
-def design_matrix(ifgramFile=None, date12_list=[], zero_first=True):
+def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None, zero_first=True):
     '''Make the design matrix for the inversion based on date12_list.
     Reference:
         Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002).
@@ -1758,6 +1758,11 @@ def design_matrix(ifgramFile=None, date12_list=[], zero_first=True):
     date_num = len(date6_list)
     ifgram_num = len(date12_list)
 
+    if not referenceDate:
+        referenceDate = date6_list[0]
+    referenceDate = ptime.yymmdd(referenceDate)
+    refIndex = date6_list.index(referenceDate)
+
     A = np.zeros((ifgram_num, date_num))
     B = np.zeros(np.shape(A))
     #t = np.zeros((ifgram_num, 2))
@@ -1770,7 +1775,8 @@ def design_matrix(ifgramFile=None, date12_list=[], zero_first=True):
 
     # Remove the 1st date assuming it's zero
     if zero_first:
-        A = A[:,1:]
+        A = np.hstack((A[:,0:refIndex], A[:,(refIndex+1):]))
+        #A = A[:,1:]
         B = B[:,:-1]
 
     return A,B

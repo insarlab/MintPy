@@ -202,6 +202,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
         writefile.write(data_geo, atr, fname_out)
 
     del data_geo
+    print 'finished writing file: %s' % (fname_out)
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
     print 'Time used: %02d hours %02d mins %02d secs' % (h, m, s)
     return fname_out
@@ -453,6 +454,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
         writefile.write(data_geo, atr, fname_out)
 
     del data_geo, vtx, wts
+    print 'finished writing file: %s' % (fname_out)
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
     print 'Time used: %02d hours %02d mins %02d secs' % (h, m, s)
     return fname_out
