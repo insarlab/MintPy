@@ -37,7 +37,7 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 class Basemap2(Basemap): 
     # add drawscale method to Basemap class. 
     # Basemap.drawmapscale() do not support 'cyl' projection.
-    def drawscale(self, lat_c, lon_c, distance, ax=None, font_size=12, yoffset=None): 
+    def drawscale(self, lat_c, lon_c, distance, ax=None, font_size=12, yoffset=None, color='k'): 
         """draw a simple map scale from x1,y to x2,y in map projection 
         coordinates, label it with actual distance
         Inputs:
@@ -57,16 +57,16 @@ class Basemap2(Basemap):
         if not yoffset:
             yoffset = 0.1*length
 
-        self.plot([lon0,lon1],[lat_c,lat_c],color='k')
-        self.plot([lon0,lon0],[lat_c,lat_c+yoffset],color='k')
-        self.plot([lon1,lon1],[lat_c,lat_c+yoffset],color='k')
+        self.plot([lon0,lon1],[lat_c,lat_c],color=color)
+        self.plot([lon0,lon0],[lat_c,lat_c+yoffset],color=color)
+        self.plot([lon1,lon1],[lat_c,lat_c+yoffset],color=color)
         if not ax:  ax = plt.gca()
         if distance < 1000.0:
             ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d m'%(distance),\
-                    verticalalignment='top', horizontalalignment='center',fontsize=font_size) 
+                    verticalalignment='top', horizontalalignment='center',fontsize=font_size, color=color) 
         else:
             ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d km'%(distance/1000.0),\
-                    verticalalignment='top', horizontalalignment='center',fontsize=font_size) 
+                    verticalalignment='top', horizontalalignment='center',fontsize=font_size, color=color) 
     
     def auto_lalo_sequence(self, geo_box, lalo_step=None, max_tick_num=4, step_candidate=[1,2,3,4,5]):
         '''Auto calculate lat/lon label sequence based on input geo_box
@@ -109,7 +109,7 @@ class Basemap2(Basemap):
         return lats, lons, lalo_step
 
 
-    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1,0,0,1], font_size=12):
+    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1,0,0,1], font_size=12, color='k'):
         '''Auto draw lat/lon label/tick based on coverage from geo_box
         Inputs:
             geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -145,8 +145,8 @@ class Basemap2(Basemap):
         # Plot x/y label
         labels_lat = np.multiply(labels, [1,1,0,0])
         labels_lon = np.multiply(labels, [0,0,1,1])
-        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05, fontsize=font_size)
-        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05, fontsize=font_size)
+        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05, fontsize=font_size, color=color, textcolor=color)
+        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05, fontsize=font_size, color=color, textcolor=color)
 
 
 ##########################################  Sub Function  ########################################
@@ -904,14 +904,15 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             if inps.scalebar[1] == 999.0:  inps.scalebar[1] = inps.geo_box[3]+0.1*(inps.geo_box[1]-inps.geo_box[3])
             if inps.scalebar[2] == 999.0:  inps.scalebar[2] = inps.geo_box[0]+0.2*(inps.geo_box[2]-inps.geo_box[0])
             # Draw scale bar
-            m.drawscale(inps.scalebar[1], inps.scalebar[2], inps.scalebar[0], ax=ax, font_size=inps.font_size)
+            m.drawscale(inps.scalebar[1], inps.scalebar[2], inps.scalebar[0], ax=ax,\
+                        font_size=inps.font_size, color=inps.font_color)
 
         # Lat Lon labels
         if inps.lalo_label:
             print 'plot lat/lon labels'
-            m.draw_lalo_label(inps.geo_box, ax=ax, lalo_step=inps.lalo_step, font_size=inps.font_size)
+            m.draw_lalo_label(inps.geo_box, ax=ax, lalo_step=inps.lalo_step, font_size=inps.font_size, color=inps.font_color)
         else:
-            ax.tick_params(labelsize=inps.font_size)
+            ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
         
         # Plot Seed Point
         if inps.disp_seed and inps.seed_lalo:
@@ -997,16 +998,15 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         if inps.cbar_nbins:
             cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
             cbar.update_ticks()
-        cbar.ax.tick_params(labelsize=inps.font_size)
+        cbar.ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
         if not inps.cbar_label:
-            cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
+            cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
         else:
-            cbar.set_label(inps.cbar_label, fontsize=inps.font_size)
-        #cbar.set_label('Temporal Coherence', fontsize=inps.font_size)
+            cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
 
     # 3.2 Title
     if inps.disp_title:
-        ax.set_title(inps.fig_title, fontsize=inps.font_size)
+        ax.set_title(inps.fig_title, fontsize=inps.font_size, color=inps.font_color)
 
     # 3.3 Flip Left-Right / Up-Down
     if inps.flip_lr:
@@ -1193,6 +1193,7 @@ def cmdLineParse(argv):
     ##### Figure 
     fig = parser.add_argument_group('Figure','Figure settings for display')
     fig.add_argument('-s','--fontsize', dest='font_size', type=int, help='font size')
+    fig.add_argument('--fontcolor', dest='font_color', default='k', help='font color')
     fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,\
                      help='DPI - dot per inch - for display/write')
     fig.add_argument('-r','--row', dest='fig_row_num', type=int, default=1, help='subplot number in row')
@@ -1546,7 +1547,7 @@ def main(argv):
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
                     if inps.zero_mask:
                         data[data==0] = np.nan
-                    if ref_yx:
+                    elif ref_yx:
                         data -= data[ref_yx[0], ref_yx[1]]
                 elif k in ['HDFEOS']:
                     dset = h5file[k]['GRIDS']['timeseries'].get(epoch)
@@ -1632,11 +1633,11 @@ def main(argv):
                 if inps.cbar_nbins:
                     cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
                     cbar.update_ticks()
-                cbar.ax.tick_params(labelsize=inps.font_size)
+                cbar.ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
                 if not inps.cbar_label:
-                    cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
+                    cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
                 else:
-                    cbar.set_label(inps.cbar_label, fontsize=inps.font_size)
+                    cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
 
             # Save Figure
             if inps.save_fig:

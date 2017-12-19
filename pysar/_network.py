@@ -941,6 +941,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     if not 'disp_title'     in keyList:  plot_dict['disp_title']     = True
     if not 'coh_thres'      in keyList:  plot_dict['coh_thres']      = None
     if not 'disp_drop'      in keyList:  plot_dict['disp_drop']      = True
+    if not 'every_year'     in keyList:  plot_dict['every_year']     = 1
     coh_list = plot_dict['coherence_list']
     disp_min = plot_dict['disp_min']
     disp_max = plot_dict['disp_max']
@@ -1078,7 +1079,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
     ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perp Baseline [m]',fontsize=plot_dict['fontsize'])
@@ -1104,6 +1105,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
                     markercolor
                     markersize
                     disp_title : bool, show figure title or not, default: True
+                    every_year : int, number of years for the major tick on xaxis
         date8_list_drop : list of string, date dropped in YYYYMMDD format
                           e.g. ['20080711', '20081011']
     Output:
@@ -1116,6 +1118,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
     if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
+    if not 'every_year'  in keyList:   plot_dict['every_year']  = 1
     transparency = 0.7
 
     # Date Convert
@@ -1150,7 +1153,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
         ax.set_title('Perpendicular Baseline History',fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
     ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perpendicular Baseline [m]',fontsize=plot_dict['fontsize'])
@@ -1261,6 +1264,7 @@ def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
     if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
+    if not 'every_year'  in keyList:   plot_dict['every_year']  = 1
 
     # Get date list
     m_dates = [date12.split('-')[0] for date12 in date12_list]
@@ -1279,7 +1283,7 @@ def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
     if plot_dict['disp_title']:
         ax.set_title('Coherence History of All Related Interferograms')
 
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
     ax.set_ylim([0.0,1.0])
 
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])

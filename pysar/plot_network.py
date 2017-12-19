@@ -133,6 +133,7 @@ def cmdLineParse():
     fig.add_argument('--lw','--linewidth', dest='linewidth', type=int, default=2, help='line width in points')
     fig.add_argument('--mc','--markercolor', dest='markercolor', default='orange', help='marker color')
     fig.add_argument('--ms','--markersize', dest='markersize', type=int, default=16, help='marker size in points')
+    fig.add_argument('--every-year', dest='every_year', type=int, default=1, help='number of years per major tick on x-axis')
 
     fig.add_argument('--dpi', dest='fig_dpi', type=int, default=150,\
                      help='DPI - dot per inch - for display/write')
@@ -239,7 +240,7 @@ def main(argv):
 
     figName = 'BperpHistory'+inps.fig_ext
     if inps.save_fig:
-        fig.savefig(figName,bbox_inches='tight')
+        fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
         print 'save figure to '+figName
 
     # Fig 2 - Coherence Matrix
@@ -254,7 +255,7 @@ def main(argv):
                                         date12_list_drop, plot_dict=vars(inps))
 
         if inps.save_fig:
-            fig.savefig(figName, bbox_inches='tight', dpi=150)
+            fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print 'save figure to '+figName
 
     # Fig 3 - Min/Max Coherence History
@@ -265,10 +266,10 @@ def main(argv):
         else:
             fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax = pnet.plot_coherence_history(ax, date12_list, inps.coherence_list)
+        ax = pnet.plot_coherence_history(ax, date12_list, inps.coherence_list, plot_dict=vars(inps))
 
         if inps.save_fig:
-            fig.savefig(figName, bbox_inches='tight')
+            fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print 'save figure to '+figName
 
     # Fig 4 - Interferogram Network
@@ -281,7 +282,7 @@ def main(argv):
 
     figName = 'Network'+inps.fig_ext
     if inps.save_fig:
-        fig.savefig(figName,bbox_inches='tight')
+        fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
         print 'save figure to '+figName
 
     if inps.save_list:
