@@ -212,6 +212,8 @@ class InsarDatasetController(InsarDatabaseController):
             print "Successfully uploaded " + fileName
         elif responseCode == 302:
             sys.stderr.write("Server redirected us... Please check username and password, and try again")
+        elif responseCode == 301:
+            sys.stderr.write("Server redirected us... Please check host address, and try again")
         else:
             sys.stderr.write("The server responded with code: " + str(responseCode))
 
@@ -228,6 +230,8 @@ class InsarDatasetController(InsarDatabaseController):
 
         if responseCode == 302:
             sys.stderr.write("Server redirected us... Please check username and password, and try again")
+        elif responseCode == 301:
+            sys.stderr.write("Server redirected us... Please check host address, and try again")
             
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
