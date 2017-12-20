@@ -362,9 +362,9 @@ pysar.geocode            = auto  #[yes / no], auto for yes
 pysar.geocode.resolution = auto  #[0.0-inf / filename], auto for 0.001 (~100 m), output resolution for ISCE processor
 
 ## 12.2 Export to other formats
-## To update UNAVCO file with new acquisitions, enabling update mode, a.k.a. put XXXXXXXX as endDate 
-## in filename if endDate < 1 year
-pysar.save.unavco  = auto   #[yes / update / no], auto for no, save timeseries to UNAVCO InSAR Archive format
+pysar.save.unavco         = auto   #[yes / no], auto for no, save timeseries to UNAVCO InSAR Archive format
+pysar.save.unavco.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
+pysar.save.unavco.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
 pysar.save.kml     = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 pysar.save.geotiff = auto   #[yes / no], auto for no, save geocoded velocity to Geotiff format [not implemented yet]
 
@@ -1147,7 +1147,7 @@ def main(argv):
     #############################################
     # Save to UNAVCO InSAR Archive format
     #############################################
-    if template['pysar.save.unavco'] in ['yes','update']:
+    if template['pysar.save.unavco'].lower() in ['yes']:
         print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
         if 'Y_FIRST' not in atr.keys() and not inps.lookup_file:
             warnings.warn('Dataset is in radar coordinates without lookup table file.'+\
@@ -1204,9 +1204,8 @@ def main(argv):
                 print 'No UNAVCO time-series file exists yet.'
             #inps.unavco_file = unavco.get_unavco_filename(inps.geo_timeseries_file)
             unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
-                        ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file
-            if template['pysar.save.unavco'] == 'update':
-                unavcoCmd += ' --update '
+                        ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file+\
+                        ' --template '+inps.template_file
             print unavcoCmd
             if ut.update_file(inps.unavco_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
                                                  inps.geo_inc_angle_file, inps.dem_geo_file], check_readable=False):

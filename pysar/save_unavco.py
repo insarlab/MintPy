@@ -127,11 +127,11 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     #################################
     ##### Given manually
     try:    unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
-    except: pass
+    except: unavco_meta_dict['frame'] = 0
     try:    unavco_meta_dict['atmos_correct_method'] = pysar_meta_dict['atmos_correct_method']
     except: pass
     try:    unavco_meta_dict['post_processing_method'] = pysar_meta_dict['post_processing_method']
-    except: unavco_meta_dict['post_processing_method'] = 'PySAR'
+    except: unavco_meta_dict['post_processing_method'] = 'PYSAR'
     try:  unavco_meta_dict['processing_dem'] = pysar_meta_dict['processing_dem']
     except: pass
     try:  unavco_meta_dict['unwrap_method'] = pysar_meta_dict['unwrap_method']
@@ -189,28 +189,58 @@ def get_unavco_filename(timeseriesFile):
     DATE2 = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
     TBASE = "%04d"%(0)
     BPERP = "%05d"%(0)
-    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
+    #outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
+    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'.he5'
 
     return outName
+
+def read_template2inps(template_file, inps=None):
+    '''Read input template options into Namespace inps'''
+    if not inps:
+        inps = cmdLineParse()
+
+    print 'read options from template file: '+os.path.basename(template_file)
+    template = readfile.read_template(template_file)
+    key_list = template.keys()
+
+    # Coherence-based network modification
+    prefix = 'pysar.save.unavco.'
+
+    key = prefix+'update'
+    if key in key_list and template[key] == 'yes':
+        inps.update = True
+
+    key = prefix+'subset'
+    if key in key_list and template[key] == 'yes':
+        inps.subset = True
+
+    return inps
 
 
 ################################################################
 TEMPALTE='''
-pysar.save.unavco  = auto   #[yes / update / no], auto for no, save timeseries to UNAVCO InSAR Archive format
-                            #update for enabling update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year
+pysar.save.unavco         = auto   #[yes / no], auto for no, save timeseries to UNAVCO InSAR Archive format
+pysar.save.unavco.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
+pysar.save.unavco.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
 '''
 
 EXAMPLE='''example:
-  save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geo_incidenceAngle
-                 -d demGeo.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
+  save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geo_incidenceAngle.h5 -d demGeo.h5
+                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
+  save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geometryGeo.h5 -d geometryGeo.h5
+                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --update
+  save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geometryGeo.h5 -d geometryGeo.h5
+                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --subset
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Convert PySAR product into UNAVCO InSAR Archive format',\
+    parser = argparse.ArgumentParser(description='Convert PySAR product into UNAVCO InSAR Archive format\n'+\
+                                                 '\tonly support time-series for now.',\
                                      formatter_class=argparse.RawDescriptionHelpFormatter,\
                                      epilog=EXAMPLE)
 
     parser.add_argument('timeseries', default='timeseries.h5', help='Timeseries file')
+    parser.add_argument('--template','-t', dest='template_file', help='Template file')
 
     parser.add_argument('-i','--incidence_angle', default='incidence_angle.h5', help='Incidence angle file')
     parser.add_argument('-d','--dem', default='dem.h5', help='DEM file')
@@ -219,6 +249,8 @@ def cmdLineParse():
     parser.add_argument('-m','--mask', default='mask.h5',help='Mask file')
     parser.add_argument('--update', action='store_true',\
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
+    parser.add_argument('--subset', action='store_true',\
+                        help='Enable subset mode, a.k.a. put suffix _N31700_N32100_E130500_E131100')
 
     inps = parser.parse_args()
     return inps
@@ -227,11 +259,15 @@ def cmdLineParse():
 ################################################################
 def main(argv):
     inps = cmdLineParse()
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
 
     #print '\n**************** Output to UNAVCO **************'
     ##### Prepare Metadata
     pysar_meta_dict = readfile.read_attribute(inps.timeseries)
     k = pysar_meta_dict['FILE_TYPE']
+    length = int(pysar_meta_dict['FILE_LENGTH'])
+    width = int(pysar_meta_dict['WIDTH'])
     h5_timeseries = h5py.File(inps.timeseries,'r')
     dateList = sorted(h5_timeseries[k].keys())
     unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
@@ -241,23 +277,59 @@ def main(argv):
 
     meta_dict = pysar_meta_dict.copy()
     meta_dict.update(unavco_meta_dict)
+    print '-----------------------------------------'
 
-    #### Open HDF5 File
+    ##### Open HDF5 File
+    #####Get output filename
     SAT = meta_dict['mission']
     SW  = meta_dict['beam_mode']    # should be like FB08 for ALOS, need to find out, Yunjun, 2016-12-26
     RELORB = "%03d"%(int(meta_dict['relative_orbit']))
-    FRAME  = "%04d"%(int(meta_dict['frame']))
+
+    ##Frist and/or Last Frame
+    frame1 = int(meta_dict['frame'])
+    key = 'first_frame'
+    if key in meta_dict.keys():
+        frame1 = int(meta_dict[key])
+    FRAME  = "%04d"%(frame1)
+    key = 'last_frame'
+    if key in meta_dict.keys():
+        frame2 = int(meta_dict[key])
+        if frame2 != frame1:
+            FRAME += "_%04d"%(frame2)
+
     TBASE = "%04d"%(0)
     BPERP = "%05d"%(0)
     DATE1 = dt.datetime.strptime(meta_dict['first_date'],'%Y-%m-%d').strftime('%Y%m%d')
-    end_date = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d')
-    if inps.update and (dt.datetime.utcnow() - end_date) < dt.timedelta(days=365):
+    DATE2 = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
+    #end_date = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d')
+    #if inps.update and (dt.datetime.utcnow() - end_date) < dt.timedelta(days=365):
+    if inps.update:
+        print 'Update mode is enabled, put endDate as XXXXXXXX.'
         DATE2 = 'XXXXXXXX'
-    else:
-        DATE2 = end_date.strftime('%Y%m%d')
-    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
 
-    print '-----------------------------------------'
+    #outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
+    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
+
+    if inps.subset:
+        print 'Subset mode is enabled, put subset range info in output filename.'
+        lat1 = float(meta_dict['Y_FIRST'])
+        lon0 = float(meta_dict['X_FIRST'])
+        lat0 = lat1 + float(meta_dict['Y_STEP']) * length
+        lon1 = lon0 + float(meta_dict['X_STEP']) * width
+
+        lat0Str = 'N%05d' % (round(lat0*1e3))
+        lat1Str = 'N%05d' % (round(lat1*1e3))
+        lon0Str = 'E%06d' % (round(lon0*1e3))
+        lon1Str = 'E%06d' % (round(lon1*1e3))
+        if lat0 < 0.0: lat0Str = 'S%05d' % (round(abs(lat0)*1e3))
+        if lat1 < 0.0: lat1Str = 'S%05d' % (round(abs(lat1)*1e3))
+        if lon0 < 0.0: lon0Str = 'W%06d' % (round(abs(lon0)*1e3))
+        if lon1 < 0.0: lon1Str = 'W%06d' % (round(abs(lon1)*1e3))
+
+        SUB = '_%s_%s_%s_%s' % (lat0Str, lat1Str, lon0Str, lon1Str)
+        outName = os.path.splitext(outName)[0] + SUB + os.path.splitext(outName)[1]
+
+    ##### Open HDF5 File
     print 'writing >>> '+outName
     f = h5py.File(outName,'w')
     hdfeos = f.create_group('HDFEOS')
@@ -288,7 +360,7 @@ def main(argv):
     ##### Write Incidence_Angle
     if os.path.isfile(inps.incidence_angle):
         print 'reading file: '+inps.incidence_angle
-        inc_angle, inc_angle_meta = readfile.read(inps.incidence_angle)
+        inc_angle, inc_angle_meta = readfile.read(inps.incidence_angle, epoch='incidenceAngle')
         dset = group.create_dataset('incidence_angle', data=inc_angle, compression='gzip')
         dset.attrs['Title'] = 'Incidence angle'
         dset.attrs['MissingValue'] = FLOAT_ZERO
@@ -298,7 +370,7 @@ def main(argv):
     ##### Write DEM
     if os.path.isfile(inps.dem):
         print 'reading file: '+inps.dem
-        dem, dem_meta = readfile.read(inps.dem)
+        dem, dem_meta = readfile.read(inps.dem, epoch='height')
         dset = group.create_dataset('dem', data=dem, compression='gzip')
         dset.attrs['Title'] = 'Digital elevatino model'
         dset.attrs['MissingValue'] = INT_ZERO
@@ -318,7 +390,7 @@ def main(argv):
     ##### Write Mask
     if os.path.isfile(inps.mask):
         print 'reading file: '+inps.mask
-        mask, mask_meta = readfile.read(inps.mask)
+        mask, mask_meta = readfile.read(inps.mask, epoch='mask')
         dset = group.create_dataset('mask', data=mask, compression='gzip')
         dset.attrs['Title'] = 'Mask'
         dset.attrs['MissingValue'] = INT_ZERO
