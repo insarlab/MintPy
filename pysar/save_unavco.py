@@ -97,7 +97,8 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
 
     ## beam_mode/swath
     unavco_meta_dict['beam_mode']  = pysar_meta_dict['beam_mode']
-    unavco_meta_dict['beam_swath'] = pysar_meta_dict['beam_swath']
+    try:    unavco_meta_dict['beam_swath'] = pysar_meta_dict['beam_swath']
+    except: unavco_meta_dict['beam_swath'] = 0
 
     ## relative_orbit, or track number
     #atr_dict['relative_orbit'] = int(re.match(r'(\w+)T([0-9+])',atr['PROJECT_NAME']).groups()[1])
@@ -226,11 +227,11 @@ pysar.save.unavco.subset  = auto   #[yes / no], auto for no, put subset range in
 
 EXAMPLE='''example:
   save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geo_incidenceAngle.h5 -d demGeo.h5
-                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
+                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --template pysarApp_template.txt
   save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geometryGeo.h5 -d geometryGeo.h5
-                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --update
+                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --template pysarApp_template.txt --update
   save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geometryGeo.h5 -d geometryGeo.h5
-                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --subset
+                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --template pysarApp_template.txt --subset
 '''
 
 def cmdLineParse():
