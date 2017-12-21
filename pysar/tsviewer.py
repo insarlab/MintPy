@@ -661,257 +661,41 @@ def plot_timeseries_event(event):
 
 
 def main(argv):
-    global tims, inps, img, mask, d_v, d_ts, ax_v, fig_ts, fig_v, ax_ts, tslider, h5, k, dateList, atr, ullat, ullon, lat_step, lon_step, width, length
+    global fig_v, ax_v, inps, ax_ts, fig_ts
 
-
-    #######Actual code.
     inps = cmdLineParse(argv)
 
-    # Time Series Info
-    atr = readfile.read_attribute(inps.timeseries_file)
-    k = atr['FILE_TYPE']
-    print('input file is ' + k + ': ' + inps.timeseries_file)
-    if not k == 'timeseries':
-        raise ValueError('Only timeseries file is supported!')
+    setup_plot()
 
-    h5 = h5py.File(inps.timeseries_file, 'r')
-    dateList = sorted(h5[k].keys())
-    date_num = len(dateList)
-    inps.dates, tims = ptime.date_list2vector(dateList)
-
-    # Read exclude dates
-    if inps.ex_date_list:
-        input_ex_date = list(inps.ex_date_list)
-        inps.ex_date_list = []
-        if input_ex_date:
-            for ex_date in input_ex_date:
-                if os.path.isfile(ex_date):
-                    ex_date = ptime.read_date_list(ex_date)
-                else:
-                    ex_date = [ptime.yyyymmdd(ex_date)]
-                inps.ex_date_list += list(set(ex_date) - set(inps.ex_date_list))
-            # delete dates not existed in input file
-            inps.ex_date_list = sorted(list(set(inps.ex_date_list).intersection(dateList)))
-            inps.ex_dates = ptime.date_list2vector(inps.ex_date_list)[0]
-            inps.ex_idx_list = sorted([dateList.index(i) for i in inps.ex_date_list])
-            print('exclude date:' + str(inps.ex_date_list))
-
-    ## Zero displacement for 1st acquisition
-    if inps.zero_first:
-        if inps.ex_date_list:
-            inps.zero_idx = min(list(set(range(date_num)) - set(inps.ex_idx_list)))
-        else:
-            inps.zero_idx = 0
-
-    # File Size
-    length = int(atr['FILE_LENGTH'])
-    width = int(atr['WIDTH'])
-    print('data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, length, 0, width))
-    try:
-        ullon = float(atr['X_FIRST'])
-        ullat = float(atr['Y_FIRST'])
-        lon_step = float(atr['X_STEP'])
-        lat_step = float(atr['Y_STEP'])
-        lrlon = ullon + width * lon_step
-        lrlat = ullat + length * lat_step
-        print('data size in [lat0,lat1,lon0,lon1]: [%.4f, %.4f, %.4f, %.4f]' % (lrlat, ullat, ullon, lrlon))
-    except:
-        pass
-
-    # Initial Pixel Coord
-    if inps.lalo and 'Y_FIRST' in list(atr.keys()):
-        y = int((inps.lalo[0] - ullat) / lat_step + 0.5)
-        x = int((inps.lalo[1] - ullon) / lon_step + 0.5)
-        inps.yx = [y, x]
-
-    if inps.ref_lalo and 'Y_FIRST' in list(atr.keys()):
-        y = int((inps.ref_lalo[0] - ullat) / lat_step + 0.5)
-        x = int((inps.ref_lalo[1] - ullon) / lon_step + 0.5)
-        inps.ref_yx = [y, x]
-
-    # Display Unit
-    if inps.disp_unit == 'cm':
-        inps.unit_fac = 100.0
-    elif inps.disp_unit == 'm':
-        inps.unit_fac = 1.0
-    elif inps.disp_unit == 'dm':
-        inps.unit_fac = 10.0
-    elif inps.disp_unit == 'mm':
-        inps.unit_fac = 1000.0
-    elif inps.disp_unit == 'km':
-        inps.unit_fac = 0.001
-    else:
-        raise ValueError('Un-recognized unit: ' + inps.disp_unit)
-    print('data    unit: m')
-    print('display unit: ' + inps.disp_unit)
-
-    # Flip up-down / left-right
-    if inps.auto_flip:
-        inps.flip_lr, inps.flip_ud = view.auto_flip_direction(atr)
-    else:
-        inps.flip_ud = False
-        inps.left_lr = False
-
-    # Mask file
-    if not inps.mask_file:
-        if 'X_FIRST' in list(atr.keys()):
-            file_list = ['geo_maskTempCoh.h5']
-        else:
-            file_list = ['maskTempCoh.h5', 'mask.h5']
-        try:
-            inps.mask_file = ut.get_file_list(file_list)[0]
-        except:
-            inps.mask_file = None
-    try:
-        mask = readfile.read(inps.mask_file)[0]
-        mask[mask != 0] = 1
-        print('load mask from file: ' + inps.mask_file)
-    except:
-        mask = None
-        print('No mask used.')
-
-    # Initial Map
-    d_v = h5[k].get(dateList[inps.epoch_num])[:] * inps.unit_fac
-    if inps.ref_date:
-        inps.ref_d_v = h5[k].get(inps.ref_date)[:] * inps.unit_fac
-        d_v -= inps.ref_d_v
-    if mask is not None:
-        d_v = mask_matrix(d_v, mask)
-    if inps.ref_yx:
-        d_v -= d_v[inps.ref_yx[0], inps.ref_yx[1]]
-    data_lim = [np.nanmin(d_v), np.nanmax(d_v)]
-
-    if not inps.ylim:
-        inps.ylim = data_lim
-    print('Initial data range: ' + str(data_lim))
-    print('Display data range: ' + str(inps.ylim))
-
-    ########## Fig 1 - Cumulative Displacement Map
+    ########## Main Figure- Cumulative Displacement Map
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
     fig_v = plt.figure('Cumulative Displacement')
 
-    # Axes 1
-    # ax_v = fig_v.add_subplot(111)
-    # ax_v.set_position([0.125,0.25,0.75,0.65])
-    # This works on OSX. Original worked on Linux.
-    # rect[left, bottom, width, height]
+    ######### Map Axis - Disaplcement Map Axis
     ax_v = fig_v.add_axes([0.125, 0.25, 0.75, 0.65])
-    if inps.dem_file:
-        dem = readfile.read(inps.dem_file)[0]
-        ax_v = view.plot_dem_yx(ax_v, dem)
-    img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim, interpolation='nearest')
 
-    # Reference Pixel
-    if inps.ref_yx:
-        d_v -= d_v[inps.ref_yx[0], inps.ref_yx[1]]
-        ax_v.plot(inps.ref_yx[1], inps.ref_yx[0], 'ks', ms=6)
-    else:
-        try:
-            ax_v.plot(int(atr['ref_x']), int(atr['ref_y']), 'ks', ms=6)
-        except:
-            pass
+    configure_plot()
 
-    # Initial Pixel
-    if inps.yx:
-        ax_v.plot(inps.yx[1], inps.yx[0], 'ro', markeredgecolor='black')
-
-    ax_v.set_xlim(0, np.shape(d_v)[1])
-    ax_v.set_ylim(np.shape(d_v)[0], 0)
-
-    # Status Bar
-
-    ax_v.format_coord = format_coord
-
-    # Title and Axis Label
-    ax_v.set_title('N = %d, Time = %s' % (inps.epoch_num, \
-                                          inps.dates[inps.epoch_num].strftime('%Y-%m-%d')))
-    if not 'Y_FIRST' in list(atr.keys()):
-        ax_v.set_xlabel('Range')
-        ax_v.set_ylabel('Azimuth')
-
-    # Flip axis
-    if inps.flip_lr:
-        ax_v.invert_xaxis()
-        print('flip map left and right')
-    if inps.flip_ud:
-        ax_v.invert_yaxis()
-        print('flip map up and down')
-
-    # Colorbar
-    cbar = fig_v.colorbar(img, orientation='vertical')
-    cbar.set_label('Displacement [%s]' % inps.disp_unit)
-
-    # Axes 2 - Time Slider
-    ax_time = fig_v.add_axes([0.125, 0.1, 0.6, 0.07], axisbg='lightgoldenrodyellow', yticks=[])
-
-    tslider = Slider(ax_time, 'Years', tims[0], tims[-1], valinit=tims[inps.epoch_num])
-    tslider.ax.bar(tims, np.ones(len(tims)), facecolor='black', width=0.01, ecolor=None)
-    tslider.ax.set_xticks(np.round(np.linspace(tims[0], tims[-1], num=5) * 100) / 100)
-
-    tslider.on_changed(time_slider_update)
-
-    ########## Fig 2 - Time Series Displacement - Point
+    ########## Plot Axes - Time Series Displacement - Points
     fig_ts = plt.figure('Time series - point', figsize=inps.fig_size)
     ax_ts = fig_ts.add_subplot(111)
 
     # Read Error List
-    inps.error_ts = None
-    if inps.error_file:
-        error_fileContent = np.loadtxt(inps.error_file, dtype=str)
-        inps.error_ts = error_fileContent[:, 1].astype(np.float) * inps.unit_fac
-        if inps.ex_date_list:
-            e_ts = inps.error_ts[:]
-            inps.ex_error_ts = np.array([e_ts[i] for i in inps.ex_idx_list])
-            inps.error_ts = np.array([e_ts[i] for i in range(date_num) if i not in inps.ex_idx_list])
-
-    # Initial point time series plot
-    if inps.yx:
-        d_ts = update_timeseries(inps.yx[0], inps.yx[1])
-    else:
-        d_ts = np.zeros(len(tims))
-        ax_ts = plot_timeseries_scatter(ax_ts, d_ts, inps)
+    read_error_list()
+    # Plot Data from Initial Point on Map
+    plot_data_from_inital_point()
 
     ########## Output
-    if inps.save_fig and inps.yx:
-        print('save info for pixel ' + str(inps.yx))
-        if not inps.fig_base:
-            inps.fig_base = 'y%d_x%d' % (inps.yx[0], inps.yx[1])
+    save_output()
 
-        # TXT - point time series
-        outName = inps.fig_base + '_ts.txt'
-        header_info = 'timeseries_file=' + inps.timeseries_file
-        header_info += '\ny=%d, x=%d' % (inps.yx[0], inps.yx[1])
-        try:
-            lat = ullat + inps.yx[0] * lat_step
-            lon = ullon + inps.yx[1] * lon_step
-            header_info += '\nlat=%.6f, lon=%.6f' % (lat, lon)
-        except:
-            pass
-        if inps.ref_yx:
-            header_info += '\nreference pixel: y=%d, x=%d' % (inps.ref_yx[0], inps.ref_yx[1])
-        else:
-            header_info += '\nreference pixel: y=%s, x=%s' % (atr['ref_y'], atr['ref_x'])
-        header_info += '\nunit=m/yr'
-        np.savetxt(outName, list(zip(np.array(dateList), np.array(d_ts) / inps.unit_fac)), fmt='%s', \
-                   delimiter='    ', header=header_info)
-        print('save time series displacement in meter to ' + outName)
-
-        # Figure - point time series
-        outName = inps.fig_base + '_ts.pdf'
-        fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print('save time series plot to ' + outName)
-
-        # Figure - map
-        outName = inps.fig_base + '_' + dateList[inps.epoch_num] + '.png'
-        fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print('save map plot to ' + outName)
-
-    ########## Final linking of the canvas to the plots.
+    ########## MPL Connection Actions
     cid = fig_v.canvas.mpl_connect('button_press_event', plot_timeseries_event)
-    if inps.disp_fig:
-        plt.show()
+
+    display_figure()
+
+    ########## MPL Disconnect Actions
     fig_v.canvas.mpl_disconnect(cid)
 
 ###########################################################################################
