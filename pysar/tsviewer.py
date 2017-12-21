@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Slider, Button
 import scipy.stats as stats
 
 import _datetime as ptime
@@ -661,8 +661,31 @@ def plot_timeseries_event(event):
     d_ts = update_timeseries(ii, jj)
 
 
+# Displays second data plot to screen
+def show_second_plot(event):
+
+    global inps, p1_last_clicked_y, p1_last_clicked_x, second_plot_axes, p2_last_clicked_x, p2_last_clicked_y, \
+        second_plot_visible,  fig_v
+
+    second_plot_axes = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
+
+    fig_v.canvas.draw()
+
+
+# Hides second data plot from screen
+def hide_second_plot(event):
+    global second_plot_axes, fig_v
+
+    second_plot_axes.remove()
+
+    fig_v.canvas.draw()
+
+
+
+
+
 def main(argv):
-    global fig_v, ax_v, inps, ax_ts, fig_ts
+    global fig_v, ax_v, inps, ax_ts, fig_ts, second_plot_axes
 
     inps = cmdLineParse(argv)
 
@@ -682,11 +705,21 @@ def main(argv):
     ########## Plot Axes - Time Series Displacement - Points
     ax_ts = fig_v.add_axes([0.55, 0.62, 0.42, 0.3])
     second_plot_axes = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
+    second_plot_axes.remove()
 
     # Read Error List
     read_error_list()
     # Plot Data from Initial Point on Map
     plot_data_from_inital_point()
+
+    ######### Second Plot Axis Buttons - Show/Hide Axis and Data
+    ax_button_show = fig_v.add_axes([0.8, 0.03, 0.18, 0.045])
+    show_button = Button(ax_button_show, "Display Second Plot")
+    show_button.on_clicked(show_second_plot)
+
+    ax_button_hide = fig_v.add_axes([0.61, 0.03, 0.18, 0.045])
+    hide_button = Button(ax_button_hide, "Hide Second Plot")
+    hide_button.on_clicked(hide_second_plot)
 
     ########## Output
     save_output()
