@@ -21,14 +21,14 @@ import pysar._readfile as readfile
 
 ############################################################################
 def usage():
-    print '''usage:  temporal_derivative.py  timeseries_file 
+    print('''usage:  temporal_derivative.py  timeseries_file 
 
 Calculate the temporal derivative of time-series displacement.
   Useful to check time-dependent deformation.
 
 example:
   temporal_derivative.py  timeseries.h5 
-    '''
+    ''')
     return
 
 
@@ -46,7 +46,7 @@ def main(argv):
     width = int(atr['WIDTH'])
 
     ##### Read time-series
-    print "loading time series: " + timeseries_file
+    print("loading time series: " + timeseries_file)
     h5 = h5py.File(timeseries_file)
     date_list = sorted(h5[k].keys())
     date_num = len(date_list)
@@ -66,19 +66,19 @@ def main(argv):
     h5.close()
 
     ##### Calculate 1st and 2nd temporal derivatives
-    print "calculating temporal 1st derivative ... "
+    print("calculating temporal 1st derivative ... ")
     timeseries_1st = np.zeros((date_num-1,pixel_num),np.float32)
     for i in range(date_num-1):
         timeseries_1st[i][:] = timeseries[i+1][:] - timeseries[i][:]
 
-    print "calculating temporal 2nd derivative"
+    print("calculating temporal 2nd derivative")
     timeseries_2nd = np.zeros((date_num-2,pixel_num),np.float32)
     for i in range(date_num-2):
         timeseries_2nd[i][:] = timeseries_1st[i+1][:] - timeseries_1st[i][:]
 
     ##### Write 1st and 2nd temporal derivatives
     outfile1 = os.path.splitext(timeseries_file)[0]+'_1stDerivative.h5'
-    print 'writing >>> '+outfile1
+    print('writing >>> '+outfile1)
     h5out = h5py.File(outfile1, 'w')
     group = h5out.create_group(k)
 
@@ -87,13 +87,13 @@ def main(argv):
         date = date_list[i+1]
         dset = group.create_dataset(date, data=np.reshape(timeseries_1st[i][:],[length,width]), compression='gzip')
         prog_bar.update(i+1, suffix=date)
-    for key,value in atr.iteritems():
+    for key,value in atr.items():
         group.attrs[key] = value
     prog_bar.close()
     h5out.close()
 
     outfile2 = os.path.splitext(timeseries_file)[0]+'_2ndDerivative.h5'
-    print 'writing >>> '+outfile2
+    print('writing >>> '+outfile2)
     h5out = h5py.File(outfile2, 'w')
     group = h5out.create_group(k)
 
@@ -102,12 +102,12 @@ def main(argv):
         date = date_list[i+2]
         dset = group.create_dataset(date, data=np.reshape(timeseries_2nd[i][:],[length,width]), compression='gzip')
         prog_bar.update(i+1, suffix=date)
-    for key,value in atr.iteritems():
+    for key,value in atr.items():
         group.attrs[key] = value
     prog_bar.close()
     h5out.close()
 
-    print 'Done.'
+    print('Done.')
     return outfile1, outfile2
 
 

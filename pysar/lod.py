@@ -30,13 +30,13 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 def correct_lod_file(File, outFile=None):
     # Check Sensor Type
-    print 'input file: '+File
+    print('input file: '+File)
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     platform = atr['PLATFORM']
-    print 'platform: '+platform
+    print('platform: '+platform)
     if not platform.lower() in ['env','envisat']:
-        print 'No need to correct LOD for '+platform
+        print('No need to correct LOD for '+platform)
         sys.exit(1)
 
     # Output Filename
@@ -66,11 +66,11 @@ def correct_lod_file(File, outFile=None):
         group = h5out.create_group(k)
 
         if k in ['interferograms','wrapped']:
-            print 'number of interferograms: '+str(len(epochList))
+            print('number of interferograms: '+str(len(epochList)))
             wvl = float(atr['WAVELENGTH'])
             Ramp *= -4*np.pi/wvl
             for epoch in epochList:
-                print epoch
+                print(epoch)
                 data = h5[k][epoch].get(epoch)[:]
                 atr = h5[k][epoch].attrs
                 
@@ -81,24 +81,24 @@ def correct_lod_file(File, outFile=None):
                  
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data, compression='gzip')
-                for key, value in atr.iteritems():
+                for key, value in atr.items():
                     gg.attrs[key] = value
 
         elif k == 'timeseries':
-            print 'number of acquisitions: '+str(len(epochList))
+            print('number of acquisitions: '+str(len(epochList)))
             tbase = [float(dy)/365.25 for dy in ptime.date_list2tbase(epochList)[0]]
             for i in range(len(epochList)):
                 epoch = epochList[i]
-                print epoch
+                print(epoch)
                 data = h5[k].get(epoch)[:]
                 
                 data -= Ramp*tbase[i]
                 
                 dset = group.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in atr.iteritems():
+            for key, value in atr.items():
                 group.attrs[key] = value
         else:
-            print 'No need to correct for LOD for '+k+' file'
+            print('No need to correct for LOD for '+k+' file')
             sys.exit(1)
 
         h5.close()
@@ -113,7 +113,7 @@ def correct_lod_file(File, outFile=None):
 
 
 def usage():
-    print '''usage: lod.py file_radarCoord [out_name]
+    print('''usage: lod.py file_radarCoord [out_name]
 
 Local Oscilator Drift correction of Envisat ASAR instrument with an empirical model.
 
@@ -126,7 +126,7 @@ example:
   lod.py timeseries.h5
   lod.py timeseries.h5 timeseries_LODcor.h5
   lod.py Seeded_unwrapIfgram.h5
-    '''
+    ''')
     return
 
 
@@ -142,7 +142,7 @@ def main(argv):
     #print '\n***************** Correct Local Oscilator Drift *******************'    
     outFile = correct_lod_file(File, outName)
     
-    print 'Done.'
+    print('Done.')
 
 #########################################################################################
 if __name__ == '__main__':

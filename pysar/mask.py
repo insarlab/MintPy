@@ -43,14 +43,14 @@ def update_mask(mask, inps_dict=None):
     if inps_dict['subset_x']:
         mask[:,0:inps_dict['subset_x'][0]] = 0
         mask[:,inps_dict['subset_x'][1]:] = 0
-        print 'mask out area not in x: '+str(inps_dict['subset_x'])
+        print('mask out area not in x: '+str(inps_dict['subset_x']))
     if inps_dict['subset_y']:
         mask[0:inps_dict['subset_y'][0],:] = 0
         mask[inps_dict['subset_y'][1]:,:] = 0
-        print 'mask out area not in y: '+str(inps_dict['subset_y'])
+        print('mask out area not in y: '+str(inps_dict['subset_y']))
     if inps_dict['thr']:
         mask[mask<inps_dict['thr']] = 0
-        print 'mask out pixels < '+str(inps_dict['thr'])+' in mask file'
+        print('mask out pixels < '+str(inps_dict['thr'])+' in mask file')
     return mask
 
 
@@ -68,13 +68,13 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
     
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    print 'masking '+k+' file: '+File+' ...'
+    print('masking '+k+' file: '+File+' ...')
 
     # Read maskFile
     atrm = readfile.read_attribute(maskFile)
     km = atrm['FILE_TYPE']
     if km not in multi_group_hdf5_file+multi_dataset_hdf5_file:
-        print 'reading mask file: '+maskFile
+        print('reading mask file: '+maskFile)
         mask = readfile.read(maskFile)[0]
         if inps_dict:
             mask = update_mask(mask, inps_dict)
@@ -87,23 +87,23 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
         epochList = sorted(h5file[k].keys())
 
         h5out = h5py.File(outFile,'w')
-        print 'writing >>> '+outFile
+        print('writing >>> '+outFile)
 
     ##### Multiple Dataset File
     if k == 'timeseries':
-        print 'number of acquisitions: '+str(len(epochList))
+        print('number of acquisitions: '+str(len(epochList)))
         group = h5out.create_group(k)
         for d in epochList:
-            print d
+            print(d)
             unw = h5file[k].get(d)[:]
 
             unw = mask_matrix(unw,mask)
 
             dset = group.create_dataset(d, data=unw, compression='gzip')
-        for key,value in atr.iteritems():   group.attrs[key] = value
+        for key,value in atr.items():   group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
-        print 'number of interferograms: '+str(len(epochList))
+        print('number of interferograms: '+str(len(epochList)))
         gg = h5out.create_group(k)
         
         # Mask multi group file with multi group coherence file
@@ -116,12 +116,12 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
         
         for i in range(len(epochList)):
             igram = epochList[i]
-            print igram
+            print(igram)
             unw = h5file[k][igram].get(igram)[:]
             
             if km == 'coherence':
                 coh = cohList[i]
-                print coh
+                print(coh)
                 mask = h5mask[km][coh].get(coh)[:]
                 if not inps_dict:
                     mask = update_mask(mask, inps_dict)                
@@ -130,14 +130,14 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
 
             group = gg.create_group(igram)
             dset = group.create_dataset(igram, data=unw, compression='gzip')
-            for key, value in h5file[k][igram].attrs.iteritems():
+            for key, value in h5file[k][igram].attrs.items():
                 group.attrs[key] = value
 
     ##### Single Dataset File
     else:
         unw,atr = readfile.read(File)
         unw     = mask_matrix(unw,mask)
-        print 'writing >>> '+outFile
+        print('writing >>> '+outFile)
         writefile.write(unw,atr,outFile)
 
     try: h5file.close()
@@ -182,8 +182,8 @@ def main(argv):
     inps = cmdLineParse()
     #print '\n****************** mask *********************'
     inps.file = ut.get_file_list(inps.file)
-    print 'number of file to mask: '+str(len(inps.file))
-    print inps.file
+    print('number of file to mask: '+str(len(inps.file)))
+    print(inps.file)
 
     # check outfile and parallel option
     if inps.parallel:
@@ -199,10 +199,10 @@ def main(argv):
         Parallel(n_jobs=num_cores)(delayed(mask_file)(File, inps.mask_file, inps_dict=vars(inps)) for File in inps.file)
     else:
         for File in inps.file:
-            print '-------------------------------------------'
+            print('-------------------------------------------')
             mask_file(File, inps.mask_file, inps_dict=vars(inps))
 
-    print 'Done.'
+    print('Done.')
     return
 
 

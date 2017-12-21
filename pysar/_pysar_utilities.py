@@ -100,15 +100,15 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             return False
     else:
         atr = readfile.read_attribute(ifgram_file)
-        if print_msg:  print 'Unwrapped interferograms: '+ifgram_file
+        if print_msg:  print('Unwrapped interferograms: '+ifgram_file)
 
-    if print_msg:  print 'Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR']
-    if 'X_FIRST' in atr.keys():
+    if print_msg:  print('Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR'])
+    if 'X_FIRST' in list(atr.keys()):
         geocoded = True
-        if print_msg:  print 'Loaded dataset are in geo coordinates'
+        if print_msg:  print('Loaded dataset are in geo coordinates')
     else:
         geocoded = False
-        if print_msg:  print 'Loaded dataset are in radar coordinates'
+        if print_msg:  print('Loaded dataset are in radar coordinates')
 
     # Recommended files (None if not found)
     # 2. Spatial coherence for each interferogram
@@ -119,10 +119,10 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     coherence_file = is_file_exist(file_list, abspath=True)
     if print_msg:
         if coherence_file:
-            print 'Spatial       coherences: '+coherence_file
+            print('Spatial       coherences: '+coherence_file)
         else:
-            print 'WARNING: No coherences file found. Cannot use coherence-based network modification without it.'
-            print "It's supposed to be like: "+str(file_list)
+            print('WARNING: No coherences file found. Cannot use coherence-based network modification without it.')
+            print("It's supposed to be like: "+str(file_list))
 
     # 3. DEM in radar coord
     file_list = [work_dir+'/demRadar.h5',\
@@ -130,10 +130,10 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     dem_radar_file = is_file_exist(file_list, abspath=True)
     if print_msg:
         if dem_radar_file:
-            print 'DEM in radar coordinates: '+dem_radar_file
+            print('DEM in radar coordinates: '+dem_radar_file)
         elif not geocoded:
-            print 'WARNING: No DEM file in radar coord found.'
-            print "It's supposed to be like: "+str(file_list)
+            print('WARNING: No DEM file in radar coord found.')
+            print("It's supposed to be like: "+str(file_list))
 
     # 4. DEM in geo coord
     file_list = [work_dir+'/demGeo_tight.h5',\
@@ -142,10 +142,10 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     dem_geo_file = is_file_exist(file_list, abspath=True)
     if print_msg:
         if dem_geo_file:
-            print 'DEM in geo   coordinates: '+dem_geo_file
+            print('DEM in geo   coordinates: '+dem_geo_file)
         else:
-            print 'WARNING: No DEM file in geo coord found.'
-            print "It's supposed to be like: "+str(file_list)
+            print('WARNING: No DEM file in geo coord found.')
+            print("It's supposed to be like: "+str(file_list))
 
     # 5. Transform file for geocoding
     if atr['INSAR_PROCESSOR'] == 'roipac':
@@ -157,10 +157,10 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     trans_file = is_file_exist(file_list, abspath=True)
     if print_msg:
         if trans_file:
-            print 'Mapping transform   file: '+trans_file
+            print('Mapping transform   file: '+trans_file)
         elif not geocoded:
-            print 'No transform file found! Can not geocode without it!'
-            print "It's supposed to be like: "+str(file_list)
+            print('No transform file found! Can not geocode without it!')
+            print("It's supposed to be like: "+str(file_list))
 
     ##### Update namespace inps if inputed
     load_complete = True
@@ -169,9 +169,9 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     if not geocoded and None in [dem_radar_file, trans_file]:
         load_complete = False
     if load_complete and print_msg:
-        print '-----------------------------------------------------------------------------------'
-        print 'All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.'
-        print '-----------------------------------------------------------------------------------'
+        print('-----------------------------------------------------------------------------------')
+        print('All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
+        print('-----------------------------------------------------------------------------------')
 
     if inps:
         inps.ifgram_file    = ifgram_file
@@ -253,10 +253,10 @@ def circle_index(atr,circle_par):
             c_y = np.rint((c_lat-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
             c_x = np.rint((c_lon-float(atr['X_FIRST']))/float(atr['X_STEP']))
         except:
-            print '\nERROR: Unrecognized circle index format: '+circle_par
-            print 'Supported format:'
-            print '--circle 200,300,20            for radar coord input'
-            print '--circle 31.0214,130.5699,20   for geo   coord input\n'
+            print('\nERROR: Unrecognized circle index format: '+circle_par)
+            print('Supported format:')
+            print('--circle 200,300,20            for radar coord input')
+            print('--circle 31.0214,130.5699,20   for geo   coord input\n')
             return 0
 
     y,x = np.ogrid[-c_y:length-c_y, -c_x:width-c_x]
@@ -267,16 +267,16 @@ def circle_index(atr,circle_par):
 
 def update_template_file(template_file, extra_dict):
     '''Update option value in template_file with value from input extra_dict'''
-    extra_key_list = extra_dict.keys()
+    extra_key_list = list(extra_dict.keys())
 
     ## Compare and skip updating template_file is no new option value found.
     update = False
     orig_dict = readfile.read_template(template_file)
-    for key, value in orig_dict.iteritems():
+    for key, value in orig_dict.items():
         if key in extra_key_list and extra_dict[key] != value:
             update = True
     if not update:
-        print 'No new option value found, skip updating '+template_file
+        print('No new option value found, skip updating '+template_file)
         return template_file
 
     ## Update template_file with new value from extra_dict
@@ -291,7 +291,7 @@ def update_template_file(template_file, extra_dict):
             value = str.replace(c[1],'\n','').split("#")[0].strip()
             if key in extra_key_list and extra_dict[key] != value:
                 line = line.replace(value, extra_dict[key], 1)
-                print '    '+key+': '+value+' --> '+extra_dict[key]
+                print('    '+key+': '+value+' --> '+extra_dict[key])
         f_tmp.write(line+'\n')
     f_orig.close()
     f_tmp.close()
@@ -318,7 +318,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     '''
     # Intermediate files name
     if ramp_type == 'no':
-        print 'No ramp removal'
+        print('No ramp removal')
         deramp_file = timeseries_resid_file
     else:
         deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_'+ramp_type+'.h5'
@@ -332,13 +332,13 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
-                print 'removing a '+ramp_type+' ramp from file: '+timeseries_resid_file
+                print('removing a '+ramp_type+' ramp from file: '+timeseries_resid_file)
                 deramp_file = rm.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
-        print 'Calculating residual standard deviation for each epoch from file: '+deramp_file
+        print('Calculating residual standard deviation for each epoch from file: '+deramp_file)
         std_file = timeseries_std(deramp_file, mask_file, std_file)
 
     # Read residual std text file
-    print 'read timeseries RSD from file: '+std_file
+    print('read timeseries RSD from file: '+std_file)
     std_fileContent = np.loadtxt(std_file, dtype=str)
     std_list = std_fileContent[:,1].astype(np.float).tolist()
     date_list = list(std_fileContent[:,0]) 
@@ -352,10 +352,10 @@ def timeseries_std(inFile, maskFile='maskTempCoh.h5', outFile=None):
     '''
     try:
         mask = readfile.read(maskFile)[0]
-        print 'read mask from file: '+maskFile
+        print('read mask from file: '+maskFile)
     except:
         maskFile = None
-        print 'no mask input, use all pixels'
+        print('no mask input, use all pixels')
 
     if not outFile:
         outFile = os.path.splitext(inFile)[0]+'_std.txt'
@@ -382,10 +382,10 @@ def timeseries_std(inFile, maskFile='maskTempCoh.h5', outFile=None):
         std = np.nanstd(data)
         msg = '%s    %.4f' % (date, std)
         f.write(msg+'\n')
-        print msg
+        print(msg)
     h5.close()
     f.close()
-    print 'write to '+outFile
+    print('write to '+outFile)
 
     return outFile
 
@@ -405,7 +405,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     '''
     # Intermediate files name
     if ramp_type == 'no':
-        print 'No ramp removal'
+        print('No ramp removal')
         deramp_file = timeseries_resid_file
     else:
         deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_'+ramp_type+'.h5'
@@ -419,13 +419,13 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
-                print 'removing a '+ramp_type+' ramp from file: '+timeseries_resid_file
+                print('removing a '+ramp_type+' ramp from file: '+timeseries_resid_file)
                 deramp_file = rm.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
-        print 'Calculating residual RMS for each epoch from file: '+deramp_file
+        print('Calculating residual RMS for each epoch from file: '+deramp_file)
         rms_file = timeseries_rms(deramp_file, mask_file, rms_file)
 
     # Read residual RMS text file
-    print 'read timeseries residual RMS from file: '+rms_file
+    print('read timeseries residual RMS from file: '+rms_file)
     rms_fileContent = np.loadtxt(rms_file, dtype=str)
     rms_list = rms_fileContent[:,1].astype(np.float).tolist()
     date_list = list(rms_fileContent[:,0]) 
@@ -439,10 +439,10 @@ def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None, dimension=2)
     '''
     try:
         mask = readfile.read(maskFile)[0]
-        print 'read mask from file: '+maskFile
+        print('read mask from file: '+maskFile)
     except:
         maskFile = None
-        print 'no mask input, use all pixels'
+        print('no mask input, use all pixels')
 
     if not outFile:
         outFile = os.path.splitext(inFile)[0]+'_rms.txt'
@@ -470,10 +470,10 @@ def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None, dimension=2)
             rms = np.sqrt(np.nanmean(np.square(data)))
             msg = '%s    %.4f' % (date, rms)
             f.write(msg+'\n')
-            print msg
+            print(msg)
         h5.close()
         f.close()
-        print 'write to '+outFile
+        print('write to '+outFile)
         return outFile
 
     elif dimension == 3:
@@ -500,10 +500,10 @@ def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
     '''
     try:
         mask = readfile.read(maskFile)[0]
-        print 'read mask from file: '+maskFile
+        print('read mask from file: '+maskFile)
     except:
         maskFile = None
-        print 'no mask input, use all pixels'
+        print('no mask input, use all pixels')
 
     if not outFile:
         outFile = os.path.splitext(inFile)[0]+'_coh.txt'
@@ -529,10 +529,10 @@ def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
         coh = np.absolute(np.nanmean(data))
         msg = '%s    %.4f' % (date, coh)
         f.write(msg+'\n')
-        print msg
+        print(msg)
     h5.close()
     f.close()
-    print 'write to '+outFile
+    print('write to '+outFile)
 
     return outFile
 
@@ -584,8 +584,8 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
         try:
             atr = readfile.read_attribute(outFile)
         except:
-            print outFile+' exists, but can not read, remove it.'
-            rmCmd = 'rm '+outFile;  print rmCmd;  os.system(rmCmd)
+            print(outFile+' exists, but can not read, remove it.')
+            rmCmd = 'rm '+outFile;  print(rmCmd);  os.system(rmCmd)
             return True
 
     if inFile:
@@ -596,17 +596,17 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
             if any(os.path.getmtime(outFile) < os.path.getmtime(File) for File in inFile):
                 return True
             else:
-                print outFile+' exists and is newer than '+str(inFile)+', skip updating.'
+                print(outFile+' exists and is newer than '+str(inFile)+', skip updating.')
                 return False
 
     return False
 
 def update_attribute_or_not(atr_new, atr_orig, update=False):
     '''Compare new attributes with exsiting ones'''
-    for key in atr_new.keys():
+    for key in list(atr_new.keys()):
         value = str(atr_new[key])
-        if (key in atr_orig.keys() and value == str(atr_orig[key]) or\
-            key not in atr_orig.keys() and value == 'None'):
+        if (key in list(atr_orig.keys()) and value == str(atr_orig[key]) or\
+            key not in list(atr_orig.keys()) and value == 'None'):
             next
         else:
             update = True
@@ -631,7 +631,7 @@ def add_attribute(File, atr_new=dict()):
         update = update_attribute_or_not(atr_new, atr, update)
     elif k in multi_group_hdf5_file:
         h5 = h5py.File(File, 'r')
-        epochList = h5[k].keys()
+        epochList = list(h5[k].keys())
         for epoch in epochList:
             atr = h5[k][epoch].attrs
             update = update_attribute_or_not(atr_new, atr, update)
@@ -640,13 +640,13 @@ def add_attribute(File, atr_new=dict()):
         raise Exception('Un-recognized file type: '+k)
 
     if not update:
-        print 'All updated (removed) attributes already exists (do not exists) and have the same value, skip update.'
+        print('All updated (removed) attributes already exists (do not exists) and have the same value, skip update.')
         return File
 
     # Update attributes
     h5 = h5py.File(File,'r+')
     if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
-        for key, value in atr_new.iteritems():
+        for key, value in atr_new.items():
             # delete the item is new value is None
             if value == 'None':
                 try: h5[k].attrs.pop(key)
@@ -654,9 +654,9 @@ def add_attribute(File, atr_new=dict()):
             else:
                 h5[k].attrs[key] = value
     elif k in multi_group_hdf5_file:
-        epochList = h5[k].keys()
+        epochList = list(h5[k].keys())
         for epoch in epochList:
-            for key, value in atr_new.iteritems():
+            for key, value in atr_new.items():
                 if value == 'None':
                     try: h5[k][epoch].attrs.pop(key)
                     except: pass
@@ -673,15 +673,15 @@ def check_parallel(file_num=1):
     # Disable parallel option for one input file
     if file_num <= 1:
         enable_parallel = False
-        print 'parallel processing is diabled for one input file'
+        print('parallel processing is diabled for one input file')
         return 1, enable_parallel, None, None
 
     # Check required python module
     try:
         from joblib import Parallel, delayed
     except:
-        print 'Can not import joblib'
-        print 'parallel is disabled.'
+        print('Can not import joblib')
+        print('parallel is disabled.')
         enable_parallel = False
         return 1, enable_parallel, None, None
 
@@ -689,11 +689,11 @@ def check_parallel(file_num=1):
     num_cores = min(multiprocessing.cpu_count(), file_num, pysar.parallel_num)
     if num_cores <= 1:
         enable_parallel = False
-        print 'parallel processing is disabled because min of the following two numbers <= 1:'
-        print 'available cpu number of the computer: '+str(multiprocessing.cpu_count())
-        print 'pysar.__init__.py: parallel_num: '+str(pysar.parallel_num)
+        print('parallel processing is disabled because min of the following two numbers <= 1:')
+        print('available cpu number of the computer: '+str(multiprocessing.cpu_count()))
+        print('pysar.__init__.py: parallel_num: '+str(pysar.parallel_num))
     else:
-        print 'parallel processing using %d cores ...'%(num_cores)
+        print('parallel processing using %d cores ...'%(num_cores))
     
     try:
         return num_cores, enable_parallel, Parallel, delayed
@@ -716,9 +716,9 @@ def perp_baseline_timeseries(atr, dimension=1):
         pbase - np.array, with shape = [date_num, 1] or [date_num, length]
     '''
     # return constant value for geocoded input file
-    if 'Y_FIRST' in atr.keys() and dimension > 0:
+    if 'Y_FIRST' in list(atr.keys()) and dimension > 0:
         dimension = 0
-        print 'input file is geocoded, return constant P_BASELINE in azimuth direction within one interferogram'
+        print('input file is geocoded, return constant P_BASELINE in azimuth direction within one interferogram')
 
     length = int(atr['FILE_LENGTH'])
     pbase_list = [float(i) for i in atr['P_BASELINE_TIMESERIES'].split()]
@@ -734,8 +734,8 @@ def perp_baseline_timeseries(atr, dimension=1):
                 pbase[i,:] = np.linspace(pbase_top[i], pbase_bottom[i], num=length, endpoint='FALSE')
         except:
             dimension = 0
-            print 'Can not find P_BASELINE_TOP/BOTTOM_TIMESERIES in input attribute'
-            print 'return constant P_BASELINE in azimuth direction for each acquisition instead'
+            print('Can not find P_BASELINE_TOP/BOTTOM_TIMESERIES in input attribute')
+            print('return constant P_BASELINE in azimuth direction for each acquisition instead')
     return pbase
 
 
@@ -754,9 +754,9 @@ def range_distance(atr, dimension=2):
     Output: np.array (0, 1 or 2 D) - range distance between antenna and ground target in meters
     '''
     # return center value for geocoded input file
-    if 'Y_FIRST' in atr.keys() and dimension > 0:
+    if 'Y_FIRST' in list(atr.keys()) and dimension > 0:
         dimension = 0
-        print 'input file is geocoded, return center range distance for the whole area'
+        print('input file is geocoded, return center range distance for the whole area')
 
     near_range = float(atr['STARTING_RANGE'])
     dR = float(atr['RANGE_PIXEL_SIZE'])
@@ -765,12 +765,12 @@ def range_distance(atr, dimension=2):
     
     far_range = near_range + dR*width
     center_range = (far_range + near_range)/2.0
-    print 'center range : %.2f m' % (center_range)
+    print('center range : %.2f m' % (center_range))
     if dimension == 0:
         return np.array(center_range)
     
-    print 'near   range : %.2f m' % (near_range)
-    print 'far    range : %.2f m' % (far_range)
+    print('near   range : %.2f m' % (near_range))
+    print('far    range : %.2f m' % (far_range))
     range_x = np.linspace(near_range, far_range, num=width, endpoint='FALSE')
     if dimension == 1:
         return range_x
@@ -796,10 +796,10 @@ def incidence_angle(atr, dimension=2, print_msg=True):
     Output: 2D np.array - incidence angle in degree for each pixel
     '''
     # Return center value for geocoded input file
-    if 'Y_FIRST' in atr.keys() and dimension > 0:
+    if 'Y_FIRST' in list(atr.keys()) and dimension > 0:
         dimension = 0
         if print_msg:
-            print 'input file is geocoded, return center incident angle only'
+            print('input file is geocoded, return center incident angle only')
     
     ## Read Attributes
     near_range = float(atr['STARTING_RANGE'])
@@ -815,13 +815,13 @@ def incidence_angle(atr, dimension=2, print_msg=True):
     incidence_f = (np.pi - np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))) * 180.0/np.pi
     incidence_c = (incidence_f+incidence_n)/2.0
     if print_msg:
-        print 'center incidence angle : %.4f degree' % (incidence_c)
+        print('center incidence angle : %.4f degree' % (incidence_c))
     if dimension == 0:
         return np.array(incidence_c)
 
     if print_msg:
-        print 'near   incidence angle : %.4f degree' % (incidence_n)
-        print 'far    incidence angle : %.4f degree' % (incidence_f)
+        print('near   incidence angle : %.4f degree' % (incidence_n))
+        print('far    incidence angle : %.4f degree' % (incidence_f))
     incidence_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
     if dimension == 1:
         return incidence_x
@@ -862,22 +862,22 @@ def get_file_stack(File, maskFile=None):
     if os.path.isfile(stackFile):
         atrStack = readfile.read_attribute(stackFile)
         if atrStack['WIDTH'] == atr['WIDTH'] and atrStack['FILE_LENGTH'] == atr['FILE_LENGTH']:
-            print 'reading stack from existed file: '+stackFile
+            print('reading stack from existed file: '+stackFile)
             stack = readfile.read(stackFile)[0]
     # Calculate stack
     else:
-        print 'calculating stack of input file ...'
+        print('calculating stack of input file ...')
         stack = stacking(File)
         # Write stack file is input file is multi-dataset (large file size usually)
         if atr['FILE_TYPE'] in multi_group_hdf5_file+multi_dataset_hdf5_file:
             atrStack = atr.copy()
             atrStack['FILE_TYPE'] = 'mask'
-            print 'writing stack file >>> '+stackFile
+            print('writing stack file >>> '+stackFile)
             writefile.write(stack, atrStack, stackFile)
 
     # set masked out area into NaN
     if maskFile:
-        print 'read mask from file: '+maskFile
+        print('read mask from file: '+maskFile)
         mask = readfile.read(maskFile)[0]
         stack[mask==0] = np.nan
 
@@ -895,7 +895,7 @@ def check_drop_ifgram(h5, atr, ifgram_list, print_msg=True):
         ifgram_list_drop - list of string, group name with drop_ifgram = 'no'
     '''
     # Return all interferogram list if 'drop_ifgram' do not exist
-    if 'drop_ifgram' not in atr.keys():
+    if 'drop_ifgram' not in list(atr.keys()):
         return ifgram_list
 
     ifgram_list_out = list(ifgram_list)
@@ -905,7 +905,7 @@ def check_drop_ifgram(h5, atr, ifgram_list, print_msg=True):
             ifgram_list_out.remove(ifgram)
     
     if len(ifgram_list) > len(ifgram_list_out) and print_msg:
-        print "remove interferograms with 'drop_ifgram'='yes'"
+        print("remove interferograms with 'drop_ifgram'='yes'")
     return ifgram_list_out
 
 
@@ -931,7 +931,7 @@ def nonzero_mask(File, outFile='mask.h5'):
     prog_bar.close()
 
     atr['FILE_TYPE'] = 'mask'
-    print 'writing >>> '+outFile
+    print('writing >>> '+outFile)
     writefile.write(mask, atr, outFile)
     
     return outFile
@@ -969,7 +969,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     '''
     suffix='_spatialAverage.txt'
     if File.endswith(suffix):
-        print 'Input file is spatial average txt already, read it directly'
+        print('Input file is spatial average txt already, read it directly')
         txtFile = File
         txtContent = np.loadtxt(txtFile, dtype=str)
         mean_list = [float(i) for i in txtContent[:,1]]
@@ -991,7 +991,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         maskFile = None
         mask = None
     elif type(maskFile) is str:
-        print 'read mask from file: '+maskFile
+        print('read mask from file: '+maskFile)
         mask = readfile.read(maskFile)[0]
         mask = mask[box[1]:box[3],box[0]:box[2]]
     elif type(maskFile) is np.ndarray:
@@ -999,7 +999,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         mask = mask[box[1]:box[3],box[0]:box[2]]
         maskFile = 'np.ndarray matrix'
     else:
-        print 'Unsupported mask input format: '+str(type(maskFile))
+        print('Unsupported mask input format: '+str(type(maskFile)))
         return None, None
 
     # Read existing txt file only if 1) data file is older AND 2) same AOI
@@ -1028,7 +1028,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     except: pass
 
     if read_txt:
-        print txtFile+' already exists, read it directly'
+        print(txtFile+' already exists, read it directly')
         txtContent = np.loadtxt(txtFile, dtype=str)
         mean_list = [float(i) for i in txtContent[:,1]]
         date_list = [i for i in txtContent[:,0]]
@@ -1049,7 +1049,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
                 dset = h5file[k][epoch].get(epoch)
             elif k in multi_dataset_hdf5_file:
                 dset = h5file[k].get(epoch)
-            else:  print 'Unrecognized group type: '+k
+            else:  print('Unrecognized group type: '+k)
             
             data = dset[box[1]:box[3],box[0]:box[2]]
             if not mask is None:
@@ -1081,7 +1081,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
 
     # Write mean coherence list into text file
     if saveList:
-        print 'write average coherence in space into text file: '+txtFile
+        print('write average coherence in space into text file: '+txtFile)
         fl = open(txtFile, 'w')
         # Write comments
         fl.write(file_line)
@@ -1121,7 +1121,7 @@ def temporal_average(File, outFile=None):
             d = h5file[k][epoch].get(epoch)[:]
         elif k in ['timeseries']:
             d = h5file[k].get(epoch)[:]
-        else: print k+' type is not supported currently.'; sys.exit(1)
+        else: print(k+' type is not supported currently.'); sys.exit(1)
         dMean += d
         prog_bar.update(i+1)
     prog_bar.close()
@@ -1132,11 +1132,11 @@ def temporal_average(File, outFile=None):
     # Output
     if not outFile:
         outFile = os.path.splitext(File)[0]+'_tempAverage.h5'
-    print 'writing >>> '+outFile
+    print('writing >>> '+outFile)
     h5mean = h5py.File(outFile, 'w')
     group  = h5mean.create_group('mask')
     dset = group.create_dataset(os.path.basename('mask'), data=dMean, compression='gzip')
-    for key,value in atr.iteritems():
+    for key,value in atr.items():
         group.attrs[key] = value
     h5mean.close()
 
@@ -1158,11 +1158,11 @@ def get_file_list(fileList, abspath=False):
     if not fileList:
         return []
 
-    if isinstance(fileList, basestring):
+    if isinstance(fileList, str):
         fileList = [fileList]
 
     # Get rid of None element
-    fileList = filter(lambda x: x!=None, fileList)
+    fileList = [x for x in fileList if x!=None]
     fileListOut = []
     for i in range(len(fileList)):
         file0 = fileList[i]
@@ -1197,17 +1197,17 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
     # Update Input List
     fname_list_out = list(fname_list)
     if width_list.count(mode_width)!=len(width_list) or length_list.count(mode_length)!=len(length_list):
-        print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-        print 'WARNING: Some files may have the wrong dimensions!'
-        print 'All files should have the same size.'
-        print 'The width and length of the majority of files are: %s, %s' % (mode_width, mode_length)
-        print 'But the following files have different dimensions and thus will not be loaded:'
+        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+        print('WARNING: Some files may have the wrong dimensions!')
+        print('All files should have the same size.')
+        print('The width and length of the majority of files are: %s, %s' % (mode_width, mode_length))
+        print('But the following files have different dimensions and thus will not be loaded:')
         for i in range(len(fname_list)):
             if width_list[i] != mode_width or length_list[i] != mode_length:
-                print '%s    width: %s  length: %s' % (fname_list[i], width_list[i], length_list[i])
+                print('%s    width: %s  length: %s' % (fname_list[i], width_list[i], length_list[i]))
                 fname_list_out.remove(fname_list[i])
-        print '\nNumber of files left: '+str(len(fname_list_out))
-        print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+        print('\nNumber of files left: '+str(len(fname_list_out)))
+        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
     return fname_list_out, mode_width, mode_length
 
@@ -1224,16 +1224,16 @@ def mode (thelist):
         counts[item] = counts.get(item, 0) + 1
     maxcount = 0
     maxitem  = None
-    for k, v in counts.items():
+    for k, v in list(counts.items()):
         if v > maxcount:
             maxitem  = k
             maxcount = v
 
     if maxcount == 1:
-        print "All values only appear once"
+        print("All values only appear once")
         return None
-    elif counts.values().count(maxcount) > 1:
-        print "List has multiple modes"
+    elif list(counts.values()).count(maxcount) > 1:
+        print("List has multiple modes")
         return None
     else:
         return maxitem
@@ -1242,8 +1242,8 @@ def mode (thelist):
 ######################################################################################################
 def range_resolution(atr, print_msg=True):
     '''Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
-    if 'X_FIRST' in atr.keys():
-        print 'Input file is in geo coord, no range resolution info.'
+    if 'X_FIRST' in list(atr.keys()):
+        print('Input file is in geo coord, no range resolution info.')
         return
     inc_angle = incidence_angle(atr, 0, print_msg)
     rg_step = float(atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
@@ -1251,8 +1251,8 @@ def range_resolution(atr, print_msg=True):
 
 def azimuth_resolution(atr):
     '''Get azimuth resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
-    if 'X_FIRST' in atr.keys():
-        print 'Input file is in geo coord, no azimuth resolution info.'
+    if 'X_FIRST' in list(atr.keys()):
+        print('Input file is in geo coord, no azimuth resolution info.')
         return
     if atr['INSAR_PROCESSOR'] == 'roipac':
         Re = float(atr['EARTH_RADIUS'])
@@ -1283,7 +1283,7 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_msg=Tr
     if transFile:
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
-        print 'reading file: '+transFile
+        print('reading file: '+transFile)
         trans_rg, trans_atr = readfile.read(transFile, (), 'range')
         trans_az = readfile.read(transFile, (), 'azimuth')[0]
         lat_first = float(trans_atr['Y_FIRST'])
@@ -1321,11 +1321,11 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_msg=Tr
 
     ########## Simple conversion using 2D linear transformation, with 4 corners' lalo info
     elif atr_rdr:
-        print 'finding approximate radar coordinate with 2D linear transformation estimation.'
-        print '    using four corner lat/lon info from '+rdrFile+' file.'
+        print('finding approximate radar coordinate with 2D linear transformation estimation.')
+        print('    using four corner lat/lon info from '+rdrFile+' file.')
         # This method only works for whole frame/track, thus input file cannot be subsetted before.
-        if 'subset_x0' in atr_rdr.keys():
-            print 'WARNING: Cannot use subset file as input! No coordinate converted.'
+        if 'subset_x0' in list(atr_rdr.keys()):
+            print('WARNING: Cannot use subset file as input! No coordinate converted.')
             return None
 
         LAT_REF1=float(atr_rdr['LAT_REF1'])
@@ -1352,7 +1352,7 @@ def glob2radar(lat, lon, transFile='geomap*.trans', atr_rdr=dict(), print_msg=Tr
         res_mean = np.mean(np.abs(res),0)
         rg_resid = (res_mean[0]+0.5).astype(int)
         az_resid = (res_mean[1]+0.5).astype(int)
-        print 'Residul - rg: '+str(rg_resid)+', az: '+str(az_resid)
+        print('Residul - rg: '+str(rg_resid)+', az: '+str(az_resid))
     
         ### calculate radar coordinate of inputs
         N = len(lat)
@@ -1387,14 +1387,14 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True
     ## by searching pixels in trans file with value falling buffer lat/lon value
     if transFile:
         # if
-        if 'subset_x0' in atr_rdr.keys():
+        if 'subset_x0' in list(atr_rdr.keys()):
             rg += int(atr_rdr['subset_x0'])
             az += int(atr_rdr['subset_y0'])        
 
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
         if print_msg:
-            print 'reading file: '+transFile
+            print('reading file: '+transFile)
         trans_rg, trans_atr = readfile.read(transFile, (), 'range')
         trans_az = readfile.read(transFile, (), 'azimuth')[0]
         lat_first = float(trans_atr['Y_FIRST'])
@@ -1434,8 +1434,8 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True
     ## by estimating a simple 2D linear transformation
     elif atr_rdr:
         # This method only works for whole frame/track, thus input file cannot be subsetted before.
-        if 'subset_x0' in atr_rdr.keys():
-            print 'WARNING: Cannot use subset file as input! No coordinate converted.'
+        if 'subset_x0' in list(atr_rdr.keys()):
+            print('WARNING: Cannot use subset file as input! No coordinate converted.')
             return None
         
         LAT_REF1=float(atr_rdr['LAT_REF1'])
@@ -1463,7 +1463,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True
         lat_resid = res_mean[0]
         lon_resid = res_mean[1]
         if print_msg:
-            print 'Residul - lat: '+str(lat_resid)+', lon: '+str(lon_resid)
+            print('Residul - lat: '+str(lat_resid)+', lon: '+str(lon_resid))
         
         ### calculate geo coordinate of inputs
         N = len(rg)
@@ -1472,7 +1472,7 @@ def radar2glob(az, rg, transFile='geomap*.trans', atr_rdr=dict(), print_msg=True
         lon = np.dot(A, affine_par[:,1])
         
     else:
-        print 'No geomap*.trans or radar coord file found!'
+        print('No geomap*.trans or radar coord file found!')
         return None
 
     return lat, lon, lat_resid, lon_resid
@@ -1505,7 +1505,7 @@ def hillshade(data,scale):
 def date_list(h5file):
     dateList = []
     tbase = []
-    k = h5file.keys()
+    k = list(h5file.keys())
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
     ifgram_list = sorted(h5file[k[0]].keys())
@@ -1610,9 +1610,9 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     tbase_list = ptime.date_list2tbase(date8_list)[0]
     dt = np.diff(tbase_list).reshape((date_num-1,1))
 
-    print 'number of interferograms : '+str(ifgram_num)
-    print 'number of pixels in space: '+str(pixel_num)
-    print 'number of acquisitions   : '+str(date_num)
+    print('number of interferograms : '+str(ifgram_num))
+    print('number of pixels in space: '+str(pixel_num))
+    print('number of acquisitions   : '+str(date_num))
 
     # Design matrix
     A,B = design_matrix(ifgramFile, date12_list)
@@ -1622,10 +1622,10 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     try:
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
-        print 'reference pixel in y/x: [%d, %d]'%(ref_y, ref_x)
+        print('reference pixel in y/x: [%d, %d]'%(ref_y, ref_x))
     except:
-        print 'ERROR: No ref_x/y found! Can not inverse interferograms without reference in space.'
-        print 'run seed_data.py '+ifgramFile+' --mark-attribute for a quick referencing.'
+        print('ERROR: No ref_x/y found! Can not inverse interferograms without reference in space.')
+        print('run seed_data.py '+ifgramFile+' --mark-attribute for a quick referencing.')
         sys.exit(1)
 
     ##### Inversion Function
@@ -1638,7 +1638,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
         return defo
 
     ##### Read Interferograms
-    print 'Reading interferograms ...'
+    print('Reading interferograms ...')
     data = np.zeros((ifgram_num,pixel_num), np.float32)
     prog_bar = ptime.progress_bar(maxValue=ifgram_num, prefix='loading: ')
     for j in range(ifgram_num):
@@ -1652,7 +1652,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     prog_bar.close()
 
     ##### Inversion
-    print 'Inversing time series ...'
+    print('Inversing time series ...')
     dataPoint = np.zeros((ifgram_num,1),np.float32)
     dataLine  = np.zeros((ifgram_num,width),np.float32)
     tempDeformation = np.zeros((date_num,pixel_num),np.float32)
@@ -1667,7 +1667,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     del data
 
     ##### Time Series Data Preparation
-    print 'converting phase to range'
+    print('converting phase to range')
     timeseries = np.zeros((date_num,length,width),np.float32)
     phase2range = -1*float(atr['WAVELENGTH'])/(4.*np.pi)
     for i in range(date_num):
@@ -1676,8 +1676,8 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     del tempDeformation
   
     ##### Output Time Series File
-    print 'writing >>> '+timeseriesFile
-    print 'number of dates: '+str(date_num)
+    print('writing >>> '+timeseriesFile)
+    print('number of dates: '+str(date_num))
     h5timeseries = h5py.File(timeseriesFile,'w')
     group = h5timeseries.create_group('timeseries')
     prog_bar = ptime.progress_bar(maxValue=date_num, prefix='writing: ')
@@ -1688,7 +1688,7 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     prog_bar.close()
 
     ## Attributes
-    print 'calculating perpendicular baseline timeseries'
+    print('calculating perpendicular baseline timeseries')
     pbase, pbase_top, pbase_bottom = perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list)
     # convert np.array into string with each item separated by white space
     pbase = str(pbase.tolist()).translate(None,'[],')
@@ -1698,10 +1698,10 @@ def timeseries_inversion(ifgramFile, timeseriesFile):
     atr['P_BASELINE_TOP_TIMESERIES'] = pbase_top
     atr['P_BASELINE_BOTTOM_TIMESERIES'] = pbase_bottom
     atr['ref_date'] = date8_list[0]
-    for key,value in atr.iteritems():
+    for key,value in atr.items():
         group.attrs[key] = value
     h5timeseries.close()
-    print 'Time series inversion took ' + str(time.time()-total) +' secs\nDone.'
+    print('Time series inversion took ' + str(time.time()-total) +' secs\nDone.')
     return timeseriesFile
 
     
@@ -1721,17 +1721,17 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
     dt = np.diff(tbase)
     B1 = np.linalg.pinv(B)
     B1 = np.array(B1,np.float32)
-    ifgram_list = h5flat['interferograms'].keys()
+    ifgram_list = list(h5flat['interferograms'].keys())
     ifgram_num = len(ifgram_list)
     #dset = h5flat[ifgram_list[0]].get(h5flat[ifgram_list[0]].keys()[0])
     #data = dset[0:dset.shape[0],0:dset.shape[1]]
     dset=h5flat['interferograms'][ifgram_list[0]].get(ifgram_list[0])
     data = dset[0:dset.shape[0],0:dset.shape[1]] 
     pixel_num = np.shape(data)[0]*np.shape(data)[1]
-    print 'Reading in the interferograms'
+    print('Reading in the interferograms')
     #print ifgram_num,pixel_num
-    print 'number of interferograms: '+str(ifgram_num)
-    print 'number of pixels: '+str(pixel_num)
+    print('number of interferograms: '+str(ifgram_num))
+    print('number of pixels: '+str(pixel_num))
     pixel_num_step = int(pixel_num/10)
   
     data = np.zeros((ifgram_num,pixel_num),np.float32)
@@ -1759,7 +1759,7 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
             tempDeformation[:,ni] = defo
         #if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,pixel_num)
         if not np.remainder(ni,pixel_num_step):
-            print 'Processing point: %8d of %8d, %3d' % (ni,pixel_num,(10*ni/pixel_num_step))+'%'
+            print('Processing point: %8d of %8d, %3d' % (ni,pixel_num,(10*ni/pixel_num_step))+'%')
     del data
     timeseries = np.zeros((date_num,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
     factor = -1*float(h5flat['interferograms'][ifgram_list[0]].attrs['WAVELENGTH'])/(4.*np.pi)
@@ -1768,7 +1768,7 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
         timeseries[ni] = timeseries[ni]*factor
     del tempDeformation
     timeseriesDict = {}
-    for key, value in h5flat['interferograms'][ifgram_list[0]].attrs.iteritems():
+    for key, value in h5flat['interferograms'][ifgram_list[0]].attrs.items():
         timeseriesDict[key] = value 
   
     dateIndex={}
@@ -1776,24 +1776,24 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
         dateIndex[dateList[ni]]=ni
     if not 'timeseries' in h5timeseries:
         group = h5timeseries.create_group('timeseries')
-        for key,value in timeseriesDict.iteritems():
+        for key,value in timeseriesDict.items():
             group.attrs[key] = value
     
     for date in dateList:
         if not date in h5timeseries['timeseries']:
             dset = group.create_dataset(date, data=timeseries[dateIndex[date]], compression='gzip')
-    print 'Time series inversion took ' + str(time.time()-total) +' secs'
+    print('Time series inversion took ' + str(time.time()-total) +' secs')
 
 
 
 def timeseries_inversion_L1(h5flat,h5timeseries):
     try:
-        from l1 import l1
+        from .l1 import l1
         from cvxopt import normal,matrix
     except:
-        print '-----------------------------------------------------------------------'
-        print 'cvxopt should be installed to be able to use the L1 norm minimization.'
-        print '-----------------------------------------------------------------------'
+        print('-----------------------------------------------------------------------')
+        print('cvxopt should be installed to be able to use the L1 norm minimization.')
+        print('-----------------------------------------------------------------------')
         sys.exit(1)
         #modified from sbas.py written by scott baker, 2012 
   
@@ -1805,15 +1805,15 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
     BL1 = matrix(B)
     B1 = np.linalg.pinv(B)
     B1 = np.array(B1,np.float32)
-    ifgram_list = h5flat['interferograms'].keys()
+    ifgram_list = list(h5flat['interferograms'].keys())
     ifgram_num = len(ifgram_list)
     #dset = h5flat[ifgram_list[0]].get(h5flat[ifgram_list[0]].keys()[0])
     #data = dset[0:dset.shape[0],0:dset.shape[1]]
     dset=h5flat['interferograms'][ifgram_list[0]].get(ifgram_list[0]) 
     data = dset[0:dset.shape[0],0:dset.shape[1]] 
     pixel_num = np.shape(data)[0]*np.shape(data)[1]
-    print 'Reading in the interferograms'
-    print ifgram_num,pixel_num
+    print('Reading in the interferograms')
+    print(ifgram_num,pixel_num)
   
     #data = np.zeros((ifgram_num,pixel_num),np.float32)
     data = np.zeros((ifgram_num,pixel_num))
@@ -1828,11 +1828,11 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
     dataPoint = np.zeros((ifgram_num,1),np.float32)
     modelDimension = np.shape(B)[1]
     tempDeformation = np.zeros((date_num,pixel_num),np.float32)
-    print data.shape
+    print(data.shape)
     DataL1=matrix(data)
     L1ORL2=np.ones((pixel_num,1))
     for ni in range(pixel_num):
-        print ni
+        print(ni)
         dataPoint = data[:,ni]
         nan_ndx = dataPoint == 0.
         fin_ndx = dataPoint != 0.
@@ -1853,7 +1853,7 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
                 defo = np.concatenate((zero,np.cumsum([tmpe_ratea*dt])))
     
             tempDeformation[:,ni] = defo
-        if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,pixel_num)
+        if not np.remainder(ni,10000): print('Processing point: %7d of %7d ' % (ni,pixel_num))
     del data
     timeseries = np.zeros((date_num,np.shape(dset)[0],np.shape(dset)[1]),np.float32)
     factor = -1*float(h5flat['interferograms'][ifgram_list[0]].attrs['WAVELENGTH'])/(4.*np.pi)
@@ -1864,7 +1864,7 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
     L1ORL2=np.reshape(L1ORL2,(np.shape(dset)[1],np.shape(dset)[0])).T
     
     timeseriesDict = {}
-    for key, value in h5flat['interferograms'][ifgram_list[0]].attrs.iteritems():
+    for key, value in h5flat['interferograms'][ifgram_list[0]].attrs.items():
             timeseriesDict[key] = value
   
     dateIndex={}
@@ -1872,13 +1872,13 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
         dateIndex[dateList[ni]]=ni
     if not 'timeseries' in h5timeseries:
         group = h5timeseries.create_group('timeseries')
-        for key,value in timeseriesDict.iteritems():
+        for key,value in timeseriesDict.items():
             group.attrs[key] = value
   
     for date in dateList:
         if not date in h5timeseries['timeseries']:
             dset = group.create_dataset(date, data=timeseries[dateIndex[date]], compression='gzip')
-    print 'Time series inversion took ' + str(time.time()-total) +' secs'
+    print('Time series inversion took ' + str(time.time()-total) +' secs')
     L1orL2h5=h5py.File('L1orL2.h5','w')
     gr=L1orL2h5.create_group('mask') 
     dset=gr.create_dataset('mask',data=L1ORL2,compression='gzip')
@@ -1939,10 +1939,10 @@ def perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list=[]):
 
 def dBh_dBv_timeseries(ifgramFile):
     h5file = h5py.File(ifgramFile)
-    k=h5file.keys()
+    k=list(h5file.keys())
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
-    igramList = h5file[k[0]].keys()
+    igramList = list(h5file[k[0]].keys())
     dBh_igram=[]
     dBv_igram=[]
     for igram in igramList:
@@ -1967,10 +1967,10 @@ def dBh_dBv_timeseries(ifgramFile):
 
 def Bh_Bv_timeseries(ifgramFile):
     h5file = h5py.File(ifgramFile)
-    k=h5file.keys()
+    k=list(h5file.keys())
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
-    igramList = h5file[k[0]].keys()
+    igramList = list(h5file[k[0]].keys())
     Bh_igram=[]
     Bv_igram=[]
     for igram in igramList:
@@ -2023,7 +2023,7 @@ def stacking(File):
 
     else:
         try: stack, atrStack = readfile.read(File)
-        except: print 'Cannot read file: '+File; sys.exit(1)
+        except: print('Cannot read file: '+File); sys.exit(1)
 
     return stack
 
@@ -2071,8 +2071,8 @@ def make_triangle(dates12,igram1,igram2,igram3):
     return Igramtriangle,IgramtriangleIndexes
 
 def get_triangles(h5file):
-    k=h5file.keys()
-    igramList=h5file[k[0]].keys()
+    k=list(h5file.keys())
+    igramList=list(h5file[k[0]].keys())
    
     dates12=[]
     for igram in igramList:
@@ -2121,7 +2121,7 @@ def get_triangles(h5file):
 
 
 def generate_curls(curlfile, h5file, Triangles, curls):
-    ifgram_list = h5file['interferograms'].keys()
+    ifgram_list = list(h5file['interferograms'].keys())
     h5curlfile = h5py.File(curlfile,'w')
     gg = h5curlfile.create_group('interferograms')
 
@@ -2138,7 +2138,7 @@ def generate_curls(curlfile, h5file, Triangles, curls):
         triangle_date = Triangles[i][0]+'_'+Triangles[i][1]+'_'+Triangles[i][2]
         group = gg.create_group(triangle_date)
         dset = group.create_dataset(triangle_date, data=d1+d3-d2, compression='gzip')
-        for key, value in h5file['interferograms'][ifgram1].attrs.iteritems():
+        for key, value in h5file['interferograms'][ifgram1].attrs.items():
             group.attrs[key] = value
         prog_bar.update(i+1)
 

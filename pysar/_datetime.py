@@ -26,7 +26,7 @@ import matplotlib.dates as mdates
 
 ################################################################
 def yyyymmdd2years(dates):
-    if isinstance(dates, basestring):
+    if isinstance(dates, str):
         d = dt(*time.strptime(dates,"%Y%m%d")[0:5])
         day_of_year = d.timetuple().tm_yday
         yy = float(d.year)+float(day_of_year-1)/365.25
@@ -38,7 +38,7 @@ def yyyymmdd2years(dates):
             day_of_year = d.timetuple().tm_yday
             yy.append(float(d.year)+float(day_of_year-1)/365.25)
     else:
-        print 'Unrecognized date format. Only string and list supported.'
+        print('Unrecognized date format. Only string and list supported.')
         sys.exit(1)
     return yy
 
@@ -50,7 +50,7 @@ def yymmdd2yyyymmdd(date):
 
 
 def yyyymmdd(dates):
-    if isinstance(dates,basestring):
+    if isinstance(dates,str):
         if len(dates) == 6:  datesOut = yymmdd2yyyymmdd(dates)
         else:                datesOut = dates
     elif isinstance(dates,list):
@@ -65,7 +65,7 @@ def yyyymmdd(dates):
 
 
 def yymmdd(dates):
-    if isinstance(dates,basestring):
+    if isinstance(dates,str):
         if len(dates) == 8:  datesOut = dates[2:8]
         else:                datesOut = dates
     elif isinstance(dates,list):
@@ -93,7 +93,7 @@ def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
         return []
 
     h5 = h5py.File(ifgramFile, 'r')
-    k = h5.keys()
+    k = list(h5.keys())
     if 'interferograms' in k: k = 'interferograms'
     elif 'coherence' in k: k = 'coherence'
     elif 'wrapped' in k: k = 'wrapped'
@@ -338,6 +338,6 @@ class progress_bar:
     def close(self):
         """Prints a blank space at the end to ensure proper printing
         of future statements."""
-        print ' '
+        print(' ')
 ################################End of progress bar class####################################
 

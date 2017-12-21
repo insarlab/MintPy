@@ -40,7 +40,7 @@ def nearest_neighbor(x,y, x_array, y_array):
 
 def reset_pairs(File):
     '''Reset/restore all pairs within the input file by set all drop_ifgram=no'''
-    print "set drop_ifgram to 'no' for all interferograms for file: "+File
+    print("set drop_ifgram to 'no' for all interferograms for file: "+File)
     k = readfile.read_attribute(File)['FILE_TYPE']
     h5 = h5py.File(File,'r+')
     ifgram_list = sorted(h5[k].keys())
@@ -52,12 +52,12 @@ def reset_pairs(File):
 
 def manual_select_pairs_to_remove(File):
     '''Manually select interferograms to remove'''
-    print '----------------------------------------------------------------------------'
-    print 'Manually select interferograms to remove'
-    print 'Click two dates - points - in the figure to select one pair of interferogram'
-    print 'repeat until you select all pairs you would like to remove'
-    print 'then close the figure to continue the program ...'
-    print '----------------------------------------------------------------------------'
+    print('----------------------------------------------------------------------------')
+    print('Manually select interferograms to remove')
+    print('Click two dates - points - in the figure to select one pair of interferogram')
+    print('repeat until you select all pairs you would like to remove')
+    print('then close the figure to continue the program ...')
+    print('----------------------------------------------------------------------------')
     # Display the network
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -66,7 +66,7 @@ def manual_select_pairs_to_remove(File):
     bperp_list = ut.perp_baseline_ifgram2timeseries(File)[0].tolist()
     date8_list = ptime.ifgram_date_list(File)
     ax = pnet.plot_network(ax, date12_orig, date8_list, bperp_list)
-    print 'display the network of interferogram of file: '+File
+    print('display the network of interferogram of file: '+File)
 
     date6_list = ptime.yymmdd(date8_list)
     dates_array = np.array(ptime.date_list2vector(date8_list)[0])
@@ -80,7 +80,7 @@ def manual_select_pairs_to_remove(File):
         yClick = event.ydata
         idx = nearest_neighbor(xClick, yClick, dateNum_array, bperp_array)
         date6 = date6_list[idx]
-        print 'click at '+date6
+        print('click at '+date6)
         date_click.append(date6)
         if len(date_click)%2 == 0 and date_click[-2] != date_click[-1]:
             [m_date, s_date] = sorted(date_click[-2:])
@@ -88,11 +88,11 @@ def manual_select_pairs_to_remove(File):
             s_idx = date6_list.index(s_date)
             date12 = m_date+'-'+s_date
             if date12 in date12_orig:
-                print 'select date12: '+date12
+                print('select date12: '+date12)
                 date12_click.append(date12)
                 ax.plot([dateNum_array[m_idx],dateNum_array[s_idx]], [bperp_array[m_idx],bperp_array[s_idx]], 'r', lw=4)
             else:
-                 print date12+' is not existed in input file'
+                 print(date12+' is not existed in input file')
         plt.draw()
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
@@ -111,11 +111,11 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
         outFile       - string, output file name, if mark_attribute=True, outFile = File
     '''
     k = readfile.read_attribute(File)['FILE_TYPE']
-    print '----------------------------------------------------------------------------'
-    print 'file: '+File
+    print('----------------------------------------------------------------------------')
+    print('file: '+File)
 
     if mark_attribute:
-        print "set drop_ifgram to 'yes' for all interferograms to remove, and 'no' for all the others."
+        print("set drop_ifgram to 'yes' for all interferograms to remove, and 'no' for all the others.")
         h5 = h5py.File(File,'r+')
         ifgram_list = sorted(h5[k].keys())
         for ifgram in ifgram_list:
@@ -129,15 +129,15 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
     else:
         date12_orig = pnet.get_date12_list(File)
         date12_to_write = sorted(list(set(date12_orig) - set(date12_to_rmv)))
-        print 'number of interferograms in file      : '+str(len(date12_orig))
-        print 'number of interferograms to keep/write: '+str(len(date12_to_write))
-        print 'list   of interferograms to keep/write: '
-        print date12_to_write
+        print('number of interferograms in file      : '+str(len(date12_orig)))
+        print('number of interferograms to keep/write: '+str(len(date12_to_write)))
+        print('list   of interferograms to keep/write: ')
+        print(date12_to_write)
         date12Num = len(date12_to_write)
     
         if not outFile:
             outFile = 'Modified_'+os.path.basename(File)
-        print 'writing >>> '+outFile
+        print('writing >>> '+outFile)
         h5out = h5py.File(outFile, 'w')
         gg = h5out.create_group(k)
 
@@ -153,14 +153,14 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
             data = h5[k][igram].get(igram)[:]
             group = gg.create_group(igram)
             dset = group.create_dataset(igram, data=data, compression='gzip')
-            for key, value in h5[k][igram].attrs.iteritems():
+            for key, value in h5[k][igram].attrs.items():
                 group.attrs[key] = value
             group.attrs['drop_ifgram'] = 'no'
             prog_bar.update(i+1, suffix=date12_list[i])
         prog_bar.close()
         h5.close()
         h5out.close()
-        print 'finished writing >>> '+outFile
+        print('finished writing >>> '+outFile)
     
     return outFile
 
@@ -171,7 +171,7 @@ def read_template2inps(template_file, inps=None):
         inps = cmdLineParse()
 
     template = readfile.read_template(inps.template_file)
-    key_list = template.keys()
+    key_list = list(template.keys())
 
     # Coherence-based network modification
     prefix = 'pysar.network.'
@@ -197,7 +197,7 @@ def read_template2inps(template_file, inps=None):
         try:
             coh_file_idx = k_list.index('coherence')
         except ValueError:
-            print 'No coherence file found! Can not use coherence-based method without it.'
+            print('No coherence file found! Can not use coherence-based method without it.')
         inps.coherence_file = inps.file[coh_file_idx]
 
     key = prefix+'minCoherence'
@@ -243,8 +243,8 @@ def read_template2inps(template_file, inps=None):
                 inps.trans_file = ut.get_file_list(inps.trans_file)[0]
             except:
                 inps.trans_file = None
-                print 'Warning: no mapping transformation file found! Can not use '+key+' option without it.'
-                print 'skip this option.'
+                print('Warning: no mapping transformation file found! Can not use '+key+' option without it.')
+                print('skip this option.')
                 inps.aoi_pix_box = None
 
 
@@ -398,8 +398,8 @@ def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
     date12_orig = pnet.get_date12_list(inps.file[0])
-    print 'input file(s) to be modified: '+str(inps.file)
-    print 'number of interferograms: '+str(len(date12_orig))
+    print('input file(s) to be modified: '+str(inps.file))
+    print('number of interferograms: '+str(len(date12_orig)))
     atr = readfile.read_attribute(inps.file[0])
 
     # Update inps if template is input
@@ -407,14 +407,14 @@ def main(argv):
         inps = read_template2inps(inps.template_file, inps)
 
     if inps.reset:
-        print '----------------------------------------------------------------------------'
+        print('----------------------------------------------------------------------------')
         for file in inps.file:
             reset_pairs(file)
 
         mean_coh_txt_file = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.txt'
         if os.path.isfile(mean_coh_txt_file):
             rmCmd = 'rm '+mean_coh_txt_file
-            print rmCmd
+            print(rmCmd)
             os.system(rmCmd)
 
         return
@@ -422,8 +422,8 @@ def main(argv):
     if all(not i for i in [inps.reference_file, inps.max_temp_baseline, inps.max_perp_baseline,\
                            inps.exclude_ifg_index, inps.exclude_date, inps.coherence_based, inps.start_date, inps.end_date]):
         # Display network for manually modification when there is no other modification input.
-        print 'No input option found to remove interferogram'
-        print 'To manually modify network, please use --manual option '
+        print('No input option found to remove interferogram')
+        print('To manually modify network, please use --manual option ')
         return
     
     # Convert index : input to continous index list
@@ -439,7 +439,7 @@ def main(argv):
             elif len(index_temp)==1:
                 inps.exclude_ifg_index.append(int(index))
             else:
-                print 'Unrecoganized input: '+index
+                print('Unrecoganized input: '+index)
         inps.exclude_ifg_index = sorted(inps.exclude_ifg_index)
         if max(inps.exclude_ifg_index) > len(date12_orig):
             raise Exception('Input index out of range!\n'+\
@@ -452,27 +452,27 @@ def main(argv):
     # 1. Update date12_to_rmv from reference file
     if inps.reference_file:
         date12_to_keep = pnet.get_date12_list(inps.reference_file)
-        print '----------------------------------------------------------------------------'
-        print 'use reference pairs info from file: '+inps.reference_file
-        print 'number of interferograms in reference: '+str(len(date12_to_keep))
-        print 'date12 not in reference file:'
+        print('----------------------------------------------------------------------------')
+        print('use reference pairs info from file: '+inps.reference_file)
+        print('number of interferograms in reference: '+str(len(date12_to_keep)))
+        print('date12 not in reference file:')
         for date12 in date12_orig:
             if date12 not in date12_to_keep:
                 date12_to_rmv.append(date12)
-                print date12
+                print(date12)
 
     # 2.1 Update date12_to_rmv from coherence file
     if inps.coherence_based and os.path.isfile(inps.coherence_file):
-        print '----------------------------------------------------------------------------'
-        print 'use coherence-based network modification from coherence file: '+inps.coherence_file
+        print('----------------------------------------------------------------------------')
+        print('use coherence-based network modification from coherence file: '+inps.coherence_file)
         # check mask AOI in lalo
         if inps.aoi_geo_box and inps.trans_file:
-            print 'input AOI in (lon0, lat1, lon1, lat0): '+str(inps.aoi_geo_box)
+            print('input AOI in (lon0, lat1, lon1, lat0): '+str(inps.aoi_geo_box))
             inps.aoi_pix_box = subset.bbox_geo2radar(inps.aoi_geo_box, atr, inps.trans_file) 
         if inps.aoi_pix_box:
             # check mask AOI within the data coverage
             inps.aoi_pix_box = subset.check_box_within_data_coverage(inps.aoi_pix_box, atr)
-            print 'input AOI in (x0,y0,x1,y1): '+str(inps.aoi_pix_box)
+            print('input AOI in (x0,y0,x1,y1): '+str(inps.aoi_pix_box))
 
         # Calculate spatial average coherence
         coh_list, coh_date12_list = ut.spatial_average(inps.coherence_file, inps.mask_file,\
@@ -480,34 +480,34 @@ def main(argv):
 
         # MST network
         if inps.keep_mst:
-            print 'Get minimum spanning tree (MST) of interferograms with inverse of coherence.'
-            print 'date12 with 1) average coherence < '+str(inps.min_coherence)+' AND 2) not in MST network: '
+            print('Get minimum spanning tree (MST) of interferograms with inverse of coherence.')
+            print('date12 with 1) average coherence < '+str(inps.min_coherence)+' AND 2) not in MST network: ')
             mst_date12_list = pnet.threshold_coherence_based_mst(coh_date12_list, coh_list)
         else:
-            print 'date12 with average coherence < '+str(inps.min_coherence)
+            print('date12 with average coherence < '+str(inps.min_coherence))
             mst_date12_list = []
 
         for i in range(len(coh_date12_list)):
             date12 = coh_date12_list[i]
             if coh_list[i] < inps.min_coherence and date12 not in mst_date12_list:
                 date12_to_rmv.append(date12)
-                print date12
+                print(date12)
 
     # 2.2 Update date12_to_rmv from perp baseline threshold
     if inps.max_perp_baseline:
-        print '----------------------------------------------------------------------------'
-        print 'Drop pairs with perpendicular spatial baseline > '+str(inps.max_perp_baseline)+' meters'
+        print('----------------------------------------------------------------------------')
+        print('Drop pairs with perpendicular spatial baseline > '+str(inps.max_perp_baseline)+' meters')
         ifg_bperp_list = pnet.igram_perp_baseline_list(inps.file[0])
         for i in range(len(ifg_bperp_list)):
             if ifg_bperp_list[i] > inps.max_perp_baseline:
                 date12 = date12_orig[i]
                 date12_to_rmv.append(date12)
-                print date12
+                print(date12)
 
     # 2.3 Update date12_to_rmv from temp baseline threshold
     if inps.max_temp_baseline:
-        print '----------------------------------------------------------------------------'
-        print 'Drop pairs with temporal baseline > '+str(inps.max_temp_baseline)+' days'
+        print('----------------------------------------------------------------------------')
+        print('Drop pairs with temporal baseline > '+str(inps.max_temp_baseline)+' days')
         date8_list = ptime.ifgram_date_list(inps.file[0])
         date6_list = ptime.yymmdd(date8_list)
         tbase_list = ptime.date_list2tbase(date8_list)[0]
@@ -519,52 +519,52 @@ def main(argv):
             if t_diff > inps.max_temp_baseline:
                 date12 = date12_orig[i]
                 date12_to_rmv.append(date12)
-                print date12
+                print(date12)
 
     # 2.4 Update date12_to_rmv from exclude_ifg_index
     if inps.exclude_ifg_index:
-        print '----------------------------------------------------------------------------'
-        print 'drop date12/pair with the following index number:'
+        print('----------------------------------------------------------------------------')
+        print('drop date12/pair with the following index number:')
         for index in inps.exclude_ifg_index:
             date12 = date12_orig[index-1]
             date12_to_rmv.append(date12)
-            print str(index)+'    '+date12
+            print(str(index)+'    '+date12)
 
     # 2.5 Update date12_to_rmv from exclude_date
     if inps.exclude_date:
         inps.exclude_date = ptime.yymmdd(inps.exclude_date)
-        print '----------------------------------------------------------------------------'
-        print 'Drop pairs including the following dates: \n'+str(inps.exclude_date)
+        print('----------------------------------------------------------------------------')
+        print('Drop pairs including the following dates: \n'+str(inps.exclude_date))
         for i in range(len(date12_orig)):
             date1, date2 = date12_orig[i].split('-')
             if (date1 in inps.exclude_date) or (date2 in inps.exclude_date):
                 date12 = date12_orig[i]
                 date12_to_rmv.append(date12)
-                print date12
+                print(date12)
 
     # 2.6 Update date12_to_rmv from start_date
     if inps.start_date:
         inps.start_date = ptime.yymmdd(inps.start_date)
-        print '----------------------------------------------------------------------------'
-        print 'Drop pairs with date earlier than start-date: '+inps.start_date
+        print('----------------------------------------------------------------------------')
+        print('Drop pairs with date earlier than start-date: '+inps.start_date)
         min_date = int(ptime.yyyymmdd(inps.start_date))
         for i in range(len(date12_orig)):
             date12 = date12_orig[i]
             if any(int(j) < min_date for j in ptime.yyyymmdd(date12.split('-'))):
                 date12_to_rmv.append(date12)
-                print date12
+                print(date12)
 
     # 2.7 Update date12_to_rmv from end_date
     if inps.end_date:
         inps.end_date = ptime.yymmdd(inps.end_date)
-        print '----------------------------------------------------------------------------'
-        print 'Drop pairs with date earlier than end-date: '+inps.end_date
+        print('----------------------------------------------------------------------------')
+        print('Drop pairs with date earlier than end-date: '+inps.end_date)
         max_date = int(ptime.yyyymmdd(inps.end_date))
         for i in range(len(date12_orig)):
             date12 = date12_orig[i]
             if any(int(j) > max_date for j in ptime.yyyymmdd(date12.split('-'))):
                 date12_to_rmv.append(date12)
-                print date12
+                print(date12)
 
     # 3. Manually drop pairs
     if inps.disp_network:
@@ -572,17 +572,17 @@ def main(argv):
         for date12 in list(date12_click):
             if date12 not in date12_orig:
                 date12_click.remove(date12)
-        print 'date12 selected to remove:'
-        print date12_click
+        print('date12 selected to remove:')
+        print(date12_click)
         date12_to_rmv += date12_click
 
     # 4. drop duplicate date12 and sort in order
     date12_to_rmv = list(set(date12_to_rmv))
     date12_to_rmv = sorted(date12_to_rmv)
-    print '----------------------------------------------------------------------------'
-    print 'number of interferograms to remove: '+str(len(date12_to_rmv))
-    print 'list   of interferograms to remove:'
-    print date12_to_rmv
+    print('----------------------------------------------------------------------------')
+    print('number of interferograms to remove: '+str(len(date12_to_rmv)))
+    print('list   of interferograms to remove:')
+    print(date12_to_rmv)
 
     ##### Calculated date12_to_drop v.s. existing date12_to_drop
     # Get list of date12 of interferograms already been marked to drop
@@ -595,7 +595,7 @@ def main(argv):
     h5.close()
 
     if date12_to_rmv == date12_list_dropped and inps.mark_attribute:
-        print 'Calculated date12 to drop is the same as exsiting marked input file, skip update file attributes.'
+        print('Calculated date12 to drop is the same as exsiting marked input file, skip update file attributes.')
         return
 
 
@@ -609,30 +609,30 @@ def main(argv):
             k = readfile.read_attribute(File)['FILE_TYPE']
             # Update Mask File
             if k == 'interferograms':
-                print 'update mask file for input '+k+' file based on '+Modified_File
+                print('update mask file for input '+k+' file based on '+Modified_File)
                 inps.mask_file = 'mask.h5'
-                print 'writing >>> '+inps.mask_file
+                print('writing >>> '+inps.mask_file)
                 ut.nonzero_mask(Modified_File, inps.mask_file)
             elif k == 'coherence':
-                print 'update average spatial coherence for input '+k+' file based on: '+Modified_File
+                print('update average spatial coherence for input '+k+' file based on: '+Modified_File)
                 outFile = 'averageSpatialCoherence.h5'
-                print 'writing >>> '+outFile
+                print('writing >>> '+outFile)
                 ut.temporal_average(Modified_File, outFile)
                 Modified_CoherenceFile = Modified_File
     
         # Plot result
         if inps.plot:
-            print '\nplot modified network and save to file.'
+            print('\nplot modified network and save to file.')
             plotCmd = 'plot_network.py '+Modified_File+' --coherence '+Modified_CoherenceFile+' --nodisplay'
             if inps.mask_file:
                 plotCmd += ' --mask '+inps.mask_file
-            print plotCmd
+            print(plotCmd)
             os.system(plotCmd)
         
-        print 'Done.'
+        print('Done.')
         return
     else:
-        print 'No new interferograms to drop, skip update.'
+        print('No new interferograms to drop, skip update.')
         return
 
 

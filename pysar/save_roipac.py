@@ -19,7 +19,7 @@ import pysar._datetime as ptime
 
 ##############################################################################
 def usage():
-    print '''usage: save_roipac.py  file  [date_info]
+    print('''usage: save_roipac.py  file  [date_info]
 
 Convert PySAR hdf5 file to ROI_PAC format 
 
@@ -37,7 +37,7 @@ example:
   save_roipac.py  unwrapIfgram.h5  filt_091225-100723-sim_HDR_8rlks_c10.unw
   save_roipac.py  unwrapIfgram.h5  091225-100723
   save_roipac.py  temporal_coherence.h5
-    '''
+    ''')
     return
 
 
@@ -57,20 +57,20 @@ def main(argv):
     if k == 'velocity':
         dset = h5file['velocity'].get('velocity')
         data = dset[0:dset.shape[0],0:dset.shape[1]]
-        print "converting velocity to a 1 year interferogram."
+        print("converting velocity to a 1 year interferogram.")
         wvl=float(h5file[k].attrs['WAVELENGTH'])
         data=(-4*pi/wvl)*data
 
         outname=File.split('.')[0]+'.unw'
-        print 'writing >>> '+outname
+        print('writing >>> '+outname)
         writefile.write(data,atr,outname)
 
     elif k == 'timeseries':
-        dateList=h5file['timeseries'].keys() 
+        dateList=list(h5file['timeseries'].keys()) 
         ## Input
         if   len(sys.argv)==2:
-            print 'No input date specified >>> continue with the last date'
-            dateList=h5file['timeseries'].keys()
+            print('No input date specified >>> continue with the last date')
+            dateList=list(h5file['timeseries'].keys())
             d=dateList[-1]
         elif len(sys.argv)==3:
             d=sys.argv[2]
@@ -84,10 +84,10 @@ def main(argv):
         except: pass
 
         ## Data
-        print 'reading '+d+' ... '
+        print('reading '+d+' ... ')
         data = h5file['timeseries'].get(d)[:]
         try:
-            print 'reading '+d_ref+' ... '
+            print('reading '+d_ref+' ... ')
             data_ref = h5file['timeseries'].get(d_ref)[:]
             data = data - data_ref
         except: pass
@@ -111,12 +111,12 @@ def main(argv):
         atr['DATE12']                = master_d+'-'+d
 
         ## Writing
-        print 'writing >>> '+outname
+        print('writing >>> '+outname)
         writefile.write(data,atr,outname)
 
     elif k in ['interferograms','coherence','wrapped']:
         ## Check input
-        igramList = h5file[k].keys()
+        igramList = list(h5file[k].keys())
         try:
             d = sys.argv[2]
             for i in range(len(igramList)):
@@ -124,16 +124,16 @@ def main(argv):
                     igram = igramList[i]
         except:
             igram = igramList[-1]
-            print 'No input date specified >>> continue with the last date'
+            print('No input date specified >>> continue with the last date')
 
         ## Read and Write
-        print 'reading '+igram+' ... '
+        print('reading '+igram+' ... ')
         data = h5file[k][igram].get(igram)[:]
         atr = dict(h5file[k][igram].attrs)
         atr['PROCESSOR'] = 'roipac'
         outname = igram
 
-        print 'writing >>> '+ outname
+        print('writing >>> '+ outname)
         writefile.write(data, atr, outname)  
 
     else:
@@ -146,7 +146,7 @@ def main(argv):
             outname=os.path.splitext(File)[0]+'.dem'
         else:
             outname=File.split('.')[0]+'.unw'
-        print 'writing >>> '+ outname
+        print('writing >>> '+ outname)
         writefile.write(data,atr,outname)
 
 

@@ -46,10 +46,10 @@ def main(argv):
 
     # Network Inversion
     if not inps.inverse_method == 'L1':
-        print 'Inverse time-series using L2 norm minimization'
+        print('Inverse time-series using L2 norm minimization')
         ut.timeseries_inversion(inps.ifgram_file, inps.timeseries_file)
     else:
-        print 'Inverse time-series using L1 norm minimization'
+        print('Inverse time-series using L1 norm minimization')
         ut.timeseries_inversion_L1(inps.ifgram_file, inps.timeseries_file)
 
     return inps.timeseries_file

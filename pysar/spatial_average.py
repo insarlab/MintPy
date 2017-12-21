@@ -41,7 +41,7 @@ def cmdLineParse():
 #############################  Main Function  ################################
 def main(argv):
     inps = cmdLineParse()
-    print '\n*************** Spatial Average ******************'
+    print('\n*************** Spatial Average ******************')
     for File in inps.file:
         mean_list, date_list = ut.spatial_average(File, inps.mask_file, saveList=True)
         atr = readfile.read_attribute(File)

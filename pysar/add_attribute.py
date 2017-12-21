@@ -22,7 +22,7 @@ import pysar._pysar_utilities as ut
 ################################################################################
 
 def usage():
-    print '''
+    print('''
 ***************************************************************
   Add / Update attributes of hdf5 file manually
 
@@ -43,7 +43,7 @@ def usage():
       add_attribute.py unwrapIfgram.h5  ref_y=None  ref_x=None
 
 ***************************************************************
-    '''
+    ''')
     return
 
 
@@ -59,7 +59,7 @@ def main(argv):
     #print '************ Add / Update HDF5 File Attributes *************'
     File = argv[0]
     atr  = readfile.read_attribute(File)
-    print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File
+    print('Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File)
 
     ##### Read New Attributes
     atr_new = dict()
@@ -70,7 +70,7 @@ def main(argv):
         else:
             atr_tmp = argv[i].split('=')
             atr_new[atr_tmp[0].strip()] = atr_tmp[1].strip()
-    print "The following attributes will be added/updated, or removed if new value is 'None':"
+    print("The following attributes will be added/updated, or removed if new value is 'None':")
     info.print_attributes(atr_new)
 
     ext = os.path.splitext(File)[1]
@@ -79,9 +79,9 @@ def main(argv):
         File = ut.add_attribute(File, atr_new)
     else:
         if not ut.update_attribute_or_not(atr_new, atr):
-            print 'All updated (removed) attributes already exists (do not exists) and have the same value, skip update.'
+            print('All updated (removed) attributes already exists (do not exists) and have the same value, skip update.')
         else:
-            for key, value in atr_new.iteritems():
+            for key, value in atr_new.items():
                 # delete the item is new value is None
                 if value == 'None':
                     try: atr.pop(key)
@@ -89,7 +89,7 @@ def main(argv):
                 else:
                     atr[key] = value
             if atr['PROCESSOR'] == 'roipac':
-                print 'writing >>> '+File+'.rsc'
+                print('writing >>> '+File+'.rsc')
                 writefile.write_roipac_rsc(atr, File+'.rsc')
 
     return File

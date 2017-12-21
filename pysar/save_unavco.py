@@ -32,14 +32,14 @@ def get_mission_name(meta_dict):
     '''
     mission = None
 
-    key_list = meta_dict.keys()
+    key_list = list(meta_dict.keys())
     if 'mission' in key_list:
         value = meta_dict['mission'].lower()
     elif 'PLATFORM' in key_list:
         value = meta_dict['PLATFORM'].lower()
     else:
-        print 'No PLATFORM nor mission attribute found, can not identify mission name.'
-        print 'return None'
+        print('No PLATFORM nor mission attribute found, can not identify mission name.')
+        print('return None')
         return mission
 
     ## Convert to UNAVCO Mission name
@@ -68,15 +68,15 @@ def get_mission_name(meta_dict):
         else:
             mission = 'ALOS'
     else:
-        print 'Un-recognized PLATFORM attribute: '+value
-        print 'return None'
+        print('Un-recognized PLATFORM attribute: '+value)
+        print('return None')
     return mission
 
 
 def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## Extract UNAVCO format metadata from PySAR attributes dictionary and dateList 
 
-    for key in pysar_meta_dict.keys():
+    for key in list(pysar_meta_dict.keys()):
         if 'unavco.' in key:
             pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict[key]
 
@@ -90,7 +90,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
     try: unavco_meta_dict['mission'] = get_mission_name(pysar_meta_dict)
     except ValueError:
-        print 'Missing required attribute: mission'
+        print('Missing required attribute: mission')
 
     ## beam_mode/swath
     unavco_meta_dict['beam_mode']  = pysar_meta_dict['beam_mode']
@@ -150,7 +150,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ##### insarmaps metadata
     #################################
     # footprint for data coverage
-    if 'X_FIRST' in pysar_meta_dict.keys():
+    if 'X_FIRST' in list(pysar_meta_dict.keys()):
         lon0 = float(pysar_meta_dict['X_FIRST'])
         lat0 = float(pysar_meta_dict['Y_FIRST'])
         lon1 = lon0 + float(pysar_meta_dict['X_STEP'])*int(pysar_meta_dict['WIDTH'])
@@ -159,7 +159,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
         lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
         unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
     else:
-        print 'Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info.'
+        print('Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info.')
 
     return unavco_meta_dict
 
@@ -226,8 +226,8 @@ def main(argv):
     h5_timeseries = h5py.File(inps.timeseries,'r')
     dateList = sorted(h5_timeseries[k].keys())
     unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
-    print '## UNAVCO Metadata:'
-    print '-----------------------------------------'
+    print('## UNAVCO Metadata:')
+    print('-----------------------------------------')
     info.print_attributes(unavco_meta_dict)
 
     meta_dict = pysar_meta_dict.copy()
@@ -244,27 +244,27 @@ def main(argv):
     BPERP = "%05d"%(0)
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
 
-    print '-----------------------------------------'
-    print 'writing >>> '+outName
+    print('-----------------------------------------')
+    print('writing >>> '+outName)
     f = h5py.File(outName,'w')
     hdfeos = f.create_group('HDFEOS')
-    if 'Y_FIRST' in meta_dict.keys():
+    if 'Y_FIRST' in list(meta_dict.keys()):
         gg_coord = hdfeos.create_group('GRIDS')
     else:
         gg_coord = hdfeos.create_group('SWATHS')
     group = gg_coord.create_group('timeseries')
 
     ##### Write Attributes to the HDF File
-    print 'write metadata to '+str(f)
-    for key,value in meta_dict.iteritems():
+    print('write metadata to '+str(f))
+    for key,value in meta_dict.items():
         f.attrs[key] = value
 
-    print 'write data to '+str(group)
+    print('write data to '+str(group))
     ##### Write Time Series Data
-    print 'reading file: '+inps.timeseries
-    print 'number of acquisitions: %d' % len(dateList)
+    print('reading file: '+inps.timeseries)
+    print('number of acquisitions: %d' % len(dateList))
     for date in dateList:
-        print date
+        print(date)
         data = h5_timeseries[k].get(date)[:,:]
         dset = group.create_dataset(date, data=data, compression='gzip')
         dset.attrs['Title'] = 'Time series displacement'
@@ -274,7 +274,7 @@ def main(argv):
 
     ##### Write Incidence_Angle
     if os.path.isfile(inps.incidence_angle):
-        print 'reading file: '+inps.incidence_angle
+        print('reading file: '+inps.incidence_angle)
         inc_angle, inc_angle_meta = readfile.read(inps.incidence_angle)
         dset = group.create_dataset('incidence_angle', data=inc_angle, compression='gzip')
         dset.attrs['Title'] = 'Incidence angle'
@@ -284,7 +284,7 @@ def main(argv):
 
     ##### Write DEM
     if os.path.isfile(inps.dem):
-        print 'reading file: '+inps.dem
+        print('reading file: '+inps.dem)
         dem, dem_meta = readfile.read(inps.dem)
         dset = group.create_dataset('dem', data=dem, compression='gzip')
         dset.attrs['Title'] = 'Digital elevatino model'
@@ -294,7 +294,7 @@ def main(argv):
 
     ##### Write Coherence
     if os.path.isfile(inps.coherence):
-        print 'reading file: '+inps.coherence
+        print('reading file: '+inps.coherence)
         coherence, coherence_meta = readfile.read(inps.coherence)
         dset = group.create_dataset('coherence', data=coherence, compression='gzip')
         dset.attrs['Title'] = 'Temporal Coherence'
@@ -304,7 +304,7 @@ def main(argv):
 
     ##### Write Mask
     if os.path.isfile(inps.mask):
-        print 'reading file: '+inps.mask
+        print('reading file: '+inps.mask)
         mask, mask_meta = readfile.read(inps.mask)
         dset = group.create_dataset('mask', data=mask, compression='gzip')
         dset.attrs['Title'] = 'Mask'
@@ -313,7 +313,7 @@ def main(argv):
         dset.attrs['_FillValue'] = INT_ZERO
 
     f.close()
-    print 'Done.'
+    print('Done.')
     return
 
 

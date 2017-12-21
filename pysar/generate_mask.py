@@ -64,7 +64,7 @@ def main(argv):
     length = int(atr['FILE_LENGTH'])
     width = int(atr['WIDTH'])
     k = atr['FILE_TYPE']
-    print 'Input file is '+k+': '+inps.file
+    print('Input file is '+k+': '+inps.file)
 
     # default output filename
     if not inps.outfile:
@@ -77,12 +77,12 @@ def main(argv):
 
     ##### Mask: Non-zero
     if inps.nonzero:
-        print 'generate mask for all pixels with non-zero value'
+        print('generate mask for all pixels with non-zero value')
         inps.outfile = ut.nonzero_mask(inps.file, inps.outfile)
         return inps.outfile
 
     ##### Mask: Threshold 
-    print 'create initial mask with the same size as the input file and all = 1'
+    print('create initial mask with the same size as the input file and all = 1')
     mask = np.ones((length, width), dtype=np.float32)
 
     data, atr = readfile.read(inps.file, inps.epoch)
@@ -90,33 +90,33 @@ def main(argv):
     # min threshold
     if inps.vmin:
         mask[data<inps.vmin] = 0
-        print 'all pixels with value < %s = 0' % str(inps.vmin)
+        print('all pixels with value < %s = 0' % str(inps.vmin))
 
     # max threshold
     if inps.vmax:
         mask[data>inps.vmax] = 0
-        print 'all pixels with value > %s = 0' % str(inps.vmax)
+        print('all pixels with value > %s = 0' % str(inps.vmax))
 
     # nan value
     mask[np.isnan(data)] = 0
-    print 'all pixels with nan value = 0'
+    print('all pixels with nan value = 0')
 
     # subset in Y
     if inps.subset_y:
         y0,y1 = sorted(inps.subset_y)
         mask[0:y0,:] = 0
         mask[y1:length,:] = 0
-        print 'all pixels with y OUT of [%d, %d] = 0' % (y0,y1)
+        print('all pixels with y OUT of [%d, %d] = 0' % (y0,y1))
 
     # subset in x
     if inps.subset_x:
         x0,x1 = sorted(inps.subset_x)
         mask[:,0:x0] = 0
         mask[:,x1:width] = 0
-        print 'all pixels with x OUT of [%d, %d] = 0' % (x0,x1)
+        print('all pixels with x OUT of [%d, %d] = 0' % (x0,x1))
   
     ## Write mask file
-    print 'writing >>> '+inps.outfile
+    print('writing >>> '+inps.outfile)
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask, atr, inps.outfile)
     return inps.outfile

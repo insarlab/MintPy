@@ -7,14 +7,14 @@ import pysar._pysar_utilities as ut
 
 
 def usage():
-    print '''usage: ifgram_closure.py  ifgram_file  [output_file]
+    print('''usage: ifgram_closure.py  ifgram_file  [output_file]
 
 Generate closure file for interferograms.
 
 example:
   ifgram_closure.py  unwrapIfgram.h5
   ifgram_closure.py  unwrapIfgram.h5  curls.h5
-    '''
+    ''')
     return
 
 
@@ -33,7 +33,7 @@ def main(argv):
     if not os.path.isfile(curlfile):
         ut.generate_curls(curlfile,h5file,Triangles,curls)
     else:
-        print curlfile + " already exists!"
+        print(curlfile + " already exists!")
 
     return curlfile
 

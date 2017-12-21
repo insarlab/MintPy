@@ -52,7 +52,7 @@ def multilook_matrix(matrix,lks_y,lks_x):
 def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
     #####
     atr = dict()
-    for key, value in atr_dict.iteritems():  atr[key] = str(value)
+    for key, value in atr_dict.items():  atr[key] = str(value)
   
     ##### calculate new data size
     length = int(atr['FILE_LENGTH'])
@@ -68,37 +68,37 @@ def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
     atr['XMAX'] = str(width_mli-1)
     atr['YMAX'] = str(length_mli-1)
     if print_msg:
-        print 'update FILE_LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX'
+        print('update FILE_LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX')
     
     try:
         atr['Y_STEP'] = str(lks_y*float(atr['Y_STEP']))
         atr['X_STEP'] = str(lks_x*float(atr['X_STEP']))
-        if print_msg: print 'update Y/X_STEP'
+        if print_msg: print('update Y/X_STEP')
     except: pass
     try:
         atr['AZIMUTH_PIXEL_SIZE'] = str(lks_y*float(atr['AZIMUTH_PIXEL_SIZE']))
         atr['RANGE_PIXEL_SIZE']   = str(lks_x*float(atr['RANGE_PIXEL_SIZE']))
-        if print_msg: print 'update AZIMUTH/RANGE_PIXEL_SIZE'
+        if print_msg: print('update AZIMUTH/RANGE_PIXEL_SIZE')
     except: pass
 
-    if not 'Y_FIRST' in atr.keys():
+    if not 'Y_FIRST' in list(atr.keys()):
         try:
             atr['RLOOKS'] = str(int(atr['RLOOKS'])*lks_x)
             atr['ALOOKS'] = str(int(atr['ALOOKS'])*lks_y)
-            if print_msg: print 'update R/ALOOKS'
+            if print_msg: print('update R/ALOOKS')
         except: pass
 
     try:
         atr['ref_y'] = str(int(int(atr['ref_y'])/lks_y))
         atr['ref_x'] = str(int(int(atr['ref_x'])/lks_x))
-        if print_msg: print 'update ref_y/x'
+        if print_msg: print('update ref_y/x')
     except: pass
     try:
         atr['subset_y0'] = str(int(int(atr['subset_y0'])/lks_y))
         atr['subset_y1'] = str(int(int(atr['subset_y1'])/lks_y))
         atr['subset_x0'] = str(int(int(atr['subset_x0'])/lks_x))
         atr['subset_x1'] = str(int(int(atr['subset_x1'])/lks_x))
-        if print_msg: print 'update subset_y0/y1/x0/x1'
+        if print_msg: print('update subset_y0/y1/x0/x1')
     except: pass
 
     return atr
@@ -111,9 +111,9 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## input file info
     atr = readfile.read_attribute(infile)
     k = atr['FILE_TYPE']
-    print 'multilooking '+k+' file '+infile
-    print 'number of looks in y / azimuth direction: %d' % lks_y
-    print 'number of looks in x / range   direction: %d' % lks_x
+    print('multilooking '+k+' file '+infile)
+    print('number of looks in y / azimuth direction: %d' % lks_y)
+    print('number of looks in x / range   direction: %d' % lks_x)
 
     ## output file name
     if not outfile:
@@ -122,7 +122,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
             outfile = os.path.splitext(infile)[0]+'_'+str(lks_y)+'alks_'+str(lks_x)+'rlks'+ext
         else:
             outfile = os.path.basename(infile)
-    print 'writing >>> '+outfile
+    print('writing >>> '+outfile)
 
     ###############################################################################
     ## Read/Write multi-dataset files
@@ -137,7 +137,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
         if k in ['interferograms','coherence','wrapped']:
             date12_list = ptime.list_ifgram2date12(epochList)
-            print 'number of interferograms: '+str(len(epochList))
+            print('number of interferograms: '+str(len(epochList)))
             for i in range(epoch_num):
                 epoch = epochList[i]
                 data = h5[k][epoch].get(epoch)[:]
@@ -148,12 +148,12 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data_mli, compression='gzip')
-                for key, value in atr_mli.iteritems():
+                for key, value in atr_mli.items():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
 
         elif k == 'timeseries':
-            print 'number of acquisitions: '+str(len(epochList))
+            print('number of acquisitions: '+str(len(epochList)))
             for i in range(epoch_num):
                 epoch = epochList[i]
                 data = h5[k].get(epoch)[:]
@@ -164,7 +164,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 prog_bar.update(i+1, suffix=epoch)
             atr = h5[k].attrs
             atr_mli = multilook_attribute(atr,lks_y,lks_x)
-            for key, value in atr_mli.iteritems():
+            for key, value in atr_mli.items():
                 group.attrs[key] = value
 
         h5.close()
@@ -228,10 +228,10 @@ def main(argv):
         Parallel(n_jobs=num_cores)(delayed(multilook_file)(file, inps.lks_y, inps.lks_x) for file in inps.file)
     else:
         for File in inps.file:
-            print '-------------------------------------------'
+            print('-------------------------------------------')
             multilook_file(File, inps.lks_y, inps.lks_x)
 
-    print 'Done.'
+    print('Done.')
     return
 
 ###################################################################################################

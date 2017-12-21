@@ -38,7 +38,7 @@ def update_attribute4isce(atr_rdr, inps, geo_data):
 
     # copy atr_rdr
     atr = dict()
-    for key, value in atr_rdr.iteritems():
+    for key, value in atr_rdr.items():
         atr[key] = str(value)
 
     atr['FILE_LENGTH'] = str(geo_data.shape[0])
@@ -50,7 +50,7 @@ def update_attribute4isce(atr_rdr, inps, geo_data):
     atr['Y_UNIT'] = 'degrees'
     atr['X_UNIT'] = 'degrees'
 
-    if 'ref_y' in atr_rdr.keys() and 'ref_x' in atr_rdr.keys():
+    if 'ref_y' in list(atr_rdr.keys()) and 'ref_x' in list(atr_rdr.keys()):
         length_rdr = int(atr_rdr['FILE_LENGTH'])
         width_rdr = int(atr_rdr['WIDTH'])
         ref_y_rdr = int(atr_rdr['ref_y'])
@@ -81,7 +81,7 @@ def geocode_attribute_with_geo_lut(atr_rdr, atr_lut, print_msg=True):
 
     # copy atr_rdr
     atr = dict()
-    for key, value in atr_rdr.iteritems():
+    for key, value in atr_rdr.items():
         atr[key] = str(value)
 
     atr['FILE_LENGTH'] = atr_lut['FILE_LENGTH']
@@ -96,7 +96,7 @@ def geocode_attribute_with_geo_lut(atr_rdr, atr_lut, print_msg=True):
     except: atr['X_UNIT'] = 'degrees'
 
     # Reference point from y/x to lat/lon
-    if 'ref_y' in atr_rdr.keys() and 'ref_x' in atr_rdr.keys():
+    if 'ref_y' in list(atr_rdr.keys()) and 'ref_x' in list(atr_rdr.keys()):
         ref_x_rdr = np.array(int(atr_rdr['ref_x']))
         ref_y_rdr = np.array(int(atr_rdr['ref_y']))
         trans_file = atr_lut['FILE_PATH']
@@ -109,7 +109,7 @@ def geocode_attribute_with_geo_lut(atr_rdr, atr_lut, print_msg=True):
             atr['ref_y'] = str(int(ref_y))
             atr['ref_x'] = str(int(ref_x))
             if print_msg:
-                print 'update ref_lat/lon/y/x'
+                print('update ref_lat/lon/y/x')
         else:
             warnings.warn("original reference pixel is out of .trans file's coverage. Continue.")
             try: atr.pop('ref_y')
@@ -160,26 +160,26 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
 
 
     ## Original coordinates: row/column number in radar file
-    print '------------------------------------------------------'
-    print 'geocoding file: '+fname
+    print('------------------------------------------------------')
+    print('geocoding file: '+fname)
     len_rdr = int(atr_rdr['FILE_LENGTH'])
     wid_rdr = int(atr_rdr['WIDTH'])
     pts_rdr = (np.arange(len_rdr), np.arange(wid_rdr))
 
 
     ## New coordinates: data value in lookup table
-    print 'reading lookup table file: '+lut_file
+    print('reading lookup table file: '+lut_file)
     rg, az, atr_lut = readfile.read(lut_file)
     len_geo = int(atr_lut['FILE_LENGTH'])
     wid_geo = int(atr_lut['WIDTH'])
 
     # adjustment if input radar file has been subseted.
-    if 'subset_x0' in atr_rdr.keys():
+    if 'subset_x0' in list(atr_rdr.keys()):
         x0 = float(atr_rdr['subset_x0'])
         y0 = float(atr_rdr['subset_y0'])
         rg -= x0
         az -= y0
-        print '\tinput radar coord file has been subsetted, adjust lookup table value'
+        print('\tinput radar coord file has been subsetted, adjust lookup table value')
 
     # extract pixels only available in radar file (get ride of invalid corners)
     idx = (az>0.0)*(az<=len_rdr)*(rg>0.0)*(rg<=wid_rdr)
@@ -187,7 +187,7 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
     del az, rg
 
 
-    print 'geocoding using scipy.interpolate.RegularGridInterpolator ...'
+    print('geocoding using scipy.interpolate.RegularGridInterpolator ...')
     data_geo = np.empty((len_geo, wid_geo)) * fill_value
     k = atr_rdr['FILE_TYPE']
     ##### Multiple Dataset File
@@ -199,10 +199,10 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)
-        print 'writing >>> '+fname_out
+        print('writing >>> '+fname_out)
 
         if k == 'timeseries':
-            print 'number of acquisitions: '+str(epoch_num)
+            print('number of acquisitions: '+str(epoch_num))
             for i in range(epoch_num):
                 date = epoch_list[i]
                 data = h5[k].get(date)[:]
@@ -215,13 +215,13 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
                 prog_bar.update(i+1, suffix=date)
             prog_bar.close()
 
-            print 'update attributes'
+            print('update attributes')
             atr = geocode_attribute_with_geo_lut(atr_rdr, atr_lut)
-            for key,value in atr.iteritems():
+            for key,value in atr.items():
                 group.attrs[key] = value
 
         elif k in ['interferograms','wrapped','coherence']:
-            print 'number of interferograms: '+str(epoch_num)
+            print('number of interferograms: '+str(epoch_num))
             date12_list = ptime.list_ifgram2date12(epoch_list)
             for i in range(epoch_num):
                 ifgram = epoch_list[i]
@@ -235,7 +235,7 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
                 dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
 
                 atr = geocode_attribute_with_geo_lut(h5[k][ifgram].attrs, atr_lut, print_msg=False)
-                for key, value in atr.iteritems():
+                for key, value in atr.items():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
         h5.close()
@@ -243,22 +243,22 @@ def geocode_file_with_geo_lut(fname, lut_file=None, method='nearest', fill_value
 
     ##### Single Dataset File
     else:
-        print 'reading '+fname
+        print('reading '+fname)
         data = readfile.read(fname)[0]
         RGI_func = RGI(pts_rdr, data, method, bounds_error=False, fill_value=fill_value)
 
         data_geo.fill(fill_value)
         data_geo[idx] = RGI_func(pts_geo)
 
-        print 'update attributes'
+        print('update attributes')
         atr = geocode_attribute_with_geo_lut(atr_rdr, atr_lut)
 
-        print 'writing >>> '+fname_out
+        print('writing >>> '+fname_out)
         writefile.write(data_geo, atr, fname_out)
 
     del data_geo
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
-    print 'Time used: %02d hours %02d mins %02d secs' % (h, m, s)
+    print('Time used: %02d hours %02d mins %02d secs' % (h, m, s))
     return fname_out
 
 
@@ -296,10 +296,10 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
-    print 'number of files to geocode: '+str(len(inps.file))
-    print inps.file
-    print 'interpolation method: '+inps.method
-    print 'fill_value: '+str(inps.fill_value)
+    print('number of files to geocode: '+str(len(inps.file)))
+    print(inps.file)
+    print('interpolation method: '+inps.method)
+    print('fill_value: '+str(inps.fill_value))
 
     # check outfile and parallel option
     if inps.parallel:
@@ -315,7 +315,7 @@ def main(argv):
         for fname in inps.file:
             geocode_file_with_geo_lut(fname, inps.lookup_file, inps.method, inps.fill_value)
 
-    print 'Done.'
+    print('Done.')
     return
 
 ######################################################################################

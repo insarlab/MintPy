@@ -22,14 +22,14 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 ########################################################################################
 def usage():
-    print '''usage: save_mat.py  file  [outfile]
+    print('''usage: save_mat.py  file  [outfile]
 
 This function converts the PySAR hdf5 file formats to the matlab structure and saves to a .mat file.
 
 example:
   save_mat.py  velocity.h5
   save_mat.py  timeseries.h5
-    '''
+    ''')
     return
 
 
@@ -48,11 +48,11 @@ def main(argv):
 
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    print 'input is '+k+' file: '+File
+    print('input is '+k+' file: '+File)
 
     try:    matFile = argv[1]
     except: matFile = os.path.splitext(File)[0]+'.mat'
-    print 'writing >>> '+matFile
+    print('writing >>> '+matFile)
 
     #####
     h5file = h5py.File(File,'r')
@@ -77,19 +77,19 @@ def main(argv):
             V['y_unit']=''
   
         try:  V['wavelength']=float(atr['WAVELENGTH'])
-        except:  print 'WAVELENGTH was not found'
+        except:  print('WAVELENGTH was not found')
         try:  V['sat_height']=float(atr['HEIGHT'])
-        except:  print 'HEIGHT was not found'
+        except:  print('HEIGHT was not found')
     
         try:  V['near_range']=float(atr['STARTING_RANGE'])
-        except:  print 'STARTING_RANGE was not found'
+        except:  print('STARTING_RANGE was not found')
     
         V['far_range']=''
     
         try:  V['near_LookAng']=float(atr['LOOK_REF1'])
-        except:  print 'LOOK_REF1 was not found'
+        except:  print('LOOK_REF1 was not found')
         try:  V['far_LookAng']=float(atr['LOOK_REF2'])
-        except:  print 'LOOK_REF2 was not found'
+        except:  print('LOOK_REF2 was not found')
        
         V['earth_radius']=''
         V['Unit']='m/yr'
@@ -97,10 +97,10 @@ def main(argv):
         V['bperpbot']=''
         V['sat']=''
         try:  V['width']=int(atr['WIDTH'])
-        except:  print 'WIDTH was not found'
+        except:  print('WIDTH was not found')
     
         try:  V['file_length']=int(atr['FILE_LENGTH'])
-        except:  print 'FILE_LENGTH was not found'
+        except:  print('FILE_LENGTH was not found')
         V['t']=''
         V['date']=''
         V['date_years']=''
@@ -116,7 +116,7 @@ def main(argv):
         epochList = sorted(h5file['timeseries'].keys())
         data_dict={}
         for epoch in epochList:
-            print epoch
+            print(epoch)
             d = h5file['timeseries'].get(epoch)
             ts={}
             ts['data'] = d[0:d.shape[0],0:d.shape[1]] 

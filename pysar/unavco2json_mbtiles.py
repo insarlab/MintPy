@@ -14,7 +14,7 @@ import getopt
 from pysar.add_attribute_insarmaps import InsarDatabaseController
 from pysar.mask import mask_matrix
 import argparse
-import cPickle
+import pickle
 
 # ex: python Converter_unavco.py Alos_SM_73_2980_2990_20070107_20110420.h5
 
@@ -53,7 +53,7 @@ needed_attributes = {
 
 def serialize_dictionary(dictionary, fileName):
     with open(fileName, "w") as file:
-        cPickle.dump(dictionary, file)
+        pickle.dump(dictionary, file)
 # ---------------------------------------------------------------------------------------
 # convert h5 file to json and upload it. folder_name == unavco_name
 def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name):
@@ -68,8 +68,8 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     y_first = float(attributes["Y_FIRST"])
     num_columns = int(attributes["WIDTH"])
     num_rows = int(attributes["FILE_LENGTH"])
-    print "columns: %d" % num_columns
-    print "rows: %d" % num_rows
+    print("columns: %d" % num_columns)
+    print("rows: %d" % num_rows)
     # create a siu_man array to store json point objects
     siu_man = []
     displacement_values = []
@@ -136,7 +136,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     try:
         g = geocoder.google([mid_lat,mid_long], method='reverse', timeout=60.0)
         country = str(g.country_long)
-    except Exception, e:
+    except Exception as e:
         sys.stderr.write("timeout reverse geocoding country name")
 
     area = folder_name
@@ -158,7 +158,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     for k in attributes:
         v = attributes[k]
         if k in needed_attributes:
-            print str(k) + ": " + str(v)
+            print(str(k) + ": " + str(v))
             attribute_keys += (str(k) + ",")
             attribute_values += (str(v) + ',')
     attribute_keys = attribute_keys[:len(attribute_keys)-1] + '}'
@@ -197,7 +197,7 @@ def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
     json_file.write("%s" % string_json)
     json_file.close()
 
-    print "converted chunk " + str(chunk_num)
+    print("converted chunk " + str(chunk_num))
 
 # ---------------------------------------------------------------------------------------
 def build_parser():
@@ -237,7 +237,7 @@ def main():
 # in timeseries group, there are datasets
 # need to get datasets with dates - strings that can be converted to integers
     dataset_keys = []
-    for k in group.keys():
+    for k in list(group.keys()):
         if k.isdigit():
             dataset_keys.append(k)
     dataset_keys.sort()
@@ -250,7 +250,7 @@ def main():
     for key in dataset_keys:
         dataset = group[key][:]
         if should_mask:
-            print "Masking " + str(key)
+            print("Masking " + str(key))
             mask = group['mask'][:]
             dataset = mask_matrix(dataset, mask)
 
@@ -268,7 +268,7 @@ def main():
     try: # create path for output
         os.mkdir(output_folder)
     except:
-        print output_folder + " already exists"
+        print(output_folder + " already exists")
 
 # read and convert the datasets, then write them into json files and insert into database
     convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, output_folder, folder_name)
@@ -280,7 +280,7 @@ def main():
 # ---------------------------------------------------------------------------------------
 # check how long it took to read h5 file data and create json files
     end_time =  time.clock()
-    print ("time elapsed: " + str(end_time - start_time))
+    print(("time elapsed: " + str(end_time - start_time)))
 # ---------------------------------------------------------------------------------------
 
 if __name__ == '__main__':

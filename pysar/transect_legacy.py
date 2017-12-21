@@ -267,7 +267,7 @@ def get_transect(z,x0,y0,x1,y1,interpolation='nearest'):
 
 ############################################################
 def Usage():
-    print '''
+    print('''
 *****************************************************************************************
 
    Generating a transect [or multiple transects] of the velocity field. 
@@ -311,7 +311,7 @@ def Usage():
                    -n 100 -d 10 -p yes -g ../GPS_velocities_PBO_and_unavco.cmm4 -S pysar -r IMPS -n 230 -s '11904,93' -e '5389,5662' -E on
 
 *****************************************************************************************
-    '''
+    ''')
 
 
 #####################################################################
@@ -343,7 +343,7 @@ def main(argv):
         elif opt == '-L':   stationsList = arg.split(',')
         elif opt == '-F':   FaultCoords  = arg.split(',')
         elif opt == '-p':   flip_profile = arg
-        elif opt == '-u':   flip_updown  = arg; print flip_updown
+        elif opt == '-u':   flip_updown  = arg; print(flip_updown)
         elif opt == '-G':   which_gps =arg
         elif opt == '-S':   gps_source=arg
         elif opt == '-h':   hbound=float(arg) 
@@ -357,7 +357,7 @@ def main(argv):
     try: atr = readfile.read_attribute(velocityFile)
     except:  Usage(); sys.exit(1)
     k = atr['FILE_TYPE']
-    print 'input file is '+k
+    print('input file is '+k)
 
     h5file = h5py.File(velocityFile,'r')
     z= h5file[k].get(k)[:]
@@ -365,7 +365,7 @@ def main(argv):
     width  = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
     try: lat,lon,lat_step,lon_step,lat_all,lon_all = get_lat_lon(atr)
-    except:  print 'radar coordinate'
+    except:  print('radar coordinate')
 
     ##### Fault Coordinates
     try:
@@ -375,17 +375,17 @@ def main(argv):
         Yf0,Xf0=find_row_column(Lon0,Lat0,lon,lat,lon_step,lat_step)
         Yf1,Xf1=find_row_column(Lon1,Lat1,lon,lat,lon_step,lat_step)
   
-        print '*********************************************'
-        print ' Fault Coordinates:'
-        print '   --------------------------  '
-        print '    Lat          Lon'
-        print str(Lat0) + ' , ' +str(Lon0)
-        print str(Lat1) + ' , ' +str(Lon1)
-        print '   --------------------------  '
-        print '    row          column'
-        print str(Yf0) + ' , ' +str(Xf0)
-        print str(Yf1) + ' , ' +str(Xf1)
-        print '*********************************************'
+        print('*********************************************')
+        print(' Fault Coordinates:')
+        print('   --------------------------  ')
+        print('    Lat          Lon')
+        print(str(Lat0) + ' , ' +str(Lon0))
+        print(str(Lat1) + ' , ' +str(Lon1))
+        print('   --------------------------  ')
+        print('    row          column')
+        print(str(Yf0) + ' , ' +str(Xf0))
+        print(str(Yf1) + ' , ' +str(Xf1))
+        print('*********************************************')
         #mf=float(Yf1-Yf0)/float((Xf1-Xf0))  # slope of the fault line
         #cf=float(Yf0-mf*Xf0)   # intercept of the fault line
         #df0=dist_point_from_line(mf,cf,x0,y0,1,1)   #distance of the profile start point from the Fault line
@@ -395,9 +395,9 @@ def main(argv):
         #x1=int((df0+df1)/np.sqrt(1+mp**2)+x0)    # correcting the end point of the profile to be on a line perpendicular to the Fault
         #y1=int(mp*(x1-x0)+y0)
     except:
-        print '*********************************************'
-        print 'No information about the Fault coordinates!'
-        print '*********************************************'
+        print('*********************************************')
+        print('No information about the Fault coordinates!')
+        print('*********************************************')
 
 #############################################################################
     try:
@@ -407,14 +407,14 @@ def main(argv):
         ax=fig.add_subplot(111)
         ax.imshow(z)
         try: ax.plot([Xf0,Xf1],[Yf0,Yf1],'k-')
-        except: print 'Fault line is not specified'
+        except: print('Fault line is not specified')
   
         xc=[]
         yc=[]
-        print 'please click on start and end point of the desired profile'
+        print('please click on start and end point of the desired profile')
         def onclick(event):
             if event.button==1:
-                print 'click'
+                print('click')
                 xc.append(int(event.xdata))
                 yc.append(int(event.ydata))
         cid = fig.canvas.mpl_connect('button_press_event', onclick)
@@ -435,11 +435,11 @@ def main(argv):
         Info_aboutFault='No'
 
 ##############################################################################
-    print '******************************************************'
-    print 'First profile coordinates:'
-    print 'Start point:  y = '+str(y0)+', x = '+str(x0) 
-    print 'End   point:  y = '+str(y1)+', x = '+str(x1)   
-    print '******************************************************'
+    print('******************************************************')
+    print('First profile coordinates:')
+    print('Start point:  y = '+str(y0)+', x = '+str(x0)) 
+    print('End   point:  y = '+str(y1)+', x = '+str(x1))   
+    print('******************************************************')
     length = int(np.hypot(x1-x0, y1-y0))
     x, y = np.linspace(x0, x1, length), np.linspace(y0, y1, length)
     zi = z[y.astype(np.int), x.astype(np.int)]
@@ -457,8 +457,8 @@ def main(argv):
         DX=(x-x0)*dx
         DY=(y-y0)*dy
         D =np.hypot(DX, DY)
-        print 'geo coordinate:'
-        print 'profile length = ' +str(D[-1]/1000.0) + ' km'
+        print('geo coordinate:')
+        print('profile length = ' +str(D[-1]/1000.0) + ' km')
         # df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
     except:
         dx=float(atr['RANGE_PIXEL_SIZE'])
@@ -466,12 +466,12 @@ def main(argv):
         DX=(x-x0)*dx
         DY=(y-y0)*dy
         D=np.hypot(DX, DY)
-        print 'radar coordinate:'
-        print 'profile length = ' +str(D[-1]/1000.0) + ' km'       
+        print('radar coordinate:')
+        print('profile length = ' +str(D[-1]/1000.0) + ' km')       
         # df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
 
     try: df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
-    except: print 'Fault line is not specified'
+    except: print('Fault line is not specified')
 
     import pdb; pdb.set_trace()
 
@@ -520,21 +520,21 @@ def main(argv):
 
     #############################################
     try:  m_prof_edge,c_prof_edge=line(XX0[0],YY0[0],XX0[-1],YY0[-1])    
-    except:  print 'Plotting one profile'    
+    except:  print('Plotting one profile')    
 
     ###############################################################################    
     if flip_profile=='yes':
         transect=np.flipud(transect);
         try:         df0_km=np.max(D)-df0_km;
-        except:    print '';
+        except:    print('');
     
 
-    print '******************************************************'
+    print('******************************************************')
     try:    gpsFile
     except: gpsFile='Nogps'
-    print 'GPS velocity file:'
-    print gpsFile
-    print '*******************************************************'
+    print('GPS velocity file:')
+    print(gpsFile)
+    print('*******************************************************')
     if os.path.isfile(gpsFile):
        insarData=z
        del z
@@ -560,14 +560,14 @@ def main(argv):
        lat,lon,lat_step,lon_step,lat_all,lon_all=get_lat_lon(h5file)
        IDYref,IDXref=find_row_column(Lon[idxRef],Lat[idxRef],lon,lat,lon_step,lat_step)
        if (not np.isnan(IDYref)) and (not np.isnan(IDXref)):
-         print 'referencing InSAR data to the GPS station at : ' + str(IDYref) + ' , '+ str(IDXref)
+         print('referencing InSAR data to the GPS station at : ' + str(IDYref) + ' , '+ str(IDXref))
          if not np.isnan(insarData[IDYref][IDXref]):
              transect = transect - insarData[IDYref][IDXref]
              insarData=insarData - insarData[IDYref][IDXref]
             
          else:
             
-             print ''' 
+             print(''' 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       
       WARNING: nan value for InSAR data at the refernce pixel!
@@ -576,12 +576,12 @@ def main(argv):
                please select another GPS station as the reference station.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
-                   '''
+                   ''')
              sys.exit(1)
        else:
-         print 'WARNING:'
-         print 'Reference GPS station is out of the area covered by InSAR data'
-         print 'please select another GPS station as the reference station.'
+         print('WARNING:')
+         print('Reference GPS station is out of the area covered by InSAR data')
+         print('please select another GPS station as the reference station.')
          sys.exit(1)
        
        try:
@@ -592,13 +592,13 @@ def main(argv):
         
       # theta=23.0*np.pi/180.0
        if os.path.isfile(incidence_file):
-           print 'Using exact look angle for each pixel'
+           print('Using exact look angle for each pixel')
            h5file_theta=h5py.File(incidence_file,'r')
            dset=h5file_theta['mask'].get('mask')
            theta=dset[0:dset.shape[0],0:dset.shape[1]]
            theta=theta*np.pi/180.0
        else:
-           print 'Using average look angle'
+           print('Using average look angle')
            theta=np.ones(np.shape(insarData))*23.0*np.pi/180.0
 
        heading=193.0*np.pi/180.0
@@ -624,8 +624,8 @@ def main(argv):
 #       print theta[IDYref,IDXref]
 
        gpsLOS_ref = gps_to_LOS(Ve[idxRef],Vn[idxRef],theta[IDYref,IDXref],heading)
-       print '%%%%%%^^^^^^^%%%%%%%%'
-       print gpsLOS_ref/1000.0
+       print('%%%%%%^^^^^^^%%%%%%%%')
+       print(gpsLOS_ref/1000.0)
       # insarData=insarData -gpsLOS_ref/1000.0 
       # transect = transect -gpsLOS_ref/1000.0
 
@@ -645,7 +645,7 @@ def main(argv):
          #  gpsLOS=gpsLOS-gpsLOS_ref
 
            IDY,IDX=find_row_column(Lon[idx],Lat[idx],lon,lat,lon_step,lat_step)
-           print theta[IDY,IDX]
+           print(theta[IDY,IDX])
            gpsLOS = gps_to_LOS(Ve[idx],Vn[idx],theta[IDY,IDX],heading)
          #  gpsLOS = gpsLOS-gpsLOS_ref
 
@@ -707,10 +707,10 @@ def main(argv):
            DistGPS.append(dist_point_from_line(m_prof_edge,c_prof_edge,GPSx[i],GPSy[i],dx,dy))
            
 
-       print '****************************************************'
-       print 'GPS stations in the profile area:' 
-       print GPS_in_bound_st
-       print '****************************************************'
+       print('****************************************************')
+       print('GPS stations in the profile area:') 
+       print(GPS_in_bound_st)
+       print('****************************************************')
        GPS_in_bound = np.array(GPS_in_bound)
        DistGPS = np.array(DistGPS)
    #    axes[1].plot(DistGPS/1000.0, -1*GPS_in_bound/1000, 'bo')
@@ -726,16 +726,16 @@ def main(argv):
 
    # else:
 
-    print '****************'
-    print 'flip up-down'
-    print flip_updown
+    print('****************')
+    print('flip up-down')
+    print(flip_updown)
 
     if flip_updown=='yes' and gpsFile!='Nogps':
-       print 'Flipping up-down'
+       print('Flipping up-down')
        transect=-1*transect
        GPS_in_bound=-1*GPS_in_bound
     elif flip_updown=='yes':
-       print 'Flipping up-down'
+       print('Flipping up-down')
        transect=-1*transect
 
 
@@ -768,7 +768,7 @@ def main(argv):
     try:
       axes[1].plot(DistGPS/1000.0, -1*GPS_in_bound/1000, 'b^',ms=10)
     except:
-      print ''
+      print('')
    # pl.fill_between(x, y-error, y+error,alpha=0.6, facecolor='0.20')
    # print transect
 #############################################################################
@@ -794,7 +794,7 @@ def main(argv):
     axes2.axis('image')
 
     figName = 'transect_area.png'
-    print 'writing '+figName
+    print('writing '+figName)
     plt.savefig(figName)    
 
 #############################################################################
@@ -821,12 +821,12 @@ def main(argv):
          dataset['lon']='Nan'
        dataset['Unit']='m'
        dataset['Distance_along_profile']=D
-       print '*****************************************'
-       print ''
-       print 'writing transect to >>> '+matFile
+       print('*****************************************')
+       print('')
+       print('writing transect to >>> '+matFile)
        sio.savemat(matFile, {'dataset': dataset})
-       print ''
-       print '*****************************************'
+       print('')
+       print('*****************************************')
 ############################################################################
  #   ax.plot(D/1000.0, avgInSAR*1000, 'r-')
  
@@ -849,7 +849,7 @@ def main(argv):
     try:      
         ax.plot(DistGPS/1000.0, -1*GPS_in_bound, '^',ms=10,mfc='Cyan')
     except:
-        print ''
+        print('')
     ax.set_ylabel('LOS velocity [mm/yr]',fontsize=26)
     ax.set_xlabel('Distance along profile [km]',fontsize=26)
 
@@ -915,10 +915,10 @@ def main(argv):
 
 
     figName = 'transect.png'
-    print 'writing '+figName
+    print('writing '+figName)
     plt.savefig(figName)
-    print ''
-    print '________________________________'
+    print('')
+    print('________________________________')
 #############################################################################
     plt.show()
 

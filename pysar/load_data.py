@@ -28,15 +28,15 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 ##################################################################
 def auto_path_miami(inps, template={}):
     '''Auto File Path Setting for Geodesy Lab - University of Miami'''
-    print 'Use auto path setting in University of Miami.'+\
-          '(To turn it off, change miami_path value to False in pysar/__init__.py)'
+    print('Use auto path setting in University of Miami.'+\
+          '(To turn it off, change miami_path value to False in pysar/__init__.py)')
     # PYSAR working directory
     if not inps.timeseries_dir:
         inps.timeseries_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PYSAR'
 
     ##### .unw/.cor/.int files
     process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
-    print "PROCESS directory: "+process_dir
+    print("PROCESS directory: "+process_dir)
     if inps.insar_processor == 'roipac':
         if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/filt_*.unw'
         if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
@@ -82,8 +82,8 @@ def auto_path_miami(inps, template={}):
         elif inps.insar_processor == 'gamma':
             inps.dem_geo = [process_dir+'/SIM/sim_'+m_date12+'/sim_*.utm.dem']
 
-        if   'DEMg' in template.keys():  inps.dem_geo.append(template['DEMg'])
-        elif 'DEM'  in template.keys():  inps.dem_geo.append(template['DEM'])
+        if   'DEMg' in list(template.keys()):  inps.dem_geo.append(template['DEMg'])
+        elif 'DEM'  in list(template.keys()):  inps.dem_geo.append(template['DEM'])
         try:    inps.dem_geo = ut.get_file_list(inps.dem_geo)[0]
         except: inps.dem_geo = None
 
@@ -105,16 +105,16 @@ def mode (thelist):
         counts[item] = counts.get(item, 0) + 1
     maxcount = 0
     maxitem  = None
-    for k, v in counts.items():
+    for k, v in list(counts.items()):
         if v > maxcount:
             maxitem  = k
             maxcount = v
 
     if maxcount == 1:
-        print "All values only appear once"
+        print("All values only appear once")
         return None
-    elif counts.values().count(maxcount) > 1:
-        print "List has multiple modes"
+    elif list(counts.values()).count(maxcount) > 1:
+        print("List has multiple modes")
         return None
     else:
         return maxitem
@@ -142,17 +142,17 @@ def check_file_size(fileList, mode_width=None, mode_length=None):
     ext = os.path.splitext(fileList[0])[1]
     fileListOut = list(fileList)
     if widthList.count(mode_width)!=len(widthList) or lengthList.count(mode_length)!=len(lengthList):
-        print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-        print 'WARNING: Some '+ext+' may have the wrong dimensions!'
-        print 'All '+ext+' should have the same size.'
-        print 'The width and length of the majority of '+ext+' are: '+str(mode_width)+', '+str(mode_length)
-        print 'But the following '+ext+' have different dimensions and thus will not be loaded:'
+        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+        print('WARNING: Some '+ext+' may have the wrong dimensions!')
+        print('All '+ext+' should have the same size.')
+        print('The width and length of the majority of '+ext+' are: '+str(mode_width)+', '+str(mode_length))
+        print('But the following '+ext+' have different dimensions and thus will not be loaded:')
         for i in range(len(fileList)):
             if widthList[i] != mode_width or lengthList[i] != mode_length:
-                print '%s    width: %s    length: %s' % (os.path.basename(fileList[i]), widthList[i], lengthList[i])
+                print('%s    width: %s    length: %s' % (os.path.basename(fileList[i]), widthList[i], lengthList[i]))
                 fileListOut.remove(fileList[i])
-        print '\nNumber of '+ext+' left: '+str(len(fileListOut))
-        print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+        print('\nNumber of '+ext+' left: '+str(len(fileListOut)))
+        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     return fileListOut, mode_width, mode_length
 
 
@@ -165,12 +165,12 @@ def check_existed_hdf5_file(roipacFileList, hdf5File):
     
     # if previous hdf5 file existed
     if os.path.isfile(hdf5File):
-        print os.path.basename(hdf5File)+'  already exists.'
+        print(os.path.basename(hdf5File)+'  already exists.')
         try:
             atr = readfile.read_attribute(hdf5File)
         except:
-            print 'File exists but not readable, delete it.'
-            rmCmd = 'rm '+hdf5File; print rmCmd; os.system(rmCmd)
+            print('File exists but not readable, delete it.')
+            rmCmd = 'rm '+hdf5File; print(rmCmd); os.system(rmCmd)
             return outFileList
         k = atr['FILE_TYPE']
         h5 = h5py.File(hdf5File, 'r')
@@ -188,11 +188,11 @@ def check_existed_hdf5_file(roipacFileList, hdf5File):
             ext = os.path.splitext(outFileList[0])[1]
             outFileList, mode_width, mode_length = check_file_size(outFileList)
             if mode_width != atr['WIDTH'] or mode_length != atr['FILE_LENGTH']:
-                print 'WARNING: input ROI_PAC files have different size than existed hdf5 file:'
-                print 'ROI_PAC file size: '+mode_length+', '+mode_width
-                print 'HDF5    file size: '+atr['FILE_LENGTH']+', '+atr['WIDTH']
-                print 'Continue WITHOUT loading '+ext+' file'
-                print 'To enforse loading, change/remove existed HDF5 filename and re-run loading script'
+                print('WARNING: input ROI_PAC files have different size than existed hdf5 file:')
+                print('ROI_PAC file size: '+mode_length+', '+mode_width)
+                print('HDF5    file size: '+atr['FILE_LENGTH']+', '+atr['WIDTH'])
+                print('Continue WITHOUT loading '+ext+' file')
+                print('To enforse loading, change/remove existed HDF5 filename and re-run loading script')
                 outFileList = None
     
     return outFileList
@@ -211,8 +211,8 @@ def load_multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extra_
 
     '''
     ext = os.path.splitext(fileList[0])[1]
-    print 'loading '+ext+' files into '+fileType+' HDF5 file ...'
-    print 'number of '+ext+' input: '+str(len(fileList))
+    print('loading '+ext+' files into '+fileType+' HDF5 file ...')
+    print('number of '+ext+' input: '+str(len(fileList)))
 
     # Check width/length mode of input files
     fileList, mode_width, mode_length = check_file_size(fileList)
@@ -225,31 +225,31 @@ def load_multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extra_
     # Open(Create) HDF5 file with r+/w mode based on fileList2
     if fileList2 == fileList:
         # Create and open new hdf5 file with w mode
-        print 'number of '+ext+' to add: '+str(len(fileList))
-        print 'open '+hdf5File+' with w mode'
+        print('number of '+ext+' to add: '+str(len(fileList)))
+        print('open '+hdf5File+' with w mode')
         h5file = h5py.File(hdf5File, 'w')
     elif fileList2:
         # Open existed hdf5 file with r+ mode
-        print 'Continue by adding the following new epochs ...'
-        print 'number of '+ext+' to add: '+str(len(fileList2))
-        print 'open '+hdf5File+' with r+ mode'
+        print('Continue by adding the following new epochs ...')
+        print('number of '+ext+' to add: '+str(len(fileList2)))
+        print('open '+hdf5File+' with r+ mode')
         h5file = h5py.File(hdf5File, 'r+')
         fileList = list(fileList2)
     else:
-        print 'All input '+ext+' are included, no need to re-load.'
+        print('All input '+ext+' are included, no need to re-load.')
         fileList = None
 
     # Loop - Writing ROI_PAC files into hdf5 file
     if fileList:
         # Unwraped Interferograms
-        if not fileType in h5file.keys():
+        if not fileType in list(h5file.keys()):
             gg = h5file.create_group(fileType)     # new hdf5 file
         else:
             gg = h5file[fileType]                  # existing hdf5 file
 
         for file in fileList:
             # Read data and attributes
-            print 'Adding ' + file
+            print('Adding ' + file)
             data, atr = readfile.read(file)
 
             # PySAR attributes
@@ -257,7 +257,7 @@ def load_multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extra_
             try:     atr['PROJECT_NAME'] = extra_meta_dict['project_name']
             except:  atr['PROJECT_NAME'] = 'PYSAR'
             key = 'INSAR_PROCESSOR'
-            if key not in atr.keys():
+            if key not in list(atr.keys()):
                 try:  atr[key] = extra_meta_dict['insar_processor']
                 except:  pass
 
@@ -266,12 +266,12 @@ def load_multi_group_hdf5(fileType, fileList, hdf5File='unwrapIfgram.h5', extra_
             dset = group.create_dataset(os.path.basename(file), data=data, compression='gzip')
 
             # Write attributes
-            for key, value in atr.iteritems():
+            for key, value in atr.items():
                 group.attrs[key] = str(value)
 
         # End of Loop
         h5file.close()
-        print 'finished writing to '+hdf5File
+        print('finished writing to '+hdf5File)
 
     return hdf5File, fileList
 
@@ -292,27 +292,27 @@ def load_single_dataset_hdf5(file_type, infile, outfile, extra_meta_dict=dict())
     if ut.update_file(outfile, infile):
         if (os.path.dirname(infile) == os.path.dirname(outfile) and \
             os.path.splitext(infile)[1] == os.path.splitext(outfile)[1]):
-            print infile+' already in working directory with recommended format, no need to re-load.'
+            print(infile+' already in working directory with recommended format, no need to re-load.')
             outfile = infile
 
         else:
             # Read input file
-            print 'loading file: '+infile
+            print('loading file: '+infile)
             data = readfile.read(infile)[0]
 
             # Write output file - data
-            print 'writing >>> '+outfile
+            print('writing >>> '+outfile)
             h5 = h5py.File(outfile, 'w')
             group = h5.create_group(file_type)
             dset = group.create_dataset(file_type, data=data, compression='gzip')
 
             # Write output file - attributes
-            for key, value in atr.iteritems():
+            for key, value in atr.items():
                 group.attrs[key] = value
             try: group.attrs['PROJECT_NAME'] = extra_meta_dict['project_name']
             except: pass
             key = 'INSAR_PROCESSOR'
-            if key not in atr.keys():
+            if key not in list(atr.keys()):
                 try:  atr[key] = extra_meta_dict['insar_processor']
                 except:  pass
             h5.close()
@@ -332,7 +332,7 @@ def copy_file(targetFile, destDir):
     #print '--------------------------------------------'
     destFile = destDir+'/'+os.path.basename(targetFile)
     if ut.update_file(destFile, targetFile):
-        print 'copy '+targetFile+' to '+destDir
+        print('copy '+targetFile+' to '+destDir)
         shutil.copy2(targetFile, destDir)
         try: shutil.copy2(targetFile+'.rsc', destDir)
         except: pass
@@ -360,7 +360,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         unwrapIfgram.h5 = load_file('filt*.unw', inps_dict=vars(inps))
     '''
     # Get project_name from input template file
-    if not 'project_name' in inps_dict.keys() and 'template_file' in inps_dict.keys():
+    if not 'project_name' in list(inps_dict.keys()) and 'template_file' in list(inps_dict.keys()):
         template_filename_list = [os.path.basename(i) for i in inps_dict['template_file']]
         try:  template_filename_list.remove('pysarApp_template.txt')
         except:  pass
@@ -374,8 +374,8 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
 
     ##### Prepare attributes file
     processor = inps_dict['insar_processor']
-    print '--------------------------------------------'
-    print 'preparing attributes files using prep_%s.py ...' % processor
+    print('--------------------------------------------')
+    print('preparing attributes files using prep_%s.py ...' % processor)
     # prepare multiple files input for cmd calling
     files_input = ''
     for x in fileList:
@@ -384,14 +384,14 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
     if   processor == 'gamma' :  prepCmd = 'prep_gamma.py ' +files_input;   os.system(prepCmd)
     elif processor == 'roipac':  prepCmd = 'prep_roipac.py '+files_input;   os.system(prepCmd)
     else:
-        print 'Un-supported InSAR processor: '+processor
-        print 'Skip preparing attributes files'
+        print('Un-supported InSAR processor: '+processor)
+        print('Skip preparing attributes files')
 
-    print '----------------------------'
-    print 'loading files ...'
+    print('----------------------------')
+    print('loading files ...')
     atr = readfile.read_attribute(fileList[0])
     k = atr['FILE_TYPE']
-    print 'Input file(s) is '+atr['PROCESSOR']+' '+k
+    print('Input file(s) is '+atr['PROCESSOR']+' '+k)
 
     # Get output file type
     if not file_type:
@@ -414,7 +414,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         elif file_type == 'snaphu_connect_component':  outfile = 'snaphuConnectComponent.h5'
         elif file_type == 'mask':  outfile = 'mask.h5'
         elif file_type == 'dem':
-            if 'Y_FIRST' in atr.keys():
+            if 'Y_FIRST' in list(atr.keys()):
                 outfile = 'demGeo.h5'
             else:
                 outfile = 'demRadar.h5'
@@ -424,7 +424,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
             warnings.warn('Un-recognized file type: '+file_type)
 
         # output directory
-        if 'timeseries_dir' in inps_dict.keys() and inps_dict['timeseries_dir']:
+        if 'timeseries_dir' in list(inps_dict.keys()) and inps_dict['timeseries_dir']:
             outdir = inps_dict['timeseries_dir']
         else:
             outdir = os.path.abspath(os.getcwd())
@@ -467,10 +467,10 @@ def load_data_from_template(inps):
     # Read file by file
     for File in inps.template_file:
         temp_dict = readfile.read_template(File)
-        for key, value in temp_dict.iteritems():
+        for key, value in temp_dict.items():
             temp_dict[key] = ut.check_variable_name(value)
         template.update(temp_dict)
-    keyList = template.keys()
+    keyList = list(template.keys())
 
     # Project Name
     if not inps.project_name:
@@ -488,8 +488,8 @@ def load_data_from_template(inps):
             else:
                 inps.insar_processor = value
 
-    print '--------------------------------------------'
-    print 'InSAR processing software: '+inps.insar_processor
+    print('--------------------------------------------')
+    print('InSAR processing software: '+inps.insar_processor)
     if 'pysar.unwrapFiles'    in keyList:   inps.unw   = template['pysar.unwrapFiles']
     if 'pysar.corFiles'       in keyList:   inps.cor   = template['pysar.corFiles']
     if 'pysar.transFile'      in keyList:   inps.trans = template['pysar.transFile']
@@ -523,13 +523,13 @@ def load_data_from_template(inps):
     # TEMPLATE file directory (to support relative path input)
     inps.template_dir = os.path.dirname(inps.template_file[-1])
     os.chdir(inps.template_dir)
-    print 'Go to TEMPLATE directory: '+inps.template_dir
-    print 'unwrapped interferograms to load: '+str(inps.unw)
+    print('Go to TEMPLATE directory: '+inps.template_dir)
+    print('unwrapped interferograms to load: '+str(inps.unw))
     #print 'wrapped   interferograms to load: '+str(inps.int)
-    print 'spatial coherence  files to load: '+str(inps.cor)
-    print 'transformation     file to load: '+str(inps.trans)
-    print 'DEM file in radar coord to load: '+str(inps.dem_radar)
-    print 'DEM file in geo   coord to load: '+str(inps.dem_geo)
+    print('spatial coherence  files to load: '+str(inps.cor))
+    print('transformation     file to load: '+str(inps.trans))
+    print('DEM file in radar coord to load: '+str(inps.dem_radar))
+    print('DEM file in geo   coord to load: '+str(inps.dem_geo))
 
     ##------------------------------------ Loading into HDF5 ---------------------------------------##
     # required - unwrapped interferograms
@@ -547,7 +547,7 @@ def load_data_from_template(inps):
     inps.dem_geo_file = load_file(inps.dem_geo, vars(inps))
 
     os.chdir(inps.timeseries_dir)
-    print 'Go back to PYSAR directory: '+inps.timeseries_dir
+    print('Go back to PYSAR directory: '+inps.timeseries_dir)
     return inps
 
 
