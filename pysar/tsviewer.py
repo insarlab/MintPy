@@ -475,14 +475,15 @@ def flip_axis():
 def make_color_bar():
     global fig_v, img, inps
     # Colorbar
-    cbar = fig_v.colorbar(img, orientation='vertical')
+    cbar_axes = fig_v.add_axes([0.065, 0.32, 0.40, 0.03])
+    cbar = fig_v.colorbar(img, cax=cbar_axes, orientation='horizontal')
     cbar.set_label('Displacement [%s]' % inps.disp_unit)
 
 
 def make_time_slider():
     global tslider, fig_v, tims, inps
 
-    ax_time = fig_v.add_axes([0.125, 0.1, 0.6, 0.07], axisbg='lightgoldenrodyellow', yticks=[])
+    ax_time = fig_v.add_axes([0.07, 0.10, 0.37, 0.07], axisbg='lightgoldenrodyellow', yticks=[])
     tslider = Slider(ax_time, '', tims[0], tims[-1], valinit=tims[inps.epoch_num])
     tslider.ax.bar(tims, np.ones(len(tims)), facecolor='black', width=0.01, ecolor=None)
     tslider.ax.set_xticks(np.round(np.linspace(tims[0], tims[-1], num=5) * 100) / 100)
@@ -608,7 +609,7 @@ def update_timeseries(y, x):
     ax_ts.set_xlabel('Time', fontsize=inps.font_size)
     ax_ts.set_ylabel('Displacement [%s]' % inps.disp_unit, fontsize=inps.font_size)
 
-    fig_ts.canvas.draw()
+    fig_v.canvas.draw()
 
     # Print to terminal
     print('\n---------------------------------------')
@@ -671,16 +672,15 @@ def main(argv):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
-    fig_v = plt.figure('Cumulative Displacement')
+    fig_v = plt.figure('Cumulative Displacement', figsize=inps.fig_size)
 
-    ######### Map Axis - Disaplcement Map Axis
-    ax_v = fig_v.add_axes([0.125, 0.25, 0.75, 0.65])
+    ######### Map Axis - Displacement Map Axis
+    ax_v = fig_v.add_axes([0.035, 0.42, 0.5, 0.5])
 
     configure_plot()
 
     ########## Plot Axes - Time Series Displacement - Points
-    fig_ts = plt.figure('Time series - point', figsize=inps.fig_size)
-    ax_ts = fig_ts.add_subplot(111)
+    ax_ts = fig_v.add_axes([0.55, 0.62, 0.42, 0.3])
 
     # Read Error List
     read_error_list()
@@ -701,4 +701,3 @@ def main(argv):
 ###########################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
