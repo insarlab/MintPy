@@ -1,8 +1,6 @@
 #! /usr/bin/env python2
 
-import sys
 import os
-import getopt
 import argparse
 import glob
 

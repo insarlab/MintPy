@@ -2,7 +2,7 @@
 import os
 import sys
 import h5py
-import pysar._readfile as readfile
+import _readfile as readfile
 
 try:
     demFile = sys.argv[1]

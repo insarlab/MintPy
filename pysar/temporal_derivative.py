@@ -9,14 +9,12 @@
 
 import os
 import sys
-import time
-import datetime
 
 import h5py
 import numpy as np
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
+import _datetime as ptime
+import _readfile as readfile
 
 
 ############################################################################

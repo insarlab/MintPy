@@ -8,7 +8,7 @@
 import sys
 import os
 import getopt
-import pysar._readfile as readfile
+import _readfile as readfile
 
 def usage():
     print('''

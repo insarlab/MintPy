@@ -12,11 +12,8 @@ import os
 import h5py
 import numpy as np
 import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
-from scipy.linalg import pinv as pinv
 
-import pysar._readfile as readfile
+import _readfile as readfile
 
 
 ############################################################

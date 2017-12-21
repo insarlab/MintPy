@@ -10,7 +10,7 @@
 import os
 import sys
 
-import pysar._pysar_utilities as ut
+import _pysar_utilities as ut
 
 
 #################################  Usage  ####################################

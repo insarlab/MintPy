@@ -15,11 +15,11 @@ import h5py
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator as RGI
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import _datetime as ptime
+import _readfile as readfile
+import _writefile as writefile
+import _pysar_utilities as ut
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
 
 ###############################################################################

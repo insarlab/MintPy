@@ -43,13 +43,12 @@ import h5py
 import numpy as np
 import multiprocessing
 
-import pysar
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._datetime as ptime
-import pysar._network as pnet
-import pysar._remove_surface as rm
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import _readfile as readfile
+import _writefile as writefile
+import _datetime as ptime
+import _network as pnet
+import _remove_surface as rm
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ###############################################################################

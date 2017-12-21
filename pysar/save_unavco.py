@@ -9,14 +9,13 @@
 import os
 import sys
 import argparse
-import re
 from datetime import datetime as dt
 
 import h5py
 import numpy as np
 
-import pysar._readfile as readfile
-import pysar.info as info
+import _readfile as readfile
+import info as info
 
 
 ################################################################

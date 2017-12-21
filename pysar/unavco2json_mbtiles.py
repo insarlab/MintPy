@@ -8,11 +8,8 @@ import math
 import time
 import os
 import sys
-import psycopg2
 import geocoder
-import getopt
-from pysar.add_attribute_insarmaps import InsarDatabaseController
-from pysar.mask import mask_matrix
+from mask import mask_matrix
 import argparse
 import pickle
 

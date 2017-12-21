@@ -15,10 +15,10 @@ import numpy as np
 import matplotlib as mpl; mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-import pysar._datetime as ptime
-import pysar._network as pnet
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import _datetime as ptime
+import _network as pnet
+import _readfile as readfile
+import _pysar_utilities as ut
 
 
 ######################################################################################################

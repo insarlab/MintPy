@@ -13,9 +13,8 @@ import getopt
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
-import pysar._readfile as readfile
+import _readfile as readfile
 
 
 ############################################################

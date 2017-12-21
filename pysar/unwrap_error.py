@@ -14,11 +14,11 @@ import h5py
 import numpy as np
 from scipy.linalg import pinv
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
-import pysar._remove_surface as rm
+import _datetime as ptime
+import _readfile as readfile
+import _writefile as writefile
+import _pysar_utilities as ut
+import _remove_surface as rm
 
 
 ##########################################################################################

@@ -6,8 +6,7 @@
 ############################################################
 
 import sys
-import os 
-from  numpy import shape,pi,cos, sin
+from  numpy import pi,cos, sin
 import getopt
 import h5py 
 

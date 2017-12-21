@@ -8,14 +8,12 @@
 
 import os
 import sys
-import getopt
-import time
 
 import h5py
 from numpy import std
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
+import _datetime as ptime
+import _readfile as readfile
 
 
 ############################################################

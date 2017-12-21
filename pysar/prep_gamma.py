@@ -13,10 +13,10 @@ import re
 
 import numpy as np
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import _datetime as ptime
+import _readfile as readfile
+import _writefile as writefile
+import _pysar_utilities as ut
 
 
 ######################################## Sub Functions ############################################

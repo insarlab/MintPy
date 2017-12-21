@@ -6,14 +6,10 @@
 ############################################################
 
 
-import os
-import sys 
-
-import h5py
+import sys
 import numpy as np
-import matplotlib.pyplot as plt
 
-import pysar._readfile as readfile
+import _readfile as readfile
 
 
 ################################################################################

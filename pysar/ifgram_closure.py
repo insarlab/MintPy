@@ -3,7 +3,7 @@
 import os
 import sys
 import h5py
-import pysar._pysar_utilities as ut
+import _pysar_utilities as ut
 
 
 def usage():

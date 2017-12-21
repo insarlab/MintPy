@@ -11,13 +11,12 @@ import argparse
 
 import h5py
 import numpy as np
-import matplotlib as mpl; mpl.use('Agg')
-import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.use('Agg')
 
-import pysar._readfile as readfile
-import pysar._datetime as ptime
-import pysar._network as pnet
-import pysar._pysar_utilities as ut
+import _readfile as readfile
+import _datetime as ptime
+import _pysar_utilities as ut
 
 
 ##################################################################

@@ -15,9 +15,9 @@ from . import _gmt as gmt
 import h5py
 import numpy as np
 
-import pysar._readfile as readfile
-import pysar.view as pview
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import _readfile as readfile
+import view as pview
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
 
 ####################################################################################

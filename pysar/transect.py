@@ -8,21 +8,16 @@
 
 import os
 import sys
-import getopt
-import glob
 import argparse
 
-import h5py
 import numpy as np
 import scipy.ndimage
 import scipy.io as sio
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
-import pysar.subset as sub
-import pysar.view as view
+import _readfile as readfile
+import _pysar_utilities as ut
+import subset as sub
 
 
 #####################################################################

@@ -9,13 +9,11 @@
 import sys
 import argparse
 
-import h5py
 import matplotlib.pyplot as plt
 
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
-import pysar._datetime as ptime
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import _readfile as readfile
+import _pysar_utilities as ut
+import _datetime as ptime
 
 
 #################################  Usage  ####################################

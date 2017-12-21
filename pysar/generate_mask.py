@@ -9,17 +9,14 @@
 #                   Add nonzero method, equivalent to Mask.h5
 
 
-import os
 import sys
 import argparse
-import getopt
 
 import numpy as np
-import h5py
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import _readfile as readfile
+import _writefile as writefile
+import _pysar_utilities as ut
 
 
 ################################################################################################

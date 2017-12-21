@@ -21,7 +21,6 @@ from matplotlib.patheffects import withStroke
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
-#import pysar
 import _datetime as ptime
 import _readfile as readfile
 import _pysar_utilities as ut
@@ -29,7 +28,7 @@ import mask as mask
 import subset as subset
 from .multilook import multilook_matrix
 
-from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
 
 ############################################ Class ###############################################

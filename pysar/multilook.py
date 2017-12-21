@@ -10,15 +10,14 @@ import sys
 import os
 import argparse
 import warnings
-import re
 
 import h5py
 import numpy as np
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
-import pysar._datetime as ptime
+import _readfile as readfile
+import _writefile as writefile
+import _pysar_utilities as ut
+import _datetime as ptime
 
 
 ######################################## Sub Functions ############################################

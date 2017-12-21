@@ -16,16 +16,14 @@
 
 import os
 import sys
-import time
-import datetime
 
 import h5py
 import numpy as np
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._datetime as ptime
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import _readfile as readfile
+import _writefile as writefile
+import _datetime as ptime
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
 
 def correct_lod_file(File, outFile=None):

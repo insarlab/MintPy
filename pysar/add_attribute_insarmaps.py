@@ -2,11 +2,8 @@
 
 import psycopg2
 import sys
-import getopt
-import os
 import argparse
-import pysar._readfile as readfile
-import json
+import _readfile as readfile
 import pycurl
 from io import StringIO
 import urllib.request, urllib.parse, urllib.error

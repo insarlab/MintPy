@@ -13,10 +13,10 @@ import argparse
 import h5py
 import numpy as np
 
-import pysar._datetime as ptime
-import pysar._pysar_utilities as ut
-import pysar._readfile as readfile
-import pysar._writefile as writefile
+import _datetime as ptime
+import _pysar_utilities as ut
+import _readfile as readfile
+import _writefile as writefile
 
 def read_template2inps(template_file, inps=None):
     '''Read input template file into inps.ex_date'''

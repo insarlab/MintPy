@@ -10,8 +10,8 @@ import os
 import sys
 import argparse
 
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import _readfile as readfile
+import _pysar_utilities as ut
 
 
 ################################################################################################

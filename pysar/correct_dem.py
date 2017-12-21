@@ -1,11 +1,9 @@
 #! /usr/bin/env python2
 
-import os
-import sys
 from numpy import *
 import h5py
-from pysar import _readfile
-from pysar import _writefile
+import _readfile
+import _writefile
 
 
 

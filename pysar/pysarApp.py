@@ -37,15 +37,13 @@ import argparse
 import warnings
 import shutil
 
-import h5py
 import numpy as np
 
-import pysar
-import pysar._pysar_utilities as ut
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar.subset as subset
-import pysar.save_unavco as unavco
+import _pysar_utilities as ut
+import _readfile as readfile
+import _writefile as writefile
+import subset as subset
+import save_unavco as unavco
 
 
 def check_subset_file(File, inps_dict, outFile=None, overwrite=False):

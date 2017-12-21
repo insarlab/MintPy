@@ -8,17 +8,14 @@
 
 import os
 import sys
-import time
-import datetime
 import argparse
 
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import _datetime as ptime
+import _readfile as readfile
+import _pysar_utilities as ut
 
 
 ############################################################################

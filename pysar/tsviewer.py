@@ -2,9 +2,7 @@
 # Adopted from plotts.py from GIAnT v1.0 for PySAR products
 
 import os
-import sys
 import argparse
-from datetime import datetime as dt
 
 import h5py
 import numpy as np

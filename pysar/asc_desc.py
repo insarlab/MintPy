@@ -14,10 +14,10 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
-import pysar.subset as subset
+import _readfile as readfile
+import _writefile as writefile
+import _pysar_utilities as ut
+import subset as subset
 
 
 ################################################################################

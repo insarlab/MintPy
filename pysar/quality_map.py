@@ -6,12 +6,7 @@
 ############################################################
 
 import sys
-import os
-import numpy as np
-import getopt
 import h5py
-import matplotlib.pyplot as plt
-#from scipy.sparse.csgraph import laplacian
 from scipy.ndimage.filters import laplace
 
 

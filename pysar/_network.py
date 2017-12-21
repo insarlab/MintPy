@@ -25,9 +25,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.sparse import csr_matrix, find
 from scipy.sparse.csgraph import minimum_spanning_tree
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import _datetime as ptime
+import _readfile as readfile
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ##################################################################

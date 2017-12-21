@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import getopt
 import sys
 import os
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 def usage():
     print('''

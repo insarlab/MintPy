@@ -12,9 +12,9 @@ import os
 from numpy import pi
 import h5py
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._datetime as ptime
+import _readfile as readfile
+import _writefile as writefile
+import _datetime as ptime
 
 
 ##############################################################################
