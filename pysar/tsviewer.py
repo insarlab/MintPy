@@ -19,7 +19,7 @@ from mask import mask_matrix
 
 ############# Global Variables ################
 tims, inps, img, mask, d_v, d_ts = None, None, None, None, None, None
-ax_v, fig_ts, fig_v, ax_ts, tslider = None, None, None, None, None
+ax_v, fig_ts, fig_v, ax_ts, tslider, second_plot_axes = None, None, None, None, None, None
 h5, k, dateList, atr, date_num = None, None, None, None, None
 lat, lon, ullat, ullon, lat_step, lon_step = None, None, None, None, None, None
 width, length = None, None
@@ -681,6 +681,7 @@ def main(argv):
 
     ########## Plot Axes - Time Series Displacement - Points
     ax_ts = fig_v.add_axes([0.55, 0.62, 0.42, 0.3])
+    second_plot_axes = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
 
     # Read Error List
     read_error_list()
