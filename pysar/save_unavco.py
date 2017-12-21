@@ -103,9 +103,10 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## relative_orbit, or track number
     #atr_dict['relative_orbit'] = int(re.match(r'(\w+)T([0-9+])',atr['PROJECT_NAME']).groups()[1])
     unavco_meta_dict['relative_orbit'] = int(pysar_meta_dict['relative_orbit'])
-    
+
     ## processing info
-    unavco_meta_dict['processing_type']     = pysar_meta_dict['processing_type']
+    try:    unavco_meta_dict['processing_type'] = pysar_meta_dict['processing_type']
+    except: unavco_meta_dict['processing_type'] = 'LOS_TIMESERIES'
     unavco_meta_dict['processing_software'] = pysar_meta_dict['processing_software']
 
     ##### Grabbed by script
