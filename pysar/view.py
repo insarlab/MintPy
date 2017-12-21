@@ -26,7 +26,7 @@ import _readfile as readfile
 import _pysar_utilities as ut
 import mask as mask
 import subset as subset
-from .multilook import multilook_matrix
+from multilook import multilook_matrix
 
 from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
