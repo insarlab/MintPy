@@ -21,6 +21,7 @@ from matplotlib.patheffects import withStroke
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
+import pysar
 import _datetime as ptime
 import _readfile as readfile
 import _pysar_utilities as ut
