@@ -24,6 +24,9 @@ h5, k, dateList, atr, date_num = None, None, None, None, None
 lat, lon, ullat, ullon, lat_step, lon_step = None, None, None, None, None, None
 width, length = None, None
 
+p1_scatter_point, p2_scatter_point = None, None
+
+
 ###########################################################################################
 def read_timeseries_yx(timeseries_file, y, x):
     '''Read time-series displacement on point (y,x) from timeseries_file
@@ -651,7 +654,7 @@ def estimate_slope():
 
 def plot_timeseries_event(event):
     '''Event function to get y/x from button press'''
-    global ax_v, d_ts
+    global ax_v, d_ts, p1_scatter_point, p2_scatter_point
 
     if event.inaxes != ax_v:
         return
@@ -659,6 +662,23 @@ def plot_timeseries_event(event):
     ii = int(event.ydata + 0.5)
     jj = int(event.xdata + 0.5)
     d_ts = update_timeseries(ii, jj)
+
+    if event.button == 1:
+        print("Button 1")
+
+        if p1_scatter_point is not None:
+            p1_scatter_point.remove()
+
+        p1_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='red', marker='o')
+
+    elif event.button == 3:
+        print("Button 3")
+
+        if p2_scatter_point is not None:
+            p2_scatter_point.remove()
+
+        p2_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='blue', marker='o')
+
 
 
 # Displays second data plot to screen
@@ -725,12 +745,12 @@ def main(argv):
     save_output()
 
     ########## MPL Connection Actions
-    cid = fig_v.canvas.mpl_connect('button_press_event', plot_timeseries_event)
+    first_data_point = fig_v.canvas.mpl_connect('button_press_event', plot_timeseries_event)
 
     display_figure()
 
     ########## MPL Disconnect Actions
-    fig_v.canvas.mpl_disconnect(cid)
+    fig_v.canvas.mpl_disconnect(first_data_point)
 
 ###########################################################################################
 if __name__ == '__main__':
