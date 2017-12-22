@@ -81,11 +81,13 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## Extract UNAVCO format metadata from PySAR attributes dictionary and dateList 
 
     for key in pysar_meta_dict.keys():
-        if 'he5.' in key:
-            pysar_meta_dict[key.split('he5.')[1]] = pysar_meta_dict[key]
+        if 'unavco.' in key:
+            pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict[key]
+        if 'hdfEos5.' in key:
+            pysar_meta_dict[key.split('hdfEos5.')[1]] = pysar_meta_dict[key]
 
     unavco_meta_dict = dict()
-    
+
     #################################
     ##### Required metadata
     #################################
@@ -170,8 +172,8 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     return unavco_meta_dict
 
 
-def get_unavco_filename(timeseriesFile):
-    '''Get output file name of UNAVCO InSAR Archive'''
+def get_hdfeos5_filename(timeseriesFile):
+    '''Get output file name of HDF-EOS5 time series file'''
     ##### Prepare Metadata
     pysar_meta_dict = readfile.read_attribute(timeseriesFile)
     k = pysar_meta_dict['FILE_TYPE']
@@ -207,7 +209,7 @@ def read_template2inps(template_file, inps=None):
     key_list = template.keys()
 
     # Coherence-based network modification
-    prefix = 'pysar.save.he5.'
+    prefix = 'pysar.save.hdfEos5.'
 
     key = prefix+'update'
     if key in key_list and template[key] == 'yes':
@@ -222,14 +224,14 @@ def read_template2inps(template_file, inps=None):
 
 ################################################################
 TEMPALTE='''
-pysar.save.he5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
-pysar.save.he5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
-pysar.save.he5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
+pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
+pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
+pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
 '''
 
 EXAMPLE='''example:
-  save_he5.py geo_timeseries_ECMWF_demErr_refDate_plane.h5
-  save_he5.py timeseries_ECMWF_demErr_refDate_plane.h5
+  save_hdfeos5.py geo_timeseries_ECMWF_demErr_refDate_plane.h5
+  save_hdfeos5.py timeseries_ECMWF_demErr_refDate_plane.h5
 '''
 
 def cmdLineParse():

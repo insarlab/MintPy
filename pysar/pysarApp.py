@@ -46,7 +46,7 @@ import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar.subset as subset
-import pysar.save_he5 as he5
+import pysar.save_hdfeos5 as hdfeos5
 
 
 ###############################################################################
@@ -362,9 +362,9 @@ pysar.geocode            = auto  #[yes / no], auto for yes
 pysar.geocode.resolution = auto  #[0.0-inf / filename], auto for 0.001 (~100 m), output resolution for ISCE processor
 
 ## 12.2 Export to other formats
-pysar.save.he5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
-pysar.save.he5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
-pysar.save.he5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
+pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
+pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
+pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
 pysar.save.kml     = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 pysar.save.geotiff = auto   #[yes / no], auto for no, save geocoded velocity to Geotiff format [not implemented yet]
 
@@ -1144,7 +1144,7 @@ def main(argv):
     #############################################
     # Save Timeseries to HDF-EOS5 format
     #############################################
-    if template['pysar.save.he5'].lower() in ['yes']:
+    if template['pysar.save.hdfEos5'].lower() in ['yes']:
         print '\n*********  Output Timeseries to HDF-EOS5 Format  ***********'
         if 'Y_FIRST' not in atr.keys() and not inps.lookup_file:
             warnings.warn('Dataset is in radar coordinates without lookup table file.'+\
@@ -1192,19 +1192,19 @@ def main(argv):
 
             # Save to HDF-EOS5 format
             print '--------------------------------------------'
-            SAT = he5.get_mission_name(atr)
+            SAT = hdfeos5.get_mission_name(atr)
             try:
-                inps.he5_file = ut.get_file_list(SAT+'_*.he5')[0]
-                print 'Find existed HDF-EOS5 time-series file: '+inps.he5_file
+                inps.hdfeos5_file = ut.get_file_list(SAT+'_*.he5')[0]
+                print 'Find existed HDF-EOS5 time-series file: '+inps.hdfeos5_file
             except:
-                inps.he5_file = None
+                inps.hdfeos5_file = None
                 print 'No HDF-EOS5 time-series file exists yet.'
-            he5Cmd = 'save_he5.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+' -i '+inps.geo_inc_angle_file+\
+            hdfeos5Cmd = 'save_hdfeos5.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+' -i '+inps.geo_inc_angle_file+\
                      ' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file+' -t '+inps.template_file
-            print he5Cmd
-            if ut.update_file(inps.he5_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
+            print hdfeos5Cmd
+            if ut.update_file(inps.hdfeos5_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
                                               inps.geo_inc_angle_file, inps.dem_geo_file], check_readable=False):
-                status = subprocess.Popen(he5Cmd, shell=True).wait()
+                status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
                 if status is not 0:
                     print '\nError while generating HDF-EOS5 time-series file.\n'
                     sys.exit(-1)
