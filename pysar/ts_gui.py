@@ -34,6 +34,22 @@ root.minsize(width=350, height=550)
 root.maxsize(width=350, height=550)
 root.resizable(width=False, height=False)
 
+colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap', 'CMRmap_r', 'Dark2',
+             'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r', 'Oranges', 'Oranges_r', 'PRGn', 'PRGn_r',
+             'Paired', 'Paired_r', 'Pastel1', 'Pastel1_r', 'Pastel2', 'Pastel2_r', 'PiYG', 'PiYG_r', 'PuBu', 'PuBuGn', 'PuBuGn_r', 'PuBu_r',
+             'PuOr', 'PuOr_r', 'PuRd', 'PuRd_r', 'Purples', 'Purples_r', 'RdBu', 'RdBu_r', 'RdGy', 'RdGy_r', 'RdPu', 'RdPu_r', 'RdYlBu', 'RdYlBu_r',
+             'RdYlGn', 'RdYlGn_r', 'Reds', 'Reds_r', 'Set1', 'Set1_r', 'Set2', 'Set2_r', 'Set3', 'Set3_r', 'Spectral', 'Spectral_r', 'Vega10', 'Vega10_r',
+             'Vega20', 'Vega20_r', 'Vega20b', 'Vega20b_r', 'Vega20c', 'Vega20c_r', 'Wistia', 'Wistia_r', 'YlGn', 'YlGnBu', 'YlGnBu_r', 'YlGn_r', 'YlOrBr',
+             'YlOrBr_r', 'YlOrRd', 'YlOrRd_r', 'afmhot', 'afmhot_r', 'autumn', 'autumn_r', 'binary', 'binary_r', 'bone', 'bone_r', 'brg', 'brg_r', 'bwr',
+             'bwr_r', 'cool', 'cool_r', 'coolwarm', 'coolwarm_r', 'copper', 'copper_r', 'cubehelix', 'cubehelix_r', 'flag', 'flag_r', 'gist_earth',
+             'gist_earth_r', 'gist_gray', 'gist_gray_r', 'gist_heat', 'gist_heat_r', 'gist_ncar', 'gist_ncar_r', 'gist_rainbow', 'gist_rainbow_r',
+             'gist_stern', 'gist_stern_r', 'gist_yarg', 'gist_yarg_r', 'gnuplot', 'gnuplot2', 'gnuplot2_r', 'gnuplot_r', 'gray', 'gray_r', 'hot', 'hot_r',
+             'hsv', 'hsv_r', 'inferno', 'inferno_r', 'jet', 'jet_r', 'magma', 'magma_r', 'nipy_spectral', 'nipy_spectral_r', 'ocean', 'ocean_r', 'pink', 'pink_r',
+             'plasma', 'plasma_r', 'prism', 'prism_r', 'rainbow', 'rainbow_r', 'seismic', 'seismic_r', 'spectral', 'spectral_r', 'spring', 'spring_r', 'summer',
+             'summer_r', 'tab10', 'tab10_r', 'tab20', 'tab20_r', 'tab20b', 'tab20b_r', 'tab20c', 'tab20c_r', 'terrain', 'terrain_r', 'viridis', 'viridis_r',
+             'winter', 'winter_r']
+
+
 '''     Frames, Text Variables, and Widgets for selection of the timeseries.h5 file to plot data from.     '''
 pick_timeseries_file_frame = Frame(root)
 
@@ -130,8 +146,23 @@ y_lim_lower_label = Label(y_lim_lower_frame, text="Lower Y-Lim", width=8)
 y_lim_lower_slider = Scale(y_lim_lower_frame, from_= -40, to= 40, orient=HORIZONTAL, length=150, variable=y_lim_lower, showvalue=0)
 y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
 
-'''     Frames, Text Variables, and Widgets for setting extrenous widgets      '''
+'''     Frames, Text Variables, and Widgets for setting extraneous widgets      '''
 unit_cmap_frame = Frame(root)
+
+unit = StringVar()
+unit.set("cm")
+unit_option_menu = apply(OptionMenu, (unit_cmap_frame, unit) + tuple(["cm", "m", "dm", "km"]))
+unit_option_menu.config(width=6)
+
+colormap = StringVar()
+colormap_option_menu = apply(OptionMenu, (unit_cmap_frame, colormap) + tuple(colormaps))
+colormap_option_menu.config(width=10)
+colormap.set('hsv')
+
+ref_date = StringVar()
+ref_date_option_menu = apply(OptionMenu, (unit_cmap_frame, ref_date) + tuple(["09-11-2009", "09-12-2009", "09-13-2009"]))
+ref_date_option_menu.config(width=12)
+ref_date.set('09-11-2009')
 
 
 
@@ -191,5 +222,8 @@ y_lim_lower_slider.pack(side=LEFT, padx=10)
 y_lim_lower_entry.pack(side=LEFT)
 
 unit_cmap_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+unit_option_menu.pack(side=LEFT, padx=(0, 10))
+colormap_option_menu.pack(side=LEFT, padx=(0, 10))
+ref_date_option_menu.pack(side=LEFT)
 
 mainloop()
