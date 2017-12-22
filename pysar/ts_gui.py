@@ -2,6 +2,7 @@ from Tkinter import *
 import matplotlib
 matplotlib.use('TkAgg')
 import tkFileDialog as filedialog
+import tsviewer as ts_view
 
 def pick_file():
     filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
@@ -28,6 +29,19 @@ def pick_dem():
     dem.set(root.filename)
     dem_short.set(filename.split("/")[-1])
     return root.filename
+
+
+def show_plot():
+
+    options = [timeseries_file.get(), "-m", mask.get(), "--dem", dem.get(), "--lalo", start_lat_input.get(),
+               start_lon_input.get(), "--ref-lalo", ref_lat_input.get(), ref_lon_input.get(),
+               "--ylim", str(y_lim_lower.get()), str(y_lim_upper.get()), "-u", unit.get(), "-c", colormap.get()]
+
+    if ts_view.fig_v is not None:
+        ts_view.fig_v.clear()
+
+    ts_view.main(options)
+
 
 root = Tk()
 root.minsize(width=350, height=550)
@@ -164,7 +178,7 @@ ref_date_option_menu = apply(OptionMenu, (unit_cmap_frame, ref_date) + tuple(["0
 ref_date_option_menu.config(width=12)
 ref_date.set('09-11-2009')
 
-
+submit_button = Button(root, text="Show Plot", command=lambda: show_plot())
 
 
 
@@ -180,8 +194,6 @@ selected_mask_file_label.pack(side=LEFT, fill=X)
 pick_dem_file_frame.pack(anchor='w', fill=X)
 pick_dem_file_button.pack(side=LEFT, anchor='w', pady=5, padx=10)
 selected_dem_file_label.pack(side=LEFT, fill=X)
-
-
 
 
 lat_lon_frame.pack(anchor='w', fill=X, pady=10, padx=10)
@@ -225,5 +237,7 @@ unit_cmap_frame.pack(anchor='w', fill=X, pady=10, padx=10)
 unit_option_menu.pack(side=LEFT, padx=(0, 10))
 colormap_option_menu.pack(side=LEFT, padx=(0, 10))
 ref_date_option_menu.pack(side=LEFT)
+
+submit_button.pack(anchor='center', pady=20)
 
 mainloop()

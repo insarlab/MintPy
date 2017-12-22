@@ -823,7 +823,7 @@ def main(argv):
     ########## Plot Axes - Time Series Displacement - Points
     ax_ts = fig_v.add_axes([0.55, 0.62, 0.42, 0.3])
     second_plot_axis = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
-    hide_second_plot(None)
+    second_plot_axis.remove()
 
     # Read Error List
     read_error_list()
