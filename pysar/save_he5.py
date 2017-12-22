@@ -23,6 +23,7 @@ import pysar.info as info
 
 
 ################################################################
+BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)
 FLOAT_ZERO = np.float32(0.0)
 CPX_ZERO = np.complex64(0.0)
@@ -227,11 +228,8 @@ pysar.save.he5.subset  = auto   #[yes / no], auto for no, put subset range info 
 '''
 
 EXAMPLE='''example:
-  save_he5.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geo_incidenceAngle.h5 -d demGeo.h5
-              -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -t pysarApp_template.txt
-  save_he5.py timeseries_ECMWF_demErr_refDate_plane.h5     -i geometryGeo.h5        -d geometryGeo.h5
-              -c temporalCoherence.h5     -m maskTempCoh.h5     -t pysarApp_template.txt
-
+  save_he5.py geo_timeseries_ECMWF_demErr_refDate_plane.h5
+  save_he5.py timeseries_ECMWF_demErr_refDate_plane.h5
 '''
 
 def cmdLineParse():
@@ -240,14 +238,28 @@ def cmdLineParse():
                                      formatter_class=argparse.RawDescriptionHelpFormatter,\
                                      epilog=EXAMPLE)
 
-    parser.add_argument('timeseries', default='timeseries.h5', help='Timeseries file')
-    parser.add_argument('--template','-t', dest='template_file', help='Template file')
+    parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
+    parser.add_argument('--template','-t', dest='template_file', default='pysarApp_template.txt', help='Template file')
 
-    parser.add_argument('-i','--incidence_angle', default='incidence_angle.h5', help='Incidence angle file')
-    parser.add_argument('-d','--dem', default='dem.h5', help='DEM file')
-    parser.add_argument('-c','--coherence', default='temporal_coherence.h5',
+    parser.add_argument('-c','--coherence', dest='coherence_file', default='temporalCoherence.h5',
                         help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
-    parser.add_argument('-m','--mask', default='mask.h5',help='Mask file')
+    parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5',help='Mask file')
+
+    geom = parser.add_argument_group('Geometry','Geometry files')
+    geom.add_argument('-d','--dem', dest='dem_file', default='geometryGeo.h5', help='DEM file')
+    geom.add_argument('--rg-coord', dest='rg_coord_file', default='geometryGeo.h5', help='DEM file')
+    geom.add_argument('--az-coord', dest='az_coord_file', default='geometryGeo.h5', help='DEM file')
+
+    geom.add_argument('-i','--incidence_angle', dest='inc_angle_file', default='geometryGeo.h5',\
+                      help='Incidence angle file')
+    geom.add_argument('--az-angle', dest='head_angle_file', default='geometryGeo.h5',\
+                      help='Incidence angle file')
+
+    geom.add_argument('--slant-range', dest='slant_range_dist_file', default='geometryGeo.h5',\
+                      help='Slant range distance file')
+    geom.add_argument('--water-mask', dest='water_mask_file', default='geometryGeo.h5', help='Water mask file')
+    geom.add_argument('--shadow-mask', dest='shadow_mask_file', default='geometryGeo.h5', help='Shadow mask file')
+
     parser.add_argument('--update', action='store_true',\
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
     parser.add_argument('--subset', action='store_true',\
@@ -264,12 +276,16 @@ def main(argv):
         inps = read_template2inps(inps.template_file, inps)
 
     ##### Prepare Metadata
-    pysar_meta_dict = readfile.read_attribute(inps.timeseries)
+    pysar_meta_dict = readfile.read_attribute(inps.timeseries_file)
     k = pysar_meta_dict['FILE_TYPE']
     length = int(pysar_meta_dict['FILE_LENGTH'])
     width = int(pysar_meta_dict['WIDTH'])
-    h5_timeseries = h5py.File(inps.timeseries,'r')
+    h5_timeseries = h5py.File(inps.timeseries_file,'r')
     dateList = sorted(h5_timeseries[k].keys())
+    dateNum = len(dateList)
+    dateListStr = str(dateList).translate(None, "[],u'")
+    pysar_meta_dict['DATE_TIMESERIES'] = dateListStr
+    
     unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
     print '## UNAVCO Metadata:'
     print '-----------------------------------------'
@@ -331,6 +347,7 @@ def main(argv):
         SUB = '_%s_%s_%s_%s' % (lat0Str, lat1Str, lon0Str, lon1Str)
         outName = os.path.splitext(outName)[0] + SUB + os.path.splitext(outName)[1]
 
+
     ##### Open HDF5 File
     print 'writing >>> '+outName
     f = h5py.File(outName,'w')
@@ -341,63 +358,150 @@ def main(argv):
         gg_coord = hdfeos.create_group('SWATHS')
     group = gg_coord.create_group('timeseries')
 
+
     ##### Write Attributes to the HDF File
     print 'write metadata to '+str(f)
     for key,value in meta_dict.iteritems():
         f.attrs[key] = value
 
-    print 'write data to '+str(group)
-    ##### Write Time Series Data
-    print 'reading file: '+inps.timeseries
-    print 'number of acquisitions: %d' % len(dateList)
-    for date in dateList:
-        print date
-        data = h5_timeseries[k].get(date)[:,:]
-        dset = group.create_dataset(date, data=data, compression='gzip')
-        dset.attrs['Title'] = 'Time series displacement'
-        dset.attrs['MissingValue'] = FLOAT_ZERO
-        dset.attrs['Units'] = 'meters'
-        dset.attrs['_FillValue'] = FLOAT_ZERO
 
-    ##### Write Incidence_Angle
-    if os.path.isfile(inps.incidence_angle):
-        print 'reading file: '+inps.incidence_angle
-        inc_angle, inc_angle_meta = readfile.read(inps.incidence_angle, epoch='incidenceAngle')
-        dset = group.create_dataset('incidence_angle', data=inc_angle, compression='gzip')
-        dset.attrs['Title'] = 'Incidence angle'
+    ##### Write Observation - Displacement
+    groupObs = group.create_group('observation')
+    print 'write data to '+str(groupObs)
+
+    disDset = np.zeros((dateNum, length, width), np.float32)
+    for i in range(dateNum):
+        sys.stdout.write('\rreading 3D displacement from file %s: %d/%d ...' % (inps.timeseries_file, i+1, dateNum))
+        sys.stdout.flush()
+        disDset[i] = h5_timeseries[k].get(dateList[i])[:]
+    print ' '
+
+    dset = groupObs.create_dataset('displacement', data=disDset, dtype=np.float32)
+    dset.attrs['DATE_TIMESERIES'] = dateListStr
+    dset.attrs['Title'] = 'Displacement time-series'
+    dset.attrs['MissingValue'] = FLOAT_ZERO
+    dset.attrs['Units'] = 'meters'
+    dset.attrs['_FillValue'] = FLOAT_ZERO
+
+
+    ##### Write Quality
+    groupQ = group.create_group('quality')
+    print 'write data to '+str(groupQ)
+
+    ## 1 - temporalCoherence
+    print 'reading coherence       from file: '+inps.coherence_file
+    data = readfile.read(inps.coherence_file)[0]
+    dset = groupQ.create_dataset('temporalCoherence', data=data, compression='gzip')
+    dset.attrs['Title'] = 'Temporal Coherence'
+    dset.attrs['MissingValue'] = FLOAT_ZERO
+    dset.attrs['Units'] = '1'
+    dset.attrs['_FillValue'] = FLOAT_ZERO
+
+    ## 2 - mask
+    print 'reading mask            from file: '+inps.mask_file
+    data = readfile.read(inps.mask_file, epoch='mask')[0]
+    dset = groupQ.create_dataset('mask', data=data, compression='gzip')
+    dset.attrs['Title'] = 'Mask'
+    dset.attrs['MissingValue'] = BOOL_ZERO
+    dset.attrs['Units'] = '1'
+    dset.attrs['_FillValue'] = BOOL_ZERO
+
+
+    ##### Write Geometry
+    ## Required: height, incidenceAngle
+    ## Optional: rangeCoord, azimuthCoord, headingAngle, slantRangeDistance, waterMask, shadowMask
+    groupGeom = group.create_group('geometry')
+    print 'write data to '+str(groupGeom)
+
+    ## 1 - height
+    print 'reading height          from file: '+inps.dem_file
+    data = readfile.read(inps.dem_file, epoch='height')[0]
+    dset = groupGeom.create_dataset('height', data=data, compression='gzip')
+    dset.attrs['Title'] = 'Digital elevatino model'
+    dset.attrs['MissingValue'] = INT_ZERO
+    dset.attrs['Units'] = 'meters'
+    dset.attrs['_FillValue'] = INT_ZERO
+
+    ## 2 - incidenceAngle
+    print 'reading incidence angle from file: '+inps.inc_angle_file
+    data = readfile.read(inps.inc_angle_file, epoch='incidenceAngle')[0]
+    dset = groupGeom.create_dataset('incidenceAngle', data=data, compression='gzip')
+    dset.attrs['Title'] = 'Incidence angle'
+    dset.attrs['MissingValue'] = FLOAT_ZERO
+    dset.attrs['Units'] = 'degrees'
+    dset.attrs['_FillValue'] = FLOAT_ZERO
+
+    ## 3 - rangeCoord
+    try:
+        data = readfile.read(inps.rg_coord_file, epoch='rangeCoord', print_msg=False)[0]
+        print 'reading range coord     from file: '+inps.rg_coord_file
+        dset = groupGeom.create_dataset('rangeCoord', data=data, compression='gzip')
+        dset.attrs['Title'] = 'Range Coordinates'
+        dset.attrs['MissingValue'] = FLOAT_ZERO
+        dset.attrs['Units'] = '1'
+        dset.attrs['_FillValue'] = FLOAT_ZERO
+    except:
+        print 'No rangeCoord found in file %s' % (inps.rg_coord_file)
+
+    ## 4 - azimuthCoord
+    try:
+        data = readfile.read(inps.az_coord_file, epoch='azimuthCoord', print_msg=False)[0]
+        print 'reading azimuth coord   from file: '+inps.az_coord_file
+        dset = groupGeom.create_dataset('azimuthCoord', data=data, compression='gzip')
+        dset.attrs['Title'] = 'Azimuth Coordinates'
+        dset.attrs['MissingValue'] = FLOAT_ZERO
+        dset.attrs['Units'] = '1'
+        dset.attrs['_FillValue'] = FLOAT_ZERO
+    except:
+        print 'No azimuthCoord found in file %s' % (inps.az_coord_file)
+
+    ## 5 - headingAngle
+    try:
+        data = readfile.read(inps.head_angle_file, epoch='heandingAngle', print_msg=False)[0]
+        print 'reading azimuth coord   from file: '+inps.head_angle_file
+        dset = groupGeom.create_dataset('heandingAngle', data=data, compression='gzip')
+        dset.attrs['Title'] = 'Heanding Angle'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'degrees'
         dset.attrs['_FillValue'] = FLOAT_ZERO
+    except:
+        print 'No headingAngle found in file %s' % (inps.head_angle_file)
 
-    ##### Write DEM
-    if os.path.isfile(inps.dem):
-        print 'reading file: '+inps.dem
-        dem, dem_meta = readfile.read(inps.dem, epoch='height')
-        dset = group.create_dataset('dem', data=dem, compression='gzip')
-        dset.attrs['Title'] = 'Digital elevatino model'
-        dset.attrs['MissingValue'] = INT_ZERO
-        dset.attrs['Units'] = 'meters'
-        dset.attrs['_FillValue'] = INT_ZERO
-
-    ##### Write Coherence
-    if os.path.isfile(inps.coherence):
-        print 'reading file: '+inps.coherence
-        coherence, coherence_meta = readfile.read(inps.coherence)
-        dset = group.create_dataset('coherence', data=coherence, compression='gzip')
-        dset.attrs['Title'] = 'Temporal Coherence'
+    ## 6 - slantRangeDistance
+    try:
+        data = readfile.read(inps.slant_range_dist_file, epoch='slantRangeDistance', print_msg=False)[0]
+        print 'reading slant range distance from file: '+inps.slant_range_dist_file
+        dset = groupGeom.create_dataset('slantRangeDistance', data=data, compression='gzip')
+        dset.attrs['Title'] = 'Slant Range Distance'
         dset.attrs['MissingValue'] = FLOAT_ZERO
-        dset.attrs['Units'] = 'None'
+        dset.attrs['Units'] = 'meters'
         dset.attrs['_FillValue'] = FLOAT_ZERO
+    except:
+        print 'No slantRangeDistance found in file %s' % (inps.slant_range_dist_file)
 
-    ##### Write Mask
-    if os.path.isfile(inps.mask):
-        print 'reading file: '+inps.mask
-        mask, mask_meta = readfile.read(inps.mask, epoch='mask')
-        dset = group.create_dataset('mask', data=mask, compression='gzip')
-        dset.attrs['Title'] = 'Mask'
-        dset.attrs['MissingValue'] = INT_ZERO
-        dset.attrs['Units'] = 'None'
-        dset.attrs['_FillValue'] = INT_ZERO
+    ## 7 - waterMask
+    try:
+        data = readfile.read(inps.water_mask_file, epoch='waterMask', print_msg=False)[0]
+        print 'reading water mask      from file: '+inps.water_mask_file
+        dset = groupGeom.create_dataset('waterMask', data=data, compression='gzip')
+        dset.attrs['Title'] = 'Water Mask'
+        dset.attrs['MissingValue'] = BOOL_ZERO
+        dset.attrs['Units'] = '1'
+        dset.attrs['_FillValue'] = BOOL_ZERO
+    except:
+        print 'No waterMask found in file %s' % (inps.water_mask_file)
+
+    ## 8 - shadowMask
+    try:
+        data = readfile.read(inps.shadow_mask_file, epoch='shadowMask', print_msg=False)[0]
+        print 'reading shadow mask     from file: '+inps.shadow_mask_file
+        dset = groupGeom.create_dataset('shadowMask', data=data, compression='gzip')
+        dset.attrs['Title'] = 'Shadow Mask'
+        dset.attrs['MissingValue'] = BOOL_ZERO
+        dset.attrs['Units'] = '1'
+        dset.attrs['_FillValue'] = BOOL_ZERO
+    except:
+        print 'No shadowMask found in file %s' % (inps.shadow_mask_file)
 
     f.close()
     print 'Done.'

@@ -1151,7 +1151,6 @@ def main(argv):
                           'Can not geocode.'+\
                           'Skip saving.')
         else:
-            import pdb; pdb.set_trace()
             # 1. Time series file
             inps.geo_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file, inps.template_file)
             # Add HDF-EOS5 attributes
