@@ -112,12 +112,23 @@ ref_lon_entry = Entry(ref_lon_frame, textvariable=ref_lon_input, width=17)
 
 '''     Frames, Text Variables, and Widgets for setting y-lim      '''
 y_lim_frame = Frame(root)
-
-'''     Frames, Text Variables, and Widgets for setting upper bound on the y-lim      '''
 y_lim_upper_frame = Frame(y_lim_frame)
 
-'''     Frames, Text Variables, and Widgets for setting lower bound on the y-lim      '''
+y_lim_upper = IntVar()
+y_lim_upper.set(20)
+
+y_lim_upper_label = Label(y_lim_upper_frame, text="Upper Y-Lim", width=8)
+y_lim_upper_slider = Scale(y_lim_upper_frame, from_= -40, to= 40, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
+y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6)
+
 y_lim_lower_frame = Frame(y_lim_frame)
+
+y_lim_lower = IntVar()
+y_lim_lower.set(-20)
+
+y_lim_lower_label = Label(y_lim_lower_frame, text="Lower Y-Lim", width=8)
+y_lim_lower_slider = Scale(y_lim_lower_frame, from_= -40, to= 40, orient=HORIZONTAL, length=150, variable=y_lim_lower, showvalue=0)
+y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
 
 '''     Frames, Text Variables, and Widgets for setting extrenous widgets      '''
 unit_cmap_frame = Frame(root)
@@ -170,8 +181,14 @@ ref_lon_entry.pack(side=TOP)
 y_lim_frame.pack(anchor='w', fill=X, pady=10, padx=10)
 
 y_lim_upper_frame.pack(side=TOP, fill=X, pady=(0, 10))
+y_lim_upper_label.pack(side=LEFT)
+y_lim_upper_slider.pack(side=LEFT, padx=10)
+y_lim_upper_entry.pack(side=LEFT)
 
 y_lim_lower_frame.pack(side=TOP, fill=X)
+y_lim_lower_label.pack(side=LEFT)
+y_lim_lower_slider.pack(side=LEFT, padx=10)
+y_lim_lower_entry.pack(side=LEFT)
 
 unit_cmap_frame.pack(anchor='w', fill=X, pady=10, padx=10)
 
