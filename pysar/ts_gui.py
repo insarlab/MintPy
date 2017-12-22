@@ -3,6 +3,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import tkFileDialog as filedialog
 import tsviewer as ts_view
+import info
 
 
 def pick_file():
@@ -34,6 +35,10 @@ def pick_dem():
 
 def show_plot():
 
+    file_info = info.hdf5_structure_string(timeseries_file.get())
+
+    show_file_info(file_info)
+
     options = [timeseries_file.get(), "-m", mask.get(), "--dem", dem.get(), "--lalo", start_lat_input.get(),
                start_lon_input.get(), "--ref-lalo", ref_lat_input.get(), ref_lon_input.get(),
                "--ylim", str(y_lim_lower.get()), str(y_lim_upper.get()), "-u", unit.get(), "-c", colormap.get()]
@@ -51,6 +56,21 @@ def show_plot():
         ts_view.fig_v.clear()
 
     ts_view.main(options)
+
+
+def show_file_info(file_info):
+
+    window = Tk()
+    window.minsize(width=350, height=550)
+    window.maxsize( height=550)
+    window.resizable(width=True, height=False)
+
+    text_box = Text(window, wrap=NONE)
+    text_box.insert(END, file_info)
+    text_box.config(height=550)
+    text_box.config(state=DISABLED)
+
+    text_box.pack(fill=X)
 
 
 root = Tk()
