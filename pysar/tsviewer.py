@@ -801,7 +801,6 @@ def compute_timeseries_data(plot_number, x_point, y_point):
     return d_ts_n
 
 
-
 def main(argv):
     global fig_v, ax_v, inps, ax_ts, fig_ts, second_plot_axis
 

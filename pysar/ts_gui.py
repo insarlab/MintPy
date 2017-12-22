@@ -4,6 +4,7 @@ matplotlib.use('TkAgg')
 import tkFileDialog as filedialog
 import tsviewer as ts_view
 
+
 def pick_file():
     filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
                                           filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
@@ -38,6 +39,15 @@ def show_plot():
                "--ylim", str(y_lim_lower.get()), str(y_lim_upper.get()), "-u", unit.get(), "-c", colormap.get()]
 
     if ts_view.fig_v is not None:
+
+        ts_view.p1_x = None
+        ts_view.p1_y = None
+        ts_view.p2_x = None
+        ts_view.p2_y = None
+        ts_view.p1_scatter_point = None
+        ts_view.p2_scatter_point = None
+        ts_view.second_plot_axis_visible = False
+
         ts_view.fig_v.clear()
 
     ts_view.main(options)
