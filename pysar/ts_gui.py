@@ -73,19 +73,41 @@ start_lat_lon_frame = Frame(lat_lon_frame)
 '''     Frames, Text Variables, and Widgtes for start lat coordinate entry     '''
 start_lat_frame = Frame(start_lat_lon_frame)
 
+start_lat_input = StringVar()
+start_lat_input.set("-0.4606")
 
-'''     Frames, Text Variables, and Widgets for start long coordinate entry     '''
+start_lat_label = Label(start_lat_frame, text="Starting Latitude", width=17)
+start_lat_entry = Entry(start_lat_frame, textvariable=start_lat_input, width=17)
+
+'''     Frames, Text Variables, and Widgtes for start long coordinate entry     '''
 start_lon_frame = Frame(start_lat_lon_frame)
 
+start_lon_input = StringVar()
+start_lon_input.set("-91.0752")
+
+start_lon_label = Label(start_lon_frame, text="Starting Longitude", width=17)
+start_lon_entry = Entry(start_lon_frame, textvariable=start_lon_input, width=17)
 
 '''     Frames, Text Variables, and Widgets for reference lat/long coordinates     '''
 ref_lat_lon_frame = Frame(lat_lon_frame, width=10)
 
-'''     Frames, Text Variables, and Widgets for reference lat coordinate entry     '''
+'''     Frames, Text Variables, and Widgtes for reference lat coordinate entry     '''
 ref_lat_frame = Frame(ref_lat_lon_frame)
 
-'''     Frames, Text Variables, and Widgets for reference long coordinate entry     '''
+ref_lat_input = StringVar()
+ref_lat_input.set("-0.4606")
+
+ref_lat_label = Label(ref_lat_frame, text="Reference Latitude", width=17)
+ref_lat_entry = Entry(ref_lat_frame, textvariable=ref_lat_input, width=17)
+
+'''     Frames, Text Variables, and Widgtes for reference long coordinate entry     '''
 ref_lon_frame = Frame(ref_lat_lon_frame)
+
+ref_lon_input = StringVar()
+ref_lon_input.set("-91.0752")
+
+ref_lon_label = Label(ref_lon_frame, text="Reference Longitude", width=17)
+ref_lon_entry = Entry(ref_lon_frame, textvariable=ref_lon_input, width=17)
 
 
 '''     Frames, Text Variables, and Widgets for setting y-lim      '''
@@ -125,15 +147,25 @@ lat_lon_frame.pack(anchor='w', fill=X, pady=10, padx=10)
 start_lat_lon_frame.pack(side=TOP, pady=(0, 10), fill=X)
 
 start_lat_frame.pack(side=LEFT)
+start_lat_label.pack(side=TOP)
+start_lat_entry.pack(side=TOP)
+
 
 start_lon_frame.pack(side=LEFT)
+start_lon_label.pack(side=TOP)
+start_lon_entry.pack(side=TOP)
 
 ref_lat_lon_frame.pack(side=TOP, fill=X)
 
 ref_lat_frame.pack(side=LEFT)
+ref_lat_label.pack(side=TOP)
+ref_lat_entry.pack(side=TOP)
 
 
 ref_lon_frame.pack(side=LEFT)
+ref_lon_label.pack(side=TOP)
+ref_lon_entry.pack(side=TOP)
+
 
 y_lim_frame.pack(anchor='w', fill=X, pady=10, padx=10)
 
