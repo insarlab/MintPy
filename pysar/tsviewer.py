@@ -719,6 +719,7 @@ def hide_second_plot(event):
 
     if p2_scatter_point is not None:
         p2_scatter_point.remove()
+        p2_scatter_point = None
 
     second_plot_axis.remove()
 
