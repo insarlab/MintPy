@@ -80,8 +80,8 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## Extract UNAVCO format metadata from PySAR attributes dictionary and dateList 
 
     for key in pysar_meta_dict.keys():
-        if 'unavco.' in key:
-            pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict[key]
+        if 'he5.' in key:
+            pysar_meta_dict[key.split('he5.')[1]] = pysar_meta_dict[key]
 
     unavco_meta_dict = dict()
     
@@ -97,7 +97,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
 
     ## beam_mode/swath
     unavco_meta_dict['beam_mode']  = pysar_meta_dict['beam_mode']
-    try:    unavco_meta_dict['beam_swath'] = pysar_meta_dict['beam_swath']
+    try:    unavco_meta_dict['beam_swath'] = int(pysar_meta_dict['beam_swath'])
     except: unavco_meta_dict['beam_swath'] = 0
 
     ## relative_orbit, or track number
@@ -206,7 +206,7 @@ def read_template2inps(template_file, inps=None):
     key_list = template.keys()
 
     # Coherence-based network modification
-    prefix = 'pysar.save.unavco.'
+    prefix = 'pysar.save.he5.'
 
     key = prefix+'update'
     if key in key_list and template[key] == 'yes':
@@ -221,23 +221,22 @@ def read_template2inps(template_file, inps=None):
 
 ################################################################
 TEMPALTE='''
-pysar.save.unavco         = auto   #[yes / no], auto for no, save timeseries to UNAVCO InSAR Archive format
-pysar.save.unavco.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
-pysar.save.unavco.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
+pysar.save.he5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
+pysar.save.he5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
+pysar.save.he5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
 '''
 
 EXAMPLE='''example:
-  save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geo_incidenceAngle.h5 -d demGeo.h5
-                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --template pysarApp_template.txt
-  save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geometryGeo.h5 -d geometryGeo.h5
-                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --template pysarApp_template.txt --update
-  save_unavco.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geometryGeo.h5 -d geometryGeo.h5
-                 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 --template pysarApp_template.txt --subset
+  save_he5.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -i geo_incidenceAngle.h5 -d demGeo.h5
+              -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -t pysarApp_template.txt
+  save_he5.py timeseries_ECMWF_demErr_refDate_plane.h5     -i geometryGeo.h5        -d geometryGeo.h5
+              -c temporalCoherence.h5     -m maskTempCoh.h5     -t pysarApp_template.txt
+
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Convert PySAR product into UNAVCO InSAR Archive format\n'+\
-                                                 '\tonly support time-series for now.',\
+    parser = argparse.ArgumentParser(description='Convert PySAR timeseries product into HDF-EOS5 format\n'+\
+                                     'https://earthdata.nasa.gov/user-resources/standards-and-references/hdf-eos5',\
                                      formatter_class=argparse.RawDescriptionHelpFormatter,\
                                      epilog=EXAMPLE)
 
@@ -264,7 +263,6 @@ def main(argv):
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
-    #print '\n**************** Output to UNAVCO **************'
     ##### Prepare Metadata
     pysar_meta_dict = readfile.read_attribute(inps.timeseries)
     k = pysar_meta_dict['FILE_TYPE']
@@ -284,7 +282,9 @@ def main(argv):
     ##### Open HDF5 File
     #####Get output filename
     SAT = meta_dict['mission']
-    SW  = meta_dict['beam_mode']    # should be like FB08 for ALOS, need to find out, Yunjun, 2016-12-26
+    SW  = meta_dict['beam_mode']
+    if meta_dict['beam_swath']:
+        SW += str(meta_dict['beam_swath'])
     RELORB = "%03d"%(int(meta_dict['relative_orbit']))
 
     ##Frist and/or Last Frame

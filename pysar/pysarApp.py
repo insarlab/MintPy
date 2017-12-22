@@ -46,7 +46,7 @@ import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar.subset as subset
-import pysar.save_unavco as unavco
+import pysar.save_he5 as he5
 
 
 ###############################################################################
@@ -352,7 +352,7 @@ pysar.velocity.startDate   = auto   #[20070101 / no], auto for no
 pysar.velocity.endDate     = auto   #[20101230 / no], auto for no
 
 
-## 12. Post-processing (geocode, output to Google Earth, UNAVCO, etc.)
+## 12. Post-processing (geocode, output to Google Earth, HDF-EOS5, etc.)
 ## 12.1 Geocode
 ## For data processed by ROI_PAC/Gamma, output resolution for geocoded file is the same as their lookup table file.
 ## For data processed by ISCE/Doris, output resolution is assign by user with resolution option:
@@ -362,9 +362,9 @@ pysar.geocode            = auto  #[yes / no], auto for yes
 pysar.geocode.resolution = auto  #[0.0-inf / filename], auto for 0.001 (~100 m), output resolution for ISCE processor
 
 ## 12.2 Export to other formats
-pysar.save.unavco         = auto   #[yes / no], auto for no, save timeseries to UNAVCO InSAR Archive format
-pysar.save.unavco.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
-pysar.save.unavco.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
+pysar.save.he5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
+pysar.save.he5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
+pysar.save.he5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
 pysar.save.kml     = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 pysar.save.geotiff = auto   #[yes / no], auto for no, save geocoded velocity to Geotiff format [not implemented yet]
 
@@ -557,8 +557,8 @@ def main(argv):
     except: inps.trop_file = None
 
     # Get unavco_attributes.txt file name
-    try:    inps.unavco_atr_file = ut.get_file_list('unavco_attributes.txt', abspath=True)[0]
-    except: inps.unavco_atr_file = None;   print 'No UNAVCO attributes file found.'
+    try:    inps.unavco_atr_file = ut.get_file_list('unavco_attribute*txt', abspath=True)[0]
+    except: inps.unavco_atr_file = None;   print 'No HDF-EOS5 attributes file found.'
 
 
     #########################################
@@ -583,17 +583,14 @@ def main(argv):
     if 'Y_FIRST' in atr.keys():
         inps.coord_type = 'geo'
 
-    #if inps.unavco_atr_file:
-    #    atrCmd = 'add_attribute.py '+inps.ifgram_file+' '+inps.unavco_atr_file       # FA 11/17: add attributes from template file until unavco_attributes is generated automatically
-    #import pdb; pdb.set_trace()
     if inps.custom_template_file:
         atrCmd = 'add_attribute.py '+inps.ifgram_file+' '+inps.custom_template_file
-
         print atrCmd
         status = subprocess.Popen(atrCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while adding UNAVCO attributes to unwrapped interferograms file.\n'
+            print '\nError while adding HDF-EOS5 attributes to unwrapped interferograms file.\n'
             sys.exit(-1)
+
     if inps.load_dataset:
         sys.exit('Exit as planned after loading/checking the dataset')
 
@@ -1145,24 +1142,25 @@ def main(argv):
 
 
     #############################################
-    # Save to UNAVCO InSAR Archive format
+    # Save Timeseries to HDF-EOS5 format
     #############################################
-    if template['pysar.save.unavco'].lower() in ['yes']:
-        print '\n*********  Output to UNAVCO InSAR Archive Format  ***********'
+    if template['pysar.save.he5'].lower() in ['yes']:
+        print '\n*********  Output Timeseries to HDF-EOS5 Format  ***********'
         if 'Y_FIRST' not in atr.keys() and not inps.lookup_file:
             warnings.warn('Dataset is in radar coordinates without lookup table file.'+\
                           'Can not geocode.'+\
                           'Skip saving.')
         else:
+            import pdb; pdb.set_trace()
             # 1. Time series file
             inps.geo_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file, inps.template_file)
-            # Add UNAVCO attributes
+            # Add HDF-EOS5 attributes
             if inps.unavco_atr_file:
                 atrCmd = 'add_attribute.py '+inps.geo_timeseries_file+' '+inps.unavco_atr_file
                 print atrCmd
                 status = subprocess.Popen(atrCmd, shell=True).wait()
                 if status is not 0:
-                    print '\nError while adding UNAVCO attributes to time series file.\n'
+                    print '\nError while adding HDF-EOS5 attributes to time series file.\n'
                     sys.exit(-1)
 
             # 2. Temporal Coherence
@@ -1183,8 +1181,8 @@ def main(argv):
                 inps.geo_mask_file = outName
 
             # 4. Incidence Angle
-            inps.inc_angle_file = 'incidenceAngle.h5'
-            if ut.update_file(inps.inc_angle_file, inps.timeseries_file):
+            #inps.inc_angle_file = 'incidenceAngle.h5'
+            if ut.update_file(inps.inc_angle_file):
                 incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
                 print incAngleCmd
                 status = subprocess.Popen(incAngleCmd, shell=True).wait()
@@ -1193,25 +1191,23 @@ def main(argv):
                     sys.exit(-1)
             inps.geo_inc_angle_file = check_geocode_file(inps.lookup_file, inps.inc_angle_file, inps.template_file)
 
-            # Save to UNAVCO format
+            # Save to HDF-EOS5 format
             print '--------------------------------------------'
-            SAT = unavco.get_mission_name(atr)
+            SAT = he5.get_mission_name(atr)
             try:
-                inps.unavco_file = ut.get_file_list(SAT+'_*.he5')[0]
-                print 'Find existed UNAVCO time-series file: '+inps.unavco_file
+                inps.he5_file = ut.get_file_list(SAT+'_*.he5')[0]
+                print 'Find existed HDF-EOS5 time-series file: '+inps.he5_file
             except:
-                inps.unavco_file = None
-                print 'No UNAVCO time-series file exists yet.'
-            #inps.unavco_file = unavco.get_unavco_filename(inps.geo_timeseries_file)
-            unavcoCmd = 'save_unavco.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+\
-                        ' -i '+inps.geo_inc_angle_file+' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file+\
-                        ' --template '+inps.template_file
-            print unavcoCmd
-            if ut.update_file(inps.unavco_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
-                                                 inps.geo_inc_angle_file, inps.dem_geo_file], check_readable=False):
-                status = subprocess.Popen(unavcoCmd, shell=True).wait()
+                inps.he5_file = None
+                print 'No HDF-EOS5 time-series file exists yet.'
+            he5Cmd = 'save_he5.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+' -i '+inps.geo_inc_angle_file+\
+                     ' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file+' -t '+inps.template_file
+            print he5Cmd
+            if ut.update_file(inps.he5_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
+                                              inps.geo_inc_angle_file, inps.dem_geo_file], check_readable=False):
+                status = subprocess.Popen(he5Cmd, shell=True).wait()
                 if status is not 0:
-                    print '\nError while generating UNAVCO InSAR arhive time series file.\n'
+                    print '\nError while generating HDF-EOS5 time-series file.\n'
                     sys.exit(-1)
 
 
