@@ -25,7 +25,8 @@ lat, lon, ullat, ullon, lat_step, lon_step = None, None, None, None, None, None
 width, length = None, None
 
 p1_scatter_point, p2_scatter_point = None, None
-second_plot_axis_visible = False;
+p1_x, p1_y, p2_x, p2_y = None, None, None, None
+second_plot_axis_visible = False
 
 
 ###########################################################################################
@@ -585,6 +586,8 @@ def update_timeseries(y, x, plot_number):
     '''Plot point time series displacement at pixel [y, x]'''
     global fig_ts, ax_ts, second_plot_axis, inps, dateList, h5, k, inps, tims, fig_v, date_num, d_ts
 
+    set_scatter_coords(plot_number, x, y)
+
     if plot_number == 1:
         axis = ax_ts
     else:
@@ -658,16 +661,22 @@ def estimate_slope():
     print('linear velocity: %.2f +/- %.2f [%s/yr]' % (d_slope[0], d_slope[4], inps.disp_unit))
 
 
+def set_scatter_coords(plot_number, x, y):
+    global p1_x, p1_y, p2_x, p2_y
+    if plot_number == 1:
+        p1_x, p1_y = x, y
+    else:
+        p2_x, p2_y = x, y
+
 def plot_timeseries_event(event):
     '''Event function to get y/x from button press'''
-    global ax_v, d_ts, p1_scatter_point, p2_scatter_point, second_plot_axis
+    global ax_v, d_ts, p1_scatter_point, p2_scatter_point, second_plot_axis, p1_x, p1_y, p2_x, p2_y
 
     if event.inaxes != ax_v:
         return
 
     ii = int(event.ydata + 0.5)
     jj = int(event.xdata + 0.5)
-    plot_number = 0
 
     if event.button == 1:
 
@@ -675,6 +684,7 @@ def plot_timeseries_event(event):
             p1_scatter_point.remove()
 
         p1_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='red', marker='o')
+
         d_ts = update_timeseries(ii, jj, 1)
 
     elif event.button == 3 and second_plot_axis_visible:
@@ -683,7 +693,8 @@ def plot_timeseries_event(event):
             p2_scatter_point.remove()
 
         p2_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='blue', marker='o')
-        d_ts = update_timeseries(ii, jj, 3)
+
+        d_ts = update_timeseries(ii, jj, 2)
 
 
 # Displays second data plot to screen
@@ -711,6 +722,77 @@ def hide_second_plot(event):
     fig_v.canvas.draw()
 
 
+# Displays Scatter Plot Data from one or both data axes in separate figure for anlaysis
+def show_data_as_fig(event):
+    global second_plot_axis, ax_ts, second_plot_axis_visible
+
+    if ax_ts == event.inaxes or second_plot_axis == event.inaxes:
+        show_figure(1)
+        if second_plot_axis_visible:
+            show_figure(2)
+
+
+# Configures and Shows Data Plot as Separate Figure Window
+def show_figure(plot_number):
+    global p2_x, p2_y, p1_x, p1_y, ax_ts, inps
+
+    plot_figure = plt.figure("PLOT!!", figsize=(10, 5))
+
+    new_axes = plot_figure.add_subplot(111)
+    new_axes.set_ylim(inps.ylim)
+
+    d_ts_n = set_timeseries_data(plot_number)
+
+    plot_timeseries_scatter(new_axes, d_ts_n, inps)
+
+    set_title_and_legend(new_axes)
+
+    plot_figure.show()
+    plot_figure.canvas.draw()
+
+
+def set_title_and_legend(axis):
+    global p1_x, p1_y, p2_x, p2_y, inps
+
+    # Compute title based off lat/lon coords
+    series_label_1 = set_axis_title(p1_x, p1_y)
+    series_label_2 = None
+
+    title = series_label_1
+
+    if p2_x is not None:
+        series_label_2 = set_axis_title(p2_x, p2_y)
+        title += " vs " + series_label_2
+
+    # Display title
+    if inps.disp_title:
+        axis.set_title(title)
+
+    # Set Legend
+    axis.legend([series_label_1, series_label_2])
+
+
+def set_timeseries_data(plot_number):
+    global tims, p1_y, p1_x, p2_y, p2_x, ax_ts, second_plot_axes
+
+    x_point, y_point = p1_x, p1_y
+
+    if plot_number == 2:
+        x_point = p2_x
+        y_point = p2_y
+
+    return compute_timeseries_data(plot_number, x_point, y_point)
+
+
+def compute_timeseries_data(plot_number, x_point, y_point):
+    global tims
+
+    if x_point is not None:
+        d_ts_n = update_timeseries(y_point, x_point, plot_number)
+    else:
+        d_ts_n = np.zeros(len(tims))
+
+    return d_ts_n
 
 
 
@@ -756,11 +838,13 @@ def main(argv):
 
     ########## MPL Connection Actions
     first_data_point = fig_v.canvas.mpl_connect('button_press_event', plot_timeseries_event)
+    show_data_figure = fig_v.canvas.mpl_connect('button_press_event', show_data_as_fig)
 
     display_figure()
 
     ########## MPL Disconnect Actions
     fig_v.canvas.mpl_disconnect(first_data_point)
+    fig_v.canvas.mpl_disconnect(show_data_figure)
 
 ###########################################################################################
 if __name__ == '__main__':
