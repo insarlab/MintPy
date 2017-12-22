@@ -166,7 +166,7 @@ def plot_data_from_inital_point():
     global ax_ts, inps, tims, d_ts
 
     if inps.yx:
-        d_ts = update_timeseries(inps.yx[0], inps.yx[1], 1, ax_ts)
+        d_ts = update_timeseries(inps.yx[0], inps.yx[1], 1)
     else:
         d_ts = np.zeros(len(tims))
         ax_ts = plot_timeseries_scatter(ax_ts, d_ts, inps)
@@ -635,7 +635,11 @@ def update_timeseries(y, x, plot_number):
 
 
 def set_axis_title(x, y):
-    global lat, lon, ullat, ullat, lat_step, lon_step
+    global lat, lon, ullon, ullat, lat_step, lon_step
+
+    if x is None:
+        x = 0
+        y = 0
 
     title_ts = 'Y = %d, X = %d' % (y, x)
     try:
@@ -663,6 +667,7 @@ def estimate_slope():
 
 def set_scatter_coords(plot_number, x, y):
     global p1_x, p1_y, p2_x, p2_y
+
     if plot_number == 1:
         p1_x, p1_y = x, y
     else:
