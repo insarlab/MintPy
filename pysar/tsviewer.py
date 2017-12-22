@@ -19,12 +19,13 @@ from mask import mask_matrix
 
 ############# Global Variables ################
 tims, inps, img, mask, d_v, d_ts = None, None, None, None, None, None
-ax_v, fig_ts, fig_v, ax_ts, tslider, second_plot_axes = None, None, None, None, None, None
+ax_v, fig_ts, fig_v, ax_ts, tslider, second_plot_axis = None, None, None, None, None, None
 h5, k, dateList, atr, date_num = None, None, None, None, None
 lat, lon, ullat, ullon, lat_step, lon_step = None, None, None, None, None, None
 width, length = None, None
 
 p1_scatter_point, p2_scatter_point = None, None
+second_plot_axis_visible = False;
 
 
 ###########################################################################################
@@ -580,9 +581,14 @@ def plot_timeseries_scatter(ax, dis_ts, inps):
     return ax
 
 
-def update_timeseries(y, x):
+def update_timeseries(y, x, plot_number):
     '''Plot point time series displacement at pixel [y, x]'''
-    global fig_ts, ax_ts, second_plot_axes, inps, dateList, h5, k, inps, tims, fig_v, date_num, d_ts
+    global fig_ts, ax_ts, second_plot_axis, inps, dateList, h5, k, inps, tims, fig_v, date_num, d_ts
+
+    if plot_number == 1:
+        axis = ax_ts
+    else:
+        axis = second_plot_axis
 
     d_ts = []
     for date in dateList:
@@ -594,23 +600,23 @@ def update_timeseries(y, x):
     if inps.zero_first:
         d_ts -= d_ts[inps.zero_idx]
 
-    ax_ts.cla()
+    axis.cla()
     if inps.error_file:
-        ax_ts = plot_timeseries_errorbar(ax_ts, d_ts, inps)
+        axis = plot_timeseries_errorbar(ax_ts, d_ts, inps)
     else:
-        ax_ts = plot_timeseries_scatter(ax_ts, d_ts, inps)
-    ax_ts.set_ylim(inps.ylim)
-    for tick in ax_ts.yaxis.get_major_ticks():
+        axis = plot_timeseries_scatter(axis, d_ts, inps)
+    axis.set_ylim(inps.ylim)
+    for tick in axis.yaxis.get_major_ticks():
         tick.label.set_fontsize(inps.font_size)
 
     # Title
     title_ts = set_axis_title(x, y)
     if inps.disp_title:
-        ax_ts.set_title(title_ts)
+        axis.set_title(title_ts)
 
-    ax_ts = ptime.auto_adjust_xaxis_date(ax_ts, tims, fontSize=inps.font_size)[0]
-    ax_ts.set_xlabel('Time', fontsize=inps.font_size)
-    ax_ts.set_ylabel('Displacement [%s]' % inps.disp_unit, fontsize=inps.font_size)
+    axis = ptime.auto_adjust_xaxis_date(axis, tims, fontSize=inps.font_size)[0]
+    axis.set_xlabel('Time', fontsize=inps.font_size)
+    axis.set_ylabel('Displacement [%s]' % inps.disp_unit, fontsize=inps.font_size)
 
     fig_v.canvas.draw()
 
@@ -654,49 +660,53 @@ def estimate_slope():
 
 def plot_timeseries_event(event):
     '''Event function to get y/x from button press'''
-    global ax_v, d_ts, p1_scatter_point, p2_scatter_point
+    global ax_v, d_ts, p1_scatter_point, p2_scatter_point, second_plot_axis
 
     if event.inaxes != ax_v:
         return
 
     ii = int(event.ydata + 0.5)
     jj = int(event.xdata + 0.5)
-    d_ts = update_timeseries(ii, jj)
+    plot_number = 0
 
     if event.button == 1:
-        print("Button 1")
 
         if p1_scatter_point is not None:
             p1_scatter_point.remove()
 
         p1_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='red', marker='o')
+        d_ts = update_timeseries(ii, jj, 1)
 
-    elif event.button == 3:
-        print("Button 3")
+    elif event.button == 3 and second_plot_axis_visible:
 
         if p2_scatter_point is not None:
             p2_scatter_point.remove()
 
         p2_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='blue', marker='o')
-
+        d_ts = update_timeseries(ii, jj, 3)
 
 
 # Displays second data plot to screen
 def show_second_plot(event):
 
-    global inps, p1_last_clicked_y, p1_last_clicked_x, second_plot_axes, p2_last_clicked_x, p2_last_clicked_y, \
-        second_plot_visible,  fig_v
+    global fig_v, second_plot_axis, second_plot_axis_visible
 
-    second_plot_axes = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
+    second_plot_axis = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
+    second_plot_axis_visible = True
 
     fig_v.canvas.draw()
 
 
 # Hides second data plot from screen
 def hide_second_plot(event):
-    global second_plot_axes, fig_v
+    global second_plot_axis, fig_v, p2_scatter_point, second_plot_axis_visible
 
-    second_plot_axes.remove()
+    if p2_scatter_point is not None:
+        p2_scatter_point.remove()
+
+    second_plot_axis.remove()
+
+    second_plot_axis_visible = False
 
     fig_v.canvas.draw()
 
@@ -705,7 +715,7 @@ def hide_second_plot(event):
 
 
 def main(argv):
-    global fig_v, ax_v, inps, ax_ts, fig_ts, second_plot_axes
+    global fig_v, ax_v, inps, ax_ts, fig_ts, second_plot_axis
 
     inps = cmdLineParse(argv)
 
@@ -724,8 +734,8 @@ def main(argv):
 
     ########## Plot Axes - Time Series Displacement - Points
     ax_ts = fig_v.add_axes([0.55, 0.62, 0.42, 0.3])
-    second_plot_axes = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
-    second_plot_axes.remove()
+    second_plot_axis = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
+    hide_second_plot(None)
 
     # Read Error List
     read_error_list()
