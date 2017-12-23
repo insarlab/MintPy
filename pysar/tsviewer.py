@@ -19,7 +19,7 @@ from mask import mask_matrix
 
 ############# Global Variables ################
 tims, inps, img, mask, d_v, d_ts = None, None, None, None, None, None
-ax_v, fig_ts, fig_v, ax_ts, tslider, second_plot_axis = None, None, None, None, None, None
+ax_v, fig_ts, fig_v, ax_ts, tslider, second_plot_axis, new_axes = None, None, None, None, None, None, None
 h5, k, dateList, atr, date_num = None, None, None, None, None
 lat, lon, ullat, ullon, lat_step, lon_step = None, None, None, None, None, None
 width, length = None, None
@@ -27,6 +27,7 @@ width, length = None, None
 plot_figure, p1_scatter, p2_scatter, scatts = None, None, None, None
 p1_scatter_point, p2_scatter_point = None, None
 p1_x, p1_y, p2_x, p2_y = None, None, None, None
+annot = None
 second_plot_axis_visible = False
 
 
@@ -745,12 +746,17 @@ def show_data_as_fig(event):
 
 # Configures and Shows Data Plot as Separate Figure Window
 def show_figure(plot_number):
-    global p2_x, p2_y, p1_x, p1_y, ax_ts, inps, plot_figure, p1_scatter, p2_scatter
+    global p2_x, p2_y, p1_x, p1_y, ax_ts, inps, plot_figure, p1_scatter, p2_scatter, new_axes, annot
 
     plot_figure = plt.figure("PLOT!!", figsize=(10, 5))
 
     new_axes = plot_figure.add_subplot(111)
     new_axes.set_ylim(inps.ylim)
+
+    annot = new_axes.annotate("", xy=(0, 0), xytext=(-33, 20), textcoords="offset points",
+                        bbox=dict(boxstyle="round", fc="w"),
+                        arrowprops=dict(arrowstyle="->"))
+    annot.set_visible(False)
 
     d_ts_n = set_timeseries_data(plot_number)
 
@@ -764,13 +770,44 @@ def show_figure(plot_number):
     set_title_and_legend(new_axes)
 
     plot_figure.canvas.mpl_connect('pick_event', hide_scatter)
+    plot_figure.canvas.mpl_connect('motion_notify_event', on_hover)
 
     plot_figure.show()
     plot_figure.canvas.draw()
 
-    #plot_figure.canvas.mpl_disconnect(hide_data_set)
+
+def on_hover(event):
+    global plot_figure, annot, p1_scatter, p2_scatter, new_axes
+
+    vis = annot.get_visible()
+    if event.inaxes == new_axes:
+        cont, ind = p1_scatter.contains(event)
+        if cont:
+            update_annot(ind, p1_scatter)
+            annot.set_visible(True)
+            plot_figure.canvas.draw_idle()
+        else:
+            cont, ind = p2_scatter.contains(event) if p2_scatter is not None else (False, 0)
+            if cont:
+                update_annot(ind, p2_scatter)
+                annot.set_visible(True)
+                plot_figure.canvas.draw_idle()
+            else:
+                if vis:
+                    annot.set_visible(False)
+                    plot_figure.canvas.draw_idle()
 
 
+def update_annot(ind, sc):
+
+    pos = sc.get_offsets()[ind["ind"][0]]
+    annot.xy = pos
+    text = "ANNOTATION"
+    annot.set_text(text)
+    annot.get_bbox_patch().set_facecolor('b')
+    annot.get_bbox_patch().set_alpha(0.4)
+
+# Hides Scatter Plot Data on Data Point Figure on Legend Item Click
 def hide_scatter(event):
     global scatts, plot_figure
 
@@ -789,6 +826,7 @@ def hide_scatter(event):
     plot_figure.canvas.draw_idle()
 
 
+# Sets title and legend information in Data Point Figure
 def set_title_and_legend(axis):
     global p1_x, p1_y, p2_x, p2_y, inps, p1_scatter, p2_scatter, scatts
 
