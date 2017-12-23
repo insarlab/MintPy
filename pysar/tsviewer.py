@@ -585,7 +585,7 @@ def plot_timeseries_scatter(ax, dis_ts, inps):
     return ax, scatter
 
 
-def update_timeseries(y, x, plot_number):
+def update_timeseries(y, x, plot_number, data_only=False):
     '''Plot point time series displacement at pixel [y, x]'''
     global fig_ts, ax_ts, second_plot_axis, inps, dateList, h5, k, inps, tims, fig_v, date_num, d_ts
 
@@ -605,6 +605,9 @@ def update_timeseries(y, x, plot_number):
 
     if inps.zero_first:
         d_ts -= d_ts[inps.zero_idx]
+
+    if data_only:
+        return d_ts
 
     axis.cla()
     if inps.error_file:
@@ -648,13 +651,21 @@ def set_axis_title(x, y):
 
         title_ts = 'Y = %d, X = %d' % (y, x)
         try:
-            lat = ullat + y * lat_step
-            lon = ullon + x * lon_step
+            lat, lon = xy_to_lat_lon(x, y)
             title_ts += ', lat = %.4f, lon = %.4f' % (lat, lon)
         except:
             pass
 
     return title_ts
+
+
+def xy_to_lat_lon(x, y):
+    global ullat, ullon, lat_step, lon_step
+
+    latitude = ullat + y * lat_step
+    longitude = ullon + x * lon_step
+
+    return latitude, longitude
 
 
 def estimate_slope():
@@ -753,9 +764,8 @@ def show_figure(plot_number):
     new_axes = plot_figure.add_subplot(111)
     new_axes.set_ylim(inps.ylim)
 
-    annot = new_axes.annotate("", xy=(0, 0), xytext=(-33, 20), textcoords="offset points",
-                        bbox=dict(boxstyle="round", fc="w"),
-                        arrowprops=dict(arrowstyle="->"))
+    annot = new_axes.annotate("", xy=(0, 0), xytext=(445, 10), textcoords="axes points", bbox=dict(boxstyle="round", fc="w"))
+
     annot.set_visible(False)
 
     d_ts_n = set_timeseries_data(plot_number)
@@ -799,13 +809,34 @@ def on_hover(event):
 
 
 def update_annot(ind, sc):
+    global p1_x, p1_y, p2_x, p2_y, annot, p1_scatter, p2_scatter, tims, lat, lon
 
     pos = sc.get_offsets()[ind["ind"][0]]
     annot.xy = pos
-    text = "ANNOTATION"
+
+    if sc is p1_scatter and p1_x is not None:
+        data = update_timeseries(p1_y, p1_x, 1, True)
+        latitude, longitude = xy_to_lat_lon(p1_x, p1_y)
+    elif sc is p2_scatter and p2_x is not None:
+        data = update_timeseries(p2_y, p2_x, 2, True)
+        latitude, longitude = xy_to_lat_lon(p2_x, p2_y)
+    else:
+        data = np.zeros(len(tims))
+        latitude, longitude = None, None
+
+    raw_date = str(dateList[ind["ind"][0]])
+    date = list(raw_date)
+    date.insert(4, '-')
+    date.insert(7, '-')
+    date = "".join(date)
+    datum = str(data[ind["ind"][0]])
+
+    text = "(%.4f , %.4f)" % (latitude, longitude)
+    text += "\nDate: "+date+"\n"+datum
     annot.set_text(text)
     annot.get_bbox_patch().set_facecolor('b')
     annot.get_bbox_patch().set_alpha(0.4)
+
 
 # Hides Scatter Plot Data on Data Point Figure on Legend Item Click
 def hide_scatter(event):
