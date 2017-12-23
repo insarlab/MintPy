@@ -610,6 +610,8 @@ def update_timeseries(y, x, plot_number):
         axis = plot_timeseries_errorbar(ax_ts, d_ts, inps)
     else:
         axis, scatter = plot_timeseries_scatter(axis, d_ts, inps)
+        scatter.set_label('2')
+
     axis.set_ylim(inps.ylim)
     for tick in axis.yaxis.get_major_ticks():
         tick.label.set_fontsize(inps.font_size)
@@ -805,14 +807,15 @@ def set_title_and_legend(axis):
         axis.set_title(title)
 
     # Set Legend
-    legend = axis.legend(fancybox=True)
+    legend = axis.legend((p1_scatter, p2_scatter), (series_label_1, series_label_2), fancybox=True)
     legend.get_frame().set_alpha(0.4)
     scatters = [p1_scatter, p2_scatter]
     scatts = dict()
 
     for legline, scatter in zip(legend.legendHandles, scatters):
-        legline.set_picker(5)  # 5 pts tolerance
-        scatts[legline] = scatter
+        if legline is not None:
+            legline.set_picker(5)  # 5 pts tolerance
+            scatts[legline] = scatter
 
 
 def set_timeseries_data(plot_number):
