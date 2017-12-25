@@ -120,11 +120,12 @@ def read(File, box=None, epoch=None, print_msg=True):
             else:
                 dset = h5file[k][epoch2read].get(epoch2read)
 
-        elif k in single_dataset_hdf5_file:
-            dset = h5file[k].get(k)
+        #elif k in single_dataset_hdf5_file:
         else:
-            print 'ERROR: Unrecognized h5 file type: '+k
-            sys.exit(1)
+            dset = h5file[k].get(k)
+        #else:
+        #    print 'ERROR: Unrecognized h5 file type: '+k
+        #    sys.exit(1)
 
         data = dset[box[1]:box[3],box[0]:box[2]]
 
@@ -298,7 +299,8 @@ def read_attribute(File, epoch=None):
                 epoch = h5[k].keys()[0]
             attrs = h5[k][epoch].attrs
 
-        elif k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
+        #elif k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
+        else:
             key = 'WIDTH'
             if key in h5.attrs.keys():
                 attrs = h5.attrs
@@ -309,10 +311,10 @@ def read_attribute(File, epoch=None):
                         break
             if attrs is None:
                 raise ValueError('No attribute '+key+' found in 1/2 group level!')
-        elif k in ['HDFEOS']:
-            attrs = h5.attrs
-        else:
-            sys.exit('Unrecognized h5 file key: '+k)
+        #elif k in ['HDFEOS']:
+        #    attrs = h5.attrs
+        #else:
+        #    sys.exit('Unrecognized h5 file key: '+k)
 
         atr = dict()
         for key, value in attrs.iteritems():
@@ -386,6 +388,10 @@ def read_attribute(File, epoch=None):
             atr['INSAR_PROCESSOR'] = 'roipac'
         else:
             atr['INSAR_PROCESSOR'] = atr['PROCESSOR']
+
+    if atr['PROCESSOR'] == 'isce' and ext == '.wgs84':
+        atr['FILE_TYPE'] = 'dem'
+
     return atr
 
 
@@ -760,7 +766,7 @@ def read_real_float64(fname, box=None, byte_order='l'):
         data_type = '>f8'
 
     data = np.fromfile(fname, dtype=data_type, count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[1]:box[2]]
+    data = data[box[1]:box[3], box[0]:box[2]]
     return data, atr
 
 def read_complex_float32(fname, box=None, byte_order='l', cpx=False):
@@ -799,7 +805,7 @@ def read_complex_float32(fname, box=None, byte_order='l', cpx=False):
         data_type = '>c8'
 
     data = np.fromfile(fname, dtype=data_type, count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[1]:box[2]]
+    data = data[box[1]:box[3], box[0]:box[2]]
 
     if cpx:
         return data, atr
@@ -829,7 +835,7 @@ def read_real_float32(fname, box=None, byte_order='l'):
         data_type = '>f4'
 
     data = np.fromfile(fname, dtype=data_type, count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[1]:box[2]]
+    data = data[box[1]:box[3], box[0]:box[2]]
     return data, atr
 
 
@@ -883,7 +889,7 @@ def read_real_int16(File, box=None, byte_order='l'):
         data_type = '>i2'
 
     data = np.fromfile(File, dtype=data_type, count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[1]:box[2]]
+    data = data[box[1]:box[3], box[0]:box[2]]
     return data, atr
 
 
@@ -903,7 +909,7 @@ def read_bool(File, box=None):
         box = [0,0,width,length]
     
     data = np.fromfile(File, dtype=bool, count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[1]:box[2]]
+    data = data[box[1]:box[3], box[0]:box[2]]
     return data, atr
 
 

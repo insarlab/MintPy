@@ -1279,7 +1279,7 @@ def main(argv):
         # Read Epoch List
         h5file = h5py.File(inps.file,'r')
         if k in ['HDFEOS']:
-            epochList = h5file[k]['GRIDS']['timeseries'].keys()
+            epochList = h5file.attrs['DATE_TIMESERIES'].split()
         else:
             epochList = sorted(h5file[k].keys())
         #h5file.close()
@@ -1363,6 +1363,12 @@ def main(argv):
         except:
             print 'Can not open mask file: '+inps.mask_file
             inps.mask_file = None
+    elif k in ['HDFEOS']:
+        inps.mask_file = inps.file
+        h5msk = h5py.File(inps.file, 'r')
+        msk = h5msk[k]['GRIDS']['timeseries']['quality'].get('mask')[:]
+        h5msk.close()
+        print 'mask %s data with contained mask dataset.' % (k)
 
     ############################### Read Data and Display ###############################
     ##### Display One Dataset
@@ -1550,7 +1556,7 @@ def main(argv):
                     elif ref_yx:
                         data -= data[ref_yx[0], ref_yx[1]]
                 elif k in ['HDFEOS']:
-                    dset = h5file[k]['GRIDS']['timeseries'].get(epoch)
+                    dset = h5file[k]['GRIDS']['timeseries']['observation'].get('displacement')[i,:,:]
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
                     subplot_title = str(epoch)
                 else:
