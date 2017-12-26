@@ -560,7 +560,7 @@ def subset_file(File, subset_dict_input, outFile=None):
         writefile.write(data,atr_dict,outFile)
 
     elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
-        rg_overlap,az_overlap,atr_dict = readfile.read(File, pix_box4data)
+        rg_overlap, az_overlap, atr_dict = readfile.read(File, pix_box4data)
 
         rg = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
         rg[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = rg_overlap
@@ -571,7 +571,7 @@ def subset_file(File, subset_dict_input, outFile=None):
         atr_dict = subset_attribute(atr_dict, pix_box)
         writefile.write(rg,az,atr_dict,outFile)
     else:
-        data_overlap,atr_dict = readfile.read(File, pix_box4data)
+        data_overlap, atr_dict = readfile.read(File, pix_box4data)
 
         data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
         data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
