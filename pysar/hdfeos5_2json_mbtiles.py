@@ -57,7 +57,7 @@ def serialize_dictionary(dictionary, fileName):
         cPickle.dump(dictionary, file)
 # ---------------------------------------------------------------------------------------
 # convert h5 file to json and upload it. folder_name == unavco_name
-def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, json_path, folder_name):
+def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_path, folder_name):
 
     region_file = None
     project_name = attributes["PROJECT_NAME"]
@@ -84,15 +84,15 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
     CHUNK_SIZE = 20000
 
     # iterate through h5 file timeseries
-    for (row, col), value in np.ndenumerate(timeseries_datasets[dataset_keys[0]]):
+    for (row, col), value in np.ndenumerate(timeseries_datasets[dates[0]]):
         longitude = x_first + (col * x_step)
         latitude = y_first + (row * y_step) 
         displacement = float(value) 
         # if value is not equal to naN, create a new json point object and append to siu_man array
         if not math.isnan(displacement):
             # get displacement values for all the dates into array for json and string for pgsql
-            for key in dataset_keys:
-                displacement = timeseries_datasets[key][row][col]
+            for date in dates:
+                displacement = timeseries_datasets[date][row][col]
                 displacements += (str(displacement) + ",")
                 displacement_values.append(float(displacement))
             displacements = displacements[:len(displacements) - 1] + '}'
@@ -120,12 +120,12 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
             # if chunk_size limit is reached, write chunk into a json file
             # then increment chunk number and clear siu_man array
             if len(siu_man) == CHUNK_SIZE:
-                make_json_file(chunk_num, siu_man, dataset_keys, json_path, folder_name)
+                make_json_file(chunk_num, siu_man, dates, json_path, folder_name)
                 chunk_num += 1
                 siu_man = []
 
     # write the last chunk that might be smaller than chunk_size
-    make_json_file(chunk_num, siu_man, dataset_keys, json_path, folder_name)
+    make_json_file(chunk_num, siu_man, dates, json_path, folder_name)
 
     # dictionary to contain metadata needed by db to be written to a file
     # and then be read by json_mbtiles2insarmaps.py
@@ -144,7 +144,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
 
     # for some reason pgsql only takes {} not [] - format date arrays and attributes to be inserted to pgsql
     string_dates_sql = '{'
-    for k in dataset_keys:
+    for k in dates:
         string_dates_sql += (str(k) + ",")
     string_dates_sql = string_dates_sql[:len(string_dates_sql) - 1] + '}'
 
@@ -184,11 +184,11 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, j
 # ---------------------------------------------------------------------------------------
 # create a json file out of siu man array
 # then put json file into directory named after the h5 file
-def make_json_file(chunk_num, points, dataset_keys, json_path, folder_name):
+def make_json_file(chunk_num, points, dates, json_path, folder_name):
 
     data = {
     "type": "FeatureCollection",
-    "dates": dataset_keys, 
+    "dates": dates,
     "features": points
     }
 
@@ -230,35 +230,34 @@ def main():
 # use h5py to open specified group(s) in the h5 file 
 # then read datasets from h5 file into memory for faster reading of data
     file = h5py.File(file_name,  "r")
-    group = file['HDFEOS']['GRIDS']['timeseries']
+    timeseries_group = file["HDFEOS"]["GRIDS"]["timeseries"]
+    displacement_3d_matrix = timeseries_group["observation"]["displacement"]
 
 # get attributes (stored at root) of UNAVCO timeseries file
     attributes = dict(file.attrs)
 
-# in timeseries group, there are datasets
+# in timeseries displacement_3d_matrix, there are datasets
 # need to get datasets with dates - strings that can be converted to integers
-    dataset_keys = []
-    for k in group.keys():
-        if k.isdigit():
-            dataset_keys.append(k)
-    dataset_keys.sort()
+    dates = displacement_3d_matrix.attrs["DATE_TIMESERIES"].split(" ")
 
-# array that stores dates from dataset_keys that have been converted to decimal
+# array that stores dates from dates that have been converted to decimal
     decimal_dates = []
 
 # read datasets in the group into a dictionary of 2d arrays and intialize decimal dates
     timeseries_datasets = {}
-    for key in dataset_keys:
-        dataset = group[key][:]
+    i = 0
+    for displacement_2d_matrix in displacement_3d_matrix:
+        dataset = displacement_2d_matrix[:]
         if should_mask:
-            print "Masking " + str(key)
-            mask = group['mask'][:]
+            print "Masking " + dates[i]
+            mask = timeseries_group["quality"]["mask"][:]
             dataset = mask_matrix(dataset, mask)
 
-        timeseries_datasets[key] = dataset
-        d = get_date(key)
+        timeseries_datasets[dates[i]] = dataset
+        d = get_date(dates[i])
         decimal = get_decimal_date(d)
         decimal_dates.append(decimal)
+        i += 1
 
 # close h5 file
     file.close()
@@ -272,7 +271,7 @@ def main():
         print output_folder + " already exists"
 
 # read and convert the datasets, then write them into json files and insert into database
-    convert_data(attributes, decimal_dates, timeseries_datasets, dataset_keys, output_folder, folder_name)
+    convert_data(attributes, decimal_dates, timeseries_datasets, dates, output_folder, folder_name)
 
 # run tippecanoe command to get mbtiles file
     os.chdir(os.path.abspath(output_folder))
