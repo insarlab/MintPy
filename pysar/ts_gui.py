@@ -65,7 +65,7 @@ def show_plot():
 
     options = [timeseries_file.get(), "-m", mask_file.get(), "--dem", dem_file.get(), "--lalo", start_lat_input.get(),
                start_lon_input.get(), "--ref-lalo", ref_lat_input.get(), ref_lon_input.get(),
-               "--ylim", str(y_lim_lower.get()), str(y_lim_upper.get()), "-u", unit.get(), "-c", colormap.get()]
+               "--ylim", str(y_lim_lower.get()), str(y_lim_upper.get()), "-u", unit.get(), "-c", colormap.get(), "--ref-date", ref_date.get()]
 
     if ts_view.fig_v is not None:
 
