@@ -1,9 +1,12 @@
 from Tkinter import *
+
+import h5py
 import matplotlib
 matplotlib.use('TkAgg')
 import tkFileDialog as filedialog
 import tsviewer as ts_view
 import info
+import _readfile as readfile
 
 
 def pick_file():
@@ -15,6 +18,9 @@ def pick_file():
         timeseries_file.set(root.filename)
         file_short.set(filename.split("/")[-1])
         pick_ts_file_button.config(text="Cancel")
+
+        update_date_options()
+
         return root.filename
     else:
         timeseries_file.set("")
@@ -89,6 +95,30 @@ def show_file_info(file_info):
     text_box.config(state=DISABLED)
 
     text_box.pack(fill=X)
+
+def update_date_options():
+    global ref_date
+
+    atr = readfile.read_attribute(timeseries_file.get())
+    k = atr['FILE_TYPE']
+
+    if not k == 'timeseries':
+        raise ValueError('Only timeseries file is supported!')
+
+    h5 = h5py.File(timeseries_file.get(), 'r')
+    date_list = sorted(h5[k].keys())
+
+    def format_date(raw_date):
+        list_date = list(raw_date)
+        list_date.insert(4, '-')
+        list_date.insert(7, '-')
+        the_date = "".join(list_date)
+        return the_date
+
+    for date in date_list:
+        ref_date_option_menu.children['menu'].add_command(label=format_date(date), command=lambda val=date: ref_date.set(val))
+
+    ref_date.set(date_list[0])
 
 
 root = Tk()
@@ -225,9 +255,9 @@ colormap_option_menu.config(width=10)
 colormap.set('hsv')
 
 ref_date = StringVar()
-ref_date_option_menu = apply(OptionMenu, (unit_cmap_frame, ref_date) + tuple(["09-11-2009", "09-12-2009", "09-13-2009"]))
+#ref_date_option_menu = apply(OptionMenu, (unit_cmap_frame, ref_date) + tuple(["09-11-2009", "09-12-2009", "09-13-2009"]))
+ref_date_option_menu = OptionMenu(unit_cmap_frame, ref_date, "")
 ref_date_option_menu.config(width=12)
-ref_date.set('09-11-2009')
 
 show_info = IntVar()
 show_info_checkbutton = Checkbutton(root, text="Show File Info", variable=show_info)
