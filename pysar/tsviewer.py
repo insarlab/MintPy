@@ -175,7 +175,7 @@ def plot_data_from_inital_point():
 
 
 def read_error_list():
-    global inps
+    global inps, date_num
 
     inps.error_ts = None
     if inps.error_file:
@@ -283,7 +283,7 @@ def set_zero_displacement():
 
 
 def compute_file_size():
-    global atr
+    global atr, width, length
 
     length = int(atr['FILE_LENGTH'])
     width = int(atr['WIDTH'])
@@ -291,7 +291,7 @@ def compute_file_size():
 
 
 def compute_lat_lon_params():
-    global ullon, ullat, lon_step, lat_step, atr
+    global ullon, ullat, lon_step, lat_step, atr, width, length
 
     try:
         ullon = float(atr['X_FIRST'])
@@ -306,7 +306,7 @@ def compute_lat_lon_params():
 
 
 def set_inital_pixel_coords():
-    global inps, atr, ullat, lat_step, ullon, lon_step
+    global inps, atr
 
     if inps.lalo and 'Y_FIRST' in atr.keys():
         y, x = set_yx_coords(inps.lalo[0], inps.lalo[1])
@@ -317,7 +317,7 @@ def set_inital_pixel_coords():
 
 
 def set_yx_coords(y_input, x_input):
-    global inps, ullat, ullon, lat_step, lon_step
+    global ullat, ullon, lat_step, lon_step
 
     y = int((y_input - ullat) / lat_step + 0.5)
     x = int((x_input - ullon) / lon_step + 0.5)
