@@ -18,7 +18,7 @@ def pick_file():
         return root.filename
     else:
         timeseries_file.set("")
-        file_short.set("No Timeseries File Selected")
+        file_short.set("No File Selected")
         pick_ts_file_button.config(text="Select Timeseries File")
 
 
@@ -33,7 +33,7 @@ def pick_mask():
         return root.filename
     else:
         mask_file.set("")
-        mask_short.set("No Mask File Selected")
+        mask_short.set("No File Selected")
         pick_mask_file_button.config(text="Select Mask File")
 
 
@@ -48,8 +48,8 @@ def pick_dem():
         return root.filename
     else:
         dem_file.set("")
-        dem_short.set("No Topography File Selected")
-        pick_dem_file_button.config(text="Selected Topography File")
+        dem_short.set("No File Selected")
+        pick_dem_file_button.config(text="Select Topography File")
 
 
 def show_plot():
@@ -93,8 +93,8 @@ def show_file_info(file_info):
 
 
 root = Tk()
-root.minsize(width=400, height=550)
-root.maxsize(width=400, height=550)
+root.minsize(width=350, height=550)
+root.maxsize(width=350, height=550)
 root.resizable(width=False, height=False)
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap', 'CMRmap_r', 'Dark2',
@@ -118,7 +118,7 @@ pick_timeseries_file_frame = Frame(root)
 
 timeseries_file = StringVar()
 file_short = StringVar()
-file_short.set("No Mask File Seleceted")
+file_short.set("No File Selected")
 
 pick_ts_file_button = Button(pick_timeseries_file_frame, text='Select Timeseries File', anchor='w', width=15, command=lambda: pick_file())
 selected_ts_file_label = Label(pick_timeseries_file_frame, textvariable=file_short)
@@ -129,7 +129,7 @@ pick_mask_file_frame = Frame(root)
 
 mask_file = StringVar()
 mask_short = StringVar()
-mask_short.set("No Mask File Seleceted")
+mask_short.set("No File Selected")
 
 pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', anchor='w', width=15, command=lambda: pick_mask())
 selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
@@ -140,7 +140,7 @@ pick_dem_file_frame = Frame(root)
 
 dem_file = StringVar()
 dem_short = StringVar()
-dem_short.set("No Topography File Selected")
+dem_short.set("No File Selected")
 
 pick_dem_file_button = Button(pick_dem_file_frame, text='Select Topography File', anchor='w', width=15, command=lambda: pick_dem())
 selected_dem_file_label = Label(pick_dem_file_frame, textvariable=dem_short)
