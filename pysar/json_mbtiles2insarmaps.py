@@ -65,16 +65,26 @@ def upload_json(folder_path):
     area_name = get_unavco_name(folder_path)
     attributesController.remove_dataset_if_there(area_name)
     attributesController.close()
+
+    # uploading metadata for area. this creates entry into area table.
+    # we need this entry to get the db to generate an id for area which
+    # we use to name the corresponding table for the dataset
+    upload_insarmaps_metadata(folder_path + "/metadata.pickle")
+    # create index
+    print "Creating index on " + area_name
+    attributesController.connect()
+    area_id = str(attributesController.get_dataset_id(area_name))
+    attributesController.close()
     firstJsonFile = True
 
     for file in os.listdir(folder_path):
         # insert json file to pgsql using ogr2ogr
         file_extension = file.split(".")[1]
         if file != "metadata.pickle" and file_extension != "mbtiles":
-            command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + area_name + '" ' + folder_path + '/' + file
+            command = 'ogr2ogr -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln ' + area_id + ' ' + folder_path + '/' + file
             # only provide layer creation options if this is the first file
             if firstJsonFile:
-                command = 'ogr2ogr -lco LAUNDER=NO -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln "' + area_name + '" ' + folder_path + '/' + file
+                command = 'ogr2ogr -lco LAUNDER=NO -append -f "PostgreSQL" PG:"dbname=pgis host=' + dbHost + ' user=' + dbUsername + ' password=' + dbPassword + '" --config PG_USE_COPY YES -nln ' + area_id + ' ' + folder_path + '/' + file
                 firstJsonFile = False
 
             res = os.system(command)
@@ -85,14 +95,9 @@ def upload_json(folder_path):
 
             print "Inserted " + file + " to db"
 
-    # uploading metadata for area 
-    upload_insarmaps_metadata(folder_path + "/metadata.pickle")
-    # create index
-    print "Creating index on " + area_name
-    attributesController = InsarDatabaseController(dbUsername, dbPassword, dbHost, 'pgis')
     attributesController.connect()
-    attributesController.index_table_on(area_name, "p", None)
-    attributesController.cluster_table_using(area_name, area_name + "_p_idx")
+    attributesController.index_table_on(area_id, "p", None)
+    attributesController.cluster_table_using(area_id, area_id + "_p_idx")
     attributesController.close()
 
 def build_parser():
