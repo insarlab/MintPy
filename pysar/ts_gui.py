@@ -53,10 +53,9 @@ def pick_dem():
 
 
 def show_plot():
-
-    file_info = info.hdf5_structure_string(timeseries_file.get())
-
-    show_file_info(file_info)
+    if show_info.get() == 1:
+        file_info = info.hdf5_structure_string(timeseries_file.get())
+        show_file_info(file_info)
 
     options = [timeseries_file.get(), "-m", mask_file.get(), "--dem", dem_file.get(), "--lalo", start_lat_input.get(),
                start_lon_input.get(), "--ref-lalo", ref_lat_input.get(), ref_lon_input.get(),
@@ -230,6 +229,9 @@ ref_date_option_menu = apply(OptionMenu, (unit_cmap_frame, ref_date) + tuple(["0
 ref_date_option_menu.config(width=12)
 ref_date.set('09-11-2009')
 
+show_info = IntVar()
+show_info_checkbutton = Checkbutton(root, text="Show File Info", variable=show_info)
+
 submit_button = Button(root, text="Show Plot", command=lambda: show_plot())
 
 
@@ -290,6 +292,7 @@ unit_option_menu.pack(side=LEFT, padx=(0, 10))
 colormap_option_menu.pack(side=LEFT, padx=(0, 10))
 ref_date_option_menu.pack(side=LEFT)
 
+show_info_checkbutton.pack(anchor='center', pady=10)
 submit_button.pack(anchor='center', pady=20)
 
 mainloop()
