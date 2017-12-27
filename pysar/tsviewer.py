@@ -19,13 +19,15 @@ from mask import mask_matrix
 
 ############# Global Variables ################
 tims, inps, img, mask, d_v, d_ts = None, None, None, None, None, None
-ax_v, fig_ts, fig_v, ax_ts, tslider, second_plot_axis = None, None, None, None, None, None
+ax_v, fig_ts, fig_v, ax_ts, tslider, second_plot_axis, new_axes = None, None, None, None, None, None, None
 h5, k, dateList, atr, date_num = None, None, None, None, None
 lat, lon, ullat, ullon, lat_step, lon_step = None, None, None, None, None, None
 width, length = None, None
 
+plot_figure, p1_scatter, p2_scatter, scatts = None, None, None, None
 p1_scatter_point, p2_scatter_point = None, None
 p1_x, p1_y, p2_x, p2_y = None, None, None, None
+annot = None
 second_plot_axis_visible = False
 
 
@@ -169,7 +171,7 @@ def plot_data_from_inital_point():
         d_ts = update_timeseries(inps.yx[0], inps.yx[1], 1)
     else:
         d_ts = np.zeros(len(tims))
-        ax_ts = plot_timeseries_scatter(ax_ts, d_ts, inps)
+        ax_ts, scatter = plot_timeseries_scatter(ax_ts, d_ts, inps)
 
 
 def read_error_list():
@@ -578,11 +580,12 @@ def plot_timeseries_scatter(ax, dis_ts, inps):
         # Plot excluded dates
         ax.scatter(inps.ex_dates, ex_d_ts, s=inps.marker_size ** 2, color='gray')  # color='crimson'
     # Plot kept dates
-    ax.scatter(dates, d_ts, s=inps.marker_size ** 2)
-    return ax
+    scatter = ax.scatter(dates, d_ts, s=inps.marker_size ** 2, label='1')
+
+    return ax, scatter
 
 
-def update_timeseries(y, x, plot_number):
+def update_timeseries(y, x, plot_number, data_only=False):
     '''Plot point time series displacement at pixel [y, x]'''
     global fig_ts, ax_ts, second_plot_axis, inps, dateList, h5, k, inps, tims, fig_v, date_num, d_ts
 
@@ -603,11 +606,16 @@ def update_timeseries(y, x, plot_number):
     if inps.zero_first:
         d_ts -= d_ts[inps.zero_idx]
 
+    if data_only:
+        return d_ts
+
     axis.cla()
     if inps.error_file:
         axis = plot_timeseries_errorbar(ax_ts, d_ts, inps)
     else:
-        axis = plot_timeseries_scatter(axis, d_ts, inps)
+        axis, scatter = plot_timeseries_scatter(axis, d_ts, inps)
+        scatter.set_label('2')
+
     axis.set_ylim(inps.ylim)
     for tick in axis.yaxis.get_major_ticks():
         tick.label.set_fontsize(inps.font_size)
@@ -638,18 +646,26 @@ def set_axis_title(x, y):
     global lat, lon, ullon, ullat, lat_step, lon_step
 
     if x is None:
-        x = 0
-        y = 0
+        title_ts = 'No Point Selected'
+    else:
 
-    title_ts = 'Y = %d, X = %d' % (y, x)
-    try:
-        lat = ullat + y * lat_step
-        lon = ullon + x * lon_step
-        title_ts += ', lat = %.4f, lon = %.4f' % (lat, lon)
-    except:
-        pass
+        title_ts = 'Y = %d, X = %d' % (y, x)
+        try:
+            lat, lon = xy_to_lat_lon(x, y)
+            title_ts += ', lat = %.4f, lon = %.4f' % (lat, lon)
+        except:
+            pass
 
     return title_ts
+
+
+def xy_to_lat_lon(x, y):
+    global ullat, ullon, lat_step, lon_step
+
+    latitude = ullat + y * lat_step
+    longitude = ullon + x * lon_step
+
+    return latitude, longitude
 
 
 def estimate_slope():
@@ -672,6 +688,7 @@ def set_scatter_coords(plot_number, x, y):
         p1_x, p1_y = x, y
     else:
         p2_x, p2_y = x, y
+
 
 def plot_timeseries_event(event):
     '''Event function to get y/x from button press'''
@@ -740,25 +757,109 @@ def show_data_as_fig(event):
 
 # Configures and Shows Data Plot as Separate Figure Window
 def show_figure(plot_number):
-    global p2_x, p2_y, p1_x, p1_y, ax_ts, inps
+    global p2_x, p2_y, p1_x, p1_y, ax_ts, inps, plot_figure, p1_scatter, p2_scatter, new_axes, annot
 
     plot_figure = plt.figure("PLOT!!", figsize=(10, 5))
 
     new_axes = plot_figure.add_subplot(111)
     new_axes.set_ylim(inps.ylim)
 
+    annot = new_axes.annotate("", xy=(0, 0), xytext=(445, 10), textcoords="axes points", bbox=dict(boxstyle="round", fc="w"))
+
+    annot.set_visible(False)
+
     d_ts_n = set_timeseries_data(plot_number)
 
-    plot_timeseries_scatter(new_axes, d_ts_n, inps)
+    scatter = plot_timeseries_scatter(new_axes, d_ts_n, inps)
+
+    if plot_number == 1:
+        _, p1_scatter = scatter
+    elif plot_number == 2:
+        _, p2_scatter = scatter
 
     set_title_and_legend(new_axes)
+
+    plot_figure.canvas.mpl_connect('pick_event', hide_scatter)
+    plot_figure.canvas.mpl_connect('motion_notify_event', on_hover)
 
     plot_figure.show()
     plot_figure.canvas.draw()
 
 
+def on_hover(event):
+    global plot_figure, annot, p1_scatter, p2_scatter, new_axes
+
+    vis = annot.get_visible()
+    if event.inaxes == new_axes:
+        cont, ind = p1_scatter.contains(event)
+        if cont:
+            update_annot(ind, p1_scatter)
+            annot.set_visible(True)
+            plot_figure.canvas.draw_idle()
+        else:
+            cont, ind = p2_scatter.contains(event) if p2_scatter is not None else (False, 0)
+            if cont:
+                update_annot(ind, p2_scatter)
+                annot.set_visible(True)
+                plot_figure.canvas.draw_idle()
+            else:
+                if vis:
+                    annot.set_visible(False)
+                    plot_figure.canvas.draw_idle()
+
+
+def update_annot(ind, sc):
+    global p1_x, p1_y, p2_x, p2_y, annot, p1_scatter, p2_scatter, tims, lat, lon
+
+    pos = sc.get_offsets()[ind["ind"][0]]
+    annot.xy = pos
+
+    if sc is p1_scatter and p1_x is not None:
+        data = update_timeseries(p1_y, p1_x, 1, True)
+        latitude, longitude = xy_to_lat_lon(p1_x, p1_y)
+    elif sc is p2_scatter and p2_x is not None:
+        data = update_timeseries(p2_y, p2_x, 2, True)
+        latitude, longitude = xy_to_lat_lon(p2_x, p2_y)
+    else:
+        data = np.zeros(len(tims))
+        latitude, longitude = None, None
+
+    raw_date = str(dateList[ind["ind"][0]])
+    date = list(raw_date)
+    date.insert(4, '-')
+    date.insert(7, '-')
+    date = "".join(date)
+    datum = str(data[ind["ind"][0]])
+
+    text = "(%.4f , %.4f)" % (latitude, longitude)
+    text += "\nDate: "+date+"\n"+datum
+    annot.set_text(text)
+    annot.get_bbox_patch().set_facecolor('b')
+    annot.get_bbox_patch().set_alpha(0.4)
+
+
+# Hides Scatter Plot Data on Data Point Figure on Legend Item Click
+def hide_scatter(event):
+    global scatts, plot_figure
+
+    legline = event.artist
+    origline = scatts[legline]
+    vis = not origline.get_visible()
+    origline.set_visible(vis)
+
+    # Change the alpha on the line in the legend so we can see what lines
+    # have been toggled
+    if vis:
+        legline.set_alpha(1.0)
+    else:
+        legline.set_alpha(0.2)
+
+    plot_figure.canvas.draw_idle()
+
+
+# Sets title and legend information in Data Point Figure
 def set_title_and_legend(axis):
-    global p1_x, p1_y, p2_x, p2_y, inps
+    global p1_x, p1_y, p2_x, p2_y, inps, p1_scatter, p2_scatter, scatts
 
     # Compute title based off lat/lon coords
     series_label_1 = set_axis_title(p1_x, p1_y)
@@ -775,7 +876,15 @@ def set_title_and_legend(axis):
         axis.set_title(title)
 
     # Set Legend
-    axis.legend([series_label_1, series_label_2])
+    legend = axis.legend((p1_scatter, p2_scatter), (series_label_1, series_label_2), fancybox=True)
+    legend.get_frame().set_alpha(0.4)
+    scatters = [p1_scatter, p2_scatter]
+    scatts = dict()
+
+    for legline, scatter in zip(legend.legendHandles, scatters):
+        if legline is not None:
+            legline.set_picker(5)  # 5 pts tolerance
+            scatts[legline] = scatter
 
 
 def set_timeseries_data(plot_number):
@@ -801,6 +910,7 @@ def compute_timeseries_data(plot_number, x_point, y_point):
     return d_ts_n
 
 
+######################## MAIN FUNCTION ########################
 def main(argv):
     global fig_v, ax_v, inps, ax_ts, fig_ts, second_plot_axis
 
