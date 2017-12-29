@@ -37,7 +37,19 @@ def pick_mask():
         pick_mask_file_button.config(text="Select Mask File")
 
 
-
+def pick_dem():
+    if dem_file.get() == "":
+        filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
+                                              filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
+        root.filename = filename
+        dem_file.set(root.filename)
+        dem_short.set(filename.split("/")[-1])
+        pick_dem_file_button.config(text="Cancel")
+        return root.filename
+    else:
+        dem_file.set("")
+        dem_short.set("No File Selected")
+        pick_dem_file_button.config(text="Select Topography File")
 
 
 root = Tk()
@@ -143,6 +155,50 @@ opposite = IntVar()
 opposite_checkbutton = Checkbutton(flip_frame, text="Opposite", variable=opposite)
 
 
+transparency_frame = Frame(root)
+transparency_label = Label(transparency_frame, text="Alpha", width=8)
+transparency_slider = Scale(transparency_frame, from_= -40, to= 40, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
+transparency_entry = Entry(transparency_frame, textvariable=y_lim_upper, width=6)
+
+
+
+'''     Frames, Text Variables, and Widgets for selection of the topography dem.h5 file to add topography to the data.     '''
+pick_dem_file_frame = Frame(root)
+
+dem_file = StringVar()
+dem_short = StringVar()
+dem_short.set("No File Selected")
+
+pick_dem_file_button = Button(pick_dem_file_frame, text='Select Topography File', anchor='w', width=15, command=lambda: pick_dem())
+selected_dem_file_label = Label(pick_dem_file_frame, textvariable=dem_short)
+
+dem_options_frame = Frame(root)
+
+shading = IntVar()
+dem_shading_checkbutton = Checkbutton(dem_options_frame, text="Show Shaded Relief", variable=shading)
+
+countours = IntVar()
+dem_countours_checkbutton = Checkbutton(dem_options_frame, text="Show Countour Lines", variable=countours)
+
+dem_countour_smoothing_frame = Frame(root)
+
+countour_smoothing = StringVar()
+dem_countour_smoothing_label = Label(dem_countour_smoothing_frame, text="Contour Smoothing: ", width=15, anchor='w')
+dem_countour_smoothing_entry = Entry(dem_countour_smoothing_frame, textvariable=countour_smoothing, width=10)
+
+dem_countour_step_frame = Frame(root)
+
+countour_step = StringVar()
+dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ", width=15, anchor='w')
+dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=10)
+
+
+
+
+
+
+
+
 
 
 pick_h5_file_frame.pack(anchor='w', fill=X, pady=(10, 5), padx=10)
@@ -175,5 +231,27 @@ lr_flip_checkbutton.pack(side=LEFT, padx=(0, 12))
 ud_flip_checkbutton.pack(side=LEFT, padx=(0, 12))
 wrap_checkbutton.pack(side=LEFT, padx=(0, 12))
 opposite_checkbutton.pack(side=LEFT)
+
+transparency_frame.pack(side=TOP, fill=X)
+transparency_label.pack(side=LEFT)
+transparency_slider.pack(side=LEFT, padx=10)
+transparency_entry.pack(side=LEFT)
+
+pick_dem_file_frame.pack(anchor='w', fill=X, pady=(35, 10))
+pick_dem_file_button.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
+selected_dem_file_label.pack(side=LEFT, fill=X)
+
+
+dem_options_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+dem_shading_checkbutton.pack(side=LEFT, padx=(0, 12))
+dem_countours_checkbutton.pack(side=LEFT)
+
+dem_countour_smoothing_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+dem_countour_smoothing_label.pack(side=LEFT, padx=(0, 10))
+dem_countour_smoothing_entry.pack(side=LEFT)
+
+dem_countour_step_frame.pack(anchor='w', fill=X, pady=(5, 10), padx=10)
+dem_countour_step_label.pack(side=LEFT, padx=(0, 10))
+dem_countour_step_entry.pack(side=LEFT)
 
 mainloop()
