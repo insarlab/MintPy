@@ -59,11 +59,11 @@ def on_configure(event):
 
 
 root = Tk()
-root.minsize(width=375, height=750)
-root.maxsize(width=375, height=750)
+root.minsize(width=365, height=750)
+root.maxsize(width=365, height=750)
 root.resizable(width=False, height=False)
 
-canvas = Canvas(root, width=355)
+canvas = Canvas(root, width=345)
 canvas.pack(side=LEFT, fill=Y)
 
 scrollbar = Scrollbar(root, command=canvas.yview)
@@ -116,6 +116,7 @@ mask_short.set("No File Selected")
 
 pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', anchor='w', width=15, command=lambda: pick_mask())
 selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
+
 
 
 display_options_label = Label(frame, text="DISPLAY OPTIONS:", anchor=W)
@@ -182,6 +183,7 @@ transparency_slider = Scale(transparency_frame, from_=0, to=1, resolution=0.1, o
 transparency_entry = Entry(transparency_frame, textvariable=transparency, width=6)
 
 
+
 dem_options_label = Label(frame, text="DEM OPTIONS:", anchor=W)
 
 '''     Frames, Text Variables, and Widgets for selection of the topography dem.h5 file to add topography to the data.     '''
@@ -215,6 +217,7 @@ dem_countour_step_frame = Frame(dem_countour_options, width=15)
 countour_step = StringVar()
 dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ", anchor='c', width=15)
 dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=6)
+
 
 
 subset_label = Label(frame, text="SUBSET DATA", anchor=W)
@@ -258,6 +261,64 @@ subset_lon_from_entry = Entry(subset_lon_frame, textvariable=subset_lon_from, wi
 subset_lon_to = StringVar()
 subset_lon_to_label = Label(subset_lon_frame, text="To: ")
 subset_lon_to_entry = Entry(subset_lon_frame, textvariable=subset_lon_to, width=6)
+
+
+reference_label = Label(frame, text="REFERENCE:", anchor=W)
+
+ref_xy_frame = Frame(frame)
+
+ref_x = StringVar()
+ref_x_label = Label(ref_xy_frame, text="X:    ")
+ref_x_entry = Entry(ref_xy_frame, textvariable=ref_x, width=6)
+
+ref_y = StringVar()
+ref_y_label = Label(ref_xy_frame, text="Y:    ")
+ref_y_entry = Entry(ref_xy_frame, textvariable=ref_y, width=6)
+
+ref_latlon_frame = Frame(frame)
+
+ref_lat = StringVar()
+ref_lat_label = Label(ref_latlon_frame, text="Lat: ")
+ref_lat_entry = Entry(ref_latlon_frame, textvariable=ref_lat, width=6)
+
+ref_lon = StringVar()
+ref_lon_label = Label(ref_latlon_frame, text="Lon: ")
+ref_lon_entry = Entry(ref_latlon_frame, textvariable=ref_lon, width=6)
+
+show_ref_frame = Frame(frame)
+
+show_ref = IntVar()
+show_ref_checkbutton = Checkbutton(show_ref_frame, text="Show Reference", variable=show_ref)
+
+reference_options_frame = Frame(frame)
+
+ref_color = StringVar()
+ref_color_option_menu = apply(OptionMenu, (reference_options_frame, ref_color) + tuple(["1", "2", "3", "4", "5"]))
+ref_color_option_menu.config(width=10)
+ref_color.set("1")
+
+ref_sym = StringVar()
+ref_symbol_option_menu = apply(OptionMenu, (reference_options_frame, ref_sym) + tuple(["1", "2", "3", "4", "5"]))
+ref_symbol_option_menu.config(width=10)
+ref_sym.set('1')
+
+ref_date = StringVar()
+ref_date_option_menu = apply(OptionMenu, (reference_options_frame, ref_date) + tuple(["1", "2", "3", "4", "5"]))
+ref_date_option_menu.config(width=10)
+ref_date.set("1")
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -351,5 +412,32 @@ subset_lon_from_entry.pack(side=LEFT, padx=(0, 10))
 subset_lon_to_label.pack(side=LEFT, padx=(0, 5))
 subset_lon_to_entry.pack(side=LEFT, padx=(0, 10))
 
+reference_label.pack(fill=X, padx=10, pady=(35, 10))
+
+ref_xy_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+
+ref_x_label.pack(side=LEFT, padx=(0, 5))
+ref_x_entry.pack(side=LEFT, padx=(0, 10))
+ref_y_label.pack(side=LEFT, padx=(0, 5))
+ref_y_entry.pack(side=LEFT, padx=(0, 10))
+
+ref_latlon_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+
+ref_lat_label.pack(side=LEFT, padx=(0, 5))
+ref_lat_entry.pack(side=LEFT, padx=(0, 10))
+ref_lon_label.pack(side=LEFT, padx=(0, 5))
+ref_lon_entry.pack(side=LEFT, padx=(0, 10))
+
+show_ref_frame.pack(anchor='w', fill=X, padx=10, pady=(0, 10))
+show_ref_checkbutton.pack(side=LEFT, pady=10)
+
+reference_options_frame.pack(anchor='w', fill=X, pady=(0, 10), padx=10)
+ref_color_option_menu.pack(side=LEFT, padx=(0, 10))
+ref_symbol_option_menu.pack(side=LEFT, padx=(0, 10))
+ref_date_option_menu.pack(side=LEFT)
+
+space = Frame(frame)
+space.config(height=100)
+space.pack(side=LEFT)
 
 mainloop()
