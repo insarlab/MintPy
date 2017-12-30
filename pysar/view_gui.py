@@ -118,6 +118,8 @@ pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', an
 selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
 
 
+display_options_label = Label(frame, text="DISPLAY OPTIONS:", anchor=W)
+
 '''     Frames, Text Variables, and Widgets for setting y-lim      '''
 y_lim_frame = Frame(frame)
 y_lim_upper_frame = Frame(y_lim_frame)
@@ -172,13 +174,15 @@ wrap_checkbutton = Checkbutton(flip_frame, text="Wrap", variable=wrap)
 opposite = IntVar()
 opposite_checkbutton = Checkbutton(flip_frame, text="Opposite", variable=opposite)
 
-
+transparency = IntVar()
+transparency.set(1.0)
 transparency_frame = Frame(frame)
 transparency_label = Label(transparency_frame, text="Alpha", width=8)
-transparency_slider = Scale(transparency_frame, from_= -40, to= 40, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
-transparency_entry = Entry(transparency_frame, textvariable=y_lim_upper, width=6)
+transparency_slider = Scale(transparency_frame, from_=0, to=1, resolution=0.1, orient=HORIZONTAL, length=150, variable=transparency, showvalue=0)
+transparency_entry = Entry(transparency_frame, textvariable=transparency, width=6)
 
 
+dem_options_label = Label(frame, text="DEM OPTIONS:", anchor=W)
 
 '''     Frames, Text Variables, and Widgets for selection of the topography dem.h5 file to add topography to the data.     '''
 pick_dem_file_frame = Frame(frame)
@@ -213,12 +217,12 @@ dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ",
 dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=6)
 
 
-subset_label = Label(frame, text="SUBSET DATA")
+subset_label = Label(frame, text="SUBSET DATA", anchor=W)
 
 subset_x_frame = Frame(frame)
 
 subset_x_from = StringVar()
-subset_x_from_label = Label(subset_x_frame, text="X      From: ")
+subset_x_from_label = Label(subset_x_frame, text="X         From: ")
 subset_x_from_entry = Entry(subset_x_frame, textvariable=subset_x_from, width=6)
 
 subset_x_to = StringVar()
@@ -228,7 +232,7 @@ subset_x_to_entry = Entry(subset_x_frame, textvariable=subset_x_to, width=6)
 subset_y_frame = Frame(frame)
 
 subset_y_from = StringVar()
-subset_y_from_label = Label(subset_y_frame, text="Y      From: ")
+subset_y_from_label = Label(subset_y_frame, text="Y         From: ")
 subset_y_from_entry = Entry(subset_y_frame, textvariable=subset_y_from, width=6)
 
 subset_y_to = StringVar()
@@ -267,7 +271,9 @@ pick_mask_file_frame.pack(anchor='w', fill=X)
 pick_mask_file_button.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
 selected_mask_file_label.pack(side=LEFT, fill=X)
 
-y_lim_frame.pack(anchor='w', fill=X, pady=(35, 10), padx=10)
+display_options_label.pack(anchor='w', fill=X, pady=(35, 0), padx=10)
+
+y_lim_frame.pack(fill=X, pady=10, padx=10)
 
 y_lim_upper_frame.pack(side=TOP, fill=X, pady=(0, 10))
 y_lim_upper_label.pack(side=LEFT)
@@ -295,10 +301,11 @@ transparency_label.pack(side=LEFT)
 transparency_slider.pack(side=LEFT, padx=10)
 transparency_entry.pack(side=LEFT)
 
-pick_dem_file_frame.pack(anchor='w', fill=X, pady=(35, 10))
+dem_options_label.pack(anchor='w', fill=X, pady=(45, 0), padx=10)
+
+pick_dem_file_frame.pack(fill=X, pady=10)
 pick_dem_file_button.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
 selected_dem_file_label.pack(side=LEFT, fill=X)
-
 
 dem_options_frame.pack(anchor='w', fill=X, pady=(0, 10), padx=10)
 dem_shading_checkbutton.pack(side=LEFT, padx=(0, 12))
@@ -314,7 +321,7 @@ dem_countour_step_frame.pack(anchor='w', side=LEFT, pady=(5, 10), padx=10)
 dem_countour_step_label.pack(side=TOP, pady=(0, 10), fill=X)
 dem_countour_step_entry.pack(side=TOP)
 
-subset_label.pack(anchor='w', fill=X, pady=(25, 10), padx=10)
+subset_label.pack(anchor='w', fill=X, pady=(15, 0), padx=10)
 
 subset_x_frame.pack(anchor='w', fill=X, pady=10, padx=10)
 
