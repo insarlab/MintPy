@@ -11,11 +11,11 @@ def pick_file():
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
-        root.filename = filename
-        h5_file.set(root.filename)
+        frame.filename = filename
+        h5_file.set(frame.filename)
         h5_file_short.set(filename.split("/")[-1])
         pick_h5_file_button.config(text="Cancel")
-        return root.filename
+        return frame.filename
     else:
         h5_file.set("")
         h5_file_short.set("No File Selected")
@@ -26,11 +26,11 @@ def pick_mask():
     if mask_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
-        root.filename = filename
-        mask_file.set(root.filename)
+        frame.filename = filename
+        mask_file.set(frame.filename)
         mask_short.set(filename.split("/")[-1])
         pick_mask_file_button.config(text="Cancel")
-        return root.filename
+        return frame.filename
     else:
         mask_file.set("")
         mask_short.set("No File Selected")
@@ -41,21 +41,39 @@ def pick_dem():
     if dem_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
-        root.filename = filename
-        dem_file.set(root.filename)
+        frame.filename = filename
+        dem_file.set(frame.filename)
         dem_short.set(filename.split("/")[-1])
         pick_dem_file_button.config(text="Cancel")
-        return root.filename
+        return frame.filename
     else:
         dem_file.set("")
         dem_short.set("No File Selected")
         pick_dem_file_button.config(text="Select Topography File")
 
 
+def on_configure(event):
+    # update scrollregion after starting 'mainloop'
+    # when all widgets are in canvas
+    canvas.configure(scrollregion=canvas.bbox('all'))
+
+
 root = Tk()
-root.minsize(width=350, height=750)
-root.maxsize(width=350, height=750)
+root.minsize(width=375, height=750)
+root.maxsize(width=375, height=750)
 root.resizable(width=False, height=False)
+
+canvas = Canvas(root, width=355)
+canvas.pack(side=LEFT, fill=Y)
+
+scrollbar = Scrollbar(root, command=canvas.yview)
+scrollbar.pack(side=LEFT, fill='y')
+
+canvas.configure(yscrollcommand = scrollbar.set)
+canvas.bind('<Configure>', on_configure)
+
+frame = Frame(canvas)
+canvas.create_window((0,0), window=frame, anchor='nw')
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap', 'CMRmap_r', 'Dark2',
              'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r', 'Oranges', 'Oranges_r', 'PRGn', 'PRGn_r',
@@ -79,7 +97,7 @@ projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll",
 
 
 '''     Frames, Text Variables, and Widgets for selection of the timeseries.h5 file to plot data from.     '''
-pick_h5_file_frame = Frame(root)
+pick_h5_file_frame = Frame(frame)
 
 h5_file = StringVar()
 h5_file_short = StringVar()
@@ -90,7 +108,7 @@ selected_ts_file_label = Label(pick_h5_file_frame, textvariable=h5_file_short)
 
 
 '''     Frames, Text Variables, and Widgets for selection of the mask.h5 file to add a mask to the ata.     '''
-pick_mask_file_frame = Frame(root)
+pick_mask_file_frame = Frame(frame)
 
 mask_file = StringVar()
 mask_short = StringVar()
@@ -101,7 +119,7 @@ selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
 
 
 '''     Frames, Text Variables, and Widgets for setting y-lim      '''
-y_lim_frame = Frame(root)
+y_lim_frame = Frame(frame)
 y_lim_upper_frame = Frame(y_lim_frame)
 
 y_lim_upper = IntVar()
@@ -122,7 +140,7 @@ y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
 
 
 '''     Frames, Text Variables, and Widgets for setting extraneous properties      '''
-unit_cmap_projection_frame = Frame(root)
+unit_cmap_projection_frame = Frame(frame)
 
 unit = StringVar()
 unit.set("cm")
@@ -140,7 +158,7 @@ projection_option_menu.config(width=12)
 projection.set("cea")
 
 
-flip_frame = Frame(root)
+flip_frame = Frame(frame)
 
 lr_flip = IntVar()
 lr_flip_checkbutton = Checkbutton(flip_frame, text="Flip LR", variable=lr_flip)
@@ -155,7 +173,7 @@ opposite = IntVar()
 opposite_checkbutton = Checkbutton(flip_frame, text="Opposite", variable=opposite)
 
 
-transparency_frame = Frame(root)
+transparency_frame = Frame(frame)
 transparency_label = Label(transparency_frame, text="Alpha", width=8)
 transparency_slider = Scale(transparency_frame, from_= -40, to= 40, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
 transparency_entry = Entry(transparency_frame, textvariable=y_lim_upper, width=6)
@@ -163,7 +181,7 @@ transparency_entry = Entry(transparency_frame, textvariable=y_lim_upper, width=6
 
 
 '''     Frames, Text Variables, and Widgets for selection of the topography dem.h5 file to add topography to the data.     '''
-pick_dem_file_frame = Frame(root)
+pick_dem_file_frame = Frame(frame)
 
 dem_file = StringVar()
 dem_short = StringVar()
@@ -172,7 +190,7 @@ dem_short.set("No File Selected")
 pick_dem_file_button = Button(pick_dem_file_frame, text='Select Topography File', anchor='w', width=15, command=lambda: pick_dem())
 selected_dem_file_label = Label(pick_dem_file_frame, textvariable=dem_short)
 
-dem_options_frame = Frame(root)
+dem_options_frame = Frame(frame)
 
 shading = IntVar()
 dem_shading_checkbutton = Checkbutton(dem_options_frame, text="Show Shaded Relief", variable=shading)
@@ -180,7 +198,7 @@ dem_shading_checkbutton = Checkbutton(dem_options_frame, text="Show Shaded Relie
 countours = IntVar()
 dem_countours_checkbutton = Checkbutton(dem_options_frame, text="Show Countour Lines", variable=countours)
 
-dem_countour_options = Frame(root)
+dem_countour_options = Frame(frame)
 
 dem_countour_smoothing_frame = Frame(dem_countour_options, width=15)
 
@@ -195,9 +213,9 @@ dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ",
 dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=6)
 
 
-subset_label = Label(root, text="SUBSET DATA")
+subset_label = Label(frame, text="SUBSET DATA")
 
-subset_x_frame = Frame(root)
+subset_x_frame = Frame(frame)
 
 subset_x_from = StringVar()
 subset_x_from_label = Label(subset_x_frame, text="X      From: ")
@@ -207,7 +225,7 @@ subset_x_to = StringVar()
 subset_x_to_label = Label(subset_x_frame, text="To: ")
 subset_x_to_entry = Entry(subset_x_frame, textvariable=subset_x_to, width=6)
 
-subset_y_frame = Frame(root)
+subset_y_frame = Frame(frame)
 
 subset_y_from = StringVar()
 subset_y_from_label = Label(subset_y_frame, text="Y      From: ")
@@ -217,7 +235,7 @@ subset_y_to = StringVar()
 subset_y_to_label = Label(subset_y_frame, text="To: ")
 subset_y_to_entry = Entry(subset_y_frame, textvariable=subset_y_to, width=6)
 
-subset_lat_frame = Frame(root)
+subset_lat_frame = Frame(frame)
 
 subset_lat_from = StringVar()
 subset_lat_from_label = Label(subset_lat_frame, text="Lat      From: ")
@@ -227,7 +245,7 @@ subset_lat_to = StringVar()
 subset_lat_to_label = Label(subset_lat_frame, text="To: ")
 subset_lat_to_entry = Entry(subset_lat_frame, textvariable=subset_lat_to, width=6)
 
-subset_lon_frame = Frame(root)
+subset_lon_frame = Frame(frame)
 
 subset_lon_from = StringVar()
 subset_lon_from_label = Label(subset_lon_frame, text="Lon      From: ")
