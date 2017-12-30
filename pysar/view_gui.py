@@ -53,8 +53,8 @@ def pick_dem():
 
 
 root = Tk()
-root.minsize(width=350, height=550)
-root.maxsize(width=350, height=550)
+root.minsize(width=350, height=750)
+root.maxsize(width=350, height=750)
 root.resizable(width=False, height=False)
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap', 'CMRmap_r', 'Dark2',
@@ -180,22 +180,62 @@ dem_shading_checkbutton = Checkbutton(dem_options_frame, text="Show Shaded Relie
 countours = IntVar()
 dem_countours_checkbutton = Checkbutton(dem_options_frame, text="Show Countour Lines", variable=countours)
 
-dem_countour_smoothing_frame = Frame(root)
+dem_countour_options = Frame(root)
+
+dem_countour_smoothing_frame = Frame(dem_countour_options, width=15)
 
 countour_smoothing = StringVar()
-dem_countour_smoothing_label = Label(dem_countour_smoothing_frame, text="Contour Smoothing: ", width=15, anchor='w')
-dem_countour_smoothing_entry = Entry(dem_countour_smoothing_frame, textvariable=countour_smoothing, width=10)
+dem_countour_smoothing_label = Label(dem_countour_smoothing_frame, text="Contour Smoothing: ", anchor='c', width=15)
+dem_countour_smoothing_entry = Entry(dem_countour_smoothing_frame, textvariable=countour_smoothing, width=6)
 
-dem_countour_step_frame = Frame(root)
+dem_countour_step_frame = Frame(dem_countour_options, width=15)
 
 countour_step = StringVar()
-dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ", width=15, anchor='w')
-dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=10)
+dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ", anchor='c', width=15)
+dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=6)
 
 
+subset_label = Label(root, text="SUBSET DATA")
 
+subset_x_frame = Frame(root)
 
+subset_x_from = StringVar()
+subset_x_from_label = Label(subset_x_frame, text="X      From: ")
+subset_x_from_entry = Entry(subset_x_frame, textvariable=subset_x_from, width=6)
 
+subset_x_to = StringVar()
+subset_x_to_label = Label(subset_x_frame, text="To: ")
+subset_x_to_entry = Entry(subset_x_frame, textvariable=subset_x_to, width=6)
+
+subset_y_frame = Frame(root)
+
+subset_y_from = StringVar()
+subset_y_from_label = Label(subset_y_frame, text="Y      From: ")
+subset_y_from_entry = Entry(subset_y_frame, textvariable=subset_y_from, width=6)
+
+subset_y_to = StringVar()
+subset_y_to_label = Label(subset_y_frame, text="To: ")
+subset_y_to_entry = Entry(subset_y_frame, textvariable=subset_y_to, width=6)
+
+subset_lat_frame = Frame(root)
+
+subset_lat_from = StringVar()
+subset_lat_from_label = Label(subset_lat_frame, text="Lat      From: ")
+subset_lat_from_entry = Entry(subset_lat_frame, textvariable=subset_lat_from, width=6)
+
+subset_lat_to = StringVar()
+subset_lat_to_label = Label(subset_lat_frame, text="To: ")
+subset_lat_to_entry = Entry(subset_lat_frame, textvariable=subset_lat_to, width=6)
+
+subset_lon_frame = Frame(root)
+
+subset_lon_from = StringVar()
+subset_lon_from_label = Label(subset_lon_frame, text="Lon      From: ")
+subset_lon_from_entry = Entry(subset_lon_frame, textvariable=subset_lon_from, width=6)
+
+subset_lon_to = StringVar()
+subset_lon_to_label = Label(subset_lon_frame, text="To: ")
+subset_lon_to_entry = Entry(subset_lon_frame, textvariable=subset_lon_to, width=6)
 
 
 
@@ -242,16 +282,49 @@ pick_dem_file_button.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
 selected_dem_file_label.pack(side=LEFT, fill=X)
 
 
-dem_options_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+dem_options_frame.pack(anchor='w', fill=X, pady=(0, 10), padx=10)
 dem_shading_checkbutton.pack(side=LEFT, padx=(0, 12))
 dem_countours_checkbutton.pack(side=LEFT)
 
-dem_countour_smoothing_frame.pack(anchor='w', fill=X, pady=10, padx=10)
-dem_countour_smoothing_label.pack(side=LEFT, padx=(0, 10))
-dem_countour_smoothing_entry.pack(side=LEFT)
+dem_countour_options.pack(anchor='w', fill=X, pady=10)
 
-dem_countour_step_frame.pack(anchor='w', fill=X, pady=(5, 10), padx=10)
-dem_countour_step_label.pack(side=LEFT, padx=(0, 10))
-dem_countour_step_entry.pack(side=LEFT)
+dem_countour_smoothing_frame.pack(anchor='w', side=LEFT, pady=(0, 10), padx=(20, 10))
+dem_countour_smoothing_label.pack(side=TOP, pady=(0, 10), fill=X)
+dem_countour_smoothing_entry.pack(side=TOP)
+
+dem_countour_step_frame.pack(anchor='w', side=LEFT, pady=(5, 10), padx=10)
+dem_countour_step_label.pack(side=TOP, pady=(0, 10), fill=X)
+dem_countour_step_entry.pack(side=TOP)
+
+subset_label.pack(anchor='w', fill=X, pady=(25, 10), padx=10)
+
+subset_x_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+
+subset_x_from_label.pack(side=LEFT, padx=(0, 5))
+subset_x_from_entry.pack(side=LEFT, padx=(0, 10))
+subset_x_to_label.pack(side=LEFT, padx=(0, 5))
+subset_x_to_entry.pack(side=LEFT, padx=(0, 10))
+
+subset_y_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+
+subset_y_from_label.pack(side=LEFT, padx=(0, 5))
+subset_y_from_entry.pack(side=LEFT, padx=(0, 10))
+subset_y_to_label.pack(side=LEFT, padx=(0, 5))
+subset_y_to_entry.pack(side=LEFT, padx=(0, 10))
+
+subset_lat_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+
+subset_lat_from_label.pack(side=LEFT, padx=(0, 5))
+subset_lat_from_entry.pack(side=LEFT, padx=(0, 10))
+subset_lat_to_label.pack(side=LEFT, padx=(0, 5))
+subset_lat_to_entry.pack(side=LEFT, padx=(0, 10))
+
+subset_lon_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+
+subset_lon_from_label.pack(side=LEFT, padx=(0, 5))
+subset_lon_from_entry.pack(side=LEFT, padx=(0, 10))
+subset_lon_to_label.pack(side=LEFT, padx=(0, 5))
+subset_lon_to_entry.pack(side=LEFT, padx=(0, 10))
+
 
 mainloop()
