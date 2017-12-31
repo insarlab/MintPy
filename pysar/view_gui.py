@@ -119,6 +119,8 @@ selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
 
 
 
+
+
 display_options_label = Label(frame, text="DISPLAY OPTIONS:", anchor=W)
 
 '''     Frames, Text Variables, and Widgets for setting y-lim      '''
@@ -141,7 +143,6 @@ y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
 y_lim_lower_slider = Scale(y_lim_lower_frame, from_= -40, to= 40, orient=HORIZONTAL, length=150, variable=y_lim_lower, showvalue=0)
 y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
 
-
 '''     Frames, Text Variables, and Widgets for setting extraneous properties      '''
 unit_cmap_projection_frame = Frame(frame)
 
@@ -159,7 +160,6 @@ projection = StringVar()
 projection_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, projection) + tuple(projections))
 projection_option_menu.config(width=12)
 projection.set("cea")
-
 
 flip_frame = Frame(frame)
 
@@ -181,6 +181,8 @@ transparency_frame = Frame(frame)
 transparency_label = Label(transparency_frame, text="Alpha", width=8)
 transparency_slider = Scale(transparency_frame, from_=0, to=1, resolution=0.1, orient=HORIZONTAL, length=150, variable=transparency, showvalue=0)
 transparency_entry = Entry(transparency_frame, textvariable=transparency, width=6)
+
+
 
 
 
@@ -217,6 +219,8 @@ dem_countour_step_frame = Frame(dem_countour_options, width=15)
 countour_step = StringVar()
 dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ", anchor='c', width=15)
 dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=6)
+
+
 
 
 
@@ -261,6 +265,9 @@ subset_lon_from_entry = Entry(subset_lon_frame, textvariable=subset_lon_from, wi
 subset_lon_to = StringVar()
 subset_lon_to_label = Label(subset_lon_frame, text="To: ")
 subset_lon_to_entry = Entry(subset_lon_frame, textvariable=subset_lon_to, width=6)
+
+
+
 
 
 reference_label = Label(frame, text="REFERENCE:", anchor=W)
@@ -311,12 +318,95 @@ ref_date.set("1")
 
 
 
+figure_label = Label(frame, text="FIGURE:", anchor=W)
 
+font_dpi_frame = Frame(frame)
 
+font_size = StringVar()
+font_size_label = Label(font_dpi_frame, text="Font Size:    ")
+font_size_entry = Entry(font_dpi_frame, textvariable=font_size, width=6)
 
+plot_dpi = StringVar()
+dpi_label = Label(font_dpi_frame, text="DPI:    ")
+dpi_entry = Entry(font_dpi_frame, textvariable=plot_dpi, width=6)
 
+row_col_num_frame = Frame(frame)
 
+row_num = StringVar()
+row_num_label = Label(row_col_num_frame, text="Row Num:   ")
+row_num_entry = Entry(row_col_num_frame, textvariable=row_num, width=6)
 
+col_num = StringVar()
+col_num_label = Label(row_col_num_frame, text="Col Num:   ")
+col_num_entry = Entry(row_col_num_frame, textvariable=col_num, width=6)
+
+axis_cbar_frame = Frame(frame)
+
+axis_show = IntVar()
+axis_show_checkbutton = Checkbutton(axis_cbar_frame, text="Show Axis", variable=axis_show)
+
+cbar_show = IntVar()
+cbar_show_checkbutton = Checkbutton(axis_cbar_frame, text="Show Colorbar", variable=cbar_show)
+
+title_show = IntVar()
+title_show_checkbutton = Checkbutton(axis_cbar_frame, text="Show Title", variable=title_show)
+
+title_tick_frame = Frame(frame)
+
+tick_show = IntVar()
+tick_show_checkbutton = Checkbutton(title_tick_frame, text="Show Ticks", variable=tick_show)
+
+title_in = IntVar()
+title_in_checkbutton = Checkbutton(title_tick_frame, text="Title in Axes", variable=title_in)
+
+title_input_frame = Frame(frame)
+
+title = StringVar()
+title_input_label = Label(title_input_frame, text="Figure Title: ")
+title_input_entry = Entry(title_input_frame, textvariable=title, width=25)
+
+fig_size_frame = Frame(frame)
+
+fig_size_label = Label(fig_size_frame, text="Fig Size")
+
+fig_size_width = StringVar()
+fig_size_width_label = Label(fig_size_frame, text="Width: ")
+fig_size_width_entry = Entry(fig_size_frame, textvariable=fig_size_width, width=6)
+
+fig_size_height = StringVar()
+fig_size_height_label = Label(fig_size_frame, text="Length: ")
+fig_size_height_entry = Entry(fig_size_frame, textvariable=fig_size_height, width=6)
+
+fig_ext_num_frame = Frame(frame)
+
+fig_ext = StringVar()
+fig_ext_option_menu = apply(OptionMenu, (fig_ext_num_frame, ref_color) + tuple([".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]))
+fig_ext_option_menu.config(width=14)
+fig_ext.set("1")
+
+fig_num = StringVar()
+fig_num_option_menu = apply(OptionMenu, (fig_ext_num_frame, ref_sym) + tuple(["1", "2", "3", "4", "5"]))
+fig_num_option_menu.config(width=14)
+fig_num.set('1')
+
+fig_w_space_frame = Frame(frame)
+
+fig_w_space = StringVar()
+fig_w_space_label = Label(fig_w_space_frame, text="Fig Width Space: ")
+fig_w_space_entry = Entry(fig_w_space_frame, textvariable=fig_w_space, width=6)
+
+fig_h_space_frame = Frame(frame)
+
+fig_h_space = StringVar()
+fig_h_space_label = Label(fig_h_space_frame, text="Fig Height Space:")
+fig_h_space_entry = Entry(fig_h_space_frame, textvariable=fig_h_space, width=6)
+
+coords_frame = Frame(frame)
+
+coords = StringVar()
+coords_option_menu = apply(OptionMenu, (coords_frame, coords) + tuple(["radar", "geo"]))
+coords_option_menu.config(width=15)
+coords.set("geo")
 
 
 
@@ -435,6 +525,55 @@ reference_options_frame.pack(anchor='w', fill=X, pady=(0, 10), padx=10)
 ref_color_option_menu.pack(side=LEFT, padx=(0, 10))
 ref_symbol_option_menu.pack(side=LEFT, padx=(0, 10))
 ref_date_option_menu.pack(side=LEFT)
+
+figure_label.pack(fill=X, padx=10, pady=(35, 10))
+
+font_dpi_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+font_size_label.pack(side=LEFT, padx=(0, 5))
+font_size_entry.pack(side=LEFT, padx=(0, 10))
+dpi_label.pack(side=LEFT, padx=(0, 5))
+dpi_entry.pack(side=LEFT)
+
+row_col_num_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+row_num_label.pack(side=LEFT, padx=(0, 5))
+row_num_entry.pack(side=LEFT, padx=(0, 10))
+col_num_label.pack(side=LEFT, padx=(0, 5))
+col_num_entry.pack(side=LEFT)
+
+axis_cbar_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+axis_show_checkbutton.pack(side=LEFT, padx=(0, 12))
+cbar_show_checkbutton.pack(side=LEFT, padx=(0, 12))
+title_show_checkbutton.pack(side=LEFT, padx=(0, 12))
+
+title_tick_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+tick_show_checkbutton.pack(side=LEFT, padx=(0, 12))
+title_in_checkbutton.pack(side=LEFT)
+
+title_input_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+title_input_label.pack(side=LEFT, padx=(0, 10))
+title_input_entry.pack(side=LEFT)
+
+fig_size_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+fig_size_label.pack(side=LEFT, padx=(0, 10))
+fig_size_width_label.pack(side=LEFT, padx=(0, 5))
+fig_size_width_entry.pack(side=LEFT, padx=(0, 10))
+fig_size_height_label.pack(side=LEFT, padx=(0, 5))
+fig_size_height_entry.pack(side=LEFT, padx=(0, 10))
+
+fig_ext_num_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+fig_ext_option_menu.pack(side=LEFT, padx=(0, 10))
+fig_num_option_menu.pack(side=LEFT, padx=(0, 10))
+
+fig_w_space_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+fig_w_space_label.pack(side=LEFT, padx=(0, 5))
+fig_w_space_entry.pack(side=LEFT, padx=(0, 10))
+
+fig_h_space_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+fig_h_space_label.pack(side=LEFT, padx=(0, 5))
+fig_h_space_entry.pack(side=LEFT)
+
+coords_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+coords_option_menu.pack(side=LEFT)
 
 space = Frame(frame)
 space.config(height=100)
