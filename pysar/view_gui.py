@@ -62,7 +62,8 @@ def show_plot():
 
     options = [h5_file.get(), "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()),  "-u", unit.get(), "-c", colormap.get(),
                "--projection", projection.get(), "--alpha", str(transparency.get()), "--contour-smooth", countour_smoothing.get(),
-               "--contour-step", countour_step.get()]
+               "--contour-step", countour_step.get(),"--ref-color", ref_color.get(),  "--ref-symbol", ref_sym.get(), "--figext",
+               fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()]
 
     if mask_file.get() != "":
         options.append("--mask")
@@ -102,9 +103,59 @@ def show_plot():
         options.append(subset_lon_from.get())
         options.append(subset_lon_to.get())
 
+    if ref_x.get() != "" and ref_y.get() != "":
+        options.append("--ref-yx")
+        options.append(ref_y.get())
+        options.append(ref_x.get())
+    if ref_lat.get() != "" and ref_lon.get() != "":
+        options.append("--ref-lalo")
+        options.append(ref_lat.get())
+        options.append(ref_lon.get())
+    if show_ref == 0:
+        options.append("--noreference")
+
+
+    if font_size.get() != "":
+        options.append("-s")
+        options.append(font_size.get())
+    if plot_dpi.get() != "":
+        options.append("--dpi")
+        options.append(plot_dpi.get())
+    if row_num.get() != "":
+        options.append("--row")
+        options.append(row_num.get())
+    if col_num.get() != "":
+        options.append("--col")
+        options.append(col_num.get())
+    if axis_show.get() == 0:
+        options.append("--noaxis")
+    if tick_show.get() == 0:
+        options.append("--notick")
+    if title_show.get() == 0:
+        options.append("--notitle")
+    if cbar_show.get() == 0:
+        options.append("--nocbar")
+    if title_in.get() == 1:
+        options.append("--title-in")
+    if title.get() != "":
+        options.append("--figtitle")
+        options.append(title.get())
+    if fig_size_width.get() != "" and fig_size_height.get() != "":
+        options.append("--figsize")
+        options.append(fig_size_height.get())
+        options.append(fig_size_width.get())
+    if fig_w_space.get() != "":
+        options.append("--wspace")
+        options.append(fig_w_space.get())
+    if fig_h_space.get() != "":
+        options.append("--hspace")
+        options.append(fig_h_space.get())
 
 
     view.main(options)
+
+
+
 
 root = Tk()
 root.minsize(width=365, height=750)
@@ -347,6 +398,7 @@ ref_lon_entry = Entry(ref_latlon_frame, textvariable=ref_lon, width=6)
 show_ref_frame = Frame(frame)
 
 show_ref = IntVar()
+show_ref.set(1)
 show_ref_checkbutton = Checkbutton(show_ref_frame, text="Show Reference", variable=show_ref)
 
 reference_options_frame = Frame(frame)
@@ -434,7 +486,7 @@ fig_ext_num_frame = Frame(frame)
 fig_ext = StringVar()
 fig_ext_option_menu = apply(OptionMenu, (fig_ext_num_frame, ref_color) + tuple([".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]))
 fig_ext_option_menu.config(width=14)
-fig_ext.set("1")
+fig_ext.set(".pdf")
 
 fig_num = StringVar()
 fig_num_option_menu = apply(OptionMenu, (fig_ext_num_frame, ref_sym) + tuple(["1", "2", "3", "4", "5"]))
