@@ -61,7 +61,8 @@ def on_configure(event):
 def show_plot():
 
     options = [h5_file.get(), "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()),  "-u", unit.get(), "-c", colormap.get(),
-               "--projection", projection.get(), "--alpha", str(transparency.get())]
+               "--projection", projection.get(), "--alpha", str(transparency.get()), "--contour-smooth", countour_smoothing.get(),
+               "--contour-step", countour_step.get()]
 
     if mask_file.get() != "":
         options.append("--mask")
@@ -76,7 +77,32 @@ def show_plot():
     if opposite.get() == 1:
         options.append("--opposite")
 
-    print(options)
+    if dem_file.get() != "":
+        options.append("--dem")
+        options.append(dem_file.get())
+    if shading.get() == 0:
+        options.append("--dem-noshade")
+    if countours.get() == 0:
+        options.append("--dem-nocontour")
+
+    if subset_x_from.get() != "" and subset_x_to.get() != "":
+        options.append("-x")
+        options.append(subset_x_from.get())
+        options.append(subset_x_to.get())
+    if subset_y_from.get() != "" and subset_y_to.get() != "":
+        options.append("-y")
+        options.append(subset_y_from.get())
+        options.append(subset_y_to.get())
+    if subset_lat_from.get() != "" and subset_lat_to.get() != "":
+        options.append("-l")
+        options.append(subset_lat_from.get())
+        options.append(subset_lat_to.get())
+    if subset_lon_from.get() != "" and subset_lon_to.get() != "":
+        options.append("-L")
+        options.append(subset_lon_from.get())
+        options.append(subset_lon_to.get())
+
+
 
     view.main(options)
 
@@ -223,9 +249,11 @@ selected_dem_file_label = Label(pick_dem_file_frame, textvariable=dem_short)
 dem_options_frame = Frame(frame)
 
 shading = IntVar()
+shading.set(1)
 dem_shading_checkbutton = Checkbutton(dem_options_frame, text="Show Shaded Relief", variable=shading)
 
 countours = IntVar()
+countours.set(1)
 dem_countours_checkbutton = Checkbutton(dem_options_frame, text="Show Countour Lines", variable=countours)
 
 dem_countour_options = Frame(frame)
@@ -233,12 +261,14 @@ dem_countour_options = Frame(frame)
 dem_countour_smoothing_frame = Frame(dem_countour_options, width=15)
 
 countour_smoothing = StringVar()
+countour_smoothing.set("3.0")
 dem_countour_smoothing_label = Label(dem_countour_smoothing_frame, text="Contour Smoothing: ", anchor='c', width=15)
 dem_countour_smoothing_entry = Entry(dem_countour_smoothing_frame, textvariable=countour_smoothing, width=6)
 
 dem_countour_step_frame = Frame(dem_countour_options, width=15)
 
 countour_step = StringVar()
+countour_step.set("200")
 dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ", anchor='c', width=15)
 dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=6)
 
