@@ -60,13 +60,23 @@ def on_configure(event):
 
 def show_plot():
 
-    options = []
-
-    options.append(h5_file.get())
+    options = [h5_file.get(), "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()),  "-u", unit.get(), "-c", colormap.get(),
+               "--projection", projection.get(), "--alpha", str(transparency.get())]
 
     if mask_file.get() != "":
         options.append("--mask")
         options.append(mask_file.get())
+
+    if lr_flip.get() == 1:
+        options.append("--flip-lr")
+    if ud_flip.get() == 1:
+        options.append("--flip-ud")
+    if wrap.get() == 1:
+        options.append("--wrap")
+    if opposite.get() == 1:
+        options.append("--opposite")
+
+    print(options)
 
     view.main(options)
 
@@ -143,7 +153,7 @@ y_lim_upper = IntVar()
 y_lim_upper.set(20)
 
 y_lim_upper_label = Label(y_lim_upper_frame, text="Maximum", width=8)
-y_lim_upper_slider = Scale(y_lim_upper_frame, from_= -40, to= 40, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
+y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=5000, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
 y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6)
 
 y_lim_lower_frame = Frame(y_lim_frame)
@@ -152,14 +162,14 @@ y_lim_lower = IntVar()
 y_lim_lower.set(-20)
 
 y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
-y_lim_lower_slider = Scale(y_lim_lower_frame, from_= -40, to= 40, orient=HORIZONTAL, length=150, variable=y_lim_lower, showvalue=0)
+y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=5000, orient=HORIZONTAL, length=150, variable=y_lim_lower, showvalue=0)
 y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
 
 '''     Frames, Text Variables, and Widgets for setting extraneous properties      '''
 unit_cmap_projection_frame = Frame(frame)
 
 unit = StringVar()
-unit.set("cm")
+unit.set("m")
 unit_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, unit) + tuple(["cm", "m", "dm", "km"]))
 unit_option_menu.config(width=6)
 
