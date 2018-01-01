@@ -58,6 +58,18 @@ def on_configure(event):
     canvas.configure(scrollregion=canvas.bbox('all'))
 
 
+def show_plot():
+
+    options = []
+
+    options.append(h5_file.get())
+
+    if mask_file.get() != "":
+        options.append("--mask")
+        options.append(mask_file.get())
+
+    view.main(options)
+
 root = Tk()
 root.minsize(width=365, height=750)
 root.maxsize(width=365, height=750)
@@ -575,8 +587,13 @@ fig_h_space_entry.pack(side=LEFT)
 coords_frame.pack(anchor='w', fill=X, padx=10, pady=10)
 coords_option_menu.pack(side=LEFT)
 
+submit_button = Button(frame, text="Show Plot", command=lambda: show_plot())
+submit_button.pack(pady=(35, 10))
+
 space = Frame(frame)
 space.config(height=100)
 space.pack(side=LEFT)
+
+
 
 mainloop()
