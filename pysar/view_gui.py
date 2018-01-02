@@ -60,6 +60,10 @@ def on_configure(event):
 
 def show_plot():
 
+    print(scalebar_distance.get())
+    print(scalebar_lat.get())
+    print(scalebar_lon.get())
+
     options = [h5_file.get(), "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()),  "-u", unit.get(), "-c", colormap.get(),
                "--projection", projection.get(), "--alpha", str(transparency.get()), "--contour-smooth", countour_smoothing.get(),
                "--contour-step", countour_step.get(),"--ref-color", ref_color.get(),  "--ref-symbol", ref_sym.get(), "--figext",
@@ -151,6 +155,29 @@ def show_plot():
         options.append("--hspace")
         options.append(fig_h_space.get())
 
+    if coastline.get() != 0:
+        options.append("--coastline")
+    if resolution.get() != "":
+        options.append("--resolution")
+        options.append(resolution.get())
+    if lalo_label.get() != 0:
+        options.append("--lalo-label")
+    if lalo_step.get() != "":
+        options.append("--lalo-step")
+        options.append(lalo_step.get())
+    if scalebar_distance.get() != "" and scalebar_lat.get() != "" and scalebar_lon.get() != "":
+        options.append("--scalebar")
+        options.append(scalebar_distance.get())
+        options.append(scalebar_lat.get())
+        options.append(scalebar_lon.get())
+    if show_scalebar.get() == 0:
+        options.append("--noscalebar")
+
+    if save.get() != 0:
+        options.append("--save")
+    if output_file.get() != "":
+        options.append("-o")
+        options.append(output_file.get())
 
     view.main(options)
 
@@ -451,20 +478,25 @@ col_num_entry = Entry(row_col_num_frame, textvariable=col_num, width=6)
 axis_cbar_frame = Frame(frame)
 
 axis_show = IntVar()
+axis_show.set(1)
 axis_show_checkbutton = Checkbutton(axis_cbar_frame, text="Show Axis", variable=axis_show)
 
 cbar_show = IntVar()
+cbar_show.set(1)
 cbar_show_checkbutton = Checkbutton(axis_cbar_frame, text="Show Colorbar", variable=cbar_show)
 
 title_show = IntVar()
+title_show.set(1)
 title_show_checkbutton = Checkbutton(axis_cbar_frame, text="Show Title", variable=title_show)
 
 title_tick_frame = Frame(frame)
 
 tick_show = IntVar()
+tick_show.set(1)
 tick_show_checkbutton = Checkbutton(title_tick_frame, text="Show Ticks", variable=tick_show)
 
 title_in = IntVar()
+title_in.set(1)
 title_in_checkbutton = Checkbutton(title_tick_frame, text="Title in Axes", variable=title_in)
 
 title_input_frame = Frame(frame)
@@ -529,8 +561,8 @@ coastline = IntVar()
 coastline_checkbutton = Checkbutton(coastline_res_frame, text="Show Coastline", variable=coastline)
 
 resolution = StringVar()
-resolution.set("Crude")
-resolution_option_menu = apply(OptionMenu, (coastline_res_frame, resolution) + tuple(["Crude", "Low", "Intermediate", "High", "Full", "None"]))
+resolution.set("c")
+resolution_option_menu = apply(OptionMenu, (coastline_res_frame, resolution) + tuple(["c", "l", "i", "h", "f", "None"]))
 resolution_option_menu.config(width=15)
 
 lalo_settings_frame = Frame(frame)
@@ -558,6 +590,7 @@ scalebar_lon_entry = Entry(scalebar_settings, textvariable=scalebar_lon, width=4
 show_scalebar_frame = Frame(frame)
 
 show_scalebar = IntVar()
+show_scalebar.set(1)
 show_scalebar_checkbutton = Checkbutton(show_scalebar_frame, text="Show Scalebar", variable=show_scalebar)
 
 
