@@ -555,8 +555,29 @@ scalebar_lat_label = Label(scalebar_settings, text="Lat/Lon: ")
 scalebar_lat_entry = Entry(scalebar_settings, textvariable=scalebar_lat, width=4)
 scalebar_lon_entry = Entry(scalebar_settings, textvariable=scalebar_lon, width=4)
 
+show_scalebar_frame = Frame(frame)
+
 show_scalebar = IntVar()
-show_scalebar_checkbutton = Checkbutton(frame, text="Show Scalebar", variable=show_scalebar)
+show_scalebar_checkbutton = Checkbutton(show_scalebar_frame, text="Show Scalebar", variable=show_scalebar)
+
+
+
+
+
+output_label = Label(frame, text="OUTPUT", anchor=W)
+output_frame = Frame(frame)
+
+save = IntVar()
+save_checkbutton = Checkbutton(output_frame, text="Save Output", variable=save)
+
+output_file = StringVar()
+output_file_label = Label(output_frame, text="Output File: ")
+output_file_entry = Entry(output_frame, textvariable=output_file, width=12)
+
+
+
+
+
 
 
 pick_h5_file_frame.pack(anchor='w', fill=X, pady=(10, 5), padx=10)
@@ -731,7 +752,7 @@ lalo_label_checkbutton.pack(side=LEFT, padx=(0, 15))
 lalo_step_label.pack(side=LEFT, padx=(0, 5))
 lalo_step_entry.pack(side=LEFT)
 
-scalebar_settings.pack(fill=X, padx=10, pady=5)
+scalebar_settings.pack(fill=X, padx=10, pady=10)
 scalebar_label.pack(side=LEFT, padx=(0, 10))
 scalebar_dist_label.pack(side=LEFT, padx=(0, 2))
 scalebar_dist_entry.pack(side=LEFT, padx=(0, 5))
@@ -739,7 +760,15 @@ scalebar_lat_label.pack(side=LEFT, padx=(0, 2))
 scalebar_lat_entry.pack(side=LEFT)
 scalebar_lon_entry.pack(side=LEFT)
 
-show_scalebar_checkbutton.pack(anchor='w', side=LEFT, padx=10)
+show_scalebar_frame.pack(fill=X, padx=10, pady=5)
+show_scalebar_checkbutton.pack(side=LEFT, pady=10)
+
+output_label.pack(anchor='w', fill=X, padx=10, pady=(35, 10))
+
+output_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+save_checkbutton.pack(side=LEFT, padx=(0, 10))
+output_file_label.pack(side=LEFT, padx=(0, 5))
+output_file_entry.pack(side=LEFT)
 
 space = Frame(frame)
 space.config(height=50)
