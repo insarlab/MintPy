@@ -162,17 +162,21 @@ root.minsize(width=365, height=750)
 root.maxsize(width=365, height=750)
 root.resizable(width=False, height=False)
 
-canvas = Canvas(root, width=345)
-canvas.pack(side=LEFT, fill=Y)
+submit_button = Button(root, text="Show Plot", command=lambda: show_plot())
+submit_button.pack(side=TOP, pady=(10, 20))
+
+canvas = Canvas(root, width=345, height=680)
+canvas.pack(side=LEFT, anchor='nw')
 
 scrollbar = Scrollbar(root, command=canvas.yview)
 scrollbar.pack(side=LEFT, fill='y')
 
-canvas.configure(yscrollcommand = scrollbar.set)
+canvas.configure(yscrollcommand=scrollbar.set)
 canvas.bind('<Configure>', on_configure)
 
 frame = Frame(canvas)
 canvas.create_window((0,0), window=frame, anchor='nw')
+
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap', 'CMRmap_r', 'Dark2',
              'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r', 'Oranges', 'Oranges_r', 'PRGn', 'PRGn_r',
@@ -679,11 +683,8 @@ fig_h_space_entry.pack(side=LEFT)
 coords_frame.pack(anchor='w', fill=X, padx=10, pady=10)
 coords_option_menu.pack(side=LEFT)
 
-submit_button = Button(frame, text="Show Plot", command=lambda: show_plot())
-submit_button.pack(pady=(35, 10))
-
 space = Frame(frame)
-space.config(height=100)
+space.config(height=50)
 space.pack(side=LEFT)
 
 
