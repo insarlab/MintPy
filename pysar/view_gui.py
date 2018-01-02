@@ -521,6 +521,43 @@ coords.set("geo")
 
 
 
+map_options_label = Label(frame, text="MAP: ", anchor=W)
+
+coastline_res_frame = Frame(frame)
+
+coastline = IntVar()
+coastline_checkbutton = Checkbutton(coastline_res_frame, text="Show Coastline", variable=coastline)
+
+resolution = StringVar()
+resolution.set("Crude")
+resolution_option_menu = apply(OptionMenu, (coastline_res_frame, resolution) + tuple(["Crude", "Low", "Intermediate", "High", "Full", "None"]))
+resolution_option_menu.config(width=15)
+
+lalo_settings_frame = Frame(frame)
+
+lalo_label = IntVar()
+lalo_label_checkbutton = Checkbutton(lalo_settings_frame, text="Show LALO Label", variable=lalo_label)
+
+lalo_step = StringVar()
+lalo_step_label = Label(lalo_settings_frame, text="LALO Step: ")
+lalo_step_entry = Entry(lalo_settings_frame, textvariable=lalo_step, width=6)
+
+scalebar_settings = Frame(frame)
+
+scalebar_distance = StringVar()
+scalebar_lat = StringVar()
+scalebar_lon = StringVar()
+
+scalebar_label = Label(scalebar_settings, text="Scalebar")
+scalebar_dist_label = Label(scalebar_settings, text="Dist: ")
+scalebar_dist_entry = Entry(scalebar_settings, textvariable=scalebar_distance, width=4)
+scalebar_lat_label = Label(scalebar_settings, text="Lat/Lon: ")
+scalebar_lat_entry = Entry(scalebar_settings, textvariable=scalebar_lat, width=4)
+scalebar_lon_entry = Entry(scalebar_settings, textvariable=scalebar_lon, width=4)
+
+show_scalebar = IntVar()
+show_scalebar_checkbutton = Checkbutton(frame, text="Show Scalebar", variable=show_scalebar)
+
 
 pick_h5_file_frame.pack(anchor='w', fill=X, pady=(10, 5), padx=10)
 pick_h5_file_button.pack(side=LEFT, anchor='w', padx=(0, 20))
@@ -682,6 +719,27 @@ fig_h_space_entry.pack(side=LEFT)
 
 coords_frame.pack(anchor='w', fill=X, padx=10, pady=10)
 coords_option_menu.pack(side=LEFT)
+
+map_options_label.pack(fill=X, padx=10, pady=(35, 10))
+
+coastline_res_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+coastline_checkbutton.pack(side=LEFT, padx=(0, 25))
+resolution_option_menu.pack(side=LEFT)
+
+lalo_settings_frame.pack(fill=X, padx=10, pady=10)
+lalo_label_checkbutton.pack(side=LEFT, padx=(0, 15))
+lalo_step_label.pack(side=LEFT, padx=(0, 5))
+lalo_step_entry.pack(side=LEFT)
+
+scalebar_settings.pack(fill=X, padx=10, pady=5)
+scalebar_label.pack(side=LEFT, padx=(0, 10))
+scalebar_dist_label.pack(side=LEFT, padx=(0, 2))
+scalebar_dist_entry.pack(side=LEFT, padx=(0, 5))
+scalebar_lat_label.pack(side=LEFT, padx=(0, 2))
+scalebar_lat_entry.pack(side=LEFT)
+scalebar_lon_entry.pack(side=LEFT)
+
+show_scalebar_checkbutton.pack(anchor='w', side=LEFT, padx=10)
 
 space = Frame(frame)
 space.config(height=50)
