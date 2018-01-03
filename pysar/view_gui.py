@@ -64,15 +64,22 @@ def show_plot():
     print(scalebar_lat.get())
     print(scalebar_lon.get())
 
-    options = [h5_file.get(), "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()),  "-u", unit.get(), "-c", colormap.get(),
-               "--projection", projection.get(), "--alpha", str(transparency.get()), "--contour-smooth", countour_smoothing.get(),
-               "--contour-step", countour_step.get(),"--ref-color", ref_color.get(),  "--ref-symbol", ref_sym.get(), "--figext",
-               fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()]
+    options = [h5_file.get(), "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()), "--alpha", str(transparency.get()), "--figext",
+    fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()]
 
     if mask_file.get() != "":
         options.append("--mask")
         options.append(mask_file.get())
 
+    if unit.get() != "":
+        options.append("-u")
+        options.append(unit.get())
+    if colormap.get() != "":
+        options.append("-c")
+        options.append(colormap.get())
+    if projection.get() != "":
+        options.append("--projection")
+        options.append(projection.get())
     if lr_flip.get() == 1:
         options.append("--flip-lr")
     if ud_flip.get() == 1:
@@ -89,6 +96,12 @@ def show_plot():
         options.append("--dem-noshade")
     if countours.get() == 0:
         options.append("--dem-nocontour")
+    if countour_smoothing.get() != "":
+        options.append("--contour-smooth")
+        options.append(countour_smoothing.get())
+    if countour_step.get() != "":
+        options.append("--contour-step")
+        options.append(countour_step.get())
 
     if subset_x_from.get() != "" and subset_x_to.get() != "":
         options.append("-x")
@@ -117,7 +130,14 @@ def show_plot():
         options.append(ref_lon.get())
     if show_ref == 0:
         options.append("--noreference")
+    if ref_color.get() != "":
+        options.append("--ref-color")
+        options.append(ref_color.get())
+    if ref_sym.get() != "":
+        options.append("--ref-symbol")
+        options.append(ref_sym.get())
 
+    ''' "--ref-color", ref_color.get(), "--ref-symbol", ref_sym.get() '''
 
     if font_size.get() != "":
         options.append("-s")
@@ -182,6 +202,8 @@ def show_plot():
         location = "/".join(location_parts[1:-1])
 
         options.append("/"+str(location)+"/"+output_file.get())
+
+    print(options)
 
     view.main(options)
 
@@ -282,7 +304,7 @@ unit_cmap_projection_frame = Frame(frame)
 
 unit = StringVar()
 unit.set("m")
-unit_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, unit) + tuple(["cm", "m", "dm", "km"]))
+unit_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, unit) + tuple(["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]))
 unit_option_menu.config(width=6)
 
 colormap = StringVar()
@@ -441,17 +463,14 @@ reference_options_frame = Frame(frame)
 ref_color = StringVar()
 ref_color_option_menu = apply(OptionMenu, (reference_options_frame, ref_color) + tuple(["1", "2", "3", "4", "5"]))
 ref_color_option_menu.config(width=10)
-ref_color.set("1")
 
 ref_sym = StringVar()
 ref_symbol_option_menu = apply(OptionMenu, (reference_options_frame, ref_sym) + tuple(["1", "2", "3", "4", "5"]))
 ref_symbol_option_menu.config(width=10)
-ref_sym.set('1')
 
 ref_date = StringVar()
 ref_date_option_menu = apply(OptionMenu, (reference_options_frame, ref_date) + tuple(["1", "2", "3", "4", "5"]))
 ref_date_option_menu.config(width=10)
-ref_date.set("1")
 
 
 
