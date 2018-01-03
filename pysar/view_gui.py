@@ -259,7 +259,7 @@ h5_file = StringVar()
 h5_file_short = StringVar()
 h5_file_short.set("No File Selected")
 
-pick_h5_file_button = Button(pick_h5_file_frame, text='Select Timeseries File', anchor='w', width=15, command=lambda: pick_file())
+pick_h5_file_button = Button(pick_h5_file_frame, text='Select .h5 File', anchor='w', width=15, command=lambda: pick_file())
 selected_ts_file_label = Label(pick_h5_file_frame, textvariable=h5_file_short)
 
 
