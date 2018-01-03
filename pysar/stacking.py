@@ -16,8 +16,8 @@ import pysar._pysar_utilities as ut
 
 #################################  Usage  ####################################
 EXAMPLE='''example:
-  stack.py unwrapIfgram.h5
-  stack.py coherence.h5 -m mask.h5
+  stacking.py unwrapIfgram.h5
+  stacking.py coherence.h5 -m mask.h5
 '''
 
 def cmdLineParse():

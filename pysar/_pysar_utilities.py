@@ -2078,7 +2078,7 @@ def get_file_stack(File, maskFile=None):
     '''
     stack = None
     atr = readfile.read_attribute(File)
-    stackFile = os.path.splitext(File)[0]+'_stack.h5'
+    stackFile = os.path.splitext(File)[0]+'_stacking.h5'
 
     # Read stack from existed file
     if os.path.isfile(stackFile):

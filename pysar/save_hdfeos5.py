@@ -131,8 +131,13 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ##### Recommended metadata
     #################################
     ##### Given manually
-    try:    unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
-    except: unavco_meta_dict['frame'] = 0
+    if 'frame' in pysar_meta_dict.keys():
+        unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
+    elif 'first_frame' in pysar_meta_dict.keys():
+        unavco_meta_dict['frame'] = int(pysar_meta_dict['first_frame'])
+    else:
+        unavco_meta_dict['frame'] = 0
+
     try:    unavco_meta_dict['atmos_correct_method'] = pysar_meta_dict['atmos_correct_method']
     except: pass
     try:    unavco_meta_dict['post_processing_method'] = pysar_meta_dict['post_processing_method']
