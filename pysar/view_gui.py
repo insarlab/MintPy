@@ -177,7 +177,11 @@ def show_plot():
         options.append("--save")
     if output_file.get() != "":
         options.append("-o")
-        options.append(output_file.get())
+
+        location_parts = h5_file.get().split("/")
+        location = "/".join(location_parts[1:-1])
+
+        options.append("/"+str(location)+"/"+output_file.get())
 
     view.main(options)
 
@@ -257,7 +261,7 @@ display_options_label = Label(frame, text="DISPLAY OPTIONS:", anchor=W)
 y_lim_frame = Frame(frame)
 y_lim_upper_frame = Frame(y_lim_frame)
 
-y_lim_upper = IntVar()
+y_lim_upper = DoubleVar()
 y_lim_upper.set(20)
 
 y_lim_upper_label = Label(y_lim_upper_frame, text="Maximum", width=8)
@@ -266,7 +270,7 @@ y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6)
 
 y_lim_lower_frame = Frame(y_lim_frame)
 
-y_lim_lower = IntVar()
+y_lim_lower = DoubleVar()
 y_lim_lower.set(-20)
 
 y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
