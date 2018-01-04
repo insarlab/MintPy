@@ -7,9 +7,10 @@ import tkFileDialog as filedialog
 import view as view
 import info
 
+
 def pick_file():
     if h5_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
         h5_file.set(frame.filename)
@@ -24,7 +25,7 @@ def pick_file():
 
 def pick_mask():
     if mask_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
         mask_file.set(frame.filename)
@@ -39,7 +40,7 @@ def pick_mask():
 
 def pick_dem():
     if dem_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
         dem_file.set(frame.filename)
@@ -208,8 +209,6 @@ def show_plot():
     view.main(options)
 
 
-
-
 root = Tk()
 root.minsize(width=365, height=750)
 root.maxsize(width=365, height=750)
@@ -219,13 +218,16 @@ submit_button = Button(root, text="Show Plot", command=lambda: show_plot())
 submit_button.pack(side=TOP, pady=(10, 20))
 
 canvas = Canvas(root, width=345, height=680)
+canvas.bind('<Configure>', on_configure)
+
 canvas.pack(side=LEFT, anchor='nw')
 
-scrollbar = Scrollbar(root, command=canvas.yview)
+scrollbar = Scrollbar(root)
 scrollbar.pack(side=LEFT, fill='y')
 
 canvas.configure(yscrollcommand=scrollbar.set)
-canvas.bind('<Configure>', on_configure)
+scrollbar.config(command=canvas.yview)
+
 
 frame = Frame(canvas)
 canvas.create_window((0,0), window=frame, anchor='nw')

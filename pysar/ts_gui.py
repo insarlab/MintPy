@@ -12,7 +12,7 @@ import _readfile as readfile
 def pick_file():
     if timeseries_file.get() == "":
         print(timeseries_file.get())
-        filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         root.filename = filename
         timeseries_file.set(root.filename)
@@ -30,7 +30,7 @@ def pick_file():
 
 def pick_mask():
     if mask_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         root.filename = filename
         mask_file.set(root.filename)
@@ -45,7 +45,7 @@ def pick_mask():
 
 def pick_dem():
     if dem_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         root.filename = filename
         dem_file.set(root.filename)
