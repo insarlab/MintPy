@@ -456,6 +456,7 @@ def main(argv):
 
     # Project Name
     inps.project_name = None
+    #import pdb; pdb.set_trace()
     if inps.custom_template_file:
         inps.custom_template_file = os.path.abspath(inps.custom_template_file)
         inps.project_name = os.path.splitext(os.path.basename(inps.custom_template_file))[0]
@@ -532,9 +533,15 @@ def main(argv):
             if key in custom_template.keys():
                 custom_template[key] = custom_template[key].lower().replace('-','_')
 
+        # FA 1/18: insert general options from template file as pysar.* options
+        if 'processor' in custom_template.keys():
+            custom_template['pysar.insarProcessor'] = custom_template['processor']
+            #import pdb; pdb.set_trace()
+        
         # Update default template with custom input template
         print 'update default template based on input custom template'
         inps.template_file = ut.update_template_file(inps.template_file, custom_template)
+
 
     if inps.generate_template:
         sys.exit('Exit as planned after template file generation.')
