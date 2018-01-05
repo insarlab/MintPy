@@ -49,7 +49,7 @@ import pysar._writefile as writefile
 import pysar._datetime as ptime
 import pysar._network as pnet
 import pysar._remove_surface as rm
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file, geometry_dataset
 
 
 ###############################################################################
@@ -104,7 +104,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
         else:
             epoch2check = 'latitude'
         try:
-            dset = readfile.read(fname, epoch=epoch2check, print_msg=print_msg)[0]
+            dset = readfile.read(fname, epoch=epoch2check, print_msg=False)[0]
             outFile = fname
             break
         except:
@@ -121,19 +121,29 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     return outFile
 
 
-def get_dem_file(coordType='radar', filePattern=None, abspath=False, print_msg=True):
-    '''Find DEM file with/without input file pattern'''
+def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, print_msg=True):
+    '''Find geometry file containing input specific dataset'''
+    if dset not in geometry_dataset:
+        sys.exit('Unrecognized geometry dataset name: %s' % (dset))
+
     ##Search Existing Files
     if not filePattern:
-        filePattern = ['geometryRadar.h5', 'geometryGeo_tight.h5', 'geometryGeo.h5',\
-                       'demRadar.h5', 'demGeo.h5',\
-                       'radar*.hgt', '*.dem', '*.dem.wgs84']
+        filePattern = ['geometryRadar.h5', 'geometryGeo_tight.h5', 'geometryGeo.h5']
+        if dset in ['rangeCoord','azimuthCoord']:
+            filePattern += ['geomap*lks_tight.trans', 'geomap*lks.trans', 'sim*_tight.UTM_TO_RDC', 'sim*.UTM_TO_RDC']
+        elif dset == 'height':
+            filePattern += ['demRadar.h5', 'demGeo.h5', 'radar*.hgt', '*.dem', '*.dem.wgs84']
+        elif dset == 'incidenceAngle'    :  filePattern += ['*incidenceAngle.h5']
+        elif dset == 'slantRangeDistance':  filePattern += ['*rangeDistance.h5']
+        elif dset == 'waterMask'         :  filePattern += ['*waterMask.h5']
+        elif dset == 'shadowMask'        :  filePattern += ['*shadowMask.h5']
+
     existFiles = []
     try:
         existFiles = get_file_list(filePattern)
     except:
         if print_msg:
-            print 'ERROR: No DEM file found!'
+            print 'ERROR: No %s file found!' % (dset)
             print 'It should be like:'
             print filePattern
         return None
@@ -149,97 +159,14 @@ def get_dem_file(coordType='radar', filePattern=None, abspath=False, print_msg=T
                 continue
         #Check dataset
         try:
-            dset = readfile.read(fname, epoch='height', print_msg=print_msg)[0]
+            dset = readfile.read(fname, epoch=dset, print_msg=False)[0]
             outFile = fname
             break
         except:
             pass
     if not outFile:
         if print_msg:
-            print 'No height info found in files.'
-        return None
-
-    ##Path Format
-    if abspath:
-        outFile = os.path.abspath(outFile)
-    return outFile
-
-
-def get_inc_angle_file(coordType=None, filePattern=None, abspath=False, print_msg=True):
-    '''Find Incidence Angle file with/without input file pattern'''
-    ##Search Existing Files
-    if not filePattern:
-        filePattern = ['geometry*.h5','*incidenceAngle.h5']
-    existFiles = []
-    try:
-        existFiles = get_file_list(filePattern)
-    except:
-        if print_msg:
-            print 'ERROR: No incidence angle file found!'
-            print 'It should be like:'
-            print filePattern
-        return None
-
-    ##Chck Files Info
-    outFile = None
-    for fname in existFiles:
-        #Check coord type
-        if coordType:
-            atr = readfile.read_attribute(fname)
-            if ((coordType == 'radar' and 'Y_FIRST'     in atr.keys()) or \
-                (coordType == 'geo'   and 'Y_FIRST' not in atr.keys())):
-                continue
-        #Check dataset
-        try:
-            dset = readfile.read(fname, epoch='incidenceAngle', print_msg=print_msg)[0]
-            outFile = fname
-            break
-        except:
-            pass
-    if not outFile:
-        if print_msg:
-            print 'No incidence angle info found in files.'
-        return None
-
-    ##Return path
-    if abspath:
-        outFile = os.path.abspath(outFile)
-    return outFile
-
-def get_range_distance_file(coordType=None, filePattern=None, abspath=False, print_msg=True):
-    '''Find Slant Range Distance file with/without input file pattern'''
-    ##Search Existing Files
-    if not filePattern:
-        filePattern = ['geometry*.h5','*rangeDistance.h5']
-    existFiles = []
-    try:
-        existFiles = get_file_list(filePattern)
-    except:
-        if print_msg:
-            print 'ERROR: No range distance file found!'
-            print 'It should be like:'
-            print filePattern
-        return None
-
-    ##Check Files Info
-    outFile = None
-    for fname in existFiles:
-        #Check coord type
-        if coordType:
-            atr = readfile.read_attribute(fname)
-            if ((coordType == 'radar' and 'Y_FIRST'     in atr.keys()) or \
-                (coordType == 'geo'   and 'Y_FIRST' not in atr.keys())):
-                continue
-        #Check dataset
-        try:
-            dset = readfile.read(fname, epoch='slantRangeDistance', print_msg=print_msg)[0]
-            outFile = fname
-            break
-        except:
-            pass
-    if not outFile:
-        if print_msg:
-            print 'No range distance info found in files.'
+            print 'No %s info found in files.' % (dset)
         return None
 
     ##Path Format
@@ -328,31 +255,28 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
             print "It's supposed to be like: "+str(file_list)
 
     # 3. DEM in radar coord
-    dem_radar_file = get_dem_file(coordType='radar', abspath=True, print_msg=False)
+    dem_radar_file = get_geometry_file('height', coordType='radar', abspath=True, print_msg=print_msg)
     if print_msg:
         if dem_radar_file:
             print 'DEM in radar coordinates: '+dem_radar_file
         elif not geocoded:
             print 'WARNING: No DEM file in radar coord found.'
-            print "It's supposed to be like: "+str(file_list)
 
     # 4. DEM in geo coord
-    dem_geo_file = get_dem_file(coordType='geo', abspath=True, print_msg=False)
+    dem_geo_file = get_geometry_file('height', coordType='geo', abspath=True, print_msg=print_msg)
     if print_msg:
         if dem_geo_file:
             print 'DEM in geo   coordinates: '+dem_geo_file
         else:
             print 'WARNING: No DEM file in geo coord found.'
-            print "It's supposed to be like: "+str(file_list)
 
     # 5. Lookup table file for geocoding
-    lookup_file = get_lookup_file(inps.lookup_file, abspath=True, print_msg=False)
+    lookup_file = get_lookup_file(inps.lookup_file, abspath=True, print_msg=print_msg)
     if print_msg:
         if lookup_file:
             print 'Lookup table        file: '+lookup_file
         elif not geocoded:
             print 'No lookup file found! Can not geocode without it!'
-            print "It's supposed to be like: "+str(file_list)
 
     ##### Update namespace inps if inputed
     load_complete = True
@@ -2078,7 +2002,7 @@ def get_file_stack(File, maskFile=None):
     '''
     stack = None
     atr = readfile.read_attribute(File)
-    stackFile = os.path.splitext(File)[0]+'_stacking.h5'
+    stackFile = os.path.splitext(File)[0]+'Stacking.h5'
 
     # Read stack from existed file
     if os.path.isfile(stackFile):
@@ -2145,7 +2069,7 @@ def stacking(File):
         h5file.close()
 
         # Write stack file is input file is multi-dataset (large file size usually)
-        stackFile = os.path.splitext(File)[0]+'_stack.h5'
+        stackFile = os.path.splitext(File)[0]+'Stacking.h5'
         print 'writing stack file >>> '+stackFile
         writefile.write(stack, atr, stackFile)
 

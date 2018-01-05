@@ -2,7 +2,7 @@
 ###############################################################################
 # 
 # Project: PySAR 
-# Purpose: Python Module for InSAR Time-series Analysis
+# Purpose: Python Module for InSAR Time Series Analysis
 # Author: Heresh Fattahi, Zhang Yunjun
 # Created: July 2013
 #
@@ -63,7 +63,8 @@ def check_geocode_file(geomapFile, File, templateFile=None, outFile=None):
         warnings.warn('No lookup file found! Skip geocoding.')
         return None
 
-    if not outFile:  outFile = 'geo_'+os.path.basename(File)
+    if not outFile:
+        outFile = 'geo_'+os.path.basename(File)
 
     if ut.update_file(outFile, File):
         geocodeCmd = 'geocode.py '+File+' -l '+os.path.basename(geomapFile)
@@ -456,7 +457,6 @@ def main(argv):
 
     # Project Name
     inps.project_name = None
-    #import pdb; pdb.set_trace()
     if inps.custom_template_file:
         inps.custom_template_file = os.path.abspath(inps.custom_template_file)
         inps.project_name = os.path.splitext(os.path.basename(inps.custom_template_file))[0]
@@ -536,12 +536,10 @@ def main(argv):
         # FA 1/18: insert general options from template file as pysar.* options
         if 'processor' in custom_template.keys():
             custom_template['pysar.insarProcessor'] = custom_template['processor']
-            #import pdb; pdb.set_trace()
-        
+
         # Update default template with custom input template
         print 'update default template based on input custom template'
         inps.template_file = ut.update_template_file(inps.template_file, custom_template)
-
 
     if inps.generate_template:
         sys.exit('Exit as planned after template file generation.')
@@ -660,14 +658,14 @@ def main(argv):
     #########################################
     # Generating Aux files
     #########################################
-    print '\n*************** Generate Initial Mask ****************'
-    # Initial mask
+    print '\n*************** Generate Auxiliary Files ****************'
+    ##### Initial mask (pixels with unwrapped phase in ALL interferograms)
     inps.mask_file = 'mask.h5'
     if ut.update_file(inps.mask_file, inps.ifgram_file):
         print 'creating mask file using non-zero pixels from file: '+inps.ifgram_file
         inps.mask_file = ut.nonzero_mask(inps.ifgram_file, inps.mask_file)
 
-    # Average spatial coherence
+    ##### Average spatial coherence
     if inps.coherence_file:
         inps.spatial_coh_file = 'averageSpatialCoherence.h5'
         print 'creating average spatial coherence from file: '+inps.coherence_file
@@ -676,25 +674,107 @@ def main(argv):
     else:
         inps.spatial_coh_file = None
 
-    # Incidence Angle
-    inps.inc_angle_file = ut.get_inc_angle_file(abspath=True, print_msg=False)
-    if not inps.inc_angle_file:
-        print 'creating incidence angle from file: '+inps.ifgram_file
-        inps.inc_angle_file = 'incidenceAngle.h5'
-        incAngleCmd = 'incidence_angle.py %s %s' % (inps.ifgram_file, inps.inc_angle_file)
+    ##### Incidence Angle
+    print '##### Preparing Geometry - Incidence Angle'
+    inps.inc_angle_radar_file = ut.get_geometry_file('incidenceAngle', coordType='radar', abspath=True, print_msg=False)
+    inps.inc_angle_geo_file   = ut.get_geometry_file('incidenceAngle', coordType='geo',   abspath=True, print_msg=False)
+
+    if not inps.inc_angle_radar_file and inps.coord_type == 'radar':
+        inps.inc_angle_radar_file = 'incidenceAngle.h5'
+        incAngleCmd = 'incidence_angle.py %s %s' % (inps.ifgram_file, inps.inc_angle_radar_file)
         print incAngleCmd
         status = subprocess.Popen(incAngleCmd, shell=True).wait()
+        if status is not 0:
+            sys.exit('\nError while calculating incidence angle.\n')
+
+    if not inps.inc_angle_geo_file:
+        if inps.inc_angle_radar_file:
+            inps.inc_angle_geo_file = check_geocode_file(inps.lookup_file, inps.inc_angle_radar_file, inps.template_file)
+        else:
+            inps.inc_angle_geo_file = 'incidenceAngle.h5'
+            incAngleCmd = 'incidence_angle.py %s %s' % (inps.ifgram_file, inps.inc_angle_geo_file)
+            print incAngleCmd
+            status = subprocess.Popen(incAngleCmd, shell=True).wait()
+            if status is not 0:
+                sys.exit('\nError while calculating incidence angle.\n')
+
+    inps.inc_angle_radar_file = ut.get_geometry_file('incidenceAngle', coordType='radar', abspath=True, print_msg=False)
+    inps.inc_angle_geo_file   = ut.get_geometry_file('incidenceAngle', coordType='geo',   abspath=True, print_msg=False)
+    for fname in [inps.inc_angle_radar_file, inps.inc_angle_geo_file]:
+        if fname and 'geometry' not in fname:
+            loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
+            print loadCmd
+            status = subprocess.Popen(loadCmd, shell=True).wait()
+
+    inps.inc_angle_file = ut.get_geometry_file('incidenceAngle', coordType=inps.coord_type, abspath=True, print_msg=False)
     print 'incidence angle file: %s' % (inps.inc_angle_file)
 
-    # Slant range distance
-    inps.range_dist_file = ut.get_range_distance_file(abspath=True, print_msg=False)
-    if not inps.range_dist_file:
-        print 'creating slant range distance from file: '+inps.ifgram_file
-        inps.range_dist_file = 'rangeDistance.h5'
-        rangeDistCmd = 'range_distance.py %s %s' % (inps.ifgram_file, inps.range_dist_file)
+    ##### Slant range distance
+    print '##### Preparing Geometry - Slant Range Distance'
+    inps.range_dist_radar_file = ut.get_geometry_file('slantRangeDistance', coordType='radar', abspath=True, print_msg=False)
+    inps.range_dist_geo_file   = ut.get_geometry_file('slantRangeDistance', coordType='geo',   abspath=True, print_msg=False)
+
+    if not inps.range_dist_radar_file and inps.coord_type == 'radar':
+        inps.range_dist_radar_file = 'rangeDistance.h5'
+        rangeDistCmd = 'range_distance.py %s %s' % (inps.ifgram_file, inps.range_dist_radar_file)
         print rangeDistCmd
         status = subprocess.Popen(rangeDistCmd, shell=True).wait()
+        if status is not 0:
+            sys.exit('\nError while calculating slant range distance.\n')
+
+    if not inps.range_dist_geo_file:
+        if inps.range_dist_radar_file:
+            inps.range_dist_geo_file = check_geocode_file(inps.lookup_file, inps.range_dist_radar_file, inps.template_file)
+        else:
+            inps.range_dist_geo_file = 'rangeDistance.h5'
+            rangeDistCmd = 'range_distance.py %s %s' % (inps.ifgram_file, inps.range_dist_geo_file)
+            print rangeDistCmd
+            status = subprocess.Popen(rangeDistCmd, shell=True).wait()
+            if status is not 0:
+                sys.exit('\nError while calculating slant range distance.\n')
+
+    inps.range_dist_radar_file = ut.get_geometry_file('slantRangeDistance', coordType='radar', abspath=True, print_msg=False)
+    inps.range_dist_geo_file   = ut.get_geometry_file('slantRangeDistance', coordType='geo',   abspath=True, print_msg=False)
+    for fname in [inps.range_dist_radar_file, inps.range_dist_geo_file]:
+        if fname and 'geometry' not in fname:
+            loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
+            print loadCmd
+            status = subprocess.Popen(loadCmd, shell=True).wait()
+
+    inps.range_dist_file = ut.get_geometry_file('slantRangeDistance',\
+                                                coordType=inps.coord_type, abspath=True, print_msg=False)
     print 'slant range distance file: %s' % (inps.range_dist_file)
+
+    ##### DEM
+    print '##### Preparing Geometry - Height'
+    for fname in [inps.dem_radar_file, inps.dem_geo_file]:
+        if fname and 'geometry' not in fname:
+            loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
+            print loadCmd
+            status = subprocess.Popen(loadCmd, shell=True).wait()        
+
+    ##### Water Mask
+    print '##### Preparing Geometry - Water Mask'
+    inps.water_mask_radar_file = ut.get_geometry_file('waterMask', coordType='radar', abspath=True, print_msg=False)
+    inps.water_mask_geo_file   = ut.get_geometry_file('waterMask', coordType='geo',   abspath=True, print_msg=False)
+
+    if not inps.water_mask_radar_file and inps.dem_radar_file:
+        inps.water_mask_radar_file = 'waterMask.h5'
+        maskCmd = 'generate_mask.py %s height -m 0.5 -o %s ' % (inps.dem_radar_file, inps.water_mask_radar_file)
+        print maskCmd
+        status = subprocess.Popen(maskCmd, shell=True).wait()
+
+    if not inps.water_mask_geo_file and inps.dem_geo_file:
+        inps.water_mask_geo_file = 'waterMask.h5'
+        maskCmd = 'generate_mask.py %s height -m 0.5 -o %s ' % (inps.dem_geo_file, inps.water_mask_geo_file)
+        print maskCmd
+        status = subprocess.Popen(maskCmd, shell=True).wait()
+
+    for fname in [inps.water_mask_radar_file, inps.water_mask_geo_file]:
+        if fname and 'geometry' not in fname:
+            loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
+            print loadCmd
+            status = subprocess.Popen(loadCmd, shell=True).wait()        
 
 
     #########################################
@@ -1097,54 +1177,54 @@ def main(argv):
 
     # Geocoding
     if 'Y_FIRST' in atr.keys():
-        inps.geo_vel_file = inps.vel_file
-        inps.geo_temp_coh_file = inps.temp_coh_file
-        inps.geo_timeseries_file = inps.timeseries_file
+        inps.vel_geo_file = inps.vel_file
+        inps.temp_coh_geo_file = inps.temp_coh_file
+        inps.timeseries_geo_file = inps.timeseries_file
     else:
-        inps.geo_vel_file = None
-        inps.geo_temp_coh_file = None
-        inps.geo_timeseries_file = None
+        inps.vel_geo_file = None
+        inps.temp_coh_geo_file = None
+        inps.timeseries_geo_file = None
 
     key = 'pysar.geocode'
     if template[key] in ['auto','yes'] and 'Y_FIRST' not in atr.keys():
         print '\n--------------------------------------------'
-        inps.geo_vel_file        = check_geocode_file(inps.lookup_file, inps.vel_file,        inps.template_file)
-        inps.geo_temp_coh_file   = check_geocode_file(inps.lookup_file, inps.temp_coh_file,   inps.template_file)
-        inps.goe_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file, inps.template_file)
+        inps.vel_geo_file        = check_geocode_file(inps.lookup_file, inps.vel_file,        inps.template_file)
+        inps.temp_coh_geo_file   = check_geocode_file(inps.lookup_file, inps.temp_coh_file,   inps.template_file)
+        inps.timeseries_geo_file = check_geocode_file(inps.lookup_file, inps.timeseries_file, inps.template_file)
 
 
     # Mask in geo coord
-    inps.geo_mask_file = None
-    if inps.geo_temp_coh_file:
+    inps.mask_geo_file = None
+    if inps.temp_coh_geo_file:
         # Generate mask in geo coord
         print '\n--------------------------------------------'
         outName = 'maskTempCoh.h5'
-        if os.path.basename(inps.geo_temp_coh_file).startswith('geo_'):
+        if os.path.basename(inps.temp_coh_geo_file).startswith('geo_'):
             outName = 'geo_'+outName
-        maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
+        maskCmd = 'generate_mask.py '+inps.temp_coh_geo_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
         print maskCmd
-        if ut.update_file(outName, inps.geo_temp_coh_file):
+        if ut.update_file(outName, inps.temp_coh_geo_file):
             status = subprocess.Popen(maskCmd, shell=True).wait()
-        inps.geo_mask_file = outName
+        inps.mask_geo_file = outName
 
         # Mask geo_velocity file
-        if inps.geo_vel_file and inps.geo_mask_file:
-            outName = os.path.splitext(inps.geo_vel_file)[0]+'_masked.h5'
-            maskCmd = 'mask.py '+inps.geo_vel_file+' -m '+inps.geo_mask_file+' -o '+outName
+        if inps.vel_geo_file and inps.mask_geo_file:
+            outName = os.path.splitext(inps.vel_geo_file)[0]+'_masked.h5'
+            maskCmd = 'mask.py '+inps.vel_geo_file+' -m '+inps.mask_geo_file+' -o '+outName
             print maskCmd
-            if ut.update_file(outName, [inps.geo_vel_file, inps.geo_mask_file]):
+            if ut.update_file(outName, [inps.vel_geo_file, inps.mask_geo_file]):
                 status = subprocess.Popen(maskCmd, shell=True).wait()
-            try:  inps.geo_vel_file = glob.glob(outName)[0]
+            try:  inps.vel_geo_file = glob.glob(outName)[0]
             except:  pass
 
     # Save to Google Earth KML file
-    if inps.geo_vel_file and template['pysar.save.kml'] in ['auto','yes']:
+    if inps.vel_geo_file and template['pysar.save.kml'] in ['auto','yes']:
         print '\n--------------------------------------------'
-        print 'creating Google Earth KMZ file for geocoded velocity file: '+inps.geo_vel_file+' ...'
-        outName = os.path.splitext(inps.geo_vel_file)[0]+'.kmz'
-        kmlCmd = 'save_kml.py '+inps.geo_vel_file
+        print 'creating Google Earth KMZ file for geocoded velocity file: '+inps.vel_geo_file+' ...'
+        outName = os.path.splitext(inps.vel_geo_file)[0]+'.kmz'
+        kmlCmd = 'save_kml.py '+inps.vel_geo_file
         print kmlCmd
-        if ut.update_file(outName, inps.geo_vel_file, check_readable=False):
+        if ut.update_file(outName, inps.vel_geo_file, check_readable=False):
             status = subprocess.Popen(kmlCmd, shell=True).wait()
 
 
@@ -1159,10 +1239,10 @@ def main(argv):
                           'Skip saving.')
         else:
             # 1. Time series file
-            inps.geo_timeseries_file = check_geocode_file(inps.lookup_file, inps.timeseries_file, inps.template_file)
+            inps.timeseries_geo_file = check_geocode_file(inps.lookup_file, inps.timeseries_file, inps.template_file)
             # Add HDF-EOS5 attributes
             if inps.unavco_atr_file:
-                atrCmd = 'add_attribute.py '+inps.geo_timeseries_file+' '+inps.unavco_atr_file
+                atrCmd = 'add_attribute.py '+inps.timeseries_geo_file+' '+inps.unavco_atr_file
                 print atrCmd
                 status = subprocess.Popen(atrCmd, shell=True).wait()
                 if status is not 0:
@@ -1170,32 +1250,20 @@ def main(argv):
                     sys.exit(-1)
 
             # 2. Temporal Coherence
-            inps.geo_temp_coh_file = check_geocode_file(inps.lookup_file, inps.temp_coh_file, inps.template_file)
+            inps.temp_coh_geo_file = check_geocode_file(inps.lookup_file, inps.temp_coh_file, inps.template_file)
 
             # 3. Mask file
-            if not inps.geo_mask_file:
+            if not inps.mask_geo_file:
                 outName = 'maskTempCoh.h5'
-                if os.path.basename(inps.geo_temp_coh_file).startswith('geo_'):
+                if os.path.basename(inps.temp_coh_geo_file).startswith('geo_'):
                     outName = 'geo_'+outName
-                maskCmd = 'generate_mask.py '+inps.geo_temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
+                maskCmd = 'generate_mask.py '+inps.temp_coh_geo_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
                 print maskCmd
-                if ut.update_file(outName, inps.geo_temp_coh_file):
+                if ut.update_file(outName, inps.temp_coh_geo_file):
                     status = subprocess.Popen(maskCmd, shell=True).wait()
                     if status is not 0:
-                        print '\nError while generating mask file.\n'
-                        sys.exit(-1)
-                inps.geo_mask_file = outName
-
-            # 4. Incidence Angle
-            #inps.inc_angle_file = 'incidenceAngle.h5'
-            if ut.update_file(inps.inc_angle_file):
-                incAngleCmd = 'incidence_angle.py '+inps.timeseries_file+' '+inps.inc_angle_file
-                print incAngleCmd
-                status = subprocess.Popen(incAngleCmd, shell=True).wait()
-                if status is not 0:
-                    print '\nError while generating incidence angle file.\n'
-                    sys.exit(-1)
-            inps.geo_inc_angle_file = check_geocode_file(inps.lookup_file, inps.inc_angle_file, inps.template_file)
+                        sys.exit('\nError while generating mask file.\n')
+                inps.mask_geo_file = outName
 
             # Save to HDF-EOS5 format
             print '--------------------------------------------'
@@ -1206,15 +1274,14 @@ def main(argv):
             except:
                 inps.hdfeos5_file = None
                 print 'No HDF-EOS5 time-series file exists yet.'
-            hdfeos5Cmd = 'save_hdfeos5.py '+inps.geo_timeseries_file+' -d '+inps.dem_geo_file+' -i '+inps.geo_inc_angle_file+\
-                     ' -c '+inps.geo_temp_coh_file+' -m '+inps.geo_mask_file+' -t '+inps.template_file
+            hdfeos5Cmd = 'save_hdfeos5.py '+inps.timeseries_geo_file+' -t '+inps.template_file+\
+                         ' -c '+inps.temp_coh_geo_file+' -m '+inps.mask_geo_file
             print hdfeos5Cmd
-            if ut.update_file(inps.hdfeos5_file, [inps.geo_timeseries_file, inps.geo_temp_coh_file, inps.geo_mask_file,\
-                                              inps.geo_inc_angle_file, inps.dem_geo_file], check_readable=False):
+            if ut.update_file(inps.hdfeos5_file, [inps.timeseries_geo_file, inps.temp_coh_geo_file, inps.mask_geo_file,\
+                                              inps.inc_angle_geo_file, inps.dem_geo_file], check_readable=False):
                 status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
                 if status is not 0:
-                    print '\nError while generating HDF-EOS5 time-series file.\n'
-                    sys.exit(-1)
+                    sys.exit('\nError while generating HDF-EOS5 time-series file.\n')
 
 
     #############################################

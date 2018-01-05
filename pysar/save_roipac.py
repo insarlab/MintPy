@@ -15,6 +15,7 @@ import h5py
 import pysar._readfile as readfile
 import pysar._writefile as writefile
 import pysar._datetime as ptime
+from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ##############################################################################
@@ -66,12 +67,12 @@ def main(argv):
         print 'writing >>> '+outname
         writefile.write(data,atr,outname)
 
-    elif k == 'timeseries':
-        dateList=h5file['timeseries'].keys() 
+    elif k in multi_dataset_hdf5_file:
+        dateList=h5file[k].keys() 
         ## Input
         if   len(sys.argv)==2:
             print 'No input date specified >>> continue with the last date'
-            dateList=h5file['timeseries'].keys()
+            dateList=h5file[k].keys()
             d=dateList[-1]
         elif len(sys.argv)==3:
             d=sys.argv[2]
@@ -86,10 +87,10 @@ def main(argv):
 
         ## Data
         print 'reading '+d+' ... '
-        data = h5file['timeseries'].get(d)[:]
+        data = h5file[k].get(d)[:]
         try:
             print 'reading '+d_ref+' ... '
-            data_ref = h5file['timeseries'].get(d_ref)[:]
+            data_ref = h5file[k].get(d_ref)[:]
             data = data - data_ref
         except: pass
         wvl=float(atr['WAVELENGTH'])

@@ -25,7 +25,10 @@ import pysar._pysar_utilities as ut
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
-sensorList = ['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','Sen','Kmps5','Gaofen3']
+sensorList = ['ers','env','sen','s1',\
+              'jers','alos','palsar','alos2','palsar2',\
+              'tsx','tdx','terra','csk','cosmo',\
+              'rsat','radarsat','rsat2','radarsat2','kmps5','gaofen3']
 
 ############################ Sub Functions ###################################
 def project_name2sensor(projectName):
@@ -287,9 +290,9 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
                 try:  atr[key] = exDict['insar_processor']
                 except:  pass
             key = 'PLATFORM'
-            if key not in atr.keys() or atr[key] not in sensorList:
-                try:  atr[key] = exDict['PLATFORM']
-                except:  pass
+            if ((key not in atr.keys() or not any(re.search(i, atr[key].lower()) for i in sensorList))\
+                and exDict['PLATFORM']):
+                atr[key] = exDict['PLATFORM']
 
             # Write dataset
             group = gg.create_group(os.path.basename(file))

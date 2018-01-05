@@ -52,6 +52,8 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 multi_group_hdf5_file=['interferograms','coherence','wrapped','snaphu_connect_component']
 multi_dataset_hdf5_file=['timeseries','geometry']
 single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
+geometry_dataset=['rangeCoord','azimuthCoord','latitude','longitude','height',\
+                  'incidenceAngle','headingAngle','slantRangeDistance','waterMask','shadowMask']
 
 
 #########################################################################

@@ -172,7 +172,7 @@ def main(argv):
     else:
         coordType = 'radar'
     print 'Input file is in %s coordinates' % (coordType)
-    inps.range_dist_file = ut.get_range_distance_file(coordType=coordType)
+    inps.range_dist_file = ut.get_geometry_file('slantRangeDistance', coordType=coordType)
     inps.outfile = correct_lod_file(inps.file, inps.range_dist_file, inps.outfile)
     print 'Done.'
 

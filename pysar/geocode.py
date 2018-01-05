@@ -99,7 +99,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     start = time.time()
     ## Default Inputs and outputs
     if not fname_out:
-        fname_out = 'geo_'+fname
+        fname_out = os.path.dirname(os.path.abspath(fname))+'/geo_'+os.path.basename(fname)
 
     ##### Interpolate value on irregular radar coordinates (from lookup table file value)
     ##### with known value on regular radar coordinates (from radar file attribute)
@@ -322,7 +322,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
         sys.exit(-1)
 
     if not fname_out:
-        fname_out = 'geo_'+fname
+        fname_out = os.path.dirname(os.path.abspath(fname))+'/geo_'+os.path.basename(fname)
 
     ## Read lookup table file
     atr_rdr = readfile.read_attribute(fname)
