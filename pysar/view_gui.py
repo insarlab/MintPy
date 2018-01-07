@@ -478,11 +478,11 @@ show_ref_checkbutton = Checkbutton(show_ref_frame, text="Show Reference", variab
 reference_options_frame = Frame(frame)
 
 ref_color = StringVar()
-ref_color_option_menu = apply(OptionMenu, (reference_options_frame, ref_color) + tuple(["1", "2", "3", "4", "5"]))
+ref_color_option_menu = apply(OptionMenu, (reference_options_frame, ref_color) + tuple(["b", "g", "r", "m", "c", "y", "k", "w"]))
 ref_color_option_menu.config(width=10)
 
 ref_sym = StringVar()
-ref_symbol_option_menu = apply(OptionMenu, (reference_options_frame, ref_sym) + tuple(["1", "2", "3", "4", "5"]))
+ref_symbol_option_menu = apply(OptionMenu, (reference_options_frame, ref_sym) + tuple([".", ",", "o", "v", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "*", "h", "H", "+", "x", "X", "d", "D", "|", "_"]))
 ref_symbol_option_menu.config(width=10)
 
 ref_date = StringVar()
