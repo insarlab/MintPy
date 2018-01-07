@@ -436,6 +436,11 @@ y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
 y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=5000, orient=HORIZONTAL, length=150, variable=y_lim_lower, showvalue=0)
 y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
 
+unit_cmap_projection_labels_frame = Frame(frame)
+unit_label = Label(unit_cmap_projection_labels_frame, text="Unit", width=6, anchor='w')
+colormap_label = Label(unit_cmap_projection_labels_frame, text="Colormap", width=10, anchor='w')
+projection_label = Label(unit_cmap_projection_labels_frame, text="Projection", width=12, anchor='w')
+
 '''     Frames, Text Variables, and Widgets for setting extraneous properties      '''
 unit_cmap_projection_frame = Frame(frame)
 
@@ -607,6 +612,12 @@ show_ref = IntVar()
 show_ref.set(1)
 show_ref_checkbutton = Checkbutton(show_ref_frame, text="Show Reference", variable=show_ref)
 
+reference_options_labels_frame = Frame(frame)
+
+ref_color_label = Label(reference_options_labels_frame, text="Ref Color", width=10, anchor='w')
+ref_symbol_label = Label(reference_options_labels_frame, text="Ref Symbol", width=10, anchor='w')
+ref_date_label = Label(reference_options_labels_frame, text="Ref Date", width=10, anchor='w')
+
 reference_options_frame = Frame(frame)
 
 ref_color = StringVar()
@@ -691,6 +702,10 @@ fig_size_height = StringVar()
 fig_size_height_label = Label(fig_size_frame, text="Length: ")
 fig_size_height_entry = Entry(fig_size_frame, textvariable=fig_size_height, width=6)
 
+fig_ext_num_label_frame = Frame(frame)
+fig_ext_label = Label(fig_ext_num_label_frame, text="Fig Ext", width=14, anchor='w')
+fig_num_label = Label(fig_ext_num_label_frame, text="Fig Num", width=14, anchor='w')
+
 fig_ext_num_frame = Frame(frame)
 
 fig_ext = StringVar()
@@ -716,6 +731,7 @@ fig_h_space_label = Label(fig_h_space_frame, text="Fig Height Space:")
 fig_h_space_entry = Entry(fig_h_space_frame, textvariable=fig_h_space, width=6)
 
 coords_frame = Frame(frame)
+coords_label = Label(coords_frame, text="Coordinates: ", width=10, anchor='w')
 
 coords = StringVar()
 coords_option_menu = apply(OptionMenu, (coords_frame, coords) + tuple(["radar", "geo"]))
@@ -734,10 +750,11 @@ coastline_res_frame = Frame(frame)
 coastline = IntVar()
 coastline_checkbutton = Checkbutton(coastline_res_frame, text="Show Coastline", variable=coastline)
 
+resolution_label = Label(coastline_res_frame, text="Res: ", width=3, anchor='w')
 resolution = StringVar()
 resolution.set("c")
 resolution_option_menu = apply(OptionMenu, (coastline_res_frame, resolution) + tuple(["c", "l", "i", "h", "f", "None"]))
-resolution_option_menu.config(width=15)
+resolution_option_menu.config(width=8)
 
 lalo_settings_frame = Frame(frame)
 
@@ -809,7 +826,12 @@ y_lim_lower_label.pack(side=LEFT)
 y_lim_lower_slider.pack(side=LEFT, padx=10)
 y_lim_lower_entry.pack(side=LEFT)
 
-unit_cmap_projection_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+unit_cmap_projection_labels_frame.pack(anchor='w', fill=X, pady=(10, 0), padx=10)
+unit_label.pack(side=LEFT, padx=(0, 10))
+colormap_label.pack(side=LEFT, padx=(0, 10))
+projection_label.pack(side=LEFT)
+
+unit_cmap_projection_frame.pack(anchor='w', fill=X, pady=(10, 5), padx=10)
 unit_option_menu.pack(side=LEFT, padx=(0, 10))
 colormap_option_menu.pack(side=LEFT, padx=(0, 10))
 projection_option_menu.pack(side=LEFT)
@@ -896,7 +918,12 @@ ref_lon_entry.pack(side=LEFT, padx=(0, 10))
 show_ref_frame.pack(anchor='w', fill=X, padx=10, pady=(0, 10))
 show_ref_checkbutton.pack(side=LEFT, pady=10)
 
-reference_options_frame.pack(anchor='w', fill=X, pady=(0, 10), padx=10)
+reference_options_labels_frame.pack(anchor='w', fill=X, pady=(0, 0), padx=10)
+ref_color_label.pack(side=LEFT, padx=(0, 10))
+ref_symbol_label.pack(side=LEFT, padx=(0, 10))
+ref_date_label.pack(side=LEFT)
+
+reference_options_frame.pack(anchor='w', fill=X, pady=(5, 10), padx=10)
 ref_color_option_menu.pack(side=LEFT, padx=(0, 10))
 ref_symbol_option_menu.pack(side=LEFT, padx=(0, 10))
 ref_date_option_menu.pack(side=LEFT)
@@ -935,7 +962,11 @@ fig_size_width_entry.pack(side=LEFT, padx=(0, 10))
 fig_size_height_label.pack(side=LEFT, padx=(0, 5))
 fig_size_height_entry.pack(side=LEFT, padx=(0, 10))
 
-fig_ext_num_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+fig_ext_num_label_frame.pack(anchor='w', fill=X, padx=10, pady=(10, 0))
+fig_ext_label.pack(side=LEFT, padx=(0, 10))
+fig_num_label.pack(side=LEFT, padx=(0, 10))
+
+fig_ext_num_frame.pack(anchor='w', fill=X, padx=10, pady=(5, 10))
 fig_ext_option_menu.pack(side=LEFT, padx=(0, 10))
 fig_num_option_menu.pack(side=LEFT, padx=(0, 10))
 
@@ -948,12 +979,14 @@ fig_h_space_label.pack(side=LEFT, padx=(0, 5))
 fig_h_space_entry.pack(side=LEFT)
 
 coords_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+coords_label.pack(side=LEFT, padx=(0, 10))
 coords_option_menu.pack(side=LEFT)
 
 map_options_label.pack(fill=X, padx=10, pady=(35, 10))
 
 coastline_res_frame.pack(anchor='w', fill=X, padx=10, pady=10)
 coastline_checkbutton.pack(side=LEFT, padx=(0, 25))
+resolution_label.pack(side=LEFT, padx=(0, 10))
 resolution_option_menu.pack(side=LEFT)
 
 lalo_settings_frame.pack(fill=X, padx=10, pady=10)
