@@ -7,6 +7,7 @@ import tkFileDialog as filedialog
 import view as view
 import info
 import _readfile as readfile
+import subset
 
 def pick_file():
     global attributes
@@ -241,29 +242,38 @@ def set_variables_from_attributes():
 
     set_susbset_lalo_info()
 
+    ref_x.set("0")
+    ref_y.set("0")
 
-def compute_lalo_subset():
-    width = int(float(attributes['WIDTH']))
-    length = int(float(attributes['FILE_LENGTH']))
+    _, _, ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
+
+    ref_lat.set(str(round(ref_lat_data, 2)))
+    ref_lon.set(str(round(ref_lon_data, 2)))
+
+
+
+
+def compute_lalo(w, l):
+
+    #width = int(float(attributes['WIDTH']))
+    #length = int(float(attributes['FILE_LENGTH']))
+
+    width = int(float(w))
+    length = int(float(l))
+
     data_box = (0, 0, width, length)
 
-    lat_step = float(attributes['X_STEP'])
-    lon_step = float(attributes['Y_STEP'])
-    ul_lon = float(attributes['X_FIRST']) + data_box[0]*lon_step
-    ul_lat = float(attributes['Y_FIRST']) + data_box[1]*lat_step
-    lr_lon = ul_lon - lon_step * (data_box[2] - data_box[0])
-    lr_lat = ul_lat - lat_step * (data_box[3] - data_box[1])
-
-    return ul_lat, ul_lon, lr_lon, lr_lat
+    return subset.box_pixel2geo(data_box, attributes)
 
 
 def set_susbset_lalo_info():
-    ul_lat, ul_lon, lr_lon, lr_lat = compute_lalo_subset()
+    ul_lat, ul_lon, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['FILE_LENGTH'])
 
     subset_lat_from.set(str(round(ul_lat, 2)))
     subset_lon_from.set(str(round(ul_lon, 2)))
     subset_lat_to.set(str(round(lr_lat, 2)))
     subset_lon_to.set(str(round(lr_lon, 2)))
+
 
 root = Tk()
 root.minsize(width=365, height=750)
