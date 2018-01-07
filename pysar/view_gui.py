@@ -67,6 +67,23 @@ def on_configure(event):
     canvas.configure(scrollregion=canvas.bbox('all'))
 
 
+def update_sliders(unit):
+    scale = 1
+    new_max = starting_upper_lim
+    if unit == "m":
+        scale = 1
+    elif unit == "cm":
+        scale = 100
+    elif unit == "mm":
+        scale = 1000
+    elif unit == "dm":
+        scale = 0.01
+    elif unit == "km":
+        scale = 0.001
+
+    y_lim_upper_slider.configure(to_=new_max*scale)
+    y_lim_lower_slider.configure(to_=new_max*scale)
+
 def show_file_info(file_info):
 
     window = Tk()
@@ -143,7 +160,7 @@ def show_plot():
         options.append(subset_lon_from.get())
         options.append(subset_lon_to.get())
 
-    if ref_x.get() != "" and ref_y.get() != "":
+    '''if ref_x.get() != "" and ref_y.get() != "":
         options.append("--ref-yx")
         options.append(ref_y.get())
         options.append(ref_x.get())
@@ -158,7 +175,7 @@ def show_plot():
         options.append(ref_color.get())
     if ref_sym.get() != "":
         options.append("--ref-symbol")
-        options.append(ref_sym.get())
+        options.append(ref_sym.get())'''
 
     ''' "--ref-color", ref_color.get(), "--ref-symbol", ref_sym.get() '''
 
@@ -234,21 +251,30 @@ def show_plot():
 
 
 def set_variables_from_attributes():
-    print("")
+
     subset_x_from.set(attributes['XMIN'])
     subset_y_from.set(attributes['YMIN'])
     subset_x_to.set(attributes['XMAX'])
     subset_y_to.set(attributes['YMAX'])
 
-    set_susbset_lalo_info()
+    ul_lon, ul_lat, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['FILE_LENGTH'])
+
+    subset_lat_from.set(str(round(ul_lat, 2)))
+    subset_lon_from.set(str(round(ul_lon, 2)))
+    subset_lat_to.set(str(round(lr_lat, 2)))
+    subset_lon_to.set(str(round(lr_lon, 2)))
+
+
 
     ref_x.set("0")
     ref_y.set("0")
 
-    _, _, ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
+    #_, _, ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
 
-    ref_lat.set(str(round(ref_lat_data, 2)))
-    ref_lon.set(str(round(ref_lon_data, 2)))
+    #ref_lat.set(str(round(ref_lat_data, 2)))
+    #ref_lon.set(str(round(ref_lon_data, 2)))
+
+    unit.set(attributes['UNIT'])
 
 
 
@@ -265,14 +291,6 @@ def compute_lalo(w, l):
 
     return subset.box_pixel2geo(data_box, attributes)
 
-
-def set_susbset_lalo_info():
-    ul_lat, ul_lon, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['FILE_LENGTH'])
-
-    subset_lat_from.set(str(round(ul_lat, 2)))
-    subset_lon_from.set(str(round(ul_lon, 2)))
-    subset_lat_to.set(str(round(lr_lat, 2)))
-    subset_lon_to.set(str(round(lr_lon, 2)))
 
 
 root = Tk()
@@ -348,11 +366,13 @@ display_options_label = Label(frame, text="DISPLAY OPTIONS:", anchor=W)
 y_lim_frame = Frame(frame)
 y_lim_upper_frame = Frame(y_lim_frame)
 
+starting_upper_lim = 5000
+
 y_lim_upper = DoubleVar()
 y_lim_upper.set(20)
 
 y_lim_upper_label = Label(y_lim_upper_frame, text="Maximum", width=8)
-y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=5000, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
+y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
 y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6)
 
 y_lim_lower_frame = Frame(y_lim_frame)
@@ -369,8 +389,11 @@ unit_cmap_projection_frame = Frame(frame)
 
 unit = StringVar()
 unit.set("m")
-unit_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, unit) + tuple(["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]))
+#unit_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, unit) + tuple(["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]))
+unit_options = ["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]
+unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=update_sliders)
 unit_option_menu.config(width=6)
+#unit_option_menu.config(command=lambda: update_sliders())
 
 colormap = StringVar()
 colormap_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, colormap) + tuple(colormaps))
