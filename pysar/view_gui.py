@@ -58,6 +58,20 @@ def on_configure(event):
     canvas.configure(scrollregion=canvas.bbox('all'))
 
 
+def show_file_info(file_info):
+
+    window = Tk()
+    window.minsize(width=350, height=550)
+    window.maxsize( height=550)
+    window.resizable(width=True, height=False)
+
+    text_box = Text(window, wrap=NONE)
+    text_box.insert(END, file_info)
+    text_box.config(height=550)
+    text_box.config(state=DISABLED)
+
+    text_box.pack(fill=X)
+
 def show_plot():
 
     print(scalebar_distance.get())
@@ -203,7 +217,9 @@ def show_plot():
 
         options.append("/"+str(location)+"/"+output_file.get())
 
-    print(options)
+    if show_info.get() == 1:
+        file_info = info.hdf5_structure_string(h5_file.get())
+        show_file_info(file_info)
 
     view.main(options)
 
@@ -338,7 +354,8 @@ transparency_label = Label(transparency_frame, text="Alpha", width=8)
 transparency_slider = Scale(transparency_frame, from_=0, to=1, resolution=0.1, orient=HORIZONTAL, length=150, variable=transparency, showvalue=0)
 transparency_entry = Entry(transparency_frame, textvariable=transparency, width=6)
 
-
+show_info = IntVar()
+show_info_checkbutton = Checkbutton(frame, text="Show File Info", variable=show_info)
 
 
 
@@ -674,7 +691,9 @@ transparency_label.pack(side=LEFT)
 transparency_slider.pack(side=LEFT, padx=10)
 transparency_entry.pack(side=LEFT)
 
-dem_options_label.pack(anchor='w', fill=X, pady=(45, 0), padx=10)
+show_info_checkbutton.pack(anchor='center', pady=10)
+
+dem_options_label.pack(anchor='w', fill=X, pady=(35, 0), padx=10)
 
 pick_dem_file_frame.pack(fill=X, pady=10)
 pick_dem_file_button.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
