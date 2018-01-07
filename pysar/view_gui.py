@@ -21,11 +21,16 @@ def pick_file():
         h5_file_short.set(filename.split("/")[-1])
         pick_h5_file_button.config(text="Cancel")
 
-        data, attributes = readfile.read(h5_file.get())
-        max = numpy.amax(data)
-        starting_upper_lim = max*2
-        update_sliders("m")
-        y_lim_upper.set(max)
+        atr = readfile.read_attribute(h5_file.get())
+
+        file_type = atr['FILE_TYPE']
+
+        if file_type not in readfile.multi_group_hdf5_file + readfile.multi_dataset_hdf5_file + ['HDFEOS']:
+            data, attributes = readfile.read(h5_file.get())
+            max = numpy.amax(data)
+            starting_upper_lim = max*2
+            update_sliders("m")
+            y_lim_upper.set(max)
 
         set_variables_from_attributes()
 
@@ -102,6 +107,7 @@ def show_file_info(file_info):
     text_box.config(state=DISABLED)
 
     text_box.pack(fill=X)
+
 
 def show_plot():
 
@@ -251,6 +257,8 @@ def show_plot():
     if show_info.get() == 1:
         file_info = info.hdf5_structure_string(h5_file.get())
         show_file_info(file_info)
+
+    print(options)
 
     view.main(options)
 
