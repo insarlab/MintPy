@@ -6,8 +6,11 @@ matplotlib.use('TkAgg')
 import tkFileDialog as filedialog
 import view as view
 import info
+import _readfile as readfile
 
 def pick_file():
+    global attributes
+
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
@@ -15,6 +18,11 @@ def pick_file():
         h5_file.set(frame.filename)
         h5_file_short.set(filename.split("/")[-1])
         pick_h5_file_button.config(text="Cancel")
+
+        attributes = readfile.read_attribute(h5_file.get())
+
+        set_variables_from_attributes()
+
         return frame.filename
     else:
         h5_file.set("")
@@ -224,7 +232,38 @@ def show_plot():
     view.main(options)
 
 
+def set_variables_from_attributes():
+    print("")
+    subset_x_from.set(attributes['XMIN'])
+    subset_y_from.set(attributes['YMIN'])
+    subset_x_to.set(attributes['XMAX'])
+    subset_y_to.set(attributes['YMAX'])
 
+    set_susbset_lalo_info()
+
+
+def compute_lalo_subset():
+    width = int(float(attributes['WIDTH']))
+    length = int(float(attributes['FILE_LENGTH']))
+    data_box = (0, 0, width, length)
+
+    lat_step = float(attributes['X_STEP'])
+    lon_step = float(attributes['Y_STEP'])
+    ul_lon = float(attributes['X_FIRST']) + data_box[0]*lon_step
+    ul_lat = float(attributes['Y_FIRST']) + data_box[1]*lat_step
+    lr_lon = ul_lon - lon_step * (data_box[2] - data_box[0])
+    lr_lat = ul_lat - lat_step * (data_box[3] - data_box[1])
+
+    return ul_lat, ul_lon, lr_lon, lr_lat
+
+
+def set_susbset_lalo_info():
+    ul_lat, ul_lon, lr_lon, lr_lat = compute_lalo_subset()
+
+    subset_lat_from.set(str(round(ul_lat, 2)))
+    subset_lon_from.set(str(round(ul_lon, 2)))
+    subset_lat_to.set(str(round(lr_lat, 2)))
+    subset_lon_to.set(str(round(lr_lon, 2)))
 
 root = Tk()
 root.minsize(width=365, height=750)
@@ -266,7 +305,7 @@ projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll",
                "npaeqd", "mill", "merc", "stere", "eqdc", "rotpole", "cyl", "npstere", "spstere", "hammer", "geos",
                "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "class", "vandg", "laea", "splaea", "robin"]
 
-
+attributes = []
 
 '''     Frames, Text Variables, and Widgets for selection of the timeseries.h5 file to plot data from.     '''
 pick_h5_file_frame = Frame(frame)
@@ -480,10 +519,12 @@ reference_options_frame = Frame(frame)
 ref_color = StringVar()
 ref_color_option_menu = apply(OptionMenu, (reference_options_frame, ref_color) + tuple(["b", "g", "r", "m", "c", "y", "k", "w"]))
 ref_color_option_menu.config(width=10)
+ref_color.set("b")
 
 ref_sym = StringVar()
 ref_symbol_option_menu = apply(OptionMenu, (reference_options_frame, ref_sym) + tuple([".", ",", "o", "v", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "*", "h", "H", "+", "x", "X", "d", "D", "|", "_"]))
 ref_symbol_option_menu.config(width=10)
+ref_sym.set(".")
 
 ref_date = StringVar()
 ref_date_option_menu = apply(OptionMenu, (reference_options_frame, ref_date) + tuple(["1", "2", "3", "4", "5"]))
@@ -560,14 +601,14 @@ fig_size_height_entry = Entry(fig_size_frame, textvariable=fig_size_height, widt
 fig_ext_num_frame = Frame(frame)
 
 fig_ext = StringVar()
-fig_ext_option_menu = apply(OptionMenu, (fig_ext_num_frame, ref_color) + tuple([".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]))
+fig_ext_option_menu = apply(OptionMenu, (fig_ext_num_frame, fig_ext) + tuple([".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]))
 fig_ext_option_menu.config(width=14)
 fig_ext.set(".pdf")
 
 fig_num = StringVar()
-fig_num_option_menu = apply(OptionMenu, (fig_ext_num_frame, ref_sym) + tuple(["1", "2", "3", "4", "5"]))
+fig_num_option_menu = apply(OptionMenu, (fig_ext_num_frame, fig_num) + tuple(["1", "2", "3", "4", "5"]))
 fig_num_option_menu.config(width=14)
-fig_num.set('1')
+fig_num.set("1")
 
 fig_w_space_frame = Frame(frame)
 
