@@ -270,32 +270,71 @@ def set_variables_from_attributes():
     subset_lon_to.set(str(round(lr_lon, 2)))
 
 
-
     ref_x.set("0")
     ref_y.set("0")
 
-    #_, _, ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
+    _, _, ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
 
-    #ref_lat.set(str(round(ref_lat_data, 2)))
-    #ref_lon.set(str(round(ref_lon_data, 2)))
+    ref_lat.set(str(round(ref_lat_data, 2)))
+    ref_lon.set(str(round(ref_lon_data, 2)))
+
 
     unit.set(attributes['UNIT'])
 
 
 
 
-def compute_lalo(w, l):
+def compute_lalo(x, y):
 
-    #width = int(float(attributes['WIDTH']))
-    #length = int(float(attributes['FILE_LENGTH']))
+    print("X,  Y: "+str(x)+", "+str(y))
 
-    width = int(float(w))
-    length = int(float(l))
+    try: x_data = int(float(x))
+    except: x_data = 0
 
-    data_box = (0, 0, width, length)
+    try: y_data = int(float(y))
+    except: y_data = 0
+
+    data_box = (0, 0, x_data, y_data)
 
     return subset.box_pixel2geo(data_box, attributes)
 
+
+def compute_xy(lat, lon):
+
+    lat_data = round(float(lat), 4)
+    lon_data = round(float(lon), 4)
+
+    data_box = (float(attributes['X_FIRST']), float(attributes['Y_FIRST']), lon_data, lat_data)
+
+    print("DATA BOX:"+str(data_box))
+
+    return subset.box_geo2pixel(data_box, attributes)
+
+
+def update_subset_lalo(x, y, z):
+
+    x_from, x_to, y_from, y_to = subset_x_from.get(), subset_x_to.get(), subset_y_from.get(), subset_y_to.get()
+
+    _, _, lon_from, lat_from = compute_lalo(x_from, y_from)
+    _, _, lon_to, lat_to = compute_lalo(x_to, y_to)
+
+    subset_lat_from.set(str(round(lat_from, 2)))
+    subset_lat_to.set(str(round(lat_to, 2)))
+    subset_lon_from.set(str(round(lon_from, 2)))
+    subset_lon_to.set(str(round(lon_to, 2)))
+
+
+def update_subset_xy(x, y, z):
+
+    lat_from, lat_to, lon_from, lon_to = subset_lat_from.get(), subset_lat_to.get(), subset_lon_from.get(), subset_lon_to.get()
+
+    _, _, x_from, y_from = compute_xy(lat_from, lon_from)
+    _, _, x_to, y_to = compute_xy(lat_to, lon_to)
+
+    subset_x_from.set(str(x_from))
+    subset_x_to.set(str(x_to))
+    subset_y_from.set(str(y_from))
+    subset_y_to.set(str(y_to))
 
 
 root = Tk()
@@ -483,40 +522,48 @@ subset_label = Label(frame, text="SUBSET DATA", anchor=W)
 subset_x_frame = Frame(frame)
 
 subset_x_from = StringVar()
+subset_x_from.trace('w', callback=update_subset_lalo)
 subset_x_from_label = Label(subset_x_frame, text="X         From: ")
 subset_x_from_entry = Entry(subset_x_frame, textvariable=subset_x_from, width=6)
 
 subset_x_to = StringVar()
+subset_x_to.trace('w', callback=update_subset_lalo)
 subset_x_to_label = Label(subset_x_frame, text="To: ")
 subset_x_to_entry = Entry(subset_x_frame, textvariable=subset_x_to, width=6)
 
 subset_y_frame = Frame(frame)
 
 subset_y_from = StringVar()
+subset_y_from.trace('w', callback=update_subset_lalo)
 subset_y_from_label = Label(subset_y_frame, text="Y         From: ")
 subset_y_from_entry = Entry(subset_y_frame, textvariable=subset_y_from, width=6)
 
 subset_y_to = StringVar()
+subset_y_to.trace('w', callback=update_subset_lalo)
 subset_y_to_label = Label(subset_y_frame, text="To: ")
 subset_y_to_entry = Entry(subset_y_frame, textvariable=subset_y_to, width=6)
 
 subset_lat_frame = Frame(frame)
 
 subset_lat_from = StringVar()
+subset_lat_from.trace('w', callback=update_subset_xy)
 subset_lat_from_label = Label(subset_lat_frame, text="Lat      From: ")
 subset_lat_from_entry = Entry(subset_lat_frame, textvariable=subset_lat_from, width=6)
 
 subset_lat_to = StringVar()
+subset_lat_to.trace('w', callback=update_subset_xy)
 subset_lat_to_label = Label(subset_lat_frame, text="To: ")
 subset_lat_to_entry = Entry(subset_lat_frame, textvariable=subset_lat_to, width=6)
 
 subset_lon_frame = Frame(frame)
 
 subset_lon_from = StringVar()
+subset_lon_from.trace('w', callback=update_subset_xy)
 subset_lon_from_label = Label(subset_lon_frame, text="Lon      From: ")
 subset_lon_from_entry = Entry(subset_lon_frame, textvariable=subset_lon_from, width=6)
 
 subset_lon_to = StringVar()
+subset_lon_to.trace('w', callback=update_subset_xy)
 subset_lon_to_label = Label(subset_lon_frame, text="To: ")
 subset_lon_to_entry = Entry(subset_lon_frame, textvariable=subset_lon_to, width=6)
 
