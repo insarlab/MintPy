@@ -8,9 +8,10 @@ import view as view
 import info
 import _readfile as readfile
 import subset
+import numpy
 
 def pick_file():
-    global attributes
+    global attributes, starting_upper_lim
 
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/User/Joshua/", title="Select file",
@@ -20,7 +21,11 @@ def pick_file():
         h5_file_short.set(filename.split("/")[-1])
         pick_h5_file_button.config(text="Cancel")
 
-        attributes = readfile.read_attribute(h5_file.get())
+        data, attributes = readfile.read(h5_file.get())
+        max = numpy.amax(data)
+        starting_upper_lim = max*2
+        update_sliders("m")
+        y_lim_upper.set(max)
 
         set_variables_from_attributes()
 
