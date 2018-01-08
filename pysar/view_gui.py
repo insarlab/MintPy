@@ -368,7 +368,7 @@ submit_button.pack(side=TOP, pady=(10, 20))
 canvas = Canvas(root, width=345, height=680)
 canvas.pack(side=LEFT, anchor='nw')
 
-scrollbar = Scrollbar(root)
+scrollbar = Scrollbar(root, command=canvas.yview)
 scrollbar.pack(side=LEFT, fill='y')
 
 canvas.configure(yscrollcommand=scrollbar.set)
@@ -746,6 +746,7 @@ fig_h_space_entry = Entry(fig_h_space_frame, textvariable=fig_h_space, width=6)
 coords_frame = Frame(frame)
 
 coords = StringVar()
+coords_label = Label(coords_frame, text="Coords: ", width=5)
 coords_option_menu = apply(OptionMenu, (coords_frame, coords) + tuple(["radar", "geo"]))
 coords_option_menu.config(width=15)
 coords.set("geo")
