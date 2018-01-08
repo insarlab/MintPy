@@ -1284,8 +1284,8 @@ def main(argv):
             if ut.update_file(inps.hdfeos5_file, [inps.timeseries_geo_file, inps.temp_coh_geo_file, inps.mask_geo_file,\
                                               inps.inc_angle_geo_file, inps.dem_geo_file], check_readable=False):
                 status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
-                if status is not 0:
-                    sys.exit('\nError while generating HDF-EOS5 time-series file.\n')
+                #if status is not 0:
+                #    sys.exit('\nError while generating HDF-EOS5 time-series file.\n')
 
 
     #############################################
