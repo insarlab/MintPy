@@ -110,7 +110,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## processing info
     try:    unavco_meta_dict['processing_type'] = pysar_meta_dict['processing_type']
     except: unavco_meta_dict['processing_type'] = 'LOS_TIMESERIES'
-    unavco_meta_dict['processing_software'] = pysar_meta_dict['processing_software']
+    #unavco_meta_dict['processing_software'] = pysar_meta_dict['processing_software']
 
     ##### Grabbed by script
     ## date info
