@@ -1230,7 +1230,9 @@ def main(argv):
     print('\n******************** Display ********************')
 
     # File Basic Info
-    try: atr = readfile.read_attribute(inps.file)
+    try:
+        atr = readfile.read_attribute(inps.file)
+        print(str(atr))
     except: print('Can not read file: '+inps.file); sys.exit(1)
     ext = os.path.splitext(inps.file)[1].lower()
     print('Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+inps.file)

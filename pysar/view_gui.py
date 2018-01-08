@@ -6,9 +6,13 @@ matplotlib.use('TkAgg')
 import tkFileDialog as filedialog
 import view as view
 import info
-
+import _readfile as readfile
+import subset
+import numpy
 
 def pick_file():
+    global attributes, starting_upper_lim
+
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
@@ -16,6 +20,20 @@ def pick_file():
         h5_file.set(frame.filename)
         h5_file_short.set(filename.split("/")[-1])
         pick_h5_file_button.config(text="Cancel")
+
+        atr = readfile.read_attribute(h5_file.get())
+
+        file_type = atr['FILE_TYPE']
+
+        if file_type not in readfile.multi_group_hdf5_file + readfile.multi_dataset_hdf5_file + ['HDFEOS']:
+            data, attributes = readfile.read(h5_file.get())
+            max = numpy.amax(data)
+            starting_upper_lim = max*2
+            update_sliders("m")
+            y_lim_upper.set(max)
+
+        set_variables_from_attributes()
+
         return frame.filename
     else:
         h5_file.set("")
@@ -57,6 +75,38 @@ def on_configure(event):
     # update scrollregion after starting 'mainloop'
     # when all widgets are in canvas
     canvas.configure(scrollregion=canvas.bbox('all'))
+
+
+def update_sliders(unit):
+    scale = 1
+    new_max = starting_upper_lim
+    if unit == "m":
+        scale = 1
+    elif unit == "cm":
+        scale = 100
+    elif unit == "mm":
+        scale = 1000
+    elif unit == "dm":
+        scale = 0.01
+    elif unit == "km":
+        scale = 0.001
+
+    y_lim_upper_slider.configure(to_=new_max*scale)
+    y_lim_lower_slider.configure(to_=new_max*scale)
+
+def show_file_info(file_info):
+
+    window = Tk()
+    window.minsize(width=350, height=550)
+    window.maxsize( height=550)
+    window.resizable(width=True, height=False)
+
+    text_box = Text(window, wrap=NONE)
+    text_box.insert(END, file_info)
+    text_box.config(height=550)
+    text_box.config(state=DISABLED)
+
+    text_box.pack(fill=X)
 
 
 def show_plot():
@@ -121,7 +171,7 @@ def show_plot():
         options.append(subset_lon_from.get())
         options.append(subset_lon_to.get())
 
-    if ref_x.get() != "" and ref_y.get() != "":
+    '''if ref_x.get() != "" and ref_y.get() != "":
         options.append("--ref-yx")
         options.append(ref_y.get())
         options.append(ref_x.get())
@@ -136,7 +186,7 @@ def show_plot():
         options.append(ref_color.get())
     if ref_sym.get() != "":
         options.append("--ref-symbol")
-        options.append(ref_sym.get())
+        options.append(ref_sym.get())'''
 
     ''' "--ref-color", ref_color.get(), "--ref-symbol", ref_sym.get() '''
 
@@ -204,9 +254,95 @@ def show_plot():
 
         options.append("/"+str(location)+"/"+output_file.get())
 
+    if show_info.get() == 1:
+        file_info = info.hdf5_structure_string(h5_file.get())
+        show_file_info(file_info)
+
     print(options)
 
     view.main(options)
+
+
+def set_variables_from_attributes():
+
+    subset_x_from.set(attributes['XMIN'])
+    subset_y_from.set(attributes['YMIN'])
+    subset_x_to.set(attributes['XMAX'])
+    subset_y_to.set(attributes['YMAX'])
+
+    ul_lon, ul_lat, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['FILE_LENGTH'])
+
+    subset_lat_from.set(str(round(ul_lat, 2)))
+    subset_lon_from.set(str(round(ul_lon, 2)))
+    subset_lat_to.set(str(round(lr_lat, 2)))
+    subset_lon_to.set(str(round(lr_lon, 2)))
+
+
+    ref_x.set("0")
+    ref_y.set("0")
+
+    _, _, ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
+
+    ref_lat.set(str(round(ref_lat_data, 2)))
+    ref_lon.set(str(round(ref_lon_data, 2)))
+
+
+    unit.set(attributes['UNIT'])
+
+
+
+
+def compute_lalo(x, y):
+
+    print("X,  Y: "+str(x)+", "+str(y))
+
+    try: x_data = int(float(x))
+    except: x_data = 0
+
+    try: y_data = int(float(y))
+    except: y_data = 0
+
+    data_box = (0, 0, x_data, y_data)
+
+    return subset.box_pixel2geo(data_box, attributes)
+
+
+def compute_xy(lat, lon):
+
+    lat_data = round(float(lat), 4)
+    lon_data = round(float(lon), 4)
+
+    data_box = (float(attributes['X_FIRST']), float(attributes['Y_FIRST']), lon_data, lat_data)
+
+    print("DATA BOX:"+str(data_box))
+
+    return subset.box_geo2pixel(data_box, attributes)
+
+
+def update_subset_lalo(x, y, z):
+
+    x_from, x_to, y_from, y_to = subset_x_from.get(), subset_x_to.get(), subset_y_from.get(), subset_y_to.get()
+
+    _, _, lon_from, lat_from = compute_lalo(x_from, y_from)
+    _, _, lon_to, lat_to = compute_lalo(x_to, y_to)
+
+    subset_lat_from.set(str(round(lat_from, 2)))
+    subset_lat_to.set(str(round(lat_to, 2)))
+    subset_lon_from.set(str(round(lon_from, 2)))
+    subset_lon_to.set(str(round(lon_to, 2)))
+
+
+def update_subset_xy(x, y, z):
+
+    lat_from, lat_to, lon_from, lon_to = subset_lat_from.get(), subset_lat_to.get(), subset_lon_from.get(), subset_lon_to.get()
+
+    _, _, x_from, y_from = compute_xy(lat_from, lon_from)
+    _, _, x_to, y_to = compute_xy(lat_to, lon_to)
+
+    subset_x_from.set(str(x_from))
+    subset_x_to.set(str(x_to))
+    subset_y_from.set(str(y_from))
+    subset_y_to.set(str(y_to))
 
 
 root = Tk()
@@ -218,16 +354,13 @@ submit_button = Button(root, text="Show Plot", command=lambda: show_plot())
 submit_button.pack(side=TOP, pady=(10, 20))
 
 canvas = Canvas(root, width=345, height=680)
-canvas.bind('<Configure>', on_configure)
-
 canvas.pack(side=LEFT, anchor='nw')
 
 scrollbar = Scrollbar(root)
 scrollbar.pack(side=LEFT, fill='y')
 
 canvas.configure(yscrollcommand=scrollbar.set)
-scrollbar.config(command=canvas.yview)
-
+canvas.bind('<Configure>', on_configure)
 
 frame = Frame(canvas)
 canvas.create_window((0,0), window=frame, anchor='nw')
@@ -252,7 +385,7 @@ projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll",
                "npaeqd", "mill", "merc", "stere", "eqdc", "rotpole", "cyl", "npstere", "spstere", "hammer", "geos",
                "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "class", "vandg", "laea", "splaea", "robin"]
 
-
+attributes = []
 
 '''     Frames, Text Variables, and Widgets for selection of the timeseries.h5 file to plot data from.     '''
 pick_h5_file_frame = Frame(frame)
@@ -285,11 +418,13 @@ display_options_label = Label(frame, text="DISPLAY OPTIONS:", anchor=W)
 y_lim_frame = Frame(frame)
 y_lim_upper_frame = Frame(y_lim_frame)
 
+starting_upper_lim = 5000
+
 y_lim_upper = DoubleVar()
 y_lim_upper.set(20)
 
 y_lim_upper_label = Label(y_lim_upper_frame, text="Maximum", width=8)
-y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=5000, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
+y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
 y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6)
 
 y_lim_lower_frame = Frame(y_lim_frame)
@@ -301,13 +436,21 @@ y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
 y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=5000, orient=HORIZONTAL, length=150, variable=y_lim_lower, showvalue=0)
 y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
 
+unit_cmap_projection_labels_frame = Frame(frame)
+unit_label = Label(unit_cmap_projection_labels_frame, text="Unit", width=6, anchor='w')
+colormap_label = Label(unit_cmap_projection_labels_frame, text="Colormap", width=10, anchor='w')
+projection_label = Label(unit_cmap_projection_labels_frame, text="Projection", width=12, anchor='w')
+
 '''     Frames, Text Variables, and Widgets for setting extraneous properties      '''
 unit_cmap_projection_frame = Frame(frame)
 
 unit = StringVar()
 unit.set("m")
-unit_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, unit) + tuple(["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]))
+#unit_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, unit) + tuple(["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]))
+unit_options = ["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]
+unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=update_sliders)
 unit_option_menu.config(width=6)
+#unit_option_menu.config(command=lambda: update_sliders())
 
 colormap = StringVar()
 colormap_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, colormap) + tuple(colormaps))
@@ -340,7 +483,8 @@ transparency_label = Label(transparency_frame, text="Alpha", width=8)
 transparency_slider = Scale(transparency_frame, from_=0, to=1, resolution=0.1, orient=HORIZONTAL, length=150, variable=transparency, showvalue=0)
 transparency_entry = Entry(transparency_frame, textvariable=transparency, width=6)
 
-
+show_info = IntVar()
+show_info_checkbutton = Checkbutton(frame, text="Show File Info", variable=show_info)
 
 
 
@@ -391,40 +535,48 @@ subset_label = Label(frame, text="SUBSET DATA", anchor=W)
 subset_x_frame = Frame(frame)
 
 subset_x_from = StringVar()
+subset_x_from.trace('w', callback=update_subset_lalo)
 subset_x_from_label = Label(subset_x_frame, text="X         From: ")
 subset_x_from_entry = Entry(subset_x_frame, textvariable=subset_x_from, width=6)
 
 subset_x_to = StringVar()
+subset_x_to.trace('w', callback=update_subset_lalo)
 subset_x_to_label = Label(subset_x_frame, text="To: ")
 subset_x_to_entry = Entry(subset_x_frame, textvariable=subset_x_to, width=6)
 
 subset_y_frame = Frame(frame)
 
 subset_y_from = StringVar()
+subset_y_from.trace('w', callback=update_subset_lalo)
 subset_y_from_label = Label(subset_y_frame, text="Y         From: ")
 subset_y_from_entry = Entry(subset_y_frame, textvariable=subset_y_from, width=6)
 
 subset_y_to = StringVar()
+subset_y_to.trace('w', callback=update_subset_lalo)
 subset_y_to_label = Label(subset_y_frame, text="To: ")
 subset_y_to_entry = Entry(subset_y_frame, textvariable=subset_y_to, width=6)
 
 subset_lat_frame = Frame(frame)
 
 subset_lat_from = StringVar()
+subset_lat_from.trace('w', callback=update_subset_xy)
 subset_lat_from_label = Label(subset_lat_frame, text="Lat      From: ")
 subset_lat_from_entry = Entry(subset_lat_frame, textvariable=subset_lat_from, width=6)
 
 subset_lat_to = StringVar()
+subset_lat_to.trace('w', callback=update_subset_xy)
 subset_lat_to_label = Label(subset_lat_frame, text="To: ")
 subset_lat_to_entry = Entry(subset_lat_frame, textvariable=subset_lat_to, width=6)
 
 subset_lon_frame = Frame(frame)
 
 subset_lon_from = StringVar()
+subset_lon_from.trace('w', callback=update_subset_xy)
 subset_lon_from_label = Label(subset_lon_frame, text="Lon      From: ")
 subset_lon_from_entry = Entry(subset_lon_frame, textvariable=subset_lon_from, width=6)
 
 subset_lon_to = StringVar()
+subset_lon_to.trace('w', callback=update_subset_xy)
 subset_lon_to_label = Label(subset_lon_frame, text="To: ")
 subset_lon_to_entry = Entry(subset_lon_frame, textvariable=subset_lon_to, width=6)
 
@@ -460,15 +612,23 @@ show_ref = IntVar()
 show_ref.set(1)
 show_ref_checkbutton = Checkbutton(show_ref_frame, text="Show Reference", variable=show_ref)
 
+reference_options_labels_frame = Frame(frame)
+
+ref_color_label = Label(reference_options_labels_frame, text="Ref Color", width=10, anchor='w')
+ref_symbol_label = Label(reference_options_labels_frame, text="Ref Symbol", width=10, anchor='w')
+ref_date_label = Label(reference_options_labels_frame, text="Ref Date", width=10, anchor='w')
+
 reference_options_frame = Frame(frame)
 
 ref_color = StringVar()
-ref_color_option_menu = apply(OptionMenu, (reference_options_frame, ref_color) + tuple(["1", "2", "3", "4", "5"]))
+ref_color_option_menu = apply(OptionMenu, (reference_options_frame, ref_color) + tuple(["b", "g", "r", "m", "c", "y", "k", "w"]))
 ref_color_option_menu.config(width=10)
+ref_color.set("b")
 
 ref_sym = StringVar()
-ref_symbol_option_menu = apply(OptionMenu, (reference_options_frame, ref_sym) + tuple(["1", "2", "3", "4", "5"]))
+ref_symbol_option_menu = apply(OptionMenu, (reference_options_frame, ref_sym) + tuple([".", ",", "o", "v", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "*", "h", "H", "+", "x", "X", "d", "D", "|", "_"]))
 ref_symbol_option_menu.config(width=10)
+ref_sym.set(".")
 
 ref_date = StringVar()
 ref_date_option_menu = apply(OptionMenu, (reference_options_frame, ref_date) + tuple(["1", "2", "3", "4", "5"]))
@@ -542,17 +702,21 @@ fig_size_height = StringVar()
 fig_size_height_label = Label(fig_size_frame, text="Length: ")
 fig_size_height_entry = Entry(fig_size_frame, textvariable=fig_size_height, width=6)
 
+fig_ext_num_label_frame = Frame(frame)
+fig_ext_label = Label(fig_ext_num_label_frame, text="Fig Ext", width=14, anchor='w')
+fig_num_label = Label(fig_ext_num_label_frame, text="Fig Num", width=14, anchor='w')
+
 fig_ext_num_frame = Frame(frame)
 
 fig_ext = StringVar()
-fig_ext_option_menu = apply(OptionMenu, (fig_ext_num_frame, ref_color) + tuple([".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]))
+fig_ext_option_menu = apply(OptionMenu, (fig_ext_num_frame, fig_ext) + tuple([".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]))
 fig_ext_option_menu.config(width=14)
 fig_ext.set(".pdf")
 
 fig_num = StringVar()
-fig_num_option_menu = apply(OptionMenu, (fig_ext_num_frame, ref_sym) + tuple(["1", "2", "3", "4", "5"]))
+fig_num_option_menu = apply(OptionMenu, (fig_ext_num_frame, fig_num) + tuple(["1", "2", "3", "4", "5"]))
 fig_num_option_menu.config(width=14)
-fig_num.set('1')
+fig_num.set("1")
 
 fig_w_space_frame = Frame(frame)
 
@@ -585,10 +749,11 @@ coastline_res_frame = Frame(frame)
 coastline = IntVar()
 coastline_checkbutton = Checkbutton(coastline_res_frame, text="Show Coastline", variable=coastline)
 
+resolution_label = Label(coastline_res_frame, text="Res: ", width=3, anchor='w')
 resolution = StringVar()
 resolution.set("c")
 resolution_option_menu = apply(OptionMenu, (coastline_res_frame, resolution) + tuple(["c", "l", "i", "h", "f", "None"]))
-resolution_option_menu.config(width=15)
+resolution_option_menu.config(width=8)
 
 lalo_settings_frame = Frame(frame)
 
@@ -660,7 +825,12 @@ y_lim_lower_label.pack(side=LEFT)
 y_lim_lower_slider.pack(side=LEFT, padx=10)
 y_lim_lower_entry.pack(side=LEFT)
 
-unit_cmap_projection_frame.pack(anchor='w', fill=X, pady=10, padx=10)
+unit_cmap_projection_labels_frame.pack(anchor='w', fill=X, pady=(10, 0), padx=10)
+unit_label.pack(side=LEFT, padx=(0, 10))
+colormap_label.pack(side=LEFT, padx=(0, 10))
+projection_label.pack(side=LEFT)
+
+unit_cmap_projection_frame.pack(anchor='w', fill=X, pady=(10, 5), padx=10)
 unit_option_menu.pack(side=LEFT, padx=(0, 10))
 colormap_option_menu.pack(side=LEFT, padx=(0, 10))
 projection_option_menu.pack(side=LEFT)
@@ -676,7 +846,9 @@ transparency_label.pack(side=LEFT)
 transparency_slider.pack(side=LEFT, padx=10)
 transparency_entry.pack(side=LEFT)
 
-dem_options_label.pack(anchor='w', fill=X, pady=(45, 0), padx=10)
+show_info_checkbutton.pack(anchor='center', pady=10)
+
+dem_options_label.pack(anchor='w', fill=X, pady=(35, 0), padx=10)
 
 pick_dem_file_frame.pack(fill=X, pady=10)
 pick_dem_file_button.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
@@ -745,7 +917,12 @@ ref_lon_entry.pack(side=LEFT, padx=(0, 10))
 show_ref_frame.pack(anchor='w', fill=X, padx=10, pady=(0, 10))
 show_ref_checkbutton.pack(side=LEFT, pady=10)
 
-reference_options_frame.pack(anchor='w', fill=X, pady=(0, 10), padx=10)
+reference_options_labels_frame.pack(anchor='w', fill=X, pady=(0, 0), padx=10)
+ref_color_label.pack(side=LEFT, padx=(0, 10))
+ref_symbol_label.pack(side=LEFT, padx=(0, 10))
+ref_date_label.pack(side=LEFT)
+
+reference_options_frame.pack(anchor='w', fill=X, pady=(5, 10), padx=10)
 ref_color_option_menu.pack(side=LEFT, padx=(0, 10))
 ref_symbol_option_menu.pack(side=LEFT, padx=(0, 10))
 ref_date_option_menu.pack(side=LEFT)
@@ -784,7 +961,11 @@ fig_size_width_entry.pack(side=LEFT, padx=(0, 10))
 fig_size_height_label.pack(side=LEFT, padx=(0, 5))
 fig_size_height_entry.pack(side=LEFT, padx=(0, 10))
 
-fig_ext_num_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+fig_ext_num_label_frame.pack(anchor='w', fill=X, padx=10, pady=(10, 0))
+fig_ext_label.pack(side=LEFT, padx=(0, 10))
+fig_num_label.pack(side=LEFT, padx=(0, 10))
+
+fig_ext_num_frame.pack(anchor='w', fill=X, padx=10, pady=(5, 10))
 fig_ext_option_menu.pack(side=LEFT, padx=(0, 10))
 fig_num_option_menu.pack(side=LEFT, padx=(0, 10))
 
@@ -797,12 +978,14 @@ fig_h_space_label.pack(side=LEFT, padx=(0, 5))
 fig_h_space_entry.pack(side=LEFT)
 
 coords_frame.pack(anchor='w', fill=X, padx=10, pady=10)
+coords_label.pack(side=LEFT, padx=(0, 10))
 coords_option_menu.pack(side=LEFT)
 
 map_options_label.pack(fill=X, padx=10, pady=(35, 10))
 
 coastline_res_frame.pack(anchor='w', fill=X, padx=10, pady=10)
 coastline_checkbutton.pack(side=LEFT, padx=(0, 25))
+resolution_label.pack(side=LEFT, padx=(0, 10))
 resolution_option_menu.pack(side=LEFT)
 
 lalo_settings_frame.pack(fill=X, padx=10, pady=10)
