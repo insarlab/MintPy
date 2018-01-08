@@ -63,11 +63,11 @@ def auto_path_miami(inps, template={}):
     ##### .unw/.cor/.int files
     process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PROCESS'
     print "PROCESS directory: "+process_dir
-    if inps.insar_processor == 'roipac':
+    if inps.insarProcessor == 'roipac':
         if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/filt_*.unw'
         if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
         #if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/filt_*rlks.int'
-    elif inps.insar_processor == 'gamma':
+    elif inps.insarProcessor == 'gamma':
         if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/diff_*rlks.unw'
         if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
         #if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/diff_*rlks.int'
@@ -83,18 +83,18 @@ def auto_path_miami(inps, template={}):
 
     if not inps.lut or inps.lut == 'auto':
         try:
-            if inps.insar_processor == 'roipac':
+            if inps.insarProcessor == 'roipac':
                 inps.lut = process_dir+'/GEO/*'+m_date12+'*/geomap*.trans'
-            elif inps.insar_processor == 'gamma':
+            elif inps.insarProcessor == 'gamma':
                 inps.lut = process_dir+'/SIM/sim_'+m_date12+'/sim_*.UTM_TO_RDC'
         except:
             warnings.warn('No master interferogram found! Can not locate mapping transformation file for geocoding!')
 
     if not inps.dem_radar or inps.dem_radar == 'auto':
         try:
-            if inps.insar_processor == 'roipac':
+            if inps.insarProcessor == 'roipac':
                 inps.dem_radar = process_dir+'/DONE/*'+m_date12+'*/radar*.hgt'
-            elif inps.insar_processor == 'gamma':
+            elif inps.insarProcessor == 'gamma':
                 inps.dem_radar = process_dir+'/SIM/sim_'+m_date12+'/sim_*.hgt_sim'
         except:
             warnings.warn('No master interferogram found! Can not locate DEM in radar coord!')
@@ -105,7 +105,7 @@ def auto_path_miami(inps, template={}):
         inps.dem_geo = []
         if os.path.isdir(dem_dir):
             inps.dem_geo = [dem_dir+'/*.dem']
-        elif inps.insar_processor == 'gamma':
+        elif inps.insarProcessor == 'gamma':
             inps.dem_geo = [process_dir+'/SIM/sim_'+m_date12+'/sim_*.utm.dem']
 
         if   'DEMg' in template.keys():  inps.dem_geo.append(template['DEMg'])
@@ -287,7 +287,7 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
             except:  atr['PROJECT_NAME'] = 'PYSAR'
             key = 'INSAR_PROCESSOR'
             if key not in atr.keys():
-                try:  atr[key] = exDict['insar_processor']
+                try:  atr[key] = exDict['insarProcessor']
                 except:  pass
             key = 'PLATFORM'
             if ((key not in atr.keys() or not any(re.search(i, atr[key].lower()) for i in sensorList))\
@@ -366,6 +366,7 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
             (fbase.startswith('incidenceang') and 'incidenceAngle' in h5dnameList) or\
             (fbase.endswith(('.trans','.utm_to_rdc')) and 'rangeCoord' in h5dnameList) or\
             ((fbase.startswith(('hgt','dem')) or fbase.endswith(('.hgt','.dem','wgs84'))) and 'height' in h5dnameList) or\
+            (os.path.abspath(fname) == outfile) or\
             #(fbase.startswith('geometry') and any(i in h5dnameList for i in ['rangeCoord','longitude'])) or \
             (fbase.startswith('rangedist') and 'slantRangeDistance' in h5dnameList)):
             fileList.remove(fname)
@@ -438,7 +439,7 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
             except:  atr['PROJECT_NAME'] = 'PYSAR'
             key = 'INSAR_PROCESSOR'
             if key not in atr.keys():
-                try:  atr[key] = exDict['insar_processor']
+                try:  atr[key] = exDict['insarProcessor']
                 except:  pass
             # Write attributes
             for key,value in atr.iteritems():
@@ -488,7 +489,7 @@ def load_single_dataset_hdf5(file_type, infile, outfile=None, exDict=dict()):
             except: pass
             key = 'INSAR_PROCESSOR'
             if key not in atr.keys():
-                try:  atr[key] = exDict['insar_processor']
+                try:  atr[key] = exDict['insarProcessor']
                 except:  pass
             h5.close()
     return outfile
@@ -519,7 +520,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
                     PROJECT_NAME   : KujuAlosAT422F650  (extra attribute dictionary to add to output file)
                     sensor         : (optional)
                     timeseries_dir : directory of time series analysis, e.g. KujuAlosAT422F650/PYSAR
-                    insar_processor: InSAR processor, roipac, isce, gamma, doris
+                    insarProcessor: InSAR processor, roipac, isce, gamma, doris
         outfile   - string, output file name
         file_type - string, group name for output HDF5 file, interferograms, coherence, dem, etc.
     Output:
@@ -544,7 +545,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         return None
 
     ##### Prepare attributes file
-    processor = inps_dict['insar_processor']
+    processor = inps_dict['insarProcessor']
     print '--------------------------------------------'
     print 'preparing attributes files using prep_%s.py ...' % processor
     # prepare multiple files input for cmd calling
@@ -657,12 +658,12 @@ def load_data_from_template(inps):
         if key in keyList:
             value = template[key]
             if value == 'auto':
-                inps.insar_processor = 'roipac'
+                inps.insarProcessor = 'roipac'
             else:
-                inps.insar_processor = value
+                inps.insarProcessor = value
 
     print '--------------------------------------------'
-    print 'InSAR processing software: '+inps.insar_processor
+    print 'InSAR processing software: '+inps.insarProcessor
     if 'pysar.unwrapFiles'        in keyList:   inps.unw       = template['pysar.unwrapFiles']
     if 'pysar.corFiles'           in keyList:   inps.cor       = template['pysar.corFiles']
     if 'pysar.lookupFile'         in keyList:   inps.lut       = template['pysar.lookupFile']
@@ -756,12 +757,12 @@ TEMPLATE='''
 ##     pysar.lookupFile         = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
 ##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
 ##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
-pysar.insarProcessor     = auto  #[roipac, gamma, isce], auto for roipac
-pysar.unwrapFiles        = auto  #[filt*.unw, diff_*.unw, filt*.unw]
-pysar.corFiles           = auto  #[filt*.cor, filt_*.cor, filt*.cor]
+pysar.insarProcessor     = auto  #[roipac,        gamma,           isce], auto for roipac
+pysar.unwrapFiles        = auto  #[filt*rlks.unw, diff_*rlks.unw,  filt*.unw]
+pysar.corFiles           = auto  #[filt*rlks.cor, filt_*rlks.cor,  filt*.cor]
 pysar.lookupFile         = auto  #[geomap*.trans, sim*.UTM_TO_RDC, l*.rdr]
-pysar.demFile.radarCoord = auto  #[radar*.hgt, sim*.hgt_sim, hgt.rdr]
-pysar.demFile.geoCoord   = auto  #[*.dem, sim*.utm.dem, demLat*.dem.wgs84]
+pysar.demFile.radarCoord = auto  #[radar*.hgt,    sim*.hgt_sim,    hgt.rdr]
+pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    None]
 '''
 
 
@@ -772,7 +773,7 @@ def cmdLineParse():
 
     parser.add_argument('--template','-t', dest='template_file', nargs='*', help='template file, to get PROJECT_NAME')
     parser.add_argument('--project', dest='project_name', help='project name of dataset, used in INSARMAPS Web Viewer')
-    parser.add_argument('--processor','-p', dest='insar_processor',\
+    parser.add_argument('--processor','-p', dest='insarProcessor',\
                         default='roipac', choices={'roipac','gamma','isce','doris','gmtsar'},\
                         help='InSAR processor/software of the file')
 

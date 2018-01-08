@@ -280,9 +280,11 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
 
     ##### Update namespace inps if inputed
     load_complete = True
-    if None in [ifgram_file, coherence_file, dem_geo_file]:
+    if None in [ifgram_file, coherence_file]:
         load_complete = False
     if not geocoded and None in [dem_radar_file, lookup_file]:
+        load_complete = False
+    if dem_geo_file and not (hasattr(inps, 'insarProcessor') and inps.insarProcessor == 'isce'):
         load_complete = False
     if load_complete and print_msg:
         print '-----------------------------------------------------------------------------------'

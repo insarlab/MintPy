@@ -45,12 +45,13 @@ import pysar
 import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar._writefile as writefile
+import pysar.geocode as geocode
 import pysar.subset as subset
 import pysar.save_hdfeos5 as hdfeos5
 
 
 ###############################################################################
-def check_geocode_file(geomapFile, File, templateFile=None, outFile=None):
+def check_geocode_file(lookupFile, File, templateFile=None, outFile=None):
     '''Geocode input file or use existed geocoded file.'''
     if not File:
         return None
@@ -59,15 +60,15 @@ def check_geocode_file(geomapFile, File, templateFile=None, outFile=None):
         if 'Y_FIRST' in atr.keys():
             return File
     
-    if not geomapFile:
+    if not lookupFile:
         warnings.warn('No lookup file found! Skip geocoding.')
         return None
 
     if not outFile:
-        outFile = 'geo_'+os.path.basename(File)
+        outFile = geocode.geocode_output_filename(File)
 
     if ut.update_file(outFile, File):
-        geocodeCmd = 'geocode.py '+File+' -l '+os.path.basename(geomapFile)
+        geocodeCmd = 'geocode.py %s -l %s -o %s' % (File, os.path.basename(lookupFile), outFile)
         if templateFile:
             geocodeCmd += ' -t '+templateFile
         print geocodeCmd
@@ -226,7 +227,7 @@ pysar.unwrapFiles        = auto  #[filt*rlks.unw, diff_*rlks.unw,  filt*.unw]
 pysar.corFiles           = auto  #[filt*rlks.cor, filt_*rlks.cor,  filt*.cor]
 pysar.lookupFile         = auto  #[geomap*.trans, sim*.UTM_TO_RDC, l*.rdr]
 pysar.demFile.radarCoord = auto  #[radar*.hgt,    sim*.hgt_sim,    hgt.rdr]
-pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    demLat*.dem.wgs84]
+pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    None]
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)
@@ -547,6 +548,9 @@ def main(argv):
     print 'read default template file: '+inps.template_file
     inps.template_file = os.path.abspath(inps.template_file)
     template = readfile.read_template(inps.template_file)
+    inps.insarProcessor = template['pysar.insarProcessor']
+    if inps.insarProcessor.lower() == 'auto':
+        inps.insarProcessor = 'roipac'
 
     # Get existing tropo delay file
     inps.trop_model = 'ECMWF'

@@ -25,6 +25,15 @@ import pysar._pysar_utilities as ut
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
+def geocode_output_filename(fname):
+    if 'geometryRadar' in fname:
+        fname_out = os.path.basename(fname).replace('geometryRadar','geometryGeo')
+    else:
+        fname_out = 'geo_'+os.path.basename(fname)
+    fname_out = os.getcwd()+'/'+fname_out
+    return fname_out
+
+
 ############################ Geocoded with lut in geo coord #########################
 def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
     '''Get attributes in geo coord from atr_rdr dict and atr_lut dict
@@ -99,7 +108,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     start = time.time()
     ## Default Inputs and outputs
     if not fname_out:
-        fname_out = os.path.dirname(os.path.abspath(fname))+'/geo_'+os.path.basename(fname)
+        fname_out = geocode_output_filename(fname)
 
     ##### Interpolate value on irregular radar coordinates (from lookup table file value)
     ##### with known value on regular radar coordinates (from radar file attribute)
@@ -322,7 +331,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
         sys.exit(-1)
 
     if not fname_out:
-        fname_out = os.path.dirname(os.path.abspath(fname))+'/geo_'+os.path.basename(fname)
+        fname_out = geocode_output_filename(fname)
 
     ## Read lookup table file
     atr_rdr = readfile.read_attribute(fname)
