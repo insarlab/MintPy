@@ -290,8 +290,6 @@ def set_variables_from_attributes():
     unit.set(attributes['UNIT'])
 
 
-
-
 def compute_lalo(x, y):
 
     print("X,  Y: "+str(x)+", "+str(y))
@@ -320,7 +318,12 @@ def compute_xy(lat, lon):
 
 
 def update_subset_lalo(x, y, z):
+    global update_in_progress
 
+    if update_in_progress:
+        return
+
+    update_in_progress = True
     x_from, x_to, y_from, y_to = subset_x_from.get(), subset_x_to.get(), subset_y_from.get(), subset_y_to.get()
 
     _, _, lon_from, lat_from = compute_lalo(x_from, y_from)
@@ -331,9 +334,16 @@ def update_subset_lalo(x, y, z):
     subset_lon_from.set(str(round(lon_from, 2)))
     subset_lon_to.set(str(round(lon_to, 2)))
 
+    update_in_progress = False
+
 
 def update_subset_xy(x, y, z):
+    global update_in_progress
 
+    if update_in_progress:
+        return
+
+    update_in_progress = True
     lat_from, lat_to, lon_from, lon_to = subset_lat_from.get(), subset_lat_to.get(), subset_lon_from.get(), subset_lon_to.get()
 
     _, _, x_from, y_from = compute_xy(lat_from, lon_from)
@@ -343,6 +353,8 @@ def update_subset_xy(x, y, z):
     subset_x_to.set(str(x_to))
     subset_y_from.set(str(y_from))
     subset_y_to.set(str(y_to))
+
+    update_in_progress = False
 
 
 root = Tk()
@@ -386,6 +398,7 @@ projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll",
                "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "class", "vandg", "laea", "splaea", "robin"]
 
 attributes = []
+update_in_progress = False
 
 '''     Frames, Text Variables, and Widgets for selection of the timeseries.h5 file to plot data from.     '''
 pick_h5_file_frame = Frame(frame)
