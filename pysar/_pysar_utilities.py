@@ -284,7 +284,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
         load_complete = False
     if not geocoded and None in [dem_radar_file, lookup_file]:
         load_complete = False
-    if dem_geo_file and not (hasattr(inps, 'insarProcessor') and inps.insarProcessor == 'isce'):
+    if dem_geo_file is  None  and not (hasattr(inps, 'insarProcessor') and inps.insarProcessor == 'isce'):
         load_complete = False
     if load_complete and print_msg:
         print '-----------------------------------------------------------------------------------'

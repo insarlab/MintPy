@@ -71,6 +71,14 @@ def auto_path_miami(inps, template={}):
         if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/DONE/IFGRAM*/diff_*rlks.unw'
         if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/DONE/IFGRAM*/filt_*rlks.cor'
         #if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/diff_*rlks.int'
+    elif inps.insarProcessor == 'isce':
+        process_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name
+        if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/merged/interferograms/*/filt*.unw'
+        if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/merged/interferograms/*/filt*.cor'
+        if not inps.lut or inps.lut == 'auto':   inps.lut = process_dir+'/merged/geom_master/l*.rdr'
+        if not inps.dem_radar or inps.dem_radar == 'auto':   inps.dem_radar = process_dir+'/merged/geom_master/l*.rdr'
+        if not inps.dem_geo or inps.dem_geo == 'auto':   inps.dem_geo = None
+        #if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/diff_*rlks.int'
 
     ##### master interferogram for lookup table and DEM in radar coord
     if all(fname and fname != 'auto' for fname in [inps.lut, inps.dem_radar, inps.dem_geo]):
@@ -672,6 +680,7 @@ def load_data_from_template(inps):
 
     # Check existed single dataset files
     inps_tmp = argparse.Namespace()
+    #import pdb; pdb.set_trace()
     inps_tmp = ut.check_loaded_dataset(inps.timeseries_dir, inps_tmp, print_msg=False)
     if (not inps.lut       or inps.lut       == 'auto') and inps_tmp.lookup_file   :  inps.lut       = inps_tmp.lookup_file
     if (not inps.dem_radar or inps.dem_radar == 'auto') and inps_tmp.dem_radar_file:  inps.dem_radar = inps_tmp.dem_radar_file
