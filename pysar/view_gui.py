@@ -2,6 +2,7 @@ from Tkinter import *
 
 import h5py
 import matplotlib
+
 matplotlib.use('TkAgg')
 import tkFileDialog as filedialog
 import view as view
@@ -10,21 +11,52 @@ import _readfile as readfile
 import subset
 import numpy
 
-
-#71
-canvas, frame, attributes, update_in_progress, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
+canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
 pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
 colormap, projection, lr_flip, ud_flip, wrap, opposite, transparency, show_info, dem_file, dem_short, \
 pick_dem_file_button, shading, countours, countour_smoothing, countour_step, subset_x_from, subset_x_to, subset_y_from, \
 subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, font_size, \
 plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
-fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step,\
-scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file = None, None, None, None, None, None,\
-                                                                                  None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,\
-                                                                                  None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,\
-                                                                                  None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,\
-                                                                                  None, None, None, None
+fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
+scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file \
+    = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
+      None, None, None, None, None, None, None, None, None, None, None, None, None
 
+colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap',
+             'CMRmap_r', 'Dark2', 'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd',
+             'OrRd_r',
+             'Oranges', 'Oranges_r', 'PRGn', 'PRGn_r', 'Paired', 'Paired_r', 'Pastel1', 'Pastel1_r', 'Pastel2',
+             'Pastel2_r', 'PiYG', 'PiYG_r', 'PuBu', 'PuBuGn', 'PuBuGn_r', 'PuBu_r', 'PuOr', 'PuOr_r', 'PuRd', 'PuRd_r',
+             'Purples', 'Purples_r', 'RdBu', 'RdBu_r', 'RdGy', 'RdGy_r', 'RdPu', 'RdPu_r', 'RdYlBu', 'RdYlBu_r',
+             'RdYlGn',
+             'RdYlGn_r', 'Reds', 'Reds_r', 'Set1', 'Set1_r', 'Set2', 'Set2_r', 'Set3', 'Set3_r', 'Spectral',
+             'Spectral_r',
+             'Vega10', 'Vega10_r', 'Vega20', 'Vega20_r', 'Vega20b', 'Vega20b_r', 'Vega20c', 'Vega20c_r', 'Wistia',
+             'Wistia_r', 'YlGn', 'YlGnBu', 'YlGnBu_r', 'YlGn_r', 'YlOrBr', 'YlOrBr_r', 'YlOrRd', 'YlOrRd_r', 'afmhot',
+             'afmhot_r', 'autumn', 'autumn_r', 'binary', 'binary_r', 'bone', 'bone_r', 'brg', 'brg_r', 'bwr', 'bwr_r',
+             'cool', 'cool_r', 'coolwarm', 'coolwarm_r', 'copper', 'copper_r', 'cubehelix', 'cubehelix_r', 'flag',
+             'flag_r',
+             'gist_earth', 'gist_earth_r', 'gist_gray', 'gist_gray_r', 'gist_heat', 'gist_heat_r', 'gist_ncar',
+             'gist_ncar_r',
+             'gist_rainbow', 'gist_rainbow_r', 'gist_stern', 'gist_stern_r', 'gist_yarg', 'gist_yarg_r', 'gnuplot',
+             'gnuplot2', 'gnuplot2_r', 'gnuplot_r', 'gray', 'gray_r', 'hot', 'hot_r', 'hsv', 'hsv_r', 'inferno',
+             'inferno_r',
+             'jet', 'jet_r', 'magma', 'magma_r', 'nipy_spectral', 'nipy_spectral_r', 'ocean', 'ocean_r', 'pink',
+             'pink_r',
+             'plasma', 'plasma_r', 'prism', 'prism_r', 'rainbow', 'rainbow_r', 'seismic', 'seismic_r', 'spectral',
+             'spectral_r', 'spring', 'spring_r', 'summer', 'summer_r', 'tab10', 'tab10_r', 'tab20', 'tab20_r', 'tab20b',
+             'tab20b_r', 'tab20c', 'tab20c_r', 'terrain', 'terrain_r', 'viridis', 'viridis_r', 'winter', 'winter_r']
+
+projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll", "lcc", "tmerc", "nplaea", "gall",
+               "npaeqd", "mill", "merc", "stere", "eqdc", "rotpole", "cyl", "npstere", "spstere", "hammer", "geos",
+               "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "class", "vandg", "laea", "splaea", "robin"]
+
+unit_options = ["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]
+
+attributes = []
+update_in_progress = False
 
 
 def pick_file():
@@ -45,7 +77,7 @@ def pick_file():
         if file_type not in readfile.multi_group_hdf5_file + readfile.multi_dataset_hdf5_file + ['HDFEOS']:
             data, attributes = readfile.read(h5_file.get())
             max = numpy.amax(data)
-            starting_upper_lim = max*2
+            starting_upper_lim = max * 2
             update_sliders("m")
             y_lim_upper.set(max)
 
@@ -89,8 +121,6 @@ def pick_dem():
 
 
 def on_configure(event):
-    # update scrollregion after starting 'mainloop'
-    # when all widgets are in canvas
     canvas.configure(scrollregion=canvas.bbox('all'))
 
 
@@ -104,18 +134,18 @@ def update_sliders(unit):
     elif unit == "mm":
         scale = 1000
     elif unit == "dm":
-        scale = 0.01
+        scale = 0.1
     elif unit == "km":
         scale = 0.001
 
-    y_lim_upper_slider.configure(to_=new_max*scale)
-    y_lim_lower_slider.configure(to_=new_max*scale)
+    y_lim_upper_slider.configure(to_=new_max * scale)
+    y_lim_lower_slider.configure(to_=new_max * scale)
+
 
 def show_file_info(file_info):
-
     window = Tk()
     window.minsize(width=350, height=550)
-    window.maxsize( height=550)
+    window.maxsize(height=550)
     window.resizable(width=True, height=False)
 
     text_box = Text(window, wrap=NONE)
@@ -127,13 +157,8 @@ def show_file_info(file_info):
 
 
 def show_plot():
-
-    print(scalebar_distance.get())
-    print(scalebar_lat.get())
-    print(scalebar_lon.get())
-
-    options = [h5_file.get(), "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()), "--alpha", str(transparency.get()), "--figext",
-    fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()]
+    options = [h5_file.get(), "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()), "--alpha",
+               str(transparency.get()), "--figext", fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()]
 
     if mask_file.get() != "":
         options.append("--mask")
@@ -269,7 +294,7 @@ def show_plot():
         location_parts = h5_file.get().split("/")
         location = "/".join(location_parts[1:-1])
 
-        options.append("/"+str(location)+"/"+output_file.get())
+        options.append("/" + str(location) + "/" + output_file.get())
 
     if show_info.get() == 1:
         file_info = info.hdf5_structure_string(h5_file.get())
@@ -281,57 +306,61 @@ def show_plot():
 
 
 def set_variables_from_attributes():
-
     subset_x_from.set(attributes['XMIN'])
     subset_y_from.set(attributes['YMIN'])
     subset_x_to.set(attributes['XMAX'])
     subset_y_to.set(attributes['YMAX'])
 
-    ul_lon, ul_lat, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['FILE_LENGTH'])
+    ul_lon, ul_lat, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['FILE_LENGTH'], all_data=True)
 
-    subset_lat_from.set(str(round(ul_lat, 2)))
-    subset_lon_from.set(str(round(ul_lon, 2)))
-    subset_lat_to.set(str(round(lr_lat, 2)))
-    subset_lon_to.set(str(round(lr_lon, 2)))
-
+    subset_lat_from.set(ul_lat)
+    subset_lon_from.set(ul_lon)
+    subset_lat_to.set(lr_lat)
+    subset_lon_to.set(lr_lon)
 
     ref_x.set("0")
     ref_y.set("0")
 
-    _, _, ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
+    ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
 
-    ref_lat.set(str(round(ref_lat_data, 2)))
-    ref_lon.set(str(round(ref_lon_data, 2)))
-
+    ref_lat.set(ref_lat_data)
+    ref_lon.set(ref_lon_data)
 
     unit.set(attributes['UNIT'])
 
 
-def compute_lalo(x, y):
+def compute_lalo(x, y, all_data=False):
+    try:
+        x_data = int(float(x))
+    except:
+        x_data = 0
 
-    print("X,  Y: "+str(x)+", "+str(y))
-
-    try: x_data = int(float(x))
-    except: x_data = 0
-
-    try: y_data = int(float(y))
-    except: y_data = 0
+    try:
+        y_data = int(float(y))
+    except:
+        y_data = 0
 
     data_box = (0, 0, x_data, y_data)
 
-    return subset.box_pixel2geo(data_box, attributes)
+    lalo = subset.box_pixel2geo(data_box, attributes)
+
+    formatted_lalo = [str(round(num, 2)) for num in lalo]
+
+    if all_data:
+        return formatted_lalo
+    else:
+        return formatted_lalo[2], formatted_lalo[3]
 
 
 def compute_xy(lat, lon):
-
     lat_data = round(float(lat), 4)
     lon_data = round(float(lon), 4)
 
     data_box = (float(attributes['X_FIRST']), float(attributes['Y_FIRST']), lon_data, lat_data)
 
-    print("DATA BOX:"+str(data_box))
+    xy = subset.box_geo2pixel(data_box, attributes)
 
-    return subset.box_geo2pixel(data_box, attributes)
+    return str(xy[2]), str(xy[3])
 
 
 def update_subset_lalo(x, y, z):
@@ -343,13 +372,13 @@ def update_subset_lalo(x, y, z):
     update_in_progress = True
     x_from, x_to, y_from, y_to = subset_x_from.get(), subset_x_to.get(), subset_y_from.get(), subset_y_to.get()
 
-    _, _, lon_from, lat_from = compute_lalo(x_from, y_from)
-    _, _, lon_to, lat_to = compute_lalo(x_to, y_to)
+    lon_from, lat_from = compute_lalo(x_from, y_from)
+    lon_to, lat_to = compute_lalo(x_to, y_to)
 
-    subset_lat_from.set(str(round(lat_from, 2)))
-    subset_lat_to.set(str(round(lat_to, 2)))
-    subset_lon_from.set(str(round(lon_from, 2)))
-    subset_lon_to.set(str(round(lon_to, 2)))
+    subset_lat_from.set(lat_from)
+    subset_lat_to.set(lat_to)
+    subset_lon_from.set(lon_from)
+    subset_lon_to.set(lon_to)
 
     update_in_progress = False
 
@@ -361,29 +390,31 @@ def update_subset_xy(x, y, z):
         return
 
     update_in_progress = True
+
     lat_from, lat_to, lon_from, lon_to = subset_lat_from.get(), subset_lat_to.get(), subset_lon_from.get(), subset_lon_to.get()
 
-    _, _, x_from, y_from = compute_xy(lat_from, lon_from)
-    _, _, x_to, y_to = compute_xy(lat_to, lon_to)
+    x_from, y_from = compute_xy(lat_from, lon_from)
+    x_to, y_to = compute_xy(lat_to, lon_to)
 
-    subset_x_from.set(str(x_from))
-    subset_x_to.set(str(x_to))
-    subset_y_from.set(str(y_from))
-    subset_y_to.set(str(y_to))
+    subset_x_from.set(x_from)
+    subset_x_to.set(x_to)
+    subset_y_from.set(y_from)
+    subset_y_to.set(y_to)
 
     update_in_progress = False
 
 
 def main():
     global canvas, frame, attributes, update_in_progress, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
-pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
-colormap, projection, lr_flip, ud_flip, wrap, opposite, transparency, show_info, dem_file, dem_short, \
-pick_dem_file_button, shading, countours, countour_smoothing, countour_step, subset_x_from, subset_x_to, subset_y_from, \
-subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, font_size, \
-plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
-fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step,\
-scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
+        pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
+        colormap, projection, lr_flip, ud_flip, wrap, opposite, transparency, show_info, dem_file, dem_short, \
+        pick_dem_file_button, shading, countours, countour_smoothing, countour_step, subset_x_from, subset_x_to, subset_y_from, \
+        subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, font_size, \
+        plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
+        fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
+        scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
 
+    '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
     root.minsize(width=365, height=750)
     root.maxsize(width=365, height=750)
@@ -402,41 +433,18 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     canvas.bind('<Configure>', on_configure)
 
     frame = Frame(canvas)
-    canvas.create_window((0,0), window=frame, anchor='nw')
+    canvas.create_window((0, 0), window=frame, anchor='nw')
 
-
-    colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap', 'CMRmap_r', 'Dark2',
-                 'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r', 'Oranges', 'Oranges_r', 'PRGn', 'PRGn_r',
-                 'Paired', 'Paired_r', 'Pastel1', 'Pastel1_r', 'Pastel2', 'Pastel2_r', 'PiYG', 'PiYG_r', 'PuBu', 'PuBuGn', 'PuBuGn_r', 'PuBu_r',
-                 'PuOr', 'PuOr_r', 'PuRd', 'PuRd_r', 'Purples', 'Purples_r', 'RdBu', 'RdBu_r', 'RdGy', 'RdGy_r', 'RdPu', 'RdPu_r', 'RdYlBu', 'RdYlBu_r',
-                 'RdYlGn', 'RdYlGn_r', 'Reds', 'Reds_r', 'Set1', 'Set1_r', 'Set2', 'Set2_r', 'Set3', 'Set3_r', 'Spectral', 'Spectral_r', 'Vega10', 'Vega10_r',
-                 'Vega20', 'Vega20_r', 'Vega20b', 'Vega20b_r', 'Vega20c', 'Vega20c_r', 'Wistia', 'Wistia_r', 'YlGn', 'YlGnBu', 'YlGnBu_r', 'YlGn_r', 'YlOrBr',
-                 'YlOrBr_r', 'YlOrRd', 'YlOrRd_r', 'afmhot', 'afmhot_r', 'autumn', 'autumn_r', 'binary', 'binary_r', 'bone', 'bone_r', 'brg', 'brg_r', 'bwr',
-                 'bwr_r', 'cool', 'cool_r', 'coolwarm', 'coolwarm_r', 'copper', 'copper_r', 'cubehelix', 'cubehelix_r', 'flag', 'flag_r', 'gist_earth',
-                 'gist_earth_r', 'gist_gray', 'gist_gray_r', 'gist_heat', 'gist_heat_r', 'gist_ncar', 'gist_ncar_r', 'gist_rainbow', 'gist_rainbow_r',
-                 'gist_stern', 'gist_stern_r', 'gist_yarg', 'gist_yarg_r', 'gnuplot', 'gnuplot2', 'gnuplot2_r', 'gnuplot_r', 'gray', 'gray_r', 'hot', 'hot_r',
-                 'hsv', 'hsv_r', 'inferno', 'inferno_r', 'jet', 'jet_r', 'magma', 'magma_r', 'nipy_spectral', 'nipy_spectral_r', 'ocean', 'ocean_r', 'pink', 'pink_r',
-                 'plasma', 'plasma_r', 'prism', 'prism_r', 'rainbow', 'rainbow_r', 'seismic', 'seismic_r', 'spectral', 'spectral_r', 'spring', 'spring_r', 'summer',
-                 'summer_r', 'tab10', 'tab10_r', 'tab20', 'tab20_r', 'tab20b', 'tab20b_r', 'tab20c', 'tab20c_r', 'terrain', 'terrain_r', 'viridis', 'viridis_r',
-                 'winter', 'winter_r']
-
-    projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll", "lcc", "tmerc", "nplaea", "gall",
-                   "npaeqd", "mill", "merc", "stere", "eqdc", "rotpole", "cyl", "npstere", "spstere", "hammer", "geos",
-                   "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "class", "vandg", "laea", "splaea", "robin"]
-
-    attributes = []
-    update_in_progress = False
-
-    '''     Frames, Text Variables, and Widgets for selection of the timeseries.h5 file to plot data from.     '''
+    '''     Frames, Text Variables, and Widgets for selection of the timeseries.h5 file to plot data from.      '''
     pick_h5_file_frame = Frame(frame)
 
     h5_file = StringVar()
     h5_file_short = StringVar()
     h5_file_short.set("No File Selected")
 
-    pick_h5_file_button = Button(pick_h5_file_frame, text='Select .h5 File', anchor='w', width=15, command=lambda: pick_file())
+    pick_h5_file_button = Button(pick_h5_file_frame, text='Select .h5 File', anchor='w', width=15,
+                                 command=lambda: pick_file())
     selected_ts_file_label = Label(pick_h5_file_frame, textvariable=h5_file_short)
-
 
     '''     Frames, Text Variables, and Widgets for selection of the mask.h5 file to add a mask to the ata.     '''
     pick_mask_file_frame = Frame(frame)
@@ -445,92 +453,120 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     mask_short = StringVar()
     mask_short.set("No File Selected")
 
-    pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', anchor='w', width=15, command=lambda: pick_mask())
+    pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', anchor='w', width=15,
+                                   command=lambda: pick_mask())
     selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
 
+    '''
+    |-----------------------------------------------------------------------------------------------------|
+    |                                                                                                     |
+    |                                WIDGETS TO CONTROL DISPLAY OPTIONS                                   |
+    |                                                                                                     |
+    |-----------------------------------------------------------------------------------------------------|
 
+    '''
 
-
-
+    '''     DISPLAY OPTIONS WIDGETS'''
     display_options_label = Label(frame, text="DISPLAY OPTIONS:", anchor=W)
 
-    '''     Frames, Text Variables, and Widgets for setting y-lim      '''
-    y_lim_frame = Frame(frame)
-    y_lim_upper_frame = Frame(y_lim_frame)
 
+    '''    WIDGETS FOR UPPER AND LOWER Y-LIM      '''
     starting_upper_lim = 5000
+
+    y_lim_frame = Frame(frame)
 
     y_lim_upper = DoubleVar()
     y_lim_upper.set(20)
 
+    y_lim_upper_frame = Frame(y_lim_frame)
     y_lim_upper_label = Label(y_lim_upper_frame, text="Maximum", width=8)
-    y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150, variable=y_lim_upper, showvalue=0)
+    y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
+                               variable=y_lim_upper, showvalue=0)
     y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6)
-
-    y_lim_lower_frame = Frame(y_lim_frame)
 
     y_lim_lower = DoubleVar()
     y_lim_lower.set(-20)
 
+    y_lim_lower_frame = Frame(y_lim_frame)
     y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
-    y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=5000, orient=HORIZONTAL, length=150, variable=y_lim_lower, showvalue=0)
+    y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
+                               variable=y_lim_lower, showvalue=0)
     y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
 
+
+    '''     WIDGETS FOR UNIT, COLORMAP, AND PROJECTION    '''
     unit_cmap_projection_labels_frame = Frame(frame)
     unit_label = Label(unit_cmap_projection_labels_frame, text="Unit", width=6, anchor='w')
     colormap_label = Label(unit_cmap_projection_labels_frame, text="Colormap", width=10, anchor='w')
     projection_label = Label(unit_cmap_projection_labels_frame, text="Projection", width=12, anchor='w')
 
-    '''     Frames, Text Variables, and Widgets for setting extraneous properties      '''
     unit_cmap_projection_frame = Frame(frame)
 
     unit = StringVar()
     unit.set("m")
-    #unit_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, unit) + tuple(["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]))
-    unit_options = ["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]
+
     unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=update_sliders)
     unit_option_menu.config(width=6)
-    #unit_option_menu.config(command=lambda: update_sliders())
 
     colormap = StringVar()
-    colormap_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, colormap) + tuple(colormaps))
-    colormap_option_menu.config(width=10)
     colormap.set('hsv')
 
+    colormap_option_menu = OptionMenu(unit_cmap_projection_frame, colormap, *colormaps)
+    colormap_option_menu.config(width=10)
+
     projection = StringVar()
-    projection_option_menu = apply(OptionMenu, (unit_cmap_projection_frame, projection) + tuple(projections))
-    projection_option_menu.config(width=12)
     projection.set("cea")
 
+    projection_option_menu = OptionMenu(unit_cmap_projection_frame, projection, *projections)
+    projection_option_menu.config(width=12)
+
+
+    '''     WIDGETS FOR FLIPPING, WRAP, AND OPPOSITE    '''
     flip_frame = Frame(frame)
 
     lr_flip = IntVar()
-    lr_flip_checkbutton = Checkbutton(flip_frame, text="Flip LR", variable=lr_flip)
-
     ud_flip = IntVar()
-    ud_flip_checkbutton = Checkbutton(flip_frame, text="Flip UD", variable=ud_flip)
-
     wrap = IntVar()
-    wrap_checkbutton = Checkbutton(flip_frame, text="Wrap", variable=wrap)
-
     opposite = IntVar()
+
+    lr_flip_checkbutton = Checkbutton(flip_frame, text="Flip LR", variable=lr_flip)
+    ud_flip_checkbutton = Checkbutton(flip_frame, text="Flip UD", variable=ud_flip)
+    wrap_checkbutton = Checkbutton(flip_frame, text="Wrap", variable=wrap)
     opposite_checkbutton = Checkbutton(flip_frame, text="Opposite", variable=opposite)
 
+
+    '''     WIDGETS FOR TRANSPARENCY'''
     transparency = IntVar()
     transparency.set(1.0)
+
     transparency_frame = Frame(frame)
     transparency_label = Label(transparency_frame, text="Alpha", width=8)
-    transparency_slider = Scale(transparency_frame, from_=0, to=1, resolution=0.1, orient=HORIZONTAL, length=150, variable=transparency, showvalue=0)
+    transparency_slider = Scale(transparency_frame, from_=0, to=1, resolution=0.1, orient=HORIZONTAL, length=150,
+                                variable=transparency, showvalue=0)
     transparency_entry = Entry(transparency_frame, textvariable=transparency, width=6)
 
+    '''     WIDGETS FOR SHOWING INFO SCREEN'''
     show_info = IntVar()
     show_info_checkbutton = Checkbutton(frame, text="Show File Info", variable=show_info)
 
 
 
+
+
+    '''
+        |-----------------------------------------------------------------------------------------------------|
+        |                                                                                                     |
+        |                         WIDGETS TO CONTROL DEM TOPOGRAPHY OPTIONS                                   |
+        |                                                                                                     |
+        |-----------------------------------------------------------------------------------------------------|
+
+    '''
+
+    '''     DEM OPTIONS WIDGETS'''
     dem_options_label = Label(frame, text="DEM OPTIONS:", anchor=W)
 
-    '''     Frames, Text Variables, and Widgets for selection of the topography dem.h5 file to add topography to the data.     '''
+
+    '''     WIDGETS FOR DEM TOPOGRAPHY FILE    '''
     pick_dem_file_frame = Frame(frame)
 
     dem_file = StringVar()
@@ -540,29 +576,34 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     pick_dem_file_button = Button(pick_dem_file_frame, text='Select Topography File', anchor='w', width=15, command=lambda: pick_dem())
     selected_dem_file_label = Label(pick_dem_file_frame, textvariable=dem_short)
 
+
+    '''     WIDGETS FOR DEM SHADING AND CONTOURS     '''
     dem_options_frame = Frame(frame)
 
     shading = IntVar()
     shading.set(1)
-    dem_shading_checkbutton = Checkbutton(dem_options_frame, text="Show Shaded Relief", variable=shading)
 
     countours = IntVar()
     countours.set(1)
+
+    dem_shading_checkbutton = Checkbutton(dem_options_frame, text="Show Shaded Relief", variable=shading)
     dem_countours_checkbutton = Checkbutton(dem_options_frame, text="Show Countour Lines", variable=countours)
 
-    dem_countour_options = Frame(frame)
 
-    dem_countour_smoothing_frame = Frame(dem_countour_options, width=15)
+    '''     WIDGERS FOR DEN CONTOUR SMOOTHING AND STEP'''
+    dem_countour_options = Frame(frame)
 
     countour_smoothing = StringVar()
     countour_smoothing.set("3.0")
+
+    countour_step = StringVar()
+    countour_step.set("200")
+
+    dem_countour_smoothing_frame = Frame(dem_countour_options, width=15)
     dem_countour_smoothing_label = Label(dem_countour_smoothing_frame, text="Contour Smoothing: ", anchor='c', width=15)
     dem_countour_smoothing_entry = Entry(dem_countour_smoothing_frame, textvariable=countour_smoothing, width=6)
 
     dem_countour_step_frame = Frame(dem_countour_options, width=15)
-
-    countour_step = StringVar()
-    countour_step.set("200")
     dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ", anchor='c', width=15)
     dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=6)
 
@@ -570,8 +611,20 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
 
 
 
+    '''
+            |-----------------------------------------------------------------------------------------------------|
+            |                                                                                                     |
+            |                                 WIDGETS TO CONTROL SUBSET OPTIONS                                   |
+            |                                                                                                     |
+            |-----------------------------------------------------------------------------------------------------|
+
+    '''
+
+    '''     SUBSET OPTIONS WIDGETS      '''
     subset_label = Label(frame, text="SUBSET DATA", anchor=W)
 
+
+    '''     WIDGETS FOR SUBSET X-VALUES'''
     subset_x_frame = Frame(frame)
 
     subset_x_from = StringVar()
@@ -584,6 +637,8 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     subset_x_to_label = Label(subset_x_frame, text="To: ")
     subset_x_to_entry = Entry(subset_x_frame, textvariable=subset_x_to, width=6)
 
+
+    '''     WIDGETS FOR SUBSET Y-VALUES     '''
     subset_y_frame = Frame(frame)
 
     subset_y_from = StringVar()
@@ -596,6 +651,8 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     subset_y_to_label = Label(subset_y_frame, text="To: ")
     subset_y_to_entry = Entry(subset_y_frame, textvariable=subset_y_to, width=6)
 
+
+    '''     WIDGETS FOR SUBSET LAT-VALUES       '''
     subset_lat_frame = Frame(frame)
 
     subset_lat_from = StringVar()
@@ -608,6 +665,8 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     subset_lat_to_label = Label(subset_lat_frame, text="To: ")
     subset_lat_to_entry = Entry(subset_lat_frame, textvariable=subset_lat_to, width=6)
 
+
+    '''     WIDGETS FOR SUBSET LON-VALUES       '''
     subset_lon_frame = Frame(frame)
 
     subset_lon_from = StringVar()
@@ -624,8 +683,20 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
 
 
 
+    '''
+            |-----------------------------------------------------------------------------------------------------|
+            |                                                                                                     |
+            |                              WIDGETS TO CONTROL REFERENCE OPTIONS                                   |
+            |                                                                                                     |
+            |-----------------------------------------------------------------------------------------------------|
+
+    '''
+
+    '''     REFERENCE OPTIONS WIDGETS     '''
     reference_label = Label(frame, text="REFERENCE:", anchor=W)
 
+
+    '''     WIDGETS FOR REFERENCE XY'''
     ref_xy_frame = Frame(frame)
 
     ref_x = StringVar()
@@ -636,6 +707,8 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     ref_y_label = Label(ref_xy_frame, text="Y:    ")
     ref_y_entry = Entry(ref_xy_frame, textvariable=ref_y, width=6)
 
+
+    '''     WIDGETS FOR REFERENCE LALO'''
     ref_latlon_frame = Frame(frame)
 
     ref_lat = StringVar()
@@ -646,12 +719,16 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     ref_lon_label = Label(ref_latlon_frame, text="Lon: ")
     ref_lon_entry = Entry(ref_latlon_frame, textvariable=ref_lon, width=6)
 
+
+    '''     WIDGETS FOR SHOWING REFERENCE MARKER        '''
     show_ref_frame = Frame(frame)
 
     show_ref = IntVar()
     show_ref.set(1)
     show_ref_checkbutton = Checkbutton(show_ref_frame, text="Show Reference", variable=show_ref)
 
+
+    '''     WIDGETS FOR REFERENCE OPTIONS       '''
     reference_options_labels_frame = Frame(frame)
 
     ref_color_label = Label(reference_options_labels_frame, text="Ref Color", width=10, anchor='w')
@@ -660,26 +737,41 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
 
     reference_options_frame = Frame(frame)
 
+    reference_colors = ["b", "g", "r", "m", "c", "y", "k", "w"]
     ref_color = StringVar()
-    ref_color_option_menu = apply(OptionMenu, (reference_options_frame, ref_color) + tuple(["b", "g", "r", "m", "c", "y", "k", "w"]))
-    ref_color_option_menu.config(width=10)
     ref_color.set("b")
+    ref_color_option_menu = OptionMenu(reference_options_frame, ref_color, *reference_colors)
+    ref_color_option_menu.config(width=10)
 
+    reference_symbols = [".", ",", "o", "v", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "*", "h", "H", "+",
+                         "x", "X", "d", "D", "|", "_"]
     ref_sym = StringVar()
-    ref_symbol_option_menu = apply(OptionMenu, (reference_options_frame, ref_sym) + tuple([".", ",", "o", "v", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "*", "h", "H", "+", "x", "X", "d", "D", "|", "_"]))
-    ref_symbol_option_menu.config(width=10)
     ref_sym.set(".")
+    ref_symbol_option_menu = OptionMenu(reference_options_frame, ref_sym,*reference_symbols)
+    ref_symbol_option_menu.config(width=10)
 
+    reference_dates = ["1", "2", "3", "4", "5"]
     ref_date = StringVar()
-    ref_date_option_menu = apply(OptionMenu, (reference_options_frame, ref_date) + tuple(["1", "2", "3", "4", "5"]))
+    ref_date_option_menu = OptionMenu(reference_options_frame, ref_date, *reference_dates)
     ref_date_option_menu.config(width=10)
 
 
 
 
 
+    '''
+            |-----------------------------------------------------------------------------------------------------|
+            |                                                                                                     |
+            |                                 WIDGETS TO CONTROL FIGURE OPTIONS                                   |
+            |                                                                                                     |
+            |-----------------------------------------------------------------------------------------------------|
+
+    '''
+    '''     FIGURE OPTIONS WIDGETS'''
     figure_label = Label(frame, text="FIGURE:", anchor=W)
 
+
+    '''     WIDGETS FOR FONT SIZE AND FIGURE DPI'''
     font_dpi_frame = Frame(frame)
 
     font_size = StringVar()
@@ -690,6 +782,8 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     dpi_label = Label(font_dpi_frame, text="DPI:    ")
     dpi_entry = Entry(font_dpi_frame, textvariable=plot_dpi, width=6)
 
+
+    '''     WIDGETS FOR NUMBER OF ROWS AND NUMBER OF COLUMNS      '''
     row_col_num_frame = Frame(frame)
 
     row_num = StringVar()
@@ -700,6 +794,8 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     col_num_label = Label(row_col_num_frame, text="Col Num:   ")
     col_num_entry = Entry(row_col_num_frame, textvariable=col_num, width=6)
 
+
+    '''     WIDGETS FOR SHOWING AXIS, COLORBAR, TITLE, AND AXIS TICKS       '''
     axis_cbar_frame = Frame(frame)
 
     axis_show = IntVar()
@@ -724,12 +820,16 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     title_in.set(1)
     title_in_checkbutton = Checkbutton(title_tick_frame, text="Title in Axes", variable=title_in)
 
+
+    '''     WIDGETS FOR TITLE     '''
     title_input_frame = Frame(frame)
 
     title = StringVar()
     title_input_label = Label(title_input_frame, text="Figure Title: ")
     title_input_entry = Entry(title_input_frame, textvariable=title, width=25)
 
+
+    '''     WIDGETS FO DIGURE SIZE      '''
     fig_size_frame = Frame(frame)
 
     fig_size_label = Label(fig_size_frame, text="Fig Size")
@@ -742,22 +842,28 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     fig_size_height_label = Label(fig_size_frame, text="Length: ")
     fig_size_height_entry = Entry(fig_size_frame, textvariable=fig_size_height, width=6)
 
+
+    '''     WIDGETS FOR FIGURE EXTENIONS AND FIGURE NUMBERS'''
     fig_ext_num_label_frame = Frame(frame)
     fig_ext_label = Label(fig_ext_num_label_frame, text="Fig Ext", width=14, anchor='w')
     fig_num_label = Label(fig_ext_num_label_frame, text="Fig Num", width=14, anchor='w')
 
     fig_ext_num_frame = Frame(frame)
 
+    figure_extensions = [".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]
     fig_ext = StringVar()
-    fig_ext_option_menu = apply(OptionMenu, (fig_ext_num_frame, fig_ext) + tuple([".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]))
-    fig_ext_option_menu.config(width=14)
     fig_ext.set(".pdf")
+    fig_ext_option_menu = OptionMenu(fig_ext_num_frame, fig_ext, *figure_extensions)
+    fig_ext_option_menu.config(width=14)
 
+    figure_numbers = ["1", "2", "3", "4", "5"]
     fig_num = StringVar()
-    fig_num_option_menu = apply(OptionMenu, (fig_ext_num_frame, fig_num) + tuple(["1", "2", "3", "4", "5"]))
-    fig_num_option_menu.config(width=14)
     fig_num.set("1")
+    fig_num_option_menu = OptionMenu(fig_ext_num_frame, fig_num, *figure_numbers)
+    fig_num_option_menu.config(width=14)
 
+
+    '''     WIDGETS FOR FIGURE WIDTH AND HIEGHT SPACE'''
     fig_w_space_frame = Frame(frame)
 
     fig_w_space = StringVar()
@@ -770,6 +876,8 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     fig_h_space_label = Label(fig_h_space_frame, text="Fig Height Space:")
     fig_h_space_entry = Entry(fig_h_space_frame, textvariable=fig_h_space, width=6)
 
+
+    '''     WIDGETS FOR COORDINATE TYPE     '''
     coords_frame = Frame(frame)
 
     coords = StringVar()
@@ -782,20 +890,35 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
 
 
 
+    '''
+            |-----------------------------------------------------------------------------------------------------|
+            |                                                                                                     |
+            |                                    WIDGETS TO CONTROL MAP OPTIONS                                   |
+            |                                                                                                     |
+            |-----------------------------------------------------------------------------------------------------|
 
+    '''
+
+    '''     MAP OPTIONS WIDGETS     '''
     map_options_label = Label(frame, text="MAP: ", anchor=W)
 
+
+    '''     WIDGETS FOR COASTLINE'''
     coastline_res_frame = Frame(frame)
 
     coastline = IntVar()
     coastline_checkbutton = Checkbutton(coastline_res_frame, text="Show Coastline", variable=coastline)
 
+
+    '''     WODGETS FOR RESOLUTION      '''
     resolution_label = Label(coastline_res_frame, text="Res: ", width=3, anchor='w')
     resolution = StringVar()
     resolution.set("c")
-    resolution_option_menu = apply(OptionMenu, (coastline_res_frame, resolution) + tuple(["c", "l", "i", "h", "f", "None"]))
+    resolution_option_menu = apply(OptionMenu,
+                                   (coastline_res_frame, resolution) + tuple(["c", "l", "i", "h", "f", "None"]))
     resolution_option_menu.config(width=8)
 
+    '''     WIDGETS FOR LALO LABEL AND LALO STEP'''
     lalo_settings_frame = Frame(frame)
 
     lalo_label = IntVar()
@@ -805,6 +928,8 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     lalo_step_label = Label(lalo_settings_frame, text="LALO Step: ")
     lalo_step_entry = Entry(lalo_settings_frame, textvariable=lalo_step, width=6)
 
+
+    '''     WIDGETS FOR SCALEBAR DISTANCE, LATITUDE, LONGITUDE      '''
     scalebar_settings = Frame(frame)
 
     scalebar_distance = StringVar()
@@ -818,6 +943,8 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
     scalebar_lat_entry = Entry(scalebar_settings, textvariable=scalebar_lat, width=4)
     scalebar_lon_entry = Entry(scalebar_settings, textvariable=scalebar_lon, width=4)
 
+
+    '''     WIDGETA FOR SHOWING SCALEBAR     '''
     show_scalebar_frame = Frame(frame)
 
     show_scalebar = IntVar()
@@ -828,12 +955,25 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
 
 
 
+    '''
+                |-----------------------------------------------------------------------------------------------------|
+                |                                                                                                     |
+                |                                 WIDGETS TO CONTROL OUTPUT OPTIONS                                   |
+                |                                                                                                     |
+                |-----------------------------------------------------------------------------------------------------|
+
+    '''
+
+    '''     OUTPUT OPTIONS WIDGETS      '''
     output_label = Label(frame, text="OUTPUT", anchor=W)
+
     output_frame = Frame(frame)
 
+    '''     WIDGETS FOR SAVE    '''
     save = IntVar()
     save_checkbutton = Checkbutton(output_frame, text="Save Output", variable=save)
 
+    '''     WIDGETS FOR OUTPU FILE      '''
     output_file = StringVar()
     output_file_label = Label(output_frame, text="Output File: ")
     output_file_entry = Entry(output_frame, textvariable=output_file, width=12)
@@ -843,6 +983,18 @@ scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
 
 
 
+
+
+
+
+    '''
+                |-----------------------------------------------------------------------------------------------------|
+                |                                                                                                     |
+                |                         PACKING AND PLACEMENT COMMANDS FOR ALL WIDGETS                              |
+                |                                                                                                     |
+                |-----------------------------------------------------------------------------------------------------|
+
+    '''
 
     pick_h5_file_frame.pack(anchor='w', fill=X, pady=(10, 5), padx=10)
     pick_h5_file_button.pack(side=LEFT, anchor='w', padx=(0, 20))
