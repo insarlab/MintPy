@@ -134,7 +134,7 @@ class Basemap2(Basemap):
         # Plot x/y tick without label
         if not ax:
             ax = plt.gca()
-        ax.tick_params(direction='in')
+        ax.tick_params(which='both', direction='in', labelsize=font_size, bottom=True, top=True, left=True, right=True)
 
         ax.set_xticks(lons)
         ax.set_yticks(lats)

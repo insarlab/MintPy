@@ -432,8 +432,8 @@ def main(argv):
         mean_coh_txt_file = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.txt'
         if os.path.isfile(mean_coh_txt_file):
             rmCmd = 'rm '+mean_coh_txt_file
-            print rmCmd
-            os.system(rmCmd)
+            #print rmCmd
+            #os.system(rmCmd)
         return
 
 

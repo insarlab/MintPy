@@ -177,7 +177,8 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
 
         elif k in multi_group_hdf5_file:
             print 'number of interferograms: '+str(epoch_num)
-            date12_list = ptime.list_ifgram2date12(epoch_list)
+            try:    date12_list = ptime.list_ifgram2date12(epoch_list)
+            except: date12_list = epoch_list
             for i in range(epoch_num):
                 ifgram = epoch_list[i]
                 data = h5[k][ifgram].get(ifgram)[:]
@@ -425,7 +426,8 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
         elif k in multi_group_hdf5_file:
             print 'number of interferograms: '+str(epoch_num)
-            date12_list = ptime.list_ifgram2date12(epoch_list)
+            try:    date12_list = ptime.list_ifgram2date12(epoch_list)
+            except: date12_list = epoch_list
             for i in range(epoch_num):
                 ifgram = epoch_list[i]
                 data = h5[k][ifgram].get(ifgram)[:]
@@ -439,6 +441,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
                 for key, value in atr.iteritems():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
+            prog_bar.close()
         h5.close()
         h5out.close()
 

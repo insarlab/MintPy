@@ -164,7 +164,7 @@ def cmdLineParse():
                         help='date(s) not included in velocity estimation, could be list of string or text file, i.e.:\n'+\
                              '--exclude 20040502 20060708 20090103\n'+\
                              '--exclude exclude_date.txt\n'+DROP_DATE_TXT)
-    parser.add_argument('--template', dest='template_file',\
+    parser.add_argument('--template','-t', dest='template_file',\
                         help='template file with the following items:'+TEMPLATE)
     parser.add_argument('-o','--output', dest='outfile', help='output file name')
 

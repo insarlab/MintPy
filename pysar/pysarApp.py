@@ -227,7 +227,7 @@ pysar.unwrapFiles        = auto  #[filt*rlks.unw, diff_*rlks.unw,  filt*.unw]
 pysar.corFiles           = auto  #[filt*rlks.cor, filt_*rlks.cor,  filt*.cor]
 pysar.lookupFile         = auto  #[geomap*.trans, sim*.UTM_TO_RDC, l*.rdr]
 pysar.demFile.radarCoord = auto  #[radar*.hgt,    sim*.hgt_sim,    hgt.rdr]
-pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    None]
+pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    None] not needed for ISCE product
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)
@@ -316,10 +316,10 @@ pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECM
 ## 8. Topographic (DEM) Residual Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
 ## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
 ## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
-pysar.topoError              = auto  #[yes / no], auto for yes
-pysar.topoError.polyOrder    = auto  #[1-inf], auto for 2, polynomial order of temporal deformation model
-pysar.topoError.stepFuncDate = auto  #[20080529,20100611 / no], auto for no, date of step jump
-pysar.topoError.excludeDate  = auto  #[20070321,20101120 / txtFile / no], auto for no, date exlcuded for error estimation
+pysar.topographicResidual              = auto  #[yes / no], auto for yes
+pysar.topographicResidual.polyOrder    = auto  #[1-inf], auto for 2, polynomial order of temporal deformation model
+pysar.topographicResidual.stepFuncDate = auto  #[20080529,20100611 / no], auto for no, date of step jump
+pysar.topographicResidual.excludeDate  = auto  #[20070321 / txtFile / no], auto for no, date exlcuded for error estimation
 
 
 ## 8.1 Phase Residual Root Mean Square
@@ -1044,7 +1044,7 @@ def main(argv):
               (inps.timeseries_file, inps.template_file, inps.inc_angle_file, inps.range_dist_file, outName)
     print topoCmd
     inps.timeseries_resid_file = None
-    if template['pysar.topoError'] in ['yes','auto']:
+    if template['pysar.topographicResidual'] in ['yes','auto']:
         print 'Correcting topographic residuals using method from Fattahi and Amelung, 2013, TGRS ...'
         if ut.update_file(outName, inps.timeseries_file):
             status = subprocess.Popen(topoCmd, shell=True).wait()

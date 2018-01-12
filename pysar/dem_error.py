@@ -73,7 +73,7 @@ def read_template2inps(template_file, inps=None):
     key_list = template.keys()
 
     # Read template option
-    prefix = 'pysar.topoError.'
+    prefix = 'pysar.topographicResidual.'
 
     key = prefix+'polyOrder'
     if key in key_list:
@@ -130,10 +130,12 @@ def check_exclude_date(exDateIn, dateList):
 ######################################
 TEMPLATE='''
 ## 8. Topographic (DEM) Residual Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
-pysar.topoError              = auto    #[yes / no], auto for yes
-pysar.topoError.polyOrder    = auto    #[1-inf], auto for 2, polynomial order of temporal deformation model
-pysar.topoError.excludeDate  = auto    #[20070321,20101120 / txtFile / no], auto for no, date not used for error estimation
-pysar.topoError.stepFuncDate = auto    #[20080529,20100611 / no], auto for no, date of step jump, i.e. eruption/earthquade date
+## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
+## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
+pysar.topographicResidual              = auto  #[yes / no], auto for yes
+pysar.topographicResidual.polyOrder    = auto  #[1-inf], auto for 2, polynomial order of temporal deformation model
+pysar.topographicResidual.stepFuncDate = auto  #[20080529,20100611 / no], auto for no, date of step jump
+pysar.topographicResidual.excludeDate  = auto  #[20070321 / txtFile / no], auto for no, date exlcuded for error estimation
 '''
 
 EXAMPLE='''example:
@@ -151,7 +153,7 @@ REFERENCE='''reference:
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='DEM Error Correction.',\
+    parser = argparse.ArgumentParser(description='Topographic (DEM) Residual Correction',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 

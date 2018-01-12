@@ -100,7 +100,7 @@ def cmdLineParse():
                                      epilog=EXAMPLE)
 
     parser.add_argument('timeseries_file', help='Timeseries file')
-    parser.add_argument('--template', dest='template_file',\
+    parser.add_argument('--template','-t', dest='template_file',\
                         help='template file with options below:\n'+TEMPLATE+'\n')
     parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5',\
                         help='mask file for estimation')
@@ -111,6 +111,7 @@ def cmdLineParse():
                         help='minimum RMS in m, threshold used to exclude dates, default: 0.02 m')
     parser.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\
                         help='figure size in inches - width and length')
+    parser.add_argument('--tick-year-num', dest='tick_year_num', type=int, default=1, help='Year number per major tick')
     inps = parser.parse_args()
     inps.save_reference_date = True
     inps.save_exclude_date = True
@@ -181,6 +182,7 @@ def main(argv):
         x_list = [i-bar_width/2 for i in dates]
 
         rms_list = [i*1000. for i in rms_list]
+        min_rms = inps.min_rms * 1000.
         # Plot all dates
         ax.bar(x_list, rms_list, bar_width.days)
         #ax.bar(x_list, rms_list, bar_width.days)
@@ -197,11 +199,11 @@ def main(argv):
             ax.bar(ex_x_list, ex_rms_list, bar_width.days, color='darkgray', label='Exclude date(s)')
 
         # Plot min_rms line
-        ax, xmin, xmax = ptime.auto_adjust_xaxis_date(ax, datevector, font_size)
-        ax.plot(np.array([xmin, xmax]), np.array([inps.min_rms, inps.min_rms]), '-')
+        ax, xmin, xmax = ptime.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=inps.tick_year_num)
+        ax.plot(np.array([xmin, xmax]), np.array([min_rms, min_rms]), '--k')
 
         # axis format
-        ax = pnet.auto_adjust_yaxis(ax, rms_list+[inps.min_rms], font_size, ymin=0.0)
+        ax = pnet.auto_adjust_yaxis(ax, rms_list+[min_rms], font_size, ymin=0.0)
         ax.set_xlabel('Time [years]',fontsize=font_size)
         ax.set_ylabel('Root Mean Square [mm]',fontsize=font_size)
         ax.yaxis.set_ticks_position('both')
