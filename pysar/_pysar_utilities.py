@@ -1690,7 +1690,7 @@ def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None, zero_firs
     refIndex = date6_list.index(referenceDate)
 
     A = np.zeros((ifgram_num, date_num))
-    B = np.zeros(np.shape(A))
+    B = np.zeros(A.shape)
     #t = np.zeros((ifgram_num, 2))
     for i in range(ifgram_num):
         m_idx, s_idx = [date6_list.index(j) for j in date12_list[i].split('-')]

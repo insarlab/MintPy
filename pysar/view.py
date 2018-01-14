@@ -373,7 +373,7 @@ def get_epoch_full_list_from_input(all_epoch_list, epoch_input_list=[], epoch_nu
     # Update epoch_num_list from epoch_input_list
     if epoch_input_list:
         for epoch_input in epoch_input_list:
-            epoch_list_tmp = [s for s in all_epoch_list if epoch_input in s]
+            epoch_list_tmp = [s for s in all_epoch_list if epoch_input.lower() in s.lower()]
             epoch_list += list(set(epoch_list_tmp) - set(epoch_list))
         epoch_num_list += [all_epoch_list.index(s) for s in epoch_list]
 
@@ -1328,13 +1328,20 @@ def main(argv):
         # Raise Error if no epoch left
         if epochNum == 0:
             raise Exception('Zero epoch found!')
+
     # for single-dataset file
-    elif k.lower() in ['.trans','.utm_to_rdc'] and not inps.epoch:
-        inps.epoch = ['range','azimuth']
-    elif fbase.startswith('los') and not inps.epoch:
-        inps.epoch = ['inc','az']
+    elif k.lower() in ['.trans','.utm_to_rdc']:
+        epochList = ['range','azimuth']
+    elif fbase.startswith('los'):
+        epochList = ['incidenceAngle','headingAngle']
     else:
-        inps.epoch = ['']
+        epochList = ['']
+
+    if not inps.epoch:
+        inps.epoch = epochList
+    else:
+        inps.epoch = get_epoch_full_list_from_input(epochList, inps.epoch)[0]
+
     epochNum = len(inps.epoch)
 
 

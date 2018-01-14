@@ -348,7 +348,7 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
     outfile = os.path.abspath(outfile)
 
     #####Check overlap with existing hdf5 file
-    h5dnameList = []
+    h5dsetList = []
     if os.path.isfile(outfile):
         print os.path.basename(outfile)+'  already exists.'
         try:
@@ -359,25 +359,32 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
             print rmCmd
             os.system(rmCmd)
         h5 = h5py.File(outfile, 'r')
-        h5dnameList = sorted(h5['geometry'].keys())
+        h5dsetList = sorted(h5['geometry'].keys())
         h5.close()
 
-    dnameList = []
-    fileList2 = list(fileList)
-    for fname in fileList2:
-        fbase = os.path.basename(fname).lower()
-        if ((fbase.startswith('lat') and 'latitude' in h5dnameList) or\
-            (fbase.startswith('lon') and 'longitude' in h5dnameList) or\
-            (fbase.startswith('los') and 'incidenceAngle' in h5dnameList) or\
-            (fbase.startswith('shadowmask') and 'shadowMask' in h5dnameList) or\
-            (fbase.startswith('watermask') and 'waterMask' in h5dnameList) or\
-            (fbase.startswith('incidenceang') and 'incidenceAngle' in h5dnameList) or\
-            (fbase.endswith(('.trans','.utm_to_rdc')) and 'rangeCoord' in h5dnameList) or\
-            ((fbase.startswith(('hgt','dem')) or fbase.endswith(('.hgt','.dem','wgs84'))) and 'height' in h5dnameList) or\
-            (os.path.abspath(fname) == outfile) or\
-            #(fbase.startswith('geometry') and any(i in h5dnameList for i in ['rangeCoord','longitude'])) or \
-            (fbase.startswith('rangedist') and 'slantRangeDistance' in h5dnameList)):
-            fileList.remove(fname)
+    def load_dataset(group, dsetList, fname, h5dsetList):
+        ## Read input file
+        if len(dsetList) == 2:
+            d0, d1, atr = readfile.read(fname)
+            dataList = [d0,d1]
+        else:
+            d0, atr = readfile.read(fname)
+            dataList = [d0]
+
+        ## Load into HDF5 file
+        for dsetName in dsetList:
+            idx = dsetList.index(dsetName)
+            if dsetName not in h5dsetList:
+                print 'Add %s from %s' % (dsetName, os.path.basename(fname))
+                dset = group.create_dataset(dsetName, data=dataList[idx], compression='gzip')
+            else:
+                if exDict['force_load']:
+                    print 'Update %s from %s' % (dsetName, os.path.basename(fname))
+                    dset = group.get(dsetName)
+                    dset[:] = dataList[idx]
+                else:
+                    print '%s is already existed, no need to re-load from %s.' % (dsetName, os.path.basename(fname))
+        return group, atr
 
     # Loop - Writing files into hdf5 file
     if fileList:
@@ -400,44 +407,32 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
         ##datasets
         for fname in fileList:
             fbase = os.path.basename(fname).lower()
-            print 'Add '+fname
             if fbase.startswith('lat'):
-                data, atr = readfile.read(fname)
-                dset = group.create_dataset('latitude', data=data, compression='gzip')
+                group, atr = load_dataset(group, ['latitude'], fname, h5dsetList)
 
             elif fbase.startswith('lon'):
-                data, atr = readfile.read(fname)
-                dset = group.create_dataset('longitude', data=data, compression='gzip')
+                group, atr = load_dataset(group, ['longitude'], fname, h5dsetList)
 
             elif fbase.startswith('los'):
-                d0, d1, atr = readfile.read(fname)
-                dset = group.create_dataset('incidenceAngle', data=d0, compression='gzip')
-                dset = group.create_dataset('headingAngle', data=d1, compression='gzip')
+                group, atr = load_dataset(group, ['incidenceAngle','headingAngle'], fname, h5dsetList)
 
             elif 'shadowmask' in fbase:
-                data, atr = readfile.read(fname)
-                dset = group.create_dataset('shadowMask', data=data, compression='gzip')
+                group, atr = load_dataset(group, ['shadowMask'], fname, h5dsetList)
 
             elif 'watermask' in fbase:
-                data, atr = readfile.read(fname)
-                dset = group.create_dataset('waterMask', data=data, compression='gzip')
+                group, atr = load_dataset(group, ['waterMask'], fname, h5dsetList)
 
             elif 'incidenceang' in fbase:
-                data, atr = readfile.read(fname)
-                dset = group.create_dataset('incidenceAngle', data=data, compression='gzip')
+                group, atr = load_dataset(group, ['incidenceAngle'], fname, h5dsetList)
 
             elif 'rangedist' in fbase:
-                data, atr = readfile.read(fname)
-                dset = group.create_dataset('slantRangeDistance', data=data, compression='gzip')
+                group, atr = load_dataset(group, ['slantRangeDistance'], fname, h5dsetList)
 
             elif fbase.endswith(('.trans','.utm_to_rdc')):
-                d0, d1, atr = readfile.read(fname)
-                dset = group.create_dataset('rangeCoord', data=d0, compression='gzip')
-                dset = group.create_dataset('azimuthCoord', data=d1, compression='gzip')
+                group, atr = load_dataset(group, ['rangeCoord','azimuthCoord'], fname, h5dsetList)
 
             elif fbase.startswith(('hgt','dem')) or fbase.endswith(('.hgt','.dem','wgs84')):
-                data, atr = readfile.read(fname)
-                dset = group.create_dataset('height', data=data, compression='gzip')
+                group, atr = load_dataset(group, ['height'], fname, h5dsetList)
 
             else:
                 print 'Un-recognized file type: '+fbase
@@ -680,7 +675,6 @@ def load_data_from_template(inps):
 
     # Check existed single dataset files
     inps_tmp = argparse.Namespace()
-    #import pdb; pdb.set_trace()
     inps_tmp = ut.check_loaded_dataset(inps.timeseries_dir, inps_tmp, print_msg=False)
     if (not inps.lut       or inps.lut       == 'auto') and inps_tmp.lookup_file   :  inps.lut       = inps_tmp.lookup_file
     if (not inps.dem_radar or inps.dem_radar == 'auto') and inps_tmp.dem_radar_file:  inps.dem_radar = inps_tmp.dem_radar_file
@@ -787,10 +781,12 @@ def cmdLineParse():
                         help='InSAR processor/software of the file')
 
     singleFile = parser.add_argument_group('Load into single HDF5 file')
-    singleFile.add_argument('-f','--file', nargs='*', help='file(s) to be loaded, processed by ROI_PAC, Gamma, DORIS or ISCE.')
+    singleFile.add_argument('-f','--file', nargs='*', help='file(s) to be loaded, processed by ROI_PAC, Gamma or ISCE.')
     singleFile.add_argument('--file-type', dest='file_type', help='output file type, i.e.\n'+\
                             'interferograms, coherence, wrapped, dem, ...')
     singleFile.add_argument('-o','--output', dest='outfile', help='output file name')
+    singleFile.add_argument('--force', dest='force_load', action='store_true',\
+                            help='Enforce the update/loading of input data, even though it is already existed.')
 
     multiFile = parser.add_argument_group('Load whole dataset using template, i.e.',TEMPLATE)
     multiFile.add_argument('--dir', dest='timeseries_dir',\
