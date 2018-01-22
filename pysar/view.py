@@ -750,10 +750,18 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
             print 'WARNING: input reference point has nan value, continue with original reference info'
             inps.seed_yx = None
     else:
-        try:    inps.seed_yx = [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]
-        except: inps.seed_yx = None
-        try:    inps.seed_lalo = [float(meta_dict['ref_lat']), float(meta_dict['ref_lon'])]
-        except: inps.seed_lalo = None
+        if 'ref_y' in meta_dict.keys():
+            inps.seed_yx = [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]
+        else:
+            inps.seed_yx = None
+
+        if 'ref_lat' in meta_dict.keys():
+            inps.seed_lalo = [float(meta_dict['ref_lat']), float(meta_dict['ref_lon'])]
+        elif inps.seed_yx and inps.geo_box:
+            inps.seed_lalo = [subset.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
+                              subset.coord_radar2geo(inps.seed_yx[1], meta_dict, 'x')]
+        else:
+            inps.seed_lalo = None
 
     # Multilook
     if inps.multilook and inps.multilook_num > 1:

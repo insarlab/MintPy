@@ -149,6 +149,7 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
 EXAMPLE='''example:
   tropcor_pyaps.py timeseries.h5 -d geometryRadar.h5 -i geometryRadar.h5
   tropcor_pyaps.py timeseries.h5 -d geometryGeo.h5   -i geometryGeo.h5   --weather-dir /famelung/data/WEATHER
+  tropcor_pyaps.py -d srtm1.dem -i 30 --hour 00:00 --ref-yx 2000 2500 --date-list date_list.txt
 
   tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s NARR
   tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s MERRA --delay dry -i 23
@@ -179,7 +180,7 @@ def cmdLineParse():
     parser.add_argument(dest='timeseries_file', nargs='?', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-d','--dem', dest='dem_file',\
                         help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
-    parser.add_argument('-i', dest='inc_angle',\
+    parser.add_argument('-i', dest='inc_angle', default='30',\
                         help='a file containing all incidence angles, or a number representing for the whole image.')
     parser.add_argument('--weather-dir', dest='weather_dir', \
                         help='directory to put downloaded weather data, i.e. ./../WEATHER\n'+\
@@ -204,7 +205,7 @@ def cmdLineParse():
     inps = parser.parse_args()
 
     # Correcting TIMESERIES or DOWNLOAD DATA ONLY, required one of them
-    if not inps.timeseries_file and not inps.download:
+    if not inps.dem_file and ( not inps.timeseries_file or not inps.date_list_file ):
         parser.print_help()
         sys.exit(1)
     return inps
@@ -214,14 +215,18 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
 
+    atr = dict()
     if inps.timeseries_file:
         inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
         atr = readfile.read_attribute(inps.timeseries_file)
         k = atr['FILE_TYPE']
-        if 'ref_y' not in atr.keys() and inps.ref_yx:
-            print 'No reference info found in input file, use input ref_yx: '+str(inps.ref_yx)
-            atr['ref_y'] = inps.ref_yx[0]
-            atr['ref_x'] = inps.ref_yx[1]
+    elif inps.dem_file:
+        inps.dem_file = ut.get_file_list([inps.dem_file])[0]
+        atr = readfile.read_attribute(inps.dem_file)
+    if 'ref_y' not in atr.keys() and inps.ref_yx:
+        print 'No reference info found in input file, use input ref_yx: '+str(inps.ref_yx)
+        atr['ref_y'] = inps.ref_yx[0]
+        atr['ref_x'] = inps.ref_yx[1]
 
     ##Read Incidence angle: to map the zenith delay to the slant delay
     if os.path.isfile(inps.inc_angle):
