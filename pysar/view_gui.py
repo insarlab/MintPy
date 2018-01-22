@@ -1,3 +1,5 @@
+#! /usr/bin/env python2
+
 from Tkinter import *
 
 import h5py
@@ -325,6 +327,18 @@ def set_variables_from_attributes():
 
     unit.set(attributes['UNIT'])
 
+    row_num.set("1")
+    col_num.set("1")
+    font_size.set("16")
+    plot_dpi.set("200")
+    fig_size_width.set("6.0")
+    fig_size_height.set("8.0")
+    title.set(h5_file_short.get())
+    fig_w_space.set("1")
+    fig_h_space.set("1")
+
+
+
 
 def compute_lalo(x, y, all_data=False):
     try:
@@ -417,7 +431,7 @@ def main():
     root.maxsize(width=365, height=750)
     root.resizable(width=False, height=False)
 
-    submit_button = Button(root, text="Show Plot", command=lambda: show_plot())
+    submit_button = Button(root, text="Show Plot", command=lambda: show_plot(), background="green")
     submit_button.pack(side=TOP, pady=(10, 20))
 
     canvas = Canvas(root, width=345, height=680)

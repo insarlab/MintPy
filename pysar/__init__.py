@@ -74,3 +74,5 @@ from . import transect
 from . import tropcor_phase_elevation
 #import tropcor_pyaps
 from . import unwrap_error
+import view_gui
+import ts_gui

@@ -1,3 +1,5 @@
+#! /usr/bin/env python2
+
 from Tkinter import *
 
 import h5py
