@@ -294,9 +294,11 @@ def show_plot():
         file_info = info.hdf5_structure_string(h5_file.get())
         show_file_info(file_info)
 
-    print(options)
-
-    view.main(options)
+    #print(options)
+    if h5_file.get() != "":
+        view.main(options)
+    else:
+        print("No file selected")
 
 
 def set_variables_from_attributes():
