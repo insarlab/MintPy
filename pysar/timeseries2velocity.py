@@ -11,17 +11,14 @@
 
 import os
 import sys
-import time
-import datetime
 import argparse
 
 import numpy as np
 import h5py
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import _datetime as ptime
+import _readfile as readfile
+import _writefile as writefile
 
 
 ############################################################################
@@ -37,7 +34,7 @@ def get_exclude_date(inps, date_list_all):
 
     # 1. template_file
     if inps.template_file:
-        print 'read option from template file: '+inps.template_file
+        print('read option from template file: '+inps.template_file)
         inps = read_template2inps(inps.template_file, inps)
 
     # 2. ex_date
@@ -52,26 +49,26 @@ def get_exclude_date(inps, date_list_all):
             inps.ex_date += list(set(ex_date) - set(inps.ex_date))
         # delete dates not existed in input file
         inps.ex_date = list(set(inps.ex_date).intersection(date_list_all))
-        print 'exclude date:'+str(inps.ex_date)
+        print('exclude date:'+str(inps.ex_date))
 
     # 3. min_date
     if inps.min_date:
-        print 'start date: '+inps.min_date
+        print('start date: '+inps.min_date)
         yy_min = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.min_date))
         for i in range(len(date_list_all)):
             date = date_list_all[i]
             if yy_list_all[i] < yy_min and date not in inps.ex_date:
-                print '  remove date: '+date
+                print('  remove date: '+date)
                 inps.ex_date.append(date)
 
     # 4. max_date
     if inps.max_date:
-        print 'end date: '+inps.max_date
+        print('end date: '+inps.max_date)
         yy_max = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.max_date))
         for i in range(len(date_list_all)):
             date = date_list_all[i]
             if yy_list_all[i] > yy_max and date not in inps.ex_date:
-                print '  remove date: '+date
+                print('  remove date: '+date)
                 inps.ex_date.append(date)
 
     return inps.ex_date
@@ -100,7 +97,7 @@ def read_template2inps(template_file, inps=None):
     if not inps:
         inps = cmdLineParse()
     template = readfile.read_template(template_file)
-    key_list = template.keys()
+    key_list = list(template.keys())
 
     # Read template option
     prefix = 'pysar.velocity.'
@@ -181,7 +178,7 @@ def main(argv):
     #print '\n********** Inversion: Time Series to Velocity ***********'
     atr = readfile.read_attribute(inps.timeseries_file)
     k = atr['FILE_TYPE']
-    print 'input '+k+' file: '+inps.timeseries_file
+    print('input '+k+' file: '+inps.timeseries_file)
     if not k == 'timeseries':
         sys.exit('ERROR: input file is not timeseries!') 
     h5file = h5py.File(inps.timeseries_file)
@@ -189,20 +186,20 @@ def main(argv):
     #####################################
     ## Date Info
     dateListAll = sorted(h5file[k].keys())
-    print '--------------------------------------------'
-    print 'Dates from input file: '+str(len(dateListAll))
-    print dateListAll
+    print('--------------------------------------------')
+    print('Dates from input file: '+str(len(dateListAll)))
+    print(dateListAll)
 
     inps.ex_date = get_exclude_date(inps, dateListAll)
 
     dateList = sorted(list(set(dateListAll) - set(inps.ex_date)))
-    print '--------------------------------------------'
+    print('--------------------------------------------')
     if len(dateList) == len(dateListAll):
-        print 'using all dates to calculate the velocity'
+        print('using all dates to calculate the velocity')
     else:
-        print 'Dates used to estimate the velocity: '+str(len(dateList))
-        print dateList
-    print '--------------------------------------------'
+        print('Dates used to estimate the velocity: '+str(len(dateList)))
+        print(dateList)
+    print('--------------------------------------------')
 
     # Date Aux Info
     dates, datevector = ptime.date_list2vector(dateList)
@@ -217,7 +214,7 @@ def main(argv):
     B_inv = np.array(B_inv, np.float32)
 
     # Loading timeseries
-    print "Loading time series file: "+inps.timeseries_file+' ...'
+    print("Loading time series file: "+inps.timeseries_file+' ...')
     width = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
     dateNum = len(dateList)
@@ -231,16 +228,16 @@ def main(argv):
     h5file.close()
 
     # Velocity Inversion
-    print 'Calculating velocity ...'
+    print('Calculating velocity ...')
     X = np.dot(B_inv, timeseries)
     velocity = np.reshape(X[0,:], [length,width])
 
-    print 'Calculating rmse ...'
+    print('Calculating rmse ...')
     timeseries_linear = np.dot(B, X)
     timeseries_residual = timeseries - timeseries_linear
     rmse = np.reshape(np.sqrt((np.sum((timeseries_residual)**2,0))/dateNum), [length,width])
     
-    print 'Calculating the standard deviation of the estimated velocity ...'
+    print('Calculating the standard deviation of the estimated velocity ...')
     s1 = np.sqrt(np.sum(timeseries_residual**2,0) / (dateNum-2))
     s2 = np.sqrt(np.sum((datevector-np.mean(datevector))**2))
     std = np.reshape(s1/s2, [length,width])
@@ -266,20 +263,20 @@ def main(argv):
     atr['date2'] = datevector[dateNum-1]
 
     # File Writing
-    print '--------------------------------------'
+    print('--------------------------------------')
     atr['FILE_TYPE'] = 'velocity'
-    print 'writing >>> '+inps.outfile
+    print('writing >>> '+inps.outfile)
     writefile.write(velocity, atr, inps.outfile)
     
     #atr['FILE_TYPE'] = 'rmse'
-    print 'writing >>> '+inps.outfile_rmse
+    print('writing >>> '+inps.outfile_rmse)
     writefile.write(rmse, atr, inps.outfile_rmse)
     
     #atr['FILE_TYPE'] = 'rmse'
-    print 'writing >>> '+inps.outfile_std
+    print('writing >>> '+inps.outfile_std)
     writefile.write(std, atr, inps.outfile_std)
 
-    print 'Done.\n'
+    print('Done.\n')
     return inps.outfile
 
 

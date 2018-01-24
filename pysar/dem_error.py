@@ -14,10 +14,10 @@ import h5py
 import numpy as np
 from scipy.special import gamma
 
-import pysar._datetime as ptime
-import pysar._pysar_utilities as ut
-import pysar._readfile as readfile
-import pysar._writefile as writefile
+import _datetime as ptime
+import _pysar_utilities as ut
+import _readfile as readfile
+import _writefile as writefile
 
 
 def topographic_residual_inversion(ts0, A0, inps):
@@ -70,7 +70,7 @@ def read_template2inps(template_file, inps=None):
     if not inps:
         inps = cmdLineParse()
     template = readfile.read_template(template_file)
-    key_list = template.keys()
+    key_list = list(template.keys())
 
     # Read template option
     prefix = 'pysar.topographicResidual.'
@@ -122,7 +122,7 @@ def check_exclude_date(exDateIn, dateList):
             exDate = [ptime.yyyymmdd(exDate)]
         exDateOut += exDate
     exDateOut = sorted(list(set(exDateOut).intersection(dateList)))
-    print 'Exclude date for DEM error estimation:'
+    print('Exclude date for DEM error estimation:')
     print exDateOut
     return exDateOut
 
@@ -191,10 +191,9 @@ def main(argv):
     if not inps.outfile:
         inps.outfile = os.path.splitext(inps.timeseries_file)[0]+suffix+os.path.splitext(inps.timeseries_file)[1]
     if inps.template_file:
-        print 'read option from template file: '+inps.template_file
+        print('read option from template file: '+inps.template_file)
         inps = read_template2inps(inps.template_file, inps)
 
-    ##### Read Data
     atr = readfile.read_attribute(inps.timeseries_file)
     coordType = 'radar'
     if 'Y_FIRST' in atr.keys():
@@ -232,6 +231,7 @@ def main(argv):
     h5 = h5py.File(inps.timeseries_file)
     date_list = sorted(h5['timeseries'].keys())
     date_num = len(date_list)
+
     inps.tbase = np.array(ptime.date_list2tbase(date_list)[0]).reshape(-1,1)
 
     #Mark dates used in the estimation
@@ -250,12 +250,12 @@ def main(argv):
         sys.stdout.write('\rreading acquisition %3d/%3d ...' % (i+1, date_num))
         sys.stdout.flush()
     h5.close()
-    print ''
+    print('')
 
 
     ##### Design matrix - temporal deformation model
-    print '-------------------------------------------------'
-    print 'Correct topographic phase residual using Fattahi and Amelung (2013, IEEE-TGRS)'
+    print('-------------------------------------------------')
+    print('Correct topographic phase residual using Fattahi and Amelung (2013, IEEE-TGRS)')
     msg = 'minimum-norm constrain on: phase'
     if inps.phase_velocity:
         msg += ' velocity'
@@ -288,6 +288,7 @@ def main(argv):
     print '-------------------------------------------------'
 
 
+<<<<<<< HEAD
     ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
     ## Output estimated steps 
     print 'ordinal least squares (OLS) inversion using L2-norm minimization'
@@ -366,8 +367,9 @@ def main(argv):
         sys.stdout.flush()
         dset = group.create_dataset(date_list[i], data=timeseriesRes[i].reshape(length, width), compression='gzip')
     print ''
+
     # Attribute
-    for key,value in atr.iteritems():
+    for key,value in atr.items():
         group.attrs[key] = value
     h5.close()
 

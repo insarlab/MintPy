@@ -8,10 +8,10 @@
 import sys
 import os
 import getopt
-import pysar._readfile as readfile
+import _readfile as readfile
 
 def usage():
-    print '''
+    print('''
 **************************************************************
   Display GAMMA products
       support files: .mli, .slc 
@@ -36,7 +36,7 @@ def usage():
       gamma_view.py -f 101016.slc -x 3200:4000 -y 5500:7100 -P yes
 
 **************************************************************
-    '''
+    ''')
 
 ###########################################################
 def main(argv):
@@ -83,24 +83,24 @@ def main(argv):
     # subset
     try:
         ysub
-        if ysub[1] > length: ysub[1]=length;   print 'ysub[1] > length! Set ysub[1]=length='+str(length)
+        if ysub[1] > length: ysub[1]=length;   print('ysub[1] > length! Set ysub[1]=length='+str(length))
     except:
         ysub=[0,length]
-        print 'no subset in y direction'
+        print('no subset in y direction')
     try:
         xsub
-        if xsub[1] > width:  xsub[1]=width;  print 'xsub[1] > width! Set xsub[1]=width='+str(width)
+        if xsub[1] > width:  xsub[1]=width;  print('xsub[1] > width! Set xsub[1]=width='+str(width))
     except:
         xsub=[0,width]
-        print 'no subset in x direction'
+        print('no subset in x direction')
   
     if (ysub[1]-ysub[0])*(xsub[1]-xsub[0]) < length*width:
         subsetCmd='subset.py -f '+file+' -x '+str(xsub[0])+':'+str(xsub[1])+' -y '+str(ysub[0])+':'+str(ysub[1])+' -o '+outname
-        print subsetCmd
+        print(subsetCmd)
         os.system(subsetCmd)
     else:
         outname = file
-        print 'No subset.'
+        print('No subset.')
     
     # generate .ras file
     if ext == '.mli':
@@ -109,7 +109,7 @@ def main(argv):
         try:    mli_az
         except: mli_az=1
         rasCmd='raspwr '+outname+' '+str(xsub[1]-xsub[0])+' 1 0 '+str(mli_rg)+' '+str(mli_az)+' 1. .35 1 - 0'
-        print rasCmd
+        print(rasCmd)
         os.system(rasCmd)
     elif ext in ('.slc','.SLC'):
         try:    mli_rg
@@ -117,16 +117,16 @@ def main(argv):
         try:    mli_az
         except: mli_az=2
         rasCmd='rasSLC '+outname+' '+str(xsub[1]-xsub[0])+' 1 0 '+str(mli_rg)+' '+str(mli_az)+' 1. .35 1 1'
-        print rasCmd
+        print(rasCmd)
         os.system(rasCmd)
     else:
-        print 'Not recognized file extension!'
+        print('Not recognized file extension!')
         usage(); sys.exit(1)
 
     # display .ras file
     if disRas in ('yes','Yes','Y','y','YES'):
         disCmd = 'display '+outname+'.ras'
-        print disCmd
+        print(disCmd)
         os.system(disCmd)
 
         

@@ -7,18 +7,14 @@
 
 
 import sys
-import os
 
-import h5py
-import numpy as np
-
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import _readfile as readfile
+import _writefile as writefile
+import _pysar_utilities as ut
 
 
 def usage():
-    print '''
+    print('''
 usage:  range_distance.py  file  [outfile]
 
 Generates range distance (in Radar Coordinate) for each pixel
@@ -33,7 +29,7 @@ example:
   range_distance.py  velocity.h5
   range_distance.py  timeseries.h5
   range_distance.py  temporal_coherence.h5
-    '''
+    ''')
     return
 
 def main(argv):
@@ -50,16 +46,17 @@ def main(argv):
     range_dis = ut.range_distance(atr, dimension=2)
     
     # Geo coord
+
     if 'Y_FIRST' in atr.keys():
-        print 'Input file is geocoded, only center range distance is calculated: '
-        print range_dis
+        print('Input file is geocoded, only center range distance is calculated: ')
+        print(range_dis)
         length = int(atr['FILE_LENGTH'])
         width = int(atr['WIDTH'])
         range_dis_mat = np.zeros((length, width), np.float32)
         range_dis_mat[:] = range_dis
         range_dis = range_dis_mat
 
-    print 'writing >>> '+outFile
+    print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'
     try: atr.pop('ref_date')

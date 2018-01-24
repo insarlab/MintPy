@@ -800,10 +800,10 @@ def main(argv):
 
     # Network Inversion
     if inps.resid_norm == 'L2':
-        print 'inverse time-series using L2 norm minimization'
+        print('inverse time-series using L2 norm minimization')
         ifgram_inversion(inps.ifgram_file, inps.coherence_file, meta=vars(inps))
     else:
-        print 'inverse time-series using L1 norm minimization'
+        print('inverse time-series using L1 norm minimization')
         ut.timeseries_inversion_L1(inps.ifgram_file, inps.timeseriesFile)
 
     return

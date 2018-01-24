@@ -112,9 +112,9 @@ def read(File, box=None, epoch=None, print_msg=True):
             except: epoch2read = None
             if not epoch2read:
                 if print_msg:
-                    print 'ERROR: no input epoch found!'
-                    print 'input epoch: '+str(epoch)
-                    print 'available epoches: '+str(epoch_list)
+                    print('ERROR: no input epoch found!')
+                    print('input epoch: '+str(epoch))
+                    print('available epoches: '+str(epoch_list))
                 sys.exit(1)
 
             elif k in multi_dataset_hdf5_file:
@@ -277,8 +277,8 @@ def read_attribute(File, epoch=None):
     '''
     ext = os.path.splitext(File)[1].lower()
     if not os.path.isfile(File):
-        print 'Input file not existed: '+File
-        print 'Current directory: '+os.getcwd()
+        print('Input file not existed: '+File)
+        print('Current directory: '+os.getcwd())
         sys.exit(1)
 
     ##### PySAR
@@ -319,7 +319,7 @@ def read_attribute(File, epoch=None):
         #    sys.exit('Unrecognized h5 file key: '+k)
 
         atr = dict()
-        for key, value in attrs.iteritems():
+        for key, value in attrs.items():
             atr[key] = str(value)
         atr['FILE_TYPE'] = str(k)
         atr['PROCESSOR'] = 'pysar'
@@ -344,9 +344,9 @@ def read_attribute(File, epoch=None):
             atr['FILE_TYPE'] = ext
             #if 'FILE_TYPE' not in atr.keys():
             #    atr['FILE_TYPE'] = ext
-            if 'PROCESSOR' not in atr.keys():
+            if 'PROCESSOR' not in list(atr.keys()):
                 atr['PROCESSOR'] = 'roipac'
-            if 'INSAR_PROCESSOR' not in atr.keys():
+            if 'INSAR_PROCESSOR' not in list(atr.keys()):
                 atr['INSAR_PROCESSOR'] = 'roipac'
 
         ##### PAR File
@@ -355,9 +355,9 @@ def read_attribute(File, epoch=None):
             atr['FILE_TYPE'] = ext
             #if 'FILE_TYPE' not in atr.keys():
             #    atr['FILE_TYPE'] = ext
-            if 'PROCESSOR' not in atr.keys():
+            if 'PROCESSOR' not in list(atr.keys()):
                 atr['PROCESSOR'] = 'gamma'
-            if 'INSAR_PROCESSOR' not in atr.keys():
+            if 'INSAR_PROCESSOR' not in list(atr.keys()):
                 atr['INSAR_PROCESSOR'] = 'gamma'
 
         ##### XML File
@@ -366,7 +366,7 @@ def read_attribute(File, epoch=None):
             if 'FILE_TYPE' not in atr.keys():
                 atr['FILE_TYPE'] = ext
             atr['PROCESSOR'] = 'isce'
-            if 'INSAR_PROCESSOR' not in atr.keys():
+            if 'INSAR_PROCESSOR' not in list(atr.keys()):
                 atr['INSAR_PROCESSOR'] = 'isce'
 
         else:
@@ -385,7 +385,7 @@ def read_attribute(File, epoch=None):
             atr['UNIT'] = '1'
 
     atr['FILE_PATH'] = os.path.abspath(File)
-    if 'INSAR_PROCESSOR' not in atr.keys():
+    if 'INSAR_PROCESSOR' not in list(atr.keys()):
         if atr['PROCESSOR'] == 'pysar':
             atr['INSAR_PROCESSOR'] = 'roipac'
         else:
@@ -405,7 +405,7 @@ def check_variable_name(path):
             p0 = os.getenv(s[1:])
             path = path.replace(path.split("/")[0], p0)
         except:
-            print 'WARNING: Un-recognized environmental variable: '+s
+            print('WARNING: Un-recognized environmental variable: '+s)
     return path
 
 def is_plot_attribute(attribute):
@@ -542,6 +542,7 @@ def read_isce_xml(File):
 
 def attribute_gamma2roipac(par_dict_in):
     '''Convert Gamma par attribute into ROI_PAC format'''
+
     par_dict = dict()
     for key, value in par_dict_in.iteritems():
         par_dict[key] = value
@@ -948,13 +949,13 @@ def read_multiple(File,box=''):  # Not ready yet
     ##### Bounding Box
     if box == '':  box = [0,0,width,length]
 
-    epochList = h5file[k].keys()
+    epochList = list(h5file[k].keys())
     epochNum  = len(epochList)
-    if epochNum == 0:   print "There is no data in the file";  sys.exit(1)
+    if epochNum == 0:   print("There is no data in the file");  sys.exit(1)
  
     data = np.zeros([length,width])
     for igram in igramList:
-        print igram
+        print(igram)
         
         dset = h5file[k][igram].get(igram)
         ##### Crop

@@ -12,11 +12,8 @@ import os
 import h5py
 import numpy as np
 import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
-from scipy.linalg import pinv as pinv
 
-import pysar._readfile as readfile
+import _readfile as readfile
 
 
 ####################################################################################
@@ -34,7 +31,7 @@ def to_percent(y, position):
 
 ####################################################################################
 def usage():
-    print '''usage: baseline_trop.py timeseries_file dem_file poly_order {range_and_azimuth|range|azimuth} mask_file
+    print('''usage: baseline_trop.py timeseries_file dem_file poly_order {range_and_azimuth|range|azimuth} mask_file
 
 Simultaneously correcting the baseline error and stratified tropospheric delay correlated with DEM.
 
@@ -46,7 +43,7 @@ example:
   baseline_trop.py  timeseries.h5 radar.hgt 1
   baseline_trop.py  timeseries.h5 radar.hgt 1 range
   baseline_trop.py  timeseries.h5 radar.hgt 1 range_and_azimuth mask.h5
-    '''
+    ''')
     return
 
 
@@ -62,22 +59,22 @@ def main(argv):
   
     try:    baseline_error = argv[3]
     except: baseline_error = 'range_and_azimuth'
-    print baseline_error
+    print(baseline_error)
     ##################################
     h5file = h5py.File(File)
-    dateList = h5file['timeseries'].keys()
+    dateList = list(h5file['timeseries'].keys())
     ##################################
   
     try: maskFile = argv[4]
     except:
         if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
         elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
-        else: print 'No mask found!'; sys.exit(1)
+        else: print('No mask found!'); sys.exit(1)
     try:
         Mask,Matr = readfile.read(maskFile, epoch='mask')
-        print 'mask: '+maskFile
+        print('mask: '+maskFile)
     except:
-        print 'Can not open mask file: '+maskFile
+        print('Can not open mask file: '+maskFile)
         sys.exit(1)
   
     #try:
@@ -106,16 +103,16 @@ def main(argv):
     Fh=-np.sin(lookangle)
     Fv=-np.cos(lookangle)
   
-    print 'Looking for azimuth pixel size'
+    print('Looking for azimuth pixel size')
     try:
         daz=float(h5file['timeseries'].attrs['AZIMUTH_PIXEL_SIZE'])
     except:
-        print'''
+        print('''
         ERROR!
         The attribute AZIMUTH_PIXEL_SIZE was not found!
         Possible cause of error: Geo coordinate.
         This function works only in radar coordinate system.
-        '''   
+        ''')   
         sys.exit(1)
   
     lines=np.tile(np.arange(0,sy,1),[1,sx])
@@ -158,7 +155,7 @@ def main(argv):
     elif p==3:
         #  A = np.vstack((dem[ndx]**3,dem[ndx]**2,dem[ndx],np.ones(len(dem[ndx])))).T
         B = np.vstack((dem**3,dem**2,dem,np.ones(len(dem)))).T
-    print np.shape(A)
+    print(np.shape(A))
   
     Ainv=np.linalg.pinv(A)
     ###################################################
@@ -169,7 +166,7 @@ def main(argv):
     Bhrate=[]
     Bvrate=[]
     Be=np.zeros([len(dateList),num_base_par+p+1])  
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     for i in range(1,len(dateList)):
         dset = h5file['timeseries'].get(dateList[i])
         data = dset[0:dset.shape[0],0:dset.shape[1]]
@@ -181,20 +178,20 @@ def main(argv):
         Bv.append(Berror[2])
         Bvrate.append(Berror[3])
         Be[i,:]=Berror
-        print Berror
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%' 
-    print 'baseline error           mean                          std'   
-    print '       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh))
-    print '     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate))
-    print '       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv))
-    print '     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate))
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'       
+        print(Berror)
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%') 
+    print('baseline error           mean                          std')   
+    print('       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh)))
+    print('     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate)))
+    print('       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv)))
+    print('     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate)))
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')       
     # plt.hist(Bh,bins=8,normed=True)
     # formatter = FuncFormatter(to_percent)
     # Set the formatter
     # plt.gca().yaxis.set_major_formatter(formatter)    
     # plt.show()
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     # print 'Estimating Baseline error from each differences ...'
 
     orbEffect=np.zeros([len(dateList),sy,sx])
@@ -206,7 +203,7 @@ def main(argv):
         orbEffect[i,:,:]=effect - effect[yref,xref]
         del effect
   
-    print 'Correctiing the time series '
+    print('Correctiing the time series ')
     outName=File.replace('.h5','')+'_baseTropCor.h5'
     h5orbCor=h5py.File(outName,'w')
     group = h5orbCor.create_group('timeseries')
@@ -215,7 +212,7 @@ def main(argv):
         data = dset1[0:dset1.shape[0],0:dset1.shape[1]] - orbEffect[i,:,:]
         dset = group.create_dataset(dateList[i], data=data, compression='gzip')      
   
-    for key,value in h5file['timeseries'].attrs.iteritems():
+    for key,value in h5file['timeseries'].attrs.items():
         group.attrs[key] = value
   
   

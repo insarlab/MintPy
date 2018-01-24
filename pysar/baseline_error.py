@@ -12,11 +12,8 @@ import os
 import h5py
 import numpy as np
 import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
-from scipy.linalg import pinv as pinv
 
-import pysar._readfile as readfile
+import _readfile as readfile
 
 
 ############################################################
@@ -34,7 +31,7 @@ def to_percent(y, position):
 
 ############################################################
 def usage():
-    print '''usage: baseline_error.py [-h] timeseries_file [mask_file] [exclude_date]
+    print('''usage: baseline_error.py [-h] timeseries_file [mask_file] [exclude_date]
 
 Estimating the errors in baseline components (bh,bv,dbh,dbv), and correcting the time-series. 
 
@@ -49,7 +46,7 @@ reference:
 
 example:
   baseline_error.py  timeseries.h5 Mask.h5
-    '''
+    ''')
     return
 
 
@@ -69,7 +66,7 @@ def main(argv):
   
     ##################################
     h5file = h5py.File(File)
-    dateList = h5file['timeseries'].keys()
+    dateList = list(h5file['timeseries'].keys())
     ##################################
   
     ##### Read Mask File 
@@ -79,12 +76,12 @@ def main(argv):
     except:
         if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
         elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
-        else: print 'No mask found!'; sys.exit(1)
+        else: print('No mask found!'; sys.exit(1))
     try:
         Mask,Matr = readfile.read(maskFile, epoch='mask')
-        print 'mask: '+maskFile
+        print('mask: '+maskFile)
     except:
-        print 'Can not open mask file: '+maskFile
+        print('Can not open mask file: '+maskFile)
         sys.exit(1)
 
 
@@ -104,12 +101,12 @@ def main(argv):
     try:
         daz=float(h5file['timeseries'].attrs['AZIMUTH_PIXEL_SIZE'])
     except:
-        print'''
+        print('''
         ERROR!
         The attribute AZIMUTH_PIXEL_SIZE was not found!
         Possible cause of error: Geo coordinate.
         This function works only in radar coordinate system.
-        '''
+        ''')
         sys.exit(1)
     lines=np.tile(np.arange(0,sy,1),[1,sx])
     lines=lines.flatten(1)
@@ -130,7 +127,7 @@ def main(argv):
     try:     excludedDates = argv[2] 
     except:  excludedDates = []
   
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     for i in range(1,len(dateList)):
         if not dateList[i] in excludedDates:
             dset = h5file['timeseries'].get(dateList[i])
@@ -143,27 +140,27 @@ def main(argv):
             Bvrate.append(Berror[3])
             Be[i,:]=Berror
         else:
-            print str(dateList[i]) + ' is not considered for Baseline Error estimation'
+            print(str(dateList[i]) + ' is not considered for Baseline Error estimation')
   
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%' 
-    print 'baseline error           mean                          std'   
-    print '       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh))
-    print '     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate))
-    print '       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv))
-    print '     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate))
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'       
-    print 'bh error of each epoch:'
-    print Bh
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    print 'bv error of each epoch:'
-    print Bv
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%') 
+    print('baseline error           mean                          std')   
+    print('       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh)))
+    print('     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate)))
+    print('       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv)))
+    print('     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate)))
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')       
+    print('bh error of each epoch:')
+    print(Bh)
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    print('bv error of each epoch:')
+    print(Bv)
     # plt.hist(Bh,bins=8,normed=True)
     # formatter = FuncFormatter(to_percent)
     # Set the formatter
     # plt.gca().yaxis.set_major_formatter(formatter)    
     # plt.show()
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    print 'Estimating Baseline error from each differences ...'
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    print('Estimating Baseline error from each differences ...')
   
     Bedif=np.zeros([len(dateList), 4])
     for i in range(1,len(dateList)):
@@ -177,7 +174,7 @@ def main(argv):
         Bedif[i,:]=Berrord
        
   
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
   
     yref=int(h5file['timeseries'].attrs['ref_y'])
     xref=int(h5file['timeseries'].attrs['ref_x'])
@@ -191,7 +188,7 @@ def main(argv):
         orbEffect[i,:,:]=effect - effect[yref,xref]
         del effect
   
-    print 'Correctiing the time series '
+    print('Correctiing the time series ')
     outName=File.replace('.h5','')+'_baselineCor.h5'
     h5orbCor=h5py.File(outName,'w')
     group = h5orbCor.create_group('timeseries')
@@ -200,7 +197,7 @@ def main(argv):
         data = dset1[0:dset1.shape[0],0:dset1.shape[1]] - orbEffect[i,:,:]
         dset = group.create_dataset(dateList[i], data=data, compression='gzip')      
   
-    for key,value in h5file['timeseries'].attrs.iteritems():
+    for key,value in h5file['timeseries'].attrs.items():
         group.attrs[key] = value
   
     try:

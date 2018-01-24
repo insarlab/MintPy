@@ -11,13 +11,13 @@ import os
 import sys
 import argparse
 
-import _gmt as gmt
+from . import _gmt as gmt
 import h5py
 import numpy as np
 
-import pysar._readfile as readfile
-import pysar.view as pview
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import _readfile as readfile
+import view as pview
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
 
 ####################################################################################
@@ -54,7 +54,7 @@ def write_grd_file(data, atr, fname_out=None):
     lats, lons = get_geo_lat_lon(atr)
 
     # writing
-    print 'writing >>> '+fname_out
+    print('writing >>> '+fname_out)
     gmt.write_gmt_simple(lons, np.flipud(lats), np.flipud(data), fname_out,\
                          title='default', name=atr['FILE_TYPE'], scale=1.0, offset=0, units=atr['UNIT'])
     return fname_out
@@ -90,19 +90,19 @@ def main(argv):
     ##### 1. Read data
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
-    print 'Input file is '+k
+    print('Input file is '+k)
 
     # Check: file in geo coord
-    if 'X_FIRST' not in atr.keys():
+    if 'X_FIRST' not in list(atr.keys()):
         sys.exit('ERROR: Input file is not geocoded.')
 
     # Check: epoch is required for multi_dataset/group files
     if not inps.epoch:
         if k in multi_group_hdf5_file:
-            print "No date/date12 input.\nIt's required for "+k+" file"
+            print("No date/date12 input.\nIt's required for "+k+" file")
             sys.exit(1)
         elif k in multi_dataset_hdf5_file:
-            print 'No input date ..., continue to convert the last date of time-series.'
+            print('No input date ..., continue to convert the last date of time-series.')
             h5 = h5py.File(inps.file, 'r')
             date_list = sorted(h5[k].keys())
             h5.close()
@@ -118,7 +118,7 @@ def main(argv):
 
     ##### 2. Write GMT .grd file
     inps.outfile = write_grd_file(data, atr, inps.outfile)
-    print 'Done.'
+    print('Done.')
     return inps.outfile
 
 

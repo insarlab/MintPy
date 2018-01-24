@@ -12,20 +12,19 @@ import sys
 import h5py
 import numpy as np
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import _readfile as readfile
+import _pysar_utilities as ut
 
 
 def usage():
-    print '''usage: coord_glob2radar.py lat lon [trans_file] [hdf5_file_radarCoord]
+    print('''usage: coord_glob2radar.py lat lon [trans_file] [hdf5_file_radarCoord]
 
 Generates the sum of two input files.
 
 example:
   coord_glob2radar.py 33.5 130.8
   coord_glob2radar.py 33.5 130.8 geomap_4rlks.trans velocity.h5
-    '''
+    ''')
 
 ################################################################################
 
@@ -44,10 +43,10 @@ def main(argv):
 
     atr_rdr = readfile.read_attribute(radar_file)
     
-    print 'input geo coord: lat=%.4f, lon=%.4f' % (lat, lon)
+    print('input geo coord: lat=%.4f, lon=%.4f' % (lat, lon))
      
     y, x = ut.glob2radar(np.array(lat), np.array(lon), trans_file, atr_rdr)[0:2]
-    print 'corresponding radar coord: y=%d, x=%d' % (y, x)
+    print('corresponding radar coord: y=%d, x=%d' % (y, x))
 
     return
 

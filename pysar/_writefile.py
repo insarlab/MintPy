@@ -60,13 +60,13 @@ def write(*args):
     if ext in ['.h5','.he5']:
         k = atr['FILE_TYPE']
         if k in ['interferograms','coherence','wrapped','timeseries']:
-            print 'Un-supported file type: '+k
-            print 'Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...'
+            print('Un-supported file type: '+k)
+            print('Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...')
             return 0;
         h5file = h5py.File(outname,'w')
         group = h5file.create_group(k)
         dset = group.create_dataset(k, data=data, compression='gzip')
-        for key , value in atr.iteritems():
+        for key , value in atr.items():
             group.attrs[key]=value
         h5file.close()
         return outname
@@ -93,7 +93,7 @@ def write(*args):
             write_complex_int16(data,outname)
         elif ext == '.int':
             write_complex64(data, outname)
-        else: print 'Un-supported file type: '+ext; return 0;
+        else: print('Un-supported file type: '+ext); return 0;
 
         ##### Write .rsc File
         write_roipac_rsc(atr, outname+'.rsc')
@@ -111,7 +111,7 @@ def write_roipac_rsc(atr, outname, sorting=True):
     '''
 
     # sorting by key name
-    keyList = atr.iterkeys()
+    keyList = iter(atr.keys())
     if sorting:
         keyList = sorted(keyList)
     
@@ -153,7 +153,7 @@ def write_float32(*args):
         pha     = args[1]
         outname = args[2]
     else:
-        print 'Error while getting args: support 2/3 args only.'
+        print('Error while getting args: support 2/3 args only.')
         return
  
     nlines = pha.shape[0]
@@ -176,8 +176,8 @@ def write_complex64(data,outname):
     Im=np.sin(data)
     # F=np.zeros([2*nlines*WIDTH,1],np.complex64) 
     F=np.zeros([2*nlines*WIDTH,1],np.float32)  
-    id1=range(0,2*nlines*WIDTH,2)
-    id2=range(1,2*nlines*WIDTH,2)
+    id1=list(range(0,2*nlines*WIDTH,2))
+    id2=list(range(1,2*nlines*WIDTH,2))
     F[id1]=np.reshape(R,(nlines*WIDTH,1))
     F[id2]=np.reshape(Im,(nlines*WIDTH,1))
     F.tofile(outname)
@@ -211,8 +211,8 @@ def write_complex_int16(data,outname):
 
     nlines = data.shape[0]
     WIDTH  = data.shape[1]
-    id1 = range(0,2*nlines*WIDTH,2)
-    id2 = range(1,2*nlines*WIDTH,2)
+    id1 = list(range(0,2*nlines*WIDTH,2))
+    id2 = list(range(1,2*nlines*WIDTH,2))
 
     F=np.zeros([2*nlines*WIDTH,1],np.int16)
     F[id1]=np.reshape(np.array(data.real,np.int16),(nlines*WIDTH,1))

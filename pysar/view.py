@@ -23,14 +23,14 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
 import pysar
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
-import pysar.mask as mask
-import pysar.subset as subset
-from pysar.multilook import multilook_matrix
+import _datetime as ptime
+import _readfile as readfile
+import _pysar_utilities as ut
+import mask as mask
+import subset as subset
+from multilook import multilook_matrix
 
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
 
 ############################################ Class ###############################################
@@ -180,7 +180,7 @@ def auto_flip_direction(atr_dict):
     except:
         geocoord = False
         try:
-            print atr_dict['ORBIT_DIRECTION']+' orbit'
+            print(atr_dict['ORBIT_DIRECTION']+' orbit')
             if atr_dict['ORBIT_DIRECTION'][0].upper() == 'A':
                 flip_ud = True
             else:
@@ -313,7 +313,7 @@ def check_colormap_input(atr_dict, colormap=None):
                                      '.mli','.slc','.amp','.ramp']:
               colormap = 'gray'
         else: colormap = 'jet'
-    print 'colormap: '+colormap
+    print('colormap: '+colormap)
 
     # Modified hsv colormap by H. Fattahi
     if colormap == 'hsv':
@@ -353,8 +353,8 @@ def check_multilook_input(pixel_box, row_num, col_num):
     # Update multilook based on multilook_num
     if multilook_num > 1:
         multilook = True
-        print 'number of data points per figure: '+'%.1E' %(pixel_num_per_figure)
-        print 'multilook with a factor of '+str(multilook_num)+' for display'
+        print('number of data points per figure: '+'%.1E' %(pixel_num_per_figure))
+        print('multilook with a factor of '+str(multilook_num)+' for display')
     else:
         multilook = False
     return multilook, multilook_num
@@ -406,7 +406,7 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
     '''
 
     if inps_dict['disp_dem_shade']:
-        print 'show shaded relief DEM'
+        print('show shaded relief DEM')
         ls = LightSource(azdeg=315, altdeg=45)
         dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+2000)
 
@@ -419,8 +419,8 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
         bmap.imshow(dem_shade, origin='upper', interpolation='spline16')
 
     if inps_dict['disp_dem_contour']:
-        print 'show contour in step - '+str(inps_dict['dem_contour_step'])+' m'+\
-              ' with smoothing factor - '+str(inps_dict['dem_contour_smooth'])
+        print('show contour in step - '+str(inps_dict['dem_contour_step'])+' m'+\
+              ' with smoothing factor - '+str(inps_dict['dem_contour_smooth']))
         c_x = np.linspace(box[0], box[2], num=dem.shape[1], endpoint='FALSE').reshape(1,dem.shape[1])
         c_y = np.linspace(box[1], box[3], num=dem.shape[0], endpoint='FALSE').reshape(dem.shape[0],1)
         c_xx = matlib.repmat(c_x, dem.shape[0], 1)
@@ -458,14 +458,14 @@ def plot_dem_yx(ax, dem, inps_dict=dict()):
         inps_dict['dem_contour_step']   = 200.0
 
     if inps_dict['disp_dem_shade']:
-        print 'show shaded relief DEM'
+        print('show shaded relief DEM')
         ls = LightSource(azdeg=315, altdeg=45)
         dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+2000)
         ax.imshow(dem_shade, interpolation='spline16')
 
     if inps_dict['disp_dem_contour']:
-        print 'show contour in step: '+str(inps_dict['dem_contour_step'])+' m'+\
-              ' with smoothing factor - '+str(inps_dict['dem_contour_smooth'])
+        print('show contour in step: '+str(inps_dict['dem_contour_step'])+' m'+\
+              ' with smoothing factor - '+str(inps_dict['dem_contour_smooth']))
         dem_contour = ndimage.gaussian_filter(dem, sigma=inps_dict['dem_contour_smooth'], order=0)
         contour_sequence = np.arange(-6000, 9000, inps_dict['dem_contour_step'])
         ax.contour(dem_contour, contour_sequence, origin='lower',colors='black',alpha=0.5)
@@ -500,9 +500,9 @@ def scale_data4disp_unit_and_rewrap(data, atr, disp_unit=None, rewrapping=False)
             disp_unit = 'radian'
         else:
             rewrapping = False
-            print 'WARNING: re-wrap is disabled for '+k
+            print('WARNING: re-wrap is disabled for '+k)
     elif disp_unit not in ['radian'] and rewrapping:
-        print 'WARNING: re-wrap is disabled because display unit is not radian.'
+        print('WARNING: re-wrap is disabled because display unit is not radian.')
         rewrapping = False
 
     # Default unit
@@ -515,11 +515,11 @@ def scale_data4disp_unit_and_rewrap(data, atr, disp_unit=None, rewrapping=False)
     # Data Operation - Scale to display unit
     if not disp_unit == atr['UNIT']:
         data, disp_unit = scale_data2disp_unit(data, atr, disp_unit)        
-    print 'display in unit: '+disp_unit
+    print('display in unit: '+disp_unit)
 
     # Data Operation - Rewrapping
     if rewrapping and 'radian' in disp_unit:
-        print 're-wrapping data to [-pi, pi]'
+        print('re-wrapping data to [-pi, pi]')
         data -= np.round(data/(2*np.pi)) * (2*np.pi)
 
     return data, disp_unit, rewrapping
@@ -557,7 +557,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
             range2phase = -(4*np.pi) / float(atr_dict['WAVELENGTH'])
             scale *= range2phase
         else:
-            print 'Unrecognized phase/length unit: '+disp_unit[0]
+            print('Unrecognized phase/length unit: '+disp_unit[0])
             return
     elif data_unit[0] == 'radian':
         phase2range = -float(atr_dict['WAVELENGTH']) / (4*np.pi)
@@ -568,7 +568,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
         elif disp_unit[0] in ['radians','radian','rad','r']:
             pass
         else:
-            print 'Unrecognized phase/length unit: '+disp_unit[0]
+            print('Unrecognized phase/length unit: '+disp_unit[0])
             return
 
     # amplitude/coherence unit - 1
@@ -578,12 +578,14 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
             matrix[ind] = 10*np.log10(np.absolute(matrix[ind]))
             disp_unit[0] = 'dB'
         else:
+<<<<<<< HEAD
             try:
                 scale /= float(disp_unit[0])
             except:
-                print 'Un-scalable display unit: '+disp_unit[0]
+                print('Un-scalable display unit: '+disp_unit[0])
+
     else:
-        print 'Un-scalable data unit: '+data_unit
+        print('Un-scalable data unit: '+data_unit)
 
     # Calculate scaling factor  - 2
     if len(data_unit)==2:
@@ -592,7 +594,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
             if   disp_unit[1] in ['y','yr','year'  ]: disp_unit[1] = 'yr'
             elif disp_unit[1] in ['m','mon','month']: disp_unit[1] = 'mon'; scale *= 12.0
             elif disp_unit[1] in ['d','day'        ]: disp_unit[1] = 'day'; scale *= 365.25
-            else: print 'Unrecognized time unit for display: '+disp_unit[1]
+            else: print('Unrecognized time unit for display: '+disp_unit[1])
         except:
             disp_unit.append('yr')
         disp_unit = disp_unit[0]+'/'+disp_unit[1]
@@ -609,7 +611,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
 def update_plot_inps_with_display_setting_file(inps, disp_set_file):
     '''Update inps using values from display setting file'''
     disp_set_dict = readfile.read_template(disp_set_file)
-    keyList = disp_set_dict.keys()
+    keyList = list(disp_set_dict.keys())
     if not inps.disp_unit and 'plot.displayUnit' in keyList:
         inps.disp_unit = disp_set_dict['plot.displayUnit']
     if not inps.disp_min and 'plot.displayMin' in keyList:
@@ -651,11 +653,11 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     inps.geo_box = subset.box_pixel2geo(inps.pix_box, meta_dict)
     # Out message
     data_box = (0,0,width,length)
-    print 'data   coverage in y/x: '+str(data_box)
-    print 'subset coverage in y/x: '+str(inps.pix_box)
-    print 'data   coverage in lat/lon: '+str(subset.box_pixel2geo(data_box, meta_dict))
-    print 'subset coverage in lat/lon: '+str(inps.geo_box)
-    print '------------------------------------------------------------------------'
+    print('data   coverage in y/x: '+str(data_box))
+    print('subset coverage in y/x: '+str(inps.pix_box))
+    print('data   coverage in lat/lon: '+str(subset.box_pixel2geo(data_box, meta_dict)))
+    print('subset coverage in lat/lon: '+str(inps.geo_box))
+    print('------------------------------------------------------------------------')
     
     # Multilook
     # if too many subplots in one figure for less memory and faster speed
@@ -671,8 +673,8 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     if inps.seed_lalo and inps.geo_box:
         inps.seed_yx = [subset.coord_geo2radar(inps.seed_lalo[0], meta_dict, 'lat'), \
                         subset.coord_geo2radar(inps.seed_lalo[1], meta_dict, 'lon')]
-        print 'input reference point in lat/lon: '+str(inps.seed_lalo)
-        print 'input reference point in y  /x  : '+str(inps.seed_yx)
+        print('input reference point in lat/lon: '+str(inps.seed_lalo))
+        print('input reference point in y  /x  : '+str(inps.seed_yx))
 
     # Unit and Wrap
     # Check re-wrap's conflict with disp_unit.  Priority: disp_unit > wrap > disp_unit(None)
@@ -682,12 +684,12 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
             inps.disp_min  = -np.pi
             inps.disp_max  =  np.pi
             inps.disp_unit = 'radian'
-            print 're-wrap data to [-pi, pi] for display'
+            print('re-wrap data to [-pi, pi] for display')
         else:
             inps.wrap = False
-            print 'WARNING: re-wrap is disabled for '+k
+            print('WARNING: re-wrap is disabled for '+k)
     elif inps.disp_unit not in ['radian'] and inps.wrap:
-        print 'WARNING: re-wrap is disabled because display unit is not radian.'
+        print('WARNING: re-wrap is disabled because display unit is not radian.')
         inps.wrap = False
 
     # Default unit for amplitude image
@@ -740,14 +742,14 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
         if not np.isnan(inps.seed_value):
             data -= inps.seed_value
             if meta_dict['FILE_TYPE'] in multi_group_hdf5_file+multi_dataset_hdf5_file:
-                print 'set reference point to: '+str(inps.seed_yx)
+                print('set reference point to: '+str(inps.seed_yx))
             if inps.geo_box:
                 inps.seed_lalo = [subset.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
                                   subset.coord_radar2geo(inps.seed_yx[1], meta_dict, 'x')]
             else:
                 inps.seed_lalo = None
         else:
-            print 'WARNING: input reference point has nan value, continue with original reference info'
+            print('WARNING: input reference point has nan value, continue with original reference info')
             inps.seed_yx = None
     else:
         if 'ref_y' in meta_dict.keys():
@@ -781,12 +783,12 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
 
     # 1.4 Scale 
     if not inps.disp_scale == 1.0:
-        print 'scaling data by a factor of '+str(inps.disp_scale)
+        print('scaling data by a factor of '+str(inps.disp_scale))
         data *= inps.disp_scale
 
     # 1.5 Opposite
     if inps.opposite:
-        print 'show opposite'
+        print('show opposite')
         data *= -1
     
     return data, inps
@@ -827,21 +829,22 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
     #----------------------- 1.2 Update plot inps/data with data matrix ----------------------#
     data, inps = update_matrix_with_plot_inps(data, meta_dict, inps)
-    print 'data    unit: '+meta_dict['UNIT']
-    print 'display unit: '+inps.disp_unit
+    print('data    unit: '+meta_dict['UNIT'])
+    print('display unit: '+inps.disp_unit)
 
     # 1.6 Min / Max - Data/Display
     data_min = np.nanmin(data)
     data_max = np.nanmax(data)
     if inps.disp_min is None:  inps.disp_min = data_min
     if inps.disp_max is None:  inps.disp_max = data_max
-    print 'data    range: %f - %f' % (data_min, data_max)
-    print 'display range: %f - %f' % (inps.disp_min, inps.disp_max)
+
+    print('data    range: %f - %f' % (data_min, data_max))
+    print('display range: %f - %f' % (inps.disp_min, inps.disp_max))
 
     # 1.7 DEM
     if inps.dem_file:
         dem_meta_dict = readfile.read_attribute(inps.dem_file)
-        print 'reading DEM: '+os.path.basename(inps.dem_file)+' ...'
+        print('reading DEM: '+os.path.basename(inps.dem_file)+' ...')
         if inps.geo_box:
             # Support DEM with different Resolution and Coverage 
             inps.dem_pix_box = subset.box_geo2pixel(inps.geo_box, dem_meta_dict)
@@ -855,17 +858,17 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             lon_length = abs(inps.geo_box[2]-inps.geo_box[0])
             if max(lat_length, lon_length) > 1.0:
                 inps.disp_dem_contour = False
-                print 'area is too large (lat or lon > 1 deg), turn off the DEM contour display'
+                print('area is too large (lat or lon > 1 deg), turn off the DEM contour display')
 
-    print 'display data in transparency: '+str(inps.transparency)
+    print('display data in transparency: '+str(inps.transparency))
 
 
     #-------------------- 2.1 Plot in Geo-coordinate using Basemap --------------------------------#
     if inps.geo_box and inps.fig_coord=='geo':
-        print 'plot in Lat/Lon coordinate'
+        print('plot in Lat/Lon coordinate')
         # Map Setup
-        print 'map projection: '+inps.map_projection
-        print 'boundary database resolution: '+inps.resolution
+        print('map projection: '+inps.map_projection)
+        print('boundary database resolution: '+inps.resolution)
         if inps.map_projection in ['cyl','merc','mill','cea','gall']:
             m = Basemap2(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
                         urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],\
@@ -886,22 +889,22 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
         # Draw coastline
         if inps.coastline:
-            print 'draw coast line'
+            print('draw coast line')
             m.drawcoastlines()
 
         # Plot DEM
         if inps.dem_file:
-            print 'plotting DEM background ...'
+            print('plotting DEM background ...')
             m = plot_dem_lalo(m, dem, inps.geo_box, vars(inps))
 
         # Plot Data
-        print 'plotting Data ...'
+        print('plotting Data ...')
         im = m.imshow(data, cmap=inps.colormap, origin='upper', vmin=inps.disp_min, vmax=inps.disp_max,\
                       alpha=inps.transparency, interpolation='nearest', animated=inps.animation)
 
         # Scale Bar
         if inps.disp_scalebar:
-            print 'plot scale bar'
+            print('plot scale bar')
             if not inps.scalebar:  inps.scalebar=[999,999,999]
             # Default Distance - 20% of data width
             if inps.scalebar[0] == 999.0:
@@ -917,7 +920,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
         # Lat Lon labels
         if inps.lalo_label:
-            print 'plot lat/lon labels'
+<<<<<<< HEAD
+            print('plot lat/lon labels')
             m.draw_lalo_label(inps.geo_box, ax=ax, lalo_step=inps.lalo_step, font_size=inps.font_size, color=inps.font_color)
         else:
             ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
@@ -925,7 +929,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         # Plot Seed Point
         if inps.disp_seed and inps.seed_lalo:
             ax.plot(inps.seed_lalo[1], inps.seed_lalo[0], inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
-            print 'plot reference point'
+            print('plot reference point')
 
         # Status bar
         def format_coord(x,y):
@@ -948,15 +952,15 @@ def plot_matrix(ax, data, meta_dict, inps=None):
      
     #-------------------- 2.2 Plot in Y/X-coordinate ------------------------------------------------#
     else:
-        print 'plotting in Y/X coordinate ...'
+        print('plotting in Y/X coordinate ...')
         
         # Plot DEM
         if inps.dem_file:
-            print 'plotting DEM background ...'
+            print('plotting DEM background ...')
             ax = plot_dem_yx(ax, dem, vars(inps))
 
         # Plot Data
-        print 'plotting Data ...'
+        print('plotting Data ...')
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.disp_min, vmax=inps.disp_max,\
                        alpha=inps.transparency, interpolation='nearest')
 
@@ -966,7 +970,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         if inps.disp_seed and inps.seed_yx:
             ax.plot(inps.seed_yx[1]-inps.pix_box[0], inps.seed_yx[0]-inps.pix_box[1],\
                     inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
-            print 'plot reference point'
+            print('plot reference point')
 
         ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
         ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
@@ -1018,16 +1022,16 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
     # 3.3 Flip Left-Right / Up-Down
     if inps.flip_lr:
-        print 'flip figure left and right'
+        print('flip figure left and right')
         ax.invert_xaxis()
     if inps.flip_ud:
-        print 'flip figure up and down'
+        print('flip figure up and down')
         ax.invert_yaxis()
 
     # 3.4 Turn off axis
     if not inps.disp_axis:
         ax.axis('off')
-        print 'turn off axis display'
+        print('turn off axis display')
 
     # 3.5 Turn off tick label
     if not inps.disp_tick:
@@ -1264,7 +1268,7 @@ def main(argv):
     inps = cmdLineParse(argv)
     if not inps.disp_fig:
         plt.switch_backend('Agg')
-    print '\n******************** Display ********************'
+    print('\n******************** Display ********************')
 
     # File Basic Info
     ext = os.path.splitext(inps.file)[1].lower()
@@ -1275,11 +1279,12 @@ def main(argv):
     except:
         sys.exit('Can not read file: '+inps.file)
 
-    print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+inps.file
+    print('Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+inps.file)
+
     k = atr['FILE_TYPE']
     width = int(float(atr['WIDTH']))
     length = int(float(atr['FILE_LENGTH']))
-    print 'file size in y/x: '+atr['FILE_LENGTH']+', '+atr['WIDTH']
+    print('file size in y/x: '+atr['FILE_LENGTH']+', '+atr['WIDTH'])
 
     #------------------------------ Epoch/Date Info -------------------------------------------#
     # Read "epoch list to display' and 'reference date' for multi-dataset files
@@ -1313,10 +1318,11 @@ def main(argv):
             print 'num of dates in file %s : %d' % (inps.file, len(epochList))
             print 'dates to exclude (%d):' % (len(inps.exclude_epoch));     print inps.exclude_epoch
             print 'dates to display (%d):' % (len(inps.epoch));             print inps.epoch
+
         else:
-            print 'num of dates in file   :'+str(len(epochList))
-            print 'num of dates to exclude:'+str(len(inps.exclude_epoch))
-            print 'num of dates to display:'+str(epochNum)
+            print('num of dates in file   :'+str(len(epochList)))
+            print('num of dates to exclude:'+str(len(inps.exclude_epoch)))
+            print('num of dates to display:'+str(epochNum))
 
         # Reference Date
         if inps.ref_date:
@@ -1325,14 +1331,14 @@ def main(argv):
                 inps.ref_date = ref_date_list[0]
                 if inps.ref_date == atr['ref_date']:
                     inps.ref_date = None
-                    print 'Input date is already the reference date: '+atr['ref_date']
+                    print('Input date is already the reference date: '+atr['ref_date'])
             else:
-                print 'input reference date is not included in file '+inps.file
-                print 'input reference date: '+inps.ref_date
-                print 'dates in file '+inps.file+':\n'+str(epochList)
+                print('input reference date is not included in file '+inps.file)
+                print('input reference date: '+inps.ref_date)
+                print('dates in file '+inps.file+':\n'+str(epochList))
                 inps.ref_date = None
 
-        print '------------------------------------------------------------------------'
+        print('------------------------------------------------------------------------')
         # Raise Error if no epoch left
         if epochNum == 0:
             raise Exception('Zero epoch found!')
@@ -1371,12 +1377,12 @@ def main(argv):
             atrMsk = readfile.read_attribute(inps.mask_file)
             if atrMsk['FILE_LENGTH'] == atr['FILE_LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
                 msk = readfile.read(inps.mask_file, inps.pix_box, epoch='mask')[0]
-                print 'mask data with: '+os.path.basename(inps.mask_file)
+                print('mask data with: '+os.path.basename(inps.mask_file))
             else:
-                print 'WARNING: input file has different size from mask file: %s. Continue without mask' % (inps.mask_file)
+                print('WARNING: input file has different size from mask file: %s. Continue without mask' % (inps.mask_file))
                 inps.mask_file = None
         except:
-            print 'Can not open mask file: '+inps.mask_file
+            print('Can not open mask file: '+inps.mask_file)
             inps.mask_file = None
     elif k in ['HDFEOS']:
         inps.mask_file = inps.file
@@ -1389,7 +1395,7 @@ def main(argv):
     ##### Display One Dataset
     if epochNum == 1:
         # Read Data
-        print 'reading data ...'
+        print('reading data ...')
         data, atr = readfile.read(inps.file, inps.pix_box, inps.epoch[0])
         if inps.zero_mask:
             data[data==0] = np.nan
@@ -1409,7 +1415,8 @@ def main(argv):
             plot_shape = [data.shape[1]*1.25, data.shape[0]]
             fig_scale = min(pysar.figsize_single_min/min(plot_shape), pysar.figsize_single_max/max(plot_shape))
             inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in plot_shape]
-        print 'create figure in size: '+str(inps.fig_size)
+        print('create figure in size: '+str(inps.fig_size))
+        
         fig = plt.figure(figsize=inps.fig_size)
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
 
@@ -1418,7 +1425,7 @@ def main(argv):
         del data
 
         if inps.disp_fig:
-            print 'showing ...'
+            print('showing ...')
             plt.show()
 
 
@@ -1436,7 +1443,7 @@ def main(argv):
             #screen_width_res = root.winfo_screenwidth() / screen_dpi
             #screen_height_res = root.winfo_screenheight() / screen_dpi
             inps.fig_size = pysar.figsize_multi
-        print 'create figure in size: '+str(inps.fig_size)
+        print('create figure in size: '+str(inps.fig_size))
 
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
@@ -1454,10 +1461,10 @@ def main(argv):
                 fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
             inps.fig_row_num, inps.fig_col_num = auto_row_col_num(epochNum, data_shape, fig_size4plot, inps.fig_num)
         inps.fig_num = np.ceil(float(epochNum) / float(inps.fig_row_num*inps.fig_col_num)).astype(int)
-        print 'dataset number: '+str(epochNum)
-        print 'row     number: '+str(inps.fig_row_num)
-        print 'column  number: '+str(inps.fig_col_num)
-        print 'figure  number: '+str(inps.fig_num)
+        print('dataset number: '+str(epochNum))
+        print('row     number: '+str(inps.fig_row_num))
+        print('column  number: '+str(inps.fig_col_num))
+        print('figure  number: '+str(inps.fig_num))
 
         # Update multilook parameters with new num and col number
         if inps.multilook and inps.multilook_num == 1:
@@ -1487,28 +1494,33 @@ def main(argv):
         # Reference date for timeseries
         if k == 'timeseries':
             if inps.ref_date:
-                print 'consider input reference date: '+inps.ref_date
+                print('consider input reference date: '+inps.ref_date)
                 ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)[0]
 
         ref_yx = None
-        if k in ['interferograms'] and 'ref_y' in atr.keys():
+        if k in ['interferograms'] and 'ref_y' in list(atr.keys()):
             ref_yx = [int(atr[i]) for i in ['ref_y','ref_x']]
-            print 'consider reference pixel of interferograms in y/x: %d/%d' % (ref_yx[0], ref_yx[1])
+            print('consider reference pixel of interferograms in y/x: %d/%d' % (ref_yx[0], ref_yx[1]))
 
         # Read DEM
         if inps.dem_file:
+<<<<<<< HEAD
             print 'reading DEM: '+os.path.basename(inps.dem_file)+' ...'
             dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box, epoch='height')
+=======
+            print('reading DEM: '+os.path.basename(inps.dem_file)+' ...')
+            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box)
+>>>>>>> 0735328fb034833bbb6042a817015d3da23bdece
             if inps.multilook:
                 dem = multilook_matrix(dem, inps.multilook_num, inps.multilook_num)
 
             # Shaded Relief and Contour
             if inps.disp_dem_shade: 
-                print 'show shaded relief DEM'
+                print('show shaded relief DEM')
                 ls = LightSource(azdeg=315, altdeg=45)
                 dem_hillshade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+2000)
             if inps.disp_dem_contour:
-                print 'show contour: step = '+str(inps.dem_contour_step)+' m'
+                print('show contour: step = '+str(inps.dem_contour_step)+' m')
                 dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
                 contour_sequence = np.arange(-6000, 9000, inps.dem_contour_step)
 
@@ -1523,8 +1535,13 @@ def main(argv):
         drop_epoch_list = []
         if k in multi_group_hdf5_file and inps.disp_title:
             drop_epoch_list = sorted(list(set(inps.epoch) - \
+<<<<<<< HEAD
                                           set(ut.check_drop_ifgram(h5file, print_msg=False))))
             print "mark interferograms with 'drop_ifgram'='yes' in red colored title"
+=======
+                                          set(ut.check_drop_ifgram(h5file, atr, inps.epoch, print_msg=False))))
+            print("mark interferograms with 'drop_ifgram'='yes' in red colored title")
+>>>>>>> 0735328fb034833bbb6042a817015d3da23bdece
 
         ##### Loop 1 - Figures
         for j in range(1, inps.fig_num+1):
@@ -1533,9 +1550,15 @@ def main(argv):
                 inps.outfile = inps.outfile_base+'_'+str(j)+inps.fig_ext
             else:
                 inps.outfile = inps.outfile_base+inps.fig_ext
+<<<<<<< HEAD
             fig_title = 'Figure '+str(j)+' - '+inps.outfile
             print '----------------------------------------'
             print fig_title
+=======
+            fig_title = 'Figure '+str(j)+' - '+inps.outfile_base
+            print('----------------------------------------')
+            print(fig_title)
+>>>>>>> 0735328fb034833bbb6042a817015d3da23bdece
             # Open a new figure object
             fig = plt.figure(j, figsize=inps.fig_size)
             fig.canvas.set_window_title(fig_title)
@@ -1629,20 +1652,21 @@ def main(argv):
             # Min and Max for this figure
             all_data_min = np.nanmin([all_data_min, fig_data_min])
             all_data_max = np.nanmax([all_data_max, fig_data_max])
-            print 'data    range: [%.2f, %.2f] %s' % (fig_data_min, fig_data_max, inps.disp_unit)
-            try:  print 'display range: [%.2f, %.2f] %s' % (disp_min, disp_max, inps.disp_unit)
+            print('data    range: [%.2f, %.2f] %s' % (fig_data_min, fig_data_max, inps.disp_unit))
+            try:  print('display range: [%.2f, %.2f] %s' % (disp_min, disp_max, inps.disp_unit))
             except: pass
 
             # Colorbar
             if not inps.disp_min and not inps.disp_max:
-                print 'Note: different color scale for EACH subplot!'
+                print('Note: different color scale for EACH subplot!')
             else:
                 if not inps.cbar_ext:
                     if   inps.disp_min <= fig_data_min and inps.disp_max >= fig_data_max: inps.cbar_ext='neither'
                     elif inps.disp_min >  fig_data_min and inps.disp_max >= fig_data_max: inps.cbar_ext='min'
                     elif inps.disp_min <= fig_data_min and inps.disp_max <  fig_data_max: inps.cbar_ext='max'
                     else:  inps.cbar_ext='both'
-                print 'show colorbar'
+                print('show colorbar')
+
                 #fig.subplots_adjust(wspace=inps.fig_wid_space, hspace=inps.fig_hei_space, right=0.965)
                 fig.subplots_adjust(right=0.95)
                 cax = fig.add_axes([0.96, 0.25, 0.01, 0.5])
@@ -1668,16 +1692,17 @@ def main(argv):
                     fig.clf()
 
         ##### End of Loop 1
+<<<<<<< HEAD
         try: h5file.close()
         except: pass
-        print '----------------------------------------'
-        print 'all data range: [%f, %f] %s' % (all_data_min, all_data_max, inps.disp_unit)
+        print('----------------------------------------')
+        print('all data range: [%f, %f] %s' % (all_data_min, all_data_max, inps.disp_unit))
         if inps.disp_min and inps.disp_max:
-            print 'display  range: [%f, %f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit)
+            print('display  range: [%f, %f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit))
 
         # Display Figure
         if inps.disp_fig:
-            print 'showing ...'
+            print('showing ...')
             plt.show()
 
 

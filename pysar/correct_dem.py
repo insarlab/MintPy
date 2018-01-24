@@ -1,16 +1,14 @@
 #! /usr/bin/env python2
 
-import os
-import sys
 from numpy import *
 import h5py
-from pysar import _readfile
-from pysar import _writefile
+import _readfile
+import _writefile
 
 
 
 def usage():
-    print '''
+    print('''
 *******************************************
   Usage: correct_dem.py demFile geo_demErrorFile
 
@@ -19,7 +17,7 @@ def usage():
       correct_dem.py $DEMDIR/Socorro-30/Socorro_30.dem geo_DEM_error.h5
 
 *******************************************         
-    '''
+    ''')
 
 
 def main(argv):
@@ -33,13 +31,13 @@ def main(argv):
     dset  = g['dem'].get('dem')
     dem_error = dset[0:dset.shape[0]]
 
-    print 'Correcting the DEM'
+    print('Correcting the DEM')
     sum = dem + dem_error
-    print 'Creating the new DEM'
+    print('Creating the new DEM')
     _writefile.write_real_int16(sum,'DEM_w_error.dem')
           
     rsc_file = open('DEM_w_error.dem.rsc','w')
-    for k in demrsc.keys():
+    for k in list(demrsc.keys()):
         rsc_file.write(k+'	'+demrsc[k]+'\n')
         rsc_file.close
           

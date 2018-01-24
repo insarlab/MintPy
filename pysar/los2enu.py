@@ -6,14 +6,13 @@
 ############################################################
 
 import sys
-import os 
-from  numpy import shape,pi,cos, sin
+from  numpy import pi,cos, sin
 import getopt
 import h5py 
 
 
 def usage():
-    print ''' 
+    print(''' 
 **************************************************************************
   Projecting LOS (Line of Sight) InSAR measurements to different components
     
@@ -35,7 +34,7 @@ def usage():
    Example:
 
 ***************************************************************
-    '''
+    ''')
 
 ############################################################################
 def main(argv):
@@ -53,7 +52,7 @@ def main(argv):
         elif opt == '-H':       heading       = float(arg)
   
     h5file=h5py.File(File,'r')
-    k=h5file.keys()  
+    k=list(h5file.keys())  
     Vset=h5file[k[0]].get(k[0])
     V=Vset[0:Vset.shape[0],0:Vset.shape[1]]
 
@@ -62,13 +61,13 @@ def main(argv):
         iset=h5incidence['mask'].get('mask')
         inc=iset[0:iset.shape[0],0:iset.shape[1]]
     except:
-        print 'Incidence angle was not found or is not readable!'
-        print 'Continue with average look angle'
+        print('Incidence angle was not found or is not readable!')
+        print('Continue with average look angle')
         look_n=float(h5file[k[0]].attrs['LOOK_REF1'])
         look_f=float(h5file[k[0]].attrs['LOOK_REF2']) 
         inc=(look_n+look_f)/2.
         inc=41.0
-        print 'Average look angle = '+str(inc)
+        print('Average look angle = '+str(inc))
   
     inc=inc*pi/180.
    
@@ -86,24 +85,24 @@ def main(argv):
         try:
             az=azimuth*pi/180.
         except:
-            print ''         
-            print 'Error: azimuth of the fault is required!';
-            print ''
+            print('')         
+            print('Error: azimuth of the fault is required!');
+            print('')
             sys.exit(1)
   
         try:
             h=heading*pi/180.
         except:
-            print 'trying to use the heading angle from '+File 
+            print('trying to use the heading angle from '+File) 
             heading = float(h5file[k[0]].attrs['HEADING'])
             if heading < 0:
                 heading=heading+360
             h=heading*pi/180.
         
-        print '******************************************'  
-        print 'Fault Azimuth = '+str(azimuth)
-        print 'Satellite Heading Angle = '+str(heading)
-        print '******************************************'
+        print('******************************************')  
+        print('Fault Azimuth = '+str(azimuth))
+        print('Satellite Heading Angle = '+str(heading))
+        print('******************************************')
   
         fac=sin(az)*cos(h)*sin(inc)-cos(az)*sin(h)*sin(inc)
         P = V/fac 
@@ -115,19 +114,19 @@ def main(argv):
         try:
             proj_inc=proj_inc*pi/180.       
         except:
-            print 'Error: los option projects the current los to a different los with \
-            a given inc angle. It needs the new inc angle to be introdueced using -I option'
+            print('Error: los option projects the current los to a different los with \
+            a given inc angle. It needs the new inc angle to be introdueced using -I option')
             sys.exit(1)
         inc=inc-proj_inc
         P = V*cos(inc) # projecting LOS to up assuming zero horizontal deformation
         outName='projected_los.h5'
   
-    print 'writing '+outName    
+    print('writing '+outName)    
     h5file2 = h5py.File(outName,'w')
     group=h5file2.create_group(k[0])
     dset = group.create_dataset(k[0], data=P, compression='gzip')
     
-    for key, value in h5file[k[0]].attrs.iteritems():
+    for key, value in h5file[k[0]].attrs.items():
             group.attrs[key] = value
       
     h5file.close()

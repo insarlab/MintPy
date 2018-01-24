@@ -7,19 +7,18 @@
 
 
 import sys
-import os
 
 import h5py
 import numpy as np
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
-import pysar._datetime as ptime
+import _readfile as readfile
+import _writefile as writefile
+import _pysar_utilities as ut
+import _datetime as ptime
 
 
 def usage():
-    print '''
+    print('''
 usage:  perp_baseline.py  timeseries_file   date  [outfile]
 
 Generates perpendicular baseline (in Radar Coordinate) for each pixel
@@ -33,7 +32,7 @@ input arguments:
 
 example:
   perp_baseline.py  timeseries.h5  20101020
-    '''
+    ''')
     return
 
 def main(argv):
@@ -51,7 +50,7 @@ def main(argv):
     pbase = ut.perp_baseline_timeseries(atr, dimension=1)
 
     if pbase.shape[1] == 1:
-        print pbase
+        print(pbase)
         return pbase
     
     k = atr['FILE_TYPE']
@@ -69,7 +68,8 @@ def main(argv):
     if not outFile:
         outFile = 'perpBaseline_'+epoch+'.h5'
 
-    print 'writing >>> '+outFile
+    print('writing >>> '+outFile)
+    
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'
     writefile.write(pbase_xy, atr, outFile)

@@ -13,14 +13,14 @@ import datetime
 import h5py
 import numpy as np
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import _datetime as ptime
+import _readfile as readfile
+import _pysar_utilities as ut
 
 
 #####################################################################################
 def usage():
-    print '''usage: ifgram_reconstruction.py  ifgram_file  timeseries_file  [output_name]
+    print('''usage: ifgram_reconstruction.py  ifgram_file  timeseries_file  [output_name]
 
 Reconstruct interferograms from time-series
 
@@ -33,7 +33,7 @@ arguments:
 example:
   ifgram_reconstruction.py  unwrapIfgram.h5  timeseries_ECMWF_demCor.h5
   ifgram_reconstruction.py  unwrapIfgram.h5  timeseries_ECMWF_demCor.h5  reconstructed_unwrapIfgram.h5
-    '''
+    ''')
     return
 
 
@@ -55,13 +55,13 @@ def main(argv):
     width = int(atr['WIDTH'])
 
     ##### Read time-series file
-    print 'loading timeseries ...'
+    print('loading timeseries ...')
     h5ts = h5py.File(timeseries_file, 'r')
     date_list = sorted(h5ts['timeseries'].keys())
     date_num = len(date_list)
     timeseries = np.zeros((date_num, length*width))
 
-    print 'number of acquisitions: '+str(date_num)
+    print('number of acquisitions: '+str(date_num))
     prog_bar = ptime.progress_bar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
@@ -76,7 +76,7 @@ def main(argv):
     timeseries = range2phase*timeseries
 
     #####  Estimate interferograms from timeseries
-    print 'estimating interferograms from timeseries using design matrix from input interferograms'
+    print('estimating interferograms from timeseries using design matrix from input interferograms')
     A,B = ut.design_matrix(ifgram_file)
     p = -1*np.ones([A.shape[0],1])
     Ap = np.hstack((p,A))
@@ -84,7 +84,7 @@ def main(argv):
     del timeseries
 
     ##### Write interferograms file
-    print 'writing >>> '+outfile
+    print('writing >>> '+outfile)
     h5 = h5py.File(ifgram_file,'r')
     ifgram_list = sorted(h5['interferograms'].keys())
     ifgram_num = len(ifgram_list)
@@ -93,7 +93,7 @@ def main(argv):
     h5out = h5py.File(outfile,'w')
     group = h5out.create_group('interferograms')
 
-    print 'number of interferograms: '+str(ifgram_num)
+    print('number of interferograms: '+str(ifgram_num))
     prog_bar = ptime.progress_bar(maxValue=ifgram_num)
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
@@ -101,13 +101,13 @@ def main(argv):
 
         gg = group.create_group(ifgram)
         dset = gg.create_dataset(ifgram, data=data, compression='gzip')
-        for key, value in h5['interferograms'][ifgram].attrs.iteritems():
+        for key, value in h5['interferograms'][ifgram].attrs.items():
             gg.attrs[key] = value
         prog_bar.update(i+1, suffix=date12_list[i])
     prog_bar.close()
     h5.close()
     h5out.close()
-    print 'Done.'
+    print('Done.')
     return outfile
 
 

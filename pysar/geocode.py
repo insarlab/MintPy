@@ -18,11 +18,11 @@ from scipy.interpolate import RegularGridInterpolator as RGI
 import scipy.spatial.qhull as qhull
 
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import _datetime as ptime
+import _readfile as readfile
+import _writefile as writefile
+import _pysar_utilities as ut
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
 
 def geocode_output_filename(fname):
@@ -47,7 +47,7 @@ def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
 
     # copy atr_rdr
     atr = dict()
-    for key, value in atr_rdr.iteritems():
+    for key, value in atr_rdr.items():
         atr[key] = str(value)
 
     atr['FILE_LENGTH'] = atr_lut['FILE_LENGTH']
@@ -62,7 +62,7 @@ def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
     except: atr['X_UNIT'] = 'degrees'
 
     # Reference point from y/x to lat/lon
-    if 'ref_y' in atr_rdr.keys() and 'ref_x' in atr_rdr.keys():
+    if 'ref_y' in list(atr_rdr.keys()) and 'ref_x' in list(atr_rdr.keys()):
         ref_x_rdr = np.array(int(atr_rdr['ref_x']))
         ref_y_rdr = np.array(int(atr_rdr['ref_y']))
         trans_file = atr_lut['FILE_PATH']
@@ -75,7 +75,7 @@ def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
             atr['ref_y'] = str(int(ref_y))
             atr['ref_x'] = str(int(ref_x))
             if print_msg:
-                print 'update ref_lat/lon/y/x'
+                print('update ref_lat/lon/y/x')
         else:
             warnings.warn("original reference pixel is out of .trans file's coverage. Continue.")
             try: atr.pop('ref_y')
@@ -113,37 +113,40 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     ##### Interpolate value on irregular radar coordinates (from lookup table file value)
     ##### with known value on regular radar coordinates (from radar file attribute)
     ## Grid/regular coordinates from row/column number in radar file
-    print '------------------------------------------------------'
-    print 'geocoding file: '+fname
+    print('------------------------------------------------------')
+    print('geocoding file: '+fname)
     atr_rdr = readfile.read_attribute(fname)
+    
     len_rdr = int(atr_rdr['FILE_LENGTH'])
     wid_rdr = int(atr_rdr['WIDTH'])
     pts_old = (np.arange(len_rdr), np.arange(wid_rdr))
 
     ## Irregular coordinates from data value in lookup table
-    print 'reading lookup table file: '+lookup_file
+    print('reading lookup table file: '+lookup_file)
     atr_lut = readfile.read_attribute(lookup_file)
     rg = readfile.read(lookup_file, epoch='range')[0]
     az = readfile.read(lookup_file, epoch='azimuth')[0]
+
     len_geo = int(atr_lut['FILE_LENGTH'])
     wid_geo = int(atr_lut['WIDTH'])
 
     # adjustment if input radar file has been subseted.
-    if 'subset_x0' in atr_rdr.keys():
+    if 'subset_x0' in list(atr_rdr.keys()):
         x0 = float(atr_rdr['subset_x0'])
         y0 = float(atr_rdr['subset_y0'])
         rg -= x0
         az -= y0
-        print '\tinput radar coord file has been subsetted, adjust lookup table value'
+        print('\tinput radar coord file has been subsetted, adjust lookup table value')
 
     # extract pixels only available in radar file (get ride of invalid corners)
     idx = (az>0.0)*(az<=len_rdr)*(rg>0.0)*(rg<=wid_rdr)
     pts_new = np.hstack((az[idx].reshape(-1,1), rg[idx].reshape(-1,1)))
     del az, rg
 
-    print 'geocoding using scipy.interpolate.RegularGridInterpolator ...'
+    print('geocoding using scipy.interpolate.RegularGridInterpolator ...')
     data_geo = np.empty((len_geo, wid_geo))
     data_geo.fill(inps.fill_value)
+    
     k = atr_rdr['FILE_TYPE']
     ##### Multiple Dataset File
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
@@ -154,8 +157,9 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)
-        print 'writing >>> '+fname_out
+        print('writing >>> '+fname_out)
 
+<<<<<<< HEAD
         if k in multi_dataset_hdf5_file:
             print 'number of datasets: '+str(epoch_num)
             for i in range(epoch_num):
@@ -409,6 +413,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
         if k in multi_dataset_hdf5_file:
             print 'number of acquisitions: '+str(epoch_num)
+
             for i in range(epoch_num):
                 date = epoch_list[i]
                 data = h5[k].get(date)[:]
@@ -419,15 +424,16 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
                 prog_bar.update(i+1, suffix=date)
             prog_bar.close()
 
-            print 'update attributes'
+            print('update attributes')
             atr = update_attribute_radar_lut(atr_rdr, inps, lat, lon)
             for key,value in atr.iteritems():
                 group.attrs[key] = value
 
         elif k in multi_group_hdf5_file:
-            print 'number of interferograms: '+str(epoch_num)
+            print('number of interferograms: '+str(epoch_num))
             try:    date12_list = ptime.list_ifgram2date12(epoch_list)
             except: date12_list = epoch_list
+
             for i in range(epoch_num):
                 ifgram = epoch_list[i]
                 data = h5[k][ifgram].get(ifgram)[:]
@@ -447,7 +453,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
     ##### Single Dataset File
     else:
-        print 'reading '+fname
+        print('reading '+fname)
         data = readfile.read(fname)[0]
 
         ##Solution 1 - qhull
@@ -459,16 +465,16 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
         #interp_cubic = mtri.CubicTriInterpolator(triang, data, kind='geom')
         #data_geo = interp_cubic(grid_lat, grid_lon)
 
-        print 'update attributes'
+        print('update attributes')
         atr = update_attribute_radar_lut(atr_rdr, inps, lat, lon)
 
-        print 'writing >>> '+fname_out
+        print('writing >>> '+fname_out)
         writefile.write(data_geo, atr, fname_out)
 
     del data_geo, vtx, wts
     print 'finished writing file: %s' % (fname_out)
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
-    print 'Time used: %02d hours %02d mins %02d secs' % (h, m, s)
+    print('Time used: %02d hours %02d mins %02d secs' % (h, m, s))
     return fname_out
 
 
@@ -568,11 +574,12 @@ def main(argv):
         inps = read_template2inps(inps.template_file, inps)
 
     inps.file = ut.get_file_list(inps.file)
-    print 'number of files to geocode: '+str(len(inps.file))
+
+    print('number of files to geocode: '+str(len(inps.file)))
     print inps.file
     if len(inps.file) > 1:
         inps.outfile = None
-    print 'fill_value: '+str(inps.fill_value)
+    print('fill_value: '+str(inps.fill_value))
 
     ##Check Lookup table
     inps.lookup_file = ut.get_lookup_file(inps.lookup_file)
@@ -591,7 +598,7 @@ def main(argv):
         for fname in inps.file:
             geocode_file(fname, inps.lookup_file, inps.outfile, inps)
 
-    print 'Done.'
+    print('Done.')
     return
 
 

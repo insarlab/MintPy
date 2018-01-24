@@ -6,18 +6,13 @@
 ############################################################
 
 import sys
-import os
-import numpy as np
-import getopt
 import h5py
-import matplotlib.pyplot as plt
-#from scipy.sparse.csgraph import laplacian
 from scipy.ndimage.filters import laplace
 
 
 ##############################################################################
 def usage():
-    print '''
+    print('''
 ***************************************************************************
    Usage:
        quality_map.py  file.h5 
@@ -26,7 +21,7 @@ def usage():
        quality_map.py  Seeded_Loaded_data.h5
 
 ***************************************************************************
-    '''
+    ''')
 #def Sudo_Correlation():
 
 #def Derivative_Variance():
@@ -39,23 +34,23 @@ def main(argv):
     except: usage();sys.exit(1)
   
     h5file=h5py.File(file,'r')
-    kh5=h5file.keys()
-    ifgramList=h5file['interferograms'].keys()
+    kh5=list(h5file.keys())
+    ifgramList=list(h5file['interferograms'].keys())
   
     try:    OutName=argv[1]
     except: OutName='Laplacian.h5'
   
     h5laplace=h5py.File(OutName,'w')
     group=h5laplace.create_group('interferograms')
-    print 'Calculating the Discrete Laplacian Transform'   
+    print('Calculating the Discrete Laplacian Transform')   
     for ifgram in  ifgramList:
-        print ifgram
+        print(ifgram)
         dset=h5file['interferograms'][ifgram].get(ifgram)
         unw=dset[0:dset.shape[0],0:dset.shape[1]]
         Lunw=laplace(unw)
         g=group.create_group(ifgram)
         g.create_dataset(ifgram,data=Lunw,compression='gzip')
-        for key, value in h5file['interferograms'][ifgram].attrs.iteritems():
+        for key, value in h5file['interferograms'][ifgram].attrs.items():
             g.attrs[key] = value
   
     gm = h5laplace.create_group('mask')
@@ -67,9 +62,9 @@ def main(argv):
         gc = h5laplace.create_group('meanCoherence')
         dset = gc.create_dataset('meanCoherence', data=meanCoherence, compression='gzip')
     except:
-        print ''   
+        print('')   
   
-    print 'DONE!'
+    print('DONE!')
 
 ##############################################################################
 if __name__ == '__main__':

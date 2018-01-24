@@ -12,14 +12,12 @@
 import os
 import sys
 import argparse
-import getopt
 
-import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
+import _readfile as readfile
+import _writefile as writefile
 
 
 #############################################################################################
@@ -60,11 +58,11 @@ def manual_offset_estimate(matrix1, matrix2):
     ax.imshow(matrix1)
     xc=[] 
     yc=[] 
-    print 'please click on start and end point of the desired profile/line'
-    print 'afterward close the figure to continue the process'
+    print('please click on start and end point of the desired profile/line')
+    print('afterward close the figure to continue the process')
     def onclick(event):
         if event.button==1:
-            print 'click'
+            print('click')
             xc.append(int(event.xdata))
             yc.append(int(event.ydata))
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
@@ -78,11 +76,11 @@ def manual_offset_estimate(matrix1, matrix2):
     ax.imshow(matrix2)
     xc=[]
     yc=[]
-    print 'please click on start and end point of the desired profile'
-    print 'afterward close the figure to continue the process'
+    print('please click on start and end point of the desired profile')
+    print('afterward close the figure to continue the process')
     def onclick(event):
         if event.button==1:
-            print 'click'
+            print('click')
             xc.append(int(event.xdata))
             yc.append(int(event.ydata))
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
@@ -108,15 +106,15 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
     V1, atr1 = readfile.read(File1)
     V2, atr2 = readfile.read(File2)
     k = atr1['FILE_TYPE']
-    print '---------------------------'
-    print 'matching 2 '+k+' files:\n'+File1+'\n'+File2
+    print('---------------------------')
+    print('matching 2 '+k+' files:\n'+File1+'\n'+File2)
     
     # Get Coverage Info 
     # Boundary Info - 2 Input Files
     West1,East1,North1,South1,width1,length1 = corners(atr1)
     West2,East2,North2,South2,width2,length2 = corners(atr2)
     # Boundary Info - Output File
-    print 'finding the corners of the whole area'
+    print('finding the corners of the whole area')
     West  = min(West1, West2)
     East  = max(East1, East2)
     North = max(North1,North2)
@@ -147,29 +145,29 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
         offset = np.nansum(VV_diff) / np.sum(np.isfinite(VV_diff))  
 
     if np.isnan(offset):
-        print '**************************************************'
-        print 'WARNING:'
-        print ''
-        print 'No common area found between two velocity maps'
-        print 'At least one common pixel is required.'
-        print 'No matching applied. '
-        print 'Continue with manual matching ...'
-        print '    by selecting two line from each dataset to calculate the offset'
-        print '**************************************************'
+        print('**************************************************')
+        print('WARNING:')
+        print('')
+        print('No common area found between two velocity maps')
+        print('At least one common pixel is required.')
+        print('No matching applied. ')
+        print('Continue with manual matching ...')
+        print('    by selecting two line from each dataset to calculate the offset')
+        print('**************************************************')
         manual_matching = True
     if manual_match:
         offset = manual_offset_estimate(V1, V2)
 
     # Adjust File2 value using offset
     if np.isnan(offset):
-        print '**************************************************'
-        print 'WARNING:'
-        print ''
-        print 'No offset is estimated and no matching applied.'
-        print 'Continue to merge two input files without any adjustment.'
-        print '**************************************************'   
+        print('**************************************************')
+        print('WARNING:')
+        print('')
+        print('No offset is estimated and no matching applied.')
+        print('Continue to merge two input files without any adjustment.')
+        print('**************************************************')   
     else:
-        print 'Average offset between two velocity in the common area is: ' + str(offset)
+        print('Average offset between two velocity in the common area is: ' + str(offset))
         V2 = V2 - offset
 
     # Get merged data matrix value
@@ -184,7 +182,7 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
         ext = os.path.splitext(File1)[1]
         outName = os.path.splitext(os.path.basename(File1))[0]+'_'+\
                   os.path.splitext(os.path.basename(File2))[0]+ext
-    print 'writing >>> '+outName
+    print('writing >>> '+outName)
     atr = atr1.copy()
     atr['WIDTH'] = width
     atr['FILE_LENGTH'] = length
@@ -195,17 +193,17 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
     # Display
     fig_size = [16.0,16.0]
     fig = plt.figure(figsize=fig_size)
-    print 'plotting result ...'
+    print('plotting result ...')
     fig=plt.subplot(2,2,1);  plt.imshow(VV1);      plt.title(File1);     plt.colorbar()
     fig=plt.subplot(2,2,2);  plt.imshow(VV2);      plt.title(File2);     plt.colorbar()
     fig=plt.subplot(2,2,3);  plt.imshow(VV);       plt.title(outName);   plt.colorbar()
     fig=plt.subplot(2,2,4);  plt.imshow(VV_diff);  plt.title('Offset');  plt.colorbar()
     plt.tight_layout()
     plt.savefig(outName+'.png', bbox_inches='tight', transparent=True, dpi=150)
-    print 'save figure to '+outName+'.png'
+    print('save figure to '+outName+'.png')
 
     if disp_fig:
-        print 'showing ...'
+        print('showing ...')
         plt.show()
 
     return outName
@@ -242,8 +240,8 @@ def cmdLineParse():
 def main(argv):
     # Inputs
     inps = cmdLineParse()
-    print '\n**************** Match Files *********************'
-    print 'Files to be matched:\n'+inps.first_file+', '+str(inps.other_file)
+    print('\n**************** Match Files *********************')
+    print('Files to be matched:\n'+inps.first_file+', '+str(inps.other_file))
     
     # Matching file by file
     file1 = inps.first_file
@@ -253,7 +251,7 @@ def main(argv):
         else:
             outName = None
         file1 = match_two_files(file1, file2, outName, inps.manual_match, inps.disp_fig)
-    print 'Done.'
+    print('Done.')
     return file1
 
 #############################################################################################

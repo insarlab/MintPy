@@ -6,25 +6,21 @@
 ############################################################
 
 
-import os
-import sys 
-
-import h5py
+import sys
 import numpy as np
-import matplotlib.pyplot as plt
 
-import pysar._readfile as readfile
+import _readfile as readfile
 
 
 ################################################################################
 def usage():
-    print '''usage: correlation_with_dem.py  dem_file  file  [y0:y1 x0:x1]
+    print('''usage: correlation_with_dem.py  dem_file  file  [y0:y1 x0:x1]
 
 Calculates the correlation of the DEM and file
 
 example:
   correlation_with_dem.py   radar_8rlks.hgt  velocity_masked.h5
-    '''
+    ''')
     return
 
 
@@ -38,7 +34,7 @@ def main(argv):
 
     dem, demRsc = readfile.read(demFile)
     data, atr   = readfile.read(File)
-    print 'Input file is '+atr['FILE_TYPE']
+    print('Input file is '+atr['FILE_TYPE'])
 
     # Subset
     try:
@@ -57,13 +53,13 @@ def main(argv):
     C1[1][:] = data[ndx]
 
     # Display
-    print '-------------------------------------------'
-    print 'Correlation with the DEM:  %.2f' % np.corrcoef(C1)[0][1]
-    print '-------------------------------------------'
-    print 'DEM info:'
-    print '    Max height difference: %.2f m' % (np.max(dem[ndx])-np.min(dem[ndx]))
-    print '    Average        height: %.2f m' % np.mean(dem[ndx])
-    print '    Height            Std: %.2f m' % np.std(dem[ndx])
+    print('-------------------------------------------')
+    print('Correlation with the DEM:  %.2f' % np.corrcoef(C1)[0][1])
+    print('-------------------------------------------')
+    print('DEM info:')
+    print('    Max height difference: %.2f m' % (np.max(dem[ndx])-np.min(dem[ndx])))
+    print('    Average        height: %.2f m' % np.mean(dem[ndx]))
+    print('    Height            Std: %.2f m' % np.std(dem[ndx]))
     return
 
 ################################################################################

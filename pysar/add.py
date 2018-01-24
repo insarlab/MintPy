@@ -17,10 +17,10 @@ import argparse
 import h5py
 import numpy as np
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import _datetime as ptime
+import _readfile as readfile
+import _writefile as writefile
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ################################################################################
@@ -55,7 +55,7 @@ def add_files(fname_list, fname_out=None):
     k = atr['FILE_TYPE']
     length = int(atr['FILE_LENGTH'])
     width = int(atr['WIDTH'])
-    print 'First input file is '+atr['PROCESSOR']+' '+k
+    print('First input file is '+atr['PROCESSOR']+' '+k)
 
     ## Multi-dataset/group file
     if k in multi_group_hdf5_file + multi_dataset_hdf5_file:
@@ -66,10 +66,10 @@ def add_files(fname_list, fname_out=None):
                 k in multi_group_hdf5_file   and ki in multi_group_hdf5_file):
                 pass
             else:
-                print 'Input files structure are not the same: '+k+' v.s. '+ki
+                print('Input files structure are not the same: '+k+' v.s. '+ki)
                 sys.exit(1)
 
-        print 'writing >>> '+fname_out
+        print('writing >>> '+fname_out)
         h5out = h5py.File(fname_out, 'w')
         group = h5out.create_group(k)
 
@@ -79,7 +79,7 @@ def add_files(fname_list, fname_out=None):
         prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
     if k in multi_dataset_hdf5_file:
-        print 'number of acquisitions: %d' % epoch_num
+        print('number of acquisitions: %d' % epoch_num)
         for i in range(epoch_num):
             epoch = epoch_list[i]
             data = np.zeros((length,width))
@@ -91,28 +91,28 @@ def add_files(fname_list, fname_out=None):
             dset = group.create_dataset(epoch, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=epoch)
 
-        for key,value in atr.iteritems():
+        for key,value in atr.items():
             group.attrs[key] = value
         h5out.close()
         h5.close()
         prog_bar.close()
   
     elif k in multi_group_hdf5_file:
-        print 'number of interferograms: %d' % epoch_num
+        print('number of interferograms: %d' % epoch_num)
         date12_list = ptime.list_ifgram2date12(epoch_list)
         for i in range(epoch_num):
             epoch = epoch_list[i]
             data = np.zeros((length,width))
             for fname in fname_list:
                 h5file = h5py.File(fname,'r')
-                temp_k = h5file.keys()[0]
+                temp_k = list(h5file.keys())[0]
                 temp_epoch_list = sorted(h5file[temp_k].keys())
                 d = h5file[temp_k][temp_epoch_list[i]].get(temp_epoch_list[i])[:]
                 data = add_matrix(data,d)
 
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in h5[k][epoch].attrs.iteritems():
+            for key, value in h5[k][epoch].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
         h5out.close()
@@ -123,11 +123,11 @@ def add_files(fname_list, fname_out=None):
     else:
         data = np.zeros((length,width))
         for fname in fname_list:
-            print 'loading '+fname
+            print('loading '+fname)
             d,r = readfile.read(fname)
             data = add_matrix(data,d)
 
-        print 'writing >>> '+fname_out
+        print('writing >>> '+fname_out)
         writefile.write(data,atr,fname_out)
 
     return fname_out
@@ -158,11 +158,11 @@ def cmdLineParse():
 ################################################################################
 def main(argv):
     inps = cmdLineParse()
-    print 'Input files to be added: '
-    print inps.file
+    print('Input files to be added: ')
+    print(inps.file)
 
     inps.outfile = add_files(inps.file, inps.outfile)
-    print 'Done.'
+    print('Done.')
     return inps.outfile
 
 

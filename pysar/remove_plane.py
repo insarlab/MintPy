@@ -9,17 +9,15 @@
 # Yunjun, Aug 2016: Support multiple surfaces
 
 
-import os
 import sys
 import argparse
 
-import h5py
 import numpy as np
 
-import pysar._pysar_utilities as ut
-import pysar._remove_surface as rm
-import pysar._readfile as readfile
-import pysar._writefile as writefile
+import _pysar_utilities as ut
+import _remove_surface as rm
+import _readfile as readfile
+import _writefile as writefile
 
 
 ######################################
@@ -61,8 +59,8 @@ def main(argv):
     
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
-    print 'input file(s): '+str(len(inps.file))
-    print inps.file
+    print('input file(s): '+str(len(inps.file)))
+    print(inps.file)
     
     #print '\n*************** Phase Ramp Removal ***********************'
     atr = readfile.read_attribute(inps.file[0])
@@ -75,7 +73,7 @@ def main(argv):
         try:
             mask_atr = readfile.read_attribute(inps.mask_file)
         except:
-            print 'Can not open mask file: '+inps.mask_file
+            print('Can not open mask file: '+inps.mask_file)
             inps.mask_file = None
 
     # Update mask for multiple surfaces
@@ -108,7 +106,7 @@ def main(argv):
         outFile = 'mask_'+str(surfNum)+inps.surface_type+'.h5'
         atr['FILE_TYPE'] = 'mask'
         writefile.write(mask_multiSurface, atr, outFile)
-        print 'saved mask to '+outFile
+        print('saved mask to '+outFile)
 
     ############################## Removing Phase Ramp #######################################
     # check outfile and parallel option
@@ -126,10 +124,10 @@ def main(argv):
 
     else:
         for File in inps.file:
-            print '------------------------------------------'
+            print('------------------------------------------')
             rm.remove_surface(File, inps.surface_type, inps.mask_file, ysub=inps.ysub)
     
-    print 'Done.'
+    print('Done.')
     return
 
 

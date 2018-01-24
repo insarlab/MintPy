@@ -19,10 +19,10 @@ except:
 import h5py
 import numpy as np
 
-import pysar._datetime as ptime
-import pysar._pysar_utilities as ut
-import pysar._readfile as readfile
-import pysar._writefile as writefile
+import _datetime as ptime
+import _pysar_utilities as ut
+import _readfile as readfile
+import _writefile as writefile
 
 
 ###############################################################
@@ -102,7 +102,7 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     weather_dir = os.path.abspath(weather_dir)
     grib_dir = weather_dir+'/'+grib_source
     if not os.path.isdir(grib_dir):
-        print 'making directory: '+grib_dir
+        print('making directory: '+grib_dir)
         os.makedirs(grib_dir)
 
     ## Date list to grib file list
@@ -119,22 +119,22 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     if grib_file_existed:
         grib_filesize_mode = ut.mode([os.path.getsize(i) for i in grib_file_existed])
         grib_file_corrupted = [i for i in grib_file_existed if os.path.getsize(i) != grib_filesize_mode]
-        print 'number of grib files existed    : %d' % len(grib_file_existed)
-        print 'file size mode: %d' % grib_filesize_mode
+        print('number of grib files existed    : %d' % len(grib_file_existed))
+        print('file size mode: %d' % grib_filesize_mode)
         if grib_file_corrupted:
-            print '------------------------------------------------------------------------------'
-            print 'corrupted grib files detected! Delete them and re-download...'
-            print 'number of grib files corrupted  : %d' % len(grib_file_corrupted)
+            print('------------------------------------------------------------------------------')
+            print('corrupted grib files detected! Delete them and re-download...')
+            print('number of grib files corrupted  : %d' % len(grib_file_corrupted))
             for i in grib_file_corrupted:
                 rmCmd = 'rm '+i
-                print rmCmd
+                print(rmCmd)
                 os.system(rmCmd)
                 grib_file_existed.remove(i)
-            print '------------------------------------------------------------------------------'
+            print('------------------------------------------------------------------------------')
     grib_file2download = sorted(list(set(grib_file_list) - set(grib_file_existed)))
     date_list2download = [str(re.findall('\d{8}', i)[0]) for i in grib_file2download]
-    print 'number of grib files to download: %d' % len(date_list2download)
-    print '------------------------------------------------------------------------------\n'
+    print('number of grib files to download: %d' % len(date_list2download))
+    print('------------------------------------------------------------------------------\n')
 
     ## Download grib file using PyAPS
     if   grib_source == 'ECMWF':  pa.ECMWFdload(date_list2download, hour, grib_dir)
@@ -249,8 +249,8 @@ def main(argv):
             outname = os.path.splitext(inps.dem_file)[0]+'4pyaps'+atr_dem['FILE_TYPE']
             inps.dem_file = writefile.write(dem, atr_dem, outname)
 
-    print '*******************************************************************************'
-    print 'Downloading weather model data ...'
+    print('*******************************************************************************')
+    print('Downloading weather model data ...')
 
     ## Get Grib Source
     if   inps.weather_model in ['ECMWF','ERA-Interim']:   inps.grib_source = 'ECMWF'
@@ -258,7 +258,7 @@ def main(argv):
     elif inps.weather_model == 'MERRA':                   inps.grib_source = 'MERRA'
     elif inps.weather_model == 'NARR' :                   inps.grib_source = 'NARR'
     else: raise Reception('Unrecognized weather model: '+inps.weather_model)
-    print 'grib source: '+inps.grib_source
+    print('grib source: '+inps.grib_source)
 
     # Get weather directory
     if not inps.weather_dir:
@@ -268,11 +268,11 @@ def main(argv):
             inps.weather_dir = os.path.dirname(os.path.abspath(inps.dem_file))+'/../WEATHER'
         else:
             inps.weather_dir = os.path.abspath(os.getcwd())
-    print 'Store weather data into directory: '+inps.weather_dir
+    print('Store weather data into directory: '+inps.weather_dir)
 
     # Get date list to download
     if not inps.date_list_file:
-        print 'read date list info from: '+inps.timeseries_file
+        print('read date list info from: '+inps.timeseries_file)
         h5 = h5py.File(inps.timeseries_file, 'r')
         if 'timeseries' in h5.keys():
             date_list = sorted(h5[k].keys())
@@ -287,22 +287,22 @@ def main(argv):
         h5.close()
     else:
         date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
-        print 'read date list info from: '+inps.date_list_file
+        print('read date list info from: '+inps.date_list_file)
 
     # Get Acquisition time - hour
     if not inps.hour:
         inps.hour = closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.grib_source)
-    print 'Time of cloest available product: '+inps.hour
+    print('Time of cloest available product: '+inps.hour)
 
     ## Download data using PyAPS
     inps.grib_file_list = dload_grib(date_list, inps.hour, inps.weather_model, inps.weather_dir)
 
     if inps.download:
-        print 'Download completed, exit as planned.'
+        print('Download completed, exit as planned.')
         return
 
-    print '*******************************************************************************'
-    print 'Calcualting delay for each epoch.'
+    print('*******************************************************************************')
+    print('Calcualting delay for each epoch.')
 
     ## Calculate tropo delay using pyaps
     length = int(atr['FILE_LENGTH'])
@@ -324,10 +324,11 @@ def main(argv):
 
     ## Write tropospheric delay to HDF5
     tropFile = inps.grib_source+'.h5'
-    print 'writing >>> %s' % (tropFile)
+
+    print('writing >>> %s' % (tropFile))
     h5trop = h5py.File(tropFile, 'w')
     group_trop = h5trop.create_group('timeseries')
-    print 'number of acquisitions: '+str(date_num)
+    print('number of acquisitions: '+str(date_num))
     prog_bar = ptime.progress_bar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
@@ -366,7 +367,7 @@ def main(argv):
         rmCmd = 'rm %s %s.rsc' % (inps.dem_file, inps.dem_file)
         print rmCmd
         os.system(rmCmd)
-    print 'Done.'
+    print('Done.')
     return inps.out_file
 
 

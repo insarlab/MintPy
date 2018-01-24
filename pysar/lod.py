@@ -34,14 +34,15 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 #########################################################################################
 def correct_lod_file(File, rangeDistFile=None, outFile=None):
     # Check Sensor Type
-    print 'correct Local Oscilator Drift for Envisat using an empirical model (Marinkovic and Larsen, 2013)'
-    print 'input file: '+File
+<<<<<<< HEAD
+    print('correct Local Oscilator Drift for Envisat using an empirical model (Marinkovic and Larsen, 2013)')
+    print('input file: '+File)
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     platform = atr['PLATFORM']
-    print 'platform: '+platform
+    print('platform: '+platform)
     if not platform.lower() in ['env','envisat']:
-        print 'No need to correct LOD for '+platform
+        print('No need to correct LOD for '+platform)
         sys.exit(1)
 
     # Output Filename
@@ -79,7 +80,7 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
         prog_bar = ptime.progress_bar(maxValue=epochNum)
         if k in ['interferograms','wrapped']:
             Ramp *= -4*np.pi / float(atr['WAVELENGTH'])
-            print 'number of interferograms: '+str(epochNum)
+            print('number of interferograms: '+str(epochNum))
             date12List = ptime.list_ifgram2date12(epochList)
             for i in range(epochNum):
                 epoch = epochList[i]
@@ -93,12 +94,12 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
 
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data, compression='gzip')
-                for key, value in atr.iteritems():
+                for key, value in atr.items():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12List[i])
 
         elif k == 'timeseries':
-            print 'number of acquisitions: '+str(len(epochList))
+            print('number of acquisitions: '+str(len(epochList)))
             tbase = [float(dy)/365.25 for dy in ptime.date_list2tbase(epochList)[0]]
             for i in range(epochNum):
                 epoch = epochList[i]
@@ -111,7 +112,7 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
             for key, value in atr.iteritems():
                 group.attrs[key] = value
         else:
-            print 'No need to correct for LOD for '+k+' file'
+            print('No need to correct for LOD for '+k+' file')
             sys.exit(1)
         prog_bar.close()
         h5.close()
@@ -132,6 +133,7 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
     return outFile
 
 
+<<<<<<< HEAD
 #########################################################################################
 REFERENCE='''reference:
   Marinkovic, P., and Y. Larsen (2013), Consequences of long-term ASAR local oscillator 
@@ -171,10 +173,10 @@ def main(argv):
         coordType = 'geo'
     else:
         coordType = 'radar'
-    print 'Input file is in %s coordinates' % (coordType)
+    print('Input file is in %s coordinates' % (coordType))
     inps.range_dist_file = ut.get_geometry_file('slantRangeDistance', coordType=coordType)
     inps.outfile = correct_lod_file(inps.file, inps.range_dist_file, inps.outfile)
-    print 'Done.'
+    print('Done.')
 
 
 #########################################################################################

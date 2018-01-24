@@ -5,7 +5,6 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
-import os
 import sys
 import argparse
 import time
@@ -14,10 +13,9 @@ import datetime
 import h5py
 import numpy as np
 import random
-import matplotlib.pyplot as plt
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
+import _datetime as ptime
+import _readfile as readfile
 
 
 ##############################################################################################
@@ -64,13 +62,13 @@ def main(argv):
     # Check subset input
     if inps.subset_y:
         inps.subset_y = sorted(inps.subset_y)
-        print 'subset in y/azimuth direction: '+str(inps.subset_y)
+        print('subset in y/azimuth direction: '+str(inps.subset_y))
     else:
         inps.subset_y = [0, length]
 
     if inps.subset_x:
         inps.subset_x = sorted(inps.subset_x)
-        print 'subset in x/range direction: '+str(inps.subset_x)
+        print('subset in x/range direction: '+str(inps.subset_x))
     else:
         inps.subset_x = [0, width]
     y0, y1 = inps.subset_y
@@ -78,26 +76,26 @@ def main(argv):
 
     # Read velocity/rate
     velocity = readfile.read(inps.velocity_file)[0]
-    print 'read velocity file: '+inps.velocity_file
+    print('read velocity file: '+inps.velocity_file)
 
     k = 'interferograms'
     h5 = h5py.File(inps.ifgram_file, 'r')
     ifgram_list = sorted(h5[k].keys())
     ifgram_num = len(ifgram_list)
     date12_list = ptime.list_ifgram2date12(ifgram_list)
-    print 'number of interferograms: '+str(ifgram_num)
+    print('number of interferograms: '+str(ifgram_num))
 
     ##### Select interferograms with unwrapping error
     if inps.percentage > 0.0:
         mask = readfile.read(inps.mask_file, epoch='mask')[0]
-        print 'read mask for pixels with unwrapping error from file: '+inps.mask_file
+        print('read mask for pixels with unwrapping error from file: '+inps.mask_file)
 
         unw_err_ifgram_num = int(np.rint(inps.percentage*ifgram_num))
-        unw_err_ifgram_idx = random.sample(range(ifgram_num), unw_err_ifgram_num)
+        unw_err_ifgram_idx = random.sample(list(range(ifgram_num)), unw_err_ifgram_num)
         unw_err_ifgram_list = [ifgram_list[i] for i in unw_err_ifgram_idx]
         unw_err_date12_list = [date12_list[i] for i in unw_err_ifgram_idx]
-        print 'randomly choose the following %d interferograms with unwrapping error' % unw_err_ifgram_num
-        print unw_err_date12_list
+        print('randomly choose the following %d interferograms with unwrapping error' % unw_err_ifgram_num)
+        print(unw_err_date12_list)
 
         unit_unw_err = 2.0*np.pi*mask
     else:
@@ -108,7 +106,7 @@ def main(argv):
     s_dates = ptime.yyyymmdd([i.split('-')[1] for i in date12_list])
     range2phase = -4.0*np.pi/float(atr['WAVELENGTH'])
 
-    print 'writing simulated interferograms file: '+inps.outfile
+    print('writing simulated interferograms file: '+inps.outfile)
     h5out=h5py.File(inps.outfile,'w') 
     group = h5out.create_group('interferograms')
     for i in range(ifgram_num):
@@ -122,16 +120,16 @@ def main(argv):
         # Simuated interferograms with unwrap error
         unw = velocity*dt*range2phase
         if ifgram in unw_err_ifgram_list:
-            rand_int = random.sample(range(1,10),1)[0]
+            rand_int = random.sample(list(range(1,10)),1)[0]
             unw += rand_int * unit_unw_err
-            print ifgram+'  - add unwrapping error of %d*2*pi' % rand_int
+            print(ifgram+'  - add unwrapping error of %d*2*pi' % rand_int)
         else:
-            print ifgram
+            print(ifgram)
 
         gg = group.create_group(ifgram)
         dset = gg.create_dataset(ifgram, data=unw[y0:y1,x0:x1], compression='gzip')
 
-        for key, value in h5[k][ifgram].attrs.iteritems():
+        for key, value in h5[k][ifgram].attrs.items():
             gg.attrs[key] = value
         if ifgram in unw_err_ifgram_list:
             gg.attrs['unwrap_error'] = 'yes'
@@ -141,7 +139,7 @@ def main(argv):
         gg.attrs['WIDTH']       = x1-x0
     h5.close()
     h5out.close()
-    print 'Done.'
+    print('Done.')
     return inps.outfile
 
 
