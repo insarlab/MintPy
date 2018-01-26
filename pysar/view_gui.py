@@ -17,14 +17,14 @@ canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_shor
 pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
 colormap, projection, lr_flip, ud_flip, wrap, opposite, transparency, show_info, dem_file, dem_short, \
 pick_dem_file_button, shading, countours, countour_smoothing, countour_step, subset_x_from, subset_x_to, subset_y_from, \
-subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, font_size, \
-plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
-fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
-scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file \
+subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, ref_color, \
+ref_sym, ref_date, font_size, plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, \
+fig_size_width, fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, \
+lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file \
     = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
-      None, None, None, None, None, None, None, None, None, None, None, None, None
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap',
              'CMRmap_r', 'Dark2', 'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r',
@@ -305,7 +305,26 @@ def show_plot():
         print("No file selected")
 
 
+def reset_plot():
+    set_variables_from_attributes()
+
+
 def set_variables_from_attributes():
+
+    update_sliders('m')
+    y_lim_upper.set(starting_upper_lim/2)
+    y_lim_lower.set(0)
+    unit.set(attributes['UNIT'])
+    colormap.set('hsv')
+    projection.set("cea")
+    transparency.set(1.0)
+
+
+    shading.set(1)
+    countours.set(1)
+    countour_smoothing.set("3.0")
+    countour_step.set("200")
+
 
     subset_x_from.set(attributes['XMIN'])
     subset_y_from.set(attributes['YMIN'])
@@ -321,13 +340,12 @@ def set_variables_from_attributes():
 
     ref_x.set("0")
     ref_y.set("0")
-
     ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
-
     ref_lat.set(ref_lat_data)
     ref_lon.set(ref_lon_data)
+    ref_color.set("b")
+    ref_sym.set(".")
 
-    unit.set(attributes['UNIT'])
 
     row_num.set("1")
     col_num.set("1")
@@ -338,7 +356,18 @@ def set_variables_from_attributes():
     title.set(h5_file_short.get())
     fig_w_space.set("1")
     fig_h_space.set("1")
+    axis_show.set(1)
+    cbar_show.set(1)
+    title_show.set(1)
+    tick_show.set(1)
+    title_in.set(1)
 
+    fig_ext.set(".pdf")
+    fig_num.set("1")
+    coords.set("geo")
+
+    resolution.set("c")
+    show_scalebar.set(1)
 
 
 
@@ -425,13 +454,16 @@ def main():
         subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, font_size, \
         plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
         fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
-        scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file
+        scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_color, ref_sym, ref_date
 
     '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
     root.minsize(width=365, height=750)
     root.maxsize(width=365, height=750)
     root.resizable(width=False, height=False)
+
+    reset_button = Button(root, text="Reset Settings", command=lambda: reset_plot())
+    reset_button.pack(side=TOP, pady=(10, 5))
 
     submit_button = Button(root, text="Show Plot", command=lambda: show_plot(), background="green")
     submit_button.pack(side=TOP, pady=(10, 20))
@@ -516,19 +548,16 @@ def main():
     unit_cmap_projection_frame = Frame(frame)
 
     unit = StringVar()
-    unit.set("m")
 
     unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=update_sliders)
     unit_option_menu.config(width=6)
 
     colormap = StringVar()
-    colormap.set('hsv')
 
     colormap_option_menu = OptionMenu(unit_cmap_projection_frame, colormap, *colormaps)
     colormap_option_menu.config(width=10)
 
     projection = StringVar()
-    projection.set("cea")
 
     projection_option_menu = OptionMenu(unit_cmap_projection_frame, projection, *projections)
     projection_option_menu.config(width=12)
@@ -550,7 +579,6 @@ def main():
 
     '''     WIDGETS FOR TRANSPARENCY'''
     transparency = IntVar()
-    transparency.set(1.0)
 
     transparency_frame = Frame(frame)
     transparency_label = Label(transparency_frame, text="Alpha", width=8)
@@ -594,10 +622,8 @@ def main():
     dem_options_frame = Frame(frame)
 
     shading = IntVar()
-    shading.set(1)
 
     countours = IntVar()
-    countours.set(1)
 
     dem_shading_checkbutton = Checkbutton(dem_options_frame, text="Show Shaded Relief", variable=shading)
     dem_countours_checkbutton = Checkbutton(dem_options_frame, text="Show Countour Lines", variable=countours)
@@ -607,10 +633,8 @@ def main():
     dem_countour_options = Frame(frame)
 
     countour_smoothing = StringVar()
-    countour_smoothing.set("3.0")
 
     countour_step = StringVar()
-    countour_step.set("200")
 
     dem_countour_smoothing_frame = Frame(dem_countour_options, width=15)
     dem_countour_smoothing_label = Label(dem_countour_smoothing_frame, text="Contour Smoothing: ", anchor='c', width=15)
@@ -737,7 +761,6 @@ def main():
     show_ref_frame = Frame(frame)
 
     show_ref = IntVar()
-    show_ref.set(1)
     show_ref_checkbutton = Checkbutton(show_ref_frame, text="Show Reference", variable=show_ref)
 
 
@@ -752,14 +775,12 @@ def main():
 
     reference_colors = ["b", "g", "r", "m", "c", "y", "k", "w"]
     ref_color = StringVar()
-    ref_color.set("b")
     ref_color_option_menu = OptionMenu(reference_options_frame, ref_color, *reference_colors)
     ref_color_option_menu.config(width=10)
 
     reference_symbols = [".", ",", "o", "v", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "*", "h", "H", "+",
                          "x", "X", "d", "D", "|", "_"]
     ref_sym = StringVar()
-    ref_sym.set(".")
     ref_symbol_option_menu = OptionMenu(reference_options_frame, ref_sym,*reference_symbols)
     ref_symbol_option_menu.config(width=10)
 
@@ -812,25 +833,20 @@ def main():
     axis_cbar_frame = Frame(frame)
 
     axis_show = IntVar()
-    axis_show.set(1)
     axis_show_checkbutton = Checkbutton(axis_cbar_frame, text="Show Axis", variable=axis_show)
 
     cbar_show = IntVar()
-    cbar_show.set(1)
     cbar_show_checkbutton = Checkbutton(axis_cbar_frame, text="Show Colorbar", variable=cbar_show)
 
     title_show = IntVar()
-    title_show.set(1)
     title_show_checkbutton = Checkbutton(axis_cbar_frame, text="Show Title", variable=title_show)
 
     title_tick_frame = Frame(frame)
 
     tick_show = IntVar()
-    tick_show.set(1)
     tick_show_checkbutton = Checkbutton(title_tick_frame, text="Show Ticks", variable=tick_show)
 
     title_in = IntVar()
-    title_in.set(1)
     title_in_checkbutton = Checkbutton(title_tick_frame, text="Title in Axes", variable=title_in)
 
 
@@ -865,13 +881,11 @@ def main():
 
     figure_extensions = [".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]
     fig_ext = StringVar()
-    fig_ext.set(".pdf")
     fig_ext_option_menu = OptionMenu(fig_ext_num_frame, fig_ext, *figure_extensions)
     fig_ext_option_menu.config(width=14)
 
     figure_numbers = ["1", "2", "3", "4", "5"]
     fig_num = StringVar()
-    fig_num.set("1")
     fig_num_option_menu = OptionMenu(fig_ext_num_frame, fig_num, *figure_numbers)
     fig_num_option_menu.config(width=14)
 
@@ -897,7 +911,6 @@ def main():
     coords_label = Label(coords_frame, text="Coords: ", width=5)
     coords_option_menu = apply(OptionMenu, (coords_frame, coords) + tuple(["radar", "geo"]))
     coords_option_menu.config(width=15)
-    coords.set("geo")
 
 
 
@@ -926,7 +939,6 @@ def main():
     '''     WODGETS FOR RESOLUTION      '''
     resolution_label = Label(coastline_res_frame, text="Res: ", width=3, anchor='w')
     resolution = StringVar()
-    resolution.set("c")
     resolution_option_menu = apply(OptionMenu,
                                    (coastline_res_frame, resolution) + tuple(["c", "l", "i", "h", "f", "None"]))
     resolution_option_menu.config(width=8)
@@ -961,7 +973,6 @@ def main():
     show_scalebar_frame = Frame(frame)
 
     show_scalebar = IntVar()
-    show_scalebar.set(1)
     show_scalebar_checkbutton = Checkbutton(show_scalebar_frame, text="Show Scalebar", variable=show_scalebar)
 
 
