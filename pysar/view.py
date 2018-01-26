@@ -32,6 +32,7 @@ from multilook import multilook_matrix
 
 from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
+fig = None
 
 ############################################ Class ###############################################
 class Basemap2(Basemap): 
@@ -1263,6 +1264,7 @@ def cmdLineParse(argv):
 
 #########################################  Main Function  ########################################
 def main(argv):
+    global fig
     inps = cmdLineParse(argv)
     if not inps.disp_fig:
         plt.switch_backend('Agg')
@@ -1417,7 +1419,7 @@ def main(argv):
             inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in plot_shape]
         print('create figure in size: '+str(inps.fig_size))
         
-        fig = plt.figure(figsize=inps.fig_size)
+        fig = plt.figure("Figure", figsize=inps.fig_size)
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
 
         # Plotting

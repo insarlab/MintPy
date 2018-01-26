@@ -298,6 +298,8 @@ def show_plot():
 
     #print(options)
     if h5_file.get() != "":
+        if view.fig is not None:
+            view.fig.clear()
         view.main(options)
     else:
         print("No file selected")
