@@ -20,11 +20,13 @@ pick_dem_file_button, shading, countours, countour_smoothing, countour_step, sub
 subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, ref_color, \
 ref_sym, ref_date, font_size, plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, \
 fig_size_width, fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, \
-lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file \
+lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, epoch_option_menu, epoch \
     = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
-      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+
+epoch_list = ["All"]
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap',
              'CMRmap_r', 'Dark2', 'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r',
@@ -55,7 +57,7 @@ update_in_progress = False
 
 
 def pick_file():
-    global attributes, starting_upper_lim
+    global attributes, starting_upper_lim, epoch_option_menu, epoch_list, epoch
 
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/", title="Select file",
@@ -69,20 +71,40 @@ def pick_file():
 
         file_type = atr['FILE_TYPE']
 
-        if file_type not in readfile.multi_group_hdf5_file + readfile.multi_dataset_hdf5_file + ['HDFEOS']:
-            data, attributes = readfile.read(h5_file.get())
-            max = numpy.amax(data)
-            starting_upper_lim = max * 2
-            update_sliders("m")
-            y_lim_upper.set(max)
+        epoch_list = []
+
+        h5file = h5py.File(h5_file.get(), 'r')
+        if file_type in ['HDFEOS']:
+            epoch_list += h5file.attrs['DATE_TIMESERIES'].split()
+        else:
+            epoch_list += sorted(h5file[file_type].keys())
+
+        data, attributes = readfile.read(h5_file.get(), epoch=epoch_list[len(epoch_list)-1])
+
+        max = numpy.amax(data)
+        starting_upper_lim = max * 2
+        update_sliders("m")
+        y_lim_upper.set(max)
 
         set_variables_from_attributes()
 
+        def format_date(raw_date):
+            list_date = list(raw_date)
+            list_date.insert(4, '-')
+            list_date.insert(7, '-')
+            the_date = "".join(list_date)
+            return the_date
+
+        for the_epoch in epoch_list:
+            epoch_option_menu.children['menu'].add_command(label=the_epoch,
+                                                              command=lambda val=the_epoch: epoch.set(val))
+        epoch.set("All")
         return frame.filename
     else:
         h5_file.set("")
         h5_file_short.set("No File Selected")
         pick_h5_file_button.config(text="Select .h5 File")
+        epoch_option_menu['menu'].delete(1, 'end')
 
 
 def pick_mask():
@@ -153,12 +175,18 @@ def show_file_info(file_info):
 
 def show_plot():
 
-    options = [h5_file.get(), "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()), "--alpha",
-               str(transparency.get()), "--figext", fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()]
+    options = [h5_file.get()]
+
+    if epoch.get() != "All":
+        options.append(epoch.get())
+
+    options += [ "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()), "--alpha", str(transparency.get()),
+                    "--figext", fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()]
 
     if mask_file.get() != "":
         options.append("--mask")
         options.append(mask_file.get())
+
 
     if unit.get() != "":
         options.append("-u")
@@ -454,7 +482,8 @@ def main():
         subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, font_size, \
         plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
         fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
-        scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_color, ref_sym, ref_date
+        scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_color, ref_sym, ref_date, \
+        epoch_option_menu, epoch, epoch_list
 
     '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
@@ -501,6 +530,14 @@ def main():
     pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', anchor='w', width=15,
                                    command=lambda: pick_mask())
     selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
+
+    '''     WIDGETS FOR SHOWING EPOCHS AND EXLUDE DATES     '''
+
+    epoch_frame = Frame(frame)
+
+    epoch = StringVar()
+    epoch_option_menu = OptionMenu(epoch_frame, epoch, *epoch_list)
+    epoch_option_menu.config(width=10)
 
     '''
     |-----------------------------------------------------------------------------------------------------|
@@ -1027,6 +1064,9 @@ def main():
     pick_mask_file_frame.pack(anchor='w', fill=X)
     pick_mask_file_button.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
     selected_mask_file_label.pack(side=LEFT, fill=X)
+
+    epoch_frame.pack(anchor='w', fill=X)
+    epoch_option_menu.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
 
     display_options_label.pack(anchor='w', fill=X, pady=(35, 0), padx=10)
 

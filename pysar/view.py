@@ -1301,7 +1301,7 @@ def main(argv):
         inps.epoch = get_epoch_full_list_from_input(epochList, inps.epoch, inps.epoch_num)[0]
         # If no epoch info input, display all the epochs
         if not inps.epoch:
-            inps.epoch = list(epochList) 
+            inps.epoch = list(epochList)
 
         # Epochs to exclude
         if inps.exclude_epoch:
