@@ -288,7 +288,7 @@ def main(argv):
     print '-------------------------------------------------'
 
 
-<<<<<<< HEAD
+
     ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
     ## Output estimated steps 
     print 'ordinal least squares (OLS) inversion using L2-norm minimization'

@@ -145,7 +145,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
         rg, az, atr = readfile.read(File)
         rg = mask_matrix(rg, mask, inps_dict['fill_value'])
         az = mask_matrix(az, mask, inps_dict['fill_value'])
-        print 'writing >>> '+outFile
+        print('writing >>> '+outFile)
         writefile.write(rg, az, atr, outFile)
 
     else:

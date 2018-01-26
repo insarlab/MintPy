@@ -69,9 +69,11 @@ def show_plot():
         file_info = info.hdf5_structure_string(timeseries_file.get())
         show_file_info(file_info)
 
-    options = [timeseries_file.get(), "-m", mask_file.get(), "--dem", dem_file.get(), "--lalo", start_lat_input.get(),
-               start_lon_input.get(), "--ref-lalo", ref_lat_input.get(), ref_lon_input.get(),
-               "--ylim", str(y_lim_lower.get()), str(y_lim_upper.get()), "-u", unit.get(), "-c", colormap.get(), "--ref-date", ref_date.get()]
+    options = [timeseries_file.get(), "--dem", dem_file.get(), "--lalo", start_lat_input.get(), start_lon_input.get(),
+               "--ylim", str(y_lim_lower.get()), str(y_lim_upper.get()), "-u", unit.get(), "-c", colormap.get(),
+               "--ref-date", ref_date.get(), "--ref-lalo", ref_lat_input.get(), ref_lon_input.get()]
+
+    #
 
     if ts_view.fig_v is not None:
 
@@ -216,7 +218,7 @@ def main():
     ref_lat_frame = Frame(ref_lat_lon_frame)
 
     ref_lat_input = StringVar()
-    ref_lat_input.set("-0.4606")
+    ref_lat_input.set("-0.3563")
 
     ref_lat_label = Label(ref_lat_frame, text="Reference Latitude", width=17)
     ref_lat_entry = Entry(ref_lat_frame, textvariable=ref_lat_input, width=17)
@@ -225,7 +227,7 @@ def main():
     ref_lon_frame = Frame(ref_lat_lon_frame)
 
     ref_lon_input = StringVar()
-    ref_lon_input.set("-91.0752")
+    ref_lon_input.set("-91.2142")
 
     ref_lon_label = Label(ref_lon_frame, text="Reference Longitude", width=17)
     ref_lon_entry = Entry(ref_lon_frame, textvariable=ref_lon_input, width=17)

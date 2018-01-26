@@ -545,7 +545,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         return None
 
     ##### Prepare attributes file
-<<<<<<< HEAD
+
     processor = inps_dict['insarProcessor']
     print('--------------------------------------------')
     print('preparing attributes files using prep_%s.py ...' % processor)
@@ -663,7 +663,6 @@ def load_data_from_template(inps):
             else:
                 inps.insarProcessor = value
 
-<<<<<<< HEAD
     print('--------------------------------------------')
     print('InSAR processing software: '+inps.insarProcessor)
     if 'pysar.unwrapFiles'        in keyList:   inps.unw       = template['pysar.unwrapFiles']
@@ -702,11 +701,11 @@ def load_data_from_template(inps):
     print('Go to TEMPLATE directory: '+inps.template_dir)
     print('unwrapped interferograms to load: '+str(inps.unw))
     #print 'wrapped   interferograms to load: '+str(inps.int)
-<<<<<<< HEAD
+
     print('spatial coherence  files to load: '+str(inps.cor))
     print('lookup table        file to load: '+str(inps.lut))
     print('DEM file in radar  coord to load: '+str(inps.dem_radar))
-    print('DEM file in geo    coord to load: '+str(inps.dem_geo)))
+    print('DEM file in geo    coord to load: '+str(inps.dem_geo))
 
     ##------------------------------------ Loading into HDF5 ---------------------------------------##
     # required - unwrapped interferograms

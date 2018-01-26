@@ -34,7 +34,7 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 #########################################################################################
 def correct_lod_file(File, rangeDistFile=None, outFile=None):
     # Check Sensor Type
-<<<<<<< HEAD
+
     print('correct Local Oscilator Drift for Envisat using an empirical model (Marinkovic and Larsen, 2013)')
     print('input file: '+File)
     atr = readfile.read_attribute(File)
@@ -133,7 +133,6 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
     return outFile
 
 
-<<<<<<< HEAD
 #########################################################################################
 REFERENCE='''reference:
   Marinkovic, P., and Y. Larsen (2013), Consequences of long-term ASAR local oscillator 

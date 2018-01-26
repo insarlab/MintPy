@@ -117,7 +117,7 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
     if sub_y[0]>=length or sub_y[1]<=0 or sub_x[0]>=width or sub_x[1]<=0:
         print('ERROR: input index is out of data range!')
         data_box = (0,0,width,length)
-<<<<<<< HEAD
+
         print('\tdata   range in x/y: '+str(data_box))
         print('\tsubset range in x/y: '+str(pixel_box))
         print('\tdata   range in lat/lon: '+str(box_pixel2geo(data_box, atr_dict)))

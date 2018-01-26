@@ -92,7 +92,7 @@ class Basemap2(Basemap):
             lalo_step_candidate = [i*10**digit for i in step_candidate]
             distance = [(i - max_lalo_dist/max_tick_num)**2 for i in lalo_step_candidate]
             lalo_step = lalo_step_candidate[distance.index(min(distance))]
-        print 'label step - '+str(lalo_step)+' degree'
+        print('label step - '+str(lalo_step)+' degree')
 
         # Auto tick sequence
         digit = np.int(np.floor(np.log10(lalo_step)))
@@ -578,7 +578,6 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
             matrix[ind] = 10*np.log10(np.absolute(matrix[ind]))
             disp_unit[0] = 'dB'
         else:
-<<<<<<< HEAD
             try:
                 scale /= float(disp_unit[0])
             except:
@@ -721,7 +720,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     if not inps.fig_title:
         try:    inps.fig_title = auto_figure_title(meta_dict['FILE_PATH'], inps.epoch, vars(inps))
         except: inps.fig_title = os.path.splitext(os.path.basename(meta_dict['FILE_PATH']))[0]
-    print 'figure title: '+inps.fig_title
+    print('figure title: '+inps.fig_title)
 
     # Figure output file name
     if not inps.outfile:
@@ -920,7 +919,6 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
         # Lat Lon labels
         if inps.lalo_label:
-<<<<<<< HEAD
             print('plot lat/lon labels')
             m.draw_lalo_label(inps.geo_box, ax=ax, lalo_step=inps.lalo_step, font_size=inps.font_size, color=inps.font_color)
         else:
@@ -1042,7 +1040,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
     # Figure Output
     if inps.save_fig:
-        print 'save figure to '+inps.outfile
+        print('save figure to '+inps.outfile)
         plt.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
 
     return ax, inps
@@ -1315,9 +1313,11 @@ def main(argv):
 
         # Output message
         if k in multi_dataset_hdf5_file:
-            print 'num of dates in file %s : %d' % (inps.file, len(epochList))
-            print 'dates to exclude (%d):' % (len(inps.exclude_epoch));     print inps.exclude_epoch
-            print 'dates to display (%d):' % (len(inps.epoch));             print inps.epoch
+            print('num of dates in file %s : %d' % (inps.file, len(epochList)))
+            print('dates to exclude (%d):' % (len(inps.exclude_epoch)))
+            print(inps.exclude_epoch)
+            print('dates to display (%d):' % (len(inps.epoch)))
+            print(inps.epoch)
 
         else:
             print('num of dates in file   :'+str(len(epochList)))
@@ -1389,7 +1389,7 @@ def main(argv):
         h5msk = h5py.File(inps.file, 'r')
         msk = h5msk[k]['GRIDS']['timeseries']['quality'].get('mask')[:]
         h5msk.close()
-        print 'mask %s data with contained mask dataset.' % (k)
+        print('mask %s data with contained mask dataset.' % (k))
 
     ############################### Read Data and Display ###############################
     ##### Display One Dataset
@@ -1504,13 +1504,8 @@ def main(argv):
 
         # Read DEM
         if inps.dem_file:
-<<<<<<< HEAD
-            print 'reading DEM: '+os.path.basename(inps.dem_file)+' ...'
-            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box, epoch='height')
-=======
             print('reading DEM: '+os.path.basename(inps.dem_file)+' ...')
-            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box)
->>>>>>> 0735328fb034833bbb6042a817015d3da23bdece
+            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box, epoch='height')
             if inps.multilook:
                 dem = multilook_matrix(dem, inps.multilook_num, inps.multilook_num)
 
@@ -1535,13 +1530,8 @@ def main(argv):
         drop_epoch_list = []
         if k in multi_group_hdf5_file and inps.disp_title:
             drop_epoch_list = sorted(list(set(inps.epoch) - \
-<<<<<<< HEAD
                                           set(ut.check_drop_ifgram(h5file, print_msg=False))))
-            print "mark interferograms with 'drop_ifgram'='yes' in red colored title"
-=======
-                                          set(ut.check_drop_ifgram(h5file, atr, inps.epoch, print_msg=False))))
             print("mark interferograms with 'drop_ifgram'='yes' in red colored title")
->>>>>>> 0735328fb034833bbb6042a817015d3da23bdece
 
         ##### Loop 1 - Figures
         for j in range(1, inps.fig_num+1):
@@ -1550,15 +1540,10 @@ def main(argv):
                 inps.outfile = inps.outfile_base+'_'+str(j)+inps.fig_ext
             else:
                 inps.outfile = inps.outfile_base+inps.fig_ext
-<<<<<<< HEAD
+
             fig_title = 'Figure '+str(j)+' - '+inps.outfile
-            print '----------------------------------------'
-            print fig_title
-=======
-            fig_title = 'Figure '+str(j)+' - '+inps.outfile_base
             print('----------------------------------------')
             print(fig_title)
->>>>>>> 0735328fb034833bbb6042a817015d3da23bdece
             # Open a new figure object
             fig = plt.figure(j, figsize=inps.fig_size)
             fig.canvas.set_window_title(fig_title)
@@ -1686,13 +1671,12 @@ def main(argv):
 
             # Save Figure
             if inps.save_fig:
-                print 'save figure to '+inps.outfile
+                print('save figure to '+inps.outfile)
                 fig.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
                 if not inps.disp_fig:
                     fig.clf()
 
         ##### End of Loop 1
-<<<<<<< HEAD
         try: h5file.close()
         except: pass
         print('----------------------------------------')

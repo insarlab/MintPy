@@ -997,18 +997,11 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             disp_min = data_min
             disp_max = data_max
 
-<<<<<<< HEAD
         if print_msg:
-            print 'showing coherence'
-            print 'colormap: '+plot_dict['colormap']
-            print 'display range: '+str([disp_min, disp_max])
-            print 'data    range: '+str([data_min, data_max])
-=======
-        print('showing coherence')
-        print('colormap: '+plot_dict['colormap'])
-        print('display range: '+str([disp_min, disp_max]))
-        print('data    range: '+str([data_min, data_max]))
->>>>>>> 0735328fb034833bbb6042a817015d3da23bdece
+            print('showing coherence')
+            print('colormap: '+plot_dict['colormap'])
+            print('display range: '+str([disp_min, disp_max]))
+            print('data    range: '+str([data_min, data_max]))
 
         # Use lower/upper part of colormap to emphasis dropped interferograms
         if not coh_thres:
@@ -1030,12 +1023,9 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
         colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
         cmap = colors.LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
-<<<<<<< HEAD
+
         if print_msg:
-            print 'color jump at '+str(coh_thres)
-=======
-        print('color jump at '+str(coh_thres))
->>>>>>> 0735328fb034833bbb6042a817015d3da23bdece
+            print('color jump at '+str(coh_thres))
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
@@ -1248,7 +1238,7 @@ def mode (thelist):
     for item in thelist:
         counts[item] = counts.get(item, 0) + 1
     maxcount = 0
-<<<<<<< HEAD
+
     maxitem  = []
     for k, v in counts.items():
         if v == maxcount and v > 0:
@@ -1259,25 +1249,12 @@ def mode (thelist):
             maxcount = v
 
     if maxcount == 1:
-        print "All values only appear once, return the least/smallest one."
+        print("All values only appear once, return the least/smallest one.")
         return sorted(maxitem)[0]
     elif counts.values().count(maxcount) > 1:
-        print "List has multiple modes, return the least/smallest one."
+        print("List has multiple modes, return the least/smallest one.")
         return sorted(maxitem)[0]
-=======
-    maxitem  = None
-    for k, v in list(counts.items()):
-        if v > maxcount:
-            maxitem  = k
-            maxcount = v
 
-    if maxcount == 1:
-        print("All values only appear once")
-        return None
-    elif list(counts.values()).count(maxcount) > 1:
-        print("List has multiple modes")
-        return None
->>>>>>> 0735328fb034833bbb6042a817015d3da23bdece
     else:
         return maxitem[0]
 
