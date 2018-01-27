@@ -20,11 +20,12 @@ pick_dem_file_button, shading, countours, countour_smoothing, countour_step, sub
 subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, ref_color, \
 ref_sym, ref_date, font_size, plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, \
 fig_size_width, fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, \
-lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, epoch_option_menu, epoch \
+lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, epoch_option_menu, epoch, \
+excludes_list_box \
     = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
-      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
 
 epoch_list = ["All"]
 
@@ -88,16 +89,10 @@ def pick_file():
 
         set_variables_from_attributes()
 
-        def format_date(raw_date):
-            list_date = list(raw_date)
-            list_date.insert(4, '-')
-            list_date.insert(7, '-')
-            the_date = "".join(list_date)
-            return the_date
-
         for the_epoch in epoch_list:
             epoch_option_menu.children['menu'].add_command(label=the_epoch,
                                                               command=lambda val=the_epoch: epoch.set(val))
+            excludes_list_box.insert(END, the_epoch)
         epoch.set("All")
         return frame.filename
     else:
@@ -187,6 +182,10 @@ def show_plot():
         options.append("--mask")
         options.append(mask_file.get())
 
+    excludes = [str(excludes_list_box.get(idx)) for idx in excludes_list_box.curselection()]
+    options.append("--exclude")
+    for ex in excludes:
+        options.append(str(ex))
 
     if unit.get() != "":
         options.append("-u")
@@ -483,7 +482,7 @@ def main():
         plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
         fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
         scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_color, ref_sym, ref_date, \
-        epoch_option_menu, epoch, epoch_list
+        epoch_option_menu, epoch, epoch_list, excludes_list_box
 
     '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
@@ -538,6 +537,8 @@ def main():
     epoch = StringVar()
     epoch_option_menu = OptionMenu(epoch_frame, epoch, *epoch_list)
     epoch_option_menu.config(width=10)
+
+    excludes_list_box = Listbox(epoch_frame, selectmode=MULTIPLE, height=5)
 
     '''
     |-----------------------------------------------------------------------------------------------------|
@@ -1067,6 +1068,8 @@ def main():
 
     epoch_frame.pack(anchor='w', fill=X)
     epoch_option_menu.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
+
+    excludes_list_box.pack(side=LEFT, pady=5)
 
     display_options_label.pack(anchor='w', fill=X, pady=(35, 0), padx=10)
 
