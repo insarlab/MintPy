@@ -58,7 +58,7 @@ update_in_progress = False
 
 
 def pick_file():
-    global attributes, starting_upper_lim, epoch_option_menu, epoch_list, epoch
+    global attributes, starting_upper_lim, epoch_option_menu, epoch_list, epoch, y_lim_upper_slider, y_lim_lower_slider
 
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/", title="Select file",
@@ -83,9 +83,13 @@ def pick_file():
         data, attributes = readfile.read(h5_file.get(), epoch=epoch_list[len(epoch_list)-1])
 
         max = numpy.amax(data)
-        starting_upper_lim = max * 2
+        starting_upper_lim = max * 5
         update_sliders("m")
         y_lim_upper.set(max)
+
+        if max < 1:
+            y_lim_upper_slider.config(resolution=0.001)
+            y_lim_lower_slider.config(resolution=0.001)
 
         set_variables_from_attributes()
 
@@ -100,6 +104,8 @@ def pick_file():
         h5_file_short.set("No File Selected")
         pick_h5_file_button.config(text="Select .h5 File")
         epoch_option_menu['menu'].delete(1, 'end')
+        y_lim_upper_slider.config(resolution=1)
+        y_lim_lower_slider.config(resolution=1)
 
 
 def pick_mask():
@@ -531,6 +537,11 @@ def main():
     selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
 
     '''     WIDGETS FOR SHOWING EPOCHS AND EXLUDE DATES     '''
+
+    epoch_labels_frame = Frame(frame)
+
+    epoch_option_menu_label = Label(epoch_labels_frame, text="Epoch", width=10, anchor='w')
+    exclude_date_label = Label(epoch_labels_frame, text="Exclude Dates", width=15, anchor='w')
 
     epoch_frame = Frame(frame)
 
@@ -1066,10 +1077,14 @@ def main():
     pick_mask_file_button.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
     selected_mask_file_label.pack(side=LEFT, fill=X)
 
-    epoch_frame.pack(anchor='w', fill=X)
-    epoch_option_menu.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
+    epoch_labels_frame.pack(anchor='w', fill=X, pady=5)
+    epoch_option_menu_label.pack(side=LEFT, padx=(12, 20))
+    exclude_date_label.pack(side=LEFT)
 
+    epoch_frame.pack(anchor='w', fill=X)
+    epoch_option_menu.pack(side=LEFT, anchor='n', pady=5, padx=(10, 20))
     excludes_list_box.pack(side=LEFT, pady=5)
+
 
     display_options_label.pack(anchor='w', fill=X, pady=(35, 0), padx=10)
 
