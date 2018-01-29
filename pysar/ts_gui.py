@@ -16,18 +16,20 @@ import numpy
 canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
 pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
 colormap, projection, lr_flip, ud_flip, wrap, opposite, transparency, show_info, dem_file, dem_short, \
-pick_dem_file_button, shading, countours, countour_smoothing, countour_step, pix_input_xy_x, subset_x_to, subset_y_from, \
-subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, ref_color, \
-ref_sym, font_size, title_show, marker_size, edge_width, no_flip, zfirst, title_show, tick_show, title_in, title, \
-fig_size_width, fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, \
-lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_date_option_menu, ref_date, \
-excludes_list_box \
+pick_dem_file_button, shading, countours, countour_smoothing, countour_step, pix_input_xy_x, pix_input_xy_y, pix_input_lalo_la, \
+pix_input_lalo_lo, ref_pix_input_xy_x, ref_pix_input_xy_y, ref_pix_input_lalo_la, ref_pix_input_lalo_lo, ref_x, ref_y, \
+ref_lat, ref_lon, ref_color, ref_sym, font_size, title_show, marker_size, edge_width, no_flip, zfirst, title_show, tick_show, \
+title_in, title, fig_size_width, fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, \
+lalo_label, lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_date_option_menu, \
+ref_date, excludes_list_box, num, num_option_menu\
     = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
-      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
+      None
 
 ref_dates_list = ["All"]
+num_list = [0]
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap',
              'CMRmap_r', 'Dark2', 'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r',
@@ -58,7 +60,8 @@ update_in_progress = False
 
 
 def pick_file():
-    global attributes, starting_upper_lim, ref_date_option_menu, ref_dates_list, ref_date, y_lim_upper_slider, y_lim_lower_slider
+    global attributes, starting_upper_lim, ref_date_option_menu, ref_dates_list, ref_date, y_lim_upper_slider, \
+        y_lim_lower_slider, num_option_menu, num_list
 
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/", title="Select file",
@@ -72,8 +75,6 @@ def pick_file():
 
         file_type = atr['FILE_TYPE']
 
-        ref_dates_list = []
-
         h5file = h5py.File(h5_file.get(), 'r')
         if file_type in ['HDFEOS']:
             ref_dates_list += h5file.attrs['DATE_TIMESERIES'].split()
@@ -81,11 +82,13 @@ def pick_file():
             ref_dates_list += sorted(h5file[file_type].keys())
 
         data, attributes = readfile.read(h5_file.get(), epoch=ref_dates_list[len(ref_dates_list) - 1])
-
         max = numpy.amax(data)
         starting_upper_lim = max * 5
         update_sliders("m")
         y_lim_upper.set(max)
+
+        num_list.clear()
+        num_list = list(range(len(ref_dates_list)))
 
         if max < 1:
             y_lim_upper_slider.config(resolution=0.001)
@@ -95,9 +98,14 @@ def pick_file():
 
         for the_epoch in ref_dates_list:
             ref_date_option_menu.children['menu'].add_command(label=the_epoch,
-                                                              command=lambda val=the_epoch: epoch.set(val))
+                                                              command=lambda val=the_epoch: ref_date.set(val))
             excludes_list_box.insert(END, the_epoch)
         ref_date.set("All")
+
+        for number in num_list:
+            num_option_menu.children['menu'].add_command(label=number,
+                                                              command=lambda val=number: num.set(val))
+
         return frame.filename
 
     else:
@@ -180,6 +188,7 @@ def show_plot():
     options = [h5_file.get()]
 
     if ref_date.get() != "All":
+        options.append("--ref-date")
         options.append(ref_date.get())
 
     options += ["--ylim-mat", str(y_lim_lower.get()), str(y_lim_upper.get())]
@@ -194,6 +203,10 @@ def show_plot():
         for ex in excludes:
             options.append(str(ex))
 
+    if num.get() != "":
+        options.append("-n")
+        options.append(num.get())
+
     if unit.get() != "":
         options.append("-u")
         options.append(unit.get())
@@ -204,24 +217,6 @@ def show_plot():
     if dem_file.get() != "":
         options.append("--dem")
         options.append(dem_file.get())
-
-    '''if pix_input_xy_x.get() != "" and subset_x_to.get() != "":
-        options.append("-x")
-        options.append(pix_input_xy_x.get())
-        options.append(subset_x_to.get())
-    if subset_y_from.get() != "" and subset_y_to.get() != "":
-        options.append("-y")
-        options.append(subset_y_from.get())
-        options.append(subset_y_to.get())
-    if subset_lat_from.get() != "" and subset_lat_to.get() != "":
-        options.append("-l")
-        options.append(subset_lat_from.get())
-        options.append(subset_lat_to.get())
-    if subset_lon_from.get() != "" and subset_lon_to.get() != "":
-        options.append("-L")
-        options.append(subset_lon_from.get())
-        options.append(subset_lon_to.get())'''
-
 
     if font_size.get() != "":
         options.append("-s")
@@ -242,6 +237,24 @@ def show_plot():
         options.append(fig_size_width.get())
     if zfirst.get() == 1:
         options.append("--zf")
+
+    if pix_input_xy_x.get() != "" and pix_input_xy_y.get() != "":
+        options.append("--yx")
+        options.append(pix_input_xy_y.get())
+        options.append(pix_input_xy_x.get())
+    if pix_input_lalo_la.get() != "" and pix_input_lalo_lo.get() != "":
+        options.append("--lalo")
+        options.append(pix_input_lalo_la.get())
+        options.append(pix_input_lalo_lo.get())
+
+    if ref_pix_input_xy_x.get() != "" and ref_pix_input_xy_y.get() != "":
+        options.append("--ref-yx")
+        options.append(ref_pix_input_xy_y.get())
+        options.append(ref_pix_input_xy_x.get())
+    if pix_input_lalo_la.get() != "" and pix_input_lalo_lo.get() != "":
+        options.append("--ref-lalo")
+        options.append(ref_pix_input_lalo_la.get())
+        options.append(ref_pix_input_lalo_lo.get())
 
     '''if save.get() != 0:
         options.append("--save")
@@ -297,6 +310,22 @@ def set_variables_from_attributes():
     zfirst.set(1)
     title_show.set(1)
 
+    pix_input_xy_x.set("300")
+    pix_input_xy_y.set("300")
+
+    lon, lat = compute_lalo("300", "300")
+
+    pix_input_lalo_la.set(lat)
+    pix_input_lalo_lo.set(lon)
+
+    ref_pix_input_xy_x.set(attributes['ref_x'])
+    ref_pix_input_xy_y.set(attributes['ref_y'])
+
+    ref_lon, ref_lat = compute_lalo(ref_pix_input_xy_x.get(), ref_pix_input_xy_y.get())
+
+    ref_pix_input_lalo_la.set(ref_lat)
+    ref_pix_input_lalo_lo.set(ref_lon)
+
 
 
 def compute_lalo(x, y, all_data=False):
@@ -333,27 +362,24 @@ def compute_xy(lat, lon):
     return str(xy[2]), str(xy[3])
 
 
-def update_subset_lalo(x, y, z):
+def update_pix_input_lalo(x, y, z):
     global update_in_progress
 
     if update_in_progress:
         return
 
     update_in_progress = True
-    x_from, x_to, y_from, y_to = pix_input_xy_x.get(), subset_x_to.get(), subset_y_from.get(), subset_y_to.get()
+    x_in, y_in = pix_input_xy_x.get(), pix_input_xy_y.get()
 
-    lon_from, lat_from = compute_lalo(x_from, y_from)
-    lon_to, lat_to = compute_lalo(x_to, y_to)
+    lon, lat = compute_lalo(x_in, y_in)
 
-    subset_lat_from.set(lat_from)
-    subset_lat_to.set(lat_to)
-    subset_lon_from.set(lon_from)
-    subset_lon_to.set(lon_to)
+    pix_input_lalo_la.set(lat)
+    pix_input_lalo_lo.set(lon)
 
     update_in_progress = False
 
 
-def update_subset_xy(x, y, z):
+def update_pix_input_xy(x, y, z):
     global update_in_progress
 
     if update_in_progress:
@@ -361,29 +387,61 @@ def update_subset_xy(x, y, z):
 
     update_in_progress = True
 
-    lat_from, lat_to, lon_from, lon_to = subset_lat_from.get(), subset_lat_to.get(), subset_lon_from.get(), subset_lon_to.get()
+    lat, lon = pix_input_lalo_la.get(), pix_input_lalo_lo.get()
 
-    x_from, y_from = compute_xy(lat_from, lon_from)
-    x_to, y_to = compute_xy(lat_to, lon_to)
+    x_comp, y_comp = compute_xy(lat, lon)
 
-    pix_input_xy_x.set(x_from)
-    subset_x_to.set(x_to)
-    subset_y_from.set(y_from)
-    subset_y_to.set(y_to)
+    pix_input_xy_x.set(x_comp)
+    pix_input_xy_y.set(y_comp)
+
+    update_in_progress = False
+
+
+def update_ref_pix_input_lalo(x, y, z):
+    global update_in_progress
+
+    if update_in_progress:
+        return
+
+    update_in_progress = True
+    x_in, y_in = ref_pix_input_xy_x.get(), ref_pix_input_xy_y.get()
+
+    lon, lat = compute_lalo(x_in, y_in)
+
+    ref_pix_input_lalo_la.set(lat)
+    ref_pix_input_lalo_lo.set(lon)
+
+    update_in_progress = False
+
+
+def update_ref_pix_input_xy(x, y, z):
+    global update_in_progress
+
+    if update_in_progress:
+        return
+
+    update_in_progress = True
+
+    lat, lon = ref_pix_input_lalo_la.get(), ref_pix_input_lalo_lo.get()
+
+    x_comp, y_comp = compute_xy(lat, lon)
+
+    ref_pix_input_xy_x.set(x_comp)
+    ref_pix_input_xy_y.set(y_comp)
 
     update_in_progress = False
 
 
 def main():
-    global canvas, frame, attributes, update_in_progress, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
+    global canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
         pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
         colormap, projection, lr_flip, ud_flip, wrap, opposite, transparency, show_info, dem_file, dem_short, \
-        pick_dem_file_button, shading, countours, countour_smoothing, countour_step, pix_input_xy_x, subset_x_to, subset_y_from, \
-        subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, font_size, \
-        title_show, marker_size, edge_width, no_flip, zfirst, title_show, tick_show, title_in, title, fig_size_width, \
-        fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
-        scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_color, ref_sym, \
-        ref_date_option_menu, ref_date, ref_dates_list, excludes_list_box
+        pick_dem_file_button, shading, countours, countour_smoothing, countour_step, pix_input_xy_x, pix_input_xy_y, pix_input_lalo_la, \
+        pix_input_lalo_lo, ref_pix_input_xy_x, ref_pix_input_xy_y, ref_pix_input_lalo_la, ref_pix_input_lalo_lo, ref_x, ref_y, \
+        ref_lat, ref_lon, ref_color, ref_sym, font_size, title_show, marker_size, edge_width, no_flip, zfirst, title_show, tick_show, \
+        title_in, title, fig_size_width, fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, \
+        lalo_label, lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_date_option_menu, \
+        ref_date, excludes_list_box, num, num_option_menu
 
     '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
@@ -444,18 +502,15 @@ def main():
 
     '''     WIDGETS FOR SHOWING EPOCHS AND EXLUDE DATES     '''
 
-    epoch_labels_frame = Frame(frame)
+    num_labels_frame = Frame(frame)
 
-    epoch_option_menu_label = Label(epoch_labels_frame, text="Epoch", width=10, anchor='w')
-    exclude_date_label = Label(epoch_labels_frame, text="Exclude Dates", width=15, anchor='w')
+    num_option_menu_label = Label(num_labels_frame, text="Plot Number", width=10, anchor='w')
 
-    epoch_frame = Frame(frame)
+    num_frame = Frame(frame)
 
-    ref_date = StringVar()
-    ref_date_option_menu = OptionMenu(epoch_frame, ref_date, *ref_dates_list)
-    ref_date_option_menu.config(width=10)
-
-    excludes_list_box = Listbox(epoch_frame, selectmode=MULTIPLE, height=5)
+    num = StringVar()
+    num_option_menu = OptionMenu(num_frame, num, *num_list)
+    num_option_menu.config(width=10)
 
     '''
     |-----------------------------------------------------------------------------------------------------|
@@ -599,12 +654,12 @@ def main():
     pix_input_xy_frame = Frame(frame)
 
     pix_input_xy_x = StringVar()
-    #pix_input_xy_x.trace('w', callback=update_subset_lalo)
+    pix_input_xy_x.trace('w', callback=update_pix_input_lalo)
     pix_input_xy_x_label = Label(pix_input_xy_frame, text="X:     ")
     pix_input_xy_x_entry = Entry(pix_input_xy_frame, textvariable=pix_input_xy_x, width=6)
 
     pix_input_xy_y = StringVar()
-    #pix_input_xy_y.trace('w', callback=update_subset_lalo)
+    pix_input_xy_y.trace('w', callback=update_pix_input_lalo)
     pix_input_xy_y_label = Label(pix_input_xy_frame, text="Y:    ")
     pix_input_xy_y_entry = Entry(pix_input_xy_frame, textvariable=pix_input_xy_y, width=6)
 
@@ -613,12 +668,12 @@ def main():
     pix_input_lalo_frame = Frame(frame)
 
     pix_input_lalo_la = StringVar()
-    #pix_input_lalo_la.trace('w', callback=update_subset_xy)
+    pix_input_lalo_la.trace('w', callback=update_pix_input_xy)
     pix_input_lalo_la_label = Label(pix_input_lalo_frame, text="Lat:  ")
     pix_input_lalo_la_entry = Entry(pix_input_lalo_frame, textvariable=pix_input_lalo_la, width=6)
 
     pix_input_lalo_lo = StringVar()
-    #pix_input_lalo_lo.trace('w', callback=update_subset_xy)
+    pix_input_lalo_lo.trace('w', callback=update_pix_input_xy)
     pix_input_lalo_lo_label = Label(pix_input_lalo_frame, text="Lon:   ")
     pix_input_lalo_lo_entry = Entry(pix_input_lalo_frame, textvariable=pix_input_lalo_lo, width=6)
 
@@ -630,12 +685,12 @@ def main():
     ref_pix_input_xy_frame = Frame(frame)
 
     ref_pix_input_xy_x = StringVar()
-    #ref_pix_input_xy_x.trace('w', callback=update_subset_lalo)
+    ref_pix_input_xy_x.trace('w', callback=update_ref_pix_input_lalo)
     ref_pix_input_xy_x_label = Label(ref_pix_input_xy_frame, text="X:     ")
     ref_pix_input_xy_x_entry = Entry(ref_pix_input_xy_frame, textvariable=ref_pix_input_xy_x, width=6)
 
     ref_pix_input_xy_y = StringVar()
-    #ref_pix_input_xy_y.trace('w', callback=update_subset_lalo)
+    ref_pix_input_xy_y.trace('w', callback=update_ref_pix_input_lalo)
     ref_pix_input_xy_y_label = Label(ref_pix_input_xy_frame, text="Y:      ")
     ref_pix_input_xy_y_entry = Entry(ref_pix_input_xy_frame, textvariable=ref_pix_input_xy_y, width=6)
 
@@ -643,12 +698,12 @@ def main():
     ref_pix_input_lalo_frame = Frame(frame)
 
     ref_pix_input_lalo_la = StringVar()
-    #ref_pix_input_lalo_la.trace('w', callback=update_subset_xy)
+    ref_pix_input_lalo_la.trace('w', callback=update_ref_pix_input_xy)
     ref_pix_input_lalo_la_label = Label(ref_pix_input_lalo_frame, text="Lat:   ")
     ref_pix_input_lalo_la_entry = Entry(ref_pix_input_lalo_frame, textvariable=ref_pix_input_lalo_la, width=6)
 
     ref_pix_input_lalo_lo = StringVar()
-    #ref_pix_input_lalo_lo.trace('w', callback=update_subset_xy)
+    ref_pix_input_lalo_lo.trace('w', callback=update_ref_pix_input_xy)
     ref_pix_input_lalo_lo_label = Label(ref_pix_input_lalo_frame, text="Lon:   ")
     ref_pix_input_lalo_lo_entry = Entry(ref_pix_input_lalo_frame, textvariable=ref_pix_input_lalo_lo, width=6)
 
@@ -709,6 +764,11 @@ def main():
     pick_dem_file_button.pack(side=LEFT, anchor='w', pady=5, padx=(10, 20))
     selected_dem_file_label.pack(side=LEFT, fill=X)
 
+    num_labels_frame.pack(anchor='w', fill=X, pady=5)
+    num_option_menu_label.pack(side=LEFT, padx=(12, 20))
+
+    num_frame.pack(anchor='w', fill=X)
+    num_option_menu.pack(side=LEFT, anchor='n', pady=5, padx=(10, 20))
 
 
     pixel_input_label.pack(anchor='w', fill=X, pady=(15, 0), padx=10)
