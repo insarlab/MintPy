@@ -354,7 +354,7 @@ def flip_map():
         inps.flip_lr, inps.flip_ud = view.auto_flip_direction(atr)
     else:
         inps.flip_ud = False
-        inps.left_lr = False
+        inps.flip_lr = False
 
 
 def set_mask():
@@ -620,7 +620,7 @@ def update_timeseries(y, x, plot_number, data_only=False):
         axis, scatter = plot_timeseries_scatter(axis, d_ts, inps)
         scatter.set_label('2')
 
-    axis.set_ylim(inps.ylim)
+    axis.set_ylim(inps.ylim_mat)
     for tick in axis.yaxis.get_major_ticks():
         tick.label.set_fontsize(inps.font_size)
 
@@ -766,7 +766,7 @@ def show_figure(plot_number):
     plot_figure = plt.figure("PLOT!!", figsize=(10, 5))
 
     new_axes = plot_figure.add_subplot(111)
-    new_axes.set_ylim(inps.ylim)
+    new_axes.set_ylim(inps.ylim_mat)
 
     annot = new_axes.annotate("", xy=(0, 0), xytext=(445, 10), textcoords="axes points", bbox=dict(boxstyle="round", fc="w"))
 
