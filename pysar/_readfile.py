@@ -124,11 +124,12 @@ def read(File, box=None, epoch=None, print_msg=True):
 
         #elif k in single_dataset_hdf5_file:
         else:
-            dset = h5file[k].get(k)
+            dset = h5file[k]['GRIDS']['timeseries']['observation'].get('displacement')[:, :, 1]
         #else:
         #    print 'ERROR: Unrecognized h5 file type: '+k
         #    sys.exit(1)
 
+        print(dset)
         data = dset[box[1]:box[3],box[0]:box[2]]
 
         h5file.close()

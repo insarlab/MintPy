@@ -62,7 +62,7 @@ def pick_file():
 
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/", title="Select file",
-                                              filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
+                                              filetypes=(("jpeg files", "*.h5"), ("all files", "*.*"), ("more files", "*.he5")))
         frame.filename = filename
         h5_file.set(frame.filename)
         h5_file_short.set(filename.split("/")[-1])
@@ -71,12 +71,14 @@ def pick_file():
         atr = readfile.read_attribute(h5_file.get())
 
         file_type = atr['FILE_TYPE']
+        print(file_type)
 
         epoch_list = []
 
         h5file = h5py.File(h5_file.get(), 'r')
         if file_type in ['HDFEOS']:
             epoch_list += h5file.attrs['DATE_TIMESERIES'].split()
+            print(epoch_list)
         else:
             epoch_list += sorted(h5file[file_type].keys())
 
@@ -91,6 +93,8 @@ def pick_file():
             y_lim_upper_slider.config(resolution=0.001)
             y_lim_lower_slider.config(resolution=0.001)
 
+
+        print(attributes)
         set_variables_from_attributes()
 
         for the_epoch in epoch_list:
