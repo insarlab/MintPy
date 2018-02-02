@@ -403,7 +403,6 @@ def set_variables_from_attributes():
     show_scalebar.set(1)
 
 
-
 def compute_lalo(x, y, all_data=False):
     try:
         x_data = int(float(x))
@@ -479,6 +478,22 @@ def update_subset_xy(x, y, z):
     update_in_progress = False
 
 
+def validate_numbers(action, index, value_if_allowed,
+                     prior_value, text, validation_type, trigger_type, widget_name):
+
+    if value_if_allowed == "" or value_if_allowed == "-":
+        return True
+
+    if text in '0123456789.-+ ':
+        try:
+            float(value_if_allowed)
+            return True
+        except ValueError:
+            return False
+    else:
+        return False
+
+
 def main():
     global canvas, frame, attributes, update_in_progress, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
         pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
@@ -495,6 +510,11 @@ def main():
     root.minsize(width=365, height=750)
     root.maxsize(width=365, height=750)
     root.resizable(width=False, height=False)
+
+    vcmd_num = (root.register(validate_numbers), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+    #print(vcmd)
+
+    #print(validate_entry_widgets('1', '2', '3', '4', '5', '6', '7', '8'))
 
     reset_button = Button(root, text="Reset Settings", command=lambda: reset_plot())
     reset_button.pack(side=TOP, pady=(10, 5))
@@ -576,7 +596,7 @@ def main():
     y_lim_upper_label = Label(y_lim_upper_frame, text="Maximum", width=8)
     y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
                                variable=y_lim_upper, showvalue=0)
-    y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6)
+    y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6, validate='key', validatecommand=vcmd_num)
 
     y_lim_lower = DoubleVar()
     y_lim_lower.set(-20)
@@ -585,7 +605,7 @@ def main():
     y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
     y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
                                variable=y_lim_lower, showvalue=0)
-    y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
+    y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR UNIT, COLORMAP, AND PROJECTION    '''
@@ -633,7 +653,7 @@ def main():
     transparency_label = Label(transparency_frame, text="Alpha", width=8)
     transparency_slider = Scale(transparency_frame, from_=0, to=1, resolution=0.1, orient=HORIZONTAL, length=150,
                                 variable=transparency, showvalue=0)
-    transparency_entry = Entry(transparency_frame, textvariable=transparency, width=6)
+    transparency_entry = Entry(transparency_frame, textvariable=transparency, width=6, validate='key', validatecommand=vcmd_num)
 
     '''     WIDGETS FOR SHOWING INFO SCREEN'''
     show_info = IntVar()
@@ -687,11 +707,11 @@ def main():
 
     dem_countour_smoothing_frame = Frame(dem_countour_options, width=15)
     dem_countour_smoothing_label = Label(dem_countour_smoothing_frame, text="Contour Smoothing: ", anchor='c', width=15)
-    dem_countour_smoothing_entry = Entry(dem_countour_smoothing_frame, textvariable=countour_smoothing, width=6)
+    dem_countour_smoothing_entry = Entry(dem_countour_smoothing_frame, textvariable=countour_smoothing, width=6, validate='key', validatecommand=vcmd_num)
 
     dem_countour_step_frame = Frame(dem_countour_options, width=15)
     dem_countour_step_label = Label(dem_countour_step_frame, text="Countour Step: ", anchor='c', width=15)
-    dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=6)
+    dem_countour_step_entry = Entry(dem_countour_step_frame, textvariable=countour_step, width=6, validate='key', validatecommand=vcmd_num)
 
 
 
@@ -716,13 +736,12 @@ def main():
     subset_x_from = StringVar()
     subset_x_from.trace('w', callback=update_subset_lalo)
     subset_x_from_label = Label(subset_x_frame, text="X         From: ")
-    subset_x_from_entry = Entry(subset_x_frame, textvariable=subset_x_from, width=6)
+    subset_x_from_entry = Entry(subset_x_frame, textvariable=subset_x_from, width=6, validate='key', validatecommand=vcmd_num)
 
     subset_x_to = StringVar()
     subset_x_to.trace('w', callback=update_subset_lalo)
     subset_x_to_label = Label(subset_x_frame, text="To: ")
-    subset_x_to_entry = Entry(subset_x_frame, textvariable=subset_x_to, width=6)
-
+    subset_x_to_entry = Entry(subset_x_frame, textvariable=subset_x_to, width=6, validate='key', validatecommand=vcmd_num)
 
     '''     WIDGETS FOR SUBSET Y-VALUES     '''
     subset_y_frame = Frame(frame)
@@ -730,12 +749,12 @@ def main():
     subset_y_from = StringVar()
     subset_y_from.trace('w', callback=update_subset_lalo)
     subset_y_from_label = Label(subset_y_frame, text="Y         From: ")
-    subset_y_from_entry = Entry(subset_y_frame, textvariable=subset_y_from, width=6)
+    subset_y_from_entry = Entry(subset_y_frame, textvariable=subset_y_from, width=6, validate='key', validatecommand=vcmd_num)
 
     subset_y_to = StringVar()
     subset_y_to.trace('w', callback=update_subset_lalo)
     subset_y_to_label = Label(subset_y_frame, text="To: ")
-    subset_y_to_entry = Entry(subset_y_frame, textvariable=subset_y_to, width=6)
+    subset_y_to_entry = Entry(subset_y_frame, textvariable=subset_y_to, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR SUBSET LAT-VALUES       '''
@@ -744,12 +763,12 @@ def main():
     subset_lat_from = StringVar()
     subset_lat_from.trace('w', callback=update_subset_xy)
     subset_lat_from_label = Label(subset_lat_frame, text="Lat      From: ")
-    subset_lat_from_entry = Entry(subset_lat_frame, textvariable=subset_lat_from, width=6)
+    subset_lat_from_entry = Entry(subset_lat_frame, textvariable=subset_lat_from, width=6, validate='key', validatecommand=vcmd_num)
 
     subset_lat_to = StringVar()
     subset_lat_to.trace('w', callback=update_subset_xy)
     subset_lat_to_label = Label(subset_lat_frame, text="To: ")
-    subset_lat_to_entry = Entry(subset_lat_frame, textvariable=subset_lat_to, width=6)
+    subset_lat_to_entry = Entry(subset_lat_frame, textvariable=subset_lat_to, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR SUBSET LON-VALUES       '''
@@ -758,12 +777,12 @@ def main():
     subset_lon_from = StringVar()
     subset_lon_from.trace('w', callback=update_subset_xy)
     subset_lon_from_label = Label(subset_lon_frame, text="Lon      From: ")
-    subset_lon_from_entry = Entry(subset_lon_frame, textvariable=subset_lon_from, width=6)
+    subset_lon_from_entry = Entry(subset_lon_frame, textvariable=subset_lon_from, width=6, validate='key', validatecommand=vcmd_num)
 
     subset_lon_to = StringVar()
     subset_lon_to.trace('w', callback=update_subset_xy)
     subset_lon_to_label = Label(subset_lon_frame, text="To: ")
-    subset_lon_to_entry = Entry(subset_lon_frame, textvariable=subset_lon_to, width=6)
+    subset_lon_to_entry = Entry(subset_lon_frame, textvariable=subset_lon_to, width=6, validate='key', validatecommand=vcmd_num)
 
 
 
@@ -787,11 +806,11 @@ def main():
 
     ref_x = StringVar()
     ref_x_label = Label(ref_xy_frame, text="X:    ")
-    ref_x_entry = Entry(ref_xy_frame, textvariable=ref_x, width=6)
+    ref_x_entry = Entry(ref_xy_frame, textvariable=ref_x, width=6, validate='key', validatecommand=vcmd_num)
 
     ref_y = StringVar()
     ref_y_label = Label(ref_xy_frame, text="Y:    ")
-    ref_y_entry = Entry(ref_xy_frame, textvariable=ref_y, width=6)
+    ref_y_entry = Entry(ref_xy_frame, textvariable=ref_y, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR REFERENCE LALO'''
@@ -799,11 +818,11 @@ def main():
 
     ref_lat = StringVar()
     ref_lat_label = Label(ref_latlon_frame, text="Lat: ")
-    ref_lat_entry = Entry(ref_latlon_frame, textvariable=ref_lat, width=6)
+    ref_lat_entry = Entry(ref_latlon_frame, textvariable=ref_lat, width=6, validate='key', validatecommand=vcmd_num)
 
     ref_lon = StringVar()
     ref_lon_label = Label(ref_latlon_frame, text="Lon: ")
-    ref_lon_entry = Entry(ref_latlon_frame, textvariable=ref_lon, width=6)
+    ref_lon_entry = Entry(ref_latlon_frame, textvariable=ref_lon, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR SHOWING REFERENCE MARKER        '''
@@ -859,11 +878,11 @@ def main():
 
     font_size = StringVar()
     font_size_label = Label(font_dpi_frame, text="Font Size:    ")
-    font_size_entry = Entry(font_dpi_frame, textvariable=font_size, width=6)
+    font_size_entry = Entry(font_dpi_frame, textvariable=font_size, width=6, validate='key', validatecommand=vcmd_num)
 
     plot_dpi = StringVar()
     dpi_label = Label(font_dpi_frame, text="DPI:    ")
-    dpi_entry = Entry(font_dpi_frame, textvariable=plot_dpi, width=6)
+    dpi_entry = Entry(font_dpi_frame, textvariable=plot_dpi, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR NUMBER OF ROWS AND NUMBER OF COLUMNS      '''
@@ -871,11 +890,11 @@ def main():
 
     row_num = StringVar()
     row_num_label = Label(row_col_num_frame, text="Row Num:   ")
-    row_num_entry = Entry(row_col_num_frame, textvariable=row_num, width=6)
+    row_num_entry = Entry(row_col_num_frame, textvariable=row_num, width=6, validate='key', validatecommand=vcmd_num)
 
     col_num = StringVar()
     col_num_label = Label(row_col_num_frame, text="Col Num:   ")
-    col_num_entry = Entry(row_col_num_frame, textvariable=col_num, width=6)
+    col_num_entry = Entry(row_col_num_frame, textvariable=col_num, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR SHOWING AXIS, COLORBAR, TITLE, AND AXIS TICKS       '''
@@ -914,11 +933,11 @@ def main():
 
     fig_size_width = StringVar()
     fig_size_width_label = Label(fig_size_frame, text="Width: ")
-    fig_size_width_entry = Entry(fig_size_frame, textvariable=fig_size_width, width=6)
+    fig_size_width_entry = Entry(fig_size_frame, textvariable=fig_size_width, width=6, validate='key', validatecommand=vcmd_num)
 
     fig_size_height = StringVar()
     fig_size_height_label = Label(fig_size_frame, text="Length: ")
-    fig_size_height_entry = Entry(fig_size_frame, textvariable=fig_size_height, width=6)
+    fig_size_height_entry = Entry(fig_size_frame, textvariable=fig_size_height, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR FIGURE EXTENIONS AND FIGURE NUMBERS'''
@@ -944,13 +963,13 @@ def main():
 
     fig_w_space = StringVar()
     fig_w_space_label = Label(fig_w_space_frame, text="Fig Width Space: ")
-    fig_w_space_entry = Entry(fig_w_space_frame, textvariable=fig_w_space, width=6)
+    fig_w_space_entry = Entry(fig_w_space_frame, textvariable=fig_w_space, width=6, validate='key', validatecommand=vcmd_num)
 
     fig_h_space_frame = Frame(frame)
 
     fig_h_space = StringVar()
     fig_h_space_label = Label(fig_h_space_frame, text="Fig Height Space:")
-    fig_h_space_entry = Entry(fig_h_space_frame, textvariable=fig_h_space, width=6)
+    fig_h_space_entry = Entry(fig_h_space_frame, textvariable=fig_h_space, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR COORDINATE TYPE     '''
@@ -1000,7 +1019,7 @@ def main():
 
     lalo_step = StringVar()
     lalo_step_label = Label(lalo_settings_frame, text="LALO Step: ")
-    lalo_step_entry = Entry(lalo_settings_frame, textvariable=lalo_step, width=6)
+    lalo_step_entry = Entry(lalo_settings_frame, textvariable=lalo_step, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR SCALEBAR DISTANCE, LATITUDE, LONGITUDE      '''
@@ -1012,10 +1031,10 @@ def main():
 
     scalebar_label = Label(scalebar_settings, text="Scalebar")
     scalebar_dist_label = Label(scalebar_settings, text="Dist: ")
-    scalebar_dist_entry = Entry(scalebar_settings, textvariable=scalebar_distance, width=4)
+    scalebar_dist_entry = Entry(scalebar_settings, textvariable=scalebar_distance, width=4, validate='key', validatecommand=vcmd_num)
     scalebar_lat_label = Label(scalebar_settings, text="Lat/Lon: ")
-    scalebar_lat_entry = Entry(scalebar_settings, textvariable=scalebar_lat, width=4)
-    scalebar_lon_entry = Entry(scalebar_settings, textvariable=scalebar_lon, width=4)
+    scalebar_lat_entry = Entry(scalebar_settings, textvariable=scalebar_lat, width=4, validate='key', validatecommand=vcmd_num)
+    scalebar_lon_entry = Entry(scalebar_settings, textvariable=scalebar_lon, width=4, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETA FOR SHOWING SCALEBAR     '''
