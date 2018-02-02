@@ -29,7 +29,7 @@ ref_date, excludes_list_box, num, num_option_menu\
       None
 
 ref_dates_list = ["All"]
-num_list = [0]
+num_list = [""]
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap',
              'CMRmap_r', 'Dark2', 'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r',
@@ -60,7 +60,7 @@ update_in_progress = False
 
 
 def pick_file():
-    global attributes, starting_upper_lim, ref_date_option_menu, ref_dates_list, ref_date, y_lim_upper_slider, \
+    global h5_file, h5_file_short, attributes, starting_upper_lim, ref_date_option_menu, ref_dates_list, ref_date, y_lim_upper_slider, \
         y_lim_lower_slider, num_option_menu, num_list
 
     if h5_file.get() == "":
@@ -87,7 +87,7 @@ def pick_file():
         update_sliders("m")
         y_lim_upper.set(max)
 
-        num_list.clear()
+        num_list.pop(0)
         num_list = list(range(len(ref_dates_list)))
 
         if max < 1:
@@ -106,6 +106,7 @@ def pick_file():
             num_option_menu.children['menu'].add_command(label=number,
                                                               command=lambda val=number: num.set(val))
 
+        num.set(str(len(num_list)-3))
         return frame.filename
 
     else:
