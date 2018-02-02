@@ -328,7 +328,6 @@ def set_variables_from_attributes():
     ref_pix_input_lalo_lo.set(ref_lon)
 
 
-
 def compute_lalo(x, y, all_data=False):
     try:
         x_data = int(float(x))
@@ -433,6 +432,22 @@ def update_ref_pix_input_xy(x, y, z):
     update_in_progress = False
 
 
+def validate_numbers(action, index, value_if_allowed,
+                     prior_value, text, validation_type, trigger_type, widget_name):
+
+    if value_if_allowed == "" or value_if_allowed == "-":
+        return True
+
+    if text in '0123456789.-+ ':
+        try:
+            float(value_if_allowed)
+            return True
+        except ValueError:
+            return False
+    else:
+        return False
+
+
 def main():
     global canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
         pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
@@ -449,6 +464,8 @@ def main():
     root.minsize(width=365, height=750)
     root.maxsize(width=365, height=750)
     root.resizable(width=False, height=False)
+
+    vcmd_num = (root.register(validate_numbers), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
 
     reset_button = Button(root, text="Reset Settings", command=lambda: reset_plot())
     reset_button.pack(side=TOP, pady=(10, 5))
@@ -538,7 +555,7 @@ def main():
     y_lim_upper_label = Label(y_lim_upper_frame, text="Maximum", width=8)
     y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
                                variable=y_lim_upper, showvalue=0)
-    y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6)
+    y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6, validate='key', validatecommand=vcmd_num)
 
     y_lim_lower = DoubleVar()
     y_lim_lower.set(-20)
@@ -547,7 +564,7 @@ def main():
     y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
     y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
                                variable=y_lim_lower, showvalue=0)
-    y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6)
+    y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR UNIT, COLORMAP, AND PROJECTION    '''
@@ -575,18 +592,18 @@ def main():
 
     fig_size_width = StringVar()
     fig_size_width_label = Label(fig_size_frame, text="Width: ")
-    fig_size_width_entry = Entry(fig_size_frame, textvariable=fig_size_width, width=6)
+    fig_size_width_entry = Entry(fig_size_frame, textvariable=fig_size_width, width=6, validate='key', validatecommand=vcmd_num)
 
     fig_size_height = StringVar()
     fig_size_height_label = Label(fig_size_frame, text="Length: ")
-    fig_size_height_entry = Entry(fig_size_frame, textvariable=fig_size_height, width=6)
+    fig_size_height_entry = Entry(fig_size_frame, textvariable=fig_size_height, width=6, validate='key', validatecommand=vcmd_num)
 
     '''     WIDGETS FOR FONT SIZE AND FIGURE DPI'''
     font_title_frame = Frame(frame)
 
     font_size = StringVar()
     font_size_label = Label(font_title_frame, text="Font Size:    ")
-    font_size_entry = Entry(font_title_frame, textvariable=font_size, width=6)
+    font_size_entry = Entry(font_title_frame, textvariable=font_size, width=6, validate='key', validatecommand=vcmd_num)
 
     title_show = IntVar()
     show_title_label = Label(font_title_frame, text="Show Title:    ")
@@ -608,11 +625,11 @@ def main():
 
     marker_size = StringVar()
     marker_size_label = Label(mkrsize_edgewidth_frame, text="Marker Size: ")
-    marker_size_entry = Entry(mkrsize_edgewidth_frame, textvariable=marker_size, width=6)
+    marker_size_entry = Entry(mkrsize_edgewidth_frame, textvariable=marker_size, width=6, validate='key', validatecommand=vcmd_num)
 
     edge_width = StringVar()
     edge_width_label = Label(mkrsize_edgewidth_frame, text="Edge Width: ")
-    edge_width_entry = Entry(mkrsize_edgewidth_frame, textvariable=edge_width, width=6)
+    edge_width_entry = Entry(mkrsize_edgewidth_frame, textvariable=edge_width, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR SHOWING EPOCHS AND EXLUDE DATES     '''
@@ -657,12 +674,12 @@ def main():
     pix_input_xy_x = StringVar()
     pix_input_xy_x.trace('w', callback=update_pix_input_lalo)
     pix_input_xy_x_label = Label(pix_input_xy_frame, text="X:     ")
-    pix_input_xy_x_entry = Entry(pix_input_xy_frame, textvariable=pix_input_xy_x, width=6)
+    pix_input_xy_x_entry = Entry(pix_input_xy_frame, textvariable=pix_input_xy_x, width=6, validate='key', validatecommand=vcmd_num)
 
     pix_input_xy_y = StringVar()
     pix_input_xy_y.trace('w', callback=update_pix_input_lalo)
     pix_input_xy_y_label = Label(pix_input_xy_frame, text="Y:    ")
-    pix_input_xy_y_entry = Entry(pix_input_xy_frame, textvariable=pix_input_xy_y, width=6)
+    pix_input_xy_y_entry = Entry(pix_input_xy_frame, textvariable=pix_input_xy_y, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     WIDGETS FOR SUBSET LAT-VALUES       '''
@@ -671,12 +688,12 @@ def main():
     pix_input_lalo_la = StringVar()
     pix_input_lalo_la.trace('w', callback=update_pix_input_xy)
     pix_input_lalo_la_label = Label(pix_input_lalo_frame, text="Lat:  ")
-    pix_input_lalo_la_entry = Entry(pix_input_lalo_frame, textvariable=pix_input_lalo_la, width=6)
+    pix_input_lalo_la_entry = Entry(pix_input_lalo_frame, textvariable=pix_input_lalo_la, width=6, validate='key', validatecommand=vcmd_num)
 
     pix_input_lalo_lo = StringVar()
     pix_input_lalo_lo.trace('w', callback=update_pix_input_xy)
     pix_input_lalo_lo_label = Label(pix_input_lalo_frame, text="Lon:   ")
-    pix_input_lalo_lo_entry = Entry(pix_input_lalo_frame, textvariable=pix_input_lalo_lo, width=6)
+    pix_input_lalo_lo_entry = Entry(pix_input_lalo_frame, textvariable=pix_input_lalo_lo, width=6, validate='key', validatecommand=vcmd_num)
 
 
     '''     SUBSET OPTIONS WIDGETS      '''
@@ -688,12 +705,12 @@ def main():
     ref_pix_input_xy_x = StringVar()
     ref_pix_input_xy_x.trace('w', callback=update_ref_pix_input_lalo)
     ref_pix_input_xy_x_label = Label(ref_pix_input_xy_frame, text="X:     ")
-    ref_pix_input_xy_x_entry = Entry(ref_pix_input_xy_frame, textvariable=ref_pix_input_xy_x, width=6)
+    ref_pix_input_xy_x_entry = Entry(ref_pix_input_xy_frame, textvariable=ref_pix_input_xy_x, width=6, validate='key', validatecommand=vcmd_num)
 
     ref_pix_input_xy_y = StringVar()
     ref_pix_input_xy_y.trace('w', callback=update_ref_pix_input_lalo)
     ref_pix_input_xy_y_label = Label(ref_pix_input_xy_frame, text="Y:      ")
-    ref_pix_input_xy_y_entry = Entry(ref_pix_input_xy_frame, textvariable=ref_pix_input_xy_y, width=6)
+    ref_pix_input_xy_y_entry = Entry(ref_pix_input_xy_frame, textvariable=ref_pix_input_xy_y, width=6, validate='key', validatecommand=vcmd_num)
 
     '''     WIDGETS FOR SUBSET LAT-VALUES       '''
     ref_pix_input_lalo_frame = Frame(frame)
@@ -701,12 +718,12 @@ def main():
     ref_pix_input_lalo_la = StringVar()
     ref_pix_input_lalo_la.trace('w', callback=update_ref_pix_input_xy)
     ref_pix_input_lalo_la_label = Label(ref_pix_input_lalo_frame, text="Lat:   ")
-    ref_pix_input_lalo_la_entry = Entry(ref_pix_input_lalo_frame, textvariable=ref_pix_input_lalo_la, width=6)
+    ref_pix_input_lalo_la_entry = Entry(ref_pix_input_lalo_frame, textvariable=ref_pix_input_lalo_la, width=6, validate='key', validatecommand=vcmd_num)
 
     ref_pix_input_lalo_lo = StringVar()
     ref_pix_input_lalo_lo.trace('w', callback=update_ref_pix_input_xy)
     ref_pix_input_lalo_lo_label = Label(ref_pix_input_lalo_frame, text="Lon:   ")
-    ref_pix_input_lalo_lo_entry = Entry(ref_pix_input_lalo_frame, textvariable=ref_pix_input_lalo_lo, width=6)
+    ref_pix_input_lalo_lo_entry = Entry(ref_pix_input_lalo_frame, textvariable=ref_pix_input_lalo_lo, width=6, validate='key', validatecommand=vcmd_num)
 
 
 

@@ -512,9 +512,6 @@ def main():
     root.resizable(width=False, height=False)
 
     vcmd_num = (root.register(validate_numbers), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-    #print(vcmd)
-
-    #print(validate_entry_widgets('1', '2', '3', '4', '5', '6', '7', '8'))
 
     reset_button = Button(root, text="Reset Settings", command=lambda: reset_plot())
     reset_button.pack(side=TOP, pady=(10, 5))
