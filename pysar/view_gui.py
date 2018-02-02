@@ -60,6 +60,9 @@ update_in_progress = False
 def pick_file():
     global attributes, starting_upper_lim, epoch_option_menu, epoch_list, epoch, y_lim_upper_slider, y_lim_lower_slider
 
+    if len(epoch_list) > 0:
+        epoch_option_menu['menu'].delete(0, "end")
+
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/", title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*"), ("more files", "*.he5")))
@@ -85,6 +88,7 @@ def pick_file():
         data, attributes = readfile.read(h5_file.get(), epoch=epoch_list[len(epoch_list)-1])
 
         max = numpy.amax(data)
+
         starting_upper_lim = max * 5
         update_sliders("m")
         y_lim_upper.set(max)
@@ -185,8 +189,7 @@ def show_plot():
     if epoch.get() != "All":
         options.append(epoch.get())
 
-    options += [ "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()), "--alpha", str(transparency.get()),
-                    "--figext", fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()]
+    options += [ "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()), "--alpha", str(transparency.get())]
 
     if mask_file.get() != "":
         options.append("--mask")
@@ -300,6 +303,17 @@ def show_plot():
     if fig_h_space.get() != "":
         options.append("--hspace")
         options.append(fig_h_space.get())
+    if fig_ext.get() != "":
+        options.append("--figext")
+        options.append(fig_ext.get())
+    if fig_num.get() != "":
+        options.append("--fignum")
+        options.append(fig_num.get())
+    if coords.get() != "":
+        options.append("--coord")
+        options.append(coords.get())
+
+        #"--figext", fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()
 
     if coastline.get() != 0:
         options.append("--coastline")
@@ -482,8 +496,7 @@ def update_subset_xy(x, y, z):
     update_in_progress = False
 
 
-def validate_numbers(action, index, value_if_allowed,
-                     prior_value, text, validation_type, trigger_type, widget_name):
+def validate_numbers(action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
 
     if value_if_allowed == "" or value_if_allowed == "-":
         return True

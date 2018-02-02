@@ -123,8 +123,10 @@ def read(File, box=None, epoch=None, print_msg=True):
                 dset = h5file[k][epoch2read].get(epoch2read)
 
         #elif k in single_dataset_hdf5_file:
-        else:
+        elif k in ['HDFEOS']:
             dset = h5file[k]['GRIDS']['timeseries']['observation'].get('displacement')[:, :, 1]
+        else:
+            dset = h5file[k].get(k)
         #else:
         #    print 'ERROR: Unrecognized h5 file type: '+k
         #    sys.exit(1)
