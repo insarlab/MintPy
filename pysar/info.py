@@ -42,6 +42,7 @@ def print_attributes(atr, string=str(), sorting=True):
 ############################################################
 def hdf5_structure_string(file):
     global output
+
     def print_hdf5_structure_obj(name, obj):
         global output
         output = attributes_string(obj.attrs, output)

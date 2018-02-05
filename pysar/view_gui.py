@@ -14,7 +14,7 @@ import subset
 import numpy
 
 canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
-pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
+pick_mask_file_button, starting_upper_lim, starting_lower_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
 colormap, projection, lr_flip, ud_flip, wrap, opposite, transparency, show_info, dem_file, dem_short, \
 pick_dem_file_button, shading, countours, countour_smoothing, countour_step, subset_x_from, subset_x_to, subset_y_from, \
 subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref_x, ref_y, ref_lat, ref_lon, ref_color, \
@@ -25,7 +25,12 @@ excludes_list_box \
     = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
-      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+
+use_default = None
+current_slider_scale = None
+file_info_window = None
+file_info = None
 
 epoch_list = ["All"]
 
@@ -49,7 +54,7 @@ colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn',
 
 projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll", "lcc", "tmerc", "nplaea", "gall",
                "npaeqd", "mill", "merc", "stere", "eqdc", "rotpole", "cyl", "npstere", "spstere", "hammer", "geos",
-               "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "class", "vandg", "laea", "splaea", "robin"]
+               "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "cass", "vandg", "laea", "splaea", "robin"]
 
 unit_options = ["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]
 
@@ -58,7 +63,8 @@ update_in_progress = False
 
 
 def pick_file():
-    global attributes, starting_upper_lim, epoch_option_menu, epoch_list, epoch, y_lim_upper_slider, y_lim_lower_slider
+    global attributes, starting_upper_lim, starting_lower_lim, epoch_option_menu, epoch_list, epoch, y_lim_upper_slider, y_lim_lower_slider, \
+        file_info, y_lim_upper, y_lim_lower
 
     if len(epoch_list) > 0:
         epoch_option_menu['menu'].delete(0, "end")
@@ -71,40 +77,43 @@ def pick_file():
         h5_file_short.set(filename.split("/")[-1])
         pick_h5_file_button.config(text="Cancel")
 
+        file_info = info.hdf5_structure_string(h5_file.get())
+
         atr = readfile.read_attribute(h5_file.get())
 
         file_type = atr['FILE_TYPE']
-        print(file_type)
 
         epoch_list = []
 
         h5file = h5py.File(h5_file.get(), 'r')
         if file_type in ['HDFEOS']:
             epoch_list += h5file.attrs['DATE_TIMESERIES'].split()
-            print(epoch_list)
         else:
             epoch_list += sorted(h5file[file_type].keys())
 
         data, attributes = readfile.read(h5_file.get(), epoch=epoch_list[len(epoch_list)-1])
 
-        max = numpy.amax(data)
+        max_val = numpy.amax(data)
+        starting_lower_lim = numpy.amin(data)
 
-        starting_upper_lim = max * 5
+        print("MAX: "+str(max_val))
+        print("MIN: "+str(starting_lower_lim))
+
+        starting_upper_lim = max_val * 5
         update_sliders("m")
-        y_lim_upper.set(max)
 
         if max < 1:
             y_lim_upper_slider.config(resolution=0.001)
             y_lim_lower_slider.config(resolution=0.001)
 
 
-        print(attributes)
         set_variables_from_attributes()
-
+        excludes_list_box.delete(0, END)
         for the_epoch in epoch_list:
             epoch_option_menu.children['menu'].add_command(label=the_epoch,
                                                               command=lambda val=the_epoch: epoch.set(val))
             excludes_list_box.insert(END, the_epoch)
+
         epoch.set("All")
         return frame.filename
     else:
@@ -114,6 +123,7 @@ def pick_file():
         epoch_option_menu['menu'].delete(1, 'end')
         y_lim_upper_slider.config(resolution=1)
         y_lim_lower_slider.config(resolution=1)
+        file_info = None
 
 
 def pick_mask():
@@ -151,8 +161,11 @@ def on_configure(event):
 
 
 def update_sliders(unit):
+    global current_slider_scale
+
     scale = 1
     new_max = starting_upper_lim
+
     if unit == "m":
         scale = 1
     elif unit == "cm":
@@ -167,29 +180,52 @@ def update_sliders(unit):
     y_lim_upper_slider.configure(to_=new_max * scale)
     y_lim_lower_slider.configure(to_=new_max * scale)
 
+    current_y_lim_upper = y_lim_upper.get()
+    current_y_lim_lower = y_lim_lower.get()
 
-def show_file_info(file_info):
-    window = Tk()
-    window.minsize(width=350, height=550)
-    window.maxsize(height=550)
-    window.resizable(width=True, height=False)
 
-    text_box = Text(window, wrap=NONE)
+    y_lim_upper.set(current_y_lim_upper*scale)
+    y_lim_lower.set(current_y_lim_lower*scale)
+
+
+def show_file_info():
+    global file_info_window, file_info
+
+    file_info_window = Tk()
+    file_info_window.minsize(width=350, height=550)
+    file_info_window.maxsize(height=550)
+    file_info_window.resizable(width=True, height=False)
+
+    text_box = Text(file_info_window, wrap=NONE)
     text_box.insert(END, file_info)
     text_box.config(height=550)
     text_box.config(state=DISABLED)
 
     text_box.pack(fill=X)
 
+    def close():
+        global file_info_window, file_info
+
+        file_info_window.destroy()
+        file_info_window = None
+        file_info = None
+
+        print(file_info)
+
+
+    file_info_window.protocol("WM_DELETE_WINDOW", close)
+
 
 def show_plot():
+
+    global file_info_window, file_info
 
     options = [h5_file.get()]
 
     if epoch.get() != "All":
         options.append(epoch.get())
 
-    options += [ "-m", str(y_lim_lower.get()), "-M", str(y_lim_upper.get()), "--alpha", str(transparency.get())]
+    options += ["--alpha", str(transparency.get())]
 
     if mask_file.get() != "":
         options.append("--mask")
@@ -199,6 +235,12 @@ def show_plot():
     options.append("--exclude")
     for ex in excludes:
         options.append(str(ex))
+
+    if use_default.get() != 1:
+        options.append("-m")
+        options.append(str(y_lim_lower.get()))
+        options.append("-M")
+        options.append(str(y_lim_upper.get()))
 
     if unit.get() != "":
         options.append("-u")
@@ -344,10 +386,14 @@ def show_plot():
         options.append("/" + str(location) + "/" + output_file.get())
 
     if show_info.get() == 1:
-        file_info = info.hdf5_structure_string(h5_file.get())
-        show_file_info(file_info)
 
-    #print(options)
+        if file_info_window is not None:
+            file_info_window.destroy()
+            file_info_window = None
+
+        show_file_info()
+
+    print(options)
     if h5_file.get() != "":
         if view.fig is not None:
             view.fig.clear()
@@ -362,9 +408,17 @@ def reset_plot():
 
 def set_variables_from_attributes():
 
+    dem_file.set("")
+    dem_short.set("No File Selected")
+    pick_dem_file_button.config(text="Select Topography File")
+
+    mask_file.set("")
+    mask_short.set("No File Selected")
+    pick_mask_file_button.config(text="Select Mask File")
+
     update_sliders('m')
-    y_lim_upper.set(starting_upper_lim/2)
-    y_lim_lower.set(0)
+    y_lim_upper.set(starting_upper_lim/5)
+    y_lim_lower.set(starting_lower_lim)
     unit.set(attributes['UNIT'])
     colormap.set('hsv')
     projection.set("cea")
@@ -376,26 +430,31 @@ def set_variables_from_attributes():
     countour_smoothing.set("3.0")
     countour_step.set("200")
 
+    try:
 
-    subset_x_from.set(attributes['XMIN'])
-    subset_y_from.set(attributes['YMIN'])
-    subset_x_to.set(attributes['XMAX'])
-    subset_y_to.set(attributes['YMAX'])
+        attributes['X_FIRST']
 
-    ul_lon, ul_lat, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['FILE_LENGTH'], all_data=True)
+        subset_x_from.set(attributes['XMIN'])
+        subset_y_from.set(attributes['YMIN'])
+        subset_x_to.set(attributes['XMAX'])
+        subset_y_to.set(attributes['YMAX'])
 
-    subset_lat_from.set(ul_lat)
-    subset_lon_from.set(ul_lon)
-    subset_lat_to.set(lr_lat)
-    subset_lon_to.set(lr_lon)
+        ul_lon, ul_lat, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['FILE_LENGTH'], all_data=True)
 
-    ref_x.set("0")
-    ref_y.set("0")
-    ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
-    ref_lat.set(ref_lat_data)
-    ref_lon.set(ref_lon_data)
-    ref_color.set("b")
-    ref_sym.set(".")
+        subset_lat_from.set(ul_lat)
+        subset_lon_from.set(ul_lon)
+        subset_lat_to.set(lr_lat)
+        subset_lon_to.set(lr_lon)
+
+        ref_x.set("0")
+        ref_y.set("0")
+        ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
+        ref_lat.set(ref_lat_data)
+        ref_lon.set(ref_lon_data)
+        ref_color.set("b")
+        ref_sym.set(".")
+    except KeyError:
+        print()
 
 
     row_num.set("1")
@@ -520,7 +579,7 @@ def main():
         plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
         fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
         scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_color, ref_sym, ref_date, \
-        epoch_option_menu, epoch, epoch_list, excludes_list_box
+        epoch_option_menu, epoch, epoch_list, excludes_list_box, use_default
 
     '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
@@ -620,6 +679,9 @@ def main():
     y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
                                variable=y_lim_lower, showvalue=0)
     y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6, validate='key', validatecommand=vcmd_num)
+
+    use_default = BooleanVar()
+    use_default_y_lims = Checkbutton(y_lim_frame, text="Use Default Y Lim", variable=use_default)
 
 
     '''     WIDGETS FOR UNIT, COLORMAP, AND PROJECTION    '''
@@ -1132,6 +1194,8 @@ def main():
     y_lim_lower_label.pack(side=LEFT)
     y_lim_lower_slider.pack(side=LEFT, padx=10)
     y_lim_lower_entry.pack(side=LEFT)
+
+    use_default_y_lims.pack(side=LEFT, pady=(10, 5))
 
     unit_cmap_projection_labels_frame.pack(anchor='w', fill=X, pady=(10, 0), padx=10)
     unit_label.pack(side=LEFT, padx=(0, 20))
