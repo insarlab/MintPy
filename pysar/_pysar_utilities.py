@@ -132,7 +132,7 @@ def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, pri
         if dset in ['rangeCoord','azimuthCoord']:
             filePattern += ['geomap*lks_tight.trans', 'geomap*lks.trans', 'sim*_tight.UTM_TO_RDC', 'sim*.UTM_TO_RDC']
         elif dset == 'height':
-            filePattern += ['demRadar.h5', 'demGeo.h5', 'radar*.hgt', '*.dem', '*.dem.wgs84']
+            filePattern += ['demRadar.h5', 'demGeo.h5', 'radar*.hgt', '*.dem', '*.dem.wgs84','*.hgt_sim']
         elif dset == 'incidenceAngle'    :  filePattern += ['*incidenceAngle.h5']
         elif dset == 'slantRangeDistance':  filePattern += ['*rangeDistance.h5']
         elif dset == 'waterMask'         :  filePattern += ['*waterMask.h5']

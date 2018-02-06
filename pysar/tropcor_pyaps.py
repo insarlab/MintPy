@@ -215,6 +215,7 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
 
+    k = None
     atr = dict()
     if inps.timeseries_file:
         inps.timeseries_file = ut.get_file_list([inps.timeseries_file])[0]
