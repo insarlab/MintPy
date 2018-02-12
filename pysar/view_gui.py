@@ -21,11 +21,12 @@ subset_y_to, subset_lat_from, subset_lat_to, subset_lon_from, subset_lon_to, ref
 ref_sym, ref_date, font_size, plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, \
 fig_size_width, fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, \
 lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, epoch_option_menu, epoch, \
-excludes_list_box \
+excludes_list_box, ref_date_option_menu, show_ref \
     = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
-      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
+      None, None
 
 use_default = None
 current_slider_scale = None
@@ -33,6 +34,7 @@ file_info_window = None
 file_info = None
 
 epoch_list = ["All"]
+ref_dates_list = [""]
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap',
              'CMRmap_r', 'Dark2', 'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r',
@@ -56,18 +58,20 @@ projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll",
                "npaeqd", "mill", "merc", "stere", "eqdc", "rotpole", "cyl", "npstere", "spstere", "hammer", "geos",
                "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "cass", "vandg", "laea", "splaea", "robin"]
 
-unit_options = ["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]
+unit_options = ["cm", "dm", "m",  "km", "", "cm/yr", "dm/yr", "m/yr", "km/yr"]
 
 attributes = []
 update_in_progress = False
 
 
 def pick_file():
-    global attributes, starting_upper_lim, starting_lower_lim, epoch_option_menu, epoch_list, epoch, y_lim_upper_slider, y_lim_lower_slider, \
-        file_info, y_lim_upper, y_lim_lower
+
+    global file_info
 
     if len(epoch_list) > 0:
         epoch_option_menu['menu'].delete(0, "end")
+    if len(ref_dates_list) > 0:
+        ref_date_option_menu['menu'].delete(0, "end")
 
     if h5_file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/", title="Select file",
@@ -77,52 +81,20 @@ def pick_file():
         h5_file_short.set(filename.split("/")[-1])
         pick_h5_file_button.config(text="Cancel")
 
-        file_info = info.hdf5_structure_string(h5_file.get())
-
-        atr = readfile.read_attribute(h5_file.get())
-
-        file_type = atr['FILE_TYPE']
-
-        epoch_list = []
-
-        h5file = h5py.File(h5_file.get(), 'r')
-        if file_type in ['HDFEOS']:
-            epoch_list += h5file.attrs['DATE_TIMESERIES'].split()
-        else:
-            epoch_list += sorted(h5file[file_type].keys())
-
-        data, attributes = readfile.read(h5_file.get(), epoch=epoch_list[len(epoch_list)-1])
-
-        max_val = numpy.amax(data)
-        starting_lower_lim = numpy.amin(data)
-
-        print("MAX: "+str(max_val))
-        print("MIN: "+str(starting_lower_lim))
-
-        starting_upper_lim = max_val * 5
-        update_sliders("m")
-
-        if max < 1:
-            y_lim_upper_slider.config(resolution=0.001)
-            y_lim_lower_slider.config(resolution=0.001)
-
+        file_info = info.hdf5_structure_string(filename)
 
         set_variables_from_attributes()
-        excludes_list_box.delete(0, END)
-        for the_epoch in epoch_list:
-            epoch_option_menu.children['menu'].add_command(label=the_epoch,
-                                                              command=lambda val=the_epoch: epoch.set(val))
-            excludes_list_box.insert(END, the_epoch)
 
-        epoch.set("All")
         return frame.filename
     else:
         h5_file.set("")
         h5_file_short.set("No File Selected")
         pick_h5_file_button.config(text="Select .h5 File")
-        epoch_option_menu['menu'].delete(1, 'end')
-        y_lim_upper_slider.config(resolution=1)
-        y_lim_lower_slider.config(resolution=1)
+        epoch_option_menu['menu'].delete(0, 'end')
+        ref_date_option_menu['menu'].delete(0, 'end')
+        excludes_list_box.delete(0, 'end')
+        y_lim_upper.set(0)
+        y_lim_lower.set(0)
         file_info = None
 
 
@@ -160,32 +132,65 @@ def on_configure(event):
     canvas.configure(scrollregion=canvas.bbox('all'))
 
 
-def update_sliders(unit):
+def update_sliders(unit, setValues=True):
     global current_slider_scale
 
-    scale = 1
+    scale = 1.0
     new_max = starting_upper_lim
 
     if unit == "m":
-        scale = 1
+        scale = 1.0
     elif unit == "cm":
-        scale = 100
+        scale = 100.0
     elif unit == "mm":
-        scale = 1000
+        scale = 1000.0
     elif unit == "dm":
-        scale = 0.1
+        scale = 10
     elif unit == "km":
         scale = 0.001
 
-    y_lim_upper_slider.configure(to_=new_max * scale)
-    y_lim_lower_slider.configure(to_=new_max * scale)
+    current_slider_scale = scale
 
-    current_y_lim_upper = y_lim_upper.get()
-    current_y_lim_lower = y_lim_lower.get()
+    y_lim_upper_slider.configure(to_=new_max*scale)
+    y_lim_upper_slider.configure(from_=-1*(float(new_max*scale)/4))
+    y_lim_lower_slider.configure(to_=new_max*scale)
+    y_lim_lower_slider.configure(from_=-1*(float(new_max*scale)/4))
+
+    if setValues:
+        current_y_lim_upper = y_lim_upper.get()
+        current_y_lim_lower = y_lim_lower.get()
+
+        y_lim_upper.set(current_y_lim_upper*scale)
+        y_lim_lower.set(current_y_lim_lower*scale)
 
 
-    y_lim_upper.set(current_y_lim_upper*scale)
-    y_lim_lower.set(current_y_lim_lower*scale)
+def scale_sliders(unit):
+    global current_slider_scale
+
+    new_max_slider_val = y_lim_upper.get() / current_slider_scale
+    new_min_slider_val = y_lim_lower.get() / current_slider_scale
+
+    print(new_max_slider_val)
+
+    if unit in ["m", "m/yr"]:
+        current_slider_scale = 1.0
+    elif unit in ["cm", "cm/yr"]:
+        current_slider_scale = 100.0
+    elif unit in ["mm", "mm/yr"]:
+        current_slider_scale = 1000.0
+    elif unit in ["dm", "dm/yr"]:
+        current_slider_scale = 10
+    elif unit in ["km", "km/yr"]:
+        current_slider_scale = 0.001
+
+    new_max_slider_val *= current_slider_scale
+    new_min_slider_val *= current_slider_scale
+
+    update_sliders(unit, setValues=False)
+
+    y_lim_upper_slider.set(new_max_slider_val)
+    y_lim_lower_slider.set(new_min_slider_val)
+
 
 
 def show_file_info():
@@ -204,13 +209,10 @@ def show_file_info():
     text_box.pack(fill=X)
 
     def close():
-        global file_info_window, file_info
+        global file_info_window
 
         file_info_window.destroy()
         file_info_window = None
-        file_info = None
-
-        print(file_info)
 
 
     file_info_window.protocol("WM_DELETE_WINDOW", close)
@@ -218,7 +220,7 @@ def show_file_info():
 
 def show_plot():
 
-    global file_info_window, file_info
+    global file_info_window, attributes
 
     options = [h5_file.get()]
 
@@ -232,9 +234,10 @@ def show_plot():
         options.append(mask_file.get())
 
     excludes = [str(excludes_list_box.get(idx)) for idx in excludes_list_box.curselection()]
-    options.append("--exclude")
-    for ex in excludes:
-        options.append(str(ex))
+    if len(excludes) > 0:
+        options.append("--exclude")
+        for ex in excludes:
+            options.append(str(ex))
 
     if use_default.get() != 1:
         options.append("-m")
@@ -282,16 +285,21 @@ def show_plot():
         options.append("-y")
         options.append(subset_y_from.get())
         options.append(subset_y_to.get())
-    if subset_lat_from.get() != "" and subset_lat_to.get() != "":
-        options.append("-l")
-        options.append(subset_lat_from.get())
-        options.append(subset_lat_to.get())
-    if subset_lon_from.get() != "" and subset_lon_to.get() != "":
-        options.append("-L")
-        options.append(subset_lon_from.get())
-        options.append(subset_lon_to.get())
 
-    '''if ref_x.get() != "" and ref_y.get() != "":
+    try:
+        attributes['X_FIRST']
+        if subset_lat_from.get() != "" and subset_lat_to.get() != "":
+            options.append("-l")
+            options.append(subset_lat_from.get())
+            options.append(subset_lat_to.get())
+        if subset_lon_from.get() != "" and subset_lon_to.get() != "":
+            options.append("-L")
+            options.append(subset_lon_from.get())
+            options.append(subset_lon_to.get())
+    except KeyError:
+        print("File is not Geocoded")
+
+    if ref_x.get() != "" and ref_y.get() != "":
         options.append("--ref-yx")
         options.append(ref_y.get())
         options.append(ref_x.get())
@@ -306,9 +314,10 @@ def show_plot():
         options.append(ref_color.get())
     if ref_sym.get() != "":
         options.append("--ref-symbol")
-        options.append(ref_sym.get())'''
-
-    ''' "--ref-color", ref_color.get(), "--ref-symbol", ref_sym.get() '''
+        options.append(ref_sym.get())
+    if ref_date.get() != "":
+        options.append("--ref-date")
+        options.append(ref_date.get())
 
     if font_size.get() != "":
         options.append("-s")
@@ -354,8 +363,6 @@ def show_plot():
     if coords.get() != "":
         options.append("--coord")
         options.append(coords.get())
-
-        #"--figext", fig_ext.get(), "--fignum", fig_num.get(), "--coord", coords.get()
 
     if coastline.get() != 0:
         options.append("--coastline")
@@ -408,6 +415,10 @@ def reset_plot():
 
 def set_variables_from_attributes():
 
+    global attributes
+
+    set_sliders()
+
     dem_file.set("")
     dem_short.set("No File Selected")
     pick_dem_file_button.config(text="Select Topography File")
@@ -416,12 +427,9 @@ def set_variables_from_attributes():
     mask_short.set("No File Selected")
     pick_mask_file_button.config(text="Select Mask File")
 
-    update_sliders('m')
-    y_lim_upper.set(starting_upper_lim/5)
-    y_lim_lower.set(starting_lower_lim)
     unit.set(attributes['UNIT'])
-    colormap.set('hsv')
-    projection.set("cea")
+    colormap.set('jet')
+    projection.set("cyl")
     transparency.set(1.0)
 
 
@@ -446,13 +454,24 @@ def set_variables_from_attributes():
         subset_lat_to.set(lr_lat)
         subset_lon_to.set(lr_lon)
 
-        ref_x.set("0")
-        ref_y.set("0")
-        ref_lat_data, ref_lon_data = compute_lalo(ref_x.get(), ref_y.get())
-        ref_lat.set(ref_lat_data)
-        ref_lon.set(ref_lon_data)
-        ref_color.set("b")
-        ref_sym.set(".")
+        try:
+            attributes['ref_x']
+
+            ref_x.set(attributes['ref_x'])
+            ref_y.set(attributes["ref_y"])
+            ref_lon_data, ref_lat_data = compute_lalo(ref_x.get(), ref_y.get())
+            ref_lat.set(ref_lat_data)
+            ref_lon.set(ref_lon_data)
+            ref_color.set("b")
+            ref_sym.set(".")
+            ref_date.set(attributes['ref_date'])
+        except:
+            ref_x.set("")
+            ref_y.set("")
+            ref_lat.set("")
+            ref_lon.set("")
+
+
     except KeyError:
         print()
 
@@ -478,6 +497,71 @@ def set_variables_from_attributes():
 
     resolution.set("c")
     show_scalebar.set(1)
+
+    '''     Set ListBox and Epoch Information   '''
+    set_epoch_info()
+
+
+def set_sliders(value=None):
+    global starting_lower_lim, starting_upper_lim, y_lim_upper_slider, y_lim_lower_slider
+
+    print(value)
+    if value is not None:
+        epoch.set(value)
+
+    data = read_file_info(value)
+    max_val = numpy.amax(data)
+    starting_lower_lim = numpy.amin(data)
+    starting_upper_lim = max_val * 5
+
+    update_sliders("m", setValues=False)
+
+    y_lim_upper.set(starting_upper_lim / 5)
+    y_lim_lower.set(starting_lower_lim)
+
+
+def set_epoch_info():
+    global epoch, epoch_list, epoch_option_menu, excludes_list_box, attributes, ref_date_option_menu
+
+    excludes_list_box.delete(0, END)
+    epoch_option_menu['menu'].delete(0, END)
+
+    for the_epoch in epoch_list:
+        epoch_option_menu.children['menu'].add_command(label=the_epoch,
+                                                       command=lambda val=the_epoch: set_sliders(val))
+        if the_epoch is not "All":
+            excludes_list_box.insert(END, the_epoch)
+
+            if attributes['FILE_TYPE'] in ['timeseries']:
+                ref_date_option_menu.children['menu'].add_command(label=the_epoch,
+                                                                  command=lambda val=the_epoch: ref_date.set(val))
+    if attributes['FILE_TYPE'] in ['timeseries']:
+        ref_date.set(epoch_list[1])
+    else:
+        ref_date.set("")
+
+    epoch.set("All")
+
+
+def read_file_info(epoch=None):
+    global epoch_list, attributes, ref_dates_list
+
+    atr = readfile.read_attribute(h5_file.get())
+    file_type = atr['FILE_TYPE']
+    epoch_list = ["All"]
+    ref_dates_list = [""]
+    h5file = h5py.File(h5_file.get(), 'r')
+    if file_type in ['HDFEOS']:
+        epoch_list += h5file.attrs['DATE_TIMESERIES'].split()
+    else:
+        epoch_list += sorted(h5file[file_type].keys())
+
+    if epoch and epoch is not "All":
+        data, attributes = readfile.read(h5_file.get(), epoch=epoch)
+    else:
+        data, attributes = readfile.read(h5_file.get(), epoch=epoch_list[len(epoch_list) - 1])
+
+    return data
 
 
 def compute_lalo(x, y, all_data=False):
@@ -555,6 +639,41 @@ def update_subset_xy(x, y, z):
     update_in_progress = False
 
 
+def update_reference_lalo(x, y, z):
+    global update_in_progress
+
+    if update_in_progress:
+        return
+
+    update_in_progress = True
+    x, y = ref_x.get(), ref_y.get()
+
+    lon, lat = compute_lalo(x, y)
+
+    ref_lat.set(lat)
+    ref_lon.set(lon)
+
+    update_in_progress = False
+
+
+def update_reference_xy(x, y, z):
+    global update_in_progress
+
+    if update_in_progress:
+        return
+
+    update_in_progress = True
+
+    lat, lon = ref_lat.get(), ref_lon.get()
+
+    x, y = compute_xy(lat, lon)
+
+    ref_x.set(x)
+    ref_y.set(y)
+
+    update_in_progress = False
+
+
 def validate_numbers(action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
 
     if value_if_allowed == "" or value_if_allowed == "-":
@@ -579,7 +698,7 @@ def main():
         plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
         fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
         scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_color, ref_sym, ref_date, \
-        epoch_option_menu, epoch, epoch_list, excludes_list_box, use_default
+        epoch_option_menu, epoch, epoch_list, excludes_list_box, use_default, ref_date_option_menu, ref_dates_list, show_ref
 
     '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
@@ -639,7 +758,7 @@ def main():
     epoch_frame = Frame(frame)
 
     epoch = StringVar()
-    epoch_option_menu = OptionMenu(epoch_frame, epoch, *epoch_list)
+    epoch_option_menu = OptionMenu(epoch_frame, epoch, *epoch_list, command=set_sliders)
     epoch_option_menu.config(width=10)
 
     excludes_list_box = Listbox(epoch_frame, selectmode=MULTIPLE, height=5)
@@ -668,7 +787,7 @@ def main():
     y_lim_upper_frame = Frame(y_lim_frame)
     y_lim_upper_label = Label(y_lim_upper_frame, text="Maximum", width=8)
     y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
-                               variable=y_lim_upper, showvalue=0)
+                               variable=y_lim_upper, showvalue=0, resolution=0.001)
     y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6, validate='key', validatecommand=vcmd_num)
 
     y_lim_lower = DoubleVar()
@@ -677,7 +796,7 @@ def main():
     y_lim_lower_frame = Frame(y_lim_frame)
     y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
     y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
-                               variable=y_lim_lower, showvalue=0)
+                               variable=y_lim_lower, showvalue=0, resolution=0.001)
     y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6, validate='key', validatecommand=vcmd_num)
 
     use_default = BooleanVar()
@@ -694,7 +813,7 @@ def main():
 
     unit = StringVar()
 
-    unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=update_sliders)
+    unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=scale_sliders)
     unit_option_menu.config(width=6)
 
     colormap = StringVar()
@@ -881,10 +1000,12 @@ def main():
     ref_xy_frame = Frame(frame)
 
     ref_x = StringVar()
+    ref_x.trace('w', callback=update_reference_lalo)
     ref_x_label = Label(ref_xy_frame, text="X:    ")
     ref_x_entry = Entry(ref_xy_frame, textvariable=ref_x, width=6, validate='key', validatecommand=vcmd_num)
 
     ref_y = StringVar()
+    ref_y.trace('w', callback=update_reference_lalo)
     ref_y_label = Label(ref_xy_frame, text="Y:    ")
     ref_y_entry = Entry(ref_xy_frame, textvariable=ref_y, width=6, validate='key', validatecommand=vcmd_num)
 
@@ -893,10 +1014,12 @@ def main():
     ref_latlon_frame = Frame(frame)
 
     ref_lat = StringVar()
+    ref_lat.trace('w', callback=update_reference_xy)
     ref_lat_label = Label(ref_latlon_frame, text="Lat: ")
     ref_lat_entry = Entry(ref_latlon_frame, textvariable=ref_lat, width=6, validate='key', validatecommand=vcmd_num)
 
     ref_lon = StringVar()
+    ref_lon.trace('w', callback=update_reference_xy)
     ref_lon_label = Label(ref_latlon_frame, text="Lon: ")
     ref_lon_entry = Entry(ref_latlon_frame, textvariable=ref_lon, width=6, validate='key', validatecommand=vcmd_num)
 
@@ -928,9 +1051,8 @@ def main():
     ref_symbol_option_menu = OptionMenu(reference_options_frame, ref_sym,*reference_symbols)
     ref_symbol_option_menu.config(width=10)
 
-    reference_dates = ["1", "2", "3", "4", "5"]
     ref_date = StringVar()
-    ref_date_option_menu = OptionMenu(reference_options_frame, ref_date, *reference_dates)
+    ref_date_option_menu = OptionMenu(reference_options_frame, ref_date, *ref_dates_list)
     ref_date_option_menu.config(width=10)
 
 

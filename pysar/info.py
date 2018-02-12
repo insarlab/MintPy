@@ -52,7 +52,11 @@ def hdf5_structure_string(file):
     h5file = h5py.File(file, 'r')
     h5file.visititems(print_hdf5_structure_obj)
     h5file.close()
-    return output
+
+    local_output = output
+    output = ""
+
+    return local_output
 
 
 ## By andrewcollette at https://github.com/h5py/h5py/issues/406
