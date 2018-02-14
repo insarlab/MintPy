@@ -516,6 +516,7 @@ def configure_plot():
     # Construct Time Slider
     make_time_slider()
 
+
 ################### PLOTTING HELPER FUNCTIONS #######################
 def time_slider_update(val):
     '''Update Displacement Map using Slider'''
@@ -532,6 +533,7 @@ def time_slider_update(val):
         d_v -= d_v[inps.ref_yx[0], inps.ref_yx[1]]
     img.set_data(d_v)
     fig_v.canvas.draw()
+
 
 def format_coord(x, y):
     global width, length, ullat, lat_step, ullon, lon_step, d_v, lat, lonf

@@ -49,14 +49,12 @@ colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn',
              'spectral_r', 'spring', 'spring_r', 'summer', 'summer_r', 'tab10', 'tab10_r', 'tab20', 'tab20_r', 'tab20b',
              'tab20b_r', 'tab20c', 'tab20c_r', 'terrain', 'terrain_r', 'viridis', 'viridis_r', 'winter', 'winter_r']
 
-projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll", "lcc", "tmerc", "nplaea", "gall",
-               "npaeqd", "mill", "merc", "stere", "eqdc", "rotpole", "cyl", "npstere", "spstere", "hammer", "geos",
-               "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "class", "vandg", "laea", "splaea", "robin"]
-
 unit_options = ["cm", "m", "dm", "km", "", "cm/yr", "m/yr", "dm/yr", "km/yr"]
 
 attributes = []
 update_in_progress = False
+starting_lower_lim = 0
+current_slider_scale = 1.0
 
 
 def pick_file():
@@ -71,42 +69,8 @@ def pick_file():
         h5_file_short.set(filename.split("/")[-1])
         pick_h5_file_button.config(text="Cancel")
 
-        atr = readfile.read_attribute(h5_file.get())
-
-        file_type = atr['FILE_TYPE']
-
-        h5file = h5py.File(h5_file.get(), 'r')
-        if file_type in ['HDFEOS']:
-            ref_dates_list += h5file.attrs['DATE_TIMESERIES'].split()
-        else:
-            ref_dates_list += sorted(h5file[file_type].keys())
-
-        data, attributes = readfile.read(h5_file.get(), epoch=ref_dates_list[len(ref_dates_list) - 1])
-        max = numpy.amax(data)
-        starting_upper_lim = max * 5
-        update_sliders("m")
-        y_lim_upper.set(max)
-
-        num_list.pop(0)
-        num_list = list(range(len(ref_dates_list)))
-
-        if max < 1:
-            y_lim_upper_slider.config(resolution=0.001)
-            y_lim_lower_slider.config(resolution=0.001)
-
         set_variables_from_attributes()
 
-        for the_epoch in ref_dates_list:
-            ref_date_option_menu.children['menu'].add_command(label=the_epoch,
-                                                              command=lambda val=the_epoch: ref_date.set(val))
-            excludes_list_box.insert(END, the_epoch)
-        ref_date.set("All")
-
-        for number in num_list:
-            num_option_menu.children['menu'].add_command(label=number,
-                                                              command=lambda val=number: num.set(val))
-
-        num.set(str(len(num_list)-3))
         return frame.filename
 
     else:
@@ -114,8 +78,9 @@ def pick_file():
         h5_file_short.set("No File Selected")
         pick_h5_file_button.config(text="Select .h5 File")
         ref_date_option_menu['menu'].delete(1, 'end')
-        y_lim_upper_slider.config(resolution=1)
-        y_lim_lower_slider.config(resolution=1)
+        num_option_menu['menu'].delete(0, 'end')
+        excludes_list_box.delete(0, 'end')
+
 
 
 def pick_mask():
@@ -152,22 +117,66 @@ def on_configure(event):
     canvas.configure(scrollregion=canvas.bbox('all'))
 
 
-def update_sliders(unit):
-    scale = 1
+def update_sliders(unit, setValues=True):
+    global current_slider_scale
+
+    scale = 1.0
     new_max = starting_upper_lim
+    new_min = starting_lower_lim
+
     if unit == "m":
-        scale = 1
+        scale = 1.0
     elif unit == "cm":
-        scale = 100
+        scale = 100.0
     elif unit == "mm":
-        scale = 1000
+        scale = 1000.0
     elif unit == "dm":
-        scale = 0.1
+        scale = 10
     elif unit == "km":
         scale = 0.001
 
-    y_lim_upper_slider.configure(to_=new_max * scale)
-    y_lim_lower_slider.configure(to_=new_max * scale)
+    current_slider_scale = scale
+
+    y_lim_upper_slider.configure(to_= new_max*scale)
+    y_lim_upper_slider.configure(from_= -1*(float(new_max*scale)/4))
+    y_lim_lower_slider.configure(to_= new_max*scale)
+    y_lim_lower_slider.configure(from_= (float(new_min*scale)))
+
+    if setValues:
+        current_y_lim_upper = y_lim_upper.get()
+        current_y_lim_lower = y_lim_lower.get()
+
+        y_lim_upper.set(current_y_lim_upper*scale)
+        y_lim_lower.set(current_y_lim_lower*scale)
+
+
+def scale_sliders(unit):
+    global current_slider_scale
+
+    new_max_slider_val = y_lim_upper.get() / current_slider_scale
+    new_min_slider_val = y_lim_lower.get() / current_slider_scale
+
+    print(new_max_slider_val)
+
+    if unit in ["m", "m/yr"]:
+        current_slider_scale = 1.0
+    elif unit in ["cm", "cm/yr"]:
+        current_slider_scale = 100.0
+    elif unit in ["mm", "mm/yr"]:
+        current_slider_scale = 1000.0
+    elif unit in ["dm", "dm/yr"]:
+        current_slider_scale = 10
+    elif unit in ["km", "km/yr"]:
+        current_slider_scale = 0.001
+
+    new_max_slider_val *= current_slider_scale
+    new_min_slider_val *= current_slider_scale
+
+    update_sliders(unit, setValues=False)
+
+    y_lim_upper_slider.set(new_max_slider_val)
+    y_lim_lower_slider.set(new_min_slider_val)
+
 
 
 def show_file_info(file_info):
@@ -294,12 +303,12 @@ def reset_plot():
 
 
 def set_variables_from_attributes():
+    global atr, attributes, data, num_list, starting_upper_lim, ref_dates_list, ref_date_option_menu, excludes_list_box, num_option_menu
 
-    update_sliders('m')
-    y_lim_upper.set(starting_upper_lim/2)
-    y_lim_lower.set(0)
+    set_sliders()
+
     unit.set(attributes['UNIT'])
-    colormap.set('hsv')
+    colormap.set('jet')
 
     fig_size_width.set("5")
     fig_size_height.set("10")
@@ -326,6 +335,74 @@ def set_variables_from_attributes():
 
     ref_pix_input_lalo_la.set(ref_lat)
     ref_pix_input_lalo_lo.set(ref_lon)
+
+    set_epoch_info()
+
+
+def set_sliders(value=None):
+    global starting_lower_lim, starting_upper_lim, y_lim_upper_slider, y_lim_lower_slider, num
+
+    if value is not None:
+        num.set(value)
+
+    data = read_file_data(value)
+    max_val = numpy.amax(data)
+    min_val = numpy.amin(data)
+
+    starting_lower_lim = min_val * 5
+    starting_upper_lim = max_val * 5
+
+    update_sliders("m")
+    y_lim_upper.set(starting_upper_lim / 5)
+    y_lim_lower.set(starting_lower_lim / 5)
+
+
+def set_epoch_info():
+    global excludes_list_box, ref_date_option_menu, ref_date, num_list, num_option_menu, the_epoch, num, ref_dates_list
+
+    num_list.pop(0)
+    num_list = list(range(len(ref_dates_list)))
+
+    excludes_list_box.delete(0, END)
+    ref_date_option_menu['menu'].delete(0, END)
+    num_option_menu['menu'].delete(1, END)
+
+    for the_epoch in ref_dates_list:
+        ref_date_option_menu.children['menu'].add_command(label=the_epoch,
+                                                          command=lambda val=the_epoch: ref_date.set(val))
+        if the_epoch is not "All":
+            excludes_list_box.insert(END, the_epoch)
+
+    ref_date.set("All")
+
+    for number in num_list:
+        num_option_menu.children['menu'].add_command(label=number,
+                                                     command=lambda val=number: set_sliders(val))
+
+    num.set(str(len(num_list) - 3))
+
+
+def read_file_data(epoch=None):
+    global atr, attributes, ref_dates_list
+
+    atr = readfile.read_attribute(h5_file.get())
+
+    file_type = atr['FILE_TYPE']
+
+    ref_dates_list = ["All"]
+
+    h5file = h5py.File(h5_file.get(), 'r')
+    if file_type in ['HDFEOS']:
+        ref_dates_list += h5file.attrs['DATE_TIMESERIES'].split()
+    else:
+        ref_dates_list += sorted(h5file[file_type].keys())
+
+    if epoch and epoch is not "All":
+        data, attributes = readfile.read(h5_file.get(), epoch=ref_dates_list[epoch])
+    else:
+        data, attributes = readfile.read(h5_file.get(), epoch=ref_dates_list[len(ref_dates_list) - 1])
+
+    return data
 
 
 def compute_lalo(x, y, all_data=False):
@@ -554,7 +631,7 @@ def main():
     y_lim_upper_frame = Frame(y_lim_frame)
     y_lim_upper_label = Label(y_lim_upper_frame, text="Maximum", width=8)
     y_lim_upper_slider = Scale(y_lim_upper_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
-                               variable=y_lim_upper, showvalue=0)
+                               variable=y_lim_upper, showvalue=0, resolution=0.001)
     y_lim_upper_entry = Entry(y_lim_upper_frame, textvariable=y_lim_upper, width=6, validate='key', validatecommand=vcmd_num)
 
     y_lim_lower = DoubleVar()
@@ -563,7 +640,7 @@ def main():
     y_lim_lower_frame = Frame(y_lim_frame)
     y_lim_lower_label = Label(y_lim_lower_frame, text="Minimum", width=8)
     y_lim_lower_slider = Scale(y_lim_lower_frame, from_=0, to=starting_upper_lim, orient=HORIZONTAL, length=150,
-                               variable=y_lim_lower, showvalue=0)
+                               variable=y_lim_lower, showvalue=0, resolution=0.001)
     y_lim_lower_entry = Entry(y_lim_lower_frame, textvariable=y_lim_lower, width=6, validate='key', validatecommand=vcmd_num)
 
 
@@ -576,7 +653,7 @@ def main():
 
     unit = StringVar()
 
-    unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=update_sliders)
+    unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=scale_sliders)
     unit_option_menu.config(width=16)
 
     colormap = StringVar()

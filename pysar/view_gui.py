@@ -509,7 +509,7 @@ def set_sliders(value=None):
     if value is not None:
         epoch.set(value)
 
-    data = read_file_info(value)
+    data = read_file_data(value)
     max_val = numpy.amax(data)
     starting_lower_lim = numpy.amin(data)
     starting_upper_lim = max_val * 5
@@ -543,7 +543,7 @@ def set_epoch_info():
     epoch.set("All")
 
 
-def read_file_info(epoch=None):
+def read_file_data(epoch=None):
     global epoch_list, attributes, ref_dates_list
 
     atr = readfile.read_attribute(h5_file.get())
