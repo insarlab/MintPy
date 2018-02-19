@@ -28,6 +28,8 @@ excludes_list_box, ref_date_option_menu, show_ref \
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
       None, None
 
+file_base = "/"
+
 use_default = None
 current_slider_scale = None
 file_info_window = None
@@ -66,7 +68,7 @@ update_in_progress = False
 
 def pick_file():
 
-    global file_info
+    global file_info, file_base
 
     if len(epoch_list) > 0:
         epoch_option_menu['menu'].delete(0, "end")
@@ -74,11 +76,13 @@ def pick_file():
         ref_date_option_menu['menu'].delete(0, "end")
 
     if h5_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*"), ("more files", "*.he5")))
         frame.filename = filename
         h5_file.set(frame.filename)
-        h5_file_short.set(filename.split("/")[-1])
+        parts = filename.split("/")
+        file_base = parts[0]
+        h5_file_short.set(parts[-1])
         pick_h5_file_button.config(text="Cancel")
 
         file_info = info.hdf5_structure_string(filename)
@@ -100,7 +104,7 @@ def pick_file():
 
 def pick_mask():
     if mask_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
         mask_file.set(frame.filename)
@@ -115,7 +119,7 @@ def pick_mask():
 
 def pick_dem():
     if dem_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
         dem_file.set(frame.filename)

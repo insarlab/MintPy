@@ -56,17 +56,21 @@ update_in_progress = False
 starting_lower_lim = 0
 current_slider_scale = 1.0
 
+file_base = "/"
+
 
 def pick_file():
     global h5_file, h5_file_short, attributes, starting_upper_lim, ref_date_option_menu, ref_dates_list, ref_date, y_lim_upper_slider, \
-        y_lim_lower_slider, num_option_menu, num_list
+        y_lim_lower_slider, num_option_menu, num_list, file_base
 
     if h5_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
         h5_file.set(frame.filename)
-        h5_file_short.set(filename.split("/")[-1])
+        parts = filename.split("/")
+        file_base = parts[0]
+        h5_file_short.set(parts[-1])
         pick_h5_file_button.config(text="Cancel")
 
         set_variables_from_attributes()
@@ -85,7 +89,7 @@ def pick_file():
 
 def pick_mask():
     if mask_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
         mask_file.set(frame.filename)
@@ -100,7 +104,7 @@ def pick_mask():
 
 def pick_dem():
     if dem_file.get() == "":
-        filename = filedialog.askopenfilename(initialdir="/", title="Select file",
+        filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
         dem_file.set(frame.filename)
