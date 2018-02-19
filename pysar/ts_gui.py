@@ -128,15 +128,15 @@ def update_sliders(unit, setValues=True):
     new_max = starting_upper_lim
     new_min = starting_lower_lim
 
-    if unit == "m":
+    if unit in ["m", "m/yr"]:
         scale = 1.0
-    elif unit == "cm":
+    elif unit in ["cm", "cm/yr"]:
         scale = 100.0
-    elif unit == "mm":
+    elif unit in ["mm", "mm/yr"]:
         scale = 1000.0
-    elif unit == "dm":
-        scale = 10
-    elif unit == "km":
+    elif unit in ["dm", "dm/yr"]:
+        scale = 10.0
+    elif unit in ["km", "km/yr"]:
         scale = 0.001
 
     current_slider_scale = scale
@@ -169,7 +169,7 @@ def scale_sliders(unit):
     elif unit in ["mm", "mm/yr"]:
         current_slider_scale = 1000.0
     elif unit in ["dm", "dm/yr"]:
-        current_slider_scale = 10
+        current_slider_scale = 10.0
     elif unit in ["km", "km/yr"]:
         current_slider_scale = 0.001
 
@@ -344,7 +344,7 @@ def set_variables_from_attributes():
 
 
 def set_sliders(value=None):
-    global starting_lower_lim, starting_upper_lim, y_lim_upper_slider, y_lim_lower_slider, num
+    global starting_lower_lim, starting_upper_lim, y_lim_upper_slider, y_lim_lower_slider, num, attributes, unit
 
     if value is not None:
         num.set(value)
@@ -356,7 +356,8 @@ def set_sliders(value=None):
     starting_lower_lim = min_val * 5
     starting_upper_lim = max_val * 5
 
-    update_sliders("m")
+    unit.set(attributes['UNIT'])
+    update_sliders(attributes['UNIT'])
     y_lim_upper.set(starting_upper_lim / 5)
     y_lim_lower.set(starting_lower_lim / 5)
 
