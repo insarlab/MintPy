@@ -71,11 +71,17 @@ def pick_file():
         parts = filename.split("/")
         file_base = parts[0]
         h5_file_short.set(parts[-1])
-        pick_h5_file_button.config(text="Cancel")
+        if h5_file.get() != "":
+            pick_h5_file_button.config(text="Cancel")
+        else:
+            h5_file_short.set("No File Selected")
+            pick_h5_file_button.config(text="Select .h5 File")
+            return
+
 
         set_variables_from_attributes()
 
-        return frame.filename
+        #return frame.filename
 
     else:
         h5_file.set("")
@@ -101,6 +107,10 @@ def pick_mask():
         mask_short.set("No File Selected")
         pick_mask_file_button.config(text="Select Mask File")
 
+    if mask_file.get() == "":
+        mask_short.set("No File Selected")
+        pick_mask_file_button.config(text="Select Mask File")
+
 
 def pick_dem():
     if dem_file.get() == "":
@@ -113,6 +123,10 @@ def pick_dem():
         return frame.filename
     else:
         dem_file.set("")
+        dem_short.set("No File Selected")
+        pick_dem_file_button.config(text="Select Topography File")
+
+    if dem_file.get() == "":
         dem_short.set("No File Selected")
         pick_dem_file_button.config(text="Select Topography File")
 
