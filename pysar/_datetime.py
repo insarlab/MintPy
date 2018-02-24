@@ -240,6 +240,34 @@ def list_ifgram2date12(ifgram_list):
     return date12_list_out
 
 
+def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
+    '''Find closest available time of weather product from SAR acquisition time
+    Inputs:
+        sar_acquisition_time - string, SAR data acquisition time in seconds
+        grib_source - string, Grib Source of weather reanalysis product
+    Output:
+        grib_hr - string, time of closest available weather product 
+    Example:
+        '06:00' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'ECMWF')
+        '12'    = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
+    '''
+    # Get hour/min of SAR acquisition time
+    sar_time = float(sar_acquisition_time)
+    #sar_hh = int(sar_time/3600.0)
+    #sar_mm = int((sar_time-3600.0*sar_hh) / 60.0)
+    
+    # Find closest time in available weather products
+    grib_hr_list = [0, 6, 12, 18]
+    grib_hr = int(min(grib_hr_list, key=lambda x:abs(x-sar_time/3600.)))
+    
+    # Adjust time output format
+    if grib_source == 'NARR':
+        grib_hr = "%02d"%grib_hr
+    else:
+        grib_hr = "%02d:00"%grib_hr
+    return grib_hr
+
+
 ###########################Simple progress bar######################
 class progress_bar:
     '''Creates a text-based progress bar. Call the object with 
