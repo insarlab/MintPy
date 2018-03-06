@@ -285,16 +285,18 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 ## 5. Network Inversion
 ## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
-## Temporal coherence (weighted) is calculated using Tazzani et al. (2007, IEEE-TGRS)
-## Singular-Value Decomposition (SVD) is applied if network are not fully connected
-## There are 3 options for weighting function:
-## a. variance  - BLUE, use inverse of covariance as weight  (Rocca, 2007, TGRS; Guarnieri & Tebaldini, 2008, TGRS)
-## b. coherence - WLS, use coherence as weight (Perissin and Wang, 2012, IEEE-TGRS; Tong et al., 2016, RSE)
-## c. no        - LS, no/uniform weight (Berardino et al., 2002, TGRS)
-pysar.timeseriesInv.weightFunc    = auto #[variance / no / coherence], auto for no
-pysar.timeseriesInv.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
-pysar.timeseriesInv.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
-pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
+## Temporal coherence is calculated using Tazzani et al. (Tizzani et al., 2007, IEEE-TGRS)
+## Singular-Value Decomposition (SVD) is applied if network are not fully connected for no weight scenario.
+## There are 4 weighting options:
+## a. fim       - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
+## b. variance  - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
+## c. coherence - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
+## d. no        - LS, no/uniform weight (Berardino et al., 2002, TGRS)
+pysar.networkInversion.weightFunc    = auto #[fim / variance / coherence / no], auto for no
+pysar.networkInversion.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
+pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for geometry*.h5
+pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
+pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 
 
 ## 6. Local Oscillator Drift (LOD) Correction (for Envisat only)
@@ -309,8 +311,10 @@ pysar.timeseriesInv.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal 
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
 ## c. base_trop_cor - (not recommend) baseline error and stratified tropo simultaneously (Jo et al., 2010, Geo J)
 pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / base_trop_cor / no], auto for pyaps
-pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
 pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
+pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
+pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, Number of looks to be applied to interferogram 
+                                             #before empirical estimation of topography correlated atmosphere.
 
 
 ## 8. Topographic (DEM) Residual Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
@@ -778,8 +782,11 @@ def main(argv):
         if fname and 'geometry' not in fname:
             loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
             print loadCmd
-            status = subprocess.Popen(loadCmd, shell=True).wait()        
+            status = subprocess.Popen(loadCmd, shell=True).wait()
 
+    inps.water_mask_file = ut.get_geometry_file('waterMask',\
+                                                coordType=inps.coord_type, abspath=True, print_msg=False)
+    print 'water mask file: %s' % (inps.water_mask_file)
 
     #########################################
     # Referencing Interferograms in Space
@@ -884,10 +891,12 @@ def main(argv):
     print '\n**********  Network Inversion to Time Series  ********************'
     inps.timeseries_file = 'timeseries.h5'
     inps.temp_coh_file = 'temporalCoherence.h5'
-    invertCmd = 'ifgram_inversion.py '+inps.ifgram_file+' --template '+inps.template_file
-    print invertCmd
+    invCmd = 'ifgram_inversion.py %s --template %s' % (inps.ifgram_file, inps.template_file)
+    if inps.water_mask_file:
+        invCmd += ' --water-mask '+inps.water_mask_file
+    print invCmd
     if ut.update_file(inps.timeseries_file, inps.ifgram_file):
-        status = subprocess.Popen(invertCmd, shell=True).wait()
+        status = subprocess.Popen(invCmd, shell=True).wait()
         if status is not 0:
             print '\nError while inverting network of interferograms to time-series.\n'
             sys.exit(-1)
@@ -896,7 +905,7 @@ def main(argv):
     print 'Update Mask based on Temporal Coherence ...'
     # Read template option
     inps.min_temp_coh = 0.7
-    key = 'pysar.timeseriesInv.minTempCoh'
+    key = 'pysar.networkInversion.minTempCoh'
     if key in template.keys():
         value = template[key]
         if value == 'auto':
