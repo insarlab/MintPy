@@ -140,8 +140,15 @@ def phase_variance_ps(L, coherence=None):
     return var, coherence
 
 
-def coherence2phase_variance_ds(coherence, L=32):
+def coherence2phase_variance_ds(coherence, L=32, print_msg=False):
     '''Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)'''
+    lineStr = '    number of multilooks L=%d' % L
+    if L > 80:
+        L = 80
+        lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
+    if print_msg:
+        print lineStr
+
     epsilon = 1e-4
     coh_num = 1000
     coh_min = 0.0
@@ -159,6 +166,13 @@ def coherence2phase_variance_ds(coherence, L=32):
     var_lut = phase_variance_ds(L, coh_lut)[0]
     variance = var_lut[coherence_idx]
     return variance
+
+def coherence2fisher_info_index(coherence, L=32, epsilon=1e-4):
+    '''Convert coherence to Fisher information index (Seymour & Cumming, 1994, IGARSS)'''
+    coherence = np.array(coherence, np.float64)
+    coherence[coherence > 1-epsilon] = 1-epsilon
+    weight = 2.0 * L * np.square(coherence) / (1 - np.square(coherence))
+    return weight
 
 
 def round_to_1(x):
@@ -466,12 +480,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
         if meta['weight_function'].startswith('var'):
             print 'convert coherence to weight using inverse of phase variance'
             print '    with phase PDF for distributed scatterers from Tough et al. (1995)'
-            lineStr = '    number of multilooks L=%d' % L
-            if L > 80:
-                L = 80
-                lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
-            print lineStr
-            weight = 1.0 / coherence2phase_variance_ds(weight, L)
+            weight = 1.0 / coherence2phase_variance_ds(weight, L, print_msg=True)
 
         elif meta['weight_function'].startswith(('lin','coh','cor')):
             print 'use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)'
@@ -479,8 +488,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
 
         elif meta['weight_function'].startswith(('fim','fisher')):
             print 'convert coherence to weight using Fisher Information Index (Seymour & Cumming, 1994)'
-            weight[weight > 1-epsilon] = 1-epsilon
-            weight = 2.0 * L * np.square(weight) / (1 - np.square(weight))
+            weight = coherence2fisher_info_index(weight, L)
 
         else:
             print 'Un-recognized weight function: %s' % meta['weight_function']

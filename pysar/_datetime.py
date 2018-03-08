@@ -261,10 +261,11 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
     grib_hr = int(min(grib_hr_list, key=lambda x:abs(x-sar_time/3600.)))
     
     # Adjust time output format
-    if grib_source == 'NARR':
-        grib_hr = "%02d"%grib_hr
-    else:
-        grib_hr = "%02d:00"%grib_hr
+    grib_hr = "%02d"%grib_hr
+    #if grib_source == 'NARR':
+    #    grib_hr = "%02d"%grib_hr
+    #else:
+    #    grib_hr = "%02d:00"%grib_hr
     return grib_hr
 
 

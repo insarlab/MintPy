@@ -83,10 +83,12 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     ## Date list to grib file list
     grib_file_list = []
     for d in date_list:
-        if   grib_source == 'ECMWF':  grib_file = grib_dir+'/ERA-Int_'+d+'_'+hour+'.grb'
-        elif grib_source == 'ERA'  :  grib_file = grib_dir+'/ERA_'+d+'_'+hour+'.grb'
-        elif grib_source == 'MERRA':  grib_file = grib_dir+'/merra-'+d+'-'+hour+'.hdf'
-        elif grib_source == 'NARR' :  grib_file = grib_dir+'/narr-a_221_'+d+'_'+hour+'00_000.grb'
+        grib_file = grib_dir+'/'
+        if   grib_source == 'ECMWF' :  grib_file += 'ERA-Int_%s_%s.grb' % (d, hour)
+        elif grib_source == 'ERA'   :  grib_file += 'ERA_%s_%s.grb' % (d, hour)
+        elif grib_source == 'NARR'  :  grib_file += 'narr-a_221_%s_%s00_000.grb' % (d, hour)
+        elif grib_source == 'MERRA' :  grib_file += 'merra-%s-%s.nc4' % (d, hour)
+        elif grib_source == 'MERRA1':  grib_file += 'merra-%s-%s.hdf' % (d, hour)
         grib_file_list.append(grib_file)
 
     ## Get date list to download (skip already downloaded files)
@@ -112,10 +114,11 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     print '------------------------------------------------------------------------------\n'
 
     ## Download grib file using PyAPS
-    if   grib_source == 'ECMWF':  pa.ECMWFdload(date_list2download, hour, grib_dir)
-    elif grib_source == 'ERA'  :  pa.ERAdload(  date_list2download, hour, grib_dir)
-    elif grib_source == 'MERRA':  pa.MERRAdload(date_list2download, hour, grib_dir)
-    elif grib_source == 'NARR' :  pa.NARRdload( date_list2download, hour, grib_dir)
+    if   grib_source == 'ECMWF' :  pa.ECMWFdload( date_list2download, hour, grib_dir)
+    elif grib_source == 'ERA'   :  pa.ERAdload(   date_list2download, hour, grib_dir)
+    elif grib_source == 'NARR'  :  pa.NARRdload(  date_list2download, hour, grib_dir)
+    elif grib_source == 'MERRA' :  pa.MERRAdload( date_list2download, hour, grib_dir)
+    elif grib_source == 'MERRA1':  pa.MERRA1dload(date_list2download, hour, grib_dir)
 
     return grib_file_existed
 
@@ -124,14 +127,14 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
 EXAMPLE='''example:
   tropcor_pyaps.py timeseries.h5 -d geometryRadar.h5 -i geometryRadar.h5
   tropcor_pyaps.py timeseries.h5 -d geometryGeo.h5   -i geometryGeo.h5   --weather-dir /famelung/data/WEATHER
-  tropcor_pyaps.py -d srtm1.dem -i 30 --hour 00:00 --ref-yx 2000 2500 --date-list date_list.txt
+  tropcor_pyaps.py -d srtm1.dem -i 30 --hour 00 --ref-yx 2000 2500 --date-list date_list.txt
 
   tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s NARR
   tropcor_pyaps.py timeseries.h5 -d demRadar.h5 -s MERRA --delay dry -i 23
   tropcor_pyaps.py timeseries_LODcor.h5 -d demRadar.h5
 
-  tropcor_pyaps.py -s ECMWF --hour 18:00 --date-list date_list.txt --download
-  tropcor_pyaps.py -s ECMWF --hour 18:00 --date-list bl_list.txt   --download
+  tropcor_pyaps.py -s ECMWF --hour 18 --date-list date_list.txt --download
+  tropcor_pyaps.py -s ECMWF --hour 18 --date-list bl_list.txt   --download
 '''
 
 REFERENCE='''reference:
@@ -141,8 +144,15 @@ REFERENCE='''reference:
 '''
 
 TEMPLATE='''
-pysar.troposphericDelay.method        = pyaps   #[pyaps, height-correlation] 
-pysar.troposphericDelay.weatherModel  = ECMWF   #[ECMWF, ERA, MERRA, NARR]
+## 7. Tropospheric Delay Correction (optional and recommended)
+## correct tropospheric delay using the following methods:
+## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS; Dee et al., 2011)
+## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
+## c. base_trop_cor - (not recommend) baseline error and stratified tropo simultaneously (Jo et al., 2010, Geo J)
+pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / base_trop_cor / no], auto for pyaps
+pysar.troposphericDelay.weatherModel = auto  #[ECMWF / MERRA / NARR], auto for ECMWF, for pyaps method
+pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
+pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, Number of looks to be applied to interferogram 
 '''
 
 
@@ -169,9 +179,12 @@ def cmdLineParse():
     parser.add_argument('--ref-yx', dest='ref_yx', type=int, nargs=2, help='reference pixel in y/x')
 
     parser.add_argument('-s', dest='weather_model',\
-                        default='ECMWF', choices={'ECMWF','ERA-Interim','ERA','MERRA','MERRA2','NARR'},\
-                        help='source of the atmospheric data')
-    parser.add_argument('--hour', help='time of data (ECMWF takes hh:mm, NARR takes hh only)')
+                        default='ECMWF', choices={'ECMWF','ERA-Interim','ERA','MERRA','MERRA1','NARR'},\
+                        help='source of the atmospheric data.\n'+\
+                             'By the time of 2018-Mar-06, ERA and ECMWF data download link is working.\n'+\
+                             'NARR is working for 1979-Jan to 2014-Oct.\n'+\
+                             'MERRA(2) is not working.')
+    parser.add_argument('--hour', help='time of data in HH, e.g. 12, 06')
 
     parser.add_argument('--template', dest='template_file',\
                         help='template file with input options below:\n'+TEMPLATE)
