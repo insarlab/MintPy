@@ -424,7 +424,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
     ## 3 - Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
     maskAllNet = np.all(ifgram_data, axis=0)
     maskAllNet *= mask
-    maskPartNet = mask - maskAllNet
+    maskPartNet = mask ^ maskAllNet
 
     ##### Design matrix
     A,B = ut.design_matrix(ifgramFile, date12_list)

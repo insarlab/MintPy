@@ -62,6 +62,19 @@ def get_delay(grib_file, atr, inps_dict):
     return phs
 
 
+def date_list2grib_file(date_list, hour, grib_source, grib_dir):
+    grib_file_list = []
+    for d in date_list:
+        grib_file = grib_dir+'/'
+        if   grib_source == 'ECMWF' :  grib_file += 'ERA-Int_%s_%s.grb' % (d, hour)
+        elif grib_source == 'ERA'   :  grib_file += 'ERA_%s_%s.grb' % (d, hour)
+        elif grib_source == 'NARR'  :  grib_file += 'narr-a_221_%s_%s00_000.grb' % (d, hour)
+        elif grib_source == 'MERRA' :  grib_file += 'merra-%s-%s.nc4' % (d, hour)
+        elif grib_source == 'MERRA1':  grib_file += 'merra-%s-%s.hdf' % (d, hour)
+        grib_file_list.append(grib_file)
+    return grib_file_list
+
+
 def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     '''Download weather re-analysis grib files using PyAPS
     Inputs:
@@ -72,7 +85,6 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     Output:
         grib_file_list : list of string
     '''
-
     ## Grib data directory
     weather_dir = os.path.abspath(weather_dir)
     grib_dir = weather_dir+'/'+grib_source
@@ -81,15 +93,7 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
         os.makedirs(grib_dir)
 
     ## Date list to grib file list
-    grib_file_list = []
-    for d in date_list:
-        grib_file = grib_dir+'/'
-        if   grib_source == 'ECMWF' :  grib_file += 'ERA-Int_%s_%s.grb' % (d, hour)
-        elif grib_source == 'ERA'   :  grib_file += 'ERA_%s_%s.grb' % (d, hour)
-        elif grib_source == 'NARR'  :  grib_file += 'narr-a_221_%s_%s00_000.grb' % (d, hour)
-        elif grib_source == 'MERRA' :  grib_file += 'merra-%s-%s.nc4' % (d, hour)
-        elif grib_source == 'MERRA1':  grib_file += 'merra-%s-%s.hdf' % (d, hour)
-        grib_file_list.append(grib_file)
+    grib_file_list = date_list2grib_file(date_list, hour, grib_source, grib_dir)
 
     ## Get date list to download (skip already downloaded files)
     grib_file_existed = ut.get_file_list(grib_file_list)
