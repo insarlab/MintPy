@@ -76,8 +76,8 @@ def auto_path_miami(inps, template={}):
         if not inps.unw or inps.unw == 'auto':   inps.unw = process_dir+'/merged/interferograms/*/filt*.unw'
         if not inps.cor or inps.cor == 'auto':   inps.cor = process_dir+'/merged/interferograms/*/filt*.cor'
         if not inps.lut or inps.lut == 'auto':   inps.lut = process_dir+'/merged/geom_master/l*.rdr'
-        if not inps.dem_radar or inps.dem_radar == 'auto':   inps.dem_radar = process_dir+'/merged/geom_master/l*.rdr'
-        if not inps.dem_geo or inps.dem_geo == 'auto':   inps.dem_geo = None
+        if not inps.dem_radar or inps.dem_radar == 'auto':   inps.dem_radar = process_dir+'/merged/geom_master/hgt.rdr'
+        if not inps.dem_geo or inps.dem_geo == 'auto':   inps.dem_geo = ""
         #if not inps.int or inps.int == 'auto':   inps.int = process_dir+'/DONE/IFGRAM*/diff_*rlks.int'
 
     ##### master interferogram for lookup table and DEM in radar coord
@@ -109,7 +109,7 @@ def auto_path_miami(inps, template={}):
 
     # Use DEMg/DEM option if dem_geo is not specified in pysar option
     dem_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/DEM'
-    if not inps.dem_geo or inps.dem_geo == 'auto':
+    if inps.dem_geo is not None or inps.dem_geo == 'auto':
         inps.dem_geo = []
         if os.path.isdir(dem_dir):
             inps.dem_geo = [dem_dir+'/*.dem']

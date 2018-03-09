@@ -391,7 +391,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
     ## Invert pixels on mask 1+2
     pixel_num2inv = np.sum(mask)
     pixel_idx2inv = np.where(mask)[0]
-    print 'number of pixels to inverse: %s out of %s' % (pixel_num2inv, pixel_num)
+    print 'number of pixels to invert: %s out of %s' % (pixel_num2inv, pixel_num)
     if pixel_num2inv < 1:
         ts = ts.reshape(date_num, row_num, col_num)
         temp_coh = temp_coh.reshape(row_num, col_num)
@@ -436,7 +436,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
     timeIdx.remove(refIdx)
     Astd = ut.design_matrix(ifgramFile, date12_list, referenceDate=ref_date)[0]
 
-    ##### Inverse
+    ##### Inversion
     if meta['weight_function'] in ['no','uniform']:
         if np.sum(maskAllNet) > 0:
             print 'inverting pixels with valid phase in all     ifgrams with OLS (%.0f pixels) ...' % (np.sum(maskAllNet))
@@ -613,7 +613,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
             meta['ref_value'] = 0.0
             print 'skip checking reference pixel info - This is for SIMULATION ONLY.'
         else:
-            print 'ERROR: No ref_x/y found! Can not inverse interferograms without reference in space.'
+            print 'ERROR: No ref_x/y found! Can not invert interferograms without reference in space.'
             print 'run seed_data.py '+ifgramFile+' --mark-attribute for a quick referencing.'
             sys.exit(1)
     h5ifgram.close()
@@ -634,7 +634,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
         if np.linalg.matrix_rank(A) < date_num-1:
             print 'ERROR: singular design matrix!'
             print '    Input network of interferograms is not fully connected!'
-            print '    Can not inverse the weighted least square solution.'
+            print '    Can not invert the weighted least square solution.'
             print 'You could try:'
             print '    1) Add more interferograms to make the network fully connected:'
             print '       a.k.a., no multiple subsets nor network islands'
@@ -643,7 +643,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     print '-------------------------------------------------------------------------------'
 
 
-    ##### Inverse time-series phase
+    ##### Invert time-series phase
     ##Check parallel environment
     if meta['weight_function'] in ['no','uniform']:
         meta['parallel'] = False
@@ -900,11 +900,11 @@ Tizzani, P., Berardino, P., Casu, F., Euillades, P., Manzo, M., Ricciardi, G. P.
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Inverse network of interferograms into timeseries.',\
+    parser = argparse.ArgumentParser(description='Invert network of interferograms into timeseries.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
-    parser.add_argument('ifgram_file', help='interferograms file to be inversed')
+    parser.add_argument('ifgram_file', help='interferograms file to be inverted')
     parser.add_argument('--template','-t', dest='template_file',\
                         help='template text file with the following options:\n'+TEMPLATE)
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
