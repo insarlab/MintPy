@@ -227,7 +227,7 @@ pysar.unwrapFiles        = auto  #[filt*rlks.unw, diff_*rlks.unw,  filt*.unw]
 pysar.corFiles           = auto  #[filt*rlks.cor, filt_*rlks.cor,  filt*.cor]
 pysar.lookupFile         = auto  #[geomap*.trans, sim*.UTM_TO_RDC, l*.rdr]
 pysar.demFile.radarCoord = auto  #[radar*.hgt,    sim*.hgt_sim,    hgt.rdr]
-pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    None] not needed for ISCE product
+pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    ""] not needed for ISCE product
 
 
 ## 1.1 Subset (optional, --subset to exit after this step)
