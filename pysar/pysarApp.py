@@ -605,8 +605,8 @@ def main(argv):
             sys.exit(-1)
 
     if inps.load_dataset:
-        sys.exit('Exit as planned after loading/checking the dataset')
-
+        print('Exit as planned after loading/checking the dataset with error code 0')
+        sys.exit(0)
     if inps.reset:
         print 'Reset dataset attributtes for a fresh re-run with options from %s' % os.path.basename(inps.template_file)
         print '-----------------------------------------------------------------------------------'
