@@ -4,6 +4,7 @@ from Tkinter import *
 
 import h5py
 import matplotlib
+import argparse
 
 matplotlib.use('TkAgg')
 import tkFileDialog as filedialog
@@ -34,6 +35,7 @@ use_default = None
 current_slider_scale = None
 file_info_window = None
 file_info = None
+inps = None
 
 epoch_list = ["All"]
 ref_dates_list = [""]
@@ -66,6 +68,20 @@ attributes = []
 update_in_progress = False
 
 
+def cmdLineParse(argv):
+    global inps
+    parser = argparse.ArgumentParser(description='Display InSAR Product',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=None)
+
+    ##### Input
+    infile = parser.add_argument_group('Input File', 'File/Dataset to display')
+    infile.add_argument('--file', dest='file', metavar='FILE', help='file for display')
+
+    inps = parser.parse_args(argv)
+    return inps
+
+
 def pick_file():
 
     global file_info, file_base
@@ -79,21 +95,8 @@ def pick_file():
         filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*"), ("more files", "*.he5")))
         frame.filename = filename
-        h5_file.set(frame.filename)
-        parts = filename.split("/")
-        file_base = parts[0]
-        h5_file_short.set(parts[-1])
 
-        if h5_file.get() != "":
-            pick_h5_file_button.config(text="Cancel")
-        else:
-            h5_file_short.set("No File Selected")
-            pick_h5_file_button.config(text="Select .h5 File")
-            return
-
-        file_info = info.hdf5_structure_string(filename)
-
-        set_variables_from_attributes()
+        on_file_selection(filename)
 
         #return frame.filename
     else:
@@ -145,6 +148,25 @@ def pick_dem():
         dem_short.set("No File Selected")
         pick_dem_file_button.config(text="Select Topography File")
 
+
+def on_file_selection(file):
+    global file_base, file_info
+    h5_file.set(file)
+    inps.file = file
+    parts = h5_file.get().split("/")
+    file_base = parts[0]
+    h5_file_short.set(parts[-1])
+
+    if h5_file.get() != "":
+        pick_h5_file_button.config(text="Cancel")
+    else:
+        h5_file_short.set("No File Selected")
+        pick_h5_file_button.config(text="Select .h5 File")
+        return
+
+    file_info = info.hdf5_structure_string(h5_file.get())
+
+    set_variables_from_attributes()
 
 def on_configure(event):
     canvas.configure(scrollregion=canvas.bbox('all'))
@@ -240,7 +262,7 @@ def show_plot():
 
     global file_info_window, attributes
 
-    options = [h5_file.get()]
+    options = [inps.file]
 
     if epoch.get() != "All":
         options.append(epoch.get())
@@ -530,11 +552,11 @@ def set_sliders(value=None):
     data = read_file_data(value)
     max_val = numpy.amax(data)
     starting_lower_lim = numpy.amin(data)
-    starting_upper_lim = max_val * 5
+    starting_upper_lim = max_val * 3
 
     update_sliders("m", setValues=False)
 
-    y_lim_upper.set(starting_upper_lim / 5)
+    y_lim_upper.set(starting_upper_lim / 3)
     y_lim_lower.set(starting_lower_lim)
 
 
@@ -1527,8 +1549,12 @@ def main():
     space.config(height=50)
     space.pack(side=LEFT)
 
+    if inps.file:
+        on_file_selection(inps.file);
+
     mainloop()
 
 
 if __name__ == '__main__':
+    inps = cmdLineParse(sys.argv[1:])
     main()
