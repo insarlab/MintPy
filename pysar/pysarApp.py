@@ -294,7 +294,7 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ## d. no        - LS, no/uniform weight (Berardino et al., 2002, TGRS)
 pysar.networkInversion.weightFunc    = auto #[fim / variance / coherence / no], auto for no
 pysar.networkInversion.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
-pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for geometry*.h5
+pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
 pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 
@@ -892,8 +892,6 @@ def main(argv):
     inps.timeseries_file = 'timeseries.h5'
     inps.temp_coh_file = 'temporalCoherence.h5'
     invCmd = 'ifgram_inversion.py %s --template %s' % (inps.ifgram_file, inps.template_file)
-    if inps.water_mask_file:
-        invCmd += ' --water-mask '+inps.water_mask_file
     print invCmd
     if ut.update_file(inps.timeseries_file, inps.ifgram_file):
         status = subprocess.Popen(invCmd, shell=True).wait()

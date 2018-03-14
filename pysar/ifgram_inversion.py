@@ -836,20 +836,21 @@ def read_template2inps(template_file, inps):
     key = prefix+'waterMaskFile'
     if key in key_list:
         value = template[key]
-        if value in ['auto']:
-            atr = readfile.read_attribute(inps.ifgram_file)
-            if 'Y_FIRST' in atr.keys():
-                maskFile = 'geometryGeo.h5'
-            else:
-                maskFile = 'geometryRadar.h5'
+        if value in ['auto', 'no']:
+            maskFile = None
+            #atr = readfile.read_attribute(inps.ifgram_file)
+            #if 'Y_FIRST' in atr.keys():
+            #    maskFile = 'geometryGeo.h5'
+            #else:
+            #    maskFile = 'geometryRadar.h5'
         else:
             maskFile = value
-        try:
-            data = readfile.read(maskFile, epoch='mask')[0]
-            inps.water_mask_file = maskFile
-        except:
-            print 'Can not found mask dataset in file: %s' % (maskFile)
-            print 'Ignore this input water mask file option and continue.'
+            try:
+                data = readfile.read(maskFile, epoch='mask')[0]
+                inps.water_mask_file = maskFile
+            except:
+                print 'Can not found mask dataset in file: %s' % (maskFile)
+                print 'Ignore this input water mask file option and continue.'
 
     return inps
 
@@ -874,7 +875,7 @@ TEMPLATE='''
 ## d. no        - LS, no/uniform weight (Berardino et al., 2002, TGRS)
 pysar.networkInversion.weightFunc    = auto #[fim / variance / coherence / no], auto for no
 pysar.networkInversion.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
-pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for geometry*.h5
+pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
 pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 '''
