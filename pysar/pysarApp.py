@@ -590,8 +590,7 @@ def main(argv):
     print '--------------------------------------------'
     inps = ut.check_loaded_dataset(inps.work_dir, inps)
     if not inps.ifgram_file:
-        print '\nERROR: No interferograms file found!\n'
-        sys.exit('Exit.')
+        sys.exit('ERROR: No interferograms file found!')
 
     atr = readfile.read_attribute(inps.ifgram_file)
     inps.coord_type = 'radar'
@@ -603,8 +602,7 @@ def main(argv):
         print atrCmd
         status = subprocess.Popen(atrCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while adding HDF-EOS5 attributes to unwrapped interferograms file.\n'
-            sys.exit(-1)
+            sys.exit('ERROR while adding HDF-EOS5 attributes to unwrapped interferograms file.')
 
     if inps.load_dataset:
         print('Exit as planned after loading/checking the dataset with error code 0')
@@ -662,7 +660,8 @@ def main(argv):
         inps = subset_dataset(inps, inps.template_file)
 
     if inps.subset_dataset:
-        sys.exit('Exit as planned after subsetting the dataset')
+        print('Exit as planned after subsetting the dataset')
+        sys.exit(0)
 
 
     #########################################
@@ -882,10 +881,11 @@ def main(argv):
     if ut.update_file('Network.pdf', check_readable=False, \
                       inFile=[inps.ifgram_file, inps.coh_spatialAverage_file, inps.template_file]):
         status = subprocess.Popen(plotCmd, shell=True).wait()
+        #if status is not 0:
+        #   sys.exit('ERROR running plot_network.py.')
 
     if inps.modify_network:
         sys.exit('Exit as planned after network modification.')
-
 
     #########################################
     # Inversion of Interferograms
