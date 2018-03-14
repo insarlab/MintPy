@@ -202,7 +202,7 @@ _________________________________________________
 
 TEMPLATE='''# vim: set filetype=cfg:
 ##------------------------ pysarApp_template.txt ------------------------##
-## 1. Load Data (--load to exit after this step)
+########## 1. Load Data (--load to exit after this step)
 ## recommended input files for data in radar coordinates:
 ##     pysar.insarProcessor     = InSAR processor
 ##     pysar.unwrapFiles        = 'path of all unwrapped interferograms'
@@ -237,10 +237,12 @@ pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 pysar.subset.tightBox = auto    #[yes / no], auto for yes, tight bounding box for files in geo coord
 pysar.multilook.yx    = auto    #[4,4 / no], auto for no [not implemented yet]
 
+
 ## 1.2 Prepare geometry files
 ## Prepare incidenceAngle.h5, rangeDistance.h5 files
 
-## 2. Reference in Space
+
+## 1.3 Reference in Space
 ## reference all interferograms to one common point in space
 ## auto - randomly select a pixel with coherence > minCoherence
 pysar.reference.yx            = auto   #[257,151 / auto]
@@ -251,7 +253,7 @@ pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum cohere
 pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
 
 
-## 3. Unwrapping Error Correction (optional and not recommended)
+## 1.4 Unwrapping Error Correction (optional and not recommended)
 ## unwrapping error correction based on the following two methods:
 ## a. phase closure (Fattahi, 2015, PhD Thesis)
 ## b. connecting bridge
@@ -261,7 +263,8 @@ pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
 pysar.unwrapError.yx       = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,...], auto for none
 
 
-## 4. Modify Network (optional)
+########## 2. Network Inversion
+## 2.1 Modify Network (optional)
 ## Coherence-based network modification = MST + Threshold, by default
 ## 1) calculate a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
 ## 2) find a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
@@ -283,8 +286,7 @@ pysar.network.startDate       = auto  #[20090101 / no], auto for no
 pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 
-## 5. Network Inversion
-## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
+## 2.2 Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## Temporal coherence is calculated using Tazzani et al. (Tizzani et al., 2007, IEEE-TGRS)
 ## Singular-Value Decomposition (SVD) is applied if network are not fully connected for no weight scenario.
 ## There are 4 weighting options:
@@ -299,13 +301,13 @@ pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimizati
 pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 
 
-## 6. Local Oscillator Drift (LOD) Correction (for Envisat only)
+## Local Oscillator Drift (LOD) Correction (for Envisat only)
 ## correct LOD if input dataset comes from Envisat
 ## skip this step for all the other satellites.
 ## Reference paper: Marinkovic and Larsen, 2013, Proc. LPS
 
 
-## 7. Tropospheric Delay Correction (optional and recommended)
+########## 3. Tropospheric Delay Correction (optional and recommended)
 ## correct tropospheric delay using the following methods:
 ## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS; Dee et al., 2011)
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
@@ -317,7 +319,7 @@ pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, Number of loo
                                              #before empirical estimation of topography correlated atmosphere.
 
 
-## 8. Topographic (DEM) Residual Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
+########## 4. Topographic (DEM) Residual Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
 ## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
 ## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
 pysar.topographicResidual              = auto  #[yes / no], auto for yes
@@ -326,7 +328,7 @@ pysar.topographicResidual.stepFuncDate = auto  #[20080529,20100611 / no], auto f
 pysar.topographicResidual.excludeDate  = auto  #[20070321 / txtFile / no], auto for no, date exlcuded for error estimation
 
 
-## 8.1 Phase Residual Root Mean Square
+## 4.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Recommendation: quadratic for whole image, plane for local/small area
@@ -337,29 +339,29 @@ pysar.residualRms.saveRefDate     = auto  #[yes / no], auto for yes, save date w
 pysar.residualRms.saveExcludeDate = auto  #[yes / no], auto for yes, save date(s) with RMS > threshold to txt/pdf file.
 
 
-## 9. Reference in Time
+## 4.2 Reference in Time
 ## reference all timeseries to one date in time
 ## auto - choose date with minimum residual RMS using value from step 8.1
 ## no   - do not change reference date, keep the defaut one (1st date usually) and skip this step
 pysar.reference.date = auto   #[auto / reference_date.txt / 20090214 / no]
 
 
-## 10. Phase Ramp Removal (optional)
+########## 5. Phase Ramp Removal (optional)
 ## remove phase ramp for each epoch, useful to check localized deformation, i.e. volcanic, land subsidence, etc.
 ## [plane, quadratic, plane_range, plane_azimuth, quadratic_range, quadratic_azimuth, baseline_cor, base_trop_cor]
 pysar.deramp          = auto  #[no / plane / quadratic], auto for no - no ramp will be removed
 pysar.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask file for ramp estimation
 
 
-## 11. Velocity Inversion
+########## 6. Velocity Inversion
 ## estimate linear velocity from timeseries, and from tropospheric delay file if exists.
 pysar.velocity.excludeDate = auto   #[exclude_date.txt / 20080520,20090817 / no], auto for exclude_date.txt
 pysar.velocity.startDate   = auto   #[20070101 / no], auto for no
 pysar.velocity.endDate     = auto   #[20101230 / no], auto for no
 
 
-## 12. Post-processing (geocode, output to Google Earth, HDF-EOS5, etc.)
-## 12.1 Geocode
+########## 7. Post-processing (geocode, output to Google Earth, HDF-EOS5, etc.)
+## 7.1 Geocode
 ## For data processed by ROI_PAC/Gamma, output resolution for geocoded file is the same as their lookup table file.
 ## For data processed by ISCE/Doris, output resolution is assign by user with resolution option:
 ## 1) float number - resolution in degree, 0.001 by default, around 100 m on equator
@@ -367,14 +369,14 @@ pysar.velocity.endDate     = auto   #[20101230 / no], auto for no
 pysar.geocode            = auto  #[yes / no], auto for yes
 pysar.geocode.resolution = auto  #[0.0-inf / filename], auto for 0.001 (~100 m), output resolution for ISCE processor
 
-## 12.2 Export to other formats
+## 7.2 Export to other formats
 pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
 pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
 pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
 pysar.save.kml     = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 pysar.save.geotiff = auto   #[yes / no], auto for no, save geocoded velocity to Geotiff format [not implemented yet]
 
-## 12.3 Plot
+## 7.3 Plot
 pysar.plot = auto   #[yes / no], auto for yes, plot files generated by pysarApp default processing to PIC folder
 '''
 
