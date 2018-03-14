@@ -32,6 +32,7 @@
 import os
 import sys
 import re
+from datetime import datetime as dt
 
 import h5py
 import numpy as np
@@ -122,7 +123,13 @@ def read(File, box=None, epoch=None, print_msg=True):
             else:
                 dset = h5file[k][epoch2read].get(epoch2read)
 
-        #elif k in single_dataset_hdf5_file:
+        elif k in ['GIANT_TS']:
+            dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5file['dates'][:].tolist()]
+            dateIndx = dateList.index(epoch)
+            if 'rawts' in h5file.keys():
+                dset = h5file['rawts'][dateIndx,:,:]
+            elif 'recons' in h5file.keys():
+                dset = h5file['recons'][dateIndx,:,:]
         else:
             dset = h5file[k].get(k)
         #else:
@@ -197,11 +204,7 @@ def read(File, box=None, epoch=None, print_msg=True):
             amp, pha, atr = read_float32(File, box=box)
             return pha, atr
 
-        elif ext in ['.dem']:
-            dem, atr = read_real_int16(File, box=box)
-            return dem, atr
-
-        elif ext in ['.wgs84']:
+        elif ext in ['.dem','.wgs84']:
             dem, atr = read_real_int16(File, box=box)
             return dem, atr
 
@@ -214,6 +217,10 @@ def read(File, box=None, epoch=None, print_msg=True):
             m_amp = amp.real
             s_amp = amp.imag
             return m_amp, s_amp, atr
+
+        elif ext in ['.flt']:
+            data, atr = read_real_float32(File, box=box)
+            return data, atr
 
         elif ext in ['.flg', '.byt']:
             flag, atr = read_bool(File, box=box)
@@ -311,6 +318,16 @@ def read_attribute(File, epoch=None):
                     if key in h5[groupK].attrs.keys():
                         attrs = h5[groupK].attrs
                         break
+            if File.endswith('PARAMS.h5'):
+                #dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
+                attrs = dict()
+                attrs['FILE_LENGTH'] = h5['cmask'].shape[0]
+                attrs['WIDTH'] = h5['cmask'].shape[1]
+                #attrs['ORBIT_DIRECTION'] = 'descending'
+                #attrs['ref_y'] = '134'
+                #attrs['ref_x'] = '637'
+                #attrs['ref_date'] = '20141225'
+                k = 'GIANT_TS'
             if attrs is None:
                 raise ValueError('No attribute '+key+' found in 1/2 group level!')
         #elif k in ['HDFEOS']:
@@ -369,6 +386,14 @@ def read_attribute(File, epoch=None):
             if 'INSAR_PROCESSOR' not in atr.keys():
                 atr['INSAR_PROCESSOR'] = 'isce'
 
+        elif os.path.isfile(File+'.hdr'):
+            atr = read_template(File+'.hdr')
+            atr = attribute_envi2roipac(atr)
+            atr['FILE_TYPE'] = atr['file type']
+            atr['PROCESSOR'] = 'isce'
+            if 'INSAR_PROCESSOR' not in atr.keys():
+                atr['INSAR_PROCESSOR'] = 'isce'
+
         else:
             sys.exit('Unrecognized file extension: '+ext)
 
@@ -380,6 +405,8 @@ def read_attribute(File, epoch=None):
         atr['UNIT'] = 'm'
     elif atr['FILE_TYPE'] in ['velocity']:
         atr['UNIT'] = 'm/yr'
+    elif atr['FILE_TYPE'] in ['GIANT_TS']:
+        atr['UNIT'] = 'mm'
     else:
         if 'UNIT' not in atr.keys():
             atr['UNIT'] = '1'
@@ -524,16 +551,20 @@ def read_isce_xml(File):
     ## Read lat/lon info for geocoded file
     try:
         comp1 = root.find("./component[@name='coordinate1']")
-        xml_dict['X_STEP']  = comp1.find("./property[@name='delta']/value").text
-        xml_dict['X_FIRST'] = comp1.find("./property[@name='startingvalue']/value").text
-        xml_dict['X_LAST']  = comp1.find("./property[@name='endingvalue']/value").text
+        x_step = comp1.find("./property[@name='delta']/value").text
+        if x_step not in  ['1','-1']:
+            xml_dict['X_STEP']  = x_step
+            xml_dict['X_FIRST'] = comp1.find("./property[@name='startingvalue']/value").text
+            xml_dict['X_LAST']  = comp1.find("./property[@name='endingvalue']/value").text
     except: pass
 
     try:
         comp2 = root.find("./component[@name='coordinate2']")
-        xml_dict['Y_STEP']  = comp2.find("./property[@name='delta']/value").text
-        xml_dict['Y_FIRST'] = comp2.find("./property[@name='startingvalue']/value").text
-        xml_dict['Y_LAST']  = comp2.find("./property[@name='endingvalue']/value").text
+        y_step = comp2.find("./property[@name='delta']/value").text
+        if y_step not in ['1','-1']:
+            xml_dict['Y_STEP']  = y_step
+            xml_dict['Y_FIRST'] = comp2.find("./property[@name='startingvalue']/value").text
+            xml_dict['Y_LAST']  = comp2.find("./property[@name='endingvalue']/value").text
     except: pass
 
     xml_dict = attribute_isce2roipac(xml_dict)
@@ -710,6 +741,21 @@ def attribute_isce2roipac(metaDict, dates=[], baselineDict={}):
         rscDict['H_BASELINE_TOP_HDR']    = str(bpar)
         rscDict['H_BASELINE_BOTTOM_HDR'] = str(bpar)
 
+    return rscDict
+
+def attribute_envi2roipac(metaDict):
+    '''Convert ISCE xml attribute into ROI_PAC format'''
+
+    rscDict={}
+    for key in metaDict.keys():
+        rscDict[key] = str(metaDict[key]).strip().split()[0]
+    keyList = rscDict.keys()
+
+    rscDict['WIDTH'] = rscDict['samples']
+    rscDict['FILE_LENGTH'] = rscDict['lines']
+    enviDataType = rscDict['data type']
+    if enviDataType == '4':
+        rscDict['DATA_TYPE'] = 'float32'
     return rscDict
 
 

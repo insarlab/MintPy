@@ -4,6 +4,11 @@
 # Copyright(c) 2017, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
+#
+# Recommended usage:
+#   import pysar.view as pp
+#
+
 
 import os
 import sys
@@ -31,6 +36,19 @@ import pysar.subset as subset
 from pysar.multilook import multilook_matrix
 
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+
+
+
+mplColors = ['#1f77b4',\
+             '#ff7f0e',\
+             '#2ca02c',\
+             '#d62728',\
+             '#9467bd',\
+             '#8c564b',\
+             '#e377c2',\
+             '#7f7f7f',\
+             '#bcbd22',\
+             '#17becf']
 
 
 ############################################ Class ###############################################
@@ -223,7 +241,7 @@ def auto_figure_title(fname, epoch=[], inps_dict=None):
         if 'unwCor' in fname:
             fig_title += '_unwCor'
 
-    elif len(epoch)==1 and k in multi_dataset_hdf5_file:
+    elif len(epoch)==1 and k in multi_dataset_hdf5_file+['GIANT_TS']:
         if inps_dict['ref_date']:
             ref_date = inps_dict['ref_date']
         else:
@@ -548,7 +566,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
 
     # Calculate scaling factor  - 1
     # phase unit - length / angle 
-    if data_unit[0] == 'm':
+    if data_unit[0].endswith('m'):
         if   disp_unit[0] == 'mm': scale *= 1000.0
         elif disp_unit[0] == 'cm': scale *= 100.0
         elif disp_unit[0] == 'dm': scale *= 10.0
@@ -557,8 +575,14 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
             range2phase = -(4*np.pi) / float(atr_dict['WAVELENGTH'])
             scale *= range2phase
         else:
-            print 'Unrecognized phase/length unit: '+disp_unit[0]
+            print 'Unrecognized display phase/length unit: '+disp_unit[0]
             return
+        
+        if   data_unit[0] == 'mm': scale *= 0.001
+        elif data_unit[0] == 'cm': scale *= 0.01
+        elif data_unit[0] == 'dm': scale *= 0.1
+        elif data_unit[0] == 'km': scale *= 1000.
+        
     elif data_unit[0] == 'radian':
         phase2range = -float(atr_dict['WAVELENGTH']) / (4*np.pi)
         if   disp_unit[0] == 'mm': scale *= phase2range * 1000.0
@@ -1283,11 +1307,15 @@ def main(argv):
 
     #------------------------------ Epoch/Date Info -------------------------------------------#
     # Read "epoch list to display' and 'reference date' for multi-dataset files
-    if k in multi_group_hdf5_file+multi_dataset_hdf5_file+['HDFEOS']:
+    if k in multi_group_hdf5_file+multi_dataset_hdf5_file+['HDFEOS', 'GIANT_TS']:
         # Read Epoch List
         h5file = h5py.File(inps.file,'r')
         if k in ['HDFEOS']:
             epochList = h5file.attrs['DATE_TIMESERIES'].split()
+        elif k in ['GIANT_TS']:
+            epochList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5file['dates'][:].tolist()]
+            print 'dates:'
+            print epochList
         else:
             epochList = sorted(h5file[k].keys())
         #h5file.close()
@@ -1296,7 +1324,7 @@ def main(argv):
         inps.epoch = get_epoch_full_list_from_input(epochList, inps.epoch, inps.epoch_num)[0]
         # If no epoch info input, display all the epochs
         if not inps.epoch:
-            inps.epoch = list(epochList) 
+            inps.epoch = list(epochList)
 
         # Epochs to exclude
         if inps.exclude_epoch:
@@ -1323,9 +1351,9 @@ def main(argv):
             ref_date_list = get_epoch_full_list_from_input(epochList, [inps.ref_date])[0]
             if ref_date_list:
                 inps.ref_date = ref_date_list[0]
-                if inps.ref_date == atr['ref_date']:
-                    inps.ref_date = None
-                    print 'Input date is already the reference date: '+atr['ref_date']
+                #if inps.ref_date == atr['ref_date']:
+                #    inps.ref_date = None
+                #    print 'Input date is already the reference date: '+atr['ref_date']
             else:
                 print 'input reference date is not included in file '+inps.file
                 print 'input reference date: '+inps.ref_date
@@ -1384,6 +1412,12 @@ def main(argv):
         msk = h5msk[k]['GRIDS']['timeseries']['quality'].get('mask')[:]
         h5msk.close()
         print 'mask %s data with contained mask dataset.' % (k)
+    elif inps.file.endswith('PARAMS.h5'):
+        inps.mask_file = inps.file
+        h5msk = h5py.File(inps.file, 'r')
+        msk = h5msk['cmask'][:] == 1.
+        h5msk.close()
+        print 'mask data with contained cmask dataset'
 
     ############################### Read Data and Display ###############################
     ##### Display One Dataset
@@ -1391,6 +1425,7 @@ def main(argv):
         # Read Data
         print 'reading data ...'
         data, atr = readfile.read(inps.file, inps.pix_box, inps.epoch[0])
+        
         if inps.zero_mask:
             data[data==0] = np.nan
         if inps.ref_date:

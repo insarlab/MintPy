@@ -98,10 +98,12 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     ## Get date list to download (skip already downloaded files)
     grib_file_existed = ut.get_file_list(grib_file_list)
     if grib_file_existed:
-        grib_filesize_mode = ut.mode([os.path.getsize(i) for i in grib_file_existed])
-        grib_file_corrupted = [i for i in grib_file_existed if os.path.getsize(i) != grib_filesize_mode]
+        grib_filesize_digit = ut.mode([len(str(os.path.getsize(i))) for i in grib_file_existed])
+        grib_filesize_max2 = ut.mode([str(os.path.getsize(i))[0:2] for i in grib_file_existed])
+        grib_file_corrupted = [i for i in grib_file_existed if (len(str(os.path.getsize(i))) != grib_filesize_digit or\
+                                                                str(os.path.getsize(i))[0:2] != grib_filesize_max2)]
+        print 'file size mode: %se%d bytes' % (grib_filesize_max2, grib_filesize_digit-2)
         print 'number of grib files existed    : %d' % len(grib_file_existed)
-        print 'file size mode: %d' % grib_filesize_mode
         if grib_file_corrupted:
             print '------------------------------------------------------------------------------'
             print 'corrupted grib files detected! Delete them and re-download...'
@@ -159,12 +161,21 @@ pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for heigh
 pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, Number of looks to be applied to interferogram 
 '''
 
+DATA_INFO='''
+  re-analysis_dataset      coverage   temporal_resolution    spatial_resolution      latency     analysis
+------------------------------------------------------------------------------------------------------------
+ERA-Interim (by ECMWF)      Global      00/06/12/18 UTC      0.75 deg (~83 km)       2-month       4D-var
+MERRA2 (by NASA Goddard)    Global      00/06/12/18 UTC      0.5 * 0.625 (~50 km)   2-3 weeks      3D-var
+
+To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application, following https://disc.gsfc.nasa.gov/earthdata-login.
+'''
+
 
 def cmdLineParse():
     parser = argparse.ArgumentParser(description='Tropospheric correction using weather models\n'+\
                                      '  PyAPS is used to download and calculate the delay for each time-series epoch.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
+                                     epilog=REFERENCE+'\n'+DATA_INFO+'\n'+EXAMPLE)
 
     parser.add_argument(dest='timeseries_file', nargs='?', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-d','--dem', dest='dem_file',\
