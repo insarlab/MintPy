@@ -168,6 +168,7 @@ def on_file_selection(file):
 
     set_variables_from_attributes()
 
+
 def on_configure(event):
     canvas.configure(scrollregion=canvas.bbox('all'))
 
@@ -1550,7 +1551,7 @@ def main():
     space.pack(side=LEFT)
 
     if inps.file:
-        on_file_selection(inps.file);
+        on_file_selection(inps.file)
 
     mainloop()
 
