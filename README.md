@@ -17,6 +17,7 @@ We recommend using [Anaconda](https://www.anaconda.com/) to install the python e
 - Basemap (optional, for plotting in geo coordinate)
 - pykml (optional, for Google Earth KMZ file output)
 - joblib (optional, for parallel processing)
+- Pillow (optional, for image handling)
 - [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) (optional, for tropospheric correction using weather re-analysis models, i.e. ERA-Interim, NARR, MERRA)
 
 Here is a example on Mac OSX using csh/tcsh:   
