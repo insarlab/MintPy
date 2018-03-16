@@ -35,7 +35,7 @@ def cmdLineParse():
 #############################  Main Function  ################################
 def main(argv):
     inps = cmdLineParse()
-    print '\n*************** Stacking ******************'
+    print('\n*************** Stacking ******************')
     for File in inps.file:
         ut.get_file_stack(File, inps.mask_file)
     return

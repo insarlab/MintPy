@@ -29,14 +29,14 @@ if __MOSEK:
 
         task.append(mosek.accmode.var, n + m)            # number of variables
         task.append(mosek.accmode.con, 2*m)              # number of constraints
-        task.putclist(range(n+m), n*[0.0] + m*[1.0])     # setup objective
+        task.putclist(list(range(n+m)), n*[0.0] + m*[1.0])     # setup objective
 
         # input A matrix row by row
         for i in range(m):
             task.putavec(mosek.accmode.con, i, 
-                         range(n) + [n+i] , list(P[i,:]) + [-1.0])
+                         list(range(n)) + [n+i] , list(P[i,:]) + [-1.0])
             task.putavec(mosek.accmode.con, i+m, 
-                         range(n) + [n+i] , list(-P[i,:]) + [-1.0])
+                         list(range(n)) + [n+i] , list(-P[i,:]) + [-1.0])
 
         # setup bounds on constraints
         task.putboundslice(mosek.accmode.con,
@@ -74,12 +74,12 @@ if __MOSEK:
 
         task.append(mosek.accmode.var, n + 2*m)          # number of variables
         task.append(mosek.accmode.con, m)                # number of constraints
-        task.putclist(range(n+2*m), n*[0.0] + 2*m*[1.0]) # setup objective
+        task.putclist(list(range(n+2*m)), n*[0.0] + 2*m*[1.0]) # setup objective
 
         # input A matrix row by row
         for i in range(m):
             task.putavec(mosek.accmode.con, i, 
-                         range(n) + [n+i, n+m+i] , list(P[i,:]) + [-1.0, 1.0])
+                         list(range(n)) + [n+i, n+m+i] , list(P[i,:]) + [-1.0, 1.0])
 
         # setup bounds on constraints
         task.putboundslice(mosek.accmode.con,

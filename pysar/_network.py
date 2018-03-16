@@ -93,17 +93,17 @@ def read_igram_pairs(igramFile):
     '''Read pairs index from hdf5 file'''
     ## Read Igram file
     h5file = h5py.File(igramFile,'r')
-    k = h5file.keys()
+    k = list(h5file.keys())
     if 'interferograms' in k: k[0] = 'interferograms'
     elif 'coherence'    in k: k[0] = 'coherence'
     if k[0] not in  ['interferograms','coherence','wrapped']:
-        print 'Only interferograms / coherence / wrapped are supported.';  sys.exit(1)
+        print('Only interferograms / coherence / wrapped are supported.');  sys.exit(1)
 
     dateList  = ptime.ifgram_date_list(igramFile)
     dateList6 = ptime.yymmdd(dateList)
 
     pairs = []
-    igramList=h5file[k[0]].keys()
+    igramList=list(h5file[k[0]].keys())
     for igram in igramList:
         date12 = h5file[k[0]][igram].attrs['DATE12'].split('-')
         pairs.append([dateList6.index(date12[0]),dateList6.index(date12[1])])
@@ -133,7 +133,7 @@ def read_baseline_file(baselineFile, exDateList=[]):
     ## Read baseline file into lines
     fb = open(baselineFile)
     lines = []
-    for line in fb.xreadlines():
+    for line in fb:
         l = str.replace(line,'\n','').strip()
         lines.append(l)
     fb.close()
@@ -205,7 +205,7 @@ def get_date12_list(File, check_drop_ifgram=False):
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
             atr = h5[k][epoch].attrs
-            if not check_drop_ifgram or 'drop_ifgram' not in atr.keys() or atr['drop_ifgram'] == 'no':
+            if not check_drop_ifgram or 'drop_ifgram' not in list(atr.keys()) or atr['drop_ifgram'] == 'no':
                 date12 = atr['DATE12']
                 date12_list.append(date12)
         h5.close()
@@ -221,7 +221,7 @@ def get_date12_list(File, check_drop_ifgram=False):
 
 def igram_perp_baseline_list(File):
     '''Get perpendicular baseline list from input multi_group hdf5 file'''
-    print 'read perp baseline info from '+File
+    print(('read perp baseline info from '+File))
     k = readfile.read_attribute(File)['FILE_TYPE']
     h5 = h5py.File(File, 'r')
     epochList = sorted(h5[k].keys())
@@ -249,7 +249,7 @@ def azimuth_bandwidth(sensor):
     elif  sensor == 'Tsx'  :  bandwidth = 15000.0
     elif  sensor == 'Csk'  :  bandwidth = 15000.0   # FA 9/2015  shoud be checked
     elif  sensor == 'Kmps5':  bandwidth = 15000.0   # shong 08/2016 sould be checked
-    else: print 'satellite not found'; bandwidth = None
+    else: print('satellite not found'); bandwidth = None
     return bandwidth
 
 
@@ -311,7 +311,7 @@ def signal2noise_ratio(sensor):
     elif sensor.startswith('Env') :  SNR = 19.5
     elif sensor.startswith('Jers'):  SNR = 14
     elif sensor.startswith('S'):     SNR = 22
-    else: print 'satellite not found'; SNR = None
+    else: print('satellite not found'); SNR = None
     return SNR
 
 
@@ -328,7 +328,7 @@ def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
     inc_angle    = incidence_angle(sensor, inc_angle) / 180 * np.pi
     Bperp_c      = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
     if print_msg:
-        print 'Critical Perpendicular Baseline: '+str(Bperp_c)+' m'
+        print(('Critical Perpendicular Baseline: '+str(Bperp_c)+' m'))
     return Bperp_c
 
 
@@ -442,10 +442,10 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
     #epsilon = 1e-3
     #cohs[cohs < epsilon] = epsilon
     if display:
-        print ''
+        print('')
 
     if display:
-        print 'critical perp baseline: %.f m' % pbase_c
+        print(('critical perp baseline: %.f m' % pbase_c))
         cohs_mat = coherence_matrix(date12_list, cohs)
         plt.figure()
         plt.imshow(cohs_mat, vmin=0.0, vmax=1.0, cmap='jet')
@@ -477,9 +477,9 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
         s_dates = [date12.split('-')[1] for date12 in date12_list]
         date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
         if not len(date_list) == len(pbase_list):
-            print 'ERROR: number of existing dates is not equal to number of perp baseline!'
-            print 'date list is needed for threshold filtering!'
-            print 'skip filtering.'
+            print('ERROR: number of existing dates is not equal to number of perp baseline!')
+            print('date list is needed for threshold filtering!')
+            print('skip filtering.')
             return date12_list
     date6_list = ptime.yymmdd(date_list)
 
@@ -515,9 +515,9 @@ def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase
         s_dates = [date12.split('-')[1] for date12 in date12_list]
         date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
         if not len(date_list) == len(pbase_list):
-            print 'ERROR: number of existing dates is not equal to number of perp baseline!'
-            print 'date list is needed for threshold filtering!'
-            print 'skip filtering.'
+            print('ERROR: number of existing dates is not equal to number of perp baseline!')
+            print('date list is needed for threshold filtering!')
+            print('skip filtering.')
             return date12_list
     date6_list = ptime.yymmdd(date_list)
 
@@ -715,8 +715,8 @@ def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
     date12_list_all = select_pairs_all(date_list)
 
     # Loop of Threshold
-    print 'List of temporal and perpendicular spatial baseline thresholds:'
-    print temp_perp_list
+    print('List of temporal and perpendicular spatial baseline thresholds:')
+    print(temp_perp_list)
     date12_list = []
     for temp_perp in temp_perp_list:
         tbase_max = temp_perp[0]
@@ -819,14 +819,14 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[]):
     # Select master date if not existed
     if not m_date:
         m_date = select_master_date(date8_list, pbase_list)
-        print 'auto select master date: '+m_date
+        print(('auto select master date: '+m_date))
     
     # Check input master date
     m_date8 = ptime.yyyymmdd(m_date)
     if m_date8 not in date8_list:
-        print 'Input master date is not existed in date list!'
-        print 'Input master date: '+str(m_date8)
-        print 'Input date list: '+str(date8_list)
+        print('Input master date is not existed in date list!')
+        print(('Input master date: '+str(m_date8)))
+        print(('Input date list: '+str(date8_list)))
         m_date8 = None
     
     # Generate star/ps network
@@ -927,7 +927,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     '''
     
     # Figure Setting
-    keyList = plot_dict.keys()
+    keyList = list(plot_dict.keys())
     if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
     if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
@@ -964,8 +964,8 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         s_idx = date6_list.index(s_date)
         pbase12[i] = pbase_list[s_idx] - pbase_list[m_idx]
         tbase12[i] = tbase_list[s_idx] - tbase_list[m_idx]
-    print 'max perpendicular baseline: %.2f m' % (np.max(np.abs(pbase12)))
-    print 'max temporal      baseline: %d days' % (np.max(tbase12))
+    print(('max perpendicular baseline: %.2f m' % (np.max(np.abs(pbase12)))))
+    print(('max temporal      baseline: %d days' % (np.max(tbase12))))
 
     ## Keep/Drop - date12
     date12_list_keep = sorted(list(set(date12_list) - set(date12_list_drop)))
@@ -997,10 +997,10 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             disp_max = data_max
 
         if print_msg:
-            print 'showing coherence'
-            print 'colormap: '+plot_dict['colormap']
-            print 'display range: '+str([disp_min, disp_max])
-            print 'data    range: '+str([data_min, data_max])
+            print('showing coherence')
+            print(('colormap: '+plot_dict['colormap']))
+            print(('display range: '+str([disp_min, disp_max])))
+            print(('data    range: '+str([data_min, data_max])))
 
         # Use lower/upper part of colormap to emphasis dropped interferograms
         if not coh_thres:
@@ -1015,7 +1015,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         if coh_thres < disp_min:
             disp_min = 0.0
             if print_msg:
-                print 'data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)
+                print(('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)))
         c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
         coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
         cmap = plt.get_cmap(plot_dict['colormap'])
@@ -1023,7 +1023,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
         cmap = colors.LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
         if print_msg:
-            print 'color jump at '+str(coh_thres)
+            print(('color jump at '+str(coh_thres)))
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
@@ -1112,7 +1112,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
         ax : matplotlib axes object
     '''
     # Figure Setting
-    keyList = plot_dict.keys()
+    keyList = list(plot_dict.keys())
     if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
     if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
@@ -1126,7 +1126,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
 
     # Get index of date used and dropped
     #date8_list_drop = ['20080711', '20081011']  # for debug
-    idx_keep = range(len(date8_list))
+    idx_keep = list(range(len(date8_list)))
     idx_drop = []
     for i in date8_list_drop:
         idx = date8_list.index(i)
@@ -1168,7 +1168,7 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, date12_list_drop=[], 
                                            ALL  pairs in the lower triangle.
     '''
     # Figure Setting
-    keyList = plot_dict.keys()
+    keyList = list(plot_dict.keys())
     if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
     if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
@@ -1197,9 +1197,9 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, date12_list_drop=[], 
 
     date_num = coh_mat.shape[0]
     if date_num < 30:
-        tick_list = range(0,date_num,5)
+        tick_list = list(range(0,date_num,5))
     else:
-        tick_list = range(0,date_num,10)
+        tick_list = list(range(0,date_num,10))
     ax.get_xaxis().set_ticks(tick_list)
     ax.get_yaxis().set_ticks(tick_list)
     ax.set_xlabel('Image Number', fontsize=plot_dict['fontsize'])
@@ -1237,7 +1237,7 @@ def mode (thelist):
         counts[item] = counts.get(item, 0) + 1
     maxcount = 0
     maxitem  = []
-    for k, v in counts.items():
+    for k, v in list(counts.items()):
         if v == maxcount and v > 0:
             maxitem.append(k)
         elif v > maxcount:
@@ -1246,10 +1246,10 @@ def mode (thelist):
             maxcount = v
 
     if maxcount == 1:
-        print "All values only appear once, return the least/smallest one."
+        print("All values only appear once, return the least/smallest one.")
         return sorted(maxitem)[0]
-    elif counts.values().count(maxcount) > 1:
-        print "List has multiple modes, return the least/smallest one."
+    elif list(counts.values()).count(maxcount) > 1:
+        print("List has multiple modes, return the least/smallest one.")
         return sorted(maxitem)[0]
     else:
         return maxitem[0]
@@ -1258,7 +1258,7 @@ def mode (thelist):
 def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
     '''Plot min/max Coherence of all interferograms for each date'''
     # Figure Setting
-    keyList = plot_dict.keys()
+    keyList = list(plot_dict.keys())
     if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
     if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'

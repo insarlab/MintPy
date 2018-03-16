@@ -4,7 +4,7 @@ import sys
 import argparse
 from pysar.add_attribute_insarmaps import InsarDatabaseController, InsarDatasetController
 import os
-import cPickle
+import pickle
 
 dbUsername = "INSERT"
 dbPassword = "INSERT"
@@ -16,7 +16,7 @@ def get_unavco_name(json_path):
     fileName = json_path + "/metadata.pickle"
 
     with open(fileName, "r") as file:
-        insarmapsMetadata = cPickle.load(file)
+        insarmapsMetadata = pickle.load(file)
 
     return insarmapsMetadata["area"]
 
@@ -24,7 +24,7 @@ def upload_insarmaps_metadata(fileName):
     insarmapsMetadata = None
 
     with open(fileName, "r") as file:
-        insarmapsMetadata = cPickle.load(file)
+        insarmapsMetadata = pickle.load(file)
 
     area = insarmapsMetadata["area"]
     project_name = insarmapsMetadata["project_name"]
@@ -61,7 +61,7 @@ def upload_json(folder_path):
     global dbUsername, dbPassword, dbHost
     attributesController = InsarDatabaseController(dbUsername, dbPassword,     dbHost, 'pgis')
     attributesController.connect()
-    print "Clearing old dataset, if it is there"
+    print("Clearing old dataset, if it is there")
     area_name = get_unavco_name(folder_path)
     attributesController.remove_dataset_if_there(area_name)
     attributesController.close()
@@ -71,7 +71,7 @@ def upload_json(folder_path):
     # we use to name the corresponding table for the dataset
     upload_insarmaps_metadata(folder_path + "/metadata.pickle")
     # create index
-    print "Creating index on " + area_name
+    print("Creating index on " + area_name)
     attributesController.connect()
     area_id = str(attributesController.get_dataset_id(area_name))
     attributesController.close()
@@ -93,7 +93,7 @@ def upload_json(folder_path):
                 sys.stderr.write("Error inserting into the database. This is most often due to running out of Memory (RAM), or incorrect database credentials... quitting")
                 sys.exit()
 
-            print "Inserted " + file + " to db"
+            print("Inserted " + file + " to db")
 
     attributesController.connect()
     attributesController.index_table_on(area_id, "p", None)
@@ -126,10 +126,10 @@ def main():
     dbHost = parseArgs.host
 
     if parseArgs.json_folder:
-        print "Uploading json chunks..."
+        print("Uploading json chunks...")
         upload_json(parseArgs.json_folder)
     elif parseArgs.json_folder_positional:
-        print "Uploading json chunks...."
+        print("Uploading json chunks....")
         upload_json(parseArgs.json_folder_positional)
 
     if parseArgs.mbtiles_file or parseArgs.mbtiles_file_positional:
@@ -137,17 +137,17 @@ def main():
         if not parseArgs.server_user or not parseArgs.server_password:
             sys.stderr.write("Error: credentials for the insarmaps server not provided")
         elif parseArgs.mbtiles_file:
-            print "Uploading mbtiles..."
+            print("Uploading mbtiles...")
             dbContoller.upload_mbtiles(parseArgs.mbtiles_file)
         else:
-            print "Uploading mbtiles...."
+            print("Uploading mbtiles....")
             dbContoller.upload_mbtiles(parseArgs.mbtiles_file_positional)
 
     if parseArgs.remove:
         if not parseArgs.server_user or not parseArgs.server_password:
             sys.stderr.write("Error: credentials for the insarmaps server not provided")
         else:
-            print "Removing " + parseArgs.remove
+            print("Removing " + parseArgs.remove)
             dbContoller = InsarDatasetController(dbUsername, dbPassword, dbHost, 'pgis', parseArgs.server_user, parseArgs.server_password)
             dbContoller.connect()
             dbContoller.remove_dataset_if_there(parseArgs.remove)

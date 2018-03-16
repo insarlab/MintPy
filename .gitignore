@@ -14,3 +14,4 @@ docs/logo.ai
 figure
 modis
 examples/plot_single_dataset.ipynb
+*.bak

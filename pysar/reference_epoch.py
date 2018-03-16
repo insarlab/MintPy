@@ -29,19 +29,19 @@ def ref_date_attribute(atr_in, ref_date, date_list):
     ref_index = date_list.index(ref_date)
 
     atr = dict()
-    for key, value in atr_in.iteritems():
+    for key, value in atr_in.items():
         atr[key] = str(value)
 
     # Update ref_date
     atr['ref_date'] = ref_date
-    print 'update ref_date'
+    print('update ref_date')
 
     # Update Bperp time series
     try:
         pbase = np.array([float(i) for i in atr['P_BASELINE_TIMESERIES'].split()])
         pbase -= pbase[ref_index]
         atr['P_BASELINE_TIMESERIES'] = str(pbase.tolist()).translate(None,'[],')
-        print 'update P_BASELINE_TIMESERIES'
+        print('update P_BASELINE_TIMESERIES')
     except:
         pass
 
@@ -52,7 +52,7 @@ def ref_date_attribute(atr_in, ref_date, date_list):
         pbase_bottom -= pbase_bottom[ref_index]
         atr['P_BASELINE_TOP_TIMESERIES']    = str(pbase_top.tolist()).translate(None,'[],')
         atr['P_BASELINE_BOTTOM_TIMESERIES'] = str(pbase_bottom.tolist()).translate(None,'[],')
-        print 'update P_BASELINE_TOP/BOTTOM_TIMESERIES'
+        print('update P_BASELINE_TOP/BOTTOM_TIMESERIES')
     except:
         pass
 
@@ -68,7 +68,7 @@ def ref_date_file(inFile, ref_date, outFile=None):
     atr = readfile.read_attribute(inFile)
     k = atr['FILE_TYPE']
     if not k in ['timeseries']:
-        print 'Input file is '+k+', only timeseries is supported.'
+        print('Input file is '+k+', only timeseries is supported.')
         return None
 
     # Input reference date
@@ -80,13 +80,13 @@ def ref_date_file(inFile, ref_date, outFile=None):
     except: ref_date_orig = date_list[0]
 
     ref_date = ptime.yyyymmdd(ref_date)
-    print 'input reference date: '+ref_date
+    print('input reference date: '+ref_date)
     if not ref_date in date_list:
-        print 'Input reference date was not found!\nAll dates available: '+str(date_list)
+        print('Input reference date was not found!\nAll dates available: '+str(date_list))
         return None
     if ref_date == ref_date_orig:
-        print 'Same reference date chosen as existing reference date.'
-        print 'Copy %s to %s' % (inFile, outFile)
+        print('Same reference date chosen as existing reference date.')
+        print('Copy %s to %s' % (inFile, outFile))
         shutil.copy2(inFile, outFile)
         return outFile
 
@@ -94,7 +94,7 @@ def ref_date_file(inFile, ref_date, outFile=None):
     h5 = h5py.File(inFile, 'r')
     ref_data = h5[k].get(ref_date)[:]
 
-    print 'writing >>> '+outFile
+    print('writing >>> '+outFile)
     h5out = h5py.File(outFile,'w')
     group = h5out.create_group(k)
     prog_bar = ptime.progress_bar(maxValue=date_num)
@@ -108,7 +108,7 @@ def ref_date_file(inFile, ref_date, outFile=None):
 
     ## Update attributes
     atr = ref_date_attribute(atr, ref_date, date_list)
-    for key,value in atr.iteritems():
+    for key,value in atr.items():
         group.attrs[key] = value
     h5out.close()
 
@@ -121,7 +121,7 @@ def read_template2inps(templateFile, inps=None):
         inps = cmdLineParse()
 
     template = readfile.read_template(templateFile)
-    key_list = template.keys()
+    key_list = list(template.keys())
 
     key = 'pysar.reference.date'
     if key in key_list:
@@ -212,22 +212,22 @@ def main(argv):
         inps = read_template2inps(inps.template_file)
 
     if inps.ref_date == 'no':
-        print 'No reference date input, skip this step.'
+        print('No reference date input, skip this step.')
         return inps.timeseries_file
 
     elif inps.ref_date.lower() in ['auto']:
-        print '------------------------------------------------------------'
-        print 'auto choose reference date based on minimum residual RMS'
+        print('------------------------------------------------------------')
+        print('auto choose reference date based on minimum residual RMS')
         if not inps.resid_file:
             inps.resid_file = os.path.join(os.path.dirname(inps.timeseries_file), 'timeseriesResidual.h5')
         rms_list, date_list = ut.get_residual_rms(inps.resid_file, inps.mask_file, inps.ramp_type)
         ref_idx = np.argmin(rms_list)
         inps.ref_date = date_list[ref_idx]
-        print 'date with minimum residual RMS: %s - %.4f' % (inps.ref_date, rms_list[ref_idx])
-        print '------------------------------------------------------------'
+        print('date with minimum residual RMS: %s - %.4f' % (inps.ref_date, rms_list[ref_idx]))
+        print('------------------------------------------------------------')
 
     elif os.path.isfile(inps.ref_date):
-        print 'read reference date from file: '+inps.ref_date
+        print('read reference date from file: '+inps.ref_date)
         inps.ref_date = ptime.read_date_list(inps.ref_date)[0]
 
     # Referencing input file

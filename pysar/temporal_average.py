@@ -15,7 +15,7 @@ import pysar._pysar_utilities as ut
 
 #################################  Usage  ####################################
 def usage():
-    print '''usage:  temporal_average.py  file  [output_file]
+    print('''usage:  temporal_average.py  file  [output_file]
 
 Calculate temporal average/mean of multi-temporal datasets.
 
@@ -25,7 +25,7 @@ arguments:
 
 example:
   temporal_average.py  coherence.h5  averageSpatialCoherence.h5
-    '''
+    ''')
     return
 
 
@@ -41,7 +41,7 @@ def main(argv):
     except: outName = os.path.splitext(File)[0]+'_tempAverage.h5'
 
     outName = ut.temporal_average(File, outName)
-    print 'Done.'
+    print('Done.')
     return outName
 
 

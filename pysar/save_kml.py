@@ -25,7 +25,7 @@ import pysar
 import pysar._datetime as ptime
 import pysar._readfile as readfile
 import pysar._pysar_utilities as ut
-import pysar.view as pview
+import pysar.view as pp
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -45,11 +45,11 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
         kmz_file - string, output KMZ filename
     Example:
         import pysar._readfile as readfile
-        import pysar.view as pview
+        import pysar.view as pp
         import pysar.save_kml as save_kml
         fname = 'geo_velocity_masked.h5'
         data, atr = readfile.read(fname)
-        out_name_base = pview.auto_figure_title(fname, None)
+        out_name_base = pp.auto_figure_title(fname, None)
         save_kml.write_kmz_file(data, atr, out_name_base)
     '''
     if not inps:
@@ -61,19 +61,19 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     west, east, south, north = ut.four_corners(atr)
 
     ## 2.1 Make PNG file - Data
-    print 'plotting data ...'
+    print('plotting data ...')
 
     # Figure size
     if not inps.fig_size:
         fig_scale = min(pysar.figsize_single_min/min(data.shape),\
                         pysar.figsize_single_max/max(data.shape))
         inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in data.shape]
-    print 'create figure in size: '+str(inps.fig_size)
+    print('create figure in size: '+str(inps.fig_size))
     fig = plt.figure(figsize=inps.fig_size, frameon=False)
     ax = fig.add_axes([0., 0., 1., 1.])
     ax.set_axis_off()
 
-    print 'colormap: '+inps.colormap
+    print('colormap: '+inps.colormap)
     inps.colormap = plt.get_cmap(inps.colormap)
 
     # Plot - data matrix
@@ -85,10 +85,10 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
             xref = int(atr['ref_x'])
             yref = int(atr['ref_y'])
             ax.plot(xref, yref, 'ks', ms=inps.seed_size)
-            print 'show reference point'
+            print('show reference point')
         except:
             inps.disp_seed = False
-            print 'Cannot find reference point info!'
+            print('Cannot find reference point info!')
 
     width = int(atr['WIDTH'])
     length = int(atr['FILE_LENGTH'])
@@ -96,7 +96,7 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     ax.set_ylim([length,0])
 
     data_png_file = out_name_base + '.png'
-    print 'writing '+data_png_file
+    print('writing '+data_png_file)
     plt.savefig(data_png_file, pad_inches=0.0, transparent=True, dpi=inps.fig_dpi)
 
     ## 2.2 Making PNG file - colorbar
@@ -114,11 +114,11 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     pc.patch.set_alpha(0.7)
 
     cbar_png_file = out_name_base + '_cbar.png'
-    print 'writing '+cbar_png_file
+    print('writing '+cbar_png_file)
     pc.savefig(cbar_png_file, bbox_inches='tight', facecolor=pc.get_facecolor(), dpi=inps.fig_dpi)
 
     ## 2.3 Generate KML file
-    print 'generating kml file ...'
+    print('generating kml file ...')
     try:     doc = KML.kml(KML.Folder(KML.name(atr['PROJECT_NAME'])))
     except:  doc = KML.kml(KML.Folder(KML.name('PySAR product')))
 
@@ -138,20 +138,20 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     if not inps.cbar_height:
         try:
             dem_file = ut.get_file_list(['geometry*.h5','dem*.h5','*.dem','radar*.hgt'])[0]
-            print 'use mean height from file: '+dem_file+' + 1000 m as colorbar height.'
+            print('use mean height from file: '+dem_file+' + 1000 m as colorbar height.')
             inps.cbar_height = np.rint(np.nanmean(readfile.read(dem_file, epoch='height')[0])) + 1000.0
         except: pass
     elif str(inps.cbar_height).lower().endswith('ground'):
         inps.cbar_height = None
 
     if inps.cbar_height:
-        print 'set colorbar in height: %.2f m' % inps.cbar_height
+        print('set colorbar in height: %.2f m' % inps.cbar_height)
         slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),\
                                  KML.altitude(str(inps.cbar_height)),KML.altitudeMode('absolute'),\
                                  KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
                                                KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
     else:
-        print 'set colorbar clampToGround'
+        print('set colorbar clampToGround')
         slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),\
                                  KML.altitudeMode('clampToGround'),\
                                  KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
@@ -161,20 +161,20 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     # Write KML file
     kmlstr = etree.tostring(doc, pretty_print=True) 
     kml_file = out_name_base + '.kml'
-    print 'writing '+kml_file
+    print('writing '+kml_file)
     f = open(kml_file, 'w')
     f.write(kmlstr)
     f.close()
 
     ## 2.4 Generate KMZ file
     kmz_file = out_name_base + '.kmz'
-    print 'writing '+kmz_file
+    print('writing '+kmz_file)
     cmdKMZ = 'zip '+kmz_file+' '+kml_file+' '+data_png_file+' '+cbar_png_file
     os.system(cmdKMZ)
 
-    cmdClean = 'rm '+kml_file;         print cmdClean;    os.system(cmdClean)
-    cmdClean = 'rm '+data_png_file;    print cmdClean;    os.system(cmdClean)
-    cmdClean = 'rm '+cbar_png_file;    print cmdClean;    os.system(cmdClean)
+    cmdClean = 'rm '+kml_file;         print(cmdClean);    os.system(cmdClean)
+    cmdClean = 'rm '+data_png_file;    print(cmdClean);    os.system(cmdClean)
+    cmdClean = 'rm '+cbar_png_file;    print(cmdClean);    os.system(cmdClean)
 
     return kmz_file
 
@@ -244,15 +244,15 @@ def main(argv):
     ##### 1. Read data
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
-    print 'Input file is '+k
+    print('Input file is '+k)
 
     # Check: file in geo coord
-    if 'X_FIRST' not in atr.keys():
+    if 'X_FIRST' not in list(atr.keys()):
         sys.exit('ERROR: Input file is not geocoded.')
 
     # Check: epoch is required for multi_dataset/group files
     if not inps.epoch and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-        print "No date/date12 input.\nIt's required for "+k+" file"
+        print("No date/date12 input.\nIt's required for "+k+" file")
         sys.exit(1)
 
     # Read data
@@ -260,17 +260,17 @@ def main(argv):
 
     # Output filename
     if not inps.outfile:
-        inps.outfile = pview.auto_figure_title(inps.file, inps.epoch, vars(inps))
+        inps.outfile = pp.auto_figure_title(inps.file, inps.epoch, vars(inps))
 
     # Data Operation - Display Unit & Rewrapping
-    data, inps.disp_unit, inps.wrap = pview.scale_data4disp_unit_and_rewrap(data, atr, inps.disp_unit, inps.wrap)
+    data, inps.disp_unit, inps.wrap = pp.scale_data4disp_unit_and_rewrap(data, atr, inps.disp_unit, inps.wrap)
     if inps.wrap:
         inps.ylim = [-np.pi, np.pi]
 
     ##### 2. Generate Google Earth KMZ
     kmz_file = write_kmz_file(data, atr, inps.outfile, inps)
 
-    print 'Done.'
+    print('Done.')
     return
 
 #######################################################

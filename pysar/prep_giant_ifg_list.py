@@ -20,14 +20,14 @@ def get_mission_name(meta_dict):
     '''
     mission = None
 
-    key_list = meta_dict.keys()
+    key_list = list(meta_dict.keys())
     if 'mission' in key_list:
         value = meta_dict['mission'].lower()
     elif 'PLATFORM' in key_list:
         value = meta_dict['PLATFORM'].lower()
     else:
-        print 'No PLATFORM nor mission attribute found, can not identify mission name.'
-        print 'return None'
+        print('No PLATFORM nor mission attribute found, can not identify mission name.')
+        print('return None')
         return mission
 
     ## Convert to UNAVCO Mission name
@@ -56,8 +56,8 @@ def get_mission_name(meta_dict):
         else:
             mission = 'ALOS'
     else:
-        print 'Un-recognized PLATFORM attribute: '+value
-        print 'return None'
+        print('Un-recognized PLATFORM attribute: '+value)
+        print('return None')
     return mission
 
 
@@ -87,7 +87,7 @@ def main(argv):
 
     if not inps.sensor:
         inps.sensor = get_mission_name(atr)
-    print 'Sensor name: %s' % (inps.sensor)
+    print('Sensor name: %s' % (inps.sensor))
 
     m_date_list = []
     s_date_list = []
@@ -96,7 +96,7 @@ def main(argv):
     inps.file = ut.get_file_list(inps.file, abspath=True)
     if os.path.splitext(inps.file[0])[1] not in ['.h5','.he5']:
         ifgramNum = len(inps.file)
-        print 'Number of interferograms: %d' % (ifgramNum)
+        print('Number of interferograms: %d' % (ifgramNum))
         for fname in inps.file:
             try:    date12 = str(re.findall('\d{8}[-_]\d{8}', os.path.basename(fname))[0]).replace('_','-')
             except: date12 = str(re.findall('\d{6}[-_]\d{6}', os.path.basename(fname))[0]).replace('_','-')
@@ -122,7 +122,7 @@ def main(argv):
     for i in range(ifgramNum):
         fl.write(fout.format(m_date_list[i], s_date_list[i], bperp_list[i], inps.sensor))
     fl.close()
-    print 'write to %s' % (inps.outfile)
+    print('write to %s' % (inps.outfile))
     return
 
 

@@ -40,8 +40,8 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     date_list = sorted(h5timeseries['timeseries'].keys())
     date_num = len(date_list)
 
-    print "load time series: "+timeseriesFile
-    print 'number of acquisitions: '+str(date_num)
+    print("load time series: "+timeseriesFile)
+    print('number of acquisitions: '+str(date_num))
     timeseries = np.zeros((date_num, pixel_num), np.float32)
     prog_bar = ptime.progress_bar(maxValue=date_num, prefix='loading: ')
     for i in range(date_num):
@@ -57,7 +57,7 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     timeseries *= range2phase
 
     # interferograms data
-    print "interferograms file: " + ifgramFile
+    print("interferograms file: " + ifgramFile)
     atr_ifgram = readfile.read_attribute(ifgramFile)
     h5ifgram   = h5py.File(ifgramFile, 'r')
     ifgram_list = sorted(h5ifgram['interferograms'].keys())
@@ -74,12 +74,12 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     try:
         ref_x = int(atr_ts['ref_x'])
         ref_y = int(atr_ts['ref_y'])
-        print 'find reference pixel in y/x: [%d, %d]'%(ref_y, ref_x)
+        print('find reference pixel in y/x: [%d, %d]'%(ref_y, ref_x))
     except ValueError:
-        print 'No ref_x/y found! Can not calculate temporal coherence without it.'
+        print('No ref_x/y found! Can not calculate temporal coherence without it.')
     
-    print 'calculating temporal coherence interferogram by interferogram ...'
-    print 'number of interferograms: '+str(ifgram_num)
+    print('calculating temporal coherence interferogram by interferogram ...')
+    print('number of interferograms: '+str(ifgram_num))
     temp_coh = np.zeros(pixel_num, dtype=np.float32)+0j
     prog_bar = ptime.progress_bar(maxValue=ifgram_num, prefix='calculating: ')
     for i in range(ifgram_num):
@@ -120,7 +120,7 @@ EXAMPLE='''example:
 '''
 
 def usage():
-    print USAGE+'\n\n'+DESCRIPTION+'\n\n'+REFERENCE+'\n'+EXAMPLE
+    print(USAGE+'\n\n'+DESCRIPTION+'\n\n'+REFERENCE+'\n'+EXAMPLE)
     return
 
 
@@ -136,13 +136,13 @@ def main(argv):
 
     try:    tempCohFile = argv[2]
     except: tempCohFile = 'temporalCoherence.h5'
-    print 'writing >>> '+tempCohFile
+    print('writing >>> '+tempCohFile)
     
     atr = readfile.read_attribute(timeseriesFile)
     atr['FILE_TYPE'] = 'temporal_coherence'
     atr['UNIT'] = '1'
     writefile.write(temp_coherence, atr, tempCohFile)
-    print 'Done.'
+    print('Done.')
     return tempCohFile
 
 

@@ -35,12 +35,12 @@ def read_timeseries_yx(timeseries_file, y, x, ref_yx=None):
     h5 = h5py.File(timeseries_file, 'r')
     if k in ['GIANT_TS']:
         date_list = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
-        dname = [i for i in ['rawts','recons'] if i in h5.keys()][0]
+        dname = [i for i in ['rawts','recons'] if i in list(h5.keys())][0]
         dis_ts = h5[dname][:,y,x]
         if ref_yx is not None:
             dis_ts = h5[dname][:,ref_yx[0],ref_yx[1]]
     else:
-        date_list = h5[k].keys()
+        date_list = list(h5[k].keys())
         for date in date_list:
             dis = h5[k].get(date)[y,x]
             if inps.ref_yx:
@@ -62,8 +62,8 @@ def read_timeseries_lalo(timeseries_file, lat, lon):
     '''
 
     atr = readfile.read_attribute(timeseries_file)
-    if 'X_FIRST' not in atr.keys():
-        print 'ERROR: input file is not geocoded'
+    if 'X_FIRST' not in list(atr.keys()):
+        print('ERROR: input file is not geocoded')
         return None
 
     lat0 = float(atr['Y_FIRST'])
@@ -162,7 +162,7 @@ if __name__ == '__main__':
     # Time Series Info
     atr = readfile.read_attribute(inps.timeseries_file)
     k = atr['FILE_TYPE']
-    print 'input file is '+k+': '+inps.timeseries_file
+    print('input file is '+k+': '+inps.timeseries_file)
     if not k in ['timeseries','GIANT_TS']:
         raise ValueError('Only timeseries file is supported!')
 
@@ -189,7 +189,7 @@ if __name__ == '__main__':
             inps.ex_date_list = sorted(list(set(inps.ex_date_list).intersection(dateList)))
             inps.ex_dates = ptime.date_list2vector(inps.ex_date_list)[0]
             inps.ex_idx_list = sorted([dateList.index(i) for i in inps.ex_date_list])
-            print 'exclude date:'+str(inps.ex_date_list)
+            print('exclude date:'+str(inps.ex_date_list))
 
     ## Zero displacement for 1st acquisition
     if inps.zero_first:
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     # File Size
     length = int(atr['FILE_LENGTH'])
     width = int(atr['WIDTH'])
-    print 'data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, length, 0, width)
+    print('data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, length, 0, width))
     try:
         ullon = float(atr['X_FIRST'])
         ullat = float(atr['Y_FIRST'])
@@ -209,17 +209,17 @@ if __name__ == '__main__':
         lat_step = float(atr['Y_STEP'])
         lrlon = ullon + width*lon_step
         lrlat = ullat + length*lat_step
-        print 'data size in [lat0,lat1,lon0,lon1]: [%.4f, %.4f, %.4f, %.4f]' % (lrlat, ullat, ullon, lrlon)
+        print('data size in [lat0,lat1,lon0,lon1]: [%.4f, %.4f, %.4f, %.4f]' % (lrlat, ullat, ullon, lrlon))
     except:
         pass
 
     # Initial Pixel Coord
-    if inps.lalo and 'Y_FIRST' in atr.keys():
+    if inps.lalo and 'Y_FIRST' in list(atr.keys()):
         y = int((inps.lalo[0] - ullat) / lat_step + 0.5)
         x = int((inps.lalo[1] - ullon) / lon_step + 0.5)
         inps.yx = [y, x]
 
-    if inps.ref_lalo and 'Y_FIRST' in atr.keys():
+    if inps.ref_lalo and 'Y_FIRST' in list(atr.keys()):
         y = int((inps.ref_lalo[0] - ullat) / lat_step + 0.5)
         x = int((inps.ref_lalo[1] - ullon) / lon_step + 0.5)
         inps.ref_yx = [y, x]
@@ -232,11 +232,11 @@ if __name__ == '__main__':
     elif inps.disp_unit == 'km': inps.unit_fac = 0.001
     else: raise ValueError('Un-recognized unit: '+inps.disp_unit)
     if k in ['GIANT_TS']:
-        print 'data    unit: mm'
+        print('data    unit: mm')
         inps.unit_fac *= 0.001
     else:
-        print 'data    unit: m'
-    print 'display unit: '+inps.disp_unit
+        print('data    unit: m')
+    print('display unit: '+inps.disp_unit)
 
     # Flip up-down / left-right
     if inps.auto_flip:
@@ -256,10 +256,10 @@ if __name__ == '__main__':
     try:
         mask = readfile.read(inps.mask_file, epoch='mask')[0]
         mask[mask!=0] = 1
-        print 'load mask from file: '+inps.mask_file
+        print('load mask from file: '+inps.mask_file)
     except:
         mask = None
-        print 'No mask used.'
+        print('No mask used.')
 
     # Initial Map
     d_v = readfile.read(inps.timeseries_file, epoch=dateList[inps.epoch_num])[0] * inps.unit_fac
@@ -275,8 +275,8 @@ if __name__ == '__main__':
 
     if not inps.ylim_mat:
         inps.ylim_mat = data_lim
-    print 'Initial data range: '+str(data_lim)
-    print 'Display data range: '+str(inps.ylim_mat)
+    print('Initial data range: '+str(data_lim))
+    print('Display data range: '+str(inps.ylim_mat))
 
     ########## Fig 1 - Cumulative Displacement Map
     if not inps.disp_fig:
@@ -330,17 +330,17 @@ if __name__ == '__main__':
     # Title and Axis Label
     ax_v.set_title('N = %d, Time = %s' % (inps.epoch_num,\
                                           inps.dates[inps.epoch_num].strftime('%Y-%m-%d')))
-    if not 'Y_FIRST' in atr.keys():
+    if not 'Y_FIRST' in list(atr.keys()):
         ax_v.set_xlabel('Range')
         ax_v.set_ylabel('Azimuth')
 
     # Flip axis
     if inps.flip_lr:
         ax_v.invert_xaxis()
-        print 'flip map left and right'
+        print('flip map left and right')
     if inps.flip_ud:
         ax_v.invert_yaxis()
-        print 'flip map up and down'
+        print('flip map up and down')
 
     # Colorbar
     cbar = fig_v.colorbar(img, orientation='vertical')
@@ -460,9 +460,9 @@ if __name__ == '__main__':
         fig_ts.canvas.draw()
 
         # Print to terminal
-        print '\n---------------------------------------'
-        print title_ts
-        print d_ts
+        print('\n---------------------------------------')
+        print(title_ts)
+        print(d_ts)
 
         # Slope estimation
         if inps.ex_date_list:
@@ -471,7 +471,7 @@ if __name__ == '__main__':
             d_slope = stats.linregress(np.array(tims_kept), np.array(d_ts_kept))
         else:
             d_slope = stats.linregress(np.array(tims), np.array(d_ts))
-        print 'linear velocity: %.2f +/- %.2f [%s/yr]' % (d_slope[0], d_slope[4], inps.disp_unit)
+        print('linear velocity: %.2f +/- %.2f [%s/yr]' % (d_slope[0], d_slope[4], inps.disp_unit))
 
         return d_ts
 
@@ -495,7 +495,7 @@ if __name__ == '__main__':
 
     ########## Output
     if inps.save_fig and inps.yx:
-        print 'save info for pixel '+str(inps.yx)
+        print('save info for pixel '+str(inps.yx))
         if not inps.fig_base:
             inps.fig_base = 'y%d_x%d' % (inps.yx[0], inps.yx[1])
 
@@ -514,19 +514,19 @@ if __name__ == '__main__':
         else:
             header_info += '\nreference pixel: y=%s, x=%s' % (atr['ref_y'], atr['ref_x'])
         header_info += '\nunit=m/yr'
-        np.savetxt(outName, zip(np.array(dateList), np.array(d_ts)/inps.unit_fac), fmt='%s',\
+        np.savetxt(outName, list(zip(np.array(dateList), np.array(d_ts)/inps.unit_fac)), fmt='%s',\
                    delimiter='    ', header=header_info)
-        print 'save time series displacement in meter to '+outName
+        print('save time series displacement in meter to '+outName)
 
         # Figure - point time series
         outName = inps.fig_base+'_ts.pdf'
         fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print 'save time series plot to '+outName
+        print('save time series plot to '+outName)
 
         # Figure - map
         outName = inps.fig_base+'_'+dateList[inps.epoch_num]+'.png'
         fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print 'save map plot to '+outName
+        print('save map plot to '+outName)
 
 
     ########## Final linking of the canvas to the plots.

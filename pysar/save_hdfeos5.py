@@ -36,14 +36,14 @@ def get_mission_name(meta_dict):
     '''
     mission = None
 
-    key_list = meta_dict.keys()
+    key_list = list(meta_dict.keys())
     if 'mission' in key_list:
         value = meta_dict['mission'].lower()
     elif 'PLATFORM' in key_list:
         value = meta_dict['PLATFORM'].lower()
     else:
-        print 'No PLATFORM nor mission attribute found, can not identify mission name.'
-        print 'return None'
+        print('No PLATFORM nor mission attribute found, can not identify mission name.')
+        print('return None')
         return mission
 
     ## Convert to UNAVCO Mission name
@@ -72,15 +72,15 @@ def get_mission_name(meta_dict):
         else:
             mission = 'ALOS'
     else:
-        print 'Un-recognized PLATFORM attribute: '+value
-        print 'return None'
+        print('Un-recognized PLATFORM attribute: '+value)
+        print('return None')
     return mission
 
 
 def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## Extract UNAVCO format metadata from PySAR attributes dictionary and dateList 
 
-    for key in pysar_meta_dict.keys():
+    for key in list(pysar_meta_dict.keys()):
         if 'unavco.' in key:
             pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict[key]
         if 'hdfEos5.' in key:
@@ -96,7 +96,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
     try: unavco_meta_dict['mission'] = get_mission_name(pysar_meta_dict)
     except ValueError:
-        print 'Missing required attribute: mission'
+        print('Missing required attribute: mission')
 
     ## beam_mode/swath
     unavco_meta_dict['beam_mode']  = pysar_meta_dict['beam_mode']
@@ -131,9 +131,9 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ##### Recommended metadata
     #################################
     ##### Given manually
-    if 'frame' in pysar_meta_dict.keys():
+    if 'frame' in list(pysar_meta_dict.keys()):
         unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
-    elif 'first_frame' in pysar_meta_dict.keys():
+    elif 'first_frame' in list(pysar_meta_dict.keys()):
         unavco_meta_dict['frame'] = int(pysar_meta_dict['first_frame'])
     else:
         unavco_meta_dict['frame'] = 0
@@ -163,7 +163,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ##### insarmaps metadata
     #################################
     # footprint for data coverage
-    if 'X_FIRST' in pysar_meta_dict.keys():
+    if 'X_FIRST' in list(pysar_meta_dict.keys()):
         lon0 = float(pysar_meta_dict['X_FIRST'])
         lat0 = float(pysar_meta_dict['Y_FIRST'])
         lon1 = lon0 + float(pysar_meta_dict['X_STEP'])*int(pysar_meta_dict['WIDTH'])
@@ -172,7 +172,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
         lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
         unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
     else:
-        print 'Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info.'
+        print('Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info.')
 
     return unavco_meta_dict
 
@@ -209,9 +209,9 @@ def read_template2inps(template_file, inps=None):
     if not inps:
         inps = cmdLineParse()
 
-    print 'read options from template file: '+os.path.basename(template_file)
+    print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(template_file)
-    key_list = template.keys()
+    key_list = list(template.keys())
 
     # Coherence-based network modification
     prefix = 'pysar.save.hdfEos5.'
@@ -294,13 +294,13 @@ def main(argv):
     pysar_meta_dict['DATE_TIMESERIES'] = dateListStr
     
     unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
-    print '## UNAVCO Metadata:'
-    print '-----------------------------------------'
+    print('## UNAVCO Metadata:')
+    print('-----------------------------------------')
     info.print_attributes(unavco_meta_dict)
 
     meta_dict = pysar_meta_dict.copy()
     meta_dict.update(unavco_meta_dict)
-    print '-----------------------------------------'
+    print('-----------------------------------------')
 
     ##### Open HDF5 File
     #####Get output filename
@@ -313,11 +313,11 @@ def main(argv):
     ##Frist and/or Last Frame
     frame1 = int(meta_dict['frame'])
     key = 'first_frame'
-    if key in meta_dict.keys():
+    if key in list(meta_dict.keys()):
         frame1 = int(meta_dict[key])
     FRAME  = "%04d"%(frame1)
     key = 'last_frame'
-    if key in meta_dict.keys():
+    if key in list(meta_dict.keys()):
         frame2 = int(meta_dict[key])
         if frame2 != frame1:
             FRAME += "_%04d"%(frame2)
@@ -329,14 +329,14 @@ def main(argv):
     #end_date = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d')
     #if inps.update and (dt.datetime.utcnow() - end_date) < dt.timedelta(days=365):
     if inps.update:
-        print 'Update mode is enabled, put endDate as XXXXXXXX.'
+        print('Update mode is enabled, put endDate as XXXXXXXX.')
         DATE2 = 'XXXXXXXX'
 
     #outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
 
     if inps.subset:
-        print 'Subset mode is enabled, put subset range info in output filename.'
+        print('Subset mode is enabled, put subset range info in output filename.')
         lat1 = float(meta_dict['Y_FIRST'])
         lon0 = float(meta_dict['X_FIRST'])
         lat0 = lat1 + float(meta_dict['Y_STEP']) * length
@@ -356,10 +356,10 @@ def main(argv):
 
 
     ##### Open HDF5 File
-    print 'writing >>> '+outName
+    print('writing >>> '+outName)
     f = h5py.File(outName,'w')
     hdfeos = f.create_group('HDFEOS')
-    if 'Y_FIRST' in meta_dict.keys():
+    if 'Y_FIRST' in list(meta_dict.keys()):
         gg_coord = hdfeos.create_group('GRIDS')
     else:
         gg_coord = hdfeos.create_group('SWATHS')
@@ -367,21 +367,21 @@ def main(argv):
 
 
     ##### Write Attributes to the HDF File
-    print 'write metadata to '+str(f)
-    for key,value in meta_dict.iteritems():
+    print('write metadata to '+str(f))
+    for key,value in meta_dict.items():
         f.attrs[key] = value
 
 
     ##### Write Observation - Displacement
     groupObs = group.create_group('observation')
-    print 'write data to '+str(groupObs)
+    print('write data to '+str(groupObs))
 
     disDset = np.zeros((dateNum, length, width), np.float32)
     for i in range(dateNum):
         sys.stdout.write('\rreading 3D displacement from file %s: %d/%d ...' % (inps.timeseries_file, i+1, dateNum))
         sys.stdout.flush()
         disDset[i] = h5_timeseries[k].get(dateList[i])[:]
-    print ' '
+    print(' ')
 
     dset = groupObs.create_dataset('displacement', data=disDset, dtype=np.float32)
     dset.attrs['DATE_TIMESERIES'] = dateListStr
@@ -393,10 +393,10 @@ def main(argv):
 
     ##### Write Quality
     groupQ = group.create_group('quality')
-    print 'write data to '+str(groupQ)
+    print('write data to '+str(groupQ))
 
     ## 1 - temporalCoherence
-    print 'reading coherence       from file: '+inps.coherence_file
+    print('reading coherence       from file: '+inps.coherence_file)
     data = readfile.read(inps.coherence_file)[0]
     dset = groupQ.create_dataset('temporalCoherence', data=data, compression='gzip')
     dset.attrs['Title'] = 'Temporal Coherence'
@@ -405,7 +405,7 @@ def main(argv):
     dset.attrs['_FillValue'] = FLOAT_ZERO
 
     ## 2 - mask
-    print 'reading mask            from file: '+inps.mask_file
+    print('reading mask            from file: '+inps.mask_file)
     data = readfile.read(inps.mask_file, epoch='mask')[0]
     dset = groupQ.create_dataset('mask', data=data, compression='gzip')
     dset.attrs['Title'] = 'Mask'
@@ -418,10 +418,10 @@ def main(argv):
     ## Required: height, incidenceAngle
     ## Optional: rangeCoord, azimuthCoord, headingAngle, slantRangeDistance, waterMask, shadowMask
     groupGeom = group.create_group('geometry')
-    print 'write data to '+str(groupGeom)
+    print('write data to '+str(groupGeom))
 
     ## 1 - height
-    print 'reading height          from file: '+inps.dem_file
+    print('reading height          from file: '+inps.dem_file)
     data = readfile.read(inps.dem_file, epoch='height')[0]
     dset = groupGeom.create_dataset('height', data=data, compression='gzip')
     dset.attrs['Title'] = 'Digital elevatino model'
@@ -430,7 +430,7 @@ def main(argv):
     dset.attrs['_FillValue'] = INT_ZERO
 
     ## 2 - incidenceAngle
-    print 'reading incidence angle from file: '+inps.inc_angle_file
+    print('reading incidence angle from file: '+inps.inc_angle_file)
     data = readfile.read(inps.inc_angle_file, epoch='incidenceAngle')[0]
     dset = groupGeom.create_dataset('incidenceAngle', data=data, compression='gzip')
     dset.attrs['Title'] = 'Incidence angle'
@@ -441,77 +441,77 @@ def main(argv):
     ## 3 - rangeCoord
     try:
         data = readfile.read(inps.rg_coord_file, epoch='rangeCoord', print_msg=False)[0]
-        print 'reading range coord     from file: '+inps.rg_coord_file
+        print('reading range coord     from file: '+inps.rg_coord_file)
         dset = groupGeom.create_dataset('rangeCoord', data=data, compression='gzip')
         dset.attrs['Title'] = 'Range Coordinates'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = '1'
         dset.attrs['_FillValue'] = FLOAT_ZERO
     except:
-        print 'No rangeCoord found in file %s' % (inps.rg_coord_file)
+        print('No rangeCoord found in file %s' % (inps.rg_coord_file))
 
     ## 4 - azimuthCoord
     try:
         data = readfile.read(inps.az_coord_file, epoch='azimuthCoord', print_msg=False)[0]
-        print 'reading azimuth coord   from file: '+inps.az_coord_file
+        print('reading azimuth coord   from file: '+inps.az_coord_file)
         dset = groupGeom.create_dataset('azimuthCoord', data=data, compression='gzip')
         dset.attrs['Title'] = 'Azimuth Coordinates'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = '1'
         dset.attrs['_FillValue'] = FLOAT_ZERO
     except:
-        print 'No azimuthCoord found in file %s' % (inps.az_coord_file)
+        print('No azimuthCoord found in file %s' % (inps.az_coord_file))
 
     ## 5 - headingAngle
     try:
         data = readfile.read(inps.head_angle_file, epoch='heandingAngle', print_msg=False)[0]
-        print 'reading azimuth coord   from file: '+inps.head_angle_file
+        print('reading azimuth coord   from file: '+inps.head_angle_file)
         dset = groupGeom.create_dataset('heandingAngle', data=data, compression='gzip')
         dset.attrs['Title'] = 'Heanding Angle'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'degrees'
         dset.attrs['_FillValue'] = FLOAT_ZERO
     except:
-        print 'No headingAngle found in file %s' % (inps.head_angle_file)
+        print('No headingAngle found in file %s' % (inps.head_angle_file))
 
     ## 6 - slantRangeDistance
     try:
         data = readfile.read(inps.slant_range_dist_file, epoch='slantRangeDistance', print_msg=False)[0]
-        print 'reading slant range distance from file: '+inps.slant_range_dist_file
+        print('reading slant range distance from file: '+inps.slant_range_dist_file)
         dset = groupGeom.create_dataset('slantRangeDistance', data=data, compression='gzip')
         dset.attrs['Title'] = 'Slant Range Distance'
         dset.attrs['MissingValue'] = FLOAT_ZERO
         dset.attrs['Units'] = 'meters'
         dset.attrs['_FillValue'] = FLOAT_ZERO
     except:
-        print 'No slantRangeDistance found in file %s' % (inps.slant_range_dist_file)
+        print('No slantRangeDistance found in file %s' % (inps.slant_range_dist_file))
 
     ## 7 - waterMask
     try:
         data = readfile.read(inps.water_mask_file, epoch='waterMask', print_msg=False)[0]
-        print 'reading water mask      from file: '+inps.water_mask_file
+        print('reading water mask      from file: '+inps.water_mask_file)
         dset = groupGeom.create_dataset('waterMask', data=data, compression='gzip')
         dset.attrs['Title'] = 'Water Mask'
         dset.attrs['MissingValue'] = BOOL_ZERO
         dset.attrs['Units'] = '1'
         dset.attrs['_FillValue'] = BOOL_ZERO
     except:
-        print 'No waterMask found in file %s' % (inps.water_mask_file)
+        print('No waterMask found in file %s' % (inps.water_mask_file))
 
     ## 8 - shadowMask
     try:
         data = readfile.read(inps.shadow_mask_file, epoch='shadowMask', print_msg=False)[0]
-        print 'reading shadow mask     from file: '+inps.shadow_mask_file
+        print('reading shadow mask     from file: '+inps.shadow_mask_file)
         dset = groupGeom.create_dataset('shadowMask', data=data, compression='gzip')
         dset.attrs['Title'] = 'Shadow Mask'
         dset.attrs['MissingValue'] = BOOL_ZERO
         dset.attrs['Units'] = '1'
         dset.attrs['_FillValue'] = BOOL_ZERO
     except:
-        print 'No shadowMask found in file %s' % (inps.shadow_mask_file)
+        print('No shadowMask found in file %s' % (inps.shadow_mask_file))
 
     f.close()
-    print 'Done.'
+    print('Done.')
     return
 
 

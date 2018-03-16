@@ -44,7 +44,7 @@ def sample_data(lat, lon, mask=None, num_sample=500):
     ## Check number of samples and number of pixels
     num_pixel = len(lat)
     if num_sample > num_pixel:
-        print 'Number of samples > number of pixels, fix number of samples to number of pixels.'
+        print('Number of samples > number of pixels, fix number of samples to number of pixels.')
         num_sample = num_pixel
 
     # Check input mask

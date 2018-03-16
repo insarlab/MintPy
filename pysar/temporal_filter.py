@@ -61,7 +61,7 @@ def main(argv):
     tbase /= 365.25
 
     # Read timeseries
-    print 'loading time-series ...'
+    print('loading time-series ...')
     timeseries = np.zeros((date_num, pixel_num))
     prog_bar = ptime.progress_bar(maxValue=date_num)
     for i in range(date_num):
@@ -74,7 +74,7 @@ def main(argv):
     prog_bar.close()
 
     # Smooth timeseries with moving window in time
-    print 'smoothing time-series using moving gaussian window with size of %.1f years' % inps.time_win
+    print('smoothing time-series using moving gaussian window with size of %.1f years' % inps.time_win)
     timeseries_filt = np.zeros((date_num, pixel_num))
     prog_bar = ptime.progress_bar(maxValue=date_num)
     for i in range(date_num):
@@ -95,14 +95,14 @@ def main(argv):
     try:    ref_date = atr['ref_date']
     except: ref_date = date_list[0]
     ref_date_idx = date_list.index(ref_date)
-    print 'reference date: '+ref_date
-    print 'reference date index: '+str(ref_date_idx)
+    print('reference date: '+ref_date)
+    print('reference date index: '+str(ref_date_idx))
     ref_data = np.reshape(timeseries_filt[ref_date_idx,:], [length, width])
 
     if not inps.outfile:
         inps.outfile = os.path.splitext(inps.timeseries_file)[0]+'_smooth.h5'
-    print 'writing >>> '+inps.outfile
-    print 'number of acquisitions: '+str(date_num)
+    print('writing >>> '+inps.outfile)
+    print('number of acquisitions: '+str(date_num))
 
     h5out = h5py.File(inps.outfile, 'w')
     group = h5out.create_group(k)
@@ -112,12 +112,12 @@ def main(argv):
         data = np.reshape(timeseries_filt[i,:], [length, width])
         dset = group.create_dataset(date, data=data-ref_data, compression='gzip')
         prog_bar.update(i+1, suffix=date)
-    for key,value in atr.iteritems():
+    for key,value in atr.items():
         group.attrs[key] = value
     h5out.close()
     prog_bar.close()
 
-    print 'Done.'
+    print('Done.')
     return inps.outfile
 
 

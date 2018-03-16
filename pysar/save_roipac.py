@@ -21,7 +21,7 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 ##############################################################################
 def usage():
-    print '''usage: save_roipac.py  file  [date_info]
+    print('''usage: save_roipac.py  file  [date_info]
 
 Convert PySAR hdf5 file to ROI_PAC format 
 
@@ -33,7 +33,7 @@ argument:
                              used as the reference date.
 
 example:
-    '''
+    ''')
     return
 
 ############################################################
@@ -76,12 +76,12 @@ def main(argv):
     if k == 'velocity':
         dset = h5file['velocity'].get('velocity')
         data = dset[0:dset.shape[0],0:dset.shape[1]]
-        print "converting velocity to a 1 year interferogram."
+        print("converting velocity to a 1 year interferogram.")
         wvl=float(h5file[k].attrs['WAVELENGTH'])
         data=(-4*pi/wvl)*data
 
         inps.outfile=inps.file.split('.')[0]+'.unw'
-        print 'writing >>> '+inps.outfile
+        print('writing >>> '+inps.outfile)
         writefile.write(data,atr,inps.outfile)
 
     elif k in multi_dataset_hdf5_file:
@@ -89,13 +89,13 @@ def main(argv):
         try:
             inps.epoch = [date for date in dateList if inps.epoch in date][0]
         except:
-            print 'No input date specified >>> continue with the last date'
+            print('No input date specified >>> continue with the last date')
             inps.epoch = dateList[-1]
         if k in ['timeseries']:
             inps.epoch = ptime.yyyymmdd(inps.epoch)
 
         ## Data
-        print 'reading %s and %s ...' % (inps.ref_date, inps.epoch)
+        print('reading %s and %s ...' % (inps.ref_date, inps.epoch))
         data = h5file[k].get(inps.epoch)[:]
         if inps.ref_date:
             inps.ref_date = ptime.yyyymmdd(inps.ref_date)
@@ -118,7 +118,7 @@ def main(argv):
                 inps.outfile = '%s_%s.unw' % (inps.ref_date[2:8],inps.epoch[2:8])
             else:
                 inps.outfile = '%s.cor' % (inps.epoch)
-        print 'writing >>> '+inps.outfile
+        print('writing >>> '+inps.outfile)
         writefile.write(data,atr,inps.outfile)
 
     elif k in ['interferograms','coherence','wrapped']:
@@ -127,11 +127,11 @@ def main(argv):
         try:
             inps.epoch = [igram for igram in igramList if inps.epoch in igram][0]
         except:
-            print 'No input interferogram specified >>> continue with the last one'
+            print('No input interferogram specified >>> continue with the last one')
             inps.epoch = igramList[-1]
 
         ## Read and Write
-        print 'reading '+inps.epoch+' ... '
+        print('reading '+inps.epoch+' ... ')
         atr = dict(h5file[k][inps.epoch].attrs)
         data = h5file[k][inps.epoch].get(inps.epoch)[:]
         if k == 'interferograms':
@@ -139,14 +139,14 @@ def main(argv):
                 ref_y = int(atr['ref_y'])
                 ref_x = int(atr['ref_x'])
                 data -= data[ref_y,ref_x]
-                print 'consider the reference pixel in y/x: %d/%d' % (ref_y, ref_x)
+                print('consider the reference pixel in y/x: %d/%d' % (ref_y, ref_x))
             except:
-                print 'No ref_y/x info found in attributes.'
+                print('No ref_y/x info found in attributes.')
         atr['PROCESSOR'] = 'roipac'
         atr['INSAR_PROCESSOR'] = 'roipac'
 
         inps.outfile = inps.epoch
-        print 'writing >>> '+ inps.outfile
+        print('writing >>> '+ inps.outfile)
         writefile.write(data, atr, inps.outfile)  
 
     else:
@@ -159,7 +159,7 @@ def main(argv):
                 inps.outfile=os.path.splitext(inps.file)[0]+'.dem'
             else:
                 inps.outfile=inps.file.split('.')[0]+'.unw'
-        print 'writing >>> '+ inps.outfile
+        print('writing >>> '+ inps.outfile)
         writefile.write(data,atr,inps.outfile)
 
 

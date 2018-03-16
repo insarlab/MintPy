@@ -49,8 +49,8 @@ def remove_data_surface(data, mask, surf_type='plane'):
     mask = mask.flatten(1) 
     z = data.flatten(1)
     ndx= mask !=0
-    x = range(0,np.shape(data)[1])
-    y = range(0,np.shape(data)[0])
+    x = list(range(0,np.shape(data)[1]))
+    y = list(range(0,np.shape(data)[0]))
     x1,y1 = np.meshgrid(x,y)
     points = np.vstack((y1.flatten(1),x1.flatten(1))).T
     if surf_type=='quadratic':
@@ -127,7 +127,7 @@ def remove_data_multiple_surface(data, mask, surf_type, ysub):
 
     surfaceNum = len(ysub)/2
     ## 1st Mask
-    print 'removing 1st surface ...'
+    print('removing 1st surface ...')
     i = 0
     mask_i = np.zeros(data.shape,data.dtype)
     mask_i[ysub[2*i]:ysub[2*i+1],:] = mask[ysub[2*i]:ysub[2*i+1],:]
@@ -137,7 +137,7 @@ def remove_data_multiple_surface(data, mask, surf_type, ysub):
 
     ## 2 - last Masks
     for i in range(1,surfaceNum):
-        print 'removing '+str(i+1)+'th surface ...'
+        print('removing '+str(i+1)+'th surface ...')
         mask_i = np.zeros(data.shape,data.dtype)
         mask_i[ysub[2*i]:ysub[2*i+1],:] = mask[ysub[2*i]:ysub[2*i+1],:]
 
@@ -164,16 +164,16 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
     
     if maskFile:
         Mask = readfile.read(maskFile, epoch='mask')[0]
-        print 'read mask file: '+maskFile
+        print('read mask file: '+maskFile)
     else:
         Mask = np.ones((int(atr['FILE_LENGTH']), int(atr['WIDTH'])))
-        print 'use mask of the whole area'
+        print('use mask of the whole area')
     
     ##### Input File Info
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    print 'Input file is '+k
-    print 'remove ramp type: '+surf_type
+    print('Input file is '+k)
+    print('remove ramp type: '+surf_type)
     
     ## Multiple Datasets File
     if k in ['interferograms','coherence','wrapped','timeseries']:
@@ -184,10 +184,10 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
 
         h5flat = h5py.File(outFile,'w')
         group  = h5flat.create_group(k)
-        print 'writing >>> '+outFile
+        print('writing >>> '+outFile)
 
     if k in ['timeseries']:
-        print 'number of acquisitions: '+str(len(epochList))
+        print('number of acquisitions: '+str(len(epochList)))
         for i in range(epoch_num):
             epoch = epochList[i]
             data = h5file[k].get(epoch)[:]
@@ -199,17 +199,17 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
   
             dset = group.create_dataset(epoch, data=data_n, compression='gzip')
             prog_bar.update(i+1, suffix=epoch)
-        for key,value in h5file[k].attrs.iteritems():
+        for key,value in h5file[k].attrs.items():
             group.attrs[key] = value
   
     elif k in ['interferograms','wrapped','coherence']:
-        print 'number of interferograms: '+str(len(epochList))
+        print('number of interferograms: '+str(len(epochList)))
         date12_list = ptime.list_ifgram2date12(epochList)
 
         if k == 'interferograms':
             mask_bk = np.zeros(Mask.shape)
             mask_bk = Mask
-            print 'do not consider zero value pixel for interferograms'
+            print('do not consider zero value pixel for interferograms')
 
         for i in range(epoch_num):
             epoch = epochList[i]
@@ -225,21 +225,21 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
 
             gg   = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data_n, compression='gzip')
-            for key,value in h5file[k][epoch].attrs.iteritems():
+            for key,value in h5file[k][epoch].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
 
     ## Single Dataset File
     else:
         data,atr = readfile.read(File)
-        print 'Removing '+surf_type+' from '+k
+        print('Removing '+surf_type+' from '+k)
   
         if not ysub:
             data_n,ramp = remove_data_surface(data, Mask, surf_type)
         else:
             data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
 
-        print 'writing >>> '+outFile
+        print('writing >>> '+outFile)
         writefile.write(data_n,atr,outFile)
   
     try:
@@ -248,6 +248,6 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
         prog_bar.close()
     except: pass
   
-    print 'Remove '+surf_type+' took ' + str(time.time()-start) +' secs'
+    print('Remove '+surf_type+' took ' + str(time.time()-start) +' secs')
     return outFile
 

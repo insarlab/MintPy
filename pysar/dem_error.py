@@ -70,7 +70,7 @@ def read_template2inps(template_file, inps=None):
     if not inps:
         inps = cmdLineParse()
     template = readfile.read_template(template_file)
-    key_list = template.keys()
+    key_list = list(template.keys())
 
     # Read template option
     prefix = 'pysar.topographicResidual.'
@@ -122,8 +122,8 @@ def check_exclude_date(exDateIn, dateList):
             exDate = [ptime.yyyymmdd(exDate)]
         exDateOut += exDate
     exDateOut = sorted(list(set(exDateOut).intersection(dateList)))
-    print 'Exclude date for DEM error estimation:'
-    print exDateOut
+    print('Exclude date for DEM error estimation:')
+    print(exDateOut)
     return exDateOut
 
 
@@ -191,21 +191,21 @@ def main(argv):
     if not inps.outfile:
         inps.outfile = os.path.splitext(inps.timeseries_file)[0]+suffix+os.path.splitext(inps.timeseries_file)[1]
     if inps.template_file:
-        print 'read option from template file: '+inps.template_file
+        print('read option from template file: '+inps.template_file)
         inps = read_template2inps(inps.template_file, inps)
 
     ##### Read Data
     atr = readfile.read_attribute(inps.timeseries_file)
     coordType = 'radar'
-    if 'Y_FIRST' in atr.keys():
+    if 'Y_FIRST' in list(atr.keys()):
         coordType = 'geo'
 
     # 1. Incidence angle
     try:
         inps.inc_angle_file = ut.get_file_list(inps.inc_angle_file, coord=coordType)[0]
     except ValueError:
-        print 'No incidence angle file found!\nRun incidence_angle.py to generate it.'
-    print 'read incidence angle from file: '+str(inps.inc_angle_file)
+        print('No incidence angle file found!\nRun incidence_angle.py to generate it.')
+    print('read incidence angle from file: '+str(inps.inc_angle_file))
     inps.inc_angle = readfile.read(inps.inc_angle_file, epoch='incidenceAngle')[0].flatten()
     inps.inc_angle *= np.pi/180.0
 
@@ -213,22 +213,22 @@ def main(argv):
     try:
         inps.range_dist_file = ut.get_file_list(inps.range_dist_file, coord=coordType)[0]
     except ValueError:
-        print 'No range distance file found!\nRun range_distance.py to generate it.'
-    print 'read slant range distance from file: '+str(inps.range_dist_file)
+        print('No range distance file found!\nRun range_distance.py to generate it.')
+    print('read slant range distance from file: '+str(inps.range_dist_file))
     inps.range_dist = readfile.read(inps.range_dist_file, epoch='slantRangeDistance')[0].flatten()
 
     # 3. Perp Baseline - 1D in time, 0D/1D in space (azimuth)
-    print 'read perpendicular baseline'
+    print('read perpendicular baseline')
     try:
         inps.pbase = ut.perp_baseline_timeseries(atr, dimension=1)
         if inps.pbase.shape[1] > 1:
-            print 'consider perp baseline variance in azimuth direction'
+            print('consider perp baseline variance in azimuth direction')
     except valueError:
-        print 'No P_BASELINE_TIMESERIES found in timeseries file.\n'+\
-              'Can not correct for DEM residula without it!'
+        print('No P_BASELINE_TIMESERIES found in timeseries file.\n'+\
+              'Can not correct for DEM residula without it!')
 
     # 4. Time Series - 1D in time, 1D in space (flattened)
-    print "read time series file: " + inps.timeseries_file
+    print("read time series file: " + inps.timeseries_file)
     h5 = h5py.File(inps.timeseries_file)
     date_list = sorted(h5['timeseries'].keys())
     date_num = len(date_list)
@@ -250,16 +250,16 @@ def main(argv):
         sys.stdout.write('\rreading acquisition %3d/%3d ...' % (i+1, date_num))
         sys.stdout.flush()
     h5.close()
-    print ''
+    print('')
 
 
     ##### Design matrix - temporal deformation model
-    print '-------------------------------------------------'
-    print 'Correct topographic phase residual using Fattahi and Amelung (2013, IEEE-TGRS)'
+    print('-------------------------------------------------')
+    print('Correct topographic phase residual using Fattahi and Amelung (2013, IEEE-TGRS)')
     msg = 'minimum-norm constrain on: phase'
     if inps.phase_velocity:
         msg += ' velocity'
-    print msg
+    print(msg)
 
     # Heresh's original code for phase history approach
     #A1 = np.hstack((np.ones((date_num, 1)), inps.tbase))
@@ -267,7 +267,7 @@ def main(argv):
     #A_def = np.hstack((A2,A1,np.ones((date_num,1))))
 
     # 1. Polynomial - 2D matrix in size of (date_num, polyOrder+1)
-    print "temporal deformation model: polynomial order = "+str(inps.poly_order)
+    print("temporal deformation model: polynomial order = "+str(inps.poly_order))
     A_def = np.ones((date_num, 1), np.float32)
     for i in range(inps.poly_order):
         Ai = inps.tbase**(i+1) / gamma(i+2)
@@ -276,7 +276,7 @@ def main(argv):
 
     # 2. Step function - 2D matrix in size of (date_num, stepNum)
     if inps.step_date:
-        print "temporal deformation model: step functions at "+str(inps.step_date)
+        print("temporal deformation model: step functions at "+str(inps.step_date))
         yySteps = ptime.yyyymmdd2years(inps.step_date)
         yyList = np.array(ptime.yyyymmdd2years(date_list)).reshape(-1,1)
         for yyStep in yySteps:
@@ -285,12 +285,12 @@ def main(argv):
             A_def = np.hstack((A_def, Ai))
     inps.step_num = len(inps.step_date)
 
-    print '-------------------------------------------------'
+    print('-------------------------------------------------')
 
 
     ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
     ## Output estimated steps 
-    print 'ordinal least squares (OLS) inversion using L2-norm minimization'
+    print('ordinal least squares (OLS) inversion using L2-norm minimization')
     timeseriesCor = np.zeros((date_num, pixel_num), dtype=np.float32)
     timeseriesRes = np.zeros((date_num, pixel_num), dtype=np.float32)
     topoRes = np.zeros(pixel_num, dtype=np.float32)
@@ -298,14 +298,14 @@ def main(argv):
     if inps.step_num > 0:
         stepModel = np.zeros((inps.step_num, pixel_num), dtype=np.float32)
 
-    print 'skip pixels with zero/nan value in geometry files - incidence angle and range distance'
+    print('skip pixels with zero/nan value in geometry files - incidence angle and range distance')
     mask = np.multiply(~np.isnan(inps.inc_angle), ~np.isnan(inps.range_dist))
     mask[inps.inc_angle == 0.] = 0
     mask[inps.range_dist == 0.] = 0
     pixel_num2inv = np.sum(mask)
     pixel_idx2inv = np.where(mask)[0]
-    print 'number of pixels in the file: %d' % (pixel_num)
-    print 'number of pixels to  inverse: %d' % (pixel_num2inv)
+    print('number of pixels in the file: %d' % (pixel_num))
+    print('number of pixels to  inverse: %d' % (pixel_num2inv))
 
     if inps.pbase.shape[1] == 1:
         pbase = inps.pbase
@@ -333,62 +333,62 @@ def main(argv):
 
     ##------------------------------------------------ Output  --------------------------------------------##
     # 1. DEM error file
-    if 'Y_FIRST' in atr.keys():
+    if 'Y_FIRST' in list(atr.keys()):
         deltaZFile = 'demGeo_error.h5'
     else:
         deltaZFile = 'demRadar_error.h5'
-    print 'writing >>> '+deltaZFile
+    print('writing >>> '+deltaZFile)
     atrDeltaZ = atr.copy()
     atrDeltaZ['FILE_TYPE'] = 'dem'
     atrDeltaZ['UNIT'] = 'm'
     writefile.write(topoRes.reshape(length, width), atrDeltaZ, deltaZFile)
 
     # 2. Topo Residual Corrected Time Series
-    print 'writing >>> '+inps.outfile
+    print('writing >>> '+inps.outfile)
     h5 = h5py.File(inps.outfile,'w')
     group = h5.create_group('timeseries')
     for i in range(date_num):
         sys.stdout.write('\rwriting acquisition %3d/%3d ...' % (i+1, date_num))
         sys.stdout.flush()
         dset = group.create_dataset(date_list[i], data=timeseriesCor[i].reshape(length, width), compression='gzip')
-    print ''
-    for key,value in atr.iteritems():
+    print('')
+    for key,value in atr.items():
         group.attrs[key] = value
     h5.close()
 
     # 3. Inversion residual Time Series
     tsResFile = os.path.join(os.path.dirname(inps.outfile), 'timeseriesResidual.h5')
-    print 'writing >>> '+os.path.basename(tsResFile)
+    print('writing >>> '+os.path.basename(tsResFile))
     h5 = h5py.File(tsResFile,'w')
     group = h5.create_group('timeseries')
     for i in range(date_num):
         sys.stdout.write('\rwriting acquisition %3d/%3d ...' % (i+1, date_num))
         sys.stdout.flush()
         dset = group.create_dataset(date_list[i], data=timeseriesRes[i].reshape(length, width), compression='gzip')
-    print ''
+    print('')
     # Attribute
-    for key,value in atr.iteritems():
+    for key,value in atr.items():
         group.attrs[key] = value
     h5.close()
 
     # 4. Step temporal Model estimation
     if inps.step_num > 0:
         stepFile = os.path.join(os.path.dirname(inps.outfile), 'timeseriesStepModel.h5')
-        print 'writing >>> '+os.path.basename(stepFile)
+        print('writing >>> '+os.path.basename(stepFile))
         h5 = h5py.File(stepFile,'w')
         group = h5.create_group('timeseries')
         for i in range(inps.step_num):
             sys.stdout.write('\rwriting acquisition %3d/%3d ...' % (i+1, inps.step_num))
             sys.stdout.flush()
             dset = group.create_dataset(inps.step_date[i], data=stepModel[i].reshape(length, width), compression='gzip')
-        print ''
+        print('')
         # Attribute
-        for key,value in atr.iteritems():
+        for key,value in atr.items():
             group.attrs[key] = value
         group.attrs.pop('ref_date')
         h5.close()
 
-    print 'Done.'
+    print('Done.')
     return
 
 ################################################################################

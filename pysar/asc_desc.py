@@ -89,7 +89,7 @@ def main(argv):
         sys.exit('ERROR: Not all input files are geocoded.')
 
     k1 = atr1['FILE_TYPE']
-    print 'Input 1st file is '+k1
+    print('Input 1st file is '+k1)
 
     # Common AOI in lalo
     west, east, south, north = get_overlap_lalo(atr1, atr2)
@@ -104,8 +104,8 @@ def main(argv):
     incidence = []
     for i in range(len(inps.file)):
         fname = inps.file[i]
-        print '---------------------'
-        print 'reading '+fname
+        print('---------------------')
+        print('reading '+fname)
         atr = readfile.read_attribute(fname)
 
         [x0,x1] = subset.coord_geo2radar([west,east], atr, 'lon')
@@ -116,7 +116,7 @@ def main(argv):
         heading_angle = float(atr['HEADING'])
         if heading_angle < 0.:
             heading_angle += 360.
-        print 'heading angle: '+str(heading_angle)
+        print('heading angle: '+str(heading_angle))
         heading_angle *= np.pi/180.
         heading.append(heading_angle)
         
@@ -153,16 +153,16 @@ def main(argv):
     atr['X_STEP'] = str(lon_step)
     atr['Y_STEP'] = str(lat_step)
 
-    print '---------------------'
+    print('---------------------')
     outname = inps.outfile[0]
-    print 'writing   vertical component to file: '+outname
+    print('writing   vertical component to file: '+outname)
     writefile.write(u_v, atr, outname)
 
     outname = inps.outfile[1]
-    print 'writing horizontal component to file: '+outname
+    print('writing horizontal component to file: '+outname)
     writefile.write(u_h, atr, outname)
 
-    print 'Done.'
+    print('Done.')
     return
 
 

@@ -57,7 +57,7 @@ def check_geocode_file(lookupFile, File, templateFile=None, outFile=None):
         return None
     else:
         atr = readfile.read_attribute(File)
-        if 'Y_FIRST' in atr.keys():
+        if 'Y_FIRST' in list(atr.keys()):
             return File
     
     if not lookupFile:
@@ -71,7 +71,7 @@ def check_geocode_file(lookupFile, File, templateFile=None, outFile=None):
         geocodeCmd = 'geocode.py %s -l %s -o %s' % (File, os.path.basename(lookupFile), outFile)
         if templateFile:
             geocodeCmd += ' -t '+templateFile
-        print geocodeCmd
+        print(geocodeCmd)
         status = subprocess.Popen(geocodeCmd, shell=True).wait()
 
     try:    outFile = glob.glob(outFile)[0]
@@ -110,25 +110,25 @@ def subset_dataset(inps, template_file):
     #####Step 1: Read subset info into pix_box
     #Check conflict
     if geo_box:
-        if not inps.lookup_file and 'Y_FIRST' not in atr.keys():
-            print 'WARNING: turn off pysar.subset.lalo because:'
-            print '    1) no lookup file AND '
-            print '    2) dataset is in radar coord'
+        if not inps.lookup_file and 'Y_FIRST' not in list(atr.keys()):
+            print('WARNING: turn off pysar.subset.lalo because:')
+            print('    1) no lookup file AND ')
+            print('    2) dataset is in radar coord')
             geo_box = None
     if not geo_box and not pix_box:
         sys.exit('ERROR: no valid subset input!\nTry to set pysar.subset.yx/lalo all to auto/no')
 
     #geo_box --> pix_box
     if geo_box:
-        if 'Y_FIRST' not in atr.keys():
-            print 'calculate bounding box in y/x from lat/lon input'
+        if 'Y_FIRST' not in list(atr.keys()):
+            print('calculate bounding box in y/x from lat/lon input')
             pix_box = subset.bbox_geo2radar(geo_box, atr, inps.lookup_file)
         else:
             pix_box = (0,0,0,0)
             pix_box[0:3:2] = subset.coord_geo2radar(geo_box[0:3:2], atr, 'lon')
             pix_box[1:4:2] = subset.coord_geo2radar(geo_box[1:4:2], atr, 'lat')
-        print 'Input subset in (lon0,lat0,lon1,lat1): '+str(geo_box)
-    print 'Input subset in (x0,  y0,  x1,  y1  ): '+str(pix_box)
+        print('Input subset in (lon0,lat0,lon1,lat1): '+str(geo_box))
+    print('Input subset in (x0,  y0,  x1,  y1  ): '+str(pix_box))
 
 
     #####Step 2 - subset
@@ -136,15 +136,15 @@ def subset_dataset(inps, template_file):
     if not os.path.isdir(subset_dir):
         os.mkdir(subset_dir)
     os.chdir(subset_dir)
-    print '\n--------------------------------------------'
-    print 'Creating subset datasets ...'
-    print "Go to subset directory: "+subset_dir
+    print('\n--------------------------------------------')
+    print('Creating subset datasets ...')
+    print("Go to subset directory: "+subset_dir)
     lookupFileOld = inps.lookup_file
 
-    if 'Y_FIRST' in atr.keys():
-        print '\n--------------------------------------------'
-        print 'dataset is in geo coordinates'
-        print '    subseting all files in (x0,y0,x1,y1): '+str(pix_box)
+    if 'Y_FIRST' in list(atr.keys()):
+        print('\n--------------------------------------------')
+        print('dataset is in geo coordinates')
+        print('    subseting all files in (x0,y0,x1,y1): '+str(pix_box))
         inps = subset.subset_box2inps(inps, pix_box, None)
         inps.ifgram_file    = check_subset_file(inps.ifgram_file,    vars(inps))
         inps.coherence_file = check_subset_file(inps.coherence_file, vars(inps))
@@ -154,25 +154,25 @@ def subset_dataset(inps, template_file):
         inps.trop_file      = check_subset_file(inps.trop_file,      vars(inps))
     else:
         atr_lut = readfile.read_attribute(inps.lookup_file)
-        print '\n--------------------------------------------'
-        print 'dataset is in radar coordinates'
-        print '    subseting all radar-coord files in (x0,y0,x1,y1): '+str(pix_box)
+        print('\n--------------------------------------------')
+        print('dataset is in radar coordinates')
+        print('    subseting all radar-coord files in (x0,y0,x1,y1): '+str(pix_box))
         inps = subset.subset_box2inps(inps, pix_box, None)
         inps.ifgram_file    = check_subset_file(inps.ifgram_file,    vars(inps))
         inps.coherence_file = check_subset_file(inps.coherence_file, vars(inps))
         inps.dem_radar_file = check_subset_file(inps.dem_radar_file, vars(inps))
         inps.trop_file      = check_subset_file(inps.trop_file,      vars(inps))
-        if 'Y_FIRST' not in atr_lut.keys():
+        if 'Y_FIRST' not in list(atr_lut.keys()):
             inps.lookup_file  = check_subset_file(inps.lookup_file,  vars(inps))
 
-        print ''
+        print('')
         geo_box = subset.bbox_radar2geo(pix_box, atr, lookupFile=lookupFileOld)
-        print '--------------------------------------------'
-        print 'dataset is in radar coordinates'
-        print '    subseting all geo-coord files in (lon0,lat0,lon1,lat1): '+str(geo_box)
+        print('--------------------------------------------')
+        print('dataset is in radar coordinates')
+        print('    subseting all geo-coord files in (lon0,lat0,lon1,lat1): '+str(geo_box))
         inps = subset.subset_box2inps(inps, None, geo_box)
         inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps))
-        if 'Y_FIRST' in atr_lut.keys():
+        if 'Y_FIRST' in list(atr_lut.keys()):
             inps.lookup_file = check_subset_file(inps.lookup_file, vars(inps))
     return inps
 
@@ -460,14 +460,14 @@ def main(argv):
     #########################################
     # Initiation
     #########################################
-    print LOGO
+    print(LOGO)
 
     # Project Name
     inps.project_name = None
     if inps.custom_template_file:
         inps.custom_template_file = os.path.abspath(inps.custom_template_file)
         inps.project_name = os.path.splitext(os.path.basename(inps.custom_template_file))[0]
-        print 'Project name: '+inps.project_name
+        print('Project name: '+inps.project_name)
 
     # Work directory
     if not inps.work_dir:
@@ -480,7 +480,7 @@ def main(argv):
     if not os.path.isdir(inps.work_dir):
         os.makedirs(inps.work_dir)
     os.chdir(inps.work_dir)
-    print "Go to work directory: "+inps.work_dir
+    print("Go to work directory: "+inps.work_dir)
 
 
     #####for Univ of Miami
@@ -493,7 +493,7 @@ def main(argv):
         for file in file_list:
             if ut.update_file(os.path.basename(file), file, check_readable=False):
                 shutil.copy2(file, inps.work_dir)
-                print 'copy '+os.path.basename(file)+' to work directory'
+                print('copy '+os.path.basename(file)+' to work directory')
     except: pass
 
     # Copy from SLC directory
@@ -504,23 +504,23 @@ def main(argv):
         for file in file_list:
             if ut.update_file(os.path.basename(file), file, check_readable=False):
                 shutil.copy2(file, inps.work_dir)
-                print 'copy '+os.path.basename(file)+' to work directory'
+                print('copy '+os.path.basename(file)+' to work directory')
     except: pass
 
 
     #########################################
     # Read Template Options
     #########################################
-    print '\n*************** Template Options ****************'
+    print('\n*************** Template Options ****************')
     # default template
     inps.template_file = 'pysarApp_template.txt'
     if not os.path.isfile(inps.template_file):
-        print 'generate default template file: '+inps.template_file
+        print('generate default template file: '+inps.template_file)
         f = open(inps.template_file, 'w')
         f.write(TEMPLATE)
         f.close()
     else:
-        print 'default template file exists: '+inps.template_file
+        print('default template file exists: '+inps.template_file)
 
     # custom template
     if inps.custom_template_file:
@@ -529,29 +529,29 @@ def main(argv):
             shutil.copy2(inps.custom_template_file, inps.work_dir)
 
         # Read custom template
-        print 'read custom template file: '+inps.custom_template_file
+        print('read custom template file: '+inps.custom_template_file)
         custom_template = readfile.read_template(inps.custom_template_file)
         # correct some loose type errors
-        for key in custom_template.keys():
+        for key in list(custom_template.keys()):
             if   custom_template[key].lower() in ['default']:          custom_template[key] = 'auto'
             elif custom_template[key].lower() in ['n','off','false']:  custom_template[key] = 'no'
             elif custom_template[key].lower() in ['y','on','true']:    custom_template[key] = 'yes'
         for key in ['pysar.deramp', 'pysar.troposphericDelay.method']:
-            if key in custom_template.keys():
+            if key in list(custom_template.keys()):
                 custom_template[key] = custom_template[key].lower().replace('-','_')
 
         # FA 1/18: insert general options from template file as pysar.* options
-        if 'processor' in custom_template.keys():
+        if 'processor' in list(custom_template.keys()):
             custom_template['pysar.insarProcessor'] = custom_template['processor']
 
         # Update default template with custom input template
-        print 'update default template based on input custom template'
+        print('update default template based on input custom template')
         inps.template_file = ut.update_template_file(inps.template_file, custom_template)
 
     if inps.generate_template:
         sys.exit('Exit as planned after template file generation.')
 
-    print 'read default template file: '+inps.template_file
+    print('read default template file: '+inps.template_file)
     inps.template_file = os.path.abspath(inps.template_file)
     template = readfile.read_template(inps.template_file)
     inps.insarProcessor = template['pysar.insarProcessor']
@@ -561,7 +561,7 @@ def main(argv):
     # Get existing tropo delay file
     inps.trop_model = 'ECMWF'
     key = 'pysar.troposphericDelay.weatherModel'
-    if key in template.keys():
+    if key in list(template.keys()):
         value = template[key]
         if value == 'auto':
             inps.trop_model = 'ECMWF'
@@ -573,33 +573,33 @@ def main(argv):
 
     # Get unavco_attributes.txt file name
     try:    inps.unavco_atr_file = ut.get_file_list('unavco_attribute*txt', abspath=True)[0]
-    except: inps.unavco_atr_file = None;   print 'No HDF-EOS5 attributes file found.'
+    except: inps.unavco_atr_file = None;   print('No HDF-EOS5 attributes file found.')
 
 
     #########################################
     # Loading Data
     #########################################
-    print '\n*************** Load Data ****************'
+    print('\n*************** Load Data ****************')
     loadCmd = 'load_data.py --dir '+inps.work_dir+' --template '+inps.template_file
     if inps.custom_template_file:
         loadCmd += ' '+inps.custom_template_file+' --project '+inps.project_name
-    print loadCmd
+    print(loadCmd)
     status = subprocess.Popen(loadCmd, shell=True).wait()
     os.chdir(inps.work_dir)
 
-    print '--------------------------------------------'
+    print('--------------------------------------------')
     inps = ut.check_loaded_dataset(inps.work_dir, inps)
     if not inps.ifgram_file:
         sys.exit('ERROR: No interferograms file found!')
 
     atr = readfile.read_attribute(inps.ifgram_file)
     inps.coord_type = 'radar'
-    if 'Y_FIRST' in atr.keys():
+    if 'Y_FIRST' in list(atr.keys()):
         inps.coord_type = 'geo'
 
     if inps.custom_template_file:
         atrCmd = 'add_attribute.py '+inps.ifgram_file+' '+inps.custom_template_file
-        print atrCmd
+        print(atrCmd)
         status = subprocess.Popen(atrCmd, shell=True).wait()
         if status is not 0:
             sys.exit('ERROR while adding HDF-EOS5 attributes to unwrapped interferograms file.')
@@ -608,25 +608,25 @@ def main(argv):
         print('Exit as planned after loading/checking the dataset with error code 0')
         sys.exit(0)
     if inps.reset:
-        print 'Reset dataset attributtes for a fresh re-run with options from %s' % os.path.basename(inps.template_file)
-        print '-----------------------------------------------------------------------------------'
+        print('Reset dataset attributtes for a fresh re-run with options from %s' % os.path.basename(inps.template_file))
+        print('-----------------------------------------------------------------------------------')
         # Reset network
         networkCmd = 'modify_network.py '+inps.ifgram_file
         if inps.coherence_file:
             networkCmd +=  ' '+inps.coherence_file
         networkCmd += ' --reset'
-        print networkCmd
+        print(networkCmd)
         status = subprocess.Popen(networkCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while resetting the network of interferograms.\n'
+            print('\nError while resetting the network of interferograms.\n')
             sys.exit(-1)
 
         # Reset reference pixel
         seedCmd = 'seed_data.py '+inps.ifgram_file+' --reset'
-        print seedCmd
+        print(seedCmd)
         status = subprocess.Popen(seedCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while resetting the reference pixel in space.\n'
+            print('\nError while resetting the reference pixel in space.\n')
             sys.exit(-1)
 
 
@@ -645,9 +645,9 @@ def main(argv):
 
         ##Tight subset lookup table in geo coord (roipac/gamma)
         atr_lut = readfile.read_attribute(inps.lookup_file)
-        if 'Y_FIRST' in atr_lut.keys():
+        if 'Y_FIRST' in list(atr_lut.keys()):
             subCmd = 'subset.py '+inps.lookup_file+' --tight'
-            print subCmd
+            print(subCmd)
             outName = os.path.splitext(inps.lookup_file)[0]+'_tight'+os.path.splitext(inps.lookup_file)[1]
             if ut.update_file(outName, inps.lookup_file):
                 status = subprocess.Popen(subCmd, shell=True).wait()
@@ -656,7 +656,7 @@ def main(argv):
 
     # Subset based on input template
     if not all(template[key] in ['auto', 'no'] for key in ['pysar.subset.yx','pysar.subset.lalo']):
-        print '\n*************** Subset ****************'
+        print('\n*************** Subset ****************')
         inps = subset_dataset(inps, inps.template_file)
 
     if inps.subset_dataset:
@@ -667,31 +667,31 @@ def main(argv):
     #########################################
     # Generating Aux files
     #########################################
-    print '\n*************** Generate Auxiliary Files ****************'
+    print('\n*************** Generate Auxiliary Files ****************')
     ##### Initial mask (pixels with unwrapped phase in ALL interferograms)
     inps.mask_file = 'mask.h5'
     if ut.update_file(inps.mask_file, inps.ifgram_file):
-        print 'creating mask file using non-zero pixels from file: '+inps.ifgram_file
+        print('creating mask file using non-zero pixels from file: '+inps.ifgram_file)
         inps.mask_file = ut.nonzero_mask(inps.ifgram_file, inps.mask_file)
 
     ##### Average spatial coherence
     if inps.coherence_file:
         inps.spatial_coh_file = 'averageSpatialCoherence.h5'
-        print 'creating average spatial coherence from file: '+inps.coherence_file
+        print('creating average spatial coherence from file: '+inps.coherence_file)
         if ut.update_file(inps.spatial_coh_file, inps.coherence_file):
             inps.spatial_coh_file = ut.temporal_average(inps.coherence_file, inps.spatial_coh_file)
     else:
         inps.spatial_coh_file = None
 
     ##### Incidence Angle
-    print '##### Preparing Geometry - Incidence Angle'
+    print('##### Preparing Geometry - Incidence Angle')
     inps.inc_angle_radar_file = ut.get_geometry_file('incidenceAngle', coordType='radar', abspath=True, print_msg=False)
     inps.inc_angle_geo_file   = ut.get_geometry_file('incidenceAngle', coordType='geo',   abspath=True, print_msg=False)
 
     if not inps.inc_angle_radar_file and inps.coord_type == 'radar':
         inps.inc_angle_radar_file = 'incidenceAngle.h5'
         incAngleCmd = 'incidence_angle.py %s %s' % (inps.ifgram_file, inps.inc_angle_radar_file)
-        print incAngleCmd
+        print(incAngleCmd)
         status = subprocess.Popen(incAngleCmd, shell=True).wait()
         if status is not 0:
             sys.exit('\nError while calculating incidence angle.\n')
@@ -702,7 +702,7 @@ def main(argv):
         else:
             inps.inc_angle_geo_file = 'incidenceAngle.h5'
             incAngleCmd = 'incidence_angle.py %s %s' % (inps.ifgram_file, inps.inc_angle_geo_file)
-            print incAngleCmd
+            print(incAngleCmd)
             status = subprocess.Popen(incAngleCmd, shell=True).wait()
             if status is not 0:
                 sys.exit('\nError while calculating incidence angle.\n')
@@ -712,21 +712,21 @@ def main(argv):
     for fname in [inps.inc_angle_radar_file, inps.inc_angle_geo_file]:
         if fname and 'geometry' not in fname:
             loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
-            print loadCmd
+            print(loadCmd)
             status = subprocess.Popen(loadCmd, shell=True).wait()
 
     inps.inc_angle_file = ut.get_geometry_file('incidenceAngle', coordType=inps.coord_type, abspath=True, print_msg=False)
-    print 'incidence angle file: %s' % (inps.inc_angle_file)
+    print('incidence angle file: %s' % (inps.inc_angle_file))
 
     ##### Slant range distance
-    print '##### Preparing Geometry - Slant Range Distance'
+    print('##### Preparing Geometry - Slant Range Distance')
     inps.range_dist_radar_file = ut.get_geometry_file('slantRangeDistance', coordType='radar', abspath=True, print_msg=False)
     inps.range_dist_geo_file   = ut.get_geometry_file('slantRangeDistance', coordType='geo',   abspath=True, print_msg=False)
 
     if not inps.range_dist_radar_file and inps.coord_type == 'radar':
         inps.range_dist_radar_file = 'rangeDistance.h5'
         rangeDistCmd = 'range_distance.py %s %s' % (inps.ifgram_file, inps.range_dist_radar_file)
-        print rangeDistCmd
+        print(rangeDistCmd)
         status = subprocess.Popen(rangeDistCmd, shell=True).wait()
         if status is not 0:
             sys.exit('\nError while calculating slant range distance.\n')
@@ -737,7 +737,7 @@ def main(argv):
         else:
             inps.range_dist_geo_file = 'rangeDistance.h5'
             rangeDistCmd = 'range_distance.py %s %s' % (inps.ifgram_file, inps.range_dist_geo_file)
-            print rangeDistCmd
+            print(rangeDistCmd)
             status = subprocess.Popen(rangeDistCmd, shell=True).wait()
             if status is not 0:
                 sys.exit('\nError while calculating slant range distance.\n')
@@ -747,87 +747,87 @@ def main(argv):
     for fname in [inps.range_dist_radar_file, inps.range_dist_geo_file]:
         if fname and 'geometry' not in fname:
             loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
-            print loadCmd
+            print(loadCmd)
             status = subprocess.Popen(loadCmd, shell=True).wait()
 
     inps.range_dist_file = ut.get_geometry_file('slantRangeDistance',\
                                                 coordType=inps.coord_type, abspath=True, print_msg=False)
-    print 'slant range distance file: %s' % (inps.range_dist_file)
+    print('slant range distance file: %s' % (inps.range_dist_file))
 
     ##### DEM
-    print '##### Preparing Geometry - Height'
+    print('##### Preparing Geometry - Height')
     for fname in [inps.dem_radar_file, inps.dem_geo_file]:
         if fname and 'geometry' not in fname:
             loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
-            print loadCmd
+            print(loadCmd)
             status = subprocess.Popen(loadCmd, shell=True).wait()        
 
     ##### Water Mask
-    print '##### Preparing Geometry - Water Mask'
+    print('##### Preparing Geometry - Water Mask')
     inps.water_mask_radar_file = ut.get_geometry_file('waterMask', coordType='radar', abspath=True, print_msg=False)
     inps.water_mask_geo_file   = ut.get_geometry_file('waterMask', coordType='geo',   abspath=True, print_msg=False)
 
     if not inps.water_mask_radar_file and inps.dem_radar_file:
         inps.water_mask_radar_file = 'waterMask.h5'
         maskCmd = 'generate_mask.py %s height -m 0.5 -o %s ' % (inps.dem_radar_file, inps.water_mask_radar_file)
-        print maskCmd
+        print(maskCmd)
         status = subprocess.Popen(maskCmd, shell=True).wait()
 
     if not inps.water_mask_geo_file and inps.dem_geo_file:
         inps.water_mask_geo_file = 'waterMask.h5'
         maskCmd = 'generate_mask.py %s height -m 0.5 -o %s ' % (inps.dem_geo_file, inps.water_mask_geo_file)
-        print maskCmd
+        print(maskCmd)
         status = subprocess.Popen(maskCmd, shell=True).wait()
 
     for fname in [inps.water_mask_radar_file, inps.water_mask_geo_file]:
         if fname and 'geometry' not in fname:
             loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
-            print loadCmd
+            print(loadCmd)
             status = subprocess.Popen(loadCmd, shell=True).wait()
 
     inps.water_mask_file = ut.get_geometry_file('waterMask',\
                                                 coordType=inps.coord_type, abspath=True, print_msg=False)
-    print 'water mask file: %s' % (inps.water_mask_file)
+    print('water mask file: %s' % (inps.water_mask_file))
 
     #########################################
     # Referencing Interferograms in Space
     #########################################
-    print '\n**********  Reference in space  ***************'
+    print('\n**********  Reference in space  ***************')
     seedCmd = 'seed_data.py '+inps.ifgram_file+' --template '+inps.template_file+' --mark-attribute'
     resetCmd = 'seed_data.py '+inps.ifgram_file+' --reset'
 
     ## Skip calling seed command only if 1) ref_y/x exists AND 2) pysar.reference.yx/lalo == auto
     run_seedCmd = True
     atr = readfile.read_attribute(inps.ifgram_file)
-    if 'ref_x' in atr.keys():
+    if 'ref_x' in list(atr.keys()):
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
         length = int(atr['FILE_LENGTH'])
         width = int(atr['WIDTH'])
-        print 'Find reference pixel info from %s in y/x: [%d, %d]' % (os.path.basename(inps.ifgram_file), ref_y, ref_x)
+        print('Find reference pixel info from %s in y/x: [%d, %d]' % (os.path.basename(inps.ifgram_file), ref_y, ref_x))
         if not (0 <= ref_y <= length and 0 <= ref_x <= width):
-            print 'existed reference pixel is out of data coverage.'
-            print '1) reset reference pixel info'
-            print resetCmd
+            print('existed reference pixel is out of data coverage.')
+            print('1) reset reference pixel info')
+            print(resetCmd)
             status = subprocess.Popen(resetCmd, shell=True).wait()
-            print '2) re-run seed_data.py to select new refernce pixel.'
+            print('2) re-run seed_data.py to select new refernce pixel.')
         else:
-            print '----------------------------------------------------------------------------------------'
-            print 'To remove reference pixel info, use seed_data.py --reset option:'
-            print resetCmd
-            print '----------------------------------------------------------------------------------------'
+            print('----------------------------------------------------------------------------------------')
+            print('To remove reference pixel info, use seed_data.py --reset option:')
+            print(resetCmd)
+            print('----------------------------------------------------------------------------------------')
             prefix = 'pysar.reference.'
             if all(template[prefix+i] in ['auto','no'] for i in ['yx','lalo']):
                 run_seedCmd = False
-                print 'No specific coordinates input found, no need to re-select reference pixel'
+                print('No specific coordinates input found, no need to re-select reference pixel')
             else:
-                print 'Specific coordinates input found, re-select reference pixel with options from template file'
+                print('Specific coordinates input found, re-select reference pixel with options from template file')
 
     if run_seedCmd:
-        print seedCmd
+        print(seedCmd)
         status = subprocess.Popen(seedCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while finding reference pixel in space.\n'
+            print('\nError while finding reference pixel in space.\n')
             sys.exit(-1)
 
 
@@ -837,16 +837,16 @@ def main(argv):
     #    of interferograms
     ############################################
     if template['pysar.unwrapError.method'] not in ['auto','no']:
-        print '\n**********  Unwrapping Error Correction  **************'
+        print('\n**********  Unwrapping Error Correction  **************')
         outName = os.path.splitext(inps.ifgram_file)[0]+'_unwCor.h5'
         unwCmd='unwrap_error.py '+inps.ifgram_file+' --mask '+inps.mask_file+' --template '+inps.template_file
-        print unwCmd
+        print(unwCmd)
         #if ut.update_file(outName):
         if ut.update_file(outName, inps.ifgram_file):
-            print 'This might take a while depending on the size of your data set!'
+            print('This might take a while depending on the size of your data set!')
             status = subprocess.Popen(unwCmd, shell=True).wait()
             if status is not 0:
-                print '\nError while correcting phase unwrapping errors.\n'
+                print('\nError while correcting phase unwrapping errors.\n')
                 sys.exit(-1)
         inps.ifgram_file = outName
 
@@ -854,29 +854,29 @@ def main(argv):
     #########################################
     # Network Modification (Optional)
     #########################################
-    print '\n*************** Modify Network ****************'
+    print('\n*************** Modify Network ****************')
     networkCmd = 'modify_network.py --template '+inps.template_file+' '+inps.ifgram_file
     if inps.coherence_file:
         networkCmd += ' '+inps.coherence_file
-    print networkCmd
-    print '----------------------------------------------------------------------------------------'
-    print 'To use all interferograms in the file, run modify_network.py with --reset option to restore all pairs info.'
+    print(networkCmd)
+    print('----------------------------------------------------------------------------------------')
+    print('To use all interferograms in the file, run modify_network.py with --reset option to restore all pairs info.')
     msg_str = 'modify_network.py '+inps.ifgram_file
     if inps.coherence_file:
         msg_str +=  ' '+inps.coherence_file
     msg_str += ' --reset'
-    print msg_str
-    print '----------------------------------------------------------------------------------------'
+    print(msg_str)
+    print('----------------------------------------------------------------------------------------')
     status = subprocess.Popen(networkCmd, shell=True).wait()
     if status is not 0:
-        print '\nError while modifying the network of interferograms.\n'
+        print('\nError while modifying the network of interferograms.\n')
         sys.exit(-1)
 
     # Plot network colored in spatial coherence
-    print '--------------------------------------------'
+    print('--------------------------------------------')
     plotCmd = 'plot_network.py '+inps.ifgram_file+' --coherence '+inps.coherence_file+\
               ' --template '+inps.template_file+' --nodisplay'
-    print plotCmd
+    print(plotCmd)
     inps.coh_spatialAverage_file = os.path.splitext(inps.coherence_file)[0]+'_spatialAverage.txt'
     if ut.update_file('Network.pdf', check_readable=False, \
                       inFile=[inps.ifgram_file, inps.coh_spatialAverage_file, inps.template_file]):
@@ -890,23 +890,23 @@ def main(argv):
     #########################################
     # Inversion of Interferograms
     ########################################
-    print '\n**********  Network Inversion to Time Series  ********************'
+    print('\n**********  Network Inversion to Time Series  ********************')
     inps.timeseries_file = 'timeseries.h5'
     inps.temp_coh_file = 'temporalCoherence.h5'
     invCmd = 'ifgram_inversion.py %s --template %s' % (inps.ifgram_file, inps.template_file)
-    print invCmd
+    print(invCmd)
     if ut.update_file(inps.timeseries_file, inps.ifgram_file):
         status = subprocess.Popen(invCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while inverting network of interferograms to time-series.\n'
+            print('\nError while inverting network of interferograms to time-series.\n')
             sys.exit(-1)
 
-    print '\n--------------------------------------------'
-    print 'Update Mask based on Temporal Coherence ...'
+    print('\n--------------------------------------------')
+    print('Update Mask based on Temporal Coherence ...')
     # Read template option
     inps.min_temp_coh = 0.7
     key = 'pysar.networkInversion.minTempCoh'
-    if key in template.keys():
+    if key in list(template.keys()):
         value = template[key]
         if value == 'auto':
             inps.min_temp_coh = 0.7
@@ -915,11 +915,11 @@ def main(argv):
 
     outName = 'maskTempCoh.h5'
     maskCmd = 'generate_mask.py '+inps.temp_coh_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
-    print maskCmd
+    print(maskCmd)
     if ut.update_file(outName, inps.temp_coh_file):
         status = subprocess.Popen(maskCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while generating mask file from temporal coherence.\n'
+            print('\nError while generating mask file from temporal coherence.\n')
             sys.exit(-1)
     inps.mask_file = outName
 
@@ -930,20 +930,20 @@ def main(argv):
     ## Check DEM file for tropospheric delay setting
     ## DEM is needed with same coord (radar/geo) as timeseries file
     atr = readfile.read_attribute(inps.timeseries_file)
-    if 'X_FIRST' in atr.keys():
+    if 'X_FIRST' in list(atr.keys()):
         demFile = inps.dem_geo_file
     else:
         demFile = inps.dem_radar_file
     if ut.update_file(demFile):
-        print '++++++++++++++++++++++++++++++++++++++++++++++'
-        print 'ERROR:'
-        print '    DEM file was not found!'
+        print('++++++++++++++++++++++++++++++++++++++++++++++')
+        print('ERROR:')
+        print('    DEM file was not found!')
         #if 'pysar.troposphericDelay.method' in template.keys():
         #    print '    Continue without tropospheric correction ...'
         #    template['pysar.troposphericDelay.method'] = 'no'
         #if template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']:
         #    template['pysar.deramp'] = 'no'
-        print '++++++++++++++++++++++++++++++++++++++++++++++'
+        print('++++++++++++++++++++++++++++++++++++++++++++++')
 
 
     ##############################################
@@ -952,14 +952,14 @@ def main(argv):
     ############################################## 
     sar_mission = atr['PLATFORM'].lower()
     if sar_mission.startswith('env'):
-        print '\n**********  Local Oscillator Drift correction for Envisat  ********'
+        print('\n**********  Local Oscillator Drift correction for Envisat  ********')
         outName = os.path.splitext(inps.timeseries_file)[0]+'_LODcor.h5'
         lodCmd = 'lod.py %s -r %s' % (inps.timeseries_file, inps.range_dist_file)
-        print lodCmd
+        print(lodCmd)
         if ut.update_file(outName, [inps.timeseries_file, inps.range_dist_file]):
             status = subprocess.Popen(lodCmd, shell=True).wait()
             if status is not 0:
-                print '\nError while correcting Local Oscillator Drift.\n'
+                print('\nError while correcting Local Oscillator Drift.\n')
                 sys.exit(-1)
         inps.timeseries_file = outName
 
@@ -967,9 +967,9 @@ def main(argv):
     ##############################################
     # Tropospheric Delay Correction (Optional)
     ##############################################
-    print '\n**********  Tropospheric Delay Correction  ******************'
+    print('\n**********  Tropospheric Delay Correction  ******************')
     key = 'pysar.troposphericDelay.method'
-    if (key in template.keys() and template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']):
+    if (key in list(template.keys()) and template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']):
         message='''
         Orbital error correction was BaseTropCor.
         Tropospheric correction was already applied simultaneous with baseline error correction.
@@ -983,7 +983,7 @@ def main(argv):
     # read template option
     inps.trop_method = 'pyaps'
     key = 'pysar.troposphericDelay.method'
-    if key in template.keys():
+    if key in list(template.keys()):
         value = template[key]
         if value == 'auto':
             inps.trop_method = 'pyaps'
@@ -992,7 +992,7 @@ def main(argv):
 
     inps.trop_poly_order = '1'
     key = 'pysar.troposphericDelay.polyOrder'
-    if key in template.keys():
+    if key in list(template.keys()):
         value = template[key]
         if value == 'auto':
             inps.trop_poly_order = '1'
@@ -1001,43 +1001,43 @@ def main(argv):
 
     # Call scripts
     if inps.trop_method == 'height_correlation':
-        print 'tropospheric delay correction with height-correlation approach'
+        print('tropospheric delay correction with height-correlation approach')
         tropCmd = 'tropcor_phase_elevation.py '+inps.timeseries_file+' -d '+demFile+\
                   ' -p '+inps.trop_poly_order+' -m '+inps.mask_file
-        print tropCmd
+        print(tropCmd)
         outName = os.path.splitext(inps.timeseries_file)[0]+'_tropHgt.h5'
         if ut.update_file(outName, inps.timeseries_file):
             status = subprocess.Popen(tropCmd, shell=True).wait()
             if status is not 0:
-                print '\nError while correcting tropospheric delay.\n'
+                print('\nError while correcting tropospheric delay.\n')
                 sys.exit(-1)
         inps.timeseries_file = outName
 
     elif inps.trop_method == 'pyaps':
-        print 'Atmospheric correction using Weather Re-analysis dataset (using PyAPS software)'
-        print 'Weather Re-analysis dataset: '+inps.trop_model
+        print('Atmospheric correction using Weather Re-analysis dataset (using PyAPS software)')
+        print('Weather Re-analysis dataset: '+inps.trop_model)
         tropCmd = 'tropcor_pyaps.py '+inps.timeseries_file+' -d '+demFile+' -s '+inps.trop_model+\
                   ' --weather-dir '+inps.work_dir+'/../WEATHER'+' -i '+inps.inc_angle_file
-        print tropCmd
+        print(tropCmd)
         outName = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.trop_model+'.h5'
         if ut.update_file(outName, inps.timeseries_file):
             try:
                 inps.trop_file = ut.get_file_list(inps.trop_model+'.h5')[0]
                 tropCmd = 'diff.py '+inps.timeseries_file+' '+inps.trop_file+' -o '+outName
-                print 'Use existed tropospheric delay file: '+inps.trop_file
-                print tropCmd
+                print('Use existed tropospheric delay file: '+inps.trop_file)
+                print(tropCmd)
             except: pass
             status = subprocess.Popen(tropCmd, shell=True).wait()
             if status is not 0:
-                print '\nError while correcting tropospheric delay, try the following:'
-                print '1) Check the installation of PyAPS (http://earthdef.caltech.edu/projects/pyaps/wiki/Main)'
-                print '2) Use other tropospheric correction method, height-correlation, for example'
-                print '3) or turn off the option by setting pysar.troposphericDelay.method = no in template file.\n'
+                print('\nError while correcting tropospheric delay, try the following:')
+                print('1) Check the installation of PyAPS (http://earthdef.caltech.edu/projects/pyaps/wiki/Main)')
+                print('2) Use other tropospheric correction method, height-correlation, for example')
+                print('3) or turn off the option by setting pysar.troposphericDelay.method = no in template file.\n')
                 sys.exit(-1)
         inps.timeseries_file = outName
 
     else:
-        print 'No atmospheric delay correction.'
+        print('No atmospheric delay correction.')
 
     # Grab tropospheric delay file
     try:    inps.trop_file = ut.get_file_list(inps.trop_model+'.h5')[0]
@@ -1047,57 +1047,57 @@ def main(argv):
     ##############################################
     # Topographic (DEM) Residuals Correction (Optional)
     ##############################################
-    print '\n**********  Topographic Residual (DEM error) correction  *******'
+    print('\n**********  Topographic Residual (DEM error) correction  *******')
     outName = os.path.splitext(inps.timeseries_file)[0]+'_demErr.h5'
     topoCmd = 'dem_error.py %s --template %s -i %s -r %s -o %s' %\
               (inps.timeseries_file, inps.template_file, inps.inc_angle_file, inps.range_dist_file, outName)
-    print topoCmd
+    print(topoCmd)
     inps.timeseries_resid_file = None
     if template['pysar.topographicResidual'] in ['yes','auto']:
-        print 'Correcting topographic residuals using method from Fattahi and Amelung, 2013, TGRS ...'
+        print('Correcting topographic residuals using method from Fattahi and Amelung, 2013, TGRS ...')
         if ut.update_file(outName, inps.timeseries_file):
             status = subprocess.Popen(topoCmd, shell=True).wait()
             if status is not 0:
-                print '\nError while correcting topographic phase residual.\n'
+                print('\nError while correcting topographic phase residual.\n')
                 sys.exit(-1)
         inps.timeseries_file = outName
         inps.timeseries_resid_file = 'timeseriesResidual.h5'
     else:
-        print 'No correction for topographic residuals.'
+        print('No correction for topographic residuals.')
 
 
     ##############################################
     # Timeseries Residual Standard Deviation
     ##############################################
-    print '\n**********  Timeseries Residual Root Mean Square  *******'
+    print('\n**********  Timeseries Residual Root Mean Square  *******')
     if inps.timeseries_resid_file:
         rmsCmd = 'timeseries_rms.py '+inps.timeseries_resid_file+' --template '+inps.template_file
-        print rmsCmd
+        print(rmsCmd)
         status = subprocess.Popen(rmsCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while calculating RMS of time series phase residual.\n'
+            print('\nError while calculating RMS of time series phase residual.\n')
             sys.exit(-1)
     else:
-        print 'No timeseries residual file found! Skip residual RMS analysis.'
+        print('No timeseries residual file found! Skip residual RMS analysis.')
 
 
     ##############################################
     # Reference in Time
     ##############################################
-    print '\n**********  Reference in Time  *******'
+    print('\n**********  Reference in Time  *******')
     if template['pysar.reference.date'] != 'no':
         outName = os.path.splitext(inps.timeseries_file)[0]+'_refDate.h5'
         refCmd = 'reference_epoch.py '+inps.timeseries_file+' --template '+inps.template_file
-        print refCmd
+        print(refCmd)
         status = subprocess.Popen(refCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while changing reference date.\n'
+            print('\nError while changing reference date.\n')
             sys.exit(-1)
 
         if not ut.update_file(outName):
             inps.timeseries_file = outName
     else:
-        print 'No reference change in time.'
+        print('No reference change in time.')
 
 
     ##############################################
@@ -1106,17 +1106,17 @@ def main(argv):
     # Read template option
     inps.deramp_mask_file = 'maskTempCoh.h5'
     key = 'pysar.deramp.maskFile'
-    if key in template.keys():
+    if key in list(template.keys()):
         value = template[key]
         if value == 'auto':
             inps.deramp_mask_file = 'maskTempCoh.h5'
         else:
             inps.deramp_mask_file = value
 
-    print '\n**********  Ramp Removal  ***********************'
+    print('\n**********  Ramp Removal  ***********************')
     if template['pysar.deramp'] not in ['no','auto']:
         inps.deramp_method = template['pysar.deramp']
-        print 'Phase Ramp Removal method : '+inps.deramp_method
+        print('Phase Ramp Removal method : '+inps.deramp_method)
         derampCmd = None
 
         # Get executable command and output name
@@ -1126,15 +1126,15 @@ def main(argv):
             outName = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.deramp_method+'.h5'
 
         elif inps.deramp_method in ['baseline_cor','baselinecor']:
-            if not 'X_FIRST' in atr.keys():
+            if not 'X_FIRST' in list(atr.keys()):
                 derampCmd = 'baseline_error.py '+inps.timeseries_file+' '+inps.mask_file
                 outName = os.path.splitext(inps.timeseries_file)[0]+'_baselineCor.h5'
             else:
                 warnings.warn('BaselineCor method can only be applied in radar coordinate, skipping correction')
 
         elif inps.deramp_method in ['base_trop_cor','basetropcor','baselinetropcor']:
-            if not 'X_FIRST' in atr.keys():
-                print 'Joint estimation of Baseline error and tropospheric delay [height-correlation approach]'
+            if not 'X_FIRST' in list(atr.keys()):
+                print('Joint estimation of Baseline error and tropospheric delay [height-correlation approach]')
                 try:    poly_order = template['pysar.troposphericDelay.polyOrder']
                 except: poly_order = '1'
                 derampCmd = 'baseline_trop.py '+inps.timeseries_file+' '+inps.dem_radar_file+' '+\
@@ -1147,28 +1147,28 @@ def main(argv):
 
         # Execute command
         if derampCmd:
-            print derampCmd
+            print(derampCmd)
             if ut.update_file(outName, inps.timeseries_file):
                 status = subprocess.Popen(derampCmd, shell=True).wait()
                 if status is not 0:
-                    print '\nError while removing phase ramp for each acquisition of time-series.\n'
+                    print('\nError while removing phase ramp for each acquisition of time-series.\n')
                     sys.exit(-1)
             inps.timeseries_file = outName
     else:
-        print 'No phase ramp removal.'
+        print('No phase ramp removal.')
 
 
     #############################################
     # Velocity and rmse maps
     #############################################
-    print '\n**********  Velocity estimation  **********************'
+    print('\n**********  Velocity estimation  **********************')
     inps.vel_file = 'velocity.h5'
     velCmd = 'timeseries2velocity.py '+inps.timeseries_file+' --template '+inps.template_file+' -o '+inps.vel_file
-    print velCmd
+    print(velCmd)
     if ut.update_file(inps.vel_file, [inps.timeseries_file, inps.template_file]):
         status = subprocess.Popen(velCmd, shell=True).wait()
         if status is not 0:
-            print '\nError while estimating linear velocity from time-series.\n'
+            print('\nError while estimating linear velocity from time-series.\n')
             sys.exit(-1)
 
     # Velocity from Tropospheric delay
@@ -1177,7 +1177,7 @@ def main(argv):
         suffix = suffix[0].upper()+suffix[1:].lower()
         inps.trop_vel_file = 'velocity'+suffix+'.h5'
         velCmd = 'timeseries2velocity.py '+inps.trop_file+' --template '+inps.template_file+' -o '+inps.trop_vel_file
-        print velCmd
+        print(velCmd)
         if ut.update_file(inps.trop_vel_file, [inps.trop_file, inps.template_file]):
             status = subprocess.Popen(velCmd, shell=True).wait()
 
@@ -1186,10 +1186,10 @@ def main(argv):
     # Post-processing
     # Geocodeing, masking and save to KML 
     ############################################
-    print '\n**********  Post-processing  ********************************'
+    print('\n**********  Post-processing  ********************************')
 
     # Geocoding
-    if 'Y_FIRST' in atr.keys():
+    if 'Y_FIRST' in list(atr.keys()):
         inps.vel_geo_file = inps.vel_file
         inps.temp_coh_geo_file = inps.temp_coh_file
         inps.timeseries_geo_file = inps.timeseries_file
@@ -1199,8 +1199,8 @@ def main(argv):
         inps.timeseries_geo_file = None
 
     key = 'pysar.geocode'
-    if template[key] in ['auto','yes'] and 'Y_FIRST' not in atr.keys():
-        print '\n--------------------------------------------'
+    if template[key] in ['auto','yes'] and 'Y_FIRST' not in list(atr.keys()):
+        print('\n--------------------------------------------')
         inps.vel_geo_file        = check_geocode_file(inps.lookup_file, inps.vel_file,        inps.template_file)
         inps.temp_coh_geo_file   = check_geocode_file(inps.lookup_file, inps.temp_coh_file,   inps.template_file)
         inps.timeseries_geo_file = check_geocode_file(inps.lookup_file, inps.timeseries_file, inps.template_file)
@@ -1210,12 +1210,12 @@ def main(argv):
     inps.mask_geo_file = None
     if inps.temp_coh_geo_file:
         # Generate mask in geo coord
-        print '\n--------------------------------------------'
+        print('\n--------------------------------------------')
         outName = 'maskTempCoh.h5'
         if os.path.basename(inps.temp_coh_geo_file).startswith('geo_'):
             outName = 'geo_'+outName
         maskCmd = 'generate_mask.py '+inps.temp_coh_geo_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
-        print maskCmd
+        print(maskCmd)
         if ut.update_file(outName, inps.temp_coh_geo_file):
             status = subprocess.Popen(maskCmd, shell=True).wait()
         inps.mask_geo_file = outName
@@ -1224,7 +1224,7 @@ def main(argv):
         if inps.vel_geo_file and inps.mask_geo_file:
             outName = os.path.splitext(inps.vel_geo_file)[0]+'_masked.h5'
             maskCmd = 'mask.py '+inps.vel_geo_file+' -m '+inps.mask_geo_file+' -o '+outName
-            print maskCmd
+            print(maskCmd)
             if ut.update_file(outName, [inps.vel_geo_file, inps.mask_geo_file]):
                 status = subprocess.Popen(maskCmd, shell=True).wait()
             try:  inps.vel_geo_file = glob.glob(outName)[0]
@@ -1232,11 +1232,11 @@ def main(argv):
 
     # Save to Google Earth KML file
     if inps.vel_geo_file and template['pysar.save.kml'] in ['auto','yes']:
-        print '\n--------------------------------------------'
-        print 'creating Google Earth KMZ file for geocoded velocity file: '+inps.vel_geo_file+' ...'
+        print('\n--------------------------------------------')
+        print('creating Google Earth KMZ file for geocoded velocity file: '+inps.vel_geo_file+' ...')
         outName = os.path.splitext(inps.vel_geo_file)[0]+'.kmz'
         kmlCmd = 'save_kml.py '+inps.vel_geo_file
-        print kmlCmd
+        print(kmlCmd)
         if ut.update_file(outName, inps.vel_geo_file, check_readable=False):
             status = subprocess.Popen(kmlCmd, shell=True).wait()
 
@@ -1245,8 +1245,8 @@ def main(argv):
     # Save Timeseries to HDF-EOS5 format
     #############################################
     if template['pysar.save.hdfEos5'].lower() in ['yes']:
-        print '\n*********  Output Timeseries to HDF-EOS5 Format  ***********'
-        if 'Y_FIRST' not in atr.keys() and not inps.lookup_file:
+        print('\n*********  Output Timeseries to HDF-EOS5 Format  ***********')
+        if 'Y_FIRST' not in list(atr.keys()) and not inps.lookup_file:
             warnings.warn('Dataset is in radar coordinates without lookup table file.'+\
                           'Can not geocode.'+\
                           'Skip saving.')
@@ -1256,10 +1256,10 @@ def main(argv):
             # Add HDF-EOS5 attributes
             if inps.unavco_atr_file:
                 atrCmd = 'add_attribute.py '+inps.timeseries_geo_file+' '+inps.unavco_atr_file
-                print atrCmd
+                print(atrCmd)
                 status = subprocess.Popen(atrCmd, shell=True).wait()
                 if status is not 0:
-                    print '\nError while adding HDF-EOS5 attributes to time series file.\n'
+                    print('\nError while adding HDF-EOS5 attributes to time series file.\n')
                     sys.exit(-1)
 
             # 2. Temporal Coherence
@@ -1271,7 +1271,7 @@ def main(argv):
                 if os.path.basename(inps.temp_coh_geo_file).startswith('geo_'):
                     outName = 'geo_'+outName
                 maskCmd = 'generate_mask.py '+inps.temp_coh_geo_file+' -m '+str(inps.min_temp_coh)+' -o '+outName
-                print maskCmd
+                print(maskCmd)
                 if ut.update_file(outName, inps.temp_coh_geo_file):
                     status = subprocess.Popen(maskCmd, shell=True).wait()
                     if status is not 0:
@@ -1279,17 +1279,17 @@ def main(argv):
                 inps.mask_geo_file = outName
 
             # Save to HDF-EOS5 format
-            print '--------------------------------------------'
+            print('--------------------------------------------')
             SAT = hdfeos5.get_mission_name(atr)
             try:
                 inps.hdfeos5_file = ut.get_file_list(SAT+'_*.he5')[0]
-                print 'Find existed HDF-EOS5 time-series file: '+inps.hdfeos5_file
+                print('Find existed HDF-EOS5 time-series file: '+inps.hdfeos5_file)
             except:
                 inps.hdfeos5_file = None
-                print 'No HDF-EOS5 time-series file exists yet.'
+                print('No HDF-EOS5 time-series file exists yet.')
             hdfeos5Cmd = 'save_hdfeos5.py '+inps.timeseries_geo_file+' -t '+inps.template_file+\
                          ' -c '+inps.temp_coh_geo_file+' -m '+inps.mask_geo_file
-            print hdfeos5Cmd
+            print(hdfeos5Cmd)
             if ut.update_file(inps.hdfeos5_file, [inps.timeseries_geo_file, inps.temp_coh_geo_file, inps.mask_geo_file,\
                                               inps.inc_angle_geo_file, inps.dem_geo_file], check_readable=False):
                 status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
@@ -1301,21 +1301,21 @@ def main(argv):
     # Plot Figures
     #############################################
     if template['pysar.plot'] in ['yes','auto']:
-        print '\n*********  Plot and Save pysarApp runing results to PIC  ***********'
+        print('\n*********  Plot and Save pysarApp runing results to PIC  ***********')
         inps.plot_sh_file = 'plot_pysarApp.sh'
 
         # Copy to workding directory if not existed yet.
         if not os.path.isfile('./'+inps.plot_sh_file):
-            print 'copy $PYSAR_HOME/shellscripts/'+inps.plot_sh_file+' to working directory'
+            print('copy $PYSAR_HOME/shellscripts/'+inps.plot_sh_file+' to working directory')
             try:
                 shutil.copy2(ut.which(inps.plot_sh_file), './')
             except:
-                print 'WARNING: no '+inps.plot_sh_file+' found in the environment variable path, skip plotting.'
-        print 'for better performance, edit the input parameters in '+inps.plot_sh_file+' and re-run this script.'
+                print('WARNING: no '+inps.plot_sh_file+' found in the environment variable path, skip plotting.')
+        print('for better performance, edit the input parameters in '+inps.plot_sh_file+' and re-run this script.')
 
         #if ut.update_file('PIC', [inps.plot_sh_file, inps.template_file], check_readable=False):
         plotCmd = './'+inps.plot_sh_file
-        print plotCmd
+        print(plotCmd)
         status = subprocess.Popen(plotCmd, shell=True).wait()
 
 
@@ -1323,10 +1323,10 @@ def main(argv):
     #                PySAR v1.2                 #
     #############################################
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
-    print '\nTime used: %02d hours %02d mins %02d secs' % (h, m, s)
-    print '\n###############################################'
-    print 'End of PySAR processing!'
-    print '################################################\n'
+    print('\nTime used: %02d hours %02d mins %02d secs' % (h, m, s))
+    print('\n###############################################')
+    print('End of PySAR processing!')
+    print('################################################\n')
 
 
 
