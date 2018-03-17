@@ -11,12 +11,11 @@ PySAR is a open-source Python package for InSAR (Interferometric Synthetic Apert
 
 #### 1.1 Pre-requisite
 We recommend using [Anaconda](https://www.anaconda.com/) to install the python environment and the prerequisite packages. You will need:   
-- [Python2.7](https://www.anaconda.com/download/)
+- [Python3.6](https://www.anaconda.com/download/)
 - Numpy
 - Scipy
 - h5py
 - Matplotlib
-- Pillow
 - Basemap (optional, for plotting in geo coordinate)
 - pykml (optional, for Google Earth KMZ file output)
 - joblib (optional, for parallel processing)
@@ -27,19 +26,19 @@ Here is a example on Mac OSX using csh/tcsh:
 Add the following in ~/.cshrc file and source it.   
 
     ############################ Python ############################### 
-    setenv PYTHON2DIR  ~/python/anaconda2
-    setenv PATH        ${PYTHON2DIR}/bin:${PATH}
+    setenv PYTHON3DIR  ~/python/anaconda3
+    setenv PATH        ${PYTHON3DIR}/bin:${PATH}
 
 Install Xcode with command line tools, follow instructions [here](https://github.com/yunjunz/macOS_Setup).
 
 Then run the following in your terminal:   
 
     cd ~/python
-    wget https://repo.continuum.io/archive/Anaconda2-4.4.0-MacOSX-x86_64.sh
-    chmod +x Anaconda2-4.4.0-MacOSX-x86_64.sh
-    ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p $PYTHON2DIR
-    $PYTHON2DIR/bin/conda config --add channels conda-forge
-    $PYTHON2DIR/bin/conda install basemap joblib pykml --yes   
+    wget https://repo.continuum.io/archive/Anaconda3-5.1.0-MacOSX-x86_64.sh
+    chmod +x Anaconda3-5.1.0-MacOSX-x86_64.sh
+    ./Anaconda3-5.1.0-MacOSX-x86_64.sh -b -p $PYTHON3DIR
+    $PYTHON3DIR/bin/conda config --add channels conda-forge
+    $PYTHON3DIR/bin/conda install basemap joblib pykml --yes   
    
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
 
@@ -48,8 +47,8 @@ For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthde
 Download the latest released version at [https://github.com/yunjunz/PySAR/releases](https://github.com/yunjunz/PySAR/releases), or use the command below.    
    
     cd ~/python
-    wget https://github.com/yunjunz/PySAR/archive/v1.2.0.tar.gz
-    tar -zxvf v1.2.0.tar.gz
+    wget https://github.com/yunjunz/PySAR/archive/v1.3.0.tar.gz
+    tar -zxvf v1.3.0.tar.gz
    
 or download the development version using git:   
    
@@ -63,7 +62,7 @@ To use the package, you need to setup the environment. Depending on your shell, 
 For bash user, add to your .bashrc file:   
 
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
-    export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-1.2.0"
+    export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-1.3.0"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}  
     export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}   
 
@@ -72,7 +71,7 @@ For csh/tcsh user, add to your .cshrc file:
     if ( ! $?PYTHONPATH ) then
         setenv PYTHONPATH ""
     endif
-    setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-1.2.0"
+    setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-1.3.0"
     setenv PYTHONPATH  ${PYSAR_HOME}:${PYTHONPATH}
     setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}
    
@@ -123,7 +122,7 @@ PySAR is a toolbox with a lot of individual utility scripts, highly modulized in
    
 ### 3. Documentation
    
-- Manual: [PDF](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-1.2.0_201708.pdf), [HTML](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-1.2.0_201708.html.zip)
+- Manual: [PDF](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-1.3_201803.pdf), [HTML](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-1.3_201803.html.zip)
 - Wiki: Check our [Github Wiki](https://github.com/yunjunz/PySAR/wiki) to see the example data, paper references, file naming convention and more.
    
 ### 4. Google Group
