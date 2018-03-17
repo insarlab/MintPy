@@ -22,11 +22,11 @@ import matplotlib as mpl;  mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 import pysar
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
 import pysar.view as pp
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ############################################################

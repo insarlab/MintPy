@@ -11,8 +11,6 @@
 # of Envisat ASAR instrument was suggested by Petar Marinkovic and Yngvar Larsen, 2013. #
 #                                                                                       #
 #########################################################################################
-# Yunjun, Jan 2017: using pysar._readfile/_writefile/_datetime
-# Yunjun, Nov 2017: add support for geocoded file using input range distance
 
 
 import os
@@ -24,15 +22,15 @@ import datetime
 import h5py
 import numpy as np
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 #########################################################################################
-def correct_lod_file(File, rangeDistFile=None, outFile=None):
+def correct_LOD(File, rangeDistFile=None, outFile=None):
     # Check Sensor Type
     print('correct Local Oscilator Drift for Envisat using an empirical model (Marinkovic and Larsen, 2013)')
     print('input file: '+File)
@@ -140,13 +138,13 @@ REFERENCE='''reference:
 '''
 
 EXAMPLE='''example:
-  lod.py timeseries.h5
-  lod.py unwrapIfgram.h5  -r geometryGeo.h5
-  lod.py filt_101020_110220_4rlks.unw
+  local_oscilator_drift.py timeseries.h5
+  local_oscilator_drift.py unwrapIfgram.h5  -r geometryGeo.h5
+  local_oscilator_drift.py filt_101020_110220_4rlks.unw
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Local Oscilator Drift correction of Envisat',\
+    parser = argparse.ArgumentParser(description='Local Oscilator Drift (LOD) correction of Envisat',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
@@ -173,7 +171,7 @@ def main(argv):
         coordType = 'radar'
     print('Input file is in %s coordinates' % (coordType))
     inps.range_dist_file = ut.get_geometry_file('slantRangeDistance', coordType=coordType)
-    inps.outfile = correct_lod_file(inps.file, inps.range_dist_file, inps.outfile)
+    inps.outfile = correct_LOD(inps.file, inps.range_dist_file, inps.outfile)
     print('Done.')
 
 

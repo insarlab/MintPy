@@ -14,11 +14,11 @@ import h5py
 import numpy as np
 from scipy.linalg import pinv
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
-import pysar._remove_surface as rm
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
+import pysar.utils.deramp as deramp
 
 
 ##########################################################################################
@@ -269,7 +269,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
             data = h5[k][ifgram].get(ifgram)[:]
             data -= data[ref_y, ref_x]
 
-            data_deramp, ramp = rm.remove_data_surface(data, ramp_mask, ramp_type)
+            data_deramp, ramp = deramp.remove_data_surface(data, ramp_mask, ramp_type)
             data_derampCor = bridging_data(data_deramp, mask, x_list, y_list)
 
             ramp[data == 0.] = 0.
@@ -297,7 +297,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
         data = readfile.read(ifgram_file)[0]
         data -= data[ref_y, ref_x]
 
-        data_deramp,ramp = rm.remove_data_surface(data,ramp_mask,ramp_type)
+        data_deramp,ramp = deramp.remove_data_surface(data,ramp_mask,ramp_type)
         data_derampCor = bridging_data(data_deramp,mask,x_list,y_list)
 
         print('writing >>> '+ifgram_cor_file)

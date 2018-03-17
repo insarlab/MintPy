@@ -42,9 +42,9 @@ import h5py
 import numpy as np
 
 import pysar
-import pysar._pysar_utilities as ut
-import pysar._readfile as readfile
-import pysar._writefile as writefile
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 import pysar.geocode as geocode
 import pysar.subset as subset
 import pysar.save_hdfeos5 as hdfeos5
@@ -414,12 +414,10 @@ UM_FILE_STRUCT='''
 
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description=LOGO,
+    parser = argparse.ArgumentParser(description='Time Series Analysis Routine',
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
-                                     #epilog=TEMPLATE+'\n'+EXAMPLE)
 
-    parser.add_argument('-v','--version', action='version', version='%(prog)s 1.2')
     parser.add_argument('custom_template_file', nargs='?',\
                         help='custom template with option settings.\n'+\
                              "It's equivalent to None, if pysarApp_template.txt is input, as it will be read always.")
@@ -954,7 +952,7 @@ def main(argv):
     if sar_mission.startswith('env'):
         print('\n**********  Local Oscillator Drift correction for Envisat  ********')
         outName = os.path.splitext(inps.timeseries_file)[0]+'_LODcor.h5'
-        lodCmd = 'lod.py %s -r %s' % (inps.timeseries_file, inps.range_dist_file)
+        lodCmd = 'local_oscilator_drift.py %s -r %s' % (inps.timeseries_file, inps.range_dist_file)
         print(lodCmd)
         if ut.update_file(outName, [inps.timeseries_file, inps.range_dist_file]):
             status = subprocess.Popen(lodCmd, shell=True).wait()

@@ -2,7 +2,6 @@
 
 import sys
 import os
-import getopt
 import argparse
 import glob
 

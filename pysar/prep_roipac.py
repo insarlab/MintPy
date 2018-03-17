@@ -13,9 +13,9 @@ import re
 
 import numpy as np
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 ######################################## Sub Functions ############################################

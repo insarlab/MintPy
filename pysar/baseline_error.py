@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 from scipy.linalg import pinv as pinv
 
-import pysar._readfile as readfile
+import pysar.utils.readfile as readfile
 
 
 ############################################################

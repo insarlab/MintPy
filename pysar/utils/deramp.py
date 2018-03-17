@@ -4,7 +4,7 @@
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# remove_plane are modified from a software originally
+# deramp are modified from a software originally
 # written by Scott Baker with the following licence:
 ###############################################################################
 #  Copyright (c) 2011, Scott Baker 
@@ -37,9 +37,9 @@ import time
 import h5py
 import numpy as np
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
 
 
 ##################################################################

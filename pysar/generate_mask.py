@@ -12,14 +12,13 @@
 import os
 import sys
 import argparse
-import getopt
 
 import numpy as np
 import h5py
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 ################################################################################################

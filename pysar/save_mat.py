@@ -16,8 +16,8 @@ import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
 
-import pysar._readfile as readfile
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import pysar.utils.readfile as readfile
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ########################################################################################

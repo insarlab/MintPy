@@ -15,9 +15,9 @@ import h5py
 import numpy as np
 import scipy.io.netcdf as netcdf
 
-import pysar._readfile as readfile
+import pysar.utils.readfile as readfile
 import pysar.view as pp
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ####################################################################################

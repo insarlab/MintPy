@@ -2,7 +2,7 @@
 ############################################################
 # Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Author:  Heresh Fattahi, 2013                            #
 ############################################################
 # Yunjun, Jan 2016: add out_name option, support ROI_PAC product
 #                   support coherence/wrapped
@@ -17,10 +17,11 @@ import argparse
 import h5py
 import numpy as np
 
-import _datetime as ptime
-import _readfile as readfile
-import _writefile as writefile
-from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import pysar
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ################################################################################
@@ -140,24 +141,36 @@ EXAMPLE='''example:
   add.py  timeseries_ECMWF.h5  ECMWF.h5           -o  timeseries.h5
 '''
 
-def cmdLineParse():
+def createParser():
+    ''' Command line parser '''
     parser = argparse.ArgumentParser(description='Generate sum of multiple input files.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='files (2 or more) to be added')
     parser.add_argument('-o','--output', dest='outfile', help='output file name')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs = None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+    if not inps.input and not inps.geometryDir:
+        parser.print_usage()
+        sys.exit('ERROR: Empty input directory!')
+    return inps
+
+def cmdLineParse(iargs = None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     if len(inps.file) < 2:
         parser.print_usage()
-        sys.exit(os.path.basename(sys.argv[0])+': error: number of input files is < 2')
+        sys.exit('ERROR: At least 2 input files needed!')
     return inps
 
 
 ################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     print('Input files to be added: ')
     print(inps.file)
 
@@ -168,5 +181,8 @@ def main(argv):
 
 ################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])  
+    '''
+    Main driver.
+    '''
+    main()
 

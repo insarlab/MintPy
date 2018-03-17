@@ -8,9 +8,9 @@ import argparse
 
 import h5py
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
 
 
 def get_mission_name(meta_dict):

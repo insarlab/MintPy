@@ -18,7 +18,7 @@ import datetime as dt
 import h5py
 import numpy as np
 
-import pysar._readfile as readfile
+import pysar.utils.readfile as readfile
 import pysar.info as info
 
 

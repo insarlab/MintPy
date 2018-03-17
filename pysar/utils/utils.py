@@ -44,12 +44,12 @@ import numpy as np
 import multiprocessing
 
 import pysar
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._datetime as ptime
-import pysar._network as pnet
-import pysar._remove_surface as rm
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file, geometry_dataset
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.network as pnet
+import pysar.utils.deramp as deramp
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file, geometry_dataset
 
 
 ###############################################################################
@@ -454,7 +454,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 raise Exception(msg)
             else:
                 print('removing a '+ramp_type+' ramp from file: '+timeseries_resid_file)
-                deramp_file = rm.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
+                deramp_file = deramp.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
         print('Calculating residual standard deviation for each epoch from file: '+deramp_file)
         std_file = timeseries_std(deramp_file, mask_file, std_file)
 
@@ -541,7 +541,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 raise Exception(msg)
             else:
                 print('removing a '+ramp_type+' ramp from file: '+timeseries_resid_file)
-                deramp_file = rm.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
+                deramp_file = deramp.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
         print('Calculating residual RMS for each epoch from file: '+deramp_file)
         rms_file = timeseries_rms(deramp_file, mask_file, rms_file)
 

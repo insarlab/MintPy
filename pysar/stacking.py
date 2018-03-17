@@ -11,7 +11,7 @@ import argparse
 
 import h5py
 
-import pysar._pysar_utilities as ut
+import pysar.utils.utils as ut
 
 
 #################################  Usage  ####################################

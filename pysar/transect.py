@@ -8,7 +8,6 @@
 
 import os
 import sys
-import getopt
 import glob
 import argparse
 
@@ -19,10 +18,10 @@ import scipy.io as sio
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
 import pysar.subset as sub
-import pysar.view as view
+#import pysar.view as pp
 
 
 #####################################################################

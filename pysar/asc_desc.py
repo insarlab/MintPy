@@ -14,9 +14,9 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 import pysar.subset as subset
 
 
@@ -129,7 +129,8 @@ def main(argv):
     ##### 2. Project displacement from LOS to Horizontal and Vertical components
     # math for 3D: cos(theta)*Uz - cos(alpha)*sin(theta)*Ux + sin(alpha)*sin(theta)*Uy = Ulos
     # math for 2D: cos(theta)*Uv - sin(alpha-az)*sin(theta)*Uh = Ulos   #Uh_perp = 0.0
-    # This could be easily modified to support multiple view geometry (e.g. two adjcent tracks from asc & desc) to resolve 3D
+    # This could be easily modified to support multiple view geometry
+    # (e.g. two adjcent tracks from asc & desc) to resolve 3D
 
     # Design matrix
     A = np.zeros((2,2));

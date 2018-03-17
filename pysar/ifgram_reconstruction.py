@@ -6,16 +6,15 @@
 ############################################################
 
 import sys
-import getopt
 import time
 import datetime
 
 import h5py
 import numpy as np
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
 
 
 #####################################################################################

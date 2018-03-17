@@ -16,8 +16,8 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
 
 
 ##############################################################################################

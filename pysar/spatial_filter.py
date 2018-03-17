@@ -26,10 +26,10 @@ import numpy as np
 #from PIL import Image
 from scipy import ndimage
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ################################################################################################

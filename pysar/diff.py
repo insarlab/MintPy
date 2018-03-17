@@ -16,9 +16,9 @@ import argparse
 import numpy as np
 import h5py
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._datetime as ptime
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
 
 
 #####################################################################################

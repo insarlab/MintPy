@@ -14,7 +14,7 @@ import pyproj
 import random
 import matplotlib.pyplot as plt
 
-import pysar._datetime as ptime
+import pysar.utils.datetime as ptime
 
 
 def get_lat_lon(atr):

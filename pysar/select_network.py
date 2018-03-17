@@ -20,9 +20,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import pysar
-import pysar._readfile as readfile
-import pysar._datetime as ptime
-import pysar._network as pnet
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.network as pnet
 
 
 sar_sensor_list=['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','Sen','Kmps5','G3']

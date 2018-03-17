@@ -12,10 +12,10 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import scipy.stats as stats
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
-import pysar.view as view
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
+import pysar.view as pp
 from pysar.mask import mask_matrix
 
 
@@ -240,7 +240,7 @@ if __name__ == '__main__':
 
     # Flip up-down / left-right
     if inps.auto_flip:
-        inps.flip_lr, inps.flip_ud = view.auto_flip_direction(atr)
+        inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(atr)
     else:
         inps.flip_ud = False
         inps.left_lr = False
@@ -292,7 +292,7 @@ if __name__ == '__main__':
     ax_v = fig_v.add_axes([0.125,0.25,0.75,0.65])
     if inps.dem_file:
         dem = readfile.read(inps.dem_file, epoch='height')[0]
-        ax_v = view.plot_dem_yx(ax_v, dem)
+        ax_v = pp.plot_dem_yx(ax_v, dem)
     img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim_mat, interpolation='nearest')
 
     # Reference Pixel

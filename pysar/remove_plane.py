@@ -16,10 +16,10 @@ import argparse
 import h5py
 import numpy as np
 
-import pysar._pysar_utilities as ut
-import pysar._remove_surface as rm
-import pysar._readfile as readfile
-import pysar._writefile as writefile
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
+import pysar.utils.deramp as deramp
 
 
 ######################################
@@ -116,18 +116,18 @@ def main(argv):
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
 
     if len(inps.file) == 1:
-        rm.remove_surface(inps.file[0], inps.surface_type, inps.mask_file, inps.outfile, inps.ysub)
+        deramp.remove_surface(inps.file[0], inps.surface_type, inps.mask_file, inps.outfile, inps.ysub)
 
     elif inps.parallel:
         #num_cores = min(multiprocessing.cpu_count(), len(inps.file))
         #print 'parallel processing using %d cores ...'%(num_cores)
-        Parallel(n_jobs=num_cores)(delayed(rm.remove_surface)(file, inps.surface_type, inps.mask_file, ysub=inps.ysub)\
+        Parallel(n_jobs=num_cores)(delayed(deramp.remove_surface)(file, inps.surface_type, inps.mask_file, ysub=inps.ysub)\
                                    for file in inps.file)
 
     else:
         for File in inps.file:
             print('------------------------------------------')
-            rm.remove_surface(File, inps.surface_type, inps.mask_file, ysub=inps.ysub)
+            deramp.remove_surface(File, inps.surface_type, inps.mask_file, ysub=inps.ysub)
     
     print('Done.')
     return

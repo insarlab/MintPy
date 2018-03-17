@@ -28,14 +28,14 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
 import pysar
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
 import pysar.mask as mask
 import pysar.subset as subset
 from pysar.multilook import multilook_matrix
 
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 
@@ -832,12 +832,12 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     Example:
         import matplotlib.pyplot as plt
         import pysar._readfile as readfile
-        import pysar.view as view
+        import pysar.view as pp
          
         data, atr = readfile.read('velocity.h5')
         fig = plt.figure()
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
-        ax = view.plot_matrix(ax, data, atr)
+        ax = pp.plot_matrix(ax, data, atr)
         plt.show()
     '''
 

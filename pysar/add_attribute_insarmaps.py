@@ -1,11 +1,10 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 
 import psycopg2
 import sys
-import getopt
 import os
 import argparse
-import pysar._readfile as readfile
+import pysar.utils.readfile as readfile
 import json
 import pycurl
 from io import StringIO
