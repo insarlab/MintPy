@@ -320,13 +320,10 @@ def read_template2inps(template_file, inps=None):
 
     print('read options from tempalte file: '+os.path.basename(inps.template_file))
     template = readfile.read_template(inps.template_file)
-    key_list = list(template.keys())
-
-    # Coherence-based network modification
     prefix = 'pysar.unwrapError.'
 
     key = prefix+'method'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['bridging','phase_closure']:
             inps.method = value
@@ -336,13 +333,13 @@ def read_template2inps(template_file, inps=None):
             print('Unrecognized input for %s: %s' % (key, value))
 
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.mask_file = value
 
     key = prefix+'yx'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             yx = value.replace(';',' ').replace(',',' ').split()
@@ -351,7 +348,7 @@ def read_template2inps(template_file, inps=None):
             inps.x = yx[1::2]
 
     key = prefix+'ramp'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto']:
             inps.ramp_type = 'plane'

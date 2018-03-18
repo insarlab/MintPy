@@ -29,7 +29,7 @@ def ref_date_attribute(atr_in, ref_date, date_list):
     ref_index = date_list.index(ref_date)
 
     atr = dict()
-    for key, value in atr_in.items():
+    for key, value in iter(atr_in.items()):
         atr[key] = str(value)
 
     # Update ref_date
@@ -108,7 +108,7 @@ def ref_date_file(inFile, ref_date, outFile=None):
 
     ## Update attributes
     atr = ref_date_attribute(atr, ref_date, date_list)
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5out.close()
 
@@ -121,15 +121,14 @@ def read_template2inps(templateFile, inps=None):
         inps = cmdLineParse()
 
     template = readfile.read_template(templateFile)
-    key_list = list(template.keys())
 
     key = 'pysar.reference.date'
-    if key in key_list:
+    if key in template.keys():
         inps.ref_date = template[key]
 
     prefix = 'pysar.residualStd.'
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.mask_file = 'maskTempCoh.h5'
@@ -139,7 +138,7 @@ def read_template2inps(templateFile, inps=None):
             inps.mask_file = value
 
     key = prefix+'ramp'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.ramp_type = 'quadratic'
@@ -170,9 +169,9 @@ pysar.reference.date = auto   #[auto / reference_date.txt / 20090214 / no]
 '''
 
 EXAMPLE='''example:
-  reference_epoch.py timeseries_ECMWF_demErr.h5  --ref-date 20050107
-  reference_epoch.py timeseries_ECMWF_demErr.h5  --ref-date auto
-  reference_epoch.py timeseries_ECMWF_demErr.h5  --template KujuAlosAT422F650.template
+  reference_date.py timeseries_ECMWF_demErr.h5  --ref-date 20050107
+  reference_date.py timeseries_ECMWF_demErr.h5  --ref-date auto
+  reference_date.py timeseries_ECMWF_demErr.h5  --template KujuAlosAT422F650.template
 '''
 
 def cmdLineParse():

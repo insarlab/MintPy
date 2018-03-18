@@ -30,6 +30,10 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 ############################################################################### 
+#
+# Recommend usage:
+#   import pysar.utils.utils as ut
+#
 
 
 import os
@@ -99,7 +103,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     outFile = None
     for fname in existFiles:
         atr = readfile.read_attribute(fname)
-        if 'Y_FIRST' in list(atr.keys()):
+        if 'Y_FIRST' in atr.keys():
             epoch2check = 'rangeCoord'
         else:
             epoch2check = 'latitude'
@@ -154,8 +158,8 @@ def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, pri
         #Check coord type
         if coordType:
             atr = readfile.read_attribute(fname)
-            if ((coordType == 'radar' and 'Y_FIRST'     in list(atr.keys())) or \
-                (coordType == 'geo'   and 'Y_FIRST' not in list(atr.keys()))):
+            if ((coordType == 'radar' and 'Y_FIRST'     in atr.keys()) or \
+                (coordType == 'geo'   and 'Y_FIRST' not in atr.keys())):
                 continue
         #Check dataset
         try:
@@ -228,7 +232,7 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     if print_msg:
         print('Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR'])
 
-    if 'X_FIRST' in list(atr.keys()):
+    if 'X_FIRST' in atr.keys():
         geocoded = True
         if print_msg:
             print('Loaded dataset are in geo coordinates')
@@ -388,13 +392,12 @@ def circle_index(atr,circle_par):
 
 def update_template_file(template_file, extra_dict):
     '''Update option value in template_file with value from input extra_dict'''
-    extra_key_list = list(extra_dict.keys())
 
     ## Compare and skip updating template_file is no new option value found.
     update = False
     orig_dict = readfile.read_template(template_file)
-    for key, value in orig_dict.items():
-        if key in extra_key_list and extra_dict[key] != value:
+    for key, value in iter(orig_dict.items()):
+        if key in extra_dict.keys() and extra_dict[key] != value:
             update = True
     if not update:
         print('No new option value found, skip updating '+template_file)
@@ -410,7 +413,7 @@ def update_template_file(template_file, extra_dict):
         if not line.startswith('%') and not line.startswith('#') and len(c) > 1:
             key = c[0]
             value = str.replace(c[1],'\n','').split("#")[0].strip()
-            if key in extra_key_list and extra_dict[key] != value:
+            if key in extra_dict.keys() and extra_dict[key] != value:
                 line = line.replace(value, extra_dict[key], 1)
                 print('    '+key+': '+value+' --> '+extra_dict[key])
         f_tmp.write(line+'\n')
@@ -724,10 +727,10 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
 
 def update_attribute_or_not(atr_new, atr_orig, update=False):
     '''Compare new attributes with exsiting ones'''
-    for key in list(atr_new.keys()):
+    for key in atr_new.keys():
         value = str(atr_new[key])
-        if (key in list(atr_orig.keys()) and value == str(atr_orig[key]) or\
-            key not in list(atr_orig.keys()) and value == 'None'):
+        if (key     in atr_orig.keys() and value == str(atr_orig[key]) or\
+            key not in atr_orig.keys() and value == 'None'):
             next
         else:
             update = True
@@ -767,7 +770,7 @@ def add_attribute(File, atr_new=dict()):
     # Update attributes
     h5 = h5py.File(File,'r+')
     if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
-        for key, value in atr_new.items():
+        for key, value in iter(atr_new.items()):
             # delete the item is new value is None
             if value == 'None':
                 try: h5[k].attrs.pop(key)
@@ -777,7 +780,7 @@ def add_attribute(File, atr_new=dict()):
     elif k in multi_group_hdf5_file:
         epochList = list(h5[k].keys())
         for epoch in epochList:
-            for key, value in atr_new.items():
+            for key, value in iter(atr_new.items()):
                 if value == 'None':
                     try: h5[k][epoch].attrs.pop(key)
                     except: pass
@@ -840,10 +843,10 @@ def perp_baseline_timeseries(atr, dimension=1):
     Output:
         pbase - np.array, with shape = [date_num, 1] or [date_num, length]
     '''
-    if dimension > 0 and 'Y_FIRST' in list(atr.keys()):
+    if dimension > 0 and 'Y_FIRST' in atr.keys():
         dimension = 0
         print('file is in geo coordinates, return constant P_BASELINE for one interferogram')
-    if dimension > 0 and any(i not in list(atr.keys()) for i in ['P_BASELINE_TOP_TIMESERIES',\
+    if dimension > 0 and any(i not in atr.keys() for i in ['P_BASELINE_TOP_TIMESERIES',\
                                                            'P_BASELINE_BOTTOM_TIMESERIES']):
         dimension = 0
         print('No P_BASELINE_TOP/BOTTOM_TIMESERIES attributes found, return constant P_BASELINE for one interferogram')
@@ -880,7 +883,7 @@ def range_distance(atr, dimension=2):
     Output: np.array (0, 1 or 2 D) - range distance between antenna and ground target in meters
     '''
     # return center value for geocoded input file
-    if 'Y_FIRST' in list(atr.keys()) and dimension > 0:
+    if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
         print('input file is geocoded, return center range distance for the whole area')
 
@@ -922,7 +925,7 @@ def incidence_angle(atr, dimension=2, print_msg=True):
     Output: 2D np.array - incidence angle in degree for each pixel
     '''
     # Return center value for geocoded input file
-    if 'Y_FIRST' in list(atr.keys()) and dimension > 0:
+    if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
         if print_msg:
             print('input file is geocoded, return center incident angle only')
@@ -989,12 +992,12 @@ def check_drop_ifgram(h5, print_msg=True):
     k = list(h5.keys())[0]
     dsList = sorted(h5[k].keys())
     atr = h5[k][dsList[0]].attrs
-    if 'drop_ifgram' not in list(atr.keys()):
+    if 'drop_ifgram' not in atr.keys():
         return dsList
 
     dsListOut = list(dsList)
     for ds in dsList:
-        if h5[k][ds].attrs['drop_ifgram'] == 'yes':
+        if 'drop_ifgram' in h5[k][ds].attrs.keys() and h5[k][ds].attrs['drop_ifgram'] == 'yes':
             dsListOut.remove(ds)
 
     if len(dsList) > len(dsListOut) and print_msg:
@@ -1264,7 +1267,7 @@ def temporal_average(File, outFile=None):
     h5mean = h5py.File(outFile, 'w')
     group  = h5mean.create_group('mask')
     dset = group.create_dataset(os.path.basename('mask'), data=dMean, compression='gzip')
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5mean.close()
 
@@ -1306,12 +1309,10 @@ def get_file_list(fileList, abspath=False, coord=None):
         fileListOutBk = list(fileListOut)
         for fname in fileListOutBk:
             atr = readfile.read_attribute(fname)
-            if coord in ['geo']:
-                if 'Y_FIRST' not in list(atr.keys()):
-                    fileListOut.remove(fname)
-            elif coord in ['radar','rdr','rdc']:
-                if 'Y_FIRST' in list(atr.keys()):
-                    fileListOut.remove(fname)
+            if coord in ['geo'] and 'Y_FIRST' not in atr.keys():
+                fileListOut.remove(fname)
+            elif coord in ['radar','rdr','rdc'] and 'Y_FIRST' in atr.keys():
+                fileListOut.remove(fname)
             else:
                 raise ValueError('Input coord type: '+str(coord)+'\n. Only support geo, radar, rdr, rdc inputs.')
 
@@ -1369,7 +1370,7 @@ def mode (thelist):
         counts[item] = counts.get(item, 0) + 1
     maxcount = 0
     maxitem  = None
-    for k, v in list(counts.items()):
+    for k, v in iter(counts.items()):
         if v > maxcount:
             maxitem  = k
             maxcount = v
@@ -1387,7 +1388,7 @@ def mode (thelist):
 ######################################################################################################
 def range_ground_resolution(atr, print_msg=False):
     '''Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
-    if 'X_FIRST' in list(atr.keys()):
+    if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no range resolution info.')
         return
     inc_angle = incidence_angle(atr, 0, print_msg)
@@ -1396,7 +1397,7 @@ def range_ground_resolution(atr, print_msg=False):
 
 def azimuth_ground_resolution(atr):
     '''Get azimuth resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
-    if 'X_FIRST' in list(atr.keys()):
+    if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no azimuth resolution info.')
         return
     try:    processor = atr['INSAR_PROCESSOR']
@@ -1449,7 +1450,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
         print('reading file: '+lookupFile)
 
     #####For lookup table in geo-coord, read value directly
-    if 'Y_FIRST' in list(atr_lut.keys()):
+    if 'Y_FIRST' in atr_lut.keys():
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3
         lut_x = readfile.read(lookupFile, epoch='rangeCoord')[0]
@@ -1467,14 +1468,14 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
         y_factor = 2
         az0 = 0
         rg0 = 0
-        if 'Y_FIRST' not in list(atr_rdr.keys()):
+        if 'Y_FIRST' not in atr_rdr.keys():
             az_step = azimuth_ground_resolution(atr_rdr)
             rg_step = range_ground_resolution(atr_rdr, print_msg)
             x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
             y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
-            if 'subset_y0' in list(atr_rdr.keys()):
+            if 'subset_y0' in atr_rdr.keys():
                 az0 = int(atr_rdr['subset_y0'])
-            if 'subset_x0' in list(atr_rdr.keys()):
+            if 'subset_x0' in atr_rdr.keys():
                 rg0 = int(atr_rdr['subset_x0'])
 
         width  = int(atr_lut['WIDTH'])
@@ -1534,8 +1535,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
         print('reading file: '+lookupFile)
 
     #####For lookup table in geo-coord, search the buffer and use center pixel
-    if 'Y_FIRST' in list(atr_lut.keys()):
-        if 'subset_x0' in list(atr_rdr.keys()):
+    if 'Y_FIRST' in atr_lut.keys():
+        if 'subset_x0' in atr_rdr.keys():
             rg += int(atr_rdr['subset_x0'])
             az += int(atr_rdr['subset_y0'])        
 
@@ -1554,7 +1555,7 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
         # Get range/azimuth ground resolution/step
         x_factor = 10
         y_factor = 10
-        if 'Y_FIRST' not in list(atr_rdr.keys()):
+        if 'Y_FIRST' not in atr_rdr.keys():
             az_step = azimuth_ground_resolution(atr_rdr)
             rg_step = range_ground_resolution(atr_rdr, print_msg)
             x_factor = 2*np.ceil(abs(lon_step)/rg_step)
@@ -1779,7 +1780,7 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
         dateIndex[dateList[ni]]=ni
     if not 'timeseries' in h5timeseries:
         group = h5timeseries.create_group('timeseries')
-        for key,value in timeseriesDict.items():
+        for key,value in iter(timeseriesDict.items()):
             group.attrs[key] = value
     
     for date in dateList:
@@ -1875,7 +1876,7 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
         dateIndex[dateList[ni]]=ni
     if not 'timeseries' in h5timeseries:
         group = h5timeseries.create_group('timeseries')
-        for key,value in timeseriesDict.items():
+        for key,value in iter(timeseriesDict.items()):
             group.attrs[key] = value
   
     for date in dateList:

@@ -149,7 +149,8 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
     sub_y = [subset_box[1], subset_box[3]]
     #####
     atr = dict()
-    for key, value in atr_dict.items():  atr[key] = str(value)
+    for key, value in iter(atr_dict.items()):
+        atr[key] = str(value)
 
     ##### Update attribute variable
     atr['FILE_LENGTH'] = str(sub_y[1]-sub_y[0])
@@ -190,7 +191,7 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
     except: pass
 
     # Starting Range for file in radar coord
-    if not 'Y_FIRST' in list(atr_dict.keys()):
+    if not 'Y_FIRST' in atr_dict.keys():
         try:
             atr['STARTING_RANGE'] = float(atr['STARTING_RANGE']) + float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
             if print_msg:  print('update STARTING_RANGE')
@@ -264,7 +265,7 @@ def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None):
     '''
     lat = np.array([geo_box[3],geo_box[3],geo_box[1],geo_box[1]])
     lon = np.array([geo_box[0],geo_box[2],geo_box[0],geo_box[2]])
-    if 'Y_FIRST' in list(atr_rdr.keys()):
+    if 'Y_FIRST' in atr_rdr.keys():
         y = coord_geo2radar(lat, atr_rdr, 'lat')
         x = coord_geo2radar(lon, atr_rdr, 'lon')
         pix_box = (x[0], y[2], x[1], y[0])
@@ -286,7 +287,7 @@ def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None):
     '''
     x = np.array([pix_box[0],pix_box[2],pix_box[0],pix_box[2]])
     y = np.array([pix_box[1],pix_box[1],pix_box[3],pix_box[3]])
-    if 'Y_FIRST' in list(atr_rdr.keys()):
+    if 'Y_FIRST' in atr_rdr.keys():
         lat = coord_radar2geo(y, atr_rdr, 'y')
         lon = coord_radar2geo(x, atr_rdr, 'x')
         geo_box = (lon[0], lat[0], lon[1], lat[2])
@@ -467,7 +468,7 @@ def subset_file(File, subset_dict_input, outFile=None):
     # if fill_value exists and not None, subset data and fill assigned value for area out of its coverage.
     # otherwise, re-check subset to make sure it's within data coverage and initialize the matrix with np.nan
     outfill = False
-    if 'fill_value' in list(subset_dict.keys()) and subset_dict['fill_value']:
+    if 'fill_value' in subset_dict.keys() and subset_dict['fill_value']:
         outfill = True
     else:
         outfill = False
@@ -493,7 +494,7 @@ def subset_file(File, subset_dict_input, outFile=None):
     # Output File Name
     if not outFile:
         if os.getcwd() == os.path.dirname(os.path.abspath(File)):
-            if 'tight' in list(subset_dict.keys()) and subset_dict['tight']:
+            if 'tight' in subset_dict.keys() and subset_dict['tight']:
                 outFile = os.path.splitext(File)[0]+'_tight'+os.path.splitext(File)[1]
             else:
                 outFile = 'subset_'+os.path.basename(File)
@@ -531,7 +532,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             prog_bar.update(i+1, suffix=epoch)
         prog_bar.close()
         atr_dict = subset_attribute(atr_dict, pix_box)
-        for key,value in atr_dict.items():
+        for key,value in iter(atr_dict.items()):
             group.attrs[key] = value
 
     elif k in multi_group_hdf5_file:
@@ -548,7 +549,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             atr_dict  = subset_attribute(atr_dict, pix_box, print_msg=False)
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in atr_dict.items():
+            for key, value in iter(atr_dict.items()):
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
         prog_bar.close()
@@ -700,7 +701,7 @@ def main(argv):
             if not inps.lookup_file:
                 sys.exit('No lookup file found! Can not use --tight option without it.')
             atr_lut = readfile.read_attribute(inps.lookup_file)
-            if 'Y_FIRST' in list(atr_lut.keys()):
+            if 'Y_FIRST' in atr_lut.keys():
                 rg_lut = readfile.read(inps.lookup_file, epoch='range')[0]
                 rg_unique, rg_pos = np.unique(rg_lut, return_inverse=True)
                 idx_row, idx_col = np.where(rg_lut != rg_unique[np.bincount(rg_pos).argmax()])
@@ -727,7 +728,7 @@ def main(argv):
         geoFileList = []
         for File in inps.file:
             atr = readfile.read_attribute(File)
-            if 'X_FIRST' in list(atr.keys()):
+            if 'X_FIRST' in atr.keys():
                 geoFileList.append(File)
             else:
                 rdrFileList.append(File)

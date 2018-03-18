@@ -88,7 +88,7 @@ def get_lalo_ref(m_par_file, atr_dict={}):
         os.system(extractCmd)
 
     # Read corner txt file
-    lalo_ref = np.loadtxt(m_corner_file, dtype='str')
+    lalo_ref = np.loadtxt(m_corner_file, dtype=bytes).astype(str)
     atr_dict['LAT_REF1'] = lalo_ref[0,0]
     atr_dict['LAT_REF2'] = lalo_ref[1,0]
     atr_dict['LAT_REF3'] = lalo_ref[2,0]

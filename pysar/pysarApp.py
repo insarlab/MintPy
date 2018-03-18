@@ -57,7 +57,7 @@ def check_geocode_file(lookupFile, File, templateFile=None, outFile=None):
         return None
     else:
         atr = readfile.read_attribute(File)
-        if 'Y_FIRST' in list(atr.keys()):
+        if 'Y_FIRST' in atr.keys():
             return File
     
     if not lookupFile:
@@ -110,7 +110,7 @@ def subset_dataset(inps, template_file):
     #####Step 1: Read subset info into pix_box
     #Check conflict
     if geo_box:
-        if not inps.lookup_file and 'Y_FIRST' not in list(atr.keys()):
+        if not inps.lookup_file and 'Y_FIRST' not in atr.keys():
             print('WARNING: turn off pysar.subset.lalo because:')
             print('    1) no lookup file AND ')
             print('    2) dataset is in radar coord')
@@ -120,7 +120,7 @@ def subset_dataset(inps, template_file):
 
     #geo_box --> pix_box
     if geo_box:
-        if 'Y_FIRST' not in list(atr.keys()):
+        if 'Y_FIRST' not in atr.keys():
             print('calculate bounding box in y/x from lat/lon input')
             pix_box = subset.bbox_geo2radar(geo_box, atr, inps.lookup_file)
         else:
@@ -141,7 +141,7 @@ def subset_dataset(inps, template_file):
     print("Go to subset directory: "+subset_dir)
     lookupFileOld = inps.lookup_file
 
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         print('\n--------------------------------------------')
         print('dataset is in geo coordinates')
         print('    subseting all files in (x0,y0,x1,y1): '+str(pix_box))
@@ -162,7 +162,7 @@ def subset_dataset(inps, template_file):
         inps.coherence_file = check_subset_file(inps.coherence_file, vars(inps))
         inps.dem_radar_file = check_subset_file(inps.dem_radar_file, vars(inps))
         inps.trop_file      = check_subset_file(inps.trop_file,      vars(inps))
-        if 'Y_FIRST' not in list(atr_lut.keys()):
+        if 'Y_FIRST' not in atr_lut.keys():
             inps.lookup_file  = check_subset_file(inps.lookup_file,  vars(inps))
 
         print('')
@@ -172,7 +172,7 @@ def subset_dataset(inps, template_file):
         print('    subseting all geo-coord files in (lon0,lat0,lon1,lat1): '+str(geo_box))
         inps = subset.subset_box2inps(inps, None, geo_box)
         inps.dem_geo_file = check_subset_file(inps.dem_geo_file, vars(inps))
-        if 'Y_FIRST' in list(atr_lut.keys()):
+        if 'Y_FIRST' in atr_lut.keys():
             inps.lookup_file = check_subset_file(inps.lookup_file, vars(inps))
     return inps
 
@@ -530,16 +530,16 @@ def main(argv):
         print('read custom template file: '+inps.custom_template_file)
         custom_template = readfile.read_template(inps.custom_template_file)
         # correct some loose type errors
-        for key in list(custom_template.keys()):
+        for key in custom_template.keys():
             if   custom_template[key].lower() in ['default']:          custom_template[key] = 'auto'
             elif custom_template[key].lower() in ['n','off','false']:  custom_template[key] = 'no'
             elif custom_template[key].lower() in ['y','on','true']:    custom_template[key] = 'yes'
         for key in ['pysar.deramp', 'pysar.troposphericDelay.method']:
-            if key in list(custom_template.keys()):
+            if key in custom_template.keys():
                 custom_template[key] = custom_template[key].lower().replace('-','_')
 
         # FA 1/18: insert general options from template file as pysar.* options
-        if 'processor' in list(custom_template.keys()):
+        if 'processor' in custom_template.keys():
             custom_template['pysar.insarProcessor'] = custom_template['processor']
 
         # Update default template with custom input template
@@ -559,7 +559,7 @@ def main(argv):
     # Get existing tropo delay file
     inps.trop_model = 'ECMWF'
     key = 'pysar.troposphericDelay.weatherModel'
-    if key in list(template.keys()):
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.trop_model = 'ECMWF'
@@ -592,7 +592,7 @@ def main(argv):
 
     atr = readfile.read_attribute(inps.ifgram_file)
     inps.coord_type = 'radar'
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         inps.coord_type = 'geo'
 
     if inps.custom_template_file:
@@ -620,7 +620,7 @@ def main(argv):
             sys.exit(-1)
 
         # Reset reference pixel
-        seedCmd = 'seed_data.py '+inps.ifgram_file+' --reset'
+        seedCmd = 'reference_point.py '+inps.ifgram_file+' --reset'
         print(seedCmd)
         status = subprocess.Popen(seedCmd, shell=True).wait()
         if status is not 0:
@@ -643,7 +643,7 @@ def main(argv):
 
         ##Tight subset lookup table in geo coord (roipac/gamma)
         atr_lut = readfile.read_attribute(inps.lookup_file)
-        if 'Y_FIRST' in list(atr_lut.keys()):
+        if 'Y_FIRST' in atr_lut.keys():
             subCmd = 'subset.py '+inps.lookup_file+' --tight'
             print(subCmd)
             outName = os.path.splitext(inps.lookup_file)[0]+'_tight'+os.path.splitext(inps.lookup_file)[1]
@@ -791,13 +791,13 @@ def main(argv):
     # Referencing Interferograms in Space
     #########################################
     print('\n**********  Reference in space  ***************')
-    seedCmd = 'seed_data.py '+inps.ifgram_file+' --template '+inps.template_file+' --mark-attribute'
-    resetCmd = 'seed_data.py '+inps.ifgram_file+' --reset'
+    seedCmd = 'reference_point.py '+inps.ifgram_file+' --template '+inps.template_file+' --mark-attribute'
+    resetCmd = 'reference_point.py '+inps.ifgram_file+' --reset'
 
     ## Skip calling seed command only if 1) ref_y/x exists AND 2) pysar.reference.yx/lalo == auto
     run_seedCmd = True
     atr = readfile.read_attribute(inps.ifgram_file)
-    if 'ref_x' in list(atr.keys()):
+    if 'ref_x' in atr.keys():
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
         length = int(atr['FILE_LENGTH'])
@@ -808,10 +808,10 @@ def main(argv):
             print('1) reset reference pixel info')
             print(resetCmd)
             status = subprocess.Popen(resetCmd, shell=True).wait()
-            print('2) re-run seed_data.py to select new refernce pixel.')
+            print('2) re-run reference_point.py to select new refernce pixel.')
         else:
             print('----------------------------------------------------------------------------------------')
-            print('To remove reference pixel info, use seed_data.py --reset option:')
+            print('To remove reference pixel info, use reference_point.py --reset option:')
             print(resetCmd)
             print('----------------------------------------------------------------------------------------')
             prefix = 'pysar.reference.'
@@ -904,7 +904,7 @@ def main(argv):
     # Read template option
     inps.min_temp_coh = 0.7
     key = 'pysar.networkInversion.minTempCoh'
-    if key in list(template.keys()):
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.min_temp_coh = 0.7
@@ -928,7 +928,7 @@ def main(argv):
     ## Check DEM file for tropospheric delay setting
     ## DEM is needed with same coord (radar/geo) as timeseries file
     atr = readfile.read_attribute(inps.timeseries_file)
-    if 'X_FIRST' in list(atr.keys()):
+    if 'X_FIRST' in atr.keys():
         demFile = inps.dem_geo_file
     else:
         demFile = inps.dem_radar_file
@@ -967,7 +967,7 @@ def main(argv):
     ##############################################
     print('\n**********  Tropospheric Delay Correction  ******************')
     key = 'pysar.troposphericDelay.method'
-    if (key in list(template.keys()) and template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']):
+    if (key in template.keys() and template['pysar.deramp'] in ['base_trop_cor','basetropcor','baselinetropcor']):
         message='''
         Orbital error correction was BaseTropCor.
         Tropospheric correction was already applied simultaneous with baseline error correction.
@@ -981,7 +981,7 @@ def main(argv):
     # read template option
     inps.trop_method = 'pyaps'
     key = 'pysar.troposphericDelay.method'
-    if key in list(template.keys()):
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.trop_method = 'pyaps'
@@ -990,7 +990,7 @@ def main(argv):
 
     inps.trop_poly_order = '1'
     key = 'pysar.troposphericDelay.polyOrder'
-    if key in list(template.keys()):
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.trop_poly_order = '1'
@@ -1085,7 +1085,7 @@ def main(argv):
     print('\n**********  Reference in Time  *******')
     if template['pysar.reference.date'] != 'no':
         outName = os.path.splitext(inps.timeseries_file)[0]+'_refDate.h5'
-        refCmd = 'reference_epoch.py '+inps.timeseries_file+' --template '+inps.template_file
+        refCmd = 'reference_date.py '+inps.timeseries_file+' --template '+inps.template_file
         print(refCmd)
         status = subprocess.Popen(refCmd, shell=True).wait()
         if status is not 0:
@@ -1104,7 +1104,7 @@ def main(argv):
     # Read template option
     inps.deramp_mask_file = 'maskTempCoh.h5'
     key = 'pysar.deramp.maskFile'
-    if key in list(template.keys()):
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.deramp_mask_file = 'maskTempCoh.h5'
@@ -1124,14 +1124,14 @@ def main(argv):
             outName = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.deramp_method+'.h5'
 
         elif inps.deramp_method in ['baseline_cor','baselinecor']:
-            if not 'X_FIRST' in list(atr.keys()):
+            if not 'X_FIRST' in atr.keys():
                 derampCmd = 'baseline_error.py '+inps.timeseries_file+' '+inps.mask_file
                 outName = os.path.splitext(inps.timeseries_file)[0]+'_baselineCor.h5'
             else:
                 warnings.warn('BaselineCor method can only be applied in radar coordinate, skipping correction')
 
         elif inps.deramp_method in ['base_trop_cor','basetropcor','baselinetropcor']:
-            if not 'X_FIRST' in list(atr.keys()):
+            if not 'X_FIRST' in atr.keys():
                 print('Joint estimation of Baseline error and tropospheric delay [height-correlation approach]')
                 try:    poly_order = template['pysar.troposphericDelay.polyOrder']
                 except: poly_order = '1'
@@ -1187,7 +1187,7 @@ def main(argv):
     print('\n**********  Post-processing  ********************************')
 
     # Geocoding
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         inps.vel_geo_file = inps.vel_file
         inps.temp_coh_geo_file = inps.temp_coh_file
         inps.timeseries_geo_file = inps.timeseries_file
@@ -1197,7 +1197,7 @@ def main(argv):
         inps.timeseries_geo_file = None
 
     key = 'pysar.geocode'
-    if template[key] in ['auto','yes'] and 'Y_FIRST' not in list(atr.keys()):
+    if template[key] in ['auto','yes'] and 'Y_FIRST' not in atr.keys():
         print('\n--------------------------------------------')
         inps.vel_geo_file        = check_geocode_file(inps.lookup_file, inps.vel_file,        inps.template_file)
         inps.temp_coh_geo_file   = check_geocode_file(inps.lookup_file, inps.temp_coh_file,   inps.template_file)
@@ -1244,7 +1244,7 @@ def main(argv):
     #############################################
     if template['pysar.save.hdfEos5'].lower() in ['yes']:
         print('\n*********  Output Timeseries to HDF-EOS5 Format  ***********')
-        if 'Y_FIRST' not in list(atr.keys()) and not inps.lookup_file:
+        if 'Y_FIRST' not in atr.keys() and not inps.lookup_file:
             warnings.warn('Dataset is in radar coordinates without lookup table file.'+\
                           'Can not geocode.'+\
                           'Skip saving.')
@@ -1318,12 +1318,12 @@ def main(argv):
 
 
     #############################################
-    #                PySAR v1.2                 #
+    # Time                                      #
     #############################################
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
     print('\nTime used: %02d hours %02d mins %02d secs' % (h, m, s))
     print('\n###############################################')
-    print('End of PySAR processing!')
+    print('End of PySAR processing! Check PIC folder.')
     print('################################################\n')
 
 

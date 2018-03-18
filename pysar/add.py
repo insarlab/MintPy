@@ -92,7 +92,7 @@ def add_files(fname_list, fname_out=None):
             dset = group.create_dataset(epoch, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=epoch)
 
-        for key,value in atr.items():
+        for key,value in iter(atr.items()):
             group.attrs[key] = value
         h5out.close()
         h5.close()

@@ -28,7 +28,8 @@
 #  DEALINGS IN THE SOFTWARE.
 ############################################################################### 
 # Recommend usage:
-#     import pysar._remove_surface as rm
+#     import pysar.utils.deramp as deramp
+#
 
 
 import os

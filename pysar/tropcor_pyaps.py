@@ -39,7 +39,7 @@ def get_delay(grib_file, atr, inps_dict):
     Output:
         phs - 2D np.array, absolute tropospheric phase delay relative to ref_y/x
     '''
-    if 'X_FIRST' in list(atr.keys()):
+    if 'X_FIRST' in atr.keys():
         aps = pa.PyAPS_geo(grib_file, inps_dict['dem_file'], grib=inps_dict['grib_source'],\
                            verb=True, Del=inps_dict['delay_type'])
     else:
@@ -227,7 +227,7 @@ def main(argv):
     elif inps.dem_file:
         inps.dem_file = ut.get_file_list([inps.dem_file])[0]
         atr = readfile.read_attribute(inps.dem_file)
-    if 'ref_y' not in list(atr.keys()) and inps.ref_yx:
+    if 'ref_y' not in atr.keys() and inps.ref_yx:
         print('No reference info found in input file, use input ref_yx: '+str(inps.ref_yx))
         atr['ref_y'] = inps.ref_yx[0]
         atr['ref_x'] = inps.ref_yx[1]
@@ -246,7 +246,7 @@ def main(argv):
         if os.path.splitext(inps.dem_file)[1] in ['.h5']:
             print('convert DEM file to ROIPAC format')
             dem, atr_dem = readfile.read(inps.dem_file, epoch='height')
-            if 'Y_FIRST' in list(atr.keys()):
+            if 'Y_FIRST' in atr.keys():
                 atr_dem['FILE_TYPE'] = '.dem'
             else:
                 atr_dem['FILE_TYPE'] = '.hgt'
@@ -290,7 +290,7 @@ def main(argv):
             raise ValueError('Un-support input file type:'+k)
         h5.close()
     else:
-        date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
+        date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=bytes, usecols=(0,)).astype(str).tolist())
         print('read date list info from: '+inps.date_list_file)
 
     # Get Acquisition time - hour
@@ -339,7 +339,7 @@ def main(argv):
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
     # Write Attributes
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group_trop.attrs[key] = value
     h5trop.close()
 
@@ -361,7 +361,7 @@ def main(argv):
         prog_bar.close()
         h5ts.close()
         # Write Attributes
-        for key,value in atr.items():
+        for key,value in iter(atr.items()):
             group_tsCor.attrs[key] = value
         h5tsCor.close()
 

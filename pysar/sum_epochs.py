@@ -98,7 +98,7 @@ def main(argv):
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
 
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5sum.close()
     print('Done.')

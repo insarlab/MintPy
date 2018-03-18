@@ -102,7 +102,8 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
             unw = mask_matrix(unw, mask, inps_dict['fill_value'])
 
             dset = group.create_dataset(d, data=unw, compression='gzip')
-        for key,value in atr.items():   group.attrs[key] = value
+        for key,value in iter(atr.items()):
+            group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
         print('number of interferograms: '+str(len(epochList)))

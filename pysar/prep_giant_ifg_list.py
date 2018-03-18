@@ -20,10 +20,9 @@ def get_mission_name(meta_dict):
     '''
     mission = None
 
-    key_list = list(meta_dict.keys())
-    if 'mission' in key_list:
+    if 'mission' in meta_dict.keys():
         value = meta_dict['mission'].lower()
-    elif 'PLATFORM' in key_list:
+    elif 'PLATFORM' in meta_dict.keys():
         value = meta_dict['PLATFORM'].lower()
     else:
         print('No PLATFORM nor mission attribute found, can not identify mission name.')

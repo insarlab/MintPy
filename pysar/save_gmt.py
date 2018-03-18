@@ -171,7 +171,7 @@ def main(argv):
     print('Input file is '+k)
 
     # Check: file in geo coord
-    if 'X_FIRST' not in list(atr.keys()):
+    if 'X_FIRST' not in atr.keys():
         sys.exit('ERROR: Input file is not geocoded.')
 
     # Check: epoch is required for multi_dataset/group files

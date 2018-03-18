@@ -633,22 +633,21 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
 def update_plot_inps_with_display_setting_file(inps, disp_set_file):
     '''Update inps using values from display setting file'''
     disp_set_dict = readfile.read_template(disp_set_file)
-    keyList = list(disp_set_dict.keys())
-    if not inps.disp_unit and 'plot.displayUnit' in keyList:
+    if not inps.disp_unit and 'plot.displayUnit' in disp_set_dict.keys():
         inps.disp_unit = disp_set_dict['plot.displayUnit']
-    if not inps.disp_min and 'plot.displayMin' in keyList:
+    if not inps.disp_min and 'plot.displayMin' in disp_set_dict.keys():
         inps.disp_min = float(disp_set_dict['plot.displayMin'])
-    if not inps.disp_max and 'plot.displayMax' in keyList:
+    if not inps.disp_max and 'plot.displayMax' in disp_set_dict.keys():
         inps.disp_max = float(disp_set_dict['plot.displayMax'])
      
-    if not inps.colormap and 'plot.colormap' in keyList:
+    if not inps.colormap and 'plot.colormap' in disp_set_dict.keys():
         inps.colormap = disp_set_dict['plot.colormap']
 
-    if not inps.subset_lat and 'plot.subset.lalo' in keyList:
+    if not inps.subset_lat and 'plot.subset.lalo' in disp_set_dict.keys():
         inps.subset_lat = [float(n) for n in disp_set_dict['plot.subset.lalo'].replace(',',' ').split()[0:2]]
-    if not inps.subset_lon and 'plot.subset.lalo' in keyList:
+    if not inps.subset_lon and 'plot.subset.lalo' in disp_set_dict.keys():
         inps.subset_lon = [float(n) for n in disp_set_dict['plot.subset.lalo'].replace(',',' ').split()[2:4]]
-    if not inps.seed_lalo and 'plot.seed.lalo' in keyList:
+    if not inps.seed_lalo and 'plot.seed.lalo' in disp_set_dict.keys():
         inps.seed_lalo = [float(n) for n in disp_set_dict['plot.referenceLalo'].replace(',',' ').split()]
     
     return inps
@@ -758,7 +757,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     # Seed Point
     # If value of new seed point is not nan, re-seed the data and update inps.seed_yx/lalo
     # Otherwise, try to read seed info from atrributes into inps.seed_yx/lalo
-    if inps.seed_yx and ('ref_y' not in list(meta_dict.keys()) or \
+    if inps.seed_yx and ('ref_y' not in meta_dict.keys() or \
                          inps.seed_yx != [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]):
         inps.seed_value = data[inps.seed_yx[0]-inps.pix_box[1], inps.seed_yx[1]-inps.pix_box[0]]
         if not np.isnan(inps.seed_value):
@@ -774,12 +773,12 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
             print('WARNING: input reference point has nan value, continue with original reference info')
             inps.seed_yx = None
     else:
-        if 'ref_y' in list(meta_dict.keys()):
+        if 'ref_y' in meta_dict.keys():
             inps.seed_yx = [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]
         else:
             inps.seed_yx = None
 
-        if 'ref_lat' in list(meta_dict.keys()):
+        if 'ref_lat' in meta_dict.keys():
             inps.seed_lalo = [float(meta_dict['ref_lat']), float(meta_dict['ref_lon'])]
         elif inps.seed_yx and inps.geo_box:
             inps.seed_lalo = [subset.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
@@ -1110,7 +1109,7 @@ PLOT_TEMPLATE='''Plot Setting:
 
 
 def cmdLineParse(argv):
-    parser = argparse.ArgumentParser(description='Display InSAR Product',\
+    parser = argparse.ArgumentParser(description='Plot InSAR Product in 2D',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
 
@@ -1526,7 +1525,7 @@ def main(argv):
                 ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)[0]
 
         ref_yx = None
-        if k in ['interferograms'] and 'ref_y' in list(atr.keys()):
+        if k in ['interferograms'] and 'ref_y' in atr.keys():
             ref_yx = [int(atr[i]) for i in ['ref_y','ref_x']]
             print('consider reference pixel of interferograms in y/x: %d/%d' % (ref_yx[0], ref_yx[1]))
 

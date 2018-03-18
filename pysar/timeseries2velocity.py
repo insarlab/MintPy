@@ -100,12 +100,11 @@ def read_template2inps(template_file, inps=None):
     if not inps:
         inps = cmdLineParse()
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     # Read template option
     prefix = 'pysar.velocity.'
     key = prefix+'excludeDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.ex_date = ['exclude_date.txt']
@@ -115,13 +114,13 @@ def read_template2inps(template_file, inps=None):
             inps.ex_date = value.replace(',',' ').split()
 
     key = prefix+'startDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.min_date = ptime.yyyymmdd(value)
 
     key = prefix+'endDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.max_date = ptime.yyyymmdd(value)

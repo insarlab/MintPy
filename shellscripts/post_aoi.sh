@@ -63,7 +63,7 @@ if [ $timeseries -eq 1 ]; then
 
     view='view.py '${row_col}' -u cm -m -5 -M 5 -D gsi10m_30m.dem --mask '$msk' --noaxis --nodisplay'
 
-    seed_data.py $seed -f ts.h5 -m $msk
+    reference_point.py $seed -f ts.h5 -m $msk
     $view -f Seeded_ts.h5
 
     sum_epochs.py Seeded_ts.h5
@@ -73,7 +73,7 @@ if [ $timeseries -eq 1 ]; then
     cir_par='31.1800,130.5290,60;31.1892,130.6147,40'
     mean_spatial.py -f sum_Seeded_ts.h5 -m $msk --circle $cir_par
 
-    reference_epoch.py Seeded_ts.h5 reference_date.txt
+    reference_date.py Seeded_ts.h5 reference_date.txt
     masking.py -f Seeded_ts_refDate.h5 -m $msk
     $view -f Seeded_ts_refDate.h5
     $view -f Seeded_ts_refDate.h5 -E drop_date.txt
@@ -106,7 +106,7 @@ if [ $point_ts -eq 1 ]; then
     #masking.py -f Seeded_ts_refDate.h5 -m $msk
     ts='Seeded_ts_refDate_masked.h5'
     vel='velocity_ex_masked.h5'
-    tsview='tsviewer.py -f '${ts}' -E drop_date.txt -F '$ts' -r 3 -D '$dem' -v '$vel' -a -0.015 -b 0.015 --rect-color crimson'
+    tsview='tsview.py -f '${ts}' -E drop_date.txt -F '$ts' -r 3 -D '$dem' -v '$vel' -a -0.015 -b 0.015 --rect-color crimson'
 
     #$tsview -l -10 -h 4 --lalo 31.1783,130.5364 --LALO 31.1853,130.5231      --nodisplay -t 20060623 -T 20110421
     #$tsview -l -7  -h 4 --lalo 31.1923,130.6184 --LALO 31.1959,130.5971 -r 2 --nodisplay -t 20060623 -T 20110421
@@ -136,7 +136,7 @@ if [ $key_ifg -eq 1 ]; then
 
     ts='Seeded_ts_refDate_masked.h5'
     vel='091130_110118_masked.unw'
-    tsview='tsviewer.py -f '${ts}' -E drop_date.txt -F '$ts' -r 3 -D '$dem' -v '$vel' --displacement -a -0.05 -b 0.05 --rect-color black'
+    tsview='tsview.py -f '${ts}' -E drop_date.txt -F '$ts' -r 3 -D '$dem' -v '$vel' --displacement -a -0.05 -b 0.05 --rect-color black'
     #$tsview --lalo 31.9076,130.8284 -l -3 -h 3 --nodisplay --zoom-y 200:900 --zoom-x 700:1600
 fi
 

@@ -70,13 +70,12 @@ def read_template2inps(template_file, inps=None):
     if not inps:
         inps = cmdLineParse()
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     # Read template option
     prefix = 'pysar.topographicResidual.'
 
     key = prefix+'polyOrder'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.poly_order = 2
@@ -84,7 +83,7 @@ def read_template2inps(template_file, inps=None):
             inps.poly_order = int(value)
 
     key = prefix+'excludeDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             value = value.replace(',',' ').split()
@@ -92,7 +91,7 @@ def read_template2inps(template_file, inps=None):
             inps.ex_date += value
 
     key = prefix+'stepFuncDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             value = value.replace(',',' ').split()
@@ -197,7 +196,7 @@ def main(argv):
     ##### Read Data
     atr = readfile.read_attribute(inps.timeseries_file)
     coordType = 'radar'
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         coordType = 'geo'
 
     # 1. Incidence angle
@@ -333,7 +332,7 @@ def main(argv):
 
     ##------------------------------------------------ Output  --------------------------------------------##
     # 1. DEM error file
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         deltaZFile = 'demGeo_error.h5'
     else:
         deltaZFile = 'demRadar_error.h5'
@@ -352,7 +351,7 @@ def main(argv):
         sys.stdout.flush()
         dset = group.create_dataset(date_list[i], data=timeseriesCor[i].reshape(length, width), compression='gzip')
     print('')
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5.close()
 
@@ -367,7 +366,7 @@ def main(argv):
         dset = group.create_dataset(date_list[i], data=timeseriesRes[i].reshape(length, width), compression='gzip')
     print('')
     # Attribute
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5.close()
 
@@ -383,7 +382,7 @@ def main(argv):
             dset = group.create_dataset(inps.step_date[i], data=stepModel[i].reshape(length, width), compression='gzip')
         print('')
         # Attribute
-        for key,value in atr.items():
+        for key,value in iter(atr.items()):
             group.attrs[key] = value
         group.attrs.pop('ref_date')
         h5.close()

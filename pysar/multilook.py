@@ -52,7 +52,8 @@ def multilook_matrix(matrix,lks_y,lks_x):
 def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
     #####
     atr = dict()
-    for key, value in atr_dict.items():  atr[key] = str(value)
+    for key, value in iter(atr_dict.items()):
+        atr[key] = str(value)
   
     ##### calculate new data size
     length = int(atr['FILE_LENGTH'])
@@ -81,7 +82,7 @@ def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
         if print_msg: print('update AZIMUTH/RANGE_PIXEL_SIZE')
     except: pass
 
-    if not 'Y_FIRST' in list(atr.keys()):
+    if not 'Y_FIRST' in atr.keys():
         try:
             atr['RLOOKS'] = str(int(atr['RLOOKS'])*lks_x)
             atr['ALOOKS'] = str(int(atr['ALOOKS'])*lks_y)
@@ -148,7 +149,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data_mli, compression='gzip')
-                for key, value in atr_mli.items():
+                for key, value in iter(atr_mli.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
 
@@ -164,7 +165,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 prog_bar.update(i+1, suffix=epoch)
             atr = h5[k].attrs
             atr_mli = multilook_attribute(atr,lks_y,lks_x)
-            for key, value in atr_mli.items():
+            for key, value in iter(atr_mli.items()):
                 group.attrs[key] = value
 
         h5.close()

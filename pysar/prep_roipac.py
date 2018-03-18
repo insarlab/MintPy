@@ -38,7 +38,7 @@ def extract_attribute(fname):
     basic_dict = readfile.read_roipac_rsc(basic_rsc_file)
 
     # return if baseline attributes are already there.
-    if 'P_BASELINE_TOP_HDR' in list(basic_dict.keys()):
+    if 'P_BASELINE_TOP_HDR' in basic_dict.keys():
         return basic_rsc_file
 
     atr = {}
@@ -116,10 +116,10 @@ def main(argv):
     if len(inps.file) == 1:
         extract_attribute(inps.file[0])
     elif inps.parallel:
-        Parallel(n_jobs=num_cores)(delayed(extract_attribute)(file) for file in inps.file)
+        Parallel(n_jobs=num_cores)(delayed(extract_attribute)(fname) for fname in inps.file)
     else:
-        for File in inps.file:
-            extract_attribute(File)
+        for fname in inps.file:
+            extract_attribute(fname)
 
     return
 

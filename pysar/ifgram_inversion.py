@@ -428,7 +428,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
 
     ##### Design matrix
     A,B = ut.design_matrix(ifgramFile, date12_list)
-    try:    ref_date = str(np.loadtxt('reference_date.txt', dtype=str))
+    try:    ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
     except: ref_date = meta['date8_list'][0]
     #print 'calculate decorrelation noise covariance with reference date = %s' % (ref_date)
     refIdx = meta['date8_list'].index(ref_date)
@@ -549,7 +549,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
         meta['tempCohFile'] = 'temporalCoherence_var.h5'
         ifgram_inversion('unwrapIfgram.h5', 'coherence.h5', meta)
     '''
-    if 'tempCohFile' not in list(meta.keys()):
+    if 'tempCohFile' not in meta.keys():
         meta['tempCohFile'] = 'temporalCoherence.h5'
     meta['timeseriesStdFile'] = 'timeseriesDecorStd.h5'
     total = time.time()
@@ -614,7 +614,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
             print('skip checking reference pixel info - This is for SIMULATION ONLY.')
         else:
             print('ERROR: No ref_x/y found! Can not invert interferograms without reference in space.')
-            print('run seed_data.py '+ifgramFile+' --mark-attribute for a quick referencing.')
+            print('run reference_point.py '+ifgramFile+' --mark-attribute for a quick referencing.')
             sys.exit(1)
     h5ifgram.close()
 
@@ -784,7 +784,7 @@ def write_timeseries_hdf5_file(timeseries, date8_list, atr, timeseriesFile=None)
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
 
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5timeseries.close()
 
@@ -797,19 +797,18 @@ def read_template2inps(template_file, inps):
         inps = cmdLineParse()
 
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     # Coherence-based network modification
     prefix = 'pysar.networkInversion.'
 
     key = prefix+'residualNorm'
-    if key in key_list and template[key] in ['L1']:
+    if key in template.keys() and template[key] in ['L1']:
         inps.resid_norm = 'L1'
     else:
         inps.resid_norm = 'L2'
 
     key = prefix+'coherenceFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto']:
             inps.coherence_file = 'coherence.h5'
@@ -819,7 +818,7 @@ def read_template2inps(template_file, inps):
             inps.coherence_file = value
 
     key = prefix+'weightFunc'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.weight_function = 'no'
@@ -834,7 +833,7 @@ def read_template2inps(template_file, inps):
             sys.exit(-1)
 
     key = prefix+'waterMaskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto', 'no']:
             maskFile = None

@@ -6,8 +6,9 @@
 ############################################################
 # Based on scripts writen by Heresh Fattahi
 # Recommended Usage:
-#   import pysar._datetime as ptime
+#   import pysar.utils.datetime as ptime
 #   date_list = ptime.ifgram_date_list('unwrapIfgram.h5')
+#
 
 
 import sys

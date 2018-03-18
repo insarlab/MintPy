@@ -333,7 +333,7 @@ def main(argv):
         row = int(y)
         if 0 <= col < data0.shape[1] and 0 <= row < data0.shape[0]:
             z = data0[row,col]
-            if 'X_FIRST' in list(atr0.keys()):
+            if 'X_FIRST' in atr0.keys():
                 lat = sub.coord_radar2geo(row, atr0, 'row')
                 lon = sub.coord_radar2geo(col, atr0, 'col')
                 return 'lon=%.4f, lat=%.4f, x=%.0f,  y=%.0f,  value=%.4f' % (lon, lat, x,y,z)

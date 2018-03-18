@@ -52,7 +52,7 @@ def main(argv):
     angle = ut.incidence_angle(atr, dimension=2)
     
     # Geo coord
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         print('Input file is geocoded, only center incident angle is calculated: ')
         print(angle)
         length = int(atr['FILE_LENGTH'])

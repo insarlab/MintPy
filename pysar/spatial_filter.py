@@ -130,7 +130,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
 
                 dset = group.create_dataset(date, data=data_filt, compression='gzip')
                 prog_bar.update(i+1, suffix=date)
-            for key,value in atr.items():
+            for key,value in iter(atr.items()):
                 group.attrs[key] = value
 
         elif k in ['interferograms','wrapped','coherence']:

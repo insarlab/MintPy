@@ -6,7 +6,7 @@
 ############################################################
 #
 # Recommended usage:
-#   import pysar._variance as pvar
+#   import pysar.utils.variance as pvar
 #
 
 import numpy as np

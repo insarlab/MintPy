@@ -5,7 +5,7 @@
 # Author:  Zhang Yunjun                                    #
 ############################################################
 # Recommended Usage:
-#   import pysar._network as pnet
+#   import pysar.utils.network as pnet
 #
 
 
@@ -56,7 +56,7 @@ def read_pairs_list(date12ListFile, dateList=[]):
     ...
     '''
     # Read date12 list file
-    date12List = sorted(list(np.loadtxt(date12ListFile, dtype=str)))
+    date12List = sorted(list(np.loadtxt(date12ListFile, dtype=bytes).astype(str)))
 
     # Get dateList from date12List
     if not dateList:
@@ -205,12 +205,12 @@ def get_date12_list(File, check_drop_ifgram=False):
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
             atr = h5[k][epoch].attrs
-            if not check_drop_ifgram or 'drop_ifgram' not in list(atr.keys()) or atr['drop_ifgram'] == 'no':
+            if not check_drop_ifgram or 'drop_ifgram' not in atr.keys() or atr['drop_ifgram'] == 'no':
                 date12 = atr['DATE12']
                 date12_list.append(date12)
         h5.close()
     else:
-        txtContent = np.loadtxt(File, dtype=str)
+        txtContent = np.loadtxt(File, dtype=bytes).astype(str)
         if len(txtContent.shape) == 1:
             txtContent = txtContent.reshape(-1,1)
         date12_list = [i for i in txtContent[:,0]]
@@ -927,21 +927,20 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     '''
     
     # Figure Setting
-    keyList = list(plot_dict.keys())
-    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
-    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
+    if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
+    if not 'linewidth'   in plot_dict.keys():   plot_dict['linewidth']   = 2
+    if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
+    if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
     # For colorful display of coherence
-    if not 'coherence_list' in keyList:  plot_dict['coherence_list'] = None
-    if not 'cbar_label'     in keyList:  plot_dict['cbar_label']     = 'Coherence'
-    if not 'disp_min'       in keyList:  plot_dict['disp_min']       = 0.2
-    if not 'disp_max'       in keyList:  plot_dict['disp_max']       = 1.0
-    if not 'colormap'       in keyList:  plot_dict['colormap']       = 'RdBu'
-    if not 'disp_title'     in keyList:  plot_dict['disp_title']     = True
-    if not 'coh_thres'      in keyList:  plot_dict['coh_thres']      = None
-    if not 'disp_drop'      in keyList:  plot_dict['disp_drop']      = True
-    if not 'every_year'     in keyList:  plot_dict['every_year']     = 1
+    if not 'coherence_list' in plot_dict.keys():  plot_dict['coherence_list'] = None
+    if not 'cbar_label'     in plot_dict.keys():  plot_dict['cbar_label']     = 'Coherence'
+    if not 'disp_min'       in plot_dict.keys():  plot_dict['disp_min']       = 0.2
+    if not 'disp_max'       in plot_dict.keys():  plot_dict['disp_max']       = 1.0
+    if not 'colormap'       in plot_dict.keys():  plot_dict['colormap']       = 'RdBu'
+    if not 'disp_title'     in plot_dict.keys():  plot_dict['disp_title']     = True
+    if not 'coh_thres'      in plot_dict.keys():  plot_dict['coh_thres']      = None
+    if not 'disp_drop'      in plot_dict.keys():  plot_dict['disp_drop']      = True
+    if not 'every_year'     in plot_dict.keys():  plot_dict['every_year']     = 1
     coh_list = plot_dict['coherence_list']
     disp_min = plot_dict['disp_min']
     disp_max = plot_dict['disp_max']
@@ -1112,13 +1111,12 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
         ax : matplotlib axes object
     '''
     # Figure Setting
-    keyList = list(plot_dict.keys())
-    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
-    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
-    if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
-    if not 'every_year'  in keyList:   plot_dict['every_year']  = 1
+    if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
+    if not 'linewidth'   in plot_dict.keys():   plot_dict['linewidth']   = 2
+    if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
+    if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
+    if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
+    if not 'every_year'  in plot_dict.keys():   plot_dict['every_year']  = 1
     transparency = 0.7
 
     # Date Convert
@@ -1168,13 +1166,12 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, date12_list_drop=[], 
                                            ALL  pairs in the lower triangle.
     '''
     # Figure Setting
-    keyList = list(plot_dict.keys())
-    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
-    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
-    if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
-    if not 'cbar_label'  in keyList:   plot_dict['cbar_label']  = 'Coherence'
+    if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
+    if not 'linewidth'   in plot_dict.keys():   plot_dict['linewidth']   = 2
+    if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
+    if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
+    if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
+    if not 'cbar_label'  in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
 
     coh_mat = coherence_matrix(date12_list, coherence_list)
 
@@ -1237,7 +1234,7 @@ def mode (thelist):
         counts[item] = counts.get(item, 0) + 1
     maxcount = 0
     maxitem  = []
-    for k, v in list(counts.items()):
+    for k, v in iter(counts.items()):
         if v == maxcount and v > 0:
             maxitem.append(k)
         elif v > maxcount:
@@ -1258,13 +1255,12 @@ def mode (thelist):
 def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
     '''Plot min/max Coherence of all interferograms for each date'''
     # Figure Setting
-    keyList = list(plot_dict.keys())
-    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
-    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
-    if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
-    if not 'every_year'  in keyList:   plot_dict['every_year']  = 1
+    if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
+    if not 'linewidth'   in plot_dict.keys():   plot_dict['linewidth']   = 2
+    if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
+    if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
+    if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
+    if not 'every_year'  in plot_dict.keys():   plot_dict['every_year']  = 1
 
     # Get date list
     m_dates = [date12.split('-')[0] for date12 in date12_list]

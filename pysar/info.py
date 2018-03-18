@@ -20,12 +20,13 @@ import pysar.utils.readfile as readfile
 ############################################################
 def print_attributes(atr, sorting=True):
     ## Print Dictionary of Attributes
-    digits = digits = max([len(key) for key in list(atr.keys())]+[0])
+    digits = digits = max([len(key) for key in atr.keys()]+[0])
     f = '{0:<%d}    {1}'%(digits)
 
-    if sorting: keyList = sorted(atr.keys())
-    else:       keyList = iter(atr.keys())
-    for key in keyList:
+    dictKey = atr.keys()
+    if sorting:
+        dictKey = sorted(dictKey)
+    for key in dictKey:
         print((f.format(str(key),str(atr[key]))))
 
     return

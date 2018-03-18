@@ -87,7 +87,7 @@ def main(argv):
         date = date_list[i+1]
         dset = group.create_dataset(date, data=np.reshape(timeseries_1st[i][:],[length,width]), compression='gzip')
         prog_bar.update(i+1, suffix=date)
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     prog_bar.close()
     h5out.close()
@@ -102,7 +102,7 @@ def main(argv):
         date = date_list[i+2]
         dset = group.create_dataset(date, data=np.reshape(timeseries_2nd[i][:],[length,width]), compression='gzip')
         prog_bar.update(i+1, suffix=date)
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     prog_bar.close()
     h5out.close()

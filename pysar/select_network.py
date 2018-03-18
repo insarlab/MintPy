@@ -63,7 +63,6 @@ def read_template2inps(templateFile, inps=None):
 
     ##Read template file
     template = readfile.read_template(templateFile)
-    key_list = list(template.keys())
     if not template:
         print('Empty template: '+templateFile)
         return None
@@ -72,18 +71,18 @@ def read_template2inps(templateFile, inps=None):
     ##Extra keys
     #extra_key_list = ['masterDate','startDate','endDate']
     #for extra_key in extra_key_list:
-    #    if extra_key in key_list:
+    #    if extra_key in template.keys():
     #        template[prefix+extra_key] = template[extra_key]
 
     #Check option prefix
     for i in ['selectPairs.']:
-        if any(i in key for key in key_list):
+        if any(i in key for key in template.keys()):
             print('\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
             print('WARNING: un-supported option prefix detected: selectPairs.')
             print("         Use selectNetwork. instead")
             print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
 
-    if all(prefix not in key for key in key_list):
+    if all(prefix not in key for key in template.keys()):
         print('\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print('ERROR: no valid input option deteced in template file!')
         print('Check the template below for supported options:')
@@ -94,7 +93,7 @@ def read_template2inps(templateFile, inps=None):
 
     ##Read template dict into inps namespace
     key = prefix+'method'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.method = 'all'
@@ -102,7 +101,7 @@ def read_template2inps(templateFile, inps=None):
             inps.method = value
 
     key = prefix+'referenceFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.reference_file = None
@@ -110,7 +109,7 @@ def read_template2inps(templateFile, inps=None):
             inps.reference_file = value
 
     key = prefix+'perpBaseMax'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.perp_base_max = 500.0
@@ -120,7 +119,7 @@ def read_template2inps(templateFile, inps=None):
             inps.perp_base_max = float(value)
 
     key = prefix+'tempBaseMax'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.temp_base_max = 1800.0
@@ -130,7 +129,7 @@ def read_template2inps(templateFile, inps=None):
             inps.temp_base_max = float(value)
 
     key = prefix+'tempBaseMin'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.temp_base_min = 0.0
@@ -138,7 +137,7 @@ def read_template2inps(templateFile, inps=None):
             inps.temp_base_min = float(value)
 
     key = prefix+'keepSeasonal'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.keep_seasonal = False
@@ -146,7 +145,7 @@ def read_template2inps(templateFile, inps=None):
             inps.keep_seasonal = True
 
     key = prefix+'dopOverlapMin'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.dop_overlap_min = 15.0
@@ -156,15 +155,15 @@ def read_template2inps(templateFile, inps=None):
             inps.dop_overlap_min = float(value)
 
     key = 'PLATFORM'
-    if key in key_list and not inps.sensor:
+    if key in template.keys() and not inps.sensor:
         inps.sensor = template[key]
 
     key = 'COH_COLOR_JUMP'
-    if key in key_list:
+    if key in template.keys():
         inps.coh_thres = float(template[key])
 
     key = prefix+'masterDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.m_date = None
@@ -172,7 +171,7 @@ def read_template2inps(templateFile, inps=None):
             inps.m_date = ptime.yymmdd(value)
 
     key = prefix+'startDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.start_date = None
@@ -180,7 +179,7 @@ def read_template2inps(templateFile, inps=None):
             inps.start_date = ptime.yyyymmdd(value)
 
     key = prefix+'endDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.end_date = None
@@ -188,7 +187,7 @@ def read_template2inps(templateFile, inps=None):
             inps.end_date = ptime.yyyymmdd(value)
 
     key = prefix+'excludeDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.exclude_date = []
@@ -196,7 +195,7 @@ def read_template2inps(templateFile, inps=None):
             inps.exclude_date = ptime.yyyymmdd([i for i in value.split(',')])
 
     key = prefix+'incrementNum'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto']:
             inps.increment_num = 3
@@ -204,7 +203,7 @@ def read_template2inps(templateFile, inps=None):
             inps.increment_num = int(value)
 
     key = prefix+'tempPerpList'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto']:
             inps.temp_perp_list = '16,1600;32,800;48,600;64,200'

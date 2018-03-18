@@ -82,7 +82,7 @@ def main(argv):
         if not ut.update_attribute_or_not(atr_new, atr):
             print('All updated (removed) attributes already exists (do not exists) and have the same value, skip update.')
         else:
-            for key, value in list(atr_new.items()):
+            for key, value in iter(atr_new.items()):
                 # delete the item is new value is None
                 if value == 'None':
                     try: atr.pop(key)

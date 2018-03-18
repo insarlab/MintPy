@@ -76,7 +76,7 @@ if [ $unwrap_error -eq 1 ]; then
   ## Generate Individual Mask for Unwrapping Error Correction
   ue_generate_mask=0
   if [ $ue_generate_mask -eq 1 ]; then
-    #seed_data.py -f Modified_LoadedData.h5 -t $tmpl
+    #reference_point.py -f Modified_LoadedData.h5 -t $tmpl
     #cp temporal_coherence.h5 temporal_coherence_1.h5
     #generate_mask.py -f temporal_coherence_1.h5 -m 0.7 -o mask_1.h5
 
@@ -87,7 +87,7 @@ if [ $unwrap_error -eq 1 ]; then
     subset.py -f ${igram}.h5 $sub
     subset.py -f Mask_spatialCoh.h5 $sub
 
-    seed_data.py       -f subset_${igram}.h5 -x 550 -y 550 -M subset_Mask_spatialCoh.h5 -o subset_${igram}_2.h5
+    reference_point.py       -f subset_${igram}.h5 -x 550 -y 550 -M subset_Mask_spatialCoh.h5 -o subset_${igram}_2.h5
     igram_inversion.py -f subset_${igram}_2.h5 -o subset_timeseries_2.h5
     temporal_coherence.py subset_${igram}_2.h5    subset_timeseries_2.h5 subset_temporal_coherence_3.h5
     subset.py -f subset_temporal_coherence_3.h5 $sub2 -o temporal_coherence_3.h5
@@ -95,19 +95,19 @@ if [ $unwrap_error -eq 1 ]; then
     image_math.py mask_3.h5 '*' 3 mask_3_3.h5
 
 
-    #seed_data.py       -f ${igram}.h5 -x 840 -y 5390 -o ${igram}_2.h5
+    #reference_point.py       -f ${igram}.h5 -x 840 -y 5390 -o ${igram}_2.h5
     #igram_inversion.py -f ${igram}_2.h5 -o timeseries_2.h5
     #temporal_coherence.py ${igram}_2.h5    timeseries_2.h5 temporal_coherence_2.h5
     #generate_mask.py -f temporal_coherence_2.h5 -m 0.7 -o mask_2.h5
     #image_math.py mask_2.h5 '*' 2 mask_2_2.h5
 
-    seed_data.py       -f ${igram}.h5 -x 550 -y 5050 -o ${igram}_2.h5
+    reference_point.py       -f ${igram}.h5 -x 550 -y 5050 -o ${igram}_2.h5
     igram_inversion.py -f ${igram}_2.h5 -o timeseries_2.h5
     temporal_coherence.py ${igram}_2.h5    timeseries_2.h5 temporal_coherence_3.h5
     generate_mask.py -f temporal_coherence_3.h5 -m 0.7 -o mask_3.h5
     image_math.py mask_3.h5 '*' 3 mask_3_3.h5
 
-    seed_data.py       -f ${igram}.h5 -x 630 -y 5860 -o ${igram}_2.h5
+    reference_point.py       -f ${igram}.h5 -x 630 -y 5860 -o ${igram}_2.h5
     igram_inversion.py -f ${igram}_2.h5 -o timeseries_2.h5
     temporal_coherence.py ${igram}_2.h5    timeseries_2.h5 temporal_coherence_4.h5
     generate_mask.py -f temporal_coherence_4.h5 -m 0.7 -o mask_4.h5
@@ -135,7 +135,7 @@ if [ $unwrap_error -eq 1 ]; then
     #$view mask_2.h5
     #$view $msk
 
-    #seed_data.py -f Modified_LoadedData.h5 -t $tmpl -M $msk
+    #reference_point.py -f Modified_LoadedData.h5 -t $tmpl -M $msk
 
     unwrap_error.py -f ${igram}.h5 -m $msk -t $tmpl --ramp quadratic --save-detrend
     remove_plane.py ${igram}_unwCor.h5 quadratic $msk
@@ -193,7 +193,7 @@ ex_date='20060624,20070812,20080629,20090702,20090817,20091002,20100705'
 ref_date='20090214'
 
 if [ $ref_dates -eq 1 ]; then
-    #reference_epoch.py timeseries_ECMWF_demCor.h5 $ref_date
+    #reference_date.py timeseries_ECMWF_demCor.h5 $ref_date
     #remove_plane.py -f timeseries_ECMWF_demCor_ref${ref_date}.h5 -s quadratic -m $msk
     ts='timeseries_ECMWF_demCor_ref'${ref_date}'_quadratic.h5'
     #sum_epochs.py $ts ts_sum.h5
@@ -215,7 +215,7 @@ if [ $deramp -eq 1 ]; then
     #$view -u cm -m -25 -M 25 -f quadratic.h5
     #$view -u cm -m -5  -M 5  -f timeseries_ECMWF_demCor_quadratic.h5
 
-    #reference_epoch.py timeseries_ECMWF_demCor_quadratic.h5 $ref_date
+    #reference_date.py timeseries_ECMWF_demCor_quadratic.h5 $ref_date
     #$view -u cm -m -5 -M 5 -f timeseries_ECMWF_demCor_quadratic_ref${ref_date}.h5
     #$view -u cm -m -5 -M 5 -f timeseries_ECMWF_demCor_quadratic_ref${ref_date}.h5 -E ${ex_date}
 fi
@@ -265,8 +265,8 @@ if [ $geo -eq 1 ]; then
     ## Find subset.lalo based on geo_velocity.h5
 
     ##### Seeding
-    #seed_data.py -t $tmpl -f geo_velocity_ex.h5
-    #seed_data.py -t $tmpl -f geo_${ts}
+    #reference_point.py -t $tmpl -f geo_velocity_ex.h5
+    #reference_point.py -t $tmpl -f geo_${ts}
 fi
 
 if [ $geo2 -eq 1 ]; then

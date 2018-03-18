@@ -78,7 +78,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
             dset = group.create_dataset(epoch, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=epoch)
         atr  = seed_attributes(atr,ref_x,ref_y)
-        for key,value in atr.items():
+        for key,value in iter(atr.items()):
             group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
@@ -98,7 +98,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
 
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in atr.items():
+            for key, value in iter(atr.items()):
                 gg.attrs[key] = value
 
             prog_bar.update(i+1, suffix=date12_list[i])
@@ -187,7 +187,7 @@ def seed_file_inps(File, inps=None, outFile=None):
                 atr_ref = dict()
                 atr_ref['ref_x'] = str(inps.ref_x)
                 atr_ref['ref_y'] = str(inps.ref_y)
-                if 'X_FIRST' in list(atr.keys()):
+                if 'X_FIRST' in atr.keys():
                     atr_ref['ref_lat'] = str(subset.coord_radar2geo(inps.ref_y, atr, 'y'))
                     atr_ref['ref_lon'] = str(subset.coord_radar2geo(inps.ref_x, atr, 'x'))
                 print(atr_ref)
@@ -208,12 +208,12 @@ def seed_file_inps(File, inps=None, outFile=None):
 ###############################################################
 def seed_attributes(atr_in,x,y):
     atr = dict()
-    for key, value in atr_in.items():
+    for key, value in iter(atr_in.items()):
         atr[key] = str(value)
 
     atr['ref_y'] = str(y)
     atr['ref_x'] = str(x)
-    if 'X_FIRST' in list(atr.keys()):
+    if 'X_FIRST' in atr.keys():
         atr['ref_lat'] = str(subset.coord_radar2geo(y,atr,'y'))
         atr['ref_lon'] = str(subset.coord_radar2geo(x,atr,'x'))
 
@@ -316,24 +316,23 @@ def read_seed_template2inps(template_file, inps=None):
         inps = cmdLineParse([''])
     
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     prefix = 'pysar.reference.'
 
     key = prefix+'yx'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
 
     key = prefix+'lalo'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
 
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.mask_file = None
@@ -343,7 +342,7 @@ def read_seed_template2inps(template_file, inps=None):
             inps.mask_file = value
 
     key = prefix+'coherenceFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.coherence_file = 'averageSpatialCoherence.h5'
@@ -351,7 +350,7 @@ def read_seed_template2inps(template_file, inps=None):
             inps.coherence_file = value
 
     key = prefix+'minCoherence'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.min_coherence = 0.85
@@ -366,11 +365,10 @@ def read_seed_reference2inps(reference_file, inps=None):
     if not inps:
         inps = cmdLineParse([''])
     atr_ref = readfile.read_attribute(inps.reference_file)
-    atr_ref_key_list = list(atr_ref.keys())
-    if (not inps.ref_y or not inps.ref_x) and 'ref_x' in atr_ref_key_list:
+    if (not inps.ref_y or not inps.ref_x) and 'ref_x' in atr_ref.keys():
         inps.ref_y = int(atr_ref['ref_y'])
         inps.ref_x = int(atr_ref['ref_x'])
-    if (not inps.ref_lat or not inps.ref_lon) and 'ref_lon' in atr_ref_key_list:
+    if (not inps.ref_lat or not inps.ref_lon) and 'ref_lon' in atr_ref.keys():
         inps.ref_lat = float(atr_ref['ref_lat'])
         inps.ref_lon = float(atr_ref['ref_lon'])
     return inps
@@ -417,17 +415,17 @@ NOTE='''note: Reference value cannot be nan, thus, all selected reference point 
 '''
 
 EXAMPLE='''example:
-  seed_data.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geomap_4rlks.trans
+  reference_point.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geomap_4rlks.trans
 
-  seed_data.py timeseries.h5     -r Seeded_velocity.h5
-  seed_data.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
-  seed_data.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
-  seed_data.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
+  reference_point.py timeseries.h5     -r Seeded_velocity.h5
+  reference_point.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
+  reference_point.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
+  reference_point.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
   
-  seed_data.py unwrapIfgram.h5 -c average_spatial_coherence.h5
-  seed_data.py unwrapIfgram.h5 --method manual
-  seed_data.py unwrapIfgram.h5 --method random
-  seed_data.py timeseries.h5   --method global-average 
+  reference_point.py unwrapIfgram.h5 -c average_spatial_coherence.h5
+  reference_point.py unwrapIfgram.h5 --method manual
+  reference_point.py unwrapIfgram.h5 --method random
+  reference_point.py timeseries.h5   --method global-average 
 '''
 
 def cmdLineParse():
@@ -511,7 +509,7 @@ def main(argv):
 
     # Convert ref_lat/lon to ref_y/x
     if inps.ref_lat and inps.ref_lon:
-        if 'X_FIRST' in list(atr.keys()):
+        if 'X_FIRST' in atr.keys():
             inps.ref_y = subset.coord_geo2radar(inps.ref_lat, atr, 'lat')
             inps.ref_x = subset.coord_geo2radar(inps.ref_lon, atr, 'lon')
         else:

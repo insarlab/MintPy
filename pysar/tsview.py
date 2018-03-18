@@ -62,7 +62,7 @@ def read_timeseries_lalo(timeseries_file, lat, lon):
     '''
 
     atr = readfile.read_attribute(timeseries_file)
-    if 'X_FIRST' not in list(atr.keys()):
+    if 'X_FIRST' not in atr.keys():
         print('ERROR: input file is not geocoded')
         return None
 
@@ -78,14 +78,14 @@ def read_timeseries_lalo(timeseries_file, lat, lon):
 
 ###########################################################################################
 EXAMPLE='''example:
-  tsviewer.py timeseries.h5 --ylim -10 10
-  tsviewer.py timeseries_demErr_plane.h5 -n 5 -m maskTempCoh.h5
-  tsviewer.py timeseries_demErr_plane.h5 --yx 300 400 --nodisplay --zero-first
-  tsviewer.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
+  tsview.py timeseries.h5 --ylim -10 10
+  tsview.py timeseries_demErr_plane.h5 -n 5 -m maskTempCoh.h5
+  tsview.py timeseries_demErr_plane.h5 --yx 300 400 --nodisplay --zero-first
+  tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
 '''
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Interactive time-series viewer',\
+    parser = argparse.ArgumentParser(description='Interactive Time-series Viewer',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
     parser.add_argument('timeseries_file', help='time series file to display')
@@ -214,12 +214,12 @@ if __name__ == '__main__':
         pass
 
     # Initial Pixel Coord
-    if inps.lalo and 'Y_FIRST' in list(atr.keys()):
+    if inps.lalo and 'Y_FIRST' in atr.keys():
         y = int((inps.lalo[0] - ullat) / lat_step + 0.5)
         x = int((inps.lalo[1] - ullon) / lon_step + 0.5)
         inps.yx = [y, x]
 
-    if inps.ref_lalo and 'Y_FIRST' in list(atr.keys()):
+    if inps.ref_lalo and 'Y_FIRST' in atr.keys():
         y = int((inps.ref_lalo[0] - ullat) / lat_step + 0.5)
         x = int((inps.ref_lalo[1] - ullon) / lon_step + 0.5)
         inps.ref_yx = [y, x]
@@ -330,7 +330,7 @@ if __name__ == '__main__':
     # Title and Axis Label
     ax_v.set_title('N = %d, Time = %s' % (inps.epoch_num,\
                                           inps.dates[inps.epoch_num].strftime('%Y-%m-%d')))
-    if not 'Y_FIRST' in list(atr.keys()):
+    if not 'Y_FIRST' in atr.keys():
         ax_v.set_xlabel('Range')
         ax_v.set_ylabel('Azimuth')
 
@@ -378,7 +378,7 @@ if __name__ == '__main__':
     # Read Error List
     inps.error_ts = None
     if inps.error_file:
-        error_fileContent = np.loadtxt(inps.error_file, dtype=str)
+        error_fileContent = np.loadtxt(inps.error_file, dtype=bytes).astype(str)
         inps.error_ts = error_fileContent[:,1].astype(np.float)*inps.unit_fac
         if inps.ex_date_list:
             e_ts = inps.error_ts[:]

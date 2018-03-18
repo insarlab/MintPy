@@ -73,7 +73,7 @@ def main(argv):
 
     # default DEM file
     if not inps.dem_file:
-        if 'X_FIRST' in list(atr.keys()):
+        if 'X_FIRST' in atr.keys():
             inps.dem_file = ['demGeo_tight.h5', 'demGeo.h5']
         else:
             inps.dem_file = ['demRadar.h5']
@@ -85,7 +85,7 @@ def main(argv):
 
     # default Mask file
     if not inps.mask_file:
-        if 'X_FIRST' in list(atr.keys()):
+        if 'X_FIRST' in atr.keys():
             inps.mask_file = 'geo_maskTempCoh.h5'
         else:
             inps.mask_file = 'maskTempCoh.h5'
@@ -210,7 +210,7 @@ def main(argv):
         dset = group.create_dataset(date, data=data, compression='gzip')
         prog_bar.update(i+1, suffix=date)
 
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
 
     prog_bar.close()

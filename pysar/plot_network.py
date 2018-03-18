@@ -29,13 +29,12 @@ def read_template2inps(template_file, inps=None):
 
     print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     # Coherence-based network modification
     prefix = 'pysar.network.'
 
     key = prefix+'coherenceFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.coherence_file = 'coherence.h5'
@@ -43,7 +42,7 @@ def read_template2inps(template_file, inps=None):
             inps.coherence_file = value
 
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             try:    inps.mask_file = ut.get_file_list(['geometry*.h5','maskLand.h5','mask.h5'])[0]
@@ -54,7 +53,7 @@ def read_template2inps(template_file, inps=None):
             inps.mask_file = value
 
     key = prefix+'minCoherence'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.coh_thres = 0.7

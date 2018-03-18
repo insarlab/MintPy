@@ -171,21 +171,20 @@ def read_template2inps(template_file, inps=None):
         inps = cmdLineParse()
 
     template = readfile.read_template(inps.template_file)
-    key_list = list(template.keys())
 
     # Coherence-based network modification
     prefix = 'pysar.network.'
 
     key = prefix+'coherenceBased'
-    if key in key_list and template[key] in ['auto','yes']:
+    if key in template.keys() and template[key] in ['auto','yes']:
         inps.coherence_based = True
 
     key = prefix+'keepMinSpanTree'
-    if key in key_list and template[key] in ['no']:
+    if key in template.keys() and template[key] in ['no']:
         inps.keep_mst = False
 
     key = prefix+'coherenceFile'
-    if key in key_list:
+    if key in template.keys():
         if template[key] == 'auto':
             inps.coherence_file = 'coherence.h5'
         else:
@@ -201,14 +200,14 @@ def read_template2inps(template_file, inps=None):
         inps.coherence_file = inps.file[coh_file_idx]
 
     key = prefix+'minCoherence'
-    if key in key_list:
+    if key in template.keys():
         if template[key] == 'auto':
             inps.min_coherence = 0.7
         else:
             inps.min_coherence = float(template[key])
 
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             try:    inps.mask_file = ut.get_file_list(['maskLand.h5','mask.h5'])[0]
@@ -219,7 +218,7 @@ def read_template2inps(template_file, inps=None):
             inps.mask_file = value
 
     key = prefix+'maskAoi.yx'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.aoi_pix_box = None
@@ -230,7 +229,7 @@ def read_template2inps(template_file, inps=None):
             inps.aoi_pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
 
     key = prefix+'maskAoi.lalo'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.aoi_geo_box = None
@@ -248,19 +247,19 @@ def read_template2inps(template_file, inps=None):
 
     ## Network Modification based on thresholds
     key = prefix+'tempBaseMax'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.max_temp_baseline = float(value)
 
     key = prefix+'perpBaseMax'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.max_perp_baseline = float(value)
 
     key = prefix+'referenceFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.reference_file = None
@@ -268,25 +267,25 @@ def read_template2inps(template_file, inps=None):
             inps.reference_file = value
 
     key = prefix+'excludeDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.exclude_date = [i for i in value.replace(',',' ').split()]
 
     key = prefix+'excludeIfgIndex'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.exclude_ifg_index = [i for i in value.replace(',',' ').split()]
 
     key = prefix+'startDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.start_date = ptime.yymmdd(value)
 
     key = prefix+'endDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.end_date = ptime.yymmdd(value)

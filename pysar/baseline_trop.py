@@ -79,17 +79,7 @@ def main(argv):
     except:
         print('Can not open mask file: '+maskFile)
         sys.exit(1)
-  
-    #try:
-    #  maskFile=argv[4]
-    #  h5Mask = h5py.File(maskFile,'r')
-    #  kMask=h5Mask.keys()
-    #  dset1 = h5Mask[kMask[0]].get(kMask[0])
-    #  Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-    #except:
-    #  dset1 = h5file['mask'].get('mask')
-    #  Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-  
+
     ##################################
     Mask=Mask.flatten(1)
     ndx= Mask !=0

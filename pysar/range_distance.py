@@ -50,7 +50,7 @@ def main(argv):
     range_dis = ut.range_distance(atr, dimension=2)
     
     # Geo coord
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         print('Input file is geocoded, only center range distance is calculated: ')
         print(range_dis)
         length = int(atr['FILE_LENGTH'])

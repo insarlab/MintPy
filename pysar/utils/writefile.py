@@ -5,9 +5,9 @@
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 #
-# Yunjun, Sep 2015: Add write_gamma_float() and write_gamma_scomplex()
-# Yunjun, Oct 2015: Add support for write_float32(amp, phase, outname)
-# Yunjun, Jan 2016: Add write()
+# Recommend usage:
+#   import pysar.utils.writefile as writefile
+#
 
 
 import os
@@ -66,7 +66,7 @@ def write(*args):
         h5file = h5py.File(outname,'w')
         group = h5file.create_group(k)
         dset = group.create_dataset(k, data=data, compression='gzip')
-        for key , value in atr.items():
+        for key , value in iter(atr.items()):
             group.attrs[key]=value
         h5file.close()
         return outname
@@ -109,26 +109,25 @@ def write_roipac_rsc(atr, outname, sorting=True):
     Output:
         outname
     '''
-
     # sorting by key name
-    keyList = iter(atr.keys())
+    dictKey = atr.keys()
     if sorting:
-        keyList = sorted(keyList)
+        dictKey = sorted(dictKey)
     
     # Convert 3.333e-4 to 0.0003333
-    if 'X_STEP' in keyList:
+    if 'X_STEP' in dictKey:
         atr['X_STEP'] = str(float(atr['X_STEP']))
         atr['Y_STEP'] = str(float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST']))
         atr['Y_FIRST'] = str(float(atr['Y_FIRST']))
 
     # max digit for space formating
-    digits = max([len(key) for key in keyList]+[2])
+    digits = max([len(key) for key in dictKey]+[2])
     f = '{0:<%d}    {1}'%(digits)
     
     # writing .rsc file
     frsc = open(outname,'w')
-    for key in keyList:
+    for key in dictKey:
         frsc.write(f.format(str(key), str(atr[key]))+'\n')
     frsc.close()
     return outname

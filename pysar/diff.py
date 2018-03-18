@@ -101,7 +101,7 @@ def diff_file(file1, file2, outName=None, force=False):
 
             dset = group.create_dataset(date, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=date)
-        for key,value in atr.items():
+        for key,value in iter(atr.items()):
             group.attrs[key] = value
 
         prog_bar.close()

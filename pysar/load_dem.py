@@ -39,7 +39,7 @@ group=h5.create_group('dem')
 
 dset = group.create_dataset('dem', data=dem, compression='gzip')
 
-for key , value in demRsc.items():
+for key , value in iter(demRsc.items()):
      group.attrs[key]=value
 
 group.attrs['ref_y']=0

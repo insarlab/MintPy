@@ -91,7 +91,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
 
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data, compression='gzip')
-                for key, value in atr.items():
+                for key, value in iter(atr.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12List[i])
 
@@ -106,7 +106,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
 
                 dset = group.create_dataset(epoch, data=data, compression='gzip')
                 prog_bar.update(i+1, suffix=epoch)
-            for key, value in atr.items():
+            for key, value in iter(atr.items()):
                 group.attrs[key] = value
         else:
             print('No need to correct for LOD for '+k+' file')
@@ -165,7 +165,7 @@ def main(argv):
         inps.outfile = os.path.splitext(inps.file)[0]+'_LODcor'+os.path.splitext(inps.file)[1]
 
     atr = readfile.read_attribute(inps.file)
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         coordType = 'geo'
     else:
         coordType = 'radar'

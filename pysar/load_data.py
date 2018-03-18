@@ -84,7 +84,7 @@ def auto_path_miami(inps, template={}):
     if all(fname and fname != 'auto' for fname in [inps.lut, inps.dem_radar, inps.dem_geo]):
         return inps
 
-    try:     m_date12 = np.loadtxt(process_dir+'/master_ifgram.txt', dtype=str).tolist()
+    try:     m_date12 = str(np.loadtxt(process_dir+'/master_ifgram.txt', dtype=bytes).astype(str))
     except:
         try: m_date12 = os.walk(process_dir+'/GEO').next()[1][0].split('geo_')[1]
         except: pass
@@ -116,8 +116,8 @@ def auto_path_miami(inps, template={}):
         elif inps.insarProcessor == 'gamma':
             inps.dem_geo = [process_dir+'/SIM/sim_'+m_date12+'/sim_*.utm.dem']
 
-        if   'DEMg' in list(template.keys()):  inps.dem_geo.append(template['DEMg'])
-        elif 'DEM'  in list(template.keys()):  inps.dem_geo.append(template['DEM'])
+        if   'DEMg' in template.keys():  inps.dem_geo.append(template['DEMg'])
+        elif 'DEM'  in template.keys():  inps.dem_geo.append(template['DEM'])
         try:    inps.dem_geo = ut.get_file_list(inps.dem_geo)[0]
         except: inps.dem_geo = None
 
@@ -139,7 +139,7 @@ def mode (thelist):
         counts[item] = counts.get(item, 0) + 1
     maxcount = 0
     maxitem  = None
-    for k, v in list(counts.items()):
+    for k, v in iter(counts.items()):
         if v > maxcount:
             maxitem  = k
             maxcount = v
@@ -294,11 +294,11 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
             try:     atr['PROJECT_NAME'] = exDict['project_name']
             except:  atr['PROJECT_NAME'] = 'PYSAR'
             key = 'INSAR_PROCESSOR'
-            if key not in list(atr.keys()):
+            if key not in atr.keys():
                 try:  atr[key] = exDict['insarProcessor']
                 except:  pass
             key = 'PLATFORM'
-            if ((key not in list(atr.keys()) or not any(re.search(i, atr[key].lower()) for i in sensorList))\
+            if ((key not in atr.keys() or not any(re.search(i, atr[key].lower()) for i in sensorList))\
                 and exDict['PLATFORM']):
                 atr[key] = exDict['PLATFORM']
 
@@ -307,7 +307,7 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
             dset = group.create_dataset(os.path.basename(file), data=data, compression='gzip')
 
             # Write attributes
-            for key, value in atr.items():
+            for key, value in iter(atr.items()):
                 group.attrs[key] = str(value)
 
         # End of Loop
@@ -335,12 +335,12 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
     ext = os.path.splitext(fileList[0])[1]
     atr = readfile.read_attribute(fileList[0])
     if not outfile:
-        if 'Y_FIRST' in list(atr.keys()):
+        if 'Y_FIRST' in atr.keys():
             outfile = 'geometryGeo.h5'
         else:
             outfile = 'geometryRadar.h5'
         # output directory
-        if 'timeseries_dir' in list(exDict.keys()) and exDict['timeseries_dir']:
+        if 'timeseries_dir' in exDict.keys() and exDict['timeseries_dir']:
             outdir = exDict['timeseries_dir']
         else:
             outdir = os.path.abspath(os.getcwd())
@@ -441,11 +441,11 @@ def load_geometry_hdf5(fileType, fileList, outfile=None, exDict=dict()):
             try:     atr['PROJECT_NAME'] = exDict['project_name']
             except:  atr['PROJECT_NAME'] = 'PYSAR'
             key = 'INSAR_PROCESSOR'
-            if key not in list(atr.keys()):
+            if key not in atr.keys():
                 try:  atr[key] = exDict['insarProcessor']
                 except:  pass
             # Write attributes
-            for key,value in atr.items():
+            for key,value in iter(atr.items()):
                 if key not in list(group.attrs.keys()):
                     group.attrs[key] = str(value)
         h5.close()
@@ -486,12 +486,14 @@ def load_single_dataset_hdf5(file_type, infile, outfile=None, exDict=dict()):
             dset = group.create_dataset(file_type, data=data, compression='gzip')
 
             # Write output file - attributes
-            for key, value in atr.items():
+            for key, value in iter(atr.items()):
+                #import pdb; pdb.set_trace()
+
                 group.attrs[key] = value
             try: group.attrs['PROJECT_NAME'] = exDict['project_name']
             except: pass
             key = 'INSAR_PROCESSOR'
-            if key not in list(atr.keys()):
+            if key not in atr.keys():
                 try:  atr[key] = exDict['insarProcessor']
                 except:  pass
             h5.close()
@@ -532,7 +534,7 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         unwrapIfgram.h5 = load_file('filt*.unw', inps_dict=vars(inps))
     '''
     # Get project_name from input template file
-    if not 'project_name' in list(inps_dict.keys()) and 'template_file' in list(inps_dict.keys()):
+    if not 'project_name' in inps_dict.keys() and 'template_file' in inps_dict.keys():
         template_filename_list = [os.path.basename(i) for i in inps_dict['template_file']]
         try:  template_filename_list.remove('pysarApp_template.txt')
         except:  pass
@@ -592,13 +594,13 @@ def load_file(fileList, inps_dict=dict(), outfile=None, file_type=None):
         elif file_type == 'snaphu_connect_component':  outfile = 'snaphuConnectComponent.h5'
         elif file_type == 'mask':  outfile = 'mask.h5'
         elif file_type == 'dem':
-            if 'Y_FIRST' in list(atr.keys()):
+            if 'Y_FIRST' in atr.keys():
                 outfile = 'demGeo.h5'
             else:
                 outfile = 'demRadar.h5'
 
         # output directory
-        if 'timeseries_dir' in list(inps_dict.keys()) and inps_dict['timeseries_dir']:
+        if 'timeseries_dir' in inps_dict.keys() and inps_dict['timeseries_dir']:
             outdir = inps_dict['timeseries_dir']
         else:
             outdir = os.path.abspath(os.getcwd())
@@ -644,10 +646,9 @@ def load_data_from_template(inps):
     # Read file by file
     for File in inps.template_file:
         temp_dict = readfile.read_template(File)
-        for key, value in temp_dict.items():
+        for key, value in iter(temp_dict.items()):
             temp_dict[key] = ut.check_variable_name(value)
         template.update(temp_dict)
-    keyList = list(template.keys())
 
     # Project Name
     if not inps.project_name:
@@ -658,7 +659,7 @@ def load_data_from_template(inps):
             inps.project_name = os.path.splitext(inps.template_filename[0])[0]
 
     for key in ['processor','processing_software','unavco.processing_software','pysar.insarProcessor']:
-        if key in keyList:
+        if key in template.keys():
             value = template[key]
             if value == 'auto':
                 inps.insarProcessor = 'roipac'
@@ -667,11 +668,11 @@ def load_data_from_template(inps):
 
     print('--------------------------------------------')
     print('InSAR processing software: '+inps.insarProcessor)
-    if 'pysar.unwrapFiles'        in keyList:   inps.unw       = template['pysar.unwrapFiles']
-    if 'pysar.corFiles'           in keyList:   inps.cor       = template['pysar.corFiles']
-    if 'pysar.lookupFile'         in keyList:   inps.lut       = template['pysar.lookupFile']
-    if 'pysar.demFile.radarCoord' in keyList:   inps.dem_radar = template['pysar.demFile.radarCoord']
-    if 'pysar.demFile.geoCoord'   in keyList:   inps.dem_geo   = template['pysar.demFile.geoCoord']
+    if 'pysar.unwrapFiles'        in template.keys():   inps.unw       = template['pysar.unwrapFiles']
+    if 'pysar.corFiles'           in template.keys():   inps.cor       = template['pysar.corFiles']
+    if 'pysar.lookupFile'         in template.keys():   inps.lut       = template['pysar.lookupFile']
+    if 'pysar.demFile.radarCoord' in template.keys():   inps.dem_radar = template['pysar.demFile.radarCoord']
+    if 'pysar.demFile.geoCoord'   in template.keys():   inps.dem_geo   = template['pysar.demFile.geoCoord']
 
     # Check existed single dataset files
     inps_tmp = argparse.Namespace()

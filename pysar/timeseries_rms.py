@@ -28,12 +28,10 @@ def read_template2inps(templateFile, inps=None):
         inps = cmdLineParse()
 
     template = readfile.read_template(templateFile)
-    key_list = list(template.keys())
-
     prefix = 'pysar.residualRms.'
 
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.mask_file = 'maskTempCoh.h5'
@@ -43,7 +41,7 @@ def read_template2inps(templateFile, inps=None):
             inps.mask_file = value
 
     key = prefix+'ramp'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.ramp_type = 'quadratic'
@@ -51,7 +49,7 @@ def read_template2inps(templateFile, inps=None):
             inps.ramp_type = value
 
     key = prefix+'threshold'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.min_rms = 0.02
@@ -59,7 +57,7 @@ def read_template2inps(templateFile, inps=None):
             inps.min_rms = float(value)
 
     key = prefix+'saveRefDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','yes']:
             inps.save_reference_date = True
@@ -67,7 +65,7 @@ def read_template2inps(templateFile, inps=None):
             inps.save_reference_date = False
 
     key = prefix+'saveExcludeDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','yes']:
             inps.save_exclude_date = True
