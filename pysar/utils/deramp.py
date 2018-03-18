@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
-############################################################
-# Program is part of PySAR v2.0                            #
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
-############################################################
-# deramp are modified from a software originally
-# written by Scott Baker with the following licence:
 ###############################################################################
+# Program is part of PySAR v2.0 
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun
+# Author:  Heresh Fattahi, Zhang Yunjun 
+###############################################################################
+#  deramp are modified from a software originally
+#  written by Scott Baker with the following licence:
+#
 #  Copyright (c) 2011, Scott Baker 
 # 
 #  Permission is hereby granted, free of charge, to any person obtaining a

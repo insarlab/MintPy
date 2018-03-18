@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
-############################################################
-# Program is part of PySAR v2.0                            #
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
-############################################################
-#This program is modified from the software originally written by Scott Baker with 
-#the following licence:
 ###############################################################################
+# Program is part of PySAR v2.0 
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun
+# Author:  Heresh Fattahi, Zhang Yunjun
+###############################################################################
+#  This program is modified from the software originally written by Scott Baker
+#  with the following licence:
+#
 #  Copyright (c) 2011, Scott Baker 
 # 
 #  Permission is hereby granted, free of charge, to any person obtaining a
@@ -43,6 +42,25 @@ import numpy as np
 import xml.etree.ElementTree as ET
 #from PIL import Image
 import json
+
+
+standardMetadatKeys={'width':'WIDTH','Width':'WIDTH','length':'LENGTH','FILE_LENGTH':'LENGTH',
+                     'wavelength':'WAVELENGTH','Wavelength':'WAVELENGTH', 'prf':'PRF'
+                     }
+
+GDAL2NUMPY_DATATYPE = {
+
+1 : np.uint8,
+2 : np.uint16,
+3 : np.int16,
+4 : np.uint32,
+5 : np.int32,
+6 : np.float32,
+7 : np.float64,
+10: np.complex64,
+11: np.complex128,
+
+}
 
 
 #########################################################################
@@ -988,40 +1006,16 @@ def read_GPS_USGS(fname):
 
 
 #########################################################################
-def read_multiple(fname,box=''):  # Not ready yet
-    '''Read multi-temporal 2D datasets into a 3-D data stack
-    Inputs:
-        fname  : input file, interferograms,coherence, timeseries, ...
-        box   : 4-tuple defining the left, upper, right, and lower pixel coordinate [optional]
-    Examples:
-        stack = stacking('timeseries.h5',(100,1200,500,1500))
-    '''
+def standardize_metadat(xmlDict, standardMetadatKeys):
+    keys = xmlDict.keys()
+    standardKeys = standardMetadatKeys.keys()
+    xmlDict_standard = {}
+    for k in keys:
+        if k in standardKeys:
+            xmlDict_standard[standardMetadatKeys[k]] = xmlDict[k]  
+        else:
+            xmlDict_standard[k] = xmlDict[k]
 
-    ##### File Info
-    atr = readfile.read_attribute(fname)
-    k = atr['FILE_TYPE']
-    length = int(float(atr['FILE_LENGTH']))
-    width  = int(float(atr['WIDTH']))
-
-    ##### Bounding Box
-    if box == '':  box = [0,0,width,length]
-
-    epochList = list(h5file[k].keys())
-    epochNum  = len(epochList)
-    if epochNum == 0:   print("There is no data in the file");  sys.exit(1)
- 
-    data = np.zeros([length,width])
-    for igram in igramList:
-        print(igram)
-        
-        dset = h5file[k][igram].get(igram)
-        ##### Crop
-        try:    data = dset[box[1]:box[3],box[0]:box[2]]
-        except: data = dset[:,:]
-        unw=dset[0:dset.shape[0],0:dset.shape[1]]
-        stack=stack+unw
-    return stack
-
-
+    return xmlDict_standard
 
 

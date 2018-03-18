@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR v2.0                            #
 # Copyright(c) 2016, Zhang Yunjun                          #
@@ -7,7 +6,6 @@
 # Based on scripts writen by Heresh Fattahi
 # Recommended Usage:
 #   import pysar.utils.datetime as ptime
-#   date_list = ptime.ifgram_date_list('unwrapIfgram.h5')
 #
 
 
