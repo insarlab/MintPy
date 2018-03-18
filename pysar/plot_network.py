@@ -45,7 +45,7 @@ def read_template2inps(template_file, inps=None):
     if key in template.keys():
         value = template[key]
         if value == 'auto':
-            try:    inps.mask_file = ut.get_file_list(['geometry*.h5','maskLand.h5','mask.h5'])[0]
+            try:    inps.mask_file = ut.get_file_list(['mask.h5', 'geometry*.h5','maskLand.h5'])[0]
             except: inps.mask_file = None
         elif value == 'no':
             inps.mask_file = None

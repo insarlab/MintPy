@@ -487,8 +487,6 @@ def load_single_dataset_hdf5(file_type, infile, outfile=None, exDict=dict()):
 
             # Write output file - attributes
             for key, value in iter(atr.items()):
-                #import pdb; pdb.set_trace()
-
                 group.attrs[key] = value
             try: group.attrs['PROJECT_NAME'] = exDict['project_name']
             except: pass

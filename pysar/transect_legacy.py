@@ -473,9 +473,6 @@ def main(argv):
     try: df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
     except: print('Fault line is not specified')
 
-    import pdb; pdb.set_trace()
-
-
     transect      = np.zeros([len(D),ntrans])
     transect[:,0] = zi
     XX0=[];XX1=[]

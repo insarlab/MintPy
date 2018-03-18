@@ -463,7 +463,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
 
     # Read residual std text file
     print('read timeseries RSD from file: '+std_file)
-    std_fileContent = np.loadtxt(std_file, dtype=str)
+    std_fileContent = np.loadtxt(std_file, dtype=bytes).astype(str)
     std_list = std_fileContent[:,1].astype(np.float).tolist()
     date_list = list(std_fileContent[:,0]) 
     
@@ -550,7 +550,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
 
     # Read residual RMS text file
     print('read timeseries residual RMS from file: '+rms_file)
-    rms_fileContent = np.loadtxt(rms_file, dtype=str)
+    rms_fileContent = np.loadtxt(rms_file, dtype=bytes).astype(str)
     rms_list = rms_fileContent[:,1].astype(np.float).tolist()
     date_list = list(rms_fileContent[:,0]) 
     
@@ -1067,7 +1067,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     if File.endswith(suffix):
         print('Input file is spatial average txt already, read it directly')
         txtFile = File
-        txtContent = np.loadtxt(txtFile, dtype=str)
+        txtContent = np.loadtxt(txtFile, dtype=bytes).astype(str)
         mean_list = [float(i) for i in txtContent[:,1]]
         date_list = [i for i in txtContent[:,0]]
         return mean_list, date_list
@@ -1127,7 +1127,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
 
     if read_txt:
         print(txtFile+' already exists, read it directly')
-        txtContent = np.loadtxt(txtFile, dtype=str)
+        txtContent = np.loadtxt(txtFile, dtype=bytes).astype(str)
         mean_list = [float(i) for i in txtContent[:,1]]
         date_list = [i for i in txtContent[:,0]]
         return mean_list, date_list
@@ -1153,11 +1153,10 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
             data = dset[box[1]:box[3],box[0]:box[2]]
             if not mask is None:
                 data[mask==0] = np.nan
-            ## supress warning 
-            ## url - http://stackoverflow.com/questions/29688168/mean-nanmean-and-warning-mean-of-empty-slice
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                mean_list.append(np.nanmean(data))
+            ### supress warning 
+            #with warnings.catch_warnings():
+            #    warnings.simplefilter("ignore", category=RuntimeWarning)
+            mean_list.append(np.nanmean(data))
             prog_bar.update(i+1)
         prog_bar.close()
         del data

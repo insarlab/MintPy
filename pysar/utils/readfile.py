@@ -341,7 +341,8 @@ def read_attribute(fname, epoch=None):
 
         atr = dict()
         for key, value in attrs.items():
-            atr[key] = str(value)
+            try:     atr[key] = value.decode('utf-8')
+            except:  atr[key] = value
         atr['FILE_TYPE'] = str(k)
         atr['PROCESSOR'] = 'pysar'
 

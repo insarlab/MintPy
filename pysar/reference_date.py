@@ -9,6 +9,7 @@ import sys
 import os
 import argparse
 import shutil
+import string
 
 import h5py
 import numpy as np
@@ -40,7 +41,8 @@ def ref_date_attribute(atr_in, ref_date, date_list):
     try:
         pbase = np.array([float(i) for i in atr['P_BASELINE_TIMESERIES'].split()])
         pbase -= pbase[ref_index]
-        atr['P_BASELINE_TIMESERIES'] = str(pbase.tolist()).translate(None,'[],')
+        pbaseStr = str(pbase.tolist()).translate(str.maketrans('[],','   ')).strip()
+        atr['P_BASELINE_TIMESERIES'] = pbaseStr
         print('update P_BASELINE_TIMESERIES')
     except:
         pass
@@ -50,8 +52,10 @@ def ref_date_attribute(atr_in, ref_date, date_list):
         pbase_bottom = np.array([float(i) for i in atr['P_BASELINE_BOTTOM_TIMESERIES'].split()])
         pbase_top    -= pbase_top[ref_index]
         pbase_bottom -= pbase_bottom[ref_index]
-        atr['P_BASELINE_TOP_TIMESERIES']    = str(pbase_top.tolist()).translate(None,'[],')
-        atr['P_BASELINE_BOTTOM_TIMESERIES'] = str(pbase_bottom.tolist()).translate(None,'[],')
+        pbase_topStr = str(pbase_top.tolist()).translate(str.maketrans('[],','   ')).strip()
+        pbase_bottomStr = str(pbase_bottom.tolist()).translate(str.maketrans('[],','   ')).strip()
+        atr['P_BASELINE_TOP_TIMESERIES']    = pbase_topStr
+        atr['P_BASELINE_BOTTOM_TIMESERIES'] = pbase_bottomStr
         print('update P_BASELINE_TOP/BOTTOM_TIMESERIES')
     except:
         pass
@@ -109,7 +113,7 @@ def ref_date_file(inFile, ref_date, outFile=None):
     ## Update attributes
     atr = ref_date_attribute(atr, ref_date, date_list)
     for key,value in iter(atr.items()):
-        group.attrs[key] = value
+        group.attrs[key] = str(value)
     h5out.close()
 
     return outFile

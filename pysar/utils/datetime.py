@@ -339,7 +339,7 @@ class progress_bar:
         else:
             self.progBar = '[%s>%s]' % ('='*(numHashes-1), ' '*(allFull-numHashes))
             # figure out where to put the percentage, roughly centered
-            percentPlace = (len(self.progBar) / 2) - len(str(percentDone))
+            percentPlace = int(len(self.progBar)/2 - len(str(percentDone)))
             percentString = ' ' + str(percentDone) + '% '
             # slice the percentage into the bar
             self.progBar = ''.join([self.progBar[0:percentPlace], percentString,

@@ -14,6 +14,7 @@ import sys
 import argparse
 import re
 import datetime as dt
+import string
 
 import h5py
 import numpy as np
@@ -288,7 +289,7 @@ def main(argv):
     h5_timeseries = h5py.File(inps.timeseries_file,'r')
     dateList = sorted(h5_timeseries[k].keys())
     dateNum = len(dateList)
-    dateListStr = str(dateList).translate(None, "[],u'")
+    dateListStr = str(dateList).translate(str.maketrans("[],u'", "     ")).strip()
     pysar_meta_dict['DATE_TIMESERIES'] = dateListStr
     
     unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)

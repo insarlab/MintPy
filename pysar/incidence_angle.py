@@ -17,7 +17,7 @@ import numpy as np
 
 import pysar.utils.readfile as readfile
 import pysar.utils.writefile as writefile
-import pysar.utils.pysar_utilities as ut
+import pysar.utils.utils as ut
 
 
 def usage():

@@ -33,6 +33,7 @@ import os
 import sys
 import time
 import argparse
+import string
 
 import h5py
 import numpy as np
@@ -439,13 +440,13 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
     ##### Inversion
     if meta['weight_function'] in ['no','uniform']:
         if np.sum(maskAllNet) > 0:
-            print('inverting pixels with valid phase in all     ifgrams with OLS (%.0f pixels) ...' % (np.sum(maskAllNet)))
+            print('inverting pixels with valid phase in all  ifgrams (%.0f pixels) ...' % (np.sum(maskAllNet)))
             ts1, tempCoh1 = network_inversion_sbas(B, ifgram_data[:,maskAllNet], meta['tbase_diff'], skipZeroPhase=False)
             ts[1:,maskAllNet] = ts1
             temp_coh[maskAllNet] = tempCoh1
 
         if np.sum(maskPartNet) > 0:
-            print('inverting pixels with valid phase in part of ifgrams with SVD ...')
+            print('inverting pixels with valid phase in some ifgrams ...')
             pixel_num2inv = np.sum(maskPartNet)
             pixel_idx2inv = np.where(maskPartNet)[0]
             prog_bar = ptime.progress_bar(maxValue=pixel_num2inv)
@@ -624,8 +625,8 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     if meta['weight_function'] in ['no','uniform']:
         print('generic least square inversion with min-norm phase velocity')
         print('    based on Berardino et al. (2002, IEEE-TGRS)')
-        print('    OLS for pixels with fully     connected network')
-        print('    SVD for pixels with partially connected network')
+        print('    OLS for pixels with full rank      network')
+        print('    SVD for pixels with rank deficient network')
         if np.linalg.matrix_rank(A) < date_num-1:
             print('WARNING: singular design matrix! Inversion result can be biased!')
             print('continue using its SVD solution on all pixels')
@@ -724,9 +725,10 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     ##### Calculate time-series attributes
     print('calculating perpendicular baseline timeseries')
     pbase, pbase_top, pbase_bottom = ut.perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list)
-    pbase = str(pbase.tolist()).translate(None,'[],')  # convert np.array into string separated by white space
-    pbase_top = str(pbase_top.tolist()).translate(None,'[],')
-    pbase_bottom = str(pbase_bottom.tolist()).translate(None,'[],')
+    # convert np.array into string separated by white space
+    pbase = str(pbase.tolist()).translate(str.maketrans('[],','   ')).strip()
+    pbase_top = str(pbase_top.tolist()).translate(str.maketrans('[],','   ')).strip()
+    pbase_bottom = str(pbase_bottom.tolist()).translate(str.maketrans('[],','   ')).strip()
     atr['P_BASELINE_TIMESERIES'] = pbase
     atr['P_BASELINE_TOP_TIMESERIES'] = pbase_top
     atr['P_BASELINE_BOTTOM_TIMESERIES'] = pbase_bottom
