@@ -18,7 +18,7 @@ import pysar.utils.datetime as ptime
 
 def get_lat_lon(atr):
     '''Get lat/lon of all pixels'''
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
     lat0 = float(atr['Y_FIRST'])
     lon0 = float(atr['X_FIRST'])

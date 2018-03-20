@@ -56,7 +56,7 @@ def main(argv):
     
     k = atr['FILE_TYPE']
     width = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     
     h5 = h5py.File(File, 'r')
     epochList = sorted(h5[k].keys())

@@ -53,7 +53,7 @@ def main(argv):
     if 'Y_FIRST' in atr.keys():
         print('Input file is geocoded, only center range distance is calculated: ')
         print(range_dis)
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         width = int(atr['WIDTH'])
         range_dis_mat = np.zeros((length, width), np.float32)
         range_dis_mat[:] = range_dis

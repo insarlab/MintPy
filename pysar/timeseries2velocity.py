@@ -218,7 +218,7 @@ def main(argv):
     # Loading timeseries
     print("Loading time series file: "+inps.timeseries_file+' ...')
     width = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     dateNum = len(dateList)
     timeseries = np.zeros([dateNum,length*width],np.float32)
     prog_bar = ptime.progress_bar(maxValue=dateNum, prefix='loading: ')

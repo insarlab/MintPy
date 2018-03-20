@@ -109,7 +109,7 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
     '''
 
     width  = int(atr_dict['WIDTH'])
-    length = int(atr_dict['FILE_LENGTH'])
+    length = int(atr_dict['LENGTH'])
     sub_x = [pixel_box[0], pixel_box[2]]
     sub_y = [pixel_box[1], pixel_box[3]]
 
@@ -153,11 +153,11 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
         atr[key] = str(value)
 
     ##### Update attribute variable
-    atr['FILE_LENGTH'] = str(sub_y[1]-sub_y[0])
+    atr['LENGTH'] = str(sub_y[1]-sub_y[0])
     atr['WIDTH']       = str(sub_x[1]-sub_x[0])
     atr['YMAX']        = str(sub_y[1]-sub_y[0] - 1)
     atr['XMAX']        = str(sub_x[1]-sub_x[0] - 1)
-    if print_msg:  print('update FILE_LENGTH, WIDTH, Y/XMAX')
+    if print_msg:  print('update LENGTH, WIDTH, Y/XMAX')
 
     # Subset atribute
     if print_msg:  print('update/add subset_y0/y1/x0/x1')
@@ -209,7 +209,7 @@ def get_coverage_box(atr):
         geo_box : 4-tuple of float in lat/lon
     '''
 
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
 
     # Get geo box
@@ -359,7 +359,7 @@ def subset_input_dict2box(subset_dict, meta_dict):
                       subset_lon : list of 2 float, subset in lon direction, default=None
         meta_dict   : dict, including the following items:
                       'WIDTH'      : int
-                      'FILE_LENGTH': int
+                      'LENGTH': int
                       'X_FIRST'    : float, optional
                       'Y_FIRST'    : float, optional
                       'X_STEP'     : float, optional
@@ -379,7 +379,7 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
     # Data Coverage
     width = int(float(meta_dict['WIDTH']))
-    length = int(float(meta_dict['FILE_LENGTH']))
+    length = int(float(meta_dict['LENGTH']))
 
     # Use subset_lat/lon input if existed,  priority: lat/lon > y/x > len/wid
     if subset_dict['subset_lat']:
@@ -457,7 +457,7 @@ def subset_file(File, subset_dict_input, outFile=None):
     try:  atr_dict = readfile.read_attribute(File)
     except:  return None
     width = int(atr_dict['WIDTH'])
-    length = int(atr_dict['FILE_LENGTH'])
+    length = int(atr_dict['LENGTH'])
     k = atr_dict['FILE_TYPE']
     print('subset '+k+' file: '+File+' ...')
 

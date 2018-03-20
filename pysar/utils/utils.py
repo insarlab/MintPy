@@ -324,7 +324,7 @@ def is_file_exist(file_list, abspath=True):
 def four_corners(atr):
     '''Return 4 corners lat/lon'''
     width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     lon_step = float(atr['X_STEP'])
     lat_step = float(atr['Y_STEP'])
     west  = float(atr['X_FIRST'])
@@ -340,7 +340,7 @@ def circle_index(atr,circle_par):
     Inputs: atr : dictionary
                 containging the following attributes:
                 WIDT
-                FILE_LENGTH
+                LENGTH
             circle_par : string in the format of 'y,x,radius'
                 i.e. '200,300,20'          for radar coord
                      '31.0214,130.5699,20' for geo   coord
@@ -351,7 +351,7 @@ def circle_index(atr,circle_par):
     '''
 
     width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
 
     if type(circle_par) == tuple:
         cir_par = circle_par
@@ -598,7 +598,7 @@ def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None, dimension=2)
         return outFile
 
     elif dimension == 3:
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         width = int(atr['WIDTH'])
         ts_data = np.zeros((date_num, length*width))
         for i in range(date_num):
@@ -830,7 +830,7 @@ def perp_baseline_timeseries(atr, dimension=1):
     '''Calculate perpendicular baseline for each acquisition within timeseries
     Inputs:
         atr - dict, including the following PySAR attribute
-              FILE_LENGTH
+              LENGTH
               P_BASELINE_TIMESERIES
               P_BASELINE_TOP_TIMESERIES (optional)
               P_BASELINE_BOTTOM_TIMESERIES (optional)
@@ -854,7 +854,7 @@ def perp_baseline_timeseries(atr, dimension=1):
     elif dimension == 1:
         pbase_top    = np.array([float(i) for i in atr['P_BASELINE_TOP_TIMESERIES'].split()]).reshape(-1, 1)
         pbase_bottom = np.array([float(i) for i in atr['P_BASELINE_BOTTOM_TIMESERIES'].split()]).reshape(-1, 1)
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         date_num = pbase_center.shape[0]
         pbase = np.zeros((date_num, length))
         for i in range(date_num):
@@ -871,7 +871,7 @@ def range_distance(atr, dimension=2):
         atr - dict, including the following ROI_PAC attributes:
               STARTING_RANGE
               RANGE_PIXEL_SIZE
-              FILE_LENGTH
+              LENGTH
               WIDTH
         dimension - int, choices = [0,1,2]
                     2 for 2d matrix, vary in range direction, constant in az direction, for radar coord only
@@ -886,7 +886,7 @@ def range_distance(atr, dimension=2):
 
     near_range = float(atr['STARTING_RANGE'])
     dR = float(atr['RANGE_PIXEL_SIZE'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
 
     far_range = near_range + dR*(width-1)
@@ -913,7 +913,7 @@ def incidence_angle(atr, dimension=2, print_msg=True):
                      RANGE_PIXEL_SIZE
                      EARTH_RADIUS
                      HEIGHT
-                     FILE_LENGTH
+                     LENGTH
                      WIDTH
         dimension - int,
                     2 for 2d matrix
@@ -932,7 +932,7 @@ def incidence_angle(atr, dimension=2, print_msg=True):
     dR = float(atr['RANGE_PIXEL_SIZE'])
     r  = float(atr['EARTH_RADIUS'])
     H  = float(atr['HEIGHT'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
     
     ## Calculation
@@ -1007,7 +1007,7 @@ def nonzero_mask(File, outFile='mask.h5'):
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     width = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     
     mask = np.ones([length, width])
     
@@ -1074,7 +1074,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     atr  = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     width = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
 
     if not box:
         box = (0,0,width,length)
@@ -1232,7 +1232,7 @@ def temporal_average(File, outFile=None):
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     width = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
 
     h5file = h5py.File(File)
     epochList = sorted(h5file[k].keys())
@@ -1328,7 +1328,7 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
     for fname in fname_list:
         atr = readfile.read_attribute(fname)
         width_list.append(atr['WIDTH'])
-        length_list.append(atr['FILE_LENGTH'])
+        length_list.append(atr['LENGTH'])
 
     # Mode of Width and Length
     if not mode_width:
@@ -1453,7 +1453,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
         lut_y = readfile.read(lookupFile, epoch='azimuthCoord')[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
-        lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['FILE_LENGTH'])/2
+        lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
         lat_step_deg = float(atr_lut['Y_STEP'])
         lon_step_deg = float(atr_lut['X_STEP'])
         lat_step = lat_step_deg*np.pi/180.0*earth_radius
@@ -1542,7 +1542,7 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
         lut_y = readfile.read(lookupFile, epoch='azimuthCoord')[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
-        lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['FILE_LENGTH'])/2
+        lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
         lat_step_deg = float(atr_lut['Y_STEP'])
         lon_step_deg = float(atr_lut['X_STEP'])
         lat_step = lat_step_deg*np.pi/180.0*earth_radius
@@ -2006,7 +2006,7 @@ def get_file_stack(File, maskFile=None):
     # Read stack from existed file
     if os.path.isfile(stackFile):
         atrStack = readfile.read_attribute(stackFile)
-        if atrStack['WIDTH'] == atr['WIDTH'] and atrStack['FILE_LENGTH'] == atr['FILE_LENGTH']:
+        if atrStack['WIDTH'] == atr['WIDTH'] and atrStack['LENGTH'] == atr['LENGTH']:
             print('reading stack from existed file: '+stackFile)
             stack = readfile.read(stackFile)[0]
 
@@ -2032,7 +2032,7 @@ def stacking(File):
     ## File Info
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     if k in ['interferograms']:
         phase2range = -1 * float(atr['WAVELENGTH']) / (4.0 * np.pi)

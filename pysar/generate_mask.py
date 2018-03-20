@@ -60,7 +60,7 @@ def main(argv):
 
     # Input File Info
     atr = readfile.read_attribute(inps.file)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     k = atr['FILE_TYPE']
     print('Input file is '+k+': '+inps.file)

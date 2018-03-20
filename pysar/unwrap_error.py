@@ -61,7 +61,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     mask = readfile.read(mask_file, epoch='mask')[0].flatten(1)
 
     atr = readfile.read_attribute(ifgram_file)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     k = atr['FILE_TYPE']
     pixel_num = length*width

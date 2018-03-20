@@ -199,7 +199,7 @@ if __name__ == '__main__':
             inps.zero_idx = 0
 
     # File Size
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     print('data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, length, 0, width))
     try:

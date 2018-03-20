@@ -55,7 +55,7 @@ def main(argv):
     if 'Y_FIRST' in atr.keys():
         print('Input file is geocoded, only center incident angle is calculated: ')
         print(angle)
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         width = int(atr['WIDTH'])
         angle_mat = np.zeros((length, width), np.float32)
         angle_mat[:] = angle

@@ -103,7 +103,7 @@ def remove_data_surface(data, mask, surf_type='plane'):
        h5flat['velocity'].attrs['Range_Ramp'] = str(MaxRamp) + '   mm/yr'
     elif surf_type == 'plane_azimuth':
        print 'azimuth gradient = ' + str(1000*plane[0][0]) + ' mm/yr/pixel'
-       length= float(h5file['velocity'].attrs['FILE_LENGTH'])
+       length= float(h5file['velocity'].attrs['LENGTH'])
        MaxRamp=length*1000*plane[0][0]
        h5flat['velocity'].attrs['Azimuth_Gradient'] = str(1000*plane[0][0]) + '   mm/yr/pixel'
        h5flat['velocity'].attrs['Azimuth_Ramp'] = str(MaxRamp) +'   mm/yr'
@@ -166,7 +166,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
         Mask = readfile.read(maskFile, epoch='mask')[0]
         print('read mask file: '+maskFile)
     else:
-        Mask = np.ones((int(atr['FILE_LENGTH']), int(atr['WIDTH'])))
+        Mask = np.ones((int(atr['LENGTH']), int(atr['WIDTH'])))
         print('use mask of the whole area')
     
     ##### Input File Info

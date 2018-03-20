@@ -167,7 +167,7 @@ def check_file_size(fileList, mode_width=None, mode_length=None):
     for file in fileList:
         rsc = readfile.read_attribute(file)
         widthList.append(rsc['WIDTH'])
-        lengthList.append(rsc['FILE_LENGTH'])
+        lengthList.append(rsc['LENGTH'])
     # Mode of Width and Length
     if not mode_width:   mode_width  = mode(widthList)
     if not mode_length:  mode_length = mode(lengthList)
@@ -226,10 +226,10 @@ def check_existed_hdf5_file(inFiles, hdf5File):
         if outFiles:
             ext = os.path.splitext(outFiles[0])[1]
             outFiles, mode_width, mode_length = check_file_size(outFiles)
-            if mode_width != atr['WIDTH'] or mode_length != atr['FILE_LENGTH']:
+            if mode_width != atr['WIDTH'] or mode_length != atr['LENGTH']:
                 print('WARNING: input files have different size than existed hdf5 file:')
                 print('Input file size: '+mode_length+', '+mode_width)
-                print('HDF5  file size: '+atr['FILE_LENGTH']+', '+atr['WIDTH'])
+                print('HDF5  file size: '+atr['LENGTH']+', '+atr['WIDTH'])
                 print('Continue WITHOUT loading '+ext+' file')
                 print('To enforse loading, change/remove existed HDF5 filename and re-run loading script')
                 outFiles = None

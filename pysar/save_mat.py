@@ -99,8 +99,8 @@ def main(argv):
         try:  V['width']=int(atr['WIDTH'])
         except:  print('WIDTH was not found')
     
-        try:  V['file_length']=int(atr['FILE_LENGTH'])
-        except:  print('FILE_LENGTH was not found')
+        try:  V['file_length']=int(atr['LENGTH'])
+        except:  print('LENGTH was not found')
         V['t']=''
         V['date']=''
         V['date_years']=''
@@ -147,7 +147,7 @@ def main(argv):
             ts['bperpbot']=float(atr['P_BASELINE_BOTTOM_HDR'])
             ts['sat']=atr['PLATFORM']
             ts['width']=int(atr['WIDTH'])
-            ts['file_length']=int(atr['FILE_LENGTH'])
+            ts['length']=int(atr['LENGTH'])
             ts['t']=np.round((yyyymmdd2years(epoch)-yyyymmdd2years(epochList[0]))*365)
             ts['date']=epoch
             ts['date_years']=yyyymmdd2years(epoch)

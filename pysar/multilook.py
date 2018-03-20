@@ -56,20 +56,20 @@ def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
         atr[key] = str(value)
   
     ##### calculate new data size
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
     length_mli = int(np.floor(length/lks_y))
     width_mli  = int(np.floor(width/lks_x))
   
     ##### Update attributes
-    atr['FILE_LENGTH'] = str(length_mli)
+    atr['LENGTH'] = str(length_mli)
     atr['WIDTH'] = str(width_mli)
     atr['XMIN'] = '0'
     atr['YMIN'] = '0'
     atr['XMAX'] = str(width_mli-1)
     atr['YMAX'] = str(length_mli-1)
     if print_msg:
-        print('update FILE_LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX')
+        print('update LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX')
     
     try:
         atr['Y_STEP'] = str(lks_y*float(atr['Y_STEP']))

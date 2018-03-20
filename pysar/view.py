@@ -228,7 +228,7 @@ def auto_figure_title(fname, epoch=[], inps_dict=None):
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     width = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
 
     #if not epoch and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
     #    print "No date/date12 input.\nIt's required for "+k+" file\nReturn None"
@@ -655,7 +655,7 @@ def update_plot_inps_with_display_setting_file(inps, disp_set_file):
 def update_plot_inps_with_meta_dict(inps, meta_dict):
     k = meta_dict['FILE_TYPE']
     width = int(float(meta_dict['WIDTH']))
-    length = int(float(meta_dict['FILE_LENGTH']))
+    length = int(float(meta_dict['LENGTH']))
 
     # default mask file:
     if not inps.mask_file and k in ['velocity','timeseries']:
@@ -1301,8 +1301,8 @@ def main(argv):
     print('Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+inps.file)
     k = atr['FILE_TYPE']
     width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
-    print('file size in y/x: '+atr['FILE_LENGTH']+', '+atr['WIDTH'])
+    length = int(float(atr['LENGTH']))
+    print('file size in y/x: '+atr['LENGTH']+', '+atr['WIDTH'])
 
     #------------------------------ Epoch/Date Info -------------------------------------------#
     # Read "epoch list to display' and 'reference date' for multi-dataset files
@@ -1396,7 +1396,7 @@ def main(argv):
     if inps.mask_file:
         try:
             atrMsk = readfile.read_attribute(inps.mask_file)
-            if atrMsk['FILE_LENGTH'] == atr['FILE_LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
+            if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
                 msk = readfile.read(inps.mask_file, inps.pix_box, epoch='mask')[0]
                 print('mask data with: '+os.path.basename(inps.mask_file))
             else:

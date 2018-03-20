@@ -326,6 +326,7 @@ pysar.topographicResidual              = auto  #[yes / no], auto for yes
 pysar.topographicResidual.polyOrder    = auto  #[1-inf], auto for 2, polynomial order of temporal deformation model
 pysar.topographicResidual.stepFuncDate = auto  #[20080529,20100611 / no], auto for no, date of step jump
 pysar.topographicResidual.excludeDate  = auto  #[20070321 / txtFile / no], auto for no, date exlcuded for error estimation
+                                               # useful for acquisitions affected by ionosphere.
 
 
 ## 4.1 Phase Residual Root Mean Square
@@ -800,7 +801,7 @@ def main(argv):
     if 'ref_x' in atr.keys():
         ref_x = int(atr['ref_x'])
         ref_y = int(atr['ref_y'])
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         width = int(atr['WIDTH'])
         print('Find reference pixel info from %s in y/x: [%d, %d]' % (os.path.basename(inps.ifgram_file), ref_y, ref_x))
         if not (0 <= ref_y <= length and 0 <= ref_x <= width):

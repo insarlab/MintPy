@@ -50,7 +50,7 @@ def main(argv):
     except: outfile = 'reconstructed_'+ifgram_file
 
     atr = readfile.read_attribute(timeseries_file)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
     ##### Read time-series file

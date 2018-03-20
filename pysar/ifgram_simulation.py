@@ -58,7 +58,7 @@ def main(argv):
     inps = cmdLineParse()
 
     atr = readfile.read_attribute(inps.velocity_file)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
     # Check subset input
@@ -137,8 +137,8 @@ def main(argv):
             gg.attrs['unwrap_error'] = 'yes'
         else:
             gg.attrs['unwrap_error'] = 'no'
-        gg.attrs['FILE_LENGTH'] = y1-y0
-        gg.attrs['WIDTH']       = x1-x0
+        gg.attrs['LENGTH'] = y1-y0
+        gg.attrs['WIDTH'] = x1-x0
     h5.close()
     h5out.close()
     print('Done.')

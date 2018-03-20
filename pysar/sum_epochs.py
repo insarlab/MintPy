@@ -57,7 +57,7 @@ def main(argv):
     date_num = len(dateList)
     print('number of acquisitions: %d' % date_num)
 
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
     D = np.zeros((date_num, length*width), np.float32)
 

@@ -148,7 +148,7 @@ def main(argv):
     # Attributes
     atr = atr1.copy()
     atr['WIDTH'] = str(width)
-    atr['FILE_LENGTH'] = str(length)
+    atr['LENGTH'] = str(length)
     atr['X_FIRST'] = str(west)
     atr['Y_FIRST'] = str(north)
     atr['X_STEP'] = str(lon_step)

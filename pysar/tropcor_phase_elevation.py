@@ -67,7 +67,7 @@ def main(argv):
     # Basic info
     atr = readfile.read_attribute(inps.timeseries_file)
     k = atr['FILE_TYPE']
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     pix_num = length*width
 

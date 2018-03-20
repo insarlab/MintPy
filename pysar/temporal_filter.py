@@ -53,7 +53,7 @@ def main(argv):
     h5 = h5py.File(inps.timeseries_file,'r')
     date_list = sorted(h5[k].keys())
     date_num = len(date_list)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     pixel_num = length*width
 

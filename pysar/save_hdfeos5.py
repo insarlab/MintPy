@@ -167,7 +167,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
         lon0 = float(pysar_meta_dict['X_FIRST'])
         lat0 = float(pysar_meta_dict['Y_FIRST'])
         lon1 = lon0 + float(pysar_meta_dict['X_STEP'])*int(pysar_meta_dict['WIDTH'])
-        lat1 = lat0 + float(pysar_meta_dict['Y_STEP'])*int(pysar_meta_dict['FILE_LENGTH'])
+        lat1 = lat0 + float(pysar_meta_dict['Y_STEP'])*int(pysar_meta_dict['LENGTH'])
         lons = [str(lon0), str(lon1), str(lon1), str(lon0), str(lon0)]
         lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
         unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
@@ -284,7 +284,7 @@ def main(argv):
     ##### Prepare Metadata
     pysar_meta_dict = readfile.read_attribute(inps.timeseries_file)
     k = pysar_meta_dict['FILE_TYPE']
-    length = int(pysar_meta_dict['FILE_LENGTH'])
+    length = int(pysar_meta_dict['LENGTH'])
     width = int(pysar_meta_dict['WIDTH'])
     h5_timeseries = h5py.File(inps.timeseries_file,'r')
     dateList = sorted(h5_timeseries[k].keys())

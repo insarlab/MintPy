@@ -51,7 +51,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
     if not rangeDistFile:
         print('calculate range distance from input file attributes')
         width = int(atr['WIDTH'])
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         range_resolution = float(atr['RANGE_PIXEL_SIZE'])
         rangeDist1D = range_resolution * np.linspace(0, width-1, width)
         rangeDist = np.tile(rangeDist1D, (length, 1))

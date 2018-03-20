@@ -152,7 +152,7 @@ def seed_file_inps(File, inps=None, outFile=None):
         print('Calculating the global spatial average value for each epoch'+\
               ' of all valid pixels ...')
         width = int(atr['WIDTH'])
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         box = (0,0,width,length)
         meanList = ut.spatial_average(File, mask, box)[0]
         inps.ref_y = ''
@@ -482,7 +482,7 @@ def main(argv):
     inps.file = ut.get_file_list(inps.file)
 
     atr = readfile.read_attribute(inps.file[0])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
 
     if inps.reset:

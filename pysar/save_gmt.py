@@ -105,7 +105,7 @@ def get_geo_lat_lon(atr):
     X_STEP = float(atr['X_STEP'])
     Y_STEP = float(atr['Y_STEP'])
     W = float(atr['WIDTH'])
-    L = float(atr['FILE_LENGTH'])
+    L = float(atr['LENGTH'])
     Y_END = Y_FIRST + L*Y_STEP
     X_END = X_FIRST + W*X_STEP
 

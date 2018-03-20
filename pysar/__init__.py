@@ -1,6 +1,6 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          
-# Author:  Heresh Fattahi, Zhang Yunjun                    
+# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          
+# Author:  Zhang Yunjun, Heresh Fattahi                    
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -12,8 +12,8 @@ __version__ = release_version
 import sys, os
 pysar_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #sys.path.insert(1,pysar_path)
-sys.path.insert(1,os.path.join(pysar_path,'pysar'))
-#sys.path.insert(1,os.path.join(pysar_path,'components'))
+#sys.path.insert(1,os.path.join(pysar_path,'pysar'))
+#sys.path.insert(1,os.path.join(pysar_path,'pysar/pysarobj'))
 #sys.path.insert(1,os.path.join(pysar_path,'library'))
 
 try:

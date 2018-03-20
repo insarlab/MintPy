@@ -240,7 +240,7 @@ def main(argv):
         raise ValueError("ERROR: input polynomial order=%d is larger than number of acquisition=%d used in estimation!" %\
                          (inps.poly_order, np.sum(inps.date_flag)))
 
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     pixel_num = length*width
     timeseries = np.zeros((date_num, pixel_num),np.float32)

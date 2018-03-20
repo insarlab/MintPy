@@ -39,13 +39,28 @@ from datetime import datetime as dt
 
 import h5py
 import numpy as np
-import xml.etree.ElementTree as ET
+from lxml import objectify
 #from PIL import Image
 import json
 
 
-standardMetadatKeys={'width':'WIDTH','Width':'WIDTH','length':'LENGTH','FILE_LENGTH':'LENGTH',
-                     'wavelength':'WAVELENGTH','Wavelength':'WAVELENGTH', 'prf':'PRF'
+standardMetadatKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
+                     'length':'LENGTH','FILE_LENGTH':'LENGTH','lines':'WIDTH',
+                     'wavelength':'WAVELENGTH','Wavelength':'WAVELENGTH','radarWavelength':'WAVELENGTH',
+                     'prf':'PRF',
+                     'post_lat':'Y_STEP',
+                     'post_lon':'X_STEP',
+                     'range_looks':'RLOOKS',
+                     'azimuth_looks':'ALOOKS',
+                     'dataType':'DATA_TYPE','data_type':'DATA_TYPE',
+                     'rangePixelSize':'RANGE_PIXEL_SIZE',
+                     'range_pixel_spacing':'RANGE_PIXEL_SIZE','rg_pixel_spacing':'RANGE_PIXEL_SIZE',
+                     'azimuthPixelSize':'AZIMUTH_PIXEL_SIZE',
+                     'azimuth_pixel_spacing':'AZIMUTH_PIXEL_SIZE','az_pixel_spacing':'AZIMUTH_PIXEL_SIZE',
+                     'earthRadius':'EARTH_RADIUS','earth_radius_below_sensor':'EARTH_RADIUS',
+                     'altitude':'HEIGHT',
+                     'startingRange':'STARTING_RANGE',
+                     'center_time':'CENTER_LINE_UTC'
                      }
 
 GDAL2NUMPY_DATATYPE = {
@@ -118,7 +133,7 @@ def read(fname, box=None, epoch=None, print_msg=True):
     atr = read_attribute(fname, epoch)
     k = atr['FILE_TYPE']
     processor = atr['INSAR_PROCESSOR']
-    length = int(float(atr['FILE_LENGTH']))
+    length = int(float(atr['LENGTH']))
     width = int(float(atr['WIDTH']))
     if not box:
         box = (0, 0, width, length)
@@ -343,7 +358,7 @@ def read_attribute(fname, epoch=None):
             if fname.endswith('PARAMS.h5'):
                 #dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
                 attrs = dict()
-                attrs['FILE_LENGTH'] = h5['cmask'].shape[0]
+                attrs['LENGTH'] = h5['cmask'].shape[0]
                 attrs['WIDTH'] = h5['cmask'].shape[1]
                 #attrs['ORBIT_DIRECTION'] = 'descending'
                 #attrs['ref_y'] = '134'
@@ -444,6 +459,7 @@ def read_attribute(fname, epoch=None):
     if atr['PROCESSOR'] == 'isce' and ext == '.wgs84':
         atr['FILE_TYPE'] = 'dem'
 
+    atr = standardize_metadata(atr, standardMetadataKeys)
     return atr
 
 
@@ -524,10 +540,17 @@ def read_template(fname, delimiter='='):
 
 
 def read_roipac_rsc(fname):
-    '''Read ROI_PAC .rsc file into a python dictionary structure.'''
+    '''Read ROI_PAC style RSC file.
+    Parameters: fname : str.
+                    File path of .rsc file.
+    Returns:    rscDict : dict
+                    Dictionary of keys and values in RSC file.
+    Examples:
+        from pysar.utils import readfile
+        atr = readfile.read_roipac_rsc('filt_101120_110220_c10.unw.rsc')
+    '''
     #rsc_dict = dict(np.loadtxt(fname, dtype=bytes, usecols=(0,1)).astype(str))
     #return rsc_dict
-
     f = open(fname, 'r')
     lines = f.readlines()
     f.close()
@@ -540,16 +563,16 @@ def read_roipac_rsc(fname):
 
 def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
     '''Read GAMMA .par/.off file into a python dictionary structure.
-    Parameters: fname : file, str, or path. 
+    Parameters: fname : str. 
                     File path of .par, .off file.
                 delimiter : str, optional
                     String used to separate values.
                 skiprows : int, optional
                     Skip the first skiprows lines.
-    Returns:    par_dict : dict
+    Returns:    parDict : dict
                     Attributes dictionary
     '''
-    par_dict = {}
+    parDict = {}
 
     # Read txt file
     f = open(fname,'r')
@@ -562,46 +585,44 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
         else:
             key = c[0]
             value = str.replace(c[1],'\n','').split("#")[0].split()[0].strip()
-            par_dict[key] = value
+            parDict[key] = value
     f.close()
 
-    par_dict = attribute_gamma2roipac(par_dict)
+    parDict = attribute_gamma2roipac(parDict)
 
-    return par_dict
+    return parDict
 
 
 def read_isce_xml(fname):
     '''Read ISCE .xml file input a python dictionary structure.'''
-    tree = ET.parse(fname)
-    root = tree.getroot()
-    xml_dict={}
+    xmlDict={}
+    fObj = objectify.parse(fname)
+    root = fObj.getroot()
 
     for child in root.findall('property'):
-        key = child.attrib['name']
-        value  = child.find('value').text
-        xml_dict[key] = value
+        xmlDict[child.attrib['name']] = str(child.value)
 
     ## Read lat/lon info for geocoded file
     try:
         comp1 = root.find("./component[@name='coordinate1']")
         x_step = comp1.find("./property[@name='delta']/value").text
         if x_step not in  ['1','-1']:
-            xml_dict['X_STEP']  = x_step
-            xml_dict['X_FIRST'] = comp1.find("./property[@name='startingvalue']/value").text
-            xml_dict['X_LAST']  = comp1.find("./property[@name='endingvalue']/value").text
+            xmlDict['X_STEP']  = x_step
+            xmlDict['X_FIRST'] = comp1.find("./property[@name='startingvalue']/value").text
+            xmlDict['X_LAST']  = comp1.find("./property[@name='endingvalue']/value").text
     except: pass
 
     try:
         comp2 = root.find("./component[@name='coordinate2']")
         y_step = comp2.find("./property[@name='delta']/value").text
         if y_step not in ['1','-1']:
-            xml_dict['Y_STEP']  = y_step
-            xml_dict['Y_FIRST'] = comp2.find("./property[@name='startingvalue']/value").text
-            xml_dict['Y_LAST']  = comp2.find("./property[@name='endingvalue']/value").text
+            xmlDict['Y_STEP']  = y_step
+            xmlDict['Y_FIRST'] = comp2.find("./property[@name='startingvalue']/value").text
+            xmlDict['Y_LAST']  = comp2.find("./property[@name='endingvalue']/value").text
     except: pass
 
-    xml_dict = attribute_isce2roipac(xml_dict)
-    return xml_dict
+    xmlDict = attribute_isce2roipac(xmlDict)
+    return xmlDict
 
 
 def attribute_gamma2roipac(par_dict_in):
@@ -613,14 +634,12 @@ def attribute_gamma2roipac(par_dict_in):
     # Length - number of rows
     for key in par_dict.keys():
         if any(key.startswith(i) for i in ['azimuth_lines','nlines','az_samp','interferogram_azimuth_lines']):
-            par_dict['FILE_LENGTH'] = par_dict[key]
+            par_dict['LENGTH'] = par_dict[key]
 
     # Width - number of columns
     for key in par_dict.keys():
         if any(key.startswith(i) for i in ['width','range_samp','interferogram_width']):
             par_dict['WIDTH'] = par_dict[key]
-        #if key in par_dict.keys():
-        #    par_dict['WIDTH'] = par_dict[key]
 
     # WAVELENGTH
     speed_of_light = 299792458.0   # meter/second
@@ -636,11 +655,6 @@ def attribute_gamma2roipac(par_dict_in):
         key2 = 'sar_to_earth_center'
         if key2 in par_dict.keys():
             par_dict['HEIGHT'] = str(float(par_dict[key2]) - float(par_dict[key]))
-
-    # UTC TIME
-    key = 'center_time'
-    if key in par_dict.keys():
-        par_dict['CENTER_LINE_UTC'] = par_dict[key]
 
     # STARTING_RANGE
     key = 'near_range_slc'
@@ -673,15 +687,6 @@ def attribute_gamma2roipac(par_dict_in):
     if key in par_dict.keys():
         par_dict['X_FIRST'] = par_dict[key]
 
-    key = 'post_lat'
-    if key in par_dict.keys():
-        par_dict['Y_STEP'] = par_dict[key]
-
-    key = 'post_lon'
-    if key in par_dict.keys():
-        par_dict['X_STEP'] = par_dict[key]
-
-
     ##### Optional attributes for PySAR from ROI_PAC
     # ANTENNA_SIDE
     key = 'azimuth_angle'
@@ -691,29 +696,6 @@ def attribute_gamma2roipac(par_dict_in):
             par_dict['ANTENNA_SIDE'] = '-1'
         else:
             par_dict['ANTENNA_SIDE'] = '1'
-
-    # PIXEL_SIZE in range/azimuth
-    for key in par_dict.keys():
-        if any(i in key for i in ['azimuth_pixel_spacing','az_pixel_spacing']):
-            par_dict['AZIMUTH_PIXEL_SIZE'] = par_dict[key]
-
-    for key in par_dict.keys():
-        if any(i in key for i in ['range_pixel_spacing','rg_pixel_spacing']):
-            par_dict['RANGE_PIXEL_SIZE'] = par_dict[key]
-
-    # Multilook number in range/azimuth
-    for key in par_dict.keys():
-        if any(i in key for i in ['range_looks']):
-            par_dict['RLOOKS'] = par_dict[key]
-
-    for key in par_dict.keys():
-        if any(i in key for i in ['azimuth_looks']):
-            par_dict['ALOOKS'] = par_dict[key]
-
-    # PRF
-    key = 'prf'
-    if key in par_dict.keys():
-        par_dict['PRF'] = par_dict['prf']
 
     return par_dict
 
@@ -726,35 +708,11 @@ def attribute_isce2roipac(metaDict, dates=[], baselineDict={}):
         rscDict[key] = str(metaDict[key]).strip().split()[0]
 
     rscDict['WIDTH'] = rscDict['width']
-    rscDict['FILE_LENGTH'] = rscDict['length']
-
-    if 'dataType' in rscDict.keys():
-        rscDict['DATA_TYPE'] = rscDict['dataType']
-    if 'data_type' in rscDict.keys():
-        rscDict['DATA_TYPE'] = rscDict['data_type']
-
-    if 'radarWavelength' in rscDict.keys():
-        rscDict['WAVELENGTH'] = rscDict['radarWavelength']
+    rscDict['LENGTH'] = rscDict['length']
 
     rscDict['PROCESSOR'] = 'isce'
     rscDict['INSAR_PROCESSOR'] = 'isce'
     rscDict['PLATFORM'] = 'Sentinel1'
-
-    if 'rangePixelSize' in rscDict.keys():
-        rscDict['RANGE_PIXEL_SIZE'] = rscDict['rangePixelSize']
-
-    if 'azimuthPixelSize' in rscDict.keys():
-        rscDict['AZIMUTH_PIXEL_SIZE'] = rscDict['azimuthPixelSize']
-
-    if 'earthRadius' in rscDict.keys():
-        rscDict['EARTH_RADIUS'] = rscDict['earthRadius']
-
-    if 'altitude' in rscDict.keys():
-        rscDict['HEIGHT'] = rscDict['altitude']
-
-    if 'startingRange' in rscDict.keys():
-        rscDict['STARTING_RANGE']  = rscDict['startingRange']
-        rscDict['STARTING_RANGE1'] = rscDict['startingRange']
 
     rscDict['ANTENNA_SIDE'] = '-1'
     if 'passDirection' in rscDict.keys():
@@ -781,8 +739,6 @@ def attribute_envi2roipac(metaDict):
     for key in metaDict.keys():
         rscDict[key] = str(metaDict[key]).strip().split()[0]
 
-    rscDict['WIDTH'] = rscDict['samples']
-    rscDict['FILE_LENGTH'] = rscDict['lines']
     enviDataType = rscDict['data type']
     if enviDataType == '4':
         rscDict['DATA_TYPE'] = 'float32'
@@ -815,7 +771,7 @@ def read_float32(fname, box=None, byte_order='l'):
 
     atr = read_attribute(fname)
     width  = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
+    length = int(float(atr['LENGTH']))
     if not box:
         box = [0,0,width,length]
 
@@ -835,7 +791,7 @@ def read_real_float64(fname, box=None, byte_order='l'):
     '''
     atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
+    length = int(float(atr['LENGTH']))
     if not box:
         box = [0, 0, width, length]
 
@@ -874,7 +830,7 @@ def read_complex_float32(fname, box=None, byte_order='l', cpx=False):
 
     atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
+    length = int(float(atr['LENGTH']))
     if not box:
         box = [0, 0, width, length]
 
@@ -904,7 +860,7 @@ def read_real_float32(fname, box=None, byte_order='l'):
     '''
     atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
+    length = int(float(atr['LENGTH']))
     if not box:
         box = [0, 0, width, length]
 
@@ -932,7 +888,7 @@ def read_complex_int16(fname, box=None, byte_order='l', cpx=False):
 
     atr = read_attribute(fname)
     width  = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
+    length = int(float(atr['LENGTH']))
     if not box:
         box = [0,0,width,length]
 
@@ -958,7 +914,7 @@ def read_complex_int16(fname, box=None, byte_order='l', cpx=False):
 def read_real_int16(fname, box=None, byte_order='l'):
     atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
+    length = int(float(atr['LENGTH']))
     if not box:
         box = [0,0,width,length]
 
@@ -982,7 +938,7 @@ def read_bool(fname, box=None):
         rscFile = fname+'.rsc'
     atr = read_attribute(rscFile.split('.rsc')[0])
     width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
+    length = int(float(atr['LENGTH']))
     if not box:
         box = [0,0,width,length]
     
@@ -1006,16 +962,14 @@ def read_GPS_USGS(fname):
 
 
 #########################################################################
-def standardize_metadat(xmlDict, standardMetadatKeys):
-    keys = xmlDict.keys()
-    standardKeys = standardMetadatKeys.keys()
-    xmlDict_standard = {}
-    for k in keys:
-        if k in standardKeys:
-            xmlDict_standard[standardMetadatKeys[k]] = xmlDict[k]  
+def standardize_metadata(metaDict, standardMetadatKeys):
+    metaDict_standard = {}
+    for k in metaDict.keys():
+        if k in standardMetadataKeys.keys():
+            metaDict_standard[standardMetadatKeys[k]] = metaDict[k]
         else:
-            xmlDict_standard[k] = xmlDict[k]
+            metaDict_standard[k] = metaDict[k]
+    return metaDict_standard
 
-    return xmlDict_standard
 
 

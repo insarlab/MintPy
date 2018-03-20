@@ -31,7 +31,7 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     
     # Basic Info
     atr_ts = readfile.read_attribute(timeseriesFile)
-    length = int(atr_ts['FILE_LENGTH'])
+    length = int(atr_ts['LENGTH'])
     width = int(atr_ts['WIDTH'])
     pixel_num = length * width
 

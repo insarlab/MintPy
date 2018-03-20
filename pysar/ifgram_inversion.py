@@ -564,7 +564,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     ##### Basic Info
     # length/width
     atr = readfile.read_attribute(ifgramFile)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
     meta['length'] = length
     meta['width']  = width

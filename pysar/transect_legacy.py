@@ -216,7 +216,7 @@ def find_row_column(Lon,Lat,lon,lat,lon_step,lat_step):
 ################################################
 def get_lat_lon(atr):
     Width    = float(atr['WIDTH'])
-    Length   = float(atr['FILE_LENGTH'])
+    Length   = float(atr['LENGTH'])
     ullon    = float(atr['X_FIRST'])
     ullat    = float(atr['Y_FIRST'])
     lon_step = float(atr['X_STEP'])
@@ -363,7 +363,7 @@ def main(argv):
     z= h5file[k].get(k)[:]
 
     width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     try: lat,lon,lat_step,lon_step,lat_all,lon_all = get_lat_lon(atr)
     except:  print('radar coordinate')
 

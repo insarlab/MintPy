@@ -36,7 +36,7 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
         data - 2D np.array in int/float, data matrix to write
         out_name_base - string, output file name base
         atr  - dict, containing the following attributes:
-               WIDTH/FILE_LENGTH : required, file size
+               WIDTH/LENGTH      : required, file size
                X/Y_FIRST/STEP    : required, for lat/lon spatial converage
                ref_x/y           : optional, column/row number of reference pixel
                PROJECT_NAME      : optional, for KMZ folder name
@@ -91,7 +91,7 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
             print('Cannot find reference point info!')
 
     width = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     ax.set_xlim([0,width])
     ax.set_ylim([length,0])
 

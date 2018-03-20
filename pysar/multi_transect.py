@@ -247,7 +247,7 @@ def find_row_column(Lon,Lat,lon,lat,lon_step,lat_step):
 
 def get_lat_lon(h5file):
    k=list(h5file.keys())
-   Length=float(h5file[k[0]].attrs['FILE_LENGTH'])
+   Length=float(h5file[k[0]].attrs['LENGTH'])
    Width=float(h5file[k[0]].attrs['WIDTH'])
    ullon=float(h5file[k[0]].attrs['X_FIRST'])
    ullat=float(h5file[k[0]].attrs['Y_FIRST'])

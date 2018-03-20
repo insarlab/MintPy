@@ -50,7 +50,7 @@ def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
     for key, value in iter(atr_rdr.items()):
         atr[key] = str(value)
 
-    atr['FILE_LENGTH'] = atr_lut['FILE_LENGTH']
+    atr['LENGTH'] = atr_lut['LENGTH']
     atr['WIDTH']   = atr_lut['WIDTH']
     atr['Y_FIRST'] = atr_lut['Y_FIRST']
     atr['X_FIRST'] = atr_lut['X_FIRST']
@@ -116,7 +116,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     print('------------------------------------------------------')
     print('geocoding file: '+fname)
     atr_rdr = readfile.read_attribute(fname)
-    len_rdr = int(atr_rdr['FILE_LENGTH'])
+    len_rdr = int(atr_rdr['LENGTH'])
     wid_rdr = int(atr_rdr['WIDTH'])
     pts_old = (np.arange(len_rdr), np.arange(wid_rdr))
 
@@ -125,7 +125,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     atr_lut = readfile.read_attribute(lookup_file)
     rg = readfile.read(lookup_file, epoch='range')[0]
     az = readfile.read(lookup_file, epoch='azimuth')[0]
-    len_geo = int(atr_lut['FILE_LENGTH'])
+    len_geo = int(atr_lut['LENGTH'])
     wid_geo = int(atr_lut['WIDTH'])
 
     # adjustment if input radar file has been subseted.
@@ -260,7 +260,7 @@ def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True
     for key, value in iter(atr_rdr.items()):
         atr[key] = str(value)
 
-    atr['FILE_LENGTH'] = str(inps.lat_num)
+    atr['LENGTH'] = str(inps.lat_num)
     atr['WIDTH'] = str(inps.lon_num)
     atr['Y_FIRST'] = str(inps.lat0)
     atr['X_FIRST'] = str(inps.lon0)
@@ -272,7 +272,7 @@ def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True
     ##Reference pixel
     if ('ref_y' in atr_rdr.keys() and lat is not None and\
         'ref_x' in atr_rdr.keys() and lon is not None):
-        length_rdr = int(atr_rdr['FILE_LENGTH'])
+        length_rdr = int(atr_rdr['LENGTH'])
         width_rdr = int(atr_rdr['WIDTH'])
         ref_y_rdr = int(atr_rdr['ref_y'])
         ref_x_rdr = int(atr_rdr['ref_x'])
@@ -336,7 +336,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
     ## Read lookup table file
     atr_rdr = readfile.read_attribute(fname)
-    length = int(atr_rdr['FILE_LENGTH'])
+    length = int(atr_rdr['LENGTH'])
     width = int(atr_rdr['WIDTH'])
     print('reading lookup table file '+lookup_file)
     lat = readfile.read(lookup_file, epoch='latitude')[0]
@@ -348,7 +348,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
         atr_ref = readfile.read_attribute(inps.lalo_step)
         inps.lat_step = float(atr_ref['Y_STEP'])
         inps.lon_step = float(atr_ref['X_STEP'])
-        inps.lat_num = int(atr_ref['FILE_LENGTH'])
+        inps.lat_num = int(atr_ref['LENGTH'])
         inps.lon_num = int(atr_ref['WIDTH'])
         inps.lat0 = float(atr_ref['Y_FIRST'])
         inps.lon0 = float(atr_ref['X_FIRST'])

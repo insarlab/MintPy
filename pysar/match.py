@@ -25,7 +25,7 @@ import pysar.utils.writefile as writefile
 def corners(atr):
     '''Get corners coordinate.'''
     width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     West  = float(atr['X_FIRST'])
     North = float(atr['Y_FIRST'])
     lon_step = float(atr['X_STEP'])
@@ -186,7 +186,7 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
     print('writing >>> '+outName)
     atr = atr1.copy()
     atr['WIDTH'] = width
-    atr['FILE_LENGTH'] = length
+    atr['LENGTH'] = length
     atr['X_FIRST'] = West
     atr['Y_FIRST'] = North
     writefile.write(VV, atr, outName)

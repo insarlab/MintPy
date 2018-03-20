@@ -66,7 +66,7 @@ def main(argv):
     
     #print '\n*************** Phase Ramp Removal ***********************'
     atr = readfile.read_attribute(inps.file[0])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
     # Read mask file if inputed

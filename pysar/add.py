@@ -54,7 +54,7 @@ def add_files(fname_list, fname_out=None):
     # Basic Info
     atr  = readfile.read_attribute(fname_list[0])
     k = atr['FILE_TYPE']
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     print('First input file is '+atr['PROCESSOR']+' '+k)
 
