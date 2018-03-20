@@ -62,7 +62,7 @@ def main(argv):
     print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'
-    try: atr.pop('ref_date')
+    try: atr.pop('REF_DATE')
     except: pass
     writefile.write(range_dis, atr, outFile)
     return outFile

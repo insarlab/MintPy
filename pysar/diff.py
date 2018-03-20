@@ -68,10 +68,10 @@ def diff_file(file1, file2, outName=None, force=False):
     if k in ['timeseries']:
         print('number of acquisitions: '+str(len(epochList)))
         # check reference date
-        if atr['ref_date'] == atr2['ref_date']:
+        if atr['REF_DATE'] == atr2['REF_DATE']:
             ref_date = None
         else:
-            ref_date = atr['ref_date']
+            ref_date = atr['REF_DATE']
             data2_ref = h5_2[k2].get(ref_date)[:]
             print('consider different reference date')
         # check reference pixel

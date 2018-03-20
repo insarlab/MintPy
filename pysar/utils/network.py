@@ -187,7 +187,7 @@ def get_date12_list(File, check_drop_ifgram=False):
     '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
     Inputs:
         File - string, path/name of input multi-group hdf5 file or text file
-        check_drop_ifgram - bool, check the "drop_ifgram" attribute or not for multi-group hdf5 file
+        check_drop_ifgram - bool, check the "DROP_IFGRAM" attribute or not for multi-group hdf5 file
     Output:
         date12_list - list of string in YYMMDD-YYMMDD format
     Example:
@@ -204,7 +204,7 @@ def get_date12_list(File, check_drop_ifgram=False):
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
             atr = h5[k][epoch].attrs
-            if not check_drop_ifgram or 'drop_ifgram' not in atr.keys() or atr['drop_ifgram'] == 'no':
+            if not check_drop_ifgram or 'DROP_IFGRAM' not in atr.keys() or atr['DROP_IFGRAM'] == 'no':
                 date12 = atr['DATE12']
                 date12_list.append(date12)
         h5.close()

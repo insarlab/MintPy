@@ -34,7 +34,7 @@ def ref_date_attribute(atr_in, ref_date, date_list):
         atr[key] = str(value)
 
     # Update ref_date
-    atr['ref_date'] = ref_date
+    atr['REF_DATE'] = ref_date
     print('update ref_date')
 
     # Update Bperp time series
@@ -80,7 +80,7 @@ def ref_date_file(inFile, ref_date, outFile=None):
     date_list = sorted(h5[k].keys())
     h5.close()
     date_num = len(date_list)
-    try:    ref_date_orig = atr['ref_date']
+    try:    ref_date_orig = atr['REF_DATE']
     except: ref_date_orig = date_list[0]
 
     ref_date = ptime.yyyymmdd(ref_date)
@@ -236,8 +236,8 @@ def main(argv):
     # Referencing input file
     if not inps.outfile:
         inps.outfile = os.path.splitext(inps.timeseries_file)[0]+'_refDate.h5'
-    try:    ref_date_comp = readfile.read_attribute(inps.outfile)['ref_date']
-    except: ref_date_comp = readfile.read_attribute(inps.timeseries_file)['ref_date']
+    try:    ref_date_comp = readfile.read_attribute(inps.outfile)['REF_DATE']
+    except: ref_date_comp = readfile.read_attribute(inps.timeseries_file)['REF_DATE']
     if inps.ref_date != ref_date_comp or ut.update_file(inps.outfile, inps.timeseries_file):
         inps.outfile = ref_date_file(inps.timeseries_file, inps.ref_date, inps.outfile)
 

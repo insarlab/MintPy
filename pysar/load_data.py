@@ -290,7 +290,7 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
             data, atr = readfile.read(file)
 
             # PySAR attributes
-            atr['drop_ifgram'] = 'no'
+            atr['DROP_IFGRAM'] = 'no'
             try:     atr['PROJECT_NAME'] = exDict['project_name']
             except:  atr['PROJECT_NAME'] = 'PYSAR'
             key = 'INSAR_PROCESSOR'

@@ -242,11 +242,11 @@ def auto_figure_title(fname, epoch=[], inps_dict=None):
             fig_title += '_unwCor'
 
     elif len(epoch)==1 and k in multi_dataset_hdf5_file+['GIANT_TS']:
-        if inps_dict['ref_date']:
-            ref_date = inps_dict['ref_date']
+        if inps_dict['REF_DATE']:
+            ref_date = inps_dict['REF_DATE']
         else:
             try:
-                ref_date = atr['ref_date']
+                ref_date = atr['REF_DATE']
             except:
                 ref_date = None
         if not ref_date:
@@ -1350,9 +1350,9 @@ def main(argv):
             ref_date_list = get_epoch_full_list_from_input(epochList, [inps.ref_date])[0]
             if ref_date_list:
                 inps.ref_date = ref_date_list[0]
-                #if inps.ref_date == atr['ref_date']:
+                #if inps.ref_date == atr['REF_DATE']:
                 #    inps.ref_date = None
-                #    print 'Input date is already the reference date: '+atr['ref_date']
+                #    print 'Input date is already the reference date: '+atr['REF_DATE']
             else:
                 print('input reference date is not included in file '+inps.file)
                 print('input reference date: '+inps.ref_date)
@@ -1558,7 +1558,7 @@ def main(argv):
         if k in multi_group_hdf5_file and inps.disp_title:
             drop_epoch_list = sorted(list(set(inps.epoch) - \
                                           set(ut.check_drop_ifgram(h5file, print_msg=False))))
-            print("mark interferograms with 'drop_ifgram'='yes' in red colored title")
+            print("mark interferograms with 'DROP_IFGRAM'='yes' in red colored title")
 
         ##### Loop 1 - Figures
         for j in range(1, inps.fig_num+1):

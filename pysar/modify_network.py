@@ -39,13 +39,13 @@ def nearest_neighbor(x,y, x_array, y_array):
 
 
 def reset_pairs(File):
-    '''Reset/restore all pairs within the input file by set all drop_ifgram=no'''
-    print("set drop_ifgram to 'no' for all interferograms for file: "+File)
+    '''Reset/restore all pairs within the input file by set all DROP_IFGRAM=no'''
+    print("set DROP_IFGRAM to 'no' for all interferograms for file: "+File)
     k = readfile.read_attribute(File)['FILE_TYPE']
     h5 = h5py.File(File,'r+')
     ifgram_list = sorted(h5[k].keys())
     for ifgram in ifgram_list:
-        h5[k][ifgram].attrs['drop_ifgram'] = 'no'
+        h5[k][ifgram].attrs['DROP_IFGRAM'] = 'no'
     h5.close()
     return File
 
@@ -104,7 +104,7 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
     Inputs:
         File          - multi_group HDF5 file, i.e. unwrapIfgram.h5, coherence.h5
         date12_to_rmv - list of string indicating interferograms in YYMMDD-YYMMDD format
-        mark_attribute- bool, if True, change 'drop_ifgram' attribute only; otherwise, write
+        mark_attribute- bool, if True, change 'DROP_IFGRAM' attribute only; otherwise, write
                         resutl to a new file
         outFile       - string, output file name
     Output:
@@ -115,14 +115,14 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
     print('file: '+File)
 
     if mark_attribute:
-        print("set drop_ifgram to 'yes' for all interferograms to remove, and 'no' for all the others.")
+        print("set DROP_IFGRAM to 'yes' for all interferograms to remove, and 'no' for all the others.")
         h5 = h5py.File(File,'r+')
         ifgram_list = sorted(h5[k].keys())
         for ifgram in ifgram_list:
             if h5[k][ifgram].attrs['DATE12'] in date12_to_rmv:
-                h5[k][ifgram].attrs['drop_ifgram'] = 'yes'
+                h5[k][ifgram].attrs['DROP_IFGRAM'] = 'yes'
             else:
-                h5[k][ifgram].attrs['drop_ifgram'] = 'no'
+                h5[k][ifgram].attrs['DROP_IFGRAM'] = 'no'
         h5.close()
         outFile = File
 
@@ -155,7 +155,7 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
             dset = group.create_dataset(igram, data=data, compression='gzip')
             for key, value in h5[k][igram].attrs.items():
                 group.attrs[key] = value
-            group.attrs['drop_ifgram'] = 'no'
+            group.attrs['DROP_IFGRAM'] = 'no'
             prog_bar.update(i+1, suffix=date12_list[i])
         prog_bar.close()
         h5.close()
@@ -338,7 +338,7 @@ def cmdLineParse():
                         help='Files to modify/drop network.\n'\
                              'i.e. unwrapIfgram.h5, wrapIfgram.h5, coherence.h5, ...')
     parser.add_argument('--reset', action='store_true',\
-                        help='restore all interferograms existed in the file, by marking all drop_ifgram=no')
+                        help='restore all interferograms existed in the file, by marking all DROP_IFGRAM=no')
     parser.add_argument('--write-file', dest='mark_attribute', action='store_false',\
                         help='write new file instead of mark dropped interferograms in attribute')
     parser.add_argument('--plot', action='store_true',\

@@ -320,7 +320,7 @@ def main(argv):
         trop_ts[i] = get_delay(grib_file, atr, vars(inps))
 
     ## Convert relative phase delay on reference date
-    try:    ref_date = atr['ref_date']
+    try:    ref_date = atr['REF_DATE']
     except: ref_date = date_list[0]
     print('convert to relative phase delay with reference date: '+ref_date)
     ref_idx = date_list.index(ref_date)

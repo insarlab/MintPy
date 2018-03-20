@@ -732,7 +732,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     atr['P_BASELINE_TIMESERIES'] = pbase
     atr['P_BASELINE_TOP_TIMESERIES'] = pbase_top
     atr['P_BASELINE_BOTTOM_TIMESERIES'] = pbase_bottom
-    atr['ref_date'] = date8_list[0]
+    atr['REF_DATE'] = date8_list[0]
     atr['FILE_TYPE'] = 'timeseries'
     atr['UNIT'] = 'm'
 

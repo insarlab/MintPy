@@ -97,7 +97,7 @@ geometry_dataset=['rangeCoord','azimuthCoord','latitude','longitude','height',\
 #########################################################################
 def read(fname, box=None, epoch=None, print_msg=True):
     '''Read one dataset and its attributes from input file.
-    
+
     Read one dataset, i.e. interferogram, coherence, velocity, dem ...
     return 0 if failed.
 
@@ -348,11 +348,11 @@ def read_attribute(fname, epoch=None):
         #elif k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
         else:
             key = 'WIDTH'
-            if key in list(h5.attrs.keys()):
+            if key in h5.attrs.keys():
                 attrs = h5.attrs
             else:
-                for groupK in list(h5.keys()):
-                    if key in list(h5[groupK].attrs.keys()):
+                for groupK in h5.keys():
+                    if key in h5[groupK].attrs.keys():
                         attrs = h5[groupK].attrs
                         break
             if fname.endswith('PARAMS.h5'):
@@ -363,25 +363,21 @@ def read_attribute(fname, epoch=None):
                 #attrs['ORBIT_DIRECTION'] = 'descending'
                 #attrs['ref_y'] = '134'
                 #attrs['ref_x'] = '637'
-                #attrs['ref_date'] = '20141225'
+                #attrs['REF_DATE'] = '20141225'
                 k = 'GIANT_TS'
             if attrs is None:
                 raise ValueError('No attribute '+key+' found in 1/2 group level!')
-        #elif k in ['HDFEOS']:
-        #    attrs = h5.attrs
-        #else:
-        #    sys.exit('Unrecognized h5 file key: '+k)
 
         atr = dict()
         for key, value in attrs.items():
             try:     atr[key] = value.decode('utf-8')
             except:  atr[key] = value
         atr['FILE_TYPE'] = str(k)
-        atr['PROCESSOR'] = 'pysar'
+        #atr['PROCESSOR'] = 'pysar'
 
         if k == 'timeseries':
-            try:    atr['ref_date']
-            except: atr['ref_date'] = sorted(h5[k].keys())[0]
+            try:    atr['REF_DATE']
+            except: atr['REF_DATE'] = sorted(h5[k].keys())[0]
 
         h5.close()
 
@@ -623,6 +619,16 @@ def read_isce_xml(fname):
 
     xmlDict = attribute_isce2roipac(xmlDict)
     return xmlDict
+
+
+def standardize_metadata(metaDict, standardMetadatKeys):
+    metaDict_standard = {}
+    for k in metaDict.keys():
+        if k in standardMetadataKeys.keys():
+            metaDict_standard[standardMetadatKeys[k]] = metaDict[k]
+        else:
+            metaDict_standard[k] = metaDict[k]
+    return metaDict_standard
 
 
 def attribute_gamma2roipac(par_dict_in):
@@ -962,14 +968,5 @@ def read_GPS_USGS(fname):
 
 
 #########################################################################
-def standardize_metadata(metaDict, standardMetadatKeys):
-    metaDict_standard = {}
-    for k in metaDict.keys():
-        if k in standardMetadataKeys.keys():
-            metaDict_standard[standardMetadatKeys[k]] = metaDict[k]
-        else:
-            metaDict_standard[k] = metaDict[k]
-    return metaDict_standard
-
 
 

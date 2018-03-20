@@ -92,7 +92,7 @@ def main(argv):
     prog_bar.close()
 
     # Write smoothed timeseries file
-    try:    ref_date = atr['ref_date']
+    try:    ref_date = atr['REF_DATE']
     except: ref_date = date_list[0]
     ref_date_idx = date_list.index(ref_date)
     print('reference date: '+ref_date)

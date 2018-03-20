@@ -976,29 +976,29 @@ def which(program):
 
 
 def check_drop_ifgram(h5, print_msg=True):
-    '''Update ifgram_list based on 'drop_ifgram' attribute
+    '''Update ifgram_list based on 'DROP_IFGRAM' attribute
     Input:
         h5          - HDF5 file object
     Output:
-        dsListOut  - list of string, group name with drop_ifgram = 'yes'
+        dsListOut  - list of string, group name with DROP_IFGRAM = 'yes'
     Example:
         h5 = h5py.File('unwrapIfgram.h5','r')
         ifgram_list = ut.check_drop_ifgram(h5)
     '''
-    # Return all interferogram list if 'drop_ifgram' do not exist
+    # Return all interferogram list if 'DROP_IFGRAM' do not exist
     k = list(h5.keys())[0]
     dsList = sorted(h5[k].keys())
     atr = h5[k][dsList[0]].attrs
-    if 'drop_ifgram' not in atr.keys():
+    if 'DROP_IFGRAM' not in atr.keys():
         return dsList
 
     dsListOut = list(dsList)
     for ds in dsList:
-        if 'drop_ifgram' in h5[k][ds].attrs.keys() and h5[k][ds].attrs['drop_ifgram'] == 'yes':
+        if 'DROP_IFGRAM' in h5[k][ds].attrs.keys() and h5[k][ds].attrs['DROP_IFGRAM'] == 'yes':
             dsListOut.remove(ds)
 
     if len(dsList) > len(dsListOut) and print_msg:
-        print("remove interferograms with 'drop_ifgram'='yes'")
+        print("remove interferograms with 'DROP_IFGRAM'='yes'")
     return dsListOut
 
 

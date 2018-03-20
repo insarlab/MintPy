@@ -384,7 +384,7 @@ def main(argv):
         # Attribute
         for key,value in iter(atr.items()):
             group.attrs[key] = value
-        group.attrs.pop('ref_date')
+        group.attrs.pop('REF_DATE')
         h5.close()
 
     print('Done.')

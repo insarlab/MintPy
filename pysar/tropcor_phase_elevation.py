@@ -135,7 +135,7 @@ def main(argv):
     date_list = sorted(h5[k].keys())
     date_num = len(date_list)
     print('number of acquisitions: '+str(date_num))
-    try:    ref_date = atr['ref_date']
+    try:    ref_date = atr['REF_DATE']
     except: ref_date = date_list[0]
 
     print('----------------------------------------------------------')
