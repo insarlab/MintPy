@@ -44,23 +44,23 @@ from lxml import objectify
 import json
 
 
-standardMetadatKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
-                     'length':'LENGTH','FILE_LENGTH':'LENGTH','lines':'WIDTH',
-                     'wavelength':'WAVELENGTH','Wavelength':'WAVELENGTH','radarWavelength':'WAVELENGTH',
-                     'prf':'PRF',
-                     'post_lat':'Y_STEP',
-                     'post_lon':'X_STEP',
-                     'range_looks':'RLOOKS',
-                     'azimuth_looks':'ALOOKS',
-                     'dataType':'DATA_TYPE','data_type':'DATA_TYPE',
-                     'rangePixelSize':'RANGE_PIXEL_SIZE',
-                     'range_pixel_spacing':'RANGE_PIXEL_SIZE','rg_pixel_spacing':'RANGE_PIXEL_SIZE',
-                     'azimuthPixelSize':'AZIMUTH_PIXEL_SIZE',
-                     'azimuth_pixel_spacing':'AZIMUTH_PIXEL_SIZE','az_pixel_spacing':'AZIMUTH_PIXEL_SIZE',
-                     'earthRadius':'EARTH_RADIUS','earth_radius_below_sensor':'EARTH_RADIUS',
-                     'altitude':'HEIGHT',
-                     'startingRange':'STARTING_RANGE',
-                     'center_time':'CENTER_LINE_UTC'
+standardMetadataKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
+                      'length':'LENGTH','FILE_LENGTH':'LENGTH','lines':'WIDTH',
+                      'wavelength':'WAVELENGTH','Wavelength':'WAVELENGTH','radarWavelength':'WAVELENGTH',
+                      'prf':'PRF',
+                      'post_lat':'Y_STEP',
+                      'post_lon':'X_STEP',
+                      'range_looks':'RLOOKS',
+                      'azimuth_looks':'ALOOKS',
+                      'dataType':'DATA_TYPE','data_type':'DATA_TYPE',
+                      'rangePixelSize':'RANGE_PIXEL_SIZE',
+                      'range_pixel_spacing':'RANGE_PIXEL_SIZE','rg_pixel_spacing':'RANGE_PIXEL_SIZE',
+                      'azimuthPixelSize':'AZIMUTH_PIXEL_SIZE',
+                      'azimuth_pixel_spacing':'AZIMUTH_PIXEL_SIZE','az_pixel_spacing':'AZIMUTH_PIXEL_SIZE',
+                      'earthRadius':'EARTH_RADIUS','earth_radius_below_sensor':'EARTH_RADIUS',
+                      'altitude':'HEIGHT',
+                      'startingRange':'STARTING_RANGE',
+                      'center_time':'CENTER_LINE_UTC'
                      }
 
 GDAL2NUMPY_DATATYPE = {
@@ -372,8 +372,8 @@ def read_attribute(fname, epoch=None):
         for key, value in attrs.items():
             try:     atr[key] = value.decode('utf-8')
             except:  atr[key] = value
+
         atr['FILE_TYPE'] = str(k)
-        #atr['PROCESSOR'] = 'pysar'
 
         if k == 'timeseries':
             try:    atr['REF_DATE']
