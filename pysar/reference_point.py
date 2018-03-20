@@ -176,8 +176,8 @@ def seed_file_inps(File, inps=None, outFile=None):
         if inps.mark_attribute:
             re_select = True
             try:
-                ref_x_orig == int(atr['ref_x'])
-                ref_y_orig == int(atr['ref_y'])
+                ref_x_orig == int(atr['REF_X'])
+                ref_y_orig == int(atr['REF_Y'])
                 if inps.ref_x == ref_x_orig and inps.ref_y == ref_y_orig:
                     re_select = False
                     print('Same reference pixel is already selected/saved in file, skip updating file attributes')
@@ -185,11 +185,11 @@ def seed_file_inps(File, inps=None, outFile=None):
             if re_select:
                 print('Add/update ref_x/y attribute to file: '+File)
                 atr_ref = dict()
-                atr_ref['ref_x'] = str(inps.ref_x)
-                atr_ref['ref_y'] = str(inps.ref_y)
+                atr_ref['REF_X'] = str(inps.ref_x)
+                atr_ref['REF_Y'] = str(inps.ref_y)
                 if 'X_FIRST' in atr.keys():
-                    atr_ref['ref_lat'] = str(subset.coord_radar2geo(inps.ref_y, atr, 'y'))
-                    atr_ref['ref_lon'] = str(subset.coord_radar2geo(inps.ref_x, atr, 'x'))
+                    atr_ref['REF_LAT'] = str(subset.coord_radar2geo(inps.ref_y, atr, 'y'))
+                    atr_ref['REF_LON'] = str(subset.coord_radar2geo(inps.ref_x, atr, 'x'))
                 print(atr_ref)
                 outFile = ut.add_attribute(File, atr_ref)
                 ut.touch([inps.coherence_file, inps.mask_file])
@@ -211,11 +211,11 @@ def seed_attributes(atr_in,x,y):
     for key, value in iter(atr_in.items()):
         atr[key] = str(value)
 
-    atr['ref_y'] = str(y)
-    atr['ref_x'] = str(x)
+    atr['REF_Y'] = str(y)
+    atr['REF_X'] = str(x)
     if 'X_FIRST' in atr.keys():
-        atr['ref_lat'] = str(subset.coord_radar2geo(y,atr,'y'))
-        atr['ref_lon'] = str(subset.coord_radar2geo(x,atr,'x'))
+        atr['REF_LAT'] = str(subset.coord_radar2geo(y,atr,'y'))
+        atr['REF_LON'] = str(subset.coord_radar2geo(x,atr,'x'))
 
     return atr
 
@@ -225,7 +225,7 @@ def manual_select_reference_yx(stack, inps):
     '''
     Input: 
         data4display : 2D np.array, stack of input file
-        inps    : namespace, with key 'ref_x' and 'ref_y', which will be updated
+        inps    : namespace, with key 'REF_X' and 'REF_Y', which will be updated
     '''
     print('\n---------------------------------------------------------')
     print('Manual select reference point ...')
@@ -365,12 +365,12 @@ def read_seed_reference2inps(reference_file, inps=None):
     if not inps:
         inps = cmdLineParse([''])
     atr_ref = readfile.read_attribute(inps.reference_file)
-    if (not inps.ref_y or not inps.ref_x) and 'ref_x' in atr_ref.keys():
-        inps.ref_y = int(atr_ref['ref_y'])
-        inps.ref_x = int(atr_ref['ref_x'])
-    if (not inps.ref_lat or not inps.ref_lon) and 'ref_lon' in atr_ref.keys():
-        inps.ref_lat = float(atr_ref['ref_lat'])
-        inps.ref_lon = float(atr_ref['ref_lon'])
+    if (not inps.ref_y or not inps.ref_x) and 'REF_X' in atr_ref.keys():
+        inps.ref_y = int(atr_ref['REF_Y'])
+        inps.ref_x = int(atr_ref['REF_X'])
+    if (not inps.ref_lat or not inps.ref_lon) and 'REF_LON' in atr_ref.keys():
+        inps.ref_lat = float(atr_ref['REF_LAT'])
+        inps.ref_lon = float(atr_ref['REF_LON'])
     return inps
 
 
@@ -386,11 +386,11 @@ def remove_reference_pixel(File):
     if k in multi_group_hdf5_file:
         ifgram_list = sorted(h5[k].keys())
         for ifgram in ifgram_list:
-            for key in ['ref_y','ref_x','ref_lat','ref_lon']:
+            for key in ['REF_Y','REF_X','REF_LAT','REF_LON']:
                 try: h5[k][ifgram].attrs.pop(key)
                 except: pass
     else:
-        for key in ['ref_y','ref_x','ref_lat','ref_lon']:
+        for key in ['REF_Y','REF_X','REF_LAT','REF_LON']:
             try: h5[k].attrs.pop(key)
             except: pass        
     h5.close()
@@ -445,10 +445,10 @@ def cmdLineParse():
                         help='remove reference pixel information from attributes in the file')
 
     coord_group = parser.add_argument_group('input coordinates')
-    coord_group.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')
-    coord_group.add_argument('-x','--col', dest='ref_x', type=int, help='column/range number of reference pixel')
-    coord_group.add_argument('-l','--lat', dest='ref_lat', type=float, help='latitude  of reference pixel')
-    coord_group.add_argument('-L','--lon', dest='ref_lon', type=float, help='longitude of reference pixel')
+    coord_group.add_argument('-y','--row', dest='REF_Y', type=int, help='row/azimuth  number of reference pixel')
+    coord_group.add_argument('-x','--col', dest='REF_X', type=int, help='column/range number of reference pixel')
+    coord_group.add_argument('-l','--lat', dest='REF_LAT', type=float, help='latitude  of reference pixel')
+    coord_group.add_argument('-L','--lon', dest='REF_LON', type=float, help='longitude of reference pixel')
     
     coord_group.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
     coord_group.add_argument('--lookup', dest='lookup_file',\

@@ -59,8 +59,8 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
         print('read range distance from file: %s' % (rangeDistFile))
         rangeDist = readfile.read(rangeDistFile, epoch='slantRangeDistance')[0]
 
-    yref = int(atr['ref_y'])
-    xref = int(atr['ref_x'])
+    yref = int(atr['REF_Y'])
+    xref = int(atr['REF_X'])
     rangeDist -= rangeDist[yref][xref]
     Ramp = np.array(rangeDist * 3.87e-7, np.float32)
 

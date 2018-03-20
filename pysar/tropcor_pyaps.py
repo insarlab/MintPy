@@ -49,8 +49,8 @@ def get_delay(grib_file, atr, inps_dict):
     aps.getdelay(phs, inc=0.0)
 
     # Get relative phase delay in space
-    yref = int(atr['ref_y'])
-    xref = int(atr['ref_x'])
+    yref = int(atr['REF_Y'])
+    xref = int(atr['REF_X'])
     phs -= phs[yref, xref]
 
     # project into LOS direction
@@ -227,10 +227,10 @@ def main(argv):
     elif inps.dem_file:
         inps.dem_file = ut.get_file_list([inps.dem_file])[0]
         atr = readfile.read_attribute(inps.dem_file)
-    if 'ref_y' not in atr.keys() and inps.ref_yx:
+    if 'REF_Y' not in atr.keys() and inps.ref_yx:
         print('No reference info found in input file, use input ref_yx: '+str(inps.ref_yx))
-        atr['ref_y'] = inps.ref_yx[0]
-        atr['ref_x'] = inps.ref_yx[1]
+        atr['REF_Y'] = inps.ref_yx[0]
+        atr['REF_X'] = inps.ref_yx[1]
 
     ##Read Incidence angle: to map the zenith delay to the slant delay
     if os.path.isfile(inps.inc_angle):

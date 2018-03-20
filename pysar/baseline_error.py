@@ -179,8 +179,8 @@ def main(argv):
   
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
   
-    yref=int(h5file['timeseries'].attrs['ref_y'])
-    xref=int(h5file['timeseries'].attrs['ref_x'])
+    yref=int(h5file['timeseries'].attrs['REF_Y'])
+    xref=int(h5file['timeseries'].attrs['REF_X'])
   
     orbEffect=np.zeros([len(dateList),sy,sx])
     for i in range(1,len(dateList)):

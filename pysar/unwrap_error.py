@@ -68,8 +68,8 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
 
     # Check reference pixel
     try:
-        ref_y = int(atr['ref_y'])
-        ref_x = int(atr['ref_x'])
+        ref_y = int(atr['REF_Y'])
+        ref_x = int(atr['REF_X'])
         print('reference pixel in y/x: %d/%d' % (ref_y, ref_x))
     except:
         sys.exit('ERROR: Can not find ref_y/x value, input file is not referenced in space!')
@@ -233,8 +233,8 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
     k = atr['FILE_TYPE']
 
     try:
-        ref_y = int(atr['ref_y'])
-        ref_x = int(atr['ref_x'])
+        ref_y = int(atr['REF_Y'])
+        ref_x = int(atr['REF_X'])
         print('reference pixel in y/x: %d/%d' % (ref_y, ref_x))
     except:
         sys.exit('ERROR: Can not find ref_y/x value, input file is not referenced in space!')

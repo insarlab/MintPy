@@ -757,8 +757,8 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     # Seed Point
     # If value of new seed point is not nan, re-seed the data and update inps.seed_yx/lalo
     # Otherwise, try to read seed info from atrributes into inps.seed_yx/lalo
-    if inps.seed_yx and ('ref_y' not in meta_dict.keys() or \
-                         inps.seed_yx != [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]):
+    if inps.seed_yx and ('REF_Y' not in meta_dict.keys() or \
+                         inps.seed_yx != [int(meta_dict['REF_Y']), int(meta_dict['REF_X'])]):
         inps.seed_value = data[inps.seed_yx[0]-inps.pix_box[1], inps.seed_yx[1]-inps.pix_box[0]]
         if not np.isnan(inps.seed_value):
             data -= inps.seed_value
@@ -773,13 +773,13 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
             print('WARNING: input reference point has nan value, continue with original reference info')
             inps.seed_yx = None
     else:
-        if 'ref_y' in meta_dict.keys():
-            inps.seed_yx = [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]
+        if 'REF_Y' in meta_dict.keys():
+            inps.seed_yx = [int(meta_dict['REF_Y']), int(meta_dict['REF_X'])]
         else:
             inps.seed_yx = None
 
-        if 'ref_lat' in meta_dict.keys():
-            inps.seed_lalo = [float(meta_dict['ref_lat']), float(meta_dict['ref_lon'])]
+        if 'REF_LAT' in meta_dict.keys():
+            inps.seed_lalo = [float(meta_dict['REF_LAT']), float(meta_dict['REF_LON'])]
         elif inps.seed_yx and inps.geo_box:
             inps.seed_lalo = [subset.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
                               subset.coord_radar2geo(inps.seed_yx[1], meta_dict, 'x')]
@@ -1525,8 +1525,8 @@ def main(argv):
                 ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)[0]
 
         ref_yx = None
-        if k in ['interferograms'] and 'ref_y' in atr.keys():
-            ref_yx = [int(atr[i]) for i in ['ref_y','ref_x']]
+        if k in ['interferograms'] and 'REF_Y' in atr.keys():
+            ref_yx = [int(atr[i]) for i in ['REF_Y','REF_X']]
             print('consider reference pixel of interferograms in y/x: %d/%d' % (ref_yx[0], ref_yx[1]))
 
         # Read DEM

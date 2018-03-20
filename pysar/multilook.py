@@ -90,15 +90,15 @@ def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
         except: pass
 
     try:
-        atr['ref_y'] = str(int(int(atr['ref_y'])/lks_y))
-        atr['ref_x'] = str(int(int(atr['ref_x'])/lks_x))
+        atr['REF_Y'] = str(int(int(atr['REF_Y'])/lks_y))
+        atr['REF_X'] = str(int(int(atr['REF_X'])/lks_x))
         if print_msg: print('update ref_y/x')
     except: pass
     try:
-        atr['subset_y0'] = str(int(int(atr['subset_y0'])/lks_y))
-        atr['subset_y1'] = str(int(int(atr['subset_y1'])/lks_y))
-        atr['subset_x0'] = str(int(int(atr['subset_x0'])/lks_x))
-        atr['subset_x1'] = str(int(int(atr['subset_x1'])/lks_x))
+        atr['SUBSET_YMIN'] = str(int(int(atr['SUBSET_YMIN'])/lks_y))
+        atr['SUBSET_YMAX'] = str(int(int(atr['SUBSET_YMAX'])/lks_y))
+        atr['SUBSET_XMIN'] = str(int(int(atr['SUBSET_XMIN'])/lks_x))
+        atr['SUBSET_XMAX'] = str(int(int(atr['SUBSET_XMAX'])/lks_x))
         if print_msg: print('update subset_y0/y1/x0/x1')
     except: pass
 

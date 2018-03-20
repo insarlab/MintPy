@@ -136,8 +136,8 @@ def main(argv):
         data = h5file[k][inps.epoch].get(inps.epoch)[:]
         if k == 'interferograms':
             try:
-                ref_y = int(atr['ref_y'])
-                ref_x = int(atr['ref_x'])
+                ref_y = int(atr['REF_Y'])
+                ref_x = int(atr['REF_X'])
                 data -= data[ref_y,ref_x]
                 print('consider the reference pixel in y/x: %d/%d' % (ref_y, ref_x))
             except:

@@ -62,29 +62,29 @@ def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
     except: atr['X_UNIT'] = 'degrees'
 
     # Reference point from y/x to lat/lon
-    if 'ref_y' in atr_rdr.keys() and 'ref_x' in atr_rdr.keys():
-        ref_x_rdr = np.array(int(atr_rdr['ref_x']))
-        ref_y_rdr = np.array(int(atr_rdr['ref_y']))
+    if 'REF_Y' in atr_rdr.keys() and 'REF_X' in atr_rdr.keys():
+        ref_x_rdr = np.array(int(atr_rdr['REF_X']))
+        ref_y_rdr = np.array(int(atr_rdr['REF_Y']))
         trans_file = atr_lut['FILE_PATH']
         ref_lat, ref_lon = ut.radar2glob(ref_y_rdr, ref_x_rdr, trans_file, atr_rdr, print_msg=False)[0:2]
         if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
             ref_y = np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
             ref_x = np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP']))
-            atr['ref_lat'] = str(ref_lat)
-            atr['ref_lon'] = str(ref_lon)
-            atr['ref_y'] = str(int(ref_y))
-            atr['ref_x'] = str(int(ref_x))
+            atr['REF_LAT'] = str(ref_lat)
+            atr['REF_LON'] = str(ref_lon)
+            atr['REF_Y'] = str(int(ref_y))
+            atr['REF_X'] = str(int(ref_x))
             if print_msg:
                 print('update ref_lat/lon/y/x')
         else:
             warnings.warn("original reference pixel is out of .trans file's coverage. Continue.")
-            try: atr.pop('ref_y')
+            try: atr.pop('REF_Y')
             except: pass
-            try: atr.pop('ref_x')
+            try: atr.pop('REF_X')
             except: pass
-            try: atr.pop('ref_lat')
+            try: atr.pop('REF_LAT')
             except: pass
-            try: atr.pop('ref_lon')
+            try: atr.pop('REF_LON')
             except: pass
     return atr
 
@@ -129,9 +129,9 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     wid_geo = int(atr_lut['WIDTH'])
 
     # adjustment if input radar file has been subseted.
-    if 'subset_x0' in atr_rdr.keys():
-        x0 = float(atr_rdr['subset_x0'])
-        y0 = float(atr_rdr['subset_y0'])
+    if 'SUBSET_XMIN' in atr_rdr.keys():
+        x0 = float(atr_rdr['SUBSET_XMIN'])
+        y0 = float(atr_rdr['SUBSET_YMIN'])
         rg -= x0
         az -= y0
         print('\tinput radar coord file has been subsetted, adjust lookup table value')
@@ -270,12 +270,12 @@ def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True
     atr['X_UNIT'] = 'degrees'
 
     ##Reference pixel
-    if ('ref_y' in atr_rdr.keys() and lat is not None and\
-        'ref_x' in atr_rdr.keys() and lon is not None):
+    if ('REF_Y' in atr_rdr.keys() and lat is not None and\
+        'REF_X' in atr_rdr.keys() and lon is not None):
         length_rdr = int(atr_rdr['LENGTH'])
         width_rdr = int(atr_rdr['WIDTH'])
-        ref_y_rdr = int(atr_rdr['ref_y'])
-        ref_x_rdr = int(atr_rdr['ref_x'])
+        ref_y_rdr = int(atr_rdr['REF_Y'])
+        ref_x_rdr = int(atr_rdr['REF_X'])
         ref_lat = lat[ref_y_rdr, ref_x_rdr]
         ref_lon = lon[ref_y_rdr, ref_x_rdr]
 
@@ -284,21 +284,21 @@ def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True
         if 0 <= ref_y <= inps.lat_num and 0 <= ref_x <= inps.lon_num:
             ref_lat = inps.lat0 + ref_y * inps.lat_step
             ref_lon = inps.lon0 + ref_x * inps.lon_step
-            atr['ref_lat'] = str(ref_lat)
-            atr['ref_lon'] = str(ref_lon)
-            atr['ref_y'] = str(ref_y)
-            atr['ref_x'] = str(ref_x)
+            atr['REF_LAT'] = str(ref_lat)
+            atr['REF_LON'] = str(ref_lon)
+            atr['REF_Y'] = str(ref_y)
+            atr['REF_X'] = str(ref_x)
             if print_msg:
                 print('update ref_lat/lon/y/x')
         else:
             warnings.warn("original reference pixel is out of lookup file's coverage. Continue.")
-            try: atr.pop('ref_y')
+            try: atr.pop('REF_Y')
             except: pass
-            try: atr.pop('ref_x')
+            try: atr.pop('REF_X')
             except: pass
-            try: atr.pop('ref_lat')
+            try: atr.pop('REF_LAT')
             except: pass
-            try: atr.pop('ref_lon')
+            try: atr.pop('REF_LON')
             except: pass
     return atr
 

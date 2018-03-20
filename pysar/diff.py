@@ -75,9 +75,9 @@ def diff_file(file1, file2, outName=None, force=False):
             data2_ref = h5_2[k2].get(ref_date)[:]
             print('consider different reference date')
         # check reference pixel
-        ref_y = int(atr['ref_y'])
-        ref_x = int(atr['ref_x'])
-        if ref_y == int(atr2['ref_y']) and ref_x == int(atr2['ref_x']):
+        ref_y = int(atr['REF_Y'])
+        ref_x = int(atr['REF_X'])
+        if ref_y == int(atr2['REF_Y']) and ref_x == int(atr2['REF_X']):
             ref_y = None
             ref_x = None
         else:

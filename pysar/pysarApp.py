@@ -798,9 +798,9 @@ def main(argv):
     ## Skip calling seed command only if 1) ref_y/x exists AND 2) pysar.reference.yx/lalo == auto
     run_seedCmd = True
     atr = readfile.read_attribute(inps.ifgram_file)
-    if 'ref_x' in atr.keys():
-        ref_x = int(atr['ref_x'])
-        ref_y = int(atr['ref_y'])
+    if 'REF_X' in atr.keys():
+        ref_x = int(atr['REF_X'])
+        ref_y = int(atr['REF_Y'])
         length = int(atr['LENGTH'])
         width = int(atr['WIDTH'])
         print('Find reference pixel info from %s in y/x: [%d, %d]' % (os.path.basename(inps.ifgram_file), ref_y, ref_x))

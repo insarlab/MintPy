@@ -598,16 +598,16 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
 
     ##### ref_y/x/value
     try:
-        ref_x = int(atr['ref_x'])
-        ref_y = int(atr['ref_y'])
+        ref_x = int(atr['REF_X'])
+        ref_y = int(atr['REF_Y'])
         print('reference pixel in y/x: [%d, %d]' % (ref_y, ref_x))
         ref_value = np.zeros((ifgram_num,1), np.float32)
         for j in range(ifgram_num):
             ifgram = ifgram_list[j]
             dset = h5ifgram['interferograms'][ifgram].get(ifgram)
             ref_value[j] = dset[ref_y,ref_x]
-        meta['ref_y'] = ref_y
-        meta['ref_x'] = ref_x
+        meta['REF_Y'] = ref_y
+        meta['REF_X'] = ref_x
         meta['ref_value'] = ref_value
     except:
         if meta['skip_ref']:

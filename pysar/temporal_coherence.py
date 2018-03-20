@@ -72,8 +72,8 @@ def temporal_coherence(timeseriesFile, ifgramFile):
 
     # Get reference pixel
     try:
-        ref_x = int(atr_ts['ref_x'])
-        ref_y = int(atr_ts['ref_y'])
+        ref_x = int(atr_ts['REF_X'])
+        ref_y = int(atr_ts['REF_Y'])
         print('find reference pixel in y/x: [%d, %d]'%(ref_y, ref_x))
     except ValueError:
         print('No ref_x/y found! Can not calculate temporal coherence without it.')

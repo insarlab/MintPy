@@ -301,7 +301,7 @@ if __name__ == '__main__':
         ax_v.plot(inps.ref_yx[1], inps.ref_yx[0], 'ks', ms=6)
     else:
         try:
-            ax_v.plot(int(atr['ref_x']), int(atr['ref_y']), 'ks', ms=6)
+            ax_v.plot(int(atr['REF_X']), int(atr['REF_Y']), 'ks', ms=6)
         except:
             pass
 
@@ -512,7 +512,7 @@ if __name__ == '__main__':
         if inps.ref_yx:
             header_info += '\nreference pixel: y=%d, x=%d' % (inps.ref_yx[0], inps.ref_yx[1])
         else:
-            header_info += '\nreference pixel: y=%s, x=%s' % (atr['ref_y'], atr['ref_x'])
+            header_info += '\nreference pixel: y=%s, x=%s' % (atr['REF_Y'], atr['REF_X'])
         header_info += '\nunit=m/yr'
         np.savetxt(outName, list(zip(np.array(dateList), np.array(d_ts)/inps.unit_fac)), fmt='%s',\
                    delimiter='    ', header=header_info)

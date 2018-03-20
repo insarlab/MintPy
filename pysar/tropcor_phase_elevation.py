@@ -105,8 +105,8 @@ def main(argv):
     print('read DEM from file: '+inps.dem_file)
     dem = readfile.read(inps.dem_file, epoch='height')[0]
 
-    ref_y = int(atr['ref_y'])
-    ref_x = int(atr['ref_x'])
+    ref_y = int(atr['REF_Y'])
+    ref_x = int(atr['REF_X'])
     dem -= dem[ref_y,ref_x]
 
     print('considering the incidence angle of each pixel ...')

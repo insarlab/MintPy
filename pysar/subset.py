@@ -162,19 +162,19 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
     # Subset atribute
     if print_msg:  print('update/add subset_y0/y1/x0/x1')
     try:
-        subset_y0_ori = int(atr['subset_y0'])
-        atr['subset_y0'] = str(sub_y[0] + subset_y0_ori)
-        atr['subset_y1'] = str(sub_y[1] + subset_y0_ori)
+        subset_y0_ori = int(atr['SUBSET_YMIN'])
+        atr['SUBSET_YMIN'] = str(sub_y[0] + subset_y0_ori)
+        atr['SUBSET_YMAX'] = str(sub_y[1] + subset_y0_ori)
     except:
-        atr['subset_y0'] = str(sub_y[0])
-        atr['subset_y1'] = str(sub_y[1])
+        atr['SUBSET_YMIN'] = str(sub_y[0])
+        atr['SUBSET_YMAX'] = str(sub_y[1])
     try:
-        subset_x0_ori = int(atr['subset_x0'])
-        atr['subset_x0'] = str(sub_x[0] + subset_x0_ori)
-        atr['subset_x1'] = str(sub_x[1] + subset_x0_ori)
+        subset_x0_ori = int(atr['SUBSET_XMIN'])
+        atr['SUBSET_XMIN'] = str(sub_x[0] + subset_x0_ori)
+        atr['SUBSET_XMAX'] = str(sub_x[1] + subset_x0_ori)
     except:
-        atr['subset_x0'] = str(sub_x[0])
-        atr['subset_x1'] = str(sub_x[1])
+        atr['SUBSET_XMIN'] = str(sub_x[0])
+        atr['SUBSET_XMAX'] = str(sub_x[1])
 
     # Geo coord
     try:
@@ -185,8 +185,8 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
 
     # Reference in space
     try:
-        atr['ref_y'] = str(int(atr['ref_y']) - sub_y[0])
-        atr['ref_x'] = str(int(atr['ref_x']) - sub_x[0])
+        atr['REF_Y'] = str(int(atr['REF_Y']) - sub_y[0])
+        atr['REF_X'] = str(int(atr['REF_X']) - sub_x[0])
         if print_msg:  print('update ref_y/x')
     except: pass
 
@@ -225,7 +225,7 @@ def get_coverage_box(atr):
         geo_box = None
 
     # Get pixel box
-    try:    pix_box = (int(atr['subset_x0']), int(atr['subset_y0']), int(atr['subset_x1']), int(atr['subset_y1']))
+    try:    pix_box = (int(atr['SUBSET_XMIN']), int(atr['SUBSET_YMIN']), int(atr['SUBSET_XMAX']), int(atr['SUBSET_YMAX']))
     except: pix_box = None
 
     return pix_box, geo_box

@@ -361,8 +361,8 @@ def read_attribute(fname, epoch=None):
                 attrs['LENGTH'] = h5['cmask'].shape[0]
                 attrs['WIDTH'] = h5['cmask'].shape[1]
                 #attrs['ORBIT_DIRECTION'] = 'descending'
-                #attrs['ref_y'] = '134'
-                #attrs['ref_x'] = '637'
+                #attrs['REF_Y'] = '134'
+                #attrs['REF_X'] = '637'
                 #attrs['REF_DATE'] = '20141225'
                 k = 'GIANT_TS'
             if attrs is None:

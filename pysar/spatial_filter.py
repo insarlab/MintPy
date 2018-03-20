@@ -88,7 +88,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
     # Basic info
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
-    try:    ref_yx = [int(atr['ref_y']), int(atr['ref_x'])]
+    try:    ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
     except: ref_yx = None
 
     filter_type = filter_type.lower()

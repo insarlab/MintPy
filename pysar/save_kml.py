@@ -82,8 +82,8 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     # Plot - reference pixel
     if inps.disp_seed == 'yes':
         try:
-            xref = int(atr['ref_x'])
-            yref = int(atr['ref_y'])
+            xref = int(atr['REF_X'])
+            yref = int(atr['REF_Y'])
             ax.plot(xref, yref, 'ks', ms=inps.seed_size)
             print('show reference point')
         except:

@@ -128,8 +128,8 @@ def main(argv):
         num_base_par=2
 
     ###########################################
-    yref=int(h5file['timeseries'].attrs['ref_y'])
-    xref=int(h5file['timeseries'].attrs['ref_x'])
+    yref=int(h5file['timeseries'].attrs['REF_Y'])
+    xref=int(h5file['timeseries'].attrs['REF_X'])
     ###########################################
     if os.path.basename(demFile).split('.')[1]=='hgt':
          amp,dem,demRsc = readfile.read_float32(demFile)

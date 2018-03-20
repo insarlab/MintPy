@@ -1469,10 +1469,10 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
             rg_step = range_ground_resolution(atr_rdr, print_msg)
             x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
             y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
-            if 'subset_y0' in atr_rdr.keys():
-                az0 = int(atr_rdr['subset_y0'])
-            if 'subset_x0' in atr_rdr.keys():
-                rg0 = int(atr_rdr['subset_x0'])
+            if 'SUBSET_YMIN' in atr_rdr.keys():
+                az0 = int(atr_rdr['SUBSET_YMIN'])
+            if 'SUBSET_XMIN' in atr_rdr.keys():
+                rg0 = int(atr_rdr['SUBSET_XMIN'])
 
         width  = int(atr_lut['WIDTH'])
         row = np.rint((lat - lat0)/lat_step_deg).astype(int)
@@ -1532,9 +1532,9 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
 
     #####For lookup table in geo-coord, search the buffer and use center pixel
     if 'Y_FIRST' in atr_lut.keys():
-        if 'subset_x0' in atr_rdr.keys():
-            rg += int(atr_rdr['subset_x0'])
-            az += int(atr_rdr['subset_y0'])        
+        if 'SUBSET_XMIN' in atr_rdr.keys():
+            rg += int(atr_rdr['SUBSET_XMIN'])
+            az += int(atr_rdr['SUBSET_YMIN'])        
 
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter

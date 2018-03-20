@@ -42,8 +42,8 @@ dset = group.create_dataset('dem', data=dem, compression='gzip')
 for key , value in iter(demRsc.items()):
      group.attrs[key]=value
 
-group.attrs['ref_y']=0
-group.attrs['ref_x']=0
+group.attrs['REF_Y']=0
+group.attrs['REF_X']=0
 h5.close()
 
 
