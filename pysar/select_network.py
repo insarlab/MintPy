@@ -23,6 +23,7 @@ import pysar
 import pysar.utils.datetime as ptime
 import pysar.utils.readfile as readfile
 import pysar.utils.network as pnet
+import pysar.utils.plot as pp
 
 
 sar_sensor_list=['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','Sen','Kmps5','G3']
@@ -75,11 +76,11 @@ def read_template2inps(templateFile, inps=None):
     #        template[prefix+extra_key] = template[extra_key]
 
     #Check option prefix
-    for i in ['selectPairs.']:
+    for i in ['selectPairs.','selectNetwork.']:
         if any(i in key for key in template.keys()):
             print('\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-            print('WARNING: un-supported option prefix detected: selectPairs.')
-            print("         Use selectNetwork. instead")
+            print('WARNING: un-supported option prefix detected: {}'.format(i))
+            print("         Use select.network. instead")
             print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
 
     if all(prefix not in key for key in template.keys()):
@@ -523,7 +524,7 @@ def main(argv):
     out_fig_name = 'BperpHistory.pdf'
     print('plotting baseline history in temp/perp baseline domain to file: '+out_fig_name)
     fig2, ax2 = plt.subplots()
-    ax2 = pnet.plot_perp_baseline_hist(ax2, date8_list, pbase_list)
+    ax2 = pp.plot_perp_baseline_hist(ax2, date8_list, pbase_list)
     plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
 
     out_fig_name = 'Network.pdf'
@@ -536,7 +537,7 @@ def main(argv):
     if inps.coherence_list:
         print('plotting predicted coherence matrix to file: '+out_fig_name)
         fig3, ax3 = plt.subplots()
-        ax3 = pnet.plot_coherence_matrix(ax3, date12_list, inps.coherence_list, plot_dict=vars(inps))
+        ax3 = pp.plot_coherence_matrix(ax3, date12_list, inps.coherence_list, plot_dict=vars(inps))
         plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
 
     if inps.disp_fig:

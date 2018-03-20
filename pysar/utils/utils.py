@@ -54,6 +54,11 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 
 ###############################################################################
+def round_to_1(x):
+    '''Return the most significant digit of input number'''
+    return round(x, -int(np.floor(np.log10(abs(x)))))
+
+
 def touch(fname_list, times=None):
     '''python equivalent function to Unix utily - touch
     It sets the modification and access times of files to the current time of day.
@@ -1331,10 +1336,8 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
         length_list.append(atr['LENGTH'])
 
     # Mode of Width and Length
-    if not mode_width:
-        mode_width = mode(width_list)
-    if not mode_length:
-        mode_length = mode(length_list)
+    if not mode_width :  mode_width  = most_common(width_list)
+    if not mode_length:  mode_length = most_common(length_list)
     
     # Update Input List
     fname_list_out = list(fname_list)
@@ -1354,7 +1357,33 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
     return fname_list_out, mode_width, mode_length
 
 
-def mode (thelist):
+def most_common(L):
+    '''Return the most common item in the list L. From Alex Martelli on Stack Overflow.
+    If the "most common" items with the same highest count are > 1, return the earliest-occurring one.
+    Link: https://stackoverflow.com/questions/1518522/python-most-common-element-in-a-list
+    Examples:
+        5 = most_common([4,5,5,5,5,8,9])
+        'goose' = most_common(['goose','duck','duck','goose'])
+    '''
+    import itertools
+    import operator
+    # get an iterable of (item, iterable) pairs
+    SL = sorted((x, i) for i, x in enumerate(L))
+    groups = itertools.groupby(SL, key=operator.itemgetter(0))
+    # auxiliary function to get "quality" for an item
+    def _auxfun(g):
+        item, iterable = g
+        count = 0
+        min_index = len(L)
+        for _, where in iterable:
+            count += 1
+            min_index = min(min_index, where)
+        return count, -min_index
+    # pick the highest-count/earliest item
+    return max(groups, key=_auxfun)[0]
+
+
+def mode(thelist):
     '''Find Mode (most common) item in the list'''
     if not thelist:
         return None

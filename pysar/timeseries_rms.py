@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import pysar.utils.datetime as ptime
 import pysar.utils.readfile as readfile
 import pysar.utils.utils as ut
-import pysar.utils.network as pnet
+import pysar.utils.plot as pp
 
 
 ######################################################################################################
@@ -175,7 +175,7 @@ def main(argv):
         font_size = 12
 
         dates, datevector = ptime.date_list2vector(date_list)
-        try:    bar_width = ut.mode(np.diff(dates).tolist())*3/4
+        try:    bar_width = ut.most_common(np.diff(dates).tolist())*3/4
         except: bar_width = np.min(np.diff(dates).tolist())*3/4
         x_list = [i-bar_width/2 for i in dates]
 
@@ -197,11 +197,11 @@ def main(argv):
             ax.bar(ex_x_list, ex_rms_list, bar_width.days, color='darkgray', label='Exclude date(s)')
 
         # Plot min_rms line
-        ax, xmin, xmax = ptime.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=inps.tick_year_num)
+        ax, xmin, xmax = pp.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=inps.tick_year_num)
         ax.plot(np.array([xmin, xmax]), np.array([min_rms, min_rms]), '--k')
 
         # axis format
-        ax = pnet.auto_adjust_yaxis(ax, rms_list+[min_rms], font_size, ymin=0.0)
+        ax = pp.auto_adjust_yaxis(ax, rms_list+[min_rms], font_size, ymin=0.0)
         ax.set_xlabel('Time [years]',fontsize=font_size)
         ax.set_ylabel('Root Mean Square [mm]',fontsize=font_size)
         ax.yaxis.set_ticks_position('both')

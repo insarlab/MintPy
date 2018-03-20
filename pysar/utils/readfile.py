@@ -60,7 +60,12 @@ standardMetadataKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
                       'earthRadius':'EARTH_RADIUS','earth_radius_below_sensor':'EARTH_RADIUS',
                       'altitude':'HEIGHT',
                       'startingRange':'STARTING_RANGE',
-                      'center_time':'CENTER_LINE_UTC'
+                      'center_time':'CENTER_LINE_UTC',
+                      'drop_ifgram':'DROP_IFGRAM',
+                      'ref_date':'REF_DATE',
+                      'ref_x':'REF_X','ref_y':'REF_Y','ref_lat':'REF_LAT','ref_lon':'REF_LON',
+                      'subset_x0':'SUBSET_XMIN','subset_x1':'SUBSET_XMAX',
+                      'subset_y0':'SUBSET_YMIN','subset_y1':'SUBSET_YMAX',
                      }
 
 GDAL2NUMPY_DATATYPE = {

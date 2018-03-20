@@ -98,8 +98,8 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     ## Get date list to download (skip already downloaded files)
     grib_file_existed = ut.get_file_list(grib_file_list)
     if grib_file_existed:
-        grib_filesize_digit = ut.mode([len(str(os.path.getsize(i))) for i in grib_file_existed])
-        grib_filesize_max2 = ut.mode([str(os.path.getsize(i))[0:2] for i in grib_file_existed])
+        grib_filesize_digit = ut.most_common([len(str(os.path.getsize(i))) for i in grib_file_existed])
+        grib_filesize_max2  = ut.most_common([str(os.path.getsize(i))[0:2] for i in grib_file_existed])
         grib_file_corrupted = [i for i in grib_file_existed if (len(str(os.path.getsize(i))) != grib_filesize_digit or\
                                                                 str(os.path.getsize(i))[0:2] != grib_filesize_max2)]
         print('file size mode: %se%d bytes' % (grib_filesize_max2, grib_filesize_digit-2))

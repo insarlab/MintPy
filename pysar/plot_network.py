@@ -18,6 +18,7 @@ import pysar.utils.datetime as ptime
 import pysar.utils.readfile as readfile
 import pysar.utils.utils as ut
 import pysar.utils.network  as pnet
+import pysar.utils.plot as pp
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -235,7 +236,7 @@ def main(argv):
     else:
         fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax = pnet.plot_perp_baseline_hist(ax, date8_list, pbase_list, vars(inps), date8_list_drop)
+    ax = pp.plot_perp_baseline_hist(ax, date8_list, pbase_list, vars(inps), date8_list_drop)
 
     figName = 'BperpHistory'+inps.fig_ext
     if inps.save_fig:
@@ -250,8 +251,8 @@ def main(argv):
         else:
             fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax = pnet.plot_coherence_matrix(ax, date12_list, inps.coherence_list,\
-                                        date12_list_drop, plot_dict=vars(inps))
+        ax = pp.plot_coherence_matrix(ax, date12_list, inps.coherence_list,\
+                                      date12_list_drop, plot_dict=vars(inps))
 
         if inps.save_fig:
             fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
@@ -265,7 +266,7 @@ def main(argv):
         else:
             fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax = pnet.plot_coherence_history(ax, date12_list, inps.coherence_list, plot_dict=vars(inps))
+        ax = pp.plot_coherence_history(ax, date12_list, inps.coherence_list, plot_dict=vars(inps))
 
         if inps.save_fig:
             fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
@@ -277,7 +278,7 @@ def main(argv):
     else:
         fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax = pnet.plot_network(ax, date12_list, date8_list, pbase_list, vars(inps), date12_list_drop)
+    ax = pp.plot_network(ax, date12_list, date8_list, pbase_list, vars(inps), date12_list_drop)
 
     figName = 'Network'+inps.fig_ext
     if inps.save_fig:

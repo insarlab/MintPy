@@ -19,6 +19,7 @@ import pysar.utils.datetime as ptime
 import pysar.utils.readfile as readfile
 import pysar.utils.utils as ut
 import pysar.utils.network as pnet
+import pysar.utils.plot as pp
 import pysar.subset as subset
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
@@ -65,7 +66,7 @@ def manual_select_pairs_to_remove(File):
     date12_orig = pnet.get_date12_list(File)
     bperp_list = ut.perp_baseline_ifgram2timeseries(File)[0].tolist()
     date8_list = ptime.ifgram_date_list(File)
-    ax = pnet.plot_network(ax, date12_orig, date8_list, bperp_list)
+    ax = pp.plot_network(ax, date12_orig, date8_list, bperp_list)
     print('display the network of interferogram of file: '+File)
 
     date6_list = ptime.yymmdd(date8_list)

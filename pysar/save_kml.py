@@ -25,7 +25,7 @@ import pysar
 import pysar.utils.datetime as ptime
 import pysar.utils.readfile as readfile
 import pysar.utils.utils as ut
-import pysar.view as pp
+import pysar.view as pv
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -45,11 +45,11 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
         kmz_file - string, output KMZ filename
     Example:
         import pysar._readfile as readfile
-        import pysar.view as pp
+        import pysar.view as pv
         import pysar.save_kml as save_kml
         fname = 'geo_velocity_masked.h5'
         data, atr = readfile.read(fname)
-        out_name_base = pp.auto_figure_title(fname, None)
+        out_name_base = pv.auto_figure_title(fname, None)
         save_kml.write_kmz_file(data, atr, out_name_base)
     '''
     if not inps:
@@ -260,10 +260,10 @@ def main(argv):
 
     # Output filename
     if not inps.outfile:
-        inps.outfile = pp.auto_figure_title(inps.file, inps.epoch, vars(inps))
+        inps.outfile = pv.auto_figure_title(inps.file, inps.epoch, vars(inps))
 
     # Data Operation - Display Unit & Rewrapping
-    data, inps.disp_unit, inps.wrap = pp.scale_data4disp_unit_and_rewrap(data, atr, inps.disp_unit, inps.wrap)
+    data, inps.disp_unit, inps.wrap = pv.scale_data4disp_unit_and_rewrap(data, atr, inps.disp_unit, inps.wrap)
     if inps.wrap:
         inps.ylim = [-np.pi, np.pi]
 

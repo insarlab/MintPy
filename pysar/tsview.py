@@ -15,7 +15,7 @@ import scipy.stats as stats
 import pysar.utils.datetime as ptime
 import pysar.utils.readfile as readfile
 import pysar.utils.utils as ut
-import pysar.view as pp
+import pysar.utils.plot as pp
 from pysar.mask import mask_matrix
 
 
@@ -453,7 +453,7 @@ if __name__ == '__main__':
         if inps.disp_title:
             ax_ts.set_title(title_ts)
 
-        ax_ts = ptime.auto_adjust_xaxis_date(ax_ts, tims, fontSize=inps.font_size)[0]
+        ax_ts = pp.auto_adjust_xaxis_date(ax_ts, tims, fontSize=inps.font_size)[0]
         ax_ts.set_xlabel('Time', fontsize=inps.font_size)
         ax_ts.set_ylabel('Displacement [%s]' % inps.disp_unit, fontsize=inps.font_size)
 

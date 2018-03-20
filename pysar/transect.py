@@ -21,7 +21,6 @@ from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import pysar.utils.readfile as readfile
 import pysar.utils.utils as ut
 import pysar.subset as sub
-#import pysar.view as pp
 
 
 #####################################################################

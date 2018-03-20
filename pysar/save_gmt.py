@@ -16,7 +16,7 @@ import numpy as np
 import scipy.io.netcdf as netcdf
 
 import pysar.utils.readfile as readfile
-import pysar.view as pp
+import pysar.view as pv
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -191,7 +191,7 @@ def main(argv):
 
     # Output filename
     if not inps.outfile:
-        inps.outfile = pp.auto_figure_title(inps.file, inps.epoch, vars(inps))
+        inps.outfile = pv.auto_figure_title(inps.file, inps.epoch, vars(inps))
     inps.outfile = os.path.splitext(inps.outfile)[0]+'.grd'
 
     ##### 2. Write GMT .grd file

@@ -127,35 +127,8 @@ def auto_path_miami(inps, template={}):
     return inps
 
 
-def mode (thelist):
-    '''Find Mode (most common) item in the list'''
-    if not thelist:
-        return None
-    if len(thelist) == 1:
-        return thelist[0]
-
-    counts = {}
-    for item in thelist:
-        counts[item] = counts.get(item, 0) + 1
-    maxcount = 0
-    maxitem  = None
-    for k, v in iter(counts.items()):
-        if v > maxcount:
-            maxitem  = k
-            maxcount = v
-
-    if maxcount == 1:
-        print("All values only appear once")
-        return None
-    elif list(counts.values()).count(maxcount) > 1:
-        print("List has multiple modes")
-        return None
-    else:
-        return maxitem
-
-
 ##################################################################
-def check_file_size(fileList, mode_width=None, mode_length=None):
+def check_file_size(fileList, commonWidth=None, commonLength=None):
     '''Update file list and drop those not in the same size with majority.'''
     # If input file list is empty
     if not fileList:
@@ -169,25 +142,25 @@ def check_file_size(fileList, mode_width=None, mode_length=None):
         widthList.append(rsc['WIDTH'])
         lengthList.append(rsc['LENGTH'])
     # Mode of Width and Length
-    if not mode_width:   mode_width  = mode(widthList)
-    if not mode_length:  mode_length = mode(lengthList)
+    if not commonWidth:   commonWidth  = ut.most_common(widthList)
+    if not commonLength:  commonLength = ut.most_common(lengthList)
     
     # Update Input List
     ext = os.path.splitext(fileList[0])[1]
     fileListOut = list(fileList)
-    if widthList.count(mode_width)!=len(widthList) or lengthList.count(mode_length)!=len(lengthList):
+    if widthList.count(commonWidth)!=len(widthList) or lengthList.count(commonLength)!=len(lengthList):
         print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
         print('WARNING: Some '+ext+' may have the wrong dimensions!')
         print('All '+ext+' should have the same size.')
-        print('The width and length of the majority of '+ext+' are: '+str(mode_width)+', '+str(mode_length))
+        print('The width and length of the majority of {} are: {} {}'.format(ext, commonWidth, commonLength))
         print('But the following '+ext+' have different dimensions and thus will not be loaded:')
         for i in range(len(fileList)):
-            if widthList[i] != mode_width or lengthList[i] != mode_length:
-                print('%s    width: %s    length: %s' % (os.path.basename(fileList[i]), widthList[i], lengthList[i]))
+            if widthList[i] != commonWidth or lengthList[i] != commonLength:
+                print('{}\twidth: {}\tlength: {}'.format(os.path.basename(fileList[i]), widthList[i], lengthList[i]))
                 fileListOut.remove(fileList[i])
-        print('\nNumber of '+ext+' left: '+str(len(fileListOut)))
+        print('\nNumber of {} file left: {}'.format(ext, len(fileListOut)))
         print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-    return fileListOut, mode_width, mode_length
+    return fileListOut, commonWidth, commonLength
 
 
 def check_existed_hdf5_file(inFiles, hdf5File):
@@ -225,10 +198,10 @@ def check_existed_hdf5_file(inFiles, hdf5File):
         # Check mode length/width with existed hdf5 file
         if outFiles:
             ext = os.path.splitext(outFiles[0])[1]
-            outFiles, mode_width, mode_length = check_file_size(outFiles)
-            if mode_width != atr['WIDTH'] or mode_length != atr['LENGTH']:
+            outFiles, commonWidth, commonLength = check_file_size(outFiles)
+            if commonWidth != atr['WIDTH'] or commonLength != atr['LENGTH']:
                 print('WARNING: input files have different size than existed hdf5 file:')
-                print('Input file size: '+mode_length+', '+mode_width)
+                print('Input file size: '+commonLength+', '+commonWidth)
                 print('HDF5  file size: '+atr['LENGTH']+', '+atr['WIDTH'])
                 print('Continue WITHOUT loading '+ext+' file')
                 print('To enforse loading, change/remove existed HDF5 filename and re-run loading script')
@@ -252,7 +225,7 @@ def load_multi_group_hdf5(fileType, fileList, outfile='unwrapIfgram.h5', exDict=
     print('number of '+ext+' input: '+str(len(fileList)))
 
     # Check width/length mode of input files
-    fileList, mode_width, mode_length = check_file_size(fileList)
+    fileList, commonWidth, commonLength = check_file_size(fileList)
     if not fileList:
         return None, None
 
