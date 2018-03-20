@@ -24,7 +24,7 @@ except KeyError:
 
 
 ########################################################################
-miami_path = True              # Package-wide variable, Auto setting for file structure of Univ. of Miami
+auto_path_miami = True         # Package-wide variable, Auto setting for file structure of Univ. of Miami
                                # change it to False if you are not using it.
 parallel_num = 8               # max core number used in parallel processing
 figsize_single_min = 6.0       # default min size in inch, for single plot

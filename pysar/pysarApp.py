@@ -426,7 +426,7 @@ def cmdLineParse():
                         help='PySAR working directory, default is:\n'+\
                              'a) current directory, or\n'+\
                              'b) $SCRATCHDIR/projectName/PYSAR, if meets the following 3 requirements:\n'+\
-                             '    1) miami_path = True in pysar/__init__.py\n'+\
+                             '    1) auto_path_miami = True in pysar/__init__.py\n'+\
                              '    2) environmental variable $SCRATCHDIR exists\n'+\
                              '    3) input custom template with basename same as projectName\n')
     parser.add_argument('-g', dest='generate_template', action='store_true',\
@@ -470,7 +470,7 @@ def main(argv):
 
     # Work directory
     if not inps.work_dir:
-        if pysar.miami_path and 'SCRATCHDIR' in os.environ and inps.project_name:
+        if pysar.auto_path_miami and 'SCRATCHDIR' in os.environ and inps.project_name:
             inps.work_dir = os.getenv('SCRATCHDIR')+'/'+inps.project_name+'/PYSAR'
         else:
             inps.work_dir = os.getcwd()
