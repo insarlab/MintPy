@@ -387,54 +387,38 @@ def read_attribute(fname, epoch=None):
         h5.close()
 
     else:
-        # attribute file list
-        try:
-            rscFileList = [fname+'.rsc', fname.split('_snap_connect.byt')[0]+'.unw.rsc']
-            rscFile = [i for i in rscFileList if os.path.isfile(i)][0]
-        except:
-            rscFile = None
-
-        ##### RSC File
-        if rscFile:
-            atr = read_roipac_rsc(rscFile)
+        ##Read metadata file
+        if os.path.isfile(fname+'.rsc'):
+            atr = read_roipac_rsc(fname+'.rsc')
             atr['FILE_TYPE'] = ext
-            #if 'FILE_TYPE' not in atr.keys():
-            #    atr['FILE_TYPE'] = ext
-            if 'PROCESSOR' not in atr.keys():
-                atr['PROCESSOR'] = 'roipac'
-            if 'INSAR_PROCESSOR' not in atr.keys():
-                atr['INSAR_PROCESSOR'] = 'roipac'
 
-        ##### PAR File
-        elif os.path.isfile(fname+'.par'):
-            atr = read_gamma_par(fname+'.par')
-            atr['FILE_TYPE'] = ext
-            #if 'FILE_TYPE' not in atr.keys():
-            #    atr['FILE_TYPE'] = ext
-            if 'PROCESSOR' not in atr.keys():
-                atr['PROCESSOR'] = 'gamma'
-            if 'INSAR_PROCESSOR' not in atr.keys():
-                atr['INSAR_PROCESSOR'] = 'gamma'
-
-        ##### XML File
         elif os.path.isfile(fname+'.xml'):
             atr = read_isce_xml(fname+'.xml')
             if 'FILE_TYPE' not in atr.keys():
                 atr['FILE_TYPE'] = ext
-            atr['PROCESSOR'] = 'isce'
-            if 'INSAR_PROCESSOR' not in atr.keys():
-                atr['INSAR_PROCESSOR'] = 'isce'
+
+        elif os.path.isfile(fname+'.par'):
+            atr = read_gamma_par(fname+'.par')
+            atr['FILE_TYPE'] = ext
 
         elif os.path.isfile(fname+'.hdr'):
             atr = read_template(fname+'.hdr')
             atr = attribute_envi2roipac(atr)
             atr['FILE_TYPE'] = atr['file type']
-            atr['PROCESSOR'] = 'isce'
-            if 'INSAR_PROCESSOR' not in atr.keys():
-                atr['INSAR_PROCESSOR'] = 'isce'
 
         else:
             sys.exit('Unrecognized file extension: '+ext)
+
+        ##Get PROCESSOR
+        if os.path.isfile(fname+'.xml'):
+            atr['PROCESSOR'] = 'isce'
+        elif os.path.isfile(fname+'.hdr'):
+            atr['PROCESSOR'] = 'isce'
+        elif os.path.isfile(fname+'.par'):
+            atr['PROCESSOR'] = 'gamma'
+        elif os.path.isfile(fname+'.rsc'):
+            if 'PROCESSOR' not in atr.keys():
+                atr['PROCESSOR'] = 'roipac'
 
     # Unit - str
     #if 'UNIT' not in atr.keys():
@@ -451,12 +435,6 @@ def read_attribute(fname, epoch=None):
             atr['UNIT'] = '1'
 
     atr['FILE_PATH'] = os.path.abspath(fname)
-    if 'INSAR_PROCESSOR' not in atr.keys():
-        if atr['PROCESSOR'] == 'pysar':
-            atr['INSAR_PROCESSOR'] = 'roipac'
-        else:
-            atr['INSAR_PROCESSOR'] = atr['PROCESSOR']
-
     if atr['PROCESSOR'] == 'isce' and ext == '.wgs84':
         atr['FILE_TYPE'] = 'dem'
 

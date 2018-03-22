@@ -154,13 +154,13 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
 
     ##### Update attribute variable
     atr['LENGTH'] = str(sub_y[1]-sub_y[0])
-    atr['WIDTH']       = str(sub_x[1]-sub_x[0])
-    atr['YMAX']        = str(sub_y[1]-sub_y[0] - 1)
-    atr['XMAX']        = str(sub_x[1]-sub_x[0] - 1)
+    atr['WIDTH']  = str(sub_x[1]-sub_x[0])
+    atr['YMAX']   = str(sub_y[1]-sub_y[0] - 1)
+    atr['XMAX']   = str(sub_x[1]-sub_x[0] - 1)
     if print_msg:  print('update LENGTH, WIDTH, Y/XMAX')
 
     # Subset atribute
-    if print_msg:  print('update/add subset_y0/y1/x0/x1')
+    if print_msg:  print('update/add SUBSET_YMIN/YMAX/XMIN/XMAX')
     try:
         subset_y0_ori = int(atr['SUBSET_YMIN'])
         atr['SUBSET_YMIN'] = str(sub_y[0] + subset_y0_ori)
@@ -187,7 +187,7 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
     try:
         atr['REF_Y'] = str(int(atr['REF_Y']) - sub_y[0])
         atr['REF_X'] = str(int(atr['REF_X']) - sub_x[0])
-        if print_msg:  print('update ref_y/x')
+        if print_msg:  print('update REF_Y/X')
     except: pass
 
     # Starting Range for file in radar coord
