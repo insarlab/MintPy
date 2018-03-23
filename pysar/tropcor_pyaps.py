@@ -204,8 +204,8 @@ def cmdLineParse():
 
     inps = parser.parse_args()
 
-    # Correcting TIMESERIES or DOWNLOAD DATA ONLY, required one of them
-    if not inps.dem_file and ( not inps.timeseries_file or not inps.date_list_file ):
+    # Calculate DELAY or DOWNLOAD DATA ONLY, required one of them
+    if not inps.download and not inps.dem_file and ( not inps.timeseries_file or not inps.date_list_file ):
         parser.print_help()
         sys.exit(1)
     return inps
