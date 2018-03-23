@@ -573,7 +573,7 @@ def plot_timeseries_errorbar(ax, dis_ts, inps):
     return ax
 
 
-def plot_timeseries_scatter(ax, dis_ts, inps):
+def plot_timeseries_scatter(ax, dis_ts, inps, plot_num=1):
     global date_num
 
     dates = list(inps.dates)
@@ -586,7 +586,11 @@ def plot_timeseries_scatter(ax, dis_ts, inps):
         # Plot excluded dates
         ax.scatter(inps.ex_dates, ex_d_ts, s=inps.marker_size ** 2, color='gray')  # color='crimson'
     # Plot kept dates
-    scatter = ax.scatter(dates, d_ts, s=inps.marker_size ** 2, label='1')
+    color = 'blue'
+    if plot_num == 2:
+        color = 'crimson'
+    print('Color is ' + color)
+    scatter = ax.scatter(dates, d_ts, s=inps.marker_size ** 2, label='1', color=color)
 
     return ax, scatter
 
@@ -619,10 +623,10 @@ def update_timeseries(y, x, plot_number, data_only=False):
     if inps.error_file:
         axis = plot_timeseries_errorbar(ax_ts, d_ts, inps)
     else:
-        axis, scatter = plot_timeseries_scatter(axis, d_ts, inps)
+        axis, scatter = plot_timeseries_scatter(axis, d_ts, inps, plot_number)
         scatter.set_label('2')
 
-    axis.set_ylim(inps.ylim_mat[0], inps.ylim_mat[1]*2)
+    axis.set_ylim(inps.ylim_mat[0]*2, inps.ylim_mat[1]*2)
     for tick in axis.yaxis.get_major_ticks():
         tick.label.set_fontsize(inps.font_size)
 
@@ -768,7 +772,7 @@ def show_figure(plot_number):
     plot_figure = plt.figure("PLOT!!", figsize=(10, 5))
 
     new_axes = plot_figure.add_subplot(111)
-    new_axes.set_ylim(inps.ylim_mat[0], inps.ylim_mat[1]*2)
+    new_axes.set_ylim(inps.ylim_mat[0]*2, inps.ylim_mat[1]*2)
 
     annot = new_axes.annotate("", xy=(0, 0), xytext=(445, 10), textcoords="axes points", bbox=dict(boxstyle="round", fc="w"))
 
@@ -776,7 +780,7 @@ def show_figure(plot_number):
 
     d_ts_n = set_timeseries_data(plot_number)
 
-    scatter = plot_timeseries_scatter(new_axes, d_ts_n, inps)
+    scatter = plot_timeseries_scatter(new_axes, d_ts_n, inps, plot_number)
 
     if plot_number == 1:
         _, p1_scatter = scatter
