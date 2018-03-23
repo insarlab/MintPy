@@ -65,7 +65,7 @@ standardMetadataKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
                       'ref_date':'REF_DATE',
                       'ref_x':'REF_X','ref_y':'REF_Y','ref_lat':'REF_LAT','ref_lon':'REF_LON',
                       'subset_x0':'SUBSET_XMIN','subset_x1':'SUBSET_XMAX',
-                      'subset_y0':'SUBSET_YMIN','subset_y1':'SUBSET_YMAX',
+                      'subset_y0':'SUBSET_YMIN','subset_y1':'SUBSET_YMAX'
                      }
 
 GDAL2NUMPY_DATATYPE = {
@@ -81,6 +81,16 @@ GDAL2NUMPY_DATATYPE = {
 11: np.complex128,
 
 }
+
+dataTypeDict = {'bool':np.bool_,'byte':np.bool_,'flag':np.bool_,
+                'int':np.int16,'int16':np.int16,'short':np.int16,'int32':np.int32,
+                'int64':np.int64,'long':np.int64,
+                'float':np.float32,'float32':np.float32,
+                'float_':np.float64,'float64':np.float64,
+                'complex':np.complex64,'complex64':np.complex64,'cpx_float32':np.complex64,
+                'cfloat':np.complex64,'cfloat32':np.complex64,
+                'complex128':np.complex128,'complex_':np.complex128,'cpx_float64':np.complex128
+               }
 
 
 #########################################################################
@@ -199,17 +209,13 @@ def read(fname, box=None, epoch=None, print_msg=True):
             data, atr = read_real_float32(fname, box=box)
             return data, atr
 
-        elif k in ['.int','int']:
-            amp, pha, atr = read_complex_float32(fname, box=box, cpx=False)
-            return pha, atr
+        elif k in ['.int','int','.flat','cpx']:
+            data, atr = read_complex_float32(fname, box=box, band='phase')
+            return data, atr
 
         elif k in ['.slc']:
-            amp, pha, atr = read_complex_float32(fname, box=box, cpx=False)
-            return amp, atr
-
-        elif k in ['.flat','cpx']:
-            amp, pha, atr = read_complex_float32(fname, box=box, cpx=False)
-            return pha, atr
+            data, atr = read_complex_float32(fname, box=box, band='amplitude')
+            return data, atr
 
         elif fbase.startswith('los'):
             incAngle, azAngle, atr = read_float32(fname, box=box)
@@ -226,7 +232,7 @@ def read(fname, box=None, epoch=None, print_msg=True):
             data, atr = read_real_float64(fname, box=box)
             return data, atr
         elif atr['DATA_TYPE'].lower() in ['cfloat32']:
-            data, atr = read_complex_float32(fname, box=box, cpx=True)
+            data, atr = read_complex_float32(fname, box=box, band='complex')
             return data, atr
         elif atr['DATA_TYPE'].lower() in ['float32','float']:
             data, atr = read_real_float32(fname, box=box)
@@ -251,14 +257,12 @@ def read(fname, box=None, epoch=None, print_msg=True):
             return dem, atr
 
         elif ext in ['.int']:
-            amp, pha, atr = read_complex_float32(fname, box=box, cpx=False)
-            return pha, atr
+            data, atr = read_complex_float32(fname, box=box, band='phase')
+            return data, atr
 
         elif ext in ['.amp']:
-            amp, atr = read_complex_float32(fname, box=box, cpx=True)
-            m_amp = amp.real
-            s_amp = amp.imag
-            return m_amp, s_amp, atr
+            data, atr = read_complex_float32(fname, box=box, band='complex')
+            return data.real, data.imag, atr
 
         elif ext in ['.flt']:
             data, atr = read_real_float32(fname, box=box)
@@ -286,7 +290,7 @@ def read(fname, box=None, epoch=None, print_msg=True):
             return data, atr
 
         elif ext in ['.UTM_TO_RDC', '.utm_to_rdc']:
-            data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', cpx=True)
+            data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', band='complex')
             if not epoch:
                 return data.real, data.imag, atr
             elif epoch.startswith(('rg','range')):
@@ -297,8 +301,8 @@ def read(fname, box=None, epoch=None, print_msg=True):
                 sys.exit('Un-recognized epoch input: '+epoch)
 
         elif ext in ['.int']:
-            amp, pha, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', cpx=False)
-            return pha, atr
+            data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', band='phase')
+            return data, atr
 
         elif ext in ['.mli']:
             data, atr = read_real_float32(fname, box=box)
@@ -792,7 +796,7 @@ def read_real_float64(fname, box=None, byte_order='l'):
     data = data[box[1]:box[3], box[0]:box[2]]
     return data, atr
 
-def read_complex_float32(fname, box=None, byte_order='l', cpx=False):
+def read_complex_float32(fname, box=None, byte_order='l', band='phase'):
     '''Read complex float 32 data matrix, i.e. roi_pac int or slc data.
     old name: read_complex64()
 
@@ -803,15 +807,16 @@ def read_complex_float32(fname, box=None, byte_order='l', cpx=False):
     real, imaginary, real, imaginary, ...
     ...
 
-    Inputs:
-        fname      : str, input file name
-        box        : 4-tuple defining (left, upper, right, lower) pixel coordinate.
-        byte_order : str, optional, order of reading byte in the file
-        cpx        : flag for output format, 
-                    0 for amplitude and phase [by default], 
-                    non-0 : for real and imagery
-    Output:
-        data : 2D np.array in complex float32 
+    Parameters: fname : str,
+                    input file name
+                box : 4-tuple
+                    defining (left, upper, right, lower) pixel coordinate.
+                byte_order : str, optional
+                    order of reading byte in the file
+                band : str
+                    output format, default = phase
+                    phase, amplitude, real, imag, complex
+    Returns: data : 2D np.array in complex float32 
     Example:
         amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
         data, atr       = read_complex_float32('150707.slc', 1)
@@ -830,12 +835,18 @@ def read_complex_float32(fname, box=None, byte_order='l', cpx=False):
     data = np.fromfile(fname, dtype=data_type, count=box[3]*width).reshape(box[3], width)
     data = data[box[1]:box[3], box[0]:box[2]]
 
-    if cpx:
-        return data, atr
+    if band == 'phase':
+        dataOut = np.angle(data)
+    elif band == 'amplitude':
+        dataOut = np.absolute(data)
+    elif band == 'real':
+        dataOut = data.real
+    elif band == 'imag':
+        dataOut = data.imag
     else:
-        amplitude = np.hypot(data.imag, data.real)
-        phase = np.arctan2(data.imag, data.real)
-        return amplitude, phase, atr
+        dataOut = data
+
+    return dataOut, atr
 
 
 def read_real_float32(fname, box=None, byte_order='l'):
@@ -930,8 +941,8 @@ def read_bool(fname, box=None):
     length = int(float(atr['LENGTH']))
     if not box:
         box = [0,0,width,length]
-    
-    data = np.fromfile(fname, dtype=bool, count=box[3]*width).reshape(box[3], width)
+
+    data = np.fromfile(fname, dtype=np.bool_, count=box[3]*width).reshape(box[3], width)
     data = data[box[1]:box[3], box[0]:box[2]]
     return data, atr
 

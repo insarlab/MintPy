@@ -6,30 +6,30 @@ import argparse
 import datetime, time
 
 from pysar.utils import readfile, datetime as ptime
-from pysar.utils.insarObj import ifgram, ifgramStack, ifgramDatasetNames
+from pysar.utils.insarobj import ifgram, ifgramStack, ifgramDatasetNames
 
 
 #################################################################
 TEMPLATE='''
 ## 1. Load Data (--load to exit after this step)
 #------------------------ ISCE/sentinelStack ---------------------:
-pysar.load.processor     = isce
-pysar.load.unwFile       = $PROJECT_DIR/merged/interferograms/*/filt_*.unw
-pysar.load.corFile       = $PROJECT_DIR/merged/interferograms/*/filt_*.cor
-pysar.load.connCompFile  = $PROJECT_DIR/merged/interferograms/*/filt_*.unw.conncomp
-pysar.load.intFile       = $PROJECT_DIR/merged/interferograms/*/filt_*.int
+pysar.load.processor      = isce
+pysar.load.unwFiles       = $PROJECT_DIR/merged/interferograms/*/filt_*.unw
+pysar.load.corFiles       = $PROJECT_DIR/merged/interferograms/*/filt_*.cor
+pysar.load.connCompFiles  = $PROJECT_DIR/merged/interferograms/*/filt_*.unw.conncomp
+pysar.load.intFiles       = $PROJECT_DIR/merged/interferograms/*/filt_*.int
 #------------------------ ROI_PAC --------------------------------:
-pysar.load.processor     = roipac
-pysar.load.unwFile       = $PROJECT_DIR/PROCESS/DONE/filt_*rlks_c10.unw
-pysar.load.corFile       = $PROJECT_DIR/PROCESS/DONE/filt_*rlks.cor
-pysar.load.connCompFile  = $PROJECT_DIR/PROCESS/DONE/filt_*_snap_connect.byt
-pysar.load.intFile       = $PROJECT_DIR/PROCESS/DONE/filt_*.int
+pysar.load.processor      = roipac
+pysar.load.unwFiles       = $PROJECT_DIR/PROCESS/DONE/filt_*rlks_c10.unw
+pysar.load.corFiles       = $PROJECT_DIR/PROCESS/DONE/filt_*rlks.cor
+pysar.load.connCompFiles  = $PROJECT_DIR/PROCESS/DONE/filt_*_snap_connect.byt
+pysar.load.intFiles       = $PROJECT_DIR/PROCESS/DONE/filt_*.int
 #------------------------ GAMMA ----------------------------------:
-pysar.load.processor     = roipac
-pysar.load.unwFile       = $PROJECT_DIR/PROCESS/DONE/diff_*rlks.unw
-pysar.load.corFile       = $PROJECT_DIR/PROCESS/DONE/filt_*rlks.cor
-pysar.load.connCompFile  = $PROJECT_DIR/PROCESS/DONE/filt_*_snap_connect.byt
-pysar.load.intFile       = $PROJECT_DIR/PROCESS/DONE/diff_*.int
+pysar.load.processor      = roipac
+pysar.load.unwFiles       = $PROJECT_DIR/PROCESS/DONE/diff_*rlks.unw
+pysar.load.corFiles       = $PROJECT_DIR/PROCESS/DONE/filt_*rlks.cor
+pysar.load.connCompFiles  = $PROJECT_DIR/PROCESS/DONE/filt_*_snap_connect.byt
+pysar.load.intFiles       = $PROJECT_DIR/PROCESS/DONE/diff_*.int
 
 pysar.subset.yx   = auto
 #pysar.subset.lalo = auto
@@ -105,13 +105,12 @@ def read_template2inps(template_files, inps=None):
     if key in template.keys():
         inps.processor = template[key]
 
-    key = prefix+'ifgramDir'
-    if key in template.keys():
-        inps.input_dir = template[key]
-
-    key = prefix+'ifgramDir'
-    if key in template.keys():
-        inps.input_dir = template[key]
+    for suffix in ['unwFiles','corFiles','connCompFiles','intFiles']:
+        key = prefix+suffix
+        if key in template.keys():
+            if inps.path_pattern is None:
+                inps.path_pattern = []
+            inps.path_pattern.append(template[key])
 
     prefix = 'pysar.subset.'
     key = prefix+'yx'
@@ -166,6 +165,7 @@ def read_inps2ifgram_stack_obj(inps):
 
     ##Get files number and path for each data type
     print('input data files:')
+    maxDigit = max([len(i) for i in ifgramDatasetNames])
     dsNameList = []
     dsNumDict = {}
     dsPathDict = {}
@@ -176,7 +176,7 @@ def read_inps2ifgram_stack_obj(inps):
             dsNameList.append(dsName)
             dsNumDict[dsName] = len(files)
             dsPathDict[dsName] = files
-            print('{}: {}'.format(dsName, pathPattern))
+            print('{:<{width}}: {path}'.format(dsName, width=maxDigit, path=pathPattern))
 
     key = 'unwrapPhase'
     if key not in dsNumDict.keys():

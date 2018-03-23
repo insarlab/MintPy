@@ -136,6 +136,15 @@ class ifgramStack:
         self.metadata = ifgramObj.get_metadata()
         return self.metadata
 
+    def get_dataset_data_type(self, dsName):
+        ifgramObj = [v for v in self.pairsDict.values()][0]
+        dsFile = ifgramObj.datasetDict[dsName]
+        metadata = readfile.read_attribute(dsFile)
+        dsDataType = dataType
+        if 'DATA_TYPE' in metadata.keys():
+            dsDataType = readfile.dataTypeDict[metadata['DATA_TYPE'].lower()]
+        return dsDataType
+
     def save2h5(self, outputFile='ifgramStack.h5', access_mode='w', box=None):
         '''Save/write an ifgramStack object into an HDF5 file with the structure below:
 
@@ -175,14 +184,17 @@ class ifgramStack:
         ###############################
         # 3D datasets containing unwrapPhase, coherence, connectComponent, wrapPhase, etc.
         for dsName in self.dsNames:
-            print('create dataset "/{}/{}"'.format(groupName, dsName))
-            ds = group.create_dataset(dsName, shape=(self.numIfgram, self.length, self.width),\
-                                      maxshape=(None, self.length, self.width), dtype=dataType, chunks=True)
+            #dsDataType = self.get_dataset_data_type(dsName)
+            dsDataType = dataType
+            dsShape = (self.numIfgram, self.length, self.width)
+            print('create dataset "/{}/{}" of {} in size of {}'.format(groupName, dsName, dsDataType, dsShape))
+            ds = group.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
+                                      dtype=dsDataType, chunks=True)
 
             progBar = ptime.progress_bar(maxValue=self.numIfgram)
             for i in range(self.numIfgram):
                 ifgramObj = self.pairsDict[self.pairs[i]]
-                data, metadata = ifgramObj.read(dsName, box=box)
+                data = ifgramObj.read(dsName, box=box)[0]
                 ds[i,:,:] = data
                 self.bperp[i] = ifgramObj.get_perp_baseline()
                 progBar.update(i+1, suffix='{}-{}'.format(self.pairs[i][0],self.pairs[i][1]))
@@ -285,10 +297,10 @@ class ifgram:
             for key , value in metadata.items():
                 setattr(self, key, value)
 
-    def read(self, family=ifgramDatasetNames[0], box=None):
-        self.get_metadata()
-        data = readfile.read(self.file, box=box)[0]
-        return data, self.metadata
+    def read(self, family, box=None):
+        self.file = self.datasetDict[family]
+        data, metadata = readfile.read(self.file, box=box)
+        return data, metadata
 
     def get_size(self):
         self.file = self.datasetDict[ifgramDatasetNames[0]]
