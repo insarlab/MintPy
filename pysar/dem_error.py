@@ -139,12 +139,12 @@ pysar.topographicResidual.excludeDate  = auto  #[20070321 / txtFile / no], auto 
 '''
 
 EXAMPLE='''example:
-  dem_error.py  timeseries_ECMWF.h5
-  dem_error.py  timeseries_ECMWF.h5  --phase-velocity
-  dem_error.py  timeseries_ECMWF.h5  -d dem_radar.h5
-  dem_error.py  geo_timeseries.h5    -i geo_incidence_angle.h5  -r geo_range.h5
-
   dem_error.py  timeseries_ECMWF.h5 --template pysarApp_template.txt
+  dem_error.py  timeseries_ECMWF.h5
+  dem_error.py  geo_timeseries_ECMWF.h5  --phase-velocity
+
+  dem_error.py  timeseries.h5        -i geometryRadar.h5       -r geometryRadar.h5
+  dem_error.py  geo_timeseries.h5    -i geo_incidenceAngle.h5  -r geo_rangeDistance.h5
 '''
 
 REFERENCE='''reference:

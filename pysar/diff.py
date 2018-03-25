@@ -45,7 +45,7 @@ def diff_file(file1, file2, outName=None, force=False):
         # Check input files type for multi_dataset/group files
         atr2 = readfile.read_attribute(file2)
         k2 = atr2['FILE_TYPE']
-  
+
         h5_1  = h5py.File(file1)
         h5_2  = h5py.File(file2)
         epochList = sorted(h5_1[k].keys())
@@ -86,15 +86,18 @@ def diff_file(file1, file2, outName=None, force=False):
         for i in range(epoch_num):
             date = epochList[i]
             data1 = h5_1[k].get(date)[:]
-            try:
+            if date in epochList2:
                 data2 = h5_2[k2].get(date)[:]
                 if ref_date:
                     data2 -= data2_ref
                 if ref_x and ref_y:
                     data2 -= data2[ref_y, ref_x]
                 data = diff_data(data1, data2)
-            except:
+            elif force:
                 data = data1
+            else:
+                sys.exit('dataset %s is not found in file %' % (date, file2))
+
             dset = group.create_dataset(date, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=date)
         for key,value in atr.items():

@@ -2,20 +2,21 @@
 # Adopted from plotts.py from GIAnT v1.0 for PySAR products
 
 import os
+import sys
 import argparse
+from datetime import datetime as dt
 
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
 from matplotlib.widgets import Slider, Button
 import scipy.stats as stats
 
-import _datetime as ptime
-import _readfile as readfile
-import _pysar_utilities as ut
-import view as view
-from mask import mask_matrix
+from . import _datetime as ptime
+from . import _readfile as readfile
+from . import _pysar_utilities as ut
+from . import view as view
+from .mask import mask_matrix
 
 ############# Global Variables ################
 tims, inps, img, mask, d_v, d_ts = None, None, None, None, None, None
@@ -32,7 +33,7 @@ second_plot_axis_visible = False
 
 
 ###########################################################################################
-def read_timeseries_yx(timeseries_file, y, x):
+def read_timeseries_yx(timeseries_file, y, x, ref_yx=None):
     '''Read time-series displacement on point (y,x) from timeseries_file
     Inputs:
         timeseries_file : string, name/path of timeseries hdf5 file
@@ -42,12 +43,24 @@ def read_timeseries_yx(timeseries_file, y, x):
     '''
     atr = readfile.read_attribute(timeseries_file)
     k = atr['FILE_TYPE']
-    h5 = h5py.File(timeseries_file, 'r')
-    date_list = list(h5[k].keys())
-
     dis_ts = []
-    for date in date_list:
-        dis_ts.append(h5[k].get(date)[y,x])
+
+    h5 = h5py.File(timeseries_file, 'r')
+    if k in ['GIANT_TS']:
+        date_list = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
+        dname = [i for i in ['rawts','recons'] if i in list(h5.keys())][0]
+        dis_ts = h5[dname][:,y,x]
+        if ref_yx is not None:
+            dis_ts = h5[dname][:,ref_yx[0],ref_yx[1]]
+    else:
+        date_list = list(h5[k].keys())
+        for date in date_list:
+            dis = h5[k].get(date)[y,x]
+            if inps.ref_yx:
+                dis -= h5[k].get(date)[ref_yx[0], ref_yx[1]]
+            dis_ts.append(dis)
+        dis_ts = np.array(dis_ts)
+
     h5.close()
     return dis_ts
 
@@ -194,7 +207,7 @@ def save_output():
     global inps, lat, lon, ullat, lat_step, ullon, lon_step, atr, fig_ts, dateList
 
     if inps.save_fig and inps.yx:
-        print('save info for pixel ' + str(inps.yx))
+        print(('save info for pixel ' + str(inps.yx)))
         if not inps.fig_base:
             inps.fig_base = 'y%d_x%d' % (inps.yx[0], inps.yx[1])
 
@@ -216,20 +229,20 @@ def save_output():
             header_info += '\nreference pixel: y=%s, x=%s' % (atr['ref_y'], atr['ref_x'])
 
         header_info += '\nunit=m/yr'
-        np.savetxt(outName, zip(np.array(dateList), np.array(d_ts) / inps.unit_fac), fmt='%s', \
+        np.savetxt(outName, list(zip(np.array(dateList), np.array(d_ts) / inps.unit_fac)), fmt='%s', \
                    delimiter='    ', header=header_info)
-        print('save time series displacement in meter to ' + outName)
+        print(('save time series displacement in meter to ' + outName))
 
 
         # Figure - point time series
         outName = inps.fig_base + '_ts.pdf'
         fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print('save time series plot to ' + outName)
+        print(('save time series plot to ' + outName))
 
         # Figure - map
         outName = inps.fig_base + '_' + dateList[inps.epoch_num] + '.png'
         fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print('save map plot to ' + outName)
+        print(('save map plot to ' + outName))
 
 
 
@@ -240,13 +253,15 @@ def read_timeseries_info():
 
     atr = readfile.read_attribute(inps.timeseries_file)
     k = atr['FILE_TYPE']
-    print('input file is ' + k + ': ' + inps.timeseries_file)
-
-    if not k == 'timeseries':
+    print(('input file is '+k+': '+inps.timeseries_file))
+    if not k in ['timeseries','GIANT_TS']:
         raise ValueError('Only timeseries file is supported!')
 
-    h5 = h5py.File(inps.timeseries_file, 'r')
-    dateList = sorted(h5[k].keys())
+    h5 = h5py.File(inps.timeseries_file,'r')
+    if k in ['GIANT_TS']:
+        dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
+    else:
+        dateList = sorted(h5[k].keys())
     date_num = len(dateList)
     inps.dates, tims = ptime.date_list2vector(dateList)
 
@@ -272,7 +287,7 @@ def exclude_dates():
             inps.ex_date_list = sorted(list(set(inps.ex_date_list).intersection(dateList)))
             inps.ex_dates = ptime.date_list2vector(inps.ex_date_list)[0]
             inps.ex_idx_list = sorted([dateList.index(i) for i in inps.ex_date_list])
-            print('exclude date:' + str(inps.ex_date_list))
+            print(('exclude date:' + str(inps.ex_date_list)))
 
 
 def set_zero_displacement():
@@ -290,7 +305,7 @@ def compute_file_size():
 
     length = int(atr['FILE_LENGTH'])
     width = int(atr['WIDTH'])
-    print('data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, length, 0, width))
+    print(('data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, length, 0, width)))
 
 
 def compute_lat_lon_params():
@@ -303,7 +318,7 @@ def compute_lat_lon_params():
         lat_step = float(atr['Y_STEP'])
         lrlon = ullon + width * lon_step
         lrlat = ullat + length * lat_step
-        print('data size in [lat0,lat1,lon0,lon1]: [%.4f, %.4f, %.4f, %.4f]' % (lrlat, ullat, ullon, lrlon))
+        print(('data size in [lat0,lat1,lon0,lon1]: [%.4f, %.4f, %.4f, %.4f]' % (lrlat, ullat, ullon, lrlon)))
     except:
         pass
 
@@ -311,13 +326,26 @@ def compute_lat_lon_params():
 def set_inital_pixel_coords():
     global inps, atr
 
-    if inps.lalo and 'Y_FIRST' in atr.keys():
+    if inps.lalo and 'Y_FIRST' in list(atr.keys()):
         y, x = set_yx_coords(inps.lalo[0], inps.lalo[1])
         inps.yx = [y, x]
-    if inps.ref_lalo and 'Y_FIRST' in atr.keys():
+    if inps.ref_lalo and 'Y_FIRST' in list(atr.keys()):
         y, x = set_yx_coords(inps.ref_lalo[0], inps.ref_lalo[1])
         inps.ref_yx = [y, x]
 
+    # Display Unit
+    if inps.disp_unit == 'cm': inps.unit_fac = 100.0
+    elif inps.disp_unit == 'm': inps.unit_fac = 1.0
+    elif inps.disp_unit == 'dm': inps.unit_fac = 10.0
+    elif inps.disp_unit == 'mm': inps.unit_fac = 1000.0
+    elif inps.disp_unit == 'km': inps.unit_fac = 0.001
+    else: raise ValueError('Un-recognized unit: '+inps.disp_unit)
+    if k in ['GIANT_TS']:
+        print('data    unit: mm')
+        inps.unit_fac *= 0.001
+    else:
+        print('data    unit: m')
+    print(('display unit: '+inps.disp_unit))
 
 def set_yx_coords(y_input, x_input):
     global ullat, ullon, lat_step, lon_step
@@ -344,7 +372,7 @@ def set_unit_fraction():
     else:
         raise ValueError('Un-recognized unit: ' + inps.disp_unit)
     print('data    unit: m')
-    print('display unit: ' + inps.disp_unit)
+    print(('display unit: ' + inps.disp_unit))
 
 
 def flip_map():
@@ -374,7 +402,7 @@ def set_mask():
     try:
         mask = readfile.read(inps.mask_file, epoch='mask')[0]
         mask[mask!=0] = 1
-        print('load mask from file: '+inps.mask_file)
+        print(('load mask from file: '+inps.mask_file))
     except:
         mask = None
         print('No mask used.')
@@ -384,9 +412,11 @@ def set_initial_map():
     global d_v, h5, k, dateList, inps, data_lim
 
     d_v = h5[k].get(dateList[inps.epoch_num])[:] * inps.unit_fac
-
+    # Initial Map
+    d_v = readfile.read(inps.timeseries_file, epoch=dateList[inps.epoch_num])[0] * inps.unit_fac
+    #d_v = h5[k].get(dateList[inps.epoch_num])[:]*inps.unit_fac
     if inps.ref_date:
-        inps.ref_d_v = h5[k].get(inps.ref_date)[:] * inps.unit_fac
+        inps.ref_d_v = readfile.read(inps.timeseries_file, epoch=inps.ref_date)[0]*inps.unit_fac
         d_v -= inps.ref_d_v
 
     if mask is not None:
@@ -399,11 +429,11 @@ def set_initial_map():
 
     if not inps.ylim_mat:
         inps.ylim_mat = data_lim
-    print('Initial data range: '+str(data_lim))
-    print('Display data range: '+str(inps.ylim_mat))
+    print(('Initial data range: '+str(data_lim)))
+    print(('Display data range: '+str(inps.ylim_mat)))
 
-    print('Initial data range: ' + str(data_lim))
-    print('Display data range: ' + str(inps.ylim))
+    print(('Initial data range: ' + str(data_lim)))
+    print(('Display data range: ' + str(inps.ylim)))
 
 
 def setup_plot():
@@ -468,7 +498,7 @@ def set_plot_axis_params():
     # Title and Axis Label
     ax_v.set_title('N = %d, Time = %s' % (inps.epoch_num, inps.dates[inps.epoch_num].strftime('%Y-%m-%d')))
 
-    if not 'Y_FIRST' in atr.keys():
+    if not 'Y_FIRST' in list(atr.keys()):
         ax_v.set_xlabel('Range')
         ax_v.set_ylabel('Azimuth')
 
@@ -589,7 +619,7 @@ def plot_timeseries_scatter(ax, dis_ts, inps, plot_num=1):
     color = 'blue'
     if plot_num == 2:
         color = 'crimson'
-    print('Color is ' + color)
+    print(('Color is ' + color))
     scatter = ax.scatter(dates, d_ts, s=inps.marker_size ** 2, label='1', color=color)
 
     return ax, scatter
@@ -688,7 +718,7 @@ def estimate_slope():
     else:
         d_slope = stats.linregress(np.array(tims), np.array(d_ts))
 
-    print('linear velocity: %.2f +/- %.2f [%s/yr]' % (d_slope[0], d_slope[4], inps.disp_unit))
+    print(('linear velocity: %.2f +/- %.2f [%s/yr]' % (d_slope[0], d_slope[4], inps.disp_unit)))
 
 
 def set_scatter_coords(plot_number, x, y):
