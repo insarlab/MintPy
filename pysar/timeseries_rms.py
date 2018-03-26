@@ -132,7 +132,7 @@ def main(argv):
     print('------------------------------------------------------------')
     ref_idx = np.argmin(rms_list)
     ref_date = date_list[ref_idx]
-    print('date with minimum residual RMS: %s - %.4f' % (ref_date, rms_list[ref_idx]))
+    print(('date with minimum residual RMS: %s - %.4f' % (ref_date, rms_list[ref_idx])))
 
     refTxtFile = 'reference_date.txt'
     if (inps.save_reference_date and \
@@ -141,12 +141,12 @@ def main(argv):
         f = open(refTxtFile, 'w')
         f.write(ref_date+'\n')
         f.close()
-        print('save date to file: '+refTxtFile)
+        print(('save date to file: '+refTxtFile))
 
     ##### exclude_date.txt
     print('------------------------------------------------------------')
     ex_idx_list = [rms_list.index(i) for i in rms_list if i > inps.min_rms]
-    print('date(s) with residual RMS > '+str(inps.min_rms))
+    print(('date(s) with residual RMS > '+str(inps.min_rms)))
     
     exTxtFile = 'exclude_date.txt'
     if ex_idx_list:
@@ -155,10 +155,10 @@ def main(argv):
                            check_readable=False)):
             f = open(exTxtFile, 'w')
             for i in ex_idx_list:
-                print('%s - %.4f' % (date_list[i], rms_list[i]))
+                print(('%s - %.4f' % (date_list[i], rms_list[i])))
                 f.write(date_list[i]+'\n')
             f.close()
-            print('save date(s) to file: '+exTxtFile)
+            print(('save date(s) to file: '+exTxtFile))
     else:
         print('None.')
 
@@ -215,7 +215,7 @@ def main(argv):
 
         # save figure
         fig.savefig(fig_name, bbox_inches='tight', transparent=True)
-        print('save figure to file: '+fig_name)
+        print(('save figure to file: '+fig_name))
 
     return
 

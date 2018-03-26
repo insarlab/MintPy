@@ -12,11 +12,11 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 import scipy.stats as stats
 
-from . import _datetime as ptime
-from . import _readfile as readfile
-from . import _pysar_utilities as ut
-from . import view as view
-from .mask import mask_matrix
+import _datetime as ptime
+import _readfile as readfile
+import _pysar_utilities as ut
+import view as view
+from mask import mask_matrix
 
 ############# Global Variables ################
 tims, inps, img, mask, d_v, d_ts = None, None, None, None, None, None

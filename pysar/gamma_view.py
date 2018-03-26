@@ -83,13 +83,13 @@ def main(argv):
     # subset
     try:
         ysub
-        if ysub[1] > length: ysub[1]=length;   print('ysub[1] > length! Set ysub[1]=length='+str(length))
+        if ysub[1] > length: ysub[1]=length;   print(('ysub[1] > length! Set ysub[1]=length='+str(length)))
     except:
         ysub=[0,length]
         print('no subset in y direction')
     try:
         xsub
-        if xsub[1] > width:  xsub[1]=width;  print('xsub[1] > width! Set xsub[1]=width='+str(width))
+        if xsub[1] > width:  xsub[1]=width;  print(('xsub[1] > width! Set xsub[1]=width='+str(width)))
     except:
         xsub=[0,width]
         print('no subset in x direction')

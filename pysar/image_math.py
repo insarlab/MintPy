@@ -35,8 +35,8 @@ def file_operation(fname, operator, operand, fname_out=None):
     # Basic Info
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
-    print('input is '+k+' file: '+fname)
-    print('operation: file %s %f' % (operator, operand))
+    print(('input is '+k+' file: '+fname))
+    print(('operation: file %s %f' % (operator, operand)))
 
     # default output filename
     if not fname_out:
@@ -57,10 +57,10 @@ def file_operation(fname, operator, operand, fname_out=None):
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)
-        print('writing >>> '+fname_out)
+        print(('writing >>> '+fname_out))
 
         if k == 'timeseries':
-            print('number of acquisitions: '+str(epoch_num))
+            print(('number of acquisitions: '+str(epoch_num)))
             for i in range(epoch_num):
                 date = epoch_list[i]
                 data = h5[k].get(date)[:]
@@ -69,11 +69,11 @@ def file_operation(fname, operator, operand, fname_out=None):
 
                 dset = group.create_dataset(date, data=data_out, compression='gzip')
                 prog_bar.update(i+1, suffix=date)
-            for key,value in atr.items():
+            for key,value in list(atr.items()):
                 group.attrs[key] = value
 
         elif k in ['interferograms','wrapped','coherence']:
-            print('number of interferograms: '+str(epoch_num))
+            print(('number of interferograms: '+str(epoch_num)))
             date12_list = ptime.list_ifgram2date12(epoch_list)
             for i in range(epoch_num):
                 ifgram = epoch_list[i]
@@ -83,7 +83,7 @@ def file_operation(fname, operator, operand, fname_out=None):
 
                 gg = group.create_group(ifgram)
                 dset = gg.create_dataset(ifgram, data=data_out, compression='gzip')
-                for key, value in h5[k][ifgram].attrs.items():
+                for key, value in list(h5[k][ifgram].attrs.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
 
@@ -96,14 +96,14 @@ def file_operation(fname, operator, operand, fname_out=None):
         rg, az, atr = readfile.read(fname)
         rg_out = data_operation(rg, operator, operand)
         az_out = data_operation(az, operator, operand)
-        print('writing >>> '+fname_out)
+        print(('writing >>> '+fname_out))
         writefile.write(rg_out, az_out, atr, fname_out)
 
     ##### Single Dataset File
     else:
         data, atr = readfile.read(fname)
         data_out = data_operation(data, operator, operand)
-        print('writing >>> '+fname_out)
+        print(('writing >>> '+fname_out))
         writefile.write(data_out, atr, fname_out)
 
     return fname_out

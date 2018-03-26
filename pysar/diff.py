@@ -34,10 +34,10 @@ def diff_file(file1, file2, outName=None, force=False):
         outName = os.path.splitext(file1)[0]+'_diff_'+os.path.splitext(os.path.basename(file2))[0]+\
                   os.path.splitext(file1)[1]
     
-    print(file1+' - '+file2)
+    print((file1+' - '+file2))
     # Read basic info
     atr  = readfile.read_attribute(file1)
-    print('Input first file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE'])
+    print(('Input first file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']))
     k = atr['FILE_TYPE']
 
     # Multi-dataset/group file
@@ -51,7 +51,7 @@ def diff_file(file1, file2, outName=None, force=False):
         epochList = sorted(h5_1[k].keys())
         epochList2 = sorted(h5_2[k2].keys())
         if not all(i in epochList2 for i in epochList):
-            print('ERROR: '+file2+' does not contain all group of '+file1)
+            print(('ERROR: '+file2+' does not contain all group of '+file1))
             if force and k in ['timeseries']:
                 print('Continue and enforce the differencing for their shared dates only!')
             else:
@@ -59,13 +59,13 @@ def diff_file(file1, file2, outName=None, force=False):
 
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
-        print('writing >>> '+outName)
+        print(('writing >>> '+outName))
 
         epoch_num = len(epochList)
         prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
     if k in ['timeseries']:
-        print('number of acquisitions: '+str(len(epochList)))
+        print(('number of acquisitions: '+str(len(epochList))))
         # check reference date
         if atr['ref_date'] == atr2['ref_date']:
             ref_date = None
@@ -100,7 +100,7 @@ def diff_file(file1, file2, outName=None, force=False):
 
             dset = group.create_dataset(date, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=date)
-        for key,value in atr.items():
+        for key,value in list(atr.items()):
             group.attrs[key] = value
 
         prog_bar.close()
@@ -109,7 +109,7 @@ def diff_file(file1, file2, outName=None, force=False):
         h5_2.close()
 
     elif k in ['interferograms','coherence','wrapped']:
-        print('number of interferograms: '+str(len(epochList)))
+        print(('number of interferograms: '+str(len(epochList))))
         date12_list = ptime.list_ifgram2date12(epochList)
         for i in range(epoch_num):
             epoch1 = epochList[i]
@@ -119,7 +119,7 @@ def diff_file(file1, file2, outName=None, force=False):
             data = diff_data(data1, data2)  
             gg = group.create_group(epoch1)
             dset = gg.create_dataset(epoch1, data=data, compression='gzip')
-            for key, value in h5_1[k][epoch1].attrs.items():
+            for key, value in list(h5_1[k][epoch1].attrs.items()):
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
 
@@ -133,7 +133,7 @@ def diff_file(file1, file2, outName=None, force=False):
         data1, atr1 = readfile.read(file1)
         data2, atr2 = readfile.read(file2)
         data = diff_data(data1, data2)
-        print('writing >>> '+outName)
+        print(('writing >>> '+outName))
         writefile.write(data, atr1, outName)
 
     return outName

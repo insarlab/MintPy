@@ -92,17 +92,17 @@ def main(argv):
 
     ##### Read Mask
 
-    print('reading mask from file: '+inps.mask_file)
+    print(('reading mask from file: '+inps.mask_file))
     mask = readfile.read(inps.mask_file, epoch='mask')[0].flatten(1)
 
     ndx = mask != 0
     msk_num = np.sum(ndx)
-    print('total            pixel number: %d' % pix_num)
-    print('estimating using pixel number: %d' % msk_num)
+    print(('total            pixel number: %d' % pix_num))
+    print(('estimating using pixel number: %d' % msk_num))
 
     ##### Read DEM
 
-    print('read DEM from file: '+inps.dem_file)
+    print(('read DEM from file: '+inps.dem_file))
     dem = readfile.read(inps.dem_file, epoch='height')[0]
 
 
@@ -125,7 +125,7 @@ def main(argv):
     elif inps.poly_order == 3:
         A = np.vstack((dem[ndx]**3, dem[ndx]**2, dem[ndx], np.ones(msk_num))).T
         B = np.vstack((dem**3,      dem**2,      dem,      np.ones(pix_num))).T
-    print('polynomial order: %d' % inps.poly_order)
+    print(('polynomial order: %d' % inps.poly_order))
 
     A_inv = np.linalg.pinv(A)
 
@@ -135,7 +135,7 @@ def main(argv):
     h5 = h5py.File(inps.timeseries_file)
     date_list = sorted(h5[k].keys())
     date_num = len(date_list)
-    print('number of acquisitions: '+str(date_num))
+    print(('number of acquisitions: '+str(date_num)))
     try:    ref_date = atr['ref_date']
     except: ref_date = date_list[0]
 
@@ -161,12 +161,12 @@ def main(argv):
                 par = np.zeros(inps.poly_order+1)
             else:
                 par = np.dot(A_inv, data[ndx])
-        print('%s: %.2f' % (date, cc))
+        print(('%s: %.2f' % (date, cc)))
         par_dict[date] = par
 
     average_phase_height_corr = np.nansum(np.abs(corr_array))/(date_num-1)
     print('----------------------------------------------------------')
-    print('Average Correlation of DEM with time-series epochs: %.2f' % average_phase_height_corr)
+    print(('Average Correlation of DEM with time-series epochs: %.2f' % average_phase_height_corr))
 
     # Correlation of DEM with Difference of subsequent epochs (Not used for now)
     corr_diff_dict = {}
@@ -193,7 +193,7 @@ def main(argv):
     ##### Correct and write time-series file
     print('----------------------------------------------------------')
     print('removing the stratified tropospheric delay from each epoch')
-    print('writing >>> '+inps.outfile)
+    print(('writing >>> '+inps.outfile))
     h5out = h5py.File(inps.outfile,'w')
     group = h5out.create_group(k)
 
@@ -211,7 +211,7 @@ def main(argv):
         dset = group.create_dataset(date, data=data, compression='gzip')
         prog_bar.update(i+1, suffix=date)
 
-    for key,value in atr.items():
+    for key,value in list(atr.items()):
         group.attrs[key] = value
 
     prog_bar.close()

@@ -244,7 +244,7 @@ def main(argv):
     if (not np.isnan(IDYref)) and (not np.isnan(IDXref)):
         print('')
         print('-----------------------------------------------------------------------')
-        print('referencing InSAR data to the GPS station at : ' + str(IDYref) + ' , '+ str(IDXref))       
+        print(('referencing InSAR data to the GPS station at : ' + str(IDYref) + ' , '+ str(IDXref)))       
         if not np.isnan(insarData[IDYref][IDXref]):
              insarData=insarData - insarData[IDYref][IDXref]
         else:
@@ -272,16 +272,16 @@ def main(argv):
         #stationsList.remove(refStation)
  
     try:
-        print('incidence angle = ' + str(theta))
+        print(('incidence angle = ' + str(theta)))
     except:
         print('using look angle from the velocity file. For more precise results input the incidence angle using option -I.')
         look_n=float(h5file['velocity'].attrs['LOOK_REF1'])
         look_f=float(h5file['velocity'].attrs['LOOK_REF2'])
         theta=(look_n+look_f)/2.
-        print('incidence angle = ' + str(theta)) 
+        print(('incidence angle = ' + str(theta))) 
   
     try:
-        print('Heading angle = '+str(heading))
+        print(('Heading angle = '+str(heading)))
     except:
         heading = float(h5file['velocity'].attrs['HEADING'])
         if heading < 0:
@@ -306,7 +306,7 @@ def main(argv):
         print('Projecting InSAR to vertical')
         insarData=-insarData/np.cos(theta)      
     print('-------------------------')
-    print('unit vector for :' + gps_comp_txt)
+    print(('unit vector for :' + gps_comp_txt))
     print(unitVec)
     print('-------------------------')
     gpsLOS_ref=unitVec[0]*Ve[idxRef]+unitVec[1]*Vn[idxRef]+unitVec[2]*Vu[idxRef]
@@ -357,10 +357,10 @@ def main(argv):
             if not np.isnan(insarData[IDY][IDX]):
                 print('%%%%%%%%%%%%%%%%%%%%')
                 print(st)
-                print('GPS: ' + str(gpsLOS) + '  +/- '+str(S))  
-                print('INSAR: '+ str(-insarData[IDY][IDX]*1000.0))
+                print(('GPS: ' + str(gpsLOS) + '  +/- '+str(S)))  
+                print(('INSAR: '+ str(-insarData[IDY][IDX]*1000.0)))
                 try:
-                    print('Coherence: ' + str(Coh[IDY][IDX]))
+                    print(('Coherence: ' + str(Coh[IDY][IDX])))
                     coherence.append(Coh[IDY][IDX])
                     if Coh[IDY][IDX]>thr:
                         InSAR1.append(-insarData[IDY][IDX]*1000.0)
@@ -399,8 +399,8 @@ def main(argv):
     print('++++++++++++++++++++++++++++++++++++++++++++++')
     print('Comparison summary:')
     print('')
-    print('AAD (average absolute difference)= '+str(SAD) + ' [mm/yr]')
-    print('Correlation = '+str(Cor))
+    print(('AAD (average absolute difference)= '+str(SAD) + ' [mm/yr]'))
+    print(('Correlation = '+str(Cor)))
     print('')
     print('++++++++++++++++++++++++++++++++++++++++++++++')
     ###############################################################

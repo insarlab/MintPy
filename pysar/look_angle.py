@@ -45,19 +45,19 @@ def main(argv):
         
         look_angle = np.tile(lookx,(length,1))
         print(look_n)
-        print(lookx[0])
+        print((lookx[0]))
         print(look_f)
-        print(lookx[-1])
-        print(lookx.shape) 
+        print((lookx[-1]))
+        print((lookx.shape)) 
         print(width)
         print(length)
-        print(np.shape(look_angle))
+        print((np.shape(look_angle)))
     
         h5file2 = h5py.File('look_angle.h5','w')
         group=h5file2.create_group('mask')
         dset = group.create_dataset('mask', data=look_angle, compression='gzip')
     
-        for key, value in h5file['velocity'].attrs.items():
+        for key, value in list(h5file['velocity'].attrs.items()):
               group.attrs[key] = value
     
         h5file.close()

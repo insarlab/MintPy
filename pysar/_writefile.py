@@ -60,13 +60,13 @@ def write(*args):
     if ext in ['.h5','.he5']:
         k = atr['FILE_TYPE']
         if k in ['interferograms','coherence','wrapped','timeseries']:
-            print('Un-supported file type: '+k)
+            print(('Un-supported file type: '+k))
             print('Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...')
             return 0;
         h5file = h5py.File(outname,'w')
         group = h5file.create_group(k)
         dset = group.create_dataset(k, data=data, compression='gzip')
-        for key , value in atr.items():
+        for key , value in list(atr.items()):
             group.attrs[key]=value
         h5file.close()
         return outname
@@ -93,7 +93,7 @@ def write(*args):
             write_complex_int16(data,outname)
         elif ext == '.int':
             write_complex64(data, outname)
-        else: print('Un-supported file type: '+ext); return 0;
+        else: print(('Un-supported file type: '+ext)); return 0;
 
         ##### Write .rsc File
         write_roipac_rsc(atr, outname+'.rsc')
@@ -111,7 +111,7 @@ def write_roipac_rsc(atr, outname, sorting=True):
     '''
 
     # sorting by key name
-    keyList = iter(atr.keys())
+    keyList = iter(list(atr.keys()))
     if sorting:
         keyList = sorted(keyList)
     

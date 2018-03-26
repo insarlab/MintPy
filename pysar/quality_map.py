@@ -50,7 +50,7 @@ def main(argv):
         Lunw=laplace(unw)
         g=group.create_group(ifgram)
         g.create_dataset(ifgram,data=Lunw,compression='gzip')
-        for key, value in h5file['interferograms'][ifgram].attrs.items():
+        for key, value in list(h5file['interferograms'][ifgram].attrs.items()):
             g.attrs[key] = value
   
     gm = h5laplace.create_group('mask')

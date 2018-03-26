@@ -9,7 +9,7 @@ import time
 import os
 import sys
 import geocoder
-from mask import mask_matrix
+from .mask import mask_matrix
 import argparse
 import pickle
 
@@ -66,8 +66,8 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
     y_first = float(attributes["Y_FIRST"])
     num_columns = int(attributes["WIDTH"])
     num_rows = int(attributes["FILE_LENGTH"])
-    print("columns: %d" % num_columns)
-    print("rows: %d" % num_rows)
+    print(("columns: %d" % num_columns))
+    print(("rows: %d" % num_rows))
     # create a siu_man array to store json point objects
     siu_man = []
     displacement_values = []
@@ -156,7 +156,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
     for k in attributes:
         v = attributes[k]
         if k in needed_attributes:
-            print(str(k) + ": " + str(v))
+            print((str(k) + ": " + str(v)))
             attribute_keys += (str(k) + ",")
             attribute_values += (str(v) + ',')
     attribute_keys = attribute_keys[:len(attribute_keys)-1] + '}'
@@ -195,7 +195,7 @@ def make_json_file(chunk_num, points, dates, json_path, folder_name):
     json_file.write("%s" % string_json)
     json_file.close()
 
-    print("converted chunk " + str(chunk_num))
+    print(("converted chunk " + str(chunk_num)))
 
 # ---------------------------------------------------------------------------------------
 def build_parser():
@@ -247,7 +247,7 @@ def main():
         dataset = displacement_2d_matrix[:]
         if should_mask:
 
-            print("Masking " + dates[i])
+            print(("Masking " + dates[i]))
             mask = timeseries_group["quality"]["mask"][:]
             dataset = mask_matrix(dataset, mask)
 
@@ -266,7 +266,7 @@ def main():
     try: # create path for output
         os.mkdir(output_folder)
     except:
-        print(output_folder + " already exists")
+        print((output_folder + " already exists"))
 
 # read and convert the datasets, then write them into json files and insert into database
     convert_data(attributes, decimal_dates, timeseries_datasets, dates, output_folder, folder_name)

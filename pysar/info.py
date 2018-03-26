@@ -21,13 +21,13 @@ output = ""
 ############################################################
 def attributes_string(atr, string=str(), sorting=True):
     ## Print Dictionary of Attributes
-    digits = digits = max([len(key) for key in atr.keys()] + [0])
+    digits = digits = max([len(key) for key in list(atr.keys())] + [0])
     f = '{0:<%d}    {1}' % (digits)
 
     if sorting:
-        keyList = sorted(atr.iterkeys())
+        keyList = sorted(atr.keys())
     else:
-        keyList = atr.iterkeys()
+        keyList = iter(atr.keys())
     for key in keyList:
         string += f.format(str(key), str(atr[key]))
         string += "\n"
@@ -36,7 +36,7 @@ def attributes_string(atr, string=str(), sorting=True):
 
 
 def print_attributes(atr, string=str(), sorting=True):
-    print(attributes_string(atr, string, sorting))
+    print((attributes_string(atr, string, sorting)))
 
 
 ############################################################
@@ -69,10 +69,10 @@ def print_hdf5_structure(file):
 def print_timseries_date_info(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
     print('*************** Date Info ***************')
-    print('Start Date: ' + dateList[0])
-    print('End   Date: ' + dateList[-1])
-    print('Number of acquisitions      : %d' % len(dateList))
-    print('Std.   of acquisition times : %.2f yeras' % std(datevector))
+    print(('Start Date: ' + dateList[0]))
+    print(('End   Date: ' + dateList[-1]))
+    print(('Number of acquisitions      : %d' % len(dateList)))
+    print(('Std.   of acquisition times : %.2f yeras' % std(datevector)))
     print('----------------------')
     print('List of dates:')
     print(dateList)
@@ -117,7 +117,7 @@ def main(argv):
 
     #################### File Structure #####################
     try:
-        print(argv[1])
+        print((argv[1]))
         if argv[1] in ['--struct', '--structure', '--tree'] and ext in ['.h5', '.he5']:
             print('***** HDF5 File Structure *****')
             print_hdf5_structure(File)
@@ -129,7 +129,7 @@ def main(argv):
     try:
         atr = readfile.read_attribute(File)
     except:
-        print('Can not read file: ' + File)
+        print(('Can not read file: ' + File))
         sys.exit(1)
     k = atr['FILE_TYPE']
 
@@ -137,7 +137,7 @@ def main(argv):
     try:
         if k in ['timeseries'] and argv[1] in ['--date']:
             h5 = h5py.File(File, 'r')
-            dateList = h5[k].keys()
+            dateList = list(h5[k].keys())
             for date in dateList:
                 print(date)
             h5.close()
@@ -145,8 +145,8 @@ def main(argv):
     except: pass
 
     print('\n************************ File Info *****************************')
-    print('File name   : '+os.path.basename(File))
-    print('File type   : '+atr['PROCESSOR']+' '+atr['FILE_TYPE'])
+    print(('File name   : '+os.path.basename(File)))
+    print(('File type   : '+atr['PROCESSOR']+' '+atr['FILE_TYPE']))
     try:
         atr['X_FIRST']
         print('Coordinates : GEO')
@@ -154,8 +154,8 @@ def main(argv):
         print('Coordinates : radar')
 
     print('\n************************ File Info *****************************')
-    print('File name   : ' + os.path.basename(File))
-    print('File type   : ' + atr['PROCESSOR'] + ' ' + atr['FILE_TYPE'])
+    print(('File name   : ' + os.path.basename(File)))
+    print(('File type   : ' + atr['PROCESSOR'] + ' ' + atr['FILE_TYPE']))
     try:
         atr['X_FIRST']
         print('Coordinates : GEO')
@@ -167,7 +167,7 @@ def main(argv):
         h5file = h5py.File(File, 'r')
         ##### Group Info
         print('All groups in this file:')
-        print(h5file.keys())
+        print((list(h5file.keys())))
 
         ##### DateList / IgramList
         if k in ['interferograms', 'coherence', 'wrapped', 'timeseries']:
@@ -187,22 +187,22 @@ def main(argv):
             epochNum = int(argv[1])
             epochAtr = h5file[k][epochList[epochNum - 1]].attrs
             print('*****************************************')
-            print(epochList[epochNum - 1])
+            print((epochList[epochNum - 1]))
             print('*************** Attributes **************')
             print_attributes(epochAtr)
             print('*****************************************')
-            print(epochList[epochNum - 1])
+            print((epochList[epochNum - 1]))
         ##### Plot Epoch List Info
         except:
 
             print('*****************************************')
-            print('Number of '+k+': '+str(len(epochList)) )
+            print(('Number of '+k+': '+str(len(epochList)) ))
             print('*****************************************')
-            print('List of the '+k+':             number')
+            print(('List of the '+k+':             number'))
             for i in range(len(epochList)):
-                print(epochList[i] + '    ' + str(i + 1))
+                print((epochList[i] + '    ' + str(i + 1)))
             print('*****************************************')
-            print('Number of ' + k + ': ' + str(len(epochList)))
+            print(('Number of ' + k + ': ' + str(len(epochList))))
 
     ##### All other file types, except for timeseries/interferograms/coherence/wrapped
     else:

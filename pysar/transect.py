@@ -39,10 +39,10 @@ def get_scale_from_disp_unit(disp_unit, data_unit):
         elif disp_unit[0] == 'dm': scale *= 10.0
         elif disp_unit[0] == 'km': scale *= 1/1000.0
         else:
-            print('Unrecognized display unit: '+disp_unit[0])
+            print(('Unrecognized display unit: '+disp_unit[0]))
             return
     else:
-        print('Unrecognized data unit: '+data_unit[0])
+        print(('Unrecognized data unit: '+data_unit[0]))
         return
 
     # Calculate scaling factor  - 2
@@ -52,7 +52,7 @@ def get_scale_from_disp_unit(disp_unit, data_unit):
             if   disp_unit[1] in ['y','yr','year'  ]: disp_unit[1] = 'yr'
             elif disp_unit[1] in ['m','mon','month']: disp_unit[1] = 'mon'; scale *= 12.0
             elif disp_unit[1] in ['d','day'        ]: disp_unit[1] = 'day'; scale *= 365.25
-            else: print('Unrecognized time unit for display: '+disp_unit[1])
+            else: print(('Unrecognized time unit for display: '+disp_unit[1]))
         except:
             disp_unit.append('yr')
         disp_unit = disp_unit[0]+'/'+disp_unit[1]
@@ -84,9 +84,9 @@ def read_lonlat_file(lonlat_file):
 #####################################################################
 def manual_select_start_end_point(File):
     '''Manual Select Start/End Point in display figure.'''
-    print('reading '+File+' ...')
+    print(('reading '+File+' ...'))
     data, atr = readfile.read(File)
-    print('displaying '+File+' ...')
+    print(('displaying '+File+' ...'))
     fig = plt.figure()
     ax=fig.add_subplot(111)
     ax.imshow(data)
@@ -99,7 +99,7 @@ def manual_select_start_end_point(File):
         if event.button==1:
             xcc, ycc = int(event.xdata), int(event.ydata)
             xc.append(xcc);  yc.append(ycc)
-            print('x = '+str(xcc)+'\ny = '+str(ycc))
+            print(('x = '+str(xcc)+'\ny = '+str(ycc)))
             ax.plot(xcc,ycc,'ro')
     cid = fig.canvas.mpl_connect('button_release_event', onclick)
     plt.show();
@@ -145,7 +145,7 @@ def transect_yx(z,atr,start_yx,end_yx,interpolation='nearest'):
     elif interpolation.lower() == 'cubic'   : zi = scipy.ndimage.map_coordinates(z,np.vstack((y,x)))
     elif interpolation.lower() == 'bilinear': zi = scipy.ndimage.map_coordinates(z,np.vstack((y,x)),order=2)
     else:
-        print('Unrecognized interpolation method: '+interpolation)
+        print(('Unrecognized interpolation method: '+interpolation))
         print('Continue with nearest ...')
         zi = z[np.rint(y).astype(np.int), np.rint(x).astype(np.int)]  # nearest neighbour
     transect[:,1] = zi
@@ -189,7 +189,7 @@ def transect_list(fileList, inps):
     transectList = []
     atrList      = []
     for File in fileList:
-        print('reading '+File)
+        print(('reading '+File))
         data, atr = readfile.read(File)
         if inps.start_lalo and inps.end_lalo:
             transect = transect_lalo(data, atr, inps.start_lalo, inps.end_lalo, inps.interpolation)
@@ -277,8 +277,8 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     print('\n**************** Transect *********************')
-    print('number of file: '+str(len(inps.file)))
-    print(inps.file)
+    print(('number of file: '+str(len(inps.file))))
+    print((inps.file))
     
 
     ##### Start / End Point Input
@@ -292,18 +292,18 @@ def main(argv):
         inps.start_yx, inps.end_yx = manual_select_start_end_point(inps.file[0])
     # Message
     if inps.start_lalo and inps.end_lalo:
-        print('Start point:  lat = '+str(inps.start_lalo[0])+', lon = '+str(inps.start_lalo[1]))
-        print('End   point:  lat = '+str(inps.end_lalo[0])+', lon = '+str(inps.end_lalo[1]))
+        print(('Start point:  lat = '+str(inps.start_lalo[0])+', lon = '+str(inps.start_lalo[1])))
+        print(('End   point:  lat = '+str(inps.end_lalo[0])+', lon = '+str(inps.end_lalo[1])))
     else:
-        print('Start point:  y = '+str(inps.start_yx[0])+', x = '+str(inps.start_yx[1]))
-        print('End   point:  y = '+str(inps.end_yx[0])+', x = '+str(inps.end_yx[1]))
+        print(('Start point:  y = '+str(inps.start_yx[0])+', x = '+str(inps.start_yx[1])))
+        print(('End   point:  y = '+str(inps.end_yx[0])+', x = '+str(inps.end_yx[1])))
 
     ##### Get Transection/Profiles Data
     print('extract transect from input files ...')
     transectList, atrList = transect_list(inps.file, inps)
     if inps.dem:
         demTransectList, demAtrList = transect_list([inps.dem], inps)
-    print('profile length: '+str(transectList[0][-1,0]/1000.0)+' km')
+    print(('profile length: '+str(transectList[0][-1,0]/1000.0)+' km'))
 
     ##### Plot
     # Figure 1 - Profile line in the 1st input file
@@ -410,11 +410,11 @@ def main(argv):
         if not inps.outfile_ext:
             inps.outfile_ext = '.png'
     if inps.save_fig:
-        print('writing >>> '+figBase+inps.outfile_ext)
+        print(('writing >>> '+figBase+inps.outfile_ext))
         fig0.savefig(inps.file[-1]+inps.outfile_ext, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
         fig.savefig(figBase+inps.outfile_ext, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
 
-        print('writing >>> '+figBase+'.mat')
+        print(('writing >>> '+figBase+'.mat'))
         transect_mat = {}
         for i in range(len(inps.file)):
             project = atrList[i]['PROJECT_NAME']

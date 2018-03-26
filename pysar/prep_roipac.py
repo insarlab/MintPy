@@ -47,7 +47,7 @@ def extract_attribute(fname):
     date1, date2 = basic_dict['DATE12'].split('-')
     baseline_rsc_file = os.path.dirname(fname)+'/'+date1+'_'+date2+'_baseline.rsc'
     baseline_dict = readfile.read_roipac_rsc(baseline_rsc_file)
-    print('read '+os.path.basename(basic_rsc_file)+' and '+os.path.basename(baseline_rsc_file))
+    print(('read '+os.path.basename(basic_rsc_file)+' and '+os.path.basename(baseline_rsc_file)))
 
     ## 3. Merge
     atr.update(basic_dict)
@@ -101,10 +101,10 @@ def main(argv):
     # Check input file type
     ext = os.path.splitext(inps.file[0])[1]
     if ext not in ['.unw','.cor','.int']:
-        print('No need to extract attributes for ROI_PAC '+ext+' file')
+        print(('No need to extract attributes for ROI_PAC '+ext+' file'))
         return
 
-    print('number of files: '+str(len(inps.file)))
+    print(('number of files: '+str(len(inps.file))))
 
     # check outfile and parallel option
     if inps.parallel:

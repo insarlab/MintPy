@@ -47,11 +47,11 @@ def main(argv):
 
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    print('input is '+k+' file: '+File)
+    print(('input is '+k+' file: '+File))
 
     try:    matFile = argv[1]
     except: matFile = os.path.splitext(File)[0]+'.mat'
-    print('writing >>> '+matFile)
+    print(('writing >>> '+matFile))
 
     #####
     h5file = h5py.File(File,'r')

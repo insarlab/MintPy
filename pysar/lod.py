@@ -36,13 +36,13 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
     # Check Sensor Type
 
     print('correct Local Oscilator Drift for Envisat using an empirical model (Marinkovic and Larsen, 2013)')
-    print('input file: '+File)
+    print(('input file: '+File))
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     platform = atr['PLATFORM']
-    print('platform: '+platform)
+    print(('platform: '+platform))
     if not platform.lower() in ['env','envisat']:
-        print('No need to correct LOD for '+platform)
+        print(('No need to correct LOD for '+platform))
         sys.exit(1)
 
     # Output Filename
@@ -52,14 +52,14 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
 
     # Get LOD phase ramp from empirical model
     if not rangeDistFile:
-        print 'calculate range distance from input file attributes'
+        print('calculate range distance from input file attributes')
         width = int(atr['WIDTH'])
         length = int(atr['FILE_LENGTH'])
         range_resolution = float(atr['RANGE_PIXEL_SIZE'])
         rangeDist1D = range_resolution * np.linspace(0, width-1, width)
         rangeDist = np.tile(rangeDist1D, (length, 1))
     else:
-        print 'read range distance from file: %s' % (rangeDistFile)
+        print('read range distance from file: %s' % (rangeDistFile))
         rangeDist = readfile.read(rangeDistFile, epoch='slantRangeDistance')[0]
 
     yref = int(atr['ref_y'])
@@ -73,14 +73,14 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
         epochList = sorted(h5[k].keys())
         epochNum = len(epochList)
 
-        print 'writing >>> %s' % (outFile)
+        print('writing >>> %s' % (outFile))
         h5out = h5py.File(outFile,'w')
         group = h5out.create_group(k)
 
         prog_bar = ptime.progress_bar(maxValue=epochNum)
         if k in ['interferograms','wrapped']:
             Ramp *= -4*np.pi / float(atr['WAVELENGTH'])
-            print('number of interferograms: '+str(epochNum))
+            print(('number of interferograms: '+str(epochNum)))
             date12List = ptime.list_ifgram2date12(epochList)
             for i in range(epochNum):
                 epoch = epochList[i]
@@ -94,12 +94,12 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
 
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data, compression='gzip')
-                for key, value in atr.items():
+                for key, value in list(atr.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12List[i])
 
         elif k == 'timeseries':
-            print('number of acquisitions: '+str(len(epochList)))
+            print(('number of acquisitions: '+str(len(epochList))))
             tbase = [float(dy)/365.25 for dy in ptime.date_list2tbase(epochList)[0]]
             for i in range(epochNum):
                 epoch = epochList[i]
@@ -109,10 +109,10 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
 
                 dset = group.create_dataset(epoch, data=data, compression='gzip')
                 prog_bar.update(i+1, suffix=epoch)
-            for key, value in atr.iteritems():
+            for key, value in atr.items():
                 group.attrs[key] = value
         else:
-            print('No need to correct for LOD for '+k+' file')
+            print(('No need to correct for LOD for '+k+' file'))
             sys.exit(1)
         prog_bar.close()
         h5.close()
@@ -125,10 +125,10 @@ def correct_lod_file(File, rangeDistFile=None, outFile=None):
         dates = ptime.yyyymmdd2years(dates)
         dt = dates[1] - dates[0]
         data -= Ramp * dt
-        print 'writing >>> %s' % (outFile)
+        print('writing >>> %s' % (outFile))
         writefile.write(data, atr, outFile)
     else:
-        print 'No need to correct for LOD for %s file' % (k)
+        print('No need to correct for LOD for %s file' % (k))
 
     return outFile
 
@@ -168,11 +168,11 @@ def main(argv):
         inps.outfile = os.path.splitext(inps.file)[0]+'_LODcor'+os.path.splitext(inps.file)[1]
 
     atr = readfile.read_attribute(inps.file)
-    if 'Y_FIRST' in atr.keys():
+    if 'Y_FIRST' in list(atr.keys()):
         coordType = 'geo'
     else:
         coordType = 'radar'
-    print('Input file is in %s coordinates' % (coordType))
+    print(('Input file is in %s coordinates' % (coordType)))
     inps.range_dist_file = ut.get_geometry_file('slantRangeDistance', coordType=coordType)
     inps.outfile = correct_lod_file(inps.file, inps.range_dist_file, inps.outfile)
     print('Done.')

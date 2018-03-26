@@ -72,9 +72,9 @@ def main(argv):
         else: print('No mask found!'); sys.exit(1)
     try:
         Mask,Matr = readfile.read(maskFile, epoch='mask')
-        print('mask: '+maskFile)
+        print(('mask: '+maskFile))
     except:
-        print('Can not open mask file: '+maskFile)
+        print(('Can not open mask file: '+maskFile))
         sys.exit(1)
   
     #try:
@@ -155,7 +155,7 @@ def main(argv):
     elif p==3:
         #  A = np.vstack((dem[ndx]**3,dem[ndx]**2,dem[ndx],np.ones(len(dem[ndx])))).T
         B = np.vstack((dem**3,dem**2,dem,np.ones(len(dem)))).T
-    print(np.shape(A))
+    print((np.shape(A)))
   
     Ainv=np.linalg.pinv(A)
     ###################################################
@@ -181,10 +181,10 @@ def main(argv):
         print(Berror)
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%') 
     print('baseline error           mean                          std')   
-    print('       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh)))
-    print('     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate)))
-    print('       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv)))
-    print('     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate)))
+    print(('       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh))))
+    print(('     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate))))
+    print(('       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv))))
+    print(('     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate))))
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')       
     # plt.hist(Bh,bins=8,normed=True)
     # formatter = FuncFormatter(to_percent)
@@ -212,7 +212,7 @@ def main(argv):
         data = dset1[0:dset1.shape[0],0:dset1.shape[1]] - orbEffect[i,:,:]
         dset = group.create_dataset(dateList[i], data=data, compression='gzip')      
   
-    for key,value in h5file['timeseries'].attrs.items():
+    for key,value in list(h5file['timeseries'].attrs.items()):
         group.attrs[key] = value
   
   

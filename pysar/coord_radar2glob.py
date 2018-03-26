@@ -31,7 +31,7 @@ def main(argv):
 
     y = int(argv[0])
     x = int(argv[1])
-    print 'input radar coord: y/azimuth=%d, x/range=%d' % (y, x)
+    print('input radar coord: y/azimuth=%d, x/range=%d' % (y, x))
 
     try:    trans_file = argv[2]
     except: trans_file = ut.get_lookup_file()
@@ -40,7 +40,7 @@ def main(argv):
     except: radar_file = 'unwrapIfgram.h5'
     atr_rdr = readfile.read_attribute(radar_file)
     lat, lon = ut.radar2glob(np.array(y), np.array(x), trans_file, atr_rdr)[0:2]
-    print('corresponding geo coord: lat=%.4f, lon=%.4f' % (lat, lon))
+    print(('corresponding geo coord: lat=%.4f, lon=%.4f' % (lat, lon)))
 
     return
 

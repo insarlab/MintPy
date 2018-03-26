@@ -1216,7 +1216,7 @@ def main():
 
     coords = StringVar()
     coords_label = Label(coords_frame, text="Coords: ", width=5)
-    coords_option_menu = apply(OptionMenu, (coords_frame, coords) + tuple(["radar", "geo"]))
+    coords_option_menu = OptionMenu(*(coords_frame, coords) + tuple(["radar", "geo"]))
     coords_option_menu.config(width=15)
 
 
@@ -1246,8 +1246,7 @@ def main():
     '''     WODGETS FOR RESOLUTION      '''
     resolution_label = Label(coastline_res_frame, text="Res: ", width=3, anchor='w')
     resolution = StringVar()
-    resolution_option_menu = apply(OptionMenu,
-                                   (coastline_res_frame, resolution) + tuple(["c", "l", "i", "h", "f", "None"]))
+    resolution_option_menu = OptionMenu(*(coastline_res_frame, resolution) + tuple(["c", "l", "i", "h", "f", "None"]))
     resolution_option_menu.config(width=8)
 
     '''     WIDGETS FOR LALO LABEL AND LALO STEP'''

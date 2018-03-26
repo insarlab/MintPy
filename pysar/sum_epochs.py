@@ -48,11 +48,11 @@ def main(argv):
     ##### Read Timeseries
     atr = readfile.read_attribute(timeseriesFile)
     k = atr['FILE_TYPE']
-    print("loading time series: " + timeseriesFile)
+    print(("loading time series: " + timeseriesFile))
     h5timeseries = h5py.File(timeseriesFile)
     dateList = sorted(h5timeseries['timeseries'].keys())
     date_num = len(dateList)
-    print('number of acquisitions: %d' % date_num)
+    print(('number of acquisitions: %d' % date_num))
 
     length = int(atr['FILE_LENGTH'])
     width  = int(atr['WIDTH'])
@@ -84,7 +84,7 @@ def main(argv):
     sumD[np.isnan(sumD)] = 1
 
     ##### Write sum epochs file
-    print('writing to >>> '+outname)
+    print(('writing to >>> '+outname))
     h5sum = h5py.File(outname,'w')
     group = h5sum.create_group('timeseries')
     prog_bar.reset()
@@ -95,7 +95,7 @@ def main(argv):
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
 
-    for key,value in atr.items():
+    for key,value in list(atr.items()):
         group.attrs[key] = value
     h5sum.close()
     print('Done.')

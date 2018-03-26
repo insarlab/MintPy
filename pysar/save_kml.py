@@ -66,12 +66,12 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
         fig_scale = min(pysar.figsize_single_min/min(data.shape),\
                         pysar.figsize_single_max/max(data.shape))
         inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in data.shape]
-    print('create figure in size: '+str(inps.fig_size))
+    print(('create figure in size: '+str(inps.fig_size)))
     fig = plt.figure(figsize=inps.fig_size, frameon=False)
     ax = fig.add_axes([0., 0., 1., 1.])
     ax.set_axis_off()
 
-    print('colormap: '+inps.colormap)
+    print(('colormap: '+inps.colormap))
     inps.colormap = plt.get_cmap(inps.colormap)
 
     # Plot - data matrix
@@ -94,7 +94,7 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     ax.set_ylim([length,0])
 
     data_png_file = out_name_base + '.png'
-    print('writing '+data_png_file)
+    print(('writing '+data_png_file))
     plt.savefig(data_png_file, pad_inches=0.0, transparent=True, dpi=inps.fig_dpi)
 
     ## 2.2 Making PNG file - colorbar
@@ -112,7 +112,7 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     pc.patch.set_alpha(0.7)
 
     cbar_png_file = out_name_base + '_cbar.png'
-    print('writing '+cbar_png_file)
+    print(('writing '+cbar_png_file))
     pc.savefig(cbar_png_file, bbox_inches='tight', facecolor=pc.get_facecolor(), dpi=inps.fig_dpi)
 
     ## 2.3 Generate KML file
@@ -136,14 +136,14 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     if not inps.cbar_height:
         try:
             dem_file = ut.get_file_list(['geometry*.h5','dem*.h5','*.dem','radar*.hgt'])[0]
-            print('use mean height from file: '+dem_file+' + 1000 m as colorbar height.')
+            print(('use mean height from file: '+dem_file+' + 1000 m as colorbar height.'))
             inps.cbar_height = np.rint(np.nanmean(readfile.read(dem_file, epoch='height')[0])) + 1000.0
         except: pass
     elif str(inps.cbar_height).lower().endswith('ground'):
         inps.cbar_height = None
 
     if inps.cbar_height:
-        print('set colorbar in height: %.2f m' % inps.cbar_height)
+        print(('set colorbar in height: %.2f m' % inps.cbar_height))
         slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),\
                                  KML.altitude(str(inps.cbar_height)),KML.altitudeMode('absolute'),\
                                  KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
@@ -159,14 +159,14 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     # Write KML file
     kmlstr = etree.tostring(doc, pretty_print=True) 
     kml_file = out_name_base + '.kml'
-    print('writing '+kml_file)
+    print(('writing '+kml_file))
     f = open(kml_file, 'w')
     f.write(kmlstr)
     f.close()
 
     ## 2.4 Generate KMZ file
     kmz_file = out_name_base + '.kmz'
-    print('writing '+kmz_file)
+    print(('writing '+kmz_file))
     cmdKMZ = 'zip '+kmz_file+' '+kml_file+' '+data_png_file+' '+cbar_png_file
     os.system(cmdKMZ)
 
@@ -242,7 +242,7 @@ def main(argv):
     ##### 1. Read data
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
-    print('Input file is '+k)
+    print(('Input file is '+k))
 
     # Check: file in geo coord
     if 'X_FIRST' not in list(atr.keys()):
@@ -250,7 +250,7 @@ def main(argv):
 
     # Check: epoch is required for multi_dataset/group files
     if not inps.epoch and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-        print("No date/date12 input.\nIt's required for "+k+" file")
+        print(("No date/date12 input.\nIt's required for "+k+" file"))
         sys.exit(1)
 
     # Read data

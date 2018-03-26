@@ -19,10 +19,10 @@ except:
 import h5py
 import numpy as np
 
-from . import _datetime as ptime
-from . import _pysar_utilities as ut
-from . import _readfile as readfile
-from . import _writefile as writefile
+import _datetime as ptime
+import _pysar_utilities as ut
+import _readfile as readfile
+import _writefile as writefile
 
 
 ###############################################################

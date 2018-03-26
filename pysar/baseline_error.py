@@ -79,9 +79,9 @@ def main(argv):
         else: print('No mask found!'); sys.exit(1)
     try:
         Mask,Matr = readfile.read(maskFile, epoch='mask')
-        print('mask: '+maskFile)
+        print(('mask: '+maskFile))
     except:
-        print('Can not open mask file: '+maskFile)
+        print(('Can not open mask file: '+maskFile))
         sys.exit(1)
 
 
@@ -140,14 +140,14 @@ def main(argv):
             Bvrate.append(Berror[3])
             Be[i,:]=Berror
         else:
-            print(str(dateList[i]) + ' is not considered for Baseline Error estimation')
+            print((str(dateList[i]) + ' is not considered for Baseline Error estimation'))
   
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%') 
     print('baseline error           mean                          std')   
-    print('       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh)))
-    print('     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate)))
-    print('       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv)))
-    print('     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate)))
+    print(('       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh))))
+    print(('     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate))))
+    print(('       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv))))
+    print(('     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate))))
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')       
     print('bh error of each epoch:')
     print(Bh)
@@ -197,7 +197,7 @@ def main(argv):
         data = dset1[0:dset1.shape[0],0:dset1.shape[1]] - orbEffect[i,:,:]
         dset = group.create_dataset(dateList[i], data=data, compression='gzip')      
   
-    for key,value in h5file['timeseries'].attrs.items():
+    for key,value in list(h5file['timeseries'].attrs.items()):
         group.attrs[key] = value
   
     try:

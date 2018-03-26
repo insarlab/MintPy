@@ -62,9 +62,9 @@ def read_template2inps(templateFile, inps=None):
 
     ##Read template file
     template = readfile.read_template(templateFile)
-    key_list = template.keys()
+    key_list = list(template.keys())
     if not template:
-        print 'Empty template: '+templateFile
+        print('Empty template: '+templateFile)
         return None
     prefix = 'select.network.'
 
@@ -77,17 +77,17 @@ def read_template2inps(templateFile, inps=None):
     #Check option prefix
     for i in ['selectPairs.']:
         if any(i in key for key in key_list):
-            print '\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-            print 'WARNING: un-supported option prefix detected: selectPairs.'
-            print "         Use selectNetwork. instead"
-            print '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
+            print('\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+            print('WARNING: un-supported option prefix detected: selectPairs.')
+            print("         Use selectNetwork. instead")
+            print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
 
     if all(prefix not in key for key in key_list):
-        print '\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-        print 'ERROR: no valid input option deteced in template file!'
-        print 'Check the template below for supported options:'
-        print '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
-        print TEMPLATE
+        print('\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print('ERROR: no valid input option deteced in template file!')
+        print('Check the template below for supported options:')
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
+        print(TEMPLATE)
         sys.exit(-1)
 
 
@@ -209,7 +209,7 @@ def read_template2inps(templateFile, inps=None):
             inps.temp_perp_list = '16,1600;32,800;48,600;64,200'
         else:
             inps.temp_perp_list = value
-    if isinstance(inps.temp_perp_list, basestring):
+    if isinstance(inps.temp_perp_list, str):
         inps.temp_perp_list = [[float(j) for j in i.split(',')] for i in inps.temp_perp_list.split(';')]
 
     return inps
@@ -353,7 +353,7 @@ def main(argv):
     log(os.path.basename(sys.argv[0])+' '+inps.template_file)
 
     project_name = os.path.splitext(os.path.basename(inps.template_file))[0]
-    print('project name: '+project_name)
+    print(('project name: '+project_name))
     if not inps.sensor:
         inps.sensor = project_name2sensor(project_name)
  
@@ -365,7 +365,7 @@ def main(argv):
 
     # Pair selection from reference
     if inps.reference_file:
-        print('Use pairs info from reference file: '+inps.reference_file)
+        print(('Use pairs info from reference file: '+inps.reference_file))
         date12_list = pnet.get_date12_list(inps.reference_file)
         date12_list = [i.replace('_','-') for i in date12_list]
 
@@ -385,18 +385,18 @@ def main(argv):
         if not inps.exclude_date:
             inps.exclude_date = []
         else:
-            print('input exclude dates: '+str(inps.exclude_date))
+            print(('input exclude dates: '+str(inps.exclude_date)))
         if inps.start_date:
-            print('input start date: '+inps.start_date)
+            print(('input start date: '+inps.start_date))
             inps.exclude_date += [i for i in date8_list if float(i) < float(ptime.yyyymmdd(inps.start_date))]
             inps.exclude_date = sorted(inps.exclude_date)
         if inps.end_date:
-            print('input end   date: '+inps.end_date)
+            print(('input end   date: '+inps.end_date))
             inps.exclude_date += [i for i in date8_list if float(i) > float(ptime.yyyymmdd(inps.end_date))]
             inps.exclude_date = sorted(inps.exclude_date)
         if inps.exclude_date:
             print('exclude    dates: ')
-            print(inps.exclude_date)
+            print((inps.exclude_date))
 
         # Read baseline list file: bl_list.txt
         inps.exclude_date = ptime.yymmdd(inps.exclude_date)
@@ -410,7 +410,7 @@ def main(argv):
         elif inps.method.startswith('seq'):    inps.method = 'sequential'
         elif inps.method.startswith('hierar'): inps.method = 'hierarchical'
         elif inps.method in ['mst','min_spanning_tree','minimum_spanning_tree']:  inps.method = 'mst'
-        print('select method: '+inps.method)
+        print(('select method: '+inps.method))
 
         if   inps.method == 'all':
             date12_list = pnet.select_pairs_all(date6_list)
@@ -426,7 +426,7 @@ def main(argv):
             date12_list = pnet.select_pairs_mst(date6_list, pbase_list)
         else:
             raise Exception('Unrecoganized select method: '+inps.method)
-        print('initial number of interferograms: '+str(len(date12_list)))
+        print(('initial number of interferograms: '+str(len(date12_list))))
 
         # Filter pairs (optional) using temp/perp/doppler baseline threshold
         if inps.method in ['star','hierarchical','mst']:
@@ -435,24 +435,24 @@ def main(argv):
             # Temporal baseline
             date12_list = pnet.threshold_temporal_baseline(date12_list, inps.temp_base_max,\
                                                            inps.keep_seasonal, inps.temp_base_min)
-            print('number of interferograms after filtering of <%d, %d> days in temporal baseline: %d'\
-                  % (inps.temp_base_min, inps.temp_base_max, len(date12_list)))
+            print(('number of interferograms after filtering of <%d, %d> days in temporal baseline: %d'\
+                  % (inps.temp_base_min, inps.temp_base_max, len(date12_list))))
             if inps.keep_seasonal:
                 print('\tkeep seasonal pairs, i.e. pairs with temporal baseline == N*years +/- one month')
 
             # Perpendicular spatial baseline
             date12_list = pnet.threshold_perp_baseline(date12_list, date6_list, pbase_list, inps.perp_base_max)
 
-            print('number of interferograms after filtering of max %d meters in perpendicular baseline: %d'\
-                  % (inps.perp_base_max, len(date12_list)))
+            print(('number of interferograms after filtering of max %d meters in perpendicular baseline: %d'\
+                  % (inps.perp_base_max, len(date12_list))))
                   
             # Doppler Overlap Percentage
             if inps.sensor:
                 bandwidth_az = pnet.azimuth_bandwidth(inps.sensor)
                 date12_list = pnet.threshold_doppler_overlap(date12_list, date6_list, dop_list,\
                                                              bandwidth_az, inps.dop_overlap_min/100.0)
-                print('number of interferograms after filtering of min '+str(inps.dop_overlap_min)+'%'+\
-                      ' overlap in azimuth Doppler frequency: '+str(len(date12_list)))
+                print(('number of interferograms after filtering of min '+str(inps.dop_overlap_min)+'%'+\
+                      ' overlap in azimuth Doppler frequency: '+str(len(date12_list))))
 
     # Write ifgram_list.txt
     if not date12_list:
@@ -462,10 +462,10 @@ def main(argv):
     # date12_list to date_list
     m_dates = [date12.replace('_','-').split('-')[0] for date12 in date12_list]
     s_dates = [date12.replace('_','-').split('-')[1] for date12 in date12_list]
-    try: print('number of acquisitions   input   : '+str(len(date6_list)))
+    try: print(('number of acquisitions   input   : '+str(len(date6_list))))
     except: pass
-    print('number of acquisitions   selected: '+str(len(list(set(m_dates + s_dates)))))
-    print('number of interferograms selected: '+str(len(date12_list)))
+    print(('number of acquisitions   selected: '+str(len(list(set(m_dates + s_dates))))))
+    print(('number of interferograms selected: '+str(len(date12_list))))
 
     # Output directory/filename
     if not inps.outfile:
@@ -480,7 +480,7 @@ def main(argv):
     if not os.path.isdir(inps.out_dir):
         os.makedirs(inps.out_dir)
 
-    print('writing >>> '+inps.outfile)
+    print(('writing >>> '+inps.outfile))
     if not inps.baseline_file:
         np.savetxt(inps.outfile, date12_list, fmt='%s')
         return inps.outfile
@@ -522,20 +522,20 @@ def main(argv):
         plt.switch_backend('Agg')
 
     out_fig_name = 'BperpHistory.pdf'
-    print('plotting baseline history in temp/perp baseline domain to file: '+out_fig_name)
+    print(('plotting baseline history in temp/perp baseline domain to file: '+out_fig_name))
     fig2, ax2 = plt.subplots()
     ax2 = pnet.plot_perp_baseline_hist(ax2, date8_list, pbase_list)
     plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
 
     out_fig_name = 'Network.pdf'
-    print('plotting network / pairs  in temp/perp baseline domain to file: '+out_fig_name)
+    print(('plotting network / pairs  in temp/perp baseline domain to file: '+out_fig_name))
     fig1, ax1 = plt.subplots()
     ax1 = pnet.plot_network(ax1, date12_list, date8_list, pbase_list, plot_dict=vars(inps), print_msg=False)
     plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
 
     out_fig_name = 'CoherenceMatrix.pdf'
     if inps.coherence_list:
-        print 'plotting predicted coherence matrix to file: '+out_fig_name
+        print('plotting predicted coherence matrix to file: '+out_fig_name)
         fig3, ax3 = plt.subplots()
         ax3 = pnet.plot_coherence_matrix(ax3, date12_list, inps.coherence_list, plot_dict=vars(inps))
         plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')

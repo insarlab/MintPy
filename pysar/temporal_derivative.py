@@ -44,7 +44,7 @@ def main(argv):
     width = int(atr['WIDTH'])
 
     ##### Read time-series
-    print("loading time series: " + timeseries_file)
+    print(("loading time series: " + timeseries_file))
     h5 = h5py.File(timeseries_file)
     date_list = sorted(h5[k].keys())
     date_num = len(date_list)
@@ -76,7 +76,7 @@ def main(argv):
 
     ##### Write 1st and 2nd temporal derivatives
     outfile1 = os.path.splitext(timeseries_file)[0]+'_1stDerivative.h5'
-    print('writing >>> '+outfile1)
+    print(('writing >>> '+outfile1))
     h5out = h5py.File(outfile1, 'w')
     group = h5out.create_group(k)
 
@@ -85,13 +85,13 @@ def main(argv):
         date = date_list[i+1]
         dset = group.create_dataset(date, data=np.reshape(timeseries_1st[i][:],[length,width]), compression='gzip')
         prog_bar.update(i+1, suffix=date)
-    for key,value in atr.items():
+    for key,value in list(atr.items()):
         group.attrs[key] = value
     prog_bar.close()
     h5out.close()
 
     outfile2 = os.path.splitext(timeseries_file)[0]+'_2ndDerivative.h5'
-    print('writing >>> '+outfile2)
+    print(('writing >>> '+outfile2))
     h5out = h5py.File(outfile2, 'w')
     group = h5out.create_group(k)
 
@@ -100,7 +100,7 @@ def main(argv):
         date = date_list[i+2]
         dset = group.create_dataset(date, data=np.reshape(timeseries_2nd[i][:],[length,width]), compression='gzip')
         prog_bar.update(i+1, suffix=date)
-    for key,value in atr.items():
+    for key,value in list(atr.items()):
         group.attrs[key] = value
     prog_bar.close()
     h5out.close()

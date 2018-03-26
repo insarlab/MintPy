@@ -11,7 +11,7 @@ import os
 import sys
 import argparse
 
-from . import _gmt as gmt
+import _gmt as gmt
 import h5py
 import numpy as np
 
@@ -54,7 +54,7 @@ def write_grd_file(data, atr, fname_out=None):
     lats, lons = get_geo_lat_lon(atr)
 
     # writing
-    print('writing >>> '+fname_out)
+    print(('writing >>> '+fname_out))
     gmt.write_gmt_simple(lons, np.flipud(lats), np.flipud(data), fname_out,\
                          title='default', name=atr['FILE_TYPE'], scale=1.0, offset=0, units=atr['UNIT'])
     return fname_out
@@ -90,7 +90,7 @@ def main(argv):
     ##### 1. Read data
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
-    print('Input file is '+k)
+    print(('Input file is '+k))
 
     # Check: file in geo coord
     if 'X_FIRST' not in list(atr.keys()):
@@ -99,7 +99,7 @@ def main(argv):
     # Check: epoch is required for multi_dataset/group files
     if not inps.epoch:
         if k in multi_group_hdf5_file:
-            print("No date/date12 input.\nIt's required for "+k+" file")
+            print(("No date/date12 input.\nIt's required for "+k+" file"))
             sys.exit(1)
         elif k in multi_dataset_hdf5_file:
             print('No input date ..., continue to convert the last date of time-series.')

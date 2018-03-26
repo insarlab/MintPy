@@ -107,7 +107,7 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
     V2, atr2 = readfile.read(File2)
     k = atr1['FILE_TYPE']
     print('---------------------------')
-    print('matching 2 '+k+' files:\n'+File1+'\n'+File2)
+    print(('matching 2 '+k+' files:\n'+File1+'\n'+File2))
     
     # Get Coverage Info 
     # Boundary Info - 2 Input Files
@@ -167,7 +167,7 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
         print('Continue to merge two input files without any adjustment.')
         print('**************************************************')   
     else:
-        print('Average offset between two velocity in the common area is: ' + str(offset))
+        print(('Average offset between two velocity in the common area is: ' + str(offset)))
         V2 = V2 - offset
 
     # Get merged data matrix value
@@ -182,7 +182,7 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
         ext = os.path.splitext(File1)[1]
         outName = os.path.splitext(os.path.basename(File1))[0]+'_'+\
                   os.path.splitext(os.path.basename(File2))[0]+ext
-    print('writing >>> '+outName)
+    print(('writing >>> '+outName))
     atr = atr1.copy()
     atr['WIDTH'] = width
     atr['FILE_LENGTH'] = length
@@ -200,7 +200,7 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
     fig=plt.subplot(2,2,4);  plt.imshow(VV_diff);  plt.title('Offset');  plt.colorbar()
     plt.tight_layout()
     plt.savefig(outName+'.png', bbox_inches='tight', transparent=True, dpi=150)
-    print('save figure to '+outName+'.png')
+    print(('save figure to '+outName+'.png'))
 
     if disp_fig:
         print('showing ...')
@@ -241,7 +241,7 @@ def main(argv):
     # Inputs
     inps = cmdLineParse()
     print('\n**************** Match Files *********************')
-    print('Files to be matched:\n'+inps.first_file+', '+str(inps.other_file))
+    print(('Files to be matched:\n'+inps.first_file+', '+str(inps.other_file)))
     
     # Matching file by file
     file1 = inps.first_file

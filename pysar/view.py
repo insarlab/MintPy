@@ -28,14 +28,14 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
 import pysar
-from . import _datetime as ptime
-from . import _readfile as readfile
-from . import _pysar_utilities as ut
-from . import mask as mask
-from . import subset as subset
-from .multilook import multilook_matrix
+import _datetime as ptime
+import _readfile as readfile
+import _pysar_utilities as ut
+import mask as mask
+import subset as subset
+from multilook import multilook_matrix
 
-from ._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
+from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
 
 fig = None
 

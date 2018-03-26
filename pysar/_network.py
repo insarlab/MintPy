@@ -205,7 +205,7 @@ def get_date12_list(File, check_drop_ifgram=False):
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
             atr = h5[k][epoch].attrs
-            if not check_drop_ifgram or 'drop_ifgram' not in atr.keys() or atr['drop_ifgram'] == 'no':
+            if not check_drop_ifgram or 'drop_ifgram' not in list(atr.keys()) or atr['drop_ifgram'] == 'no':
                 date12 = atr['DATE12']
                 date12_list.append(date12)
         h5.close()
@@ -221,7 +221,7 @@ def get_date12_list(File, check_drop_ifgram=False):
 
 def igram_perp_baseline_list(File):
     '''Get perpendicular baseline list from input multi_group hdf5 file'''
-    print('read perp baseline info from '+File)
+    print(('read perp baseline info from '+File))
     k = readfile.read_attribute(File)['FILE_TYPE']
     h5 = h5py.File(File, 'r')
     epochList = sorted(h5[k].keys())
@@ -311,7 +311,7 @@ def signal2noise_ratio(sensor):
     elif sensor.startswith('Env') :  SNR = 19.5
     elif sensor.startswith('Jers'):  SNR = 14
     elif sensor.startswith('S'):     SNR = 22
-    else: print 'satellite not found'; SNR = None
+    else: print('satellite not found'); SNR = None
     return SNR
 
 
@@ -329,7 +329,7 @@ def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
     inc_angle    = incidence_angle(sensor, inc_angle) / 180 * np.pi
     Bperp_c      = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
     if print_msg:
-        print('Critical Perpendicular Baseline: '+str(Bperp_c)+' m')
+        print(('Critical Perpendicular Baseline: '+str(Bperp_c)+' m'))
     return Bperp_c
 
 
@@ -443,10 +443,10 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
     #epsilon = 1e-3
     #cohs[cohs < epsilon] = epsilon
     if display:
-        print ''
+        print('')
 
     if display:
-        print 'critical perp baseline: %.f m' % pbase_c
+        print(('critical perp baseline: %.f m' % pbase_c))
         cohs_mat = coherence_matrix(date12_list, cohs)
         plt.figure()
         plt.imshow(cohs_mat, vmin=0.0, vmax=1.0, cmap='jet')
@@ -820,14 +820,14 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[]):
     # Select master date if not existed
     if not m_date:
         m_date = select_master_date(date8_list, pbase_list)
-        print('auto select master date: '+m_date)
+        print(('auto select master date: '+m_date))
     
     # Check input master date
     m_date8 = ptime.yyyymmdd(m_date)
     if m_date8 not in date8_list:
         print('Input master date is not existed in date list!')
-        print('Input master date: '+str(m_date8))
-        print('Input date list: '+str(date8_list))
+        print(('Input master date: '+str(m_date8)))
+        print(('Input date list: '+str(date8_list)))
         m_date8 = None
     
     # Generate star/ps network
@@ -965,8 +965,8 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         s_idx = date6_list.index(s_date)
         pbase12[i] = pbase_list[s_idx] - pbase_list[m_idx]
         tbase12[i] = tbase_list[s_idx] - tbase_list[m_idx]
-    print 'max perpendicular baseline: %.2f m' % (np.max(np.abs(pbase12)))
-    print 'max temporal      baseline: %d days' % (np.max(tbase12))
+    print(('max perpendicular baseline: %.2f m' % (np.max(np.abs(pbase12)))))
+    print(('max temporal      baseline: %d days' % (np.max(tbase12))))
 
     ## Keep/Drop - date12
     date12_list_keep = sorted(list(set(date12_list) - set(date12_list_drop)))
@@ -999,9 +999,9 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
 
         if print_msg:
             print('showing coherence')
-            print('colormap: '+plot_dict['colormap'])
-            print('display range: '+str([disp_min, disp_max]))
-            print('data    range: '+str([data_min, data_max]))
+            print(('colormap: '+plot_dict['colormap']))
+            print(('display range: '+str([disp_min, disp_max])))
+            print(('data    range: '+str([data_min, data_max])))
 
         # Use lower/upper part of colormap to emphasis dropped interferograms
         if not coh_thres:
@@ -1016,7 +1016,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         if coh_thres < disp_min:
             disp_min = 0.0
             if print_msg:
-                print 'data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)
+                print(('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)))
         c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
         coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
         cmap = plt.get_cmap(plot_dict['colormap'])
@@ -1025,7 +1025,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         cmap = colors.LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
 
         if print_msg:
-            print('color jump at '+str(coh_thres))
+            print(('color jump at '+str(coh_thres)))
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
@@ -1240,7 +1240,7 @@ def mode (thelist):
     maxcount = 0
 
     maxitem  = []
-    for k, v in counts.items():
+    for k, v in list(counts.items()):
         if v == maxcount and v > 0:
             maxitem.append(k)
         elif v > maxcount:
@@ -1251,7 +1251,7 @@ def mode (thelist):
     if maxcount == 1:
         print("All values only appear once, return the least/smallest one.")
         return sorted(maxitem)[0]
-    elif counts.values().count(maxcount) > 1:
+    elif list(counts.values()).count(maxcount) > 1:
         print("List has multiple modes, return the least/smallest one.")
         return sorted(maxitem)[0]
 

@@ -33,7 +33,7 @@ def main(argv):
     if not os.path.isfile(curlfile):
         ut.generate_curls(curlfile,h5file,Triangles,curls)
     else:
-        print(curlfile + " already exists!")
+        print((curlfile + " already exists!"))
 
     return curlfile
 

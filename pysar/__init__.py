@@ -63,7 +63,7 @@ from . import modify_network
 #import save_unw
 #import save_mat
 #import save_hdfeos5
-import seed_data
+from . import seed_data
 #import spatial_filter
 from . import sum_epochs
 #import temporal_filter
@@ -74,5 +74,5 @@ from . import transect
 from . import tropcor_phase_elevation
 #import tropcor_pyaps
 from . import unwrap_error
-import view_gui
-import ts_gui
+from . import view_gui
+from . import ts_gui

@@ -34,7 +34,7 @@ def main(argv):
 
     dem, demRsc = readfile.read(demFile)
     data, atr   = readfile.read(File)
-    print('Input file is '+atr['FILE_TYPE'])
+    print(('Input file is '+atr['FILE_TYPE']))
 
     # Subset
     try:
@@ -54,12 +54,12 @@ def main(argv):
 
     # Display
     print('-------------------------------------------')
-    print('Correlation with the DEM:  %.2f' % np.corrcoef(C1)[0][1])
+    print(('Correlation with the DEM:  %.2f' % np.corrcoef(C1)[0][1]))
     print('-------------------------------------------')
     print('DEM info:')
-    print('    Max height difference: %.2f m' % (np.max(dem[ndx])-np.min(dem[ndx])))
-    print('    Average        height: %.2f m' % np.mean(dem[ndx]))
-    print('    Height            Std: %.2f m' % np.std(dem[ndx]))
+    print(('    Max height difference: %.2f m' % (np.max(dem[ndx])-np.min(dem[ndx]))))
+    print(('    Average        height: %.2f m' % np.mean(dem[ndx])))
+    print(('    Height            Std: %.2f m' % np.std(dem[ndx])))
     return
 
 ################################################################################

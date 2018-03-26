@@ -68,7 +68,7 @@ def main(argv):
     if not outFile:
         outFile = 'perpBaseline_'+epoch+'.h5'
 
-    print('writing >>> '+outFile)
+    print(('writing >>> '+outFile))
     
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'

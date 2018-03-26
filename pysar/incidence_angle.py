@@ -48,7 +48,7 @@ def main(argv):
     angle = ut.incidence_angle(atr, dimension=2)
     
     # Geo coord
-    if 'Y_FIRST' in atr.keys():
+    if 'Y_FIRST' in list(atr.keys()):
         print('Input file is geocoded, only center incident angle is calculated: ')
         print(angle)
         length = int(atr['FILE_LENGTH'])
@@ -57,7 +57,7 @@ def main(argv):
         angle_mat[:] = angle
         angle = angle_mat
 
-    print 'writing >>> '+outFile
+    print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'degree'
     try: atr.pop('ref_date')

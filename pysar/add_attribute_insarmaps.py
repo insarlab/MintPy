@@ -3,7 +3,7 @@
 import psycopg2
 import sys
 import argparse
-import _readfile as readfile
+from . import _readfile as readfile
 import pycurl
 from io import StringIO
 import urllib.request, urllib.parse, urllib.error
@@ -131,8 +131,8 @@ class InsarDatabaseController(object):
             self.cursor.execute(sql)
             self.con.commit()
         # index exists most probably if exception thrown
-        except Exception, e:
-            print str(e)
+        except Exception as e:
+            print(str(e))
 
     def cluster_table_using(self, table, index_name):
         sql = None
@@ -142,8 +142,8 @@ class InsarDatabaseController(object):
             self.cursor.execute(sql)
             self.con.commit()
         # index exists most probably if exception thrown
-        except Exception, e:
-            print str(e)
+        except Exception as e:
+            print(str(e))
 
     def remove_point_table_if_there(self, table_name):
         sql = 'DROP TABLE IF EXISTS "' + table_name + '"'
@@ -227,7 +227,7 @@ class InsarDatasetController(InsarDatabaseController):
 
         responseCode = curl.getinfo(pycurl.HTTP_CODE)
         if responseCode == 200:
-            print("Successfully uploaded " + fileName)
+            print(("Successfully uploaded " + fileName))
         elif responseCode == 302:
             sys.stderr.write("Server redirected us... Please check username and password, and try again")
         elif responseCode == 301:
@@ -286,7 +286,7 @@ def main(argv):
     dbController.connect()
 
     for key in attributes:
-        print("Setting attribute " + key + " to " + attributes[key])
+        print(("Setting attribute " + key + " to " + attributes[key]))
         if key == "plotAttributes":
             dbController.add_plot_attribute(unavco_name, key, attributes[key])
         else:

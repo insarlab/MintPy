@@ -37,19 +37,19 @@ def main(argv):
     try:    outfile = argv[1]
     except: outfile = 'rewrapped_'+file
 
-    print('writing >>> '+outfile)
+    print(('writing >>> '+outfile))
     h5 = h5py.File(file, 'r')
     h5out = h5py.File(outfile,'w')
     gg = h5out.create_group('interferograms')
     ifgramList = list(h5['interferograms'].keys())
-    print('number of interferograms: '+str(len(ifgramList)))
+    print(('number of interferograms: '+str(len(ifgramList))))
     for ifgram in ifgramList:
         print(ifgram)
         unw = h5['interferograms'][ifgram].get(ifgram)[:]
         rewrapped = rewrap(unw)
         group = gg.create_group(ifgram)
         dset = group.create_dataset(ifgram, data=rewrapped, compression='gzip')
-        for key, value in h5['interferograms'][ifgram].attrs.items():
+        for key, value in list(h5['interferograms'][ifgram].attrs.items()):
             group.attrs[key] = value
 
     h5.close()

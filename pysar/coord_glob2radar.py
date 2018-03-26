@@ -43,10 +43,10 @@ def main(argv):
 
     atr_rdr = readfile.read_attribute(radar_file)
     
-    print('input geo coord: lat=%.4f, lon=%.4f' % (lat, lon))
+    print(('input geo coord: lat=%.4f, lon=%.4f' % (lat, lon)))
      
     y, x = ut.glob2radar(np.array(lat), np.array(lon), trans_file, atr_rdr)[0:2]
-    print('corresponding radar coord: y=%d, x=%d' % (y, x))
+    print(('corresponding radar coord: y=%d, x=%d' % (y, x)))
 
     return
 

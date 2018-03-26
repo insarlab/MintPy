@@ -47,7 +47,7 @@ def main(argv):
     
     # Geo coord
 
-    if 'Y_FIRST' in atr.keys():
+    if 'Y_FIRST' in list(atr.keys()):
         print('Input file is geocoded, only center range distance is calculated: ')
         print(range_dis)
         length = int(atr['FILE_LENGTH'])
@@ -56,7 +56,7 @@ def main(argv):
         range_dis_mat[:] = range_dis
         range_dis = range_dis_mat
 
-    print('writing >>> '+outFile)
+    print(('writing >>> '+outFile))
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'
     try: atr.pop('ref_date')

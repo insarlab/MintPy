@@ -67,7 +67,7 @@ def get_mission_name(meta_dict):
         else:
             mission = 'ALOS'
     else:
-        print('Un-recognized PLATFORM attribute: '+value)
+        print(('Un-recognized PLATFORM attribute: '+value))
         print('return None')
     return mission
 
@@ -244,7 +244,7 @@ def main(argv):
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
 
     print('-----------------------------------------')
-    print('writing >>> '+outName)
+    print(('writing >>> '+outName))
     f = h5py.File(outName,'w')
     hdfeos = f.create_group('HDFEOS')
     if 'Y_FIRST' in list(meta_dict.keys()):
@@ -254,14 +254,14 @@ def main(argv):
     group = gg_coord.create_group('timeseries')
 
     ##### Write Attributes to the HDF File
-    print('write metadata to '+str(f))
-    for key,value in meta_dict.items():
+    print(('write metadata to '+str(f)))
+    for key,value in list(meta_dict.items()):
         f.attrs[key] = value
 
-    print('write data to '+str(group))
+    print(('write data to '+str(group)))
     ##### Write Time Series Data
-    print('reading file: '+inps.timeseries)
-    print('number of acquisitions: %d' % len(dateList))
+    print(('reading file: '+inps.timeseries))
+    print(('number of acquisitions: %d' % len(dateList)))
     for date in dateList:
         print(date)
         data = h5_timeseries[k].get(date)[:,:]
@@ -273,7 +273,7 @@ def main(argv):
 
     ##### Write Incidence_Angle
     if os.path.isfile(inps.incidence_angle):
-        print('reading file: '+inps.incidence_angle)
+        print(('reading file: '+inps.incidence_angle))
         inc_angle, inc_angle_meta = readfile.read(inps.incidence_angle)
         dset = group.create_dataset('incidence_angle', data=inc_angle, compression='gzip')
         dset.attrs['Title'] = 'Incidence angle'
@@ -283,7 +283,7 @@ def main(argv):
 
     ##### Write DEM
     if os.path.isfile(inps.dem):
-        print('reading file: '+inps.dem)
+        print(('reading file: '+inps.dem))
         dem, dem_meta = readfile.read(inps.dem)
         dset = group.create_dataset('dem', data=dem, compression='gzip')
         dset.attrs['Title'] = 'Digital elevatino model'
@@ -293,7 +293,7 @@ def main(argv):
 
     ##### Write Coherence
     if os.path.isfile(inps.coherence):
-        print('reading file: '+inps.coherence)
+        print(('reading file: '+inps.coherence))
         coherence, coherence_meta = readfile.read(inps.coherence)
         dset = group.create_dataset('coherence', data=coherence, compression='gzip')
         dset.attrs['Title'] = 'Temporal Coherence'
@@ -303,7 +303,7 @@ def main(argv):
 
     ##### Write Mask
     if os.path.isfile(inps.mask):
-        print('reading file: '+inps.mask)
+        print(('reading file: '+inps.mask))
         mask, mask_meta = readfile.read(inps.mask)
         dset = group.create_dataset('mask', data=mask, compression='gzip')
         dset.attrs['Title'] = 'Mask'

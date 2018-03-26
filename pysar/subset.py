@@ -48,7 +48,7 @@ def coord_geo2radar(geoCoordIn, atr, coordType):
     for i in range(len(geoCoord)):
         if   coordType.startswith('lat'):  coord = np.rint((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
         elif coordType.startswith('lon'):  coord = np.rint((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))
-        else: print('Unrecognized coordinate type: '+coordType)
+        else: print(('Unrecognized coordinate type: '+coordType))
 
         radarCoord.append(int(coord))
 
@@ -89,7 +89,7 @@ def coord_radar2geo(radarCoordIn, atr, coordType):
     for i in range(len(radarCoord)):
         if   coordType.startswith(('row','y')):  coord = radarCoord[i]*float(atr['Y_STEP']) + float(atr['Y_FIRST'])
         elif coordType.startswith(('col','x')):  coord = radarCoord[i]*float(atr['X_STEP']) + float(atr['X_FIRST'])
-        else: print('Unrecognized coordinate type: '+coordType)
+        else: print(('Unrecognized coordinate type: '+coordType))
         geoCoord.append(coord)
     #geoCoord.sort()
 
@@ -118,19 +118,19 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
         print('ERROR: input index is out of data range!')
         data_box = (0,0,width,length)
 
-        print('\tdata   range in x/y: '+str(data_box))
-        print('\tsubset range in x/y: '+str(pixel_box))
-        print('\tdata   range in lat/lon: '+str(box_pixel2geo(data_box, atr_dict)))
-        print('\tsubset range in lat/lon: '+str(box_pixel2geo(pixel_box, atr_dict)))
+        print(('\tdata   range in x/y: '+str(data_box)))
+        print(('\tsubset range in x/y: '+str(pixel_box)))
+        print(('\tdata   range in lat/lon: '+str(box_pixel2geo(data_box, atr_dict))))
+        print(('\tsubset range in lat/lon: '+str(box_pixel2geo(pixel_box, atr_dict))))
         sys.exit(1)
 
     ## Check Y/Azimuth/Latitude subset range
     if sub_y[0]<0:       sub_y[0]=0;      print('WARNING: input y < min (0)! Set it to min.')
-    if sub_y[1]>length:  sub_y[1]=length; print('WARNING: input y > max ('+str(length)+')! Set it to max.')
+    if sub_y[1]>length:  sub_y[1]=length; print(('WARNING: input y > max ('+str(length)+')! Set it to max.'))
 
     ## Check X/Range/Longitude subset range
     if sub_x[0]<0:       sub_x[0]=0;      print('WARNING: input x < min (0)! Set it to min.')
-    if sub_x[1]>width:   sub_x[1]=width;  print('WARNING: input x > max ('+str(width)+')! Set it to max.')
+    if sub_x[1]>width:   sub_x[1]=width;  print(('WARNING: input x > max ('+str(width)+')! Set it to max.'))
 
 
     out_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
@@ -151,7 +151,7 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
     sub_y = [subset_box[1], subset_box[3]]
     #####
     atr = dict()
-    for key, value in atr_dict.items():  atr[key] = str(value)
+    for key, value in list(atr_dict.items()):  atr[key] = str(value)
 
     ##### Update attribute variable
     atr['FILE_LENGTH'] = str(sub_y[1]-sub_y[0])
@@ -266,7 +266,7 @@ def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None):
     '''
     lat = np.array([geo_box[3],geo_box[3],geo_box[1],geo_box[1]])
     lon = np.array([geo_box[0],geo_box[2],geo_box[0],geo_box[2]])
-    if 'Y_FIRST' in atr_rdr.keys():
+    if 'Y_FIRST' in list(atr_rdr.keys()):
         y = coord_geo2radar(lat, atr_rdr, 'lat')
         x = coord_geo2radar(lon, atr_rdr, 'lon')
         pix_box = (x[0], y[2], x[1], y[0])
@@ -288,7 +288,7 @@ def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None):
     '''
     x = np.array([pix_box[0],pix_box[2],pix_box[0],pix_box[2]])
     y = np.array([pix_box[1],pix_box[1],pix_box[3],pix_box[3]])
-    if 'Y_FIRST' in atr_rdr.keys():
+    if 'Y_FIRST' in list(atr_rdr.keys()):
         lat = coord_radar2geo(y, atr_rdr, 'y')
         lon = coord_radar2geo(x, atr_rdr, 'x')
         geo_box = (lon[0], lat[0], lon[1], lat[2])
@@ -336,8 +336,8 @@ def get_box_overlap_index(box1,box2):
     y1 = min(box1[3], box2[3])
     if x0 >= x1 or y0 >= y1:
         print('ERROR: No overlap between two input box range!')
-        print('box 1: '+str(box1))
-        print('box 2: '+str(box2))
+        print(('box 1: '+str(box1)))
+        print(('box 2: '+str(box2)))
         sys.exit(1)
     overlap_box  = (x0,y0,x1,y1)
 
@@ -460,7 +460,7 @@ def subset_file(File, subset_dict_input, outFile=None):
     width = int(atr_dict['WIDTH'])
     length = int(atr_dict['FILE_LENGTH'])
     k = atr_dict['FILE_TYPE']
-    print('subset '+k+' file: '+File+' ...')
+    print(('subset '+k+' file: '+File+' ...'))
 
     subset_dict = subset_dict_input.copy()
     # Read Subset Inputs into 4-tuple box in pixel and geo coord
@@ -479,10 +479,10 @@ def subset_file(File, subset_dict_input, outFile=None):
 
     geo_box = box_pixel2geo(pix_box, atr_dict)
     data_box = (0,0,width,length)
-    print('data   range in y/x: '+str(data_box))
-    print('subset range in y/x: '+str(pix_box))
-    print('data   range in lat/lon: '+str(box_pixel2geo(data_box, atr_dict)))
-    print('subset range in lat/lon: '+str(geo_box))
+    print(('data   range in y/x: '+str(data_box)))
+    print(('subset range in y/x: '+str(pix_box)))
+    print(('data   range in lat/lon: '+str(box_pixel2geo(data_box, atr_dict))))
+    print(('subset range in lat/lon: '+str(geo_box)))
 
     if pix_box == data_box:
         print('Subset range == data coverage, no need to subset. Skip.')
@@ -501,7 +501,7 @@ def subset_file(File, subset_dict_input, outFile=None):
                 outFile = 'subset_'+os.path.basename(File)
         else:
             outFile = os.path.basename(File)
-    print('writing >>> '+outFile)
+    print(('writing >>> '+outFile))
 
     ##### Multiple Dataset File
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
@@ -510,9 +510,9 @@ def subset_file(File, subset_dict_input, outFile=None):
         epochList = sorted(h5file[k].keys())
         epochNum = len(epochList)
         if k in multi_dataset_hdf5_file:
-            print('number of acquisitions: '+str(epochNum))
+            print(('number of acquisitions: '+str(epochNum)))
         else:
-            print('number of interferograms: '+str(epochNum))
+            print(('number of interferograms: '+str(epochNum)))
 
         ##### Open Output File
         h5out = h5py.File(outFile,'w')
@@ -533,7 +533,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             prog_bar.update(i+1, suffix=epoch)
         prog_bar.close()
         atr_dict = subset_attribute(atr_dict, pix_box)
-        for key,value in atr_dict.items():
+        for key,value in list(atr_dict.items()):
             group.attrs[key] = value
 
     elif k in multi_group_hdf5_file:
@@ -550,7 +550,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             atr_dict  = subset_attribute(atr_dict, pix_box, print_msg=False)
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in atr_dict.items():
+            for key, value in list(atr_dict.items()):
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
         prog_bar.close()
@@ -676,8 +676,8 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
-    print('number of input files: '+str(len(inps.file)))
-    print(inps.file)
+    print(('number of input files: '+str(len(inps.file))))
+    print((inps.file))
 
     #print '\n**************** Subset *********************'
     atr = readfile.read_attribute(inps.file[0])
@@ -689,12 +689,12 @@ def main(argv):
         if inps.reference:
             ref_atr = readfile.read_attribute(inps.reference)
             pix_box, geo_box = get_coverage_box(ref_atr)
-            print('using subset info from '+inps.reference)
+            print(('using subset info from '+inps.reference))
 
         # 2. Read subset info from template options
         elif inps.template_file:
             pix_box, geo_box = read_subset_template2box(inps.template_file)
-            print('using subset info from '+inps.template_file)
+            print(('using subset info from '+inps.template_file))
 
         # 3. Use subset from tight info
         elif inps.tight:
@@ -702,7 +702,7 @@ def main(argv):
             if not inps.lookup_file:
                 sys.exit('No lookup file found! Can not use --tight option without it.')
             atr_lut = readfile.read_attribute(inps.lookup_file)
-            if 'Y_FIRST' in atr_lut.keys():
+            if 'Y_FIRST' in list(atr_lut.keys()):
                 rg_lut = readfile.read(inps.lookup_file, epoch='range')[0]
                 rg_unique, rg_pos = np.unique(rg_lut, return_inverse=True)
                 idx_row, idx_col = np.where(rg_lut != rg_unique[np.bincount(rg_pos).argmax()])
@@ -747,17 +747,17 @@ def main(argv):
             print('calculate corresponding bounding box in geo coordinate.')
             pix_box = (inps.subset_x[0], inps.subset_y[0], inps.subset_x[1], inps.subset_y[1])
             geo_box = bbox_radar2geo(pix_box, atr_rdr, inps.lookup_file)
-        print('geo   box: '+str(geo_box))
-        print('pixel box: '+str(pix_box))
+        print(('geo   box: '+str(geo_box)))
+        print(('pixel box: '+str(pix_box)))
 
         ## Subset files
         inps.fill_value = 0
         print('--------------------------------------------')
-        print('subseting dataset in geo coord geo_box: '+str(geo_box))
+        print(('subseting dataset in geo coord geo_box: '+str(geo_box)))
         inps = subset_box2inps(inps, None, geo_box)
         subset_file_list(geoFileList, inps)
         print('--------------------------------------------')
-        print('subseting dataset in radar coord pix_box: '+str(pix_box))
+        print(('subseting dataset in radar coord pix_box: '+str(pix_box)))
         inps = subset_box2inps(inps, pix_box, None)
         subset_file_list(rdrFileList, inps)
 

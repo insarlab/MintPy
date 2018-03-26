@@ -1,7 +1,7 @@
 #! /usr/bin/env python2
 
-from Tkinter import *
-import ttk
+from tkinter import *
+import tkinter.ttk
 import h5py
 
 index = 1
@@ -20,7 +20,7 @@ def add_to_tree(name, obj):
 
 root = Tk()
 
-tree = ttk.Treeview(root)
+tree = tkinter.ttk.Treeview(root)
 tree.configure(height=850)
 
 '''tree["columns"]=("one","two")

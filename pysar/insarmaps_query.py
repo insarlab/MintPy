@@ -41,7 +41,7 @@ def main():
 
     url = buildURL(parseArgs)
 
-    print(BasicHTTP.get(url))
+    print((BasicHTTP.get(url)))
 
 if __name__ == '__main__':
     main()
