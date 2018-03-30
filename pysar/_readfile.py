@@ -119,8 +119,10 @@ def read(File, box=None, epoch=None, print_msg=True):
                 sys.exit(1)
 
             elif k in multi_dataset_hdf5_file:
+                print("H5FILE")
                 dset = h5file[k].get(epoch2read)
             else:
+                print("H5FILE")
                 dset = h5file[k][epoch2read].get(epoch2read)
         elif k in ['GIANT_TS']:
             dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5file['dates'][:].tolist()]
@@ -129,13 +131,14 @@ def read(File, box=None, epoch=None, print_msg=True):
                 dset = h5file['rawts'][dateIndx,:,:]
             elif 'recons' in list(h5file.keys()):
                 dset = h5file['recons'][dateIndx,:,:]
+        elif k in ['HDFEOS']:
+            dset = h5file[k]['GRIDS']['timeseries']['observation'].get('displacement')
         else:
             dset = h5file[k].get(k)
+
         #else:
         #    print 'ERROR: Unrecognized h5 file type: '+k
         #    sys.exit(1)
-
-        print(dset)
         data = dset[box[1]:box[3],box[0]:box[2]]
 
         h5file.close()

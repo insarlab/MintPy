@@ -585,17 +585,22 @@ def set_epoch_info():
 
 
 def read_file_data(epoch=None):
-    global epoch_list, attributes, ref_dates_list
+    global epoch_list, attributes, ref_dates_list, use_default
 
     atr = readfile.read_attribute(h5_file.get())
     file_type = atr['FILE_TYPE']
     epoch_list = ["All"]
     ref_dates_list = [""]
     h5file = h5py.File(h5_file.get(), 'r')
+    print(file_type)
     if file_type in ['HDFEOS']:
         epoch_list += h5file.attrs['DATE_TIMESERIES'].split()
+        use_default.set(1)
     else:
         epoch_list += sorted(h5file[file_type].keys())
+
+    if file_type in readfile.multi_dataset_hdf5_file:
+        use_default.set(1)
 
     if epoch and epoch is not "All":
         data, attributes = readfile.read(h5_file.get(), epoch=epoch)

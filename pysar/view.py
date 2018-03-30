@@ -1316,6 +1316,7 @@ def main(argv):
         # Read Epoch List
         h5file = h5py.File(inps.file,'r')
         if k in ['HDFEOS']:
+            print("HELLO")
             epochList = h5file.attrs['DATE_TIMESERIES'].split()
         elif k in ['GIANT_TS']:
             epochList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5file['dates'][:].tolist()]
