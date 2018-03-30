@@ -27,12 +27,12 @@ def geocode_output_filename(fname):
 
 
 ############################ Geocoded with lut in geo coord #########################
-def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
+def update_attribute_geo_lut(atr_rdr, atr_lut, printMsg=True):
     '''Get attributes in geo coord from atr_rdr dict and atr_lut dict
     Inputs:
         atr_rdr : dict, attributes of file in radar coord
         atr_lut : dict, attributes of mapping transformation file
-        print_msg : bool, print out message or not
+        printMsg : bool, print out message or not
     Output:
         atr : dict, attributes of output file in geo coord.
     '''
@@ -58,7 +58,7 @@ def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
         ref_x_rdr = np.array(int(atr_rdr['REF_X']))
         ref_y_rdr = np.array(int(atr_rdr['REF_Y']))
         trans_file = atr_lut['FILE_PATH']
-        ref_lat, ref_lon = ut.radar2glob(ref_y_rdr, ref_x_rdr, trans_file, atr_rdr, print_msg=False)[0:2]
+        ref_lat, ref_lon = ut.radar2glob(ref_y_rdr, ref_x_rdr, trans_file, atr_rdr, printMsg=False)[0:2]
         if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
             ref_y = np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
             ref_x = np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP']))
@@ -66,7 +66,7 @@ def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
             atr['REF_LON'] = str(ref_lon)
             atr['REF_Y'] = str(int(ref_y))
             atr['REF_X'] = str(int(ref_x))
-            if print_msg:
+            if printMsg:
                 print('update ref_lat/lon/y/x')
         else:
             warnings.warn("original reference pixel is out of .trans file's coverage. Continue.")
@@ -182,7 +182,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
                 gg = group.create_group(ifgram)
                 dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
 
-                atr = update_attribute_geo_lut(h5[k][ifgram].attrs, atr_lut, print_msg=False)
+                atr = update_attribute_geo_lut(h5[k][ifgram].attrs, atr_lut, printMsg=False)
                 for key, value in iter(atr.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
@@ -235,7 +235,7 @@ def interpolate(values, vtx, wts, fill_value=np.nan):
     return ret
 
 
-def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True):
+def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, printMsg=True):
     '''Get attributes in geo coord from atr_rdr dict and geo_data matrix
     Inputs:
         atr_rdr - dict, attribute of file in radar coord
@@ -280,7 +280,7 @@ def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True
             atr['REF_LON'] = str(ref_lon)
             atr['REF_Y'] = str(ref_y)
             atr['REF_X'] = str(ref_x)
-            if print_msg:
+            if printMsg:
                 print('update ref_lat/lon/y/x')
         else:
             warnings.warn("original reference pixel is out of lookup file's coverage. Continue.")
@@ -429,7 +429,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
                 gg = group.create_group(ifgram)
                 dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
 
-                atr = update_attribute_radar_lut(h5[k][ifgram].attrs, inps, lat, lon, print_msg=False)
+                atr = update_attribute_radar_lut(h5[k][ifgram].attrs, inps, lat, lon, printMsg=False)
                 for key, value in iter(atr.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])

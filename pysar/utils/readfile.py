@@ -110,7 +110,7 @@ geometry_dataset=['rangeCoord','azimuthCoord','latitude','longitude','height',\
 
 
 #########################################################################
-def read(fname, box=None, datasetName=None, epoch=None, print_msg=True):
+def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
     '''Read one dataset and its attributes from input file.
 
     Read one dataset, i.e. interferogram, coherence, velocity, dem ...
@@ -165,7 +165,7 @@ def read(fname, box=None, datasetName=None, epoch=None, print_msg=True):
             try:    epoch2read = [i for i in epoch_list if epoch.lower() in i.lower()][0]
             except: epoch2read = None
             if not epoch2read:
-                if print_msg:
+                if printMsg:
                     print('ERROR: no input epoch found!')
                     print('input epoch: '+str(epoch))
                     print('available epoches: '+str(epoch_list))
@@ -448,14 +448,14 @@ def read_attribute(fname, epoch=None):
 
 
 #########################################################################
-def check_variable_name(path, print_msg=True):
+def check_variable_name(path, printMsg=True):
     s=path.split("/")[0]
     if len(s)>0 and s[0]=="$":
         try:
             p0 = os.getenv(s[1:])
             path = path.replace(path.split("/")[0], p0)
         except:
-            if print_msg:
+            if printMsg:
                 print('WARNING: Un-recognized environmental variable: '+s)
     return path
 
@@ -467,13 +467,13 @@ def is_plot_attribute(attribute):
     return tokens[0] == "plot" and len(tokens) > 1
 
 
-def read_template(fname, delimiter='=', print_msg=True):
+def read_template(fname, delimiter='=', printMsg=True):
     '''Reads the template file into a python dictionary structure.
     Parameters: fname : str
                     full path to the template file
                 delimiter : str
                     string to separate the key and value
-                print_msg : bool
+                printMsg : bool
                     print message or not
     Returns:    template_dict : dict
                     file content
@@ -481,7 +481,7 @@ def read_template(fname, delimiter='=', print_msg=True):
         tmpl = read_template(KyushuT424F610_640AlosA.template)
         tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
         from pysar.defaults.default_path import isceAutoPath
-        tmpl = read_template(isceAutoPath, print_msg=False)
+        tmpl = read_template(isceAutoPath, printMsg=False)
     '''
     template_dict = {}
     plotAttributeDict = {}
@@ -515,7 +515,7 @@ def read_template(fname, delimiter='=', print_msg=True):
         else:
             atrName  = c[0]
             atrValue = str.replace(c[1],'\n','').split("#")[0].strip()
-            atrValue = check_variable_name(atrValue, print_msg=print_msg)
+            atrValue = check_variable_name(atrValue, printMsg=printMsg)
 
             if insidePlotObject:
                 if is_plot_attribute(atrName):

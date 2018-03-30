@@ -64,7 +64,7 @@ prefix = 'pysar.load.'
 ##----------------------------------------------------------------------------------------##
 def default_path4sentinel_stack(projectName, template=dict()):
     ## default file pattern
-    defDict = read_file.read_template(isceAutoPath, print_msg=False)
+    defDict = read_file.read_template(isceAutoPath, printMsg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 
@@ -89,7 +89,7 @@ def default_path4sentinel_stack(projectName, template=dict()):
 
 def default_path4roipac(projectName, template=dict()):
     ## default file pattern
-    defDict = read_file.read_template(roipacAutoPath, print_msg=False)
+    defDict = read_file.read_template(roipacAutoPath, printMsg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 
@@ -136,7 +136,7 @@ def default_path4roipac(projectName, template=dict()):
 
 def default_path4gamma(projectName, template=dict()):
     ## default file pattern
-    defDict = read_file.read_template(gammaAutoPath, print_msg=False)
+    defDict = read_file.read_template(gammaAutoPath, printMsg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 

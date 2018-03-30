@@ -1228,7 +1228,7 @@ def main(argv):
         drop_epoch_list = []
         if k in multi_group_hdf5_file and inps.disp_title:
             drop_epoch_list = sorted(list(set(inps.epoch) - \
-                                          set(ut.check_drop_ifgram(h5file, print_msg=False))))
+                                          set(ut.check_drop_ifgram(h5file, printMsg=False))))
             print("mark interferograms with 'DROP_IFGRAM'='yes' in red colored title")
 
         ##### Loop 1 - Figures

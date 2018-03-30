@@ -401,7 +401,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-            atr_dict  = ut.subset_attribute(atr_dict, pix_box, print_msg=False)
+            atr_dict  = ut.subset_attribute(atr_dict, pix_box, printMsg=False)
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
             for key, value in iter(atr_dict.items()):
