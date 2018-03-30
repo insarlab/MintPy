@@ -8,12 +8,9 @@
 
 import os
 import sys
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile, datetime as ptime
 
 
 def usage():

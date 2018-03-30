@@ -110,36 +110,37 @@ geometry_dataset=['rangeCoord','azimuthCoord','latitude','longitude','height',\
 
 
 #########################################################################
-def read(fname, box=None, epoch=None, print_msg=True):
+def read(fname, box=None, datasetName=None, epoch=None, print_msg=True):
     '''Read one dataset and its attributes from input file.
 
     Read one dataset, i.e. interferogram, coherence, velocity, dem ...
     return 0 if failed.
 
-    Inputs:
-        fname : str, path of file to read
-                PySAR   file: interferograms, timeseries, velocity, etc.
-                ROI_PAC file: .unw .cor .hgt .dem .trans
-                Gamma   file: .mli .slc
-                Image   file: .jpeg .jpg .png .ras .bmp
-        box   : 4-tuple of int, area to read, defined in (x0, y0, x1, y1) in pixel coordinate
-        epoch : string, epoch to read, for multi-dataset files
-                for .trans file:
-                '' - return both dataset
-                rg, range   - for geomap_*.trans file
-                az, azimuth - for geomap_*.trans file
+    Parameters: fname : str, path of file to read
+                    PySAR   file: interferograms, timeseries, velocity, etc.
+                    ROI_PAC file: .unw .cor .hgt .dem .trans
+                    Gamma   file: .mli .slc
+                    Image   file: .jpeg .jpg .png .ras .bmp
+                box : 4-tuple of int
+                    area to read, defined in (x0, y0, x1, y1) in pixel coordinate
+                epoch : string
+                    epoch to read, for multi-dataset files
+                    for .trans file:
+                        '' - return both dataset
+                        rg, range   - for geomap_*.trans file
+                        az, azimuth - for geomap_*.trans file
 
-    Outputs:
-        data : 2-D matrix in numpy.array format, return None if failed
-        atr  : dictionary, attributes of data, return None if failed
+    Returns: data : 2/3-D matrix in numpy.array format, return None if failed
+             atr : dictionary, attributes of data, return None if failed
 
     Examples:
-        data, atr = read('velocity.h5')
-        data, atr = read('100120-110214.unw', box=(100,1100, 500, 2500))
-        data, atr = read('timeseries.h5', epoch='20101120')
-        data, atr = read('timeseries.h5', box=(100,1100, 500, 2500), epoch='20101120')
-        az,   atr = read('geomap*.trans', epoch='azimuth')
-        rg,az,atr = read('geomap*.trans')
+        from pysar.utils import readfile
+        data, atr = readfile.read('velocity.h5')
+        data, atr = readfile.read('100120-110214.unw', box=(100,1100, 500, 2500))
+        data, atr = readfile.read('timeseries.h5', epoch='20101120')
+        data, atr = readfile.read('timeseries.h5', box=(100,1100, 500, 2500), epoch='20101120')
+        data, atr = readfile.read('geomap*.trans', epoch='azimuth')
+        data, atr = readfile.read('ifgramStack.h5', datasetName='unwrapPhase')
     '''
 
     # Basic Info
@@ -447,14 +448,15 @@ def read_attribute(fname, epoch=None):
 
 
 #########################################################################
-def check_variable_name(path):
+def check_variable_name(path, print_msg=True):
     s=path.split("/")[0]
     if len(s)>0 and s[0]=="$":
         try:
             p0 = os.getenv(s[1:])
             path = path.replace(path.split("/")[0], p0)
         except:
-            print('WARNING: Un-recognized environmental variable: '+s)
+            if print_msg:
+                print('WARNING: Un-recognized environmental variable: '+s)
     return path
 
 
@@ -465,13 +467,21 @@ def is_plot_attribute(attribute):
     return tokens[0] == "plot" and len(tokens) > 1
 
 
-def read_template(fname, delimiter='='):
+def read_template(fname, delimiter='=', print_msg=True):
     '''Reads the template file into a python dictionary structure.
-    Input : string, full path to the template file
-    Output: dictionary, pysar template content
-    Example:
+    Parameters: fname : str
+                    full path to the template file
+                delimiter : str
+                    string to separate the key and value
+                print_msg : bool
+                    print message or not
+    Returns:    template_dict : dict
+                    file content
+    Examples:
         tmpl = read_template(KyushuT424F610_640AlosA.template)
         tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
+        from pysar.defaults.default_path import isceAutoPath
+        tmpl = read_template(isceAutoPath, print_msg=False)
     '''
     template_dict = {}
     plotAttributeDict = {}
@@ -481,7 +491,14 @@ def read_template(fname, delimiter='='):
     # if we assume that any plot attribute coming after a > belongs to the
     # same object. Must Ask Falk and Yunjung if we can assume this to eliminate
     # all these conditionals
-    for line in open(fname):
+
+    if os.path.isfile(fname):
+        f = open(fname, 'r')
+        lines = f.readlines()
+    elif isinstance(fname, str):
+        lines = fname.split('\n')
+
+    for line in lines:
         line = line.strip()
         c = [i.strip() for i in line.split(delimiter, 1)]  #split on the 1st occurrence of delimiter
         if len(c) < 2 or line.startswith(('%','#')):
@@ -498,7 +515,7 @@ def read_template(fname, delimiter='='):
         else:
             atrName  = c[0]
             atrValue = str.replace(c[1],'\n','').split("#")[0].strip()
-            atrValue = check_variable_name(atrValue)
+            atrValue = check_variable_name(atrValue, print_msg=print_msg)
 
             if insidePlotObject:
                 if is_plot_attribute(atrName):
@@ -511,6 +528,8 @@ def read_template(fname, delimiter='='):
 
             elif atrValue != '':
                 template_dict[atrName] = atrValue
+    if os.path.isfile(fname):
+        f.close()
 
     # what if no \n at end of file? write out last plot attributes dict
     if insidePlotObject:

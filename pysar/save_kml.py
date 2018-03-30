@@ -22,11 +22,9 @@ import matplotlib as mpl;  mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 import pysar
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
-import pysar.view as pv
+from pysar.utils import readfile, datetime as ptime, utils as ut
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import pysar.view as pv
 
 
 ############################################################
@@ -256,7 +254,7 @@ def main(argv):
         sys.exit(1)
 
     # Read data
-    data, atr = readfile.read(inps.file, (), inps.epoch)
+    data, atr = readfile.read(inps.file, epoch=inps.epoch)
 
     # Output filename
     if not inps.outfile:

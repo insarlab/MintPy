@@ -12,13 +12,9 @@
 import os
 import sys
 import argparse
-
 import numpy as np
 import h5py
-
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, writefile, utils as ut
 
 
 ################################################################################################

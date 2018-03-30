@@ -5,21 +5,15 @@
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
-import sys
-import os
+import os, sys
 import argparse
 import shutil
 import string
-
 import h5py
 import numpy as np
 import matplotlib as mpl; mpl.use('Agg')
 import matplotlib.pyplot as plt
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
-import pysar.utils.network as pnet
+from pysar.utils import readfile, datetime as ptime, utils as ut, network as pnet
 
 
 ##################################################################

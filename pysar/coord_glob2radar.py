@@ -12,9 +12,7 @@ import sys
 import h5py
 import numpy as np
 
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils as readfile, writefile, utils as ut
 
 
 def usage():

@@ -42,9 +42,7 @@ import h5py
 import numpy as np
 
 import pysar
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, writefile, utils as ut
 import pysar.geocode as geocode
 import pysar.subset as subset
 import pysar.save_hdfeos5 as hdfeos5
@@ -125,8 +123,8 @@ def subset_dataset(inps, template_file):
             pix_box = subset.bbox_geo2radar(geo_box, atr, inps.lookup_file)
         else:
             pix_box = (0,0,0,0)
-            pix_box[0:3:2] = subset.coord_geo2radar(geo_box[0:3:2], atr, 'lon')
-            pix_box[1:4:2] = subset.coord_geo2radar(geo_box[1:4:2], atr, 'lat')
+            pix_box[0:3:2] = ut.coord_geo2radar(geo_box[0:3:2], atr, 'lon')
+            pix_box[1:4:2] = ut.coord_geo2radar(geo_box[1:4:2], atr, 'lat')
         print('Input subset in (lon0,lat0,lon1,lat1): '+str(geo_box))
     print('Input subset in (x0,  y0,  x1,  y1  ): '+str(pix_box))
 
@@ -203,43 +201,26 @@ _________________________________________________
 TEMPLATE='''# vim: set filetype=cfg:
 ##------------------------ pysarApp_template.txt ------------------------##
 ########## 1. Load Data (--load to exit after this step)
-## recommended input files for data in radar coordinates:
-##     pysar.insarProcessor     = InSAR processor
-##     pysar.unwrapFiles        = 'path of all unwrapped interferograms'
-##     pysar.corFiles           = 'path of all coherence files'
-##     pysar.lookupFile         = 'path of lookup table / mapping transformation file'
-##     pysar.demFile.geoCoord   = 'path of DEM in geo   coordinates'
-##     pysar.demFile.radarCoord = 'path of DEM in radar coordinates'
-## recommended input files for data in geo coordinates:
-##     pysar.insarProcessor
-##     pysar.unwrapFiles 
-##     pysar.corFiles    
-##     pysar.dem.geoCoord
-## auto - automatic path pattern for Univ of Miami file structure, which are:
-##     pysar.insarProcessor     = roipac
-##     pysar.unwrapFiles        = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*.unw
-##     pysar.corFiles           = $SCRATCHDIR/$PROJECT_NAME/DONE/IFGRAM*/filt_*rlks.cor
-##     pysar.lookupFile         = $SCRATCHDIR/$PROJECT_NAME/GEO/*master_date12*/geomap*.trans
-##     pysar.demFile.geoCoord   = $SCRATCHDIR/$PROJECT_NAME/DEM/*.dem
-##     pysar.demFile.radarCoord = $SCRATCHDIR/$PROJECT_NAME/DONE/*master_date12*/radar*.hgt
-pysar.insarProcessor     = auto  #[roipac,        gamma,           isce], auto for roipac
-pysar.unwrapFiles        = auto  #[filt*rlks.unw, diff_*rlks.unw,  filt*.unw]
-pysar.corFiles           = auto  #[filt*rlks.cor, filt_*rlks.cor,  filt*.cor]
-pysar.lookupFile         = auto  #[geomap*.trans, sim*.UTM_TO_RDC, l*.rdr]
-pysar.demFile.radarCoord = auto  #[radar*.hgt,    sim*.hgt_sim,    hgt.rdr]
-pysar.demFile.geoCoord   = auto  #[*.dem,         sim*.utm.dem,    ""] not needed for ISCE product
+## auto - automatic path pattern for Univ of Miami file structure
+## load_data.py -H to check more details.
+pysar.load.processor      = auto  #[isce,                      roipac,              gamma,             ], auto for isce
+pysar.load.unwFile        = auto  #[path2file/filt*.unw,       filt*rlks_c*.unw,    diff*rlks.unw      ]
+pysar.load.corFile        = auto  #[path2file/filt*.cor,       filt*rlks.cor,       *filt*rlks.cor     ]
+pysar.load.connCompFile   = auto  #[path2file/filt*.unw.conn*, filt*rlks_snap*.byt, None               ]
+pysar.load.intFile        = auto  #[path2file/filt*.int,       filt*rlks.int,       diff*rlks.int      ]
 
+pysar.load.demFile        = auto  #[path2file/hgt.rdr,         radar*.hgt,          sim_*rlks.rdc.hgt  ]
+pysar.load.lookupYFile    = auto  #[path2file/lat.rdr,         geomap*.trans,       sim*rlks.UTM_TO_RDC]
+pysar.load.lookupXFile    = auto  #[path2file/lon.rdr,         geomap*.trans,       sim*rlks.UTM_TO_RDC]
+pysar.load.incAngleFile   = auto  #[path2file/los.rdr,         None,                None               ]
+pysar.load.headAngleFile  = auto  #[path2file/los.rdr,         None,                None               ]
+pysar.load.shadowMaskFile = auto  #[path2file/shadowMask.rdr,  None,                None               ]
 
 ## 1.1 Subset (optional, --subset to exit after this step)
 ## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
 pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
 pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 pysar.subset.tightBox = auto    #[yes / no], auto for yes, tight bounding box for files in geo coord
-pysar.multilook.yx    = auto    #[4,4 / no], auto for no [not implemented yet]
-
-
-## 1.2 Prepare geometry files
-## Prepare incidenceAngle.h5, rangeDistance.h5 files
 
 
 ## 1.3 Reference in Space
@@ -579,9 +560,9 @@ def main(argv):
     # Loading Data
     #########################################
     print('\n*************** Load Data ****************')
-    loadCmd = 'load_data.py --dir '+inps.work_dir+' --template '+inps.template_file
+    loadCmd = 'load_data.py --template {}'.format(inps.template_file)
     if inps.custom_template_file:
-        loadCmd += ' '+inps.custom_template_file+' --project '+inps.project_name
+        loadCmd += ' {} --project {}'.format(inps.custom_template_file, inps.project_name)
     print(loadCmd)
     status = subprocess.Popen(loadCmd, shell=True).wait()
     os.chdir(inps.work_dir)
@@ -606,9 +587,18 @@ def main(argv):
     if inps.load_dataset:
         print('Exit as planned after loading/checking the dataset with error code 0')
         sys.exit(0)
+
     if inps.reset:
         print('Reset dataset attributtes for a fresh re-run with options from %s' % os.path.basename(inps.template_file))
         print('-----------------------------------------------------------------------------------')
+        # Reset reference pixel
+        seedCmd = 'reference_point.py '+inps.ifgram_file+' --reset'
+        print(seedCmd)
+        status = subprocess.Popen(seedCmd, shell=True).wait()
+        if status is not 0:
+            print('\nError while resetting the reference pixel in space.\n')
+            sys.exit(-1)
+
         # Reset network
         networkCmd = 'modify_network.py '+inps.ifgram_file
         if inps.coherence_file:
@@ -619,48 +609,6 @@ def main(argv):
         if status is not 0:
             print('\nError while resetting the network of interferograms.\n')
             sys.exit(-1)
-
-        # Reset reference pixel
-        seedCmd = 'reference_point.py '+inps.ifgram_file+' --reset'
-        print(seedCmd)
-        status = subprocess.Popen(seedCmd, shell=True).wait()
-        if status is not 0:
-            print('\nError while resetting the reference pixel in space.\n')
-            sys.exit(-1)
-
-
-    #########################################
-    # Check the subset (Optional)
-    #########################################
-    if inps.lookup_file and template['pysar.subset.tightBox'] in ['yes','auto']:
-        ###Tight subset DEM in geo coord
-        #subCmd = 'subset.py '+inps.dem_geo_file+' --tight'
-        #print subCmd
-        #outName = os.path.splitext(inps.dem_geo_file)[0]+'_tight'+os.path.splitext(inps.dem_geo_file)[1]
-        #if ut.update_file(outName, inps.dem_geo_file):
-        #    status = subprocess.Popen(subCmd, shell=True).wait()        
-        #if status is 0 and os.path.isfile(outName):
-        #    inps.dem_geo_file = outName
-
-        ##Tight subset lookup table in geo coord (roipac/gamma)
-        atr_lut = readfile.read_attribute(inps.lookup_file)
-        if 'Y_FIRST' in atr_lut.keys():
-            subCmd = 'subset.py '+inps.lookup_file+' --tight'
-            print(subCmd)
-            outName = os.path.splitext(inps.lookup_file)[0]+'_tight'+os.path.splitext(inps.lookup_file)[1]
-            if ut.update_file(outName, inps.lookup_file):
-                status = subprocess.Popen(subCmd, shell=True).wait()
-            if status is 0 and os.path.isfile(outName):
-                inps.lookup_file = outName
-
-    # Subset based on input template
-    if not all(template[key] in ['auto', 'no'] for key in ['pysar.subset.yx','pysar.subset.lalo']):
-        print('\n*************** Subset ****************')
-        inps = subset_dataset(inps, inps.template_file)
-
-    if inps.subset_dataset:
-        print('Exit as planned after subsetting the dataset')
-        sys.exit(0)
 
 
     #########################################
@@ -682,111 +630,6 @@ def main(argv):
     else:
         inps.spatial_coh_file = None
 
-    ##### Incidence Angle
-    print('##### Preparing Geometry - Incidence Angle')
-    inps.inc_angle_radar_file = ut.get_geometry_file('incidenceAngle', coordType='radar', abspath=True, print_msg=False)
-    inps.inc_angle_geo_file   = ut.get_geometry_file('incidenceAngle', coordType='geo',   abspath=True, print_msg=False)
-
-    if not inps.inc_angle_radar_file and inps.coord_type == 'radar':
-        inps.inc_angle_radar_file = 'incidenceAngle.h5'
-        incAngleCmd = 'incidence_angle.py %s %s' % (inps.ifgram_file, inps.inc_angle_radar_file)
-        print(incAngleCmd)
-        status = subprocess.Popen(incAngleCmd, shell=True).wait()
-        if status is not 0:
-            sys.exit('\nError while calculating incidence angle.\n')
-
-    if not inps.inc_angle_geo_file:
-        if inps.inc_angle_radar_file:
-            inps.inc_angle_geo_file = check_geocode_file(inps.lookup_file, inps.inc_angle_radar_file, inps.template_file)
-        else:
-            inps.inc_angle_geo_file = 'incidenceAngle.h5'
-            incAngleCmd = 'incidence_angle.py %s %s' % (inps.ifgram_file, inps.inc_angle_geo_file)
-            print(incAngleCmd)
-            status = subprocess.Popen(incAngleCmd, shell=True).wait()
-            if status is not 0:
-                sys.exit('\nError while calculating incidence angle.\n')
-
-    inps.inc_angle_radar_file = ut.get_geometry_file('incidenceAngle', coordType='radar', abspath=True, print_msg=False)
-    inps.inc_angle_geo_file   = ut.get_geometry_file('incidenceAngle', coordType='geo',   abspath=True, print_msg=False)
-    for fname in [inps.inc_angle_radar_file, inps.inc_angle_geo_file]:
-        if fname and 'geometry' not in fname:
-            loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
-            print(loadCmd)
-            status = subprocess.Popen(loadCmd, shell=True).wait()
-
-    inps.inc_angle_file = ut.get_geometry_file('incidenceAngle', coordType=inps.coord_type, abspath=True, print_msg=False)
-    print('incidence angle file: %s' % (inps.inc_angle_file))
-
-    ##### Slant range distance
-    print('##### Preparing Geometry - Slant Range Distance')
-    inps.range_dist_radar_file = ut.get_geometry_file('slantRangeDistance', coordType='radar', abspath=True, print_msg=False)
-    inps.range_dist_geo_file   = ut.get_geometry_file('slantRangeDistance', coordType='geo',   abspath=True, print_msg=False)
-
-    if not inps.range_dist_radar_file and inps.coord_type == 'radar':
-        inps.range_dist_radar_file = 'rangeDistance.h5'
-        rangeDistCmd = 'range_distance.py %s %s' % (inps.ifgram_file, inps.range_dist_radar_file)
-        print(rangeDistCmd)
-        status = subprocess.Popen(rangeDistCmd, shell=True).wait()
-        if status is not 0:
-            sys.exit('\nError while calculating slant range distance.\n')
-
-    if not inps.range_dist_geo_file:
-        if inps.range_dist_radar_file:
-            inps.range_dist_geo_file = check_geocode_file(inps.lookup_file, inps.range_dist_radar_file, inps.template_file)
-        else:
-            inps.range_dist_geo_file = 'rangeDistance.h5'
-            rangeDistCmd = 'range_distance.py %s %s' % (inps.ifgram_file, inps.range_dist_geo_file)
-            print(rangeDistCmd)
-            status = subprocess.Popen(rangeDistCmd, shell=True).wait()
-            if status is not 0:
-                sys.exit('\nError while calculating slant range distance.\n')
-
-    inps.range_dist_radar_file = ut.get_geometry_file('slantRangeDistance', coordType='radar', abspath=True, print_msg=False)
-    inps.range_dist_geo_file   = ut.get_geometry_file('slantRangeDistance', coordType='geo',   abspath=True, print_msg=False)
-    for fname in [inps.range_dist_radar_file, inps.range_dist_geo_file]:
-        if fname and 'geometry' not in fname:
-            loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
-            print(loadCmd)
-            status = subprocess.Popen(loadCmd, shell=True).wait()
-
-    inps.range_dist_file = ut.get_geometry_file('slantRangeDistance',\
-                                                coordType=inps.coord_type, abspath=True, print_msg=False)
-    print('slant range distance file: %s' % (inps.range_dist_file))
-
-    ##### DEM
-    print('##### Preparing Geometry - Height')
-    for fname in [inps.dem_radar_file, inps.dem_geo_file]:
-        if fname and 'geometry' not in fname:
-            loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
-            print(loadCmd)
-            status = subprocess.Popen(loadCmd, shell=True).wait()        
-
-    ##### Water Mask
-    print('##### Preparing Geometry - Water Mask')
-    inps.water_mask_radar_file = ut.get_geometry_file('waterMask', coordType='radar', abspath=True, print_msg=False)
-    inps.water_mask_geo_file   = ut.get_geometry_file('waterMask', coordType='geo',   abspath=True, print_msg=False)
-
-    if not inps.water_mask_radar_file and inps.dem_radar_file:
-        inps.water_mask_radar_file = 'waterMask.h5'
-        maskCmd = 'generate_mask.py %s height -m 0.5 -o %s ' % (inps.dem_radar_file, inps.water_mask_radar_file)
-        print(maskCmd)
-        status = subprocess.Popen(maskCmd, shell=True).wait()
-
-    if not inps.water_mask_geo_file and inps.dem_geo_file:
-        inps.water_mask_geo_file = 'waterMask.h5'
-        maskCmd = 'generate_mask.py %s height -m 0.5 -o %s ' % (inps.dem_geo_file, inps.water_mask_geo_file)
-        print(maskCmd)
-        status = subprocess.Popen(maskCmd, shell=True).wait()
-
-    for fname in [inps.water_mask_radar_file, inps.water_mask_geo_file]:
-        if fname and 'geometry' not in fname:
-            loadCmd = 'load_data.py -f %s --file-type geometry' % (fname)
-            print(loadCmd)
-            status = subprocess.Popen(loadCmd, shell=True).wait()
-
-    inps.water_mask_file = ut.get_geometry_file('waterMask',\
-                                                coordType=inps.coord_type, abspath=True, print_msg=False)
-    print('water mask file: %s' % (inps.water_mask_file))
 
     #########################################
     # Referencing Interferograms in Space

@@ -4,18 +4,12 @@
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
+# To do list: cp .unw.rsc to _snap_connect.byt.rsc
 
-
-import os
-import sys
+import os, sys, re
 import argparse
-import re
-
 import numpy as np
-
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, writefile, utils as ut
 
 
 ######################################## Sub Functions ############################################

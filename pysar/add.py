@@ -18,9 +18,7 @@ import h5py
 import numpy as np
 
 import pysar
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
+from pysar.utils import datetime as ptime, readfile, writefile
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 

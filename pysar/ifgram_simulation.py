@@ -5,8 +5,7 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
-import os
-import sys
+import os, sys
 import argparse
 import time
 import datetime
@@ -15,9 +14,7 @@ import h5py
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile, datetime as ptime
 
 
 ##############################################################################################

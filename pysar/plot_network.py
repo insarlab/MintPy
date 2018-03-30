@@ -6,19 +6,12 @@
 ############################################################
 
 
-import sys
-import os
+import os, sys
 import argparse
-
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
-import pysar.utils.network  as pnet
-import pysar.utils.plot as pp
+from pysar.utils import readfile, datetime as ptime, utils as ut, network as pnet, plot as pp
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 

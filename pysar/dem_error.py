@@ -9,15 +9,10 @@
 import os
 import sys
 import argparse
-
 import h5py
 import numpy as np
 from scipy.special import gamma
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import datetime as ptime, readfile, writefile, utils as ut
 
 
 def topographic_residual_inversion(ts0, A0, inps):

@@ -206,6 +206,8 @@ def get_date12_list(File, check_drop_ifgram=False):
             atr = h5[k][epoch].attrs
             if not check_drop_ifgram or 'DROP_IFGRAM' not in atr.keys() or atr['DROP_IFGRAM'] == 'no':
                 date12 = atr['DATE12']
+                try: date12 = date12.decode('utf-8')
+                except: pass
                 date12_list.append(date12)
         h5.close()
     else:

@@ -1,7 +1,8 @@
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          
-# Author:  Zhang Yunjun, Heresh Fattahi                    
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################################################
+# Program is part of PySAR v2.0                            #
+# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Author:  Zhang Yunjun, Heresh Fattahi, 2018 Mar          #
+############################################################
 
 
 from __future__ import print_function
@@ -24,7 +25,7 @@ except KeyError:
 
 
 ########################################################################
-auto_path_miami = True         # Package-wide variable, Auto setting for file structure of Univ. of Miami
+auto_path = True               # Package-wide variable, Auto setting for file structure of Univ. of Miami
                                # change it to False if you are not using it.
 parallel_num = 8               # max core number used in parallel processing
 figsize_single_min = 6.0       # default min size in inch, for single plot

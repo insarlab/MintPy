@@ -54,6 +54,151 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 
 ###############################################################################
+def coord_geo2radar(geoCoordIn, atr, coordType):
+    ## convert geo coordinates into radar coordinates (round to nearest integer)
+    ## for Geocoded file only
+    ## Inputs:
+    ##     geoCoord  : coordinate (list / tuple) in latitude/longitude in float
+    ##     atr       : dictionary of file attributes
+    ##     coordType : coordinate type: latitude, longitude
+    ##
+    ## Example:
+    ##      300        = coord_geo2radar(32.104990,    atr,'lat')
+    ##     [1000,1500] = coord_geo2radar([130.5,131.4],atr,'lon')
+
+    try:
+        atr['X_FIRST']
+    except:
+        sys.exit('Support geocoded file only!')
+
+    ## Convert to List if input is String
+    if isinstance(geoCoordIn, float):
+        geoCoordIn = [geoCoordIn]
+    geoCoord = list(geoCoordIn)
+
+    radarCoord = []
+    coordType = coordType.lower()
+    for i in range(len(geoCoord)):
+        if   coordType.startswith('lat'):  coord = np.rint((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
+        elif coordType.startswith('lon'):  coord = np.rint((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))
+        else: print('Unrecognized coordinate type: '+coordType)
+        radarCoord.append(int(coord))
+
+    if len(radarCoord) == 1:
+        radarCoord = radarCoord[0]
+    elif isinstance(geoCoordIn, tuple):
+        radarCoord = tuple(radarCoord)
+
+    return radarCoord
+
+
+################################################################
+def coord_radar2geo(radarCoordIn, atr, coordType):
+    ## convert radar coordinates into geo coordinates (pixel UL corner)
+    ## for Geocoded file only
+    ##
+    ## Inputs:
+    ##     radarCoord : coordinate (list) in row/col in int
+    ##     atr        : dictionary of file attributes
+    ##     coordType  : coordinate type: row, col, y, x
+    ##
+    ## Example:
+    ##     32.104990     = coord_radar2geo(300,        atr,'y')
+    ##     [130.5,131.4] = coord_radar2geo([1000,1500],atr,'x')
+
+    try:
+        atr['X_FIRST']
+    except:
+        sys.exit('Support geocoded file only!')
+
+    ## Convert to List if input is String
+    if isinstance(radarCoordIn, int):
+        radarCoordIn = [radarCoordIn]
+    radarCoord = list(radarCoordIn)
+
+    geoCoord = []
+    coordType = coordType.lower()
+    for i in range(len(radarCoord)):
+        if   coordType.startswith(('row','y')):  coord = radarCoord[i]*float(atr['Y_STEP']) + float(atr['Y_FIRST'])
+        elif coordType.startswith(('col','x')):  coord = radarCoord[i]*float(atr['X_STEP']) + float(atr['X_FIRST'])
+        else: print('Unrecognized coordinate type: '+coordType)
+        geoCoord.append(coord)
+    #geoCoord.sort()
+
+    if len(geoCoord) == 1:
+        geoCoord = geoCoord[0]
+    elif isinstance(radarCoordIn, tuple):
+        geoCoord = tuple(geoCoord)
+
+    return geoCoord
+
+
+def subset_attribute(atr_dict, subset_box, print_msg=True):
+    '''Update attributes dictionary due to subset
+    Inputs:
+        atr_dict   : dict, data attributes to update
+        subset_box : 4-tuple of int, subset box defined in (x0, y0, x1, y1)
+    Outputs:
+        atr      : dict, updated data attributes
+    '''
+    if subset_box is None:
+        return atr_dict
+
+    sub_x = [subset_box[0], subset_box[2]]
+    sub_y = [subset_box[1], subset_box[3]]
+    #####
+    atr = dict()
+    for key, value in iter(atr_dict.items()):
+        atr[key] = str(value)
+
+    ##### Update attribute variable
+    atr['LENGTH'] = str(sub_y[1]-sub_y[0])
+    atr['WIDTH']  = str(sub_x[1]-sub_x[0])
+    atr['YMAX']   = str(sub_y[1]-sub_y[0] - 1)
+    atr['XMAX']   = str(sub_x[1]-sub_x[0] - 1)
+    if print_msg:  print('update LENGTH, WIDTH, Y/XMAX')
+
+    # Subset atribute
+    if print_msg:  print('update/add SUBSET_YMIN/YMAX/XMIN/XMAX')
+    try:
+        subset_y0_ori = int(atr['SUBSET_YMIN'])
+        atr['SUBSET_YMIN'] = str(sub_y[0] + subset_y0_ori)
+        atr['SUBSET_YMAX'] = str(sub_y[1] + subset_y0_ori)
+    except:
+        atr['SUBSET_YMIN'] = str(sub_y[0])
+        atr['SUBSET_YMAX'] = str(sub_y[1])
+    try:
+        subset_x0_ori = int(atr['SUBSET_XMIN'])
+        atr['SUBSET_XMIN'] = str(sub_x[0] + subset_x0_ori)
+        atr['SUBSET_XMAX'] = str(sub_x[1] + subset_x0_ori)
+    except:
+        atr['SUBSET_XMIN'] = str(sub_x[0])
+        atr['SUBSET_XMAX'] = str(sub_x[1])
+
+    # Geo coord
+    try:
+        atr['Y_FIRST'] = str(float(atr['Y_FIRST'])+sub_y[0]*float(atr['Y_STEP']))
+        atr['X_FIRST'] = str(float(atr['X_FIRST'])+sub_x[0]*float(atr['X_STEP']))
+        if print_msg:  print('update Y/X_FIRST')
+    except: pass
+
+    # Reference in space
+    try:
+        atr['REF_Y'] = str(int(atr['REF_Y']) - sub_y[0])
+        atr['REF_X'] = str(int(atr['REF_X']) - sub_x[0])
+        if print_msg:  print('update REF_Y/X')
+    except: pass
+
+    # Starting Range for file in radar coord
+    if not 'Y_FIRST' in atr_dict.keys():
+        try:
+            atr['STARTING_RANGE'] = float(atr['STARTING_RANGE']) + float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
+            if print_msg:  print('update STARTING_RANGE')
+        except: pass
+
+    return atr
+
+
 def round_to_1(x):
     '''Return the most significant digit of input number'''
     return round(x, -int(np.floor(np.log10(abs(x)))))
@@ -752,42 +897,20 @@ def add_attribute(File, atr_new=dict()):
     k = atr['FILE_TYPE']
 
     # Compare new attributes with exsiting ones
-    update = False
-    if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
-        update = update_attribute_or_not(atr_new, atr, update)
-    elif k in multi_group_hdf5_file:
-        h5 = h5py.File(File, 'r')
-        epochList = list(h5[k].keys())
-        for epoch in epochList:
-            atr = h5[k][epoch].attrs
-            update = update_attribute_or_not(atr_new, atr, update)
-        h5.close()
-    else:
-        raise Exception('Un-recognized file type: '+k)
-
+    update = update_attribute_or_not(atr_new, atr, update=False)
     if not update:
         print('All updated (removed) attributes already exists (do not exists) and have the same value, skip update.')
         return File
 
     # Update attributes
     h5 = h5py.File(File,'r+')
-    if k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
-        for key, value in iter(atr_new.items()):
-            # delete the item is new value is None
-            if value == 'None':
-                try: h5[k].attrs.pop(key)
-                except: pass
-            else:
-                h5[k].attrs[key] = value
-    elif k in multi_group_hdf5_file:
-        epochList = list(h5[k].keys())
-        for epoch in epochList:
-            for key, value in iter(atr_new.items()):
-                if value == 'None':
-                    try: h5[k][epoch].attrs.pop(key)
-                    except: pass
-                else:
-                    h5[k][epoch].attrs[key] = value
+    for key, value in iter(atr_new.items()):
+        # delete the item is new value is None
+        if value == 'None':
+            try: h5[k].attrs.pop(key)
+            except: pass
+        else:
+            h5[k].attrs[key] = value
     h5.close()
     return File
 
@@ -870,8 +993,8 @@ def perp_baseline_timeseries(atr, dimension=1):
     return pbase
 
 
-def range_distance(atr, dimension=2):
-    '''Calculate range distance from input attribute dict
+def range_distance(atr, dimension=2, print_msg=True):
+    '''Calculate slant range distance from input attribute dict
     Inputs:
         atr - dict, including the following ROI_PAC attributes:
               STARTING_RANGE
@@ -887,7 +1010,8 @@ def range_distance(atr, dimension=2):
     # return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
-        print('input file is geocoded, return center range distance for the whole area')
+        if print_msg:
+            print('input file is geocoded, return center range distance for the whole area')
 
     near_range = float(atr['STARTING_RANGE'])
     dR = float(atr['RANGE_PIXEL_SIZE'])
@@ -896,12 +1020,14 @@ def range_distance(atr, dimension=2):
 
     far_range = near_range + dR*(width-1)
     center_range = (far_range + near_range)/2.0
-    print('center range : %.2f m' % (center_range))
+    if print_msg:
+        print('center range : %.2f m' % (center_range))
+        print('near   range : %.2f m' % (near_range))
+        print('far    range : %.2f m' % (far_range))
+
     if dimension == 0:
         return np.array(center_range)
 
-    print('near   range : %.2f m' % (near_range))
-    print('far    range : %.2f m' % (far_range))
     range_x = np.linspace(near_range, far_range, num=width)
     if dimension == 1:
         return range_x
@@ -1151,7 +1277,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
             elif k in multi_dataset_hdf5_file:
                 dset = h5file[k].get(epoch)
             else:  print('Unrecognized group type: '+k)
-            
+
             data = dset[box[1]:box[3],box[0]:box[2]]
             if not mask is None:
                 data[mask==0] = np.nan
@@ -1163,7 +1289,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         prog_bar.close()
         del data
     else:
-        data,atr = readfile.read(File, box)
+        data,atr = readfile.read(File, box=box)
         if not mask is None:
             data[mask==0] = np.nan
         with warnings.catch_warnings():
@@ -1173,6 +1299,8 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     # Get date/pair list
     if k in multi_group_hdf5_file:
         date_list = pnet.get_date12_list(File)
+        try: date_list = [i.decode('utf-8') for i in date_list]
+        except: pass
         # Temp/Perp Baseline
         m_dates = [date12.split('-')[0] for date12 in date_list]
         s_dates = [date12.split('-')[1] for date12 in date_list]
@@ -2023,26 +2151,36 @@ def Bh_Bv_timeseries(ifgramFile):
     return Bh,Bv
 
 
-def get_file_stack(File, maskFile=None):
+def get_file_stack(File, datasetName=None, maskFile=None, outFile=None):
     '''Get stack file of input File and return the stack 2D matrix
     Input:   File/maskFile - string
     Output:  stack - 2D np.array matrix
     '''
     stack = None
     atr = readfile.read_attribute(File)
-    stackFile = os.path.splitext(File)[0]+'Stacking.h5'
+    k = atr['FILE_TYPE']
+
+    if not outFile:
+        f = h5py.File(File,'r')
+        dsList = f[k].keys()
+        f.close()
+        if datasetName and datasetName in dsList:
+            suffix = '{}Stacking.h5'.format(datasetName)
+        else:
+            suffix = 'Stacking.h5'
+        outFile = os.path.splitext(File)[0]+suffix
 
     # Read stack from existed file
-    if os.path.isfile(stackFile):
-        atrStack = readfile.read_attribute(stackFile)
+    if os.path.isfile(outFile):
+        atrStack = readfile.read_attribute(outFile)
         if atrStack['WIDTH'] == atr['WIDTH'] and atrStack['LENGTH'] == atr['LENGTH']:
-            print('reading stack from existed file: '+stackFile)
-            stack = readfile.read(stackFile)[0]
+            print('reading stack from existed file: '+outFile)
+            stack = readfile.read(outFile)[0]
 
     # Calculate stack
     if stack is None:
         print('calculating stack of input file ...')
-        stack = stacking(File)
+        stack = stacking(File, datasetName=datasetName, outFile=outFile)
 
     # set masked out area into NaN
     if maskFile:
@@ -2053,17 +2191,16 @@ def get_file_stack(File, maskFile=None):
     return stack
 
 
-def stacking(File):
+def stacking(File, datasetName=None, outFile=None):
     '''Stack multi-temporal dataset into one equivalent to temporal sum
     For interferograms, the averaged velocity is calculated.
     '''
-
     ## File Info
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
-    if k in ['interferograms']:
+    if k in ['interferograms','ifgramStack']:
         phase2range = -1 * float(atr['WAVELENGTH']) / (4.0 * np.pi)
         atr['FILE_TYPE'] = 'velocity'
         atr['UNIT'] = 'm/yr'
@@ -2097,9 +2234,26 @@ def stacking(File):
         h5file.close()
 
         # Write stack file is input file is multi-dataset (large file size usually)
-        stackFile = os.path.splitext(File)[0]+'Stacking.h5'
-        print('writing stack file >>> '+stackFile)
-        writefile.write(stack, atr, stackFile)
+        outFile = os.path.splitext(File)[0]+'Stacking.h5'
+        print('writing stack file >>> '+outFile)
+        writefile.write(stack, atr, outFile)    
+
+    elif k in ['ifgramStack']:
+        f = h5py.File(File, 'r')
+        if datasetName == 'unwrapPhase':
+            d = f[k].get('date')
+            mDates = np.array([datetime.datetime(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in list(d[:,0])])
+            sDates = np.array([datetime.datetime(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in list(d[:,1])])
+            tbase = np.array([i.days for i in sDates - mDates], dtype=np.float32) / 365.25
+            np.tile(tbase.reshape(-1,1,1), (1,100,100))
+            data = f[k].get(datasetName)[:] * phase2range
+            data = np.nanmean(np.divide(data, np.tile(tbase.reshape(-1,1,1), (1,length,width))), axis=0)
+        elif datasetName == 'coherence':
+            data = f[k].get(datasetName)[:]
+            data = np.nanmean(data, axis=0)
+        print('writing >>> {}'.format(outFile))
+        f.close()
+        writefile.write(data, atr, outFile)
 
     else:
         try:

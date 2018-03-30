@@ -6,19 +6,12 @@
 ############################################################
 
 
-import os
-import sys
+import os, sys
 import argparse
-
 import h5py
 import numpy as np
 from scipy.linalg import pinv
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
-import pysar.utils.deramp as deramp
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut, deramp
 
 
 ##########################################################################################

@@ -433,7 +433,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     # Ploting
     #ax=fig.add_subplot(111)
     ## Colorbar when conherence is colored
-    if coh_list:
+    if coh_list is not None:
         data_min = min(coh_list)
         data_max = max(coh_list)
         # Normalize
@@ -449,28 +449,31 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             print(('display range: '+str([disp_min, disp_max])))
             print(('data    range: '+str([data_min, data_max])))
 
-        # Use lower/upper part of colormap to emphasis dropped interferograms
-        if not coh_thres:
-            # Find proper cut percentage so that all keep pairs are blue and drop pairs are red
-            coh_list_keep = [coh_list[i] for i in idx_date12_keep]
-            coh_list_drop = [coh_list[i] for i in idx_date12_drop]
-            if coh_list_drop:
-                coh_thres = max(coh_list_drop)
-            else:
-                coh_thres = min(coh_list_keep)
-
-        if coh_thres < disp_min:
-            disp_min = 0.0
+        splitColormap = True
+        if splitColormap:
+            # Use lower/upper part of colormap to emphasis dropped interferograms
+            if not coh_thres:
+                # Find proper cut percentage so that all keep pairs are blue and drop pairs are red
+                coh_list_keep = [coh_list[i] for i in idx_date12_keep]
+                coh_list_drop = [coh_list[i] for i in idx_date12_drop]
+                if coh_list_drop:
+                    coh_thres = max(coh_list_drop)
+                else:
+                    coh_thres = min(coh_list_keep)
+            if coh_thres < disp_min:
+                disp_min = 0.0
+                if print_msg:
+                    print(('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)))
+            c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
+            coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
+            cmap = plt.get_cmap(plot_dict['colormap'])
+            colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
+            colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
+            cmap = LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
             if print_msg:
-                print(('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)))
-        c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
-        coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
-        cmap = plt.get_cmap(plot_dict['colormap'])
-        colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
-        colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
-        cmap = LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
-        if print_msg:
-            print(('color jump at '+str(coh_thres)))
+                print(('color jump at '+str(coh_thres)))
+        else:
+            cmap = plt.get_cmap(plot_dict['colormap'])
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
@@ -515,7 +518,7 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         idx2 = date6_list.index(date2)
         x = np.array([dates[idx1], dates[idx2]])
         y = np.array([pbase_list[idx1], pbase_list[idx2]])
-        if coh_list:
+        if coh_list is not None:
             coh = coh_list[date12_list.index(date12)]
             coh_idx = (coh - disp_min) / (disp_max - disp_min)
             ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
@@ -694,7 +697,7 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
         ### mask out water
         #dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+500)
         #mask_file = '/Users/jeromezhang/Documents/insarlab/Kyushu/Velocity/mask_land.h5'
-        #mask_mat = readfile.read(mask_file, inps_dict['dem_pix_box'], epoch='mask')[0]
+        #mask_mat = readfile.read(mask_file, box=inps_dict['dem_pix_box'], epoch='mask')[0]
         #dem_shade = mask.mask_matrix(dem_shade, mask_mat)
 
         bmap.imshow(dem_shade, origin='upper', interpolation='spline16')

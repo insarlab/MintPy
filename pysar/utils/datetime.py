@@ -99,9 +99,11 @@ def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
     date_list = []
     ifgram_list = sorted(h5[k].keys())
     for ifgram in  ifgram_list:
-        date12 = h5[k][ifgram].attrs['DATE12'].split('-')
-        date_list.append(date12[0])
-        date_list.append(date12[1])
+        date12 = h5[k][ifgram].attrs['DATE12']
+        try: date12 = date12.decode('utf-8')
+        except: pass
+        date_list.append(date12.split('-')[0])
+        date_list.append(date12.split('-')[1])
     h5.close()
     date_list = sorted(list(set(date_list)))
 

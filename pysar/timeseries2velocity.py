@@ -9,19 +9,12 @@
 # Yunjun, Aug 2015: Support drop_date txt file input
 
 
-import os
-import sys
-import time
-import datetime
+import os, sys
+import time, datetime
 import argparse
-
-import numpy as np
 import h5py
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+import numpy as np
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 
 ############################################################################

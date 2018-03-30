@@ -8,22 +8,14 @@
 #
 
 
-import os
-import sys
+import os, sys, re, glob
 import argparse
-import re
-import glob
 import datetime
 import inspect
-
 import matplotlib.pyplot as plt
 import numpy as np
-
 import pysar
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.network as pnet
-import pysar.utils.plot as pp
+from pysar.utils import readfile, datetime as ptime, network as pnet, plot as pp
 
 
 sar_sensor_list=['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','Sen','Kmps5','G3']

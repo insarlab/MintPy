@@ -12,13 +12,9 @@
 import os
 import sys
 import argparse
-
 import numpy as np
 import h5py
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
+from pysar.utils import datetime as ptime, readfile, writefile
 
 
 #####################################################################################

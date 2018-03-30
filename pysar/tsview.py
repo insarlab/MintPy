@@ -1,21 +1,15 @@
 #!/usr/bin/env python3
 # Adopted from plotts.py from GIAnT v1.0 for PySAR products
 
-import os
-import sys
+import os, sys
 import argparse
 from datetime import datetime as dt
-
 import h5py
 import numpy as np
+import scipy.stats as stats
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
-import scipy.stats as stats
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
-import pysar.utils.plot as pp
+from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 from pysar.mask import mask_matrix
 
 

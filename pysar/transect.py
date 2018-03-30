@@ -6,21 +6,15 @@
 ############################################################
 
 
-import os
-import sys
-import glob
+import os, sys, glob
 import argparse
-
 import h5py
 import numpy as np
 import scipy.ndimage
 import scipy.io as sio
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
-
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
-import pysar.subset as sub
+from pysar.utils import readfile, utils as ut
 
 
 #####################################################################
@@ -157,7 +151,7 @@ def transect_yx(z,atr,start_yx,end_yx,interpolation='nearest'):
     earth_radius = 6371.0e3;    # in meter
     try:
         atr['X_FIRST']
-        [lat0,lat1] = sub.coord_radar2geo([y0,y1],atr,'y')
+        [lat0,lat1] = ut.coord_radar2geo([y0,y1],atr,'y')
         x_step = float(atr['X_STEP'])*np.pi/180.0*earth_radius*np.cos((lat0+lat1)/2*np.pi/180)
         y_step = float(atr['Y_STEP'])*np.pi/180.0*earth_radius
     except:
@@ -171,8 +165,8 @@ def transect_yx(z,atr,start_yx,end_yx,interpolation='nearest'):
 
 def transect_lalo(z,atr,start_lalo,end_lalo,interpolation='nearest'):
     '''Extract 2D matrix (z) value along the line [start_lalo, end_lalo]'''
-    [y0,y1] = sub.coord_geo2radar([start_lalo[0],end_lalo[0]],atr,'lat')
-    [x0,x1] = sub.coord_geo2radar([start_lalo[1],end_lalo[1]],atr,'lon')
+    [y0,y1] = ut.coord_geo2radar([start_lalo[0],end_lalo[0]],atr,'lat')
+    [x0,x1] = ut.coord_geo2radar([start_lalo[1],end_lalo[1]],atr,'lon')
     transect = transect_yx(z,atr,[y0,x0],[y1,x1],interpolation)
     return transect
 
@@ -316,8 +310,8 @@ def main(argv):
     data0, atr0 = readfile.read(inps.file[0])
     ax0.imshow(data0)
     if inps.start_lalo and inps.end_lalo:
-        [y0,y1] = sub.coord_geo2radar([inps.start_lalo[0], inps.end_lalo[0]], atr0, 'lat')
-        [x0,x1] = sub.coord_geo2radar([inps.start_lalo[1], inps.end_lalo[1]], atr0, 'lon')
+        [y0,y1] = ut.coord_geo2radar([inps.start_lalo[0], inps.end_lalo[0]], atr0, 'lat')
+        [x0,x1] = ut.coord_geo2radar([inps.start_lalo[1], inps.end_lalo[1]], atr0, 'lon')
     else:
         [y0,y1] = [inps.start_yx[0], inps.end_yx[0]]
         [x0,x1] = [inps.start_yx[1], inps.end_yx[1]]
@@ -333,8 +327,8 @@ def main(argv):
         if 0 <= col < data0.shape[1] and 0 <= row < data0.shape[0]:
             z = data0[row,col]
             if 'X_FIRST' in atr0.keys():
-                lat = sub.coord_radar2geo(row, atr0, 'row')
-                lon = sub.coord_radar2geo(col, atr0, 'col')
+                lat = ut.coord_radar2geo(row, atr0, 'row')
+                lon = ut.coord_radar2geo(col, atr0, 'col')
                 return 'lon=%.4f, lat=%.4f, x=%.0f,  y=%.0f,  value=%.4f' % (lon, lat, x,y,z)
             else:
                 return 'x=%.0f,  y=%.0f,  value=%.4f'%(x,y,z)

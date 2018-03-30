@@ -8,96 +8,10 @@
 import os, sys, glob
 import h5py
 import numpy as np
-from pysar.utils import readfile, datetime as ptime
+from pysar.utils import readfile, datetime as ptime, utils as ut
+from pysar.objects import ifgramDatasetNames, geometryDatasetNames
 
 dataType = np.float32
-
-timeseriesDatasetNames = ['raw',\
-                          'troposphericDelay',\
-                          'topographicResidual',\
-                          'ramp',\
-                          'displacement']
-
-geometryDatasetNames = ['height',\
-                        'latitude',\
-                        'longitude',\
-                        'rangeCoord',\
-                        'azimuthCoord',\
-                        'incidenceAngle',\
-                        'headingAngle',\
-                        'slantRangeDistance',\
-                        'shadowMask',\
-                        'waterMask',\
-                        'commonMask',\
-                        'bperp']
-
-ifgramDatasetNames = ['unwrapPhase',
-                      'coherence',\
-                      'connectComponent',\
-                      'wrapPhase',\
-                      'iono',\
-                      'rangeOffset',\
-                      'azimuthOffset']
-
-########################################################################################
-class timeseries:
-    '''
-    Time-series object for displacement of a set of SAR images from the same platform and track.
-    Attributes are saved in the root level.
-    It contains a "timeseries" group and three datasets: date, bperp and timeseries.
-    
-    /                    Root level
-    Attributes           Dictionary for metadata
-    timeseries           group name
-        /date            1D array of string in size of (n,) in YYYYMMDD format
-        /bperp           1D array of float32 in size of (n,) in meter.
-        /timeseries      3D array of float32 in size of (n, l, w) in meter.
-    '''
-    def __init__(self, file=None):
-        self.file = file
-
-    def close(self):
-        print('close timeseries: {}'.format(os.path.basename(self.file)))
-        self.h5.close()
-
-
-########################################################################################
-class geometry:
-    '''
-    Geometry object for Lat, Lon, Heigt, Incidence, Heading, Bperp, ... from the same platform and track.
-    Attributes are saved in the root level.
-    It contains a "geometry" group and some datasets: date12, bperp, unwrapIfgram, coherence, ...
-
-    /                    Root level
-    Attributes           Dictionary for metadata
-    geometry             group name
-        /height          2D array of float32 in size of (l, w) in meter.
-        /incidenceAngle  2D array of float32 in size of (l, w) in degree.
-        /latitude        2D array of float32 in size of (l, w) in degree.
-        /longitude       2D array of float32 in size of (l, w) in degree.
-        /rangeCoord      2D array of float32 in size of (l, w).
-        /azimuthCoord    2D array of float32 in size of (l, w).
-        /headingAngle    2D array of float32 in size of (l, w) in degree. (optional) 
-        /shadowMask      2D array of bool in size of (l, w). (optional)
-        /waterMask       2D array of bool in size of (l, w). (optional)
-        /bperp           3D array of float32 in size of (n, lc, wc) in meter (optional)
-        ...
-    '''
-    def __init__(self, name='geometry', datasetDict={}, metadata=None):
-        self.datasetDict = datasetDict
-
-        if metadata is not None:
-            for key , value in metadata.items():
-                setattr(self, key, value)
-
-    def get_size(self):
-        return None
-    def get_metadata(self):
-        return None
-    def read(self):
-        return None
-    def save2h5(self):
-        return None
 
 ########################################################################################
 class ifgramStack:
@@ -117,6 +31,7 @@ class ifgramStack:
     '''
 
     def __init__(self, name='ifgramStack', pairsDict=None):
+        self.name = name
         self.pairsDict = pairsDict
 
     def get_size(self, box=None):
@@ -148,16 +63,16 @@ class ifgramStack:
     def save2h5(self, outputFile='ifgramStack.h5', access_mode='w', box=None):
         '''Save/write an ifgramStack object into an HDF5 file with the structure below:
 
-        /interferograms        Root level group name
+        /ifgramStack           Root level group name
             Attributes         Dictionary for metadata
             /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
             /bperp             1D array of float32 in size of (m,     ) in meter.
             /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
             /coherence         3D array of float32 in size of (m, l, w).
-            /connectComponent  3D array of int16   in size of (m, l, w). (optional)
+            /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
             /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
-            /rangeOffset       3D array of float32 in size of (m, l, w). (optional)
-            /azimuthOffset     3D array of float32 in size of (m, l, w). (optional)
+            /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
+            /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
 
         Parameters: outputFile : string
                         Name of the HDF5 file for the InSAR stack
@@ -172,12 +87,13 @@ class ifgramStack:
         f = h5py.File(self.outputFile, access_mode)
         print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
 
-        groupName = 'ifgramStack'
+        groupName = self.name
         group = f.create_group(groupName)
-        print('create group "/{}"'.format(groupName))
+        print('create group   /{}'.format(groupName))
 
         self.pairs = [pair for pair in self.pairsDict.keys()]
-        self.dsNames = [dsName for dsName in self.pairsDict[self.pairs[0]].datasetDict.keys()]
+        self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
+        maxDigit = max([len(i) for i in self.dsNames])
         self.get_size(box)
 
         self.bperp = np.zeros(self.numIfgram)
@@ -186,8 +102,10 @@ class ifgramStack:
         for dsName in self.dsNames:
             #dsDataType = self.get_dataset_data_type(dsName)
             dsDataType = dataType
+            if dsName in ['connectComponent']:
+                dsDataType = np.bool_
             dsShape = (self.numIfgram, self.length, self.width)
-            print('create dataset "/{}/{}" of {} in size of {}'.format(groupName, dsName, dsDataType, dsShape))
+            print('create dataset /{g}/{d:<{w}} of {t} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit, t=dsDataType, s=dsShape))
             ds = group.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                       dtype=dsDataType, chunks=True)
 
@@ -203,14 +121,14 @@ class ifgramStack:
         ###############################
         # 2D dataset containing master and slave dates of all pairs
         dsDateName = 'date'
-        print('create dataset "/{}/{}"'.format(groupName, dsDateName))
+        print('create dataset /{}/{}'.format(groupName, dsDateName))
         dsDate = group.create_dataset(dsDateName, data=np.array(self.pairs, dtype=np.string_))
 
         ###############################
         # 1D dataset containing perpendicular baseline of all pairs
         # practice resizable matrix here for update mode
         dsBperpName = 'bperp'
-        print('create dataset "/{}/{}"'.format(groupName, dsBperpName))
+        print('create dataset /{}/{}'.format(groupName, dsBperpName))
         if dsBperpName not in group.keys():
             dsBperp = group.create_dataset(dsBperpName, shape=(self.numIfgram,), maxshape=(None,), dtype=dataType)
         else:
@@ -221,6 +139,7 @@ class ifgramStack:
         ###############################
         # Attributes
         self.get_metadata()
+        self.metadata = ut.subset_attribute(self.metadata, box)
         for key,value in self.metadata.items():
             group.attrs[key] = value
 
@@ -274,18 +193,17 @@ class ifgram:
 
     Example:
         from pysar.objects.ifgramStack import ifgram
-        datasetDict = {'unwrapPhase':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw',
-                       'coherence':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
+        datasetDict = {'unwrapPhase'     :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw',
+                       'coherence'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
-                       'wrapPhase':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
+                       'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
                        ...
                       }
         ifgramObj = ifgram(dates=('20160524','20160530'), datasetDict=datasetDict)
         data, atr = ifgramObj.read('unwrapPhase')
     """
     def __init__(self, name='ifgram', dates=None, datasetDict={}, metadata=None):
-
-
+        self.name = name
         self.masterDate, self.slaveDate = dates
         self.datasetDict = datasetDict
 
@@ -304,16 +222,16 @@ class ifgram:
 
     def get_size(self):
         self.file = self.datasetDict[ifgramDatasetNames[0]]
-        self.metadata = readfile.read_attribute(self.file)
-        self.length = int(self.metadata['LENGTH'])
-        self.width = int(self.metadata['WIDTH'])
+        metadata = readfile.read_attribute(self.file)
+        self.length = int(metadata['LENGTH'])
+        self.width = int(metadata['WIDTH'])
         return self.length, self.width
 
     def get_perp_baseline(self):
         self.file = self.datasetDict[ifgramDatasetNames[0]]
-        self.metadata = readfile.read_attribute(self.file)
-        self.bperp_top = float(self.metadata['P_BASELINE_TOP_HDR'])
-        self.bperp_bottom = float(self.metadata['P_BASELINE_BOTTOM_HDR'])
+        metadata = readfile.read_attribute(self.file)
+        self.bperp_top = float(metadata['P_BASELINE_TOP_HDR'])
+        self.bperp_bottom = float(metadata['P_BASELINE_BOTTOM_HDR'])
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
 
@@ -338,8 +256,177 @@ class ifgram:
                 self.processor = self.metadata['PROCESSOR']               
             else:
                 self.processor = 'isce'
+        self.metadata['PROCESSOR'] = self.processor
+
+        if self.track:
+            self.metadata['TRACK'] = self.track
+
+        if self.platform:
+            self.metadata['PLATFORM'] = self.platform
+
         return self.metadata
 
+
+########################################################################################
+class geometry:
+    '''
+    Geometry object for Lat, Lon, Heigt, Incidence, Heading, Bperp, ... from the same platform and track.
+
+    Example:
+        from pysar.utils import readfile
+        from pysar.utils.insarobj import geometry
+        datasetDict = {'height'        :'$PROJECT_DIR/merged/geom_master/hgt.rdr',
+                       'latitude'      :'$PROJECT_DIR/merged/geom_master/lat.rdr',
+                       'longitude'     :'$PROJECT_DIR/merged/geom_master/lon.rdr',
+                       'incidenceAngle':'$PROJECT_DIR/merged/geom_master/los.rdr',
+                       'heandingAngle' :'$PROJECT_DIR/merged/geom_master/los.rdr',
+                       'shadowMask'    :'$PROJECT_DIR/merged/geom_master/shadowMask.rdr',
+                       ...
+                      }
+        metadata = readfile.read_attribute('$PROJECT_DIR/merged/interferograms/20160629_20160723/filt_fine.unw')
+        geomObj = geometry(processor='isce', datasetDict=datasetDict, metadata=metadata)
+        geomObj.save2h5(outputFile='geometryRadar.h5', access_mode='w', box=(200,500,300,600))
+    '''
+
+    def __init__(self, name='geometry', processor=None, datasetDict={}, ifgramMetadata=None):
+        self.name = name
+        self.processor = processor
+        self.datasetDict = datasetDict
+        self.ifgramMetadata = ifgramMetadata
+
+    def read(self, family, box=None):
+        self.file = self.datasetDict[family]
+        data, metadata = readfile.read(self.file, epoch=family, box=box)
+        return data, metadata
+
+    def get_slantRangeDistance(self, box=None):
+        if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
+            return None
+        data = ut.range_distance(self.ifgramMetadata, dimension=2, print_msg=False)
+        if box is not None:
+            data = data[box[1]:box[3],box[0]:box[2]]
+        return data
+
+    def get_incidenceAngle(self, box=None):
+        if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
+            return None
+        data = ut.incidence_angle(self.ifgramMetadata, dimension=2, print_msg=False)
+        if box is not None:
+            data = data[box[1]:box[3],box[0]:box[2]]
+        return data
+
+    def get_size(self, box=None):
+        self.file = self.datasetDict[geometryDatasetNames[0]]
+        metadata = readfile.read_attribute(self.file)
+        if box:
+            length = box[3] - box[1]
+            width = box[2] - box[0]
+        else:
+            length = int(metadata['LENGTH'])
+            width = int(metadata['WIDTH'])
+        return length, width
+
+    def get_metadata(self, family=geometryDatasetNames[0]):
+        self.file = self.datasetDict[family]
+        self.metadata = readfile.read_attribute(self.file)
+        self.length = int(self.metadata['LENGTH'])
+        self.width = int(self.metadata['WIDTH'])
+        if self.processor is None:
+            ext = self.file.split('.')[-1]
+            if 'PROCESSOR' in self.metadata.keys():
+                self.processor = self.metadata['PROCESSOR']
+            elif os.path.exists(self.file+'.xml'):
+                self.processor = 'isce' 
+            elif os.path.exists(self.file+'.rsc'):
+                self.processor = 'roipac'
+            elif os.path.exists(self.file+'.par'):
+                self.processor = 'gamma'
+            elif ext == 'grd':
+                self.processor = 'gmtsar'
+            #what for DORIS/SNAP
+            else:
+                self.processor = 'isce'
+        self.metadata['PROCESSOR'] = self.processor
+        return self.metadata
+
+
+    def save2h5(self, outputFile='geometryRadar.h5', access_mode='w', box=None):
+        '''
+        /geometry                    Root level group name
+            Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
+            /height                  2D array of float32 in size of (l, w   ) in meter.
+            /latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
+            /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
+            /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
+            /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
+            /headingAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
+            /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
+            /waterMask               2D array of bool    in size of (l, w   ).           (optional)
+            /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
+            ...
+        '''
+        if len(self.datasetDict) == 0:
+            print('No dataset file path in the object, skip HDF5 file writing.')
+            return None
+
+        self.outputFile = outputFile
+        f = h5py.File(self.outputFile, access_mode)
+        print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
+
+        groupName = self.name
+        group = f.create_group(groupName)
+        print('create group   /{}'.format(groupName))
+
+        self.dsNames = list(self.datasetDict.keys())
+        maxDigit = max([len(i) for i in self.dsNames])
+        length, width = self.get_size(box)
+
+        ###############################
+        # 2D datasets containing height, latitude, incidenceAngle, shadowMask, etc.
+        for dsName in self.dsNames:
+            #dsDataType = self.get_dataset_data_type(dsName)
+            dsDataType = dataType
+            if dsName.lower().endswith('mask'):
+                dsDataType = np.bool_
+            dsShape = (length, width)
+            print('create dataset /{g}/{d:<{w}} of {t} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit, t=dsDataType, s=dsShape))
+            ds = group.create_dataset(dsName, shape=dsShape, dtype=dsDataType, chunks=True)
+            data = self.read(family=dsName, box=box)[0]
+            ds[:] = data
+
+            #progBar = ptime.progress_bar(maxValue=self.numIfgram)
+            #for i in range(self.numIfgram):
+            #    ifgramObj = self.pairsDict[self.pairs[i]]
+            #    data = ifgramObj.read(dsName, box=box)[0]
+            #    ds[i,:,:] = data
+            #    self.bperp[i] = ifgramObj.get_perp_baseline()
+            #    progBar.update(i+1, suffix='{}-{}'.format(self.pairs[i][0],self.pairs[i][1]))
+            #progBar.close()
+
+        dsName = 'incidenceAngle'
+        if dsName not in self.dsNames:
+            data = self.get_incidenceAngle(box=box)
+            if data is not None:
+                print('create dataset /{}/{} of {} in size of {}'.format(groupName, dsName, dataType, dsShape))
+                ds = group.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
+
+        dsName = 'slantRangeDistance'
+        if dsName not in self.dsNames:
+            data = self.get_slantRangeDistance(box=box)
+            if data is not None:
+                print('create dataset /{}/{} of {} in size of {}'.format(groupName, dsName, dataType, dsShape))
+                ds = group.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
+
+        ###############################
+        # Attributes
+        self.get_metadata()
+        self.metadata = ut.subset_attribute(self.metadata, box)
+        for key,value in self.metadata.items():
+            group.attrs[key] = value
+
+        f.close()
+        print('Finished writing to {}'.format(self.outputFile))
+        return self.outputFile
 
 
 ########################################################################################
@@ -413,7 +500,3 @@ class platformTrack:
             if self.pairs[pair].geometryDict  is not None:
                 keys = [k for k in self.pairs[pair].geometryDict.keys()]       
                 self.dsetGeometryNames = list(set(self.dsetGeometryNames) | set(keys))
-
-
-
-

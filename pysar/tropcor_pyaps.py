@@ -6,24 +6,15 @@
 ############################################################
 
 
-import os
-import sys
+import os, sys, re
 import argparse
-import re
-
 try:
     import pyaps as pa
 except:
     sys.exit('Cannot import pyaps into Python!')
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
-
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 ###############################################################
 def get_delay(grib_file, atr, inps_dict):

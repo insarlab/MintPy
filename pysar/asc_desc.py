@@ -6,18 +6,12 @@
 ############################################################
 # Yunjun, Jun 2017: rewrite using pysar module
 
-import os
-import sys
+import os, sys
 import argparse
-
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
-import pysar.subset as subset
+from pysar.utils import readfile, writefile, utils as ut
 
 
 ################################################################################
@@ -108,9 +102,9 @@ def main(argv):
         print('reading '+fname)
         atr = readfile.read_attribute(fname)
 
-        [x0,x1] = subset.coord_geo2radar([west,east], atr, 'lon')
-        [y0,y1] = subset.coord_geo2radar([north,south], atr, 'lat')
-        V = readfile.read(fname, (x0,y0,x1,y1))[0]
+        [x0,x1] = ut.coord_geo2radar([west,east], atr, 'lon')
+        [y0,y1] = ut.coord_geo2radar([north,south], atr, 'lat')
+        V = readfile.read(fname, box=(x0,y0,x1,y1))[0]
         u_los[i,:] = V.flatten(0)
 
         heading_angle = float(atr['HEADING'])

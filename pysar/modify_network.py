@@ -15,13 +15,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
-import pysar.utils.network as pnet
-import pysar.utils.plot as pp
-import pysar.subset as subset
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut, network as pnet, plot as pp
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import pysar.subset as subset
 
 
 ###########################  Sub Function  #############################

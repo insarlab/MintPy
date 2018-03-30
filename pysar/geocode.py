@@ -6,22 +6,14 @@
 ############################################################
 
 
-import os
-import sys
-import time
+import os, sys, time
 import argparse
 import warnings
-
 import h5py
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator as RGI
 import scipy.spatial.qhull as qhull
-
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import datetime as ptime, readfile, writefile, utils as ut
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 

@@ -8,13 +8,9 @@
 import sys
 import time
 import datetime
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, datetime as ptime, utils as ut
 
 
 #####################################################################################

@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 # Author: Zhang Yunjun, 2018-Jan-27
 
-import os
-import sys
-import re
+import os, sys, re
 import argparse
-
 import h5py
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, datetime as ptime, utils as ut
 
 
 def get_mission_name(meta_dict):

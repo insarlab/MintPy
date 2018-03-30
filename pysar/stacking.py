@@ -4,20 +4,19 @@
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-# 
+
 
 import sys
 import argparse
-
 import h5py
-
-import pysar.utils.utils as ut
+from pysar.utils import utils as ut
+from pysar.objects import ifgramDatasetNames
 
 
 #################################  Usage  ####################################
 EXAMPLE='''example:
-  stacking.py unwrapIfgram.h5
-  stacking.py coherence.h5 -m mask.h5
+  stacking.py ifgramStack.h5 unwrapPhase -o averagePhaseVelocity.h5
+  stacking.py ifgramStack.h5 coherence   -o averageSpatialCoherence.h5
 '''
 
 def cmdLineParse():
@@ -26,7 +25,10 @@ def cmdLineParse():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='File(s) to be stacked')
+    parser.add_argument('-d','--dataset', dest='dataset_name', default=ifgramDatasetNames[0],\
+                        help='Dataset to be used for stacking, when input file is ifgramStack')
     parser.add_argument('-m','--mask', dest='mask_file', help='Mask file for the calculation')
+    parser.add_argument('-o','--output', dest='outfile', help='output file name')
 
     inps = parser.parse_args()
     return inps
@@ -37,7 +39,7 @@ def main(argv):
     inps = cmdLineParse()
     print('\n*************** Stacking ******************')
     for File in inps.file:
-        ut.get_file_stack(File, inps.mask_file)
+        inps.outfile = ut.get_file_stack(File, datasetName=inps.dataset_name, maskFile=inps.mask_file, outFile=inps.outfile)
     return
 
 

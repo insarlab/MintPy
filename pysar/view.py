@@ -4,14 +4,12 @@
 # Copyright(c) 2017, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
-#
 # Recommended usage:
 #   import pysar.view as pv
 #
 
 
-import os
-import sys
+import os, sys
 import argparse
 from datetime import datetime as dt
 
@@ -25,17 +23,11 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import cm, pyproj
 
 import pysar
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
-import pysar.utils.plot as pp
-
+from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar.multilook import multilook_matrix
 import pysar.mask as mask
 import pysar.subset as subset
-from pysar.multilook import multilook_matrix
-
-from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
-from pysar.utils.plot import Basemap2
 
 
 ##################################################################################################
@@ -371,8 +363,8 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     # Convert seed_lalo if existed, to seed_yx, and use seed_yx for the following
     # seed_yx is referenced to input data coverage, not subseted area for display
     if inps.seed_lalo and inps.geo_box:
-        inps.seed_yx = [subset.coord_geo2radar(inps.seed_lalo[0], meta_dict, 'lat'), \
-                        subset.coord_geo2radar(inps.seed_lalo[1], meta_dict, 'lon')]
+        inps.seed_yx = [ut.coord_geo2radar(inps.seed_lalo[0], meta_dict, 'lat'), \
+                        ut.coord_geo2radar(inps.seed_lalo[1], meta_dict, 'lon')]
         print('input reference point in lat/lon: '+str(inps.seed_lalo))
         print('input reference point in y  /x  : '+str(inps.seed_yx))
 
@@ -444,8 +436,8 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
             if meta_dict['FILE_TYPE'] in multi_group_hdf5_file+multi_dataset_hdf5_file:
                 print('set reference point to: '+str(inps.seed_yx))
             if inps.geo_box:
-                inps.seed_lalo = [subset.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
-                                  subset.coord_radar2geo(inps.seed_yx[1], meta_dict, 'x')]
+                inps.seed_lalo = [ut.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
+                                  ut.coord_radar2geo(inps.seed_yx[1], meta_dict, 'x')]
             else:
                 inps.seed_lalo = None
         else:
@@ -460,8 +452,8 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
         if 'REF_LAT' in meta_dict.keys():
             inps.seed_lalo = [float(meta_dict['REF_LAT']), float(meta_dict['REF_LON'])]
         elif inps.seed_yx and inps.geo_box:
-            inps.seed_lalo = [subset.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
-                              subset.coord_radar2geo(inps.seed_yx[1], meta_dict, 'x')]
+            inps.seed_lalo = [ut.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
+                              ut.coord_radar2geo(inps.seed_yx[1], meta_dict, 'x')]
         else:
             inps.seed_lalo = None
 
@@ -549,7 +541,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             inps.dem_pix_box = subset.box_geo2pixel(inps.geo_box, dem_meta_dict)
         else:
             inps.dem_pix_box = inps.pix_box
-        dem, dem_meta_dict = readfile.read(inps.dem_file, inps.dem_pix_box, epoch='height')
+        dem, dem_meta_dict = readfile.read(inps.dem_file, box=inps.dem_pix_box, epoch='height')
 
         # If data is too large, do not show DEM contour
         if inps.geo_box:
@@ -569,17 +561,17 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         print('map projection: '+inps.map_projection)
         print('boundary database resolution: '+inps.resolution)
         if inps.map_projection in ['cyl','merc','mill','cea','gall']:
-            m = Basemap2(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
+            m = pp.Basemap2(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
                         urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],\
                         projection=inps.map_projection,\
                         resolution=inps.resolution, area_thresh=1., suppress_ticks=False, ax=ax)
         elif inps.map_projection in ['ortho']:
-            m = Basemap2(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
+            m = pp.Basemap2(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
                         lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,\
                         projection=inps.map_projection,\
                         resolution=inps.resolution, area_thresh=1., suppress_ticks=False, ax=ax)
         else:
-            m = Basemap2(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
+            m = pp.Basemap2(lon_0=(inps.geo_box[0]+inps.geo_box[2])/2.0,\
                         lat_0=(inps.geo_box[3]+inps.geo_box[1])/2.0,\
                         llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],\
                         urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],\
@@ -631,13 +623,13 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
         # Status bar
         def format_coord(x,y):
-            col = subset.coord_geo2radar(x, meta_dict, 'lon') - inps.pix_box[0]
-            row = subset.coord_geo2radar(y, meta_dict, 'lat') - inps.pix_box[1]
+            col = ut.coord_geo2radar(x, meta_dict, 'lon') - inps.pix_box[0]
+            row = ut.coord_geo2radar(y, meta_dict, 'lat') - inps.pix_box[1]
             if 0 <= col < data.shape[1] and 0 <= row < data.shape[0]:
                 z = data[row, col]
                 if inps.dem_file:
-                    dem_col = subset.coord_geo2radar(x, dem_meta_dict, 'lon') - inps.dem_pix_box[0]
-                    dem_row = subset.coord_geo2radar(y, dem_meta_dict, 'lat') - inps.dem_pix_box[1]
+                    dem_col = ut.coord_geo2radar(x, dem_meta_dict, 'lon') - inps.dem_pix_box[0]
+                    dem_row = ut.coord_geo2radar(y, dem_meta_dict, 'lat') - inps.dem_pix_box[1]
                     h = dem[dem_row, dem_col]
                     return 'lon=%.4f, lat=%.4f, value=%.4f, elev=%.1f m, x=%.1f, y=%.1f'\
                            %(x,y,z,h,col+inps.pix_box[0],row+inps.pix_box[1])
@@ -977,11 +969,11 @@ def main(argv):
     except:
         sys.exit('Can not read file: '+inps.file)
 
-    print('Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+inps.file)
+    print('Input file is {} {}: {}'.format(atr['PROCESSOR'], atr['FILE_TYPE'], inps.file))
     k = atr['FILE_TYPE']
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
-    print('file size in y/x: '+atr['LENGTH']+', '+atr['WIDTH'])
+    print('file size in y/x: {}, {}'.format(atr['LENGTH'],atr['WIDTH']))
 
     #------------------------------ Epoch/Date Info -------------------------------------------#
     # Read "epoch list to display' and 'reference date' for multi-dataset files
@@ -1076,7 +1068,7 @@ def main(argv):
         try:
             atrMsk = readfile.read_attribute(inps.mask_file)
             if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
-                msk = readfile.read(inps.mask_file, inps.pix_box, epoch='mask')[0]
+                msk = readfile.read(inps.mask_file, box=inps.pix_box, epoch='mask')[0]
                 print('mask data with: '+os.path.basename(inps.mask_file))
             else:
                 print('WARNING: input file has different size from mask file: %s. Continue without mask' % (inps.mask_file))
@@ -1102,12 +1094,12 @@ def main(argv):
     if epochNum == 1:
         # Read Data
         print('reading data ...')
-        data, atr = readfile.read(inps.file, inps.pix_box, inps.epoch[0])
+        data, atr = readfile.read(inps.file, box=inps.pix_box, epoch=inps.epoch[0])
         
         if inps.zero_mask:
             data[data==0] = np.nan
         if inps.ref_date:
-            ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)[0]
+            ref_data = readfile.read(inps.file, box=inps.pix_box, epoch=inps.ref_date)[0]
             data -= ref_data
             del ref_data
         # Mask Data
@@ -1201,7 +1193,7 @@ def main(argv):
         if k == 'timeseries':
             if inps.ref_date:
                 print('consider input reference date: '+inps.ref_date)
-                ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)[0]
+                ref_data = readfile.read(inps.file, box=inps.pix_box, epoch=inps.ref_date)[0]
 
         ref_yx = None
         if k in ['interferograms'] and 'REF_Y' in atr.keys():
@@ -1211,7 +1203,7 @@ def main(argv):
         # Read DEM
         if inps.dem_file:
             print('reading DEM: '+os.path.basename(inps.dem_file)+' ...')
-            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box, epoch='height')
+            dem, dem_meta_dict = readfile.read(inps.dem_file, box=inps.pix_box, epoch='height')
             if inps.multilook:
                 dem = multilook_matrix(dem, inps.multilook_num, inps.multilook_num)
 

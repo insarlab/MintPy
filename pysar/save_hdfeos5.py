@@ -9,16 +9,12 @@
 #
 
 
-import os
-import sys
+import os, sys, re
 import argparse
-import re
 import datetime as dt
 import string
-
 import h5py
 import numpy as np
-
 import pysar.utils.readfile as readfile
 import pysar.info as info
 

@@ -13,91 +13,8 @@ import argparse
 import h5py
 import numpy as np
 
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import datetime as ptime, readfile, writefile, utils as ut
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
-
-
-################################################################
-def coord_geo2radar(geoCoordIn, atr, coordType):
-    ## convert geo coordinates into radar coordinates (round to nearest integer)
-    ## for Geocoded file only
-    ## Inputs:
-    ##     geoCoord  : coordinate (list / tuple) in latitude/longitude in float
-    ##     atr       : dictionary of file attributes
-    ##     coordType : coordinate type: latitude, longitude
-    ##
-    ## Example:
-    ##      300        = coord_geo2radar(32.104990,    atr,'lat')
-    ##     [1000,1500] = coord_geo2radar([130.5,131.4],atr,'lon')
-
-    try:
-        atr['X_FIRST']
-    except:
-        sys.exit('Support geocoded file only!')
-
-    ## Convert to List if input is String
-    if isinstance(geoCoordIn, float):
-        geoCoordIn = [geoCoordIn]
-    geoCoord = list(geoCoordIn)
-
-    radarCoord = []
-    coordType = coordType.lower()
-    for i in range(len(geoCoord)):
-        if   coordType.startswith('lat'):  coord = np.rint((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
-        elif coordType.startswith('lon'):  coord = np.rint((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))
-        else: print('Unrecognized coordinate type: '+coordType)
-        radarCoord.append(int(coord))
-
-    if len(radarCoord) == 1:
-        radarCoord = radarCoord[0]
-    elif isinstance(geoCoordIn, tuple):
-        radarCoord = tuple(radarCoord)
-
-    return radarCoord
-
-
-################################################################
-def coord_radar2geo(radarCoordIn, atr, coordType):
-    ## convert radar coordinates into geo coordinates (pixel UL corner)
-    ## for Geocoded file only
-    ##
-    ## Inputs:
-    ##     radarCoord : coordinate (list) in row/col in int
-    ##     atr        : dictionary of file attributes
-    ##     coordType  : coordinate type: row, col, y, x
-    ##
-    ## Example:
-    ##     32.104990     = coord_radar2geo(300,        atr,'y')
-    ##     [130.5,131.4] = coord_radar2geo([1000,1500],atr,'x')
-
-    try:
-        atr['X_FIRST']
-    except:
-        sys.exit('Support geocoded file only!')
-
-    ## Convert to List if input is String
-    if isinstance(radarCoordIn, int):
-        radarCoordIn = [radarCoordIn]
-    radarCoord = list(radarCoordIn)
-
-    geoCoord = []
-    coordType = coordType.lower()
-    for i in range(len(radarCoord)):
-        if   coordType.startswith(('row','y')):  coord = radarCoord[i]*float(atr['Y_STEP']) + float(atr['Y_FIRST'])
-        elif coordType.startswith(('col','x')):  coord = radarCoord[i]*float(atr['X_STEP']) + float(atr['X_FIRST'])
-        else: print('Unrecognized coordinate type: '+coordType)
-        geoCoord.append(coord)
-    #geoCoord.sort()
-
-    if len(geoCoord) == 1:
-        geoCoord = geoCoord[0]
-    elif isinstance(radarCoordIn, tuple):
-        geoCoord = tuple(geoCoord)
-
-    return geoCoord
 
 
 ################################################################
@@ -136,68 +53,6 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
 
 
 ################################################################
-def subset_attribute(atr_dict, subset_box, print_msg=True):
-    '''Update attributes dictionary due to subset
-    Inputs:
-        atr_dict   : dict, data attributes to update
-        subset_box : 4-tuple of int, subset box defined in (x0, y0, x1, y1)
-    Outputs:
-        atr      : dict, updated data attributes
-    '''
-
-    sub_x = [subset_box[0], subset_box[2]]
-    sub_y = [subset_box[1], subset_box[3]]
-    #####
-    atr = dict()
-    for key, value in iter(atr_dict.items()):
-        atr[key] = str(value)
-
-    ##### Update attribute variable
-    atr['LENGTH'] = str(sub_y[1]-sub_y[0])
-    atr['WIDTH']  = str(sub_x[1]-sub_x[0])
-    atr['YMAX']   = str(sub_y[1]-sub_y[0] - 1)
-    atr['XMAX']   = str(sub_x[1]-sub_x[0] - 1)
-    if print_msg:  print('update LENGTH, WIDTH, Y/XMAX')
-
-    # Subset atribute
-    if print_msg:  print('update/add SUBSET_YMIN/YMAX/XMIN/XMAX')
-    try:
-        subset_y0_ori = int(atr['SUBSET_YMIN'])
-        atr['SUBSET_YMIN'] = str(sub_y[0] + subset_y0_ori)
-        atr['SUBSET_YMAX'] = str(sub_y[1] + subset_y0_ori)
-    except:
-        atr['SUBSET_YMIN'] = str(sub_y[0])
-        atr['SUBSET_YMAX'] = str(sub_y[1])
-    try:
-        subset_x0_ori = int(atr['SUBSET_XMIN'])
-        atr['SUBSET_XMIN'] = str(sub_x[0] + subset_x0_ori)
-        atr['SUBSET_XMAX'] = str(sub_x[1] + subset_x0_ori)
-    except:
-        atr['SUBSET_XMIN'] = str(sub_x[0])
-        atr['SUBSET_XMAX'] = str(sub_x[1])
-
-    # Geo coord
-    try:
-        atr['Y_FIRST'] = str(float(atr['Y_FIRST'])+sub_y[0]*float(atr['Y_STEP']))
-        atr['X_FIRST'] = str(float(atr['X_FIRST'])+sub_x[0]*float(atr['X_STEP']))
-        if print_msg:  print('update Y/X_FIRST')
-    except: pass
-
-    # Reference in space
-    try:
-        atr['REF_Y'] = str(int(atr['REF_Y']) - sub_y[0])
-        atr['REF_X'] = str(int(atr['REF_X']) - sub_x[0])
-        if print_msg:  print('update REF_Y/X')
-    except: pass
-
-    # Starting Range for file in radar coord
-    if not 'Y_FIRST' in atr_dict.keys():
-        try:
-            atr['STARTING_RANGE'] = float(atr['STARTING_RANGE']) + float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
-            if print_msg:  print('update STARTING_RANGE')
-        except: pass
-
-    return atr
 
 
 ###########################################################
@@ -266,8 +121,8 @@ def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None):
     lat = np.array([geo_box[3],geo_box[3],geo_box[1],geo_box[1]])
     lon = np.array([geo_box[0],geo_box[2],geo_box[0],geo_box[2]])
     if 'Y_FIRST' in atr_rdr.keys():
-        y = coord_geo2radar(lat, atr_rdr, 'lat')
-        x = coord_geo2radar(lon, atr_rdr, 'lon')
+        y = ut.coord_geo2radar(lat, atr_rdr, 'lat')
+        x = ut.coord_geo2radar(lon, atr_rdr, 'lon')
         pix_box = (x[0], y[2], x[1], y[0])
     else:
         y, x, y_res, x_res = ut.glob2radar(lat, lon, lookupFile, atr_rdr)
@@ -288,8 +143,8 @@ def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None):
     x = np.array([pix_box[0],pix_box[2],pix_box[0],pix_box[2]])
     y = np.array([pix_box[1],pix_box[1],pix_box[3],pix_box[3]])
     if 'Y_FIRST' in atr_rdr.keys():
-        lat = coord_radar2geo(y, atr_rdr, 'y')
-        lon = coord_radar2geo(x, atr_rdr, 'x')
+        lat = ut.coord_radar2geo(y, atr_rdr, 'y')
+        lon = ut.coord_radar2geo(x, atr_rdr, 'x')
         geo_box = (lon[0], lat[0], lon[1], lat[2])
     else:
         lat, lon, lat_res, lon_res = ut.radar2glob(y, x, lookupFile, atr_rdr)
@@ -383,14 +238,14 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
     # Use subset_lat/lon input if existed,  priority: lat/lon > y/x > len/wid
     if subset_dict['subset_lat']:
-        sub_y = coord_geo2radar(subset_dict['subset_lat'],meta_dict,'latitude')
+        sub_y = ut.coord_geo2radar(subset_dict['subset_lat'],meta_dict,'latitude')
     elif subset_dict['subset_y']:
         sub_y = subset_dict['subset_y']
     else:
         sub_y = [0,length]
 
     if subset_dict['subset_lon']:
-        sub_x = coord_geo2radar(subset_dict['subset_lon'],meta_dict,'longitude')
+        sub_x = ut.coord_geo2radar(subset_dict['subset_lon'],meta_dict,'longitude')
     elif subset_dict['subset_x']:
         sub_x = subset_dict['subset_x']
     else:
@@ -425,8 +280,8 @@ def box_pixel2geo(pixel_box, meta_dict):
 def box_geo2pixel(geo_box, meta_dict):
     '''Convert geo_box to pixel_box'''
     try:
-        y = coord_geo2radar([geo_box[1],geo_box[3]], meta_dict, 'latitude')
-        x = coord_geo2radar([geo_box[0],geo_box[2]], meta_dict, 'longitude')
+        y = ut.coord_geo2radar([geo_box[1],geo_box[3]], meta_dict, 'latitude')
+        x = ut.coord_geo2radar([geo_box[0],geo_box[2]], meta_dict, 'longitude')
         pixel_box = (x[0],y[0],x[1],y[1])
     except:
         pixel_box = None
@@ -531,7 +386,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             dset = group.create_dataset(epoch, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=epoch)
         prog_bar.close()
-        atr_dict = subset_attribute(atr_dict, pix_box)
+        atr_dict = ut.subset_attribute(atr_dict, pix_box)
         for key,value in iter(atr_dict.items()):
             group.attrs[key] = value
 
@@ -546,7 +401,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-            atr_dict  = subset_attribute(atr_dict, pix_box, print_msg=False)
+            atr_dict  = ut.subset_attribute(atr_dict, pix_box, print_msg=False)
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
             for key, value in iter(atr_dict.items()):
@@ -556,12 +411,12 @@ def subset_file(File, subset_dict_input, outFile=None):
 
     ##### Single Dataset File
     elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
-        data, atr_dict = readfile.read(File, pix_box)
-        atr_dict = subset_attribute(atr_dict, pix_box)
+        data, atr_dict = readfile.read(File, box=pix_box)
+        atr_dict = ut.subset_attribute(atr_dict, pix_box)
         writefile.write(data,atr_dict,outFile)
 
     elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
-        rg_overlap, az_overlap, atr_dict = readfile.read(File, pix_box4data)
+        rg_overlap, az_overlap, atr_dict = readfile.read(File, box=pix_box4data)
 
         rg = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
         rg[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = rg_overlap
@@ -569,15 +424,15 @@ def subset_file(File, subset_dict_input, outFile=None):
         az = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
         az[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = az_overlap
 
-        atr_dict = subset_attribute(atr_dict, pix_box)
+        atr_dict = ut.subset_attribute(atr_dict, pix_box)
         writefile.write(rg,az,atr_dict,outFile)
     else:
-        data_overlap, atr_dict = readfile.read(File, pix_box4data)
+        data_overlap, atr_dict = readfile.read(File, box=pix_box4data)
 
         data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
         data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-        atr_dict = subset_attribute(atr_dict, pix_box)
+        atr_dict = ut.subset_attribute(atr_dict, pix_box)
         writefile.write(data, atr_dict, outFile)
 
     ##### End Cleaning

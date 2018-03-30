@@ -6,26 +6,17 @@
 ############################################################
 
 
-import os
-import sys
+import os, sys
 import argparse
-
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
-import pysar.subset as subset
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ########################################## Sub Functions #############################################
-###############################################################
-###############################################################
 def nearest(x, tbase,xstep):
     ## """ find nearest neighbour """
     dist = np.sqrt((tbase -x)**2)
@@ -127,13 +118,14 @@ def seed_file_inps(File, inps=None, outFile=None):
     Return output file name if succeed; otherwise, return None
     '''
     # Optional inputs
-    if not outFile:  outFile = 'Seeded_'+os.path.basename(File)
+    if not outFile:
+        outFile = '{}_seeded{}'.format(os.path.splitext(File)[0], os.path.splitext(File)[1])
     if not inps:  inps = cmdLineParse([''])
     print('----------------------------------------------------')
     print('seeding file: '+File)
-    
+
     # Get stack and mask
-    stack = ut.get_file_stack(File, inps.mask_file)
+    stack = ut.get_file_stack(File, datasetName='unwrapPhase', maskFile=inps.mask_file, outFile='averagePhaseVelocity.h5')
     mask = ~np.isnan(stack)
     if np.nansum(mask) == 0.0:
         print('\n*****************************************************')
@@ -144,21 +136,21 @@ def seed_file_inps(File, inps=None, outFile=None):
         sys.exit(1)
 
     atr = readfile.read_attribute(File)
-    # 1. Reference using global average 
-    if inps.method == 'global-average':
-        print('\n---------------------------------------------------------')
-        print('Automatically Seeding using Global Spatial Average Value ')
-        print('---------------------------------------------------------')
-        print('Calculating the global spatial average value for each epoch'+\
-              ' of all valid pixels ...')
-        width = int(atr['WIDTH'])
-        length = int(atr['LENGTH'])
-        box = (0,0,width,length)
-        meanList = ut.spatial_average(File, mask, box)[0]
-        inps.ref_y = ''
-        inps.ref_x = ''
-        outFile = seed_file_reference_value(File, outFile, meanList, inps.ref_y, inps.ref_x)
-        return outFile
+    ## 1. Reference using global average 
+    #if inps.method == 'global-average':
+    #    print('\n---------------------------------------------------------')
+    #    print('Automatically Seeding using Global Spatial Average Value ')
+    #    print('---------------------------------------------------------')
+    #    print('Calculating the global spatial average value for each epoch'+\
+    #          ' of all valid pixels ...')
+    #    width = int(atr['WIDTH'])
+    #    length = int(atr['LENGTH'])
+    #    box = (0,0,width,length)
+    #    meanList = ut.spatial_average(File, mask, box)[0]
+    #    inps.ref_y = ''
+    #    inps.ref_x = ''
+    #    outFile = seed_file_reference_value(File, outFile, meanList, inps.ref_y, inps.ref_x)
+    #    return outFile
 
     # 2. Reference using specific pixel
     # 2.1 Find reference y/x
@@ -188,8 +180,8 @@ def seed_file_inps(File, inps=None, outFile=None):
                 atr_ref['REF_X'] = str(inps.ref_x)
                 atr_ref['REF_Y'] = str(inps.ref_y)
                 if 'X_FIRST' in atr.keys():
-                    atr_ref['REF_LAT'] = str(subset.coord_radar2geo(inps.ref_y, atr, 'y'))
-                    atr_ref['REF_LON'] = str(subset.coord_radar2geo(inps.ref_x, atr, 'x'))
+                    atr_ref['REF_LAT'] = str(ut.coord_radar2geo(inps.ref_y, atr, 'y'))
+                    atr_ref['REF_LON'] = str(ut.coord_radar2geo(inps.ref_x, atr, 'x'))
                 print(atr_ref)
                 outFile = ut.add_attribute(File, atr_ref)
                 ut.touch([inps.coherence_file, inps.mask_file])
@@ -210,13 +202,11 @@ def seed_attributes(atr_in,x,y):
     atr = dict()
     for key, value in iter(atr_in.items()):
         atr[key] = str(value)
-
     atr['REF_Y'] = str(y)
     atr['REF_X'] = str(x)
     if 'X_FIRST' in atr.keys():
-        atr['REF_LAT'] = str(subset.coord_radar2geo(y,atr,'y'))
-        atr['REF_LON'] = str(subset.coord_radar2geo(x,atr,'x'))
-
+        atr['REF_LAT'] = str(ut.coord_radar2geo(y,atr,'y'))
+        atr['REF_LON'] = str(ut.coord_radar2geo(x,atr,'x'))
     return atr
 
 
@@ -280,7 +270,6 @@ def select_max_coherence_yx(cohFile, mask=None, min_coh=0.85):
     #y, x = np.unravel_index(np.argmax(coh), coh.shape)
     print('y/x: '+str([y, x]))
     print('---------------------------------------------------------')
-
     return y, x
 
 
@@ -310,7 +299,7 @@ def print_warning(next_method):
 
 
 ###############################################################
-def read_seed_template2inps(template_file, inps=None):
+def read_template_file2inps(template_file, inps=None):
     '''Read seed/reference info from template file and update input namespace'''
     if not inps:
         inps = cmdLineParse([''])
@@ -334,9 +323,7 @@ def read_seed_template2inps(template_file, inps=None):
     key = prefix+'maskFile'
     if key in template.keys():
         value = template[key]
-        if value == 'auto':
-            inps.mask_file = None
-        elif value == 'no':
+        if value in ['auto','no']:
             inps.mask_file = None
         else:
             inps.mask_file = value
@@ -360,8 +347,8 @@ def read_seed_template2inps(template_file, inps=None):
     return inps
 
 
-def read_seed_reference2inps(reference_file, inps=None):
-    '''Read seed/reference info from reference file and update input namespace'''
+def read_reference_file2inps(reference_file, inps=None):
+    '''Read reference info from reference file and update input namespace'''
     if not inps:
         inps = cmdLineParse([''])
     atr_ref = readfile.read_attribute(inps.reference_file)
@@ -374,144 +361,30 @@ def read_seed_reference2inps(reference_file, inps=None):
     return inps
 
 
-def remove_reference_pixel(File):
-    '''Remove reference pixel info from input file'''
-    print("remove ref_y/x and/or ref_lat/lon from file: "+File)
-    ext = os.path.splitext(File)[1]
-    if ext not in ['.h5','.he5']:
-        sys.exit('ERROR: only hdf5 file supported for this function!')
-
-    k = readfile.read_attribute(File)['FILE_TYPE']
-    h5 = h5py.File(File,'r+')
-    if k in multi_group_hdf5_file:
-        ifgram_list = sorted(h5[k].keys())
-        for ifgram in ifgram_list:
-            for key in ['REF_Y','REF_X','REF_LAT','REF_LON']:
-                try: h5[k][ifgram].attrs.pop(key)
-                except: pass
-    else:
-        for key in ['REF_Y','REF_X','REF_LAT','REF_LON']:
-            try: h5[k].attrs.pop(key)
-            except: pass        
-    h5.close()
-    return File
-
-
-#########################################  Usage  ##############################################
-TEMPLATE='''
-## reference all interferograms to one common point in space
-## auto - randomly select a pixel with coherence > minCoherence
-pysar.reference.yx            = auto   #[257,151 / auto]
-pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
-
-pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
-pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
-pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
-'''
-
-NOTE='''note: Reference value cannot be nan, thus, all selected reference point must be:
-  a. non zero in mask, if mask is given
-  b. non nan  in data (stack)
-'''
-
-EXAMPLE='''example:
-  reference_point.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geomap_4rlks.trans
-
-  reference_point.py timeseries.h5     -r Seeded_velocity.h5
-  reference_point.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
-  reference_point.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
-  reference_point.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
-  
-  reference_point.py unwrapIfgram.h5 -c average_spatial_coherence.h5
-  reference_point.py unwrapIfgram.h5 --method manual
-  reference_point.py unwrapIfgram.h5 --method random
-  reference_point.py timeseries.h5   --method global-average 
-'''
-
-def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Reference to the same pixel in space.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=NOTE+'\n'+EXAMPLE)
-    
-    parser.add_argument('file', nargs='+', help='file(s) to be referenced.')
-    parser.add_argument('-m','--mask', dest='mask_file', help='mask file')
-    parser.add_argument('-o', '--outfile', help='output file name, disabled when more than 1 input files.')
-    parser.add_argument('--no-parallel', dest='parallel', action='store_false',\
-                        help='Disable parallel processing. Diabled auto for 1 input file.\n')
-    parser.add_argument('--mark-attribute', dest='mark_attribute', action='store_true',\
-                        help='mark/update reference attributes in input file only\n'+\
-                             'do not update data matrix value nor write new file')
-    parser.add_argument('--reset', action='store_true',\
-                        help='remove reference pixel information from attributes in the file')
-
-    coord_group = parser.add_argument_group('input coordinates')
-    coord_group.add_argument('-y','--row', dest='REF_Y', type=int, help='row/azimuth  number of reference pixel')
-    coord_group.add_argument('-x','--col', dest='REF_X', type=int, help='column/range number of reference pixel')
-    coord_group.add_argument('-l','--lat', dest='REF_LAT', type=float, help='latitude  of reference pixel')
-    coord_group.add_argument('-L','--lon', dest='REF_LON', type=float, help='longitude of reference pixel')
-    
-    coord_group.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
-    coord_group.add_argument('--lookup', dest='lookup_file',\
-                             help='Lookup table file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
-                                  'Needed for radar coord input file with --lat/lon seeding option.')
-    coord_group.add_argument('-t','--template', dest='template_file',\
-                             help='template with reference info as below:\n'+TEMPLATE)
-
-    parser.add_argument('-c','--coherence', dest='coherence_file',\
-                        help='use input coherence file to find the pixel with max coherence for reference pixel.')
-    parser.add_argument('--min-coherence', dest='min_coherence', type=float, default=0.85,\
-                        help='minimum coherence of reference pixel for max-coherence method.')
-    parser.add_argument('--method', default='random',\
-                        choices=['input-coord','max-coherence','manual','random','global-average'], \
-                        help='method to select reference pixel:\n\n'+\
-                             'input-coord   : input specific coordinates, enabled when there are coordinates input\n'+\
-                             'max-coherence : select pixel with highest coherence value as reference point\n'+\
-                             '                enabled when there is --coherence option input\n'+\
-                             'manual        : display stack of input file and manually select reference point\n'+\
-                             'random        : random select pixel as reference point\n'+\
-                             'global-average: for each dataset, use its spatial average value as reference value\n'+\
-                             '                reference pixel is changing for different datasets\n')
-    
-    inps = parser.parse_args()
-    return inps
-
-
-#######################################  Main Function  ########################################
-def main(argv):
-    inps = cmdLineParse()
-    inps.file = ut.get_file_list(inps.file)
-
-    atr = readfile.read_attribute(inps.file[0])
+def read_reference_input(inps):
+    atr = readfile.read_attribute(inps.file)
     length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
 
     if inps.reset:
-        print('----------------------------------------------------------------------------')
-        for file in inps.file:
-            remove_reference_pixel(file)
-        return
+        remove_reference_pixel(inps.file)
+        return inps.file
 
     ##### Check Input Coordinates
     # Read ref_y/x/lat/lon from reference/template
     # priority: Direct Input > Reference File > Template File
     if inps.template_file:
         print('reading reference info from template: '+inps.template_file)
-        inps = read_seed_template2inps(inps.template_file, inps)
+        inps = read_template_file2inps(inps.template_file, inps)
     if inps.reference_file:
         print('reading reference info from reference: '+inps.reference_file)
-        inps = read_seed_reference2inps(inps.reference_file, inps)
-
-    ## Do not use ref_lat/lon input for file in radar-coord
-    #if not 'X_FIRST' in atr.keys() and (inps.ref_lat or inps.ref_lon):
-    #    print 'Lat/lon reference input is disabled for file in radar coord.'
-    #    inps.ref_lat = None
-    #    inps.ref_lon = None
+        inps = read_reference_file2inps(inps.reference_file, inps)
 
     # Convert ref_lat/lon to ref_y/x
     if inps.ref_lat and inps.ref_lon:
         if 'X_FIRST' in atr.keys():
-            inps.ref_y = subset.coord_geo2radar(inps.ref_lat, atr, 'lat')
-            inps.ref_x = subset.coord_geo2radar(inps.ref_lon, atr, 'lon')
+            inps.ref_y = ut.coord_geo2radar(inps.ref_lat, atr, 'lat')
+            inps.ref_x = ut.coord_geo2radar(inps.ref_lon, atr, 'lon')
         else:
             # Convert lat/lon to az/rg for radar coord file using geomap*.trans file
             inps.ref_y, inps.ref_x = ut.glob2radar(np.array(inps.ref_lat), np.array(inps.ref_lon),\
@@ -546,26 +419,107 @@ def main(argv):
         else: 
             inps.coherence_file = None
 
-    if inps.method == 'manual':
-        inps.parallel = False
-        print('Parallel processing is disabled for manual seeding method.')
+    return inps
 
-    ##### Seeding file by file
-    # check outfile and parallel option
-    if inps.parallel:
-        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
 
-    if len(inps.file) == 1:
-        seed_file_inps(inps.file[0], inps, inps.outfile)
-        
-    elif inps.parallel:
-        #num_cores = min(multiprocessing.cpu_count(), len(inps.file))
-        #print 'parallel processing using %d cores ...'%(num_cores)
-        Parallel(n_jobs=num_cores)(delayed(seed_file_inps)(file, inps) for file in inps.file)
-    else:
-        for File in inps.file:
-            seed_file_inps(File, inps)
+def remove_reference_pixel(File):
+    '''Remove reference pixel info from input file'''
+    print("remove REF_Y/X and/or ref_lat/lon from file: "+File)
+    atrDrop = {}
+    for i in ['REF_X','REF_Y','REF_LAT','REF_LON']:
+        atrDrop[i] = None
+    File = ut.add_attribute(File, atrDrop)
+    return File
 
+
+#########################################  Usage  ##############################################
+TEMPLATE='''
+## reference all interferograms to one common point in space
+## auto - randomly select a pixel with coherence > minCoherence
+pysar.reference.yx            = auto   #[257,151 / auto]
+pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
+
+pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
+pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
+pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
+'''
+
+NOTE='''note: Reference value cannot be nan, thus, all selected reference point must be:
+  a. non zero in mask, if mask is given
+  b. non nan  in data (stack)
+'''
+
+EXAMPLE='''example:
+  reference_point.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geometryRadar.h5
+
+  reference_point.py timeseries.h5     -r Seeded_velocity.h5
+  reference_point.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
+  reference_point.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
+  reference_point.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
+  
+  reference_point.py unwrapIfgram.h5 -c average_spatial_coherence.h5
+  reference_point.py unwrapIfgram.h5 --method manual
+  reference_point.py unwrapIfgram.h5 --method random
+  reference_point.py timeseries.h5   --method global-average 
+'''
+
+def createParser():
+    parser = argparse.ArgumentParser(description='Reference to the same pixel in space.',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=NOTE+'\n'+EXAMPLE)
+    
+    parser.add_argument('file', type=str, help='file to be referenced.')
+    parser.add_argument('-m','--mask', dest='mask_file', help='mask file')
+    parser.add_argument('-o', '--outfile', help='output file name, disabled when more than 1 input files.')
+    parser.add_argument('--no-parallel', dest='parallel', action='store_false',\
+                        help='Disable parallel processing. Diabled auto for 1 input file.\n')
+    parser.add_argument('--mark-attribute', dest='mark_attribute', action='store_true',\
+                        help='mark/update reference attributes in input file only\n'+\
+                             'do not update data matrix value nor write new file')
+    parser.add_argument('--reset', action='store_true',\
+                        help='remove reference pixel information from attributes in the file')
+
+    coord_group = parser.add_argument_group('input coordinates')
+    coord_group.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')
+    coord_group.add_argument('-x','--col', dest='ref_x', type=int, help='column/range number of reference pixel')
+    coord_group.add_argument('-l','--lat', dest='ref_lat', type=float, help='latitude  of reference pixel')
+    coord_group.add_argument('-L','--lon', dest='ref_lon', type=float, help='longitude of reference pixel')
+    
+    coord_group.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
+    coord_group.add_argument('--lookup','--lookup-file', dest='lookup_file',\
+                             help='Lookup table file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
+                                  'Needed for radar coord input file with --lat/lon seeding option.')
+    coord_group.add_argument('-t','--template', dest='template_file',\
+                             help='template with reference info as below:\n'+TEMPLATE)
+
+    parser.add_argument('-c','--coherence', dest='coherence_file',\
+                        help='use input coherence file to find the pixel with max coherence for reference pixel.')
+    parser.add_argument('--min-coherence', dest='min_coherence', type=float, default=0.85,\
+                        help='minimum coherence of reference pixel for max-coherence method.')
+    parser.add_argument('--method', default='random',\
+                        choices=['input-coord','max-coherence','manual','random','global-average'], \
+                        help='method to select reference pixel:\n\n'+\
+                             'input-coord   : input specific coordinates, enabled when there are coordinates input\n'+\
+                             'max-coherence : select pixel with highest coherence value as reference point\n'+\
+                             '                enabled when there is --coherence option input\n'+\
+                             'manual        : display stack of input file and manually select reference point\n'+\
+                             'random        : random select pixel as reference point\n')
+    return parser
+
+
+def cmdLineParse(iargs = None):
+    '''Command line parser.'''
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+    return inps
+
+
+#######################################  Main Function  ########################################
+def main(argv):
+    inps = cmdLineParse()
+    inps.file = ut.get_file_list(inps.file)[0]
+    inps = read_reference_input(inps)
+    seed_file_inps(inps.file, inps, inps.outfile)
     print('Done.')
     return
 

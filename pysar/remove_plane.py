@@ -9,17 +9,11 @@
 # Yunjun, Aug 2016: Support multiple surfaces
 
 
-import os
-import sys
+import os, sys
 import argparse
-
 import h5py
 import numpy as np
-
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
-import pysar.utils.deramp as deramp
+from pysar.utils import readfile, writefile, utils as ut, deramp
 
 
 ######################################
