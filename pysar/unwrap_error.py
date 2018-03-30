@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -14,11 +14,11 @@ import h5py
 import numpy as np
 from scipy.linalg import pinv
 
-import _datetime as ptime
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
-import _remove_surface as rm
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
+import pysar.utils.deramp as deramp
 
 
 ##########################################################################################
@@ -57,20 +57,19 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     Example:
         'unwrapIfgram_unwCor.h5' = unwrap_error_correction_phase_closure('Seeded_unwrapIfgram.h5','mask.h5')
     '''
-
-    print(('read mask from file: '+mask_file))
+    print('read mask from file: '+mask_file)
     mask = readfile.read(mask_file, epoch='mask')[0].flatten(1)
 
     atr = readfile.read_attribute(ifgram_file)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     k = atr['FILE_TYPE']
     pixel_num = length*width
 
     # Check reference pixel
     try:
-        ref_y = int(atr['ref_y'])
-        ref_x = int(atr['ref_x'])
+        ref_y = int(atr['REF_Y'])
+        ref_x = int(atr['REF_X'])
         print('reference pixel in y/x: %d/%d' % (ref_y, ref_x))
     except:
         sys.exit('ERROR: Can not find ref_y/x value, input file is not referenced in space!')
@@ -82,18 +81,18 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     ##### Prepare curls
     curls, Triangles, C = ut.get_triangles(h5)
     curl_num = np.shape(curls)[0]
-    print(('Number of      triangles: '+  str(curl_num)))
+    print('Number of      triangles: '+  str(curl_num))
 
     curl_file='curls.h5'
     if not os.path.isfile(curl_file):
-        print(('writing >>> '+curl_file))
+        print('writing >>> '+curl_file)
         ut.generate_curls(curl_file, h5, Triangles, curls)
 
     thr=0.50
     curls = np.array(curls);   n1=curls[:,0];   n2=curls[:,1];   n3=curls[:,2]
 
     print('reading interferograms...')
-    print(('Number of interferograms: '+ str(ifgram_num)))
+    print('Number of interferograms: '+ str(ifgram_num))
     data = np.zeros((ifgram_num,pixel_num),np.float32)
     prog_bar = ptime.progress_bar(maxValue=ifgram_num)
     for ni in range(ifgram_num):
@@ -104,7 +103,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     prog_bar.close()
 
     print('reading curls ...') 
-    print(('number of culrs: '+str(curl_num)))
+    print('number of culrs: '+str(curl_num))
     h5curl = h5py.File(curl_file,'r')
     curl_list = sorted(h5curl[k].keys())
     curl_data = np.zeros((curl_num, pixel_num),np.float32)
@@ -157,7 +156,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     ##### Output
     if not ifgram_cor_file:
         ifgram_cor_file = os.path.splitext(ifgram_file)[0]+'_unwCor.h5'
-    print(('writing >>> '+ifgram_cor_file))
+    print('writing >>> '+ifgram_cor_file)
     h5unwCor = h5py.File(ifgram_cor_file,'w') 
     gg = h5unwCor.create_group(k) 
 
@@ -166,7 +165,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
         ifgram = ifgram_list[i]
         group = gg.create_group(ifgram)
         dset = group.create_dataset(ifgram, data=np.reshape(dataCor[i,:],[width,length]).T, compression='gzip')
-        for key, value in list(h5[k][ifgram].attrs.items()):
+        for key, value in h5[k][ifgram].attrs.items():
             group.attrs[key] = value
         prog_bar.update(i+1)
     prog_bar.close()
@@ -195,16 +194,16 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
     mask = readfile.read(mask_file, epoch='mask')[0]
     ramp_mask = mask == 1
     print('estimate phase ramp during the correction')
-    print(('ramp type: '+ramp_type))
+    print('ramp type: '+ramp_type)
 
     ##### Bridge Info
     # Check
     for i in range(len(x_list)):
         if mask[y_list[i],x_list[i]] == 0:
-            print(('\nERROR: Connecting point (%d,%d) is out of masked area! Select them again!\n' % (y_list[i],x_list[i])))
+            print('\nERROR: Connecting point (%d,%d) is out of masked area! Select them again!\n' % (y_list[i],x_list[i]))
             sys.exit(1)
-    print(('Number of bridges: '+str(len(x_list)/2)))
-    print(('Bonding points coordinates:\nx: '+str(x_list)+'\ny: '+str(y_list)))
+    print('Number of bridges: '+str(len(x_list)/2))
+    print('Bonding points coordinates:\nx: '+str(x_list)+'\ny: '+str(y_list))
 
     # Plot Connecting Pair of Points
     plot_bonding_points = False
@@ -234,8 +233,8 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
     k = atr['FILE_TYPE']
 
     try:
-        ref_y = int(atr['ref_y'])
-        ref_x = int(atr['ref_x'])
+        ref_y = int(atr['REF_Y'])
+        ref_x = int(atr['REF_X'])
         print('reference pixel in y/x: %d/%d' % (ref_y, ref_x))
     except:
         sys.exit('ERROR: Can not find ref_y/x value, input file is not referenced in space!')
@@ -254,15 +253,15 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 
         h5out = h5py.File(ifgram_cor_file,'w')
         group = h5out.create_group(k)
-        print(('writing >>> '+ifgram_cor_file))
+        print('writing >>> '+ifgram_cor_file)
 
         if save_cor_deramp_file:
             h5out_deramp = h5py.File(ifgram_cor_deramp_file,'w')
             group_deramp = h5out_deramp.create_group(k)
-            print(('writing >>> '+ifgram_cor_deramp_file))
+            print('writing >>> '+ifgram_cor_deramp_file)
 
         ##### Loop
-        print(('Number of interferograms: '+str(ifgram_num)))
+        print('Number of interferograms: '+str(ifgram_num))
         prog_bar = ptime.progress_bar(maxValue=ifgram_num)
         date12_list = ptime.list_ifgram2date12(ifgram_list)
         for i in range(ifgram_num):
@@ -270,12 +269,11 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
             data = h5[k][ifgram].get(ifgram)[:]
             data -= data[ref_y, ref_x]
 
-            data_deramp, ramp = rm.remove_data_surface(data, ramp_mask, ramp_type)
+            data_deramp, ramp = deramp.remove_data_surface(data, ramp_mask, ramp_type)
             data_derampCor = bridging_data(data_deramp, mask, x_list, y_list)
 
             ramp[data == 0.] = 0.
             gg = group.create_group(ifgram)
-
             dset = gg.create_dataset(ifgram, data=data_derampCor+ramp, compression='gzip')
             for key, value in h5[k][ifgram].attrs.items():
                 gg.attrs[key]=value
@@ -283,7 +281,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
             if save_cor_deramp_file:
                 gg_deramp = group_deramp.create_group(ifgram)
                 dset = gg_deramp.create_dataset(ifgram, data=data_derampCor, compression='gzip')
-                for key, value in list(h5[k][ifgram].attrs.items()):
+                for key, value in h5[k][ifgram].attrs.items():
                     gg_deramp.attrs[key]=value
             prog_bar.update(i+1, suffix=date12_list[i])
 
@@ -295,18 +293,18 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 
     #### .unw file
     elif ext == '.unw':
-        print(('read '+ifgram_file))
+        print('read '+ifgram_file)
         data = readfile.read(ifgram_file)[0]
         data -= data[ref_y, ref_x]
 
-        data_deramp,ramp = rm.remove_data_surface(data,ramp_mask,ramp_type)
+        data_deramp,ramp = deramp.remove_data_surface(data,ramp_mask,ramp_type)
         data_derampCor = bridging_data(data_deramp,mask,x_list,y_list)
 
-        print(('writing >>> '+ifgram_cor_file))
+        print('writing >>> '+ifgram_cor_file)
         ramp[data == 0.] = 0.
         ifgram_cor_file = writefile.write(data_derampCor+ramp, atr, ifgram_cor_file)
         if save_cor_deramp_file:
-            print(('writing >>> '+ifgram_cor_deramp_file))
+            print('writing >>> '+ifgram_cor_deramp_file)
             ifgram_cor_deramp_file = writefile.write(data_derampCor, atr, ifgram_cor_deramp_file)
 
     else:
@@ -322,13 +320,10 @@ def read_template2inps(template_file, inps=None):
 
     print('read options from tempalte file: '+os.path.basename(inps.template_file))
     template = readfile.read_template(inps.template_file)
-    key_list = list(template.keys())
-
-    # Coherence-based network modification
     prefix = 'pysar.unwrapError.'
 
     key = prefix+'method'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['bridging','phase_closure']:
             inps.method = value
@@ -338,13 +333,13 @@ def read_template2inps(template_file, inps=None):
             print('Unrecognized input for %s: %s' % (key, value))
 
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.mask_file = value
 
     key = prefix+'yx'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             yx = value.replace(';',' ').replace(',',' ').split()
@@ -353,7 +348,7 @@ def read_template2inps(template_file, inps=None):
             inps.x = yx[1::2]
 
     key = prefix+'ramp'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto']:
             inps.ramp_type = 'plane'
@@ -479,7 +474,7 @@ def main(argv):
             inps.method = 'bridging'
         else:
             inps.method = 'phase_closure'
-    print(('unwrapping error correction using method: '+inps.method))
+    print('unwrapping error correction using method: '+inps.method)
 
     #####
     if inps.method == 'phase_closure':

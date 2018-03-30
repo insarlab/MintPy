@@ -1,22 +1,23 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2016, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 #
 
 
-import sys
 import os
+import sys
 
 import h5py
 import numpy as np
 
-import _readfile as readfile
-import _writefile as writefile
-import info as info
-import _pysar_utilities as ut
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
+import pysar.info as info
+
 
 
 ################################################################################
@@ -81,7 +82,7 @@ def main(argv):
         if not ut.update_attribute_or_not(atr_new, atr):
             print('All updated (removed) attributes already exists (do not exists) and have the same value, skip update.')
         else:
-            for key, value in list(atr_new.items()):
+            for key, value in iter(atr_new.items()):
                 # delete the item is new value is None
                 if value == 'None':
                     try: atr.pop(key)

@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
@@ -18,11 +18,11 @@ from scipy.interpolate import RegularGridInterpolator as RGI
 import scipy.spatial.qhull as qhull
 
 
-import _datetime as ptime
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
-from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 def geocode_output_filename(fname):
@@ -47,10 +47,10 @@ def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
 
     # copy atr_rdr
     atr = dict()
-    for key, value in list(atr_rdr.items()):
+    for key, value in iter(atr_rdr.items()):
         atr[key] = str(value)
 
-    atr['FILE_LENGTH'] = atr_lut['FILE_LENGTH']
+    atr['LENGTH'] = atr_lut['LENGTH']
     atr['WIDTH']   = atr_lut['WIDTH']
     atr['Y_FIRST'] = atr_lut['Y_FIRST']
     atr['X_FIRST'] = atr_lut['X_FIRST']
@@ -62,29 +62,29 @@ def update_attribute_geo_lut(atr_rdr, atr_lut, print_msg=True):
     except: atr['X_UNIT'] = 'degrees'
 
     # Reference point from y/x to lat/lon
-    if 'ref_y' in list(atr_rdr.keys()) and 'ref_x' in list(atr_rdr.keys()):
-        ref_x_rdr = np.array(int(atr_rdr['ref_x']))
-        ref_y_rdr = np.array(int(atr_rdr['ref_y']))
+    if 'REF_Y' in atr_rdr.keys() and 'REF_X' in atr_rdr.keys():
+        ref_x_rdr = np.array(int(atr_rdr['REF_X']))
+        ref_y_rdr = np.array(int(atr_rdr['REF_Y']))
         trans_file = atr_lut['FILE_PATH']
         ref_lat, ref_lon = ut.radar2glob(ref_y_rdr, ref_x_rdr, trans_file, atr_rdr, print_msg=False)[0:2]
         if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
             ref_y = np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
             ref_x = np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP']))
-            atr['ref_lat'] = str(ref_lat)
-            atr['ref_lon'] = str(ref_lon)
-            atr['ref_y'] = str(int(ref_y))
-            atr['ref_x'] = str(int(ref_x))
+            atr['REF_LAT'] = str(ref_lat)
+            atr['REF_LON'] = str(ref_lon)
+            atr['REF_Y'] = str(int(ref_y))
+            atr['REF_X'] = str(int(ref_x))
             if print_msg:
                 print('update ref_lat/lon/y/x')
         else:
             warnings.warn("original reference pixel is out of .trans file's coverage. Continue.")
-            try: atr.pop('ref_y')
+            try: atr.pop('REF_Y')
             except: pass
-            try: atr.pop('ref_x')
+            try: atr.pop('REF_X')
             except: pass
-            try: atr.pop('ref_lat')
+            try: atr.pop('REF_LAT')
             except: pass
-            try: atr.pop('ref_lon')
+            try: atr.pop('REF_LON')
             except: pass
     return atr
 
@@ -114,26 +114,24 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     ##### with known value on regular radar coordinates (from radar file attribute)
     ## Grid/regular coordinates from row/column number in radar file
     print('------------------------------------------------------')
-    print(('geocoding file: '+fname))
+    print('geocoding file: '+fname)
     atr_rdr = readfile.read_attribute(fname)
-    
-    len_rdr = int(atr_rdr['FILE_LENGTH'])
+    len_rdr = int(atr_rdr['LENGTH'])
     wid_rdr = int(atr_rdr['WIDTH'])
     pts_old = (np.arange(len_rdr), np.arange(wid_rdr))
 
     ## Irregular coordinates from data value in lookup table
-    print(('reading lookup table file: '+lookup_file))
+    print('reading lookup table file: '+lookup_file)
     atr_lut = readfile.read_attribute(lookup_file)
     rg = readfile.read(lookup_file, epoch='range')[0]
     az = readfile.read(lookup_file, epoch='azimuth')[0]
-
-    len_geo = int(atr_lut['FILE_LENGTH'])
+    len_geo = int(atr_lut['LENGTH'])
     wid_geo = int(atr_lut['WIDTH'])
 
     # adjustment if input radar file has been subseted.
-    if 'subset_x0' in list(atr_rdr.keys()):
-        x0 = float(atr_rdr['subset_x0'])
-        y0 = float(atr_rdr['subset_y0'])
+    if 'SUBSET_XMIN' in atr_rdr.keys():
+        x0 = float(atr_rdr['SUBSET_XMIN'])
+        y0 = float(atr_rdr['SUBSET_YMIN'])
         rg -= x0
         az -= y0
         print('\tinput radar coord file has been subsetted, adjust lookup table value')
@@ -146,7 +144,6 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     print('geocoding using scipy.interpolate.RegularGridInterpolator ...')
     data_geo = np.empty((len_geo, wid_geo))
     data_geo.fill(inps.fill_value)
-    
     k = atr_rdr['FILE_TYPE']
     ##### Multiple Dataset File
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
@@ -157,10 +154,10 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)
-        print(('writing >>> '+fname_out))
+        print('writing >>> '+fname_out)
 
         if k in multi_dataset_hdf5_file:
-            print(('number of datasets: '+str(epoch_num)))
+            print('number of datasets: '+str(epoch_num))
             for i in range(epoch_num):
                 date = epoch_list[i]
                 data = h5[k].get(date)[:]
@@ -175,11 +172,11 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
 
             print('update attributes')
             atr = update_attribute_geo_lut(atr_rdr, atr_lut)
-            for key,value in list(atr.items()):
+            for key,value in iter(atr.items()):
                 group.attrs[key] = value
 
         elif k in multi_group_hdf5_file:
-            print(('number of interferograms: '+str(epoch_num)))
+            print('number of interferograms: '+str(epoch_num))
             try:    date12_list = ptime.list_ifgram2date12(epoch_list)
             except: date12_list = epoch_list
             for i in range(epoch_num):
@@ -194,7 +191,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
                 dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
 
                 atr = update_attribute_geo_lut(h5[k][ifgram].attrs, atr_lut, print_msg=False)
-                for key, value in list(atr.items()):
+                for key, value in iter(atr.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
         h5.close()
@@ -202,7 +199,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
 
     ##### Single Dataset File
     else:
-        print(('reading '+fname))
+        print('reading '+fname)
         data = readfile.read(fname)[0]
         RGI_func = RGI(pts_old, data, method=inps.interp_method,\
                        bounds_error=False, fill_value=inps.fill_value)
@@ -211,13 +208,13 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
         print('update attributes')
         atr = update_attribute_geo_lut(atr_rdr, atr_lut)
 
-        print(('writing >>> '+fname_out))
+        print('writing >>> '+fname_out)
         writefile.write(data_geo, atr, fname_out)
 
     del data_geo
-    print(('finished writing file: %s' % (fname_out)))
+    print('finished writing file: %s' % (fname_out))
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
-    print(('Time used: %02d hours %02d mins %02d secs' % (h, m, s)))
+    print('Time used: %02d hours %02d mins %02d secs' % (h, m, s))
     return fname_out
 
 
@@ -260,10 +257,10 @@ def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True
     '''
     # copy atr_rdr
     atr = dict()
-    for key, value in list(atr_rdr.items()):
+    for key, value in iter(atr_rdr.items()):
         atr[key] = str(value)
 
-    atr['FILE_LENGTH'] = str(inps.lat_num)
+    atr['LENGTH'] = str(inps.lat_num)
     atr['WIDTH'] = str(inps.lon_num)
     atr['Y_FIRST'] = str(inps.lat0)
     atr['X_FIRST'] = str(inps.lon0)
@@ -273,12 +270,12 @@ def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True
     atr['X_UNIT'] = 'degrees'
 
     ##Reference pixel
-    if ('ref_y' in list(atr_rdr.keys()) and lat is not None and\
-        'ref_x' in list(atr_rdr.keys()) and lon is not None):
-        length_rdr = int(atr_rdr['FILE_LENGTH'])
+    if ('REF_Y' in atr_rdr.keys() and lat is not None and\
+        'REF_X' in atr_rdr.keys() and lon is not None):
+        length_rdr = int(atr_rdr['LENGTH'])
         width_rdr = int(atr_rdr['WIDTH'])
-        ref_y_rdr = int(atr_rdr['ref_y'])
-        ref_x_rdr = int(atr_rdr['ref_x'])
+        ref_y_rdr = int(atr_rdr['REF_Y'])
+        ref_x_rdr = int(atr_rdr['REF_X'])
         ref_lat = lat[ref_y_rdr, ref_x_rdr]
         ref_lon = lon[ref_y_rdr, ref_x_rdr]
 
@@ -287,21 +284,21 @@ def update_attribute_radar_lut(atr_rdr, inps, lat=None, lon=None, print_msg=True
         if 0 <= ref_y <= inps.lat_num and 0 <= ref_x <= inps.lon_num:
             ref_lat = inps.lat0 + ref_y * inps.lat_step
             ref_lon = inps.lon0 + ref_x * inps.lon_step
-            atr['ref_lat'] = str(ref_lat)
-            atr['ref_lon'] = str(ref_lon)
-            atr['ref_y'] = str(ref_y)
-            atr['ref_x'] = str(ref_x)
+            atr['REF_LAT'] = str(ref_lat)
+            atr['REF_LON'] = str(ref_lon)
+            atr['REF_Y'] = str(ref_y)
+            atr['REF_X'] = str(ref_x)
             if print_msg:
                 print('update ref_lat/lon/y/x')
         else:
             warnings.warn("original reference pixel is out of lookup file's coverage. Continue.")
-            try: atr.pop('ref_y')
+            try: atr.pop('REF_Y')
             except: pass
-            try: atr.pop('ref_x')
+            try: atr.pop('REF_X')
             except: pass
-            try: atr.pop('ref_lat')
+            try: atr.pop('REF_LAT')
             except: pass
-            try: atr.pop('ref_lon')
+            try: atr.pop('REF_LON')
             except: pass
     return atr
 
@@ -331,7 +328,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
     if inps.interp_method != 'linear':
         print('ERROR: Supported interpolation method: linear')
-        print(('Input method is '+inps.interp_method))
+        print('Input method is '+inps.interp_method)
         sys.exit(-1)
 
     if not fname_out:
@@ -339,19 +336,19 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
     ## Read lookup table file
     atr_rdr = readfile.read_attribute(fname)
-    length = int(atr_rdr['FILE_LENGTH'])
+    length = int(atr_rdr['LENGTH'])
     width = int(atr_rdr['WIDTH'])
-    print(('reading lookup table file '+lookup_file))
+    print('reading lookup table file '+lookup_file)
     lat = readfile.read(lookup_file, epoch='latitude')[0]
     lon = readfile.read(lookup_file, epoch='longitude')[0]
 
     #####Prepare output pixel grid: lat/lon range and step
     if os.path.isfile(inps.lalo_step):
-        print(('use file %s as reference for output grid lat/lon range and step' % (inps.lalo_step)))
+        print('use file %s as reference for output grid lat/lon range and step' % (inps.lalo_step))
         atr_ref = readfile.read_attribute(inps.lalo_step)
         inps.lat_step = float(atr_ref['Y_STEP'])
         inps.lon_step = float(atr_ref['X_STEP'])
-        inps.lat_num = int(atr_ref['FILE_LENGTH'])
+        inps.lat_num = int(atr_ref['LENGTH'])
         inps.lon_num = int(atr_ref['WIDTH'])
         inps.lat0 = float(atr_ref['Y_FIRST'])
         inps.lon0 = float(atr_ref['X_FIRST'])
@@ -372,12 +369,12 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
         except ValueError:
             print('Input lat/lon step is neither a float number nor a file in geo-coord, please try again.')
 
-    print(('output lat range: %f - %f' % (inps.lat0, inps.lat1)))
-    print(('output lon range: %f - %f' % (inps.lon0, inps.lon1)))
-    print(('output lat_step : %f' % (inps.lat_step)))
-    print(('output lon_step : %f' % (inps.lon_step)))
-    print(('input  file size in   y/x  : %d/%d' % (length, width)))
-    print(('output file size in lat/lon: %d/%d' % (inps.lat_num, inps.lon_num)))
+    print('output lat range: %f - %f' % (inps.lat0, inps.lat1))
+    print('output lon range: %f - %f' % (inps.lon0, inps.lon1))
+    print('output lat_step : %f' % (inps.lat_step))
+    print('output lon_step : %f' % (inps.lon_step))
+    print('input  file size in   y/x  : %d/%d' % (length, width))
+    print('output file size in lat/lon: %d/%d' % (inps.lat_num, inps.lon_num))
 
     grid_lat, grid_lon = np.mgrid[inps.lat0:inps.lat1:inps.lat_num*1j,\
                                   inps.lon0:inps.lon1:inps.lon_num*1j]
@@ -408,11 +405,10 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)
-        print(('writing >>> '+fname_out))
+        print('writing >>> '+fname_out)
 
         if k in multi_dataset_hdf5_file:
-            print(('number of acquisitions: '+str(epoch_num)))
-
+            print('number of acquisitions: '+str(epoch_num))
             for i in range(epoch_num):
                 date = epoch_list[i]
                 data = h5[k].get(date)[:]
@@ -425,14 +421,13 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
             print('update attributes')
             atr = update_attribute_radar_lut(atr_rdr, inps, lat, lon)
-            for key,value in list(atr.items()):
+            for key,value in iter(atr.items()):
                 group.attrs[key] = value
 
         elif k in multi_group_hdf5_file:
-            print(('number of interferograms: '+str(epoch_num)))
+            print('number of interferograms: '+str(epoch_num))
             try:    date12_list = ptime.list_ifgram2date12(epoch_list)
             except: date12_list = epoch_list
-
             for i in range(epoch_num):
                 ifgram = epoch_list[i]
                 data = h5[k][ifgram].get(ifgram)[:]
@@ -443,7 +438,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
                 dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
 
                 atr = update_attribute_radar_lut(h5[k][ifgram].attrs, inps, lat, lon, print_msg=False)
-                for key, value in list(atr.items()):
+                for key, value in iter(atr.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
             prog_bar.close()
@@ -452,7 +447,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
     ##### Single Dataset File
     else:
-        print(('reading '+fname))
+        print('reading '+fname)
         data = readfile.read(fname)[0]
 
         ##Solution 1 - qhull
@@ -467,48 +462,47 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
         print('update attributes')
         atr = update_attribute_radar_lut(atr_rdr, inps, lat, lon)
 
-        print(('writing >>> '+fname_out))
+        print('writing >>> '+fname_out)
         writefile.write(data_geo, atr, fname_out)
 
     del data_geo, vtx, wts
-    print(('finished writing file: %s' % (fname_out)))
+    print('finished writing file: %s' % (fname_out))
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
-    print(('Time used: %02d hours %02d mins %02d secs' % (h, m, s)))
+    print('Time used: %02d hours %02d mins %02d secs' % (h, m, s))
     return fname_out
 
 
 def geocode_file(fname, lookup_file, fname_out, inps):
     '''Geocode input file with lookup table file'''
     atr = readfile.read_attribute(lookup_file)
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         if not inps.interp_method:
             inps.interp_method = 'nearest'
-        print(('lookup table in geo coordinates: '+lookup_file))
-        print(('interpolation method: '+inps.interp_method))
+        print('lookup table in geo coordinates: '+lookup_file)
+        print('interpolation method: '+inps.interp_method)
         fname_out = geocode_file_geo_lut(fname, lookup_file, fname_out, inps)
     else:
         if not inps.interp_method:
             inps.interp_method = 'linear'
-        print(('lookup table in radar coordinates: '+lookup_file))
-        print(('interpolation method: '+inps.interp_method))
+        print('lookup table in radar coordinates: '+lookup_file)
+        print('interpolation method: '+inps.interp_method)
         fname_out = geocode_file_radar_lut(fname, lookup_file, fname_out, inps)
     return fname_out
 
 
 def read_template2inps(template_file, inps):
     '''Read input template options into Namespace inps'''
-    print(('read input option from template file: '+template_file))
+    print('read input option from template file: '+template_file)
     if not inps:
         inps = cmdLineParse()
 
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     # Coherence-based network modification
     prefix = 'pysar.geocode.'
 
     key = prefix+'resolution'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto']:
             inps.lalo_step = value
@@ -573,12 +567,11 @@ def main(argv):
         inps = read_template2inps(inps.template_file, inps)
 
     inps.file = ut.get_file_list(inps.file)
-
-    print(('number of files to geocode: '+str(len(inps.file))))
-    print((inps.file))
+    print('number of files to geocode: '+str(len(inps.file)))
+    print(inps.file)
     if len(inps.file) > 1:
         inps.outfile = None
-    print(('fill_value: '+str(inps.fill_value)))
+    print('fill_value: '+str(inps.fill_value))
 
     ##Check Lookup table
     inps.lookup_file = ut.get_lookup_file(inps.lookup_file)

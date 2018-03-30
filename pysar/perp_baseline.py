@@ -1,20 +1,21 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 
 
 import sys
+import os
 
 import h5py
 import numpy as np
 
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
-import _datetime as ptime
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 def usage():
@@ -55,7 +56,7 @@ def main(argv):
     
     k = atr['FILE_TYPE']
     width = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     
     h5 = h5py.File(File, 'r')
     epochList = sorted(h5[k].keys())
@@ -68,8 +69,7 @@ def main(argv):
     if not outFile:
         outFile = 'perpBaseline_'+epoch+'.h5'
 
-    print(('writing >>> '+outFile))
-    
+    print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'
     writefile.write(pbase_xy, atr, outFile)

@@ -1,15 +1,19 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
 
-import sys
-import numpy as np
+import os
+import sys 
 
-import _readfile as readfile
+import h5py
+import numpy as np
+import matplotlib.pyplot as plt
+
+import pysar.utils.readfile as readfile
 
 
 ################################################################################
@@ -34,7 +38,7 @@ def main(argv):
 
     dem, demRsc = readfile.read(demFile)
     data, atr   = readfile.read(File)
-    print(('Input file is '+atr['FILE_TYPE']))
+    print('Input file is '+atr['FILE_TYPE'])
 
     # Subset
     try:
@@ -54,12 +58,12 @@ def main(argv):
 
     # Display
     print('-------------------------------------------')
-    print(('Correlation with the DEM:  %.2f' % np.corrcoef(C1)[0][1]))
+    print('Correlation with the DEM:  %.2f' % np.corrcoef(C1)[0][1])
     print('-------------------------------------------')
     print('DEM info:')
-    print(('    Max height difference: %.2f m' % (np.max(dem[ndx])-np.min(dem[ndx]))))
-    print(('    Average        height: %.2f m' % np.mean(dem[ndx])))
-    print(('    Height            Std: %.2f m' % np.std(dem[ndx])))
+    print('    Max height difference: %.2f m' % (np.max(dem[ndx])-np.min(dem[ndx])))
+    print('    Average        height: %.2f m' % np.mean(dem[ndx]))
+    print('    Height            Std: %.2f m' % np.std(dem[ndx]))
     return
 
 ################################################################################

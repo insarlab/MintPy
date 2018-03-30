@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -10,14 +10,15 @@ import sys
 import os
 import argparse
 import warnings
+import re
 
 import h5py
 import numpy as np
 
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
-import _datetime as ptime
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 ######################################## Sub Functions ############################################
@@ -51,23 +52,24 @@ def multilook_matrix(matrix,lks_y,lks_x):
 def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
     #####
     atr = dict()
-    for key, value in list(atr_dict.items()):  atr[key] = str(value)
+    for key, value in iter(atr_dict.items()):
+        atr[key] = str(value)
   
     ##### calculate new data size
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
     length_mli = int(np.floor(length/lks_y))
     width_mli  = int(np.floor(width/lks_x))
   
     ##### Update attributes
-    atr['FILE_LENGTH'] = str(length_mli)
+    atr['LENGTH'] = str(length_mli)
     atr['WIDTH'] = str(width_mli)
     atr['XMIN'] = '0'
     atr['YMIN'] = '0'
     atr['XMAX'] = str(width_mli-1)
     atr['YMAX'] = str(length_mli-1)
     if print_msg:
-        print('update FILE_LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX')
+        print('update LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX')
     
     try:
         atr['Y_STEP'] = str(lks_y*float(atr['Y_STEP']))
@@ -80,7 +82,7 @@ def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
         if print_msg: print('update AZIMUTH/RANGE_PIXEL_SIZE')
     except: pass
 
-    if not 'Y_FIRST' in list(atr.keys()):
+    if not 'Y_FIRST' in atr.keys():
         try:
             atr['RLOOKS'] = str(int(atr['RLOOKS'])*lks_x)
             atr['ALOOKS'] = str(int(atr['ALOOKS'])*lks_y)
@@ -88,15 +90,15 @@ def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
         except: pass
 
     try:
-        atr['ref_y'] = str(int(int(atr['ref_y'])/lks_y))
-        atr['ref_x'] = str(int(int(atr['ref_x'])/lks_x))
+        atr['REF_Y'] = str(int(int(atr['REF_Y'])/lks_y))
+        atr['REF_X'] = str(int(int(atr['REF_X'])/lks_x))
         if print_msg: print('update ref_y/x')
     except: pass
     try:
-        atr['subset_y0'] = str(int(int(atr['subset_y0'])/lks_y))
-        atr['subset_y1'] = str(int(int(atr['subset_y1'])/lks_y))
-        atr['subset_x0'] = str(int(int(atr['subset_x0'])/lks_x))
-        atr['subset_x1'] = str(int(int(atr['subset_x1'])/lks_x))
+        atr['SUBSET_YMIN'] = str(int(int(atr['SUBSET_YMIN'])/lks_y))
+        atr['SUBSET_YMAX'] = str(int(int(atr['SUBSET_YMAX'])/lks_y))
+        atr['SUBSET_XMIN'] = str(int(int(atr['SUBSET_XMIN'])/lks_x))
+        atr['SUBSET_XMAX'] = str(int(int(atr['SUBSET_XMAX'])/lks_x))
         if print_msg: print('update subset_y0/y1/x0/x1')
     except: pass
 
@@ -110,9 +112,9 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## input file info
     atr = readfile.read_attribute(infile)
     k = atr['FILE_TYPE']
-    print(('multilooking '+k+' file '+infile))
-    print(('number of looks in y / azimuth direction: %d' % lks_y))
-    print(('number of looks in x / range   direction: %d' % lks_x))
+    print('multilooking '+k+' file '+infile)
+    print('number of looks in y / azimuth direction: %d' % lks_y)
+    print('number of looks in x / range   direction: %d' % lks_x)
 
     ## output file name
     if not outfile:
@@ -121,7 +123,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
             outfile = os.path.splitext(infile)[0]+'_'+str(lks_y)+'alks_'+str(lks_x)+'rlks'+ext
         else:
             outfile = os.path.basename(infile)
-    print(('writing >>> '+outfile))
+    print('writing >>> '+outfile)
 
     ###############################################################################
     ## Read/Write multi-dataset files
@@ -136,7 +138,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
         if k in ['interferograms','coherence','wrapped']:
             date12_list = ptime.list_ifgram2date12(epochList)
-            print(('number of interferograms: '+str(len(epochList))))
+            print('number of interferograms: '+str(len(epochList)))
             for i in range(epoch_num):
                 epoch = epochList[i]
                 data = h5[k][epoch].get(epoch)[:]
@@ -147,12 +149,12 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data_mli, compression='gzip')
-                for key, value in list(atr_mli.items()):
+                for key, value in iter(atr_mli.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
 
         elif k == 'timeseries':
-            print(('number of acquisitions: '+str(len(epochList))))
+            print('number of acquisitions: '+str(len(epochList)))
             for i in range(epoch_num):
                 epoch = epochList[i]
                 data = h5[k].get(epoch)[:]
@@ -163,7 +165,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 prog_bar.update(i+1, suffix=epoch)
             atr = h5[k].attrs
             atr_mli = multilook_attribute(atr,lks_y,lks_x)
-            for key, value in list(atr_mli.items()):
+            for key, value in iter(atr_mli.items()):
                 group.attrs[key] = value
 
         h5.close()

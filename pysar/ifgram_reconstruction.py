@@ -1,21 +1,20 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
 import sys
-import getopt
 import time
 import datetime
 
 import h5py
 import numpy as np
 
-import _datetime as ptime
-import _readfile as readfile
-import _pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
 
 
 #####################################################################################
@@ -51,7 +50,7 @@ def main(argv):
     except: outfile = 'reconstructed_'+ifgram_file
 
     atr = readfile.read_attribute(timeseries_file)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
     ##### Read time-series file
@@ -61,7 +60,7 @@ def main(argv):
     date_num = len(date_list)
     timeseries = np.zeros((date_num, length*width))
 
-    print(('number of acquisitions: '+str(date_num)))
+    print('number of acquisitions: '+str(date_num))
     prog_bar = ptime.progress_bar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
@@ -84,7 +83,7 @@ def main(argv):
     del timeseries
 
     ##### Write interferograms file
-    print(('writing >>> '+outfile))
+    print('writing >>> '+outfile)
     h5 = h5py.File(ifgram_file,'r')
     ifgram_list = sorted(h5['interferograms'].keys())
     ifgram_num = len(ifgram_list)
@@ -93,7 +92,7 @@ def main(argv):
     h5out = h5py.File(outfile,'w')
     group = h5out.create_group('interferograms')
 
-    print(('number of interferograms: '+str(ifgram_num)))
+    print('number of interferograms: '+str(ifgram_num))
     prog_bar = ptime.progress_bar(maxValue=ifgram_num)
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
@@ -101,7 +100,7 @@ def main(argv):
 
         gg = group.create_group(ifgram)
         dset = gg.create_dataset(ifgram, data=data, compression='gzip')
-        for key, value in list(h5['interferograms'][ifgram].attrs.items()):
+        for key, value in h5['interferograms'][ifgram].attrs.items():
             gg.attrs[key] = value
         prog_bar.update(i+1, suffix=date12_list[i])
     prog_bar.close()

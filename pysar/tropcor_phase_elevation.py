@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -8,14 +8,17 @@
 
 import os
 import sys
+import time
+import datetime
 import argparse
 
 import h5py
 import numpy as np
+import matplotlib.pyplot as plt
 
-import _datetime as ptime
-import _readfile as readfile
-import _pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
 
 
 ############################################################################
@@ -64,13 +67,13 @@ def main(argv):
     # Basic info
     atr = readfile.read_attribute(inps.timeseries_file)
     k = atr['FILE_TYPE']
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     pix_num = length*width
 
     # default DEM file
     if not inps.dem_file:
-        if 'X_FIRST' in list(atr.keys()):
+        if 'X_FIRST' in atr.keys():
             inps.dem_file = ['demGeo_tight.h5', 'demGeo.h5']
         else:
             inps.dem_file = ['demRadar.h5']
@@ -82,7 +85,7 @@ def main(argv):
 
     # default Mask file
     if not inps.mask_file:
-        if 'X_FIRST' in list(atr.keys()):
+        if 'X_FIRST' in atr.keys():
             inps.mask_file = 'geo_maskTempCoh.h5'
         else:
             inps.mask_file = 'maskTempCoh.h5'
@@ -91,23 +94,19 @@ def main(argv):
             sys.exit('ERROR: No mask file found!')
 
     ##### Read Mask
-
-    print(('reading mask from file: '+inps.mask_file))
+    print('reading mask from file: '+inps.mask_file)
     mask = readfile.read(inps.mask_file, epoch='mask')[0].flatten(1)
-
     ndx = mask != 0
     msk_num = np.sum(ndx)
-    print(('total            pixel number: %d' % pix_num))
-    print(('estimating using pixel number: %d' % msk_num))
+    print('total            pixel number: %d' % pix_num)
+    print('estimating using pixel number: %d' % msk_num)
 
     ##### Read DEM
-
-    print(('read DEM from file: '+inps.dem_file))
+    print('read DEM from file: '+inps.dem_file)
     dem = readfile.read(inps.dem_file, epoch='height')[0]
 
-
-    ref_y = int(atr['ref_y'])
-    ref_x = int(atr['ref_x'])
+    ref_y = int(atr['REF_Y'])
+    ref_x = int(atr['REF_X'])
     dem -= dem[ref_y,ref_x]
 
     print('considering the incidence angle of each pixel ...')
@@ -125,7 +124,7 @@ def main(argv):
     elif inps.poly_order == 3:
         A = np.vstack((dem[ndx]**3, dem[ndx]**2, dem[ndx], np.ones(msk_num))).T
         B = np.vstack((dem**3,      dem**2,      dem,      np.ones(pix_num))).T
-    print(('polynomial order: %d' % inps.poly_order))
+    print('polynomial order: %d' % inps.poly_order)
 
     A_inv = np.linalg.pinv(A)
 
@@ -135,8 +134,8 @@ def main(argv):
     h5 = h5py.File(inps.timeseries_file)
     date_list = sorted(h5[k].keys())
     date_num = len(date_list)
-    print(('number of acquisitions: '+str(date_num)))
-    try:    ref_date = atr['ref_date']
+    print('number of acquisitions: '+str(date_num))
+    try:    ref_date = atr['REF_DATE']
     except: ref_date = date_list[0]
 
     print('----------------------------------------------------------')
@@ -161,12 +160,12 @@ def main(argv):
                 par = np.zeros(inps.poly_order+1)
             else:
                 par = np.dot(A_inv, data[ndx])
-        print(('%s: %.2f' % (date, cc)))
+        print('%s: %.2f' % (date, cc))
         par_dict[date] = par
 
     average_phase_height_corr = np.nansum(np.abs(corr_array))/(date_num-1)
     print('----------------------------------------------------------')
-    print(('Average Correlation of DEM with time-series epochs: %.2f' % average_phase_height_corr))
+    print('Average Correlation of DEM with time-series epochs: %.2f' % average_phase_height_corr)
 
     # Correlation of DEM with Difference of subsequent epochs (Not used for now)
     corr_diff_dict = {}
@@ -193,7 +192,7 @@ def main(argv):
     ##### Correct and write time-series file
     print('----------------------------------------------------------')
     print('removing the stratified tropospheric delay from each epoch')
-    print(('writing >>> '+inps.outfile))
+    print('writing >>> '+inps.outfile)
     h5out = h5py.File(inps.outfile,'w')
     group = h5out.create_group(k)
 
@@ -211,7 +210,7 @@ def main(argv):
         dset = group.create_dataset(date, data=data, compression='gzip')
         prog_bar.update(i+1, suffix=date)
 
-    for key,value in list(atr.items()):
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
 
     prog_bar.close()

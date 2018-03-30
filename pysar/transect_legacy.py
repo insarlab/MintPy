@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR v1.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
@@ -13,8 +13,9 @@ import getopt
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
-import _readfile as readfile
+import pysar.utils.readfile as readfile
 
 
 ############################################################
@@ -215,7 +216,7 @@ def find_row_column(Lon,Lat,lon,lat,lon_step,lat_step):
 ################################################
 def get_lat_lon(atr):
     Width    = float(atr['WIDTH'])
-    Length   = float(atr['FILE_LENGTH'])
+    Length   = float(atr['LENGTH'])
     ullon    = float(atr['X_FIRST'])
     ullat    = float(atr['Y_FIRST'])
     lon_step = float(atr['X_STEP'])
@@ -356,13 +357,13 @@ def main(argv):
     try: atr = readfile.read_attribute(velocityFile)
     except:  Usage(); sys.exit(1)
     k = atr['FILE_TYPE']
-    print(('input file is '+k))
+    print('input file is '+k)
 
     h5file = h5py.File(velocityFile,'r')
     z= h5file[k].get(k)[:]
 
     width  = int(atr['WIDTH'])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     try: lat,lon,lat_step,lon_step,lat_all,lon_all = get_lat_lon(atr)
     except:  print('radar coordinate')
 
@@ -378,12 +379,12 @@ def main(argv):
         print(' Fault Coordinates:')
         print('   --------------------------  ')
         print('    Lat          Lon')
-        print((str(Lat0) + ' , ' +str(Lon0)))
-        print((str(Lat1) + ' , ' +str(Lon1)))
+        print(str(Lat0) + ' , ' +str(Lon0))
+        print(str(Lat1) + ' , ' +str(Lon1))
         print('   --------------------------  ')
         print('    row          column')
-        print((str(Yf0) + ' , ' +str(Xf0)))
-        print((str(Yf1) + ' , ' +str(Xf1)))
+        print(str(Yf0) + ' , ' +str(Xf0))
+        print(str(Yf1) + ' , ' +str(Xf1))
         print('*********************************************')
         #mf=float(Yf1-Yf0)/float((Xf1-Xf0))  # slope of the fault line
         #cf=float(Yf0-mf*Xf0)   # intercept of the fault line
@@ -436,8 +437,8 @@ def main(argv):
 ##############################################################################
     print('******************************************************')
     print('First profile coordinates:')
-    print(('Start point:  y = '+str(y0)+', x = '+str(x0))) 
-    print(('End   point:  y = '+str(y1)+', x = '+str(x1)))   
+    print('Start point:  y = '+str(y0)+', x = '+str(x0)) 
+    print('End   point:  y = '+str(y1)+', x = '+str(x1))   
     print('******************************************************')
     length = int(np.hypot(x1-x0, y1-y0))
     x, y = np.linspace(x0, x1, length), np.linspace(y0, y1, length)
@@ -457,7 +458,7 @@ def main(argv):
         DY=(y-y0)*dy
         D =np.hypot(DX, DY)
         print('geo coordinate:')
-        print(('profile length = ' +str(D[-1]/1000.0) + ' km'))
+        print('profile length = ' +str(D[-1]/1000.0) + ' km')
         # df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
     except:
         dx=float(atr['RANGE_PIXEL_SIZE'])
@@ -466,14 +467,11 @@ def main(argv):
         DY=(y-y0)*dy
         D=np.hypot(DX, DY)
         print('radar coordinate:')
-        print(('profile length = ' +str(D[-1]/1000.0) + ' km'))       
+        print('profile length = ' +str(D[-1]/1000.0) + ' km')       
         # df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
 
     try: df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
     except: print('Fault line is not specified')
-
-    import pdb; pdb.set_trace()
-
 
     transect      = np.zeros([len(D),ntrans])
     transect[:,0] = zi
@@ -559,7 +557,7 @@ def main(argv):
        lat,lon,lat_step,lon_step,lat_all,lon_all=get_lat_lon(h5file)
        IDYref,IDXref=find_row_column(Lon[idxRef],Lat[idxRef],lon,lat,lon_step,lat_step)
        if (not np.isnan(IDYref)) and (not np.isnan(IDXref)):
-         print(('referencing InSAR data to the GPS station at : ' + str(IDYref) + ' , '+ str(IDXref)))
+         print('referencing InSAR data to the GPS station at : ' + str(IDYref) + ' , '+ str(IDXref))
          if not np.isnan(insarData[IDYref][IDXref]):
              transect = transect - insarData[IDYref][IDXref]
              insarData=insarData - insarData[IDYref][IDXref]
@@ -624,7 +622,7 @@ def main(argv):
 
        gpsLOS_ref = gps_to_LOS(Ve[idxRef],Vn[idxRef],theta[IDYref,IDXref],heading)
        print('%%%%%%^^^^^^^%%%%%%%%')
-       print((gpsLOS_ref/1000.0))
+       print(gpsLOS_ref/1000.0)
       # insarData=insarData -gpsLOS_ref/1000.0 
       # transect = transect -gpsLOS_ref/1000.0
 
@@ -644,7 +642,7 @@ def main(argv):
          #  gpsLOS=gpsLOS-gpsLOS_ref
 
            IDY,IDX=find_row_column(Lon[idx],Lat[idx],lon,lat,lon_step,lat_step)
-           print((theta[IDY,IDX]))
+           print(theta[IDY,IDX])
            gpsLOS = gps_to_LOS(Ve[idx],Vn[idx],theta[IDY,IDX],heading)
          #  gpsLOS = gpsLOS-gpsLOS_ref
 
@@ -793,7 +791,7 @@ def main(argv):
     axes2.axis('image')
 
     figName = 'transect_area.png'
-    print(('writing '+figName))
+    print('writing '+figName)
     plt.savefig(figName)    
 
 #############################################################################
@@ -822,7 +820,7 @@ def main(argv):
        dataset['Distance_along_profile']=D
        print('*****************************************')
        print('')
-       print(('writing transect to >>> '+matFile))
+       print('writing transect to >>> '+matFile)
        sio.savemat(matFile, {'dataset': dataset})
        print('')
        print('*****************************************')
@@ -914,7 +912,7 @@ def main(argv):
 
 
     figName = 'transect.png'
-    print(('writing '+figName))
+    print('writing '+figName)
     plt.savefig(figName)
     print('')
     print('________________________________')

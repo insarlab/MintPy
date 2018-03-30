@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import getopt
 import sys
 import os
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 def usage():
     print('''
@@ -246,7 +247,7 @@ def find_row_column(Lon,Lat,lon,lat,lon_step,lat_step):
 
 def get_lat_lon(h5file):
    k=list(h5file.keys())
-   Length=float(h5file[k[0]].attrs['FILE_LENGTH'])
+   Length=float(h5file[k[0]].attrs['LENGTH'])
    Width=float(h5file[k[0]].attrs['WIDTH'])
    ullon=float(h5file[k[0]].attrs['X_FIRST'])
    ullat=float(h5file[k[0]].attrs['Y_FIRST'])
@@ -456,7 +457,7 @@ def main(argv):
   Num_profiles=len(Fault_lon)-1
   print('*********************************************')
   print('*********************************************')
-  print(('Number of profiles to be generated: '+str(Num_profiles)))
+  print('Number of profiles to be generated: '+str(Num_profiles))
   print('*********************************************')
   print('*********************************************')
 
@@ -465,7 +466,7 @@ def main(argv):
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     print('')
-    print(('Profile '+str(Np) + ' [of total '+str(Num_profiles)+']'))
+    print('Profile '+str(Np) + ' [of total '+str(Num_profiles)+']')
     print('')
     
     try:
@@ -482,12 +483,12 @@ def main(argv):
       print(' Fault Coordinates:')
       print('   --------------------------  ')
       print('    Lat          Lon')
-      print((str(Lat0) + ' , ' +str(Lon0)))
-      print((str(Lat1) + ' , ' +str(Lon1)))
+      print(str(Lat0) + ' , ' +str(Lon0))
+      print(str(Lat1) + ' , ' +str(Lon1))
       print('   --------------------------  ')
       print('    row          column')
-      print((str(Yf0) + ' , ' +str(Xf0)))
-      print((str(Yf1) + ' , ' +str(Xf1)))
+      print(str(Yf0) + ' , ' +str(Xf0))
+      print(str(Yf1) + ' , ' +str(Xf1))
       print('*********************************************')
 #      mf=float(Yf1-Yf0)/float((Xf1-Xf0))  # slope of the fault line
 #      cf=float(Yf0-mf*Xf0)   # intercept of the fault line
@@ -546,11 +547,11 @@ def main(argv):
 ##############################################################################
     print('******************************************************')
     print('First profile coordinates:')
-    print(('Start point:  y = '+str(y0) +',x = '+ str(x0))) 
-    print(('End point:   y = '+ str(y1) + '  , x = '+str(x1)))   
+    print('Start point:  y = '+str(y0) +',x = '+ str(x0)) 
+    print('End point:   y = '+ str(y1) + '  , x = '+str(x1))   
     print('') 
-    print((str(y0) +','+ str(x0)))
-    print((str(y1) +','+ str(x1)))
+    print(str(y0) +','+ str(x0))
+    print(str(y1) +','+ str(x1))
     print('******************************************************')
     length = int(np.hypot(x1-x0, y1-y0))
     x, y = np.linspace(x0, x1, length), np.linspace(y0, y1, length)
@@ -575,7 +576,7 @@ def main(argv):
        DY=(y-y0)*dy
        D=np.hypot(DX, DY)
        print('geo coordinate:')
-       print(('profile length = ' +str(D[-1]/1000.0) + ' km'))
+       print('profile length = ' +str(D[-1]/1000.0) + ' km')
      #  df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
     except:
        dx=float(h5file[k[0]].attrs['RANGE_PIXEL_SIZE'])
@@ -584,7 +585,7 @@ def main(argv):
        DY=(y-y0)*dy
        D=np.hypot(DX, DY)
        print('radar coordinate:')
-       print(('profile length = ' +str(D[-1]/1000.0) + ' km'))       
+       print('profile length = ' +str(D[-1]/1000.0) + ' km')       
     #   df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
 
     try:
@@ -694,7 +695,7 @@ def main(argv):
        lat,lon,lat_step,lon_step = get_lat_lon(h5file,Length,Width)
        IDYref,IDXref=find_row_column(Lon[idxRef],Lat[idxRef],lon,lat,lon_step,lat_step)
        if (not np.isnan(IDYref)) and (not np.isnan(IDXref)):
-         print(('referencing InSAR data to the GPS station at : ' + str(IDYref) + ' , '+ str(IDXref)))
+         print('referencing InSAR data to the GPS station at : ' + str(IDYref) + ' , '+ str(IDXref))
          if not np.isnan(insarData[IDYref][IDXref]):
              transect = transect - insarData[IDYref][IDXref]
              insarData=insarData - insarData[IDYref][IDXref]
@@ -759,7 +760,7 @@ def main(argv):
 
        gpsLOS_ref = gps_to_LOS(Ve[idxRef],Vn[idxRef],theta[IDYref,IDXref],heading)
        print('%%%%%%^^^^^^^%%%%%%%%')
-       print((gpsLOS_ref/1000.0))
+       print(gpsLOS_ref/1000.0)
       # insarData=insarData -gpsLOS_ref/1000.0 
       # transect = transect -gpsLOS_ref/1000.0
 
@@ -779,7 +780,7 @@ def main(argv):
          #  gpsLOS=gpsLOS-gpsLOS_ref
 
            IDY,IDX=find_row_column(Lon[idx],Lat[idx],lon,lat,lon_step,lat_step)
-           print((theta[IDY,IDX]))
+           print(theta[IDY,IDX])
            gpsLOS = gps_to_LOS(Ve[idx],Vn[idx],theta[IDY,IDX],heading)
          #  gpsLOS = gpsLOS-gpsLOS_ref
 
@@ -928,7 +929,7 @@ def main(argv):
     axes2.axis('image')
 
     figName = 'transect_area_'+str(Np)+'.png'
-    print(('writing '+figName))
+    print('writing '+figName)
     plt.savefig(figName)    
 
 #############################################################################
@@ -957,7 +958,7 @@ def main(argv):
        dataset['Distance_along_profile']=D
        print('*****************************************')
        print('')
-       print(('writing transect to >>> '+matFile))
+       print('writing transect to >>> '+matFile)
        sio.savemat(matFile, {'dataset': dataset})
        print('')
        print('*****************************************')
@@ -1048,7 +1049,7 @@ def main(argv):
 
 
     figName = 'transect_'+str(Np)+'.png'
-    print(('writing '+figName))
+    print('writing '+figName)
     plt.savefig(figName)
     print('')
     print('________________________________')

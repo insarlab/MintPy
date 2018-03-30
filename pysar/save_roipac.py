@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -10,13 +10,13 @@ import sys
 import os
 import argparse
 
-from numpy import pi
 import h5py
+from numpy import pi
 
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._datetime as ptime
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ##############################################################################
@@ -33,7 +33,7 @@ argument:
                              used as the reference date.
 
 example:
-''')
+    ''')
     return
 
 ############################################################
@@ -81,7 +81,7 @@ def main(argv):
         data=(-4*pi/wvl)*data
 
         inps.outfile=inps.file.split('.')[0]+'.unw'
-        print(('writing >>> '+inps.outfile))
+        print('writing >>> '+inps.outfile)
         writefile.write(data,atr,inps.outfile)
 
     elif k in multi_dataset_hdf5_file:
@@ -95,7 +95,7 @@ def main(argv):
             inps.epoch = ptime.yyyymmdd(inps.epoch)
 
         ## Data
-        print(('reading %s and %s ...' % (inps.ref_date, inps.epoch)))
+        print('reading %s and %s ...' % (inps.ref_date, inps.epoch))
         data = h5file[k].get(inps.epoch)[:]
         if inps.ref_date:
             inps.ref_date = ptime.yyyymmdd(inps.ref_date)
@@ -113,19 +113,17 @@ def main(argv):
             atr['DATE12']            = '%s-%s' % (inps.ref_date[2:8],inps.epoch[2:8])
 
         ## Writing
-
         if not inps.outfile:
             if k in ['timeseries']:
                 inps.outfile = '%s_%s.unw' % (inps.ref_date[2:8],inps.epoch[2:8])
             else:
                 inps.outfile = '%s.cor' % (inps.epoch)
-        print(('writing >>> '+inps.outfile))
+        print('writing >>> '+inps.outfile)
         writefile.write(data,atr,inps.outfile)
 
     elif k in ['interferograms','coherence','wrapped']:
         ## Check input
         igramList = sorted(h5file[k].keys())
-
         try:
             inps.epoch = [igram for igram in igramList if inps.epoch in igram][0]
         except:
@@ -133,22 +131,22 @@ def main(argv):
             inps.epoch = igramList[-1]
 
         ## Read and Write
-        print(('reading '+inps.epoch+' ... '))
+        print('reading '+inps.epoch+' ... ')
         atr = dict(h5file[k][inps.epoch].attrs)
         data = h5file[k][inps.epoch].get(inps.epoch)[:]
-
         if k == 'interferograms':
             try:
-                ref_y = int(atr['ref_y'])
-                ref_x = int(atr['ref_x'])
+                ref_y = int(atr['REF_Y'])
+                ref_x = int(atr['REF_X'])
                 data -= data[ref_y,ref_x]
-                print(('consider the reference pixel in y/x: %d/%d' % (ref_y, ref_x)))
+                print('consider the reference pixel in y/x: %d/%d' % (ref_y, ref_x))
             except:
                 print('No ref_y/x info found in attributes.')
         atr['PROCESSOR'] = 'roipac'
         atr['INSAR_PROCESSOR'] = 'roipac'
+
         inps.outfile = inps.epoch
-        print(('writing >>> '+ inps.outfile))
+        print('writing >>> '+ inps.outfile)
         writefile.write(data, atr, inps.outfile)  
 
     else:
@@ -161,8 +159,9 @@ def main(argv):
                 inps.outfile=os.path.splitext(inps.file)[0]+'.dem'
             else:
                 inps.outfile=inps.file.split('.')[0]+'.unw'
-        print(('writing >>> '+ inps.outfile))
+        print('writing >>> '+ inps.outfile)
         writefile.write(data,atr,inps.outfile)
+
 
     h5file.close()
     return

@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2017, Zhang Yunjun, Yunmeng Cao             #
 # Author:  Zhang Yunjun, Yunmeng Cao                       #
 ############################################################
@@ -13,10 +13,10 @@ import re
 
 import numpy as np
 
-import _datetime as ptime
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 ######################################## Sub Functions ############################################
@@ -88,7 +88,7 @@ def get_lalo_ref(m_par_file, atr_dict={}):
         os.system(extractCmd)
 
     # Read corner txt file
-    lalo_ref = np.loadtxt(m_corner_file, dtype='str')
+    lalo_ref = np.loadtxt(m_corner_file, dtype=bytes).astype(str)
     atr_dict['LAT_REF1'] = lalo_ref[0,0]
     atr_dict['LAT_REF2'] = lalo_ref[1,0]
     atr_dict['LAT_REF3'] = lalo_ref[2,0]
@@ -135,15 +135,15 @@ def extract_attribute_interferogram(fname):
     try:
         off_file   = ut.get_file_list(off_file)[0]
     except:
-        print(('\nERROR: Can not find .off file, it supposed to be like: '+off_file))
+        print('\nERROR: Can not find .off file, it supposed to be like: '+off_file)
     try:
         m_par_file = ut.get_file_list(m_par_file)[0]
     except:
-        print(('\nERROR: Can not find master date .par file, it supposed to be like: '+m_par_file))
+        print('\nERROR: Can not find master date .par file, it supposed to be like: '+m_par_file)
     try:
         s_par_file = ut.get_file_list(s_par_file)[0]
     except:
-        print(('\nERROR: Can not find slave date .par file, it supposed to be like: '+s_par_file))
+        print('\nERROR: Can not find slave date .par file, it supposed to be like: '+s_par_file)
 
     #print 'read '+m_par_file
     #print 'read '+off_file
@@ -164,13 +164,12 @@ def extract_attribute_interferogram(fname):
     atr = get_lalo_ref(m_par_file, atr)
 
     ## Write to .rsc file
-    
     #print 'writing >>> '+rsc_file
     try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
     except: atr_orig = None
     if atr_orig != atr:
-        print(('merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),\
-                                               os.path.basename(off_file), os.path.basename(rsc_file))))
+        print('merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),\
+                                               os.path.basename(off_file), os.path.basename(rsc_file)))
         writefile.write_roipac_rsc(atr, rsc_file)
 
     return rsc_file
@@ -197,9 +196,8 @@ def extract_attribute_lookup_table(fname):
     atr['X_UNIT'] = 'degrees'
 
     par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
-    
-    print(('read '+os.path.basename(par_file)))
-    
+
+    print('read '+os.path.basename(par_file))
     par_dict = readfile.read_gamma_par(par_file)
 
     print('convert Gamma attribute to ROI_PAC style')
@@ -208,13 +206,11 @@ def extract_attribute_lookup_table(fname):
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
-
     try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
     except: atr_orig = None
     if atr_orig != atr:
-        print(('writing >>> '+os.path.basename(rsc_file)))
+        print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, rsc_file)
-        
     return rsc_file
 
 
@@ -232,7 +228,7 @@ def extract_attribute_dem_geo(fname):
     atr['X_UNIT'] = 'degrees'
 
     par_file = fname+'.par'
-    print(('read '+os.path.basename(par_file)))
+    print('read '+os.path.basename(par_file))
     print('convert Gamma attribute to ROI_PAC style')
     par_dict = readfile.read_gamma_par(par_file)
     par_dict = readfile.attribute_gamma2roipac(par_dict)
@@ -240,13 +236,11 @@ def extract_attribute_dem_geo(fname):
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
-
     try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
     except: atr_orig = None
     if atr_orig != atr:
-        print(('writing >>> '+os.path.basename(rsc_file)))
+        print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, rsc_file)
-
     return rsc_file
 
 
@@ -272,22 +266,19 @@ def extract_attribute_dem_radar(fname):
         fname_base = os.path.splitext(fname_base)[0]
 
     par_file = fname_base+'.diff_par'
-    print(('read '+os.path.basename(par_file)))
+    print('read '+os.path.basename(par_file))
     print('convert Gamma attribute to ROI_PAC style')
-    
     par_dict = readfile.read_gamma_par(par_file)
     par_dict = readfile.attribute_gamma2roipac(par_dict)
     atr.update(par_dict)
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
-
     try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
     except: atr_orig = None
     if atr_orig != atr:
-        print(('writing >>> '+os.path.basename(rsc_file)))
+        print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, rsc_file)
-
     return rsc_file
 
 
@@ -361,7 +352,7 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file, abspath=True)
-    print(('number of files: '+str(len(inps.file))))
+    print('number of files: '+str(len(inps.file)))
 
     # check outfile and parallel option
     if inps.parallel:
@@ -389,7 +380,7 @@ def main(argv):
         for File in inps.file:
             atr_file = extract_attribute_lookup_table(File)
     else:
-        print(('No need to extract attributes for Gamma '+ext+' file'))
+        print('No need to extract attributes for Gamma '+ext+' file')
 
     print('Done.')
     return

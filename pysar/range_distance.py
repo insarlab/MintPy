@@ -1,16 +1,20 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 
 
 import sys
+import os
 
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
+import h5py
+import numpy as np
+
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 def usage():
@@ -46,20 +50,19 @@ def main(argv):
     range_dis = ut.range_distance(atr, dimension=2)
     
     # Geo coord
-
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         print('Input file is geocoded, only center range distance is calculated: ')
         print(range_dis)
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         width = int(atr['WIDTH'])
         range_dis_mat = np.zeros((length, width), np.float32)
         range_dis_mat[:] = range_dis
         range_dis = range_dis_mat
 
-    print(('writing >>> '+outFile))
+    print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'
-    try: atr.pop('ref_date')
+    try: atr.pop('REF_DATE')
     except: pass
     writefile.write(range_dis, atr, outFile)
     return outFile

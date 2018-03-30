@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -10,10 +10,14 @@
 
 
 import sys
+import os
 
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
+import h5py
+import numpy as np
+
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 def usage():
@@ -48,10 +52,10 @@ def main(argv):
     angle = ut.incidence_angle(atr, dimension=2)
     
     # Geo coord
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         print('Input file is geocoded, only center incident angle is calculated: ')
         print(angle)
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         width = int(atr['WIDTH'])
         angle_mat = np.zeros((length, width), np.float32)
         angle_mat[:] = angle
@@ -60,7 +64,7 @@ def main(argv):
     print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'degree'
-    try: atr.pop('ref_date')
+    try: atr.pop('REF_DATE')
     except: pass
     writefile.write(angle, atr, outFile)
     return outFile

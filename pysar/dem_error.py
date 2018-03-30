@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -14,10 +14,10 @@ import h5py
 import numpy as np
 from scipy.special import gamma
 
-import _datetime as ptime
-import _pysar_utilities as ut
-import _readfile as readfile
-import _writefile as writefile
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 def topographic_residual_inversion(ts0, A0, inps):
@@ -70,13 +70,12 @@ def read_template2inps(template_file, inps=None):
     if not inps:
         inps = cmdLineParse()
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     # Read template option
     prefix = 'pysar.topographicResidual.'
 
     key = prefix+'polyOrder'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.poly_order = 2
@@ -84,7 +83,7 @@ def read_template2inps(template_file, inps=None):
             inps.poly_order = int(value)
 
     key = prefix+'excludeDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             value = value.replace(',',' ').split()
@@ -92,7 +91,7 @@ def read_template2inps(template_file, inps=None):
             inps.ex_date += value
 
     key = prefix+'stepFuncDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             value = value.replace(',',' ').split()
@@ -191,12 +190,13 @@ def main(argv):
     if not inps.outfile:
         inps.outfile = os.path.splitext(inps.timeseries_file)[0]+suffix+os.path.splitext(inps.timeseries_file)[1]
     if inps.template_file:
-        print(('read option from template file: '+inps.template_file))
+        print('read option from template file: '+inps.template_file)
         inps = read_template2inps(inps.template_file, inps)
 
+    ##### Read Data
     atr = readfile.read_attribute(inps.timeseries_file)
     coordType = 'radar'
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         coordType = 'geo'
 
     # 1. Incidence angle
@@ -231,7 +231,6 @@ def main(argv):
     h5 = h5py.File(inps.timeseries_file)
     date_list = sorted(h5['timeseries'].keys())
     date_num = len(date_list)
-
     inps.tbase = np.array(ptime.date_list2tbase(date_list)[0]).reshape(-1,1)
 
     #Mark dates used in the estimation
@@ -241,7 +240,7 @@ def main(argv):
         raise ValueError("ERROR: input polynomial order=%d is larger than number of acquisition=%d used in estimation!" %\
                          (inps.poly_order, np.sum(inps.date_flag)))
 
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     pixel_num = length*width
     timeseries = np.zeros((date_num, pixel_num),np.float32)
@@ -286,7 +285,6 @@ def main(argv):
     inps.step_num = len(inps.step_date)
 
     print('-------------------------------------------------')
-
 
 
     ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
@@ -334,7 +332,7 @@ def main(argv):
 
     ##------------------------------------------------ Output  --------------------------------------------##
     # 1. DEM error file
-    if 'Y_FIRST' in list(atr.keys()):
+    if 'Y_FIRST' in atr.keys():
         deltaZFile = 'demGeo_error.h5'
     else:
         deltaZFile = 'demRadar_error.h5'
@@ -353,7 +351,7 @@ def main(argv):
         sys.stdout.flush()
         dset = group.create_dataset(date_list[i], data=timeseriesCor[i].reshape(length, width), compression='gzip')
     print('')
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5.close()
 
@@ -367,9 +365,8 @@ def main(argv):
         sys.stdout.flush()
         dset = group.create_dataset(date_list[i], data=timeseriesRes[i].reshape(length, width), compression='gzip')
     print('')
-
     # Attribute
-    for key,value in list(atr.items()):
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5.close()
 
@@ -385,9 +382,9 @@ def main(argv):
             dset = group.create_dataset(inps.step_date[i], data=stepModel[i].reshape(length, width), compression='gzip')
         print('')
         # Attribute
-        for key,value in atr.items():
+        for key,value in iter(atr.items()):
             group.attrs[key] = value
-        group.attrs.pop('ref_date')
+        group.attrs.pop('REF_DATE')
         h5.close()
 
     print('Done.')

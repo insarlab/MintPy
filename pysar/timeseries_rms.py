@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
@@ -15,10 +15,10 @@ import numpy as np
 import matplotlib as mpl; mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-import _datetime as ptime
-import _network as pnet
-import _readfile as readfile
-import _pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
+import pysar.utils.plot as pp
 
 
 ######################################################################################################
@@ -28,12 +28,10 @@ def read_template2inps(templateFile, inps=None):
         inps = cmdLineParse()
 
     template = readfile.read_template(templateFile)
-    key_list = list(template.keys())
-
     prefix = 'pysar.residualRms.'
 
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.mask_file = 'maskTempCoh.h5'
@@ -43,7 +41,7 @@ def read_template2inps(templateFile, inps=None):
             inps.mask_file = value
 
     key = prefix+'ramp'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.ramp_type = 'quadratic'
@@ -51,7 +49,7 @@ def read_template2inps(templateFile, inps=None):
             inps.ramp_type = value
 
     key = prefix+'threshold'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.min_rms = 0.02
@@ -59,7 +57,7 @@ def read_template2inps(templateFile, inps=None):
             inps.min_rms = float(value)
 
     key = prefix+'saveRefDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','yes']:
             inps.save_reference_date = True
@@ -67,7 +65,7 @@ def read_template2inps(templateFile, inps=None):
             inps.save_reference_date = False
 
     key = prefix+'saveExcludeDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','yes']:
             inps.save_exclude_date = True
@@ -132,7 +130,7 @@ def main(argv):
     print('------------------------------------------------------------')
     ref_idx = np.argmin(rms_list)
     ref_date = date_list[ref_idx]
-    print(('date with minimum residual RMS: %s - %.4f' % (ref_date, rms_list[ref_idx])))
+    print('date with minimum residual RMS: %s - %.4f' % (ref_date, rms_list[ref_idx]))
 
     refTxtFile = 'reference_date.txt'
     if (inps.save_reference_date and \
@@ -141,13 +139,12 @@ def main(argv):
         f = open(refTxtFile, 'w')
         f.write(ref_date+'\n')
         f.close()
-        print(('save date to file: '+refTxtFile))
+        print('save date to file: '+refTxtFile)
 
     ##### exclude_date.txt
     print('------------------------------------------------------------')
     ex_idx_list = [rms_list.index(i) for i in rms_list if i > inps.min_rms]
-    print(('date(s) with residual RMS > '+str(inps.min_rms)))
-    
+    print('date(s) with residual RMS > '+str(inps.min_rms))
     exTxtFile = 'exclude_date.txt'
     if ex_idx_list:
         if (inps.save_exclude_date and \
@@ -155,10 +152,10 @@ def main(argv):
                            check_readable=False)):
             f = open(exTxtFile, 'w')
             for i in ex_idx_list:
-                print(('%s - %.4f' % (date_list[i], rms_list[i])))
+                print('%s - %.4f' % (date_list[i], rms_list[i]))
                 f.write(date_list[i]+'\n')
             f.close()
-            print(('save date(s) to file: '+exTxtFile))
+            print('save date(s) to file: '+exTxtFile)
     else:
         print('None.')
 
@@ -178,7 +175,7 @@ def main(argv):
         font_size = 12
 
         dates, datevector = ptime.date_list2vector(date_list)
-        try:    bar_width = ut.mode(np.diff(dates).tolist())*3/4
+        try:    bar_width = ut.most_common(np.diff(dates).tolist())*3/4
         except: bar_width = np.min(np.diff(dates).tolist())*3/4
         x_list = [i-bar_width/2 for i in dates]
 
@@ -200,11 +197,11 @@ def main(argv):
             ax.bar(ex_x_list, ex_rms_list, bar_width.days, color='darkgray', label='Exclude date(s)')
 
         # Plot min_rms line
-        ax, xmin, xmax = ptime.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=inps.tick_year_num)
+        ax, xmin, xmax = pp.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=inps.tick_year_num)
         ax.plot(np.array([xmin, xmax]), np.array([min_rms, min_rms]), '--k')
 
         # axis format
-        ax = pnet.auto_adjust_yaxis(ax, rms_list+[min_rms], font_size, ymin=0.0)
+        ax = pp.auto_adjust_yaxis(ax, rms_list+[min_rms], font_size, ymin=0.0)
         ax.set_xlabel('Time [years]',fontsize=font_size)
         ax.set_ylabel('Root Mean Square [mm]',fontsize=font_size)
         ax.yaxis.set_ticks_position('both')
@@ -215,7 +212,7 @@ def main(argv):
 
         # save figure
         fig.savefig(fig_name, bbox_inches='tight', transparent=True)
-        print(('save figure to file: '+fig_name))
+        print('save figure to file: '+fig_name)
 
     return
 

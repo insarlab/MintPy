@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -9,15 +9,17 @@
 # Yunjun, Aug 2016: Support multiple surfaces
 
 
+import os
 import sys
 import argparse
 
+import h5py
 import numpy as np
 
-import _pysar_utilities as ut
-import _remove_surface as rm
-import _readfile as readfile
-import _writefile as writefile
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
+import pysar.utils.deramp as deramp
 
 
 ######################################
@@ -59,12 +61,12 @@ def main(argv):
     
     inps = cmdLineParse()
     inps.file = ut.get_file_list(inps.file)
-    print(('input file(s): '+str(len(inps.file))))
-    print((inps.file))
+    print('input file(s): '+str(len(inps.file)))
+    print(inps.file)
     
     #print '\n*************** Phase Ramp Removal ***********************'
     atr = readfile.read_attribute(inps.file[0])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
     # Read mask file if inputed
@@ -73,7 +75,7 @@ def main(argv):
         try:
             mask_atr = readfile.read_attribute(inps.mask_file)
         except:
-            print(('Can not open mask file: '+inps.mask_file))
+            print('Can not open mask file: '+inps.mask_file)
             inps.mask_file = None
 
     # Update mask for multiple surfaces
@@ -106,7 +108,7 @@ def main(argv):
         outFile = 'mask_'+str(surfNum)+inps.surface_type+'.h5'
         atr['FILE_TYPE'] = 'mask'
         writefile.write(mask_multiSurface, atr, outFile)
-        print(('saved mask to '+outFile))
+        print('saved mask to '+outFile)
 
     ############################## Removing Phase Ramp #######################################
     # check outfile and parallel option
@@ -114,18 +116,18 @@ def main(argv):
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
 
     if len(inps.file) == 1:
-        rm.remove_surface(inps.file[0], inps.surface_type, inps.mask_file, inps.outfile, inps.ysub)
+        deramp.remove_surface(inps.file[0], inps.surface_type, inps.mask_file, inps.outfile, inps.ysub)
 
     elif inps.parallel:
         #num_cores = min(multiprocessing.cpu_count(), len(inps.file))
         #print 'parallel processing using %d cores ...'%(num_cores)
-        Parallel(n_jobs=num_cores)(delayed(rm.remove_surface)(file, inps.surface_type, inps.mask_file, ysub=inps.ysub)\
+        Parallel(n_jobs=num_cores)(delayed(deramp.remove_surface)(file, inps.surface_type, inps.mask_file, ysub=inps.ysub)\
                                    for file in inps.file)
 
     else:
         for File in inps.file:
             print('------------------------------------------')
-            rm.remove_surface(File, inps.surface_type, inps.mask_file, ysub=inps.ysub)
+            deramp.remove_surface(File, inps.surface_type, inps.mask_file, ysub=inps.ysub)
     
     print('Done.')
     return

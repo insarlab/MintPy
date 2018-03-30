@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 # Author: Zhang Yunjun, 2018-Jan-27
 
 import os
@@ -8,9 +8,9 @@ import argparse
 
 import h5py
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
 
 
 def get_mission_name(meta_dict):
@@ -20,10 +20,9 @@ def get_mission_name(meta_dict):
     '''
     mission = None
 
-    key_list = list(meta_dict.keys())
-    if 'mission' in key_list:
+    if 'mission' in meta_dict.keys():
         value = meta_dict['mission'].lower()
-    elif 'PLATFORM' in key_list:
+    elif 'PLATFORM' in meta_dict.keys():
         value = meta_dict['PLATFORM'].lower()
     else:
         print('No PLATFORM nor mission attribute found, can not identify mission name.')

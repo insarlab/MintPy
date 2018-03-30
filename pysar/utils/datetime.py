@@ -1,24 +1,21 @@
-#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2016, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 # Based on scripts writen by Heresh Fattahi
 # Recommended Usage:
-#   import pysar._datetime as ptime
-#   date_list = ptime.ifgram_date_list('unwrapIfgram.h5')
+#   import pysar.utils.datetime as ptime
+#
 
 
 import sys
 import re
 import time
-import datetime
 from datetime import datetime as dt
 
 import h5py
 import numpy as np
-import matplotlib.dates as mdates
 
 
 ################################################################
@@ -94,6 +91,7 @@ def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
     if 'interferograms' in k: k = 'interferograms'
     elif 'coherence' in k: k = 'coherence'
     elif 'wrapped' in k: k = 'wrapped'
+    else: k = k[0]
     if k not in  ['interferograms','coherence','wrapped']:
         raise ValueError('Only interferograms / coherence / wrapped are supported. Input is '+str(k))
 
@@ -182,42 +180,6 @@ def date_list2vector(dateList):
 
 
 ################################################################
-def auto_adjust_xaxis_date(ax, datevector, fontSize=12, every_year=1):
-    '''Adjust X axis
-    Input:
-        ax : matplotlib figure axes object
-        datevector : list of float, date in years
-                     i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
-    Output:
-        ax  - matplotlib figure axes object
-        dss - datetime.date object, xmin
-        dee - datetime.date object, xmax
-    '''
-
-    # Min/Max
-    ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12.0)
-    te=datevector[-1]+0.3;  ye=int(te);  me=int((te-ye)*12.0)
-    if ms>12:   ys = ys+1;   ms=1
-    if me>12:   ye = ye+1;   me=1
-    if ms<1:    ys = ys-1;   ms=12
-    if me<1:    ye = ye-1;   me=12
-    dss=datetime.date(ys,ms,1)
-    dee=datetime.date(ye,me,1)
-    ax.set_xlim(dss,dee)
-
-    # Label/Tick format
-    ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
-    ax.xaxis.set_major_locator(mdates.YearLocator(every_year))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-    ax.xaxis.set_minor_locator(mdates.MonthLocator())
-
-    # Label font size
-    for tick in ax.xaxis.get_major_ticks():
-        tick.label.set_fontsize(fontSize)
-    #fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
-    return ax, dss, dee
-
-
 def list_ifgram2date12(ifgram_list):
     '''Convert ifgram list into date12 list
     Input:
@@ -282,7 +244,7 @@ class progress_bar:
         Code originally from http://code.activestate.com/recipes/168639/
     
     example:
-    import pysar._datetime as ptime
+    import pysar.utils.datetime as ptime
     date12_list = ptime.list_ifgram2date12(ifgram_list)
     prog_bar = ptime.progress_bar(maxValue=1000, prefix='calculating:')
     for i in range(1000):
@@ -337,7 +299,7 @@ class progress_bar:
         else:
             self.progBar = '[%s>%s]' % ('='*(numHashes-1), ' '*(allFull-numHashes))
             # figure out where to put the percentage, roughly centered
-            percentPlace = (len(self.progBar) / 2) - len(str(percentDone))
+            percentPlace = int(len(self.progBar)/2 - len(str(percentDone)))
             percentString = ' ' + str(percentDone) + '% '
             # slice the percentage into the bar
             self.progBar = ''.join([self.progBar[0:percentPlace], percentString,

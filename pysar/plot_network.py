@@ -1,8 +1,8 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Program is part of PySAR v2.0                            #
+# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
 
@@ -14,11 +14,12 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
-import _pysar_utilities as ut
-import _datetime as ptime
-import _network  as pnet
-import _readfile as readfile
-from _readfile import multi_group_hdf5_file
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
+import pysar.utils.network  as pnet
+import pysar.utils.plot as pp
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ###########################  Sub Function  #############################
@@ -27,15 +28,14 @@ def read_template2inps(template_file, inps=None):
     if not inps:
         inps = cmdLineParse()
 
-    print(('read options from template file: '+os.path.basename(template_file)))
+    print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     # Coherence-based network modification
     prefix = 'pysar.network.'
 
     key = prefix+'coherenceFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.coherence_file = 'coherence.h5'
@@ -43,10 +43,10 @@ def read_template2inps(template_file, inps=None):
             inps.coherence_file = value
 
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
-            try:    inps.mask_file = ut.get_file_list(['geometry*.h5','maskLand.h5','mask.h5'])[0]
+            try:    inps.mask_file = ut.get_file_list(['mask.h5', 'geometry*.h5','maskLand.h5'])[0]
             except: inps.mask_file = None
         elif value == 'no':
             inps.mask_file = None
@@ -54,7 +54,7 @@ def read_template2inps(template_file, inps=None):
             inps.mask_file = value
 
     key = prefix+'minCoherence'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.coh_thres = 0.7
@@ -168,7 +168,7 @@ def main(argv):
     if ext in ['.h5']:
         atr = readfile.read_attribute(inps.file)
         k = atr['FILE_TYPE']
-        print(('reading date and perpendicular baseline from '+k+' file: '+os.path.basename(inps.file)))
+        print('reading date and perpendicular baseline from '+k+' file: '+os.path.basename(inps.file))
         if not k in multi_group_hdf5_file:
             raise ValueError('only the following file type are supported:\n'+str(multi_group_hdf5_file))
         if not inps.coherence_file and k == 'coherence':
@@ -176,14 +176,14 @@ def main(argv):
         pbase_list = ut.perp_baseline_ifgram2timeseries(inps.file)[0]
         date8_list = ptime.ifgram_date_list(inps.file)
     else:
-        print(('reading date and perpendicular baseline from baseline list file: '+inps.bl_list_file))
+        print('reading date and perpendicular baseline from baseline list file: '+inps.bl_list_file)
         date8_list, pbase_list = pnet.read_baseline_file(inps.bl_list_file)[0:2]
-    print(('number of acquisitions  : '+str(len(date8_list))))
+    print('number of acquisitions  : '+str(len(date8_list)))
 
     # Read Pairs Info
-    print(('reading pairs info from file: '+inps.file))
+    print('reading pairs info from file: '+inps.file)
     date12_list = pnet.get_date12_list(inps.file)
-    print(('number of interferograms: '+str(len(date12_list))))
+    print('number of interferograms: '+str(len(date12_list)))
 
     # Read drop_ifgram 
     date8_list_drop = []
@@ -195,16 +195,15 @@ def main(argv):
         date12_list_keep = ptime.list_ifgram2date12(ifgram_list_keep)
         # Get date12_list_drop
         date12_list_drop = sorted(list(set(date12_list) - set(date12_list_keep)))
-
-        print(('number of interferograms marked as dropped: '+str(len(date12_list_drop))))
-        print(('number of interferograms marked as kept   : '+str(len(date12_list_keep))))
+        print('number of interferograms marked as dropped: '+str(len(date12_list_drop)))
+        print('number of interferograms marked as kept   : '+str(len(date12_list_keep)))
 
         # Get date_list_drop
         m_dates = [i.split('-')[0] for i in date12_list_keep]
         s_dates = [i.split('-')[1] for i in date12_list_keep]
         date8_list_keep = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
         date8_list_drop = sorted(list(set(date8_list) - set(date8_list_keep)))
-        print(('number of acquisitions marked as dropped: '+str(len(date8_list_drop))))
+        print('number of acquisitions marked as dropped: '+str(len(date8_list_drop)))
 
     # Read Coherence List
     inps.coherence_list = None
@@ -222,7 +221,6 @@ def main(argv):
         if not set(inps.coh_date12_list) >= set(date12_list):
             print('WARNING: not every pair/date12 from input file is in coherence file')
             print('turn off the color plotting of interferograms based on coherence')
-
             inps.coherence_list = None
         elif set(inps.coh_date12_list) > set(date12_list):
             print('extract coherence value for all pair/date12 in input file')
@@ -238,12 +236,12 @@ def main(argv):
     else:
         fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax = pnet.plot_perp_baseline_hist(ax, date8_list, pbase_list, vars(inps), date8_list_drop)
+    ax = pp.plot_perp_baseline_hist(ax, date8_list, pbase_list, vars(inps), date8_list_drop)
 
     figName = 'BperpHistory'+inps.fig_ext
     if inps.save_fig:
         fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print(('save figure to '+figName))
+        print('save figure to '+figName)
 
     # Fig 2 - Coherence Matrix
     if inps.coherence_list:
@@ -253,13 +251,12 @@ def main(argv):
         else:
             fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax = pnet.plot_coherence_matrix(ax, date12_list, inps.coherence_list,\
-                                        date12_list_drop, plot_dict=vars(inps))
+        ax = pp.plot_coherence_matrix(ax, date12_list, inps.coherence_list,\
+                                      date12_list_drop, plot_dict=vars(inps))
 
         if inps.save_fig:
             fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-            print(('save figure to '+figName))
-
+            print('save figure to '+figName)
 
     # Fig 3 - Min/Max Coherence History
     if inps.coherence_list:
@@ -269,11 +266,11 @@ def main(argv):
         else:
             fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax = pnet.plot_coherence_history(ax, date12_list, inps.coherence_list, plot_dict=vars(inps))
+        ax = pp.plot_coherence_history(ax, date12_list, inps.coherence_list, plot_dict=vars(inps))
 
         if inps.save_fig:
             fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-            print(('save figure to '+figName))
+            print('save figure to '+figName)
 
     # Fig 4 - Interferogram Network
     if inps.fig_size:
@@ -281,17 +278,17 @@ def main(argv):
     else:
         fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax = pnet.plot_network(ax, date12_list, date8_list, pbase_list, vars(inps), date12_list_drop)
+    ax = pp.plot_network(ax, date12_list, date8_list, pbase_list, vars(inps), date12_list_drop)
 
     figName = 'Network'+inps.fig_ext
     if inps.save_fig:
         fig.savefig(figName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print(('save figure to '+figName))
+        print('save figure to '+figName)
 
     if inps.save_list:
         txtFile = os.path.splitext(inps.file)[0]+'_date12_list.txt'
         np.savetxt(txtFile, date12_list, fmt='%s')
-        print(('save pairs/date12 info to file: '+txtFile))
+        print('save pairs/date12 info to file: '+txtFile)
 
 
     if inps.disp_fig:

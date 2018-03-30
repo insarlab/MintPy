@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2016, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
@@ -9,11 +9,14 @@
 import sys
 import argparse
 
+import h5py
 import matplotlib.pyplot as plt
 
-import _readfile as readfile
-import _pysar_utilities as ut
-import _datetime as ptime
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.utils as ut
+import pysar.utils.plot as pp
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 #################################  Usage  ####################################
@@ -52,7 +55,7 @@ def main(argv):
             ax = fig.add_subplot(111)
             ax.plot(dates, mean_list, '-ko', lw=2, ms=16, alpha=0.7, mfc='crimson')
             ax.set_title('Spatial Average',fontsize=12)
-            ax = ptime.auto_adjust_xaxis_date(ax, datevector)[0]
+            ax = pp.auto_adjust_xaxis_date(ax, datevector)[0]
             ax.set_xlabel('Time [years]',fontsize=12)
             ax.set_ylabel('Mean',fontsize=12)
             plt.show()

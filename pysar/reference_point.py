@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -15,12 +15,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
-import _datetime as ptime
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
-import subset as subset
-from _readfile import multi_group_hdf5_file
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
+import pysar.subset as subset
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ########################################## Sub Functions #############################################
@@ -45,7 +45,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
     #####  IO Info
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    print(('file type: '+k))
+    print('file type: '+k)
 
     ##### Multiple Dataset File
     if k in ['timeseries','interferograms','wrapped','coherence']:
@@ -56,21 +56,21 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
 
         ##### Check Epoch Number
         if not epochNum == len(refList):
-            print(('\nERROR: Reference value has different epoch number'+\
-                  'from input file.'))
-            print(('Reference List epoch number: '+str(refList)))
-            print(('Input file     epoch number: '+str(epochNum)))
+            print('\nERROR: Reference value has different epoch number'+\
+                  'from input file.')
+            print('Reference List epoch number: '+str(refList))
+            print('Input file     epoch number: '+str(epochNum))
             sys.exit(1)
 
         ##### Output File Info
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
-        print(('writing >>> '+outName))
+        print('writing >>> '+outName)
         prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='seeding: ')
 
     ## Loop
     if k == 'timeseries':
-        print(('number of acquisitions: '+str(epochNum)))
+        print('number of acquisitions: '+str(epochNum))
         for i in range(epochNum):
             epoch = epochList[i]
             data = h5file[k].get(epoch)[:]
@@ -78,11 +78,11 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
             dset = group.create_dataset(epoch, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=epoch)
         atr  = seed_attributes(atr,ref_x,ref_y)
-        for key,value in list(atr.items()):
+        for key,value in iter(atr.items()):
             group.attrs[key] = value
 
     elif k in ['interferograms','wrapped','coherence']:
-        print(('number of interferograms: '+str(epochNum)))
+        print('number of interferograms: '+str(epochNum))
         date12_list = ptime.list_ifgram2date12(epochList)
         for i in range(epochNum):
             epoch = epochList[i]
@@ -98,14 +98,14 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
 
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in list(atr.items()):
+            for key, value in iter(atr.items()):
                 gg.attrs[key] = value
 
             prog_bar.update(i+1, suffix=date12_list[i])
   
     ##### Single Dataset File
     else:
-        print(('writing >>> '+outName))
+        print('writing >>> '+outName)
         data,atr = readfile.read(File)
         data -= refList
         atr  = seed_attributes(atr,ref_x,ref_y)
@@ -130,7 +130,7 @@ def seed_file_inps(File, inps=None, outFile=None):
     if not outFile:  outFile = 'Seeded_'+os.path.basename(File)
     if not inps:  inps = cmdLineParse([''])
     print('----------------------------------------------------')
-    print(('seeding file: '+File))
+    print('seeding file: '+File)
     
     # Get stack and mask
     stack = ut.get_file_stack(File, inps.mask_file)
@@ -149,10 +149,10 @@ def seed_file_inps(File, inps=None, outFile=None):
         print('\n---------------------------------------------------------')
         print('Automatically Seeding using Global Spatial Average Value ')
         print('---------------------------------------------------------')
-        print(('Calculating the global spatial average value for each epoch'+\
-              ' of all valid pixels ...'))
+        print('Calculating the global spatial average value for each epoch'+\
+              ' of all valid pixels ...')
         width = int(atr['WIDTH'])
-        length = int(atr['FILE_LENGTH'])
+        length = int(atr['LENGTH'])
         box = (0,0,width,length)
         meanList = ut.spatial_average(File, mask, box)[0]
         inps.ref_y = ''
@@ -176,25 +176,25 @@ def seed_file_inps(File, inps=None, outFile=None):
         if inps.mark_attribute:
             re_select = True
             try:
-                ref_x_orig == int(atr['ref_x'])
-                ref_y_orig == int(atr['ref_y'])
+                ref_x_orig == int(atr['REF_X'])
+                ref_y_orig == int(atr['REF_Y'])
                 if inps.ref_x == ref_x_orig and inps.ref_y == ref_y_orig:
                     re_select = False
                     print('Same reference pixel is already selected/saved in file, skip updating file attributes')
             except: pass
             if re_select:
-                print(('Add/update ref_x/y attribute to file: '+File))
+                print('Add/update ref_x/y attribute to file: '+File)
                 atr_ref = dict()
-                atr_ref['ref_x'] = str(inps.ref_x)
-                atr_ref['ref_y'] = str(inps.ref_y)
-                if 'X_FIRST' in list(atr.keys()):
-                    atr_ref['ref_lat'] = str(subset.coord_radar2geo(inps.ref_y, atr, 'y'))
-                    atr_ref['ref_lon'] = str(subset.coord_radar2geo(inps.ref_x, atr, 'x'))
+                atr_ref['REF_X'] = str(inps.ref_x)
+                atr_ref['REF_Y'] = str(inps.ref_y)
+                if 'X_FIRST' in atr.keys():
+                    atr_ref['REF_LAT'] = str(subset.coord_radar2geo(inps.ref_y, atr, 'y'))
+                    atr_ref['REF_LON'] = str(subset.coord_radar2geo(inps.ref_x, atr, 'x'))
                 print(atr_ref)
                 outFile = ut.add_attribute(File, atr_ref)
                 ut.touch([inps.coherence_file, inps.mask_file])
         else:
-            print(('Referencing input file to pixel in y/x: (%d, %d)'%(inps.ref_y, inps.ref_x)))
+            print('Referencing input file to pixel in y/x: (%d, %d)'%(inps.ref_y, inps.ref_x))
             box = (inps.ref_x, inps.ref_y, inps.ref_x+1, inps.ref_y+1)
             refList = ut.spatial_average(File, mask, box)[0]
             outFile = seed_file_reference_value(File, outFile, refList, inps.ref_y, inps.ref_x)
@@ -208,14 +208,14 @@ def seed_file_inps(File, inps=None, outFile=None):
 ###############################################################
 def seed_attributes(atr_in,x,y):
     atr = dict()
-    for key, value in list(atr_in.items()):
+    for key, value in iter(atr_in.items()):
         atr[key] = str(value)
 
-    atr['ref_y'] = str(y)
-    atr['ref_x'] = str(x)
-    if 'X_FIRST' in list(atr.keys()):
-        atr['ref_lat'] = str(subset.coord_radar2geo(y,atr,'y'))
-        atr['ref_lon'] = str(subset.coord_radar2geo(x,atr,'x'))
+    atr['REF_Y'] = str(y)
+    atr['REF_X'] = str(x)
+    if 'X_FIRST' in atr.keys():
+        atr['REF_LAT'] = str(subset.coord_radar2geo(y,atr,'y'))
+        atr['REF_LON'] = str(subset.coord_radar2geo(x,atr,'x'))
 
     return atr
 
@@ -225,7 +225,7 @@ def manual_select_reference_yx(stack, inps):
     '''
     Input: 
         data4display : 2D np.array, stack of input file
-        inps    : namespace, with key 'ref_x' and 'ref_y', which will be updated
+        inps    : namespace, with key 'REF_X' and 'REF_Y', which will be updated
     '''
     print('\n---------------------------------------------------------')
     print('Manual select reference point ...')
@@ -253,7 +253,7 @@ def manual_select_reference_yx(stack, inps):
             y = int(event.ydata+0.5)
 
             if not np.isnan(stack[y][x]):
-                print(('valid input reference y/x: '+str([y, x])))
+                print('valid input reference y/x: '+str([y, x]))
                 inps.ref_y = y
                 inps.ref_x = x
                 #plt.close(fig) 
@@ -270,15 +270,15 @@ def manual_select_reference_yx(stack, inps):
 def select_max_coherence_yx(cohFile, mask=None, min_coh=0.85):
     '''Select pixel with coherence > min_coh in random'''
     print('\n---------------------------------------------------------')
-    print(('select pixel with coherence > '+str(min_coh)+' in random'))
-    print(('use coherence file: '+cohFile))
+    print('select pixel with coherence > '+str(min_coh)+' in random')
+    print('use coherence file: '+cohFile)
     coh, coh_atr = readfile.read(cohFile)
     if not mask is None:
         coh[mask==0] = 0.0
     coh_mask = coh >= min_coh
     y, x = random_select_reference_yx(coh_mask, print_msg=False)
     #y, x = np.unravel_index(np.argmax(coh), coh.shape)
-    print(('y/x: '+str([y, x])))
+    print('y/x: '+str([y, x]))
     print('---------------------------------------------------------')
 
     return y, x
@@ -305,7 +305,7 @@ def print_warning(next_method):
     print('WARNING:')
     print('Input file is not referenced to the same pixel yet!')
     print('-----------------------------------------------------')
-    print(('Continue with default automatic seeding method: '+next_method+'\n'))
+    print('Continue with default automatic seeding method: '+next_method+'\n')
     return
 
 
@@ -316,24 +316,23 @@ def read_seed_template2inps(template_file, inps=None):
         inps = cmdLineParse([''])
     
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     prefix = 'pysar.reference.'
 
     key = prefix+'yx'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
 
     key = prefix+'lalo'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value not in ['auto','no']:
             inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
 
     key = prefix+'maskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.mask_file = None
@@ -343,7 +342,7 @@ def read_seed_template2inps(template_file, inps=None):
             inps.mask_file = value
 
     key = prefix+'coherenceFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.coherence_file = 'averageSpatialCoherence.h5'
@@ -351,7 +350,7 @@ def read_seed_template2inps(template_file, inps=None):
             inps.coherence_file = value
 
     key = prefix+'minCoherence'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.min_coherence = 0.85
@@ -366,19 +365,18 @@ def read_seed_reference2inps(reference_file, inps=None):
     if not inps:
         inps = cmdLineParse([''])
     atr_ref = readfile.read_attribute(inps.reference_file)
-    atr_ref_key_list = list(atr_ref.keys())
-    if (not inps.ref_y or not inps.ref_x) and 'ref_x' in atr_ref_key_list:
-        inps.ref_y = int(atr_ref['ref_y'])
-        inps.ref_x = int(atr_ref['ref_x'])
-    if (not inps.ref_lat or not inps.ref_lon) and 'ref_lon' in atr_ref_key_list:
-        inps.ref_lat = float(atr_ref['ref_lat'])
-        inps.ref_lon = float(atr_ref['ref_lon'])
+    if (not inps.ref_y or not inps.ref_x) and 'REF_X' in atr_ref.keys():
+        inps.ref_y = int(atr_ref['REF_Y'])
+        inps.ref_x = int(atr_ref['REF_X'])
+    if (not inps.ref_lat or not inps.ref_lon) and 'REF_LON' in atr_ref.keys():
+        inps.ref_lat = float(atr_ref['REF_LAT'])
+        inps.ref_lon = float(atr_ref['REF_LON'])
     return inps
 
 
 def remove_reference_pixel(File):
     '''Remove reference pixel info from input file'''
-    print(("remove ref_y/x and/or ref_lat/lon from file: "+File))
+    print("remove ref_y/x and/or ref_lat/lon from file: "+File)
     ext = os.path.splitext(File)[1]
     if ext not in ['.h5','.he5']:
         sys.exit('ERROR: only hdf5 file supported for this function!')
@@ -388,11 +386,11 @@ def remove_reference_pixel(File):
     if k in multi_group_hdf5_file:
         ifgram_list = sorted(h5[k].keys())
         for ifgram in ifgram_list:
-            for key in ['ref_y','ref_x','ref_lat','ref_lon']:
+            for key in ['REF_Y','REF_X','REF_LAT','REF_LON']:
                 try: h5[k][ifgram].attrs.pop(key)
                 except: pass
     else:
-        for key in ['ref_y','ref_x','ref_lat','ref_lon']:
+        for key in ['REF_Y','REF_X','REF_LAT','REF_LON']:
             try: h5[k].attrs.pop(key)
             except: pass        
     h5.close()
@@ -417,17 +415,17 @@ NOTE='''note: Reference value cannot be nan, thus, all selected reference point 
 '''
 
 EXAMPLE='''example:
-  seed_data.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geomap_4rlks.trans
+  reference_point.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geomap_4rlks.trans
 
-  seed_data.py timeseries.h5     -r Seeded_velocity.h5
-  seed_data.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
-  seed_data.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
-  seed_data.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
+  reference_point.py timeseries.h5     -r Seeded_velocity.h5
+  reference_point.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
+  reference_point.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
+  reference_point.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
   
-  seed_data.py unwrapIfgram.h5 -c average_spatial_coherence.h5
-  seed_data.py unwrapIfgram.h5 --method manual
-  seed_data.py unwrapIfgram.h5 --method random
-  seed_data.py timeseries.h5   --method global-average 
+  reference_point.py unwrapIfgram.h5 -c average_spatial_coherence.h5
+  reference_point.py unwrapIfgram.h5 --method manual
+  reference_point.py unwrapIfgram.h5 --method random
+  reference_point.py timeseries.h5   --method global-average 
 '''
 
 def cmdLineParse():
@@ -447,10 +445,10 @@ def cmdLineParse():
                         help='remove reference pixel information from attributes in the file')
 
     coord_group = parser.add_argument_group('input coordinates')
-    coord_group.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')
-    coord_group.add_argument('-x','--col', dest='ref_x', type=int, help='column/range number of reference pixel')
-    coord_group.add_argument('-l','--lat', dest='ref_lat', type=float, help='latitude  of reference pixel')
-    coord_group.add_argument('-L','--lon', dest='ref_lon', type=float, help='longitude of reference pixel')
+    coord_group.add_argument('-y','--row', dest='REF_Y', type=int, help='row/azimuth  number of reference pixel')
+    coord_group.add_argument('-x','--col', dest='REF_X', type=int, help='column/range number of reference pixel')
+    coord_group.add_argument('-l','--lat', dest='REF_LAT', type=float, help='latitude  of reference pixel')
+    coord_group.add_argument('-L','--lon', dest='REF_LON', type=float, help='longitude of reference pixel')
     
     coord_group.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
     coord_group.add_argument('--lookup', dest='lookup_file',\
@@ -484,7 +482,7 @@ def main(argv):
     inps.file = ut.get_file_list(inps.file)
 
     atr = readfile.read_attribute(inps.file[0])
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
 
     if inps.reset:
@@ -497,10 +495,10 @@ def main(argv):
     # Read ref_y/x/lat/lon from reference/template
     # priority: Direct Input > Reference File > Template File
     if inps.template_file:
-        print(('reading reference info from template: '+inps.template_file))
+        print('reading reference info from template: '+inps.template_file)
         inps = read_seed_template2inps(inps.template_file, inps)
     if inps.reference_file:
-        print(('reading reference info from reference: '+inps.reference_file))
+        print('reading reference info from reference: '+inps.reference_file)
         inps = read_seed_reference2inps(inps.reference_file, inps)
 
     ## Do not use ref_lat/lon input for file in radar-coord
@@ -511,15 +509,15 @@ def main(argv):
 
     # Convert ref_lat/lon to ref_y/x
     if inps.ref_lat and inps.ref_lon:
-        if 'X_FIRST' in list(atr.keys()):
+        if 'X_FIRST' in atr.keys():
             inps.ref_y = subset.coord_geo2radar(inps.ref_lat, atr, 'lat')
             inps.ref_x = subset.coord_geo2radar(inps.ref_lon, atr, 'lon')
         else:
             # Convert lat/lon to az/rg for radar coord file using geomap*.trans file
             inps.ref_y, inps.ref_x = ut.glob2radar(np.array(inps.ref_lat), np.array(inps.ref_lon),\
                                                    inps.lookup_file, atr)[0:2]
-        print(('Input reference point in lat/lon: '+str([inps.ref_lat, inps.ref_lon])))
-    print(('Input reference point in   y/x  : '+str([inps.ref_y, inps.ref_x])))
+        print('Input reference point in lat/lon: '+str([inps.ref_lat, inps.ref_lon]))
+    print('Input reference point in   y/x  : '+str([inps.ref_y, inps.ref_x]))
 
     # Do not use ref_y/x outside of data coverage
     if (inps.ref_y and inps.ref_x and
@@ -531,7 +529,7 @@ def main(argv):
 
     # Do not use ref_y/x in masked out area
     if inps.ref_y and inps.ref_x and inps.mask_file:
-        print(('mask: '+inps.mask_file))
+        print('mask: '+inps.mask_file)
         mask = readfile.read(inps.mask_file, epoch='mask')[0]
         if mask[inps.ref_y, inps.ref_x] == 0:
             inps.ref_y = None

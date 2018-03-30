@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2015, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -19,10 +19,10 @@ except:
 import h5py
 import numpy as np
 
-import _datetime as ptime
-import _pysar_utilities as ut
-import _readfile as readfile
-import _writefile as writefile
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 ###############################################################
@@ -39,7 +39,7 @@ def get_delay(grib_file, atr, inps_dict):
     Output:
         phs - 2D np.array, absolute tropospheric phase delay relative to ref_y/x
     '''
-    if 'X_FIRST' in list(atr.keys()):
+    if 'X_FIRST' in atr.keys():
         aps = pa.PyAPS_geo(grib_file, inps_dict['dem_file'], grib=inps_dict['grib_source'],\
                            verb=True, Del=inps_dict['delay_type'])
     else:
@@ -49,8 +49,8 @@ def get_delay(grib_file, atr, inps_dict):
     aps.getdelay(phs, inc=0.0)
 
     # Get relative phase delay in space
-    yref = int(atr['ref_y'])
-    xref = int(atr['ref_x'])
+    yref = int(atr['REF_Y'])
+    xref = int(atr['REF_X'])
     phs -= phs[yref, xref]
 
     # project into LOS direction
@@ -89,7 +89,7 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     weather_dir = os.path.abspath(weather_dir)
     grib_dir = weather_dir+'/'+grib_source
     if not os.path.isdir(grib_dir):
-        print(('making directory: '+grib_dir))
+        print('making directory: '+grib_dir)
         os.makedirs(grib_dir)
 
     ## Date list to grib file list
@@ -98,18 +98,16 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
     ## Get date list to download (skip already downloaded files)
     grib_file_existed = ut.get_file_list(grib_file_list)
     if grib_file_existed:
-
-        grib_filesize_digit = ut.mode([len(str(os.path.getsize(i))) for i in grib_file_existed])
-        grib_filesize_max2 = ut.mode([str(os.path.getsize(i))[0:2] for i in grib_file_existed])
+        grib_filesize_digit = ut.most_common([len(str(os.path.getsize(i))) for i in grib_file_existed])
+        grib_filesize_max2  = ut.most_common([str(os.path.getsize(i))[0:2] for i in grib_file_existed])
         grib_file_corrupted = [i for i in grib_file_existed if (len(str(os.path.getsize(i))) != grib_filesize_digit or\
                                                                 str(os.path.getsize(i))[0:2] != grib_filesize_max2)]
-        print(('file size mode: %se%d bytes' % (grib_filesize_max2, grib_filesize_digit-2)))
-        print(('number of grib files existed    : %d' % len(grib_file_existed)))
-
+        print('file size mode: %se%d bytes' % (grib_filesize_max2, grib_filesize_digit-2))
+        print('number of grib files existed    : %d' % len(grib_file_existed))
         if grib_file_corrupted:
             print('------------------------------------------------------------------------------')
             print('corrupted grib files detected! Delete them and re-download...')
-            print(('number of grib files corrupted  : %d' % len(grib_file_corrupted)))
+            print('number of grib files corrupted  : %d' % len(grib_file_corrupted))
             for i in grib_file_corrupted:
                 rmCmd = 'rm '+i
                 print(rmCmd)
@@ -118,7 +116,7 @@ def dload_grib(date_list, hour, grib_source='ECMWF', weather_dir='./'):
             print('------------------------------------------------------------------------------')
     grib_file2download = sorted(list(set(grib_file_list) - set(grib_file_existed)))
     date_list2download = [str(re.findall('\d{8}', i)[0]) for i in grib_file2download]
-    print(('number of grib files to download: %d' % len(date_list2download)))
+    print('number of grib files to download: %d' % len(date_list2download))
     print('------------------------------------------------------------------------------\n')
 
     ## Download grib file using PyAPS
@@ -229,17 +227,17 @@ def main(argv):
     elif inps.dem_file:
         inps.dem_file = ut.get_file_list([inps.dem_file])[0]
         atr = readfile.read_attribute(inps.dem_file)
-    if 'ref_y' not in list(atr.keys()) and inps.ref_yx:
-        print(('No reference info found in input file, use input ref_yx: '+str(inps.ref_yx)))
-        atr['ref_y'] = inps.ref_yx[0]
-        atr['ref_x'] = inps.ref_yx[1]
+    if 'REF_Y' not in atr.keys() and inps.ref_yx:
+        print('No reference info found in input file, use input ref_yx: '+str(inps.ref_yx))
+        atr['REF_Y'] = inps.ref_yx[0]
+        atr['REF_X'] = inps.ref_yx[1]
 
     ##Read Incidence angle: to map the zenith delay to the slant delay
     if os.path.isfile(inps.inc_angle):
         inps.inc_angle = readfile.read(inps.inc_angle, epoch='incidenceAngle')[0]
     else:
         inps.inc_angle = float(inps.inc_angle)
-        print(('incidence angle: '+str(inps.inc_angle)))
+        print('incidence angle: '+str(inps.inc_angle))
     inps.inc_angle = inps.inc_angle*np.pi/180.0
 
     ##Prepare DEM file in ROI_PAC format for PyAPS to read
@@ -248,7 +246,7 @@ def main(argv):
         if os.path.splitext(inps.dem_file)[1] in ['.h5']:
             print('convert DEM file to ROIPAC format')
             dem, atr_dem = readfile.read(inps.dem_file, epoch='height')
-            if 'Y_FIRST' in list(atr.keys()):
+            if 'Y_FIRST' in atr.keys():
                 atr_dem['FILE_TYPE'] = '.dem'
             else:
                 atr_dem['FILE_TYPE'] = '.hgt'
@@ -264,7 +262,7 @@ def main(argv):
     elif inps.weather_model == 'MERRA':                   inps.grib_source = 'MERRA'
     elif inps.weather_model == 'NARR' :                   inps.grib_source = 'NARR'
     else: raise Reception('Unrecognized weather model: '+inps.weather_model)
-    print(('grib source: '+inps.grib_source))
+    print('grib source: '+inps.grib_source)
 
     # Get weather directory
     if not inps.weather_dir:
@@ -274,11 +272,11 @@ def main(argv):
             inps.weather_dir = os.path.dirname(os.path.abspath(inps.dem_file))+'/../WEATHER'
         else:
             inps.weather_dir = os.path.abspath(os.getcwd())
-    print(('Store weather data into directory: '+inps.weather_dir))
+    print('Store weather data into directory: '+inps.weather_dir)
 
     # Get date list to download
     if not inps.date_list_file:
-        print(('read date list info from: '+inps.timeseries_file))
+        print('read date list info from: '+inps.timeseries_file)
         h5 = h5py.File(inps.timeseries_file, 'r')
         if 'timeseries' in list(h5.keys()):
             date_list = sorted(h5[k].keys())
@@ -292,13 +290,13 @@ def main(argv):
             raise ValueError('Un-support input file type:'+k)
         h5.close()
     else:
-        date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
-        print(('read date list info from: '+inps.date_list_file))
+        date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=bytes, usecols=(0,)).astype(str).tolist())
+        print('read date list info from: '+inps.date_list_file)
 
     # Get Acquisition time - hour
     if not inps.hour:
         inps.hour = ptime.closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.grib_source)
-    print(('Time of cloest available product: '+inps.hour))
+    print('Time of cloest available product: '+inps.hour)
 
     ## Download data using PyAPS
     inps.grib_file_list = dload_grib(date_list, inps.hour, inps.weather_model, inps.weather_dir)
@@ -311,30 +309,29 @@ def main(argv):
     print('Calcualting delay for each epoch.')
 
     ## Calculate tropo delay using pyaps
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     date_num = len(date_list)
     trop_ts = np.zeros((date_num, length, width), np.float32)
     for i in range(date_num):
         grib_file = inps.grib_file_list[i] 
         date = date_list[i]
-        print(('calculate phase delay on %s from file %s' % (date, os.path.basename(grib_file))))
+        print('calculate phase delay on %s from file %s' % (date, os.path.basename(grib_file)))
         trop_ts[i] = get_delay(grib_file, atr, vars(inps))
 
     ## Convert relative phase delay on reference date
-    try:    ref_date = atr['ref_date']
+    try:    ref_date = atr['REF_DATE']
     except: ref_date = date_list[0]
-    print(('convert to relative phase delay with reference date: '+ref_date))
+    print('convert to relative phase delay with reference date: '+ref_date)
     ref_idx = date_list.index(ref_date)
     trop_ts -= np.tile(trop_ts[ref_idx,:,:], (date_num, 1, 1))
 
     ## Write tropospheric delay to HDF5
     tropFile = inps.grib_source+'.h5'
-
-    print(('writing >>> %s' % (tropFile)))
+    print('writing >>> %s' % (tropFile))
     h5trop = h5py.File(tropFile, 'w')
     group_trop = h5trop.create_group('timeseries')
-    print(('number of acquisitions: '+str(date_num)))
+    print('number of acquisitions: '+str(date_num))
     prog_bar = ptime.progress_bar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
@@ -342,7 +339,7 @@ def main(argv):
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
     # Write Attributes
-    for key,value in list(atr.items()):
+    for key,value in iter(atr.items()):
         group_trop.attrs[key] = value
     h5trop.close()
 
@@ -350,11 +347,11 @@ def main(argv):
     if k == 'timeseries':
         if not inps.out_file:
             inps.out_file = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.grib_source+'.h5'
-        print(('writing >>> %s' % (inps.out_file)))
+        print('writing >>> %s' % (inps.out_file))
         h5ts = h5py.File(inps.timeseries_file, 'r')
         h5tsCor = h5py.File(inps.out_file, 'w')    
         group_tsCor = h5tsCor.create_group('timeseries')
-        print(('number of acquisitions: '+str(date_num)))
+        print('number of acquisitions: '+str(date_num))
         prog_bar = ptime.progress_bar(maxValue=date_num)
         for i in range(date_num):
             date = date_list[i]
@@ -364,7 +361,7 @@ def main(argv):
         prog_bar.close()
         h5ts.close()
         # Write Attributes
-        for key,value in list(atr.items()):
+        for key,value in iter(atr.items()):
             group_tsCor.attrs[key] = value
         h5tsCor.close()
 

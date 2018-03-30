@@ -1,12 +1,16 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
 import sys
+import os
+import numpy as np
 import h5py
+import matplotlib.pyplot as plt
+#from scipy.sparse.csgraph import laplacian
 from scipy.ndimage.filters import laplace
 
 
@@ -50,7 +54,7 @@ def main(argv):
         Lunw=laplace(unw)
         g=group.create_group(ifgram)
         g.create_dataset(ifgram,data=Lunw,compression='gzip')
-        for key, value in list(h5file['interferograms'][ifgram].attrs.items()):
+        for key, value in h5file['interferograms'][ifgram].attrs.items():
             g.attrs[key] = value
   
     gm = h5laplace.create_group('mask')

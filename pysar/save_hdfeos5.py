@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2016, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
@@ -14,11 +14,12 @@ import sys
 import argparse
 import re
 import datetime as dt
+import string
 
 import h5py
 import numpy as np
 
-import pysar._readfile as readfile
+import pysar.utils.readfile as readfile
 import pysar.info as info
 
 
@@ -36,10 +37,9 @@ def get_mission_name(meta_dict):
     '''
     mission = None
 
-    key_list = list(meta_dict.keys())
-    if 'mission' in key_list:
+    if 'mission' in meta_dict.keys():
         value = meta_dict['mission'].lower()
-    elif 'PLATFORM' in key_list:
+    elif 'PLATFORM' in meta_dict.keys():
         value = meta_dict['PLATFORM'].lower()
     else:
         print('No PLATFORM nor mission attribute found, can not identify mission name.')
@@ -80,7 +80,7 @@ def get_mission_name(meta_dict):
 def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ## Extract UNAVCO format metadata from PySAR attributes dictionary and dateList 
 
-    for key in list(pysar_meta_dict.keys()):
+    for key in pysar_meta_dict.keys():
         if 'unavco.' in key:
             pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict[key]
         if 'hdfEos5.' in key:
@@ -131,9 +131,9 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ##### Recommended metadata
     #################################
     ##### Given manually
-    if 'frame' in list(pysar_meta_dict.keys()):
+    if 'frame' in pysar_meta_dict.keys():
         unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
-    elif 'first_frame' in list(pysar_meta_dict.keys()):
+    elif 'first_frame' in pysar_meta_dict.keys():
         unavco_meta_dict['frame'] = int(pysar_meta_dict['first_frame'])
     else:
         unavco_meta_dict['frame'] = 0
@@ -163,11 +163,11 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     ##### insarmaps metadata
     #################################
     # footprint for data coverage
-    if 'X_FIRST' in list(pysar_meta_dict.keys()):
+    if 'X_FIRST' in pysar_meta_dict.keys():
         lon0 = float(pysar_meta_dict['X_FIRST'])
         lat0 = float(pysar_meta_dict['Y_FIRST'])
         lon1 = lon0 + float(pysar_meta_dict['X_STEP'])*int(pysar_meta_dict['WIDTH'])
-        lat1 = lat0 + float(pysar_meta_dict['Y_STEP'])*int(pysar_meta_dict['FILE_LENGTH'])
+        lat1 = lat0 + float(pysar_meta_dict['Y_STEP'])*int(pysar_meta_dict['LENGTH'])
         lons = [str(lon0), str(lon1), str(lon1), str(lon0), str(lon0)]
         lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
         unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
@@ -211,17 +211,16 @@ def read_template2inps(template_file, inps=None):
 
     print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     # Coherence-based network modification
     prefix = 'pysar.save.hdfEos5.'
 
     key = prefix+'update'
-    if key in key_list and template[key] == 'yes':
+    if key in template.keys() and template[key] == 'yes':
         inps.update = True
 
     key = prefix+'subset'
-    if key in key_list and template[key] == 'yes':
+    if key in template.keys() and template[key] == 'yes':
         inps.subset = True
 
     return inps
@@ -285,12 +284,12 @@ def main(argv):
     ##### Prepare Metadata
     pysar_meta_dict = readfile.read_attribute(inps.timeseries_file)
     k = pysar_meta_dict['FILE_TYPE']
-    length = int(pysar_meta_dict['FILE_LENGTH'])
+    length = int(pysar_meta_dict['LENGTH'])
     width = int(pysar_meta_dict['WIDTH'])
     h5_timeseries = h5py.File(inps.timeseries_file,'r')
     dateList = sorted(h5_timeseries[k].keys())
     dateNum = len(dateList)
-    dateListStr = str(dateList).translate(None, "[],u'")
+    dateListStr = str(dateList).translate(str.maketrans("[],u'", "     ")).strip()
     pysar_meta_dict['DATE_TIMESERIES'] = dateListStr
     
     unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
@@ -313,11 +312,11 @@ def main(argv):
     ##Frist and/or Last Frame
     frame1 = int(meta_dict['frame'])
     key = 'first_frame'
-    if key in list(meta_dict.keys()):
+    if key in meta_dict.keys():
         frame1 = int(meta_dict[key])
     FRAME  = "%04d"%(frame1)
     key = 'last_frame'
-    if key in list(meta_dict.keys()):
+    if key in meta_dict.keys():
         frame2 = int(meta_dict[key])
         if frame2 != frame1:
             FRAME += "_%04d"%(frame2)
@@ -359,7 +358,7 @@ def main(argv):
     print('writing >>> '+outName)
     f = h5py.File(outName,'w')
     hdfeos = f.create_group('HDFEOS')
-    if 'Y_FIRST' in list(meta_dict.keys()):
+    if 'Y_FIRST' in meta_dict.keys():
         gg_coord = hdfeos.create_group('GRIDS')
     else:
         gg_coord = hdfeos.create_group('SWATHS')
@@ -368,7 +367,7 @@ def main(argv):
 
     ##### Write Attributes to the HDF File
     print('write metadata to '+str(f))
-    for key,value in meta_dict.items():
+    for key,value in iter(meta_dict.items()):
         f.attrs[key] = value
 
 

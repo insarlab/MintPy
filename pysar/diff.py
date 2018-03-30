@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -13,11 +13,12 @@ import os
 import sys
 import argparse
 
+import numpy as np
 import h5py
 
-import _readfile as readfile
-import _writefile as writefile
-import _datetime as ptime
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
 
 
 #####################################################################################
@@ -34,10 +35,10 @@ def diff_file(file1, file2, outName=None, force=False):
         outName = os.path.splitext(file1)[0]+'_diff_'+os.path.splitext(os.path.basename(file2))[0]+\
                   os.path.splitext(file1)[1]
     
-    print((file1+' - '+file2))
+    print(file1+' - '+file2)
     # Read basic info
     atr  = readfile.read_attribute(file1)
-    print(('Input first file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']))
+    print('Input first file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE'])
     k = atr['FILE_TYPE']
 
     # Multi-dataset/group file
@@ -51,7 +52,7 @@ def diff_file(file1, file2, outName=None, force=False):
         epochList = sorted(h5_1[k].keys())
         epochList2 = sorted(h5_2[k2].keys())
         if not all(i in epochList2 for i in epochList):
-            print(('ERROR: '+file2+' does not contain all group of '+file1))
+            print('ERROR: '+file2+' does not contain all group of '+file1)
             if force and k in ['timeseries']:
                 print('Continue and enforce the differencing for their shared dates only!')
             else:
@@ -59,24 +60,24 @@ def diff_file(file1, file2, outName=None, force=False):
 
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
-        print(('writing >>> '+outName))
+        print('writing >>> '+outName)
 
         epoch_num = len(epochList)
         prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
     if k in ['timeseries']:
-        print(('number of acquisitions: '+str(len(epochList))))
+        print('number of acquisitions: '+str(len(epochList)))
         # check reference date
-        if atr['ref_date'] == atr2['ref_date']:
+        if atr['REF_DATE'] == atr2['REF_DATE']:
             ref_date = None
         else:
-            ref_date = atr['ref_date']
+            ref_date = atr['REF_DATE']
             data2_ref = h5_2[k2].get(ref_date)[:]
             print('consider different reference date')
         # check reference pixel
-        ref_y = int(atr['ref_y'])
-        ref_x = int(atr['ref_x'])
-        if ref_y == int(atr2['ref_y']) and ref_x == int(atr2['ref_x']):
+        ref_y = int(atr['REF_Y'])
+        ref_x = int(atr['REF_X'])
+        if ref_y == int(atr2['REF_Y']) and ref_x == int(atr2['REF_X']):
             ref_y = None
             ref_x = None
         else:
@@ -100,7 +101,7 @@ def diff_file(file1, file2, outName=None, force=False):
 
             dset = group.create_dataset(date, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=date)
-        for key,value in list(atr.items()):
+        for key,value in iter(atr.items()):
             group.attrs[key] = value
 
         prog_bar.close()
@@ -109,7 +110,7 @@ def diff_file(file1, file2, outName=None, force=False):
         h5_2.close()
 
     elif k in ['interferograms','coherence','wrapped']:
-        print(('number of interferograms: '+str(len(epochList))))
+        print('number of interferograms: '+str(len(epochList)))
         date12_list = ptime.list_ifgram2date12(epochList)
         for i in range(epoch_num):
             epoch1 = epochList[i]
@@ -119,7 +120,7 @@ def diff_file(file1, file2, outName=None, force=False):
             data = diff_data(data1, data2)  
             gg = group.create_group(epoch1)
             dset = gg.create_dataset(epoch1, data=data, compression='gzip')
-            for key, value in list(h5_1[k][epoch1].attrs.items()):
+            for key, value in h5_1[k][epoch1].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
 
@@ -133,7 +134,7 @@ def diff_file(file1, file2, outName=None, force=False):
         data1, atr1 = readfile.read(file1)
         data2, atr2 = readfile.read(file2)
         data = diff_data(data1, data2)
-        print(('writing >>> '+outName))
+        print('writing >>> '+outName)
         writefile.write(data, atr1, outName)
 
     return outName

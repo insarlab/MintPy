@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -23,12 +23,13 @@ except:
 
 import h5py
 import numpy as np
+#from PIL import Image
 from scipy import ndimage
 
-import _datetime as ptime
-import _readfile as readfile
-import _writefile as writefile
-from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ################################################################################################
@@ -65,7 +66,7 @@ def filter_data(data, filter_type, filter_par=None):
         data_filt = data - lp_data
 
     else:
-        print(('Un-recognized filter type: '+filter_type))
+        print('Un-recognized filter type: '+filter_type)
         sys.exit(1)
 
     return data_filt
@@ -87,7 +88,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
     # Basic info
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
-    try:    ref_yx = [int(atr['ref_y']), int(atr['ref_x'])]
+    try:    ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
     except: ref_yx = None
 
     filter_type = filter_type.lower()
@@ -115,10 +116,10 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)
-        print(('writing >>> '+fname_out))
+        print('writing >>> '+fname_out)
 
         if k == 'timeseries':
-            print(('number of acquisitions: '+str(epoch_num)))
+            print('number of acquisitions: '+str(epoch_num))
             for i in range(epoch_num):
                 date = epoch_list[i]
                 data = h5[k].get(date)[:]
@@ -129,11 +130,11 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
 
                 dset = group.create_dataset(date, data=data_filt, compression='gzip')
                 prog_bar.update(i+1, suffix=date)
-            for key,value in list(atr.items()):
+            for key,value in iter(atr.items()):
                 group.attrs[key] = value
 
         elif k in ['interferograms','wrapped','coherence']:
-            print(('number of interferograms: '+str(epoch_num)))
+            print('number of interferograms: '+str(epoch_num))
             date12_list = ptime.list_ifgram2date12(epoch_list)
             for i in range(epoch_num):
                 ifgram = epoch_list[i]
@@ -145,7 +146,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
 
                 gg = group.create_group(ifgram)
                 dset = gg.create_dataset(ifgram, data=data_filt, compression='gzip')
-                for key, value in list(h5[k][ifgram].attrs.items()):
+                for key, value in h5[k][ifgram].attrs.items():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
 
@@ -159,7 +160,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
         data_filt = filter_data(data, filter_type, filter_par)
         if ref_yx and k in ['.unw','velocity']:
             data_filt -= data_filt[ref_yx[0], ref_yx[1]]
-        print(('writing >>> '+fname_out))
+        print('writing >>> '+fname_out)
         writefile.write(data_filt, atr, fname_out)
 
     return fname_out
@@ -201,9 +202,9 @@ def cmdLineParse():
 def main(argv):
     inps = cmdLineParse()
 
-    print(('Filter type: '+inps.filter_type))
+    print('Filter type: '+inps.filter_type)
     if inps.filter_type.startswith(('lowpass','highpass')):
-        print(('parameters: '+str(inps.filter_par)))
+        print('parameters: '+str(inps.filter_par))
 
     inps.outfile = filter_file(inps.file, inps.filter_type, inps.filter_par)
     print('Done.')

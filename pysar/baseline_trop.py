@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -12,8 +12,11 @@ import os
 import h5py
 import numpy as np
 import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
+from scipy.linalg import pinv as pinv
 
-import _readfile as readfile
+import pysar.utils.readfile as readfile
 
 
 ####################################################################################
@@ -72,21 +75,11 @@ def main(argv):
         else: print('No mask found!'); sys.exit(1)
     try:
         Mask,Matr = readfile.read(maskFile, epoch='mask')
-        print(('mask: '+maskFile))
+        print('mask: '+maskFile)
     except:
-        print(('Can not open mask file: '+maskFile))
+        print('Can not open mask file: '+maskFile)
         sys.exit(1)
-  
-    #try:
-    #  maskFile=argv[4]
-    #  h5Mask = h5py.File(maskFile,'r')
-    #  kMask=h5Mask.keys()
-    #  dset1 = h5Mask[kMask[0]].get(kMask[0])
-    #  Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-    #except:
-    #  dset1 = h5file['mask'].get('mask')
-    #  Mask = dset1[0:dset1.shape[0],0:dset1.shape[1]]
-  
+
     ##################################
     Mask=Mask.flatten(1)
     ndx= Mask !=0
@@ -135,8 +128,8 @@ def main(argv):
         num_base_par=2
 
     ###########################################
-    yref=int(h5file['timeseries'].attrs['ref_y'])
-    xref=int(h5file['timeseries'].attrs['ref_x'])
+    yref=int(h5file['timeseries'].attrs['REF_Y'])
+    xref=int(h5file['timeseries'].attrs['REF_X'])
     ###########################################
     if os.path.basename(demFile).split('.')[1]=='hgt':
          amp,dem,demRsc = readfile.read_float32(demFile)
@@ -155,7 +148,7 @@ def main(argv):
     elif p==3:
         #  A = np.vstack((dem[ndx]**3,dem[ndx]**2,dem[ndx],np.ones(len(dem[ndx])))).T
         B = np.vstack((dem**3,dem**2,dem,np.ones(len(dem)))).T
-    print((np.shape(A)))
+    print(np.shape(A))
   
     Ainv=np.linalg.pinv(A)
     ###################################################
@@ -181,10 +174,10 @@ def main(argv):
         print(Berror)
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%') 
     print('baseline error           mean                          std')   
-    print(('       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh))))
-    print(('     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate))))
-    print(('       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv))))
-    print(('     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate))))
+    print('       bh     :  ' +str(np.mean(Bh)) + '     ,  '+str(np.std(Bh)))
+    print('     bh rate  :  ' +str(np.mean(Bhrate)) + '     ,  '+str(np.std(Bhrate)))
+    print('       bv     :  ' +str(np.mean(Bv)) + '     ,  '+str(np.std(Bv)))
+    print('     bv rate  :  ' +str(np.mean(Bvrate)) + '     ,  '+str(np.std(Bvrate)))
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')       
     # plt.hist(Bh,bins=8,normed=True)
     # formatter = FuncFormatter(to_percent)
@@ -212,7 +205,7 @@ def main(argv):
         data = dset1[0:dset1.shape[0],0:dset1.shape[1]] - orbEffect[i,:,:]
         dset = group.create_dataset(dateList[i], data=data, compression='gzip')      
   
-    for key,value in list(h5file['timeseries'].attrs.items()):
+    for key,value in h5file['timeseries'].attrs.items():
         group.attrs[key] = value
   
   

@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -14,9 +14,10 @@ import datetime
 import h5py
 import numpy as np
 import scipy.io as sio
+import matplotlib.pyplot as plt
 
-import _readfile as readfile
-from _readfile import single_dataset_hdf5_file
+import pysar.utils.readfile as readfile
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ########################################################################################
@@ -47,11 +48,11 @@ def main(argv):
 
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    print(('input is '+k+' file: '+File))
+    print('input is '+k+' file: '+File)
 
     try:    matFile = argv[1]
     except: matFile = os.path.splitext(File)[0]+'.mat'
-    print(('writing >>> '+matFile))
+    print('writing >>> '+matFile)
 
     #####
     h5file = h5py.File(File,'r')
@@ -98,8 +99,8 @@ def main(argv):
         try:  V['width']=int(atr['WIDTH'])
         except:  print('WIDTH was not found')
     
-        try:  V['file_length']=int(atr['FILE_LENGTH'])
-        except:  print('FILE_LENGTH was not found')
+        try:  V['file_length']=int(atr['LENGTH'])
+        except:  print('LENGTH was not found')
         V['t']=''
         V['date']=''
         V['date_years']=''
@@ -146,7 +147,7 @@ def main(argv):
             ts['bperpbot']=float(atr['P_BASELINE_BOTTOM_HDR'])
             ts['sat']=atr['PLATFORM']
             ts['width']=int(atr['WIDTH'])
-            ts['file_length']=int(atr['FILE_LENGTH'])
+            ts['length']=int(atr['LENGTH'])
             ts['t']=np.round((yyyymmdd2years(epoch)-yyyymmdd2years(epochList[0]))*365)
             ts['date']=epoch
             ts['date_years']=yyyymmdd2years(epoch)

@@ -1,9 +1,9 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 
 import os
 import sys
 import h5py
-import _pysar_utilities as ut
+import pysar.utils.utils as ut
 
 
 def usage():
@@ -33,7 +33,7 @@ def main(argv):
     if not os.path.isfile(curlfile):
         ut.generate_curls(curlfile,h5file,Triangles,curls)
     else:
-        print((curlfile + " already exists!"))
+        print(curlfile + " already exists!")
 
     return curlfile
 

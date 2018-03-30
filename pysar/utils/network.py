@@ -1,11 +1,10 @@
-#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2016, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 # Recommended Usage:
-#   import pysar._network as pnet
+#   import pysar.utils.network as pnet
 #
 
 
@@ -26,9 +25,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scipy.sparse as sparse
 from scipy.sparse.csgraph import minimum_spanning_tree
 
-import _datetime as ptime
-import _readfile as readfile
-from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ##################################################################
@@ -56,7 +55,7 @@ def read_pairs_list(date12ListFile, dateList=[]):
     ...
     '''
     # Read date12 list file
-    date12List = sorted(list(np.loadtxt(date12ListFile, dtype=str)))
+    date12List = sorted(list(np.loadtxt(date12ListFile, dtype=bytes).astype(str)))
 
     # Get dateList from date12List
     if not dateList:
@@ -188,7 +187,7 @@ def get_date12_list(File, check_drop_ifgram=False):
     '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
     Inputs:
         File - string, path/name of input multi-group hdf5 file or text file
-        check_drop_ifgram - bool, check the "drop_ifgram" attribute or not for multi-group hdf5 file
+        check_drop_ifgram - bool, check the "DROP_IFGRAM" attribute or not for multi-group hdf5 file
     Output:
         date12_list - list of string in YYMMDD-YYMMDD format
     Example:
@@ -205,12 +204,12 @@ def get_date12_list(File, check_drop_ifgram=False):
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
             atr = h5[k][epoch].attrs
-            if not check_drop_ifgram or 'drop_ifgram' not in list(atr.keys()) or atr['drop_ifgram'] == 'no':
+            if not check_drop_ifgram or 'DROP_IFGRAM' not in atr.keys() or atr['DROP_IFGRAM'] == 'no':
                 date12 = atr['DATE12']
                 date12_list.append(date12)
         h5.close()
     else:
-        txtContent = np.loadtxt(File, dtype=str)
+        txtContent = np.loadtxt(File, dtype=bytes).astype(str)
         if len(txtContent.shape) == 1:
             txtContent = txtContent.reshape(-1,1)
         date12_list = [i for i in txtContent[:,0]]
@@ -325,7 +324,6 @@ def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
     wvl = wavelength(sensor)
     near_range = 688849;        # Yunjun 5/2016, case for Jers, need a automatic way to get this number
     rg_bandwidth = range_bandwidth(sensor)
-
     inc_angle    = incidence_angle(sensor, inc_angle) / 180 * np.pi
     Bperp_c      = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
     if print_msg:
@@ -902,422 +900,4 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
     m_date12 = date12_list[m_date12_idx]
     return m_date12
 
-
-##################################################################
-def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_list_drop=[], print_msg=True):
-    '''Plot Temporal-Perp baseline Network
-    Inputs
-        ax : matplotlib axes object
-        date12_list : list of string for date12 in YYMMDD-YYMMDD format
-        date_list   : list of string, for date in YYYYMMDD/YYMMDD format
-        pbase_list  : list of float, perp baseline, len=number of acquisition
-        plot_dict   : dictionary with the following items:
-                      fontsize
-                      linewidth
-                      markercolor
-                      markersize
-
-                      coherence_list : list of float, coherence value of each interferogram, len = number of ifgrams
-                      disp_min/max :  float, min/max range of the color display based on coherence_list
-                      colormap : string, colormap name
-                      coh_thres : float, coherence of where to cut the colormap for display
-                      disp_title : bool, show figure title or not, default: True
-                      disp_drop: bool, show dropped interferograms or not, default: True
-    Output
-        ax : matplotlib axes object
-    '''
-    
-    # Figure Setting
-    keyList = list(plot_dict.keys())
-    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
-    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
-    # For colorful display of coherence
-    if not 'coherence_list' in keyList:  plot_dict['coherence_list'] = None
-    if not 'cbar_label'     in keyList:  plot_dict['cbar_label']     = 'Coherence'
-    if not 'disp_min'       in keyList:  plot_dict['disp_min']       = 0.2
-    if not 'disp_max'       in keyList:  plot_dict['disp_max']       = 1.0
-    if not 'colormap'       in keyList:  plot_dict['colormap']       = 'RdBu'
-    if not 'disp_title'     in keyList:  plot_dict['disp_title']     = True
-    if not 'coh_thres'      in keyList:  plot_dict['coh_thres']      = None
-    if not 'disp_drop'      in keyList:  plot_dict['disp_drop']      = True
-    if not 'every_year'     in keyList:  plot_dict['every_year']     = 1
-    coh_list = plot_dict['coherence_list']
-    disp_min = plot_dict['disp_min']
-    disp_max = plot_dict['disp_max']
-    coh_thres = plot_dict['coh_thres']
-    transparency = 0.7
-
-    # Date Convert
-    date8_list = ptime.yyyymmdd(sorted(date_list))
-    date6_list = ptime.yymmdd(date8_list)
-    dates, datevector = ptime.date_list2vector(date8_list)
-    tbase_list = ptime.date_list2tbase(date8_list)[0]
-
-    ## maxBperp and maxBtemp
-    ifgram_num = len(date12_list)
-    pbase12 = np.zeros(ifgram_num)
-    tbase12 = np.zeros(ifgram_num)
-    for i in range(ifgram_num):
-        m_date, s_date = date12_list[i].split('-')
-        m_idx = date6_list.index(m_date)
-        s_idx = date6_list.index(s_date)
-        pbase12[i] = pbase_list[s_idx] - pbase_list[m_idx]
-        tbase12[i] = tbase_list[s_idx] - tbase_list[m_idx]
-    print(('max perpendicular baseline: %.2f m' % (np.max(np.abs(pbase12)))))
-    print(('max temporal      baseline: %d days' % (np.max(tbase12))))
-
-    ## Keep/Drop - date12
-    date12_list_keep = sorted(list(set(date12_list) - set(date12_list_drop)))
-    idx_date12_keep = [date12_list.index(i) for i in date12_list_keep]
-    idx_date12_drop = [date12_list.index(i) for i in date12_list_drop]
-    if not date12_list_drop:
-        plot_dict['disp_drop'] = False
-
-    ## Keep/Drop - date
-    m_dates = [i.split('-')[0] for i in date12_list_keep]
-    s_dates = [i.split('-')[1] for i in date12_list_keep]
-    date8_list_keep = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
-    date8_list_drop = sorted(list(set(date8_list) - set(date8_list_keep)))
-    idx_date_keep = [date8_list.index(i) for i in date8_list_keep]
-    idx_date_drop = [date8_list.index(i) for i in date8_list_drop]
-
-
-    # Ploting
-    #ax=fig.add_subplot(111)
-    ## Colorbar when conherence is colored
-    if coh_list:
-        data_min = min(coh_list)
-        data_max = max(coh_list)
-        # Normalize
-        normalization = False
-        if normalization:
-            coh_list = [(coh-data_min) / (data_min-data_min) for coh in coh_list]
-            disp_min = data_min
-            disp_max = data_max
-
-        if print_msg:
-            print('showing coherence')
-            print(('colormap: '+plot_dict['colormap']))
-            print(('display range: '+str([disp_min, disp_max])))
-            print(('data    range: '+str([data_min, data_max])))
-
-        # Use lower/upper part of colormap to emphasis dropped interferograms
-        if not coh_thres:
-            # Find proper cut percentage so that all keep pairs are blue and drop pairs are red
-            coh_list_keep = [coh_list[i] for i in idx_date12_keep]
-            coh_list_drop = [coh_list[i] for i in idx_date12_drop]
-            if coh_list_drop:
-                coh_thres = max(coh_list_drop)
-            else:
-                coh_thres = min(coh_list_keep)
-
-        if coh_thres < disp_min:
-            disp_min = 0.0
-            if print_msg:
-                print(('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)))
-        c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
-        coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
-        cmap = plt.get_cmap(plot_dict['colormap'])
-        colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
-        colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
-        cmap = colors.LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
-
-        if print_msg:
-            print(('color jump at '+str(coh_thres)))
-
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", "3%", pad="3%")
-        norm = mpl.colors.Normalize(vmin=disp_min, vmax=disp_max)
-        cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
-        cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
-
-        #plot low coherent ifgram first and high coherence ifgram later
-        coh_list_keep = [coh_list[date12_list.index(i)] for i in date12_list_keep]
-        date12_list_keep = [x for _,x in sorted(zip(coh_list_keep, date12_list_keep))]
-
-    ## Dot - SAR Acquisition
-    if idx_date_keep:
-        x_list = [dates[i] for i in idx_date_keep]
-        y_list = [pbase_list[i] for i in idx_date_keep]
-        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
-    if idx_date_drop:
-        x_list = [dates[i] for i in idx_date_drop]
-        y_list = [pbase_list[i] for i in idx_date_drop]
-        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc='gray')
-
-    ## Line - Pair/Interferogram        
-    # interferograms dropped
-    if plot_dict['disp_drop']:
-        for date12 in date12_list_drop:
-            date1, date2 = date12.split('-')
-            idx1 = date6_list.index(date1)
-            idx2 = date6_list.index(date2)
-            x = np.array([dates[idx1], dates[idx2]])
-            y = np.array([pbase_list[idx1], pbase_list[idx2]])
-            if coh_list:
-                coh = coh_list[date12_list.index(date12)]
-                coh_idx = (coh - disp_min) / (disp_max - disp_min)
-                ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
-            else:
-                ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c='k')
-
-    # interferograms kept
-    for date12 in date12_list_keep:
-        date1, date2 = date12.split('-')
-        idx1 = date6_list.index(date1)
-        idx2 = date6_list.index(date2)
-        x = np.array([dates[idx1], dates[idx2]])
-        y = np.array([pbase_list[idx1], pbase_list[idx2]])
-        if coh_list:
-            coh = coh_list[date12_list.index(date12)]
-            coh_idx = (coh - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
-        else:
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c='k')
-
-    if plot_dict['disp_title']:
-        ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
-
-    # axis format
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
-    ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
-    ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Perp Baseline [m]',fontsize=plot_dict['fontsize'])
-
-    # Legend
-    if plot_dict['disp_drop']:
-        solid_line = mlines.Line2D([],[],color='k',ls='solid', label='Interferograms')
-        dash_line  = mlines.Line2D([],[],color='k',ls='dashed', label='Interferograms dropped')
-        ax.legend(handles=[solid_line,dash_line])
-
-    return ax
-
-
-def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list_drop=[]):
-    ''' Plot Perpendicular Spatial Baseline History
-    Inputs
-        ax : matplotlib axes object
-        date8_list : list of string, date in YYYYMMDD format
-        pbase_list : list of float, perp baseline 
-        plot_dict : dictionary with the following items:
-                    fontsize
-                    linewidth
-                    markercolor
-                    markersize
-                    disp_title : bool, show figure title or not, default: True
-                    every_year : int, number of years for the major tick on xaxis
-        date8_list_drop : list of string, date dropped in YYYYMMDD format
-                          e.g. ['20080711', '20081011']
-    Output:
-        ax : matplotlib axes object
-    '''
-    # Figure Setting
-    keyList = list(plot_dict.keys())
-    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
-    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
-    if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
-    if not 'every_year'  in keyList:   plot_dict['every_year']  = 1
-    transparency = 0.7
-
-    # Date Convert
-    dates, datevector = ptime.date_list2vector(date8_list)
-
-    # Get index of date used and dropped
-    #date8_list_drop = ['20080711', '20081011']  # for debug
-    idx_keep = list(range(len(date8_list)))
-    idx_drop = []
-    for i in date8_list_drop:
-        idx = date8_list.index(i)
-        idx_keep.remove(idx)
-        idx_drop.append(idx)
-
-    # Plot
-    #ax=fig.add_subplot(111)
-
-    # Plot date used
-    if idx_keep:
-        x_list = [dates[i] for i in idx_keep]
-        y_list = [pbase_list[i] for i in idx_keep]
-        ax.plot(x_list, y_list, '-ko', alpha=transparency, lw=plot_dict['linewidth'], \
-                ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
-    
-    # Plot date dropped
-    if idx_drop:
-        x_list = [dates[i] for i in idx_drop]
-        y_list = [pbase_list[i] for i in idx_drop]
-        ax.plot(x_list, y_list, 'ko', alpha=transparency, ms=plot_dict['markersize'], mfc='gray')
-
-    if plot_dict['disp_title']:
-        ax.set_title('Perpendicular Baseline History',fontsize=plot_dict['fontsize'])
-
-    # axis format
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
-    ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
-    ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=plot_dict['fontsize'])
-
-    return ax
-
-
-def plot_coherence_matrix(ax, date12_list, coherence_list, date12_list_drop=[], plot_dict={}):
-    '''Plot Coherence Matrix of input network
-    
-    if date12_list_drop is not empty, plot KEPT pairs in the upper triangle and
-                                           ALL  pairs in the lower triangle.
-    '''
-    # Figure Setting
-    keyList = list(plot_dict.keys())
-    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
-    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
-    if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
-    if not 'cbar_label'  in keyList:   plot_dict['cbar_label']  = 'Coherence'
-
-    coh_mat = coherence_matrix(date12_list, coherence_list)
-
-    if date12_list_drop:
-        # Date Convert
-        m_dates = [i.split('-')[0] for i in date12_list]
-        s_dates = [i.split('-')[1] for i in date12_list]
-        date6_list = ptime.yymmdd(sorted(list(set(m_dates + s_dates))))
-        # Set dropped pairs' value to nan, in upper triangle only.
-        for date12 in date12_list_drop:
-            idx1, idx2 = [date6_list.index(i) for i in date12.split('-')]
-            coh_mat[idx1, idx2] = np.nan
-
-    #Show diagonal value as black, to be distinguished from un-selected interferograms
-    diag_mat = np.diag(np.ones(coh_mat.shape[0]))
-    diag_mat[diag_mat == 0.] = np.nan
-    im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
-    #Show coherence matrix
-    im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0, interpolation='nearest')
-
-    date_num = coh_mat.shape[0]
-    if date_num < 30:
-        tick_list = list(range(0,date_num,5))
-    else:
-        tick_list = list(range(0,date_num,10))
-    ax.get_xaxis().set_ticks(tick_list)
-    ax.get_yaxis().set_ticks(tick_list)
-    ax.set_xlabel('Image Number', fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Image Number', fontsize=plot_dict['fontsize'])
-
-    if plot_dict['disp_title']:
-        ax.set_title('Coherence Matrix')
-
-    # Colorbar
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", "3%", pad="3%")
-    cbar = plt.colorbar(im, cax=cax)
-    cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
-
-    # Legend
-    if date12_list_drop:
-        ax.plot([],[],label='Upper: used ifgrams')
-        ax.plot([],[],label='Lower: all ifgrams')
-        ax.legend(handlelength=0)
-
-    return ax
-
-
-def mode (thelist):
-    '''Find Mode (most common) item in the list
-    Borrowded from pysar._pysar_utilities
-    '''
-    if not thelist:
-        return None
-    if len(thelist) == 1:
-        return thelist[0]
-
-    counts = {}
-    for item in thelist:
-        counts[item] = counts.get(item, 0) + 1
-    maxcount = 0
-
-    maxitem  = []
-    for k, v in list(counts.items()):
-        if v == maxcount and v > 0:
-            maxitem.append(k)
-        elif v > maxcount:
-            maxitem = []
-            maxitem.append(k)
-            maxcount = v
-
-    if maxcount == 1:
-        print("All values only appear once, return the least/smallest one.")
-        return sorted(maxitem)[0]
-    elif list(counts.values()).count(maxcount) > 1:
-        print("List has multiple modes, return the least/smallest one.")
-        return sorted(maxitem)[0]
-
-    else:
-        return maxitem[0]
-
-
-def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
-    '''Plot min/max Coherence of all interferograms for each date'''
-    # Figure Setting
-    keyList = list(plot_dict.keys())
-    if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in keyList:   plot_dict['linewidth']   = 2
-    if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
-    if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
-    if not 'every_year'  in keyList:   plot_dict['every_year']  = 1
-
-    # Get date list
-    m_dates = [date12.split('-')[0] for date12 in date12_list]
-    s_dates = [date12.split('-')[1] for date12 in date12_list]
-    date8_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
-
-    dates, datevector = ptime.date_list2vector(date8_list)
-    bar_width = mode(np.diff(dates).tolist())*3/4
-    x_list = [i-bar_width/2 for i in dates]
-
-    coh_mat = coherence_matrix(date12_list, coherence_list)
-
-    ax.bar(x_list, np.nanmax(coh_mat, axis=0), bar_width.days, label='Max Coherence')
-    ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min Coherence')
-
-    if plot_dict['disp_title']:
-        ax.set_title('Coherence History of All Related Interferograms')
-
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
-    ax.set_ylim([0.0,1.0])
-
-    ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Coherence',fontsize=plot_dict['fontsize'])
-    ax.legend(loc='lower right')
-
-    return ax
-
-
-def auto_adjust_yaxis(ax, dataList, fontSize=12, ymin=None, ymax=None):
-    '''Adjust Y axis
-    Input:
-        ax       : matplot figure axes object
-        dataList : list of float, value in y axis
-        fontSize : float, font size
-        ymin     : float, lower y axis limit
-        ymax     : float, upper y axis limit
-    Output:
-        ax
-    '''
-    # Min/Max
-    dataRange = max(dataList) - min(dataList)
-    if ymin is None:  ymin = min(dataList) - 0.1*dataRange
-    if ymax is None:  ymax = max(dataList) + 0.1*dataRange
-    ax.set_ylim([ymin, ymax])
-    ## Tick/Label setting
-    #xticklabels = plt.getp(ax, 'xticklabels')
-    #yticklabels = plt.getp(ax, 'yticklabels')
-    #plt.setp(yticklabels, 'color', 'k', fontsize=fontSize)
-    #plt.setp(xticklabels, 'color', 'k', fontsize=fontSize)
-
-    return ax
 

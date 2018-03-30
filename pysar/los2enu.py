@@ -1,12 +1,13 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
 import sys
-from  numpy import pi,cos, sin
+import os 
+from  numpy import shape,pi,cos, sin
 import getopt
 import h5py 
 
@@ -67,7 +68,7 @@ def main(argv):
         look_f=float(h5file[k[0]].attrs['LOOK_REF2']) 
         inc=(look_n+look_f)/2.
         inc=41.0
-        print(('Average look angle = '+str(inc)))
+        print('Average look angle = '+str(inc))
   
     inc=inc*pi/180.
    
@@ -93,15 +94,15 @@ def main(argv):
         try:
             h=heading*pi/180.
         except:
-            print(('trying to use the heading angle from '+File)) 
+            print('trying to use the heading angle from '+File) 
             heading = float(h5file[k[0]].attrs['HEADING'])
             if heading < 0:
                 heading=heading+360
             h=heading*pi/180.
         
         print('******************************************')  
-        print(('Fault Azimuth = '+str(azimuth)))
-        print(('Satellite Heading Angle = '+str(heading)))
+        print('Fault Azimuth = '+str(azimuth))
+        print('Satellite Heading Angle = '+str(heading))
         print('******************************************')
   
         fac=sin(az)*cos(h)*sin(inc)-cos(az)*sin(h)*sin(inc)
@@ -121,12 +122,12 @@ def main(argv):
         P = V*cos(inc) # projecting LOS to up assuming zero horizontal deformation
         outName='projected_los.h5'
   
-    print(('writing '+outName))    
+    print('writing '+outName)    
     h5file2 = h5py.File(outName,'w')
     group=h5file2.create_group(k[0])
     dset = group.create_dataset(k[0], data=P, compression='gzip')
     
-    for key, value in list(h5file[k[0]].attrs.items()):
+    for key, value in h5file[k[0]].attrs.items():
             group.attrs[key] = value
       
     h5file.close()

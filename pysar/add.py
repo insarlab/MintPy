@@ -1,8 +1,8 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Author:  Heresh Fattahi, 2013                            #
 ############################################################
 # Yunjun, Jan 2016: add out_name option, support ROI_PAC product
 #                   support coherence/wrapped
@@ -17,10 +17,11 @@ import argparse
 import h5py
 import numpy as np
 
-import _datetime as ptime
-import _readfile as readfile
-import _writefile as writefile
-from _readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import pysar
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ################################################################################
@@ -53,9 +54,9 @@ def add_files(fname_list, fname_out=None):
     # Basic Info
     atr  = readfile.read_attribute(fname_list[0])
     k = atr['FILE_TYPE']
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
-    print(('First input file is '+atr['PROCESSOR']+' '+k))
+    print('First input file is '+atr['PROCESSOR']+' '+k)
 
     ## Multi-dataset/group file
     if k in multi_group_hdf5_file + multi_dataset_hdf5_file:
@@ -66,10 +67,10 @@ def add_files(fname_list, fname_out=None):
                 k in multi_group_hdf5_file   and ki in multi_group_hdf5_file):
                 pass
             else:
-                print(('Input files structure are not the same: '+k+' v.s. '+ki))
+                print('Input files structure are not the same: '+k+' v.s. '+ki)
                 sys.exit(1)
 
-        print(('writing >>> '+fname_out))
+        print('writing >>> '+fname_out)
         h5out = h5py.File(fname_out, 'w')
         group = h5out.create_group(k)
 
@@ -79,7 +80,7 @@ def add_files(fname_list, fname_out=None):
         prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
     if k in multi_dataset_hdf5_file:
-        print(('number of acquisitions: %d' % epoch_num))
+        print('number of acquisitions: %d' % epoch_num)
         for i in range(epoch_num):
             epoch = epoch_list[i]
             data = np.zeros((length,width))
@@ -91,14 +92,14 @@ def add_files(fname_list, fname_out=None):
             dset = group.create_dataset(epoch, data=data, compression='gzip')
             prog_bar.update(i+1, suffix=epoch)
 
-        for key,value in list(atr.items()):
+        for key,value in iter(atr.items()):
             group.attrs[key] = value
         h5out.close()
         h5.close()
         prog_bar.close()
   
     elif k in multi_group_hdf5_file:
-        print(('number of interferograms: %d' % epoch_num))
+        print('number of interferograms: %d' % epoch_num)
         date12_list = ptime.list_ifgram2date12(epoch_list)
         for i in range(epoch_num):
             epoch = epoch_list[i]
@@ -112,7 +113,7 @@ def add_files(fname_list, fname_out=None):
 
             gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data, compression='gzip')
-            for key, value in list(h5[k][epoch].attrs.items()):
+            for key, value in h5[k][epoch].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
         h5out.close()
@@ -123,11 +124,11 @@ def add_files(fname_list, fname_out=None):
     else:
         data = np.zeros((length,width))
         for fname in fname_list:
-            print(('loading '+fname))
+            print('loading '+fname)
             d,r = readfile.read(fname)
             data = add_matrix(data,d)
 
-        print(('writing >>> '+fname_out))
+        print('writing >>> '+fname_out)
         writefile.write(data,atr,fname_out)
 
     return fname_out
@@ -140,26 +141,38 @@ EXAMPLE='''example:
   add.py  timeseries_ECMWF.h5  ECMWF.h5           -o  timeseries.h5
 '''
 
-def cmdLineParse():
+def createParser():
+    ''' Command line parser '''
     parser = argparse.ArgumentParser(description='Generate sum of multiple input files.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='files (2 or more) to be added')
     parser.add_argument('-o','--output', dest='outfile', help='output file name')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs = None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+    if not inps.input and not inps.geometryDir:
+        parser.print_usage()
+        sys.exit('ERROR: Empty input directory!')
+    return inps
+
+def cmdLineParse(iargs = None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     if len(inps.file) < 2:
         parser.print_usage()
-        sys.exit(os.path.basename(sys.argv[0])+': error: number of input files is < 2')
+        sys.exit('ERROR: At least 2 input files needed!')
     return inps
 
 
 ################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     print('Input files to be added: ')
-    print((inps.file))
+    print(inps.file)
 
     inps.outfile = add_files(inps.file, inps.outfile)
     print('Done.')
@@ -168,5 +181,8 @@ def main(argv):
 
 ################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])  
+    '''
+    Main driver.
+    '''
+    main()
 

@@ -1,6 +1,7 @@
 #! /usr/bin/env python2
 
 import urllib.request, urllib.error, urllib.parse
+import os
 import argparse
 
 class BasicHTTP:
@@ -41,7 +42,7 @@ def main():
 
     url = buildURL(parseArgs)
 
-    print((BasicHTTP.get(url)))
+    print(BasicHTTP.get(url))
 
 if __name__ == '__main__':
     main()

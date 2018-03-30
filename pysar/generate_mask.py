@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -9,14 +9,16 @@
 #                   Add nonzero method, equivalent to Mask.h5
 
 
+import os
 import sys
 import argparse
 
 import numpy as np
+import h5py
 
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 ################################################################################################
@@ -58,10 +60,10 @@ def main(argv):
 
     # Input File Info
     atr = readfile.read_attribute(inps.file)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     k = atr['FILE_TYPE']
-    print(('Input file is '+k+': '+inps.file))
+    print('Input file is '+k+': '+inps.file)
 
     # default output filename
     if not inps.outfile:
@@ -73,10 +75,8 @@ def main(argv):
             inps.outfile = 'geo_'+inps.outfile
 
     ##### Mask: Non-zero
-
     if inps.nonzero and k == 'interferograms':
         print('generate mask for all pixels with non-zero value')
-        
         inps.outfile = ut.nonzero_mask(inps.file, inps.outfile)
         return inps.outfile
 
@@ -96,12 +96,12 @@ def main(argv):
     # min threshold
     if inps.vmin:
         mask[data<inps.vmin] = 0
-        print(('all pixels with value < %s = 0' % str(inps.vmin)))
+        print('all pixels with value < %s = 0' % str(inps.vmin))
 
     # max threshold
     if inps.vmax:
         mask[data>inps.vmax] = 0
-        print(('all pixels with value > %s = 0' % str(inps.vmax)))
+        print('all pixels with value > %s = 0' % str(inps.vmax))
 
     # nan value
     mask[np.isnan(data)] = 0
@@ -112,17 +112,17 @@ def main(argv):
         y0,y1 = sorted(inps.subset_y)
         mask[0:y0,:] = 0
         mask[y1:length,:] = 0
-        print(('all pixels with y OUT of [%d, %d] = 0' % (y0,y1)))
+        print('all pixels with y OUT of [%d, %d] = 0' % (y0,y1))
 
     # subset in x
     if inps.subset_x:
         x0,x1 = sorted(inps.subset_x)
         mask[:,0:x0] = 0
         mask[:,x1:width] = 0
-        print(('all pixels with x OUT of [%d, %d] = 0' % (x0,x1)))
+        print('all pixels with x OUT of [%d, %d] = 0' % (x0,x1))
   
     ## Write mask file
-    print(('writing >>> '+inps.outfile))
+    print('writing >>> '+inps.outfile)
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask, atr, inps.outfile)
     return inps.outfile

@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -14,10 +14,10 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
-import _readfile as readfile
-import _writefile as writefile
-import _pysar_utilities as ut
-import subset as subset
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
+import pysar.subset as subset
 
 
 ################################################################################
@@ -89,7 +89,7 @@ def main(argv):
         sys.exit('ERROR: Not all input files are geocoded.')
 
     k1 = atr1['FILE_TYPE']
-    print(('Input 1st file is '+k1))
+    print('Input 1st file is '+k1)
 
     # Common AOI in lalo
     west, east, south, north = get_overlap_lalo(atr1, atr2)
@@ -105,7 +105,7 @@ def main(argv):
     for i in range(len(inps.file)):
         fname = inps.file[i]
         print('---------------------')
-        print(('reading '+fname))
+        print('reading '+fname)
         atr = readfile.read_attribute(fname)
 
         [x0,x1] = subset.coord_geo2radar([west,east], atr, 'lon')
@@ -116,7 +116,7 @@ def main(argv):
         heading_angle = float(atr['HEADING'])
         if heading_angle < 0.:
             heading_angle += 360.
-        print(('heading angle: '+str(heading_angle)))
+        print('heading angle: '+str(heading_angle))
         heading_angle *= np.pi/180.
         heading.append(heading_angle)
         
@@ -129,7 +129,8 @@ def main(argv):
     ##### 2. Project displacement from LOS to Horizontal and Vertical components
     # math for 3D: cos(theta)*Uz - cos(alpha)*sin(theta)*Ux + sin(alpha)*sin(theta)*Uy = Ulos
     # math for 2D: cos(theta)*Uv - sin(alpha-az)*sin(theta)*Uh = Ulos   #Uh_perp = 0.0
-    # This could be easily modified to support multiple view geometry (e.g. two adjcent tracks from asc & desc) to resolve 3D
+    # This could be easily modified to support multiple view geometry
+    # (e.g. two adjcent tracks from asc & desc) to resolve 3D
 
     # Design matrix
     A = np.zeros((2,2));
@@ -147,7 +148,7 @@ def main(argv):
     # Attributes
     atr = atr1.copy()
     atr['WIDTH'] = str(width)
-    atr['FILE_LENGTH'] = str(length)
+    atr['LENGTH'] = str(length)
     atr['X_FIRST'] = str(west)
     atr['Y_FIRST'] = str(north)
     atr['X_STEP'] = str(lon_step)
@@ -155,11 +156,11 @@ def main(argv):
 
     print('---------------------')
     outname = inps.outfile[0]
-    print(('writing   vertical component to file: '+outname))
+    print('writing   vertical component to file: '+outname)
     writefile.write(u_v, atr, outname)
 
     outname = inps.outfile[1]
-    print(('writing horizontal component to file: '+outname))
+    print('writing horizontal component to file: '+outname)
     writefile.write(u_h, atr, outname)
 
     print('Done.')

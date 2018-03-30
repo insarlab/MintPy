@@ -1,12 +1,11 @@
-#! /usr/bin/env python2
-############################################################
-# Program is part of PySAR v1.2                            #
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
-############################################################
-# remove_plane are modified from a software originally
-# written by Scott Baker with the following licence:
 ###############################################################################
+# Program is part of PySAR v2.0 
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun
+# Author:  Heresh Fattahi, Zhang Yunjun 
+###############################################################################
+#  deramp are modified from a software originally
+#  written by Scott Baker with the following licence:
+#
 #  Copyright (c) 2011, Scott Baker 
 # 
 #  Permission is hereby granted, free of charge, to any person obtaining a
@@ -28,7 +27,8 @@
 #  DEALINGS IN THE SOFTWARE.
 ############################################################################### 
 # Recommend usage:
-#     import pysar._remove_surface as rm
+#     import pysar.utils.deramp as deramp
+#
 
 
 import os
@@ -37,9 +37,9 @@ import time
 import h5py
 import numpy as np
 
-import _datetime as ptime
-import _readfile as readfile
-import _writefile as writefile
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
 
 
 ##################################################################
@@ -103,7 +103,7 @@ def remove_data_surface(data, mask, surf_type='plane'):
        h5flat['velocity'].attrs['Range_Ramp'] = str(MaxRamp) + '   mm/yr'
     elif surf_type == 'plane_azimuth':
        print 'azimuth gradient = ' + str(1000*plane[0][0]) + ' mm/yr/pixel'
-       length= float(h5file['velocity'].attrs['FILE_LENGTH'])
+       length= float(h5file['velocity'].attrs['LENGTH'])
        MaxRamp=length*1000*plane[0][0]
        h5flat['velocity'].attrs['Azimuth_Gradient'] = str(1000*plane[0][0]) + '   mm/yr/pixel'
        h5flat['velocity'].attrs['Azimuth_Ramp'] = str(MaxRamp) +'   mm/yr'
@@ -137,7 +137,7 @@ def remove_data_multiple_surface(data, mask, surf_type, ysub):
 
     ## 2 - last Masks
     for i in range(1,surfaceNum):
-        print(('removing '+str(i+1)+'th surface ...'))
+        print('removing '+str(i+1)+'th surface ...')
         mask_i = np.zeros(data.shape,data.dtype)
         mask_i[ysub[2*i]:ysub[2*i+1],:] = mask[ysub[2*i]:ysub[2*i+1],:]
 
@@ -164,16 +164,16 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
     
     if maskFile:
         Mask = readfile.read(maskFile, epoch='mask')[0]
-        print(('read mask file: '+maskFile))
+        print('read mask file: '+maskFile)
     else:
-        Mask = np.ones((int(atr['FILE_LENGTH']), int(atr['WIDTH'])))
+        Mask = np.ones((int(atr['LENGTH']), int(atr['WIDTH'])))
         print('use mask of the whole area')
     
     ##### Input File Info
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    print(('Input file is '+k))
-    print(('remove ramp type: '+surf_type))
+    print('Input file is '+k)
+    print('remove ramp type: '+surf_type)
     
     ## Multiple Datasets File
     if k in ['interferograms','coherence','wrapped','timeseries']:
@@ -184,10 +184,10 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
 
         h5flat = h5py.File(outFile,'w')
         group  = h5flat.create_group(k)
-        print(('writing >>> '+outFile))
+        print('writing >>> '+outFile)
 
     if k in ['timeseries']:
-        print(('number of acquisitions: '+str(len(epochList))))
+        print('number of acquisitions: '+str(len(epochList)))
         for i in range(epoch_num):
             epoch = epochList[i]
             data = h5file[k].get(epoch)[:]
@@ -199,11 +199,11 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
   
             dset = group.create_dataset(epoch, data=data_n, compression='gzip')
             prog_bar.update(i+1, suffix=epoch)
-        for key,value in list(h5file[k].attrs.items()):
+        for key,value in h5file[k].attrs.items():
             group.attrs[key] = value
   
     elif k in ['interferograms','wrapped','coherence']:
-        print(('number of interferograms: '+str(len(epochList))))
+        print('number of interferograms: '+str(len(epochList)))
         date12_list = ptime.list_ifgram2date12(epochList)
 
         if k == 'interferograms':
@@ -225,21 +225,21 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
 
             gg   = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data_n, compression='gzip')
-            for key,value in list(h5file[k][epoch].attrs.items()):
+            for key,value in h5file[k][epoch].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
 
     ## Single Dataset File
     else:
         data,atr = readfile.read(File)
-        print(('Removing '+surf_type+' from '+k))
+        print('Removing '+surf_type+' from '+k)
   
         if not ysub:
             data_n,ramp = remove_data_surface(data, Mask, surf_type)
         else:
             data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
 
-        print(('writing >>> '+outFile))
+        print('writing >>> '+outFile)
         writefile.write(data_n,atr,outFile)
   
     try:
@@ -248,6 +248,6 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
         prog_bar.close()
     except: pass
   
-    print(('Remove '+surf_type+' took ' + str(time.time()-start) +' secs'))
+    print('Remove '+surf_type+' took ' + str(time.time()-start) +' secs')
     return outFile
 

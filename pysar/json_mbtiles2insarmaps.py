@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-from .add_attribute_insarmaps import InsarDatabaseController, InsarDatasetController
+from pysar.add_attribute_insarmaps import InsarDatabaseController, InsarDatasetController
 import os
 import pickle
 
@@ -93,7 +93,7 @@ def upload_json(folder_path):
                 sys.stderr.write("Error inserting into the database. This is most often due to running out of Memory (RAM), or incorrect database credentials... quitting")
                 sys.exit()
 
-            print(("Inserted " + file + " to db"))
+            print("Inserted " + file + " to db")
 
     attributesController.connect()
     attributesController.index_table_on(area_id, "p", None)
@@ -147,7 +147,7 @@ def main():
         if not parseArgs.server_user or not parseArgs.server_password:
             sys.stderr.write("Error: credentials for the insarmaps server not provided")
         else:
-            print(("Removing " + parseArgs.remove))
+            print("Removing " + parseArgs.remove)
             dbContoller = InsarDatasetController(dbUsername, dbPassword, dbHost, 'pgis', parseArgs.server_user, parseArgs.server_password)
             dbContoller.connect()
             dbContoller.remove_dataset_if_there(parseArgs.remove)

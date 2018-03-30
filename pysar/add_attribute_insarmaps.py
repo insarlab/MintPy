@@ -1,9 +1,11 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 
 import psycopg2
 import sys
+import os
 import argparse
-from . import _readfile as readfile
+import pysar.utils.readfile as readfile
+import json
 import pycurl
 from io import StringIO
 import urllib.request, urllib.parse, urllib.error
@@ -227,7 +229,7 @@ class InsarDatasetController(InsarDatabaseController):
 
         responseCode = curl.getinfo(pycurl.HTTP_CODE)
         if responseCode == 200:
-            print(("Successfully uploaded " + fileName))
+            print("Successfully uploaded " + fileName)
         elif responseCode == 302:
             sys.stderr.write("Server redirected us... Please check username and password, and try again")
         elif responseCode == 301:
@@ -286,7 +288,7 @@ def main(argv):
     dbController.connect()
 
     for key in attributes:
-        print(("Setting attribute " + key + " to " + attributes[key]))
+        print("Setting attribute " + key + " to " + attributes[key])
         if key == "plotAttributes":
             dbController.add_plot_attribute(unavco_name, key, attributes[key])
         else:

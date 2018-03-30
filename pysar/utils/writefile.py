@@ -1,20 +1,19 @@
-#! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 #
-# Yunjun, Sep 2015: Add write_gamma_float() and write_gamma_scomplex()
-# Yunjun, Oct 2015: Add support for write_float32(amp, phase, outname)
-# Yunjun, Jan 2016: Add write()
+# Recommend usage:
+#   import pysar.utils.writefile as writefile
+#
 
 
 import os
 
 import h5py
 import numpy as np
-from PIL import Image
+#from PIL import Image
 
 
 def write(*args):
@@ -60,13 +59,13 @@ def write(*args):
     if ext in ['.h5','.he5']:
         k = atr['FILE_TYPE']
         if k in ['interferograms','coherence','wrapped','timeseries']:
-            print(('Un-supported file type: '+k))
+            print('Un-supported file type: '+k)
             print('Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...')
             return 0;
         h5file = h5py.File(outname,'w')
         group = h5file.create_group(k)
         dset = group.create_dataset(k, data=data, compression='gzip')
-        for key , value in list(atr.items()):
+        for key , value in iter(atr.items()):
             group.attrs[key]=value
         h5file.close()
         return outname
@@ -85,15 +84,15 @@ def write(*args):
             data.real = rg
             data.imag = az
             data.astype('>c8').tofile(outname)
-        elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
-            data.save(outname)
+        #elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
+        #    data.save(outname)
         elif ext == '.mli':
             write_real_float32(data,outname)
         elif ext == '.slc':
             write_complex_int16(data,outname)
         elif ext == '.int':
             write_complex64(data, outname)
-        else: print(('Un-supported file type: '+ext)); return 0;
+        else: print('Un-supported file type: '+ext); return 0;
 
         ##### Write .rsc File
         write_roipac_rsc(atr, outname+'.rsc')
@@ -109,26 +108,25 @@ def write_roipac_rsc(atr, outname, sorting=True):
     Output:
         outname
     '''
-
     # sorting by key name
-    keyList = iter(list(atr.keys()))
+    dictKey = atr.keys()
     if sorting:
-        keyList = sorted(keyList)
+        dictKey = sorted(dictKey)
     
     # Convert 3.333e-4 to 0.0003333
-    if 'X_STEP' in keyList:
+    if 'X_STEP' in dictKey:
         atr['X_STEP'] = str(float(atr['X_STEP']))
         atr['Y_STEP'] = str(float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST']))
         atr['Y_FIRST'] = str(float(atr['Y_FIRST']))
 
     # max digit for space formating
-    digits = max([len(key) for key in keyList]+[2])
+    digits = max([len(key) for key in dictKey]+[2])
     f = '{0:<%d}    {1}'%(digits)
     
     # writing .rsc file
     frsc = open(outname,'w')
-    for key in keyList:
+    for key in dictKey:
         frsc.write(f.format(str(key), str(atr[key]))+'\n')
     frsc.close()
     return outname

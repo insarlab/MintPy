@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR v2.0                            #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -33,15 +33,16 @@ import os
 import sys
 import time
 import argparse
+import string
 
 import h5py
 import numpy as np
 from scipy.special import gamma
 
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import pysar.utils.datetime as ptime
+import pysar.utils.readfile as readfile
+import pysar.utils.writefile as writefile
+import pysar.utils.utils as ut
 
 
 ################################################################################################
@@ -428,7 +429,7 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
 
     ##### Design matrix
     A,B = ut.design_matrix(ifgramFile, date12_list)
-    try:    ref_date = str(np.loadtxt('reference_date.txt', dtype=str))
+    try:    ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
     except: ref_date = meta['date8_list'][0]
     #print 'calculate decorrelation noise covariance with reference date = %s' % (ref_date)
     refIdx = meta['date8_list'].index(ref_date)
@@ -439,13 +440,13 @@ def ifgram_inversion_patch(ifgramFile, coherenceFile, meta, box=None):
     ##### Inversion
     if meta['weight_function'] in ['no','uniform']:
         if np.sum(maskAllNet) > 0:
-            print('inverting pixels with valid phase in all     ifgrams with OLS (%.0f pixels) ...' % (np.sum(maskAllNet)))
+            print('inverting pixels with valid phase in all  ifgrams (%.0f pixels) ...' % (np.sum(maskAllNet)))
             ts1, tempCoh1 = network_inversion_sbas(B, ifgram_data[:,maskAllNet], meta['tbase_diff'], skipZeroPhase=False)
             ts[1:,maskAllNet] = ts1
             temp_coh[maskAllNet] = tempCoh1
 
         if np.sum(maskPartNet) > 0:
-            print('inverting pixels with valid phase in part of ifgrams with SVD ...')
+            print('inverting pixels with valid phase in some ifgrams ...')
             pixel_num2inv = np.sum(maskPartNet)
             pixel_idx2inv = np.where(maskPartNet)[0]
             prog_bar = ptime.progress_bar(maxValue=pixel_num2inv)
@@ -549,7 +550,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
         meta['tempCohFile'] = 'temporalCoherence_var.h5'
         ifgram_inversion('unwrapIfgram.h5', 'coherence.h5', meta)
     '''
-    if 'tempCohFile' not in list(meta.keys()):
+    if 'tempCohFile' not in meta.keys():
         meta['tempCohFile'] = 'temporalCoherence.h5'
     meta['timeseriesStdFile'] = 'timeseriesDecorStd.h5'
     total = time.time()
@@ -563,7 +564,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     ##### Basic Info
     # length/width
     atr = readfile.read_attribute(ifgramFile)
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
     meta['length'] = length
     meta['width']  = width
@@ -597,16 +598,16 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
 
     ##### ref_y/x/value
     try:
-        ref_x = int(atr['ref_x'])
-        ref_y = int(atr['ref_y'])
+        ref_x = int(atr['REF_X'])
+        ref_y = int(atr['REF_Y'])
         print('reference pixel in y/x: [%d, %d]' % (ref_y, ref_x))
         ref_value = np.zeros((ifgram_num,1), np.float32)
         for j in range(ifgram_num):
             ifgram = ifgram_list[j]
             dset = h5ifgram['interferograms'][ifgram].get(ifgram)
             ref_value[j] = dset[ref_y,ref_x]
-        meta['ref_y'] = ref_y
-        meta['ref_x'] = ref_x
+        meta['REF_Y'] = ref_y
+        meta['REF_X'] = ref_x
         meta['ref_value'] = ref_value
     except:
         if meta['skip_ref']:
@@ -614,7 +615,7 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
             print('skip checking reference pixel info - This is for SIMULATION ONLY.')
         else:
             print('ERROR: No ref_x/y found! Can not invert interferograms without reference in space.')
-            print('run seed_data.py '+ifgramFile+' --mark-attribute for a quick referencing.')
+            print('run reference_point.py '+ifgramFile+' --mark-attribute for a quick referencing.')
             sys.exit(1)
     h5ifgram.close()
 
@@ -624,8 +625,8 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     if meta['weight_function'] in ['no','uniform']:
         print('generic least square inversion with min-norm phase velocity')
         print('    based on Berardino et al. (2002, IEEE-TGRS)')
-        print('    OLS for pixels with fully     connected network')
-        print('    SVD for pixels with partially connected network')
+        print('    OLS for pixels with full rank      network')
+        print('    SVD for pixels with rank deficient network')
         if np.linalg.matrix_rank(A) < date_num-1:
             print('WARNING: singular design matrix! Inversion result can be biased!')
             print('continue using its SVD solution on all pixels')
@@ -724,13 +725,14 @@ def ifgram_inversion(ifgramFile='unwrapIfgram.h5', coherenceFile='coherence.h5',
     ##### Calculate time-series attributes
     print('calculating perpendicular baseline timeseries')
     pbase, pbase_top, pbase_bottom = ut.perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list)
-    pbase = str(pbase.tolist()).translate(None,'[],')  # convert np.array into string separated by white space
-    pbase_top = str(pbase_top.tolist()).translate(None,'[],')
-    pbase_bottom = str(pbase_bottom.tolist()).translate(None,'[],')
+    # convert np.array into string separated by white space
+    pbase = str(pbase.tolist()).translate(str.maketrans('[],','   ')).strip()
+    pbase_top = str(pbase_top.tolist()).translate(str.maketrans('[],','   ')).strip()
+    pbase_bottom = str(pbase_bottom.tolist()).translate(str.maketrans('[],','   ')).strip()
     atr['P_BASELINE_TIMESERIES'] = pbase
     atr['P_BASELINE_TOP_TIMESERIES'] = pbase_top
     atr['P_BASELINE_BOTTOM_TIMESERIES'] = pbase_bottom
-    atr['ref_date'] = date8_list[0]
+    atr['REF_DATE'] = date8_list[0]
     atr['FILE_TYPE'] = 'timeseries'
     atr['UNIT'] = 'm'
 
@@ -784,7 +786,7 @@ def write_timeseries_hdf5_file(timeseries, date8_list, atr, timeseriesFile=None)
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
 
-    for key,value in atr.items():
+    for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5timeseries.close()
 
@@ -797,19 +799,18 @@ def read_template2inps(template_file, inps):
         inps = cmdLineParse()
 
     template = readfile.read_template(template_file)
-    key_list = list(template.keys())
 
     # Coherence-based network modification
     prefix = 'pysar.networkInversion.'
 
     key = prefix+'residualNorm'
-    if key in key_list and template[key] in ['L1']:
+    if key in template.keys() and template[key] in ['L1']:
         inps.resid_norm = 'L1'
     else:
         inps.resid_norm = 'L2'
 
     key = prefix+'coherenceFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto']:
             inps.coherence_file = 'coherence.h5'
@@ -819,7 +820,7 @@ def read_template2inps(template_file, inps):
             inps.coherence_file = value
 
     key = prefix+'weightFunc'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto','no']:
             inps.weight_function = 'no'
@@ -834,7 +835,7 @@ def read_template2inps(template_file, inps):
             sys.exit(-1)
 
     key = prefix+'waterMaskFile'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value in ['auto', 'no']:
             maskFile = None
