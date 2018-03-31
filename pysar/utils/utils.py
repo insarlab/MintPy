@@ -1806,31 +1806,33 @@ def date_list(h5file):
 
 
 ######################################
-def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None, zero_first=True):
+def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None):
     '''Make the design matrix for the inversion based on date12_list.
     Reference:
         Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002).
         A new algorithm for surface deformation monitoring based on small
         baseline differential SAR interferograms. IEEE TGRS, 40(11), 2375-2383.
 
-    Input:
-        ifgramFile  - string, name/path of interferograms file
-        date12_list - list of string, date12 used in calculation in YYMMDD-YYMMDD format
-                      use all date12 from ifgramFile if input is empty
-    Outputs:
-        A - 2D np.array in size of (ifgram_num, date_num-1)
-            representing date combination for each interferogram (-1 for master, 1 for slave, 0 for others)
-        B - 2D np.array in size of (ifgram_num, date_num-1)
-            representing temporal baseline timeseries between master and slave date for each interferogram
+    Parameters: ifgramFile : string, 
+                    name/path of interferograms stack file
+                date12_list : list of string in YYMMDD-YYMMDD format
+                    use all date12 from ifgramFile if input is empty
+    Returns:    A : 2D np.array in size of (ifgram_num, date_num-1)
+                    representing date combination for each interferogram (-1 for master, 1 for slave, 0 for others)
+                    used for LS and WLS optimization
+                B : 2D np.array in size of (ifgram_num, date_num-1)
+                    representing temporal baseline timeseries between master and slave date for each interferogram
+                    used for SBAS algorithm
     '''
-    # Check Inputs
+    ## Get date12_list from Inputs
     if not date12_list:
         if ifgramFile:
-            date12_list = pnet.get_date12_list(ifgramFile)
+            from pysar.objects import ifgramStack
+            date12_list = ifgramStack(ifgramFile).get_date12_list()
         else:
             raise ValueError
 
-    # date12_list to date6_list
+    ## date12_list to date6_list
     m_dates = [i.split('-')[0] for i in date12_list]
     s_dates = [i.split('-')[1] for i in date12_list]
     date6_list = sorted(list(set(m_dates + s_dates)))
@@ -1843,6 +1845,7 @@ def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None, zero_firs
     referenceDate = ptime.yymmdd(referenceDate)
     refIndex = date6_list.index(referenceDate)
 
+    ## calculate design matrix
     A = np.zeros((ifgram_num, date_num))
     B = np.zeros(A.shape)
     #t = np.zeros((ifgram_num, 2))
@@ -1853,11 +1856,10 @@ def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None, zero_firs
         B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
         #t[i,:] = [tbase[m_idx], tbase[s_idx]]
 
-    # Remove the 1st date assuming it's zero
-    if zero_first:
-        A = np.hstack((A[:,0:refIndex], A[:,(refIndex+1):]))
-        #A = A[:,1:]
-        B = B[:,:-1]
+    ## Remove reference date as it can not be resolved
+    #A = A[:,1:]
+    A = np.hstack((A[:,0:refIndex], A[:,(refIndex+1):]))
+    B = B[:,:-1]
 
     return A,B
 

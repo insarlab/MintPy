@@ -67,6 +67,7 @@ class ifgramStack:
             Attributes         Dictionary for metadata
             /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
             /bperp             1D array of float32 in size of (m,     ) in meter.
+            /dropIfgram        1D array of bool    in size of (m,     ).
             /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
             /coherence         3D array of float32 in size of (m, l, w).
             /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
@@ -105,7 +106,8 @@ class ifgramStack:
             if dsName in ['connectComponent']:
                 dsDataType = np.bool_
             dsShape = (self.numIfgram, self.length, self.width)
-            print('create dataset /{g}/{d:<{w}} of {t} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit, t=dsDataType, s=dsShape))
+            print('create dataset /{g}/{d:<{w}} of {t} in size of {s}'.format(g=groupName, d=dsName, \
+                                                                              w=maxDigit, t=dsDataType, s=dsShape))
             ds = group.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                       dtype=dsDataType, chunks=True)
 
@@ -137,52 +139,21 @@ class ifgramStack:
         dsBperp[:] = self.bperp
 
         ###############################
+        # 1D dataset containing bool value of dropping the interferograms or not
+        dsDateName = 'dropIfgram'
+        print('create dataset /{}/{}'.format(groupName, dsDateName))
+        dsDate = group.create_dataset(dsDateName, data=np.ones((self.numIfgram), dtype=np.bool_))
+
+        ###############################
         # Attributes
         self.get_metadata()
         self.metadata = ut.subset_attribute(self.metadata, box)
         for key,value in self.metadata.items():
             group.attrs[key] = value
 
-        ###################################
-        # 3D datasets for geometry (Lat, Lon, Heigt, Incidence, 
-        # Heading, Bperp, ...). For a given platform from a specific 
-        # track, a common viewing geometry is assumed. Therfore each 
-        # of Lat, Lon, Height, Incidence and Heading can be stored as
-        # 2D dataset. Baselines if provided should be 3D. 
-
-        #for dsName in platTrackObj.dsetGeometryNames:
-        #    print ('Create dataset for ', dsName)
-        #    pairs, length, width = platTrackObj.getSize_geometry(dsName)
-        #    numPairs = len(pairs)
-        #    dsg = geometryGroup.create_dataset(dsName, shape=(numPairs, length, width),
-        #            dtype=dataType) #, chunks=chunk_shape)
-        #    for i in range(numPairs):
-        #        data, metadata = platTrackObj.pairs[pairs[i]].read(dsName)
-        #        dsg[i,:,:] = data
-
-        #for key,value in self.metadata.items():
-        #    group.attrs[key] = value
-
         f.close()
         print('Finished writing to {}'.format(self.outputFile))
         return self.outputFile
-
-    def addDatasets(self, platTrack, fileList, nameList, bands):
-        # appends a list of 2D or 3D datsets to the geometry group.
-        # Can be lat.rdr, lon.rdr, z.rdr, los.rdr, a mask file, etc 
-        import reader
-        if fileList is not None:
-            f = h5py.File(self.outputFile, 'a')
-         
-            numDataSets = len(fileList)
-            for i in range(numDataSets):
-                print('adding ',fileList[i])
-                if bands is None:
-                    data = reader.read(fileList[i])
-                else:
-                    data = reader.read(fileList[i] , bands=[bands[i]])
-                dsg = f['/geometry'].create_dataset(nameList[i], data=data, shape=data.shape, dtype=data.dtype)
-            f.close()
 
 
 ########################################################################################
