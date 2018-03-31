@@ -19,6 +19,7 @@ We recommend using [Anaconda](https://www.anaconda.com/) to install the python e
 - Basemap (optional, for plotting in geo coordinate)
 - pykml (optional, for Google Earth KMZ file output)
 - joblib (optional, for parallel processing)
+- lxml (optional, for ISCE XML file parsing)
 - [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) (optional, for tropospheric correction using weather re-analysis models, i.e. ERA-Interim, NARR, MERRA)
 
 Here is a example on Mac OSX using csh/tcsh:   
@@ -38,7 +39,7 @@ Then run the following in your terminal:
     chmod +x Anaconda3-5.1.0-MacOSX-x86_64.sh
     ./Anaconda3-5.1.0-MacOSX-x86_64.sh -b -p $PYTHON3DIR
     $PYTHON3DIR/bin/conda config --add channels conda-forge
-    $PYTHON3DIR/bin/conda install basemap joblib pykml --yes   
+    $PYTHON3DIR/bin/conda install basemap joblib pykml lxml --yes   
    
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
 
