@@ -25,8 +25,8 @@ class timeseries:
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
 
     /                    Root level
-    Attributes           Dictionary for metadata
     timeseries           group name
+        Attributes       Dictionary for metadata
         /timeseries      3D array of float32 in size of (n, l, w) in meter.
         /date            1D array of string  in size of (n,     ) in YYYYMMDD format
         /bperp           1D array of float32 in size of (n,     ) in meter. (optional)
@@ -35,15 +35,17 @@ class timeseries:
         self.file = file
         self.key = 'timeseries'
 
-    def close(self):
+    def close(self, printMsg=True):
         try:
             self.f.close()
-            print('close timeseries file: {}'.format(os.path.basename(self.file)))
+            if printMsg:
+                print('close timeseries file: {}'.format(os.path.basename(self.file)))
         except:
             pass
 
-    def open(self):
-        print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
+    def open(self, printMsg=True):
+        if printMsg:
+            print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
         self.metadata = readfile.read_attribute(self.file)
         self.f = h5py.File(self.file,'r')
         self.numDate, self.length, self.width = self.f[self.key].get(self.key).shape
@@ -59,13 +61,35 @@ class timeseries:
         else:
             self.bperp = None
 
-    def read(self, box=None):
-        self.f = h5py.File(self.file,'r')
-        dset = self.f[self.key].get(self.key)
+    def read(self, epoch=None, box=None):
+        '''Read dataset from timeseries file
+        Parameters: self : timeseries object
+                    epoch : (list of) string in YYYYMMDD format
+                    box : tuple of 4 int, indicating x0,y0,x1,y1 of range
+        Returns:    data : 2D or 3D dataset
+        Examples:   from pysar.objects import timeseries
+                    tsobj = timeseries('timeseries_ECMWF_demErr.h5')
+                    data = tsobj.read(epoch='20161020')
+                    data = tsobj.read(epoch='20161020', box=(100,300,500,800))
+                    data = tsobj.read(epoch=['20161020','20161026','20161101'])
+                    data = tsobj.read(box=(100,300,500,800))
+        '''
+        self.open()
+        ds = self.f[self.key].get(self.key)
+
+        ##Index in time/1st dimension
+        dsIndex = range(self.numDate)
+        if isinstance(epoch, str):
+            dsIndex = self.dateList.index(epoch)
+        elif isinstance(epoch, list):
+            dsIndex = []
+            for e in epoch:
+                dsIndex.append(self.dateList.index(e))
+        ##Index in space/2_3 dimension
         if box is None:
-            data = dset[:]
-        else:
-            data = dset[:, box[1]:box[3], box[0]:box[2]]
+            box = [0,0,self.width,self.length]
+
+        data = ds[dsIndex, box[1]:box[3], box[0]:box[2]]
         return data
 
 
@@ -144,15 +168,17 @@ class geometry:
         self.file = file
         self.key = 'geometry'
 
-    def close(self):
+    def close(self, printMsg=True):
         try:
             self.f.close()
-            print('close geometry file: {}'.format(os.path.basename(self.file)))
+            if printMsg:
+                print('close geometry file: {}'.format(os.path.basename(self.file)))
         except: 
             pass
 
-    def open(self):
-        print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
+    def open(self, printMsg=True):
+        if printMsg:
+            print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
         self.metadata = readfile.read_attribute(self.file)
         self.f = h5py.File(self.file,'r')
         self.length, self.width = self.f[self.key].get(geometryDatasetNames[0]).shape
@@ -197,13 +223,22 @@ class ifgramStack:
         self.file = file
         self.key = 'ifgramStack'
 
-    def open(self):
+    def close(self, printMsg=True):
+        try:
+            self.f.close()
+            if printMsg:
+                print('close {} file: {}'.format(self.key, os.path.basename(self.file)))
+        except:
+            pass
+
+    def open(self, printMsg=True):
         '''
         Time format/rules:
             All datetime.datetime objects named with time
             All string in YYYYMMDD        named with date (following roipac)
         '''
-        print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
+        if printMsg:
+            print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
         self.metadata = readfile.read_attribute(self.file)
         self.f = h5py.File(self.file, 'r')
         self.get_size()
@@ -224,13 +259,6 @@ class ifgramStack:
             di = dt(*time.strptime(self.dateList[i],"%Y%m%d")[0:5])
             self.btempHist.append((di-d1).days)
         self.btempHistDiff = np.diff(self.btempHist)
-
-    def close(self):
-        try:
-            self.f.close()
-            print('close {} file: {}'.format(self.key, os.path.basename(self.file)))
-        except:
-            pass
 
     def get_size(self):
         self.length, self.width = self.f[self.key].get(ifgramDatasetNames[0]).shape[1:3]
@@ -286,6 +314,56 @@ class ifgramStack:
 
 
 
+
+
+
+########################################################################################
+class hdfEos5:
+    '''
+    Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer (http://insarmaps.miami.edu)
+    It contains a "timeseries" group and three datasets: date, bperp and timeseries.
+
+    /HDFEOS                           Root level group name
+        /GRIDS                        2nd level group name for products in geo coordinates
+            Attributes                metadata in dict.
+            /timeseries               3rd level group name for time-series InSAR product
+                /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
+                /bperp                1D array of float32 in size of (n,     ) in meter
+                /temporalCoherence    2D array of float32 in size of (   l, w).
+                /mask                 2D array of bool_   in size of (   l, w).
+                /raw                  3D array of float32 in size of (n, l, w) in meter
+                /troposphericDelay    3D array of float32 in size of (n, l, w) in meter
+                /topographicResidual  3D array of float32 in size of (n, l, w) in meter
+                /ramp                 3D array of float32 in size of (n, l, w) in meter
+                /displacement         3D array of float32 in size of (n, l, w) in meter
+            /geometry                 3rd level group name for geometry data
+                /height               2D array of float32 in size of (   l, w) in meter.
+                /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
+                /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
+                /azimuthCoord         2D array of float32 in size of (   l, w) in degree.
+                /rangeCoord           2D array of float32 in size of (   l, w) in degree.
+                /headingAngle         2D array of float32 in size of (   l, w) in degree. (optional)
+                /shadowMask           2D array of bool    in size of (   l, w).           (optional)
+                /waterMask            2D array of bool    in size of (   l, w).           (optional)
+                /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
+        /SWATHS
+            Attributes
+            /ifgramStack
+                ...
+            /geometry
+                ...
+    '''
+    def __init__(self, file=None):
+        self.file = file
+        self.key = 'HDFEOS'
+
+    def close(self, printMsg=True):
+        try:
+            self.f.close()
+            if printMsg:
+                print('close timeseries file: {}'.format(os.path.basename(self.file)))
+        except:
+            pass
 
 
 

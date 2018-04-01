@@ -240,7 +240,7 @@ def dload_grib_pyaps(date_list, hour, trop_model='ECMWF', weather_dir='./'):
     elif trop_model == 'NARR'  :  pa.NARRdload(  date_list2download, hour, grib_dir)
     elif trop_model == 'ERA'   :  pa.ERAdload(   date_list2download, hour, grib_dir)
     elif trop_model == 'MERRA1':  pa.MERRA1dload(date_list2download, hour, grib_dir)
-    return grib_file_existed
+    return grib_file_list
 
 
 def prepare_roipac_dem(demFile, geocoded=False):
@@ -314,7 +314,7 @@ def get_delay_timeseries(inps, atr):
 
 def correct_delay(inps, atr):
     print('*'*50+'\nCorrecting delay for input time-series')
-    if 'timeseries' not in atr.keys():
+    if atr['FILE_TYPE'] != 'timeseries':
         print('No input timeseries found, exit')
         sys.exit(1)
 
@@ -344,7 +344,7 @@ def main(iargs=None):
 
     # Delete temporary DEM file in ROI_PAC format
     if '4pyaps' in inps.dem_file:
-        rmCmd = 'rm {f} {f}.rsc'.format(inps.dem_file);    print(rmCmd);    os.system(rmCmd)
+        rmCmd = 'rm {f} {f}.rsc'.format(f=inps.dem_file);    print(rmCmd);    os.system(rmCmd)
     print('Done.')
     return inps.outfile
 

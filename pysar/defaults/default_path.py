@@ -25,6 +25,7 @@ pysar.load.lookupXFile    = $PROJECT_DIR/merged/geom_master/lon.rdr
 pysar.load.incAngleFile   = $PROJECT_DIR/merged/geom_master/los.rdr
 pysar.load.headAngleFile  = $PROJECT_DIR/merged/geom_master/los.rdr
 pysar.load.shadowMaskFile = $PROJECT_DIR/merged/geom_master/shadowMask.rdr
+pysar.load.bperpFile      = $PROJECT_DIR/baselines/bperp_*.rdr
 '''
 
 roipacAutoPath = '''##----------Default file path of ROI_PAC products

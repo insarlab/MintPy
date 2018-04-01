@@ -12,46 +12,7 @@ import time
 import h5py
 from numpy import std
 from pysar.utils import readfile, datetime as ptime
-
-
-############################################################
-def print_attributes(atr, sorting=True):
-    ## Print Dictionary of Attributes
-    digits = digits = max([len(key) for key in atr.keys()]+[0])
-    f = '{0:<%d}    {1}'%(digits)
-    dictKey = atr.keys()
-    if sorting:
-        dictKey = sorted(dictKey)
-    for key in dictKey:
-        print((f.format(str(key),str(atr[key]))))
-    return
-
-
-## By andrewcollette at https://github.com/h5py/h5py/issues/406
-def print_hdf5_structure(File):
-    def print_hdf5_structure_obj(name, obj):
-        print(name)
-        print_attributes(obj.attrs)
-    h5file=h5py.File(File,'r')
-    h5file.visititems(print_hdf5_structure_obj)
-    h5file.close()
-    return
-
-
-def print_timseries_date_info(dateList):
-    datevector = ptime.date_list2vector(dateList)[1]
-    print('*************** Date Info ***************')
-    print('Start Date: '+dateList[0])
-    print('End   Date: '+dateList[-1])
-    print('Number of acquisitions    : %d' % len(dateList))
-    print('Std. of acquisition times : %.2f yeras' % std(datevector))
-    print('----------------------')
-    print('List of dates:')
-    print(dateList)
-    print('----------------------')
-    print('List of dates in years')
-    print(datevector)
-    return
+from pysar.objects import timeseries, ifgramStack, geometry, hdfEos5
 
 
 ############################################################
@@ -83,41 +44,115 @@ def cmdLineParse(iargs = None):
 
 
 ############################################################
-def main(argv):
-    inps = cmdLineParse()
+def print_attributes(atr, sorting=True):
+    ## Print Dictionary of Attributes
+    digits = digits = max([len(key) for key in atr.keys()]+[0])
+    f = '{0:<%d}    {1}'%(digits)
+    dictKey = atr.keys()
+    if sorting:
+        dictKey = sorted(dictKey)
+    for key in dictKey:
+        print((f.format(str(key),str(atr[key]))))
+    return
 
-    ext = os.path.splitext(inps.file)[1].lower()
-    if inps.disp_date:
-        atr = readfile.read_attribute(inps.file)
-        k = atr['FILE_TYPE']
-        if k not in ['timeseries','ifgramStack']:
-            print('--date option can not be applied to {} file, ignore it.'.format(k))
-            inps.disp_date = False
-        else:
-            f = h5py.File(inps.file,'r')
-            dates = f[k].get('date')[:]
-            print(dates)
-        return
 
+def print_hdf5_structure(File):
+    '''Modified from andrewcollette at https://github.com/h5py/h5py/issues/406'''
+    def print_hdf5_structure_obj(name, obj):
+        if isinstance(obj, h5py.Group):
+            print('HDF5 group "/{}"'.format(name))
+        elif isinstance(obj, h5py.Dataset):
+            print('HDF5 dataset "/{:<30}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype))
+        print_attributes(obj.attrs)
+    f=h5py.File(File,'r')
+    f.visititems(print_hdf5_structure_obj)
+    f.close()
+    return
+
+
+def print_timseries_date_stat(dateList):
+    datevector = ptime.date_list2vector(dateList)[1]
+    print('Start Date: '+dateList[0])
+    print('End   Date: '+dateList[-1])
+    print('Number of acquisitions    : %d' % len(dateList))
+    print('Std. of acquisition times : %.2f yeras' % std(datevector))
+    print('----------------------')
+    print('List of dates:')
+    print(dateList)
+    print('----------------------')
+    print('List of dates in years')
+    print(datevector)
+    return
+
+
+def get_date_list(fname, printMsg=False):
+    atr = readfile.read_attribute(fname)
+    k = atr['FILE_TYPE']
+    dateList = None
+    if k in ['timeseries']:
+        obj = timeseries(fname)
+        obj.open(printMsg=False)
+        dateList = obj.dateList
+    elif k in ['ifgramStack']:
+        obj = ifgramStack(fname)
+        obj.open(printMsg=False)
+        dateList = obj.date12List
+    else:
+        print('--date option can not be applied to {} file, ignore it.'.format(k))
+    try: obj.close(printMsg=False)
+    except: pass
+
+    if printMsg and dateList is not None:
+        for i in dateList:
+            print(i)
+    return dateList
+
+
+def print_pysar_info(fname):
     try:
-        atr = readfile.read_attribute(inps.file)
+        atr = readfile.read_attribute(fname)
         k = atr['FILE_TYPE']
+        print('{} {:*<40}'.format('*'*20, 'Basic File Info '))
         print('file name: '+atr['FILE_PATH'])
         print('file type: '+atr['FILE_TYPE'])
         if 'Y_FIRST' in atr.keys():
-            print('Coordinates : GEO')
+            print('coordinates : GEO')
         else:
-            print('Coordinates : radar')
+            print('coordinates : RADAR')
+        if k in ['timeseries']:
+            dateList = get_date_list(fname)
+            print('\n{} {:*<40}'.format('*'*20, 'Date Stat Info '))
+            print_timseries_date_stat(dateList)
     except:
         pass
+    return
 
+
+############################################################
+def main(argv):
+    inps = cmdLineParse()
+    if not os.path.isfile(inps.file):
+        print('ERROR: input file does not exists: {}'.format(inps.file))
+        return
+    ext = os.path.splitext(inps.file)[1].lower()
+
+    ## --date option
+    if inps.disp_date:
+        get_date_list(inps.file, printMsg=True)
+        return
+
+    ## Basic info from PySAR reader
+    print_pysar_info(inps.file)
+
+    ## Generic Attribute/Structure of all files
     if ext in ['.h5','.he5']:
-        print('***** HDF5 File Structure *****')
+        print('\n{} {:*<40}'.format('*'*20, 'HDF5 File Structure '))
         print_hdf5_structure(inps.file)
     else:
+        print('\n{} {:*<40}'.format('*'*20, 'Binary File Attributes '))
         atr = readfile.read_attribute(inps.file)
-        print('***** File Attributes *********')
         print_attributes(atr)
+
     return
 
 
