@@ -54,6 +54,16 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 
 ###############################################################################
+standardWeatherModelNames={'ECWMF':'ERAInt','ERAINTERIM':'ERAInt','ERAINT':'ERAInt','ERAI':'ERAInt',
+                           'MERRA2':'MERRA'
+                          }
+def standardize_trop_model(tropModel):
+    tropModel = tropModel.replace('-','').upper()
+    if tropModel in standardWeatherModelNames.keys():
+        tropModel = standardWeatherModelNames[tropModel]
+    return tropModel
+
+
 def coord_geo2radar(geoCoordIn, atr, coordType):
     ## convert geo coordinates into radar coordinates (round to nearest integer)
     ## for Geocoded file only

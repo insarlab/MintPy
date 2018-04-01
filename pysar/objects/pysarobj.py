@@ -3,7 +3,9 @@
 # Copyright(c) 2018, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi, 2018              #
 ############################################################
-
+# class used for file operation within PySAR
+# Recommended usage:
+#     from pysar.objects import timeseries, ifgramStack, geometry
 
 import os, sys, glob
 import time
@@ -26,16 +28,19 @@ class timeseries:
     Attributes           Dictionary for metadata
     timeseries           group name
         /timeseries      3D array of float32 in size of (n, l, w) in meter.
-        /date            1D array of string  in size of (n,) in YYYYMMDD format
-        /bperp           1D array of float32 in size of (n,) in meter.
+        /date            1D array of string  in size of (n,     ) in YYYYMMDD format
+        /bperp           1D array of float32 in size of (n,     ) in meter. (optional)
     '''
     def __init__(self, file=None):
         self.file = file
         self.key = 'timeseries'
 
     def close(self):
-        print('close timeseries: {}'.format(os.path.basename(self.file)))
-        self.f.close()
+        try:
+            self.f.close()
+            print('close timeseries file: {}'.format(os.path.basename(self.file)))
+        except:
+            pass
 
     def open(self):
         print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
@@ -48,14 +53,27 @@ class timeseries:
 
         self.refIndex = self.dateList.index(self.metadata['REF_DATE'])
         self.btemp = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
-        self.bperp = self.f[self.key].get('bperp')[:]
-        self.bperp -= self.bperp[self.refIndex]
+        if 'bperp' in self.f[self.key].keys():
+            self.bperp = self.f[self.key].get('bperp')[:]
+            self.bperp -= self.bperp[self.refIndex]
+        else:
+            self.bperp = None
+
+    def read(self, box=None):
+        self.f = h5py.File(self.file,'r')
+        dset = self.f[self.key].get(self.key)
+        if box is None:
+            data = dset[:]
+        else:
+            data = dset[:, box[1]:box[3], box[0]:box[2]]
+        return data
+
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None):
         '''
         Parameters: data  : 3D array of float32
                     dates : 1D array/list of string in YYYYMMDD format
-                    bperp : 1D array/list of float32
+                    bperp : 1D array/list of float32 (optional)
                     metadata : dict
                     outFile : string
                     refFile : string
@@ -91,8 +109,9 @@ class timeseries:
         print('create dataset /{}/dates      of {:<10} in size of {}'.format(gName, str(dates.dtype), dates.shape))
         dset = group.create_dataset('date', data=dates, chunks=True)
 
-        print('create dataset /{}/bperp      of {:<10} in size of {}'.format(gName, str(bperp.dtype), bperp.shape))
-        dset = group.create_dataset('bperp', data=bperp, chunks=True)
+        if bperp:
+            print('create dataset /{}/bperp      of {:<10} in size of {}'.format(gName, str(bperp.dtype), bperp.shape))
+            dset = group.create_dataset('bperp', data=bperp, chunks=True)
 
         #### Attributes
         for key, value in metadata.items():
@@ -101,6 +120,58 @@ class timeseries:
         f.close()
         print('finished writing to {}'.format(outFile))
         return outFile
+
+
+
+
+########################################################################################
+class geometry:
+    ''' Geometry object.
+    /geometry                    Root level group name
+        Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
+        /height                  2D array of float32 in size of (l, w   ) in meter.
+        /latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
+        /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
+        /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
+        /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
+        /headingAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
+        /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
+        /waterMask               2D array of bool    in size of (l, w   ).           (optional)
+        /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
+        ...
+    '''
+    def __init__(self, file=None):
+        self.file = file
+        self.key = 'geometry'
+
+    def close(self):
+        try:
+            self.f.close()
+            print('close geometry file: {}'.format(os.path.basename(self.file)))
+        except: 
+            pass
+
+    def open(self):
+        print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
+        self.metadata = readfile.read_attribute(self.file)
+        self.f = h5py.File(self.file,'r')
+        self.length, self.width = self.f[self.key].get(geometryDatasetNames[0]).shape
+
+        self.geocoded = False
+        if 'Y_FIRST' in self.metadata.keys():
+            self.geocoded = True
+
+    def read(self, datasetName=geometryDatasetNames[0], box=None):
+        '''Read 2D / 3D dataset with bounding box in space'''
+        dset = self.f[self.key].get(datasetName)
+        if box is None:
+            box = (0,0,self.width,self.length)
+        if len(dset.shape) == 2:
+            data = dset[box[1]:box[3], box[0]:box[2]]
+        elif len(dset.shape) == 3:
+            data = dset[:, box[1]:box[3], box[0]:box[2]]
+        return data
+
 
 
 
@@ -155,8 +226,11 @@ class ifgramStack:
         self.btempHistDiff = np.diff(self.btempHist)
 
     def close(self):
-        print('close {} file: {}'.format(self.key, os.path.basename(self.file)))
-        self.f.close()
+        try:
+            self.f.close()
+            print('close {} file: {}'.format(self.key, os.path.basename(self.file)))
+        except:
+            pass
 
     def get_size(self):
         self.length, self.width = self.f[self.key].get(ifgramDatasetNames[0]).shape[1:3]

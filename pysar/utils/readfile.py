@@ -32,14 +32,10 @@
 #
 
 
-import os
-import sys
-import re
+import os, sys, re
 from datetime import datetime as dt
-
 import h5py
 import numpy as np
-from lxml import objectify
 #from PIL import Image
 import json
 
@@ -597,6 +593,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
 
 def read_isce_xml(fname):
     '''Read ISCE .xml file input a python dictionary structure.'''
+    from lxml import objectify
     xmlDict={}
     fObj = objectify.parse(fname)
     root = fObj.getroot()

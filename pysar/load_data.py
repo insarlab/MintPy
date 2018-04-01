@@ -92,7 +92,6 @@ def createParser():
     parser.add_argument('-o','--output', type=str, nargs=3, dest='outfile',\
                         default=['./INPUTS/ifgramStack.h5','./INPUTS/geometryRadar.h5','./INPUTS/geometryGeo.h5'],\
                         help='output HDF5 file')
-
     return parser
 
 

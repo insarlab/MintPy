@@ -3,7 +3,9 @@
 # Copyright(c) 2017, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun, 2017              #
 ############################################################
-
+# class used for data loading from InSAR stack to PySAR timeseries
+# Recommended usage:
+#     from pysar.objects.insarobj import ifgram, ifgramStack, geometry
 
 import os, sys, glob
 import h5py
@@ -360,7 +362,8 @@ class geometry:
             if dsName.lower().endswith('mask'):
                 dsDataType = np.bool_
             dsShape = (length, width)
-            print('create dataset /{g}/{d:<{w}} of {t} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit, t=dsDataType, s=dsShape))
+            print('create dataset /{g}/{d:<{w}} of {t} in size of {s}'.format(g=groupName, d=dsName,\
+                                                                              w=maxDigit, t=dsDataType, s=dsShape))
             ds = group.create_dataset(dsName, shape=dsShape, dtype=dsDataType, chunks=True)
             data = self.read(family=dsName, box=box)[0]
             ds[:] = data

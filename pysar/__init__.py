@@ -33,3 +33,7 @@ figsize_single_max = 12.0      # default min size in inch, for single plot
 figsize_multi = [15.0, 8.0]    # default size in inch, for multiple subplots
 
 
+##Internal Modules listed by relative dependency
+# pysar.utils
+# pysar.objects, pysar.defaults
+# pysar
