@@ -108,22 +108,25 @@ def write_roipac_rsc(atr, outname, sorting=True):
     Output:
         outname
     '''
-    # sorting by key name
-    dictKey = atr.keys()
-    if sorting:
-        dictKey = sorted(dictKey)
-    
+    # Convert PYSAR attributes to ROI_PAC attributes
+    atr['FILE_LENGTH'] = atr['LENGTH']
+
     # Convert 3.333e-4 to 0.0003333
-    if 'X_STEP' in dictKey:
+    if 'X_STEP' in atr.keys():
         atr['X_STEP'] = str(float(atr['X_STEP']))
         atr['Y_STEP'] = str(float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST']))
         atr['Y_FIRST'] = str(float(atr['Y_FIRST']))
 
     # max digit for space formating
-    digits = max([len(key) for key in dictKey]+[2])
+    digits = max([len(key) for key in atr.keys()]+[2])
     f = '{0:<%d}    {1}'%(digits)
     
+    # sorting by key name
+    dictKey = atr.keys()
+    if sorting:
+        dictKey = sorted(dictKey)
+
     # writing .rsc file
     frsc = open(outname,'w')
     for key in dictKey:

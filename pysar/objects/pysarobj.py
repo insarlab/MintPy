@@ -109,7 +109,7 @@ class timeseries:
         print('create dataset /{}/dates      of {:<10} in size of {}'.format(gName, str(dates.dtype), dates.shape))
         dset = group.create_dataset('date', data=dates, chunks=True)
 
-        if bperp:
+        if bperp.shape != ():
             print('create dataset /{}/bperp      of {:<10} in size of {}'.format(gName, str(bperp.dtype), bperp.shape))
             dset = group.create_dataset('bperp', data=bperp, chunks=True)
 

@@ -443,6 +443,16 @@ def read_attribute(fname, epoch=None):
     return atr
 
 
+def standardize_metadata(metaDict, standardMetadatKeys):
+    metaDict_standard = {}
+    for k in metaDict.keys():
+        if k in standardMetadataKeys.keys():
+            metaDict_standard[standardMetadatKeys[k]] = metaDict[k]
+        else:
+            metaDict_standard[k] = metaDict[k]
+    return metaDict_standard
+
+
 #########################################################################
 def check_variable_name(path, printMsg=True):
     s=path.split("/")[0]
@@ -622,16 +632,6 @@ def read_isce_xml(fname):
 
     xmlDict = attribute_isce2roipac(xmlDict)
     return xmlDict
-
-
-def standardize_metadata(metaDict, standardMetadatKeys):
-    metaDict_standard = {}
-    for k in metaDict.keys():
-        if k in standardMetadataKeys.keys():
-            metaDict_standard[standardMetadatKeys[k]] = metaDict[k]
-        else:
-            metaDict_standard[k] = metaDict[k]
-    return metaDict_standard
 
 
 def attribute_gamma2roipac(par_dict_in):

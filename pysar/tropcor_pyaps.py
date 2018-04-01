@@ -17,13 +17,17 @@ import numpy as np
 from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 from pysar.objects import timeseries, geometry
 
+standardWeatherModelNames={'ERAI':'ECMWF','ERAINT':'ECMWF','ERAINTERIM':'ECMWF',
+                           'MERRA2':'MERRA'
+                          }
+
 
 ###############################################################
 EXAMPLE='''example:
-  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ERAInt
-  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ERAInt
-  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ERAInt --dem geometryRadar.h5 --ref-yx 30 40 -i geometryRadar.h5
-  tropcor_pyaps.py -m ERAInt --dem geometryRadar.h5 -i geometryRadar.h5 -f timeseries.h5
+  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF
+  tropcor_pyaps.py -d date_list.txt     --hour 12 -m MERRA
+  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF --dem geometryRadar.h5 --ref-yx 30 40 -i geometryRadar.h5
+  tropcor_pyaps.py -m ECMWF --dem geometryRadar.h5 -i geometryRadar.h5 -f timeseries.h5
 '''
 
 REFERENCE='''reference:
@@ -45,10 +49,10 @@ pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, Number of loo
 '''
 
 DATA_INFO='''
-  re-analysis_dataset     coverage   temporal_resolution    spatial_resolution      latency     analysis
+  re-analysis_dataset        coverage   temporal_resolution    spatial_resolution      latency     analysis
 ------------------------------------------------------------------------------------------------------------
-ERAInt (by ECMWF)          Global      00/06/12/18 UTC      0.75 deg (~83 km)       2-month       4D-var
-MERRA (by NASA Goddard)    Global      00/06/12/18 UTC      0.5*0.625 (~50 km)     2-3 weeks      3D-var
+ERA-Interim (by ECMWF)        Global      00/06/12/18 UTC      0.75 deg (~83 km)       2-month      4D-var
+MERRA(2) (by NASA Goddard)    Global      00/06/12/18 UTC      0.5*0.625 (~50 km)     2-3 weeks     3D-var
 
 To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application, following https://disc.gsfc.nasa.gov/earthdata-login.
 '''
@@ -65,7 +69,7 @@ def createParser():
 
     ##For data download
     parser.add_argument('-m','--model','-s', dest='trop_model', default='ERAInt',\
-                        choices={'ERAInt','MERRA','NARR','ERA','MERRA1'},\
+                        choices={'ECMWF','MERRA','NARR','ERA','MERRA1'},\
                         help='source of the atmospheric data.\nNARR is working for 1979-Jan to 2014-Oct.')
     parser.add_argument('-d','--date-list', dest='date_list', nargs='*',\
                         help='Read the first column of text file as list of date to download data\n'+\
@@ -100,6 +104,7 @@ def cmdLineParse(iargs=None):
 
 ###############################################################
 def check_inputs(inps):
+    parser = createParser()
     atr = dict()
     if inps.timeseries_file:
         atr = readfile.read_attribute(inps.timeseries_file)
@@ -107,7 +112,7 @@ def check_inputs(inps):
         atr = readfile.read_attribute(inps.dem_file)
 
     ## Get Grib Source
-    inps.trop_model = ut.standardize_trop_model(inps.trop_model)
+    inps.trop_model = ut.standardize_trop_model(inps.trop_model, standardWeatherModelNames)
     print('weather model: '+inps.trop_model)
 
     ##hour
@@ -115,31 +120,32 @@ def check_inputs(inps):
         if 'CENTER_LINE_UTC' in atr.keys():
             inps.hour = ptime.closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.trop_model)
         else:
+            parser.print_usage()
             print('ERROR: no input for hour')
             sys.exit(1)
     print('time of cloest available product: {}:00 UTC'.format(inps.hour))
 
     ##date list
-    if not inps.date_list:
-        if inps.timeseries_file:
-            print('read date list from timeseries file: {}'.format(inps.timeseries_file))
-            f = h5py.File(inps.timeseries_file, 'r')
-            inps.date_list = [i.decode('utf8') for i in f['timeseries'].get('date')[:]]
-            f.close()
+    if inps.timeseries_file:
+        print('read date list from timeseries file: {}'.format(inps.timeseries_file))
+        f = h5py.File(inps.timeseries_file, 'r')
+        inps.date_list = [i.decode('utf8') for i in f['timeseries'].get('date')[:]]
+        f.close()
     elif len(inps.date_list) == 1:
         if os.path.isfile(inps.date_list[0]):
             print('read date list from text file: {}'.format(inps.date_list[0]))
             inps.date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list[0], dtype=bytes, usecols=(0,)).astype(str).tolist())
         else:
+            parser.print_usage()
             print('ERROR: input date list < 2')
             sys.exit(1)
 
     ## weather directory
     if not inps.weather_dir:
         if inps.timeseries_file:
-            inps.weather_dir = os.path.join(os.path.dirname(os.path.abspath(inps.timeseries_file)), '/../WEATHER')
+            inps.weather_dir = os.path.join(os.path.dirname(os.path.abspath(inps.timeseries_file)), '../WEATHER')
         elif inps.dem_file:
-            inps.weather_dir = os.path.join(os.path.dirname(os.path.abspath(inps.dem_file)), '/../WEATHER')
+            inps.weather_dir = os.path.join(os.path.dirname(os.path.abspath(inps.dem_file)), '../WEATHER')
         else:
             inps.weather_dir = os.path.abspath(os.getcwd())
     print('weather data directory: '+inps.weather_dir)
@@ -150,22 +156,22 @@ def check_inputs(inps):
 
     ## Incidence angle: to map the zenith delay to the slant delay
     if os.path.isfile(inps.inc_angle):
-        print('incidence angle from file: {}'.format(inps.inci_angle))
+        print('incidence angle from file: {}'.format(inps.inc_angle))
         inps.inc_angle = readfile.read(inps.inc_angle, epoch='incidenceAngle')[0]
     else:
         print('incidence angle from input: {}'.format(inps.inc_angle))
         inps.inc_angle = float(inps.inc_angle)
     inps.inc_angle = inps.inc_angle*np.pi/180.0
 
-    ##Prepare DEM file in ROI_PAC format for PyAPS to read
-    if inps.dem_file:
-        inps.dem_file = prepare_roipac_dem(inps.dem_file, inps.geocoded)
-
     ##Coordinate system: geocoded or not
     inps.geocoded = False
     if 'Y_FIRST' in atr.keys():
         inps.geocoded = True
     print('geocoded: {}'.format(inps.geocoded))
+
+    ##Prepare DEM file in ROI_PAC format for PyAPS to read
+    if inps.dem_file:
+        inps.dem_file = prepare_roipac_dem(inps.dem_file, inps.geocoded)
 
     return inps, atr
 
@@ -175,7 +181,7 @@ def date_list2grib_file(date_list, hour, trop_model, grib_dir):
     grib_file_list = []
     for d in date_list:
         grib_file = grib_dir+'/'
-        if   trop_model == 'ERAInt':  grib_file += 'ERA-Int_%s_%s.grb' % (d, hour)
+        if   trop_model == 'ECMWF' :  grib_file += 'ERA-Int_%s_%s.grb' % (d, hour)
         elif trop_model == 'MERRA' :  grib_file += 'merra-%s-%s.nc4' % (d, hour)
         elif trop_model == 'NARR'  :  grib_file += 'narr-a_221_%s_%s00_000.grb' % (d, hour)
         elif trop_model == 'ERA'   :  grib_file += 'ERA_%s_%s.grb' % (d, hour)
@@ -229,7 +235,7 @@ def dload_grib_pyaps(date_list, hour, trop_model='ECMWF', weather_dir='./'):
     print('------------------------------------------------------------------------------\n')
 
     ## Download grib file using PyAPS
-    if   trop_model == 'ERAInt':  pa.ECMWFdload( date_list2download, hour, grib_dir)
+    if   trop_model == 'ECMWF' :  pa.ECMWFdload( date_list2download, hour, grib_dir)
     elif trop_model == 'MERRA' :  pa.MERRAdload( date_list2download, hour, grib_dir)
     elif trop_model == 'NARR'  :  pa.NARRdload(  date_list2download, hour, grib_dir)
     elif trop_model == 'ERA'   :  pa.ERAdload(   date_list2download, hour, grib_dir)
@@ -295,7 +301,7 @@ def get_delay_timeseries(inps, atr):
     ## Convert relative phase delay on reference date
     try:    inps.ref_date = atr['REF_DATE']
     except: inps.ref_date = inps.date_list[0]
-    print('convert to relative phase delay with reference date: '+ref_date)
+    print('convert to relative phase delay with reference date: '+inps.ref_date)
     inps.ref_idx = inps.date_list.index(inps.ref_date)
     inps.trop_ts -= np.tile(inps.trop_ts[inps.ref_idx,:,:], (date_num, 1, 1))
 

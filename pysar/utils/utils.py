@@ -54,10 +54,7 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 
 ###############################################################################
-standardWeatherModelNames={'ECWMF':'ERAInt','ERAINTERIM':'ERAInt','ERAINT':'ERAInt','ERAI':'ERAInt',
-                           'MERRA2':'MERRA'
-                          }
-def standardize_trop_model(tropModel):
+def standardize_trop_model(tropModel, standardWeatherModelNames):
     tropModel = tropModel.replace('-','').upper()
     if tropModel in standardWeatherModelNames.keys():
         tropModel = standardWeatherModelNames[tropModel]
