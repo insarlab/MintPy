@@ -42,6 +42,18 @@ def multilook_matrix(matrix,lks_y,lks_x):
     return matrix_mli
 
 
+def multilook_data(data, lksY, lksX):
+    '''Modified from Praveen on StackOverflow:
+    https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution'''
+    shape = np.array(data.shape, dtype=float)
+    newShape = np.floor(shape / (lksY, lksX)).astype(int) * (lksY, lksX)
+    cropData = data[:newShape[0], :newShape[1]]
+    temp = cropData.reshape((newShape[0] // lksY, lksY,
+                             newShape[1] // lksX, lksX))
+    coarseData = np.nanmean(temp, axis=(1,3))
+    return coarseData
+
+
 def multilook_attribute(atr_dict,lks_y,lks_x, printMsg=True):
     #####
     atr = dict()
@@ -137,7 +149,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 data = h5[k][epoch].get(epoch)[:]
                 atr = h5[k][epoch].attrs
 
-                data_mli = multilook_matrix(data,lks_y,lks_x)
+                data_mli = multilook_data(data,lks_y,lks_x)
                 atr_mli = multilook_attribute(atr,lks_y,lks_x,printMsg=False)
 
                 gg = group.create_group(epoch)
@@ -152,7 +164,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 epoch = epochList[i]
                 data = h5[k].get(epoch)[:]
 
-                data_mli = multilook_matrix(data,lks_y,lks_x)
+                data_mli = multilook_data(data,lks_y,lks_x)
                 
                 dset = group.create_dataset(epoch, data=data_mli, compression='gzip')
                 prog_bar.update(i+1, suffix=epoch)
@@ -168,13 +180,13 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## Read/Write single-dataset files
     elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:        
         rg,az,atr = readfile.read(infile)
-        rgmli = multilook_matrix(rg,lks_y,lks_x); #rgmli *= 1.0/lks_x
-        azmli = multilook_matrix(az,lks_y,lks_x); #azmli *= 1.0/lks_y
+        rgmli = multilook_data(rg,lks_y,lks_x); #rgmli *= 1.0/lks_x
+        azmli = multilook_data(az,lks_y,lks_x); #azmli *= 1.0/lks_y
         atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(rgmli,azmli,atr,outfile)
     else:
         data,atr = readfile.read(infile)
-        data_mli = multilook_matrix(data,lks_y,lks_x)
+        data_mli = multilook_data(data, lks_y, lks_x)
         atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(data_mli,atr,outfile)
 

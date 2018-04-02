@@ -43,7 +43,7 @@ from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, if
 
 
 standardMetadataKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
-                      'length':'LENGTH','FILE_LENGTH':'LENGTH','lines':'WIDTH',
+                      'length':'LENGTH','FILE_LENGTH':'LENGTH','lines':'LENGTH',
                       'wavelength':'WAVELENGTH','Wavelength':'WAVELENGTH','radarWavelength':'WAVELENGTH',
                       'prf':'PRF',
                       'post_lat':'Y_STEP',
@@ -183,7 +183,7 @@ def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
     fbase = os.path.splitext(os.path.basename(fname))[0]
     atr = read_attribute(fname, epoch)
     k = atr['FILE_TYPE']
-    processor = atr['INSAR_PROCESSOR']
+    processor = atr['PROCESSOR']
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     if not box:

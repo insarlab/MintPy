@@ -25,9 +25,7 @@ from mpl_toolkits.basemap import cm, pyproj
 from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry
-from pysar.multilook import multilook_matrix
-import pysar.mask as mask
-import pysar.subset as subset
+from pysar import mask, multilook as mli, subset
 
 
 ##################################################################################################
@@ -433,7 +431,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
 
     # Multilook
     if inps.multilook and inps.multilook_num > 1:
-        data = multilook_matrix(data, inps.multilook_num, inps.multilook_num)
+        data = mli.multilook_data(data, inps.multilook_num, inps.multilook_num)
 
     # Convert data to display unit
     if not inps.disp_unit:
@@ -1185,7 +1183,7 @@ def main(iargs=None):
             print('reading DEM: '+os.path.basename(inps.dem_file)+' ...')
             dem, dem_meta_dict = readfile.read(inps.dem_file, box=inps.pix_box, epoch='height', printMsg=False)
             if inps.multilook:
-                dem = multilook_matrix(dem, inps.multilook_num, inps.multilook_num)
+                dem = mli.multilook_data(dem, inps.multilook_num, inps.multilook_num)
 
             # Shaded Relief and Contour
             if inps.disp_dem_shade: 
@@ -1238,16 +1236,19 @@ def main(iargs=None):
                 prog_bar.update(i-i_start+1, suffix='{}/{}'.format(i+1, inps.epochNum))
 
                 # Read Data
-                #import pdb; pdb.set_trace()
-
                 data = readfile.read(inps.file, box=inps.pix_box, epoch=epoch,\
                                      datasetName=inps.datasetName, printMsg=False)[0]
                 if inps.ref_date:
                     data -= ref_data
-                if inps.zero_mask:
-                    data[data==0] = np.nan
                 if inps.file_ref_yx:
                     data -= data[inps.file_ref_yx[0], inps.file_ref_yx[1]]
+                # mask
+                if inps.msk is not None:
+                    data = mask.mask_matrix(data, inps.msk)
+                if inps.zero_mask:
+                    data[data==0] = np.nan
+                if inps.multilook:
+                    data = mli.multilook_data(data, inps.multilook_num, inps.multilook_num)
 
                 # subplot_title
                 if inps.key in timeseriesKeyNames:
@@ -1259,10 +1260,6 @@ def main(iargs=None):
                         subplot_title += '\n{}'.format(epoch)
                 else:
                     subplot_title = str(epoch)
-
-                # mask
-                if inps.msk is not None:
-                    data = mask.mask_matrix(data, inps.msk)
 
                 # Update data with plot inps
                 data, inps = update_matrix_with_plot_inps(data, atr, inps)
