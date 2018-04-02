@@ -52,7 +52,7 @@ def print_attributes(atr, sorting=True):
     if sorting:
         dictKey = sorted(dictKey)
     for key in dictKey:
-        print((f.format(str(key),str(atr[key]))))
+        print('  {k:<{d}}    {v}'.format(d=digits, k=key, v=atr[key]))
     return
 
 

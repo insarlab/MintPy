@@ -8,7 +8,13 @@
 
 import os
 import numpy as np
-from pysar.utils import readfile
+
+## Auto setting for file structure of Univ. of Miami, as shown below. 
+# It required 3 conditions: 1) auto_path = True
+#                           2) $SCRATCHDIR is defined in environmental variable
+#                           3) input custom template with basename same as projectName
+# Change it to False if you are not using it.
+auto_path = True
 
 
 ###### Default path of data files from different InSAR processors to be loaded into PySAR
@@ -62,10 +68,43 @@ prefix = 'pysar.load.'
 #config = configparser.ConfigParser()
 #config.optionxform = str
 
+
+##----------------- Functions from pysar.utils.readfile to be independnt module ---------##
+def check_variable_name(path, printMsg=True):
+    s = path.split("/")[0]
+    if len(s)>0 and s[0]=="$":
+        try:
+            p0 = os.getenv(s[1:])
+            path = path.replace(path.split("/")[0], p0)
+        except:
+            if printMsg:
+                print('WARNING: Un-recognized environmental variable: '+s)
+    return path
+
+
+def read_str2dict(inString, delimiter='=', printMsg=False):
+    '''Read multiple lines of string into dict
+    Based on pysar.utils.readfile.read_template()
+    '''
+    strDict = {}
+    lines = inString.split('\n')
+    for line in lines:
+        c = [i.strip() for i in line.strip().split(delimiter, 1)]
+        if len(c) < 2 or line.startswith(('%','#')):
+            next
+        else:
+            key  = c[0]
+            value = str.replace(c[1],'\n','').split("#")[0].strip()
+            value = check_variable_name(value, printMsg=printMsg)
+            if value != '':
+                strDict[key] = value
+    return strDict
+                
+
 ##----------------------------------------------------------------------------------------##
 def default_path4sentinel_stack(projectName, template=dict()):
     ## default file pattern
-    defDict = read_file.read_template(isceAutoPath, printMsg=False)
+    defDict = read_str2dict(isceAutoPath, printMsg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 
@@ -90,7 +129,7 @@ def default_path4sentinel_stack(projectName, template=dict()):
 
 def default_path4roipac(projectName, template=dict()):
     ## default file pattern
-    defDict = read_file.read_template(roipacAutoPath, printMsg=False)
+    defDict = read_str2dict(roipacAutoPath, printMsg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 
@@ -137,7 +176,7 @@ def default_path4roipac(projectName, template=dict()):
 
 def default_path4gamma(projectName, template=dict()):
     ## default file pattern
-    defDict = read_file.read_template(gammaAutoPath, printMsg=False)
+    defDict = read_str2dict(gammaAutoPath, printMsg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 

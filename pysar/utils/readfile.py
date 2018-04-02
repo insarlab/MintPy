@@ -39,6 +39,8 @@ import numpy as np
 #from PIL import Image
 import json
 
+from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry
+
 
 standardMetadataKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
                       'length':'LENGTH','FILE_LENGTH':'LENGTH','lines':'WIDTH',
@@ -90,14 +92,6 @@ dataTypeDict = {'bool':np.bool_,'byte':np.bool_,'flag':np.bool_,
 
 
 #########################################################################
-'''Three types of HDF5 files in PySAR
-multi_group   : multiple groups with one      dataset and one attribute dict per group (Ngroup-1dset-1atr)
-multi_dataset : one      group  with multiple dataset and one attribute dict per group (1group-Ndset-1atr)
-single_dataset: one      group  with one      dataset and one attribute dict per gropu (1group-1dset-1atr)
-
-Recommend usage:
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
-'''
 multi_group_hdf5_file=['interferograms','coherence','wrapped','snaphu_connect_component']
 multi_dataset_hdf5_file=['timeseries','geometry']
 single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
@@ -106,6 +100,51 @@ geometry_dataset=['rangeCoord','azimuthCoord','latitude','longitude','height',\
 
 
 #########################################################################
+def get_file_dataset_list(fname, key):
+    fileExt = os.path.splitext(fname)[1]
+    fileBase = os.path.splitext(os.path.basename(fname))[0]
+    epochList = []
+    datasetList = None
+    ## HDF5 Files
+    if fileExt in ['.h5','.he5']:
+        f = h5py.File(fname, 'r')
+        if key in ['timeseries']:
+            obj = timeseries(fname)
+            obj.open(printMsg=False)
+            epochList = obj.dateList
+        elif key in ['ifgramStack']:
+            obj = ifgramStack(fname)
+            obj.open(printMsg=False)
+            epochList = obj.date12List
+            datasetList = [i for i in f[key].keys() if i in ifgramDatasetNames]
+        elif key in ['GIANT_TS']:
+            epochList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
+        else:
+            epochList = list(f[key].keys())
+    ## Binary Files
+    else:
+        if key.lower() in ['.trans','.utm_to_rdc']:
+            epochList = ['rangeCoord','azimuthCoord']
+        elif fileBase.startswith('los'):
+            epochList = ['incidenceAngle','headingAngle']
+        else:
+            epochList = ['']
+    return epochList, datasetList
+
+
+def check_input_epoch(allList, inList=[], inNumList=[]):
+    '''Get epoch(es) from input epoch / epoch_num'''
+    ## inList + inNumList --> outNumList --> outList
+    if inList:
+        tempList = []
+        for ei in sorted(inList):
+            tempList += [e for e in allList if ei.lower() in e.lower()]
+        inNumList += [allList.index(e) for e in set(tempList)]
+    outNumList = sorted(list(set(inNumList)))
+    outList = [allList[i] for i in outNumList]
+    return outList, outNumList
+
+
 def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
     '''Read one dataset and its attributes from input file.
 
@@ -145,49 +184,50 @@ def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
     atr = read_attribute(fname, epoch)
     k = atr['FILE_TYPE']
     processor = atr['INSAR_PROCESSOR']
-    length = int(float(atr['LENGTH']))
-    width = int(float(atr['WIDTH']))
+    length = int(atr['LENGTH'])
+    width = int(atr['WIDTH'])
     if not box:
         box = (0, 0, width, length)
 
     ##### HDF5
     if ext in ['.h5','.he5']:
-        h5file = h5py.File(fname,'r')
-
-        # Read Dataset
-        if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-            # Check input epoch exists or not
-            epoch_list = sorted(h5file[k].keys())
-            try:    epoch2read = [i for i in epoch_list if epoch.lower() in i.lower()][0]
-            except: epoch2read = None
-            if not epoch2read:
-                if printMsg:
-                    print('ERROR: no input epoch found!')
-                    print('input epoch: '+str(epoch))
-                    print('available epoches: '+str(epoch_list))
-                sys.exit(1)
-
-            elif k in multi_dataset_hdf5_file:
-                dset = h5file[k].get(epoch2read)
-            else:
-                dset = h5file[k][epoch2read].get(epoch2read)
-
-        elif k in ['GIANT_TS']:
-            dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5file['dates'][:].tolist()]
-            dateIndx = dateList.index(epoch)
-            if 'rawts' in list(h5file.keys()):
-                dset = h5file['rawts'][dateIndx,:,:]
-            elif 'recons' in list(h5file.keys()):
-                dset = h5file['recons'][dateIndx,:,:]
+        fileEpochList = get_file_dataset_list(fname, k)[0]
+        if epoch is not None:
+            if isinstance(epoch, str):
+                epoch = [epoch]
+            epochList = check_input_epoch(allList=fileEpochList, inList=epoch, inNumList=[])[0]
         else:
-            dset = h5file[k].get(k)
-        #else:
-        #    print 'ERROR: Unrecognized h5 file type: '+k
-        #    sys.exit(1)
+            epochList = fileEpochList
+        if len(epochList) == 0:
+            print('ERROR: no input epoch found!')
+            print('available epoch:\n{}'.format(fileEpochList))
+            sys.exit(1)
 
-        data = dset[box[1]:box[3],box[0]:box[2]]
-
-        h5file.close()
+        f = h5py.File(fname,'r')
+        if k in ['timeseries']:
+            obj = timeseries(fname)
+            data = obj.read(epoch=epochList, box=box, printMsg=printMsg)
+        elif k in ['ifgramStack']:
+            obj = ifgramStack(fname)
+            data = obj.read(datasetName=datasetName, epoch=epochList, box=box, printMsg=printMsg)
+            if datasetName in ['unwrapPhase','wrapPhase','iono']:
+                atr['UNIT'] = 'radian'
+            else:
+                atr['UNIT'] = '1'
+        elif k in ['geometry']:
+            obj = geometry(fname)
+            data = obj.read(datasetName=epochList[0], box=box, printMsg=printMsg)
+        elif k in ['GIANT_TS']:
+            dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
+            dateIndx = dateList.index(epoch)
+            if 'rawts' in list(f.keys()):
+                dset = f['rawts'][dateIndx,:,:]
+            elif 'recons' in list(f.keys()):
+                dset = f['recons'][dateIndx,:,:]
+            data = dset[box[1]:box[3],box[0]:box[2]]
+        else:
+            data = f[k].get(k)[box[1]:box[3],box[0]:box[2]]
+        f.close()
         return data, atr
 
     ###### Image
@@ -376,7 +416,7 @@ def read_attribute(fname, epoch=None):
 
         atr = dict()
         for key, value in attrs.items():
-            try:     atr[key] = value.decode('utf-8')
+            try:     atr[key] = value.decode('utf8')
             except:  atr[key] = value
 
         atr['FILE_TYPE'] = str(k)

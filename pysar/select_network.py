@@ -351,8 +351,8 @@ def main(argv):
         inps.sensor = project_name2sensor(project_name)
  
     # Auto path setting for Miami user
-    if not inps.baseline_file and pysar.auto_path_miami and 'SCRATCHDIR' in os.environ:
-        if pysar.auto_path_miami and 'SCRATCHDIR' in os.environ:
+    if not inps.baseline_file and pysar.defaults.auto_path and 'SCRATCHDIR' in os.environ:
+        if pysar.defaults.auto_path and 'SCRATCHDIR' in os.environ:
             try:    inps.baseline_file = glob.glob(os.getenv('SCRATCHDIR')+'/'+project_name+'/SLC/bl_list.txt')[0]
             except: inps.baseline_file = None
 
@@ -461,7 +461,7 @@ def main(argv):
 
     # Output directory/filename
     if not inps.outfile:
-        if pysar.auto_path_miami and 'SCRATCHDIR' in os.environ:
+        if pysar.defaults.auto_path and 'SCRATCHDIR' in os.environ:
             inps.out_dir = os.getenv('SCRATCHDIR')+'/'+project_name+'/PROCESS'
         else:
             try:    inps.out_dir = os.path.dirname(os.path.abspath(inps.reference_file))

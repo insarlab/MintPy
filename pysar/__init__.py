@@ -24,16 +24,24 @@ except KeyError:
     os.environ['PYSAR_HOME'] = pysar_path
 
 
-########################################################################
-auto_path = True               # Package-wide variable, Auto setting for file structure of Univ. of Miami
-                               # change it to False if you are not using it.
-parallel_num = 8               # max core number used in parallel processing
-figsize_single_min = 6.0       # default min size in inch, for single plot
-figsize_single_max = 12.0      # default min size in inch, for single plot
-figsize_multi = [15.0, 8.0]    # default size in inch, for multiple subplots
+##### PySAR modules listed by relative dependecies:
+## 0. Independent modules:
+# pysar.objects.pysarobj
+# pysar.utils.readfile
+# pysar.utils.writefile
+# pysar.utils.datetime
+# pysar.utils.sensor
+# pysar.defaults.default_path
+# 
+## Level 1 dependent modules (depends on Level 0):
+# pysar.utils.network
+# pysar.utils.deramp
+#
+## Level 2 dependent modules (depends on Level 0,1):
+# pysar.utils.utils
+#
+## Level 3 dependent modules (depends on Level 0,1,2):
+# pysar.objects.insarobj
+# pysar.utils.plot
+# 
 
-
-##Internal Modules listed by relative dependency
-# pysar.utils
-# pysar.objects, pysar.defaults
-# pysar

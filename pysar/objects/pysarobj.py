@@ -12,10 +12,39 @@ import time
 from datetime import datetime as dt
 import h5py
 import numpy as np
-from pysar.utils import readfile, datetime as ptime
-from pysar.objects import ifgramDatasetNames, geometryDatasetNames, timeseriesDatasetNames
 
 dataType = np.float32
+
+##------------------ Variables ---------------------##
+timeseriesKeyNames = ['timeseries','HDFEOS','GIANT_TS']
+
+timeseriesDatasetNames = ['raw',
+                          'troposphericDelay',
+                          'topographicResidual',
+                          'ramp',
+                          'displacement']
+
+geometryDatasetNames = ['height',
+                        'latitude',
+                        'longitude',
+                        'rangeCoord',
+                        'azimuthCoord',
+                        'incidenceAngle',
+                        'headingAngle',
+                        'slantRangeDistance',
+                        'shadowMask',
+                        'waterMask',
+                        'commonMask',
+                        'bperp']
+
+ifgramDatasetNames = ['unwrapPhase',
+                      'coherence',
+                      'connectComponent',
+                      'wrapPhase',
+                      'iono',
+                      'rangeOffset',
+                      'azimuthOffset']
+
 
 
 ########################################################################################
@@ -46,8 +75,8 @@ class timeseries:
     def open(self, printMsg=True):
         if printMsg:
             print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
-        self.metadata = readfile.read_attribute(self.file)
         self.f = h5py.File(self.file,'r')
+        self.get_metadata()
         self.numDate, self.length, self.width = self.f[self.key].get(self.key).shape
         dates = self.f[self.key].get('date')[:]
         self.times = np.array([dt(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in dates])
@@ -61,7 +90,15 @@ class timeseries:
         else:
             self.bperp = None
 
-    def read(self, epoch=None, box=None):
+    def get_metadata(self):
+        self.f = h5py.File(self.file, 'r')
+        self.metadata = dict(self.f[self.key].attrs)
+        for key, value in self.metadata.items():
+            try:     self.metadata[key] = value.decode('utf8')
+            except:  self.metadata[key] = value
+        return self.metadata
+
+    def read(self, epoch=None, box=None, printMsg=True):
         '''Read dataset from timeseries file
         Parameters: self : timeseries object
                     epoch : (list of) string in YYYYMMDD format
@@ -74,7 +111,7 @@ class timeseries:
                     data = tsobj.read(epoch=['20161020','20161026','20161101'])
                     data = tsobj.read(box=(100,300,500,800))
         '''
-        self.open()
+        self.open(printMsg=printMsg)
         ds = self.f[self.key].get(self.key)
 
         ##Index in time/1st dimension
@@ -90,6 +127,7 @@ class timeseries:
             box = [0,0,self.width,self.length]
 
         data = ds[dsIndex, box[1]:box[3], box[0]:box[2]]
+        data = np.squeeze(data)
         return data
 
 
@@ -179,16 +217,26 @@ class geometry:
     def open(self, printMsg=True):
         if printMsg:
             print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
-        self.metadata = readfile.read_attribute(self.file)
         self.f = h5py.File(self.file,'r')
+        self.get_metadata()
         self.length, self.width = self.f[self.key].get(geometryDatasetNames[0]).shape
+        self.datasetList = self.f[self.key].keys()
 
         self.geocoded = False
         if 'Y_FIRST' in self.metadata.keys():
             self.geocoded = True
 
-    def read(self, datasetName=geometryDatasetNames[0], box=None):
+    def get_metadata(self):
+        self.f = h5py.File(self.file, 'r')
+        self.metadata = dict(self.f[self.key].attrs)
+        for key, value in self.metadata.items():
+            try:     self.metadata[key] = value.decode('utf8')
+            except:  self.metadata[key] = value
+        return self.metadata
+
+    def read(self, datasetName=geometryDatasetNames[0], box=None, printMsg=True):
         '''Read 2D / 3D dataset with bounding box in space'''
+        self.f = h5py.File(self.file, 'r')
         dset = self.f[self.key].get(datasetName)
         if box is None:
             box = (0,0,self.width,self.length)
@@ -196,6 +244,7 @@ class geometry:
             data = dset[box[1]:box[3], box[0]:box[2]]
         elif len(dset.shape) == 3:
             data = dset[:, box[1]:box[3], box[0]:box[2]]
+        #data = np.squeeze(data)
         return data
 
 
@@ -239,8 +288,8 @@ class ifgramStack:
         '''
         if printMsg:
             print('open {} file: {}'.format(self.key, os.path.basename(self.file)))
-        self.metadata = readfile.read_attribute(self.file)
         self.f = h5py.File(self.file, 'r')
+        self.get_metadata()
         self.get_size()
         self.read_datetimes()
 
@@ -260,6 +309,14 @@ class ifgramStack:
             self.btempHist.append((di-d1).days)
         self.btempHistDiff = np.diff(self.btempHist)
 
+    def get_metadata(self):
+        self.f = h5py.File(self.file, 'r')
+        self.metadata = dict(self.f[self.key].attrs)
+        for key, value in self.metadata.items():
+            try:     self.metadata[key] = value.decode('utf8')
+            except:  self.metadata[key] = value
+        return self.metadata
+
     def get_size(self):
         self.length, self.width = self.f[self.key].get(ifgramDatasetNames[0]).shape[1:3]
         try:    self.dropIfgram = self.f[self.key].get('dropIfgram')[:]
@@ -274,12 +331,20 @@ class ifgramStack:
         self.sTimes = np.array([dt(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in list(dates[:,1])])[self.dropIfgram]
         return self.mTimes, self.sTimes     
 
-    def read(self, datasetName=ifgramDatasetNames[0], box=None):
+    def read(self, datasetName=ifgramDatasetNames[0], epoch=None, box=None, printMsg=True):
         '''Read 3D dataset with bounding box in space'''
+        self.open(printMsg=printMsg)
         dset = self.f[self.key].get(datasetName)
         if box is None:
             box = (0,0,self.width,self.length)
-        data = dset[self.dropIfgram, box[1]:box[3], box[0]:box[2]]
+        if epoch is None:
+            data = dset[self.dropIfgram, box[1]:box[3], box[0]:box[2]]
+        else:
+            if isinstance(epoch, str):
+                epoch = [epoch]
+            ifgramIndex = [self.date12List.index(e) for e in epoch]
+            data = dset[ifgramIndex, box[1]:box[3], box[0]:box[2]]
+        data = np.squeeze(data)
         return data
 
 

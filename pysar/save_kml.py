@@ -21,8 +21,7 @@ import numpy as np
 import matplotlib as mpl;  mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-import pysar
-from pysar.utils import readfile, datetime as ptime, utils as ut
+from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 import pysar.view as pv
 
@@ -63,8 +62,8 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
 
     # Figure size
     if not inps.fig_size:
-        fig_scale = min(pysar.figsize_single_min/min(data.shape),\
-                        pysar.figsize_single_max/max(data.shape))
+        fig_scale = min(pp.minFigSizeSingle/min(data.shape),\
+                        pp.maxFigSizeSingle/max(data.shape))
         inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in data.shape]
     print('create figure in size: '+str(inps.fig_size))
     fig = plt.figure(figsize=inps.fig_size, frameon=False)

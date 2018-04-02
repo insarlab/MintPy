@@ -24,6 +24,9 @@ import pysar.utils.datetime as ptime
 import pysar.utils.network as pnet
 import pysar.utils.utils as ut
 
+minFigSizeSingle = 6.0       # default min size in inch, for single plot
+maxFigSizeSingle = 10.0      # default min size in inch, for single plot
+defaultFigSizeMulti = [15.0, 8.0]    # default size in inch, for multiple subplots
 
 mplColors = ['#1f77b4',\
              '#ff7f0e',\
@@ -218,10 +221,10 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
     return row_num, col_num
 
 
-def check_colormap_input(atr_dict, colormap=None):
+def check_colormap_input(atr_dict, colormap=None, datasetName=None):
     if not colormap:
-        if atr_dict['FILE_TYPE'] in ['coherence','temporal_coherence','.cor',\
-                                     '.mli','.slc','.amp','.ramp']:
+        if (atr_dict['FILE_TYPE'] in ['coherence','temporal_coherence','.cor','.mli','.slc','.amp','.ramp']\
+            or (atr_dict['FILE_TYPE'] == 'ifgramStack' and datasetName in ['coherence', 'connectComponent'])):
               colormap = 'gray'
         else: colormap = 'jet'
     print('colormap: '+colormap)

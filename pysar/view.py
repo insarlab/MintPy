@@ -22,9 +22,9 @@ from matplotlib.colors import LinearSegmentedColormap, LightSource
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import cm, pyproj
 
-import pysar
 from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry
 from pysar.multilook import multilook_matrix
 import pysar.mask as mask
 import pysar.subset as subset
@@ -85,6 +85,10 @@ def auto_figure_title(fname, epoch=[], inps_dict=None):
     else:
         fig_title = os.path.splitext(os.path.basename(fname))[0]
 
+
+    if inps_dict['key'] in ['ifgramStack','hdfEos5']:
+        fig_title += inps_dict['datasetName'].capitalize()
+
     # mark - subset
     try:
         pix_box = inps_dict['pix_box']
@@ -134,32 +138,6 @@ def check_multilook_input(pixel_box, row_num, col_num):
     else:
         multilook = False
     return multilook, multilook_num
-
-
-##################################################################################################
-def get_epoch_full_list_from_input(all_epoch_list, epoch_input_list=[], epoch_num_input_list=[]):
-    '''Read/Get input epoch list from input epoch and epoch_num'''
-    epoch_input_list = sorted(epoch_input_list)
-    epoch_num_input_list = sorted([i-1 for i in epoch_num_input_list])
-
-    # Default value
-    epoch_list = []
-    epoch_num_list = []
-
-    # Update epoch_num_list from epoch_input_list
-    if epoch_input_list:
-        for epoch_input in epoch_input_list:
-            epoch_list_tmp = [s for s in all_epoch_list if epoch_input.lower() in s.lower()]
-            epoch_list += list(set(epoch_list_tmp) - set(epoch_list))
-        epoch_num_list += [all_epoch_list.index(s) for s in epoch_list]
-
-    # Update epoch_num_list from epoch_num_input_list
-    epoch_num_list += list(set(epoch_num_input_list) - set(epoch_num_list))
-
-    # Convert epoch_num_list to epoch_list
-    epoch_list = [all_epoch_list[i] for i in epoch_num_list]
-
-    return epoch_list, epoch_num_list
 
 
 ##################################################################################################
@@ -301,7 +279,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
 
 
 ##################################################################################################
-def update_plot_inps_with_display_setting_file(inps, disp_set_file):
+def update_inps_with_display_setting_file(inps, disp_set_file):
     '''Update inps using values from display setting file'''
     disp_set_dict = readfile.read_template(disp_set_file)
     if not inps.disp_unit and 'plot.displayUnit' in disp_set_dict.keys():
@@ -320,16 +298,11 @@ def update_plot_inps_with_display_setting_file(inps, disp_set_file):
         inps.subset_lon = [float(n) for n in disp_set_dict['plot.subset.lalo'].replace(',',' ').split()[2:4]]
     if not inps.seed_lalo and 'plot.seed.lalo' in disp_set_dict.keys():
         inps.seed_lalo = [float(n) for n in disp_set_dict['plot.referenceLalo'].replace(',',' ').split()]
-    
     return inps
 
-def update_plot_inps_with_meta_dict(inps, meta_dict):
-    k = meta_dict['FILE_TYPE']
-    width = int(float(meta_dict['WIDTH']))
-    length = int(float(meta_dict['LENGTH']))
-
+def update_inps_with_file_metadata(inps, meta_dict):
     # default mask file:
-    if not inps.mask_file and k in ['velocity','timeseries']:
+    if not inps.mask_file and inps.key in ['velocity','timeseries']:
         if os.path.basename(meta_dict['FILE_PATH']).startswith('geo_'):
             inps.mask_file = 'geo_maskTempCoh.h5'
         else:
@@ -344,7 +317,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     inps.pix_box = subset.check_box_within_data_coverage(inps.pix_box, meta_dict)
     inps.geo_box = subset.box_pixel2geo(inps.pix_box, meta_dict)
     # Out message
-    data_box = (0,0,width,length)
+    data_box = (0,0,inps.width,inps.length)
     print('data   coverage in y/x: '+str(data_box))
     print('subset coverage in y/x: '+str(inps.pix_box))
     print('data   coverage in lat/lon: '+str(subset.box_pixel2geo(data_box, meta_dict)))
@@ -357,7 +330,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
         inps.multilook = True
 
     # Colormap
-    inps.colormap = pp.check_colormap_input(meta_dict, inps.colormap)
+    inps.colormap = pp.check_colormap_input(meta_dict, inps.colormap, datasetName=inps.datasetName)
 
     # Seed Point
     # Convert seed_lalo if existed, to seed_yx, and use seed_yx for the following
@@ -371,29 +344,30 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     # Unit and Wrap
     # Check re-wrap's conflict with disp_unit.  Priority: disp_unit > wrap > disp_unit(None)
     if not inps.disp_unit and inps.wrap:
-        if k not in ['coherence','temporal_coherence','mask', 'dem', '.dem','.hgt',\
-                     '.slc','.mli','.trans','.cor']:
+        if inps.key not in ['coherence','temporal_coherence','mask', 'dem', '.dem','.hgt',\
+                            '.slc','.mli','.trans','.cor']:
             inps.disp_min  = -np.pi
             inps.disp_max  =  np.pi
             inps.disp_unit = 'radian'
             print('re-wrap data to [-pi, pi] for display')
         else:
             inps.wrap = False
-            print('WARNING: re-wrap is disabled for '+k)
+            print('WARNING: re-wrap is disabled for '+inps.key)
     elif inps.disp_unit not in ['radian'] and inps.wrap:
         print('WARNING: re-wrap is disabled because display unit is not radian.')
         inps.wrap = False
 
     # Default unit for amplitude image
-    if not inps.disp_unit and k in ['.mli','.slc','.amp']:
+    if not inps.disp_unit and inps.key in ['.mli','.slc','.amp']:
         inps.disp_unit = 'dB'
 
     # Min / Max - Display
     if not inps.disp_min and not inps.disp_max:
-        if k in ['coherence','temporal_coherence','.cor']:
+        if (inps.key in ['coherence','temporal_coherence','.cor']\
+            or (inps.key == 'ifgramStack' and inps.datasetName in ['coherence', 'connectComponent'])):
             inps.disp_min = 0.0
             inps.disp_max = 1.0
-        elif k in ['wrapped','.int']:
+        elif inps.key in ['wrapped','.int']:
             inps.disp_min = -np.pi
             inps.disp_max =  np.pi
 
@@ -514,10 +488,10 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     #----------------------- 0. Initial a inps Namespace if no inps input --------------------#
     if not inps:
         inps = cmdLineParse([''])
-        inps = update_plot_inps_with_meta_dict(inps, meta_dict)
+        inps = update_inps_with_file_metadata(inps, meta_dict)
 
     #----------------------- 1.1 Update plot inps with metadata dict -------------------------#
-    #inps = update_plot_inps_with_meta_dict(inps, meta_dict)
+    #inps = update_inps_with_file_metadata(inps, meta_dict)
 
     #----------------------- 1.2 Update plot inps/data with data matrix ----------------------#
     data, inps = update_matrix_with_plot_inps(data, meta_dict, inps)
@@ -779,18 +753,20 @@ PLOT_TEMPLATE='''Plot Setting:
 '''
 
 
-def cmdLineParse(argv):
+def createParser():
     parser = argparse.ArgumentParser(description='Plot InSAR Product in 2D',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
 
     ##### Input 
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
-    infile.add_argument('file', help='file for display')
-    infile.add_argument('epoch', nargs='*', help='optional - date/epoch(s) to display')
-    infile.add_argument('-n','--epoch-num', dest='epoch_num', metavar='NUM', type=int, nargs='*', default=[],\
+    infile.add_argument('file', type=str, help='file for display')
+    infile.add_argument('epoch', type=str, nargs='*', default=[], help='optional - date/epoch(s) to display')
+    infile.add_argument('-n','--epoch-num', dest='epochNumList', metavar='NUM', type=int, nargs='*', default=[],\
                         help='optional - order number of date/epoch(s) to display')
-    infile.add_argument('--exclude','--ex', dest='exclude_epoch', metavar='EPOCH', nargs='*',\
+    infile.add_argument('--ds','--dset','--dataset', dest='datasetName', default=ifgramDatasetNames[0],\
+                        help='ifgram dataset to be displayed, including:\n{}'.format(ifgramDatasetNames))
+    infile.add_argument('--exclude','--ex', dest='exEpochList', metavar='EPOCH', nargs='*', default=[],\
                         help='dates will not be displayed')
     infile.add_argument('--mask', dest='mask_file', metavar='FILE',\
                         help='mask file for display')
@@ -941,8 +917,14 @@ def cmdLineParse(argv):
                                 '--scalebar 500  999   999\n'+\
                                 '--scalebar 999  33.06 131.18')
     map_group.add_argument('--noscalebar', dest='disp_scalebar', action='store_false', help='do not display scale bar.')
+    return parser
 
-    inps = parser.parse_args(argv)
+
+def cmdLineParse(iargs=None):
+    '''Command line parser.'''
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     # If output flie name assigned or figure shown is turned off, turn on the figure save
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True
@@ -953,122 +935,87 @@ def cmdLineParse(argv):
     return inps
 
 
-#########################################  Main Function  ########################################
-def main(argv):
-    inps = cmdLineParse(argv)
-    if not inps.disp_fig:
-        plt.switch_backend('Agg')
+def check_input_file_info(inps):
+    ########## File Baic Info
+    ## attributes
+    if not os.path.isfile(inps.file):
+        print('ERROR: input file does not exists: {}'.format(inps.file))
+        sys.exit(1)
+    else:
+        try:
+            atr = readfile.read_attribute(inps.file)
+        except:
+            print('ERROR: can not read attribute of input file: {}'.format(inps.file))
+            sys.exit(1)
     print('\n******************** Display ********************')
+    print('input file is {} {}: {}'.format(atr['PROCESSOR'], atr['FILE_TYPE'], inps.file))
 
-    # File Basic Info
-    ext = os.path.splitext(inps.file)[1].lower()
-    fbase = os.path.splitext(os.path.basename(inps.file))[0]
+    ## size and name
+    inps.length = int(atr['LENGTH'])
+    inps.width = int(atr['WIDTH'])
+    inps.key = atr['FILE_TYPE']
+    inps.fileBase = os.path.splitext(os.path.basename(inps.file))[0]
+    inps.fileExt = os.path.splitext(inps.file)[1]
+    print('file size in y/x: {}'.format((inps.length,inps.width)))
 
-    try:
-        atr = readfile.read_attribute(inps.file)
-    except:
-        sys.exit('Can not read file: '+inps.file)
+    ########## File Epoch List
+    inps.fileEpochList, inps.fileDsetList = readfile.get_file_dataset_list(inps.file, inps.key)
+    return inps, atr
 
-    print('Input file is {} {}: {}'.format(atr['PROCESSOR'], atr['FILE_TYPE'], inps.file))
-    k = atr['FILE_TYPE']
-    width = int(float(atr['WIDTH']))
-    length = int(float(atr['LENGTH']))
-    print('file size in y/x: {}, {}'.format(atr['LENGTH'],atr['WIDTH']))
 
-    #------------------------------ Epoch/Date Info -------------------------------------------#
-    # Read "epoch list to display' and 'reference date' for multi-dataset files
-    if k in multi_group_hdf5_file+multi_dataset_hdf5_file+['HDFEOS', 'GIANT_TS']:
-        # Read Epoch List
-        h5file = h5py.File(inps.file,'r')
-        if k in ['HDFEOS']:
-            epochList = h5file.attrs['DATE_TIMESERIES'].split()
-        elif k in ['GIANT_TS']:
-            epochList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5file['dates'][:].tolist()]
-            print('dates:')
-            print(epochList)
-        else:
-            epochList = sorted(h5file[k].keys())
-        #h5file.close()
+def read_inps_epoch(inps, printMsg=True):
+    '''Check input / exclude / reference epoch input with file epoch list'''
+    inps.datasetName = [i for i in ifgramDatasetNames if inps.datasetName.lower() in i.lower()][0]
 
-        # Epochs to display
-        inps.epoch = get_epoch_full_list_from_input(epochList, inps.epoch, inps.epoch_num)[0]
-        # If no epoch info input, display all the epochs
-        if not inps.epoch:
-            inps.epoch = list(epochList)
+    if any([inps.epoch, inps.epochNumList]):
+        inps.epochNumList = readfile.check_input_epoch(inps.fileEpochList, inps.epoch, inps.epochNumList)[1]
+    else:
+        inps.epochNumList = range(len(inps.fileEpochList))
+    inps.exEpochList, inps.exEpochNumList = readfile.check_input_epoch(inps.fileEpochList, inps.exEpochList, inNumList=[])
 
-        # Epochs to exclude
-        if inps.exclude_epoch:
-            if os.path.isfile(inps.exclude_epoch[0]):
-                inps.exclude_epoch = ptime.read_date_list(inps.exclude_epoch[0])
-            inps.exclude_epoch = get_epoch_full_list_from_input(epochList, inps.exclude_epoch)[0]
-            inps.epoch = sorted(list(set(inps.epoch) - set(inps.exclude_epoch)))
-        else:
-            inps.exclude_epoch = []
-        epochNum = len(inps.epoch)
+    inps.epochNumList = sorted(list(set(inps.epochNumList) - set(inps.exEpochNumList)))
+    inps.epoch = [inps.fileEpochList[i] for i in inps.epochNumList]
+    inps.epochNum = len(inps.epoch)
 
-        # Output message
-        if k in multi_dataset_hdf5_file:
-            print('num of dates in file %s : %d' % (inps.file, len(epochList)))
-            print('dates to exclude (%d):' % (len(inps.exclude_epoch)));     print(inps.exclude_epoch)
-            print('dates to display (%d):' % (len(inps.epoch)));             print(inps.epoch)
-        else:
-            print('num of dates in file   :'+str(len(epochList)))
-            print('num of dates to exclude:'+str(len(inps.exclude_epoch)))
-            print('num of dates to display:'+str(epochNum))
-
-        # Reference Date
-        if inps.ref_date:
-            ref_date_list = get_epoch_full_list_from_input(epochList, [inps.ref_date])[0]
-            if ref_date_list:
-                inps.ref_date = ref_date_list[0]
-                #if inps.ref_date == atr['REF_DATE']:
-                #    inps.ref_date = None
-                #    print 'Input date is already the reference date: '+atr['REF_DATE']
-            else:
-                print('input reference date is not included in file '+inps.file)
+    if inps.ref_date:
+        if inps.key not in timeseriesKeyNames:
+            inps.ref_date = None
+        ref_date = readfile.check_input_epoch(inps.fileEpochList, [inps.ref_date])[0][0]
+        if not ref_date:
+            if printMsg:
+                print('WARNING: input reference date is not included in input file!')
                 print('input reference date: '+inps.ref_date)
-                print('dates in file '+inps.file+':\n'+str(epochList))
-                inps.ref_date = None
+            inps.ref_date = None
+        else:
+            inps.ref_date = ref_date
 
-        print('------------------------------------------------------------------------')
-        # Raise Error if no epoch left
-        if epochNum == 0:
-            raise Exception('Zero epoch found!')
+    if printMsg:
+        if inps.key in timeseriesKeyNames:
+            print('num of dates in file {}: {}'.format(os.path.basename(inps.file), len(inps.fileEpochList)))
+            print('dates to exclude ({}):\n{}'.format(len(inps.exEpochList), inps.exEpochList))
+            print('dates to display ({}):\n{}'.format(len(inps.epoch),   inps.epoch))
+            if inps.ref_date:
+                print('input reference date: {}'.format(inps.ref_date))
+        else:
+            print('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.fileEpochList)))
+            print('num of datasets to exclude: {}'.format(len(inps.exEpochList)))
+            print('num of datasets to display: {}'.format(len(inps.epoch)))
 
-    # for single-dataset file
-    elif k.lower() in ['.trans','.utm_to_rdc']:
-        epochList = ['range','azimuth']
-    elif fbase.startswith('los'):
-        epochList = ['incidenceAngle','headingAngle']
-    else:
-        epochList = ['']
-
-    if not inps.epoch:
-        inps.epoch = epochList
-    else:
-        inps.epoch = get_epoch_full_list_from_input(epochList, inps.epoch)[0]
-
-    epochNum = len(inps.epoch)
+    if inps.epochNum == 0:
+        print('ERROR: no input epoch found!')
+        print('available datasets:\n{}'.format(inps.fileEpochList))
+        sys.exit(1)
+    return inps
 
 
-    #------------------------------ Update Plot Inps with metadata dict ----------------#
-    if inps.disp_setting_file:
-        inps = update_plot_inps_with_display_setting_file(inps, inps.disp_setting_file)
-    inps = update_plot_inps_with_meta_dict(inps, atr)
-
-    ## Exit if 1) save and do not display figure, a.k.a. generate figure file,
-    ##     and 2) figure file exists and newer than data file
-    #if (inps.save_fig\
-    #    and not inps.disp_fig\
-    #    and not ut.update_file(inps.outfile, inps.file, check_readable=False)):
-    #    return inps.outfile
-
+def read_mask(inps, atr):
     # Read mask file if inputed
+    inps.msk = None
     if inps.mask_file:
         try:
             atrMsk = readfile.read_attribute(inps.mask_file)
             if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
-                msk = readfile.read(inps.mask_file, box=inps.pix_box, epoch='mask')[0]
+                inps.msk = readfile.read(inps.mask_file, box=inps.pix_box, epoch='mask')[0]
                 print('mask data with: '+os.path.basename(inps.mask_file))
             else:
                 print('WARNING: input file has different size from mask file: %s. Continue without mask' % (inps.mask_file))
@@ -1076,61 +1023,40 @@ def main(argv):
         except:
             print('Can not open mask file: '+inps.mask_file)
             inps.mask_file = None
-    elif k in ['HDFEOS']:
+
+    elif inps.key in ['HDFEOS']:
         inps.mask_file = inps.file
         h5msk = h5py.File(inps.file, 'r')
-        msk = h5msk[k]['GRIDS']['timeseries']['quality'].get('mask')[:]
+        inps.msk = h5msk[inps.key]['GRIDS']['timeseries']['quality'].get('mask')[:]
         h5msk.close()
-        print('mask %s data with contained mask dataset.' % (k))
+        print('mask %s data with contained mask dataset.' % (inps.key))
+
     elif inps.file.endswith('PARAMS.h5'):
         inps.mask_file = inps.file
         h5msk = h5py.File(inps.file, 'r')
-        msk = h5msk['cmask'][:] == 1.
+        inps.msk = h5msk['cmask'][:] == 1.
         h5msk.close()
         print('mask data with contained cmask dataset')
+    return inps
 
-    ############################### Read Data and Display ###############################
-    ##### Display One Dataset
-    if epochNum == 1:
-        # Read Data
-        print('reading data ...')
-        data, atr = readfile.read(inps.file, box=inps.pix_box, epoch=inps.epoch[0])
-        
-        if inps.zero_mask:
-            data[data==0] = np.nan
-        if inps.ref_date:
-            ref_data = readfile.read(inps.file, box=inps.pix_box, epoch=inps.ref_date)[0]
-            data -= ref_data
-            del ref_data
-        # Mask Data
-        if inps.mask_file:
-            data = mask.mask_matrix(data, msk)
-            del msk
 
-        # Figure Setting 
+def update_figure_setting(inps):
+    '''Update figure setting based on number of subplots/epochs'''
+    length = float(inps.pix_box[3]-inps.pix_box[1])
+    width = float(inps.pix_box[2]-inps.pix_box[0])
+
+    ##### One Plot
+    if inps.epochNum == 1:
         if not inps.font_size:
             inps.font_size = 16
         if not inps.fig_size:
-            plot_shape = [data.shape[1]*1.25, data.shape[0]]
-            fig_scale = min(pysar.figsize_single_min/min(plot_shape), pysar.figsize_single_max/max(plot_shape))
+            plot_shape = [width*1.25, length]
+            fig_scale = min(pp.minFigSizeSingle/min(plot_shape), pp.maxFigSizeSingle/max(plot_shape))
             inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in plot_shape]
-        print('create figure in size: '+str(inps.fig_size))
-        fig = plt.figure(figsize=inps.fig_size)
-        ax = fig.add_axes([0.1,0.1,0.8,0.8])
+            print('create figure in size: '+str(inps.fig_size))
 
-        # Plotting
-        ax, inps = plot_matrix(ax, data, atr, inps)
-        del data
-
-        if inps.disp_fig:
-            print('showing ...')
-            plt.show()
-
-
-    ##### Display Multiple Multiple Datasets
+    ##### Multiple Plots
     else:
-        #plt.switch_backend('Agg')   #to depress the warning from tight_layout.
-        ##### Figure Setting 
         if not inps.font_size:
             inps.font_size = 12
         if not inps.fig_size:
@@ -1140,37 +1066,34 @@ def main(argv):
             #root = tk.Tk()
             #screen_width_res = root.winfo_screenwidth() / screen_dpi
             #screen_height_res = root.winfo_screenheight() / screen_dpi
-            inps.fig_size = pysar.figsize_multi
-        print('create figure in size: '+str(inps.fig_size))
+            inps.fig_size = pp.defaultFigSizeMulti
+            print('create figure in size: '+str(inps.fig_size))
 
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
             inps.fig_num = 1
-            while epochNum/float(inps.fig_num) > 200.0:
+            while inps.epochNum/float(inps.fig_num) > 200.0:
                 inps.fig_num += 1
 
         # Row/Column number
         if inps.fig_row_num==1 and inps.fig_col_num==1:
             # calculate row and col number based on input info
-            data_shape = [float(inps.pix_box[3]-inps.pix_box[1])*1.1, float(inps.pix_box[2]-inps.pix_box[0])]
+            data_shape = [length*1.1, width]
             if not inps.disp_min and not inps.disp_max:
                 fig_size4plot = inps.fig_size
             else:
                 fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
-            inps.fig_row_num, inps.fig_col_num = pp.auto_row_col_num(epochNum, data_shape, fig_size4plot, inps.fig_num)
-        inps.fig_num = np.ceil(float(epochNum) / float(inps.fig_row_num*inps.fig_col_num)).astype(int)
-        print('dataset number: '+str(epochNum))
+            inps.fig_row_num, inps.fig_col_num = pp.auto_row_col_num(inps.epochNum, data_shape, fig_size4plot, inps.fig_num)
+        inps.fig_num = np.ceil(float(inps.epochNum) / float(inps.fig_row_num*inps.fig_col_num)).astype(int)
+        print('dataset number: '+str(inps.epochNum))
         print('row     number: '+str(inps.fig_row_num))
         print('column  number: '+str(inps.fig_col_num))
         print('figure  number: '+str(inps.fig_num))
 
-        # Update multilook parameters with new num and col number
-        if inps.multilook and inps.multilook_num == 1:
-            inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box, inps.fig_row_num, inps.fig_col_num)
-
         # Output File Name
+
         if inps.outfile:
-            inps.fig_ext  = os.path.splitext(inps.outfile)[1].lower()
+            inps.fig_ext = os.path.splitext(inps.outfile)[1].lower()
             inps.outfile_base = os.path.basename(inps.outfile).split(inps.fig_ext)[0]
         else:
             inps.outfile_base = os.path.splitext(inps.file)[0]
@@ -1185,25 +1108,82 @@ def main(argv):
                 inps.outfile_base += '_oppo'
             if inps.ref_date:
                 inps.outfile_base += '_ref'+inps.ref_date
-            if inps.exclude_epoch:
+            if inps.exEpochList:
                 inps.outfile_base += '_ex'
+
+    return inps
+
+
+
+#########################################  Main Function  ########################################
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
+    if not inps.disp_fig:
+        plt.switch_backend('Agg')  ##Backend setting
+
+    inps, atr = check_input_file_info(inps)
+
+    inps = read_inps_epoch(inps)
+
+    if inps.disp_setting_file:
+        inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)
+
+    inps = update_inps_with_file_metadata(inps, atr)
+
+    ## Exit if 1) save and do not display figure, a.k.a. generate figure file,
+    ##     and 2) figure file exists and newer than data file
+    #if (inps.save_fig\
+    #    and not inps.disp_fig\
+    #    and not ut.update_file(inps.outfile, inps.file, check_readable=False)):
+    #    return inps.outfile
+
+    inps = read_mask(inps, atr)
+    inps = update_figure_setting(inps)
+
+    ############################### Read Data and Display ###############################
+    ##### Display One Dataset
+    if inps.epochNum == 1:
+        print('reading data ...')
+        data, atr = readfile.read(inps.file, box=inps.pix_box, epoch=inps.epoch[0],\
+                                  datasetName=inps.datasetName, printMsg=False)
+        if inps.ref_date:
+            data -= readfile.read(inps.file, box=inps.pix_box, epoch=inps.ref_date,\
+                                  datasetName=inps.datasetName, printMsg=False)[0]
+        # Mask Data
+        if inps.zero_mask:
+            data[data==0] = np.nan
+        if inps.msk is not None:
+            data = mask.mask_matrix(data, inps.msk)
+
+        fig = plt.figure(figsize=inps.fig_size)
+        ax = fig.add_axes([0.1,0.1,0.8,0.8])
+        ax, inps = plot_matrix(ax, data, atr, inps)
+        if inps.disp_fig:
+            print('showing ...')
+            plt.show()
+
+
+    ##### Display Multiple Multiple Datasets
+    else:
+        # Update multilook parameters with new num and col number
+        if inps.multilook and inps.multilook_num == 1:
+            inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box, inps.fig_row_num, inps.fig_col_num)
 
         ##### Aux Data
         # Reference date for timeseries
-        if k == 'timeseries':
-            if inps.ref_date:
-                print('consider input reference date: '+inps.ref_date)
-                ref_data = readfile.read(inps.file, box=inps.pix_box, epoch=inps.ref_date)[0]
+        if inps.ref_date:
+            print('consider input reference date: '+inps.ref_date)
+            ref_data = readfile.read(inps.file, box=inps.pix_box, epoch=inps.ref_date, printMsg=False)[0]
 
-        ref_yx = None
-        if k in ['interferograms'] and 'REF_Y' in atr.keys():
-            ref_yx = [int(atr[i]) for i in ['REF_Y','REF_X']]
-            print('consider reference pixel of interferograms in y/x: %d/%d' % (ref_yx[0], ref_yx[1]))
+        inps.file_ref_yx = None
+        if inps.key in ['ifgramStack']+timeseriesKeyNames and 'REF_Y' in atr.keys():
+            inps.file_ref_yx = [int(atr[i]) for i in ['REF_Y','REF_X']]
+            print('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
 
         # Read DEM
         if inps.dem_file:
             print('reading DEM: '+os.path.basename(inps.dem_file)+' ...')
-            dem, dem_meta_dict = readfile.read(inps.dem_file, box=inps.pix_box, epoch='height')
+            dem, dem_meta_dict = readfile.read(inps.dem_file, box=inps.pix_box, epoch='height', printMsg=False)
             if inps.multilook:
                 dem = multilook_matrix(dem, inps.multilook_num, inps.multilook_num)
 
@@ -1223,14 +1203,15 @@ def main(argv):
         all_data_min=0
         all_data_max=0
 
-        #h5file = h5py.File(inps.file, 'r')
+        #f = h5py.File(inps.file, 'r')
         # Check dropped interferograms
         drop_epoch_list = []
-        if k in multi_group_hdf5_file and inps.disp_title:
+        if inps.key in multi_group_hdf5_file and inps.disp_title:
             drop_epoch_list = sorted(list(set(inps.epoch) - \
-                                          set(ut.check_drop_ifgram(h5file, printMsg=False))))
+                                          set(ut.check_drop_ifgram(f, printMsg=False))))
             print("mark interferograms with 'DROP_IFGRAM'='yes' in red colored title")
 
+        f = h5py.File(inps.file,'r')
         ##### Loop 1 - Figures
         for j in range(1, inps.fig_num+1):
             # Output file name for current figure
@@ -1248,43 +1229,40 @@ def main(argv):
             fig_data_min=0
             fig_data_max=0
             i_start = (j-1)*inps.fig_row_num*inps.fig_col_num
-            i_end   = min([epochNum, i_start+inps.fig_row_num*inps.fig_col_num])
+            i_end   = min([inps.epochNum, i_start+inps.fig_row_num*inps.fig_col_num])
             ##### Loop 2 - Subplots
             prog_bar = ptime.progress_bar(maxValue=i_end-i_start, prefix='loading: ')
             for i in range(i_start, i_end):
                 epoch = inps.epoch[i]
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
-                prog_bar.update(i-i_start+1, suffix=str(i+1))
+                prog_bar.update(i-i_start+1, suffix='{}/{}'.format(i+1, inps.epochNum))
 
                 # Read Data
-                if k in multi_dataset_hdf5_file:
-                    dset = h5file[k].get(epoch)
-                    data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
-                    if inps.ref_date:
-                        data -= ref_data
-                    try:    subplot_title = dt.strptime(epoch, '%Y%m%d').isoformat()[0:10]
-                    except: subplot_title = epoch
-                elif k in multi_group_hdf5_file:
-                    if inps.fig_row_num*inps.fig_col_num > 100:
-                        subplot_title = str(epochList.index(epoch)+1)
-                    else:
-                        subplot_title = str(epochList.index(epoch)+1)+'\n'+h5file[k][epoch].attrs['DATE12']
-                    dset = h5file[k][epoch].get(epoch)
-                    data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
-                    if inps.zero_mask:
-                        data[data==0] = np.nan
-                    elif ref_yx:
-                        data -= data[ref_yx[0], ref_yx[1]]
-                elif k in ['HDFEOS']:
-                    dset = h5file[k]['GRIDS']['timeseries']['observation'].get('displacement')[i,:,:]
-                    data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
-                    subplot_title = str(epoch)
+                #import pdb; pdb.set_trace()
+
+                data = readfile.read(inps.file, box=inps.pix_box, epoch=epoch,\
+                                     datasetName=inps.datasetName, printMsg=False)[0]
+                if inps.ref_date:
+                    data -= ref_data
+                if inps.zero_mask:
+                    data[data==0] = np.nan
+                if inps.file_ref_yx:
+                    data -= data[inps.file_ref_yx[0], inps.file_ref_yx[1]]
+
+                # subplot_title
+                if inps.key in timeseriesKeyNames:
+                    subplot_title = dt.strptime(epoch, '%Y%m%d').isoformat()[0:10]
+                elif inps.key in ['ifgramStack']:
+                    eIndex = inps.fileEpochList.index(epoch)
+                    subplot_title = str(eIndex)
+                    if inps.fig_row_num*inps.fig_col_num < 100:
+                        subplot_title += '\n{}'.format(epoch)
                 else:
-                    data = readfile.read(inps.file, epoch=epoch)[0]
                     subplot_title = str(epoch)
+
                 # mask
-                if inps.mask_file:
-                    data = mask.mask_matrix(data, msk)
+                if inps.msk is not None:
+                    data = mask.mask_matrix(data, inps.msk)
 
                 # Update data with plot inps
                 data, inps = update_matrix_with_plot_inps(data, atr, inps)
@@ -1373,7 +1351,7 @@ def main(argv):
                     fig.clf()
 
         ##### End of Loop 1
-        try: h5file.close()
+        try: f.close()
         except: pass
         print('----------------------------------------')
         print('all data range: [%f, %f] %s' % (all_data_min, all_data_max, inps.disp_unit))
@@ -1388,6 +1366,6 @@ def main(argv):
 
 ##################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 

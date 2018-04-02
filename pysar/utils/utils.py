@@ -922,7 +922,7 @@ def add_attribute(File, atr_new=dict()):
     return File
 
 
-def check_parallel(file_num=1, printMsg=True):
+def check_parallel(file_num=1, printMsg=True, maxParallelNum=8):
     '''Check parallel option based on pysar setting, file num and installed module
     Examples:
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
@@ -946,12 +946,11 @@ def check_parallel(file_num=1, printMsg=True):
         return 1, enable_parallel, None, None
 
     # Find proper number of cores for parallel processing
-    num_cores = min(multiprocessing.cpu_count(), file_num, pysar.parallel_num)
+    num_cores = min(multiprocessing.cpu_count(), file_num, maxParallelNum)
     if num_cores <= 1:
         enable_parallel = False
         print('parallel processing is disabled because min of the following two numbers <= 1:')
         print('available cpu number of the computer: '+str(multiprocessing.cpu_count()))
-        print('pysar.__init__.py: parallel_num: '+str(pysar.parallel_num))
     elif printMsg:
         print('parallel processing using %d cores ...'%(num_cores))
 
