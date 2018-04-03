@@ -259,12 +259,13 @@ class geometry:
                        'incidenceAngle':'$PROJECT_DIR/merged/geom_master/los.rdr',
                        'heandingAngle' :'$PROJECT_DIR/merged/geom_master/los.rdr',
                        'shadowMask'    :'$PROJECT_DIR/merged/geom_master/shadowMask.rdr',
-                       'bperp'         :['$PROJECT_DIR/merged/baselines/20160406/bperp',
-                                         '$PROJECT_DIR/merged/baselines/20160418/bperp',
-                                         ...]
-                       'dates'         :['20160406','20160418',...]
+                       'bperp'         :bperpDict
                        ...
                       }
+        bperpDict = {'20160406':'$PROJECT_DIR/merged/baselines/20160406/bperp',
+                     '20160418':'$PROJECT_DIR/merged/baselines/20160418/bperp',
+                     ...
+                    }
         metadata = readfile.read_attribute('$PROJECT_DIR/merged/interferograms/20160629_20160723/filt_fine.unw')
         geomObj = geometry(processor='isce', datasetDict=datasetDict, metadata=metadata)
         geomObj.save2h5(outputFile='geometryRadar.h5', access_mode='w', box=(200,500,300,600))
@@ -377,8 +378,6 @@ class geometry:
         print('create group   /{}'.format(groupName))
 
         self.dsNames = list(self.datasetDict.keys())
-        try: self.dsNames.remove('date')
-        except: pass
         maxDigit = max([len(i) for i in geometryDatasetNames])
         length, width = self.get_size(box)
 
@@ -386,9 +385,10 @@ class geometry:
         # 2D datasets containing height, latitude, incidenceAngle, shadowMask, etc.
         for dsName in self.dsNames:
             if dsName == 'bperp':
+                self.dateList = list(self.datasetDict[dsName].keys())
                 ##Write 3D dataset bperp
                 dsDataType = dataType
-                self.numDate = len(self.datasetDict[dsName])
+                self.numDate = len(self.dateList)
                 dsShape = (self.numDate, length, width)
                 print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
                                                                                       t=str(dsDataType), s=dsShape))
@@ -397,9 +397,9 @@ class geometry:
                 print('read coarse grid baseline files and linear interpolate into full resolution ...')
                 progBar = ptime.progress_bar(maxValue=self.numDate)
                 for i in range(self.numDate):
-                    data = self.read_isce_bperp_file(fname=self.datasetDict[dsName][i], box=box)
+                    data = self.read_isce_bperp_file(fname=self.datasetDict[dsName][self.dateList[i]], box=box)
                     ds[i,:,:] = data
-                    progBar.update(i+1, suffix=self.datasetDict['date'][i])
+                    progBar.update(i+1, suffix=self.dateList[i])
                 progBar.close()
 
                 ##Write 1D dataset date
@@ -408,7 +408,7 @@ class geometry:
                 dsDataType = np.string_
                 print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
                                                                                       t=str(dsDataType), s=dsShape))
-                data = np.array(self.datasetDict[dsName], dtype=dsDataType)
+                data = np.array(self.dateList, dtype=dsDataType)
                 ds = group.create_dataset(dsName, data=data, chunks=True)
 
             else:

@@ -261,10 +261,13 @@ def read_inps_dict2geometry_object(inpsDict):
             files = sorted(glob.glob(inpsDict[key]))
             if len(files) > 0:
                 if dsName == 'bperp':
-                    dsPathDict[dsName] = files
-                    dsPathDict['date'] = ptime.yyyymmdd([os.path.basename(os.path.dirname(i)) for i in files])
+                    bperpDict = {}
+                    for file in files:
+                        date = ptime.yyyymmdd(os.path.basename(os.path.dirname(file)))
+                        bperpDict[date] = file
+                    dsPathDict[dsName] = bperpDict
                     print('{:<{width}}: {path}'.format(dsName, width=maxDigit, path=inpsDict[key]))
-                    print('number of bperp files: {}'.format(len(files)))
+                    print('number of bperp files: {}'.format(len(list(bperpDict.keys()))))
                 else:
                     dsPathDict[dsName] = files[0]
                     print('{:<{width}}: {path}'.format(dsName, width=maxDigit, path=files[0]))
@@ -286,25 +289,17 @@ def read_inps_dict2geometry_object(inpsDict):
 
     ########## dsPathDict --> dsGeoPathDict + dsRadarPathDict
     dsNameList = list(dsPathDict.keys())
-    try: dsNameList.remove('date')
-    except: pass
     dsGeoPathDict = {}
     dsRadarPathDict = {}
     for dsName in dsNameList:
         if dsName == 'bperp':
-            atr = readfile.read_attribute(dsPathDict[dsName][0])
-            if 'Y_FIRST' in atr.keys():
-                dsGeoPathDict[dsName] = dsPathDict[dsName]
-                dsGeoPathDict['date'] = dsPathDict['date']
-            else:
-                dsRadarPathDict[dsName] = dsPathDict[dsName]
-                dsRadarPathDict['date'] = dsPathDict['date']
+            atr = readfile.read_attribute(next(iter(dsPathDict[dsName].values())))
         else:
             atr = readfile.read_attribute(dsPathDict[dsName])
-            if 'Y_FIRST' in atr.keys():
-                dsGeoPathDict[dsName] = dsPathDict[dsName]
-            else:
-                dsRadarPathDict[dsName] = dsPathDict[dsName]
+        if 'Y_FIRST' in atr.keys():
+            dsGeoPathDict[dsName] = dsPathDict[dsName]
+        else:
+            dsRadarPathDict[dsName] = dsPathDict[dsName]
 
     geomRadarObj = None
     geomGeoObj = None

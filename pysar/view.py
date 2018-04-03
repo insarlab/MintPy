@@ -1034,16 +1034,16 @@ def read_inps_dataset(inps, printMsg=True):
             inps.ref_date = ref_date
 
     if printMsg:
-        if inps.key in timeseriesKeyNames+['geometry']:
-            print('num of dates in file {}: {}'.format(os.path.basename(inps.file), len(inps.fileDatasetList)))
-            print('dates to exclude ({}):\n{}'.format(len(inps.exDsetList), inps.exDsetList))
-            print('dates to display ({}):\n{}'.format(len(inps.dset),   inps.dset))
-            if inps.ref_date:
-                print('input reference date: {}'.format(inps.ref_date))
-        else:
+        if inps.key in ['ifgramStack']:
             print('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.fileDatasetList)))
             print('num of datasets to exclude: {}'.format(len(inps.exDsetList)))
             print('num of datasets to display: {}'.format(len(inps.dset)))
+        else:
+            print('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.fileDatasetList)))
+            print('datasets to exclude ({}):\n{}'.format(len(inps.exDsetList), inps.exDsetList))
+            print('datasets to display ({}):\n{}'.format(len(inps.dset),   inps.dset))
+        if inps.ref_date and inps.key in timeseriesKeyNames:
+            print('input reference date: {}'.format(inps.ref_date))
 
     if inps.dsetNum == 0:
         print('ERROR: no input dataset found!')
@@ -1273,11 +1273,11 @@ def main(iargs=None):
             i_start = (j-1)*inps.fig_row_num*inps.fig_col_num
             i_end   = min([inps.dsetNum, i_start+inps.fig_row_num*inps.fig_col_num])
             ##### Loop 2 - Subplots
-            prog_bar = ptime.progress_bar(maxValue=i_end-i_start, prefix='loading: ')
+            progBar = ptime.progress_bar(maxValue=i_end-i_start)
             for i in range(i_start, i_end):
                 dset = inps.dset[i]
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
-                prog_bar.update(i-i_start+1, suffix=dset)
+                progBar.update(i-i_start+1, suffix=dset)
 
                 # Read Data
                 data = readfile.read(inps.file, datasetName=dset, box=inps.pix_box, printMsg=False)[0]
@@ -1347,7 +1347,7 @@ def main(iargs=None):
                     ax.axis('off')
 
             ##### Figure Setting - End of Loop 2
-            prog_bar.close()
+            progBar.close()
             fig.tight_layout()
             # Min and Max for this figure
             all_data_min = np.nanmin([all_data_min, fig_data_min])

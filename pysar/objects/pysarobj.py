@@ -223,7 +223,7 @@ class geometry:
         self.length, self.width = self.f[self.key].get(geometryDatasetNames[0]).shape
 
         self.datasetList = list(set(self.f[self.key].keys()) & set(geometryDatasetNames))
-        if 'date' in self.f[self.key].keys():
+        if 'bperp' in self.f[self.key].keys():
             self.dateList = [i.decode('utf8') for i in self.f[self.key].get('date')[:]]
             try: self.datasetList.remove('bperp')
             except: pass
