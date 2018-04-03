@@ -52,7 +52,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
         rangeDist = np.tile(rangeDist1D, (length, 1))
     else:
         print('read range distance from file: %s' % (rangeDistFile))
-        rangeDist = readfile.read(rangeDistFile, epoch='slantRangeDistance')[0]
+        rangeDist = readfile.read(rangeDistFile, datasetName='slantRangeDistance')[0]
 
     yref = int(atr['REF_Y'])
     xref = int(atr['REF_X'])

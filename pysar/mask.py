@@ -73,7 +73,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
     km = atrm['FILE_TYPE']
     if km not in multi_group_hdf5_file+multi_dataset_hdf5_file:
         print('reading mask file: '+maskFile)
-        mask = readfile.read(maskFile, epoch='mask')[0]
+        mask = readfile.read(maskFile, datasetName='mask')[0]
         if inps_dict:
             mask = update_mask(mask, inps_dict)
     

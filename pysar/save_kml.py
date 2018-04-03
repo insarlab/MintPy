@@ -136,7 +136,7 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
         try:
             dem_file = ut.get_file_list(['geometry*.h5','dem*.h5','*.dem','radar*.hgt'])[0]
             print('use mean height from file: '+dem_file+' + 1000 m as colorbar height.')
-            inps.cbar_height = np.rint(np.nanmean(readfile.read(dem_file, epoch='height')[0])) + 1000.0
+            inps.cbar_height = np.rint(np.nanmean(readfile.read(dem_file, datasetName='height')[0])) + 1000.0
         except: pass
     elif str(inps.cbar_height).lower().endswith('ground'):
         inps.cbar_height = None
@@ -194,7 +194,7 @@ def cmdLineParse():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='file to be converted, in geo coordinate.')
-    parser.add_argument('epoch', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o','--output', dest='outfile', help='output file base name. Extension is fixed with .kmz')
 
     parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('MIN','MAX'), type=float,\
@@ -247,17 +247,17 @@ def main(argv):
     if 'X_FIRST' not in atr.keys():
         sys.exit('ERROR: Input file is not geocoded.')
 
-    # Check: epoch is required for multi_dataset/group files
-    if not inps.epoch and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
+    # Check: dset is required for multi_dataset/group files
+    if not inps.dset and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         print("No date/date12 input.\nIt's required for "+k+" file")
         sys.exit(1)
 
     # Read data
-    data, atr = readfile.read(inps.file, epoch=inps.epoch)
+    data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
     # Output filename
     if not inps.outfile:
-        inps.outfile = pv.auto_figure_title(inps.file, inps.epoch, vars(inps))
+        inps.outfile = pv.auto_figure_title(inps.file, inps.dset, vars(inps))
 
     # Data Operation - Display Unit & Rewrapping
     data, inps.disp_unit, inps.wrap = pv.scale_data4disp_unit_and_rewrap(data, atr, inps.disp_unit, inps.wrap)

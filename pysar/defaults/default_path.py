@@ -31,7 +31,7 @@ pysar.load.lookupXFile    = $PROJECT_DIR/merged/geom_master/lon.rdr
 pysar.load.incAngleFile   = $PROJECT_DIR/merged/geom_master/los.rdr
 pysar.load.headAngleFile  = $PROJECT_DIR/merged/geom_master/los.rdr
 pysar.load.shadowMaskFile = $PROJECT_DIR/merged/geom_master/shadowMask.rdr
-pysar.load.bperpFile      = $PROJECT_DIR/baselines/bperp_*.rdr
+pysar.load.bperpFile      = $PROJECT_DIR/merged/baselines/*/bperp
 '''
 
 roipacAutoPath = '''##----------Default file path of ROI_PAC products
@@ -47,6 +47,7 @@ pysar.load.lookupXFile    = $PROJECT_DIR/PROCESS/GEO/geo_${m_date12}/geomap*.tra
 pysar.load.incAngleFile   = None
 pysar.load.headAngleFile  = None
 pysar.load.shadowMaskFile = None
+pysar.load.bperpFile      = None
 '''
 
 gammaAutoPath = '''##----------Default file path of GAMMA products
@@ -62,6 +63,7 @@ pysar.load.lookupXFile    = $PROJECT_DIR/PROCESS/SIM/sim_${m_date12}/sim*rlks.UT
 pysar.load.incAngleFile   = None
 pysar.load.headAngleFile  = None
 pysar.load.shadowMaskFile = None
+pysar.load.bperpFile      = $PROJECT_DIR/merged/baselines/*/*.base_perp
 '''
 
 prefix = 'pysar.load.'

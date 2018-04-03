@@ -401,7 +401,7 @@ def main(argv):
 
     ## 2 - mask
     print('reading mask            from file: '+inps.mask_file)
-    data = readfile.read(inps.mask_file, epoch='mask')[0]
+    data = readfile.read(inps.mask_file, datasetName='mask')[0]
     dset = groupQ.create_dataset('mask', data=data, compression='gzip')
     dset.attrs['Title'] = 'Mask'
     dset.attrs['MissingValue'] = BOOL_ZERO
@@ -417,7 +417,7 @@ def main(argv):
 
     ## 1 - height
     print('reading height          from file: '+inps.dem_file)
-    data = readfile.read(inps.dem_file, epoch='height')[0]
+    data = readfile.read(inps.dem_file, datasetName='height')[0]
     dset = groupGeom.create_dataset('height', data=data, compression='gzip')
     dset.attrs['Title'] = 'Digital elevatino model'
     dset.attrs['MissingValue'] = INT_ZERO
@@ -426,7 +426,7 @@ def main(argv):
 
     ## 2 - incidenceAngle
     print('reading incidence angle from file: '+inps.inc_angle_file)
-    data = readfile.read(inps.inc_angle_file, epoch='incidenceAngle')[0]
+    data = readfile.read(inps.inc_angle_file, datasetName='incidenceAngle')[0]
     dset = groupGeom.create_dataset('incidenceAngle', data=data, compression='gzip')
     dset.attrs['Title'] = 'Incidence angle'
     dset.attrs['MissingValue'] = FLOAT_ZERO
@@ -435,7 +435,7 @@ def main(argv):
 
     ## 3 - rangeCoord
     try:
-        data = readfile.read(inps.rg_coord_file, epoch='rangeCoord', printMsg=False)[0]
+        data = readfile.read(inps.rg_coord_file, datasetName='rangeCoord', printMsg=False)[0]
         print('reading range coord     from file: '+inps.rg_coord_file)
         dset = groupGeom.create_dataset('rangeCoord', data=data, compression='gzip')
         dset.attrs['Title'] = 'Range Coordinates'
@@ -447,7 +447,7 @@ def main(argv):
 
     ## 4 - azimuthCoord
     try:
-        data = readfile.read(inps.az_coord_file, epoch='azimuthCoord', printMsg=False)[0]
+        data = readfile.read(inps.az_coord_file, datasetName='azimuthCoord', printMsg=False)[0]
         print('reading azimuth coord   from file: '+inps.az_coord_file)
         dset = groupGeom.create_dataset('azimuthCoord', data=data, compression='gzip')
         dset.attrs['Title'] = 'Azimuth Coordinates'
@@ -459,7 +459,7 @@ def main(argv):
 
     ## 5 - headingAngle
     try:
-        data = readfile.read(inps.head_angle_file, epoch='heandingAngle', printMsg=False)[0]
+        data = readfile.read(inps.head_angle_file, datasetName='heandingAngle', printMsg=False)[0]
         print('reading azimuth coord   from file: '+inps.head_angle_file)
         dset = groupGeom.create_dataset('heandingAngle', data=data, compression='gzip')
         dset.attrs['Title'] = 'Heanding Angle'
@@ -471,7 +471,7 @@ def main(argv):
 
     ## 6 - slantRangeDistance
     try:
-        data = readfile.read(inps.slant_range_dist_file, epoch='slantRangeDistance', printMsg=False)[0]
+        data = readfile.read(inps.slant_range_dist_file, datasetName='slantRangeDistance', printMsg=False)[0]
         print('reading slant range distance from file: '+inps.slant_range_dist_file)
         dset = groupGeom.create_dataset('slantRangeDistance', data=data, compression='gzip')
         dset.attrs['Title'] = 'Slant Range Distance'
@@ -483,7 +483,7 @@ def main(argv):
 
     ## 7 - waterMask
     try:
-        data = readfile.read(inps.water_mask_file, epoch='waterMask', printMsg=False)[0]
+        data = readfile.read(inps.water_mask_file, datasetName='waterMask', printMsg=False)[0]
         print('reading water mask      from file: '+inps.water_mask_file)
         dset = groupGeom.create_dataset('waterMask', data=data, compression='gzip')
         dset.attrs['Title'] = 'Water Mask'
@@ -495,7 +495,7 @@ def main(argv):
 
     ## 8 - shadowMask
     try:
-        data = readfile.read(inps.shadow_mask_file, epoch='shadowMask', printMsg=False)[0]
+        data = readfile.read(inps.shadow_mask_file, datasetName='shadowMask', printMsg=False)[0]
         print('reading shadow mask     from file: '+inps.shadow_mask_file)
         dset = groupGeom.create_dataset('shadowMask', data=data, compression='gzip')
         dset.attrs['Title'] = 'Shadow Mask'

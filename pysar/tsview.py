@@ -248,7 +248,7 @@ if __name__ == '__main__':
         try:    inps.mask_file = ut.get_file_list(file_list)[0]
         except: inps.mask_file = None
     try:
-        mask = readfile.read(inps.mask_file, epoch='mask')[0]
+        mask = readfile.read(inps.mask_file, datasetName='mask')[0]
         mask[mask!=0] = 1
         print('load mask from file: '+inps.mask_file)
     except:
@@ -256,10 +256,10 @@ if __name__ == '__main__':
         print('No mask used.')
 
     # Initial Map
-    d_v = readfile.read(inps.timeseries_file, epoch=dateList[inps.epoch_num])[0] * inps.unit_fac
+    d_v = readfile.read(inps.timeseries_file, datasetName=dateList[inps.epoch_num])[0] * inps.unit_fac
     #d_v = h5[k].get(dateList[inps.epoch_num])[:]*inps.unit_fac
     if inps.ref_date:
-        inps.ref_d_v = readfile.read(inps.timeseries_file, epoch=inps.ref_date)[0]*inps.unit_fac
+        inps.ref_d_v = readfile.read(inps.timeseries_file, datasetName=inps.ref_date)[0]*inps.unit_fac
         d_v -= inps.ref_d_v
     if mask is not None:
         d_v = mask_matrix(d_v, mask)
@@ -285,7 +285,7 @@ if __name__ == '__main__':
     # rect[left, bottom, width, height]
     ax_v = fig_v.add_axes([0.125,0.25,0.75,0.65])
     if inps.dem_file:
-        dem = readfile.read(inps.dem_file, epoch='height')[0]
+        dem = readfile.read(inps.dem_file, datasetName='height')[0]
         ax_v = pp.plot_dem_yx(ax_v, dem)
     img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim_mat, interpolation='nearest')
 

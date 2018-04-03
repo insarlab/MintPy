@@ -200,7 +200,7 @@ def main(argv):
     except ValueError:
         print('No incidence angle file found!\nRun incidence_angle.py to generate it.')
     print('read incidence angle from file: '+str(inps.inc_angle_file))
-    inps.inc_angle = readfile.read(inps.inc_angle_file, epoch='incidenceAngle')[0].flatten()
+    inps.inc_angle = readfile.read(inps.inc_angle_file, datasetName='incidenceAngle')[0].flatten()
     inps.inc_angle *= np.pi/180.0
 
     # 2. Slant Range distance
@@ -209,7 +209,7 @@ def main(argv):
     except ValueError:
         print('No range distance file found!\nRun range_distance.py to generate it.')
     print('read slant range distance from file: '+str(inps.range_dist_file))
-    inps.range_dist = readfile.read(inps.range_dist_file, epoch='slantRangeDistance')[0].flatten()
+    inps.range_dist = readfile.read(inps.range_dist_file, datasetName='slantRangeDistance')[0].flatten()
 
     # 3. Perp Baseline - 1D in time, 0D/1D in space (azimuth)
     print('read perpendicular baseline')

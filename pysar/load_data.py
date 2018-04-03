@@ -25,7 +25,8 @@ datasetName2templateKey={'unwrapPhase'     :'pysar.load.unwFile',
                          'rangeCoord'      :'pysar.load.lookupXFile',
                          'incidenceAngle'  :'pysar.load.incAngleFile',
                          'headingAngle'    :'pysar.load.headAngleFile',
-                         'shadowMask'      :'pysar.load.shadowMaskFile'
+                         'shadowMask'      :'pysar.load.shadowMaskFile',
+                         'bperp'           :'pysar.load.bperpFile'
                          }
 
 DEFAULT_TEMPLATE='''template:
@@ -53,6 +54,7 @@ pysar.load.lookupXFile    = auto  #[lon.rdr,         geomap*.trans,       sim*rl
 pysar.load.incAngleFile   = auto  #[los.rdr,         None,                None               ]
 pysar.load.headAngleFile  = auto  #[los.rdr,         None,                None               ]
 pysar.load.shadowMaskFile = auto  #[shadowMask.rdr,  None,                None               ]
+pysar.load.bperpFile      = auto. #[bperp,           None,                *.base_perp        ]
 
 pysar.subset.yx   = auto
 '''
@@ -73,20 +75,12 @@ def createParser():
     parser = argparse.ArgumentParser(description='Saving a stack of Interferograms to an HDF5 file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=TEMPLATE+'\n'+NOTE+'\n'+EXAMPLE)
-
     parser.add_argument('-H', dest='print_example_template', action='store_true',\
                         help='Print/Show the example template file for loading.')
-
     parser.add_argument('-t','--template', type=str, nargs='+', dest='template_file', help='template file with path info.')
-
     parser.add_argument('--project', type=str, dest='project_name', help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor', choices={'isce','roipac','gamma','doris','gmtsar'},\
                         help='InSAR processor/software of the file')
-    #parser.add_argument('-x', type=int, nargs=2, dest='subset_x', metavar=('X_MIN','X_MAX'),\
-    #                    help='Subset range in x/range direction')
-    #parser.add_argument('-y', type=int, nargs=2, dest='subset_y', metavar=('Y_MIN','Y_MAX'),\
-    #                    help='Subset range in y/azimuth direction')
-
     parser.add_argument('--enforce', dest='update_mode', action='store_false',\
                         help='Disable the update mode, or skip checking dataset already loaded. [not implemented yet]')
     parser.add_argument('-o','--output', type=str, nargs=3, dest='outfile',\
@@ -95,7 +89,7 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs = None):
+def cmdLineParse(iargs=None):
     '''Command line parser.'''
     parser = createParser()
     inps = parser.parse_args(args=iargs)
@@ -109,7 +103,6 @@ def cmdLineParse(iargs = None):
         print('{}: error: the following arguments are required: -t/--template'.format(os.path.basename(__file__)))
         print('{} -H to show the example template file'.format(os.path.basename(__file__)))
         sys.exit(1)
-
     return inps
 
 
@@ -265,10 +258,16 @@ def read_inps_dict2geometry_object(inpsDict):
     for dsName in geometryDatasetNames:
         if dsName in datasetName2templateKey.keys():
             key = datasetName2templateKey[dsName]
-            files = glob.glob(inpsDict[key])
+            files = sorted(glob.glob(inpsDict[key]))
             if len(files) > 0:
-                dsPathDict[dsName] = files[0]
-                print('{:<{width}}: {path}'.format(dsName, width=maxDigit, path=files[0]))
+                if dsName == 'bperp':
+                    dsPathDict[dsName] = files
+                    dsPathDict['date'] = ptime.yyyymmdd([os.path.basename(os.path.dirname(i)) for i in files])
+                    print('{:<{width}}: {path}'.format(dsName, width=maxDigit, path=inpsDict[key]))
+                    print('number of bperp files: {}'.format(len(files)))
+                else:
+                    dsPathDict[dsName] = files[0]
+                    print('{:<{width}}: {path}'.format(dsName, width=maxDigit, path=files[0]))
 
     ##Check required dataset
     dsName0 = geometryDatasetNames[0]
@@ -278,30 +277,43 @@ def read_inps_dict2geometry_object(inpsDict):
 
     ########## metadata
     ifgramRadarMetadata = None
-    key = datasetName2templateKey[ifgramDatasetNames[0]]
-    files = glob.glob(inpsDict[key])
-    if len(files)>0:
-        atr = readfile.read_attribute(files[0])
+    ifgramKey = datasetName2templateKey[ifgramDatasetNames[0]]
+    ifgramFiles = glob.glob(inpsDict[ifgramKey])
+    if len(ifgramFiles)>0:
+        atr = readfile.read_attribute(ifgramFiles[0])
         if 'Y_FIRST' not in atr.keys():
             ifgramRadarMetadata = atr.copy()
 
     ########## dsPathDict --> dsGeoPathDict + dsRadarPathDict
     dsNameList = list(dsPathDict.keys())
+    try: dsNameList.remove('date')
+    except: pass
     dsGeoPathDict = {}
     dsRadarPathDict = {}
     for dsName in dsNameList:
-        atr = readfile.read_attribute(dsPathDict[dsName])
-        if 'Y_FIRST' in atr.keys():
-            dsGeoPathDict[dsName] = dsPathDict[dsName]
+        if dsName == 'bperp':
+            atr = readfile.read_attribute(dsPathDict[dsName][0])
+            if 'Y_FIRST' in atr.keys():
+                dsGeoPathDict[dsName] = dsPathDict[dsName]
+                dsGeoPathDict['date'] = dsPathDict['date']
+            else:
+                dsRadarPathDict[dsName] = dsPathDict[dsName]
+                dsRadarPathDict['date'] = dsPathDict['date']
         else:
-            dsRadarPathDict[dsName] = dsPathDict[dsName]
+            atr = readfile.read_attribute(dsPathDict[dsName])
+            if 'Y_FIRST' in atr.keys():
+                dsGeoPathDict[dsName] = dsPathDict[dsName]
+            else:
+                dsRadarPathDict[dsName] = dsPathDict[dsName]
 
     geomRadarObj = None
     geomGeoObj = None
     if len(dsRadarPathDict)>0:
-        geomRadarObj = geometry(processor=inpsDict['processor'], datasetDict=dsRadarPathDict, ifgramMetadata=ifgramRadarMetadata)
+        geomRadarObj = geometry(processor=inpsDict['processor'], datasetDict=dsRadarPathDict,\
+                                ifgramMetadata=ifgramRadarMetadata)
     if len(dsGeoPathDict)>0:
-        geomGeoObj = geometry(processor=inpsDict['processor'], datasetDict=dsGeoPathDict, ifgramMetadata=None)
+        geomGeoObj = geometry(processor=inpsDict['processor'], datasetDict=dsGeoPathDict,\
+                              ifgramMetadata=None)
     return geomRadarObj, geomGeoObj
 
 

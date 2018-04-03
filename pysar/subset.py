@@ -361,49 +361,49 @@ def subset_file(File, subset_dict_input, outFile=None):
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         ##### Open Input File 
         h5file = h5py.File(File,'r')
-        epochList = sorted(h5file[k].keys())
-        epochNum = len(epochList)
+        dsList = sorted(h5file[k].keys())
+        dsNum = len(dsList)
         if k in multi_dataset_hdf5_file:
-            print('number of acquisitions: '+str(epochNum))
+            print('number of acquisitions: '+str(dsNum))
         else:
-            print('number of interferograms: '+str(epochNum))
+            print('number of interferograms: '+str(dsNum))
 
         ##### Open Output File
         h5out = h5py.File(outFile,'w')
         group = h5out.create_group(k)
-        prog_bar = ptime.progress_bar(maxValue=epochNum)
+        prog_bar = ptime.progress_bar(maxValue=dsNum)
 
     ## Loop
     if k in multi_dataset_hdf5_file:
-        for i in range(epochNum):
-            epoch = epochList[i]
-            dset = h5file[k].get(epoch)
+        for i in range(dsNum):
+            dsName = dsList[i]
+            dset = h5file[k].get(dsName)
             data_overlap = dset[pix_box4data[1]:pix_box4data[3],pix_box4data[0]:pix_box4data[2]]
 
             data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-            dset = group.create_dataset(epoch, data=data, compression='gzip')
-            prog_bar.update(i+1, suffix=epoch)
+            dset = group.create_dataset(dsName, data=data, compression='gzip')
+            prog_bar.update(i+1, suffix=dsName)
         prog_bar.close()
         atr_dict = ut.subset_attribute(atr_dict, pix_box)
         for key,value in iter(atr_dict.items()):
             group.attrs[key] = value
 
     elif k in multi_group_hdf5_file:
-        date12_list = ptime.list_ifgram2date12(epochList)
-        for i in range(epochNum):
-            epoch = epochList[i]
-            dset = h5file[k][epoch].get(epoch)
-            atr_dict  = h5file[k][epoch].attrs
+        date12_list = ptime.list_ifgram2date12(dsList)
+        for i in range(dsNum):
+            dsName = dsList[i]
+            dset = h5file[k][dsName].get(dsName)
+            atr_dict  = h5file[k][dsName].attrs
             data_overlap = dset[pix_box4data[1]:pix_box4data[3],pix_box4data[0]:pix_box4data[2]]
 
             data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
             atr_dict  = ut.subset_attribute(atr_dict, pix_box, printMsg=False)
-            gg = group.create_group(epoch)
-            dset = gg.create_dataset(epoch, data=data, compression='gzip')
+            gg = group.create_group(dsName)
+            dset = gg.create_dataset(dsName, data=data, compression='gzip')
             for key, value in iter(atr_dict.items()):
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
@@ -557,15 +557,15 @@ def main(argv):
                 sys.exit('No lookup file found! Can not use --tight option without it.')
             atr_lut = readfile.read_attribute(inps.lookup_file)
             if 'Y_FIRST' in atr_lut.keys():
-                rg_lut = readfile.read(inps.lookup_file, epoch='range')[0]
+                rg_lut = readfile.read(inps.lookup_file, datasetName='range')[0]
                 rg_unique, rg_pos = np.unique(rg_lut, return_inverse=True)
                 idx_row, idx_col = np.where(rg_lut != rg_unique[np.bincount(rg_pos).argmax()])
                 pix_box = (np.min(idx_col)-10, np.min(idx_row)-10, np.max(idx_col)+10, np.max(idx_row)+10)
                 geo_box = box_pixel2geo(pix_box, atr_lut)
                 del rg_lut
             else:
-                lat = readfile.read(inps.lookup_file, epoch='latitude')[0]
-                lon = readfile.read(inps.lookup_file, epoch='longitude')[0]
+                lat = readfile.read(inps.lookup_file, datasetName='latitude')[0]
+                lon = readfile.read(inps.lookup_file, datasetName='longitude')[0]
                 geo_box = (np.nanmin(lon), np.nanmax(lat), np.nanmax(lon), np.nanmin(lat))
                 pix_box = None
                 del lat, lon

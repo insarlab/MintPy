@@ -81,6 +81,7 @@ class timeseries:
         dates = self.f[self.key].get('date')[:]
         self.times = np.array([dt(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in dates])
         self.dateList = [i.decode('utf8') for i in dates]
+        self.datasetList = list(self.dateList)
 
         self.refIndex = self.dateList.index(self.metadata['REF_DATE'])
         self.btemp = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
@@ -98,34 +99,33 @@ class timeseries:
             except:  self.metadata[key] = value
         return self.metadata
 
-    def read(self, epoch=None, box=None, printMsg=True):
+    def read(self, datasetName=None, box=None, printMsg=True):
         '''Read dataset from timeseries file
         Parameters: self : timeseries object
-                    epoch : (list of) string in YYYYMMDD format
+                    datasetName : (list of) string in YYYYMMDD format
                     box : tuple of 4 int, indicating x0,y0,x1,y1 of range
         Returns:    data : 2D or 3D dataset
         Examples:   from pysar.objects import timeseries
                     tsobj = timeseries('timeseries_ECMWF_demErr.h5')
-                    data = tsobj.read(epoch='20161020')
-                    data = tsobj.read(epoch='20161020', box=(100,300,500,800))
-                    data = tsobj.read(epoch=['20161020','20161026','20161101'])
+                    data = tsobj.read(datasetName='20161020')
+                    data = tsobj.read(datasetName='20161020', box=(100,300,500,800))
+                    data = tsobj.read(datasetName=['20161020','20161026','20161101'])
                     data = tsobj.read(box=(100,300,500,800))
         '''
         self.open(printMsg=printMsg)
         ds = self.f[self.key].get(self.key)
-
         ##Index in time/1st dimension
-        dsIndex = range(self.numDate)
-        if isinstance(epoch, str):
-            dsIndex = self.dateList.index(epoch)
-        elif isinstance(epoch, list):
+        if not datasetName:
+            dsIndex = range(self.numDate)
+        elif isinstance(datasetName, str):
+            dsIndex = self.dateList.index(datasetName)
+        elif isinstance(datasetName, list):
             dsIndex = []
-            for e in epoch:
+            for e in datasetName:
                 dsIndex.append(self.dateList.index(e))
         ##Index in space/2_3 dimension
         if box is None:
             box = [0,0,self.width,self.length]
-
         data = ds[dsIndex, box[1]:box[3], box[0]:box[2]]
         data = np.squeeze(data)
         return data
@@ -200,6 +200,7 @@ class geometry:
         /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
         /waterMask               2D array of bool    in size of (l, w   ).           (optional)
         /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
+        /date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
         ...
     '''
     def __init__(self, file=None):
@@ -220,7 +221,15 @@ class geometry:
         self.f = h5py.File(self.file,'r')
         self.get_metadata()
         self.length, self.width = self.f[self.key].get(geometryDatasetNames[0]).shape
-        self.datasetList = self.f[self.key].keys()
+
+        self.datasetList = list(set(self.f[self.key].keys()) & set(geometryDatasetNames))
+        if 'date' in self.f[self.key].keys():
+            self.dateList = [i.decode('utf8') for i in self.f[self.key].get('date')[:]]
+            try: self.datasetList.remove('bperp')
+            except: pass
+            self.datasetList += ['bperp-'+d for d in self.dateList]
+        else:
+            self.dateList = None
 
         self.geocoded = False
         if 'Y_FIRST' in self.metadata.keys():
@@ -235,16 +244,43 @@ class geometry:
         return self.metadata
 
     def read(self, datasetName=geometryDatasetNames[0], box=None, printMsg=True):
-        '''Read 2D / 3D dataset with bounding box in space'''
-        self.f = h5py.File(self.file, 'r')
-        dset = self.f[self.key].get(datasetName)
+        '''Read 2D / 3D dataset with bounding box in space
+        Parameters: datasetName : string, to point to specific 2D dataset, e.g.:
+                        height
+                        incidenceAngle
+                        bperp
+                        ...
+                        bperp-20161020
+                        bperp-20161026
+                        bperp-...
+                    box : tuple of 4 int, for (x0,y0,x1,y1)
+                    printMsg : bool
+        Returns: data : 2D or 3D array
+        Example:
+            obj = geometry('./INPUTS/geometryRadar.h5')
+            obj.read(datasetName='height')
+            obj.read(datasetName='incidenceAngle')
+            obj.read(datasetName='bperp')
+            obj.read(datasetName='bperp-20161020')
+        '''
+        self.open(printMsg=printMsg)
         if box is None:
             box = (0,0,self.width,self.length)
+        if datasetName is None:
+            datasetName = geometryDatasetNames[0]
+
+        datasetName = datasetName.split('-')
+        dset = self.f[self.key].get(datasetName[0])
         if len(dset.shape) == 2:
             data = dset[box[1]:box[3], box[0]:box[2]]
+
+        ## bperp
         elif len(dset.shape) == 3:
-            data = dset[:, box[1]:box[3], box[0]:box[2]]
-        #data = np.squeeze(data)
+            if len(datasetName) == 1:
+                data = dset[:, box[1]:box[3], box[0]:box[2]]
+            else:
+                data = dset[self.dateList.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
+                data = np.squeeze(data)
         return data
 
 
@@ -293,6 +329,13 @@ class ifgramStack:
         self.get_size()
         self.read_datetimes()
 
+        #Get datasetList for self.read()
+        self.datasetList = []
+        mDateList = [i.decode('utf8') for i in self.f[self.key].get('date')[:,0]]
+        sDateList = [i.decode('utf8') for i in self.f[self.key].get('date')[:,1]]
+        for dsName in list(set(self.f[self.key].keys()) & set(ifgramDatasetNames)):
+            self.datasetList += ['{}-{}_{}'.format(dsName,m,s) for m,s in zip(mDateList, sDateList)]
+
         self.mDateList = [i.strftime("%Y%m%d") for i in self.mTimes]
         self.sDateList = [i.strftime("%Y%m%d") for i in self.sTimes]
         self.date12List = ['{}_{}'.format(i,j) for i,j in zip(self.mDateList,self.sDateList)]
@@ -331,20 +374,39 @@ class ifgramStack:
         self.sTimes = np.array([dt(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in list(dates[:,1])])[self.dropIfgram]
         return self.mTimes, self.sTimes     
 
-    def read(self, datasetName=ifgramDatasetNames[0], epoch=None, box=None, printMsg=True):
-        '''Read 3D dataset with bounding box in space'''
+    def read(self, datasetName=ifgramDatasetNames[0], box=None, printMsg=True):
+        '''Read 3D dataset with bounding box in space
+        Parameters: datasetName : string, to point to specific 2D dataset, e.g.:
+                        unwrapPhase
+                        coherence
+                        connectComponent
+                        ...
+                        unwrapPhase-20161020_20161026
+                        unwrapPhase-...
+                        coherence-20161020_20161026
+                        ...
+                    box : tuple of 4 int, for (x0,y0,x1,y1)
+                    printMsg : bool
+        Returns: data : 2D or 3D array
+        Example:
+            obj = ifgramStack('./INPUTS/ifgramStack.h5')
+            obj.read(datasetName='unwrapPhase')
+            obj.read(datasetName='coherence')
+            obj.read(datasetName='unwrapPhase-20161020_20161026')
+        '''
         self.open(printMsg=printMsg)
-        dset = self.f[self.key].get(datasetName)
         if box is None:
             box = (0,0,self.width,self.length)
-        if epoch is None:
+        if datasetName is None:
+            datasetName = ifgramDatasetNames[0]
+
+        datasetName = datasetName.split('-')
+        dset = self.f[self.key].get(datasetName[0])
+        if len(datasetName) == 1:
             data = dset[self.dropIfgram, box[1]:box[3], box[0]:box[2]]
         else:
-            if isinstance(epoch, str):
-                epoch = [epoch]
-            ifgramIndex = [self.date12List.index(e) for e in epoch]
-            data = dset[ifgramIndex, box[1]:box[3], box[0]:box[2]]
-        data = np.squeeze(data)
+            data = dset[self.date12List.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
+            data = np.squeeze(data)
         return data
 
 

@@ -100,57 +100,8 @@ geometry_dataset=['rangeCoord','azimuthCoord','latitude','longitude','height',\
 
 
 #########################################################################
-def get_file_dataset_list(fname, key):
-    fileExt = os.path.splitext(fname)[1]
-    fileBase = os.path.splitext(os.path.basename(fname))[0]
-    epochList = []
-    datasetList = None
-    ## HDF5 Files
-    if fileExt in ['.h5','.he5']:
-        f = h5py.File(fname, 'r')
-        if key in ['timeseries']:
-            obj = timeseries(fname)
-            obj.open(printMsg=False)
-            epochList = obj.dateList
-        elif key in ['ifgramStack']:
-            obj = ifgramStack(fname)
-            obj.open(printMsg=False)
-            epochList = obj.date12List
-            datasetList = [i for i in f[key].keys() if i in ifgramDatasetNames]
-        elif key in ['GIANT_TS']:
-            epochList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
-        else:
-            epochList = list(f[key].keys())
-    ## Binary Files
-    else:
-        if key.lower() in ['.trans','.utm_to_rdc']:
-            epochList = ['rangeCoord','azimuthCoord']
-        elif fileBase.startswith('los'):
-            epochList = ['incidenceAngle','headingAngle']
-        else:
-            epochList = ['']
-    return epochList, datasetList
-
-
-def check_input_epoch(allList, inList=[], inNumList=[]):
-    '''Get epoch(es) from input epoch / epoch_num'''
-    ## inList + inNumList --> outNumList --> outList
-    if inList:
-        tempList = []
-        for ei in sorted(inList):
-            tempList += [e for e in allList if ei.lower() in e.lower()]
-        inNumList += [allList.index(e) for e in set(tempList)]
-    outNumList = sorted(list(set(inNumList)))
-    outList = [allList[i] for i in outNumList]
-    return outList, outNumList
-
-
-def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
+def read(fname, box=None, datasetName=None, printMsg=True):
     '''Read one dataset and its attributes from input file.
-
-    Read one dataset, i.e. interferogram, coherence, velocity, dem ...
-    return 0 if failed.
-
     Parameters: fname : str, path of file to read
                     PySAR   file: interferograms, timeseries, velocity, etc.
                     ROI_PAC file: .unw .cor .hgt .dem .trans
@@ -158,12 +109,40 @@ def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
                     Image   file: .jpeg .jpg .png .ras .bmp
                 box : 4-tuple of int
                     area to read, defined in (x0, y0, x1, y1) in pixel coordinate
-                epoch : string
-                    epoch to read, for multi-dataset files
-                    for .trans file:
-                        '' - return both dataset
-                        rg, range   - for geomap_*.trans file
-                        az, azimuth - for geomap_*.trans file
+                datasetName : string
+                    dataset to read in the format of datasetName / datasetName-dateName / datasetName-date12Name
+                    for ifgramStack:
+                        unwrapPhase
+                        coherence
+                        ...
+                        unwrapPhase-20161020_20161026
+                        ...
+                    for timeseries:
+                        20161020
+                        20161026
+                        ...
+                    for geometry:
+                        height
+                        incidenceAngle
+                        bperp
+                        ...
+                        bperp-20161020
+                        bperp-20161026
+                        bperp-...
+                    for .trans and .utm_to_rdc:
+                        rangeCoord
+                        azimuthCoord
+                    for los.rdr:
+                        incidenceAngle
+                        headingAngle
+                    for GIANT_TS:
+                        rawts
+                        recons
+                        rawts-20161020
+                        rawts-20161026
+                        rawts-...
+                    for the other single dataset file:
+                        No need and will be ignored.
 
     Returns: data : 2/3-D matrix in numpy.array format, return None if failed
              atr : dictionary, attributes of data, return None if failed
@@ -171,17 +150,20 @@ def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
     Examples:
         from pysar.utils import readfile
         data, atr = readfile.read('velocity.h5')
-        data, atr = readfile.read('100120-110214.unw', box=(100,1100, 500, 2500))
-        data, atr = readfile.read('timeseries.h5', epoch='20101120')
-        data, atr = readfile.read('timeseries.h5', box=(100,1100, 500, 2500), epoch='20101120')
-        data, atr = readfile.read('geomap*.trans', epoch='azimuth')
+        data, atr = readfile.read('timeseries.h5')
+        data, atr = readfile.read('timeseries.h5', datasetName='20161020')
         data, atr = readfile.read('ifgramStack.h5', datasetName='unwrapPhase')
+        data, atr = readfile.read('ifgramStack.h5', datasetName='unwrapPhase-20161020_20161026')
+        data, atr = readfile.read('ifgramStack.h5', datasetName='coherence', box=(100,1100, 500, 2500))
+        data, atr = readfile.read('geometryRadar.h5', datasetName='height')
+        data, atr = readfile.read('geometryRadar.h5', datasetName='bperp')
+        data, atr = readfile.read('100120-110214.unw', box=(100,1100, 500, 2500))
     '''
 
     # Basic Info
     ext = os.path.splitext(fname)[1].lower()
     fbase = os.path.splitext(os.path.basename(fname))[0]
-    atr = read_attribute(fname, epoch)
+    atr = read_attribute(fname)
     k = atr['FILE_TYPE']
     processor = atr['PROCESSOR']
     length = int(atr['LENGTH'])
@@ -191,35 +173,23 @@ def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
 
     ##### HDF5
     if ext in ['.h5','.he5']:
-        fileEpochList = get_file_dataset_list(fname, k)[0]
-        if epoch is not None:
-            if isinstance(epoch, str):
-                epoch = [epoch]
-            epochList = check_input_epoch(allList=fileEpochList, inList=epoch, inNumList=[])[0]
-        else:
-            epochList = fileEpochList
-        if len(epochList) == 0:
-            print('ERROR: no input epoch found!')
-            print('available epoch:\n{}'.format(fileEpochList))
-            sys.exit(1)
-
         f = h5py.File(fname,'r')
         if k in ['timeseries']:
             obj = timeseries(fname)
-            data = obj.read(epoch=epochList, box=box, printMsg=printMsg)
+            data = obj.read(datasetName=datasetName, box=box, printMsg=printMsg)
         elif k in ['ifgramStack']:
             obj = ifgramStack(fname)
-            data = obj.read(datasetName=datasetName, epoch=epochList, box=box, printMsg=printMsg)
+            data = obj.read(datasetName=datasetName, box=box, printMsg=printMsg)
             if datasetName in ['unwrapPhase','wrapPhase','iono']:
                 atr['UNIT'] = 'radian'
             else:
                 atr['UNIT'] = '1'
         elif k in ['geometry']:
             obj = geometry(fname)
-            data = obj.read(datasetName=epochList[0], box=box, printMsg=printMsg)
+            data = obj.read(datasetName=datasetName, box=box, printMsg=printMsg)
         elif k in ['GIANT_TS']:
             dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
-            dateIndx = dateList.index(epoch)
+            dateIndx = dateList.index(datasetName)
             if 'rawts' in list(f.keys()):
                 dset = f['rawts'][dateIndx,:,:]
             elif 'recons' in list(f.keys()):
@@ -256,14 +226,14 @@ def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
 
         elif fbase.startswith('los'):
             incAngle, azAngle, atr = read_float32(fname, box=box)
-            if not epoch:
+            if not datasetName:
                 return incAngle, azAngle, atr
-            elif epoch.startswith('inc'):
+            elif datasetName.startswith('inc'):
                 return incAngle, atr
-            elif epoch.startswith(('az','head')):
+            elif datasetName.startswith(('az','head')):
                 return azAngle, atr
             else:
-                sys.exit('Un-recognized epoch input: '+epoch)
+                sys.exit('Un-recognized datasetName input: '+datasetName)
 
         elif atr['DATA_TYPE'].lower() in ['float64','double']:
             data, atr = read_real_float64(fname, box=box)
@@ -311,14 +281,14 @@ def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
 
         elif ext in ['.trans']:
             rg, az, atr = read_float32(fname, box=box)
-            if not epoch:
+            if not datasetName:
                 return rg, az, atr
-            elif epoch.startswith(('rg','range')):
+            elif datasetName.startswith(('rg','range')):
                 return rg, atr
-            elif epoch.startswith(('az','azimuth')):
+            elif datasetName.startswith(('az','azimuth')):
                 return az, atr
             else:
-                sys.exit('Un-recognized epoch input: '+epoch)
+                sys.exit('Un-recognized datasetName input: '+datasetName)
 
     ##### Gamma
     elif processor == 'gamma':
@@ -328,14 +298,14 @@ def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
 
         elif ext in ['.UTM_TO_RDC', '.utm_to_rdc']:
             data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', band='complex')
-            if not epoch:
+            if not datasetName:
                 return data.real, data.imag, atr
-            elif epoch.startswith(('rg','range')):
+            elif datasetName.startswith(('rg','range')):
                 return data.real, atr
-            elif epoch.startswith(('az','azimuth')):
+            elif datasetName.startswith(('az','azimuth')):
                 return data.imag, atr
             else:
-                sys.exit('Un-recognized epoch input: '+epoch)
+                sys.exit('Un-recognized datasetName input: '+datasetName)
 
         elif ext in ['.int']:
             data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', band='phase')
@@ -360,9 +330,9 @@ def read(fname, box=None, datasetName=None, epoch=None, printMsg=True):
 
 
 #########################################################################
-def read_attribute(fname, epoch=None):
+def read_attribute(fname):
     '''Read attributes of input file into a dictionary
-    Input  : string, file name and epoch (optional)
+    Input  : string, file name
     Output : dictionary, attributes dictionary
     '''
     ext = os.path.splitext(fname)[1].lower()
@@ -380,39 +350,26 @@ def read_attribute(fname, epoch=None):
         else: k = list(h5.keys())[0]
 
         attrs = None
-        if k in multi_group_hdf5_file:
-            if epoch:
-                # Check input epoch exists or not
-                epoch_list = sorted(h5[k].keys())
-                try:    epoch = [i for i in epoch_list if epoch in i][0]
-                except: epoch = None
-
-            if not epoch:
-                epoch = list(h5[k].keys())[0]
-            attrs = h5[k][epoch].attrs
-
-        #elif k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
+        key = 'WIDTH'
+        if key in h5.attrs.keys():
+            attrs = h5.attrs
         else:
-            key = 'WIDTH'
-            if key in h5.attrs.keys():
-                attrs = h5.attrs
-            else:
-                for groupK in h5.keys():
-                    if key in h5[groupK].attrs.keys():
-                        attrs = h5[groupK].attrs
-                        break
-            if fname.endswith('PARAMS.h5'):
-                #dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
-                attrs = dict()
-                attrs['LENGTH'] = h5['cmask'].shape[0]
-                attrs['WIDTH'] = h5['cmask'].shape[1]
-                #attrs['ORBIT_DIRECTION'] = 'descending'
-                #attrs['REF_Y'] = '134'
-                #attrs['REF_X'] = '637'
-                #attrs['REF_DATE'] = '20141225'
-                k = 'GIANT_TS'
-            if attrs is None:
-                raise ValueError('No attribute '+key+' found in 1/2 group level!')
+            for groupK in h5.keys():
+                if key in h5[groupK].attrs.keys():
+                    attrs = h5[groupK].attrs
+                    break
+        if fname.endswith('PARAMS.h5'):
+            #dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
+            attrs = dict()
+            attrs['LENGTH'] = h5['cmask'].shape[0]
+            attrs['WIDTH'] = h5['cmask'].shape[1]
+            #attrs['ORBIT_DIRECTION'] = 'descending'
+            #attrs['REF_Y'] = '134'
+            #attrs['REF_X'] = '637'
+            #attrs['REF_DATE'] = '20141225'
+            k = 'GIANT_TS'
+        if attrs is None:
+            raise ValueError('No attribute '+key+' found in 1/2 group level!')
 
         atr = dict()
         for key, value in attrs.items():
@@ -446,7 +403,6 @@ def read_attribute(fname, epoch=None):
             atr = read_template(fname+'.hdr')
             atr = attribute_envi2roipac(atr)
             atr['FILE_TYPE'] = atr['file type']
-
         else:
             sys.exit('Unrecognized file extension: '+ext)
 

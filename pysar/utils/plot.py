@@ -224,7 +224,7 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
 def check_colormap_input(atr_dict, colormap=None, datasetName=None):
     if not colormap:
         if (atr_dict['FILE_TYPE'] in ['coherence','temporal_coherence','.cor','.mli','.slc','.amp','.ramp']\
-            or (atr_dict['FILE_TYPE'] == 'ifgramStack' and datasetName in ['coherence', 'connectComponent'])):
+            or (atr_dict['FILE_TYPE'] == 'ifgramStack' and datasetName.split('-')[0] in ['coherence', 'connectComponent'])):
               colormap = 'gray'
         else: colormap = 'jet'
     print('colormap: '+colormap)
@@ -700,7 +700,7 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
         ### mask out water
         #dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+500)
         #mask_file = '/Users/jeromezhang/Documents/insarlab/Kyushu/Velocity/mask_land.h5'
-        #mask_mat = readfile.read(mask_file, box=inps_dict['dem_pix_box'], epoch='mask')[0]
+        #mask_mat = readfile.read(mask_file, datasetName='mask', box=inps_dict['dem_pix_box'])[0]
         #dem_shade = mask.mask_matrix(dem_shade, mask_mat)
 
         bmap.imshow(dem_shade, origin='upper', interpolation='spline16')

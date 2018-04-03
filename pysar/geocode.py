@@ -115,8 +115,8 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     ## Irregular coordinates from data value in lookup table
     print('reading lookup table file: '+lookup_file)
     atr_lut = readfile.read_attribute(lookup_file)
-    rg = readfile.read(lookup_file, epoch='range')[0]
-    az = readfile.read(lookup_file, epoch='azimuth')[0]
+    rg = readfile.read(lookup_file, datasetName='range')[0]
+    az = readfile.read(lookup_file, datasetName='azimuth')[0]
     len_geo = int(atr_lut['LENGTH'])
     wid_geo = int(atr_lut['WIDTH'])
 
@@ -140,18 +140,18 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
     ##### Multiple Dataset File
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         h5 = h5py.File(fname,'r')
-        epoch_list = sorted(h5[k].keys())
-        epoch_num = len(epoch_list)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+        ds_list = sorted(h5[k].keys())
+        ds_num = len(ds_list)
+        prog_bar = ptime.progress_bar(maxValue=ds_num)
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)
         print('writing >>> '+fname_out)
 
         if k in multi_dataset_hdf5_file:
-            print('number of datasets: '+str(epoch_num))
-            for i in range(epoch_num):
-                date = epoch_list[i]
+            print('number of datasets: '+str(ds_num))
+            for i in range(ds_num):
+                date = ds_list[i]
                 data = h5[k].get(date)[:]
 
                 RGI_func = RGI(pts_old, data, method=inps.interp_method,\
@@ -168,11 +168,11 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
                 group.attrs[key] = value
 
         elif k in multi_group_hdf5_file:
-            print('number of interferograms: '+str(epoch_num))
-            try:    date12_list = ptime.list_ifgram2date12(epoch_list)
-            except: date12_list = epoch_list
-            for i in range(epoch_num):
-                ifgram = epoch_list[i]
+            print('number of interferograms: '+str(ds_num))
+            try:    date12_list = ptime.list_ifgram2date12(ds_list)
+            except: date12_list = ds_list
+            for i in range(ds_num):
+                ifgram = ds_list[i]
                 data = h5[k][ifgram].get(ifgram)[:]
 
                 RGI_func = RGI(pts_old, data, method=inps.interp_method,\
@@ -331,8 +331,8 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
     length = int(atr_rdr['LENGTH'])
     width = int(atr_rdr['WIDTH'])
     print('reading lookup table file '+lookup_file)
-    lat = readfile.read(lookup_file, epoch='latitude')[0]
-    lon = readfile.read(lookup_file, epoch='longitude')[0]
+    lat = readfile.read(lookup_file, datasetName='latitude')[0]
+    lon = readfile.read(lookup_file, datasetName='longitude')[0]
 
     #####Prepare output pixel grid: lat/lon range and step
     if os.path.isfile(inps.lalo_step):
@@ -391,18 +391,18 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
     ##### Multiple Dataset File
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         h5 = h5py.File(fname,'r')
-        epoch_list = sorted(h5[k].keys())
-        epoch_num = len(epoch_list)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+        ds_list = sorted(h5[k].keys())
+        ds_num = len(ds_list)
+        prog_bar = ptime.progress_bar(maxValue=ds_num)
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)
         print('writing >>> '+fname_out)
 
         if k in multi_dataset_hdf5_file:
-            print('number of acquisitions: '+str(epoch_num))
-            for i in range(epoch_num):
-                date = epoch_list[i]
+            print('number of acquisitions: '+str(ds_num))
+            for i in range(ds_num):
+                date = ds_list[i]
                 data = h5[k].get(date)[:]
 
                 data_geo = interpolate(data.flatten(), vtx, wts).reshape(inps.lat_num, inps.lon_num)
@@ -417,11 +417,11 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
                 group.attrs[key] = value
 
         elif k in multi_group_hdf5_file:
-            print('number of interferograms: '+str(epoch_num))
-            try:    date12_list = ptime.list_ifgram2date12(epoch_list)
-            except: date12_list = epoch_list
-            for i in range(epoch_num):
-                ifgram = epoch_list[i]
+            print('number of interferograms: '+str(ds_num))
+            try:    date12_list = ptime.list_ifgram2date12(ds_list)
+            except: date12_list = ds_list
+            for i in range(ds_num):
+                ifgram = ds_list[i]
                 data = h5[k][ifgram].get(ifgram)[:]
 
                 data_geo = interpolate(data.flatten(), vtx, wts).reshape(inps.lat_num, inps.lon_num)

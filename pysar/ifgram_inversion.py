@@ -371,8 +371,8 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
     ## 1 - Water Mask
     if inps.water_mask_file:
         print('skip pixels on water with mask from file: %s' % (os.path.basename(inps.water_mask_file)))
-        try:    waterMask = readfile.read(inps.water_mask_file, epoch='waterMask', box=box)[0].flatten()
-        except: waterMask = readfile.read(inps.water_mask_file, epoch='mask', box=box)[0].flatten()
+        try:    waterMask = readfile.read(inps.water_mask_file, datasetName='waterMask', box=box)[0].flatten()
+        except: waterMask = readfile.read(inps.water_mask_file, datasetName='mask', box=box)[0].flatten()
         mask *= np.array(waterMask, np.bool_)
 
     ## 2 - Mask for Zero Phase in ALL ifgrams
@@ -677,7 +677,7 @@ def read_template2inps(template_file, inps):
         else:
             maskFile = value
             try:
-                data = readfile.read(maskFile, epoch='mask')[0]
+                data = readfile.read(maskFile, datasetName='mask')[0]
                 inps.water_mask_file = maskFile
             except:
                 print('Can not found mask dataset in file: %s' % (maskFile))

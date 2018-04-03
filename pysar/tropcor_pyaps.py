@@ -157,7 +157,7 @@ def check_inputs(inps):
     ## Incidence angle: to map the zenith delay to the slant delay
     if os.path.isfile(inps.inc_angle):
         print('incidence angle from file: {}'.format(inps.inc_angle))
-        inps.inc_angle = readfile.read(inps.inc_angle, epoch='incidenceAngle')[0]
+        inps.inc_angle = readfile.read(inps.inc_angle, datasetName='incidenceAngle')[0]
     else:
         print('incidence angle from input: {}'.format(inps.inc_angle))
         inps.inc_angle = float(inps.inc_angle)
@@ -245,7 +245,7 @@ def dload_grib_pyaps(date_list, hour, trop_model='ECMWF', weather_dir='./'):
 
 def prepare_roipac_dem(demFile, geocoded=False):
     print('convert input DEM to ROIPAC format')
-    dem, atr = readfile.read(demFile, epoch='height')
+    dem, atr = readfile.read(demFile, datasetName='height')
     if geocoded:
         ext = '.dem'
     else:

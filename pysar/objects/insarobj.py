@@ -103,13 +103,12 @@ class ifgramStack:
         ###############################
         # 3D datasets containing unwrapPhase, coherence, connectComponent, wrapPhase, etc.
         for dsName in self.dsNames:
-            #dsDataType = self.get_dataset_data_type(dsName)
             dsDataType = dataType
             if dsName in ['connectComponent']:
                 dsDataType = np.bool_
             dsShape = (self.numIfgram, self.length, self.width)
-            print('create dataset /{g}/{d:<{w}} of {t} in size of {s}'.format(g=groupName, d=dsName, \
-                                                                              w=maxDigit, t=dsDataType, s=dsShape))
+            print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
+                                                                                  t=str(dsDataType), s=dsShape))
             ds = group.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                       dtype=dsDataType, chunks=True)
 
@@ -119,32 +118,38 @@ class ifgramStack:
                 data = ifgramObj.read(dsName, box=box)[0]
                 ds[i,:,:] = data
                 self.bperp[i] = ifgramObj.get_perp_baseline()
-                progBar.update(i+1, suffix='{}-{}'.format(self.pairs[i][0],self.pairs[i][1]))
+                progBar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],self.pairs[i][1]))
             progBar.close()
 
         ###############################
         # 2D dataset containing master and slave dates of all pairs
-        dsDateName = 'date'
-        print('create dataset /{}/{}'.format(groupName, dsDateName))
-        dsDate = group.create_dataset(dsDateName, data=np.array(self.pairs, dtype=np.string_))
+        dsName = 'date'
+        dsDataType = np.string_
+        dsShape = (self.numIfgram,)
+        print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
+                                                                              t=str(dsDataType), s=dsShape))
+        data = np.array(self.pairs, dtype=dsDataType)
+        ds = group.create_dataset(dsName, data=data)
 
         ###############################
         # 1D dataset containing perpendicular baseline of all pairs
-        # practice resizable matrix here for update mode
-        dsBperpName = 'bperp'
-        print('create dataset /{}/{}'.format(groupName, dsBperpName))
-        if dsBperpName not in group.keys():
-            dsBperp = group.create_dataset(dsBperpName, shape=(self.numIfgram,), maxshape=(None,), dtype=dataType)
-        else:
-            dsBperp = group.get(dsBperpName)
-            dsBperp.resize(self.numIfgram, axis=0)
-        dsBperp[:] = self.bperp
+        dsName = 'bperp'
+        dsDataType = dataType
+        dsShape = (self.numIfgram,)
+        print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
+                                                                              t=str(dsDataType), s=dsShape))
+        data = np.array(self.bperp, dtype=dsDataType)
+        ds = group.create_dataset(dsName, data=data)
 
         ###############################
         # 1D dataset containing bool value of dropping the interferograms or not
-        dsDateName = 'dropIfgram'
-        print('create dataset /{}/{}'.format(groupName, dsDateName))
-        dsDate = group.create_dataset(dsDateName, data=np.ones((self.numIfgram), dtype=np.bool_))
+        dsName = 'dropIfgram'
+        dsDataType = np.bool_
+        dsShape = (self.numIfgram,)
+        print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
+                                                                              t=str(dsDataType), s=dsShape))
+        data = np.ones(dsShape, dtype=dsDataType)
+        dsDate = group.create_dataset(dsName, data=data)
 
         ###############################
         # Attributes
@@ -254,6 +259,10 @@ class geometry:
                        'incidenceAngle':'$PROJECT_DIR/merged/geom_master/los.rdr',
                        'heandingAngle' :'$PROJECT_DIR/merged/geom_master/los.rdr',
                        'shadowMask'    :'$PROJECT_DIR/merged/geom_master/shadowMask.rdr',
+                       'bperp'         :['$PROJECT_DIR/merged/baselines/20160406/bperp',
+                                         '$PROJECT_DIR/merged/baselines/20160418/bperp',
+                                         ...]
+                       'dates'         :['20160406','20160418',...]
                        ...
                       }
         metadata = readfile.read_attribute('$PROJECT_DIR/merged/interferograms/20160629_20160723/filt_fine.unw')
@@ -269,7 +278,7 @@ class geometry:
 
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
-        data, metadata = readfile.read(self.file, epoch=family, box=box)
+        data, metadata = readfile.read(self.file, datasetName=family, box=box)
         return data, metadata
 
     def get_slantRangeDistance(self, box=None):
@@ -322,6 +331,21 @@ class geometry:
         self.metadata['PROCESSOR'] = self.processor
         return self.metadata
 
+    def read_isce_bperp_file(self, fname, box=None):
+        '''Read ISCE coarse grid perpendicular baseline file, and project it to full size
+        Parameters: self : geometry object,
+                    fname : str, bperp file name
+                    box : tuple of 4 int, subset range in (x0, y0, x1, y1)
+        Returns: data : 2D array of float32
+        Example:
+            data = self.read_sice_bperp_file(fname='$PROJECT_DIR/merged/baselines/20160418/bperp')
+        '''
+        dataC = readfile.read(fname)[0]
+        data = ut.interpolate_data(dataC, outShape=(self.length, self.width), interpMethod='linear')
+        if box is not None:
+            data = data[box[1]:box[3],box[0]:box[2]]
+        return data
+
 
     def save2h5(self, outputFile='geometryRadar.h5', access_mode='w', box=None):
         '''
@@ -336,11 +360,13 @@ class geometry:
             /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
             /waterMask               2D array of bool    in size of (l, w   ).           (optional)
             /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
+            /date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
             ...
         '''
         if len(self.datasetDict) == 0:
             print('No dataset file path in the object, skip HDF5 file writing.')
             return None
+        self.get_metadata()
 
         self.outputFile = outputFile
         f = h5py.File(self.outputFile, access_mode)
@@ -351,49 +377,74 @@ class geometry:
         print('create group   /{}'.format(groupName))
 
         self.dsNames = list(self.datasetDict.keys())
-        maxDigit = max([len(i) for i in self.dsNames])
+        try: self.dsNames.remove('date')
+        except: pass
+        maxDigit = max([len(i) for i in geometryDatasetNames])
         length, width = self.get_size(box)
 
         ###############################
         # 2D datasets containing height, latitude, incidenceAngle, shadowMask, etc.
         for dsName in self.dsNames:
-            #dsDataType = self.get_dataset_data_type(dsName)
-            dsDataType = dataType
-            if dsName.lower().endswith('mask'):
-                dsDataType = np.bool_
-            dsShape = (length, width)
-            print('create dataset /{g}/{d:<{w}} of {t} in size of {s}'.format(g=groupName, d=dsName,\
-                                                                              w=maxDigit, t=dsDataType, s=dsShape))
-            ds = group.create_dataset(dsName, shape=dsShape, dtype=dsDataType, chunks=True)
-            data = self.read(family=dsName, box=box)[0]
-            ds[:] = data
+            if dsName == 'bperp':
+                ##Write 3D dataset bperp
+                dsDataType = dataType
+                self.numDate = len(self.datasetDict[dsName])
+                dsShape = (self.numDate, length, width)
+                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
+                                                                                      t=str(dsDataType), s=dsShape))
+                ds = group.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
+                                          dtype=dsDataType, chunks=True)
+                print('read coarse grid baseline files and linear interpolate into full resolution ...')
+                progBar = ptime.progress_bar(maxValue=self.numDate)
+                for i in range(self.numDate):
+                    data = self.read_isce_bperp_file(fname=self.datasetDict[dsName][i], box=box)
+                    ds[i,:,:] = data
+                    progBar.update(i+1, suffix=self.datasetDict['date'][i])
+                progBar.close()
 
-            #progBar = ptime.progress_bar(maxValue=self.numIfgram)
-            #for i in range(self.numIfgram):
-            #    ifgramObj = self.pairsDict[self.pairs[i]]
-            #    data = ifgramObj.read(dsName, box=box)[0]
-            #    ds[i,:,:] = data
-            #    self.bperp[i] = ifgramObj.get_perp_baseline()
-            #    progBar.update(i+1, suffix='{}-{}'.format(self.pairs[i][0],self.pairs[i][1]))
-            #progBar.close()
+                ##Write 1D dataset date
+                dsName = 'date'
+                dsShape = (self.numDate,)
+                dsDataType = np.string_
+                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
+                                                                                      t=str(dsDataType), s=dsShape))
+                data = np.array(self.datasetDict[dsName], dtype=dsDataType)
+                ds = group.create_dataset(dsName, data=data, chunks=True)
 
+            else:
+                dsDataType = dataType
+                if dsName.lower().endswith('mask'):
+                    dsDataType = np.bool_
+                dsShape = (length, width)
+                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
+                                                                                      t=str(dsDataType), s=dsShape))
+                data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
+                ds = group.create_dataset(dsName, data=data, chunks=True)
+
+        ###############################
+        # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
         dsName = 'incidenceAngle'
         if dsName not in self.dsNames:
             data = self.get_incidenceAngle(box=box)
+            dsShape = data.shape
+            dsDataType = dataType
             if data is not None:
-                print('create dataset /{}/{} of {} in size of {}'.format(groupName, dsName, dataType, dsShape))
+                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
+                                                                                      t=str(dsDataType), s=dsShape))
                 ds = group.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
 
         dsName = 'slantRangeDistance'
         if dsName not in self.dsNames:
             data = self.get_slantRangeDistance(box=box)
+            dsShape = data.shape
+            dsDataType = dataType
             if data is not None:
-                print('create dataset /{}/{} of {} in size of {}'.format(groupName, dsName, dataType, dsShape))
+                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
+                                                                                      t=str(dsDataType), s=dsShape))
                 ds = group.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
 
         ###############################
         # Attributes
-        self.get_metadata()
         self.metadata = ut.subset_attribute(self.metadata, box)
         for key,value in self.metadata.items():
             group.attrs[key] = value

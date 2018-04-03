@@ -92,6 +92,10 @@ def write(*args):
             write_complex_int16(data,outname)
         elif ext == '.int':
             write_complex64(data, outname)
+        elif atr['DATA_TYPE'].lower() in ['float32','float']:
+            write_real_float32(data,outname)
+        elif atr['DATA_TYPE'].lower() in ['int16','short']:
+            write_real_int16(data,outname)
         else: print('Un-supported file type: '+ext); return 0;
 
         ##### Write .rsc File

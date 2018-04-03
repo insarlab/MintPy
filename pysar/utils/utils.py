@@ -27,33 +27,40 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 ############################################################################### 
-#
 # Recommend usage:
-#   import pysar.utils.utils as ut
-#
+#   from pysar.utils import utils as ut
 
 
-import os
-import sys
-import time
-import datetime
-import glob
+
+import os, sys, glob
+import time, datetime
 import warnings
-
 import h5py
 import numpy as np
 import multiprocessing
-
-import pysar
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.network as pnet
-import pysar.utils.deramp as deramp
+from scipy.interpolate import RegularGridInterpolator as RGI
+from pysar.utils import readfile, writefile, datetime as ptime, network as pnet, deramp
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file, geometry_dataset
 
 
 ###############################################################################
+def interpolate_data(inData, outShape, interpMethod='linear'):
+    '''Interpolate input 2D matrix into different shape.
+    Used to get full resolution perp baseline from ISCE coarse grid baseline file.
+    Parameters: inData : 2D array
+                outShape : tuple of 2 int in (length, width)
+                interpMethod : string, choose in [nearest, linear, cubic]
+    Returns:    outData : 2D array in outShape
+    '''
+    inShape = inData.shape
+    inPts = (np.arange(inShape[0]), np.arange(inShape[1]))
+    xx,yy = np.meshgrid(np.linspace(0, inShape[1]-1, outShape[1], endpoint=False),\
+                        np.linspace(0, inShape[0]-1, outShape[0], endpoint=False))
+    outPts = np.hstack((yy.reshape(-1,1), xx.reshape(-1,1)))
+    outData = RGI(inPts, inData, method=interpMethod, bounds_error=False)(outPts).reshape(outShape)
+    return outData
+
+
 def standardize_trop_model(tropModel, standardWeatherModelNames):
     tropModel = tropModel.replace('-','').upper()
     if tropModel in standardWeatherModelNames.keys():
@@ -258,11 +265,11 @@ def get_lookup_file(filePattern=None, abspath=False, printMsg=True):
     for fname in existFiles:
         atr = readfile.read_attribute(fname)
         if 'Y_FIRST' in atr.keys():
-            epoch2check = 'rangeCoord'
+            dsName2check = 'rangeCoord'
         else:
-            epoch2check = 'latitude'
+            dsName2check = 'latitude'
         try:
-            dset = readfile.read(fname, epoch=epoch2check, printMsg=False)[0]
+            dset = readfile.read(fname, datasetName=dsName2check, printMsg=False)[0]
             outFile = fname
             break
         except:
@@ -317,7 +324,7 @@ def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, pri
                 continue
         #Check dataset
         try:
-            dset = readfile.read(fname, epoch=dset, printMsg=False)[0]
+            dset = readfile.read(fname, datasetName=dset, printMsg=False)[0]
             outFile = fname
             break
         except:
@@ -591,7 +598,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         std_list  - list of float, standard deviation of deramped input timeseries file
         date_list - list of string in YYYYMMDD format, corresponding dates
     Example:
-        import pysar._pysar_utilities as ut
+        import pysar.utils.utils as ut
         std_list, date_list = ut.get_residual_std('timeseries_ECMWF_demErrInvResid.h5', 'maskTempCoh.h5')
     '''
     # Intermediate files name
@@ -629,7 +636,7 @@ def timeseries_std(inFile, maskFile='maskTempCoh.h5', outFile=None):
     and output result to a text file.
     '''
     try:
-        mask = readfile.read(maskFile, epoch='mask')[0]
+        mask = readfile.read(maskFile, datasetName='mask')[0]
         print('read mask from file: '+maskFile)
     except:
         maskFile = None
@@ -678,7 +685,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         rms_list  - list of float, Root Mean Square of deramped input timeseries file
         date_list - list of string in YYYYMMDD format, corresponding dates
     Example:
-        import pysar._pysar_utilities as ut
+        import pysar.utils.utils as ut
         rms_list, date_list = ut.get_residual_rms('timeseriesResidual.h5', 'maskTempCoh.h5')
     '''
     # Intermediate files name
@@ -716,7 +723,7 @@ def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None, dimension=2)
     and output result to a text file.
     '''
     try:
-        mask = readfile.read(maskFile, epoch='mask')[0]
+        mask = readfile.read(maskFile, datasetName='mask')[0]
         print('read mask from file: '+maskFile)
     except:
         maskFile = None
@@ -777,7 +784,7 @@ def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
         txtFile = timeseries_coherence('timeseries_ECMWF_demErrInvResid_quadratic.h5')
     '''
     try:
-        mask = readfile.read(maskFile, epoch='mask')[0]
+        mask = readfile.read(maskFile, datasetName='mask')[0]
         print('read mask from file: '+maskFile)
     except:
         maskFile = None
@@ -923,7 +930,7 @@ def add_attribute(File, atr_new=dict()):
 
 
 def check_parallel(file_num=1, printMsg=True, maxParallelNum=8):
-    '''Check parallel option based on pysar setting, file num and installed module
+    '''Check parallel option based file num and installed module
     Examples:
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(1000)
@@ -1223,7 +1230,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         print('no mask input, use all pixels available')
     elif type(maskFile) is str:
         print('mask from file: '+maskFile)
-        mask = readfile.read(maskFile, epoch='mask')[0]
+        mask = readfile.read(maskFile, datasetName='mask')[0]
         mask = mask[box[1]:box[3],box[0]:box[2]]
     elif type(maskFile) is np.ndarray:
         mask = maskFile
@@ -1271,17 +1278,17 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
         print('calculating spatial average of file: '+os.path.basename(File))
         h5file = h5py.File(File,'r')
-        epochList = sorted(h5file[k].keys())
-        epochNum  = len(epochList)
+        dsList = sorted(h5file[k].keys())
+        dsNum  = len(dsList)
 
         mean_list   = []
-        prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='calculating: ')
-        for i in range(epochNum):
-            epoch = epochList[i]
+        prog_bar = ptime.progress_bar(maxValue=dsNum, prefix='calculating: ')
+        for i in range(dsNum):
+            dsName = dsList[i]
             if k in multi_group_hdf5_file:
-                dset = h5file[k][epoch].get(epoch)
+                dset = h5file[k][dsName].get(dsName)
             elif k in multi_dataset_hdf5_file:
-                dset = h5file[k].get(epoch)
+                dset = h5file[k].get(dsName)
             else:  print('Unrecognized group type: '+k)
 
             data = dset[box[1]:box[3],box[0]:box[2]]
@@ -1314,8 +1321,8 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         tbase_ts_list = ptime.date_list2tbase(date6_list)[0]
         tbase_list = []
         pbase_list = []
-        for i in range(epochNum):
-            ifgram = epochList[i]
+        for i in range(dsNum):
+            ifgram = dsList[i]
             pbase_top    = float(h5file[k][ifgram].attrs['P_BASELINE_TOP_HDR'])
             pbase_bottom = float(h5file[k][ifgram].attrs['P_BASELINE_BOTTOM_HDR'])
             pbase = (pbase_bottom+pbase_top)/2.0
@@ -1327,7 +1334,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
             tbase_list.append(tbase)
 
     elif k in multi_dataset_hdf5_file:
-        date_list = epochList
+        date_list = dsList
     else:
         date_list = [os.path.basename(File)]
 
@@ -1374,24 +1381,24 @@ def temporal_average(File, outFile=None):
     length = int(atr['LENGTH'])
 
     h5file = h5py.File(File)
-    epochList = sorted(h5file[k].keys())
-    epochList = check_drop_ifgram(h5file)
-    epochNum = len(epochList)
+    dsList = sorted(h5file[k].keys())
+    dsList = check_drop_ifgram(h5file)
+    dsNum = len(dsList)
 
     # Calculation
     dMean = np.zeros((length,width))
-    prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='calculating: ')
-    for i in range(epochNum):
-        epoch = epochList[i]
+    prog_bar = ptime.progress_bar(maxValue=dsNum, prefix='calculating: ')
+    for i in range(dsNum):
+        dsName = dsList[i]
         if k in multi_group_hdf5_file:
-            d = h5file[k][epoch].get(epoch)[:]
+            d = h5file[k][dsName].get(dsName)[:]
         elif k in ['timeseries']:
-            d = h5file[k].get(epoch)[:]
+            d = h5file[k].get(dsName)[:]
         else: print(k+' type is not supported currently.'); sys.exit(1)
         dMean += d
         prog_bar.update(i+1)
     prog_bar.close()
-    dMean /= float(len(epochList))
+    dMean /= float(len(dsList))
     del d
     h5file.close()
 
@@ -1612,8 +1619,8 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
     if 'Y_FIRST' in atr_lut.keys():
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3
-        lut_x = readfile.read(lookupFile, epoch='rangeCoord')[0]
-        lut_y = readfile.read(lookupFile, epoch='azimuthCoord')[0]
+        lut_x = readfile.read(lookupFile, datasetName='rangeCoord')[0]
+        lut_y = readfile.read(lookupFile, datasetName='azimuthCoord')[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
@@ -1646,8 +1653,8 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
     #####For lookup table in radar-coord, search the buffer and use center pixel
     else:
-        lut_x = readfile.read(lookupFile, epoch='lon')[0]
-        lut_y = readfile.read(lookupFile, epoch='lat')[0]
+        lut_x = readfile.read(lookupFile, datasetName='longitude')[0]
+        lut_y = readfile.read(lookupFile, datasetName='latitude')[0]
         az = np.zeros(lat.shape)
         rg = np.zeros(lat.shape)
         x_factor = 10
@@ -1701,8 +1708,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
-        lut_x = readfile.read(lookupFile, epoch='rangeCoord')[0]
-        lut_y = readfile.read(lookupFile, epoch='azimuthCoord')[0]
+        lut_x = readfile.read(lookupFile, datasetName='rangeCoord')[0]
+        lut_y = readfile.read(lookupFile, datasetName='azimuthCoord')[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
@@ -1734,8 +1741,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
     #####For lookup table in radar-coord, read the value directly.
     else:
-        lut_x = readfile.read(lookupFile, epoch='lon')[0]
-        lut_y = readfile.read(lookupFile, epoch='lat')[0]
+        lut_x = readfile.read(lookupFile, datasetName='longitude')[0]
+        lut_y = readfile.read(lookupFile, datasetName='latitude')[0]
         lat = lut_y[az, rg]
         lon = lut_x[az, rg]
 
@@ -2193,7 +2200,7 @@ def get_file_stack(File, datasetName=None, maskFile=None, outFile=None):
     # set masked out area into NaN
     if maskFile:
         print('read mask from file: '+maskFile)
-        mask = readfile.read(maskFile, epoch='mask')[0]
+        mask = readfile.read(maskFile, datasetName='mask')[0]
         stack[mask==0] = np.nan
 
     return stack
@@ -2220,24 +2227,24 @@ def stacking(File, datasetName=None, outFile=None):
     if k in ['timeseries','interferograms','wrapped','coherence']:
         ##### Input File Info
         h5file = h5py.File(File,'r')
-        epochList = sorted(h5file[k].keys())
-        epochNum  = len(epochList)
-        prog_bar = ptime.progress_bar(maxValue=epochNum, prefix='calculating: ')
-        for i in range(epochNum):
-            epoch = epochList[i]
+        dsList = sorted(h5file[k].keys())
+        dsNum  = len(dsList)
+        prog_bar = ptime.progress_bar(maxValue=dsNum, prefix='calculating: ')
+        for i in range(dsNum):
+            dsName = dsList[i]
             if k == 'timeseries':
-                data = h5file[k].get(epoch)[:]
+                data = h5file[k].get(dsName)[:]
             else:
-                data = h5file[k][epoch].get(epoch)[:]
+                data = h5file[k][dsName].get(dsName)[:]
                 if k in ['interferograms']:
-                    m_date, s_date = h5file[k][epoch].attrs['DATE12'].split('-')
+                    m_date, s_date = h5file[k][dsName].attrs['DATE12'].split('-')
                     t1 = datetime.datetime(*time.strptime(m_date, "%y%m%d")[0:5])
                     t2 = datetime.datetime(*time.strptime(s_date, "%y%m%d")[0:5])
                     dt = float((t2-t1).days)/365.25
                     data *= phase2range / dt
             stack += data
             prog_bar.update(i+1)
-        stack *= 1.0/float(epochNum)
+        stack *= 1.0/float(dsNum)
         prog_bar.close()
         h5file.close()
 

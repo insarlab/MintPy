@@ -115,9 +115,9 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     lks_x = int(lks_x)
 
     ## input file info
-    atr = readfile.read_attribute(infile)
+    atr = readfile.read_attribute(infile)    
     k = atr['FILE_TYPE']
-    print('multilooking '+k+' file '+infile)
+    print('multilooking {} {} file: {}'.format(atr['PROCESSOR'], k, infile))
     print('number of looks in y / azimuth direction: %d' % lks_y)
     print('number of looks in x / range   direction: %d' % lks_x)
 
@@ -186,7 +186,13 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         writefile.write(rgmli,azmli,atr,outfile)
     else:
         data,atr = readfile.read(infile)
-        data_mli = multilook_data(data, lks_y, lks_x)
+        if lks_y < 0 and lks_x < 0:
+            lks_x = 1./abs(lks_x)
+            lks_y = 1./abs(lks_y)
+            outShape = (int(int(atr['LENGTH'])/lks_y), int(int(atr['WIDTH'])/lks_x))
+            data_mli = ut.interpolate_data(data, outShape=outShape, interpMethod='linear')
+        else:
+            data_mli = multilook_data(data, lks_y, lks_x)
         atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(data_mli,atr,outfile)
 
@@ -197,6 +203,9 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 EXAMPLE='''example:
   multilook.py  velocity.h5  15 15
   multilook.py  srtm30m.dem  10 10  -o srtm30m_300m.dem
+
+  To interpolate input file into larger size file:
+  multilook.py  bperp.rdr  -10 -2 -o bperp_full.rdr
 '''
 
 def cmdLineParse():

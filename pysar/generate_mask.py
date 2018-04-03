@@ -32,7 +32,7 @@ def cmdLineParse():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='input file')
-    parser.add_argument('epoch', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o','--output', dest='outfile', help='output file name.')
     
     parser.add_argument('-m','--min', dest='vmin', type=float, help='minimum value for selected pixels')
@@ -79,11 +79,11 @@ def main(argv):
     ##### Mask: Threshold 
     print('create initial mask with the same size as the input file and all = 1')
     mask = np.ones((length, width), dtype=np.float32)
-    if inps.epoch:
-        print('read %s %s' % (inps.file, inps.epoch))
+    if inps.dset:
+        print('read %s %s' % (inps.file, inps.dset))
     else:
         print('read %s' % (inps.file))
-    data, atr = readfile.read(inps.file, epoch=inps.epoch)
+    data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
     if inps.nonzero:
         print('all pixels with zero value = 0')

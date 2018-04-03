@@ -403,7 +403,7 @@ def read_reference_input(inps):
     # Do not use ref_y/x in masked out area
     if inps.ref_y and inps.ref_x and inps.mask_file:
         print('mask: '+inps.mask_file)
-        mask = readfile.read(inps.mask_file, epoch='mask')[0]
+        mask = readfile.read(inps.mask_file, datasetName='mask')[0]
         if mask[inps.ref_y, inps.ref_x] == 0:
             inps.ref_y = None
             inps.ref_x = None

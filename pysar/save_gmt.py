@@ -154,7 +154,7 @@ def cmdLineParse():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='file to be converted, in geo coordinate.')
-    parser.add_argument('epoch', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o','--output', dest='outfile', help='output file base name. Extension is fixed with .kmz')
 
     inps = parser.parse_args()
@@ -174,8 +174,8 @@ def main(argv):
     if 'X_FIRST' not in atr.keys():
         sys.exit('ERROR: Input file is not geocoded.')
 
-    # Check: epoch is required for multi_dataset/group files
-    if not inps.epoch:
+    # Check: dset is required for multi_dataset/group files
+    if not inps.dset:
         if k in multi_group_hdf5_file:
             print("No date/date12 input.\nIt's required for "+k+" file")
             sys.exit(1)
@@ -184,14 +184,14 @@ def main(argv):
             h5 = h5py.File(inps.file, 'r')
             date_list = sorted(h5[k].keys())
             h5.close()
-            inps.epoch = date_list[-1]
+            inps.dset = date_list[-1]
 
     # Read data
-    data, atr = readfile.read(inps.file, (), inps.epoch)
+    data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
     # Output filename
     if not inps.outfile:
-        inps.outfile = pv.auto_figure_title(inps.file, inps.epoch, vars(inps))
+        inps.outfile = pv.auto_figure_title(inps.file, inps.dset, vars(inps))
     inps.outfile = os.path.splitext(inps.outfile)[0]+'.grd'
 
     ##### 2. Write GMT .grd file
