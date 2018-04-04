@@ -78,16 +78,25 @@ class timeseries:
         self.f = h5py.File(self.file,'r')
         self.get_metadata()
         self.numDate, self.length, self.width = self.f[self.key].get(self.key).shape
+        self.numPixel = self.length * self.width
+
         dates = self.f[self.key].get('date')[:]
         self.times = np.array([dt(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in dates])
         self.dateList = [i.decode('utf8') for i in dates]
         self.datasetList = list(self.dateList)
 
-        self.refIndex = self.dateList.index(self.metadata['REF_DATE'])
-        self.btemp = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
+        #Temporal baseline in days
+        if 'REF_DATE' in self.metadata.keys():
+            self.refIndex = self.dateList.index(self.metadata['REF_DATE'])
+            self.btemp = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
+        else:
+            self.refIndex = None
+
+        #Perpendicular baseline in meters
         if 'bperp' in self.f[self.key].keys():
             self.bperp = self.f[self.key].get('bperp')[:]
-            self.bperp -= self.bperp[self.refIndex]
+            if self.refIndex:
+                self.bperp -= self.bperp[self.refIndex]
         else:
             self.bperp = None
 
@@ -112,7 +121,8 @@ class timeseries:
                     data = tsobj.read(datasetName=['20161020','20161026','20161101'])
                     data = tsobj.read(box=(100,300,500,800))
         '''
-        self.open(printMsg=printMsg)
+        try: self.f
+        except: self.open(printMsg=printMsg)
         ds = self.f[self.key].get(self.key)
         ##Index in time/1st dimension
         if not datasetName:
@@ -142,10 +152,14 @@ class timeseries:
         Returns: outFile : string
         Examples:
             from pysar.objects import timeseries
+
+            ##Generate a new timeseries file
             tsobj = timeseries('timeseries.h5')
-            timeseries.write(data, outFile='timeseries.h5', dates=dateList, bperp=bperp, metadata=atr)
+            timeseries.write(data, dates=dateList, bperp=bperp, metadata=atr)
+
+            ##Generate a timeseries with same attributes and same date/bperp info
             tsobj = timeseries('timeseries_demErr.h5')
-            timeseries.write(data, outFile='timeseries_demErr.h5', refFile='timeseries.h5')
+            timeseries.write(data, refFile='timeseries.h5')
         '''
         if not outFile:
             outFile = self.file
@@ -221,10 +235,13 @@ class geometry:
         self.f = h5py.File(self.file,'r')
         self.get_metadata()
         self.length, self.width = self.f[self.key].get(geometryDatasetNames[0]).shape
+        self.numPixel = self.length * self.width
 
         self.datasetList = list(set(self.f[self.key].keys()) & set(geometryDatasetNames))
         if 'bperp' in self.f[self.key].keys():
             self.dateList = [i.decode('utf8') for i in self.f[self.key].get('date')[:]]
+            self.numDate = len(self.dateList)
+            ##Update bperp datasetNames
             try: self.datasetList.remove('bperp')
             except: pass
             self.datasetList += ['bperp-'+d for d in self.dateList]
@@ -263,7 +280,8 @@ class geometry:
             obj.read(datasetName='bperp')
             obj.read(datasetName='bperp-20161020')
         '''
-        self.open(printMsg=printMsg)
+        try: self.f
+        except: self.open(printMsg=printMsg)
         if box is None:
             box = (0,0,self.width,self.length)
         if datasetName is None:
@@ -328,6 +346,7 @@ class ifgramStack:
         self.get_metadata()
         self.get_size()
         self.read_datetimes()
+        self.numPixel = self.length * self.width
 
         #Get datasetList for self.read()
         self.datasetList = []
@@ -394,7 +413,8 @@ class ifgramStack:
             obj.read(datasetName='coherence')
             obj.read(datasetName='unwrapPhase-20161020_20161026')
         '''
-        self.open(printMsg=printMsg)
+        try: self.f
+        except: self.open(printMsg=printMsg)
         if box is None:
             box = (0,0,self.width,self.length)
         if datasetName is None:
