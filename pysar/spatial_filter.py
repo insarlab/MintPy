@@ -126,7 +126,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
                 if ref_yx:
                     data_filt -= data_filt[ref_yx[0], ref_yx[1]]
 
-                dset = group.create_dataset(date, data=data_filt, compression='gzip')
+                dset = group.create_dataset(date, data=data_filt)
                 prog_bar.update(i+1, suffix=date)
             for key,value in iter(atr.items()):
                 group.attrs[key] = value
@@ -143,7 +143,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
                     data_filt -= data_filt[ref_yx[0], ref_yx[1]]
 
                 gg = group.create_group(ifgram)
-                dset = gg.create_dataset(ifgram, data=data_filt, compression='gzip')
+                dset = gg.create_dataset(ifgram, data=data_filt)
                 for key, value in h5[k][ifgram].attrs.items():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])

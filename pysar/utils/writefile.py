@@ -64,7 +64,7 @@ def write(*args):
             return 0;
         h5file = h5py.File(outname,'w')
         group = h5file.create_group(k)
-        dset = group.create_dataset(k, data=data, compression='gzip')
+        dset = group.create_dataset(k, data=data)
         for key , value in iter(atr.items()):
             group.attrs[key] = str(value)
         h5file.close()

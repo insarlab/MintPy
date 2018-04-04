@@ -95,7 +95,7 @@ def main(argv):
         data = np.reshape(estData[i,:],(length, width))
 
         gg = group.create_group(ifgram)
-        dset = gg.create_dataset(ifgram, data=data, compression='gzip')
+        dset = gg.create_dataset(ifgram, data=data)
         for key, value in h5['interferograms'][ifgram].attrs.items():
             gg.attrs[key] = value
         prog_bar.update(i+1, suffix=date12_list[i])

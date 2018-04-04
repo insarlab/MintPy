@@ -64,7 +64,7 @@ def file_operation(fname, operator, operand, fname_out=None):
 
                 data_out = data_operation(data, operator, operand)
 
-                dset = group.create_dataset(date, data=data_out, compression='gzip')
+                dset = group.create_dataset(date, data=data_out)
                 prog_bar.update(i+1, suffix=date)
             for key,value in iter(atr.items()):
                 group.attrs[key] = value
@@ -79,7 +79,7 @@ def file_operation(fname, operator, operand, fname_out=None):
                 data_out = data_operation(data, operator, operand)
 
                 gg = group.create_group(ifgram)
-                dset = gg.create_dataset(ifgram, data=data_out, compression='gzip')
+                dset = gg.create_dataset(ifgram, data=data_out)
                 for key, value in h5[k][ifgram].attrs.items():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])

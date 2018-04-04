@@ -198,7 +198,7 @@ def main(argv):
     for i in range(len(dateList)):
         dset1 = h5file['timeseries'].get(dateList[i])
         data = dset1[0:dset1.shape[0],0:dset1.shape[1]] - orbEffect[i,:,:]
-        dset = group.create_dataset(dateList[i], data=data, compression='gzip')      
+        dset = group.create_dataset(dateList[i], data=data)      
   
     for key,value in h5file['timeseries'].attrs.items():
         group.attrs[key] = value
@@ -206,7 +206,7 @@ def main(argv):
     try:
         dset1 = h5file['mask'].get('mask')
         group=h5orbCor.create_group('mask')
-        dset = group.create_dataset('mask', data=dset1, compression='gzip')
+        dset = group.create_dataset('mask', data=dset1)
     except: pass
   
     h5file.close()

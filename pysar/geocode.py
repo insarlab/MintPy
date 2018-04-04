@@ -158,7 +158,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
                                bounds_error=False, fill_value=inps.fill_value)
                 data_geo[idx] = RGI_func(pts_new)
 
-                dset = group.create_dataset(date, data=data_geo, compression='gzip')
+                dset = group.create_dataset(date, data=data_geo)
                 prog_bar.update(i+1, suffix=date)
             prog_bar.close()
 
@@ -180,7 +180,7 @@ def geocode_file_geo_lut(fname, lookup_file, fname_out, inps):
                 data_geo[idx] = RGI_func(pts_new)
 
                 gg = group.create_group(ifgram)
-                dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
+                dset = gg.create_dataset(ifgram, data=data_geo)
 
                 atr = update_attribute_geo_lut(h5[k][ifgram].attrs, atr_lut, printMsg=False)
                 for key, value in iter(atr.items()):
@@ -407,7 +407,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
 
                 data_geo = interpolate(data.flatten(), vtx, wts).reshape(inps.lat_num, inps.lon_num)
 
-                dset = group.create_dataset(date, data=data_geo, compression='gzip')
+                dset = group.create_dataset(date, data=data_geo)
                 prog_bar.update(i+1, suffix=date)
             prog_bar.close()
 
@@ -427,7 +427,7 @@ def geocode_file_radar_lut(fname, lookup_file, fname_out=None, inps=None):
                 data_geo = interpolate(data.flatten(), vtx, wts).reshape(inps.lat_num, inps.lon_num)
 
                 gg = group.create_group(ifgram)
-                dset = gg.create_dataset(ifgram, data=data_geo, compression='gzip')
+                dset = gg.create_dataset(ifgram, data=data_geo)
 
                 atr = update_attribute_radar_lut(h5[k][ifgram].attrs, inps, lat, lon, printMsg=False)
                 for key, value in iter(atr.items()):

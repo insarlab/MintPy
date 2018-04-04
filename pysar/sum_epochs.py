@@ -90,7 +90,7 @@ def main(argv):
     for i in range(date_num):
         date = dateList[i]
         d = np.reshape(sumD[i][:],[length,width])
-        dset = group.create_dataset(date, data=d, compression='gzip')
+        dset = group.create_dataset(date, data=d)
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
 

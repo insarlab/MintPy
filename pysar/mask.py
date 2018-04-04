@@ -97,7 +97,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
 
             unw = mask_matrix(unw, mask, inps_dict['fill_value'])
 
-            dset = group.create_dataset(d, data=unw, compression='gzip')
+            dset = group.create_dataset(d, data=unw)
         for key,value in iter(atr.items()):
             group.attrs[key] = value
 
@@ -133,7 +133,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
             unw = mask_matrix(unw, mask, inps_dict['fill_value'])
 
             group = gg.create_group(igram)
-            dset = group.create_dataset(igram, data=unw, compression='gzip')
+            dset = group.create_dataset(igram, data=unw)
             for key, value in h5file[k][igram].attrs.items():
                 group.attrs[key] = value
 

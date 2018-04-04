@@ -87,7 +87,7 @@ def add_files(fname_list, fname_out=None):
                 d = h5file[k].get(epoch)[:]
                 data = add_matrix(data, d)
 
-            dset = group.create_dataset(epoch, data=data, compression='gzip')
+            dset = group.create_dataset(epoch, data=data)
             prog_bar.update(i+1, suffix=epoch)
 
         for key,value in iter(atr.items()):
@@ -110,7 +110,7 @@ def add_files(fname_list, fname_out=None):
                 data = add_matrix(data,d)
 
             gg = group.create_group(epoch)
-            dset = gg.create_dataset(epoch, data=data, compression='gzip')
+            dset = gg.create_dataset(epoch, data=data)
             for key, value in h5[k][epoch].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])

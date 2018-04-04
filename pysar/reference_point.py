@@ -66,7 +66,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
             epoch = epochList[i]
             data = h5file[k].get(epoch)[:]
             data -= refList[i]
-            dset = group.create_dataset(epoch, data=data, compression='gzip')
+            dset = group.create_dataset(epoch, data=data)
             prog_bar.update(i+1, suffix=epoch)
         atr  = seed_attributes(atr,ref_x,ref_y)
         for key,value in iter(atr.items()):
@@ -88,7 +88,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
             atr  = seed_attributes(atr,ref_x,ref_y)
 
             gg = group.create_group(epoch)
-            dset = gg.create_dataset(epoch, data=data, compression='gzip')
+            dset = gg.create_dataset(epoch, data=data)
             for key, value in iter(atr.items()):
                 gg.attrs[key] = value
 

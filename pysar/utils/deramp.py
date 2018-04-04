@@ -197,7 +197,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
             else:
                 data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
   
-            dset = group.create_dataset(epoch, data=data_n, compression='gzip')
+            dset = group.create_dataset(epoch, data=data_n)
             prog_bar.update(i+1, suffix=epoch)
         for key,value in h5file[k].attrs.items():
             group.attrs[key] = value
@@ -224,7 +224,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
                 data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
 
             gg   = group.create_group(epoch)
-            dset = gg.create_dataset(epoch, data=data_n, compression='gzip')
+            dset = gg.create_dataset(epoch, data=data_n)
             for key,value in h5file[k][epoch].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])

@@ -153,7 +153,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 atr_mli = multilook_attribute(atr,lks_y,lks_x,printMsg=False)
 
                 gg = group.create_group(epoch)
-                dset = gg.create_dataset(epoch, data=data_mli, compression='gzip')
+                dset = gg.create_dataset(epoch, data=data_mli)
                 for key, value in iter(atr_mli.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
@@ -166,7 +166,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
                 data_mli = multilook_data(data,lks_y,lks_x)
                 
-                dset = group.create_dataset(epoch, data=data_mli, compression='gzip')
+                dset = group.create_dataset(epoch, data=data_mli)
                 prog_bar.update(i+1, suffix=epoch)
             atr = h5[k].attrs
             atr_mli = multilook_attribute(atr,lks_y,lks_x)

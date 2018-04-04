@@ -149,7 +149,7 @@ def modify_file_date12_list(File, date12_to_rmv, mark_attribute=False, outFile=N
     
             data = h5[k][igram].get(igram)[:]
             group = gg.create_group(igram)
-            dset = group.create_dataset(igram, data=data, compression='gzip')
+            dset = group.create_dataset(igram, data=data)
             for key, value in h5[k][igram].attrs.items():
                 group.attrs[key] = value
             group.attrs['DROP_IFGRAM'] = 'no'

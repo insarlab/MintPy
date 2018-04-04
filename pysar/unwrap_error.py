@@ -157,7 +157,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
         group = gg.create_group(ifgram)
-        dset = group.create_dataset(ifgram, data=np.reshape(dataCor[i,:],[width,length]).T, compression='gzip')
+        dset = group.create_dataset(ifgram, data=np.reshape(dataCor[i,:],[width,length]).T)
         for key, value in h5[k][ifgram].attrs.items():
             group.attrs[key] = value
         prog_bar.update(i+1)
@@ -267,13 +267,13 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 
             ramp[data == 0.] = 0.
             gg = group.create_group(ifgram)
-            dset = gg.create_dataset(ifgram, data=data_derampCor+ramp, compression='gzip')
+            dset = gg.create_dataset(ifgram, data=data_derampCor+ramp)
             for key, value in h5[k][ifgram].attrs.items():
                 gg.attrs[key]=value
 
             if save_cor_deramp_file:
                 gg_deramp = group_deramp.create_group(ifgram)
-                dset = gg_deramp.create_dataset(ifgram, data=data_derampCor, compression='gzip')
+                dset = gg_deramp.create_dataset(ifgram, data=data_derampCor)
                 for key, value in h5[k][ifgram].attrs.items():
                     gg_deramp.attrs[key]=value
             prog_bar.update(i+1, suffix=date12_list[i])

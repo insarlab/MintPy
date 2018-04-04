@@ -85,7 +85,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
                 data -= Ramp*dt
 
                 gg = group.create_group(epoch)
-                dset = gg.create_dataset(epoch, data=data, compression='gzip')
+                dset = gg.create_dataset(epoch, data=data)
                 for key, value in iter(atr.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12List[i])
@@ -99,7 +99,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
 
                 data -= Ramp*tbase[i]
 
-                dset = group.create_dataset(epoch, data=data, compression='gzip')
+                dset = group.create_dataset(epoch, data=data)
                 prog_bar.update(i+1, suffix=epoch)
             for key, value in iter(atr.items()):
                 group.attrs[key] = value

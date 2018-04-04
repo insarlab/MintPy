@@ -99,7 +99,7 @@ def ref_date_file(inFile, ref_date, outFile=None):
     for i in range(date_num):
         date = date_list[i]
         data = h5[k].get(date)[:]
-        dset = group.create_dataset(date, data=data-ref_data, compression='gzip')
+        dset = group.create_dataset(date, data=data-ref_data)
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
     h5.close()

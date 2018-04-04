@@ -95,7 +95,7 @@ def diff_file(file1, file2, outName=None, force=False):
             else:
                 sys.exit('dataset %s is not found in file %' % (date, file2))
 
-            dset = group.create_dataset(date, data=data, compression='gzip')
+            dset = group.create_dataset(date, data=data)
             prog_bar.update(i+1, suffix=date)
         for key,value in iter(atr.items()):
             group.attrs[key] = value
@@ -115,7 +115,7 @@ def diff_file(file1, file2, outName=None, force=False):
             data2 = h5_2[k2][epoch2].get(epoch2)[:]
             data = diff_data(data1, data2)  
             gg = group.create_group(epoch1)
-            dset = gg.create_dataset(epoch1, data=data, compression='gzip')
+            dset = gg.create_dataset(epoch1, data=data)
             for key, value in h5_1[k][epoch1].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])

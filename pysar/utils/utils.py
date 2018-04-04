@@ -1408,7 +1408,7 @@ def temporal_average(File, outFile=None):
     print('writing >>> '+outFile)
     h5mean = h5py.File(outFile, 'w')
     group  = h5mean.create_group('mask')
-    dset = group.create_dataset(os.path.basename('mask'), data=dMean, compression='gzip')
+    dset = group.create_dataset(os.path.basename('mask'), data=dMean)
     for key,value in iter(atr.items()):
         group.attrs[key] = value
     h5mean.close()
@@ -1953,7 +1953,7 @@ def timeseries_inversion_FGLS(h5flat,h5timeseries):
     
     for date in dateList:
         if not date in h5timeseries['timeseries']:
-            dset = group.create_dataset(date, data=timeseries[dateIndex[date]], compression='gzip')
+            dset = group.create_dataset(date, data=timeseries[dateIndex[date]])
     print('Time series inversion took ' + str(time.time()-total) +' secs')
 
 
@@ -2049,7 +2049,7 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
   
     for date in dateList:
         if not date in h5timeseries['timeseries']:
-            dset = group.create_dataset(date, data=timeseries[dateIndex[date]], compression='gzip')
+            dset = group.create_dataset(date, data=timeseries[dateIndex[date]])
     print('Time series inversion took ' + str(time.time()-total) +' secs')
     L1orL2h5=h5py.File('L1orL2.h5','w')
     gr=L1orL2h5.create_group('mask') 
@@ -2387,7 +2387,7 @@ def generate_curls(curlfile, h5file, Triangles, curls):
 
         triangle_date = Triangles[i][0]+'_'+Triangles[i][1]+'_'+Triangles[i][2]
         group = gg.create_group(triangle_date)
-        dset = group.create_dataset(triangle_date, data=d1+d3-d2, compression='gzip')
+        dset = group.create_dataset(triangle_date, data=d1+d3-d2)
         for key, value in h5file['interferograms'][ifgram1].attrs.items():
             group.attrs[key] = value
         prog_bar.update(i+1)

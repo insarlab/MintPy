@@ -201,7 +201,7 @@ def main(argv):
             trop_delay -= trop_delay[ref_y, ref_x]
             data -= trop_delay
 
-        dset = group.create_dataset(date, data=data, compression='gzip')
+        dset = group.create_dataset(date, data=data)
         prog_bar.update(i+1, suffix=date)
 
     for key,value in iter(atr.items()):

@@ -63,7 +63,7 @@ def main(argv):
                 data_wrap = rewrap(data)
 
                 gg = group.create_group(epoch)
-                dset = gg.create_dataset(epoch, data=data_wrap, compression='gzip')
+                dset = gg.create_dataset(epoch, data=data_wrap)
                 for key, value in h5[k][epoch].attrs.items():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
@@ -76,7 +76,7 @@ def main(argv):
 
                 data_wrap = rewrap(data, one_cycle)
                 
-                dset = group.create_dataset(epoch, data=data_wrap, compression='gzip')
+                dset = group.create_dataset(epoch, data=data_wrap)
                 prog_bar.update(i+1, suffix=epoch)
             for key, value in h5[k].attrs.items():
                 group.attrs[key] = value

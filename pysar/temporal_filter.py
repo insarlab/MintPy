@@ -105,7 +105,7 @@ def main(argv):
     for i in range(date_num):
         date = date_list[i]
         data = np.reshape(timeseries_filt[i,:], [length, width])
-        dset = group.create_dataset(date, data=data-ref_data, compression='gzip')
+        dset = group.create_dataset(date, data=data-ref_data)
         prog_bar.update(i+1, suffix=date)
     for key,value in iter(atr.items()):
         group.attrs[key] = value

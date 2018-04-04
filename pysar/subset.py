@@ -383,7 +383,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-            dset = group.create_dataset(dsName, data=data, compression='gzip')
+            dset = group.create_dataset(dsName, data=data)
             prog_bar.update(i+1, suffix=dsName)
         prog_bar.close()
         atr_dict = ut.subset_attribute(atr_dict, pix_box)
@@ -403,7 +403,7 @@ def subset_file(File, subset_dict_input, outFile=None):
 
             atr_dict  = ut.subset_attribute(atr_dict, pix_box, printMsg=False)
             gg = group.create_group(dsName)
-            dset = gg.create_dataset(dsName, data=data, compression='gzip')
+            dset = gg.create_dataset(dsName, data=data)
             for key, value in iter(atr_dict.items()):
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])

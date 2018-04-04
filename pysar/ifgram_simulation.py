@@ -126,7 +126,7 @@ def main(argv):
             print(ifgram)
 
         gg = group.create_group(ifgram)
-        dset = gg.create_dataset(ifgram, data=unw[y0:y1,x0:x1], compression='gzip')
+        dset = gg.create_dataset(ifgram, data=unw[y0:y1,x0:x1])
 
         for key, value in h5[k][ifgram].attrs.items():
             gg.attrs[key] = value

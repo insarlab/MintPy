@@ -81,7 +81,7 @@ def main(argv):
     prog_bar = ptime.progress_bar(maxValue=date_num-1)
     for i in range(date_num-1):
         date = date_list[i+1]
-        dset = group.create_dataset(date, data=np.reshape(timeseries_1st[i][:],[length,width]), compression='gzip')
+        dset = group.create_dataset(date, data=np.reshape(timeseries_1st[i][:],[length,width]))
         prog_bar.update(i+1, suffix=date)
     for key,value in iter(atr.items()):
         group.attrs[key] = value
@@ -96,7 +96,7 @@ def main(argv):
     prog_bar = ptime.progress_bar(maxValue=date_num-2)
     for i in range(date_num-2):
         date = date_list[i+2]
-        dset = group.create_dataset(date, data=np.reshape(timeseries_2nd[i][:],[length,width]), compression='gzip')
+        dset = group.create_dataset(date, data=np.reshape(timeseries_2nd[i][:],[length,width]))
         prog_bar.update(i+1, suffix=date)
     for key,value in iter(atr.items()):
         group.attrs[key] = value
