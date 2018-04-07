@@ -1,12 +1,12 @@
 #! /usr/bin/env python2
 
-from tkinter import *
-import tkinter.ttk
+from Tkinter import *
+import ttk
 import h5py
 
 index = 1
 
-file = "/Users/joshua/Desktop/geology_gui/test_data/timeseries.h5"
+file = "/Users/joshua/Desktop/pysar/test_data/demGeo.h5"
 
 
 def add_to_tree(name, obj):
@@ -20,7 +20,7 @@ def add_to_tree(name, obj):
 
 root = Tk()
 
-tree = tkinter.ttk.Treeview(root)
+tree = ttk.Treeview(root)
 tree.configure(height=850)
 
 '''tree["columns"]=("one","two")

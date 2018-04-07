@@ -36,6 +36,8 @@ current_slider_scale = None
 file_info_window = None
 file_info = None
 inps = None
+settings_file = None
+settings_file_button = None;
 
 epoch_list = ["All"]
 ref_dates_list = [""]
@@ -68,6 +70,103 @@ attributes = []
 update_in_progress = False
 
 
+def parse_settings():
+
+    global settings_file
+
+    settings_to_variable = {
+
+        'input.file': h5_file,
+        'input.epoch': epoch,
+        'input.mask': mask_file,
+        'output.save': save,
+        'output.outfile': output_file,
+
+        'display.min': y_lim_lower,
+        'display.max': y_lim_upper,
+        'display.unit': unit,
+        'display.colormap': colormap,
+        'display.projection': projection,
+        'display.wrap': wrap,
+        'display.opposite': opposite,
+        'display.flip_lr': lr_flip,
+        'display.flip_ud': ud_flip,
+        'display.alpha': transparency,
+
+        'dem.dem_file': dem_file,
+        'dem.no_shade': shading,
+        'dem.no_contour': countours,
+        'dem.contour_smooth': countour_smoothing,
+        'dem.contour_step': countour_step,
+
+        'subset.x_start': subset_x_from,
+        'subset.x_end': subset_x_to,
+        'subset.y_start': subset_y_from,
+        'subset.y_end': subset_y_to,
+        'subset.lat_start': subset_lat_from,
+        'subset.lat_end': subset_lat_to,
+        'subset_lon_start': subset_lon_from,
+        'subset_lon_end': subset_lon_to,
+
+        'ref.ref_date': ref_date,
+        'ref.ref_lat': ref_lat,
+        'ref.ref_lon': ref_lon,
+        'ref.ref_x': ref_x,
+        'ref.ref_y': ref_y,
+        'ref.no_reference': show_ref,
+        'ref.ref_color': ref_color,
+        'ref.ref_symbol': ref_sym,
+
+        'fig.font_size': font_size,
+        'fig.dpi': plot_dpi,
+        'fig.row': row_num,
+        'fig.col': col_num,
+        'fig.axis': axis_show,
+        'fig.ticks': tick_show,
+        'fig.title_in': title_in,
+        'fig.fig_title': title,
+        'fig.fig_size_w': fig_size_width,
+        'fig.fig_size_h': fig_size_height,
+        'fig.fig_ext': fig_ext,
+        'fig.fig_num': fig_num,
+        'fig.width_space': fig_w_space,
+        'fig.height_space': fig_h_space,
+        'fig.coord': coords,
+
+        'map.coastline': coastline,
+        'map.resolution': resolution,
+        'map.lalo_label': lalo_label,
+        'map.lalo_step': lalo_step,
+        'map.scalebar_dist': scalebar_distance,
+        'map.scalebar_lat': scalebar_lat,
+        'map.scalebar_lon': scalebar_lon,
+        'map.no_scalebar': show_scalebar
+
+
+    }
+
+    with open(settings_file.get(), 'r') as the_settings_file:
+        for line in the_settings_file:
+            if line is not "" and "=" in line:
+                parts = line.split("=")
+                key = parts[0].rstrip().strip("\t")
+                value = parts[1].strip(" \t\t").strip("\n")
+
+                if key in settings_to_variable.keys():
+                    if value.lower() == 'false':
+                        print(key)
+                        value = 0
+                    elif value.lower() == 'true':
+                        value = 1
+
+                    if key in ['input.file']:
+                        inps.file = value
+                        on_file_selection(inps.file)
+
+                    settings_to_variable[key].set(value)
+    print(inps.file)
+
+
 def cmdLineParse(argv):
     global inps
     parser = argparse.ArgumentParser(description='Display InSAR Product',\
@@ -77,6 +176,7 @@ def cmdLineParse(argv):
     ##### Input
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('--file', dest='file', metavar='FILE', help='file for display')
+    infile.add_argument('--settings', dest='settings', metavar='FILE', help='settings file to use in setup')
 
     inps = parser.parse_args(argv)
     return inps
@@ -116,18 +216,13 @@ def pick_mask():
         filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
-        mask_file.set(frame.filename)
-        mask_short.set(filename.split("/")[-1])
-        pick_mask_file_button.config(text="Cancel")
+        if filename != "":
+            mask_file.set(frame.filename)
         #return frame.filename
     else:
         mask_file.set("")
-        mask_short.set("No File Selected")
-        pick_mask_file_button.config(text="Select Mask File")
 
-    if mask_file.get() == "":
-        mask_short.set("No File Selected")
-        pick_mask_file_button.config(text="Select Mask File")
+    set_mask_short()
 
 
 def pick_dem():
@@ -135,18 +230,33 @@ def pick_dem():
         filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
                                               filetypes=(("jpeg files", "*.h5"), ("all files", "*.*")))
         frame.filename = filename
-        dem_file.set(frame.filename)
-        dem_short.set(filename.split("/")[-1])
-        pick_dem_file_button.config(text="Cancel")
-        #return frame.filename
+        if filename != "":
+            dem_file.set(frame.filename)
     else:
         dem_file.set("")
         dem_short.set("No File Selected")
-        pick_dem_file_button.config(text="Select Topography File")
 
-    if dem_file.get() == "":
-        dem_short.set("No File Selected")
-        pick_dem_file_button.config(text="Select Topography File")
+    set_dem_short()
+
+
+def pick_settings():
+
+    global settings_file_button
+
+    if settings_file.get() == "":
+        filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
+                                              filetypes=(("TEXT files", "*.txt"), ("all files", "*.*")))
+        frame.filename = filename
+        if filename != "":
+            settings_file.set(frame.filename)
+            settings_file_button.config(text=str(frame.filename).split("/")[-1])
+            parse_settings()
+        #return frame.filename
+    else:
+        print("BAD")
+        settings_file.set("")
+        settings_file_button.config(text="Select a Settings File")
+
 
 
 def on_file_selection(file):
@@ -259,13 +369,37 @@ def show_file_info():
     file_info_window.protocol("WM_DELETE_WINDOW", close)
 
 
+def in_range(parameter, value):
+
+    min_val, max_val = 0, 0
+
+    if parameter is 'X':
+        min_val = attributes['XMIN']
+        max_val = attributes['XMAX']
+    elif parameter is 'Y':
+        min_val = attributes['YMIN']
+        max_val = attributes['YMAX']
+    elif parameter is 'LAT':
+        min_val = compute_lalo(0, attributes['YMIN'])[0]
+        max_val = compute_lalo(0, attributes['YMAX'])[0]
+    elif parameter is 'LON':
+        min_val = compute_lalo(attributes['XMIN'], 0)[1]
+        max_val = compute_lalo(attributes['XMAX'], 0)[1]
+    else:
+        raise ValueError('Illegal Parameter. Accepted parameters are: X, Y, LAT, LON')
+
+    return int(min_val) <= int(value.strip(" ")) <= int(max_val)
+
+
 def show_plot():
 
     global file_info_window, attributes
 
     options = [inps.file]
 
-    if epoch.get() != "All":
+    print(inps.file)
+
+    if epoch.get() != "All" and epoch.get() != 'None':
         options.append(epoch.get())
 
     options += ["--alpha", str(transparency.get())]
@@ -318,27 +452,23 @@ def show_plot():
         options.append("--contour-step")
         options.append(countour_step.get())
 
-    if subset_x_from.get() != "" and subset_x_to.get() != "":
+    if subset_x_from.get() != "" and subset_x_to.get() != "" and in_range('X', subset_x_from.get()) and in_range('X', subset_x_to.get()):
         options.append("-x")
         options.append(subset_x_from.get())
         options.append(subset_x_to.get())
-    if subset_y_from.get() != "" and subset_y_to.get() != "":
+    else:
+        options.append("-x")
+        options.append(attributes['XMIN'])
+        options.append(attributes['XMAX'])
+
+    if subset_y_from.get() != "" and subset_y_to.get() != "" and in_range('Y', subset_y_from.get()) and in_range('Y', subset_y_to.get()):
         options.append("-y")
         options.append(subset_y_from.get())
         options.append(subset_y_to.get())
-
-    try:
-        attributes['X_FIRST']
-        if subset_lat_from.get() != "" and subset_lat_to.get() != "":
-            options.append("-l")
-            options.append(subset_lat_from.get())
-            options.append(subset_lat_to.get())
-        if subset_lon_from.get() != "" and subset_lon_to.get() != "":
-            options.append("-L")
-            options.append(subset_lon_from.get())
-            options.append(subset_lon_to.get())
-    except KeyError:
-        print("File is not Geocoded")
+    else:
+        options.append("-y")
+        options.append(attributes['YMIN'])
+        options.append(attributes['YMAX'])
 
     if ref_x.get() != "" and ref_y.get() != "":
         options.append("--ref-yx")
@@ -367,10 +497,10 @@ def show_plot():
         options.append("--dpi")
         options.append(plot_dpi.get())
     if row_num.get() != "":
-        options.append("--row")
+        options.append("-r")
         options.append(row_num.get())
     if col_num.get() != "":
-        options.append("--col")
+        options.append("-p")
         options.append(col_num.get())
     if axis_show.get() == 0:
         options.append("--noaxis")
@@ -407,7 +537,7 @@ def show_plot():
 
     if coastline.get() != 0:
         options.append("--coastline")
-    if resolution.get() != "":
+    if resolution.get() != "" and resolution.get() != "None":
         options.append("--resolution")
         options.append(resolution.get())
     if lalo_label.get() != 0:
@@ -454,6 +584,24 @@ def reset_plot():
     set_variables_from_attributes()
 
 
+def set_dem_short(x, y, z):
+    if dem_file.get() != "":
+        dem_short.set(dem_file.get().split("/")[-1])
+        pick_dem_file_button.config(text="Cancel")
+    else:
+        dem_short.set("No File Selected")
+        pick_dem_file_button.config(text="Select Topography File")
+
+
+def set_mask_short(x, y, z):
+    if mask_file.get() != "":
+        mask_short.set(mask_file.get().split("/")[-1])
+        pick_mask_file_button.config(text="Cancel")
+    else:
+        mask_short.set("No File Selected")
+        pick_mask_file_button.config(text="Select Mask File")
+
+
 def set_variables_from_attributes():
 
     global attributes
@@ -461,12 +609,8 @@ def set_variables_from_attributes():
     set_sliders()
 
     dem_file.set("")
-    dem_short.set("No File Selected")
-    pick_dem_file_button.config(text="Select Topography File")
 
     mask_file.set("")
-    mask_short.set("No File Selected")
-    pick_mask_file_button.config(text="Select Mask File")
 
     unit.set(attributes['UNIT'])
     colormap.set('jet')
@@ -744,7 +888,8 @@ def main():
         plot_dpi, row_num, col_num, axis_show, cbar_show, title_show, tick_show, title_in, title, fig_size_width, \
         fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
         scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_color, ref_sym, ref_date, \
-        epoch_option_menu, epoch, epoch_list, excludes_list_box, use_default, ref_date_option_menu, ref_dates_list, show_ref
+        epoch_option_menu, epoch, epoch_list, excludes_list_box, use_default, ref_date_option_menu, ref_dates_list, show_ref,\
+        settings_file_button, settings_file
 
     '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
@@ -754,8 +899,15 @@ def main():
 
     vcmd_num = (root.register(validate_numbers), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
 
-    reset_button = Button(root, text="Reset Settings", command=lambda: reset_plot())
-    reset_button.pack(side=TOP, pady=(10, 5))
+    reset_settings_file_frame = Frame(root)
+    reset_settings_file_frame.pack(side=TOP)
+
+    reset_button = Button(reset_settings_file_frame, text="Reset Settings", command=lambda: reset_plot())
+    reset_button.pack(side=LEFT, pady=(10, 5))
+
+    settings_file = StringVar()
+    settings_file_button = Button(reset_settings_file_frame, text="Select Settings File", command=lambda: pick_settings())
+    settings_file_button.pack(side=LEFT, pady=(10, 5))
 
     submit_button = Button(root, text="Show Plot", command=lambda: show_plot(), background="green")
     submit_button.pack(side=TOP, pady=(10, 20))
@@ -787,6 +939,7 @@ def main():
     pick_mask_file_frame = Frame(frame)
 
     mask_file = StringVar()
+    mask_file.trace('w', callback=set_mask_short)
     mask_short = StringVar()
     mask_short.set("No File Selected")
 
@@ -921,6 +1074,7 @@ def main():
     pick_dem_file_frame = Frame(frame)
 
     dem_file = StringVar()
+    dem_file.trace('w', callback=set_dem_short)
     dem_short = StringVar()
     dem_short.set("No File Selected")
 
@@ -1556,6 +1710,10 @@ def main():
 
     if inps.file:
         on_file_selection(inps.file)
+
+    if inps.settings:
+        parse_settings()
+       #sys.exit(0)
 
     mainloop()
 

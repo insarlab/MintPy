@@ -1060,6 +1060,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     if not inps.disp_tick:
         #ax.set_xticklabels([])
         #ax.set_yticklabels([])
+        print("NO TICKS")
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
 
@@ -1293,7 +1294,7 @@ def main(argv):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
     print('\n******************** Display ********************')
-
+    print(inps.disp_tick)
     # File Basic Info
     ext = os.path.splitext(inps.file)[1].lower()
     fbase = os.path.splitext(os.path.basename(inps.file))[0]
@@ -1430,6 +1431,7 @@ def main(argv):
 
     ############################### Read Data and Display ###############################
     ##### Display One Dataset
+    print("EPOCH NUM IS"+str(epochNum))
     if epochNum == 1:
         # Read Data
         print('reading data ...')
@@ -1498,6 +1500,9 @@ def main(argv):
             else:
                 fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
             inps.fig_row_num, inps.fig_col_num = auto_row_col_num(epochNum, data_shape, fig_size4plot, inps.fig_num)
+
+        print(inps.fig_row_num)
+        print(inps.fig_col_num)
         inps.fig_num = np.ceil(float(epochNum) / float(inps.fig_row_num*inps.fig_col_num)).astype(int)
         print(('dataset number: '+str(epochNum)))
         print(('row     number: '+str(inps.fig_row_num)))
