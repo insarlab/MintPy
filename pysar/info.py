@@ -12,7 +12,7 @@ import time
 import h5py
 from numpy import std
 from pysar.utils import readfile, datetime as ptime
-from pysar.objects import timeseries, ifgramStack, geometry, hdfEos5
+from pysar.objects import timeseries, ifgramStack, geometry, HDFEOS
 
 
 ############################################################
@@ -62,9 +62,11 @@ def print_hdf5_structure(File):
         if isinstance(obj, h5py.Group):
             print('HDF5 group "/{}"'.format(name))
         elif isinstance(obj, h5py.Dataset):
-            print('HDF5 dataset "/{:<30}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype))
+            print('HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype))
         print_attributes(obj.attrs)
     f=h5py.File(File,'r')
+    print('Attributes in / level:')
+    print_attributes(f.attrs)
     f.visititems(print_hdf5_structure_obj)
     f.close()
     return

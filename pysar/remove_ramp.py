@@ -18,9 +18,9 @@ from pysar.utils import readfile, writefile, utils as ut, deramp
 
 ######################################
 EXAMPLE='''example:
-  remove_plane.py  timeseries.h5      -m Mask.h5
-  remove_plane.py  timeseries.h5      -m Mask.h5         -s quadratic
-  remove_plane.py  090214_101120.unw  -m Mask_tempCoh.h5 -s quadratic  -y 0,2400,2000,6843
+  remove_ramp.py  timeseries.h5      -m Mask.h5
+  remove_ramp.py  timeseries.h5      -m Mask.h5         -s quadratic
+  remove_ramp.py  090214_101120.unw  -m Mask_tempCoh.h5 -s quadratic  -y 0,2400,2000,6843
 '''
 
 

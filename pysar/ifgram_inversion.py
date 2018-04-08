@@ -377,10 +377,9 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
 
     ## 2 - Mask for Zero Phase in ALL ifgrams
     print('skip pixels with zero/nan value in all interferograms')
-    phaseStack = ut.get_file_stack(stackobj.file, datasetName='unwrapPhase',\
-                                   outFile='averagePhaseVelocity.h5')[box[1]:box[3],box[0]:box[2]].flatten()
-    mask *= ~np.isnan(phaseStack)
-    mask *= phaseStack != 0.
+    phaseStack = ut.temporal_average(stackobj.file, datasetName='unwrapPhase', outFile='avgPhaseVelocity.h5',\
+                                     updateMode=True)[0][box[1]:box[3],box[0]:box[2]].flatten()
+    mask *= np.multiply(~np.isnan(phaseStack), phaseStack != 0.)
 
     ## Invert pixels on mask 1+2
     pixel_num2inv = np.sum(mask)
@@ -393,6 +392,7 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
         return ts, temp_coh, tsStd
 
     print('reading unwrapPhase in {}'.format(box))
+    pha_data = None
     pha_data = stackobj.read(datasetName='unwrapPhase', box=box).reshape(stackobj.numIfgram,-1)
     if inps.skip_zero_phase:
         print('skip zero phase value (masked out and filled during phase unwrapping)')
@@ -416,9 +416,21 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
     ##### Inversion
     if inps.weight_function in ['no','uniform']:
         if np.sum(maskAllNet) > 0:
-            print('inverting pixels with valid phase in all  ifgrams (%.0f pixels) ...' % (np.sum(maskAllNet)))
-            ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,maskAllNet], stackobj.btempHistDiff.reshape(-1,1),\
-                                                   skipZeroPhase=False)
+            print('inverting pixels with valid phase in all  ifgrams: {} pixels ...'.format(np.sum(maskAllNet)))
+            numAllNet = np.sum(maskAllNet)
+            phaDataTemp = pha_data[:,maskAllNet]
+            ts1 = np.zeros((date_num-1,numAllNet))
+            tempCoh1 = np.zeros((numAllNet))
+            step = 1000
+            loopNum = int(np.floor(numAllNet/step))
+            progBar = ptime.progress_bar(maxValue=loopNum)
+            for i in range(loopNum):
+                [i0, i1] = [i*step, min((i+1)*step, numAllNet)]
+                ts1[:,i0:i1], tempCoh1[i0:i1] = network_inversion_sbas(B, phaDataTemp[:,i0:i1], stackobj.btempHistDiff,\
+                                                                       skipZeroPhase=False)
+                progBar.update(i+1, suffix=i0)
+            progBar.close()
+            #ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,maskAllNet], stackobj.btempHistDiff, skipZeroPhase=False)
             ts[1:,maskAllNet] = ts1
             temp_coh[maskAllNet] = tempCoh1
 
@@ -426,15 +438,14 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
             print('inverting pixels with valid phase in some ifgrams (%.0f pixels) ...' % (np.sum(maskPartNet)))
             pixel_num2inv = np.sum(maskPartNet)
             pixel_idx2inv = np.where(maskPartNet)[0]
-            prog_bar = ptime.progress_bar(maxValue=pixel_num2inv)
+            progBar = ptime.progress_bar(maxValue=pixel_num2inv)
             for i in range(pixel_num2inv):
                 idx = pixel_idx2inv[i]
-                ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,idx], stackobj.btempHistDiff.reshape(-1,1),\
-                                                       inps.skip_zero_phase)
+                ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,idx], stackobj.btempHistDiff, inps.skip_zero_phase)
                 ts[1:, idx] = ts1.flatten()
                 temp_coh[idx] = tempCoh1
-                prog_bar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
-            prog_bar.close()
+                progBar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
+            progBar.close()
 
     else:
         epsilon = 1e-4
@@ -464,7 +475,7 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
 
         ##### Weighted Inversion pixel by pixel
         print('inverting time series ...')
-        prog_bar = ptime.progress_bar(maxValue=pixel_num2inv)
+        progBar = ptime.progress_bar(maxValue=pixel_num2inv)
         for i in range(pixel_num2inv):
             idx = pixel_idx2inv[i]
             ts1, tempCoh1, tsStd1 = network_inversion_wls(A, pha_data[:,idx], weight[:,idx], Astd=Astd,\
@@ -472,8 +483,8 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
             ts[1:, idx] = ts1.flatten()
             temp_coh[idx] = tempCoh1
             tsStd[timeIdx, idx] = tsStd1.flatten()
-            prog_bar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
-        prog_bar.close()
+            progBar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
+        progBar.close()
 
     ts = ts.reshape(date_num, row_num, col_num)
     tsStd = tsStd.reshape(date_num, row_num, col_num)
@@ -540,21 +551,22 @@ def ifgram_inversion(ifgramStackFile='ifgramStack.h5', inps=None):
     ##### Output 
     print('calculating perpendicular baseline timeseries')
     pbase = stackobj.get_perp_baseline_timeseries()
+    inps.dateList = list(stackobj.dateList)
+    atr = dict(stackobj.metadata)
+    stackobj.close()
 
-    atr = stackobj.metadata.copy()
-    atr['REF_DATE'] = stackobj.dateList[0]
+    atr['REF_DATE'] = inps.dateList[0]
     atr['FILE_TYPE'] = 'timeseries'
     atr['UNIT'] = 'm'
-    stackobj.close()
 
     print('-'*50)
     tsobj = timeseries(inps.timeseriesFile)
-    tsobj.write2hdf5(data=ts, dates=stackobj.dateList, bperp=pbase, metadata=atr, outFile=inps.timeseriesFile)
+    tsobj.write2hdf5(data=ts, dates=inps.dateList, bperp=pbase, metadata=atr)
 
     if not np.all(tsStd == 0.):
         print('-'*50)
         tsobj = timeseries(inps.timeseriesStdFile)
-        tsobj.write2hdf5(data=tsStd, outFile=inps.timeseriesStdFile, refFile=inps.timeseriesFile)
+        tsobj.write2hdf5(data=tsStd, refFile=inps.timeseriesFile)
 
     print('-'*50)
     print('writing >>> '+inps.tempCohFile)
@@ -622,7 +634,7 @@ def check_ifgram_reference(stackobj, inps):
     try:
         ref_y = int(stackobj.metadata['REF_Y'])
         ref_x = int(stackobj.metadata['REF_X'])
-        inps.ref_value = stackobj.f[stackobj.key].get('unwrapPhase')[stackobj.dropIfgram,ref_y,ref_x]
+        inps.ref_value = stackobj.f['unwrapPhase'][stackobj.dropIfgram,ref_y,ref_x]
         print('reference pixel in y/x: [{},{}]'.format(ref_y, ref_x))
     except:
         if inps.skip_ref:

@@ -22,15 +22,12 @@ import numpy as np
 def yyyymmdd2years(dates):
     if isinstance(dates, str):
         d = dt(*time.strptime(dates,"%Y%m%d")[0:5])
-        day_of_year = d.timetuple().tm_yday
-        yy = float(d.year)+float(day_of_year-1)/365.25
-        #yy = float(d.year) + float(d.month-1)/12 + float(d.day-1)/365.25
+        yy = float(d.year)+float(d.timetuple().tm_yday-1)/365.25
     elif isinstance(dates, list):
         yy = []
         for date in dates:
             d = dt(*time.strptime(date,"%Y%m%d")[0:5])
-            day_of_year = d.timetuple().tm_yday
-            yy.append(float(d.year)+float(day_of_year-1)/365.25)
+            yy.append(float(d.year)+float(d.timetuple().tm_yday-1)/365.25)
     else:
         print('Unrecognized date format. Only string and list supported.')
         sys.exit(1)
@@ -142,18 +139,13 @@ def date_list2tbase(dateList):
                              value - int, temporal baseline in days
     '''
     dateList = yyyymmdd(dateList)
-    tbase=[]
-    d1 = dt(*time.strptime(dateList[0],"%Y%m%d")[0:5])
-    for ni in range(len(dateList)):
-        d2 = dt(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
-        diff = d2-d1
-        tbase.append(diff.days)
+    dates = [dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in dateList]
+    tbase = [(i-dates[0]).days for i in dates]
 
     ## Dictionary: key - date, value - temporal baseline
     dateDict = {}
     for i in range(len(dateList)):
         dateDict[dateList[i]] = tbase[i]
-
     return tbase, dateDict
 
 
@@ -166,18 +158,10 @@ def date_list2vector(dateList):
         datevector - list of float, years, i.e. 2010.8020547945205
     '''
     dateList = yyyymmdd(dateList)
-    dates=[]
-    for ni in range(len(dateList)):
-        d = dt(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
-        dates.append(d)
-
+    dates = [dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in dateList]
     ## date in year - float format
-    datevector=[]
-    for i in range(len(dates)):
-        dvector = dates[i].year + (dates[i].month-1)/12.0 + (dates[i].day-1)/365.0
-        datevector.append(dvector)
-    datevector2=[round(i,2) for i in datevector]
-  
+    datevector = [i.year + (i.timetuple().tm_yday - 1)/365.25 for i in dates]
+    datevector2 = [round(i,2) for i in datevector]
     return dates, datevector
 
 

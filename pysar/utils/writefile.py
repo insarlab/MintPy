@@ -31,7 +31,7 @@ def write(*args):
     
     Output:
         output file name
-    
+
     Examples:
         write(data,atr,'velocity.h5')
         write(data,atr,'temporal_coherence.h5')
@@ -58,16 +58,16 @@ def write(*args):
     ##### PySAR HDF5 product
     if ext in ['.h5','.he5']:
         k = atr['FILE_TYPE']
-        if k in ['interferograms','coherence','wrapped','timeseries']:
-            print('Un-supported file type: '+k)
+        if k in ['ifgramStack','timeseries']:
+            print('ERROR: Un-supported file type: '+k)
             print('Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...')
             return 0;
-        h5file = h5py.File(outname,'w')
-        group = h5file.create_group(k)
-        dset = group.create_dataset(k, data=data)
+        f = h5py.File(outname,'w')
+        #group = f.create_group(k)
+        dset = f.create_dataset(k, data=data)
         for key , value in iter(atr.items()):
-            group.attrs[key] = str(value)
-        h5file.close()
+            f.attrs[key] = str(value)
+        f.close()
         return outname
 
     ##### ISCE / ROI_PAC GAMMA / Image product
@@ -125,7 +125,7 @@ def write_roipac_rsc(atr, outname, sorting=True):
     # max digit for space formating
     digits = max([len(key) for key in atr.keys()]+[2])
     f = '{0:<%d}    {1}'%(digits)
-    
+
     # sorting by key name
     dictKey = atr.keys()
     if sorting:

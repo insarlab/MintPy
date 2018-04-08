@@ -4,17 +4,13 @@
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-#
-# Yunjun, Mar 2016: add diff_data()
-# Yunjun, Apr 2017: add diff_file()
-# Yunjun, test comment
 
-import os
-import sys
+import os, sys
 import argparse
-import numpy as np
 import h5py
+import numpy as np
 from pysar.utils import datetime as ptime, readfile, writefile
+from pysar.objects import timeseries, ifgramStack
 
 
 #####################################################################################
@@ -25,115 +21,77 @@ def diff_data(data1,data2):
     return data
 
 
-def diff_file(file1, file2, outName=None, force=False):
+def check_reference(atr1,atr2):
+    if atr1['REF_DATE'] == atr2['REF_DATE']:
+        ref_date = None
+    else:
+        ref_date = atr1['REF_DATE']
+        print('consider different reference date')
+
+    ref_y = int(atr1['REF_Y'])
+    ref_x = int(atr1['REF_X'])
+    if ref_y == int(atr2['REF_Y']) and ref_x == int(atr2['REF_X']):
+        ref_y = None
+        ref_x = None
+    else:
+        print('consider different reference pixel')
+    return ref_date, ref_y, ref_x
+
+
+def diff_file(file1, file2, outFile=None, force=False):
     '''Subtraction/difference of two input files'''
-    if not outName:
-        outName = os.path.splitext(file1)[0]+'_diff_'+os.path.splitext(os.path.basename(file2))[0]+\
-                  os.path.splitext(file1)[1]
-    
-    print(file1+' - '+file2)
+    if not outFile:
+        fbase, fext = os.path.splitext(file1)
+        outFile = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2))[0], fext)
+    print('{} - {} --> {}'.format(file1,file2,outFile))
+
     # Read basic info
-    atr  = readfile.read_attribute(file1)
-    print('Input first file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE'])
-    k = atr['FILE_TYPE']
+    atr1 = readfile.read_attribute(file1);  k1 = atr1['FILE_TYPE']
+    atr2 = readfile.read_attribute(file2);  k2 = atr1['FILE_TYPE']
+    print('input files are: {} and {}'.format(k1,k2))
 
-    # Multi-dataset/group file
-    if k in ['timeseries','interferograms','coherence','wrapped']:
-        # Check input files type for multi_dataset/group files
-        atr2 = readfile.read_attribute(file2)
-        k2 = atr2['FILE_TYPE']
+    if k1 == 'timeseries':
+        if k2 != 'timeseries':
+            print('ERROR: input multiple dataset files are not the same file type!')
+            sys.exit(1)
 
-        h5_1  = h5py.File(file1)
-        h5_2  = h5py.File(file2)
-        epochList = sorted(h5_1[k].keys())
-        epochList2 = sorted(h5_2[k2].keys())
-        if not all(i in epochList2 for i in epochList):
-            print('ERROR: '+file2+' does not contain all group of '+file1)
-            if force and k in ['timeseries']:
-                print('Continue and enforce the differencing for their shared dates only!')
+        obj1 = timeseries(file1);  obj1.open()
+        obj2 = timeseries(file2);  obj2.open()
+        ref_date, ref_y, ref_x = check_reference(obj1.metadata, obj2.metadata)
+
+        dateListShared = [i for i in obj1.dateList if i in obj2.dateList]
+        dateShared = np.ones((obj1.numDate),dtype=np.bool_)
+        if dateListShared != obj1.dateList:
+            print('WARNING: {} does not contain all dates in {}'.format(file2, file1))
+            if force:
+                dateExcluded = list(set(obj1.dateList) - set(dateListShared))
+                print('Continue and enforce the differencing for their shared dates only.')
+                print('\twith following dates are ignored for differencing:\n{}'.format(dateExcluded))
+                dateShared[np.array([obj1.dateList.index(i) for i in dateExcluded])] = 0
             else:
+                print('Exit. To enforce the differencing anyway, use --force option.')
                 sys.exit(1)
 
-        h5out = h5py.File(outName,'w')
-        group = h5out.create_group(k)
-        print('writing >>> '+outName)
+        data2 = obj2.read(dateListShared)
+        if ref_date:
+            data2 -= data2[obj2.dateList.index(ref_date),:,:]
+        if ref_y and ref_x:
+            data2 -= data2[:,ref_y,ref_x]
 
-        epoch_num = len(epochList)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+        data = obj1.read()
+        data[dateShared] -= data2
+        objOut = timeseries(outFile)
+        objOut.write2hdf5(data=data, refFile=file1)
 
-    if k in ['timeseries']:
-        print('number of acquisitions: '+str(len(epochList)))
-        # check reference date
-        if atr['REF_DATE'] == atr2['REF_DATE']:
-            ref_date = None
-        else:
-            ref_date = atr['REF_DATE']
-            data2_ref = h5_2[k2].get(ref_date)[:]
-            print('consider different reference date')
-        # check reference pixel
-        ref_y = int(atr['REF_Y'])
-        ref_x = int(atr['REF_X'])
-        if ref_y == int(atr2['REF_Y']) and ref_x == int(atr2['REF_X']):
-            ref_y = None
-            ref_x = None
-        else:
-            print('consider different reference pixel')
-
-        # calculate difference in loop
-        for i in range(epoch_num):
-            date = epochList[i]
-            data1 = h5_1[k].get(date)[:]
-            if date in epochList2:
-                data2 = h5_2[k2].get(date)[:]
-                if ref_date:
-                    data2 -= data2_ref
-                if ref_x and ref_y:
-                    data2 -= data2[ref_y, ref_x]
-                data = diff_data(data1, data2)
-            elif force:
-                data = data1
-            else:
-                sys.exit('dataset %s is not found in file %' % (date, file2))
-
-            dset = group.create_dataset(date, data=data)
-            prog_bar.update(i+1, suffix=date)
-        for key,value in iter(atr.items()):
-            group.attrs[key] = value
-
-        prog_bar.close()
-        h5out.close()
-        h5_1.close()
-        h5_2.close()
-
-    elif k in ['interferograms','coherence','wrapped']:
-        print('number of interferograms: '+str(len(epochList)))
-        date12_list = ptime.list_ifgram2date12(epochList)
-        for i in range(epoch_num):
-            epoch1 = epochList[i]
-            epoch2 = epochList2[i]
-            data1 = h5_1[k][epoch1].get(epoch1)[:]
-            data2 = h5_2[k2][epoch2].get(epoch2)[:]
-            data = diff_data(data1, data2)  
-            gg = group.create_group(epoch1)
-            dset = gg.create_dataset(epoch1, data=data)
-            for key, value in h5_1[k][epoch1].attrs.items():
-                gg.attrs[key] = value
-            prog_bar.update(i+1, suffix=date12_list[i])
-
-        prog_bar.close()
-        h5out.close()
-        h5_1.close()
-        h5_2.close()
-  
     # Sing dataset file
     else:
         data1, atr1 = readfile.read(file1)
         data2, atr2 = readfile.read(file2)
-        data = diff_data(data1, data2)
-        print('writing >>> '+outName)
-        writefile.write(data, atr1, outName)
+        data = data1 - data2
+        print('writing >>> '+outFile)
+        writefile.write(data, atr1, outFile)
 
-    return outName
+    return outFile
 
 
 #####################################################################################

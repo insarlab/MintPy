@@ -641,9 +641,9 @@ def main(argv):
             elif k == 'coherence' and inps.update_aux:
                 inps.coherence_file = Modified_File
                 print('update average spatial coherence for input '+k+' file based on: '+Modified_File)
-                outFile = 'averageSpatialCoherence.h5'
+                outFile = 'avgSpatialCoherence.h5'
                 print('writing >>> '+outFile)
-                ut.temporal_average(Modified_File, outFile)
+                ut.temporal_average(Modified_File, datasetName='coherence', outFile=outFile, updateMode=True)
 
                 # Touch spatial average txt file of coherence if it's existed
                 coh_spatialAverage_file = os.path.splitext(Modified_File)[0]+'_spatialAverage.txt'

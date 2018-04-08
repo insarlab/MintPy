@@ -39,7 +39,7 @@ def main(argv):
     inps = cmdLineParse()
     print('\n*************** Stacking ******************')
     for File in inps.file:
-        inps.outfile = ut.get_file_stack(File, datasetName=inps.dataset_name, maskFile=inps.mask_file, outFile=inps.outfile)
+        ut.temporal_average(File, datasetName=inps.dataset_name, maskFile=inps.mask_file)
     return
 
 

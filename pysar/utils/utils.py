@@ -40,7 +40,8 @@ import numpy as np
 import multiprocessing
 from scipy.interpolate import RegularGridInterpolator as RGI
 from pysar.utils import readfile, writefile, datetime as ptime, network as pnet, deramp
-from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file, geometry_dataset
+from pysar.objects import timeseries, geometry, ifgramStack, geometryDatasetNames, ifgramDatasetNames
+from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ###############################################################################
@@ -233,9 +234,10 @@ def touch(fname_list, times=None):
 
     fname_list = [x for x in fname_list if x!=None]
     for fname in fname_list:
-        with open(fname, 'a'):
-            os.utime(fname, times)
-            print('touch '+fname)
+        if os.path.isfile(fname):
+            with open(fname, 'a'):
+                os.utime(fname, times)
+                print('touch '+fname)
 
     if len(fname_list) == 1:
         fname_list = fname_list[0]
@@ -288,7 +290,7 @@ def get_lookup_file(filePattern=None, abspath=False, printMsg=True):
 
 def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, printMsg=True):
     '''Find geometry file containing input specific dataset'''
-    if dset not in geometry_dataset:
+    if dset not in geometryDatasetNames:
         sys.exit('Unrecognized geometry dataset name: %s' % (dset))
 
     ##Search Existing Files
@@ -619,71 +621,31 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
             else:
                 print('removing a '+ramp_type+' ramp from file: '+timeseries_resid_file)
                 deramp_file = deramp.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
-        print('Calculating residual standard deviation for each epoch from file: '+deramp_file)
-        std_file = timeseries_std(deramp_file, mask_file, std_file)
+        print('calculating residual standard deviation for each epoch from file: '+deramp_file)
+        std_file = timeseries(deramp_file).timeseries_std(maskFile=mask_file, outFile=std_file)
 
     # Read residual std text file
-    print('read timeseries RSD from file: '+std_file)
+    print('read timeseries RMS from file: '+std_file)
     std_fileContent = np.loadtxt(std_file, dtype=bytes).astype(str)
     std_list = std_fileContent[:,1].astype(np.float).tolist()
     date_list = list(std_fileContent[:,0]) 
-    
     return std_list, date_list
 
-
-def timeseries_std(inFile, maskFile='maskTempCoh.h5', outFile=None):
-    '''Calculate the standard deviation for each epoch of input timeseries file
-    and output result to a text file.
-    '''
-    try:
-        mask = readfile.read(maskFile, datasetName='mask')[0]
-        print('read mask from file: '+maskFile)
-    except:
-        maskFile = None
-        print('no mask input, use all pixels')
-
-    if not outFile:
-        outFile = os.path.splitext(inFile)[0]+'_std.txt'
-
-    atr = readfile.read_attribute(inFile)
-    k = atr['FILE_TYPE']
-    if not k in ['timeseries']:
-        raise Exception('Only timeseries file is supported, input file is: '+k)
-
-    h5 = h5py.File(inFile, 'r')
-    date_list = sorted(h5[k].keys())
-    date_num = len(date_list)
-
-    f = open(outFile, 'w')
-    f.write('# Residual Standard Deviation in space for each epoch of timeseries\n')
-    f.write('# Timeseries file: '+inFile+'\n')
-    f.write('# Mask file: '+maskFile+'\n')
-    f.write('# Date      STD(m)\n')
-    for i in range(date_num):
-        date = date_list[i]
-        data = h5[k].get(date)[:]
-        if maskFile:
-            data[mask==0] = np.nan
-        std = np.nanstd(data)
-        msg = '%s    %.4f' % (date, std)
-        f.write(msg+'\n')
-        print(msg)
-    h5.close()
-    f.close()
-    print('write to '+outFile)
-
-    return outFile
 
 
 def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
     '''Calculate deramped Root Mean Square in space for each epoch of input timeseries file.
-    Inputs:
-        timeseries_resid_file - string, timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
-        mask_file - string, mask file, e.g. maskTempCoh.h5
-        ramp_type - string, ramp type, e.g. plane, quadratic, no for do not remove ramp
-    outputs:
-        rms_list  - list of float, Root Mean Square of deramped input timeseries file
-        date_list - list of string in YYYYMMDD format, corresponding dates
+    Parameters: timeseries_resid_file : string, 
+                    timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
+                mask_file : string,
+                    mask file, e.g. maskTempCoh.h5
+                ramp_type : string, 
+                    ramp type, e.g. plane, quadratic, no for do not remove ramp
+    Returns:    rms_list : list of float,
+                    Root Mean Square of deramped input timeseries file
+                date_list : list of string in YYYYMMDD format,
+                    corresponding dates
+                rms_file : string, text file with rms and date info.
     Example:
         import pysar.utils.utils as ut
         rms_list, date_list = ut.get_residual_rms('timeseriesResidual.h5', 'maskTempCoh.h5')
@@ -707,71 +669,14 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 print('removing a '+ramp_type+' ramp from file: '+timeseries_resid_file)
                 deramp_file = deramp.remove_surface(timeseries_resid_file, ramp_type, mask_file, deramp_file)
         print('Calculating residual RMS for each epoch from file: '+deramp_file)
-        rms_file = timeseries_rms(deramp_file, mask_file, rms_file)
+        rms_file = timeseries(deramp_file).timeseries_rms(maskFile=mask_file, outFile=rms_file)
 
     # Read residual RMS text file
     print('read timeseries residual RMS from file: '+rms_file)
     rms_fileContent = np.loadtxt(rms_file, dtype=bytes).astype(str)
     rms_list = rms_fileContent[:,1].astype(np.float).tolist()
     date_list = list(rms_fileContent[:,0]) 
-    
-    return rms_list, date_list
-
-
-def timeseries_rms(inFile, maskFile='maskTempCoh.h5', outFile=None, dimension=2):
-    '''Calculate the Root Mean Square for each epoch of input timeseries file
-    and output result to a text file.
-    '''
-    try:
-        mask = readfile.read(maskFile, datasetName='mask')[0]
-        print('read mask from file: '+maskFile)
-    except:
-        maskFile = None
-        print('no mask input, use all pixels')
-
-    if not outFile:
-        outFile = os.path.dirname(os.path.abspath(inFile))+'/rms_'+os.path.splitext(inFile)[0]+'.txt'
-
-    atr = readfile.read_attribute(inFile)
-    k = atr['FILE_TYPE']
-    if not k in ['timeseries']:
-        raise Exception('Only timeseries file is supported, input file is: '+k)
-
-    h5 = h5py.File(inFile, 'r')
-    date_list = sorted(h5[k].keys())
-    date_num = len(date_list)
-
-    f = open(outFile, 'w')
-    f.write('# Root Mean Square in space for each epoch of timeseries\n')
-    f.write('# Timeseries file: '+inFile+'\n')
-    f.write('# Mask file: '+maskFile+'\n')
-    if dimension == 2:
-        f.write('# Date      RMS(m)\n')
-        for i in range(date_num):
-            date = date_list[i]
-            data = h5[k].get(date)[:]
-            if maskFile:
-                data[mask==0] = np.nan
-            rms = np.sqrt(np.nanmean(np.square(data)))
-            msg = '%s    %.4f' % (date, rms)
-            f.write(msg+'\n')
-            print(msg)
-        h5.close()
-        f.close()
-        print('write to '+outFile)
-        return outFile
-
-    elif dimension == 3:
-        length = int(atr['LENGTH'])
-        width = int(atr['WIDTH'])
-        ts_data = np.zeros((date_num, length*width))
-        for i in range(date_num):
-            data = h5[k].get(date_list[i])[:]
-            if maskFile:
-                data[mask==0] = np.nan
-            ts_data[i,:] = data.flatten()
-        rms = np.sqrt(np.nanmean(np.square(ts_data)))
-        return rms
+    return rms_list, date_list, rms_file
 
 
 def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
@@ -917,15 +822,15 @@ def add_attribute(File, atr_new=dict()):
         return File
 
     # Update attributes
-    h5 = h5py.File(File,'r+')
+    f = h5py.File(File,'r+')
     for key, value in iter(atr_new.items()):
         # delete the item is new value is None
         if value == 'None':
-            try: h5[k].attrs.pop(key)
+            try: f.attrs.pop(key)
             except: pass
         else:
-            h5[k].attrs[key] = value
-    h5.close()
+            f.attrs[key] = value
+    f.close()
     return File
 
 
@@ -1200,7 +1105,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         ref_list  = spatial_average('unwrapIfgram.h5', box=(100,200,101,201))[0]
         mean_list, date12_list = spatial_average('coherence.h5', 'maskTempCoh.h5', saveList=True)
         
-        stack = ut.get_file_stack('unwrapIfgram.h5', 'mask.h5')
+        stack = ut.temporal_average('unwrapIfgram.h5', maksFile='mask.h5')
         mask = ~np.isnan(stack)
         ref_list = ut.spatial_average('unwrapIfgram.h5', mask, (100,200,101,201))
     '''
@@ -1372,48 +1277,82 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
     return mean_list, date_list
 
 
-def temporal_average(File, outFile=None):
-    '''Calculate temporal average.'''
-    # Input File Info
-    atr = readfile.read_attribute(File)
+def temporal_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, updateMode=False, outFile=None):
+    '''Calculate temporal average of multi-temporal dataset, equivalent to stacking
+    For ifgramStakc/unwrapPhase, return average phase velocity
+
+    Parameters: File : string,
+                    file to be averaged in time
+                outFile : string,
+                    output file name
+                datasetName : string,
+                    dataset to be read from input file, for multiple datasets file - ifgramStack - only
+                    e.g.: coherence, unwrapPhase
+                maskFile : string,
+                    mask file used to calculate the mean
+                ignoreNan: bool,
+                    ignore NaNs for calculate or not.
+    Returns:    dataMean : 2D array
+                outFile : string,
+                    output file name
+    Examples:
+        avgPhaseVel = ut.temporal_average('ifgramStack.h5',datasetName='unwrapPhase')[0]
+        ut.temporal_average('ifgramStack.h5', datasetName='coherence', outFile='avgSpatialCoherence.h5', updateMode=True)
+    '''
+    atr = readfile.read_attribute(File, datasetName=datasetName)
     k = atr['FILE_TYPE']
-    width = int(atr['WIDTH'])
-    length = int(atr['LENGTH'])
+    if k not in ['ifgramStack','timeseries']:
+        print('WARNING: input file is not multi-temporal file: {}, return itself.'.format(File))
+        data = readfile.read(File)[0]
+        return data, File
 
-    h5file = h5py.File(File)
-    dsList = sorted(h5file[k].keys())
-    dsList = check_drop_ifgram(h5file)
-    dsNum = len(dsList)
-
-    # Calculation
-    dMean = np.zeros((length,width))
-    prog_bar = ptime.progress_bar(maxValue=dsNum, prefix='calculating: ')
-    for i in range(dsNum):
-        dsName = dsList[i]
-        if k in multi_group_hdf5_file:
-            d = h5file[k][dsName].get(dsName)[:]
-        elif k in ['timeseries']:
-            d = h5file[k].get(dsName)[:]
-        else: print(k+' type is not supported currently.'); sys.exit(1)
-        dMean += d
-        prog_bar.update(i+1)
-    prog_bar.close()
-    dMean /= float(len(dsList))
-    del d
-    h5file.close()
-
-    # Output
+    ##Default output filename
     if not outFile:
-        outFile = os.path.splitext(File)[0]+'_tempAverage.h5'
-    print('writing >>> '+outFile)
-    h5mean = h5py.File(outFile, 'w')
-    group  = h5mean.create_group('mask')
-    dset = group.create_dataset(os.path.basename('mask'), data=dMean)
-    for key,value in iter(atr.items()):
-        group.attrs[key] = value
-    h5mean.close()
+        ext = os.path.splitext(File)[1]
+        if not outFile:
+            if k == 'ifgramStack':
+                if datasetName == 'coherence':
+                    outFile = 'avgSpatialCoherence.h5'
+                elif datasetName == 'unwrapPhase':
+                    outFile = 'avgPhaseVelocity.h5'
+                else:
+                    outFile = 'avg{}.h5'.format(datasetName)
+            elif k == 'timeseries':
+                processMark = os.path.basename(File).split('timeseries')[1].split(ext)[0]
+                outFile = 'avgDisplacement{}.h5'.format(processMark)
+            else:
+                outFile = 'avg{}.h5'.format(File)
 
-    return outFile
+    if updateMode and not update_file(outFile, [File, maskFile]):
+        dataMean = readfile.read(outFile)[0]
+        return dataMean, outFile
+
+    ##Calculate temporal average
+    if k == 'ifgramStack':
+        obj = ifgramStack(File)
+        obj.open()
+        data = obj.read(datasetName=datasetName)
+        if datasetName == 'unwrapPhase':
+            phase2range = -1 * float(atr['WAVELENGTH']) / (4.0 * np.pi)
+            data *= phase2range
+            #import pdb; pdb.set_trace()
+            data *= 1. / (obj.btemp / 365.25).reshape(-1,1,1)
+            atr['FILE_TYPE'] = 'velocity'
+            atr['UNIT'] = 'm/year'
+        else:
+            atr['FILE_TYPE'] = datasetName
+        print('read /{}/{} from file: {}'.format(k,datasetName,File))
+    elif k == 'timeseries':
+        data = timeseries(File).read()
+        atr['FILE_TYPE'] = 'displacement'
+        print('read /{}/{} from file: {}'.format(k,k,File))
+
+    dataMean = np.nanmean(data, axis=0)
+    if outFile:
+        print('writing >>> '+outFile)
+        writefile.write(dataMean, atr, outFile)
+    return dataMean, outFile
+
 
 
 ######################################################################################################
@@ -2164,118 +2103,6 @@ def Bh_Bv_timeseries(ifgramFile):
     h5file.close()
   
     return Bh,Bv
-
-
-def get_file_stack(File, datasetName=None, maskFile=None, outFile=None):
-    '''Get stack file of input File and return the stack 2D matrix
-    Input:   File/maskFile - string
-    Output:  stack - 2D np.array matrix
-    '''
-    stack = None
-    atr = readfile.read_attribute(File)
-    k = atr['FILE_TYPE']
-
-    if not outFile:
-        f = h5py.File(File,'r')
-        dsList = f[k].keys()
-        f.close()
-        if datasetName and datasetName in dsList:
-            suffix = '{}Stacking.h5'.format(datasetName)
-        else:
-            suffix = 'Stacking.h5'
-        outFile = os.path.splitext(File)[0]+suffix
-
-    # Read stack from existed file
-    if os.path.isfile(outFile):
-        atrStack = readfile.read_attribute(outFile)
-        if atrStack['WIDTH'] == atr['WIDTH'] and atrStack['LENGTH'] == atr['LENGTH']:
-            print('reading stack from existed file: '+outFile)
-            stack = readfile.read(outFile)[0]
-
-    # Calculate stack
-    if stack is None:
-        print('calculating stack of input file ...')
-        stack = stacking(File, datasetName=datasetName, outFile=outFile)
-
-    # set masked out area into NaN
-    if maskFile:
-        print('read mask from file: '+maskFile)
-        mask = readfile.read(maskFile, datasetName='mask')[0]
-        stack[mask==0] = np.nan
-
-    return stack
-
-
-def stacking(File, datasetName=None, outFile=None):
-    '''Stack multi-temporal dataset into one equivalent to temporal sum
-    For interferograms, the averaged velocity is calculated.
-    '''
-    ## File Info
-    atr = readfile.read_attribute(File)
-    k = atr['FILE_TYPE']
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
-    if k in ['interferograms','ifgramStack']:
-        phase2range = -1 * float(atr['WAVELENGTH']) / (4.0 * np.pi)
-        atr['FILE_TYPE'] = 'velocity'
-        atr['UNIT'] = 'm/yr'
-    else:
-        atr['FILE_TYPE'] = 'mask'
-
-    ## Calculation
-    stack = np.zeros([length,width])
-    if k in ['timeseries','interferograms','wrapped','coherence']:
-        ##### Input File Info
-        h5file = h5py.File(File,'r')
-        dsList = sorted(h5file[k].keys())
-        dsNum  = len(dsList)
-        prog_bar = ptime.progress_bar(maxValue=dsNum, prefix='calculating: ')
-        for i in range(dsNum):
-            dsName = dsList[i]
-            if k == 'timeseries':
-                data = h5file[k].get(dsName)[:]
-            else:
-                data = h5file[k][dsName].get(dsName)[:]
-                if k in ['interferograms']:
-                    m_date, s_date = h5file[k][dsName].attrs['DATE12'].split('-')
-                    t1 = datetime.datetime(*time.strptime(m_date, "%y%m%d")[0:5])
-                    t2 = datetime.datetime(*time.strptime(s_date, "%y%m%d")[0:5])
-                    dt = float((t2-t1).days)/365.25
-                    data *= phase2range / dt
-            stack += data
-            prog_bar.update(i+1)
-        stack *= 1.0/float(dsNum)
-        prog_bar.close()
-        h5file.close()
-
-        # Write stack file is input file is multi-dataset (large file size usually)
-        outFile = os.path.splitext(File)[0]+'Stacking.h5'
-        print('writing stack file >>> '+outFile)
-        writefile.write(stack, atr, outFile)    
-
-    elif k in ['ifgramStack']:
-        f = h5py.File(File, 'r')
-        if datasetName == 'unwrapPhase':
-            d = f[k].get('date')
-            mDates = np.array([datetime.datetime(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in list(d[:,0])])
-            sDates = np.array([datetime.datetime(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in list(d[:,1])])
-            tbase = np.array([i.days for i in sDates - mDates], dtype=np.float32) / 365.25
-            np.tile(tbase.reshape(-1,1,1), (1,100,100))
-            data = f[k].get(datasetName)[:] * phase2range
-            data = np.nanmean(np.divide(data, np.tile(tbase.reshape(-1,1,1), (1,length,width))), axis=0)
-        elif datasetName == 'coherence':
-            data = f[k].get(datasetName)[:]
-            data = np.nanmean(data, axis=0)
-        print('writing >>> {}'.format(outFile))
-        f.close()
-        writefile.write(data, atr, outFile)
-
-    else:
-        try:
-            stack, atrStack = readfile.read(File)
-        except:
-            print('Cannot read file: '+File); sys.exit(1)
-    return stack
 
 
 def yymmdd2YYYYMMDD(date):

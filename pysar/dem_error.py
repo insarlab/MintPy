@@ -184,19 +184,19 @@ def read_geometry(inps):
     if inps.geom_file:
         geomobj = geometry(inps.geom_file)
         geomobj.open()
-        print('read 2D incidenceAngle,slantRangeDistance from {} file: {}'.format(geomobj.key, geomobj.file))
+        print('read 2D incidenceAngle,slantRangeDistance from {} file: {}'.format(geomobj.name, geomobj.file))
         inps.incAngle = geomobj.read(datasetName='incidenceAngle').flatten() * np.pi/180.
         inps.rangeDist = geomobj.read(datasetName='slantRangeDistance').flatten()
-        if 'bperp' in geomobj.f[geomobj.key].keys():
-            print('reading 3D bperp from {} file: {} ...'.format(geomobj.key, geomobj.file))
+        if 'bperp' in geomobj.f.keys():
+            print('reading 3D bperp from {} file: {} ...'.format(geomobj.name, geomobj.file))
             inps.bperp = geomobj.read(datasetName='bperp').reshape((geomobj.numDate, -1))
             inps.bperp -= inps.bperp[tsobj.refIndex]
         else:
-            print('read mean bperp from {} file'.format(tsobj.key))
+            print('read mean bperp from {} file'.format(tsobj.name))
             inps.bperp = tsobj.bperp.reshape((-1,1))
     ## 0D geometry
     else:
-        print('read mean incidenceAngle,slantRangeDistance,bperp value from {} file'.format(tsobj.key))
+        print('read mean incidenceAngle,slantRangeDistance,bperp value from {} file'.format(tsobj.name))
         inps.incAngle = ut.incidence_angle(tsobj.metadata, dimension=0)
         inps.rangeDist = ut.range_distance(tsobj.metadata, dimension=0)
         inps.bperp = tsobj.bperp.reshape((-1,1))
@@ -278,9 +278,7 @@ def estimate_dem_error(inps, A_def):
             stepModel = np.zeros((inps.numStep, tsobj.numPixel), dtype=np.float32)
 
         print('skip pixels with zero/nan value in geometry: incidence angle or range distance')
-        mask = np.ones_like(inps.sinIncAngle, dtype=np.bool_)
-        mask[inps.sinIncAngle == 0.] = 0
-        mask[inps.rangeDist == 0.] = 0
+        mask = np.multiply(inps.sinIncAngle!=0., inps.rangeDist!=0.)
         numPixel2inv = np.sum(mask)
         idxPixel2inv = np.where(mask)[0]
         print('number of pixels in   file: {}'.format(tsobj.numPixel))

@@ -353,19 +353,15 @@ def main(argv):
     ##### Open HDF5 File
     print('writing >>> '+outName)
     f = h5py.File(outName,'w')
-    hdfeos = f.create_group('HDFEOS')
     if 'Y_FIRST' in meta_dict.keys():
-        gg_coord = hdfeos.create_group('GRIDS')
+        group = f.create_group('HDFEOS/GRIDS/timeseries')
     else:
-        gg_coord = hdfeos.create_group('SWATHS')
-    group = gg_coord.create_group('timeseries')
-
+        group = f.create_group('HDFEOS/SWATHS/timeseries')
 
     ##### Write Attributes to the HDF File
     print('write metadata to '+str(f))
     for key,value in iter(meta_dict.items()):
         f.attrs[key] = value
-
 
     ##### Write Observation - Displacement
     groupObs = group.create_group('observation')

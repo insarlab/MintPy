@@ -11,7 +11,7 @@ import os, sys, glob
 import h5py
 import numpy as np
 from pysar.utils import readfile, datetime as ptime, utils as ut
-from pysar.objects import ifgramDatasetNames, geometryDatasetNames
+from pysar.objects import ifgramDatasetNames, geometryDatasetNames, dataTypeDict
 
 dataType = np.float32
 
@@ -59,23 +59,23 @@ class ifgramStack:
         metadata = readfile.read_attribute(dsFile)
         dsDataType = dataType
         if 'DATA_TYPE' in metadata.keys():
-            dsDataType = readfile.dataTypeDict[metadata['DATA_TYPE'].lower()]
+            dsDataType = dataTypeDict[metadata['DATA_TYPE'].lower()]
         return dsDataType
 
     def save2h5(self, outputFile='ifgramStack.h5', access_mode='w', box=None):
         '''Save/write an ifgramStack object into an HDF5 file with the structure below:
 
-        /ifgramStack           Root level group name
-            Attributes         Dictionary for metadata
-            /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
-            /bperp             1D array of float32 in size of (m,     ) in meter.
-            /dropIfgram        1D array of bool    in size of (m,     ).
-            /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
-            /coherence         3D array of float32 in size of (m, l, w).
-            /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
-            /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
-            /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
-            /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
+        /                  Root level
+        Attributes         Dictionary for metadata
+        /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
+        /bperp             1D array of float32 in size of (m,     ) in meter.
+        /dropIfgram        1D array of bool    in size of (m,     ).
+        /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
+        /coherence         3D array of float32 in size of (m, l, w).
+        /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
+        /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
+        /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
+        /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
 
         Parameters: outputFile : string
                         Name of the HDF5 file for the InSAR stack
@@ -90,9 +90,9 @@ class ifgramStack:
         f = h5py.File(self.outputFile, access_mode)
         print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
 
-        groupName = self.name
-        group = f.create_group(groupName)
-        print('create group   /{}'.format(groupName))
+        #groupName = self.name
+        #group = f.create_group(groupName)
+        #print('create group   /{}'.format(groupName))
 
         self.pairs = [pair for pair in self.pairsDict.keys()]
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
@@ -107,9 +107,9 @@ class ifgramStack:
             if dsName in ['connectComponent']:
                 dsDataType = np.bool_
             dsShape = (self.numIfgram, self.length, self.width)
-            print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
-                                                                                  t=str(dsDataType), s=dsShape))
-            ds = group.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
+            print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit,\
+                                                                              t=str(dsDataType), s=dsShape))
+            ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                       dtype=dsDataType, chunks=True)
 
             progBar = ptime.progress_bar(maxValue=self.numIfgram)
@@ -126,37 +126,35 @@ class ifgramStack:
         dsName = 'date'
         dsDataType = np.string_
         dsShape = (self.numIfgram,)
-        print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
-                                                                              t=str(dsDataType), s=dsShape))
+        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
         data = np.array(self.pairs, dtype=dsDataType)
-        ds = group.create_dataset(dsName, data=data)
+        ds = f.create_dataset(dsName, data=data)
 
         ###############################
         # 1D dataset containing perpendicular baseline of all pairs
         dsName = 'bperp'
         dsDataType = dataType
         dsShape = (self.numIfgram,)
-        print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
-                                                                              t=str(dsDataType), s=dsShape))
+        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
         data = np.array(self.bperp, dtype=dsDataType)
-        ds = group.create_dataset(dsName, data=data)
+        ds = f.create_dataset(dsName, data=data)
 
         ###############################
         # 1D dataset containing bool value of dropping the interferograms or not
         dsName = 'dropIfgram'
         dsDataType = np.bool_
         dsShape = (self.numIfgram,)
-        print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
-                                                                              t=str(dsDataType), s=dsShape))
+        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
         data = np.ones(dsShape, dtype=dsDataType)
-        dsDate = group.create_dataset(dsName, data=data)
+        dsDate = f.create_dataset(dsName, data=data)
 
         ###############################
         # Attributes
         self.get_metadata()
         self.metadata = ut.subset_attribute(self.metadata, box)
+        self.metadata['FILE_TYPE'] = self.name
         for key,value in self.metadata.items():
-            group.attrs[key] = value
+            f.attrs[key] = value
 
         f.close()
         print('Finished writing to {}'.format(self.outputFile))
@@ -350,19 +348,19 @@ class geometry:
 
     def save2h5(self, outputFile='geometryRadar.h5', access_mode='w', box=None):
         '''
-        /geometry                    Root level group name
-            Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
-            /height                  2D array of float32 in size of (l, w   ) in meter.
-            /latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
-            /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
-            /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
-            /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
-            /headingAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
-            /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
-            /waterMask               2D array of bool    in size of (l, w   ).           (optional)
-            /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
-            /date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
-            ...
+        /                        Root level
+        Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
+        /height                  2D array of float32 in size of (l, w   ) in meter.
+        /latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
+        /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
+        /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
+        /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
+        /headingAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
+        /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
+        /waterMask               2D array of bool    in size of (l, w   ).           (optional)
+        /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
+        /date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
+        ...
         '''
         if len(self.datasetDict) == 0:
             print('No dataset file path in the object, skip HDF5 file writing.')
@@ -373,9 +371,9 @@ class geometry:
         f = h5py.File(self.outputFile, access_mode)
         print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
 
-        groupName = self.name
-        group = f.create_group(groupName)
-        print('create group   /{}'.format(groupName))
+        #groupName = self.name
+        #group = f.create_group(groupName)
+        #print('create group   /{}'.format(groupName))
 
         self.dsNames = list(self.datasetDict.keys())
         maxDigit = max([len(i) for i in geometryDatasetNames])
@@ -390,9 +388,9 @@ class geometry:
                 dsDataType = dataType
                 self.numDate = len(self.dateList)
                 dsShape = (self.numDate, length, width)
-                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
-                                                                                      t=str(dsDataType), s=dsShape))
-                ds = group.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit,\
+                                                                                  t=str(dsDataType), s=dsShape))
+                ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                           dtype=dsDataType, chunks=True)
                 print('read coarse grid baseline files and linear interpolate into full resolution ...')
                 progBar = ptime.progress_bar(maxValue=self.numDate)
@@ -406,20 +404,20 @@ class geometry:
                 dsName = 'date'
                 dsShape = (self.numDate,)
                 dsDataType = np.string_
-                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
-                                                                                      t=str(dsDataType), s=dsShape))
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit,\
+                                                                                  t=str(dsDataType), s=dsShape))
                 data = np.array(self.dateList, dtype=dsDataType)
-                ds = group.create_dataset(dsName, data=data, chunks=True)
+                ds = f.create_dataset(dsName, data=data, chunks=True)
 
             else:
                 dsDataType = dataType
                 if dsName.lower().endswith('mask'):
                     dsDataType = np.bool_
                 dsShape = (length, width)
-                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
-                                                                                      t=str(dsDataType), s=dsShape))
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit,\
+                                                                                  t=str(dsDataType), s=dsShape))
                 data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
-                ds = group.create_dataset(dsName, data=data, chunks=True)
+                ds = f.create_dataset(dsName, data=data, chunks=True)
 
         ###############################
         # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
@@ -429,9 +427,9 @@ class geometry:
             dsShape = data.shape
             dsDataType = dataType
             if data is not None:
-                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
-                                                                                      t=str(dsDataType), s=dsShape))
-                ds = group.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit,\
+                                                                                  t=str(dsDataType), s=dsShape))
+                ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
 
         dsName = 'slantRangeDistance'
         if dsName not in self.dsNames:
@@ -439,15 +437,16 @@ class geometry:
             dsShape = data.shape
             dsDataType = dataType
             if data is not None:
-                print('create dataset /{g}/{d:<{w}} of {t:<25} in size of {s}'.format(g=groupName, d=dsName, w=maxDigit,\
-                                                                                      t=str(dsDataType), s=dsShape))
-                ds = group.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit,\
+                                                                                  t=str(dsDataType), s=dsShape))
+                ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
 
         ###############################
         # Attributes
         self.metadata = ut.subset_attribute(self.metadata, box)
+        self.metadata['FILE_TYPE'] = self.name
         for key,value in self.metadata.items():
-            group.attrs[key] = value
+            f.attrs[key] = value
 
         f.close()
         print('Finished writing to {}'.format(self.outputFile))

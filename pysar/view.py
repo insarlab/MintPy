@@ -84,7 +84,7 @@ def auto_figure_title(fname, dataset=[], inps_dict=None):
         fig_title = os.path.splitext(os.path.basename(fname))[0]
 
 
-    if inps_dict['key'] in ['ifgramStack','hdfEos5']:
+    if inps_dict['key'] in ['ifgramStack','HDFEOS']:
         fig_title += inps_dict['datasetName'].capitalize()
 
     # mark - subset
@@ -328,7 +328,7 @@ def update_inps_with_file_metadata(inps, meta_dict):
         inps.multilook = True
 
     # Colormap
-    inps.colormap = pp.check_colormap_input(meta_dict, inps.colormap, datasetName=inps.dset)
+    inps.colormap = pp.check_colormap_input(meta_dict, inps.colormap, datasetName=inps.dset[0])
 
     # Seed Point
     # Convert seed_lalo if existed, to seed_yx, and use seed_yx for the following
@@ -362,7 +362,7 @@ def update_inps_with_file_metadata(inps, meta_dict):
     # Min / Max - Display
     if not inps.disp_min and not inps.disp_max:
         if (inps.key in ['coherence','temporal_coherence','.cor']\
-            or (inps.key == 'ifgramStack' and inps.datasetName in ['coherence', 'connectComponent'])):
+            or (inps.key == 'ifgramStack' and inps.dset[0].split('-')[0] in ['coherence', 'connectComponent'])):
             inps.disp_min = 0.0
             inps.disp_max = 1.0
         elif inps.key in ['wrapped','.int']:
@@ -980,7 +980,7 @@ def get_file_dataset_list(fname, key):
         elif key in ['GIANT_TS']:
             datasetList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
         else:
-            datasetList = list(f[key].keys())
+            datasetList = sorted(list(f.keys()))
     ## Binary Files
     else:
         if key.lower() in ['.trans','.utm_to_rdc']:
@@ -1012,6 +1012,9 @@ def read_inps_dataset(inps, printMsg=True):
     elif inps.key == 'geometry':
         inps.dset = geometryDatasetNames
         inps.dset.remove('bperp')
+        inps.dsetNumList = check_input_dataset(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
+    elif inps.key == 'ifgramStack':
+        inps.dset = ['unwrapPhase']
         inps.dsetNumList = check_input_dataset(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
     else:
         inps.dsetNumList = range(len(inps.fileDatasetList))
@@ -1276,8 +1279,10 @@ def main(iargs=None):
             progBar = ptime.progress_bar(maxValue=i_end-i_start)
             for i in range(i_start, i_end):
                 dset = inps.dset[i]
+                try: suffix = dset.split('-')[1]
+                except: suffix = dset
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
-                progBar.update(i-i_start+1, suffix=dset)
+                progBar.update(i-i_start+1, suffix=suffix)
 
                 # Read Data
                 data = readfile.read(inps.file, datasetName=dset, box=inps.pix_box, printMsg=False)[0]
@@ -1297,8 +1302,7 @@ def main(iargs=None):
                 if inps.key in timeseriesKeyNames:
                     subplot_title = dt.strptime(dset, '%Y%m%d').isoformat()[0:10]
                 elif inps.key in ['ifgramStack']:
-                    eIndex = inps.fileDatasetList.index(dset)
-                    subplot_title = str(eIndex)
+                    subplot_title = str(i)
                     if inps.fig_row_num*inps.fig_col_num < 100:
                         subplot_title += '\n{}'.format(dset)
                 else:

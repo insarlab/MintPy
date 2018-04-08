@@ -623,10 +623,11 @@ def main(argv):
 
     ##### Average spatial coherence
     if inps.coherence_file:
-        inps.spatial_coh_file = 'averageSpatialCoherence.h5'
+        inps.spatial_coh_file = 'avgSpatialCoherence.h5'
         print('creating average spatial coherence from file: '+inps.coherence_file)
         if ut.update_file(inps.spatial_coh_file, inps.coherence_file):
-            inps.spatial_coh_file = ut.temporal_average(inps.coherence_file, inps.spatial_coh_file)
+            inps.spatial_coh_file = ut.temporal_average(inps.coherence_file, datasetName='coherence',\
+                                                        outFile=inps.spatial_coh_file, updateMode=True)
     else:
         inps.spatial_coh_file = None
 
@@ -964,7 +965,7 @@ def main(argv):
         # Get executable command and output name
         if inps.deramp_method in ['plane', 'quadratic', 'plane_range', 'quadratic_range',\
                                   'plane_azimuth', 'quadratic_azimuth']:
-            derampCmd = 'remove_plane.py '+inps.timeseries_file+' -s '+inps.deramp_method+' -m '+inps.mask_file
+            derampCmd = 'remove_ramp.py '+inps.timeseries_file+' -s '+inps.deramp_method+' -m '+inps.mask_file
             outName = os.path.splitext(inps.timeseries_file)[0]+'_'+inps.deramp_method+'.h5'
 
         elif inps.deramp_method in ['baseline_cor','baselinecor']:

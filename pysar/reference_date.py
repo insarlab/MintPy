@@ -217,7 +217,7 @@ def main(argv):
         print('auto choose reference date based on minimum residual RMS')
         if not inps.resid_file:
             inps.resid_file = os.path.join(os.path.dirname(inps.timeseries_file), 'timeseriesResidual.h5')
-        rms_list, date_list = ut.get_residual_rms(inps.resid_file, inps.mask_file, inps.ramp_type)
+        rms_list, date_list = ut.get_residual_rms(inps.resid_file, inps.mask_file, inps.ramp_type)[0:2]
         ref_idx = np.argmin(rms_list)
         inps.ref_date = date_list[ref_idx]
         print('date with minimum residual RMS: %s - %.4f' % (inps.ref_date, rms_list[ref_idx]))

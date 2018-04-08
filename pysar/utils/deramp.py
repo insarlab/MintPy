@@ -33,13 +33,10 @@
 
 import os
 import time
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
+from pysar.utils import datetime as ptime, readfile, writefile
+from pysar.objects import timeseries, ifgramStack
 
 
 ##################################################################
@@ -126,7 +123,7 @@ def remove_data_multiple_surface(data, mask, surf_type, ysub):
     dataOut[:] = np.nan
 
     surfaceNum = len(ysub)/2
-    ## 1st Mask
+    ## 1st mask
     print('removing 1st surface ...')
     i = 0
     mask_i = np.zeros(data.shape,data.dtype)
@@ -135,7 +132,7 @@ def remove_data_multiple_surface(data, mask, surf_type, ysub):
     dataOut_i,ramp_i = remove_data_surface(data,mask_i,surf_type)
     dataOut[ysub[2*i]:ysub[2*i+1],:] = dataOut_i[ysub[2*i]:ysub[2*i+1],:]
 
-    ## 2 - last Masks
+    ## 2 - last masks
     for i in range(1,surfaceNum):
         print('removing '+str(i+1)+'th surface ...')
         mask_i = np.zeros(data.shape,data.dtype)
@@ -157,71 +154,56 @@ def remove_data_multiple_surface(data, mask, surf_type, ysub):
 def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
     start = time.time()
     atr = readfile.read_attribute(File)
-    
-    # Output File Name
-    if not outFile:
-        outFile = os.path.splitext(File)[0]+'_'+surf_type+os.path.splitext(File)[1]
-    
-    if maskFile:
-        Mask = readfile.read(maskFile, datasetName='mask')[0]
-        print('read mask file: '+maskFile)
-    else:
-        Mask = np.ones((int(atr['LENGTH']), int(atr['WIDTH'])))
-        print('use mask of the whole area')
-    
-    ##### Input File Info
-    atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     print('Input file is '+k)
     print('remove ramp type: '+surf_type)
-    
-    ## Multiple Datasets File
-    if k in ['interferograms','coherence','wrapped','timeseries']:
-        h5file = h5py.File(File,'r')
-        epochList = sorted(h5file[k].keys())
-        epoch_num = len(epochList)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
 
-        h5flat = h5py.File(outFile,'w')
-        group  = h5flat.create_group(k)
-        print('writing >>> '+outFile)
+    if not outFile:
+        outFile = os.path.splitext(File)[0]+'_'+surf_type+os.path.splitext(File)[1]
 
-    if k in ['timeseries']:
-        print('number of acquisitions: '+str(len(epochList)))
-        for i in range(epoch_num):
-            epoch = epochList[i]
-            data = h5file[k].get(epoch)[:]
-            
+    if maskFile:
+        mask = readfile.read(maskFile, datasetName='mask')[0]
+        print('read mask file: '+maskFile)
+    else:
+        mask = np.ones((int(atr['LENGTH']), int(atr['WIDTH'])))
+        print('use mask of the whole area')
+
+    if k == 'timeseries':
+        obj = timeseries(File)
+        data = obj.read()
+        numDate = data.shape[0]
+        print('estimating ramp for each acquisition ...')
+        progBar = ptime.progress_bar(maxValue=numDate)
+        for i in range(numDate):
             if not ysub:
-                data_n,ramp = remove_data_surface(data, Mask, surf_type) 
+                data[i,:,:] = remove_data_surface(np.squeeze(data[i,:,:]), mask, surf_type)[0]
             else:
-                data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
-  
-            dset = group.create_dataset(epoch, data=data_n)
-            prog_bar.update(i+1, suffix=epoch)
-        for key,value in h5file[k].attrs.items():
-            group.attrs[key] = value
+                data[i,:,:] = remove_data_multiple_surface(np.squeeze(data), mask, surf_type, ysub)
+            progBar.update(i+1, suffix=obj.dateList[i])
+        progBar.close()
+        objOut = timeseries(outFile)
+        objOut.write2hdf5(data=data, refFile=File)
   
     elif k in ['interferograms','wrapped','coherence']:
         print('number of interferograms: '+str(len(epochList)))
         date12_list = ptime.list_ifgram2date12(epochList)
 
         if k == 'interferograms':
-            mask_bk = np.zeros(Mask.shape)
-            mask_bk = Mask
+            mask_bk = np.zeros(mask.shape)
+            mask_bk = mask
             print('do not consider zero value pixel for interferograms')
 
         for i in range(epoch_num):
             epoch = epochList[i]
             data = h5file[k][epoch].get(epoch)[:]
             if k == 'interferograms':
-                Mask = mask_bk
-                Mask[data == 0.] = 0
+                mask = mask_bk
+                mask[data == 0.] = 0
 
             if not ysub:
-                data_n,ramp = remove_data_surface(data,Mask,surf_type)
+                data_n,ramp = remove_data_surface(data,mask,surf_type)
             else:
-                data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
+                data_n = remove_data_multiple_surface(data, mask, surf_type, ysub)
 
             gg   = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data_n)
@@ -233,20 +215,9 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
     else:
         data,atr = readfile.read(File)
         print('Removing '+surf_type+' from '+k)
-  
-        if not ysub:
-            data_n,ramp = remove_data_surface(data, Mask, surf_type)
-        else:
-            data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
-
+        data_n,ramp = remove_data_surface(data, mask, surf_type)
         print('writing >>> '+outFile)
         writefile.write(data_n,atr,outFile)
-  
-    try:
-        h5file.close()
-        h5flat.close()
-        prog_bar.close()
-    except: pass
   
     print('Remove '+surf_type+' took ' + str(time.time()-start) +' secs')
     return outFile

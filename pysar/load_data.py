@@ -179,7 +179,7 @@ def read_inps_dict2ifgram_stack_object(inpsDict):
     for dsName in ifgramDatasetNames:
         if dsName in datasetName2templateKey.keys():
             key = datasetName2templateKey[dsName]
-            files = glob.glob(inpsDict[key])
+            files = sorted(glob.glob(inpsDict[key]))
             if len(files) > 0:
                 dsPathDict[dsName] = files
                 dsNumDict[dsName] = len(files)

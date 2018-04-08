@@ -39,7 +39,7 @@ import numpy as np
 #from PIL import Image
 import json
 
-from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry
+from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry, datasetUnitDict
 
 
 standardMetadataKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
@@ -80,23 +80,10 @@ GDAL2NUMPY_DATATYPE = {
 
 }
 
-dataTypeDict = {'bool':np.bool_,'byte':np.bool_,'flag':np.bool_,
-                'int':np.int16,'int16':np.int16,'short':np.int16,'int32':np.int32,
-                'int64':np.int64,'long':np.int64,
-                'float':np.float32,'float32':np.float32,
-                'float_':np.float64,'float64':np.float64,
-                'complex':np.complex64,'complex64':np.complex64,'cpx_float32':np.complex64,
-                'cfloat':np.complex64,'cfloat32':np.complex64,
-                'complex128':np.complex128,'complex_':np.complex128,'cpx_float64':np.complex128
-               }
-
-
 #########################################################################
 multi_group_hdf5_file=['interferograms','coherence','wrapped','snaphu_connect_component']
 multi_dataset_hdf5_file=['timeseries','geometry']
-single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
-geometry_dataset=['rangeCoord','azimuthCoord','latitude','longitude','height',\
-                  'incidenceAngle','headingAngle','slantRangeDistance','waterMask','shadowMask']
+single_dataset_hdf5_file=['dem','mask','temporal_coherence', 'velocity']
 
 
 #########################################################################
@@ -196,7 +183,12 @@ def read(fname, box=None, datasetName=None, printMsg=True):
                 dset = f['recons'][dateIndx,:,:]
             data = dset[box[1]:box[3],box[0]:box[2]]
         else:
-            data = f[k].get(k)[box[1]:box[3],box[0]:box[2]]
+            dset = f[k]
+            if isinstance(dset, h5py.Group):
+                dset = dset[k]
+            data = dset[box[1]:box[3],box[0]:box[2]]
+            atr['LENGTH'] = str(dset.shape[0])
+            atr['WIDTH'] = str(dset.shape[1])
         f.close()
         return data, atr
 
@@ -330,7 +322,7 @@ def read(fname, box=None, datasetName=None, printMsg=True):
 
 
 #########################################################################
-def read_attribute(fname):
+def read_attribute(fname, datasetName=None):
     '''Read attributes of input file into a dictionary
     Input  : string, file name
     Output : dictionary, attributes dictionary
@@ -343,46 +335,36 @@ def read_attribute(fname):
 
     ##### PySAR
     if ext in ['.h5','.he5']:
-        h5 = h5py.File(fname,'r')
-        if   'interferograms' in list(h5.keys()): k = 'interferograms'
-        elif 'coherence'      in list(h5.keys()): k = 'coherence'
-        elif 'timeseries'     in list(h5.keys()): k = 'timeseries'
-        else: k = list(h5.keys())[0]
-
-        attrs = None
+        f = h5py.File(fname,'r')
+        ## Metadata dict
+        atr = None
         key = 'WIDTH'
-        if key in h5.attrs.keys():
-            attrs = h5.attrs
+        if key in f.attrs.keys():
+            atr = dict(f.attrs)
         else:
-            for groupK in h5.keys():
-                if key in h5[groupK].attrs.keys():
-                    attrs = h5[groupK].attrs
+            for g in f.keys():
+                if key in f[g].attrs.keys():
+                    atr = dict(f[g].attrs)
                     break
-        if fname.endswith('PARAMS.h5'):
-            #dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
-            attrs = dict()
-            attrs['LENGTH'] = h5['cmask'].shape[0]
-            attrs['WIDTH'] = h5['cmask'].shape[1]
-            #attrs['ORBIT_DIRECTION'] = 'descending'
-            #attrs['REF_Y'] = '134'
-            #attrs['REF_X'] = '637'
-            #attrs['REF_DATE'] = '20141225'
-            k = 'GIANT_TS'
-        if attrs is None:
-            raise ValueError('No attribute '+key+' found in 1/2 group level!')
+        if atr is None:
+            raise ValueError('No attribute {} found in 1/2 group level!'.format(key))
 
-        atr = dict()
-        for key, value in attrs.items():
+        for key, value in atr.items():
             try:     atr[key] = value.decode('utf8')
             except:  atr[key] = value
 
+        if 'FILE_TYPE' in atr.keys():
+            k = atr['FILE_TYPE']
+        elif 'unwrapPhase' in f.keys():
+            k = 'ifgramStack'
+        elif 'timeseries' in f.keys():
+            k = 'timeseries'
+        elif 'height' in f.keys():
+            k = 'geometry'
+        else:
+            k = list(f.keys())[0]
         atr['FILE_TYPE'] = str(k)
-
-        if k == 'timeseries':
-            try:    atr['REF_DATE']
-            except: atr['REF_DATE'] = sorted(h5[k].keys())[0]
-
-        h5.close()
+        f.close()
 
     else:
         ##Read metadata file
@@ -418,17 +400,18 @@ def read_attribute(fname):
                 atr['PROCESSOR'] = 'roipac'
 
     # Unit - str
-    #if 'UNIT' not in atr.keys():
-    if atr['FILE_TYPE'] in ['interferograms','wrapped','.unw','.int','.flat','unw']:
-        atr['UNIT'] = 'radian'
-    elif atr['FILE_TYPE'] in ['timeseries','dem','.dem','.hgt']:
-        atr['UNIT'] = 'm'
-    elif atr['FILE_TYPE'] in ['velocity']:
-        atr['UNIT'] = 'm/yr'
-    elif atr['FILE_TYPE'] in ['GIANT_TS']:
-        atr['UNIT'] = 'mm'
-    else:
-        if 'UNIT' not in atr.keys():
+    k = atr['FILE_TYPE']
+    if k == 'ifgramStack':
+        if datasetName:
+            atr['UNIT'] = datasetUnitDict[datasetName]
+        else:
+            atr['UNIT'] = 'radian'
+    elif 'UNIT' not in atr.keys():
+        if k in datasetUnitDict.keys():
+            atr['UNIT'] = datasetUnitDict[k]
+        elif k in ['GIANT_TS']:
+            atr['UNIT'] = 'mm'
+        else:
             atr['UNIT'] = '1'
 
     atr['FILE_PATH'] = os.path.abspath(fname)
@@ -443,7 +426,11 @@ def standardize_metadata(metaDict, standardMetadatKeys):
     metaDict_standard = {}
     for k in metaDict.keys():
         if k in standardMetadataKeys.keys():
-            metaDict_standard[standardMetadatKeys[k]] = metaDict[k]
+            k2 = standardMetadatKeys[k]
+            if k2 in metaDict.keys():
+                metaDict_standard[k2] = metaDict[k2]
+            else:
+                metaDict_standard[k2] = metaDict[k]
         else:
             metaDict_standard[k] = metaDict[k]
     return metaDict_standard

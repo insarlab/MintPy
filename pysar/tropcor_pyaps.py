@@ -128,9 +128,10 @@ def check_inputs(inps):
     ##date list
     if inps.timeseries_file:
         print('read date list from timeseries file: {}'.format(inps.timeseries_file))
-        f = h5py.File(inps.timeseries_file, 'r')
-        inps.date_list = [i.decode('utf8') for i in f['timeseries'].get('date')[:]]
-        f.close()
+        tsobj = timeseries(inps.timeseries_file)
+        tsobj.open()
+        inps.date_list = tsobj.dateList
+        tsobj.close()
     elif len(inps.date_list) == 1:
         if os.path.isfile(inps.date_list[0]):
             print('read date list from text file: {}'.format(inps.date_list[0]))
@@ -306,7 +307,7 @@ def get_delay_timeseries(inps, atr):
     inps.trop_ts -= np.tile(inps.trop_ts[inps.ref_idx,:,:], (date_num, 1, 1))
 
     ## Write tropospheric delay to HDF5
-    tropFile = inps.trop_model+'.h5'
+    tropFile = os.path.join(os.path.dirname(inps.dem_file), inps.trop_model+'.h5')
     tsobj = timeseries(tropFile)
     tsobj.write2hdf5(data=inps.trop_ts, outFile=tropFile, dates=inps.date_list, metadata=atr, refFile=inps.timeseries_file)
     return inps
@@ -327,7 +328,7 @@ def correct_delay(inps, atr):
 
     ts -= inps.trop_ts
     tsobj = timeseries(inps.outfile)
-    tsobj.write2hdf5(data=ts, outFile=inps.outfile, refFile=inps.timeseries_file)
+    tsobj.write2hdf5(data=ts, refFile=inps.timeseries_file)
     return inps.outfile
 
 
