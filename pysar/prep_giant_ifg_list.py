@@ -60,20 +60,25 @@ EXAMPLE='''example:
   prep_giant_ifg_list.py  unwrapIfgram.h5  --sensor SEN
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Prepare ifg.list file for GIAnT.\n',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
     parser.add_argument('file', nargs='+', help='Interferogram file(s)')
     parser.add_argument('--sensor','--mission', dest='sensor', help='Sensor name of SAR data')
     parser.add_argument('-o','--output',dest='outfile', default='ifg.list', help='Output list file')
-    inps = parser.parse_args()
+    return parser
+
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.outfile = os.path.abspath(inps.outfile)
     atr = readfile.read_attribute(inps.file[0])
     k = atr['FILE_TYPE']
@@ -121,6 +126,6 @@ def main(argv):
 
 ###################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 

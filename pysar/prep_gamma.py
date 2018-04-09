@@ -110,7 +110,6 @@ def extract_attribute_interferogram(fname):
 
     atr = {}
     atr['PROCESSOR'] = 'gamma'
-    atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
 
     ## Get info: date12, num of loooks
@@ -183,7 +182,6 @@ def extract_attribute_lookup_table(fname):
 
     atr = {}
     atr['PROCESSOR'] = 'gamma'
-    atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
     atr['Y_UNIT'] = 'degrees'
     atr['X_UNIT'] = 'degrees'
@@ -215,7 +213,6 @@ def extract_attribute_dem_geo(fname):
     '''
     atr = {}
     atr['PROCESSOR'] = 'gamma'
-    atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
     atr['Y_UNIT'] = 'degrees'
     atr['X_UNIT'] = 'degrees'
@@ -250,7 +247,6 @@ def extract_attribute_dem_radar(fname):
     '''
     atr = {}
     atr['PROCESSOR'] = 'gamma'
-    atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
 
     # Get basename of file
@@ -328,7 +324,7 @@ DESCRIPTION='''
          if no multilooking applied, do not "_4rlks" in your file names.
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Prepare attributes file for Gamma product for PySAR.\n'+DESCRIPTION,\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -336,14 +332,18 @@ def cmdLineParse():
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
     parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.file = ut.get_file_list(inps.file, abspath=True)
     print('number of files: '+str(len(inps.file)))
 
@@ -380,7 +380,7 @@ def main(argv):
 
 ###################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 
 

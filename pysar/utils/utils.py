@@ -342,7 +342,7 @@ def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, pri
     return outFile
 
 
-def check_loaded_dataset(work_dir='./', inps=None, printMsg=True):
+def check_loaded_dataset(workDir='./', inps=None, printMsg=True):
     '''Check the result of loading data for the following two rules:
         1. file existance
         2. file attribute readability
@@ -350,141 +350,103 @@ def check_loaded_dataset(work_dir='./', inps=None, printMsg=True):
     If inps is valid/not_empty: return updated inps;
     Otherwise, return True/False if all recommended file are loaded and readably or not
 
-    Inputs:
-        work_dir : string, PySAR working directory
-        inps     : Namespace, optional, variable for pysarApp.py. Not needed for check loading result.
-    Outputs:
-        load_complete  : bool, complete loading or not
-        ifgram_file    : string, file name/path of unwrapped interferograms
-        coherence_file : string, file name/path of spatial coherence
-        dem_file_radar : string, file name/path of DEM file in radara coord (for interferograms in radar coord)
-        dem_file_geo   : string, file name/path of DEM file in geo coord
-        lookup_file    : string, file name/path of lookup table file (for interferograms in radar coord)
+    Parameters: workDir : string,
+                    PySAR working directory
+                inps : Namespace, optional
+                    variable for pysarApp.py. Not needed for check loading result.
+    Returns:    loadComplete : bool,
+                    complete loading or not
+            or  inps : Namespace, if it's inputed
+                atr : dict,
+                    metadata of found ifgramStack file
     Example:
-        from pysar.pysarApp import check_loaded_dataset
-        True = check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR') #if True, PROCESS, SLC folder could be removed.
-        inps = check_loaded_dataset(inps.work_dir, inps)
+        #if True, PROCESS, SLC folder could be removed.
+        True = ut.check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR')
+        inps,atr = ut.check_loaded_dataset(inps.workDir, inps)
     '''
-    ##### Find file name/path of all loaded files
-    if not work_dir:
-        work_dir = os.getcwd()
-    work_dir = os.path.abspath(work_dir)
+    if not workDir:
+        workDir = os.getcwd()
+    workDir = os.path.abspath(workDir)
 
     if inps:
-        inps.ifgram_file    = None
-        inps.coherence_file = None
-        inps.dem_radar_file = None
-        inps.dem_geo_file   = None
-        inps.lookup_file    = None
+        inps.stackFile  = None
+        inps.geomFile   = None
+        inps.lookupFile = None
 
-    # Required files - 1. unwrapped interferograms
-    file_list = [work_dir+'/Modified_unwrapIfgram.h5',\
-                 work_dir+'/unwrapIfgram.h5',\
-                 work_dir+'/Modified_LoadedData.h5',\
-                 work_dir+'/LoadedData.h5']
-    ifgram_file = is_file_exist(file_list, abspath=True)
-
-    if not ifgram_file:
+    ##### Required files - interferograms stack
+    fileList = [os.path.join(workDir, 'INPUTS/ifgramStack.h5')]
+    stackFile = is_file_exist(fileList, abspath=True)
+    stackobj = ifgramStack(stackFile)
+    stackobj.open(printMsg=False)
+    if ifgramDatasetNames[0] not in stackobj.f.keys():
+        stackFile = None
+    stackobj.close(printMsg=False)
+    if not stackFile:
         if inps:
             return inps
         else:
             return False
     else:
-        atr = readfile.read_attribute(ifgram_file)
+        atr = readfile.read_attribute(stackFile)
 
-    if printMsg:
-        print('Loaded dataset are processed by %s InSAR software' % atr['INSAR_PROCESSOR'])
-
+    ##### Recommended files - geometry (None if not found)
     if 'X_FIRST' in atr.keys():
         geocoded = True
-        if printMsg:
-            print('Loaded dataset are in geo coordinates')
+        fileList = [os.path.join(workDir, 'INPUTS/geometryGeo.h5')]
     else:
         geocoded = False
-        if printMsg:
-            print('Loaded dataset are in radar coordinates')
+        fileList = [os.path.join(workDir, 'INPUTS/geometryRadar.h5')]
+    geomFile = is_file_exist(fileList, abspath=True)
 
-    if printMsg:
-        print('Unwrapped interferograms: '+ifgram_file)
+    fileList = [os.path.join(workDir, 'INPUTS/geometry*.h5')]
+    lookupFile = get_lookup_file(fileList, abspath=True, printMsg=printMsg)
 
-    # Recommended files (None if not found)
-    # 2. Spatial coherence for each interferogram
-    file_list = [work_dir+'/Modified_coherence.h5',\
-                 work_dir+'/coherence.h5',\
-                 work_dir+'/Modified_Coherence.h5',\
-                 work_dir+'/Coherence.h5']
-    coherence_file = is_file_exist(file_list, abspath=True)
+    if any(i is None for i in [stackFile, geomFile, lookupFile]):
+        loadComplete = False
+    else:
+        loadComplete = True
+
+    ##### print message
     if printMsg:
-        if coherence_file:
-            print('Spatial       coherences: '+coherence_file)
+        print('Loaded dataset are processed by InSAR software: {}'.format(atr['PROCESSOR']))
+        if geocoded:
+            print('Loaded dataset is in GEO coordinates')
         else:
-            print('WARNING: No coherences file found. Cannot use coherence-based network modification without it.')
-            print("It's supposed to be like: "+str(file_list))
-
-    # 3. DEM in radar coord
-    dem_radar_file = get_geometry_file('height', coordType='radar', abspath=True, printMsg=printMsg)
-    if printMsg:
-        if dem_radar_file:
-            print('DEM in radar coordinates: '+dem_radar_file)
-        elif not geocoded:
-            print('WARNING: No DEM file in radar coord found.')
-
-    # 4. DEM in geo coord
-    dem_geo_file = get_geometry_file('height', coordType='geo', abspath=True, printMsg=printMsg)
-    if printMsg:
-        if dem_geo_file:
-            print('DEM in geo   coordinates: '+dem_geo_file)
-        else:
-            print('WARNING: No DEM file in geo coord found.')
-
-    # 5. Lookup table file for geocoding
-    lookup_file = get_lookup_file(inps.lookup_file, abspath=True, printMsg=printMsg)
-    if printMsg:
-        if lookup_file:
-            print('Lookup table        file: '+lookup_file)
-        elif not geocoded:
-            print('No lookup file found! Can not geocode without it!')
+            print('Loaded dataset is in RADAR coordinates')
+        print('Interferograms Stack: {}'.format(stackFile))
+        print('Geometry File       : {}'.format(geomFile))
+        print('Lookup Table File   : {}'.format(lookupFile))
+        if loadComplete:
+            print('-'*50+'\nAll data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
+        print('-'*50)
 
     ##### Update namespace inps if inputed
-    load_complete = True
-    if None in [ifgram_file, coherence_file]:
-        load_complete = False
-    if not geocoded and None in [dem_radar_file, lookup_file]:
-        load_complete = False
-    if dem_geo_file is  None  and not (hasattr(inps, 'insarProcessor') and inps.insarProcessor == 'isce'):
-        load_complete = False
-    if load_complete and printMsg:
-        print('-----------------------------------------------------------------------------------')
-        print('All data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
-    print('-----------------------------------------------------------------------------------')
-
     if inps:
-        inps.ifgram_file    = ifgram_file
-        inps.coherence_file = coherence_file
-        inps.dem_radar_file = dem_radar_file
-        inps.dem_geo_file   = dem_geo_file
-        inps.lookup_file    = lookup_file
-        return inps
+        inps.stackFile  = stackFile
+        inps.geomFile   = geomFile
+        inps.lookupFile = lookupFile
+        inps.geocoded   = geocoded
+        return inps, atr
 
-    ##### Check 
+    ##### Check
     else:
-        return load_complete
+        return loadComplete
 
 
-def is_file_exist(file_list, abspath=True):
+def is_file_exist(fileList, abspath=True):
     '''Check if any file in the file list 1) exists and 2) readable
     Inputs:
-        file_list : list of string, file name with/without wildcards
+        fileList : list of string, file name with/without wildcards
         abspath   : bool, return absolute file name/path or not
     Output:
         file_path : string, found file name/path; None if not.
     '''
     try:
-        file_path = get_file_list(file_list, abspath=abspath)[0]
-        atr_temp = readfile.read_attribute(file_path)
+        file = get_file_list(fileList, abspath=abspath)[0]
+        atr = readfile.read_attribute(file_path)
     except:
-        file_path = None
-    return file_path
+        file = None
+    return file
 
 
 def four_corners(atr):
@@ -553,10 +515,19 @@ def circle_index(atr,circle_par):
     return idx
 
 
+def check_template_auto_value(templateDict):
+    '''Replace auto value based on $PYSAR_HOME/pysar/defaults/template.cfg file.'''
+    templateAutoFile = os.path.join(os.path.dirname(__file__),'../defaults/template.cfg')
+    templateAutoDict = readfile.read_template(templateAutoFile)
+    for key, value in templateDict:
+        if value == 'auto':
+            templateDict[key] = templateAutoDict[key]
+    return templateDict
+
+
 def update_template_file(template_file, extra_dict):
     '''Update option value in template_file with value from input extra_dict'''
-
-    ## Compare and skip updating template_file is no new option value found.
+    ## Compare and skip updating template_file if no new option value found.
     update = False
     orig_dict = readfile.read_template(template_file)
     for key, value in iter(orig_dict.items()):
@@ -568,25 +539,21 @@ def update_template_file(template_file, extra_dict):
 
     ## Update template_file with new value from extra_dict
     tmp_file = template_file+'.tmp'
-    f_orig = open(template_file, 'r')
     f_tmp = open(tmp_file, 'w')
-    for line in f_orig:
-        line = line.strip()
-        c = [i.strip() for i in line.split('=', 1)]
-        if not line.startswith('%') and not line.startswith('#') and len(c) > 1:
+    for line in open(template_file, 'r'):
+        c = [i.strip() for i in line.strip().split('=', 1)]
+        if not line.startswith(('%','#')) and len(c) > 1:
             key = c[0]
             value = str.replace(c[1],'\n','').split("#")[0].strip()
             if key in extra_dict.keys() and extra_dict[key] != value:
                 line = line.replace(value, extra_dict[key], 1)
-                print('    '+key+': '+value+' --> '+extra_dict[key])
+                print('\t{}: {} --> {}'.format(key, value, extra_dict[key]))
         f_tmp.write(line+'\n')
-    f_orig.close()
     f_tmp.close()
 
     # Overwrite exsting original template file
-    mvCmd = 'mv '+tmp_file+' '+template_file
+    mvCmd = 'mv {} {}'.format(tmp_file, template_file)
     os.system(mvCmd)
-
     return template_file
 
 
@@ -791,12 +758,13 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
 
     return False
 
-def update_attribute_or_not(atr_new, atr_orig, update=False):
+def update_attribute_or_not(atr_new, atr_orig):
     '''Compare new attributes with exsiting ones'''
+    update=False
     for key in atr_new.keys():
         value = str(atr_new[key])
-        if (key     in atr_orig.keys() and value == str(atr_orig[key]) or\
-            key not in atr_orig.keys() and value == 'None'):
+        if ((key in atr_orig.keys() and value == str(atr_orig[key]))\
+            or (key not in atr_orig.keys() and value == 'None')):
             next
         else:
             update = True
@@ -816,7 +784,7 @@ def add_attribute(File, atr_new=dict()):
     k = atr['FILE_TYPE']
 
     # Compare new attributes with exsiting ones
-    update = update_attribute_or_not(atr_new, atr, update=False)
+    update = update_attribute_or_not(atr_new, atr)
     if not update:
         print('All updated (removed) attributes already exists (do not exists) and have the same value, skip update.')
         return File
@@ -1051,31 +1019,19 @@ def check_drop_ifgram(h5, printMsg=True):
     return dsListOut
 
 
-def nonzero_mask(File, outFile='mask.h5'):
+def nonzero_mask(File, outFile='mask.h5', datasetName=ifgramDatasetNames[0]):
     '''Generate mask file for non-zero value of input multi-group hdf5 file'''
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    width = int(atr['WIDTH'])
-    length = int(atr['LENGTH'])
-    
-    mask = np.ones([length, width])
-    
-    h5 = h5py.File(File,'r')
-    igramList = sorted(h5[k].keys())
-    igramList = check_drop_ifgram(h5)
-    date12_list = ptime.list_ifgram2date12(igramList)
-    prog_bar = ptime.progress_bar(maxValue=len(igramList), prefix='loading: ')
-    for i in range(len(igramList)):
-        igram = igramList[i]
-        data = h5[k][igram].get(igram)[:]
-        mask[data==0] = 0
-        prog_bar.update(i+1, suffix=date12_list[i])
-    prog_bar.close()
+    if k == 'ifgramStack':
+        mask = ifgramStack(File).nonzero_mask(datasetName=datasetName)
+    else:
+        print('Only ifgramStack file is supported for now, input is '+k)
+        return None
 
     atr['FILE_TYPE'] = 'mask'
     print('writing >>> '+outFile)
     writefile.write(mask, atr, outFile)
-    
     return outFile
 
 
@@ -1102,12 +1058,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
                     file name, e.g. velocity.h5, for all the other file types
     Example:
         mean_list = spatial_average('coherence.h5')[0]
-        ref_list  = spatial_average('unwrapIfgram.h5', box=(100,200,101,201))[0]
         mean_list, date12_list = spatial_average('coherence.h5', 'maskTempCoh.h5', saveList=True)
-        
-        stack = ut.temporal_average('unwrapIfgram.h5', maksFile='mask.h5')
-        mask = ~np.isnan(stack)
-        ref_list = ut.spatial_average('unwrapIfgram.h5', mask, (100,200,101,201))
     '''
     suffix='_spatialAverage.txt'
     if File.endswith(suffix):
@@ -1262,7 +1213,7 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
             fl.write('#   DATE12        Mean      Btemp/days   Bperp/m   Num\n')
             for i in range(line_num):
                 line = '%s    %.4f    %8.0f    %8.1f     %d\n' % (date_list[i], mean_list[i],\
-                                                                  tbase_list[i], pbase_list[i], i+1)
+                                                                  tbase_list[i], pbase_list[i], i)
                 fl.write(line)
         else:
             fl.write('#   DATE12        Mean\n')
@@ -1335,7 +1286,6 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, upd
         if datasetName == 'unwrapPhase':
             phase2range = -1 * float(atr['WAVELENGTH']) / (4.0 * np.pi)
             data *= phase2range
-            #import pdb; pdb.set_trace()
             data *= 1. / (obj.btemp / 365.25).reshape(-1,1,1)
             atr['FILE_TYPE'] = 'velocity'
             atr['UNIT'] = 'm/year'
@@ -1505,13 +1455,11 @@ def azimuth_ground_resolution(atr):
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no azimuth resolution info.')
         return
-    try:    processor = atr['INSAR_PROCESSOR']
-    except: processor = atr['PROCESSOR']
-    if processor in ['roipac','isce']:
+    if atr['PROCESSOR'] in ['roipac','isce']:
         Re = float(atr['EARTH_RADIUS'])
         Height = float(atr['HEIGHT'])
         az_step = float(atr['AZIMUTH_PIXEL_SIZE']) *Re/(Re+Height)
-    elif processor == 'gamma':
+    elif atr['PROCESSOR'] == 'gamma':
         try: atr = readfile.attribute_gamma2roipac(atr)
         except: pass
         az_step = float(atr['AZIMUTH_PIXEL_SIZE'])

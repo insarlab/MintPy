@@ -169,7 +169,7 @@ EXAMPLE='''example:
   mask.py  timeseries*.h5 velocity*.h5  -m temporal_coherence.h5  -t 0.7
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Mask File(s)',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -188,14 +188,18 @@ def cmdLineParse():
     parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
     parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
-############################################################
-def main(argv): 
 
-    inps = cmdLineParse()
+############################################################
+def main(iargs=None): 
+    inps = cmdLineParse(iargs)
     #print '\n****************** mask *********************'
     inps.file = ut.get_file_list(inps.file)
     print('number of file to mask: '+str(len(inps.file)))
@@ -224,5 +228,5 @@ def main(argv):
 
 ############################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

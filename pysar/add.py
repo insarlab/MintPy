@@ -149,15 +149,8 @@ def createParser():
     parser.add_argument('-o','--output', dest='outfile', help='output file name')
     return parser
 
-def cmdLineParse(iargs = None):
-    parser = createParser()
-    inps = parser.parse_args(args=iargs)
-    if not inps.input and not inps.geometryDir:
-        parser.print_usage()
-        sys.exit('ERROR: Empty input directory!')
-    return inps
 
-def cmdLineParse(iargs = None):
+def cmdLineParse(iargs=None):
     parser = createParser()
     inps = parser.parse_args(args=iargs)
     if len(inps.file) < 2:
@@ -179,8 +172,5 @@ def main(iargs=None):
 
 ################################################################################
 if __name__ == '__main__':
-    '''
-    Main driver.
-    '''
     main()
 

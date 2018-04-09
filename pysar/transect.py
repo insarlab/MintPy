@@ -205,7 +205,7 @@ EXAMPLE='''example:
   transect.py AlosA*/velocity.h5 AlosD*/velocity.h5 --line-file  transect_lonlat.xy -d gsi10m.dem
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Generate transect/profile along a line',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -262,8 +262,13 @@ def cmdLineParse():
     fig.add_argument('--fontsize', dest='font_size', type=int, help='font size')
     fig.add_argument('--ms','--markersize', dest='marker_size', type=float, default=2.0,\
                      help='Point marker size. Default: 2.0')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     inps.file = ut.get_file_list(inps.file)
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True
@@ -271,8 +276,8 @@ def cmdLineParse():
 
 
 ############################ Main ###################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     print('\n**************** Transect *********************')
     print('number of file: '+str(len(inps.file)))
     print(inps.file)
@@ -429,5 +434,5 @@ def main(argv):
 
 #####################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

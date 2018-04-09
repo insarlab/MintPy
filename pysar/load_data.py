@@ -10,7 +10,7 @@ from pysar.utils import readfile, datetime as ptime
 from pysar.utils.sensor import sensors
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames
 from pysar.objects.insarobj import ifgram, ifgramStack, geometry
-from pysar.defaults import default_path
+from pysar.defaults import isceAutoPath, roipacAutoPath, gammaAutoPath
 
 
 #################################################################
@@ -37,9 +37,9 @@ DEFAULT_TEMPLATE='''template:
 ##----------Subset Range Setting
 pysar.subset.yx   = auto
 pysar.subset.lalo = auto
-'''.format(default_path.isceAutoPath,\
-           default_path.roipacAutoPath,\
-           default_path.gammaAutoPath)
+'''.format(isceAutoPath,\
+           roipacAutoPath,\
+           gammaAutoPath)
 
 TEMPLATE='''template:
 pysar.load.processor      = auto  #[isce,            roipac,              gamma,             ], auto for isce
@@ -121,7 +121,7 @@ def read_inps2dict(inps):
             inpsDict['PROJECT_NAME'] = os.path.splitext(os.path.basename(file))[1]
 
     ##Here to insert code to check default file path for miami user
-    # Check 1) SCRATCHDIR exists, 2) pysar.auto_path is True and 3) template['PROJECT_NAME'] is not None
+    # Check 1) SCRATCHDIR exists, 2) pysar.defaults.autoPath is True and 3) template['PROJECT_NAME'] is not None
 
     if len(glob.glob(inpsDict['pysar.load.unwFile'])) == 0:
         print('ERROR: No required .unw file found with pattern: {}'.format(inpsDict['pysar.load.unwFile']))

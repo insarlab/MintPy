@@ -523,7 +523,7 @@ EXAMPLE='''example:
   geocode.py  unwrapIfgram.h5     -l geometryRadar.h5   --lalo-step demGeo_tight.h5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Geocode using lookup table',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
@@ -547,14 +547,18 @@ def cmdLineParse():
                              'Support 2 types of input:\n'+\
                              '1) float number - as the output pixel size in degree. Default: 0.001 (~100m)\n'+\
                              '2) DEM file in geo coord - as reference for a) geo coverage and b) pixel size')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ######################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
@@ -588,4 +592,4 @@ def main(argv):
 
 ######################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

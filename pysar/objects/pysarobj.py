@@ -434,7 +434,7 @@ class ifgramStack:
     Attributes         Dictionary for metadata
     /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
     /bperp             1D array of float32 in size of (m,     ) in meter.
-    /dropIfgram        1D array of bool    in size of (m,     ).
+    /dropIfgram        1D array of bool    in size of (m,     ) with 0 for drop and 1 for keep
     /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
     /coherence         3D array of float32 in size of (m, l, w).
     /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
@@ -546,6 +546,23 @@ class ifgramStack:
             data = np.squeeze(data)
         return data
 
+    def nonzero_mask(self, datasetName=ifgramDatasetNames[0]):
+        try: self.f
+        except: self.open(printMsg=False)
+        if datasetName is None:
+            datasetName = ifgramDatasetNames[0]
+
+        dset = self.f[datasetName]
+        mask = np.ones(dset.shape[1:3], dtype=np.bool_)
+        numIfgram = dset.shape[0]
+        for i in range(numIfgram):
+            if self.dropIfgram[i]:
+                mask[dset[i,:,:]==0.] = 0
+                mask[np.isnan(dset[i,:,:])] = 0
+                sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, numIfgram))
+                sys.stdout.flush()
+        print('')
+        return mask
 
     ##### Functions for Network Inversion
     def get_design_matrix(self, refDate=None):

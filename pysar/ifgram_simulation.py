@@ -23,7 +23,7 @@ EXAMPLE='''example:
   ifgram_simulation.py  unwrapIfgram.h5  velocity.h5  -p 0.2  -m mask_aoi.h5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Simulating a set of interferograms based on '+\
                                                  'real interferograms and an existing displacement velocity field.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -43,16 +43,20 @@ def cmdLineParse():
                         help='percentage of unwrapping error, [0.0-1.0]. Default: 0.0')
     unwErr.add_argument('-m','--mask', dest='mask_file', default='mask.h5', \
                         help='mask for pixels with unwrapping error. Default: mask.h5')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     if not 0.0 <= inps.percentage <= 1.0:
         raise argparse.ArgumentTypeError('%r not in range [0.0, 1.0]' % inps.percentage)
     return inps
 
 
 ##############################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
 
     atr = readfile.read_attribute(inps.velocity_file)
     length = int(atr['LENGTH'])
@@ -144,5 +148,5 @@ def main(argv):
 
 ##############################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:]) 
+    main() 
 

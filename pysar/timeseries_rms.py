@@ -165,7 +165,7 @@ def plot_bar4date_rms(inps):
 
 ######################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse()
+    inps = cmdLineParse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file)
 
@@ -197,6 +197,6 @@ def main(iargs=None):
 
 ######################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 

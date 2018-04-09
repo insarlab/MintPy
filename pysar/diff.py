@@ -95,27 +95,14 @@ def diff_file(file1, file2, outFile=None, force=False):
 
 
 #####################################################################################
-def usage():
-    print('''usage:  diff.py  file1  file2  [ outfile ] [--force]
-
-Generates the difference of two input files.
-
-positional arguments:
-  file1/2               file 1 and 2 used for differencing
-
-optional argument:
-  outfile               
-
-example:
-    ''')
-    return
 EXAMPLE='''example:
   diff.py  velocity.h5      velocity_demCor.h5
+  diff.py  timeseries.h5    ECMWF.h5  -o timeseries_ECMWF.h5
   diff.py  timeseries.h5    ECMWF.h5  -o timeseries_ECMWF.h5  --force
   diff.py  unwrapIfgram.h5  reconstruct_unwrapIfgram.h5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Generates the difference of two input files.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -125,17 +112,22 @@ def cmdLineParse():
     parser.add_argument('-o','--output', dest='outfile', help='output file name, default is file1_diff_file2.h5')
     parser.add_argument('--force', action='store_true',\
                         help='Enforce the differencing for the shared dates only for time-series files')
-    inps = parser.parse_args()
+    return parser
+
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
-#####################################################################################
-def main(argv):
-    inps = cmdLineParse()
+
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.outfile = diff_file(inps.file1, inps.file2, inps.outfile, force=inps.force)
     return inps.outfile
 
 
 #####################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])  
+    main()  
 

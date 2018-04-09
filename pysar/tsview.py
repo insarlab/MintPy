@@ -78,7 +78,7 @@ EXAMPLE='''example:
   tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Interactive Time-series Viewer',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -139,8 +139,13 @@ def cmdLineParse():
     #                  help='Point marker color. Default: crimson')
     disp.add_argument('--ew','--edgewidth', dest='edge_width', type=float, default=1.0,\
                       help='Edge width. Default: 1.0')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     if (not inps.disp_fig or inps.fig_base) and not inps.save_fig:
         inps.save_fig = True
     if inps.ylim:
@@ -149,9 +154,9 @@ def cmdLineParse():
 
 
 ###########################################################################################
-if __name__ == '__main__':
+def main(iargs=None):
     #######Actual code.
-    inps = cmdLineParse()
+    inps = cmdLineParse(iargs)
 
     # Time Series Info
     atr = readfile.read_attribute(inps.timeseries_file)
@@ -528,4 +533,9 @@ if __name__ == '__main__':
     if inps.disp_fig:
         plt.show()
     fig_v.canvas.mpl_disconnect(cid)
+
+
+#########################################################################################
+if __name__ == '__main__':
+    main()
 

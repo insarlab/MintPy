@@ -172,7 +172,7 @@ EXAMPLE='''example:
   reference_date.py timeseries_ECMWF_demErr.h5  --template KujuAlosAT422F650.template
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Change reference date of timeseries.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -197,14 +197,18 @@ def cmdLineParse():
     auto.add_argument('--mask', dest='mask_file', default='maskTempCoh.h5',\
                       help='mask file used for ramp estimation\n'+'default: maskTempCoh.h5')
     parser.add_argument('-o','--outfile', help='Output file name.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file)
 
@@ -240,6 +244,6 @@ def main(argv):
 
 ##################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 

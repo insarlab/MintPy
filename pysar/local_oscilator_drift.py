@@ -138,7 +138,7 @@ EXAMPLE='''example:
   local_oscilator_drift.py filt_101020_110220_4rlks.unw
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Local Oscilator Drift (LOD) correction of Envisat',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -148,14 +148,18 @@ def cmdLineParse():
                         help='Slant range distance file, i.e. rangeDistance.h5, geometryGeo.h5')
     parser.add_argument('-o','--output', dest='outfile',\
                         help='Output file name for corrected file.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 #########################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     if not inps.outfile:
         inps.outfile = os.path.splitext(inps.file)[0]+'_LODcor'+os.path.splitext(inps.file)[1]
 
@@ -172,4 +176,4 @@ def main(argv):
 
 #########################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

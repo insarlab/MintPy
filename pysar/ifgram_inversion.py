@@ -570,7 +570,7 @@ def ifgram_inversion(ifgramStackFile='ifgramStack.h5', inps=None):
 
     print('-'*50)
     print('writing >>> '+inps.tempCohFile)
-    atr['FILE_TYPE'] = 'temporal_coherence'
+    atr['FILE_TYPE'] = 'coherence'
     atr['UNIT'] = '1'
     writefile.write(tempCoh, atr, inps.tempCohFile)
 
@@ -743,7 +743,7 @@ Tizzani, P., Berardino, P., Casu, F., Euillades, P., Manzo, M., Ricciardi, G. P.
     doi:http://dx.doi.org/10.1016/j.rse.2006.11.015
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Invert network of interferograms into timeseries.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -778,14 +778,19 @@ def cmdLineParse():
                         help='Do not skip interferograms with zero phase.')
     parser.add_argument('--water-mask','-m', dest='water_mask_file',\
                         help='Skip inversion on the masked out region, i.e. water.')
-    inps = parser.parse_args()
+    return parser
+
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     inps.parallel = False
     return inps
 
 
 ################################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     if inps.templateFile:
         inps = read_template2inps(inps.templateFile, inps)
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
@@ -809,5 +814,5 @@ def main(argv):
 
 ################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

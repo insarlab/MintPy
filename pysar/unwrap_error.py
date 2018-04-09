@@ -410,7 +410,7 @@ DESCRIPTION='''
       c. add linear phase ramp estimated in step a back to the corrected phase in step b.
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Unwrapping Error Correction.'+DESCRIPTION,\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -440,8 +440,13 @@ def cmdLineParse():
                                'pysar.unwrapError.yx = 283,1177,305,1247;350,2100,390,2200')
     bridging.add_argument('--ramp', dest='ramp_type', choices=['plane','quadratic'], default='plane',\
                           help='type of phase ramp to be removed before correction.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     if inps.y and np.mod(len(inps.y),2) != 0:
         raise argparse.ArgumentTypeError('Number of Y coordinates is not even')
     if inps.x and np.mod(len(inps.x),2) != 0:
@@ -450,8 +455,8 @@ def cmdLineParse():
 
 
 ####################################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     # output filename
     ext = os.path.splitext(inps.ifgram_file)[1]
     if not inps.outfile:
@@ -483,5 +488,5 @@ def main(argv):
 
 ####################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

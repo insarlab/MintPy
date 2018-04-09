@@ -10,11 +10,11 @@ import os
 import numpy as np
 
 ## Auto setting for file structure of Univ. of Miami, as shown below. 
-# It required 3 conditions: 1) auto_path = True
+# It required 3 conditions: 1) autoPath = True
 #                           2) $SCRATCHDIR is defined in environmental variable
 #                           3) input custom template with basename same as projectName
 # Change it to False if you are not using it.
-auto_path = True
+autoPath = True
 
 
 ###### Default path of data files from different InSAR processors to be loaded into PySAR
@@ -104,7 +104,7 @@ def read_str2dict(inString, delimiter='=', printMsg=False):
                 
 
 ##----------------------------------------------------------------------------------------##
-def default_path4sentinel_stack(projectName, template=dict()):
+def get_auto_path4sentinel_stack(projectName, template=dict()):
     ## default file pattern
     defDict = read_str2dict(isceAutoPath, printMsg=False)
     for key, value in defDict.item():
@@ -129,7 +129,7 @@ def default_path4sentinel_stack(projectName, template=dict()):
     return template
 
 
-def default_path4roipac(projectName, template=dict()):
+def get_auto_path4roipac(projectName, template=dict()):
     ## default file pattern
     defDict = read_str2dict(roipacAutoPath, printMsg=False)
     for key, value in defDict.item():
@@ -176,7 +176,7 @@ def default_path4roipac(projectName, template=dict()):
     return template
 
 
-def default_path4gamma(projectName, template=dict()):
+def get_auto_path4gamma(projectName, template=dict()):
     ## default file pattern
     defDict = read_str2dict(gammaAutoPath, printMsg=False)
     for key, value in defDict.item():

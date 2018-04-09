@@ -208,7 +208,7 @@ EXAMPLE='''example:
   multilook.py  bperp.rdr  -10 -2 -o bperp_full.rdr
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Multilook.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -219,14 +219,18 @@ def cmdLineParse():
     parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
     parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.file = ut.get_file_list(inps.file)
 
     # check outfile and parallel option
@@ -251,7 +255,7 @@ def main(argv):
 
 ###################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 
 

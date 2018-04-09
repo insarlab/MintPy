@@ -173,7 +173,7 @@ EXAMPLE='''example:
   spatial_filter.py  velocity.h5    sobel
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Spatial filtering of 2D image.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -190,16 +190,18 @@ def cmdLineParse():
                              'Sigma       for low/high pass gaussian filter, default: 3.0\n'+\
                              'Kernel Size for low/high pass average filter, default: 5')
     parser.add_argument('-o','--outfile', help='Output file name.')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     inps.filter_type = inps.filter_type.lower()
     return inps
 
 
 ################################################################################################
-def main(argv):
-    inps = cmdLineParse()
-
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     print('Filter type: '+inps.filter_type)
     if inps.filter_type.startswith(('lowpass','highpass')):
         print('parameters: '+str(inps.filter_par))
@@ -211,7 +213,7 @@ def main(argv):
 
 ################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 
 

@@ -327,7 +327,7 @@ pysar.network.startDate       = auto  #[20090101 / no], auto for no
 pysar.network.endDate         = auto  #[20110101 / no], auto for no
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Modify the network of interferograms',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -385,20 +385,24 @@ def cmdLineParse():
     manual = parser.add_argument_group('Manual Network', 'Manually select/drop/modify network')
     manual.add_argument('--manual', dest='disp_network', action='store_true',\
                         help='display network to manually choose line/interferogram to remove')
+    return parser
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
 
     inps = parser.parse_args()
     inps.aoi_geo_box = None
     inps.aoi_pix_box = None
     if not inps.lookup_file:
         inps.lookup_file = ut.get_lookup_file()
-
     return inps
 
 
 #########################  Main Function  ##############################
-def main(argv):
+def main(iargs=None):
     ##### Read Inputs
-    inps = cmdLineParse()
+    inps = cmdLineParse(iargs)
     inps.file = ut.get_file_list(inps.file)
     date12_orig = pnet.get_date12_list(inps.file[0])
     print('input file(s) to be modified: '+str(inps.file))
@@ -667,7 +671,7 @@ def main(argv):
 
 ########################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 
 

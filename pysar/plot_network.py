@@ -91,11 +91,11 @@ pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no -
 '''
 
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Display Network of Interferograms',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
-    
+
     parser.add_argument('file',\
                         help='file with network information, supporting:\n'+\
                              'HDF5 file: unwrapIfgram.h5, Modified_coherence.h5\n'+\
@@ -139,17 +139,20 @@ def cmdLineParse():
     fig.add_argument('--list', dest='save_list', action='store_true', help='save pairs/date12 list into text file')
     fig.add_argument('--save', dest='save_fig', action='store_true', help='save the figure')
     fig.add_argument('--nodisplay', dest='disp_fig', action='store_false', help='save and do not display the figure')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     if not inps.disp_fig:
         inps.save_fig = True
-    
     return inps
 
 
 ##########################  Main Function  ##############################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     if not inps.disp_fig:
         plt.switch_backend('Agg')
     if inps.template_file:
@@ -289,7 +292,7 @@ def main(argv):
 
 ############################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 
 

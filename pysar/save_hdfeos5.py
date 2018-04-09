@@ -234,7 +234,7 @@ EXAMPLE='''example:
   save_hdfeos5.py timeseries_ECMWF_demErr_refDate_plane.h5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Convert PySAR timeseries product into HDF-EOS5 format\n'+\
                                      'https://earthdata.nasa.gov/user-resources/standards-and-references/hdf-eos5',\
                                      formatter_class=argparse.RawDescriptionHelpFormatter,\
@@ -266,14 +266,17 @@ def cmdLineParse():
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
     parser.add_argument('--subset', action='store_true',\
                         help='Enable subset mode, a.k.a. put suffix _N31700_N32100_E130500_E131100')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
@@ -508,4 +511,4 @@ def main(argv):
 
 ################################################################
 if __name__ == '__main__':
-    main(sys.argv[:])
+    main()

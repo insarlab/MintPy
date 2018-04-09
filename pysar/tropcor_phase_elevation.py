@@ -28,7 +28,7 @@ REFERENCE='''reference:
   69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Stratified tropospheric delay correction using height-correlation approach',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -42,16 +42,20 @@ def cmdLineParse():
     parser.add_argument('--poly-order','-p', dest='poly_order', type=int, default=1, choices=[1,2,3],\
                         help='polynomial order of phase-height correlation. Default: 1')
     parser.add_argument('-o','--outfile', help='output corrected timeseries file name')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     if inps.threshold and (not 0.0 <= inps.threshold <= 1.0):
         raise argparse.ArgumentTypeError('%r not in range [0.0, 1.0]' % inps.threshold)
     return inps
 
 
 ############################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
 
     ##### Check default input arguments
     # default output filename
@@ -217,6 +221,6 @@ def main(argv):
 
 ############################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 

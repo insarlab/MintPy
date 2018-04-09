@@ -24,7 +24,7 @@ EXAMPLE='''example:
 '''
 
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Remove phase ramp',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -43,17 +43,20 @@ def cmdLineParse():
     parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
     parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     if inps.ysub and not len(inps.ysub)%2 == 0:
         raise Exception('ERROR: -y input has to have even length!')
     return inps
 
 
 ######################################
-def main(argv):
-    
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.file = ut.get_file_list(inps.file)
     print('input file(s): '+str(len(inps.file)))
     print(inps.file)
@@ -129,5 +132,5 @@ def main(argv):
 
 ###########################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

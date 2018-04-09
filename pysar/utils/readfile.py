@@ -703,7 +703,6 @@ def attribute_isce2roipac(metaDict, dates=[], baselineDict={}):
     rscDict['LENGTH'] = rscDict['length']
 
     rscDict['PROCESSOR'] = 'isce'
-    rscDict['INSAR_PROCESSOR'] = 'isce'
     rscDict['PLATFORM'] = 'Sentinel1'
 
     rscDict['ANTENNA_SIDE'] = '-1'

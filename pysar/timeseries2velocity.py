@@ -240,7 +240,7 @@ def estimateVelocity(inps):
 
 ############################################################################
 def main(iargs=None):
-    inps = cmdLineParse()
+    inps = cmdLineParse(iargs)
     inps = read_date_info(inps)
     inps.outfile = estimateVelocity(inps)
     print('Done.')

@@ -36,7 +36,7 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs = None):
+def cmdLineParse(iargs=None):
     '''Command line parser.'''
     parser = createParser()
     inps = parser.parse_args(args=iargs)
@@ -131,8 +131,8 @@ def print_pysar_info(fname):
 
 
 ############################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     if not os.path.isfile(inps.file):
         print('ERROR: input file does not exists: {}'.format(inps.file))
         return
@@ -160,5 +160,5 @@ def main(argv):
 
 ############################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

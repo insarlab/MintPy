@@ -20,7 +20,7 @@ EXAMPLE='''example:
  temporal_filter.py timeseries_ECMWF_demErr_refDate.h5 -t 0.3
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Smoothing Timeseries using moving Gaussian window\n'+\
                                      '  https://en.wikipedia.org/wiki/Gaussian_blur',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -30,14 +30,17 @@ def cmdLineParse():
     parser.add_argument('-t','--time-win', dest='time_win', type=float, default=0.3,\
                         help='time window in years (Sigma of the assmued Gaussian distribution.)')
     parser.add_argument('-o','--outfile', help='Output file name.')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ############################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
 
     # Basic info
     atr = readfile.read_attribute(inps.timeseries_file)
@@ -118,4 +121,4 @@ def main(argv):
 
 ############################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

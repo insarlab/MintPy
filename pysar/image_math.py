@@ -113,7 +113,7 @@ EXAMPLE='''example:
   image_math.py  timeseries.h5          '*'  1.5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -122,15 +122,18 @@ def cmdLineParse():
     parser.add_argument('-o','--output', dest='outfile', help='output file name.')
     parser.add_argument('operator', choices=['+','-','*','/','^'], help='mathmatical operator')
     parser.add_argument('operand', metavar='VALUE', type=float, help='value to be operated with input file')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 #######################################################################################
-def main(argv):
-    inps = cmdLineParse()
-
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.outfile = file_operation(inps.file, inps.operator, inps.operand, inps.outfile)  
     print('Done.')
     return inps.outfile
@@ -138,5 +141,5 @@ def main(argv):
 
 #######################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])  
+    main()  
 

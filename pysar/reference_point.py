@@ -62,6 +62,8 @@ def createParser():
                                      epilog=NOTE+'\n'+EXAMPLE)
 
     parser.add_argument('file', type=str, help='file to be referenced.')
+    parser.add_argument('-t','--template', dest='template_file',\
+                        help='template with reference info as below:\n'+TEMPLATE)
     parser.add_argument('-m','--mask', dest='mask_file', help='mask file')
     parser.add_argument('-o', '--outfile', help='output file name, disabled when more than 1 input files.')
     parser.add_argument('--write-data', dest='write_data', action='store_true',\
@@ -70,18 +72,16 @@ def createParser():
                         help='remove reference pixel information from attributes in the file')
     parser.add_argument('--force', action='store_true', help='Enforce the re-selection of reference point.')
 
-    coord_group = parser.add_argument_group('input coordinates')
-    coord_group.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')
-    coord_group.add_argument('-x','--col', dest='ref_x', type=int, help='column/range number of reference pixel')
-    coord_group.add_argument('-l','--lat', dest='ref_lat', type=float, help='latitude  of reference pixel')
-    coord_group.add_argument('-L','--lon', dest='ref_lon', type=float, help='longitude of reference pixel')
+    coord = parser.add_argument_group('input coordinates')
+    coord.add_argument('-y','--row', dest='ref_y', type=int, help='row/azimuth  number of reference pixel')
+    coord.add_argument('-x','--col', dest='ref_x', type=int, help='column/range number of reference pixel')
+    coord.add_argument('-l','--lat', dest='ref_lat', type=float, help='latitude  of reference pixel')
+    coord.add_argument('-L','--lon', dest='ref_lon', type=float, help='longitude of reference pixel')
     
-    coord_group.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
-    coord_group.add_argument('--lookup','--lookup-file', dest='lookup_file',\
-                             help='Lookup table file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
-                                  'Needed for radar coord input file with --lat/lon seeding option.')
-    coord_group.add_argument('-t','--template', dest='template_file',\
-                             help='template with reference info as below:\n'+TEMPLATE)
+    coord.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
+    coord.add_argument('--lookup','--lookup-file', dest='lookup_file',\
+                       help='Lookup table file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
+                            'Needed for radar coord input file with --lat/lon seeding option.')
 
     parser.add_argument('-c','--coherence', dest='coherence_file', default='averageSpatialCoherence.h5',\
                         help='use input coherence file to find the pixel with max coherence for reference pixel.')
@@ -312,7 +312,7 @@ def read_template_file2inps(template_file, inps=None):
     if key in template.keys():
         value = template[key]
         if value == 'auto':
-            inps.coherence_file = 'averageSpatialCoherence.h5'
+            inps.coherence_file = 'avgSpatialCoherence.h5'
         else:
             inps.coherence_file = value
 
@@ -426,7 +426,7 @@ def remove_reference_pixel(File):
 
 #######################################  Main Function  ########################################
 def main(iargs=None):
-    inps = cmdLineParse()
+    inps = cmdLineParse(iargs)
     inps.file = ut.get_file_list(inps.file)[0]
     inps = read_reference_input(inps)
     reference_file(inps)

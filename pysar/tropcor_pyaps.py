@@ -91,7 +91,6 @@ def createParser():
     ##For delay correction
     parser.add_argument('-f','--file', dest='timeseries_file', help='timeseries HDF5 file, i.e. timeseries.h5')
     parser.add_argument('-o', dest='outfile', help='Output file name for trospheric corrected timeseries.')
-
     return parser
 
 

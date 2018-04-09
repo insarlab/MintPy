@@ -21,7 +21,7 @@ EXAMPLE='''example:
   spatial_average.py sum_timeseries_ECMWF_demCor.h5 -m Mask_tempCoh.h5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Calculate average in space',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -29,14 +29,17 @@ def cmdLineParse():
     parser.add_argument('file', nargs='+', help='File(s) to calculate spatial average')
     parser.add_argument('-m','--mask', dest='mask_file', help='Mask file for the calculation')
     parser.add_argument('--nodisplay', dest='disp_fig', action='store_false', help='save and do not display the figure')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 #############################  Main Function  ################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     print('\n*************** Spatial Average ******************')
     for File in inps.file:
         mean_list, date_list = ut.spatial_average(File, inps.mask_file, saveList=True)
@@ -58,4 +61,4 @@ def main(argv):
 
 ##############################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

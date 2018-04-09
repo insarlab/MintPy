@@ -76,7 +76,7 @@ DESCRIPTION='''
   one file: filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Prepare attributes file for ROI_PAC products for PySAR.\n'+\
                                      DESCRIPTION,\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -85,14 +85,18 @@ def cmdLineParse():
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
     parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.file = ut.get_file_list(inps.file, abspath=True)
 
     # Check input file type
@@ -120,7 +124,7 @@ def main(argv):
 
 ###################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 
 

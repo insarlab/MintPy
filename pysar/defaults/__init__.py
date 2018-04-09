@@ -2,6 +2,6 @@
 
 
 from __future__ import print_function
-from .default_path import *
+from .auto_path import *
 
 

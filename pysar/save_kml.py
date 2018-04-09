@@ -188,7 +188,7 @@ EXAMPLE='''example:
   save_kml.py demGeo.h5 --cbar-label Elevation
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -229,14 +229,17 @@ def cmdLineParse():
                      help='marker size of reference point, default: 10')
     ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',\
                      help='marker symbol of reference point')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ############################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
 
     ##### 1. Read data
     atr = readfile.read_attribute(inps.file)
@@ -272,5 +275,5 @@ def main(argv):
 
 #######################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

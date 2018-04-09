@@ -15,7 +15,7 @@ from pysar.objects import ifgramDatasetNames
 
 #################################  Usage  ####################################
 EXAMPLE='''example:
-  temporal_average.py ifgramStack.h5 -d coherence -o averageSpatialCoherence.h5
+  temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoherence.h5
 '''
 
 def createParser():
@@ -61,7 +61,7 @@ def check_output_filename(inps):
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    inps = cmdLineParse()
+    inps = cmdLineParse(iargs)
     inps.outfile = check_output_filename(inps)
     inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
     print('Done.')
