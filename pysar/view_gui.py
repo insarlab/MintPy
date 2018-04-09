@@ -69,92 +69,23 @@ unit_options = ["cm", "dm", "m",  "km", "", "cm/yr", "dm/yr", "m/yr", "km/yr"]
 attributes = []
 update_in_progress = False
 
+settings_to_variable = None
+
 
 def parse_settings():
 
     global settings_file
-
-    settings_to_variable = {
-
-        'input.file': h5_file,
-        'input.epoch': epoch,
-        'input.mask': mask_file,
-        'output.save': save,
-        'output.outfile': output_file,
-
-        'display.min': y_lim_lower,
-        'display.max': y_lim_upper,
-        'display.unit': unit,
-        'display.colormap': colormap,
-        'display.projection': projection,
-        'display.wrap': wrap,
-        'display.opposite': opposite,
-        'display.flip_lr': lr_flip,
-        'display.flip_ud': ud_flip,
-        'display.alpha': transparency,
-
-        'dem.dem_file': dem_file,
-        'dem.no_shade': shading,
-        'dem.no_contour': countours,
-        'dem.contour_smooth': countour_smoothing,
-        'dem.contour_step': countour_step,
-
-        'subset.x_start': subset_x_from,
-        'subset.x_end': subset_x_to,
-        'subset.y_start': subset_y_from,
-        'subset.y_end': subset_y_to,
-        'subset.lat_start': subset_lat_from,
-        'subset.lat_end': subset_lat_to,
-        'subset_lon_start': subset_lon_from,
-        'subset_lon_end': subset_lon_to,
-
-        'ref.ref_date': ref_date,
-        'ref.ref_lat': ref_lat,
-        'ref.ref_lon': ref_lon,
-        'ref.ref_x': ref_x,
-        'ref.ref_y': ref_y,
-        'ref.no_reference': show_ref,
-        'ref.ref_color': ref_color,
-        'ref.ref_symbol': ref_sym,
-
-        'fig.font_size': font_size,
-        'fig.dpi': plot_dpi,
-        'fig.row': row_num,
-        'fig.col': col_num,
-        'fig.axis': axis_show,
-        'fig.ticks': tick_show,
-        'fig.title_in': title_in,
-        'fig.fig_title': title,
-        'fig.fig_size_w': fig_size_width,
-        'fig.fig_size_h': fig_size_height,
-        'fig.fig_ext': fig_ext,
-        'fig.fig_num': fig_num,
-        'fig.width_space': fig_w_space,
-        'fig.height_space': fig_h_space,
-        'fig.coord': coords,
-
-        'map.coastline': coastline,
-        'map.resolution': resolution,
-        'map.lalo_label': lalo_label,
-        'map.lalo_step': lalo_step,
-        'map.scalebar_dist': scalebar_distance,
-        'map.scalebar_lat': scalebar_lat,
-        'map.scalebar_lon': scalebar_lon,
-        'map.no_scalebar': show_scalebar
-
-
-    }
 
     with open(settings_file.get(), 'r') as the_settings_file:
         for line in the_settings_file:
             if line is not "" and "=" in line:
                 parts = line.split("=")
                 key = parts[0].rstrip().strip("\t")
-                value = parts[1].strip(" \t\t").strip("\n")
+                value = parts[1].strip(" \t\t").strip("\n").rstrip()
 
                 if key in settings_to_variable.keys():
+
                     if value.lower() == 'false':
-                        print(key)
                         value = 0
                     elif value.lower() == 'true':
                         value = 1
@@ -164,7 +95,33 @@ def parse_settings():
                         on_file_selection(inps.file)
 
                     settings_to_variable[key].set(value)
-    print(inps.file)
+
+
+def write_settings_file():
+
+    output = ""
+
+    for setting in sorted(settings_to_variable.keys()):
+
+        value = str(settings_to_variable[setting].get())
+
+        if setting in [lr_flip, ud_flip, wrap, opposite, shading, countours, axis_show, cbar_show, title_show,
+                       tick_show, title_in, coastline, lalo_label, show_scalebar] and value is 0:
+            value = "False"
+        elif setting in [lr_flip, ud_flip, wrap, opposite, shading, countours, axis_show, cbar_show, title_show,
+                         tick_show, title_in, coastline, lalo_label, show_scalebar] and value is 1:
+            value = "True"
+
+        if value != "":
+            output += "{0:35} = {1:10}\n".format(str(setting), str(value))
+            # "{0:35} = {1:10}\n".format(name, value)
+
+    f = filedialog.asksaveasfile(mode='w', defaultextension=".txt")
+    if f is None:  # asksaveasfile return `None` if dialog closed with "cancel".
+        return
+
+    f.write(output)
+    f.close()
 
 
 def cmdLineParse(argv):
@@ -889,7 +846,7 @@ def main():
         fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, lalo_label, lalo_step, \
         scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_color, ref_sym, ref_date, \
         epoch_option_menu, epoch, epoch_list, excludes_list_box, use_default, ref_date_option_menu, ref_dates_list, show_ref,\
-        settings_file_button, settings_file
+        settings_file_button, settings_file, settings_to_variable
 
     '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
@@ -1467,6 +1424,8 @@ def main():
     output_file_label = Label(output_frame, text="Output File: ")
     output_file_entry = Entry(output_frame, textvariable=output_file, width=12)
 
+    save_settings_button = Button(frame, text="Save Settings", command=write_settings_file)
+
 
 
 
@@ -1704,6 +1663,8 @@ def main():
     output_file_label.pack(side=LEFT, padx=(0, 5))
     output_file_entry.pack(side=LEFT)
 
+    save_settings_button.pack(side=TOP)
+
     space = Frame(frame)
     space.config(height=50)
     space.pack(side=LEFT)
@@ -1714,6 +1675,76 @@ def main():
     if inps.settings:
         parse_settings()
        #sys.exit(0)
+
+    settings_to_variable = {
+
+        'input.file': h5_file,
+        'input.epoch': epoch,
+        'input.mask': mask_file,
+        'output.save': save,
+        'output.outfile': output_file,
+
+        'display.min': y_lim_lower,
+        'display.max': y_lim_upper,
+        'display.unit': unit,
+        'display.colormap': colormap,
+        'display.projection': projection,
+        'display.wrap': wrap,
+        'display.opposite': opposite,
+        'display.flip_lr': lr_flip,
+        'display.flip_ud': ud_flip,
+        'display.alpha': transparency,
+
+        'dem.dem_file': dem_file,
+        'dem.no_shade': shading,
+        'dem.no_contour': countours,
+        'dem.contour_smooth': countour_smoothing,
+        'dem.contour_step': countour_step,
+
+        'subset.x_start': subset_x_from,
+        'subset.x_end': subset_x_to,
+        'subset.y_start': subset_y_from,
+        'subset.y_end': subset_y_to,
+        'subset.lat_start': subset_lat_from,
+        'subset.lat_end': subset_lat_to,
+        'subset_lon_start': subset_lon_from,
+        'subset_lon_end': subset_lon_to,
+
+        'ref.ref_date': ref_date,
+        'ref.ref_lat': ref_lat,
+        'ref.ref_lon': ref_lon,
+        'ref.ref_x': ref_x,
+        'ref.ref_y': ref_y,
+        'ref.no_reference': show_ref,
+        'ref.ref_color': ref_color,
+        'ref.ref_symbol': ref_sym,
+
+        'fig.font_size': font_size,
+        'fig.dpi': plot_dpi,
+        'fig.row': row_num,
+        'fig.col': col_num,
+        'fig.axis': axis_show,
+        'fig.ticks': tick_show,
+        'fig.title_in': title_in,
+        'fig.fig_title': title,
+        'fig.fig_size_w': fig_size_width,
+        'fig.fig_size_h': fig_size_height,
+        'fig.fig_ext': fig_ext,
+        'fig.fig_num': fig_num,
+        'fig.width_space': fig_w_space,
+        'fig.height_space': fig_h_space,
+        'fig.coord': coords,
+
+        'map.coastline': coastline,
+        'map.resolution': resolution,
+        'map.lalo_label': lalo_label,
+        'map.lalo_step': lalo_step,
+        'map.scalebar_dist': scalebar_distance,
+        'map.scalebar_lat': scalebar_lat,
+        'map.scalebar_lon': scalebar_lon,
+        'map.no_scalebar': show_scalebar
+
+    }
 
     mainloop()
 
