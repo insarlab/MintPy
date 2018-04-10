@@ -18,16 +18,9 @@ import pysar.subset as subset
 
 ###############################  Usage  ################################
 EXAMPLE='''example:
-  modify_network.py unwrapIfgram.h5 coherence.h5 --template pysarApp_template.txt
-  modify_network.py unwrapIfgram.h5 coherence.h5 --reset
-
-  modify_network.py unwrapIfgram.h5 coherence.h5 -t 365 -b 200
-  modify_network.py unwrapIfgram.h5 coherence.h5 --coherence-base coherence.h5 --mask Mask.h5 --min-coherence 0.7
-  modify_network.py unwrapIfgram.h5 -r Modified_coherence.h5
-  modify_network.py unwrapIfgram.h5 --start-date 20080520  --end-date 20110101
-  modify_network.py unwrapIfgram.h5 --exclude-date 20080520 20090816
-  modify_network.py unwrapIfgram.h5 --exclude-ifg-index 3:9 11 23
-  modify_network.py unwrapIfgram.h5 --manual
+  modify_network.py INPUTS/ifgramStack.h5 -t pysarApp_template.txt
+  modify_network.py INPUTS/ifgramStack.h5 --reset
+  modify_network.py INPUTS/ifgramStack.h5 --manual
 '''
 
 TEMPLATE='''
@@ -57,7 +50,7 @@ def createParser():
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
     parser.add_argument('file', help='Files to modify/drop network, e.g. INPUTS/ifgramStack.h5.')
-    parser.add_argument('--template', dest='template_file', help='Template file with input options:\n'+TEMPLATE+'\n')
+    parser.add_argument('-t','--template', dest='template_file', help='Template file with input options:\n'+TEMPLATE+'\n')
     parser.add_argument('--reset', action='store_true',\
                         help='restore all interferograms in the file, by marking all dropIfgram=True')
     parser.add_argument('--plot', action='store_true', help='plot and save the result to image files.')
@@ -66,8 +59,8 @@ def createParser():
                              'mask.h5 from unwrapIfgram.h5 or averageSpatialCoherence.h5 from coherence.h5')
 
     #1
-    parser.add_argument('-t','--max-tbase', dest='tempBaseMax', type=float, help='max temporal baseline in days')
-    parser.add_argument('-b','--max-pbase', dest='perpBaseMax', type=float, help='max perpendicular baseline in meters')
+    parser.add_argument('--max-tbase', dest='tempBaseMax', type=float, help='max temporal baseline in days')
+    parser.add_argument('--max-pbase', dest='perpBaseMax', type=float, help='max perpendicular baseline in meters')
     parser.add_argument('-r','--reference', dest='referenceFile',\
                         help='Reference hdf5 / list file with network information.\n'\
                              'i.e. Modified_unwrapIfgram.h5, Pairs.list')
@@ -144,6 +137,7 @@ def read_template2inps(template_file, inps=None):
     if not inps:
         inps = cmdLineParse()
     inpsDict = vars(inps)
+    print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(inps.template_file)
     template = ut.check_template_auto_value(template)
 
@@ -203,6 +197,7 @@ def reset_network(stackFile):
     else:
         with h5py.File(stackFile, 'r+') as f:
             f['dropIfgram'][:] = True
+        ut.touch(os.path.splitext(os.path.basename(inps.file))[0]+'_coherence_spatialAvg.txt')
     return stackFile
 
 

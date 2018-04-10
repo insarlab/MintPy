@@ -317,7 +317,7 @@ def auto_adjust_yaxis(ax, dataList, fontSize=12, ymin=None, ymax=None):
 
 
 ####################################### Plot ################################################
-def plot_coherence_history(ax, date12List, coherence_list, plot_dict={}):
+def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
     '''Plot min/max Coherence of all interferograms for each date'''
     # Figure Setting
     if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
@@ -330,13 +330,13 @@ def plot_coherence_history(ax, date12List, coherence_list, plot_dict={}):
     # Get date list
     m_dates = [date12.split('_')[0] for date12 in date12List]
     s_dates = [date12.split('_')[1] for date12 in date12List]
-    date8_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
+    dateList = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
 
-    dates, datevector = ptime.date_list2vector(date8_list)
+    dates, datevector = ptime.date_list2vector(dateList)
     bar_width = ut.most_common(np.diff(dates).tolist())*3/4
     x_list = [i-bar_width/2 for i in dates]
 
-    coh_mat = pnet.coherence_matrix(date12List, coherence_list)
+    coh_mat = pnet.coherence_matrix(date12List, cohList)
 
     ax.bar(x_list, np.nanmax(coh_mat, axis=0), bar_width.days, label='Max Coherence')
     ax.bar(x_list, np.nanmin(coh_mat, axis=0), bar_width.days, label='Min Coherence')
@@ -367,8 +367,8 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
                       markercolor
                       markersize
 
-                      coherence_list : list of float, coherence value of each interferogram, len = number of ifgrams
-                      disp_min/max :  float, min/max range of the color display based on coherence_list
+                      cohList : list of float, coherence value of each interferogram, len = number of ifgrams
+                      disp_min/max :  float, min/max range of the color display based on cohList
                       colormap : string, colormap name
                       coh_thres : float, coherence of where to cut the colormap for display
                       disp_title : bool, show figure title or not, default: True
@@ -383,16 +383,16 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
     if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
     # For colorful display of coherence
-    if not 'coherence_list' in plot_dict.keys():  plot_dict['coherence_list'] = None
-    if not 'cbar_label'     in plot_dict.keys():  plot_dict['cbar_label']     = 'Coherence'
-    if not 'disp_min'       in plot_dict.keys():  plot_dict['disp_min']       = 0.2
-    if not 'disp_max'       in plot_dict.keys():  plot_dict['disp_max']       = 1.0
-    if not 'colormap'       in plot_dict.keys():  plot_dict['colormap']       = 'RdBu'
-    if not 'disp_title'     in plot_dict.keys():  plot_dict['disp_title']     = True
-    if not 'coh_thres'      in plot_dict.keys():  plot_dict['coh_thres']      = None
-    if not 'disp_drop'      in plot_dict.keys():  plot_dict['disp_drop']      = True
-    if not 'every_year'     in plot_dict.keys():  plot_dict['every_year']     = 1
-    coh_list = plot_dict['coherence_list']
+    if not 'cohList'     in plot_dict.keys():  plot_dict['cohList']    = None
+    if not 'cbar_label'  in plot_dict.keys():  plot_dict['cbar_label'] = 'Average Spatial Coherence'
+    if not 'disp_min'    in plot_dict.keys():  plot_dict['disp_min']   = 0.2
+    if not 'disp_max'    in plot_dict.keys():  plot_dict['disp_max']   = 1.0
+    if not 'colormap'    in plot_dict.keys():  plot_dict['colormap']   = 'RdBu'
+    if not 'disp_title'  in plot_dict.keys():  plot_dict['disp_title'] = True
+    if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']  = None
+    if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']  = True
+    if not 'every_year'  in plot_dict.keys():  plot_dict['every_year'] = 1
+    cohList = plot_dict['cohList']
     disp_min = plot_dict['disp_min']
     disp_max = plot_dict['disp_max']
     coh_thres = plot_dict['coh_thres']
@@ -401,7 +401,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     # Date Convert
     dateList = ptime.yyyymmdd(sorted(dateList))
     dates, datevector = ptime.date_list2vector(dateList)
-    tbase_list = ptime.date_list2tbase(dateList)[0]
+    tbaseList = ptime.date_list2tbase(dateList)[0]
 
     ## maxBperp and maxBtemp
     ifgram_num = len(date12List)
@@ -412,7 +412,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         m_idx = dateList.index(m_date)
         s_idx = dateList.index(s_date)
         pbase12[i] = pbaseList[s_idx] - pbaseList[m_idx]
-        tbase12[i] = tbase_list[s_idx] - tbase_list[m_idx]
+        tbase12[i] = tbaseList[s_idx] - tbaseList[m_idx]
     print(('max perpendicular baseline: %.2f m' % (np.max(np.abs(pbase12)))))
     print(('max temporal      baseline: %d days' % (np.max(tbase12))))
 
@@ -435,13 +435,13 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     # Ploting
     #ax=fig.add_subplot(111)
     ## Colorbar when conherence is colored
-    if coh_list is not None:
-        data_min = min(coh_list)
-        data_max = max(coh_list)
+    if cohList is not None:
+        data_min = min(cohList)
+        data_max = max(cohList)
         # Normalize
         normalization = False
         if normalization:
-            coh_list = [(coh-data_min) / (data_min-data_min) for coh in coh_list]
+            cohList = [(coh-data_min) / (data_min-data_min) for coh in cohList]
             disp_min = data_min
             disp_max = data_max
 
@@ -456,12 +456,12 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             # Use lower/upper part of colormap to emphasis dropped interferograms
             if not coh_thres:
                 # Find proper cut percentage so that all keep pairs are blue and drop pairs are red
-                coh_list_keep = [coh_list[i] for i in idx_date12_keep]
-                coh_list_drop = [coh_list[i] for i in idx_date12_drop]
-                if coh_list_drop:
-                    coh_thres = max(coh_list_drop)
+                cohList_keep = [cohList[i] for i in idx_date12_keep]
+                cohList_drop = [cohList[i] for i in idx_date12_drop]
+                if cohList_drop:
+                    coh_thres = max(cohList_drop)
                 else:
-                    coh_thres = min(coh_list_keep)
+                    coh_thres = min(cohList_keep)
             if coh_thres < disp_min:
                 disp_min = 0.0
                 if printMsg:
@@ -484,8 +484,8 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
 
         #plot low coherent ifgram first and high coherence ifgram later
-        coh_list_keep = [coh_list[date12List.index(i)] for i in date12List_keep]
-        date12List_keep = [x for _,x in sorted(zip(coh_list_keep, date12List_keep))]
+        cohList_keep = [cohList[date12List.index(i)] for i in date12List_keep]
+        date12List_keep = [x for _,x in sorted(zip(cohList_keep, date12List_keep))]
 
     ## Dot - SAR Acquisition
     if idx_date_keep:
@@ -506,8 +506,8 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             idx2 = dateList.index(date2)
             x = np.array([dates[idx1], dates[idx2]])
             y = np.array([pbaseList[idx1], pbaseList[idx2]])
-            if coh_list:
-                coh = coh_list[date12List.index(date12)]
+            if cohList:
+                coh = cohList[date12List.index(date12)]
                 coh_idx = (coh - disp_min) / (disp_max - disp_min)
                 ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
             else:
@@ -520,8 +520,8 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         idx2 = dateList.index(date2)
         x = np.array([dates[idx1], dates[idx2]])
         y = np.array([pbaseList[idx1], pbaseList[idx2]])
-        if coh_list is not None:
-            coh = coh_list[date12List.index(date12)]
+        if cohList is not None:
+            coh = cohList[date12List.index(date12)]
             coh_idx = (coh - disp_min) / (disp_max - disp_min)
             ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
         else:
@@ -545,11 +545,11 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     return ax
 
 
-def plot_perp_baseline_hist(ax, date8_list, pbaseList, plot_dict={}, date8_list_drop=[]):
+def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop=[]):
     ''' Plot Perpendicular Spatial Baseline History
     Inputs
         ax : matplotlib axes object
-        date8_list : list of string, date in YYYYMMDD format
+        dateList : list of string, date in YYYYMMDD format
         pbaseList : list of float, perp baseline 
         plot_dict : dictionary with the following items:
                     fontsize
@@ -558,7 +558,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbaseList, plot_dict={}, date8_list_
                     markersize
                     disp_title : bool, show figure title or not, default: True
                     every_year : int, number of years for the major tick on xaxis
-        date8_list_drop : list of string, date dropped in YYYYMMDD format
+        dateList_drop : list of string, date dropped in YYYYMMDD format
                           e.g. ['20080711', '20081011']
     Output:
         ax : matplotlib axes object
@@ -573,14 +573,14 @@ def plot_perp_baseline_hist(ax, date8_list, pbaseList, plot_dict={}, date8_list_
     transparency = 0.7
 
     # Date Convert
-    dates, datevector = ptime.date_list2vector(date8_list)
+    dates, datevector = ptime.date_list2vector(dateList)
 
     # Get index of date used and dropped
-    #date8_list_drop = ['20080711', '20081011']  # for debug
-    idx_keep = list(range(len(date8_list)))
+    #dateList_drop = ['20080711', '20081011']  # for debug
+    idx_keep = list(range(len(dateList)))
     idx_drop = []
-    for i in date8_list_drop:
-        idx = date8_list.index(i)
+    for i in dateList_drop:
+        idx = dateList.index(i)
         idx_keep.remove(idx)
         idx_drop.append(idx)
 
@@ -612,7 +612,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbaseList, plot_dict={}, date8_list_
     return ax
 
 
-def plot_coherence_matrix(ax, date12List, coherence_list, date12List_drop=[], plot_dict={}):
+def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict={}):
     '''Plot Coherence Matrix of input network
     
     if date12List_drop is not empty, plot KEPT pairs in the upper triangle and
@@ -626,23 +626,22 @@ def plot_coherence_matrix(ax, date12List, coherence_list, date12List_drop=[], pl
     if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
     if not 'cbar_label'  in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
 
-    coh_mat = pnet.coherence_matrix(date12List, coherence_list)
+    coh_mat = pnet.coherence_matrix(date12List, cohList)
 
     if date12List_drop:
         # Date Convert
         m_dates = [i.split('_')[0] for i in date12List]
         s_dates = [i.split('_')[1] for i in date12List]
-        date6_list = ptime.yymmdd(sorted(list(set(m_dates + s_dates))))
+        dateList = sorted(list(set(m_dates + s_dates)))
         # Set dropped pairs' value to nan, in upper triangle only.
         for date12 in date12List_drop:
-            idx1, idx2 = [date6_list.index(i) for i in date12.split('_')]
+            idx1, idx2 = [dateList.index(i) for i in date12.split('_')]
             coh_mat[idx1, idx2] = np.nan
 
     #Show diagonal value as black, to be distinguished from un-selected interferograms
     diag_mat = np.diag(np.ones(coh_mat.shape[0]))
     diag_mat[diag_mat == 0.] = np.nan
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
-    #Show coherence matrix
     im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0, interpolation='nearest')
 
     date_num = coh_mat.shape[0]

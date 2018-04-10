@@ -8,8 +8,7 @@
 #
 
 
-import os
-import sys
+import os, sys
 import datetime
 import itertools
 
@@ -25,9 +24,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scipy.sparse as sparse
 from scipy.sparse.csgraph import minimum_spanning_tree
 
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
+from pysar.utils import datetime as ptime, readfile
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar.objects import ifgramStack, timeseries
 
 
 ##################################################################
@@ -183,7 +182,7 @@ def date12_list2index(date12_list, date_list=[]):
     return pairs_idx
 
 
-def get_date12_list(File, check_drop_ifgram=False):
+def get_date12_list(File, dropIfgram=False):
     '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
     Inputs:
         File - string, path/name of input multi-group hdf5 file or text file
@@ -195,27 +194,19 @@ def get_date12_list(File, check_drop_ifgram=False):
         date12List = get_date12_list('unwrapIfgram.h5', check_drop_ifgram=True)
         date12List = get_date12_list('Pairs.list')
     '''
-    #print 'read pairs info from '+File
     date12_list = []
     ext = os.path.splitext(File)[1].lower()
     if ext == '.h5':
         k = readfile.read_attribute(File)['FILE_TYPE']
-        h5 = h5py.File(File, 'r')
-        epochList = sorted(h5[k].keys())
-        for epoch in epochList:
-            atr = h5[k][epoch].attrs
-            if not check_drop_ifgram or 'DROP_IFGRAM' not in atr.keys() or atr['DROP_IFGRAM'] == 'no':
-                date12 = atr['DATE12']
-                try: date12 = date12.decode('utf-8')
-                except: pass
-                date12_list.append(date12)
-        h5.close()
+        if k == 'ifgramStack':
+            date12_list = ifgramStack(File).get_date12_list(dropIfgram=dropIfgram)
+        else:
+            return None
     else:
         txtContent = np.loadtxt(File, dtype=bytes).astype(str)
         if len(txtContent.shape) == 1:
             txtContent = txtContent.reshape(-1,1)
         date12_list = [i for i in txtContent[:,0]]
-
     date12_list = sorted(date12_list)
     return date12_list
 

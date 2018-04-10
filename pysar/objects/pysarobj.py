@@ -137,17 +137,17 @@ class timeseries:
         #Temporal baseline in days
         if 'REF_DATE' in self.metadata.keys():
             self.refIndex = self.dateList.index(self.metadata['REF_DATE'])
-            self.btemp = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
+            self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
         else:
             self.refIndex = None
 
         #Perpendicular baseline in meters
         if 'bperp' in self.f.keys():
-            self.bperp = self.f['bperp'][:]
+            self.pbase = self.f['bperp'][:]
             if self.refIndex:
-                self.bperp -= self.bperp[self.refIndex]
+                self.pbase -= self.pbase[self.refIndex]
         else:
-            self.bperp = None
+            self.pbase = None
 
     def get_metadata(self):
         self.f = h5py.File(self.file, 'r')
@@ -497,7 +497,7 @@ class ifgramStack:
             self.datasetList += ['{}-{}'.format(dsName,i) for i in self.date12List]
 
         #Time in timeseries domain
-        self.dateList = sorted(list(set(np.hstack((self.mDates, self.sDates)))))
+        self.dateList = self.get_date_list(dropIfgram=False)
         self.numDate = len(self.dateList)
 
     def get_metadata(self):
@@ -592,6 +592,16 @@ class ifgramStack:
         sDates = np.array([i.decode('utf8') for i in dates[:,1]])
         date12List = ['{}_{}'.format(i,j) for i,j in zip(mDates, sDates)]
         return date12List
+
+    def get_date_list(self, dropIfgram=False):
+        with h5py.File(self.file, 'r') as f:
+            dates = f['date'][:]
+            if dropIfgram:
+                dates = dates[f['dropIfgram'][:],:]
+        mDates = np.array([i.decode('utf8') for i in dates[:,0]])
+        sDates = np.array([i.decode('utf8') for i in dates[:,1]])
+        dateList = sorted(list(set(np.hstack((mDates, sDates)))))
+        return dateList
 
     def nonzero_mask(self, datasetName=None, printMsg=True, dropIfgram=True):
         '''Return the common mask of pixels with non-zero value in dataset of all ifgrams.
