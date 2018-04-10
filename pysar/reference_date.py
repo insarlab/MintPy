@@ -178,12 +178,12 @@ def createParser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('timeseries_file', help='Timeseries File')
-    parser.add_argument('--ref-date', dest='ref_date', default='auto',\
+    parser.add_argument('-r','--ref-date', dest='ref_date', default='auto',\
                         help='reference date or method, default: auto. e.g.\n'+\
                              '20101120\n'+\
                              'reference_date.txt - text file with date in YYYYMMDD format in it\n'+\
                              'auto               - choose date with min residual standard deviation')
-    parser.add_argument('--template', dest='template_file',\
+    parser.add_argument('-t','--template', dest='template_file',\
                         help='template file with options below:\n'+TEMPLATE+'\n')
 
     auto = parser.add_argument_group('Auto referencing in time based on max phase residual coherence')

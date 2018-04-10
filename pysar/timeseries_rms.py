@@ -73,7 +73,7 @@ def createParser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('timeseries_file', help='Timeseries file')
-    parser.add_argument('--template','-t', dest='template_file',\
+    parser.add_argument('-t','--template', dest='template_file',\
                         help='template file with options below:\n'+TEMPLATE+'\n')
     parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5',\
                         help='mask file for estimation')

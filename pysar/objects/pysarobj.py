@@ -123,39 +123,41 @@ class timeseries:
     def open(self, printMsg=True):
         if printMsg:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
-        self.f = h5py.File(self.file,'r')
         self.get_metadata()
-        self.numDate, self.length, self.width = self.f[self.name].shape
+        self.get_size()
         self.numPixel = self.length * self.width
 
-        dates = self.f['date'][:]
+        with h5py.File(self.file, 'r') as f:
+            dates = f['date'][:]
+            try:
+                self.pbase = f['bperp'][:]
+                self.pbase -= self.pbase[self.refIndex]
+            except:
+                self.pbase = None
         self.times = np.array([dt(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in dates])
+        self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
         self.dateList = [i.decode('utf8') for i in dates]
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]  #list of float for year, 2014.95
         self.datasetList = list(self.dateList)
 
-        #Temporal baseline in days
-        if 'REF_DATE' in self.metadata.keys():
-            self.refIndex = self.dateList.index(self.metadata['REF_DATE'])
-            self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
-        else:
-            self.refIndex = None
-
-        #Perpendicular baseline in meters
-        if 'bperp' in self.f.keys():
-            self.pbase = self.f['bperp'][:]
-            if self.refIndex:
-                self.pbase -= self.pbase[self.refIndex]
-        else:
-            self.pbase = None
-
     def get_metadata(self):
-        self.f = h5py.File(self.file, 'r')
-        self.metadata = dict(self.f.attrs)
+        with h5py.File(self.file, 'r') as f:
+            self.metadata = dict(f.attrs)
+            dates = f['date'][:]
         for key, value in self.metadata.items():
             try:     self.metadata[key] = value.decode('utf8')
             except:  self.metadata[key] = value
+        ## ref_date/index
+        dateList = [i.decode('utf8') for i in dates]
+        if 'REF_DATE' not in self.metadata.keys():
+            self.metadata['REF_DATE'] = dateList[0]
+        self.refIndex = dateList.index(self.metadata['REF_DATE'])
         return self.metadata
+
+    def get_size(self):
+        with h5py.File(self.file, 'r') as f:
+            self.numDate, self.length, self.width = f[self.name].shape
+        return self.numDate, self.length, self.width
 
     def read(self, datasetName=None, box=None, printMsg=True):
         '''Read dataset from timeseries file
@@ -170,26 +172,29 @@ class timeseries:
                     data = tsobj.read(datasetName=['20161020','20161026','20161101'])
                     data = tsobj.read(box=(100,300,500,800))
         '''
-        try: self.f
-        except: self.open(printMsg=False)
         if printMsg:
             print('reading {} data from file: {} ...'.format(self.name, self.file))
-        ds = self.f[self.name]
-        if isinstance(ds, h5py.Group):    #support for old pysar files
-            ds = ds[self.name]
-        ##Index in time/1st dimension
-        if not datasetName:
-            dsIndex = range(self.numDate)
-        elif isinstance(datasetName, str):
-            dsIndex = self.dateList.index(datasetName)
-        elif isinstance(datasetName, list):
-            dsIndex = []
-            for e in datasetName:
-                dsIndex.append(self.dateList.index(e))
-        ##Index in space/2_3 dimension
-        if box is None:
-            box = [0,0,self.width,self.length]
-        data = ds[dsIndex, box[1]:box[3], box[0]:box[2]]
+        self.open(printMsg=False)
+
+        with h5py.File(self.file, 'r') as f:
+            ds = f[self.name]
+            if isinstance(ds, h5py.Group):    #support for old pysar files
+                ds = ds[self.name]
+
+            ##Get dateFlag - mark in time/1st dimension
+            dateFlag = np.zeros((self.numDate), dtype=np.bool_)
+            if not datasetName:
+                dateFlag[:] = True
+            elif isinstance(datasetName, str):
+                dateFlag[self.dateList.index(datasetName)] = True
+            elif isinstance(datasetName, list):
+                for e in datasetName:
+                    dateFlag[self.dateList.index(e)] = True
+
+            ##Get Index in space/2_3 dimension
+            if box is None:
+                box = [0,0,self.width,self.length]
+            data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
         data = np.squeeze(data)
         return data
 
@@ -353,40 +358,34 @@ class geometry:
     def open(self, printMsg=True):
         if printMsg:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
-        self.f = h5py.File(self.file,'r')
         self.get_metadata()
         self.get_size()
         self.numPixel = self.length * self.width
-
-        try:    self.datasetList = sorted(list(set(self.f[self.name].keys()) & set(geometryDatasetNames)))
-        except: self.datasetList = sorted(list(set(self.f.keys()) & set(geometryDatasetNames)))
-        if 'bperp' in self.f.keys():
-            try:    self.dateList = [i.decode('utf8') for i in self.f[self.name]['date'][:]]
-            except: self.dateList = [i.decode('utf8') for i in self.f['date'][:]]
-            self.numDate = len(self.dateList)
-            ##Update bperp datasetNames
-            try: self.datasetList.remove('bperp')
-            except: pass
-            self.datasetList += ['bperp-'+d for d in self.dateList]
-        else:
-            self.dateList = None
-
         self.geocoded = False
         if 'Y_FIRST' in self.metadata.keys():
             self.geocoded = True
 
+        with h5py.File(self.file,'r') as f:
+            self.datasetNames = list(set(f.keys()) & set(ifgramDatasetNames))
+            self.datasetList = list(self.datasetNames)
+            if 'bperp' in f.keys():
+                self.dateList = [i.decode('utf8') for i in f['date'][:]]
+                self.numDate = len(self.dateList)
+                ##Update bperp datasetNames
+                try: self.datasetList.remove('bperp')
+                except: pass
+                self.datasetList += ['bperp-'+d for d in self.dateList]
+            else:
+                self.dateList = None
+
     def get_size(self):
-        self.f = h5py.File(self.file, 'r')
-        try:
-            dset = self.f[self.name][geometryDatasetNames[0]]
-        except:
-            dset = self.f[geometryDatasetNames[0]]
-        self.length, self.width = dset.shape
+        with h5py.File(self.file, 'r') as f:
+            self.length, self.width = f[geometryDatasetNames[0]].shape
         return self.length, self.width
 
     def get_metadata(self):
-        self.f = h5py.File(self.file, 'r')
-        self.metadata = dict(self.f.attrs)
+        with h5py.File(self.file, 'r') as f:
+            self.metadata = dict(f.attrs)
         for key, value in self.metadata.items():
             try:     self.metadata[key] = value.decode('utf8')
             except:  self.metadata[key] = value
@@ -412,30 +411,25 @@ class geometry:
             obj.read(datasetName='bperp')
             obj.read(datasetName='bperp-20161020')
         '''
-        try: self.f
-        except: self.open(printMsg=False)
+        self.open(printMsg=False)
         if box is None:
             box = (0,0,self.width,self.length)
         if datasetName is None:
             datasetName = geometryDatasetNames[0]
-
         datasetName = datasetName.split('_')
         if printMsg:
             print('reading {} data from file: {} ...'.format(datasetName[0], self.file))
-        try:
-            dset = self.f[self.name][datasetName[0]]
-        except:
-            dset = self.f[datasetName[0]]
-        if len(dset.shape) == 2:
-            data = dset[box[1]:box[3], box[0]:box[2]]
 
-        ## bperp
-        elif len(dset.shape) == 3:
-            if len(datasetName) == 1:
-                data = dset[:, box[1]:box[3], box[0]:box[2]]
-            else:
-                data = dset[self.dateList.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
-                data = np.squeeze(data)
+        with h5py.File(self.file, 'r') as f:
+            dset = f[datasetName[0]]
+            if len(dset.shape) == 2:
+                data = dset[box[1]:box[3], box[0]:box[2]]
+            elif len(dset.shape) == 3:      ## bperp
+                if len(datasetName) == 1:
+                    data = dset[:, box[1]:box[3], box[0]:box[2]]
+                else:
+                    data = dset[self.dateList.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
+                    data = np.squeeze(data)
         return data
 
 

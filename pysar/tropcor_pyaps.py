@@ -63,19 +63,15 @@ def createParser():
                                      '  PyAPS is used to download and calculate the delay for each time-series epoch.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+DATA_INFO+'\n'+EXAMPLE)
-
-    parser.add_argument('-t','--template', dest='template_file',\
-                        help='template file with input options below:\n'+TEMPLATE)
-
     ##For data download
-    parser.add_argument('-m','--model','-s', dest='trop_model', default='ERAInt',\
+    parser.add_argument('-m','--model','-s', dest='trop_model', default='ECMWF',\
                         choices={'ECMWF','MERRA','NARR','ERA','MERRA1'},\
                         help='source of the atmospheric data.\nNARR is working for 1979-Jan to 2014-Oct.')
     parser.add_argument('-d','--date-list', dest='date_list', nargs='*',\
                         help='Read the first column of text file as list of date to download data\n'+\
                              'in YYYYMMDD or YYMMDD format')
     parser.add_argument('--hour', help='time of data in HH, e.g. 12, 06')
-    parser.add_argument('--dir','--weather-dir', dest='weather_dir', \
+    parser.add_argument('-w','--dir','--weather-dir', dest='weather_dir', \
                         help='directory to put downloaded weather data, i.e. ./../WEATHER\n'+\
                              'use directory of input timeseries_file if not specified.')
 

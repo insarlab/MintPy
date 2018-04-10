@@ -161,15 +161,16 @@ def cmdLineParse(iargs=None):
 def main(iargs=None):
     inps = cmdLineParse(iargs)
     if not inps.outfile:
-        inps.outfile = os.path.splitext(inps.file)[0]+'_LODcor'+os.path.splitext(inps.file)[1]
+        inps.outfile = '{}_LODcor{}'.format(os.path.splitext(inps.file)[0], os.path.splitext(inps.file)[1])
+    if not inps.range_dist_file:
+        atr = readfile.read_attribute(inps.file)
+        if 'Y_FIRST' in atr.keys():
+            coordType = 'geo'
+        else:
+            coordType = 'radar'
+        print('Input file is in %s coordinates' % (coordType))
+        inps.range_dist_file = ut.get_geometry_file('slantRangeDistance', coordType=coordType)
 
-    atr = readfile.read_attribute(inps.file)
-    if 'Y_FIRST' in atr.keys():
-        coordType = 'geo'
-    else:
-        coordType = 'radar'
-    print('Input file is in %s coordinates' % (coordType))
-    inps.range_dist_file = ut.get_geometry_file('slantRangeDistance', coordType=coordType)
     inps.outfile = correct_LOD(inps.file, inps.range_dist_file, inps.outfile)
     print('Done.')
 
