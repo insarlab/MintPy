@@ -115,7 +115,7 @@ def extract_attribute_interferogram(fname):
     ## Get info: date12, num of loooks
     try:    date12 = str(re.findall('\d{8}[-_]\d{8}', file_basename)[0])
     except: date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0])
-    m_date, s_date = date12.replace('_','-').split('-')
+    m_date, s_date = date12.replace('-','_').split('-')
     atr['DATE12'] = ptime.yymmdd(m_date)+'-'+ptime.yymmdd(s_date)
     lks = os.path.splitext(file_basename.split(date12)[1])[0]
 

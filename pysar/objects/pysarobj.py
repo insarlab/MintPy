@@ -284,9 +284,9 @@ class timeseries:
         '''
         #Calculate RMS
         data = self.read()
-        if maskFile:
-            mask = singleDataset(maskFile).read()
+        if maskFile and os.path.isfile(maskFile):
             print('read mask from file: '+maskFile)
+            mask = singleDataset(maskFile).read()
             data[:,mask==0] = np.nan
         self.rms = np.sqrt(np.nanmean(np.square(data), axis=(1,2)))
 
@@ -302,6 +302,23 @@ class timeseries:
                    fmt='%s', delimiter='\t', header=header)
         print('save timeseries RMS to text file: {}'.format(outFile))
         return outFile
+
+    def spatial_average(self, maskFile=None, box=None):
+        self.open(printMsg=False)
+        data = self.read(box=box)
+        if maskFile and os.path.isfile(maskFile):
+            print('read mask from file: '+maskFile)
+            mask = singleDataset(maskFile).read(box=box)
+            data[:,mask==0] = np.nan
+        dmean = np.nanmean(data, axis=(1,2))
+        return dmean, self.dateList
+
+    def temporal_average(self):
+        print('calculating the temporal average of timeseries file: {}'.format(self.file))
+        self.open(printMsg=False)
+        data = self.read()
+        dmean = np.nanmean(data, axis=0)
+        return dmean
 
 
 ########################################################################################
@@ -402,7 +419,7 @@ class geometry:
         if datasetName is None:
             datasetName = geometryDatasetNames[0]
 
-        datasetName = datasetName.split('-')
+        datasetName = datasetName.split('_')
         if printMsg:
             print('reading {} data from file: {} ...'.format(datasetName[0], self.file))
         try:
@@ -462,53 +479,48 @@ class ifgramStack:
         '''
         if printMsg:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
-        self.f = h5py.File(self.file, 'r')
         self.get_metadata()
         self.get_size()
         self.read_datetimes()
         self.numPixel = self.length * self.width
 
+        with h5py.File(self.file, 'r') as f:
+            self.dropIfgram = f['dropIfgram'][:]
+            self.pbaseIfgram = f['bperp'][:]
+            self.datasetNames = list(set(f.keys()) & set(ifgramDatasetNames))
+        self.date12List = ['{}_{}'.format(i,j) for i,j in zip(self.mDates,self.sDates)]
+        self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.int16)
+
         #Get datasetList for self.read()
         self.datasetList = []
-        mDateList = [i.decode('utf8') for i in self.f['date'][:,0]]
-        sDateList = [i.decode('utf8') for i in self.f['date'][:,1]]
-        for dsName in list(set(self.f.keys()) & set(ifgramDatasetNames)):
-            self.datasetList += ['{}-{}_{}'.format(dsName,m,s) for m,s in zip(mDateList, sDateList)]
-
-        self.mDateList = [i.strftime("%Y%m%d") for i in self.mTimes]
-        self.sDateList = [i.strftime("%Y%m%d") for i in self.sTimes]
-        self.date12List = ['{}_{}'.format(i,j) for i,j in zip(self.mDateList,self.sDateList)]
-        self.btemp = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.int16)
-        self.bperp = self.f['bperp'][:][self.dropIfgram]
+        for dsName in self.datasetNames:
+            self.datasetList += ['{}-{}'.format(dsName,i) for i in self.date12List]
 
         #Time in timeseries domain
-        self.dateList = sorted(list(set(np.hstack((self.mDateList, self.sDateList)))))
+        self.dateList = sorted(list(set(np.hstack((self.mDates, self.sDates)))))
         self.numDate = len(self.dateList)
-        self.times = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.dateList])
-        self.btempHist = np.array([(i-self.times[0]).days for i in self.times], dtype=np.int16)
-        self.btempHistDiff = np.diff(self.btempHist).reshape((-1,1))
 
     def get_metadata(self):
-        self.f = h5py.File(self.file, 'r')
-        self.metadata = dict(self.f.attrs)
+        with h5py.File(self.file, 'r') as f:
+            self.metadata = dict(f.attrs)
         for key, value in self.metadata.items():
             try:     self.metadata[key] = value.decode('utf8')
             except:  self.metadata[key] = value
         return self.metadata
 
     def get_size(self):
-        self.length, self.width = self.f[ifgramDatasetNames[0]].shape[1:3]
-        try:    self.dropIfgram = self.f['dropIfgram'][:]
-        except: self.dropIfgram = np.ones(numIfgram, dtype=np.bool_)
-        self.numIfgram = np.sum(self.dropIfgram)
+        with h5py.File(self.file, 'r') as f:
+            self.numIfgram, self.length, self.width = f[ifgramDatasetNames[0]].shape
         return self.numIfgram, self.length, self.width
 
     def read_datetimes(self):
         '''Read master/slave dates into array of datetime.datetime objects'''
-        dates = self.f['date']
-        self.mTimes = np.array([dt(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in list(dates[:,0])])[self.dropIfgram]
-        self.sTimes = np.array([dt(*time.strptime(i.decode('utf8'),"%Y%m%d")[0:5]) for i in list(dates[:,1])])[self.dropIfgram]
-        return self.mTimes, self.sTimes     
+        with h5py.File(self.file, 'r') as f:
+            dates = f['date'][:]
+        self.mDates = np.array([i.decode('utf8') for i in dates[:,0]])
+        self.sDates = np.array([i.decode('utf8') for i in dates[:,1]])
+        self.mTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.mDates])
+        self.sTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.sDates])
 
     def read(self, datasetName=ifgramDatasetNames[0], box=None, printMsg=True):
         '''Read 3D dataset with bounding box in space
@@ -530,71 +542,170 @@ class ifgramStack:
             obj.read(datasetName='coherence')
             obj.read(datasetName='unwrapPhase-20161020_20161026')
         '''
-        try: self.f
-        except: self.open(printMsg=printMsg)
+        self.get_size()
         if box is None:
             box = (0,0,self.width,self.length)
         if datasetName is None:
             datasetName = ifgramDatasetNames[0]
 
-        datasetName = datasetName.split('-')
-        dset = self.f[datasetName[0]]
-        if len(datasetName) == 1:
-            data = dset[self.dropIfgram, box[1]:box[3], box[0]:box[2]]
-        else:
-            data = dset[self.date12List.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
-            data = np.squeeze(data)
+        datasetName = datasetName.split('_')
+        with h5py.File(self.file, 'r') as f:
+            dset = f[datasetName[0]]
+            if len(datasetName) == 1:
+                data = dset[:, box[1]:box[3], box[0]:box[2]]
+            else:
+                data = dset[self.date12List.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
+                data = np.squeeze(data)
         return data
 
-    def nonzero_mask(self, datasetName=ifgramDatasetNames[0]):
-        try: self.f
-        except: self.open(printMsg=False)
+    def spatial_average(self, datasetName=ifgramDatasetNames[1], maskFile=None, box=None):
         if datasetName is None:
-            datasetName = ifgramDatasetNames[0]
+            datasetName = ifgramDatasetNames[1]
+        print('calculating spatial average of {} in file {} ...'.format(datasetName, self.file))
+        if maskFile and os.path.isfile(maskFile):
+            print('read mask from file: '+maskFile)
+            mask = singleDataset(maskFile).read(box=box)
+        else:
+            maskFile = None
 
-        dset = self.f[datasetName]
-        mask = np.ones(dset.shape[1:3], dtype=np.bool_)
-        numIfgram = dset.shape[0]
-        for i in range(numIfgram):
-            if self.dropIfgram[i]:
-                mask[dset[i,:,:]==0.] = 0
-                mask[np.isnan(dset[i,:,:])] = 0
+        with h5py.File(self.file, 'r') as f:
+            dset = f[datasetName]
+            numIfgram = dset.shape[0]
+            dmean = np.zeros((numIfgram), dtype=np.float32)
+            for i in range(numIfgram):
+                data = dset[i, box[1]:box[3], box[0]:box[2]]
+                if maskFile:
+                    data[mask==0] = np.nan
+                dmean[i] = np.nanmean(data)
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, numIfgram))
                 sys.stdout.flush()
-        print('')
+            print('')
+        return dmean, self.date12List
+
+    ##### Functions considering dropIfgram value
+    def get_date12_list(self, dropIfgram=True):
+        with h5py.File(self.file, 'r') as f:
+            dates = f['date'][:]
+            if dropIfgram:
+                dates = dates[f['dropIfgram'][:],:]
+        mDates = np.array([i.decode('utf8') for i in dates[:,0]])
+        sDates = np.array([i.decode('utf8') for i in dates[:,1]])
+        date12List = ['{}_{}'.format(i,j) for i,j in zip(mDates, sDates)]
+        return date12List
+
+    def nonzero_mask(self, datasetName=None, printMsg=True, dropIfgram=True):
+        '''Return the common mask of pixels with non-zero value in dataset of all ifgrams.
+           Ignoring dropped ifgrams
+        '''
+        self.open(printMsg=False)
+        with h5py.File(self.file, 'r') as f:
+            if datasetName is None:
+                datasetName = [i for i in ['connectComponent','unwrapPhase'] if i in f.keys()][0]
+            print('calculate the common mask of pixels with non-zero {} value'.format(datasetName))
+
+            dset = f[datasetName]
+            mask = np.ones(dset.shape[1:3], dtype=np.bool_)
+            dropIfgramFlag = np.ones(dset.shape[0], dtype=np.bool_)
+            if dropIfgram:
+                dropIfgramFlag = self.dropIfgram
+            num2read = np.sum(dropIfgramFlag)
+            idx2read = np.where(dropIfgramFlag)[0]
+            for i in range(num2read):     #Loop to save memory usage
+                data = dset[idx2read[i],:,:]
+                mask[data==0.] = 0
+                mask[np.isnan(data)] = 0
+                sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+                sys.stdout.flush()
+            print('')
         return mask
 
+    def temporal_average(self, datasetName=ifgramDatasetNames[1], dropIfgram=True):
+        self.open(printMsg=False)
+        if datasetName is None:
+            datasetName = ifgramDatasetNames[0]
+        print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
+        if datasetName == 'unwrapPhase':
+            phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
+            tbaseIfgram = self.tbaseIfgram / 365.25
+
+        with h5py.File(self.file, 'r') as f:
+            dset = f[datasetName]
+            dmean = np.zeros(dset.shape[1:3], dtype=np.float32)
+            dropIfgramFlag = np.ones(dset.shape[0], dtype=np.bool_)
+            if dropIfgram:
+                dropIfgramFlag = self.dropIfgram
+            num2read = np.sum(dropIfgramFlag)
+            idx2read = np.where(dropIfgramFlag)[0]
+            for i in range(num2read):
+                data = dset[idx2read[i],:,:]
+                if datasetName == 'unwrapPhase':
+                    data *= (phase2range * (1./tbaseIfgram[idx2read[i]]))
+                dmean += data
+                sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+                sys.stdout.flush()
+            print('')
+        dmean /= np.sum(self.dropIfgram)
+        return dmean
+
     ##### Functions for Network Inversion
-    def get_design_matrix(self, refDate=None):
-        '''Return design matrix of the input ifgramStack'''
-        if not refDate:
-            refDate = self.dateList[0]
-        refIndex = self.dateList.index(refDate)
+    def get_design_matrix(self, refDate=None, dropIfgram=True):
+        '''Return design matrix of the input ifgramStack, ignoring dropped ifgrams'''
+        ## Date info
+        date12List = self.get_date12_list(dropIfgram=dropIfgram)
+        mDates = [i.split('_')[0] for i in date12List]
+        sDates = [i.split('_')[1] for i in date12List]
+        dateList = sorted(list(set(mDates + sDates)))
+        dates = [dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in dateList]
+        tbase = np.array([(i - dates[0]).days for i in dates])
+        numIfgram = len(date12List)
+        numDate = len(dateList)
 
         ## calculate design matrix
-        A = np.zeros((self.numIfgram, self.numDate))
+        A = np.zeros((numIfgram, numDate))
         B = np.zeros(A.shape)
-        for i in range(self.numIfgram):
-            m_idx, s_idx = [self.dateList.index(j) for j in self.date12List[i].split('_')]
+        for i in range(numIfgram):
+            m_idx, s_idx = [dateList.index(j) for j in date12List[i].split('_')]
             A[i, m_idx] = -1
             A[i, s_idx] = 1
-            B[i, m_idx:s_idx] = self.btempHist[m_idx+1:s_idx+1] - self.btempHist[m_idx:s_idx]
-        #Remove reference date as it can not be resolved
+            B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
+
+        ## Remove reference date as it can not be resolved
+        if not refDate:
+            refDate = dateList[0]
+        refIndex = dateList.index(refDate)
         A = np.hstack((A[:,0:refIndex], A[:,(refIndex+1):]))
         B = B[:,:-1]
         return A, B
 
-    def get_perp_baseline_timeseries(self):
-        '''Get spatial perpendicular baseline in timeseries from input '''
-        B = self.get_design_matrix()[1]
+    def get_perp_baseline_timeseries(self, dropIfgram=True):
+        '''Get spatial perpendicular baseline in timeseries from ifgramStack, ignoring dropped ifgrams'''
+        ## Get tbaseDiff
+        date12List = self.get_date12_list(dropIfgram=dropIfgram)
+        mDates = [i.split('_')[0] for i in date12List]
+        sDates = [i.split('_')[1] for i in date12List]
+        dateList = sorted(list(set(mDates + sDates)))
+        dates = [dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in dateList]
+        tbaseDiff = np.diff([(i - dates[0]).days for i in dates]).flatten()
+
+        B = self.get_design_matrix(dropIfgram=dropIfgram)[1]
         B_inv = np.linalg.pinv(B)
-        bperpRate = np.dot(B_inv, self.bperp)
-        zero = np.array([0.],np.float32)
-        pbaseTimeseries = np.concatenate((zero, np.cumsum([bperpRate*self.btempHistDiff.flatten()])))
+        with h5py.File(self.file, 'r') as f:
+            pbaseIfgram = f['bperp'][:]
+            if dropIfgram:
+                pbaseIfgram = pbaseIfgram[f['dropIfgram'][:]]
+        pbaseRate = np.dot(B_inv, pbaseIfgram)
+        pbaseTimeseries = np.concatenate((np.array([0.],dtype=np.float32), np.cumsum([pbaseRate * tbaseDiff])))
         return pbaseTimeseries
 
-
-
+    def update_drop_ifgram(self, date12List_to_drop):
+        '''Update dropIfgram dataset based on input date12List_to_drop'''
+        if date12List_to_drop is None:
+            return
+        date12ListAll = self.get_date12_list(dropIfgram=False)
+        with h5py.File(self.file, 'r+') as f:
+            print('open file {} with r+ mode'.format(self.file))
+            print('update HDF5 dataset "/dropIfgram".')
+            f['dropIfgram'][:] = np.array([i not in date12List_to_drop for i in date12ListAll], dtype=np.bool_)
 
 
 
@@ -611,10 +722,12 @@ class singleDataset:
         except:
             pass
 
-    def read(self):
+    def read(self, box=None):
         self.f = h5py.File(self.file, 'r')
         k = list(self.f.keys())[0]
         data = self.f[k][:]
+        if box is not None:
+            data = data[box[1]:box[3],box[0]:box[2]]
         return data
 
 

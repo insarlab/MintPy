@@ -99,8 +99,8 @@ def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
         date12 = h5[k][ifgram].attrs['DATE12']
         try: date12 = date12.decode('utf-8')
         except: pass
-        date_list.append(date12.split('-')[0])
-        date_list.append(date12.split('-')[1])
+        date_list.append(date12.split('_')[0])
+        date_list.append(date12.split('_')[1])
     h5.close()
     date_list = sorted(list(set(date_list)))
 
@@ -182,7 +182,7 @@ def list_ifgram2date12(ifgram_list):
 
     date12_list_out = []
     for date12 in date12_list:
-        m_date, s_date = yymmdd(date12.split('-'))
+        m_date, s_date = yymmdd(date12.split('_'))
         date12_list_out.append(m_date+'-'+s_date)
 
     return date12_list_out

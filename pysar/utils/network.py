@@ -61,7 +61,7 @@ def read_pairs_list(date12ListFile, dateList=[]):
     if not dateList:
         dateList = []
         for date12 in date12List:
-            dates = date12.split('-')
+            dates = date12.split('_')
             if not dates[0] in dateList: dateList.append(dates[0])
             if not dates[1] in dateList: dateList.append(dates[1])
         dateList.sort()
@@ -70,7 +70,7 @@ def read_pairs_list(date12ListFile, dateList=[]):
     # Get pair index 
     pairs_idx = []
     for date12 in date12List:
-        dates = date12.split('-')
+        dates = date12.split('_')
         pair_idx = [date6List.index(dates[0]), date6List.index(dates[1])]
         pairs_idx.append(pair_idx)
 
@@ -168,15 +168,15 @@ def date12_list2index(date12_list, date_list=[]):
     '''Convert list of date12 string into list of index'''
     # Get dateList from date12List
     if not date_list:
-        m_dates = [date12.split('-')[0] for date12 in date12_list]
-        s_dates = [date12.split('-')[1] for date12 in date12_list]
+        m_dates = [date12.split('_')[0] for date12 in date12_list]
+        s_dates = [date12.split('_')[1] for date12 in date12_list]
         date_list = list(set(m_dates + s_dates))
     date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(date_list)))
     
     # Get pair index 
     pairs_idx = []
     for date12 in date12_list:
-        dates = date12.split('-')
+        dates = date12.split('_')
         pair_idx = [date6_list.index(dates[0]), date6_list.index(dates[1])]
         pairs_idx.append(pair_idx)
 
@@ -414,7 +414,7 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
         if display:
             sys.stdout.write('\rinterferogram = %4d/%4d' % (i, ifgram_num))
             sys.stdout.flush()
-        m_date, s_date = date12_list[i].split('-')
+        m_date, s_date = date12_list[i].split('_')
         m_idx = date6_list.index(m_date)
         s_idx = date6_list.index(s_date)
 
@@ -474,8 +474,8 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
     if not date12_list:  return []
     # Get date6_list
     if not date_list:
-        m_dates = [date12.split('-')[0] for date12 in date12_list]
-        s_dates = [date12.split('-')[1] for date12 in date12_list]
+        m_dates = [date12.split('_')[0] for date12 in date12_list]
+        s_dates = [date12.split('_')[1] for date12 in date12_list]
         date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
         if not len(date_list) == len(pbase_list):
             print('ERROR: number of existing dates is not equal to number of perp baseline!')
@@ -487,7 +487,7 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
     # Threshold
     date12_list_out = []
     for date12 in date12_list:
-        date1, date2 = date12.split('-')
+        date1, date2 = date12.split('_')
         idx1 = date6_list.index(date1)
         idx2 = date6_list.index(date2)
         dop_overlap = calculate_doppler_overlap(dop_list[idx1], dop_list[idx2], bandwidth_az)
@@ -512,8 +512,8 @@ def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase
     if not date12_list:  return []
     # Get date6_list
     if not date_list:
-        m_dates = [date12.split('-')[0] for date12 in date12_list]
-        s_dates = [date12.split('-')[1] for date12 in date12_list]
+        m_dates = [date12.split('_')[0] for date12 in date12_list]
+        s_dates = [date12.split('_')[1] for date12 in date12_list]
         date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
         if not len(date_list) == len(pbase_list):
             print('ERROR: number of existing dates is not equal to number of perp baseline!')
@@ -525,7 +525,7 @@ def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase
     # Threshold
     date12_list_out = []
     for date12 in date12_list:
-        date1, date2 = date12.split('-')
+        date1, date2 = date12.split('_')
         idx1 = date6_list.index(date1)
         idx2 = date6_list.index(date2)
         pbase = abs(pbase_list[idx1] - pbase_list[idx2])
@@ -549,8 +549,8 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     '''
     if not date12_list:  return []
     # Get date list and tbase list
-    m_dates = [date12.split('-')[0] for date12 in date12_list]
-    s_dates = [date12.split('-')[1] for date12 in date12_list]
+    m_dates = [date12.split('_')[0] for date12 in date12_list]
+    s_dates = [date12.split('_')[1] for date12 in date12_list]
     date8_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
     date6_list = ptime.yymmdd(date8_list)
     tbase_list = ptime.date_list2tbase(date8_list)[0]
@@ -558,7 +558,7 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     # Threshold
     date12_list_out = []
     for date12 in date12_list:
-        date1, date2 = date12.split('-')
+        date1, date2 = date12.split('_')
         idx1 = date6_list.index(date1)
         idx2 = date6_list.index(date2)
         tbase = int(abs(tbase_list[idx1] - tbase_list[idx2]))
@@ -580,17 +580,17 @@ def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
                       1.0 for diagonal elements
     '''
     # Get date list
-    m_dates = [date12.split('-')[0] for date12 in date12_list]
-    s_dates = [date12.split('-')[1] for date12 in date12_list]
-    date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(list(set(m_dates + s_dates)))))
-    date_num = len(date6_list)
+    m_dates = [date12.split('_')[0] for date12 in date12_list]
+    s_dates = [date12.split('_')[1] for date12 in date12_list]
+    date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
+    date_num = len(date_list)
 
     coh_mat = np.zeros([date_num, date_num])
     coh_mat[:] = np.nan
     for date12 in date12_list:
-        date1, date2 = date12.split('-')
-        idx1 = date6_list.index(date1)
-        idx2 = date6_list.index(date2)
+        date1, date2 = date12.split('_')
+        idx1 = date_list.index(date1)
+        idx2 = date_list.index(date2)
         coh = coh_list[date12_list.index(date12)]
         coh_mat[idx1, idx2] = coh    #symmetric
         coh_mat[idx2, idx1] = coh
@@ -598,7 +598,6 @@ def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
     if diagValue is not np.nan:
         for i in range(date_num):    # diagonal value
             coh_mat[i, i] = diagValue
-
     return coh_mat
 
 
@@ -622,8 +621,8 @@ def threshold_coherence_based_mst(date12_list, coh_list):
     mst_mat_csr = minimum_spanning_tree(wei_mat_csr)
 
     # Get date6_list
-    m_dates = [date12.split('-')[0] for date12 in date12_list]
-    s_dates = [date12.split('-')[1] for date12 in date12_list]
+    m_dates = [date12.split('_')[0] for date12 in date12_list]
+    s_dates = [date12.split('_')[1] for date12 in date12_list]
     date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(list(set(m_dates + s_dates)))))
 
     # Convert MST index matrix into date12 list
@@ -884,8 +883,8 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
     tbase_array *= temp2perp_scale
     
     # Calculate sqrt of temp/perp baseline for input pairs
-    idx1 = np.array([date6_list.index(date12.split('-')[0]) for date12 in date12_list])
-    idx2 = np.array([date6_list.index(date12.split('-')[1]) for date12 in date12_list])
+    idx1 = np.array([date6_list.index(date12.split('_')[0]) for date12 in date12_list])
+    idx2 = np.array([date6_list.index(date12.split('_')[1]) for date12 in date12_list])
     base_distance = np.sqrt((tbase_array[idx2] - tbase_array[idx1])**2 + (pbase_array[idx2] - pbase_array[idx1])**2)
     
     # Get master interferogram index

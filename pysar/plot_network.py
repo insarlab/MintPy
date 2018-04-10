@@ -195,8 +195,8 @@ def main(iargs=None):
         print('number of interferograms marked as kept   : '+str(len(date12_list_keep)))
 
         # Get date_list_drop
-        m_dates = [i.split('-')[0] for i in date12_list_keep]
-        s_dates = [i.split('-')[1] for i in date12_list_keep]
+        m_dates = [i.split('_')[0] for i in date12_list_keep]
+        s_dates = [i.split('_')[1] for i in date12_list_keep]
         date8_list_keep = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
         date8_list_drop = sorted(list(set(date8_list) - set(date8_list_keep)))
         print('number of acquisitions marked as dropped: '+str(len(date8_list_drop)))

@@ -105,8 +105,8 @@ def main(iargs=None):
         unw_err_ifgram_list = []
 
     ###### Generate simulated interferograms
-    m_dates = ptime.yyyymmdd([i.split('-')[0] for i in date12_list])
-    s_dates = ptime.yyyymmdd([i.split('-')[1] for i in date12_list])
+    m_dates = ptime.yyyymmdd([i.split('_')[0] for i in date12_list])
+    s_dates = ptime.yyyymmdd([i.split('_')[1] for i in date12_list])
     range2phase = -4.0*np.pi/float(atr['WAVELENGTH'])
 
     print('writing simulated interferograms file: '+inps.outfile)

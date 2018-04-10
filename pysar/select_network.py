@@ -454,8 +454,8 @@ def main(iargs=None):
         return None
 
     # date12_list to date_list
-    m_dates = [date12.replace('_','-').split('-')[0] for date12 in date12_list]
-    s_dates = [date12.replace('_','-').split('-')[1] for date12 in date12_list]
+    m_dates = [date12.replace('_','-').split('_')[0] for date12 in date12_list]
+    s_dates = [date12.replace('_','-').split('_')[1] for date12 in date12_list]
     try: print('number of acquisitions   input   : '+str(len(date6_list)))
     except: pass
     print('number of acquisitions   selected: '+str(len(list(set(m_dates + s_dates)))))
@@ -485,7 +485,7 @@ def main(iargs=None):
     ifgram_tbase_list = []
 
     for i in range(ifgram_num):
-        m_date, s_date = date12_list[i].split('-')
+        m_date, s_date = date12_list[i].split('_')
         m_idx = date6_list.index(m_date)
         s_idx = date6_list.index(s_date)
         pbase = pbase_list[s_idx] - pbase_list[m_idx]

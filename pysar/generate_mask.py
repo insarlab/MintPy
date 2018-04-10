@@ -34,7 +34,7 @@ def createParser():
     parser.add_argument('file', help='input file')
     parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o','--output', dest='outfile', help='output file name.')
-    
+
     parser.add_argument('-m','--min', dest='vmin', type=float, help='minimum value for selected pixels')
     parser.add_argument('-M','--max', dest='vmax', type=float, help='maximum value for selected pixels')
     parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN','XMAX'), \
@@ -126,9 +126,6 @@ def main(iargs=None):
 
     ##### Mask: Non-zero
     if inps.nonzero and k == 'ifgramStack':
-        if not inps.dset:
-            inps.dset = ifgramDatasetNames[0]
-        print('generate common mask of pixels with non-zero {} value from file: {}'.format(inps.dset, inps.file))
         inps.outfile = ut.nonzero_mask(inps.file, outFile=inps.outfile, datasetName=inps.dset)
         return inps.outfile
 

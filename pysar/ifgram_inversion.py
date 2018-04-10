@@ -41,6 +41,96 @@ from pysar.objects import ifgramStack, timeseries
 
 
 ################################################################################################
+EXAMPLE='''example:
+  ifgram_inversion.py  ifgramStack.h5
+  ifgram_inversion.py  ifgramStack.h5 -t pysarApp_template.txt
+  ifgram_inversion.py  ifgramStack.h5 -w var
+  ifgram_inversion.py  ifgramStack.h5 -w fim
+  ifgram_inversion.py  ifgramStack.h5 -w coh
+'''
+
+TEMPLATE='''
+## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
+## Temporal coherence is calculated using Tazzani et al. (Tizzani et al., 2007, IEEE-TGRS)
+## Singular-Value Decomposition (SVD) is applied if network are not fully connected for no weight scenario.
+## There are 4 weighting options:
+## a. fim       - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
+## b. variance  - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
+## c. coherence - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
+## d. no        - LS, no/uniform weight (Berardino et al., 2002, TGRS)
+pysar.networkInversion.weightFunc    = auto #[fim / variance / coherence / no], auto for no
+pysar.networkInversion.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
+pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
+pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
+pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
+'''
+
+REFERENCE='''references:
+Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface 
+    deformation monitoring based on small baseline differential SAR interferograms. IEEE TGRS,
+    40(11), 2375-2383. doi:10.1109/TGRS.2002.803792
+Guarnieri, A. M., and S. Tebaldini (2008), On the exploitation of target statistics for SAR 
+    interferometry applications, Geoscience and Remote Sensing, IEEE Transactions on, 46(11), 3436-3443.
+Just, D., & Bamler, R. (1994). Phase statistics of interferograms with applications to synthetic
+    aperture radar. Applied optics, 33(20), 4361-4368. 
+Perissin, D., and T. Wang (2012), Repeat-pass SAR interferometry with partially coherent targets, IEEE TGRS,
+    50(1), 271-280, doi:10.1109/tgrs.2011.2160644.
+Samiei-Esfahany, S., J. E. Martins, F. v. Leijen, and R. F. Hanssen (2016), Phase Estimation for Distributed
+    Scatterers in InSAR Stacks Using Integer Least Squares Estimation, IEEE TGRS, 54(10), 5671-5687.
+Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR interferometry, 1994. 
+    IGARSS '94., 8-12 Aug 1994.
+Tizzani, P., Berardino, P., Casu, F., Euillades, P., Manzo, M., Ricciardi, G. P., Lanari, R.
+    (2007). Surface deformation of Long Valley caldera and Mono Basin, California, investigated
+    with the SBAS-InSAR approach. Remote Sensing of Environment, 108(3), 277-289.
+    doi:http://dx.doi.org/10.1016/j.rse.2006.11.015
+'''
+
+def createParser():
+    parser = argparse.ArgumentParser(description='Invert network of interferograms into timeseries.',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
+
+    parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
+    parser.add_argument('--template','-t', dest='templateFile',\
+                        help='template text file with the following options:\n'+TEMPLATE)
+    parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
+
+    parser.add_argument('--weight-function','-w', dest='weight_function', default='no',\
+                        help='function used to convert coherence to weight for inversion:\n'+\
+                             'variance - phase variance due to temporal decorrelation\n'+\
+                             'linear   - uniform distribution CDF function\n'+\
+                             'no       - no weight, or ordinal inversion with uniform weight')
+    parser.add_argument('--norm', dest='resid_norm', default='L2', choices=['L1','L2'],\
+                        help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
+
+    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.5e9,\
+                        help='max number of data (= ifgram_num * row_num * col_num) to read per loop\n'+\
+                             'default: 0.5G; adjust it according to your computer memory.')
+    parser.add_argument('--parallel', dest='parallel', action='store_true',\
+                        help='Enable parallel processing for the pixelwise weighted inversion. [not working yet]')
+    parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',\
+                        help='Skip checking reference pixel value, for simulation testing.')
+    parser.add_argument('-o','--output', dest='outfile', nargs=2, default=['timeseries.h5','temporalCoherence.h5'],\
+                        help='Output file name for timeseries and temporal coherence, default:\n'+\
+                             'timeseries.h5 temporalCoherence.h5')
+    parser.add_argument('--update-mode', dest='update_mode', action='store_true',\
+                        help='Enable update mode, and skip inversion if output timeseries file already exists,\n'+\
+                             'readable and newer than input interferograms file')
+    parser.add_argument('--noskip-zero-phase', dest='skip_zero_phase', action='store_false',\
+                        help='Do not skip interferograms with zero phase.')
+    parser.add_argument('--water-mask','-m', dest='water_mask_file',\
+                        help='Skip inversion on the masked out region, i.e. water.')
+    return parser
+
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+    inps.parallel = False
+    return inps
+
+
+################################################################################################
 def phase_pdf_ds(L, coherence=None, phiNum=1000):
     '''Marginal PDF of interferometric phase for distributed scatterers (DS)
     Eq. 66 (Tough et al., 1995) and Eq. 4.2.23 (Hanssen, 2001)
@@ -695,96 +785,6 @@ def read_template2inps(template_file, inps):
                 print('Can not found mask dataset in file: %s' % (maskFile))
                 print('Ignore this input water mask file option and continue.')
 
-    return inps
-
-
-################################################################################################
-EXAMPLE='''example:
-  ifgram_inversion.py  ifgramStack.h5
-  ifgram_inversion.py  ifgramStack.h5 -t pysarApp_template.txt
-  ifgram_inversion.py  ifgramStack.h5 -w var
-  ifgram_inversion.py  ifgramStack.h5 -w fim
-  ifgram_inversion.py  ifgramStack.h5 -w coh
-'''
-
-TEMPLATE='''
-## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
-## Temporal coherence is calculated using Tazzani et al. (Tizzani et al., 2007, IEEE-TGRS)
-## Singular-Value Decomposition (SVD) is applied if network are not fully connected for no weight scenario.
-## There are 4 weighting options:
-## a. fim       - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
-## b. variance  - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
-## c. coherence - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
-## d. no        - LS, no/uniform weight (Berardino et al., 2002, TGRS)
-pysar.networkInversion.weightFunc    = auto #[fim / variance / coherence / no], auto for no
-pysar.networkInversion.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
-pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
-pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
-pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
-'''
-
-REFERENCE='''references:
-Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface 
-    deformation monitoring based on small baseline differential SAR interferograms. IEEE TGRS,
-    40(11), 2375-2383. doi:10.1109/TGRS.2002.803792
-Guarnieri, A. M., and S. Tebaldini (2008), On the exploitation of target statistics for SAR 
-    interferometry applications, Geoscience and Remote Sensing, IEEE Transactions on, 46(11), 3436-3443.
-Just, D., & Bamler, R. (1994). Phase statistics of interferograms with applications to synthetic
-    aperture radar. Applied optics, 33(20), 4361-4368. 
-Perissin, D., and T. Wang (2012), Repeat-pass SAR interferometry with partially coherent targets, IEEE TGRS,
-    50(1), 271-280, doi:10.1109/tgrs.2011.2160644.
-Samiei-Esfahany, S., J. E. Martins, F. v. Leijen, and R. F. Hanssen (2016), Phase Estimation for Distributed
-    Scatterers in InSAR Stacks Using Integer Least Squares Estimation, IEEE TGRS, 54(10), 5671-5687.
-Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR interferometry, 1994. 
-    IGARSS '94., 8-12 Aug 1994.
-Tizzani, P., Berardino, P., Casu, F., Euillades, P., Manzo, M., Ricciardi, G. P., Lanari, R.
-    (2007). Surface deformation of Long Valley caldera and Mono Basin, California, investigated
-    with the SBAS-InSAR approach. Remote Sensing of Environment, 108(3), 277-289.
-    doi:http://dx.doi.org/10.1016/j.rse.2006.11.015
-'''
-
-def createParser():
-    parser = argparse.ArgumentParser(description='Invert network of interferograms into timeseries.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
-
-    parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
-    parser.add_argument('--template','-t', dest='templateFile',\
-                        help='template text file with the following options:\n'+TEMPLATE)
-    parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
-
-    parser.add_argument('--weight-function','-w', dest='weight_function', default='no',\
-                        help='function used to convert coherence to weight for inversion:\n'+\
-                             'variance - phase variance due to temporal decorrelation\n'+\
-                             'linear   - uniform distribution CDF function\n'+\
-                             'no       - no weight, or ordinal inversion with uniform weight')
-    parser.add_argument('--norm', dest='resid_norm', default='L2', choices=['L1','L2'],\
-                        help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
-
-    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.5e9,\
-                        help='max number of data (= ifgram_num * row_num * col_num) to read per loop\n'+\
-                             'default: 0.5G; adjust it according to your computer memory.')
-    parser.add_argument('--parallel', dest='parallel', action='store_true',\
-                        help='Enable parallel processing for the pixelwise weighted inversion. [not working yet]')
-    parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',\
-                        help='Skip checking reference pixel value, for simulation testing.')
-    parser.add_argument('-o','--output', dest='outfile', nargs=2, default=['timeseries.h5','temporalCoherence.h5'],\
-                        help='Output file name for timeseries and temporal coherence, default:\n'+\
-                             'timeseries.h5 temporalCoherence.h5')
-    parser.add_argument('--update-mode', dest='update_mode', action='store_true',\
-                        help='Enable update mode, and skip inversion if output timeseries file already exists,\n'+\
-                             'readable and newer than input interferograms file')
-    parser.add_argument('--noskip-zero-phase', dest='skip_zero_phase', action='store_false',\
-                        help='Do not skip interferograms with zero phase.')
-    parser.add_argument('--water-mask','-m', dest='water_mask_file',\
-                        help='Skip inversion on the masked out region, i.e. water.')
-    return parser
-
-
-def cmdLineParse(iargs=None):
-    parser = createParser()
-    inps = parser.parse_args(args=iargs)
-    inps.parallel = False
     return inps
 
 

@@ -45,6 +45,17 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 
 ###############################################################################
+def yes_or_no(question):
+    '''garrettdreyfus on Github: https://gist.github.com/garrettdreyfus/8153571'''
+    reply = str(input(question+' (y/n): ')).lower().strip()
+    if reply[0] == 'y':
+        return True
+    elif reply[0] == 'n':
+        return False
+    else:
+        return yes_or_no("Uhhhh... please enter ")
+
+
 def interpolate_data(inData, outShape, interpMethod='linear'):
     '''Interpolate input 2D matrix into different shape.
     Used to get full resolution perp baseline from ISCE coarse grid baseline file.
@@ -252,6 +263,7 @@ def get_lookup_file(filePattern=None, abspath=False, printMsg=True):
                        'geometryGeo_tight.h5', 'geometryGeo.h5',\
                        'geomap*lks_tight.trans', 'geomap*lks.trans',\
                        'sim*_tight.UTM_TO_RDC', 'sim*.UTM_TO_RDC']
+        filePattern = [os.path.join('INPUTS',i) for i in filePattern]
     existFiles = []
     try:
         existFiles = get_file_list(filePattern)
@@ -517,10 +529,17 @@ def circle_index(atr,circle_par):
 
 def check_template_auto_value(templateDict):
     '''Replace auto value based on $PYSAR_HOME/pysar/defaults/template.cfg file.'''
+    ## Read default template value and turn yes/no to True/False
     templateAutoFile = os.path.join(os.path.dirname(__file__),'../defaults/template.cfg')
     templateAutoDict = readfile.read_template(templateAutoFile)
-    for key, value in templateDict:
-        if value == 'auto':
+    for key, value in templateAutoDict.items():
+        if value == 'yes':
+            templateAutoDict[key] = True
+        elif value == 'no':
+            templateAutoDict[key] = False
+    ## Update auto value of input template dict
+    for key, value in templateDict.items():
+        if value == 'auto' and key in templateAutoDict.keys():
             templateDict[key] = templateAutoDict[key]
     return templateDict
 
@@ -530,7 +549,7 @@ def update_template_file(template_file, extra_dict):
     ## Compare and skip updating template_file if no new option value found.
     update = False
     orig_dict = readfile.read_template(template_file)
-    for key, value in iter(orig_dict.items()):
+    for key, value in orig_dict.items():
         if key in extra_dict.keys() and extra_dict[key] != value:
             update = True
     if not update:
@@ -547,8 +566,8 @@ def update_template_file(template_file, extra_dict):
             value = str.replace(c[1],'\n','').split("#")[0].strip()
             if key in extra_dict.keys() and extra_dict[key] != value:
                 line = line.replace(value, extra_dict[key], 1)
-                print('\t{}: {} --> {}'.format(key, value, extra_dict[key]))
-        f_tmp.write(line+'\n')
+                print('    {}: {} --> {}'.format(key, value, extra_dict[key]))
+        f_tmp.write(line)
     f_tmp.close()
 
     # Overwrite exsting original template file
@@ -1019,7 +1038,7 @@ def check_drop_ifgram(h5, printMsg=True):
     return dsListOut
 
 
-def nonzero_mask(File, outFile='mask.h5', datasetName=ifgramDatasetNames[0]):
+def nonzero_mask(File, outFile='mask.h5', datasetName=None):
     '''Generate mask file for non-zero value of input multi-group hdf5 file'''
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
@@ -1036,7 +1055,7 @@ def nonzero_mask(File, outFile='mask.h5', datasetName=ifgramDatasetNames[0]):
 
 
 ######################################################################################################
-def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True):
+def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=None, saveList=False, checkAoi=True):
     '''Read/Calculate Spatial Average of input file.
 
     If input file is text file, read it directly;
@@ -1051,59 +1070,42 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         box      : 4-tuple defining the left, upper, right, and lower pixel coordinate
         saveList : bool, save (list of) mean value into text file
     Output:
-        mean_list : list for float, average value in space for each epoch of input file
-        date_list : list of string for date info
+        meanList : list for float, average value in space for each epoch of input file
+        dateList : list of string for date info
                     date12_list, e.g. 101120-110220, for interferograms/coherence
                     date8_list, e.g. 20101120, for timeseries
                     file name, e.g. velocity.h5, for all the other file types
     Example:
-        mean_list = spatial_average('coherence.h5')[0]
-        mean_list, date12_list = spatial_average('coherence.h5', 'maskTempCoh.h5', saveList=True)
+        meanList = spatial_average('coherence.h5')[0]
+        meanList, date12_list = spatial_average('coherence.h5', 'maskTempCoh.h5', saveList=True)
     '''
-    suffix='_spatialAverage.txt'
-    if File.endswith(suffix):
-        print('Input file is spatial average txt already, read it directly')
-        txtFile = File
-        txtContent = np.loadtxt(txtFile, dtype=bytes).astype(str)
-        mean_list = [float(i) for i in txtContent[:,1]]
-        date_list = [i for i in txtContent[:,0]]
-        return mean_list, date_list
+    def read_text_file(fname):
+        txtContent = np.loadtxt(fname, dtype=bytes).astype(str)
+        meanList = [float(i) for i in txtContent[:,1]]
+        dateList = [i for i in txtContent[:,0]]
+        return meanList, dateList
 
-
-    # Baic File Info
+    ## Baic File Info
     atr  = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
-    width = int(atr['WIDTH'])
-    length = int(atr['LENGTH'])
-
     if not box:
-        box = (0,0,width,length)
+        box = (0,0,int(atr['WIDTH']),int(atr['LENGTH']))
 
-    # Convert input mask argument (maskFile) to mask file name (maskFile) and matrix (mask)
-    if maskFile is None:
-        maskFile = None
-        mask = None
-        print('no mask input, use all pixels available')
-    elif type(maskFile) is str:
-        print('mask from file: '+maskFile)
-        mask = readfile.read(maskFile, datasetName='mask')[0]
-        mask = mask[box[1]:box[3],box[0]:box[2]]
-    elif type(maskFile) is np.ndarray:
-        mask = maskFile
-        mask = mask[box[1]:box[3],box[0]:box[2]]
-        maskFile = 'np.ndarray matrix'
-        print('mask from input matrix')
-    else:
-        print('Unsupported mask input format: '+str(type(maskFile)))
-        return None, None
+    ## If input is text file
+    suffix = ''
+    if k == 'ifgramStack':
+        suffix += '_'+datasetName
+    suffix += '_spatialAvg.txt'
+    if File.endswith(suffix):
+        print('Input file is spatial average txt already, read it directly')
+        meanList, dateList = read_text_file(File)
+        return meanList, dateList
 
-    # Read existing txt file only if 1) data file is older AND 2) same AOI
-    read_txt = False
-    txtFile = os.path.splitext(File)[0]+suffix
-    file_line = '# Data file: %s\n' % os.path.basename(str(File))
-    mask_line = '# Mask file: %s\n' % os.path.basename(str(maskFile))
-    aoi_line = '# AOI box: %s\n' % str(box)
-
+    ## Read existing txt file only if 1) data file is older AND 2) same AOI
+    txtFile = os.path.splitext(os.path.basename(File))[0]+suffix
+    file_line = '# Data file: {}\n'.format(os.path.basename(File))
+    mask_line = '# Mask file: {}\n'.format(os.path.basename(maskFile))
+    aoi_line  = '# AOI box: {}\n'.format(box)
     try:
         # Read AOI line from existing txt file
         fl = open(txtFile,'r')
@@ -1119,116 +1121,56 @@ def spatial_average(File, maskFile=None, box=None, saveList=False, checkAoi=True
         if (aoi_line_orig == aoi_line \
             and mask_line_orig == mask_line \
             and not update_file(txtFile, [File, maskFile], check_readable=False)):
-            read_txt = True
-    except: pass
+            print(txtFile+' already exists, read it directly')
+            meanList, dateList = read_text_file(txtFile)
+            return meanList, dateList
+    except:
+        pass
 
-    if read_txt:
-        print(txtFile+' already exists, read it directly')
-        txtContent = np.loadtxt(txtFile, dtype=bytes).astype(str)
-        mean_list = [float(i) for i in txtContent[:,1]]
-        date_list = [i for i in txtContent[:,0]]
-        return mean_list, date_list
-
-
-    # Calculate mean coherence list
-    if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-        print('calculating spatial average of file: '+os.path.basename(File))
-        h5file = h5py.File(File,'r')
-        dsList = sorted(h5file[k].keys())
-        dsNum  = len(dsList)
-
-        mean_list   = []
-        prog_bar = ptime.progress_bar(maxValue=dsNum, prefix='calculating: ')
-        for i in range(dsNum):
-            dsName = dsList[i]
-            if k in multi_group_hdf5_file:
-                dset = h5file[k][dsName].get(dsName)
-            elif k in multi_dataset_hdf5_file:
-                dset = h5file[k].get(dsName)
-            else:  print('Unrecognized group type: '+k)
-
-            data = dset[box[1]:box[3],box[0]:box[2]]
-            if not mask is None:
-                data[mask==0] = np.nan
-            ### supress warning 
-            #with warnings.catch_warnings():
-            #    warnings.simplefilter("ignore", category=RuntimeWarning)
-            mean_list.append(np.nanmean(data))
-            prog_bar.update(i+1)
-        prog_bar.close()
-        del data
+    ## Calculate mean coherence list
+    if k =='ifgramStack':
+        obj = ifgramStack(File)
+        obj.open(printMsg=False)
+        meanList, dateList = obj.spatial_average(datasetName=datasetName, maskFile=maskFile, box=box)
+        pbase = obj.pbaseIfgram
+        tbase = obj.tbaseIfgram
+        obj.close()
+    elif k == 'timeseries':
+        meanList, dateList = timeseries(File).spatial_average(maskFile=maskFile, box=box)
     else:
-        data,atr = readfile.read(File, box=box)
-        if not mask is None:
-            data[mask==0] = np.nan
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            mean_list = [np.nanmean(data)]
-
-    # Get date/pair list
-    if k in multi_group_hdf5_file:
-        date_list = pnet.get_date12_list(File)
-        try: date_list = [i.decode('utf-8') for i in date_list]
-        except: pass
-        # Temp/Perp Baseline
-        m_dates = [date12.split('-')[0] for date12 in date_list]
-        s_dates = [date12.split('-')[1] for date12 in date_list]
-        date6_list = ptime.yymmdd(sorted(list(set(m_dates + s_dates))))
-        tbase_ts_list = ptime.date_list2tbase(date6_list)[0]
-        tbase_list = []
-        pbase_list = []
-        for i in range(dsNum):
-            ifgram = dsList[i]
-            pbase_top    = float(h5file[k][ifgram].attrs['P_BASELINE_TOP_HDR'])
-            pbase_bottom = float(h5file[k][ifgram].attrs['P_BASELINE_BOTTOM_HDR'])
-            pbase = (pbase_bottom+pbase_top)/2.0
-            pbase_list.append(pbase)
-
-            m_idx = date6_list.index(m_dates[i])
-            s_idx = date6_list.index(s_dates[i])
-            tbase = tbase_ts_list[s_idx] - tbase_ts_list[m_idx]
-            tbase_list.append(tbase)
-
-    elif k in multi_dataset_hdf5_file:
-        date_list = dsList
-    else:
-        date_list = [os.path.basename(File)]
-
-    try: h5file.close()
-    except: pass
-
+        data = readfile.read(File, box=box)[0]
+        if maskFile and os.path.isfile(maskFile):
+            print('mask from file: '+maskFile)
+            mask = readfile.read(maskFile, datasetName='mask', box=box)[0]
+            data[mask==0.] = np.nan
+        meanList = np.nanmean(data)
+        dateList = [os.path.basename(File)]
 
     # Write mean coherence list into text file
     if saveList:
         print('write average coherence in space into text file: '+txtFile)
         fl = open(txtFile, 'w')
         # Write comments
-        fl.write(file_line)
-        fl.write(mask_line)
-        fl.write(aoi_line)
-
+        fl.write(file_line+mask_line+aoi_line)
         # Write data list
-        line_num = len(date_list)
-        if k in multi_group_hdf5_file:
-            fl.write('#   DATE12        Mean      Btemp/days   Bperp/m   Num\n')
-            for i in range(line_num):
-                line = '%s    %.4f    %8.0f    %8.1f     %d\n' % (date_list[i], mean_list[i],\
-                                                                  tbase_list[i], pbase_list[i], i)
-                fl.write(line)
+        numLine = len(dateList)
+        if k == 'ifgramStack':
+            fl.write('#\tDATE12\t\tMean\tBtemp/days\tBperp/m\t\tNum\n')
+            for i in range(numLine):
+                fl.write('%s\t%.4f\t%8.0f\t%8.1f\t%d\n' % (dateList[i],meanList[i],tbase[i],pbase[i],i))
         else:
-            fl.write('#   DATE12        Mean\n')
-            for i in range(line_num):
-                line = '%s    %.4f\n' % (date_list[i], mean_list[i])
-                fl.write(line)
+            fl.write('#\tDATE12\t\tMean\n')
+            for i in range(numLine):
+                fl.write('%s\t%.4f\n' % (dateList[i], meanList[i]))
         fl.close()
 
-    if len(mean_list) == 1:
-        mean_list = mean_list[0]
-        date_list = date_list[0]
-    return mean_list, date_list
+    if len(meanList) == 1:
+        meanList = meanList[0]
+        dateList = dateList[0]
+    return meanList, dateList
 
 
-def temporal_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, updateMode=False, outFile=None):
+def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, outFile=None):
     '''Calculate temporal average of multi-temporal dataset, equivalent to stacking
     For ifgramStakc/unwrapPhase, return average phase velocity
 
@@ -1274,30 +1216,22 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, upd
             else:
                 outFile = 'avg{}.h5'.format(File)
 
-    if updateMode and not update_file(outFile, [File, maskFile]):
+    if updateMode and not update_file(outFile, [File]):
         dataMean = readfile.read(outFile)[0]
         return dataMean, outFile
 
     ##Calculate temporal average
     if k == 'ifgramStack':
-        obj = ifgramStack(File)
-        obj.open()
-        data = obj.read(datasetName=datasetName)
+        dataMean = ifgramStack(File).temporal_average(datasetName=datasetName)
         if datasetName == 'unwrapPhase':
-            phase2range = -1 * float(atr['WAVELENGTH']) / (4.0 * np.pi)
-            data *= phase2range
-            data *= 1. / (obj.btemp / 365.25).reshape(-1,1,1)
             atr['FILE_TYPE'] = 'velocity'
             atr['UNIT'] = 'm/year'
         else:
             atr['FILE_TYPE'] = datasetName
-        print('read /{}/{} from file: {}'.format(k,datasetName,File))
     elif k == 'timeseries':
-        data = timeseries(File).read()
+        dataMean = timeseries(File).temporal_average()
         atr['FILE_TYPE'] = 'displacement'
-        print('read /{}/{} from file: {}'.format(k,k,File))
 
-    dataMean = np.nanmean(data, axis=0)
     if outFile:
         print('writing >>> '+outFile)
         writefile.write(dataMean, atr, outFile)
@@ -1733,8 +1667,8 @@ def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None):
             raise ValueError
 
     ## date12_list to date6_list
-    m_dates = [i.split('-')[0] for i in date12_list]
-    s_dates = [i.split('-')[1] for i in date12_list]
+    m_dates = [i.split('_')[0] for i in date12_list]
+    s_dates = [i.split('_')[1] for i in date12_list]
     date6_list = sorted(list(set(m_dates + s_dates)))
     tbase = np.array(ptime.date_list2tbase(date6_list)[0])
     date_num = len(date6_list)
@@ -1750,7 +1684,7 @@ def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None):
     B = np.zeros(A.shape)
     #t = np.zeros((ifgram_num, 2))
     for i in range(ifgram_num):
-        m_idx, s_idx = [date6_list.index(j) for j in date12_list[i].split('-')]
+        m_idx, s_idx = [date6_list.index(j) for j in date12_list[i].split('_')]
         A[i, m_idx] = -1
         A[i, s_idx] = 1
         B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
@@ -1975,8 +1909,8 @@ def perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list=[]):
 
     # Temporal baseline velocity
     date12_list = ptime.list_ifgram2date12(ifgram_list)
-    m_dates = [i.split('-')[0] for i in date12_list]
-    s_dates = [i.split('-')[1] for i in date12_list]
+    m_dates = [i.split('_')[0] for i in date12_list]
+    s_dates = [i.split('_')[1] for i in date12_list]
     date8_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
     tbase_list = ptime.date_list2tbase(date8_list)[0]
     tbase_v = np.diff(tbase_list)

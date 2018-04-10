@@ -96,9 +96,9 @@ def main(iargs=None):
         ifgramNum = len(inps.file)
         print('Number of interferograms: %d' % (ifgramNum))
         for fname in inps.file:
-            try:    date12 = str(re.findall('\d{8}[-_]\d{8}', os.path.basename(fname))[0]).replace('_','-')
-            except: date12 = str(re.findall('\d{6}[-_]\d{6}', os.path.basename(fname))[0]).replace('_','-')
-            m_date, s_date = date12.split('-')
+            try:    date12 = str(re.findall('\d{8}[-_]\d{8}', os.path.basename(fname))[0]).replace('-','_')
+            except: date12 = str(re.findall('\d{6}[-_]\d{6}', os.path.basename(fname))[0]).replace('-','_')
+            m_date, s_date = date12.split('_')
             bperp = readfile.read_attribute(fname)['P_BASELINE_TOP_HDR']
             m_date_list.append(m_date)
             s_date_list.append(s_date)
@@ -108,11 +108,11 @@ def main(iargs=None):
         h5 = h5py.File(inps.file[0],'r')
         ifgram_list = ut.check_drop_ifgram(h5)
         date12_list = ptime.list_ifgram2date12(ifgram_list)
-        m_date_list = [date12.split('-')[0] for date12 in date12_list]
-        s_date_list = [date12.split('-')[1] for date12 in date12_list]
+        m_date_list = [date12.split('_')[0] for date12 in date12_list]
+        s_date_list = [date12.split('_')[1] for date12 in date12_list]
         for ifgram in ifgram_list:
-           bperp = h5[k][ifgram].attrs['P_BASELINE_TOP_HDR']
-           bperp_list.append(bperp)
+            bperp = h5[k][ifgram].attrs['P_BASELINE_TOP_HDR']
+            bperp_list.append(bperp)
         ifgramNum = len(ifgram_list)
 
     fout = '{0} {1}     {2:<15}   {3}\n'
