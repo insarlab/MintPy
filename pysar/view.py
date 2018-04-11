@@ -1250,11 +1250,12 @@ def main(iargs=None):
 
         #f = h5py.File(inps.file, 'r')
         # Check dropped interferograms
-        drop_dataset_list = []
-        if inps.key in multi_group_hdf5_file and inps.disp_title:
-            drop_dataset_list = sorted(list(set(inps.dset) - \
-                                          set(ut.check_drop_ifgram(f, printMsg=False))))
-            print("mark interferograms with 'DROP_IFGRAM'='yes' in red colored title")
+        dropDatasetList = []
+        if inps.key == 'ifgramStack' and inps.disp_title:
+            obj = ifgramStack(inps.file)
+            obj.open(printMsg=False)
+            dropDatasetList = list(np.array(inps.dset)[obj.dropIfgram == 0]) 
+            print("mark interferograms with 'dropIfgram=False' in red colored title")
 
         f = h5py.File(inps.file,'r')
         ##### Loop 1 - Figures
@@ -1328,6 +1329,11 @@ def main(iargs=None):
                 except:
                     im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest', alpha=inps.transparency)
 
+                # Plot Seed Point
+                if inps.disp_seed and inps.seed_yx:
+                    ax.plot(inps.seed_yx[1]-inps.pix_box[0], inps.seed_yx[0]-inps.pix_box[1],\
+                            inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
+
                 ###### Subplot Setting
                 # Tick and Label
                 ax.set_yticklabels([])
@@ -1337,7 +1343,7 @@ def main(iargs=None):
                 # Title
                 if inps.disp_title:
                     if not inps.fig_title_in:
-                        if dset in drop_dataset_list:
+                        if dset in dropDatasetList:
                             ax.set_title(subplot_title, fontsize=inps.font_size, color='crimson', fontweight='bold')
                         else:
                             ax.set_title(subplot_title, fontsize=inps.font_size)

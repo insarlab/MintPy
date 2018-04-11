@@ -343,6 +343,7 @@ def network_inversion_wls(A, ifgram, weight, skipZeroPhase=True, Astd=None):
     ts = np.zeros(dateNum1, np.float32)
     tsStd = np.zeros(dateNum1, np.float32)
     tempCoh = 0.
+    ifgram = np.reshape(ifgram, (-1,1))
 
     ## Skip Zero Phase Value
     if skipZeroPhase and not np.all(ifgram):
@@ -357,13 +358,13 @@ def network_inversion_wls(A, ifgram, weight, skipZeroPhase=True, Astd=None):
     W = np.diag(weight.flatten())
     try:
         ## WLS Inversion
-        ATW = A.T.dot(W)
-        ts = np.linalg.inv(ATW.dot(A)).dot(ATW).dot(ifgram.reshape(-1,1))
+        ATW = np.array(A.T.dot(W), np.float32)
+        ts = np.array(np.linalg.inv(ATW.dot(A)).dot(ATW), np.float32).dot(ifgram)
         #A_inv_wls = np.linalg.inv(A.T.dot(W).dot(A))
         #ts = A_inv_wls.dot(A.T).dot(W).dot(ifgram.reshape(-1,1))
 
         ## Temporal Coherence
-        ifgram_diff = ifgram - np.dot(A, ts).flatten()
+        ifgram_diff = ifgram - np.dot(A, ts)
         tempCoh = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / A.shape[0]
 
         ## Decorrelation Noise Std

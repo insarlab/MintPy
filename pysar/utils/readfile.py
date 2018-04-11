@@ -183,9 +183,8 @@ def read(fname, box=None, datasetName=None, printMsg=True):
                 dset = f['recons'][dateIndx,:,:]
             data = dset[box[1]:box[3],box[0]:box[2]]
         else:
-            dset = f[k]
-            if isinstance(dset, h5py.Group):
-                dset = dset[k]
+            try:    dset = f[k][datasetName]
+            except: dset = f[datasetName]
             data = dset[box[1]:box[3],box[0]:box[2]]
             atr['LENGTH'] = str(dset.shape[0])
             atr['WIDTH'] = str(dset.shape[1])

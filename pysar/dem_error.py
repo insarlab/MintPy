@@ -162,7 +162,7 @@ def design_matrix4deformation(inps):
     print("temporal deformation model: polynomial order = "+str(inps.poly_order))
     A_def = np.ones((tsobj.numDate, 1), np.float32)
     for i in range(inps.poly_order):
-        Ai = np.array(tsobj.btemp**(i+1) / gamma(i+2), np.float32).reshape(-1,1)
+        Ai = np.array(tsobj.tbase**(i+1) / gamma(i+2), np.float32).reshape(-1,1)
         A_def = np.hstack((A_def, Ai))
 
     # 2. Step function - 2D matrix in size of (numDate, len(inps.step_date))
@@ -189,17 +189,17 @@ def read_geometry(inps):
         inps.rangeDist = geomobj.read(datasetName='slantRangeDistance').flatten()
         if 'bperp' in geomobj.f.keys():
             print('reading 3D bperp from {} file: {} ...'.format(geomobj.name, geomobj.file))
-            inps.bperp = geomobj.read(datasetName='bperp').reshape((geomobj.numDate, -1))
-            inps.bperp -= inps.bperp[tsobj.refIndex]
+            inps.pbase = geomobj.read(datasetName='bperp').reshape((geomobj.numDate, -1))
+            inps.pbase -= inps.pbase[tsobj.refIndex]
         else:
             print('read mean bperp from {} file'.format(tsobj.name))
-            inps.bperp = tsobj.bperp.reshape((-1,1))
+            inps.pbase = tsobj.pbase.reshape((-1,1))
     ## 0D geometry
     else:
         print('read mean incidenceAngle,slantRangeDistance,bperp value from {} file'.format(tsobj.name))
         inps.incAngle = ut.incidence_angle(tsobj.metadata, dimension=0)
         inps.rangeDist = ut.range_distance(tsobj.metadata, dimension=0)
-        inps.bperp = tsobj.bperp.reshape((-1,1))
+        inps.pbase = tsobj.pbase.reshape((-1,1))
     inps.sinIncAngle = np.sin(inps.incAngle)
     return inps
 
@@ -211,7 +211,7 @@ def estimate_dem_error_data(ts0, A0, inps):
                 A0 : 2D np.array in size of (numDate, model_num)
                     design matrix in [A_geom, A_def]
                 inps : Namespace with the following settings:
-                    btemp : 2D np.array in size of (numDate, 1), temporal baseline
+                    tbase : 2D np.array in size of (numDate, 1), temporal baseline
                     dropDate : 1D np.array in bool data type, mark the date used in the estimation
                     phase_velocity : bool, use phase history or phase velocity for minimization
     Returns:    deltaZ : 2D np.array in size of (1,       numPixel)
@@ -232,10 +232,10 @@ def estimate_dem_error_data(ts0, A0, inps):
     ##Prepare Design matrix A and observations ts for inversion
     A = A0[inps.dropDate,:]
     ts = ts0[inps.dropDate,:]
-    btemp = inps.btemp[inps.dropDate,:]
+    tbase = inps.tbase[inps.dropDate,:]
     if inps.phase_velocity:
-        ts = np.diff(ts, axis=0) / np.diff(btemp, axis=0)
-        A = np.diff(A, axis=0) / np.diff(btemp, axis=0)
+        ts = np.diff(ts, axis=0) / np.diff(tbase, axis=0)
+        A = np.diff(A, axis=0) / np.diff(tbase, axis=0)
 
     ##Inverse using L-2 norm to get unknown parameters X = [deltaZ, vel, acc, deltaAcc, ...]
     X = np.linalg.pinv(A).dot(ts)   #equivalent to X = np.linalg.inv(A.T.dot(A)).dot(A.T).dot(ts)
@@ -256,7 +256,7 @@ def estimate_dem_error(inps, A_def):
     ##### Read Date Info
     tsobj = timeseries(inps.timeseries_file)
     tsobj.open()
-    inps.btemp = tsobj.btemp.reshape(-1,1)
+    inps.tbase = tsobj.tbase.reshape(-1,1)
     inps.dropDate = read_exclude_date(inps, tsobj.dateList)
     inps.numStep = len(inps.step_date)
 
@@ -266,7 +266,7 @@ def estimate_dem_error(inps, A_def):
 
     ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
     if inps.rangeDist.size == 1:
-        A_geom = inps.bperp / (inps.rangeDist * inps.sinIncAngle)
+        A_geom = inps.pbase / (inps.rangeDist * inps.sinIncAngle)
         A = np.hstack((A_geom, A_def))
         deltaZ, tsCor, tsRes, stepEst = estimate_dem_error_data(tsData, A, inps)
     else:
@@ -289,11 +289,11 @@ def estimate_dem_error(inps, A_def):
             progBar.update(i+1, every=1000, suffix='{}/{} pixels'.format(i+1,numPixel2inv))
             idx = idxPixel2inv[i]
 
-            if inps.bperp.shape[1] == 1:
-                bperp = inps.bperp
+            if inps.pbase.shape[1] == 1:
+                pbase = inps.pbase
             else:
-                bperp = inps.bperp[:,idx].reshape(-1,1)
-            A_geom = bperp / (inps.rangeDist[idx] * inps.sinIncAngle[idx])
+                pbase = inps.pbase[:,idx].reshape(-1,1)
+            A_geom = pbase / (inps.rangeDist[idx] * inps.sinIncAngle[idx])
             A = np.hstack((A_geom, A_def))
 
             #ts = tsData[:,idx].reshape(tsobj.numDate,-1)

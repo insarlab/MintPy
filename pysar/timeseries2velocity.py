@@ -17,6 +17,8 @@ import numpy as np
 from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 from pysar.objects import timeseries
 
+dataType = np.float32
+
 
 ############################################################################
 EXAMPLE='''example:
@@ -198,43 +200,49 @@ def design_matrix(years):
                     date in years, e.g. 2015.1830937713896
     Returns:    A : 2D array of int in size of (numDate, 2)
     '''
-    A = np.ones([len(years),2])
+    A = np.ones([len(years),2], dtype=dataType)
     A[:,0] = years
     #A_inv = np.dot(np.linalg.inv(np.dot(A.T,A)), A.T)
-    #A_inv = np.array(A_inv, np.float32)
+    #A_inv = np.array(A_inv, dataType)
     return A
 
 
 def estimateVelocity(inps):
     A = design_matrix(inps.years)
-    A_inv = np.linalg.pinv(A)
-    timeStd = np.sqrt(np.sum((inps.years - np.mean(inps.years))**2))
+    A_inv = np.array(np.linalg.pinv(A), dataType)
+    #A_inv = np.array(np.linalg.inv(A.T.dot(A)).dot(A.T), dataType)  #Give wrong and different result, find reason.
 
     tsobj = timeseries(inps.timeseries_file)
     tsData = tsobj.read()[inps.dropDate,:,:].reshape(inps.numDate, -1)
+    dsShape = (tsobj.length, tsobj.width)
 
     X = np.dot(A_inv, tsData)
-    V = X[0,:].reshape((tsobj.length, tsobj.width))
+    V = np.reshape(X[0,:], dsShape)
 
     tsResidual = tsData - np.dot(A, X)
+    timeStd = np.sqrt(np.sum((inps.years - np.mean(inps.years))**2))
     Vstd = np.sqrt(np.sum(tsResidual**2, axis=0) / (inps.numDate-2)) / timeStd
-    Vstd = Vstd.reshape((tsobj.length, tsobj.width))
+    Vstd = Vstd.reshape(dsShape)
 
+    ## Write h5 file
     if not inps.outfile:
         if inps.ex_date:
             inps.outfile = 'velocityEx.h5'
         else:
             inps.outfile = 'velocity.h5'
-    print('writing >>> '+inps.outfile)
+    print('create HDF5 file: {} with w mode'.format(inps.outfile))
     f = h5py.File(inps.outfile, 'w')
-    f.create_dataset('velocity', data=V, dtype=np.float32, chunks=True)
-    f.create_dataset('velocityStd', data=Vstd, dtype=np.float32, chunks=True)
+    print('create dataset /velocity    of {:<10} in size of {}'.format(str(dataType), dsShape))
+    f.create_dataset('velocity',    data=V,    dtype=dataType, chunks=True)
+    print('create dataset /velocityStd of {:<10} in size of {}'.format(str(dataType), dsShape))
+    f.create_dataset('velocityStd', data=Vstd, dtype=dataType, chunks=True)
     atr = tsobj.metadata.copy()
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
     for key, value in atr.items():
         f.attrs[key] = value
     f.close()
+    print('finished writing to {}'.format(inps.outfile))
     return inps.outfile
 
 

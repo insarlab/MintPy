@@ -228,7 +228,7 @@ class timeseries:
             if dates is None:
                 dates = refobj.dateList
             if bperp is None:
-                bperp = refobj.bperp
+                bperp = refobj.pbase
             refobj.close(printMsg=False)
         data = np.array(data, dtype=np.float32)
         dates = np.array(dates, dtype=np.string_)
