@@ -769,6 +769,7 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
     if check_readable:
         try:
             atr = readfile.read_attribute(outFile)
+            width = atr['WIDTH']
         except:
             print(outFile+' exists, but can not read, remove it.')
             rmCmd = 'rm '+outFile;  print(rmCmd);  os.system(rmCmd)

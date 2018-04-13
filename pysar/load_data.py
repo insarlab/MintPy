@@ -6,10 +6,9 @@ import argparse
 import datetime, time
 
 import pysar
-from pysar.utils import readfile, datetime as ptime
-from pysar.utils.sensor import sensors
-from pysar.objects import ifgramDatasetNames, geometryDatasetNames
-from pysar.objects.insarobj import ifgram, ifgramStack, geometry
+from pysar.utils import readfile, datetime as ptime, sensors, utils as ut
+from pysar.objects import ifgramDatasetNames, geometryDatasetNames, ifgramStack, geometry
+from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
 from pysar.defaults import isceAutoPath, roipacAutoPath, gammaAutoPath
 
 
@@ -30,33 +29,38 @@ datasetName2templateKey={'unwrapPhase'     :'pysar.load.unwFile',
                          }
 
 DEFAULT_TEMPLATE='''template:
-## 1. Load Data (--load to exit after this step)
+########## 1. Load Data (--load to exit after this step)
 {}\n
 {}\n
 {}\n
-##----------Subset Range Setting
-pysar.subset.yx   = auto
-pysar.subset.lalo = auto
 '''.format(isceAutoPath,\
            roipacAutoPath,\
            gammaAutoPath)
 
 TEMPLATE='''template:
-pysar.load.processor      = auto  #[isce,            roipac,              gamma,             ], auto for isce
-pysar.load.unwFile        = auto  #[filt*.unw,       filt*rlks_c*.unw,    diff*rlks.unw      ]
-pysar.load.corFile        = auto  #[filt*.cor,       filt*rlks.cor,       *filt*rlks.cor     ]
-pysar.load.connCompFile   = auto  #[filt*.unw.conn*, filt*rlks_snap*.byt, None               ]
-pysar.load.intFile        = auto  #[filt*.int,       filt*rlks.int,       diff*rlks.int      ]
+########## 1. Load Data (--load to exit after this step)
+## auto - automatic path pattern for Univ of Miami file structure
+## load_data.py -H to check more details and example inputs.
+pysar.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
+##---------interferogram datasets:
+pysar.load.unwFile        = auto  #[path2unw_file]
+pysar.load.corFile        = auto  #[path2cor_file]
+pysar.load.connCompFile   = auto  #[path2conn_file]
+pysar.load.intFile        = auto  #[path2int_file]
+##---------geometry datasets:
+pysar.load.demFile        = auto  #[path2hgt_file]
+pysar.load.lookupYFile    = auto  #[path2lat_file]]
+pysar.load.lookupXFile    = auto  #[path2lon_file]
+pysar.load.incAngleFile   = auto  #[path2los_file]
+pysar.load.headAngleFile  = auto  #[path2los_file]
+pysar.load.shadowMaskFile = auto  #[path2shadow_file]
+pysar.load.bperpFile      = auto  #[path2bperp_file]
 
-pysar.load.demFile        = auto  #[hgt.rdr,         radar*.hgt,          sim_*rlks.rdc.hgt  ]
-pysar.load.lookupYFile    = auto  #[lat.rdr,         geomap*.trans,       sim*rlks.UTM_TO_RDC]
-pysar.load.lookupXFile    = auto  #[lon.rdr,         geomap*.trans,       sim*rlks.UTM_TO_RDC]
-pysar.load.incAngleFile   = auto  #[los.rdr,         None,                None               ]
-pysar.load.headAngleFile  = auto  #[los.rdr,         None,                None               ]
-pysar.load.shadowMaskFile = auto  #[shadowMask.rdr,  None,                None               ]
-pysar.load.bperpFile      = auto. #[bperp,           None,                *.base_perp        ]
-
-pysar.subset.yx   = auto
+## 1.1 Subset (optional)
+## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
+pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
+pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
+pysar.subset.tightBox = auto    #[yes / no], auto for yes, tight bounding box for files in geo coord
 '''
 
 NOTE='''NOTE:
@@ -67,6 +71,7 @@ NOTE='''NOTE:
 
 EXAMPLE='''example:
   load_data.py -t GalapagosSenDT128.tempalte
+  load_data.py -t GalapagosSenDT128.tempalte --enforce  #Disable update mode and force to (re-)load into H5 file.
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
 '''
 
@@ -81,8 +86,8 @@ def createParser():
     parser.add_argument('--project', type=str, dest='project_name', help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor', choices={'isce','roipac','gamma','doris','gmtsar'},\
                         help='InSAR processor/software of the file')
-    parser.add_argument('--enforce', dest='update_mode', action='store_false',\
-                        help='Disable the update mode, or skip checking dataset already loaded. [not implemented yet]')
+    parser.add_argument('--enforce', dest='updateMode', action='store_false',\
+                        help='Disable the update mode, or skip checking dataset already loaded.')
     parser.add_argument('-o','--output', type=str, nargs=3, dest='outfile',\
                         default=['./INPUTS/ifgramStack.h5','./INPUTS/geometryRadar.h5','./INPUTS/geometryGeo.h5'],\
                         help='output HDF5 file')
@@ -167,8 +172,8 @@ def read_subset_box(inpsDict):
     return box
 
 
-def read_inps_dict2ifgram_stack_object(inpsDict):
-    '''Read input arguments into dict of ifgramStack object'''
+def read_inps_dict2ifgram_stack_dict_object(inpsDict):
+    '''Read input arguments into dict of ifgramStackDict object'''
     ########## inpsDict --> dsPathDict
     print('-'*50)
     print('searching interferometric pairs info')
@@ -227,17 +232,17 @@ def read_inps_dict2ifgram_stack_object(inpsDict):
                     ifgramPathDict[dsName] = dsPath2[0]
                 else:
                     print('WARNING: {} file missing for pair {}'.format(dsName, dates))
-        ifgramObj = ifgram(dates=tuple(dates), datasetDict=ifgramPathDict)
+        ifgramObj = ifgramDict(dates=tuple(dates), datasetDict=ifgramPathDict)
         pairsDict[tuple(dates)] = ifgramObj
 
     if len(pairsDict)>0:
-        stackObj = ifgramStack(pairsDict=pairsDict)
+        stackObj = ifgramStackDict(pairsDict=pairsDict)
     else:
         stackObj = None
     return stackObj
 
 
-def read_inps_dict2geometry_object(inpsDict):
+def read_inps_dict2geometry_dict_object(inpsDict):
 
     ########## eliminate dsName by processor
     if inpsDict['processor'] in ['isce','doris']:
@@ -304,12 +309,34 @@ def read_inps_dict2geometry_object(inpsDict):
     geomRadarObj = None
     geomGeoObj = None
     if len(dsRadarPathDict)>0:
-        geomRadarObj = geometry(processor=inpsDict['processor'], datasetDict=dsRadarPathDict,\
-                                ifgramMetadata=ifgramRadarMetadata)
+        geomRadarObj = geometryDict(processor=inpsDict['processor'], datasetDict=dsRadarPathDict,\
+                                    ifgramMetadata=ifgramRadarMetadata)
     if len(dsGeoPathDict)>0:
-        geomGeoObj = geometry(processor=inpsDict['processor'], datasetDict=dsGeoPathDict,\
-                              ifgramMetadata=None)
+        geomGeoObj = geometryDict(processor=inpsDict['processor'], datasetDict=dsGeoPathDict,\
+                                  ifgramMetadata=None)
     return geomRadarObj, geomGeoObj
+
+
+def update_object(outFile, inObj, inps):
+    '''Do not write h5 file if: 1) h5 exists and readable,
+                                2) it contains all date12 from ifgramStackDict,
+                                            or all datasets from geometryDict'''
+    updateFile = True
+    if inps.updateMode and not ut.update_file(outFile, check_readable=True):
+        if inObj.name == 'ifgramStack':
+            outObj = ifgramStack(outFile)
+            if (outObj.get_size() == inObj.get_size(box=inps.box)\
+                and sorted(outObj.get_date12_list(dropIfgram=False)) == sorted(inObj.get_date12_list())):
+                print('All date12   exists in file {} with same size as required, no need to re-load.'.format(outFile))
+                updateFile = False
+        elif inObj.name == 'geometry':
+            outObj = geometry(outFile)
+            outObj.open(printMsg=False)
+            if (outObj.get_size() == inObj.get_size(box=inps.box)\
+                and all(i in outObj.datasetNames for i in inObj.get_dataset_list())):
+                print('All datasets exists in file{} with same size as required, no need to re-load.'.format(outFile))
+                updateFile = False
+    return updateFile
 
 
 #################################################################
@@ -322,20 +349,23 @@ def main(iargs=None):
         print('create directory: {}'.format(inps.outdir))
 
     inpsDict = read_inps2dict(inps)
-    box = read_subset_box(inpsDict)
 
-    stackObj = read_inps_dict2ifgram_stack_object(inpsDict)
-    geomRadarObj, geomGeoObj = read_inps_dict2geometry_object(inpsDict)
+    stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
+    geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
 
-    if stackObj:
+    inps.box = read_subset_box(inpsDict)
+
+    if stackObj and update_object(inps.outfile[0], stackObj, inps):
         print('-'*50)
-        stackObj.save2h5(outputFile=inps.outfile[0], access_mode='w', box=box)
-    if geomRadarObj:
+        stackObj.write2hdf5(outputFile=inps.outfile[0], access_mode='w', box=inps.box)
+
+    if geomRadarObj and update_object(inps.outfile[1], geomRadarObj, inps):
         print('-'*50)
-        geomRadarObj.save2h5(outputFile=inps.outfile[1], access_mode='w', box=box)
-    if geomGeoObj:
+        geomRadarObj.write2hdf5(outputFile=inps.outfile[1], access_mode='w', box=inps.box)
+
+    if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, inps):
         print('-'*50)
-        geomGeoObj.save2h5(outputFile=inps.outfile[2], access_mode='w')
+        geomGeoObj.write2hdf5(outputFile=inps.outfile[2], access_mode='w')
 
     return inps.outfile
 

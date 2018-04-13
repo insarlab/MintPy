@@ -16,20 +16,20 @@ from pysar.objects import ifgramDatasetNames, geometryDatasetNames, dataTypeDict
 dataType = np.float32
 
 ########################################################################################
-class ifgramStack:
+class ifgramStackDict:
     '''
     IfgramStack object for a set of InSAR pairs from the same platform and track.
 
     Example:
-        from pysar.objects.ifgramStack import ifgramStack
+        from pysar.objects.insarobj import ifgramStackDict
         pairsDict = {('20160524','20160530'):ifgramObj1,
                      ('20160524','20160605'):ifgramObj2,
                      ('20160524','20160611'):ifgramObj3,
                      ('20160530','20160605'):ifgramObj4,
                      ...
                      }
-        stackObj = ifgramStack(pairsDict=pairsDict)
-        stackObj.save2h5(outputFile='ifgramStack.h5', box=(200,500,300,600))
+        stackObj = ifgramStackDict(pairsDict=pairsDict)
+        stackObj.write2hdf5(outputFile='ifgramStack.h5', box=(200,500,300,600))
     '''
 
     def __init__(self, name='ifgramStack', pairsDict=None):
@@ -48,6 +48,11 @@ class ifgramStack:
             self.width = ifgramObj.width
         return self.numIfgram, self.length, self.width
 
+    def get_date12_list(self):
+        pairs = [pair for pair in self.pairsDict.keys()]
+        self.date12List = ['{}_{}'.format(i[0],i[1]) for i in pairs]
+        return self.date12List
+
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
         self.metadata = ifgramObj.get_metadata()
@@ -62,8 +67,8 @@ class ifgramStack:
             dsDataType = dataTypeDict[metadata['DATA_TYPE'].lower()]
         return dsDataType
 
-    def save2h5(self, outputFile='ifgramStack.h5', access_mode='w', box=None):
-        '''Save/write an ifgramStack object into an HDF5 file with the structure below:
+    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None):
+        '''Save/write an ifgramStackDict object into an HDF5 file with the structure below:
 
         /                  Root level
         Attributes         Dictionary for metadata
@@ -162,20 +167,20 @@ class ifgramStack:
 
 
 ########################################################################################
-class ifgram:
+class ifgramDict:
     """
     Ifgram object for a single InSAR pair of interferogram. It includes dataset name (family) of:
         'unwrapPhase','coherence','connectComponent','wrapPhase','iono','rangeOffset','azimuthOffset', etc.
 
     Example:
-        from pysar.objects.ifgramStack import ifgram
+        from pysar.objects.insarobj import ifgramDict
         datasetDict = {'unwrapPhase'     :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw',
                        'coherence'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.cor',
                        'connectComponent':'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.unw.conncomp',
                        'wrapPhase'       :'$PROJECT_DIR/merged/interferograms/20151220_20160206/filt_fine.int',
                        ...
                       }
-        ifgramObj = ifgram(dates=('20160524','20160530'), datasetDict=datasetDict)
+        ifgramObj = ifgramDict(dates=('20160524','20160530'), datasetDict=datasetDict)
         data, atr = ifgramObj.read('unwrapPhase')
     """
     def __init__(self, name='ifgram', dates=None, datasetDict={}, metadata=None):
@@ -244,13 +249,13 @@ class ifgram:
 
 
 ########################################################################################
-class geometry:
+class geometryDict:
     '''
     Geometry object for Lat, Lon, Heigt, Incidence, Heading, Bperp, ... from the same platform and track.
 
     Example:
         from pysar.utils import readfile
-        from pysar.utils.insarobj import geometry
+        from pysar.utils.insarobj import geometryDict
         datasetDict = {'height'        :'$PROJECT_DIR/merged/geom_master/hgt.rdr',
                        'latitude'      :'$PROJECT_DIR/merged/geom_master/lat.rdr',
                        'longitude'     :'$PROJECT_DIR/merged/geom_master/lon.rdr',
@@ -265,8 +270,8 @@ class geometry:
                      ...
                     }
         metadata = readfile.read_attribute('$PROJECT_DIR/merged/interferograms/20160629_20160723/filt_fine.unw')
-        geomObj = geometry(processor='isce', datasetDict=datasetDict, metadata=metadata)
-        geomObj.save2h5(outputFile='geometryRadar.h5', access_mode='w', box=(200,500,300,600))
+        geomObj = geometryDict(processor='isce', datasetDict=datasetDict, metadata=metadata)
+        geomObj.write2hdf5(outputFile='geometryRadar.h5', access_mode='w', box=(200,500,300,600))
     '''
 
     def __init__(self, name='geometry', processor=None, datasetDict={}, ifgramMetadata=None):
@@ -307,6 +312,10 @@ class geometry:
             width = int(metadata['WIDTH'])
         return length, width
 
+    def get_dataset_list(self):
+        self.datasetList = list(self.datasetDict.keys())
+        return self.datasetList
+
     def get_metadata(self, family=geometryDatasetNames[0]):
         self.file = self.datasetDict[family]
         self.metadata = readfile.read_attribute(self.file)
@@ -346,7 +355,7 @@ class geometry:
         return data
 
 
-    def save2h5(self, outputFile='geometryRadar.h5', access_mode='w', box=None):
+    def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None):
         '''
         /                        Root level
         Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
