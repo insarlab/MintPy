@@ -130,6 +130,57 @@ def cmdLineParse(iargs=None):
     return inps
 
 
+def read_template2inps(template_file, inps):
+    '''Read input template options into Namespace inps'''
+    if not inps:
+        inps = cmdLineParse()
+    template = readfile.read_template(template_file)
+
+    # Coherence-based network modification
+    prefix = 'pysar.networkInversion.'
+    key = prefix+'residualNorm'
+    if key in template.keys() and template[key] in ['L1']:
+        inps.resid_norm = 'L1'
+    else:
+        inps.resid_norm = 'L2'
+
+    key = prefix+'weightFunc'
+    if key in template.keys():
+        value = template[key]
+        if value in ['auto','no']:
+            inps.weight_function = 'no'
+        elif value.startswith(('lin','coh','cor')):
+            inps.weight_function = 'linear'
+        elif value.startswith('var'):
+            inps.weight_function = 'variance'
+        elif value.startswith(('fim','fisher')):
+            inps.weight_function = 'fim'
+        else:
+            print('Un-recognized input for %s = %s' % (key, value))
+            sys.exit(-1)
+
+    key = prefix+'waterMaskFile'
+    if key in template.keys():
+        value = template[key]
+        if value in ['auto', 'no']:
+            maskFile = None
+            #atr = readfile.read_attribute(inps.ifgram_file)
+            #if 'Y_FIRST' in atr.keys():
+            #    maskFile = 'geometryGeo.h5'
+            #else:
+            #    maskFile = 'geometryRadar.h5'
+        else:
+            maskFile = value
+            try:
+                data = readfile.read(maskFile, datasetName='mask')[0]
+                inps.water_mask_file = maskFile
+            except:
+                print('Can not found mask dataset in file: %s' % (maskFile))
+                print('Ignore this input water mask file option and continue.')
+
+    return inps
+
+
 ################################################################################################
 def phase_pdf_ds(L, coherence=None, phiNum=1000):
     '''Marginal PDF of interferometric phase for distributed scatterers (DS)
@@ -482,13 +533,13 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
         tsStd = tsStd.reshape(date_num, row_num, col_num)
         return ts, temp_coh, tsStd
 
-    print('reading unwrapPhase in {}'.format(box))
+    print('reading unwrapPhase in {} * {} ...'.format(box, inps.numIfgram))
     pha_data = None
-    pha_data = stackobj.read(datasetName='unwrapPhase', box=box).reshape(stackobj.numIfgram,-1)
+    pha_data = stackobj.read(datasetName='unwrapPhase', box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
     if inps.skip_zero_phase:
         print('skip zero phase value (masked out and filled during phase unwrapping)')
-        for i in range(stackobj.numIfgram):
-            pha_data[i,:][pha_data[i,:] != 0.] -= inps.ref_value[i]
+        for i in range(inps.numIfgram):
+            pha_data[i,:][pha_data[i,:] != 0.] -= inps.refPhase[i]
 
     ## 3 - Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
     maskAllNet = np.all(pha_data, axis=0)
@@ -496,13 +547,13 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
     maskPartNet = mask ^ maskAllNet
 
     ##### Design matrix
-    A, B = stackobj.get_design_matrix()
+    A, B = stackobj.get_design_matrix(dropIfgram=True)
     try:    ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
     except: ref_date = stackobj.dateList[0]
     refIdx = stackobj.dateList.index(ref_date)
     timeIdx = [i for i in range(date_num)]
     timeIdx.remove(refIdx)
-    Astd = stackobj.get_design_matrix(refDate=ref_date)[0]
+    Astd = stackobj.get_design_matrix(refDate=ref_date, dropIfgram=True)[0]
 
     ##### Inversion
     if inps.weight_function in ['no','uniform']:
@@ -517,11 +568,11 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
             progBar = ptime.progress_bar(maxValue=loopNum)
             for i in range(loopNum):
                 [i0, i1] = [i*step, min((i+1)*step, numAllNet)]
-                ts1[:,i0:i1], tempCoh1[i0:i1] = network_inversion_sbas(B, phaDataTemp[:,i0:i1], stackobj.btempHistDiff,\
+                ts1[:,i0:i1], tempCoh1[i0:i1] = network_inversion_sbas(B, phaDataTemp[:,i0:i1], inps.tbaseDiff,\
                                                                        skipZeroPhase=False)
                 progBar.update(i+1, suffix=i0)
             progBar.close()
-            #ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,maskAllNet], stackobj.btempHistDiff, skipZeroPhase=False)
+            #ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,maskAllNet], inps.tbaseDiff, skipZeroPhase=False)
             ts[1:,maskAllNet] = ts1
             temp_coh[maskAllNet] = tempCoh1
 
@@ -532,7 +583,7 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
             progBar = ptime.progress_bar(maxValue=pixel_num2inv)
             for i in range(pixel_num2inv):
                 idx = pixel_idx2inv[i]
-                ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,idx], stackobj.btempHistDiff, inps.skip_zero_phase)
+                ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,idx], inps.tbaseDiff, inps.skip_zero_phase)
                 ts[1:, idx] = ts1.flatten()
                 temp_coh[idx] = tempCoh1
                 progBar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
@@ -540,8 +591,8 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
 
     else:
         epsilon = 1e-4
-        print('reading coherence in {}'.format(box))
-        coh_data = stackobj.read(datasetName='coherence', box=box).reshape(stackobj.numIfgram,-1)
+        print('reading coherence in {} * {} ...'.format(box, inps.numIfgram))
+        coh_data = stackobj.read(datasetName='coherence', box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
         coh_data[np.isnan(coh_data)] = epsilon
 
         ##### Calculate Weight matrix
@@ -611,16 +662,21 @@ def ifgram_inversion(ifgramStackFile='ifgramStack.h5', inps=None):
     ##### IfgramStack Info
     stackobj = ifgramStack(ifgramStackFile)
     stackobj.open()
-    print('number of interferograms: {}'.format(stackobj.numIfgram))
+    inps.numIfgram = np.sum(stackobj.dropIfgram)
+    print('number of interferograms: {}'.format(inps.numIfgram))
     print('number of acquisitions  : {}'.format(stackobj.numDate))
     print('number of lines  : {}'.format(stackobj.length))
     print('number of columns: {}'.format(stackobj.width))
 
-    inps.ref_value = check_ifgram_reference(stackobj, inps)
+    inps.dateList = stackobj.get_date_list(dropIfgram=True)
+    inps.tbase = ptime.date_list2tbase(inps.dateList)[0]
+    inps.tbaseDiff = np.diff(inps.tbase).reshape(-1,1)
+
+    inps.refPhase = check_ifgram_reference_phase(stackobj, inps)
     check_design_matrix(stackobj, inps)
 
     ##### Invert time-series phase
-    boxList = split_into_boxes(inps, stackobj.numIfgram, stackobj.length, stackobj.width)
+    boxList = split_into_boxes(inps, inps.numIfgram, stackobj.length, stackobj.width)
     numBox = len(boxList)
     ts    = np.zeros((stackobj.numDate, stackobj.length, stackobj.width), np.float32)
     tsStd = np.zeros((stackobj.numDate, stackobj.length, stackobj.width), np.float32)
@@ -641,8 +697,7 @@ def ifgram_inversion(ifgramStackFile='ifgramStack.h5', inps=None):
 
     ##### Output 
     print('calculating perpendicular baseline timeseries')
-    pbase = stackobj.get_perp_baseline_timeseries()
-    inps.dateList = list(stackobj.dateList)
+    pbase = stackobj.get_perp_baseline_timeseries(dropIfgram=True)
     atr = dict(stackobj.metadata)
     stackobj.close()
 
@@ -695,7 +750,7 @@ def split_into_boxes(inps, numIfgram, length, width, printMsg=True):
 
 def check_design_matrix(stackobj, inps):
     '''Check Rank of Design matrix for weighted inversion'''
-    A = stackobj.get_design_matrix()[0]
+    A = stackobj.get_design_matrix(dropIfgram=True)[0]
     print('-------------------------------------------------------------------------------')
     if inps.weight_function in ['no','uniform']:
         print('generic least square inversion with min-norm phase velocity')
@@ -720,73 +775,23 @@ def check_design_matrix(stackobj, inps):
     return
 
 
-def check_ifgram_reference(stackobj, inps):
-    '''Read ref_value'''
+def check_ifgram_reference_phase(stackobj, inps):
+    '''Read refPhase'''
     try:
         ref_y = int(stackobj.metadata['REF_Y'])
         ref_x = int(stackobj.metadata['REF_X'])
-        inps.ref_value = stackobj.f['unwrapPhase'][stackobj.dropIfgram,ref_y,ref_x]
-        print('reference pixel in y/x: [{},{}]'.format(ref_y, ref_x))
+        box = [ref_x, ref_y, ref_x+1, ref_y+1]
+        inps.refPhase = np.squeeze(stackobj.read(datasetName='unwrapPhase', box=box, dropIfgram=True))
+        print('reference pixel in y/x: {}'.format((ref_y, ref_x)))
     except:
         if inps.skip_ref:
-            inps.ref_value = 0.0
+            inps.refPhase = 0.0
             print('skip checking reference pixel info - This is for SIMULATION ONLY.')
         else:
-            print('ERROR: No ref_x/y found! Can not invert interferograms without reference in space.')
+            print('ERROR: No REF_X/Y found! Can not invert interferograms without reference in space.')
             print('run reference_point.py '+inps.ifgramStackFile+' --mark-attribute for a quick referencing.')
             sys.exit(1)
-    return inps.ref_value
-
-
-def read_template2inps(template_file, inps):
-    '''Read input template options into Namespace inps'''
-    if not inps:
-        inps = cmdLineParse()
-    template = readfile.read_template(template_file)
-
-    # Coherence-based network modification
-    prefix = 'pysar.networkInversion.'
-    key = prefix+'residualNorm'
-    if key in template.keys() and template[key] in ['L1']:
-        inps.resid_norm = 'L1'
-    else:
-        inps.resid_norm = 'L2'
-
-    key = prefix+'weightFunc'
-    if key in template.keys():
-        value = template[key]
-        if value in ['auto','no']:
-            inps.weight_function = 'no'
-        elif value.startswith(('lin','coh','cor')):
-            inps.weight_function = 'linear'
-        elif value.startswith('var'):
-            inps.weight_function = 'variance'
-        elif value.startswith(('fim','fisher')):
-            inps.weight_function = 'fim'
-        else:
-            print('Un-recognized input for %s = %s' % (key, value))
-            sys.exit(-1)
-
-    key = prefix+'waterMaskFile'
-    if key in template.keys():
-        value = template[key]
-        if value in ['auto', 'no']:
-            maskFile = None
-            #atr = readfile.read_attribute(inps.ifgram_file)
-            #if 'Y_FIRST' in atr.keys():
-            #    maskFile = 'geometryGeo.h5'
-            #else:
-            #    maskFile = 'geometryRadar.h5'
-        else:
-            maskFile = value
-            try:
-                data = readfile.read(maskFile, datasetName='mask')[0]
-                inps.water_mask_file = maskFile
-            except:
-                print('Can not found mask dataset in file: %s' % (maskFile))
-                print('Ignore this input water mask file option and continue.')
-
-    return inps
+    return inps.refPhase
 
 
 ################################################################################################

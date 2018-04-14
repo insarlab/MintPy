@@ -120,10 +120,14 @@ def reference_file(inps):
     '''
     if not inps:
         inps = cmdLineParse([''])
+    atr = readfile.read_attribute(inps.file)
+    if (inps.ref_y and inps.ref_x and 'REF_Y' in atr.keys()\
+        and inps.ref_y == int(atr['REF_Y']) and inps.ref_x == int(atr['REF_X'])):
+        print('Same reference pixel is already selected/saved in file, skip updating.')
+        return inps.file
 
     ##### Get stack and mask
-    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', maskFile=inps.mask_file,\
-                                outFile='avgPhaseVelocity.h5', updateMode=True)[0]
+    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', outFile='avgPhaseVelocity.h5', updateMode=True)[0]
     mask = np.multiply(~np.isnan(stack), stack!=0.)
     if np.nansum(mask) == 0.0:
         print('\n'+'*'*40)
@@ -146,12 +150,7 @@ def reference_file(inps):
         raise ValueError('ERROR: no reference y/x found.')
 
     ##### Seeding file with reference y/x
-    atr = readfile.read_attribute(inps.file)
     atrNew = reference_point_attribute(atr, y=inps.ref_y, x=inps.ref_x)
-    if 'REF_Y' in atr.keys() and inps.ref_y == int(atr['REF_Y']) and inps.ref_x == int(atr['REF_X']):
-        print('Same reference pixel is already selected/saved in file, skip updating.')
-        return inps.file
-
     if not inps.write_data:
         print('Add/update ref_x/y attribute to file: '+inps.file)
         print(atrNew)

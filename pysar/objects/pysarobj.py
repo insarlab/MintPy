@@ -516,7 +516,7 @@ class ifgramStack:
         self.mTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.mDates])
         self.sTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.sDates])
 
-    def read(self, datasetName=ifgramDatasetNames[0], box=None, printMsg=True):
+    def read(self, datasetName=ifgramDatasetNames[0], box=None, printMsg=True, dropIfgram=False):
         '''Read 3D dataset with bounding box in space
         Parameters: datasetName : string, to point to specific 2D dataset, e.g.:
                         unwrapPhase
@@ -546,7 +546,10 @@ class ifgramStack:
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName[0]]
             if len(datasetName) == 1:
-                data = dset[:, box[1]:box[3], box[0]:box[2]]
+                if dropIfgram:
+                    data = dset[f['dropIfgram'][:], box[1]:box[3], box[0]:box[2]]
+                else:
+                    data = dset[:, box[1]:box[3], box[0]:box[2]]
             else:
                 data = dset[self.date12List.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
                 data = np.squeeze(data)
@@ -592,9 +595,9 @@ class ifgramStack:
             dates = f['date'][:]
             if dropIfgram:
                 dates = dates[f['dropIfgram'][:],:]
-        mDates = np.array([i.decode('utf8') for i in dates[:,0]])
-        sDates = np.array([i.decode('utf8') for i in dates[:,1]])
-        dateList = sorted(list(set(np.hstack((mDates, sDates)))))
+        mDates = [i.decode('utf8') for i in dates[:,0]]
+        sDates = [i.decode('utf8') for i in dates[:,1]]
+        dateList = sorted(list(set(mDates + sDates)))
         return dateList
 
     def nonzero_mask(self, datasetName=None, printMsg=True, dropIfgram=True):

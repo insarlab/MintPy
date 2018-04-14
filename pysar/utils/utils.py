@@ -388,20 +388,20 @@ def check_loaded_dataset(workDir='./', inps=None, printMsg=True):
     ##### Required files - interferograms stack
     fileList = [os.path.join(workDir, 'INPUTS/ifgramStack.h5')]
     stackFile = is_file_exist(fileList, abspath=True)
-    #Check required dataset - unwrapPhase
-    stackobj = ifgramStack(stackFile)
-    stackobj.open(printMsg=False)
-    if ifgramDatasetNames[0] not in stackobj.f.keys():
-        stackFile = None
-    stackobj.close(printMsg=False)
 
     if not stackFile:
         if inps:
             return inps
         else:
             return False
-    else:
-        atr = readfile.read_attribute(stackFile)
+
+    atr = readfile.read_attribute(stackFile)
+    #Check required dataset - unwrapPhase
+    dsList = []
+    with h5py.File(stackFile,'r') as f:
+        dsList = list(f.keys())
+    if ifgramDatasetNames[0] not in dsList:
+        stackFile = None
 
     ##### Recommended files - geometry (None if not found)
     if 'X_FIRST' in atr.keys():
@@ -465,7 +465,7 @@ def is_file_exist(fileList, abspath=True):
     '''
     try:
         file = get_file_list(fileList, abspath=abspath)[0]
-        atr = readfile.read_attribute(file_path)
+        atr = readfile.read_attribute(file)
     except:
         file = None
     return file

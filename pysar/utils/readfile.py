@@ -183,6 +183,8 @@ def read(fname, box=None, datasetName=None, printMsg=True):
                 dset = f['recons'][dateIndx,:,:]
             data = dset[box[1]:box[3],box[0]:box[2]]
         else:
+            if not datasetName:
+                datasetName = k
             try:    dset = f[k][datasetName]
             except: dset = f[datasetName]
             data = dset[box[1]:box[3],box[0]:box[2]]

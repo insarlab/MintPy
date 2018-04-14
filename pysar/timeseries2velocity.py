@@ -146,21 +146,6 @@ def read_date_info(inps):
     return inps
 
 
-def get_velocity_filename(timeseries_file, template_file=None, vel_file='velocity.h5', inps=None):
-    '''Get output velocity filename
-    Example: velocity_file = get_output_filename('timeseries_ECMWF_demErr_refDate.h5', 'KujuAlosAT422F650.template')
-    '''
-    if not inps:
-        inps = cmdLineParse()
-    inps.template_file = template_file
-    obj = timeseries(timeseries_file)
-    obj.open()
-    exDateList = read_exclude_date(inps, obj.dateList)
-    if exDateList:
-        vel_file = os.path.splitext(vel_file)[0]+'Ex.h5'
-    return vel_file
-
-
 def read_template2inps(template_file, inps=None):
     '''Read input template file into inps.ex_date'''
     if not inps:

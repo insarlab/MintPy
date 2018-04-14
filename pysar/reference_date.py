@@ -5,15 +5,12 @@
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
-import os, sys
+import os, sys, shutil
 import argparse
-import shutil
-import string
 import h5py
 import numpy as np
-import matplotlib as mpl; mpl.use('Agg')
-import matplotlib.pyplot as plt
 from pysar.utils import readfile, datetime as ptime, utils as ut, network as pnet
+from pysar.objects import timeseries
 
 
 ##################################################################
@@ -61,55 +58,30 @@ def ref_date_file(inFile, ref_date, outFile=None):
     '''Change input file reference date to a different one.'''
     if not outFile:
         outFile = os.path.splitext(inFile)[0]+'_refDate.h5'
-
-    # Input file type 
-    atr = readfile.read_attribute(inFile)
-    k = atr['FILE_TYPE']
-    if not k in ['timeseries']:
-        print('Input file is '+k+', only timeseries is supported.')
-        return None
-
-    # Input reference date
-    h5 = h5py.File(inFile, 'r')
-    date_list = sorted(h5[k].keys())
-    h5.close()
-    date_num = len(date_list)
-    try:    ref_date_orig = atr['REF_DATE']
-    except: ref_date_orig = date_list[0]
-
     ref_date = ptime.yyyymmdd(ref_date)
     print('input reference date: '+ref_date)
-    if not ref_date in date_list:
-        print('Input reference date was not found!\nAll dates available: '+str(date_list))
+
+    # Input file info
+    obj = timeseries(inFile)
+    obj.open()
+    if obj.metadata['FILE_TYPE'] != 'timeseries':
+        print('ERROR: input file is {}, only timeseries is supported.'.format(obj.metadata['FILE_TYPE']))
         return None
-    if ref_date == ref_date_orig:
+    if ref_date not in obj.dateList:
+        print('ERROR: Input reference date was not found!\nAll dates available: {}'.format(date_list))
+        return None
+    if ref_date == obj.metadata['REF_DATE']:
         print('Same reference date chosen as existing reference date.')
-        print('Copy %s to %s' % (inFile, outFile))
+        print('Copy {} to {}'.format(inFile, outFile))
         shutil.copy2(inFile, outFile)
         return outFile
 
     # Referencing in time
-    h5 = h5py.File(inFile, 'r')
-    ref_data = h5[k].get(ref_date)[:]
-
-    print('writing >>> '+outFile)
-    h5out = h5py.File(outFile,'w')
-    group = h5out.create_group(k)
-    prog_bar = ptime.progress_bar(maxValue=date_num)
-    for i in range(date_num):
-        date = date_list[i]
-        data = h5[k].get(date)[:]
-        dset = group.create_dataset(date, data=data-ref_data)
-        prog_bar.update(i+1, suffix=date)
-    prog_bar.close()
-    h5.close()
-
-    ## Update attributes
-    atr = ref_date_attribute(atr, ref_date, date_list)
-    for key,value in iter(atr.items()):
-        group.attrs[key] = str(value)
-    h5out.close()
-
+    print('reading timeseries data from file: {}'.format(inFile))
+    data = obj.read()
+    data -= data[obj.dateList.index(ref_date),:,:]
+    outObj = timeseries(outFile)
+    outObj.write2hdf5(data, refFile=inFile)
     return outFile
 
 

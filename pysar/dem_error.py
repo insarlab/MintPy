@@ -184,12 +184,13 @@ def read_geometry(inps):
     if inps.geom_file:
         geomobj = geometry(inps.geom_file)
         geomobj.open()
-        print('read 2D incidenceAngle,slantRangeDistance from {} file: {}'.format(geomobj.name, geomobj.file))
-        inps.incAngle = geomobj.read(datasetName='incidenceAngle').flatten() * np.pi/180.
-        inps.rangeDist = geomobj.read(datasetName='slantRangeDistance').flatten()
-        if 'bperp' in geomobj.f.keys():
-            print('reading 3D bperp from {} file: {} ...'.format(geomobj.name, geomobj.file))
-            inps.pbase = geomobj.read(datasetName='bperp').reshape((geomobj.numDate, -1))
+        print('read 2D incidenceAngle,slantRangeDistance from {} file: {}'.format(geomobj.name,\
+                                                                                  os.path.basename(geomobj.file)))
+        inps.incAngle = geomobj.read(datasetName='incidenceAngle', printMsg=False).flatten() * np.pi/180.
+        inps.rangeDist = geomobj.read(datasetName='slantRangeDistance', printMsg=False).flatten()
+        if 'bperp' in geomobj.datasetNames:
+            print('read 3D bperp from {} file: {} ...'.format(geomobj.name, os.path.basename(geomobj.file)))
+            inps.pbase = geomobj.read(datasetName='bperp', printMsg=False).reshape((geomobj.numDate, -1))
             inps.pbase -= inps.pbase[tsobj.refIndex]
         else:
             print('read mean bperp from {} file'.format(tsobj.name))
@@ -286,7 +287,7 @@ def estimate_dem_error(inps, A_def):
 
         progBar = ptime.progress_bar(maxValue=tsobj.numPixel)
         for i in range(numPixel2inv):
-            progBar.update(i+1, every=1000, suffix='{}/{} pixels'.format(i+1,numPixel2inv))
+            progBar.update(i+1, every=1000, suffix='{}/{}'.format(i+1,numPixel2inv))
             idx = idxPixel2inv[i]
 
             if inps.pbase.shape[1] == 1:
