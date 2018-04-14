@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Slider, Button
 from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 from pysar.mask import mask_matrix
 
@@ -298,7 +298,7 @@ def set_zero_displacement():
 def compute_file_size():
     global atr, width, length
 
-    length = int(atr['FILE_LENGTH'])
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     print(('data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, length, 0, width)))
 
@@ -660,7 +660,7 @@ def update_timeseries(y, x, plot_number, data_only=False):
     if inps.disp_title:
         axis.set_title(title_ts)
 
-    axis = ptime.auto_adjust_xaxis_date(axis, tims, fontSize=inps.font_size)[0]
+    axis = pp.auto_adjust_xaxis_date(axis, tims, fontSize=inps.font_size)[0]
     axis.set_xlabel('Time', fontsize=inps.font_size)
     axis.set_ylabel('Displacement [%s]' % inps.disp_unit, fontsize=inps.font_size)
 

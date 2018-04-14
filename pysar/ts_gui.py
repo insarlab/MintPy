@@ -256,10 +256,10 @@ def show_plot():
         options.append("-n")
         options.append(num.get())
 
-    if unit.get() != "":
+    if unit.get() != "" and unit.get() != " ":
         options.append("-u")
         options.append(unit.get())
-    if colormap.get() != "":
+    if colormap.get() != "" and colormap.get() != " ":
         options.append("-c")
         options.append(colormap.get())
 
@@ -367,8 +367,8 @@ def set_variables_from_attributes():
     pix_input_lalo_la.set(lat)
     pix_input_lalo_lo.set(lon)
 
-    ref_pix_input_xy_x.set(attributes['ref_x'])
-    ref_pix_input_xy_y.set(attributes['ref_y'])
+    ref_pix_input_xy_x.set(attributes['REF_X'])
+    ref_pix_input_xy_y.set(attributes['REF_Y'])
 
     ref_lon, ref_lat = compute_lalo(ref_pix_input_xy_x.get(), ref_pix_input_xy_y.get())
 
@@ -383,6 +383,8 @@ def set_sliders(value=None):
 
     if value is not None:
         num.set(value)
+    else:
+        num.set(1)
 
     data = read_file_data(value)
     max_val = numpy.amax(data)
@@ -584,10 +586,10 @@ def main():
 
     vcmd_num = (root.register(validate_numbers), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
 
-    reset_button = Button(root, text="Reset Settings", command=lambda: reset_plot())
+    reset_button = Button(root, text="Reset Settings", command=lambda: reset_plot(), padx=15)
     reset_button.pack(side=TOP, pady=(10, 5))
 
-    submit_button = Button(root, text="Show Plot", command=lambda: show_plot(), background="green")
+    submit_button = Button(root, text="Show Plot", command=lambda: show_plot(), background="green", padx=15)
     submit_button.pack(side=TOP, pady=(10, 20))
 
     canvas = Canvas(root, width=345, height=680)
@@ -609,8 +611,8 @@ def main():
     h5_file_short = StringVar()
     h5_file_short.set("No File Selected")
 
-    pick_h5_file_button = Button(pick_h5_file_frame, text='Select .h5 File', anchor='w', width=15,
-                                 command=lambda: pick_file())
+    pick_h5_file_button = Button(pick_h5_file_frame, text='Select .h5 File', width=15,
+                                 command=lambda: pick_file(), padx=15)
     selected_ts_file_label = Label(pick_h5_file_frame, textvariable=h5_file_short)
 
     '''     Frames, Text Variables, and Widgets for selection of the mask.h5 file to add a mask to the data.     '''
@@ -620,8 +622,8 @@ def main():
     mask_short = StringVar()
     mask_short.set("No File Selected")
 
-    pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', anchor='w', width=15,
-                                   command=lambda: pick_mask())
+    pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', width=15,
+                                   command=lambda: pick_mask(), padx=15)
     selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
 
     '''     Frames, Text Variables, and Widgets for selection of the dem.h5 file to add a mask to the data.     '''
@@ -631,8 +633,8 @@ def main():
     dem_short = StringVar()
     dem_short.set("No File Selected")
 
-    pick_dem_file_button = Button(pick_dem_file_frame, text='Select Topography File', anchor='w', width=15,
-                                  command=lambda: pick_dem())
+    pick_dem_file_button = Button(pick_dem_file_frame, text='Select Topography File', width=15,
+                                  command=lambda: pick_dem(), padx=15)
     selected_dem_file_label = Label(pick_dem_file_frame, textvariable=dem_short)
 
     '''     WIDGETS FOR SHOWING EPOCHS AND EXLUDE DATES     '''
@@ -644,6 +646,7 @@ def main():
     num_frame = Frame(frame)
 
     num = StringVar()
+    num.set(" ")
     num_option_menu = OptionMenu(num_frame, num, *num_list)
     num_option_menu.config(width=10)
 
@@ -687,19 +690,19 @@ def main():
     '''     WIDGETS FOR UNIT, COLORMAP, AND PROJECTION    '''
     unit_cmap_projection_labels_frame = Frame(frame)
     unit_label = Label(unit_cmap_projection_labels_frame, text="Unit", width=16, anchor='w')
-    colormap_label = Label(unit_cmap_projection_labels_frame, text="Colormap", width=16, anchor='w')
+    colormap_label = Label(unit_cmap_projection_labels_frame, text="Colormap", width=14, anchor='w')
 
     unit_cmap_projection_frame = Frame(frame)
 
     unit = StringVar()
-
+    unit.set(" ")
     unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=scale_sliders)
-    unit_option_menu.config(width=16)
+    unit_option_menu.config(width=14)
 
     colormap = StringVar()
-
+    colormap.set(" ")
     colormap_option_menu = OptionMenu(unit_cmap_projection_frame, colormap, *colormaps)
-    colormap_option_menu.config(width=16)
+    colormap_option_menu.config(width=14)
 
 
     '''     WIDGETS FO DIGURE SIZE      '''
@@ -759,6 +762,7 @@ def main():
     epoch_frame = Frame(frame)
 
     ref_date = StringVar()
+    ref_date.set(" ")
     ref_date_option_menu = OptionMenu(epoch_frame, ref_date, *ref_dates_list)
     ref_date_option_menu.config(width=15)
 
