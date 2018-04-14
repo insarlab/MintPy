@@ -1,16 +1,16 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 
-from Tkinter import *
+from tkinter import *
 
 import h5py
 import matplotlib
 import argparse
 
 matplotlib.use('TkAgg')
-import tkFileDialog as filedialog
-import tsviewer as ts_view
+from tkinter import filedialog
+import pysar.tsview as ts_view
 import info
-import _readfile as readfile
+import pysar.utils.readfile as readfile
 import subset
 import numpy
 

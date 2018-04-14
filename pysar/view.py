@@ -37,6 +37,7 @@ from pysar.multilook import multilook_matrix
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 from pysar.utils.plot import Basemap2
 
+fig = None
 
 ##################################################################################################
 def auto_figure_title(fname, epoch=[], inps_dict=None):
@@ -964,6 +965,8 @@ def cmdLineParse(argv):
 
 #########################################  Main Function  ########################################
 def main(argv):
+    global fig
+
     inps = cmdLineParse(argv)
     if not inps.disp_fig:
         plt.switch_backend('Agg')

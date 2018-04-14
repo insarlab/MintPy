@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 from Tkinter import *
 import view_gui as vg
 import ts_gui as tg

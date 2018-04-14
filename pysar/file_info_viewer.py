@@ -1,12 +1,12 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 
-from Tkinter import *
-import ttk
+from tkinter import *
+from tkinter import ttk
 import h5py
 
 index = 1
 
-file = "/Users/joshua/Desktop/pysar/test_data/demGeo.h5"
+file = "/Users/joshua/Desktop/pysar/test_data/geometryGeo.h5"
 
 
 def add_to_tree(name, obj):
