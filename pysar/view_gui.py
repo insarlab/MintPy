@@ -62,7 +62,8 @@ colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn',
 
 projections = ["cea", "mbtfpq", "aeqd", "sinu", "poly", "moerc", "gnom", "moll", "lcc", "tmerc", "nplaea", "gall",
                "npaeqd", "mill", "merc", "stere", "eqdc", "rotpole", "cyl", "npstere", "spstere", "hammer", "geos",
-               "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "cass", "vandg", "laea", "splaea", "robin"]
+               "nsper", "eck4", "aea", "kav7", "spaeqd", "ortho", "cass", "vandg", "laea", "splaea", "robin",
+               " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "]
 
 unit_options = ["cm", "dm", "m",  "km", "", "cm/yr", "dm/yr", "m/yr", "km/yr"]
 
@@ -859,14 +860,14 @@ def main():
     reset_settings_file_frame = Frame(root)
     reset_settings_file_frame.pack(side=TOP)
 
-    reset_button = Button(reset_settings_file_frame, text="Reset Settings", command=lambda: reset_plot())
+    reset_button = Button(reset_settings_file_frame, text="Reset Settings", padx=15, command=lambda: reset_plot())
     reset_button.pack(side=LEFT, pady=(10, 5))
 
     settings_file = StringVar()
-    settings_file_button = Button(reset_settings_file_frame, text="Select Settings File", command=lambda: pick_settings())
+    settings_file_button = Button(reset_settings_file_frame, text="Select Settings File", padx=15, command=lambda: pick_settings())
     settings_file_button.pack(side=LEFT, pady=(10, 5))
 
-    submit_button = Button(root, text="Show Plot", command=lambda: show_plot(), background="green")
+    submit_button = Button(root, text="Show Plot", command=lambda: show_plot(), background="green", padx=15)
     submit_button.pack(side=TOP, pady=(10, 20))
 
     canvas = Canvas(root, width=345, height=680)
@@ -888,7 +889,7 @@ def main():
     h5_file_short = StringVar()
     h5_file_short.set("No File Selected")
 
-    pick_h5_file_button = Button(pick_h5_file_frame, text='Select .h5 File', anchor='w', width=15,
+    pick_h5_file_button = Button(pick_h5_file_frame, text='Select .h5 File', width=15,
                                  command=lambda: pick_file())
     selected_ts_file_label = Label(pick_h5_file_frame, textvariable=h5_file_short)
 
@@ -900,7 +901,7 @@ def main():
     mask_short = StringVar()
     mask_short.set("No File Selected")
 
-    pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', anchor='w', width=15,
+    pick_mask_file_button = Button(pick_mask_file_frame, text='Select Mask File', width=15,
                                    command=lambda: pick_mask())
     selected_mask_file_label = Label(pick_mask_file_frame, textvariable=mask_short)
 
@@ -914,6 +915,7 @@ def main():
     epoch_frame = Frame(frame)
 
     epoch = StringVar()
+    epoch.set(" ")
     epoch_option_menu = OptionMenu(epoch_frame, epoch, *epoch_list, command=set_sliders)
     epoch_option_menu.config(width=10)
 
@@ -961,26 +963,29 @@ def main():
 
     '''     WIDGETS FOR UNIT, COLORMAP, AND PROJECTION    '''
     unit_cmap_projection_labels_frame = Frame(frame)
-    unit_label = Label(unit_cmap_projection_labels_frame, text="Unit", width=6, anchor='w')
-    colormap_label = Label(unit_cmap_projection_labels_frame, text="Colormap", width=10, anchor='w')
-    projection_label = Label(unit_cmap_projection_labels_frame, text="Projection", width=12, anchor='w')
+    unit_label = Label(unit_cmap_projection_labels_frame, text="Unit", width=7, anchor='w')
+    colormap_label = Label(unit_cmap_projection_labels_frame, text="Colormap", width=13, anchor='w')
+    projection_label = Label(unit_cmap_projection_labels_frame, text="Projection", width=8, anchor='w')
 
     unit_cmap_projection_frame = Frame(frame)
 
     unit = StringVar()
+    unit.set(" ")
 
     unit_option_menu = OptionMenu(unit_cmap_projection_frame, unit, *unit_options, command=scale_sliders)
-    unit_option_menu.config(width=6)
+    unit_option_menu.config(width=5)
 
     colormap = StringVar()
+    colormap.set(" ")
 
     colormap_option_menu = OptionMenu(unit_cmap_projection_frame, colormap, *colormaps)
-    colormap_option_menu.config(width=10)
+    colormap_option_menu.config(width=11)
 
     projection = StringVar()
+    projection.set(" ")
 
     projection_option_menu = OptionMenu(unit_cmap_projection_frame, projection, *projections)
-    projection_option_menu.config(width=12)
+    projection_option_menu.config(width=7)
 
 
     '''     WIDGETS FOR FLIPPING, WRAP, AND OPPOSITE    '''
@@ -1199,18 +1204,21 @@ def main():
 
     reference_colors = ["b", "g", "r", "m", "c", "y", "k", "w"]
     ref_color = StringVar()
+    ref_color.set(" ")
     ref_color_option_menu = OptionMenu(reference_options_frame, ref_color, *reference_colors)
-    ref_color_option_menu.config(width=10)
+    ref_color_option_menu.config(width=8)
 
     reference_symbols = [".", ",", "o", "v", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "*", "h", "H", "+",
-                         "x", "X", "d", "D", "|", "_"]
+                         "x", "X", "d", "D", "|", "_", " ", " "]
     ref_sym = StringVar()
+    ref_sym.set(" ")
     ref_symbol_option_menu = OptionMenu(reference_options_frame, ref_sym,*reference_symbols)
-    ref_symbol_option_menu.config(width=10)
+    ref_symbol_option_menu.config(width=8)
 
     ref_date = StringVar()
+    ref_date.set(" ")
     ref_date_option_menu = OptionMenu(reference_options_frame, ref_date, *ref_dates_list)
-    ref_date_option_menu.config(width=10)
+    ref_date_option_menu.config(width=8)
 
 
 
@@ -1304,11 +1312,13 @@ def main():
 
     figure_extensions = [".emf", ".eps", ".pdf", ".png", ".ps", ".raw", ".rgba", ".svg", ".svgz"]
     fig_ext = StringVar()
+    fig_ext.set(" ")
     fig_ext_option_menu = OptionMenu(fig_ext_num_frame, fig_ext, *figure_extensions)
     fig_ext_option_menu.config(width=14)
 
     figure_numbers = ["1", "2", "3", "4", "5"]
     fig_num = StringVar()
+    fig_num.set(" ")
     fig_num_option_menu = OptionMenu(fig_ext_num_frame, fig_num, *figure_numbers)
     fig_num_option_menu.config(width=14)
 
@@ -1331,6 +1341,7 @@ def main():
     coords_frame = Frame(frame)
 
     coords = StringVar()
+    coords.set(" ")
     coords_label = Label(coords_frame, text="Coords: ", width=5)
     coords_option_menu = OptionMenu(*(coords_frame, coords) + tuple(["radar", "geo"]))
     coords_option_menu.config(width=15)
@@ -1362,6 +1373,7 @@ def main():
     '''     WODGETS FOR RESOLUTION      '''
     resolution_label = Label(coastline_res_frame, text="Res: ", width=3, anchor='w')
     resolution = StringVar()
+    resolution.set(" ")
     resolution_option_menu = OptionMenu(*(coastline_res_frame, resolution) + tuple(["c", "l", "i", "h", "f", "None"]))
     resolution_option_menu.config(width=8)
 
@@ -1424,7 +1436,7 @@ def main():
     output_file_label = Label(output_frame, text="Output File: ")
     output_file_entry = Entry(output_frame, textvariable=output_file, width=12)
 
-    save_settings_button = Button(frame, text="Save Settings", command=write_settings_file)
+    save_settings_button = Button(frame, text="Save Settings", command=write_settings_file, padx=15)
 
 
 
@@ -1483,7 +1495,7 @@ def main():
     projection_label.pack(side=LEFT)
 
     unit_cmap_projection_frame.pack(anchor='w', fill=X, pady=(10, 5), padx=10)
-    unit_option_menu.pack(side=LEFT, padx=(0, 10))
+    unit_option_menu.pack(side=LEFT, padx=(0, 10), fill=X)
     colormap_option_menu.pack(side=LEFT, padx=(0, 10))
     projection_option_menu.pack(side=LEFT)
 

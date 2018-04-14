@@ -9,7 +9,6 @@
 #   import pysar.view as pv
 #
 
-
 import os
 import sys
 import argparse
