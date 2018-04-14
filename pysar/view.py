@@ -9,7 +9,8 @@
 #
 
 
-import os, sys
+import os
+import sys
 import argparse
 from datetime import datetime as dt
 
@@ -18,12 +19,11 @@ import numpy as np
 import scipy.ndimage as ndimage
 import matplotlib.pyplot as plt
 from matplotlib import ticker
-from matplotlib.colors import LinearSegmentedColormap, LightSource
+from matplotlib.colors import LightSource
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import cm, pyproj
 
 from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
-from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry
 from pysar import mask, multilook as mli, subset
 
@@ -51,18 +51,15 @@ def auto_figure_title(fname, dataset=[], inps_dict=None):
     width = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
 
-    #if not dataset and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-    #    print "No date/date12 input.\nIt's required for "+k+" file\nReturn None"
-    #    return None
     if not dataset:
         dataset = []
 
-    if len(dataset)==1 and k in multi_group_hdf5_file:
+    if len(dataset)==1 and k == 'ifgramStack':
         fig_title = dataset[0]
         if 'unwCor' in fname:
             fig_title += '_unwCor'
 
-    elif len(dataset)==1 and k in multi_dataset_hdf5_file+['GIANT_TS']:
+    elif len(dataset)==1 and k in ['timeseries','GIANT_TS']:
         if inps_dict['REF_DATE']:
             ref_date = inps_dict['REF_DATE']
         else:
@@ -405,7 +402,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
         inps.seed_value = data[inps.seed_yx[0]-inps.pix_box[1], inps.seed_yx[1]-inps.pix_box[0]]
         if not np.isnan(inps.seed_value):
             data -= inps.seed_value
-            if meta_dict['FILE_TYPE'] in multi_group_hdf5_file+multi_dataset_hdf5_file:
+            if meta_dict['FILE_TYPE'] == 'ifgramStack':
                 print('set reference point to: '+str(inps.seed_yx))
             if inps.geo_box:
                 inps.seed_lalo = [ut.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \

@@ -173,7 +173,6 @@ pysar.topographicResidual.stepFuncDate  = auto  #[20080529,20100611 / no], auto 
 pysar.topographicResidual.excludeDate   = auto  #[20070321 / txtFile / no], auto for no, date exlcuded for error estimation
 pysar.topographicResidual.phaseVelocity = auto  #[yes / no], auto for no - phase, use phase velocity for error estimation
 
-
 ## 4.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
@@ -182,12 +181,11 @@ pysar.residualRms.maskFile        = auto  #[filename / no], auto for maskTempCoh
 pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
 pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
 
-
-## 4.2 Reference in Time
+## 4.2 Select Reference Date
 ## reference all timeseries to one date in time
-## auto - choose date with minimum residual RMS using value from step 8.1
-## no   - do not change reference date, keep the defaut one (1st date usually) and skip this step
-pysar.reference.date = auto   #[auto / reference_date.txt / 20090214 / no]
+## minRMS - choose date with minimum residual RMS using value from step 8.1
+## no     - do not change the default reference date (1st date)
+pysar.reference.date = auto   #[reference_date.txt / 20090214 / minRMS / no], auto for reference_date.txt
 
 
 ########## 5. Phase Ramp Removal (optional)
