@@ -150,7 +150,7 @@ def read(fname, box=None, datasetName=None, printMsg=True):
     # Basic Info
     ext = os.path.splitext(fname)[1].lower()
     fbase = os.path.splitext(os.path.basename(fname))[0]
-    atr = read_attribute(fname)
+    atr = read_attribute(fname, datasetName=datasetName)
     k = atr['FILE_TYPE']
     processor = atr['PROCESSOR']
     length = int(atr['LENGTH'])
@@ -365,6 +365,11 @@ def read_attribute(fname, datasetName=None):
         else:
             k = list(f.keys())[0]
         atr['FILE_TYPE'] = str(k)
+
+        if k == 'timeseries' and 'MinValue' in f[k].attrs.keys():
+            atr.update(f[k].attrs)
+        elif datasetName and datasetName in f.keys() and 'MinValue' in f[datasetName].attrs.keys():
+            atr.update(f[datasetName].attrs)
         f.close()
 
     else:

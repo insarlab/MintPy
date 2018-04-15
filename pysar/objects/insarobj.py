@@ -13,6 +13,11 @@ import numpy as np
 from pysar.utils import readfile, datetime as ptime, utils as ut
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, dataTypeDict
 
+BOOL_ZERO = np.bool_(0)
+INT_ZERO = np.int16(0)
+FLOAT_ZERO = np.float32(0.0)
+CPX_ZERO = np.complex64(0.0)
+
 dataType = np.float32
 
 ########################################################################################
@@ -117,14 +122,22 @@ class ifgramStackDict:
             ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                       dtype=dsDataType, chunks=True)
 
+            dMin = 0
+            dMax = 0
             progBar = ptime.progress_bar(maxValue=self.numIfgram)
             for i in range(self.numIfgram):
                 ifgramObj = self.pairsDict[self.pairs[i]]
                 data = ifgramObj.read(dsName, box=box)[0]
+                dMin = min(dMin, np.nanmin(data))
+                dMax = max(dMax, np.nanmax(data))
                 ds[i,:,:] = data
                 self.bperp[i] = ifgramObj.get_perp_baseline()
                 progBar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],self.pairs[i][1]))
             progBar.close()
+
+            ds.attrs['Title'] = dsName
+            ds.attrs['MaxValue'] = dMin   #facilitate disp_min/max for mutiple subplots in view.py
+            ds.attrs['MinValue'] = dMax   #facilitate disp_min/max for mutiple subplots in view.py
 
         ###############################
         # 2D dataset containing master and slave dates of all pairs

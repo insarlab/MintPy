@@ -13,6 +13,11 @@ from datetime import datetime as dt
 import h5py
 import numpy as np
 
+BOOL_ZERO = np.bool_(0)
+INT_ZERO = np.int16(0)
+FLOAT_ZERO = np.float32(0.0)
+CPX_ZERO = np.complex64(0.0)
+
 dataType = np.float32
 
 dataTypeDict = {'bool':np.bool_,'byte':np.bool_,'flag':np.bool_,
@@ -235,14 +240,20 @@ class timeseries:
         bperp = np.array(bperp, dtype=np.float32)
         metadata['FILE_TYPE'] = self.name
 
-        ##### 3D and 1D dataset
-        #gName = 'timeseries'
+        ##### 3D dataset - timeseries
         print('create timeseries HDF5 file: {} with w mode'.format(outFile))
         f = h5py.File(outFile,'w')
-        #group = f.create_group(gName)
         print('create dataset /timeseries of {:<10} in size of {}'.format(str(data.dtype), data.shape))
         dset = f.create_dataset('timeseries', data=data, chunks=True)
 
+        dset.attrs['Title'] = 'timeseries'
+        dset.attrs['MissingValue'] = FLOAT_ZERO
+        dset.attrs['Units'] = 'm'
+        dset.attrs['_FillValue'] = FLOAT_ZERO
+        dset.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
+        dset.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
+
+        ##### 3D dataset - date / bperp
         print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))
         dset = f.create_dataset('date', data=dates, chunks=True)
 
@@ -416,7 +427,7 @@ class geometry:
             box = (0,0,self.width,self.length)
         if datasetName is None:
             datasetName = geometryDatasetNames[0]
-        datasetName = datasetName.split('_')
+        datasetName = datasetName.split('-')
         if printMsg:
             print('reading {} data from file: {} ...'.format(datasetName[0], self.file))
 
@@ -537,12 +548,13 @@ class ifgramStack:
             obj.read(datasetName='unwrapPhase-20161020_20161026')
         '''
         self.get_size()
+        date12List = self.get_date12_list(dropIfgram=dropIfgram)
         if box is None:
             box = (0,0,self.width,self.length)
         if datasetName is None:
             datasetName = ifgramDatasetNames[0]
 
-        datasetName = datasetName.split('_')
+        datasetName = datasetName.split('-')
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName[0]]
             if len(datasetName) == 1:
@@ -551,7 +563,7 @@ class ifgramStack:
                 else:
                     data = dset[:, box[1]:box[3], box[0]:box[2]]
             else:
-                data = dset[self.date12List.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
+                data = dset[date12List.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
                 data = np.squeeze(data)
         return data
 

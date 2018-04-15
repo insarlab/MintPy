@@ -757,5 +757,28 @@ def plot_dem_yx(ax, dem, inps_dict=dict()):
     return ax
 
 
+def plot_colorbar(inps, im, cax):
+    # Colorbar Extend
+    if not inps.cbar_ext:
+        if   inps.disp_min <= inps.data_min and inps.disp_max >= inps.data_max: inps.cbar_ext='neither'
+        elif inps.disp_min >  inps.data_min and inps.disp_max >= inps.data_max: inps.cbar_ext='min'
+        elif inps.disp_min <= inps.data_min and inps.disp_max <  inps.data_max: inps.cbar_ext='max'
+        else:  inps.cbar_ext='both'
+    if inps.wrap and 'radian' in inps.disp_unit:
+        cbar = plt.colorbar(im, cax=cax, ticks=[-np.pi, 0, np.pi])
+        cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+    else:
+        cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
 
+    if inps.cbar_nbins:
+        cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
+        cbar.update_ticks()
+
+    cbar.ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
+
+    if not inps.cbar_label:
+        cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
+    else:
+        cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
+    return inps, cax
 

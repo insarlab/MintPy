@@ -38,7 +38,6 @@ def auto_figure_title(fname, dataset=[], inps_dict=None):
                     ref_date
                     pix_box
                     wrap
-                    disp_scale
                     opposite
     Output:
         fig_title - string, output figure title
@@ -98,12 +97,12 @@ def auto_figure_title(fname, dataset=[], inps_dict=None):
             fig_title += '_wrap'
     except: pass
 
-    # mark - scale
-    try:
-        scaling = inps_dict['disp_scale']
-        if not scaling == 1.0:
-            fig_title += '_scale'+str(scaling)
-    except: pass
+    ## mark - scale
+    #try:
+    #    scaling = inps_dict['disp_scale']
+    #    if not scaling == 1.0:
+    #        fig_title += '_scale'+str(scaling)
+    #except: pass
 
     # mark - opposite
     try:
@@ -176,7 +175,7 @@ def scale_data4disp_unit_and_rewrap(data, atr, disp_unit=None, rewrapping=False)
 
     # Data Operation - Scale to display unit
     if not disp_unit == atr['UNIT']:
-        data, disp_unit = scale_data2disp_unit(data, atr, disp_unit)        
+        disp_unit, disp_scale, data = scale_data2disp_unit(atr, disp_unit, data)
     print('display in unit: '+disp_unit)
 
     # Data Operation - Rewrapping
@@ -187,7 +186,7 @@ def scale_data4disp_unit_and_rewrap(data, atr, disp_unit=None, rewrapping=False)
     return data, disp_unit, rewrapping
 
 
-def scale_data2disp_unit(matrix, atr_dict, disp_unit):
+def scale_data2disp_unit(atr_dict, disp_unit, matrix=None):
     '''Scale data based on data unit and display unit
     Inputs:
         matrix    : 2D np.array
@@ -198,15 +197,17 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
         disp_unit : str, display unit
     Default data file units in PySAR are:  m, m/yr, radian, 1
     '''
+    if not disp_unit:
+        disp_unit = atr_dict['UNIT']
 
-    # Initial 
+    # Initial
     scale = 1.0
     data_unit = atr_dict['UNIT'].lower().split('/')
     disp_unit = disp_unit.lower().split('/')
 
     # if data and display unit is the same
     if disp_unit == data_unit:
-        return matrix, disp_unit
+        return atr_dict['UNIT'], scale, matrix
 
     # Calculate scaling factor  - 1
     # phase unit - length / angle 
@@ -241,7 +242,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
 
     # amplitude/coherence unit - 1
     elif data_unit[0] == '1':
-        if disp_unit[0] == 'db':
+        if disp_unit[0] == 'db' and matrix is not None:
             ind = np.nonzero(matrix)
             matrix[ind] = 10*np.log10(np.absolute(matrix[ind]))
             disp_unit[0] = 'dB'
@@ -268,9 +269,10 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
         disp_unit = disp_unit[0]
 
     # Scale input matrix
-    matrix *= scale
+    if matrix is not None:
+        matrix *= scale
 
-    return matrix, disp_unit
+    return disp_unit, scale, matrix
 
 
 ##################################################################################################
@@ -434,7 +436,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     if not inps.disp_unit:
         inps.disp_unit = meta_dict['UNIT']
     if not inps.disp_unit == meta_dict['UNIT']:
-        data, inps.disp_unit = scale_data2disp_unit(data, meta_dict, inps.disp_unit)        
+        inps.disp_unit, inps.disp_scale, data = scale_data2disp_unit(meta_dict, inps.disp_unit, data)
     #print 'display in unit: '+inps.disp_unit
 
     # Re-wrap
@@ -442,16 +444,16 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
         #print 're-wrapping data to [-pi, pi]'
         data -= np.round(data/(2*np.pi)) * (2*np.pi)
 
-    # 1.4 Scale 
-    if not inps.disp_scale == 1.0:
-        print('scaling data by a factor of '+str(inps.disp_scale))
-        data *= inps.disp_scale
+    ## 1.4 Scale 
+    #if not inps.disp_scale == 1.0:
+    #    print('scaling data by a factor of '+str(inps.disp_scale))
+    #    data *= inps.disp_scale
 
     # 1.5 Opposite
     if inps.opposite:
         print('show opposite')
         data *= -1
-    
+
     return data, inps
 
 
@@ -494,11 +496,11 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     print('display unit: '+inps.disp_unit)
 
     # 1.6 Min / Max - Data/Display
-    data_min = np.nanmin(data)
-    data_max = np.nanmax(data)
-    if inps.disp_min is None:  inps.disp_min = data_min
-    if inps.disp_max is None:  inps.disp_max = data_max
-    print('data    range: %f - %f' % (data_min, data_max))
+    inps.data_min = np.nanmin(data)
+    inps.data_max = np.nanmax(data)
+    if inps.disp_min is None:  inps.disp_min = inps.data_min
+    if inps.disp_max is None:  inps.disp_max = inps.data_max
+    print('data    range: %f - %f' % (inps.data_min, inps.data_max))
     print('display range: %f - %f' % (inps.disp_min, inps.disp_max))
 
     # 1.7 DEM
@@ -653,27 +655,9 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     #-------------------- 3 Figure Setting --------------------------------------------------------#
     # 3.1 Colorbar
     if inps.disp_cbar:
-        # Colorbar Extend
-        if not inps.cbar_ext:
-            if   inps.disp_min <= data_min and inps.disp_max >= data_max: inps.cbar_ext='neither'
-            elif inps.disp_min >  data_min and inps.disp_max >= data_max: inps.cbar_ext='min'
-            elif inps.disp_min <= data_min and inps.disp_max <  data_max: inps.cbar_ext='max'
-            else:  inps.cbar_ext='both'
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
-        if inps.wrap and 'radian' in inps.disp_unit:
-            cbar = plt.colorbar(im, cax=cax, ticks=[-np.pi, 0, np.pi])
-            cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
-        else:
-            cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
-        if inps.cbar_nbins:
-            cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
-            cbar.update_ticks()
-        cbar.ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
-        if not inps.cbar_label:
-            cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
-        else:
-            cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
+        inps, cax = pp.plot_colorbar(inps, im, cax)
 
     # 3.2 Title
     if inps.disp_title:
@@ -781,9 +765,9 @@ def createParser():
     disp.add_argument('-M', dest='disp_max', type=float, help='maximum value of color scale')
     disp.add_argument('-u','--unit', dest='disp_unit', metavar='UNIT',\
                       help='unit for display.  Its priority > wrap')
-    disp.add_argument('--scale', dest='disp_scale', metavar='NUM', type=float, default=1.0,\
-                      help='display data in a scaled range. \n'
-                           'Equivelant to data*input_scale')
+    #disp.add_argument('--scale', dest='disp_scale', metavar='NUM', type=float, default=1.0,\
+    #                  help='display data in a scaled range. \n'
+    #                       'Equivelant to data*input_scale')
     disp.add_argument('-c','--colormap', dest='colormap',\
                       help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
                            'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
@@ -930,7 +914,6 @@ def cmdLineParse(iargs=None):
 
 def check_input_file_info(inps):
     ########## File Baic Info
-    ## attributes
     if not os.path.isfile(inps.file):
         print('ERROR: input file does not exists: {}'.format(inps.file))
         sys.exit(1)
@@ -953,7 +936,7 @@ def check_input_file_info(inps):
 
     ########## File dataset List
     inps.fileDatasetList = get_file_dataset_list(inps.file, inps.key)
-    return inps, atr
+    return inps
 
 def get_file_dataset_list(fname, key):
     fileExt = os.path.splitext(fname)[1]
@@ -989,7 +972,7 @@ def get_file_dataset_list(fname, key):
     return datasetList
 
 
-def check_input_dataset(allList, inList=[], inNumList=[]):
+def check_dataset_input(allList, inList=[], inNumList=[]):
     '''Get dataset(es) from input dataset / dataset_num'''
     ## inList + inNumList --> outNumList --> outList
     if inList:
@@ -1002,20 +985,20 @@ def check_input_dataset(allList, inList=[], inNumList=[]):
     return outList, outNumList
 
 
-def read_inps_dataset(inps, printMsg=True):
+def read_dataset_input(inps, printMsg=True):
     '''Check input / exclude / reference dataset input with file dataset list'''
     if len(inps.dset) > 0 or len(inps.dsetNumList)>0:
-        inps.dsetNumList = check_input_dataset(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
+        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
     elif inps.key == 'geometry':
         inps.dset = geometryDatasetNames
         inps.dset.remove('bperp')
-        inps.dsetNumList = check_input_dataset(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
+        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
     elif inps.key == 'ifgramStack':
         inps.dset = ['unwrapPhase']
-        inps.dsetNumList = check_input_dataset(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
+        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
     else:
         inps.dsetNumList = range(len(inps.fileDatasetList))
-    inps.exDsetList, inps.exDsetNumList = check_input_dataset(inps.fileDatasetList, inps.exDsetList, inNumList=[])
+    inps.exDsetList, inps.exDsetNumList = check_dataset_input(inps.fileDatasetList, inps.exDsetList, inNumList=[])
 
     inps.dsetNumList = sorted(list(set(inps.dsetNumList) - set(inps.exDsetNumList)))
     inps.dset = [inps.fileDatasetList[i] for i in inps.dsetNumList]
@@ -1024,7 +1007,7 @@ def read_inps_dataset(inps, printMsg=True):
     if inps.ref_date:
         if inps.key not in timeseriesKeyNames:
             inps.ref_date = None
-        ref_date = check_input_dataset(inps.fileDatasetList, [inps.ref_date])[0][0]
+        ref_date = check_dataset_input(inps.fileDatasetList, [inps.ref_date])[0][0]
         if not ref_date:
             if printMsg:
                 print('WARNING: input reference date is not included in input file!')
@@ -1049,7 +1032,9 @@ def read_inps_dataset(inps, printMsg=True):
         print('ERROR: no input dataset found!')
         print('available datasets:\n{}'.format(inps.fileDatasetList))
         sys.exit(1)
-    return inps
+
+    atr = readfile.read_attribute(inps.file, datasetName=inps.dset[0].split('-')[0])
+    return inps, atr
 
 
 def read_mask(inps, atr):
@@ -1146,8 +1131,8 @@ def update_figure_setting(inps):
                 inps.outfile_base += '_sub'
             if inps.wrap:
                 inps.outfile_base += '_wrap'
-            if not inps.disp_scale == 1.0:
-                inps.outfile_base += '_scale'+str(inps.disp_scale)
+            #if not inps.disp_scale == 1.0:
+            #    inps.outfile_base += '_scale'+str(inps.disp_scale)
             if inps.opposite:
                 inps.outfile_base += '_oppo'
             if inps.ref_date:
@@ -1165,27 +1150,18 @@ def main(iargs=None):
     if not inps.disp_fig:
         plt.switch_backend('Agg')  ##Backend setting
 
-    inps, atr = check_input_file_info(inps)
+    inps = check_input_file_info(inps)
 
-    inps = read_inps_dataset(inps)
+    inps, atr = read_dataset_input(inps)
 
     if inps.disp_setting_file:
         inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)
 
     inps = update_inps_with_file_metadata(inps, atr)
-
-    ## Exit if 1) save and do not display figure, a.k.a. generate figure file,
-    ##     and 2) figure file exists and newer than data file
-    #if (inps.save_fig\
-    #    and not inps.disp_fig\
-    #    and not ut.update_file(inps.outfile, inps.file, check_readable=False)):
-    #    return inps.outfile
-
     inps = read_mask(inps, atr)
     inps = update_figure_setting(inps)
 
-    ############################### Read Data and Display ###############################
-    ##### Display One Dataset
+    ############################### One Subplot ###############################
     if inps.dsetNum == 1:
         print('reading data ...')
         data, atr = readfile.read(inps.file, datasetName=inps.dset[0], box=inps.pix_box, printMsg=False)
@@ -1205,11 +1181,12 @@ def main(iargs=None):
             plt.show()
 
 
-    ##### Display Multiple Multiple Datasets
+    ############################### Multiple Subplots #########################
     else:
         # Update multilook parameters with new num and col number
         if inps.multilook and inps.multilook_num == 1:
             inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box, inps.fig_row_num, inps.fig_col_num)
+            inps.msk = mli.multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
 
         ##### Aux Data
         # Reference date for timeseries
@@ -1217,10 +1194,31 @@ def main(iargs=None):
             print('consider input reference date: '+inps.ref_date)
             ref_data = readfile.read(inps.file, datasetName=inps.ref_date, box=inps.pix_box, printMsg=False)[0]
 
+        # Reference pixel for timeseries and ifgramStack
         inps.file_ref_yx = None
         if inps.key in ['ifgramStack']+timeseriesKeyNames and 'REF_Y' in atr.keys():
             inps.file_ref_yx = [int(atr[i]) for i in ['REF_Y','REF_X']]
             print('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
+
+        if inps.dsetNum > 10:
+            inps.disp_seed = False
+            print('turn off reference pixel plot for more than 10 datasets to display')
+
+        # Min/MaxValue
+        if not inps.disp_min and not inps.disp_max and 'MinValue' in atr.keys():
+            inps.disp_unit, inps.disp_scale = scale_data2disp_unit(atr, inps.disp_unit)[0:2]
+            inps.disp_min = float(atr['MinValue']) * inps.disp_scale
+            inps.disp_max = float(atr['MaxValue']) * inps.disp_scale
+            print('read MinValue / MaxValue from file for color range: {} {}'.format((inps.disp_min, inps.disp_max),
+                                                                                     inps.disp_unit))
+
+        # Check dropped interferograms
+        dropDatasetList = []
+        if inps.key == 'ifgramStack' and inps.disp_title:
+            obj = ifgramStack(inps.file)
+            obj.open(printMsg=False)
+            dropDatasetList = list(np.array(inps.dset)[obj.dropIfgram == 0]) 
+            print("mark interferograms with 'dropIfgram=False' in red colored title")
 
         # Read DEM
         if inps.dem_file:
@@ -1240,19 +1238,9 @@ def main(iargs=None):
                 contour_sequence = np.arange(-6000, 9000, inps.dem_contour_step)
 
         ################## Plot Loop ####################
-
         ## Find min and value for all data, reference for better min/max setting next time
         all_data_min=0
         all_data_max=0
-
-        #f = h5py.File(inps.file, 'r')
-        # Check dropped interferograms
-        dropDatasetList = []
-        if inps.key == 'ifgramStack' and inps.disp_title:
-            obj = ifgramStack(inps.file)
-            obj.open(printMsg=False)
-            dropDatasetList = list(np.array(inps.dset)[obj.dropIfgram == 0]) 
-            print("mark interferograms with 'dropIfgram=False' in red colored title")
 
         f = h5py.File(inps.file,'r')
         ##### Loop 1 - Figures
@@ -1269,8 +1257,8 @@ def main(iargs=None):
             fig = plt.figure(j, figsize=inps.fig_size)
             fig.canvas.set_window_title(fig_title)
 
-            fig_data_min=0
-            fig_data_max=0
+            inps.data_min=0
+            inps.data_max=0
             i_start = (j-1)*inps.fig_row_num*inps.fig_col_num
             i_end   = min([inps.dsetNum, i_start+inps.fig_row_num*inps.fig_col_num])
             ##### Loop 2 - Subplots
@@ -1288,13 +1276,13 @@ def main(iargs=None):
                     data -= ref_data
                 if inps.file_ref_yx:
                     data -= data[inps.file_ref_yx[0], inps.file_ref_yx[1]]
+                if inps.multilook:
+                    data = mli.multilook_data(data, inps.multilook_num, inps.multilook_num)
                 # mask
                 if inps.msk is not None:
                     data = mask.mask_matrix(data, inps.msk)
                 if inps.zero_mask:
                     data[data==0] = np.nan
-                if inps.multilook:
-                    data = mli.multilook_data(data, inps.multilook_num, inps.multilook_num)
 
                 # subplot_title
                 if inps.key in timeseriesKeyNames:
@@ -1310,8 +1298,8 @@ def main(iargs=None):
                 data, inps = update_matrix_with_plot_inps(data, atr, inps)
 
                 # Data Min/Max
-                fig_data_min = np.nanmin([fig_data_min, np.nanmin(data)])
-                fig_data_max = np.nanmax([fig_data_max, np.nanmax(data)])
+                inps.data_min = np.nanmin([inps.data_min, np.nanmin(data)])
+                inps.data_max = np.nanmax([inps.data_max, np.nanmax(data)])
 
                 # Plot DEM
                 if inps.dem_file and inps.disp_dem_shade:
@@ -1357,38 +1345,21 @@ def main(iargs=None):
             progBar.close()
             fig.tight_layout()
             # Min and Max for this figure
-            all_data_min = np.nanmin([all_data_min, fig_data_min])
-            all_data_max = np.nanmax([all_data_max, fig_data_max])
-            print('data    range: [%.2f, %.2f] %s' % (fig_data_min, fig_data_max, inps.disp_unit))
-            try:  print('display range: [%.2f, %.2f] %s' % (disp_min, disp_max, inps.disp_unit))
+            all_data_min = np.nanmin([all_data_min, inps.data_min])
+            all_data_max = np.nanmax([all_data_max, inps.data_max])
+            print('data    range: [%.2f, %.2f] %s' % (inps.data_min, inps.data_max, inps.disp_unit))
+            try:  print('display range: [%.2f, %.2f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit))
             except: pass
 
             # Colorbar
             if not inps.disp_min and not inps.disp_max:
                 print('Note: different color scale for EACH subplot!')
             else:
-                if not inps.cbar_ext:
-                    if   inps.disp_min <= fig_data_min and inps.disp_max >= fig_data_max: inps.cbar_ext='neither'
-                    elif inps.disp_min >  fig_data_min and inps.disp_max >= fig_data_max: inps.cbar_ext='min'
-                    elif inps.disp_min <= fig_data_min and inps.disp_max <  fig_data_max: inps.cbar_ext='max'
-                    else:  inps.cbar_ext='both'
                 print('show colorbar')
                 #fig.subplots_adjust(wspace=inps.fig_wid_space, hspace=inps.fig_hei_space, right=0.965)
                 fig.subplots_adjust(right=0.95)
                 cax = fig.add_axes([0.96, 0.25, 0.01, 0.5])
-                if inps.wrap and 'radian' in inps.disp_unit:
-                    cbar = plt.colorbar(im, cax=cax, ticks=[-np.pi, 0, np.pi])
-                    cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
-                else:
-                    cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
-                if inps.cbar_nbins:
-                    cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
-                    cbar.update_ticks()
-                cbar.ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
-                if not inps.cbar_label:
-                    cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
-                else:
-                    cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
+                inps, cax = pp.plot_colorbar(inps, im, cax)
 
             # Save Figure
             if inps.save_fig:
