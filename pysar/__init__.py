@@ -6,16 +6,18 @@
 
 
 from __future__ import print_function
-from .version import release_version, release_date
+from .version import *
 __version__ = release_version
 
 
 import sys, os
 pysar_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-#sys.path.insert(1,pysar_path)
-#sys.path.insert(1,os.path.join(pysar_path,'pysar'))
-#sys.path.insert(1,os.path.join(pysar_path,'pysar/pysarobj'))
-#sys.path.insert(1,os.path.join(pysar_path,'library'))
+sys.path.insert(1,pysar_path)
+sys.path.insert(1,os.path.join(pysar_path,'defaults'))
+sys.path.insert(1,os.path.join(pysar_path,'objects'))
+sys.path.insert(1,os.path.join(pysar_path,'simulation'))
+sys.path.insert(1,os.path.join(pysar_path,'utils'))
+
 
 try:
     os.environ['PYSAR_HOME']

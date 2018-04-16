@@ -1475,14 +1475,17 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
         az0 = 0
         rg0 = 0
         if 'Y_FIRST' not in atr_rdr.keys():
-            az_step = azimuth_ground_resolution(atr_rdr)
-            rg_step = range_ground_resolution(atr_rdr, printMsg)
-            x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
-            y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
-            if 'SUBSET_YMIN' in atr_rdr.keys():
-                az0 = int(atr_rdr['SUBSET_YMIN'])
-            if 'SUBSET_XMIN' in atr_rdr.keys():
-                rg0 = int(atr_rdr['SUBSET_XMIN'])
+            try:
+                az_step = azimuth_ground_resolution(atr_rdr)
+                rg_step = range_ground_resolution(atr_rdr, printMsg)
+                x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
+                y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
+                if 'SUBSET_YMIN' in atr_rdr.keys():
+                    az0 = int(atr_rdr['SUBSET_YMIN'])
+                if 'SUBSET_XMIN' in atr_rdr.keys():
+                    rg0 = int(atr_rdr['SUBSET_XMIN'])
+            except:
+                pass
 
         width  = int(atr_lut['WIDTH'])
         row = np.rint((lat - lat0)/lat_step_deg).astype(int)
@@ -1566,10 +1569,13 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
         x_factor = 10
         y_factor = 10
         if 'Y_FIRST' not in atr_rdr.keys():
-            az_step = azimuth_ground_resolution(atr_rdr)
-            rg_step = range_ground_resolution(atr_rdr, printMsg)
-            x_factor = 2*np.ceil(abs(lon_step)/rg_step)
-            y_factor = 2*np.ceil(abs(lat_step)/az_step)
+            try:
+                az_step = azimuth_ground_resolution(atr_rdr)
+                rg_step = range_ground_resolution(atr_rdr, printMsg)
+                x_factor = 2*np.ceil(abs(lon_step)/rg_step)
+                y_factor = 2*np.ceil(abs(lat_step)/az_step)
+            except:
+                pass
 
         lut_row = np.zeros(rg.shape)
         lut_col = np.zeros(rg.shape)

@@ -220,14 +220,14 @@ def estimateVelocity(inps):
 
     dsName = 'velocity'
     print('create dataset /{:<12} of {:<10} in size of {}'.format(dsName, str(dataType), dsShape))
-    ds = f.create_dataset(dsName,    data=V,    dtype=dataType, chunks=True)
+    ds = f.create_dataset(dsName, data=V, dtype=dataType, chunks=True, compression="gzip")
     ds.attrs['Title'] = dsName
     ds.attrs['MinValue'] = np.nanmin(V)
     ds.attrs['MaxValue'] = np.nanmax(V)
 
     dsName = 'velocityStd'
     print('create dataset /{:<12} of {:<10} in size of {}'.format(dsName, str(dataType), dsShape))
-    ds = f.create_dataset(dsName, data=Vstd, dtype=dataType, chunks=True)
+    ds = f.create_dataset(dsName, data=Vstd, dtype=dataType, chunks=True, compression="gzip")
     ds.attrs['Title'] = dsName
     ds.attrs['MinValue'] = np.nanmin(Vstd)
     ds.attrs['MaxValue'] = np.nanmax(Vstd)

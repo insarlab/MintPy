@@ -1269,7 +1269,6 @@ def main(iargs=None):
         all_data_min=0
         all_data_max=0
 
-        f = h5py.File(inps.file,'r')
         ##### Loop 1 - Figures
         for j in range(1, inps.fig_num+1):
             # Output file name for current figure
@@ -1396,8 +1395,6 @@ def main(iargs=None):
                     fig.clf()
 
         ##### End of Loop 1
-        try: f.close()
-        except: pass
         print('----------------------------------------')
         print('all data range: [%f, %f] %s' % (all_data_min, all_data_max, inps.disp_unit))
         if inps.disp_min and inps.disp_max:

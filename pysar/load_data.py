@@ -85,11 +85,15 @@ def createParser():
     parser.add_argument('-H', dest='print_example_template', action='store_true',\
                         help='Print/Show the example template file for loading.')
     parser.add_argument('-t','--template', type=str, dest='template_file', help='template file with path info.')
+
     parser.add_argument('--project', type=str, dest='PROJECT_NAME', help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor', choices={'isce','roipac','gamma','doris','gmtsar'},\
                         help='InSAR processor/software of the file', default='isce')
     parser.add_argument('--enforce', dest='updateMode', action='store_false',\
                         help='Disable the update mode, or skip checking dataset already loaded.')
+    parser.add_argument('--compression', choices={'gzip','lzf', None}, default=None,\
+                        help='compress loaded geometry while writing HDF5 file, default: None.')
+
     parser.add_argument('-o','--output', type=str, nargs=3, dest='outfile',\
                         default=['./INPUTS/ifgramStack.h5','./INPUTS/geometryRadar.h5','./INPUTS/geometryGeo.h5'],\
                         help='output HDF5 file')
@@ -129,9 +133,11 @@ def read_inps2dict(inps):
     template = ut.check_template_auto_value(template)
     inpsDict.update(template)
     prefix = 'pysar.load.'
-    for key in ['processor','updateMode']:
+    for key in ['processor','updateMode','compression']:
         if prefix+key in inpsDict.keys():
             inpsDict[key] = inpsDict[prefix+key]
+    if inpsDict['compression'] == False:
+        inpsDict['compression'] = None
 
     ## PROJECT_NAME --> PLATFORM
     if any(i in inps.template_file for i in sensors):
@@ -143,39 +149,40 @@ def read_inps2dict(inps):
     ##Here to insert code to check default file path for miami user
     # Check 1) SCRATCHDIR exists, 2) pysar.defaults.autoPath is True and 3) template['PROJECT_NAME'] is not None
 
-    ##### Read subset box (unwFile required)
-    inpsDict['box'] = None
-    inpsDict['box4geo_lut'] = None
-    files = glob.glob(inpsDict['pysar.load.unwFile'])
-    if len(files) > 0:
-        try: inpsDict = read_subset_box(inpsDict)
-        except: pass
-    else:
-        print('WARNING: No required .unw file found with pattern: {}'.format(inpsDict['pysar.load.unwFile']))
     return inpsDict
 
 
 def read_subset_box(inpsDict):
-    file0 = glob.glob(inpsDict['pysar.load.unwFile'])[0]
-    atr = readfile.read_attribute(file0)
-    data_pix_box = (0,0,int(atr['WIDTH']),int(atr['LENGTH']))
+    ##### Read subset info from template
+    inpsDict['box'] = None
+    inpsDict['box4geo_lut'] = None
+    pix_box, geo_box = subset.read_subset_template2box(inpsDict['template_file'])
+
+
+    ##### Grab required info to read input geo_box into pix_box
+    try:
+        lookupFile = [glob.glob(inpsDict['pysar.load.lookupYFile'])[0],\
+                      glob.glob(inpsDict['pysar.load.lookupXFile'])[0]]
+    except:
+        lookupFile = None
+
+    try:
+        files = [glob.glob(inpsDict['pysar.load.unwFile'])+\
+                 glob.glob(inpsDict['pysar.load.demFile'])]
+        atr = readfile.read_attribute(files[0])
+    except:
+        atr = dict()
+
+    geocoded = None
     if 'Y_FIRST' in atr.keys():
         geocoded = True
     else:
         geocoded = False
 
-    ##### Read subset info into pix_box
-    lookupFile = None
-    xfiles = glob.glob(inpsDict['pysar.load.lookupXFile'])
-    yfiles = glob.glob(inpsDict['pysar.load.lookupYFile'])
-    if len(xfiles) > 0 and len(yfiles) > 0:
-        lookupFile = [yfiles[0], xfiles[0]]
-    pix_box, geo_box = subset.read_subset_template2box(inpsDict['template_file'])
-
     ## Check conflict
     if geo_box and not geocoded and lookupFile is None:
         geo_box = None
-        print('WARNING: pysar.subset.lalo is not supported if 1) no lookup file AND 2) radar coded dataset')
+        print('WARNING: pysar.subset.lalo is not supported if 1) no lookup file AND 2) radar/unkonwn coded dataset')
         print('\tignore it and continue.')
     if not geo_box and not pix_box:
         return inpsDict
@@ -188,17 +195,18 @@ def read_subset_box(inpsDict):
             pix_box[1:4:2] = ut.coord_geo2radar(geo_box[1:4:2], atr, 'lat')
         else:
             pix_box = subset.bbox_geo2radar(geo_box, atr, lookupFile)
-        print('bounding box of interest in lalo: {}'.format(geo_box))
-    #print('bounding box of interest in  yx : {}'.format(pix_box))
-    print('box to read for datasets: {} out of {}'.format(pix_box, data_pix_box))
+        print('input bounding box of interest in lalo: {}'.format(geo_box))
+    print('box to read for datasets in y/x: {}'.format(pix_box))
 
-    ##### pix_box --> box4geo_lut for geo coded lookup table file of radar coded dataset (gamma/roipac)
+    ##### Get box for geocoded lookup table (for gamma/roipac)
     box4geo_lut = None
-    atrLut = readfile.read_attribute(lookupFile[0])
-    if not geocoded and 'Y_FIRST' in atrLut.keys():
-        geo_box = subset.bbox_radar2geo(pix_box, atr, lookupFile)
-        box4geo_lut = subset.bbox_geo2radar(geo_box, atrLut)
-        print('box to read for geo coded lookup table file: {}'.format(box4geo_lut))
+    if lookupFile is not None:
+        atrLut = readfile.read_attribute(lookupFile[0])
+        if not geocoded and 'Y_FIRST' in atrLut.keys():
+            geo_box = subset.bbox_radar2geo(pix_box, atr, lookupFile)
+            box4geo_lut = subset.bbox_geo2radar(geo_box, atrLut)
+            print('box to read for geocoded lookup file in y/x: {}'.format(box4geo_lut))
+
     inpsDict['box'] = pix_box
     inpsDict['box4geo_lut'] = box4geo_lut
     return inpsDict
@@ -213,9 +221,9 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     maxDigit = max([len(i) for i in list(datasetName2templateKey.keys())])
     dsPathDict = {}
     dsNumDict = {}
-    for dsName in ifgramDatasetNames:
-        if dsName in datasetName2templateKey.keys():
-            key = datasetName2templateKey[dsName]
+    for dsName in [i for i in ifgramDatasetNames if i in datasetName2templateKey.keys()]:
+        key = datasetName2templateKey[dsName]
+        if key in inpsDict.keys():
             files = sorted(glob.glob(inpsDict[key]))
             if len(files) > 0:
                 dsPathDict[dsName] = files
@@ -225,8 +233,8 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     ##Check required dataset
     dsName0 = ifgramDatasetNames[0]
     if dsName0 not in dsPathDict.keys():
-        print('ERROR: No reqired {} data files found!'.format(dsName0))
-        sys.exit(1)
+        print('WARNING: No reqired {} data files found!'.format(dsName0))
+        return None
 
     ##Check number of files for all dataset types
     dsNumList = list(dsNumDict.values())
@@ -234,7 +242,6 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         print('WARNING: Not all types of dataset have the same number of files:')
         for key, value in dsNumDict.items():
             print('number of {:<{width}}: {num}'.format(key, width=maxDigit, num=value))
-        #sys.exit(1)
     print('number of files per type: {}'.format(dsNumList[0]))
 
     ##Check data dimension for all files
@@ -292,9 +299,9 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     print('input data files:')
     maxDigit = max([len(i) for i in list(datasetName2templateKey.keys())])
     dsPathDict = {}
-    for dsName in geometryDatasetNames:
-        if dsName in datasetName2templateKey.keys():
-            key = datasetName2templateKey[dsName]
+    for dsName in [i for i in geometryDatasetNames if i in datasetName2templateKey.keys()]:
+        key = datasetName2templateKey[dsName]
+        if key in inpsDict.keys():
             files = sorted(glob.glob(inpsDict[key]))
             if len(files) > 0:
                 if dsName == 'bperp':
@@ -318,11 +325,12 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     ########## metadata
     ifgramRadarMetadata = None
     ifgramKey = datasetName2templateKey[ifgramDatasetNames[0]]
-    ifgramFiles = glob.glob(inpsDict[ifgramKey])
-    if len(ifgramFiles)>0:
-        atr = readfile.read_attribute(ifgramFiles[0])
-        if 'Y_FIRST' not in atr.keys():
-            ifgramRadarMetadata = atr.copy()
+    if ifgramKey in inpsDict.keys():
+        ifgramFiles = glob.glob(inpsDict[ifgramKey])
+        if len(ifgramFiles)>0:
+            atr = readfile.read_attribute(ifgramFiles[0])
+            if 'Y_FIRST' not in atr.keys():
+                ifgramRadarMetadata = atr.copy()
 
     ########## dsPathDict --> dsGeoPathDict + dsRadarPathDict
     dsNameList = list(dsPathDict.keys())
@@ -389,6 +397,18 @@ def prepare_metadata(inpsDict):
     return
 
 
+def print_write_setting(inpsDict):
+    updateMode = inpsDict['updateMode']
+    comp = inpsDict['compression']
+    print('-'*50)
+    print('updateMode : {}'.format(updateMode))
+    print('compression: {}'.format(comp))
+    box = inpsDict['box']
+    boxGeo = inpsDict['box4geo_lut']
+
+    return updateMode, comp, box, boxGeo
+
+
 #################################################################
 def main(iargs=None):
     inps = cmdLineParse(iargs)
@@ -397,26 +417,24 @@ def main(iargs=None):
         print('create directory: {}'.format(inps.outdir))
 
     inpsDict = read_inps2dict(inps)
+    inpsDict = read_subset_box(inpsDict)
     prepare_metadata(inpsDict)
 
     stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
 
-    updateMode = inpsDict['updateMode']
-    print('-'*50+'\nupdateMode is {}'.format(updateMode))
-    box = inpsDict['box']
-
+    updateMode, comp, box, boxGeo = print_write_setting(inpsDict)
     if stackObj and update_object(inps.outfile[0], stackObj, box, updateMode=updateMode):
         print('-'*50)
-        stackObj.write2hdf5(outputFile=inps.outfile[0], access_mode='w', box=box)
+        stackObj.write2hdf5(outputFile=inps.outfile[0], access_mode='w', box=box, compression=comp)
 
     if geomRadarObj and update_object(inps.outfile[1], geomRadarObj, box, updateMode=updateMode):
         print('-'*50)
-        geomRadarObj.write2hdf5(outputFile=inps.outfile[1], access_mode='w', box=box)
+        geomRadarObj.write2hdf5(outputFile=inps.outfile[1], access_mode='w', box=box, compression=comp)
 
-    if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, inpsDict['box4geo_lut'], updateMode=updateMode):
+    if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, boxGeo, updateMode=updateMode):
         print('-'*50)
-        geomGeoObj.write2hdf5(outputFile=inps.outfile[2], access_mode='w', box=inpsDict['box4geo_lut'])
+        geomGeoObj.write2hdf5(outputFile=inps.outfile[2], access_mode='w', box=boxGeo, compression=comp)
 
     return inps.outfile
 

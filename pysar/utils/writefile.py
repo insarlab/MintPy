@@ -62,7 +62,7 @@ def write(*args):
             print('Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...')
             return 0;
         f = h5py.File(outname,'w')
-        dset = f.create_dataset(k, data=data)
+        dset = f.create_dataset(k, data=data, chunks=True, compression="gzip")
         for key , value in iter(atr.items()):
             f.attrs[key] = str(value)
         f.close()
