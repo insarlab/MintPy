@@ -150,7 +150,10 @@ def read(fname, box=None, datasetName=None, printMsg=True):
     # Basic Info
     ext = os.path.splitext(fname)[1].lower()
     fbase = os.path.splitext(os.path.basename(fname))[0]
-    atr = read_attribute(fname, datasetName=datasetName)
+    if datasetName:
+        atr = read_attribute(fname, datasetName=datasetName.split('-')[0])
+    else:
+        atr = read_attribute(fname)
     k = atr['FILE_TYPE']
     processor = atr['PROCESSOR']
     length = int(atr['LENGTH'])
@@ -630,43 +633,43 @@ def attribute_gamma2roipac(par_dict_in):
         par_dict[key] = value
 
     # Length - number of rows
-    for key in par_dict.keys():
+    for key in par_dict_in.keys():
         if any(key.startswith(i) for i in ['azimuth_lines','nlines','az_samp','interferogram_azimuth_lines']):
             par_dict['LENGTH'] = par_dict[key]
 
     # Width - number of columns
-    for key in par_dict.keys():
+    for key in par_dict_in.keys():
         if any(key.startswith(i) for i in ['width','range_samp','interferogram_width']):
             par_dict['WIDTH'] = par_dict[key]
 
     # WAVELENGTH
     speed_of_light = 299792458.0   # meter/second
     key = 'radar_frequency'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['WAVELENGTH'] = str(speed_of_light/float(par_dict[key]))
 
     # HEIGHT & EARTH_RADIUS
     key = 'earth_radius_below_sensor'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['EARTH_RADIUS'] = par_dict[key]
 
         key2 = 'sar_to_earth_center'
-        if key2 in par_dict.keys():
+        if key2 in par_dict_in.keys():
             par_dict['HEIGHT'] = str(float(par_dict[key2]) - float(par_dict[key]))
 
     # STARTING_RANGE
     key = 'near_range_slc'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['STARTING_RANGE'] = par_dict[key]
 
     # PLATFORM
     key = 'sensor'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['PLATFORM'] = par_dict[key]
 
     # ORBIT_DIRECTION
     key = 'heading'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         value = float(par_dict[key])
         if 270 < value < 360 or -90 < value < 90:
             par_dict['ORBIT_DIRECTION'] = 'ascending'
@@ -678,17 +681,17 @@ def attribute_gamma2roipac(par_dict_in):
 
     ##### attributes in geo coordinates
     key = 'corner_lat'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['Y_FIRST'] = par_dict[key]
 
     key = 'corner_lon'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['X_FIRST'] = par_dict[key]
 
     ##### Optional attributes for PySAR from ROI_PAC
     # ANTENNA_SIDE
     key = 'azimuth_angle'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         value = float(par_dict[key])
         if 0 < value < 180:
             par_dict['ANTENNA_SIDE'] = '-1'

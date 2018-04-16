@@ -542,15 +542,18 @@ def check_template_auto_value(templateDict):
     ## Read default template value and turn yes/no to True/False
     templateAutoFile = os.path.join(os.path.dirname(__file__),'../defaults/template.cfg')
     templateAutoDict = readfile.read_template(templateAutoFile)
-    for key, value in templateAutoDict.items():
-        if value == 'yes':
-            templateAutoDict[key] = True
-        elif value == 'no':
-            templateAutoDict[key] = False
+
     ## Update auto value of input template dict
     for key, value in templateDict.items():
         if value == 'auto' and key in templateAutoDict.keys():
             templateDict[key] = templateAutoDict[key]
+
+    ## Change yes --> True and no --> False
+    for key, value in templateDict.items():
+        if value == 'yes':
+            templateDict[key] = True
+        elif value == 'no':
+            templateDict[key] = False
     return templateDict
 
 
@@ -843,7 +846,8 @@ def check_parallel(file_num=1, printMsg=True, maxParallelNum=8):
     # Disable parallel option for one input file
     if file_num <= 1:
         enable_parallel = False
-        print('parallel processing is diabled for one input file')
+        if printMsg:
+            print('parallel processing is diabled for one input file')
         return 1, enable_parallel, None, None
 
     # Check required python module
@@ -1439,20 +1443,24 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
         az/rg     - np.array, float, range/azimuth pixel number
         az/rg_res - float, residul/uncertainty of coordinate conversion
     '''
-    lookupFile = get_lookup_file(lookupFile)
-    if not lookupFile:
-        print('WARNING: No lookup table found! Can not convert coordinates without it.')
-        return None
-    atr_lut = readfile.read_attribute(lookupFile)
+    if lookupFile is None:
+        lookupFile = get_lookup_file(lookupFile)
+        if lookupFile is None:
+            if printMsg:
+                print('WARNING: No lookup table found! Can not convert coordinates without it.')
+            return None
+    if isinstance(lookupFile, str):
+        lookupFile = [lookupFile, lookupFile]
+    atr_lut = readfile.read_attribute(lookupFile[0])
     if printMsg:
-        print('reading file: '+lookupFile)
+        print('reading file: '+lookupFile[0])
 
     #####For lookup table in geo-coord, read value directly
     if 'Y_FIRST' in atr_lut.keys():
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3
-        lut_x = readfile.read(lookupFile, datasetName='rangeCoord')[0]
-        lut_y = readfile.read(lookupFile, datasetName='azimuthCoord')[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord')[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord')[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
@@ -1485,8 +1493,8 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
     #####For lookup table in radar-coord, search the buffer and use center pixel
     else:
-        lut_x = readfile.read(lookupFile, datasetName='longitude')[0]
-        lut_y = readfile.read(lookupFile, datasetName='latitude')[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='longitude')[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='latitude')[0]
         az = np.zeros(lat.shape)
         rg = np.zeros(lat.shape)
         x_factor = 10
@@ -1524,13 +1532,17 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
         lon/lat    - np.array, float, longitude/latitude of input point (rg,az); nan if not found.
         latlon_res - float, residul/uncertainty of coordinate conversion
     '''
-    lookupFile = get_lookup_file(lookupFile)
-    if not lookupFile:
-        print('WARNING: No lookup table found! Can not convert coordinates without it.')
-        return None
-    atr_lut = readfile.read_attribute(lookupFile)
+    if lookupFile is None:
+        lookupFile = get_lookup_file(lookupFile)
+        if lookupFile is None:
+            if printMsg:
+                print('WARNING: No lookup table found! Can not convert coordinates without it.')
+            return None
+    if isinstance(lookupFile, str):
+        lookupFile = [lookupFile, lookupFile]
+    atr_lut = readfile.read_attribute(lookupFile[0])
     if printMsg:
-        print('reading file: '+lookupFile)
+        print('reading file: '+lookupFile[0])
 
     #####For lookup table in geo-coord, search the buffer and use center pixel
     if 'Y_FIRST' in atr_lut.keys():
@@ -1540,8 +1552,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
-        lut_x = readfile.read(lookupFile, datasetName='rangeCoord')[0]
-        lut_y = readfile.read(lookupFile, datasetName='azimuthCoord')[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord')[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord')[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
@@ -1573,8 +1585,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
     #####For lookup table in radar-coord, read the value directly.
     else:
-        lut_x = readfile.read(lookupFile, datasetName='longitude')[0]
-        lut_y = readfile.read(lookupFile, datasetName='latitude')[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='longitude')[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='latitude')[0]
         lat = lut_y[az, rg]
         lon = lut_x[az, rg]
 

@@ -53,14 +53,17 @@ def auto_figure_title(fname, dataset=[], inps_dict=None):
     if not dataset:
         dataset = []
 
-    if len(dataset)==1 and k == 'ifgramStack':
-        fig_title = dataset[0]
-        if 'unwCor' in fname:
-            fig_title += '_unwCor'
+    if k == 'ifgramStack':
+        if len(dataset) == 1:
+            fig_title = dataset[0]
+            if 'unwCor' in fname:
+                fig_title += '_unwCor'
+        else:
+            fig_title = dataset[0].split('-')[0]
 
     elif len(dataset)==1 and k in ['timeseries','GIANT_TS']:
-        if inps_dict['REF_DATE']:
-            ref_date = inps_dict['REF_DATE']
+        if inps_dict['ref_date']:
+            ref_date = inps_dict['ref_date']
         else:
             try:
                 ref_date = atr['REF_DATE']
@@ -80,8 +83,8 @@ def auto_figure_title(fname, dataset=[], inps_dict=None):
         fig_title = os.path.splitext(os.path.basename(fname))[0]
 
 
-    if inps_dict['key'] in ['ifgramStack','HDFEOS']:
-        fig_title += inps_dict['datasetName'].capitalize()
+    #if inps_dict['key'] in ['ifgramStack','HDFEOS']:
+    #    fig_title += inps_dict['datasetName'].capitalize()
 
     # mark - subset
     try:
@@ -186,6 +189,23 @@ def scale_data4disp_unit_and_rewrap(data, atr, disp_unit=None, rewrapping=False)
     return data, disp_unit, rewrapping
 
 
+def auto_disp_unit(inps, atr):
+    if inps.disp_unit:
+        return inps.disp_unit
+
+    k = atr['FILE_TYPE']
+    disp_unit = atr['UNIT']
+    if k == 'ifgramStack':
+        dsetName = inps.dset[0].split('-')[0]
+        if dsetName in ['wrapPhase','unwrapPhase']:
+            disp_unit = 'radian'
+        elif dsetName in ['coherence','connectComponent']:
+            disp_unit = '1'
+    elif k in ['timeseries','velocity']:
+        disp_unit = 'cm'
+    return disp_unit
+
+
 def scale_data2disp_unit(atr_dict, disp_unit, matrix=None):
     '''Scale data based on data unit and display unit
     Inputs:
@@ -197,9 +217,6 @@ def scale_data2disp_unit(atr_dict, disp_unit, matrix=None):
         disp_unit : str, display unit
     Default data file units in PySAR are:  m, m/yr, radian, 1
     '''
-    if not disp_unit:
-        disp_unit = atr_dict['UNIT']
-
     # Initial
     scale = 1.0
     data_unit = atr_dict['UNIT'].lower().split('/')
@@ -434,7 +451,7 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
 
     # Convert data to display unit
     if not inps.disp_unit:
-        inps.disp_unit = meta_dict['UNIT']
+        inps.disp_unit = auto_disp_unit(inps, meta_dict)
     if not inps.disp_unit == meta_dict['UNIT']:
         inps.disp_unit, inps.disp_scale, data = scale_data2disp_unit(meta_dict, inps.disp_unit, data)
     #print 'display in unit: '+inps.disp_unit
@@ -656,7 +673,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     # 3.1 Colorbar
     if inps.disp_cbar:
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", "3%", pad="3%")
+        cax = divider.append_axes("right", "2%", pad="2%")
         inps, cax = pp.plot_colorbar(inps, im, cax)
 
     # 3.2 Title
@@ -693,11 +710,13 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
 ##################################################################################################
 EXAMPLE='''example:
-  view.py SanAndreas.dem
-  view.py velocity.h5 -u cm -m -2 -M 2 -c bwr --mask Mask_tempCoh.h5 -d SanAndreas.dem
+  view.py velocity.h5
+  view.py velocity.h5 velocity -m -2 -M 2 -c bwr --no-glob
 
   view.py timeseries.h5 
-  view.py unwrapIfgram.h5 070927-100217
+  view.py ifgramStack.h5 coherence
+  view.py ifgramStack.h5 unwrapPhase-20070927_20100217
+  view.py ifgramStack.h5 -n 6
   view.py Wrapped.h5    -n 5
   view.py geomap_4rlks.trans range
 
@@ -741,6 +760,8 @@ def createParser():
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('file', type=str, help='file for display')
     infile.add_argument('dset', type=str, nargs='*', default=[], help='optional - dataset(s) to display')
+    infile.add_argument('--exact','--no-glob', dest='globSearch', action='store_false',\
+                        help='Disable glob search for input dset')
     infile.add_argument('-n','--dset-num', dest='dsetNumList', metavar='NUM', type=int, nargs='*', default=[],\
                         help='optional - order number of date/dataset(s) to display')
     infile.add_argument('--ex','--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],\
@@ -972,13 +993,16 @@ def get_file_dataset_list(fname, key):
     return datasetList
 
 
-def check_dataset_input(allList, inList=[], inNumList=[]):
+def check_dataset_input(allList, inList=[], inNumList=[], globSearch=True):
     '''Get dataset(es) from input dataset / dataset_num'''
     ## inList + inNumList --> outNumList --> outList
     if inList:
         tempList = []
-        for i in sorted(inList):
-            tempList += [e for e in allList if i.lower() in e.lower()]
+        if globSearch:
+            for i in inList:
+                tempList += [e for e in allList if i in e]
+        else:
+            tempList += [i for i in inList if i in allList]
         inNumList += [allList.index(e) for e in set(tempList)]
     outNumList = sorted(list(set(inNumList)))
     outList = [allList[i] for i in outNumList]
@@ -988,17 +1012,17 @@ def check_dataset_input(allList, inList=[], inNumList=[]):
 def read_dataset_input(inps, printMsg=True):
     '''Check input / exclude / reference dataset input with file dataset list'''
     if len(inps.dset) > 0 or len(inps.dsetNumList)>0:
-        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
+        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList, inps.globSearch)[1]
     elif inps.key == 'geometry':
         inps.dset = geometryDatasetNames
         inps.dset.remove('bperp')
-        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
+        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList, inps.globSearch)[1]
     elif inps.key == 'ifgramStack':
         inps.dset = ['unwrapPhase']
-        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList)[1]
+        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList, inps.globSearch)[1]
     else:
         inps.dsetNumList = range(len(inps.fileDatasetList))
-    inps.exDsetList, inps.exDsetNumList = check_dataset_input(inps.fileDatasetList, inps.exDsetList, inNumList=[])
+    inps.exDsetList, inps.exDsetNumList = check_dataset_input(inps.fileDatasetList, inps.exDsetList, [], inps.globSearch)
 
     inps.dsetNumList = sorted(list(set(inps.dsetNumList) - set(inps.exDsetNumList)))
     inps.dset = [inps.fileDatasetList[i] for i in inps.dsetNumList]
@@ -1007,7 +1031,7 @@ def read_dataset_input(inps, printMsg=True):
     if inps.ref_date:
         if inps.key not in timeseriesKeyNames:
             inps.ref_date = None
-        ref_date = check_dataset_input(inps.fileDatasetList, [inps.ref_date])[0][0]
+        ref_date = check_dataset_input(inps.fileDatasetList, [inps.ref_date], inps.globSearch)[0][0]
         if not ref_date:
             if printMsg:
                 print('WARNING: input reference date is not included in input file!')
@@ -1186,7 +1210,8 @@ def main(iargs=None):
         # Update multilook parameters with new num and col number
         if inps.multilook and inps.multilook_num == 1:
             inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box, inps.fig_row_num, inps.fig_col_num)
-            inps.msk = mli.multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
+            if inps.msk is not None:
+                inps.msk = mli.multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
 
         ##### Aux Data
         # Reference date for timeseries
@@ -1206,6 +1231,8 @@ def main(iargs=None):
 
         # Min/MaxValue
         if not inps.disp_min and not inps.disp_max and 'MinValue' in atr.keys():
+            if not inps.disp_unit:
+                inps.disp_unit = auto_disp_unit(inps, atr)
             inps.disp_unit, inps.disp_scale = scale_data2disp_unit(atr, inps.disp_unit)[0:2]
             inps.disp_min = float(atr['MinValue']) * inps.disp_scale
             inps.disp_max = float(atr['MaxValue']) * inps.disp_scale
@@ -1357,8 +1384,8 @@ def main(iargs=None):
             else:
                 print('show colorbar')
                 #fig.subplots_adjust(wspace=inps.fig_wid_space, hspace=inps.fig_hei_space, right=0.965)
-                fig.subplots_adjust(right=0.95)
-                cax = fig.add_axes([0.96, 0.25, 0.01, 0.5])
+                fig.subplots_adjust(right=0.93)
+                cax = fig.add_axes([0.94, 0.3, 0.005, 0.4])
                 inps, cax = pp.plot_colorbar(inps, im, cax)
 
             # Save Figure

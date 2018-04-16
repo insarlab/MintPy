@@ -12,6 +12,76 @@ import numpy as np
 from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 
+##################################################################################################
+EXAMPLE='''example:
+  prep_gamma.py  diff_filt_HDR_130118-130129_4rlks.unw
+  prep_gamma.py  IFGRAM*/diff_*rlks.unw
+  prep_gamma.py  IFGRAM*/filt_*rlks.cor
+  prep_gamma.py  IFGRAM*/diff_*rlks.int
+  prep_gamma.py  sim_150911-150922.hgt_sim
+  prep_gamma.py  sim_150911-150922.utm.dem
+  prep_gamma.py  sim_150911-150922.UTM_TO_RDC
+'''
+
+DESCRIPTION='''
+  For each interferogram, including unwrapped/wrapped interferograms and coherence, 3 metadata files are required:
+  1) master .par file, e.g. 130118.amp.par
+  2) slave  .par file, e.g. 130129.amp.par
+  3) interferogram .off file, e.g. 130118-130129_4rlks.off
+
+  Other metadata files are recommended and can be generated from the above 3 if not existed, more specifically:
+  4) baseline files, e.g. 130118-130129_4rlks.baseline and 130118-130129_4rlks.base_perp
+      It can be generated from file 1-3 with Gamma command base_orbit and base_perp)
+  5) corner files, e.g. 130118_4rlks.amp.corner_full and 130118_4rlks.amp.corner
+      It can be generated from file 1 with Gamma command SLC_corners)
+
+  This script will read all these files (generate them if not existed), merge them into one, convert their name from
+  Gamma style to ROI_PAC style, and write to an metadata file, same name as input binary data file with suffix .rsc,
+  e.g. diff_filt_HDR_130118-130129_4rlks.unw.rsc
+
+
+  For DEM file in radar/geo coordinates (.utm.dem/.hgt_sim) and lookup table file for geocoding (.UTM_TO_RDC), 2 metadata
+  files are required:
+  1) .par file, contains geo coordinates info, for DEM in geo coordinates and lookup table, e.g. sim_150911-150922.utm.dem.par
+  2) .diff_par file, contains radar coordinates info, for DEM in radar coordinates, e.g. sim_150911-150922.diff_par
+
+
+  Here is an example of how your Gamma files should look like, after all interferograms/SLCs are coregistered:
+  For each interferogram, 5 files are needed:
+      diff_130118-130129_4rlks.unw
+      filt_130118-130129_4rlks.cor
+      130118-130129_4rlks.off
+      130118_4rlks.amp.par
+      130129_4rlks.amp.par
+  For each dataset, only one sim* folder with 5 files are needed, 
+      sim_130118-130129.hgt_sim
+      sim_130118-130129.diff_par
+      sim_130118-130129.utm.dem
+      sim_130118-130129.utm.dem.par
+      sim_130118-130129.UTM_TO_RDC
+
+  Notes: both - and _ are supported; 
+         both YYMMDD and YYYYMMDD naming are also supported;
+         if no multilooking applied, do not "_4rlks" in your file names.
+'''
+
+def createParser():
+    parser = argparse.ArgumentParser(description='Prepare attributes file for Gamma product for PySAR.\n'+DESCRIPTION,\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('file', nargs='+', help='Gamma file(s)')
+    parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
+                        help='Disable parallel processing. Diabled auto for 1 input file.')
+    return parser
+
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+    return inps
+
+
 ######################################## Sub Functions ############################################
 def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
     '''Get perpendicular baseline info from master/slave par file and off file.
@@ -115,7 +185,7 @@ def extract_attribute_interferogram(fname):
     ## Get info: date12, num of loooks
     try:    date12 = str(re.findall('\d{8}[-_]\d{8}', file_basename)[0])
     except: date12 = str(re.findall('\d{6}[-_]\d{6}', file_basename)[0])
-    m_date, s_date = date12.replace('-','_').split('-')
+    m_date, s_date = date12.replace('-','_').split('_')
     atr['DATE12'] = ptime.yymmdd(m_date)+'-'+ptime.yymmdd(s_date)
     lks = os.path.splitext(file_basename.split(date12)[1])[0]
 
@@ -141,11 +211,8 @@ def extract_attribute_interferogram(fname):
     #print 'read '+off_file
     par_dict = readfile.read_gamma_par(m_par_file)
     off_dict = readfile.read_gamma_par(off_file)
-
-    #print 'convert Gamma attribute to ROI_PAC style'
     atr.update(par_dict)
     atr.update(off_dict)
-    atr = readfile.attribute_gamma2roipac(atr)
 
     ## Perp Baseline Info
     #print 'extract baseline info from %s, %s and %s file' % (m_par_file, s_par_file, off_file)
@@ -159,7 +226,8 @@ def extract_attribute_interferogram(fname):
     #print 'writing >>> '+rsc_file
     try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
     except: atr_orig = None
-    if atr_orig != atr:
+    keyList = [i for i in atr_orig.keys() if i in atr.keys()]
+    if any(atr_orig[i] != atr[i] for i in keyList):
         print('merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),\
                                                os.path.basename(off_file), os.path.basename(rsc_file)))
         writefile.write_roipac_rsc(atr, rsc_file)
@@ -177,7 +245,7 @@ def extract_attribute_lookup_table(fname):
     rsc_file_list = ut.get_file_list(fname+'.rsc')
     if rsc_file_list:
         rsc_file = rsc_file_list[0]
-        print(rsc_file+' is existed, no need to re-extract.')
+        #print(rsc_file+' is existed, no need to re-extract.')
         return rsc_file
 
     atr = {}
@@ -188,18 +256,16 @@ def extract_attribute_lookup_table(fname):
 
     par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
 
-    print('read '+os.path.basename(par_file))
+    #print('read '+os.path.basename(par_file))
     par_dict = readfile.read_gamma_par(par_file)
-
-    print('convert Gamma attribute to ROI_PAC style')
-    par_dict = readfile.attribute_gamma2roipac(par_dict)
     atr.update(par_dict)
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
     try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
     except: atr_orig = None
-    if atr_orig != atr:
+    keyList = [i for i in atr_orig.keys() if i in atr.keys()]
+    if any(atr_orig[i] != atr[i] for i in keyList):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, rsc_file)
     return rsc_file
@@ -218,17 +284,16 @@ def extract_attribute_dem_geo(fname):
     atr['X_UNIT'] = 'degrees'
 
     par_file = fname+'.par'
-    print('read '+os.path.basename(par_file))
-    print('convert Gamma attribute to ROI_PAC style')
+    #print('read '+os.path.basename(par_file))
     par_dict = readfile.read_gamma_par(par_file)
-    par_dict = readfile.attribute_gamma2roipac(par_dict)
     atr.update(par_dict)
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
     try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
     except: atr_orig = None
-    if atr_orig != atr:
+    keyList = [i for i in atr_orig.keys() if i in atr.keys()]
+    if any(atr_orig[i] != atr[i] for i in keyList):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, rsc_file)
     return rsc_file
@@ -255,101 +320,27 @@ def extract_attribute_dem_radar(fname):
         fname_base = os.path.splitext(fname_base)[0]
 
     par_file = fname_base+'.diff_par'
-    print('read '+os.path.basename(par_file))
-    print('convert Gamma attribute to ROI_PAC style')
+    #print('read '+os.path.basename(par_file))
     par_dict = readfile.read_gamma_par(par_file)
-    par_dict = readfile.attribute_gamma2roipac(par_dict)
     atr.update(par_dict)
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
     try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
     except: atr_orig = None
-    if atr_orig != atr:
+    keyList = [i for i in atr_orig.keys() if i in atr.keys()]
+    if any(atr_orig[i] != atr[i] for i in keyList):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, rsc_file)
     return rsc_file
 
 
-##################################################################################################
-EXAMPLE='''example:
-  prep_gamma.py  diff_filt_HDR_130118-130129_4rlks.unw
-  prep_gamma.py  IFGRAM*/diff_*rlks.unw
-  prep_gamma.py  IFGRAM*/filt_*rlks.cor
-  prep_gamma.py  IFGRAM*/diff_*rlks.int
-  prep_gamma.py  sim_150911-150922.hgt_sim
-  prep_gamma.py  sim_150911-150922.utm.dem
-  prep_gamma.py  sim_150911-150922.UTM_TO_RDC
-'''
-
-DESCRIPTION='''
-  For each interferogram, including unwrapped/wrapped interferograms and coherence, 3 metadata files are required:
-  1) master .par file, e.g. 130118.amp.par
-  2) slave  .par file, e.g. 130129.amp.par
-  3) interferogram .off file, e.g. 130118-130129_4rlks.off
-
-  Other metadata files are recommended and can be generated from the above 3 if not existed, more specifically:
-  4) baseline files, e.g. 130118-130129_4rlks.baseline and 130118-130129_4rlks.base_perp
-      It can be generated from file 1-3 with Gamma command base_orbit and base_perp)
-  5) corner files, e.g. 130118_4rlks.amp.corner_full and 130118_4rlks.amp.corner
-      It can be generated from file 1 with Gamma command SLC_corners)
-
-  This script will read all these files (generate them if not existed), merge them into one, convert their name from
-  Gamma style to ROI_PAC style, and write to an metadata file, same name as input binary data file with suffix .rsc,
-  e.g. diff_filt_HDR_130118-130129_4rlks.unw.rsc
-
-
-  For DEM file in radar/geo coordinates (.utm.dem/.hgt_sim) and lookup table file for geocoding (.UTM_TO_RDC), 2 metadata
-  files are required:
-  1) .par file, contains geo coordinates info, for DEM in geo coordinates and lookup table, e.g. sim_150911-150922.utm.dem.par
-  2) .diff_par file, contains radar coordinates info, for DEM in radar coordinates, e.g. sim_150911-150922.diff_par
-
-
-  Here is an example of how your Gamma files should look like, after all interferograms/SLCs are coregistered:
-  For each interferogram, 5 files are needed:
-      diff_130118-130129_4rlks.unw
-      filt_130118-130129_4rlks.cor
-      130118-130129_4rlks.off
-      130118_4rlks.amp.par
-      130129_4rlks.amp.par
-  For each dataset, only one sim* folder with 5 files are needed, 
-      sim_130118-130129.hgt_sim
-      sim_130118-130129.diff_par
-      sim_130118-130129.utm.dem
-      sim_130118-130129.utm.dem.par
-      sim_130118-130129.UTM_TO_RDC
-
-  Notes: both - and _ are supported; 
-         both YYMMDD and YYYYMMDD naming are also supported;
-         if no multilooking applied, do not "_4rlks" in your file names.
-'''
-
-def createParser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for Gamma product for PySAR.\n'+DESCRIPTION,\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', nargs='+', help='Gamma file(s)')
-    parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
-                        help='Disable parallel processing. Diabled auto for 1 input file.')
-    return parser
-
-
-def cmdLineParse(iargs=None):
-    parser = createParser()
-    inps = parser.parse_args(args=iargs)
-    return inps
-
-
-##################################################################################################
-def main(iargs=None):
-    inps = cmdLineParse(iargs)
+def extract_metadata(inps):
     inps.file = ut.get_file_list(inps.file, abspath=True)
-    print('number of files: '+str(len(inps.file)))
 
     # check outfile and parallel option
     if inps.parallel:
-        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file), printMsg=False)
 
     ##### multiple datasets files
     ext = os.path.splitext(inps.file[0])[1]
@@ -372,10 +363,12 @@ def main(iargs=None):
     elif ext in ['.UTM_TO_RDC']:
         for File in inps.file:
             atr_file = extract_attribute_lookup_table(File)
-    else:
-        print('No need to extract attributes for Gamma '+ext+' file')
+    return
 
-    print('Done.')
+##################################################################################################
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
+    extract_metadata(inps)
     return
 
 ###################################################################################################

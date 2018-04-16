@@ -313,7 +313,8 @@ def get_date12_to_drop(inps):
             msg = 'Drop ifgrams with average coherence < {}: '.format(inps.minCoherence)
             mst_date12_list = []
 
-        tempList = sorted(list(set(date12ListAll) - set(coh_date12_list) - set(mst_date12_list)))
+        tempList = [i for i in date12ListAll if (i in coh_date12_list and i not in mst_date12_list)]
+        #tempList = sorted(list(set(date12ListAll) - set(coh_date12_list) - set(mst_date12_list)))
         date12_to_drop += tempList
         print(msg+'({})\n{}'.format(len(tempList), tempList))
 

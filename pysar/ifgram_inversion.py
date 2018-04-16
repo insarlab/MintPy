@@ -4,29 +4,6 @@
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# timeseries_inversion are modified from a software originally
-# written by Scott Baker with the following licence:
-###############################################################################
-#  Copyright (c) 2011, Scott Baker 
-# 
-#  Permission is hereby granted, free of charge, to any person obtaining a
-#  copy of this software and associated documentation files (the "Software"),
-#  to deal in the Software without restriction, including without limitation
-#  the rights to use, copy, modify, merge, publish, distribute, sublicense,
-#  and/or sell copies of the Software, and to permit persons to whom the
-#  Software is furnished to do so, subject to the following conditions:
-# 
-#  The above copyright notice and this permission notice shall be included
-#  in all copies or substantial portions of the Software.
-# 
-#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-#  OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-#  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-#  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-#  DEALINGS IN THE SOFTWARE.
-############################################################################### 
 
 
 import os, sys
@@ -51,15 +28,19 @@ EXAMPLE='''example:
 
 TEMPLATE='''
 ## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
-## Temporal coherence is calculated using Tazzani et al. (Tizzani et al., 2007, IEEE-TGRS)
-## Singular-Value Decomposition (SVD) is applied if network are not fully connected for no weight scenario.
 ## There are 4 weighting options:
-## a. fim       - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
-## b. variance  - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
-## c. coherence - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
-## d. no        - LS, no/uniform weight (Berardino et al., 2002, TGRS)
-pysar.networkInversion.weightFunc    = auto #[fim / variance / coherence / no], auto for no
-pysar.networkInversion.coherenceFile = auto #[filename / no], auto for coherence.h5, file to read weight data
+## 1) fim  - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
+## 2) var  - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
+## 3) coh  - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
+## 4) sbas - LS/SVD, uniform weight (Berardino et al., 2002, TGRS)
+## There are 3 mask options to mask unwrapPhase for each interferogram:
+## 1) connectComponent - mask out pixels with False/0 value [Recommended]
+## 2) coherence        - mask out pixels with value < maskThreshold
+## 3) no               - no masking.
+## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
+pysar.networkInversion.weightFunc    = auto #[fim / var / coh / sbas], auto for sbas
+pysar.networkInversion.maskDataset   = auto #[connectComponent / coherence / no], auto for connectComponent
+pysar.networkInversion.maskThreshold = auto #[0-1], auto for 0.4
 pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
 pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
@@ -73,16 +54,14 @@ Guarnieri, A. M., and S. Tebaldini (2008), On the exploitation of target statist
     interferometry applications, Geoscience and Remote Sensing, IEEE Transactions on, 46(11), 3436-3443.
 Just, D., & Bamler, R. (1994). Phase statistics of interferograms with applications to synthetic
     aperture radar. Applied optics, 33(20), 4361-4368. 
+Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
+    of multitemporal differential SAR interferograms, IEEE-TGRS, 44(9), 2374-2383.
 Perissin, D., and T. Wang (2012), Repeat-pass SAR interferometry with partially coherent targets, IEEE TGRS,
     50(1), 271-280, doi:10.1109/tgrs.2011.2160644.
 Samiei-Esfahany, S., J. E. Martins, F. v. Leijen, and R. F. Hanssen (2016), Phase Estimation for Distributed
     Scatterers in InSAR Stacks Using Integer Least Squares Estimation, IEEE TGRS, 54(10), 5671-5687.
 Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR interferometry, 1994. 
     IGARSS '94., 8-12 Aug 1994.
-Tizzani, P., Berardino, P., Casu, F., Euillades, P., Manzo, M., Ricciardi, G. P., Lanari, R.
-    (2007). Surface deformation of Long Valley caldera and Mono Basin, California, investigated
-    with the SBAS-InSAR approach. Remote Sensing of Environment, 108(3), 277-289.
-    doi:http://dx.doi.org/10.1016/j.rse.2006.11.015
 '''
 
 def createParser():
@@ -94,13 +73,18 @@ def createParser():
     parser.add_argument('--template','-t', dest='templateFile',\
                         help='template text file with the following options:\n'+TEMPLATE)
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
+    parser.add_argument('--maskDataset', dest='maskDataset', default='connComp',\
+                        help='dataset used to mask unwrapPhase')
+    parser.add_argument('--maskThreshold', type=float, default=0.4,\
+                        help='threshold to generate mask when mask is coherence')
 
-    parser.add_argument('--weight-function','-w', dest='weight_function', default='no',\
+    parser.add_argument('--weight-function','-w', dest='weightFunc', default='no',\
                         help='function used to convert coherence to weight for inversion:\n'+\
-                             'variance - phase variance due to temporal decorrelation\n'+\
-                             'linear   - uniform distribution CDF function\n'+\
-                             'no       - no weight, or ordinal inversion with uniform weight')
-    parser.add_argument('--norm', dest='resid_norm', default='L2', choices=['L1','L2'],\
+                             'fim  - Fisher Information Matrix as weight'+\
+                             'var  - phase variance due to temporal decorrelation\n'+\
+                             'coh  - uniform distribution CDF function\n'+\
+                             'sbas - uniform weight')
+    parser.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1','L2'],\
                         help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
 
     parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.5e9,\
@@ -118,7 +102,7 @@ def createParser():
                              'readable and newer than input interferograms file')
     parser.add_argument('--noskip-zero-phase', dest='skip_zero_phase', action='store_false',\
                         help='Do not skip interferograms with zero phase.')
-    parser.add_argument('--water-mask','-m', dest='water_mask_file',\
+    parser.add_argument('--water-mask','-m', dest='waterMaskFile',\
                         help='Skip inversion on the masked out region, i.e. water.')
     return parser
 
@@ -134,50 +118,21 @@ def read_template2inps(template_file, inps):
     '''Read input template options into Namespace inps'''
     if not inps:
         inps = cmdLineParse()
+    inpsDict = vars(inps)
     template = readfile.read_template(template_file)
+    template = ut.check_template_auto_value(template)
 
-    # Coherence-based network modification
     prefix = 'pysar.networkInversion.'
-    key = prefix+'residualNorm'
-    if key in template.keys() and template[key] in ['L1']:
-        inps.resid_norm = 'L1'
-    else:
-        inps.resid_norm = 'L2'
-
-    key = prefix+'weightFunc'
-    if key in template.keys():
-        value = template[key]
-        if value in ['auto','no']:
-            inps.weight_function = 'no'
-        elif value.startswith(('lin','coh','cor')):
-            inps.weight_function = 'linear'
-        elif value.startswith('var'):
-            inps.weight_function = 'variance'
-        elif value.startswith(('fim','fisher')):
-            inps.weight_function = 'fim'
-        else:
-            print('Un-recognized input for %s = %s' % (key, value))
-            sys.exit(-1)
-
-    key = prefix+'waterMaskFile'
-    if key in template.keys():
-        value = template[key]
-        if value in ['auto', 'no']:
-            maskFile = None
-            #atr = readfile.read_attribute(inps.ifgram_file)
-            #if 'Y_FIRST' in atr.keys():
-            #    maskFile = 'geometryGeo.h5'
-            #else:
-            #    maskFile = 'geometryRadar.h5'
-        else:
-            maskFile = value
-            try:
-                data = readfile.read(maskFile, datasetName='mask')[0]
-                inps.water_mask_file = maskFile
-            except:
-                print('Can not found mask dataset in file: %s' % (maskFile))
-                print('Ignore this input water mask file option and continue.')
-
+    keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
+    for key in keyList:
+        value = template[prefix+key]
+        if key in ['maskDataset']:
+            inpsDict[key] = value
+        elif value:
+            if key in ['maskThreshold']:
+                inpsDict[key] = float(value)
+            elif key in ['weightFunc','residualNorm','waterMaskFile']:
+                inpsDict[key] = value
     return inps
 
 
@@ -349,7 +304,7 @@ def network_inversion_sbas(B, ifgram, tbase_diff, skipZeroPhase=True):
     if skipZeroPhase and not np.all(ifgram):
         idx = (ifgram != 0.).flatten()
         B = B[idx, :]
-        if B.shape[0] < dateNum1:
+        if B.shape[0] < dateNum1*2:
             return ts, tempCoh
         ifgram = ifgram[idx, :]
 
@@ -467,6 +422,57 @@ def temporal_coherence(A, ts, ifgram, weight=None, chunk_size=500):
     return temp_coh
 
 
+def read_unwrap_phase(stackobj, inps, box):
+    ##### Read unwrapPhase
+    print('reading unwrapPhase in {} * {} ...'.format(box, inps.numIfgram))
+    pha_data = None
+    pha_data = stackobj.read(datasetName='unwrapPhase', box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
+    if inps.skip_zero_phase:
+        #print('skip zero phase value (masked out and filled during phase unwrapping)')
+        for i in range(inps.numIfgram):
+            pha_data[i,:][pha_data[i,:] != 0.] -= inps.refPhase[i]            
+
+    ##### Read/Generate Mask
+    if inps.maskDataset and inps.maskDataset in stackobj.datasetNames:
+        print('reading {} in {} * {} ...'.format(inps.maskDataset, box, inps.numIfgram))
+        msk_data = stackobj.read(datasetName=inps.maskDataset, box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
+        if inps.maskDataset == 'coherence':
+            msk_data = msk_data >= inps.maskThreshold
+            print('mask out pixels with {} < {}'.format(inps.maskDataset, inps.maskThreshold))
+        else:
+            print('mask out pixels with {} == 0'.format(inps.maskDataset))
+        pha_data[msk_data==0.] = 0.
+    return pha_data
+
+
+def read_coherence2weight(stackobj, inps, box):
+    epsilon = 1e-4
+    print('reading coherence in {} * {} ...'.format(box, inps.numIfgram))
+    coh_data = stackobj.read(datasetName='coherence', box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
+    coh_data[np.isnan(coh_data)] = epsilon
+
+    ##### Calculate Weight matrix
+    weight = np.array(coh_data, np.float64)
+    L = int(stackobj.metadata['ALOOKS']) * int(stackobj.metadata['RLOOKS'])
+    if inps.weightFunc == 'var':
+        print('convert coherence to weight using inverse of phase variance')
+        print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
+        weight = 1.0 / coherence2phase_variance_ds(weight, L, printMsg=True)
+
+    elif inps.weightFunc == 'coh':
+        print('use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)')
+        weight[weight < epsilon] = epsilon
+
+    elif inps.weightFunc == 'fim':
+        print('convert coherence to weight using Fisher Information Index (Seymour & Cumming, 1994)')
+        weight = coherence2fisher_info_index(weight, L)
+
+    else:
+        print('Un-recognized weight function: %s' % inps.weightFunc)
+        sys.exit(-1)
+    return weight
+
+
 def ifgram_inversion_patch(stackobj, inps, box=None):
     '''
     Inputs:
@@ -488,7 +494,7 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
                         tbase_diff   - np.array in size of (date_num-1, 1), differential temporal baseline
 
                         #Inversion
-                        weight_function   - no, fim, var, coh
+                        weightFunc   - sbas, fim, var, coh
     Outputs:
         ts       - 3D np.array in size of (date_num, row_num, col_num)
         temp_coh - 2D np.array in size of (row_num, col_num)
@@ -508,19 +514,22 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
     tsStd = np.zeros((date_num, pixel_num), np.float32)
     temp_coh = np.zeros(pixel_num, np.float32)
 
+    ##### Read unwrapPhase
+    pha_data = read_unwrap_phase(stackobj, inps, box)
+
+
     ##### Mask for pixels to invert
     mask = np.ones(pixel_num, np.bool_)
     ## 1 - Water Mask
-    if inps.water_mask_file:
-        print('skip pixels on water with mask from file: %s' % (os.path.basename(inps.water_mask_file)))
-        try:    waterMask = readfile.read(inps.water_mask_file, datasetName='waterMask', box=box)[0].flatten()
-        except: waterMask = readfile.read(inps.water_mask_file, datasetName='mask', box=box)[0].flatten()
+    if inps.waterMaskFile:
+        print('skip pixels on water with mask from file: %s' % (os.path.basename(inps.waterMaskFile)))
+        try:    waterMask = readfile.read(inps.waterMaskFile, datasetName='waterMask', box=box)[0].flatten()
+        except: waterMask = readfile.read(inps.waterMaskFile, datasetName='mask', box=box)[0].flatten()
         mask *= np.array(waterMask, np.bool_)
 
     ## 2 - Mask for Zero Phase in ALL ifgrams
     print('skip pixels with zero/nan value in all interferograms')
-    phaseStack = ut.temporal_average(stackobj.file, datasetName='unwrapPhase', outFile='avgPhaseVelocity.h5',\
-                                     updateMode=True)[0][box[1]:box[3],box[0]:box[2]].flatten()
+    phaseStack = np.nanmean(pha_data, axis=0)
     mask *= np.multiply(~np.isnan(phaseStack), phaseStack != 0.)
 
     ## Invert pixels on mask 1+2
@@ -533,18 +542,6 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
         tsStd = tsStd.reshape(date_num, row_num, col_num)
         return ts, temp_coh, tsStd
 
-    print('reading unwrapPhase in {} * {} ...'.format(box, inps.numIfgram))
-    pha_data = None
-    pha_data = stackobj.read(datasetName='unwrapPhase', box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
-    if inps.skip_zero_phase:
-        print('skip zero phase value (masked out and filled during phase unwrapping)')
-        for i in range(inps.numIfgram):
-            pha_data[i,:][pha_data[i,:] != 0.] -= inps.refPhase[i]
-
-    ## 3 - Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
-    maskAllNet = np.all(pha_data, axis=0)
-    maskAllNet *= mask
-    maskPartNet = mask ^ maskAllNet
 
     ##### Design matrix
     A, B = stackobj.get_design_matrix(dropIfgram=True)
@@ -555,8 +552,14 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
     timeIdx.remove(refIdx)
     Astd = stackobj.get_design_matrix(refDate=ref_date, dropIfgram=True)[0]
 
-    ##### Inversion
-    if inps.weight_function in ['no','uniform']:
+
+    ##### Inversion - SBAS
+    if inps.weightFunc == 'sbas':
+        ## Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
+        maskAllNet = np.all(pha_data, axis=0)
+        maskAllNet *= mask
+        maskPartNet = mask ^ maskAllNet
+
         if np.sum(maskAllNet) > 0:
             print('inverting pixels with valid phase in all  ifgrams: {} pixels ...'.format(np.sum(maskAllNet)))
             numAllNet = np.sum(maskAllNet)
@@ -589,31 +592,10 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
                 progBar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
             progBar.close()
 
+
+    ##### Inversion - WLS
     else:
-        epsilon = 1e-4
-        print('reading coherence in {} * {} ...'.format(box, inps.numIfgram))
-        coh_data = stackobj.read(datasetName='coherence', box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
-        coh_data[np.isnan(coh_data)] = epsilon
-
-        ##### Calculate Weight matrix
-        weight = np.array(coh_data, np.float64)
-        L = int(stackobj.metadata['ALOOKS']) * int(stackobj.metadata['RLOOKS'])
-        if inps.weight_function.startswith('var'):
-            print('convert coherence to weight using inverse of phase variance')
-            print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
-            weight = 1.0 / coherence2phase_variance_ds(weight, L, printMsg=True)
-
-        elif inps.weight_function.startswith(('lin','coh','cor')):
-            print('use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)')
-            weight[weight < epsilon] = epsilon
-
-        elif inps.weight_function.startswith(('fim','fisher')):
-            print('convert coherence to weight using Fisher Information Index (Seymour & Cumming, 1994)')
-            weight = coherence2fisher_info_index(weight, L)
-
-        else:
-            print('Un-recognized weight function: %s' % inps.weight_function)
-            sys.exit(-1)
+        weight = read_coherence2weight(stackobj, inps, box)
 
         ##### Weighted Inversion pixel by pixel
         print('inverting time series ...')
@@ -627,6 +609,7 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
             tsStd[timeIdx, idx] = tsStd1.flatten()
             progBar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
         progBar.close()
+
 
     ts = ts.reshape(date_num, row_num, col_num)
     tsStd = tsStd.reshape(date_num, row_num, col_num)
@@ -728,7 +711,7 @@ def split_into_boxes(inps, numIfgram, length, width, printMsg=True):
     '''Split into chunks in rows to reduce memory usage'''
     #Get r_step / chunk_num
     r_step = inps.chunk_size / (numIfgram * width)         #split in lines
-    if inps.weight_function not in ['no','uniform']:  #more memory usage (coherence) for WLS
+    if inps.weightFunc != 'sbas':  #more memory usage (coherence) for WLS
         r_step /= 2.0
     r_step = int(ceil_to_1(r_step))
     chunk_num = int((length-1)/r_step) + 1
@@ -752,7 +735,7 @@ def check_design_matrix(stackobj, inps):
     '''Check Rank of Design matrix for weighted inversion'''
     A = stackobj.get_design_matrix(dropIfgram=True)[0]
     print('-------------------------------------------------------------------------------')
-    if inps.weight_function in ['no','uniform']:
+    if inps.weightFunc == 'sbas':
         print('generic least square inversion with min-norm phase velocity')
         print('    based on Berardino et al. (2002, IEEE-TGRS)')
         print('    OLS for pixels with full rank      network')
@@ -808,7 +791,7 @@ def main(iargs=None):
         sys.exit(1)
 
     # Network Inversion
-    if inps.resid_norm == 'L2':
+    if inps.residualNorm == 'L2':
         print('inverse time-series using L2 norm minimization')
         ifgram_inversion(inps.ifgramStackFile, inps)
     else:

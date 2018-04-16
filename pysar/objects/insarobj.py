@@ -120,7 +120,7 @@ class ifgramStackDict:
             print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit,\
                                                                               t=str(dsDataType), s=dsShape))
             ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
-                                      dtype=dsDataType, chunks=True)
+                                  dtype=dsDataType, chunks=True)
 
             dMin = 0
             dMax = 0
@@ -143,7 +143,7 @@ class ifgramStackDict:
         # 2D dataset containing master and slave dates of all pairs
         dsName = 'date'
         dsDataType = np.string_
-        dsShape = (self.numIfgram,)
+        dsShape = (self.numIfgram,2)
         print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
         data = np.array(self.pairs, dtype=dsDataType)
         ds = f.create_dataset(dsName, data=data)
@@ -235,22 +235,22 @@ class ifgramDict:
         self.length = int(self.metadata['LENGTH'])
         self.width = int(self.metadata['WIDTH'])
 
-        if self.processor is None:
-            ext = self.file.split('.')[-1]
-            if os.path.exists(self.file+'.xml'):
-                self.processor = 'isce' 
-            elif os.path.exists(self.file+'.rsc'):
-                self.processor = 'roipac'
-            elif os.path.exists(self.file+'.par'):
-                self.processor = 'gamma'
-            elif ext == 'grd':
-                self.processor = 'gmtsar'
-            #what for DORIS/SNAP
-            elif 'PROCESSOR' in self.metadata.keys():
-                self.processor = self.metadata['PROCESSOR']               
-            else:
-                self.processor = 'isce'
-        self.metadata['PROCESSOR'] = self.processor
+        #if self.processor is None:
+        #    ext = self.file.split('.')[-1]
+        #    if 'PROCESSOR' in self.metadata.keys():
+        #        self.processor = self.metadata['PROCESSOR']
+        #    elif os.path.exists(self.file+'.xml'):
+        #        self.processor = 'isce' 
+        #    elif os.path.exists(self.file+'.rsc'):
+        #        self.processor = 'roipac'
+        #    elif os.path.exists(self.file+'.par'):
+        #        self.processor = 'gamma'
+        #    elif ext == 'grd':
+        #        self.processor = 'gmtsar'
+        #    #what for DORIS/SNAP
+        #    else:
+        #        self.processor = 'isce'
+        #self.metadata['PROCESSOR'] = self.processor
 
         if self.track:
             self.metadata['TRACK'] = self.track
@@ -314,8 +314,10 @@ class geometryDict:
             data = data[box[1]:box[3],box[0]:box[2]]
         return data
 
-    def get_size(self, box=None):
-        self.file = self.datasetDict[geometryDatasetNames[0]]
+    def get_size(self, family=None, box=None):
+        if not family:
+            family = list(set(self.datasetDict.keys()) - set('bperp'))[0]
+        self.file = self.datasetDict[family]
         metadata = readfile.read_attribute(self.file)
         if box:
             length = box[3] - box[1]
@@ -329,44 +331,31 @@ class geometryDict:
         self.datasetList = list(self.datasetDict.keys())
         return self.datasetList
 
-    def get_metadata(self, family=geometryDatasetNames[0]):
+    def get_metadata(self, family=None):
+        if not family:
+            family = list(set(self.datasetDict.keys()) - set('bperp'))[0]
         self.file = self.datasetDict[family]
         self.metadata = readfile.read_attribute(self.file)
         self.length = int(self.metadata['LENGTH'])
         self.width = int(self.metadata['WIDTH'])
-        if self.processor is None:
-            ext = self.file.split('.')[-1]
-            if 'PROCESSOR' in self.metadata.keys():
-                self.processor = self.metadata['PROCESSOR']
-            elif os.path.exists(self.file+'.xml'):
-                self.processor = 'isce' 
-            elif os.path.exists(self.file+'.rsc'):
-                self.processor = 'roipac'
-            elif os.path.exists(self.file+'.par'):
-                self.processor = 'gamma'
-            elif ext == 'grd':
-                self.processor = 'gmtsar'
-            #what for DORIS/SNAP
-            else:
-                self.processor = 'isce'
-        self.metadata['PROCESSOR'] = self.processor
+
+        #if self.processor is None:
+        #    ext = self.file.split('.')[-1]
+        #    if 'PROCESSOR' in self.metadata.keys():
+        #        self.processor = self.metadata['PROCESSOR']
+        #    elif os.path.exists(self.file+'.xml'):
+        #        self.processor = 'isce' 
+        #    elif os.path.exists(self.file+'.rsc'):
+        #        self.processor = 'roipac'
+        #    elif os.path.exists(self.file+'.par'):
+        #        self.processor = 'gamma'
+        #    elif ext == 'grd':
+        #        self.processor = 'gmtsar'
+        #    #what for DORIS/SNAP
+        #    else:
+        #        self.processor = 'isce'
+        #self.metadata['PROCESSOR'] = self.processor
         return self.metadata
-
-    def read_isce_bperp_file(self, fname, box=None):
-        '''Read ISCE coarse grid perpendicular baseline file, and project it to full size
-        Parameters: self : geometry object,
-                    fname : str, bperp file name
-                    box : tuple of 4 int, subset range in (x0, y0, x1, y1)
-        Returns: data : 2D array of float32
-        Example:
-            data = self.read_sice_bperp_file(fname='$PROJECT_DIR/merged/baselines/20160418/bperp')
-        '''
-        dataC = readfile.read(fname)[0]
-        data = ut.interpolate_data(dataC, outShape=(self.length, self.width), interpMethod='linear')
-        if box is not None:
-            data = data[box[1]:box[3],box[0]:box[2]]
-        return data
-
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None):
         '''
@@ -387,7 +376,6 @@ class geometryDict:
         if len(self.datasetDict) == 0:
             print('No dataset file path in the object, skip HDF5 file writing.')
             return None
-        self.get_metadata()
 
         self.outputFile = outputFile
         f = h5py.File(self.outputFile, access_mode)
@@ -399,7 +387,7 @@ class geometryDict:
 
         self.dsNames = list(self.datasetDict.keys())
         maxDigit = max([len(i) for i in geometryDatasetNames])
-        length, width = self.get_size(box)
+        length, width = self.get_size(box=box)
 
         ###############################
         # 2D datasets containing height, latitude, incidenceAngle, shadowMask, etc.
@@ -417,7 +405,8 @@ class geometryDict:
                 print('read coarse grid baseline files and linear interpolate into full resolution ...')
                 progBar = ptime.progress_bar(maxValue=self.numDate)
                 for i in range(self.numDate):
-                    data = self.read_isce_bperp_file(fname=self.datasetDict[dsName][self.dateList[i]], box=box)
+                    fname = self.datasetDict[dsName][self.dateList[i]]
+                    data = read_isce_bperp_file(fname=fname, outShape=dsShape[1:3], box=box)
                     ds[i,:,:] = data
                     progBar.update(i+1, suffix=self.dateList[i])
                 progBar.close()
@@ -446,9 +435,9 @@ class geometryDict:
         dsName = 'incidenceAngle'
         if dsName not in self.dsNames:
             data = self.get_incidenceAngle(box=box)
-            dsShape = data.shape
-            dsDataType = dataType
             if data is not None:
+                dsShape = data.shape
+                dsDataType = dataType
                 print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit,\
                                                                                   t=str(dsDataType), s=dsShape))
                 ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
@@ -456,15 +445,16 @@ class geometryDict:
         dsName = 'slantRangeDistance'
         if dsName not in self.dsNames:
             data = self.get_slantRangeDistance(box=box)
-            dsShape = data.shape
-            dsDataType = dataType
             if data is not None:
+                dsShape = data.shape
+                dsDataType = dataType
                 print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit,\
                                                                                   t=str(dsDataType), s=dsShape))
                 ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True)
 
         ###############################
         # Attributes
+        self.get_metadata(family=self.dsNames[0])
         self.metadata = ut.subset_attribute(self.metadata, box)
         self.metadata['FILE_TYPE'] = self.name
         for key,value in self.metadata.items():
@@ -473,6 +463,25 @@ class geometryDict:
         f.close()
         print('Finished writing to {}'.format(self.outputFile))
         return self.outputFile
+
+
+########################################################################################
+def read_isce_bperp_file(fname, outShape, box=None):
+    '''Read ISCE coarse grid perpendicular baseline file, and project it to full size
+    Parameters: self : geometry object,
+                fname : str, bperp file name
+                outShape : tuple of 2int, shape of file in full resolution
+                box : tuple of 4 int, subset range in (x0, y0, x1, y1) with respect to full resolution
+    Returns: data : 2D array of float32
+    Example:
+        fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
+        data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
+    '''
+    dataC = readfile.read(fname)[0]
+    data = ut.interpolate_data(dataC, outShape=(self.length, self.width), interpMethod='linear')
+    if box is not None:
+        data = data[box[1]:box[3],box[0]:box[2]]
+    return data
 
 
 ########################################################################################

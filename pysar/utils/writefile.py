@@ -54,7 +54,6 @@ def write(*args):
 
     ext = os.path.splitext(outname)[1].lower()
     ############### Read ###############
-    #print 'writing >>> '+outname
     ##### PySAR HDF5 product
     if ext in ['.h5','.he5']:
         k = atr['FILE_TYPE']
@@ -63,7 +62,6 @@ def write(*args):
             print('Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...')
             return 0;
         f = h5py.File(outname,'w')
-        #group = f.create_group(k)
         dset = f.create_dataset(k, data=data)
         for key , value in iter(atr.items()):
             f.attrs[key] = str(value)

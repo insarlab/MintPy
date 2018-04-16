@@ -10,6 +10,7 @@ from pysar.utils import readfile, datetime as ptime, sensors, utils as ut
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, ifgramStack, geometry
 from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
 from pysar.defaults import isceAutoPath, roipacAutoPath, gammaAutoPath
+from pysar import subset
 
 
 #################################################################
@@ -42,6 +43,7 @@ TEMPLATE='''template:
 ## auto - automatic path pattern for Univ of Miami file structure
 ## load_data.py -H to check more details and example inputs.
 pysar.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
+pysar.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
 ##---------interferogram datasets:
 pysar.load.unwFile        = auto  #[path2unw_file]
 pysar.load.corFile        = auto  #[path2cor_file]
@@ -58,8 +60,8 @@ pysar.load.bperpFile      = auto  #[path2bperp_file]
 
 ## 1.1 Subset (optional)
 ## if both yx and lalo are specified, use lalo option unless a) no lookup file AND b) dataset is in radar coord
-pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
 pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
+pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
 pysar.subset.tightBox = auto    #[yes / no], auto for yes, tight bounding box for files in geo coord
 '''
 
@@ -71,7 +73,7 @@ NOTE='''NOTE:
 
 EXAMPLE='''example:
   load_data.py -t GalapagosSenDT128.tempalte
-  load_data.py -t GalapagosSenDT128.tempalte --enforce  #Disable update mode and force to (re-)load into H5 file.
+  load_data.py -t pysarApp_template.txt
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
 '''
 
@@ -82,10 +84,10 @@ def createParser():
                                      epilog=TEMPLATE+'\n'+NOTE+'\n'+EXAMPLE)
     parser.add_argument('-H', dest='print_example_template', action='store_true',\
                         help='Print/Show the example template file for loading.')
-    parser.add_argument('-t','--template', type=str, nargs='+', dest='template_file', help='template file with path info.')
-    parser.add_argument('--project', type=str, dest='project_name', help='project name of dataset for INSARMAPS Web Viewer')
+    parser.add_argument('-t','--template', type=str, dest='template_file', help='template file with path info.')
+    parser.add_argument('--project', type=str, dest='PROJECT_NAME', help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor', choices={'isce','roipac','gamma','doris','gmtsar'},\
-                        help='InSAR processor/software of the file')
+                        help='InSAR processor/software of the file', default='isce')
     parser.add_argument('--enforce', dest='updateMode', action='store_false',\
                         help='Disable the update mode, or skip checking dataset already loaded.')
     parser.add_argument('-o','--output', type=str, nargs=3, dest='outfile',\
@@ -108,6 +110,10 @@ def cmdLineParse(iargs=None):
         print('{}: error: the following arguments are required: -t/--template'.format(os.path.basename(__file__)))
         print('{} -H to show the example template file'.format(os.path.basename(__file__)))
         sys.exit(1)
+
+    inps.outfile = [os.path.abspath(i) for i in inps.outfile]
+    inps.outdir = os.path.dirname(inps.outfile[0])
+
     return inps
 
 
@@ -115,61 +121,87 @@ def cmdLineParse(iargs=None):
 def read_inps2dict(inps):
     '''Read input Namespace object info into inpsDict'''
     ## Read input info into inpsDict
-    inpsDict = dict()
-    inpsDict['PROJECT_NAME'] = None
-    inpsDict['processor'] = None
-    inpsDict['platform'] = None
+    inpsDict = vars(inps)
+    inpsDict['PLATFORM'] = None
 
-    for file in inps.template_file:
-        inpsDict.update(readfile.read_template(file))
-        if any(i in file for i in sensors):
-            inpsDict['PROJECT_NAME'] = os.path.splitext(os.path.basename(file))[1]
+    ## Read template file
+    template = readfile.read_template(inps.template_file)
+    template = ut.check_template_auto_value(template)
+    inpsDict.update(template)
+    prefix = 'pysar.load.'
+    for key in ['processor','updateMode']:
+        if prefix+key in inpsDict.keys():
+            inpsDict[key] = inpsDict[prefix+key]
+
+    ## PROJECT_NAME --> PLATFORM
+    if any(i in inps.template_file for i in sensors):
+        inpsDict['PROJECT_NAME'] = os.path.splitext(os.path.basename(inps.template_file))[1]
+    if inpsDict['PROJECT_NAME']:
+        try:  inpsDict['PLATFORM'] = [i for i in sensors if i in inpsDict['PROJECT_NAME']][0].upper()
+        except:  pass
 
     ##Here to insert code to check default file path for miami user
     # Check 1) SCRATCHDIR exists, 2) pysar.defaults.autoPath is True and 3) template['PROJECT_NAME'] is not None
 
-    if len(glob.glob(inpsDict['pysar.load.unwFile'])) == 0:
-        print('ERROR: No required .unw file found with pattern: {}'.format(inpsDict['pysar.load.unwFile']))
-
-    if not inpsDict['processor']:
-        inpsDict['processor'] = inpsDict['pysar.load.processor']
-    if inps.processor:
-        inpsDict['processor'] = inps.processor.lower()
-    if not inpsDict['processor']:
-        inpsDict['processor'] = 'isce'
-
-    if inps.project_name:
-        inpsDict['PROJECT_NAME'] = inps.project_name
-    if inpsDict['PROJECT_NAME']:
-        try:
-            inpsDict['platform'] = [i for i in sensors if i in inpsDict['PROJECT_NAME']][0].upper()
-        except:
-            pass
-
+    ##### Read subset box (unwFile required)
+    inpsDict['box'] = None
+    inpsDict['box4geo_lut'] = None
+    files = glob.glob(inpsDict['pysar.load.unwFile'])
+    if len(files) > 0:
+        try: inpsDict = read_subset_box(inpsDict)
+        except: pass
+    else:
+        print('WARNING: No required .unw file found with pattern: {}'.format(inpsDict['pysar.load.unwFile']))
     return inpsDict
 
 
 def read_subset_box(inpsDict):
     file0 = glob.glob(inpsDict['pysar.load.unwFile'])[0]
     atr = readfile.read_attribute(file0)
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
-    box = (0,0,width,length)
+    data_pix_box = (0,0,int(atr['WIDTH']),int(atr['LENGTH']))
+    if 'Y_FIRST' in atr.keys():
+        geocoded = True
+    else:
+        geocoded = False
 
-    key = 'pysar.subset.yx'
-    if inpsDict[key].lower() not in ['auto','no']:
-        try:
-            sub = [i.strip() for i in inpsDict[key].split(',')]
-            y0, y1 = sorted([int(i.strip()) for i in sub[0].split(':')])
-            x0, x1 = sorted([int(i.strip()) for i in sub[1].split(':')])
-            box = (x0, y0, x1, y1)
-        except:
-            print('ERROR: input subset info {} is not in required format x0:x1,y0:y1'.format(inpsDict[key]))
-            sys.exit(1)        
+    ##### Read subset info into pix_box
+    lookupFile = None
+    xfiles = glob.glob(inpsDict['pysar.load.lookupXFile'])
+    yfiles = glob.glob(inpsDict['pysar.load.lookupYFile'])
+    if len(xfiles) > 0 and len(yfiles) > 0:
+        lookupFile = [yfiles[0], xfiles[0]]
+    pix_box, geo_box = subset.read_subset_template2box(inpsDict['template_file'])
 
-    print('box of input  files: {}'.format((0,0,width,length)))
-    print('box of data to read: {}'.format(box))
-    return box
+    ## Check conflict
+    if geo_box and not geocoded and lookupFile is None:
+        geo_box = None
+        print('WARNING: pysar.subset.lalo is not supported if 1) no lookup file AND 2) radar coded dataset')
+        print('\tignore it and continue.')
+    if not geo_box and not pix_box:
+        return inpsDict
+
+    ## geo_box --> pix_box
+    if geo_box is not None:
+        if geocoded:
+            pix_box = (0,0,0,0)
+            pix_box[0:3:2] = ut.coord_geo2radar(geo_box[0:3:2], atr, 'lon')
+            pix_box[1:4:2] = ut.coord_geo2radar(geo_box[1:4:2], atr, 'lat')
+        else:
+            pix_box = subset.bbox_geo2radar(geo_box, atr, lookupFile)
+        print('bounding box of interest in lalo: {}'.format(geo_box))
+    #print('bounding box of interest in  yx : {}'.format(pix_box))
+    print('box to read for datasets: {} out of {}'.format(pix_box, data_pix_box))
+
+    ##### pix_box --> box4geo_lut for geo coded lookup table file of radar coded dataset (gamma/roipac)
+    box4geo_lut = None
+    atrLut = readfile.read_attribute(lookupFile[0])
+    if not geocoded and 'Y_FIRST' in atrLut.keys():
+        geo_box = subset.bbox_radar2geo(pix_box, atr, lookupFile)
+        box4geo_lut = subset.bbox_geo2radar(geo_box, atrLut)
+        print('box to read for geo coded lookup table file: {}'.format(box4geo_lut))
+    inpsDict['box'] = pix_box
+    inpsDict['box4geo_lut'] = box4geo_lut
+    return inpsDict
 
 
 def read_inps_dict2ifgram_stack_dict_object(inpsDict):
@@ -199,10 +231,10 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     ##Check number of files for all dataset types
     dsNumList = list(dsNumDict.values())
     if any(i != dsNumList[0] for i in dsNumList):
-        print('ERROR: Not all types of dataset have the same number of files:')
+        print('WARNING: Not all types of dataset have the same number of files:')
         for key, value in dsNumDict.items():
             print('number of {:<{width}}: {num}'.format(key, width=maxDigit, num=value))
-        sys.exit(1)
+        #sys.exit(1)
     print('number of files per type: {}'.format(dsNumList[0]))
 
     ##Check data dimension for all files
@@ -280,8 +312,8 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     ##Check required dataset
     dsName0 = geometryDatasetNames[0]
     if dsName0 not in dsPathDict.keys():
-        print('ERROR: No reqired {} data files found!'.format(dsName0))
-        sys.exit(1)
+        print('WARNING: No reqired {} data files found!'.format(dsName0))
+        #sys.exit(1)
 
     ########## metadata
     ifgramRadarMetadata = None
@@ -317,55 +349,74 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     return geomRadarObj, geomGeoObj
 
 
-def update_object(outFile, inObj, inps):
+def update_object(outFile, inObj, box, updateMode=True):
     '''Do not write h5 file if: 1) h5 exists and readable,
                                 2) it contains all date12 from ifgramStackDict,
                                             or all datasets from geometryDict'''
     updateFile = True
-    if inps.updateMode and not ut.update_file(outFile, check_readable=True):
+    if updateMode and not ut.update_file(outFile, check_readable=True):
         if inObj.name == 'ifgramStack':
             outObj = ifgramStack(outFile)
-            if (outObj.get_size() == inObj.get_size(box=inps.box)\
+            if (outObj.get_size() == inObj.get_size(box=box)\
                 and sorted(outObj.get_date12_list(dropIfgram=False)) == sorted(inObj.get_date12_list())):
                 print('All date12   exists in file {} with same size as required, no need to re-load.'.format(outFile))
                 updateFile = False
         elif inObj.name == 'geometry':
             outObj = geometry(outFile)
             outObj.open(printMsg=False)
-            if (outObj.get_size() == inObj.get_size(box=inps.box)\
+            if (outObj.get_size() == inObj.get_size(box=box)\
                 and all(i in outObj.datasetNames for i in inObj.get_dataset_list())):
                 print('All datasets exists in file{} with same size as required, no need to re-load.'.format(outFile))
                 updateFile = False
     return updateFile
 
 
+def prepare_metadata(inpsDict):
+    prepCmd0 = None
+    if inpsDict['processor'] == 'gamma':
+        prepCmd0 = 'prep_gamma.py'
+    elif inpsDict['processor'] == 'roipac':
+        prepCmd0 = 'prep_roipac.py'
+
+    if prepCmd0:
+        print('-'*50)
+        print('prepare metadata files for {} products before loading into PySAR'.format(inpsDict['processor']))
+        for key in inpsDict.keys():
+            if key.startswith('pysar.load.') and key.endswith('File') and len(glob.glob(inpsDict[key])) > 0:
+                prepCmd = '{} {}'.format(prepCmd0, inpsDict[key])
+                print(prepCmd)
+                os.system(prepCmd)
+    return
+
+
 #################################################################
 def main(iargs=None):
     inps = cmdLineParse(iargs)
-    inps.outfile = [os.path.abspath(i) for i in inps.outfile]
-    inps.outdir = os.path.dirname(inps.outfile[0])
     if not os.path.isdir(inps.outdir):
         os.makedirs(inps.outdir)
         print('create directory: {}'.format(inps.outdir))
 
     inpsDict = read_inps2dict(inps)
+    prepare_metadata(inpsDict)
 
     stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
 
-    inps.box = read_subset_box(inpsDict)
+    updateMode = inpsDict['updateMode']
+    print('-'*50+'\nupdateMode is {}'.format(updateMode))
+    box = inpsDict['box']
 
-    if stackObj and update_object(inps.outfile[0], stackObj, inps):
+    if stackObj and update_object(inps.outfile[0], stackObj, box, updateMode=updateMode):
         print('-'*50)
-        stackObj.write2hdf5(outputFile=inps.outfile[0], access_mode='w', box=inps.box)
+        stackObj.write2hdf5(outputFile=inps.outfile[0], access_mode='w', box=box)
 
-    if geomRadarObj and update_object(inps.outfile[1], geomRadarObj, inps):
+    if geomRadarObj and update_object(inps.outfile[1], geomRadarObj, box, updateMode=updateMode):
         print('-'*50)
-        geomRadarObj.write2hdf5(outputFile=inps.outfile[1], access_mode='w', box=inps.box)
+        geomRadarObj.write2hdf5(outputFile=inps.outfile[1], access_mode='w', box=box)
 
-    if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, inps):
+    if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, inpsDict['box4geo_lut'], updateMode=updateMode):
         print('-'*50)
-        geomGeoObj.write2hdf5(outputFile=inps.outfile[2], access_mode='w')
+        geomGeoObj.write2hdf5(outputFile=inps.outfile[2], access_mode='w', box=inpsDict['box4geo_lut'])
 
     return inps.outfile
 

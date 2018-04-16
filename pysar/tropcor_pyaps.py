@@ -196,7 +196,7 @@ def dload_grib_pyaps(date_list, hour, trop_model='ECMWF', weather_dir='./'):
     Output:
         grib_file_list : list of string
     '''
-    print('*'*50+'\nDownloading weather model data using PyAPS ...')
+    print('*'*50+'\nDownloading weather model data using PyAPS (Jolivet et al., 2011, GRL) ...')
     ## Grib data directory
     grib_dir = weather_dir+'/'+trop_model
     if not os.path.isdir(grib_dir):

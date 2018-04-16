@@ -377,7 +377,7 @@ class geometry:
             self.geocoded = True
 
         with h5py.File(self.file,'r') as f:
-            self.datasetNames = list(set(f.keys()) & set(geometryDatasetNames))
+            self.datasetNames = [i for i in geometryDatasetNames if i in f.keys()]
             self.datasetList = list(self.datasetNames)
             if 'bperp' in f.keys():
                 self.dateList = [i.decode('utf8') for i in f['date'][:]]
@@ -391,7 +391,12 @@ class geometry:
 
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
-            self.length, self.width = f[geometryDatasetNames[0]].shape
+            dsName = [i for i in f.keys() if i in geometryDatasetNames][0]
+            dsShape = f[dsName].shape
+            if len(dsShape) == 3:
+                self.length, self.width = dsShape[1:3]
+            else:
+                self.length, self.width = dsShape
         return self.length, self.width
 
     def get_metadata(self):
@@ -492,7 +497,7 @@ class ifgramStack:
         with h5py.File(self.file, 'r') as f:
             self.dropIfgram = f['dropIfgram'][:]
             self.pbaseIfgram = f['bperp'][:]
-            self.datasetNames = list(set(f.keys()) & set(ifgramDatasetNames))
+            self.datasetNames = [i for i in ifgramDatasetNames if i in f.keys()]
         self.date12List = ['{}_{}'.format(i,j) for i,j in zip(self.mDates,self.sDates)]
         self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.int16)
 

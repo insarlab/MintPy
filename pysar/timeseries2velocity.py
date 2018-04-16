@@ -218,15 +218,17 @@ def estimateVelocity(inps):
     print('create HDF5 file: {} with w mode'.format(inps.outfile))
     f = h5py.File(inps.outfile, 'w')
 
-    print('create dataset /velocity    of {:<10} in size of {}'.format(str(dataType), dsShape))
-    ds = f.create_dataset('velocity',    data=V,    dtype=dataType, chunks=True)
-    ds.attrs['Title'] = 'velocity'
+    dsName = 'velocity'
+    print('create dataset /{:<12} of {:<10} in size of {}'.format(dsName, str(dataType), dsShape))
+    ds = f.create_dataset(dsName,    data=V,    dtype=dataType, chunks=True)
+    ds.attrs['Title'] = dsName
     ds.attrs['MinValue'] = np.nanmin(V)
     ds.attrs['MaxValue'] = np.nanmax(V)
 
-    print('create dataset /velocityStd of {:<10} in size of {}'.format(str(dataType), dsShape))
-    ds = f.create_dataset('velocityStd', data=Vstd, dtype=dataType, chunks=True)
-    ds.attrs['Title'] = 'velocityStd'
+    dsName = 'velocityStd'
+    print('create dataset /{:<12} of {:<10} in size of {}'.format(dsName, str(dataType), dsShape))
+    ds = f.create_dataset(dsName, data=Vstd, dtype=dataType, chunks=True)
+    ds.attrs['Title'] = dsName
     ds.attrs['MinValue'] = np.nanmin(Vstd)
     ds.attrs['MaxValue'] = np.nanmax(Vstd)
 
