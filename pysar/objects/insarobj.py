@@ -5,7 +5,8 @@
 ############################################################
 # class used for data loading from InSAR stack to PySAR timeseries
 # Recommended usage:
-#     from pysar.objects.insarobj import ifgram, ifgramStack, geometry
+#     from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
+
 
 import os, sys, glob
 import h5py
@@ -19,6 +20,7 @@ FLOAT_ZERO = np.float32(0.0)
 CPX_ZERO = np.complex64(0.0)
 
 dataType = np.float32
+
 
 ########################################################################################
 class ifgramStackDict:
@@ -122,22 +124,22 @@ class ifgramStackDict:
             ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                   dtype=dsDataType, chunks=True, compression=compression)
 
-            dMin = 0
-            dMax = 0
+            #dMin = 0
+            #dMax = 0
             progBar = ptime.progress_bar(maxValue=self.numIfgram)
             for i in range(self.numIfgram):
                 ifgramObj = self.pairsDict[self.pairs[i]]
                 data = ifgramObj.read(dsName, box=box)[0]
-                dMin = min(dMin, np.nanmin(data))
-                dMax = max(dMax, np.nanmax(data))
+                #dMin = min(dMin, np.nanmin(data))
+                #dMax = max(dMax, np.nanmax(data))
                 ds[i,:,:] = data
                 self.bperp[i] = ifgramObj.get_perp_baseline()
                 progBar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],self.pairs[i][1]))
             progBar.close()
 
-            ds.attrs['Title'] = dsName
-            ds.attrs['MaxValue'] = dMin   #facilitate disp_min/max for mutiple subplots in view.py
-            ds.attrs['MinValue'] = dMax   #facilitate disp_min/max for mutiple subplots in view.py
+            #ds.attrs['Title'] = dsName
+            #ds.attrs['MinValue'] = dMin   #facilitate disp_min/max for mutiple subplots in view.py
+            #ds.attrs['MaxValue'] = dMax   #facilitate disp_min/max for mutiple subplots in view.py
 
         ###############################
         # 2D dataset containing master and slave dates of all pairs
@@ -453,7 +455,7 @@ class geometryDict:
 
         ###############################
         # Attributes
-        self.get_metadata(family=self.dsNames[0])
+        self.get_metadata()
         self.metadata = ut.subset_attribute(self.metadata, box)
         self.metadata['FILE_TYPE'] = self.name
         for key,value in self.metadata.items():

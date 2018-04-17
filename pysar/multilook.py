@@ -50,7 +50,9 @@ def multilook_data(data, lksY, lksX):
     cropData = data[:newShape[0], :newShape[1]]
     temp = cropData.reshape((newShape[0] // lksY, lksY,
                              newShape[1] // lksX, lksX))
-    coarseData = np.nanmean(temp, axis=(1,3))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        coarseData = np.nanmean(temp, axis=(1,3))
     return coarseData
 
 

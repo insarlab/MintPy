@@ -215,30 +215,15 @@ def estimateVelocity(inps):
             inps.outfile = 'velocityEx.h5'
         else:
             inps.outfile = 'velocity.h5'
-    print('create HDF5 file: {} with w mode'.format(inps.outfile))
-    f = h5py.File(inps.outfile, 'w')
-
-    dsName = 'velocity'
-    print('create dataset /{:<12} of {:<10} in size of {}'.format(dsName, str(dataType), dsShape))
-    ds = f.create_dataset(dsName, data=V, dtype=dataType, chunks=True, compression="gzip")
-    ds.attrs['Title'] = dsName
-    ds.attrs['MinValue'] = np.nanmin(V)
-    ds.attrs['MaxValue'] = np.nanmax(V)
-
-    dsName = 'velocityStd'
-    print('create dataset /{:<12} of {:<10} in size of {}'.format(dsName, str(dataType), dsShape))
-    ds = f.create_dataset(dsName, data=Vstd, dtype=dataType, chunks=True, compression="gzip")
-    ds.attrs['Title'] = dsName
-    ds.attrs['MinValue'] = np.nanmin(Vstd)
-    ds.attrs['MaxValue'] = np.nanmax(Vstd)
+    outfileStd = '{}Std{}'.format(os.path.splitext(inps.outfile)[0], os.path.splitext(inps.outfile)[1])
 
     atr = tsobj.metadata.copy()
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
-    for key, value in atr.items():
-        f.attrs[key] = value
-    f.close()
-    print('finished writing to {}'.format(inps.outfile))
+
+    writefile.write(V, atr, outfile=inps.outfile)
+    writefile.write(Vstd, atr, outfile=outfileStd)
+
     return inps.outfile
 
 

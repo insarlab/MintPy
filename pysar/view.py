@@ -23,9 +23,227 @@ from matplotlib.colors import LightSource
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import cm, pyproj
 
-from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry
+from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 from pysar import mask, multilook as mli, subset
+
+
+##################################################################################################
+EXAMPLE='''example:
+  view.py velocity.h5
+  view.py velocity.h5 velocity -m -2 -M 2 -c bwr --no-glob
+  view.py velocity.h5 --ref-yx  210 566                #Change reference pixel
+  view.py velocity.h5 -x 100 600 -y 200 800            #plot subset in yx
+  view.py velocity.h5 -l 31.05 31.10 -L 130.05 130.10  #plot subset in lalo
+
+  view.py timeseries.h5 
+  view.py timeseries.h5 --ref-date 20101120            #Change reference date
+  view.py timeseries.h5 -ex drop_date.txt              #Exclude dates to plot
+
+  view.py INPUTS/ifgramStack.h5 coherence
+  view.py INPUTS/ifgramStack.h5 unwrapPhase-20070927_20100217
+  view.py INPUTS/ifgramStack.h5 -n 6
+  view.py INPUTS/ifgramStack.h5 20171010_20171115      #Display all data related with one interferometric pair
+
+  # Save and Output:
+  view.py velocity.h5 --save
+  view.py velocity.h5 --nodisplay
+'''
+
+PLOT_TEMPLATE='''Plot Setting:
+  plot.name          = 'Yunjun et al., 2016, AGU, Fig 4f'
+  plot.type          = LOS_VELOCITY
+  plot.startDate     = 
+  plot.endDate       = 
+  plot.displayUnit   = cm/yr
+  plot.displayMin    = -2
+  plot.displayMax    = 2
+  plot.colormap      = jet
+  plot.subset.lalo   = 33.05:33.15, 131.15:131.27
+  plot.seed.lalo = 33.0651, 131.2076
+'''
+
+
+def createParser():
+    parser = argparse.ArgumentParser(description='Plot InSAR Product in 2D',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=EXAMPLE)
+
+    ##### Input 
+    infile = parser.add_argument_group('Input File', 'File/Dataset to display')
+    infile.add_argument('file', type=str, help='file for display')
+    infile.add_argument('dset', type=str, nargs='*', default=[], help='optional - dataset(s) to display')
+    infile.add_argument('--exact','--no-glob', dest='globSearch', action='store_false',\
+                        help='Disable glob search for input dset')
+    infile.add_argument('-n','--dset-num', dest='dsetNumList', metavar='NUM', type=int, nargs='*', default=[],\
+                        help='optional - order number of date/dataset(s) to display')
+    infile.add_argument('--ex','--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],\
+                        help='dates will not be displayed')
+    infile.add_argument('--mask', dest='mask_file', metavar='FILE',\
+                        help='mask file for display')
+    infile.add_argument('--zero-mask', dest='zero_mask', action='store_true', help='mask pixels with zero value.')
+
+    ##### Output
+    outfile = parser.add_argument_group('Output', 'Save figure and write to file(s)')
+    outfile.add_argument('--save', dest='save_fig', action='store_true',\
+                         help='save the figure')
+    outfile.add_argument('--nodisplay', dest='disp_fig', action='store_false',\
+                         help='save and do not display the figure')
+    outfile.add_argument('-o','--outfile',\
+                         help="save the figure with assigned filename.\n"
+                              "By default, it's calculated based on the input file name.")
+
+    ###### Data Display Option
+    disp = parser.add_argument_group('Display Options', 'Options to adjust the dataset display')
+    disp.add_argument('-m', dest='disp_min', type=float, help='minimum value of color scale')
+    disp.add_argument('-M', dest='disp_max', type=float, help='maximum value of color scale')
+    disp.add_argument('-u','--unit', dest='disp_unit', metavar='UNIT',\
+                      help='unit for display.  Its priority > wrap')
+    #disp.add_argument('--scale', dest='disp_scale', metavar='NUM', type=float, default=1.0,\
+    #                  help='display data in a scaled range. \n'
+    #                       'Equivelant to data*input_scale')
+    disp.add_argument('-c','--colormap', dest='colormap',\
+                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
+                           'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
+    disp.add_argument('--projection', dest='map_projection', default='cyl',\
+                      help='map projection when plotting in geo-coordinate. \n'
+                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
+
+    disp.add_argument('--wrap', action='store_true',\
+                      help='re-wrap data to display data in fringes.')
+    disp.add_argument('--opposite', action='store_true',\
+                      help='display in opposite sign, equivalent to multiply data by -1.')
+    disp.add_argument('--flip-lr', dest='flip_lr', action='store_true', help='flip left-right')
+    disp.add_argument('--flip-ud', dest='flip_ud', action='store_true', help='flip up-down')
+    disp.add_argument('--multilook-num', dest='multilook_num', type=int, default=1, \
+                      help='multilook data in X and Y direction with a factor for display')
+    disp.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',\
+                      help='do not multilook, for high quality display. \n'
+                           'If multilook and multilook_num=1, multilook_num will be estimated automatically.\n'
+                           'Useful when displaying big datasets.')
+    disp.add_argument('--alpha', dest='transparency', type=float,\
+                      help='Data transparency. \n'
+                           '0.0 - fully transparent, 1.0 - no transparency.')
+    disp.add_argument('--plot-setting', dest='disp_setting_file',\
+                      help='Template file with plot setting.\n'+PLOT_TEMPLATE)
+
+    ##### DEM
+    dem = parser.add_argument_group('DEM','display topography in the background')
+    dem.add_argument('-d','--dem', dest='dem_file', metavar='DEM_FILE',\
+                     help='DEM file to show topography as background')
+    dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',\
+                     help='do not show DEM shaded relief')
+    dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',\
+                     help='do not show DEM contour lines')
+    dem.add_argument('--contour-smooth', dest='dem_contour_smooth', type=float, default=3.0,\
+                     help='Background topography contour smooth factor - sigma of Gaussian filter. \n'
+                          'Default is 3.0; set to 0.0 for no smoothing.')
+    dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,\
+                     help='Background topography contour step in meters. \n'
+                          'Default is 200 meters.')
+
+    ###### Subset
+    subset = parser.add_argument_group('Subset','Display dataset in subset range')
+    subset.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar='X', \
+                        help='subset display in x/cross-track/range direction')
+    subset.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar='Y', \
+                        help='subset display in y/along-track/azimuth direction')
+    subset.add_argument('-l','--lat', dest='subset_lat', type=float, nargs=2, metavar='LAT', \
+                        help='subset display in latitude')
+    subset.add_argument('-L','--lon', dest='subset_lon', type=float, nargs=2, metavar='LON', \
+                        help='subset display in longitude')
+    #subset.add_argument('--pixel-box', dest='pix_box', type=tuple,\
+    #                    help='subset display in box define in pixel coord (x_start, y_start, x_end, y_end).\n'
+    #                         'i.e. (100, 500, 1100, 2500)')
+    #subset.add_argument('--geo-box', dest='geo_box', type=tuple,\
+    #                    help='subset display in box define in geo coord (UL_lon, UL_lat, LR_lon, LR_lat).\n'
+    #                         'i.e. (130.2, 33.8, 131.2, 31.8)')
+
+    ##### Reference
+    ref = parser.add_argument_group('Reference','Show / Modify reference in time and space for display')
+    ref.add_argument('--ref-date', dest='ref_date', metavar='DATE', \
+                     help='Change reference date for display')
+    ref.add_argument('--ref-lalo', dest='seed_lalo', metavar=('LAT','LON'), type=float, nargs=2,\
+                     help='Change referene point LAT LON for display')
+    ref.add_argument('--ref-yx', dest='seed_yx', metavar=('Y','X'), type=int, nargs=2,\
+                     help='Change referene point Y X for display')
+    ref.add_argument('--noreference', dest='disp_seed', action='store_false', help='do not show reference point')
+    ref.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',\
+                     help='marker color of reference point')
+    ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',\
+                     help='marker symbol of reference point')
+    ref.add_argument('--ref-size', dest='seed_size', metavar='SIZE_NUM', type=int, default=10,\
+                     help='marker size of reference point, default: 10')
+
+    ##### Vectors
+    #vec = parser.add_argument_group('Vectors','Plot vector geometry')
+    #vec.add_argument('--point-yx', dest='point_yx', type=int, nargs='')
+
+    ##### Figure 
+    fig = parser.add_argument_group('Figure','Figure settings for display')
+    fig.add_argument('-s','--fontsize', dest='font_size', type=int, help='font size')
+    fig.add_argument('--fontcolor', dest='font_color', default='k', help='font color')
+    fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,\
+                     help='DPI - dot per inch - for display/write')
+    fig.add_argument('-r','--row', dest='fig_row_num', type=int, default=1, help='subplot number in row')
+    fig.add_argument('-p','--col', dest='fig_col_num', type=int, default=1, help='subplot number in column')
+    fig.add_argument('--noaxis', dest='disp_axis', action='store_false', help='do not display axis')
+    fig.add_argument('--nocbar','--nocolorbar', dest='disp_cbar', action='store_false', help='do not display colorbar')
+    fig.add_argument('--cbar-nbins', dest='cbar_nbins', type=int, help='number of bins for colorbar')
+    fig.add_argument('--cbar-ext', dest='cbar_ext', default=None, choices={'neither','min','max','both',None},\
+                     help='Extend setting of colorbar; based on data stat by default.')
+    fig.add_argument('--cbar-label', dest='cbar_label', default=None, help='colorbar label')
+    fig.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
+    fig.add_argument('--notick', dest='disp_tick', action='store_false', help='do not display tick in x/y axis')
+    fig.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
+    fig.add_argument('--figtitle', dest='fig_title', help='Title shown in the figure.')
+    fig.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\
+                      help='figure size in inches - width and length')
+    fig.add_argument('--figext', dest='fig_ext',\
+                     default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
+                     help='File extension for figure output file')
+    fig.add_argument('--fignum', dest='fig_num', type=int, help='number of figure windows')
+    fig.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,\
+                     help='width space between subplots in inches')
+    fig.add_argument('--hspace', dest='fig_hei_space', type=float, default=0.05,\
+                     help='height space between subplots in inches')
+    fig.add_argument('--coord', dest='fig_coord', choices=['radar','geo'], default='geo',\
+                     help='Display in radar/geo coordination system, for geocoded file only.')
+    fig.add_argument('--animation', action='store_true', help='enable animation mode')
+    
+    ##### Map
+    map_group = parser.add_argument_group('Map', 'Map settings for display')
+    map_group.add_argument('--coastline', action='store_true', help='Draw coastline.')
+    map_group.add_argument('--resolution', default='c', choices={'c','l','i','h','f',None}, \
+                           help='Resolution of boundary database to use.\n'+\
+                                'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
+    map_group.add_argument('--lalo-label', dest='lalo_label', action='store_true',\
+                           help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
+                                'Useful for final figure output.')
+    map_group.add_argument('--lalo-step', dest='lalo_step', type=float, help='Lat/lon step for lalo-label option.')
+    map_group.add_argument('--scalebar', nargs=3, metavar=('DISTANCE','LAT_C','LON_C'), type=float,\
+                           help='set scale bar with DISTANCE in meters centered at [LAT_C, LON_C]\n'+\
+                                'set to 999 to use automatic value, e.g.\n'+\
+                                '--scalebar 2000 33.06 131.18\n'+\
+                                '--scalebar 500  999   999\n'+\
+                                '--scalebar 999  33.06 131.18')
+    map_group.add_argument('--noscalebar', dest='disp_scalebar', action='store_false', help='do not display scale bar.')
+    return parser
+
+
+def cmdLineParse(iargs=None):
+    '''Command line parser.'''
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
+    # If output flie name assigned or figure shown is turned off, turn on the figure save
+    if inps.outfile or not inps.disp_fig:
+        inps.save_fig = True
+    if inps.coastline and inps.resolution in ['c','l']:
+        inps.resolution = 'i'
+    if inps.lalo_step:
+        inps.lalo_label = True
+    return inps
 
 
 ##################################################################################################
@@ -708,231 +926,6 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     return ax, inps
 
 
-##################################################################################################
-EXAMPLE='''example:
-  view.py velocity.h5
-  view.py velocity.h5 velocity -m -2 -M 2 -c bwr --no-glob
-
-  view.py timeseries.h5 
-  view.py ifgramStack.h5 coherence
-  view.py ifgramStack.h5 unwrapPhase-20070927_20100217
-  view.py ifgramStack.h5 -n 6
-  view.py Wrapped.h5    -n 5
-  view.py geomap_4rlks.trans range
-
-  # Display in subset:
-  view.py velocity.h5 -x 100 600     -y 200 800
-  view.py velocity.h5 -l 31.05 31.10 -L 130.05 130.10
-
-  # Exclude Dates:
-  view.py timeseries.h5 -ex drop_date.txt
-
-  # Reference:
-  view.py velocity.h5   --ref-yx   210 566
-  view.py timeseries.h5 --ref-date 20101120
-
-  # Save and Output:
-  view.py velocity.h5 --save
-  view.py velocity.h5 -o velocity.pdf
-  view.py velocity.h5 --nodisplay
-'''
-
-PLOT_TEMPLATE='''Plot Setting:
-  plot.name          = 'Yunjun et al., 2016, AGU, Fig 4f'
-  plot.type          = LOS_VELOCITY
-  plot.startDate     = 
-  plot.endDate       = 
-  plot.displayUnit   = cm/yr
-  plot.displayMin    = -2
-  plot.displayMax    = 2
-  plot.colormap      = jet
-  plot.subset.lalo   = 33.05:33.15, 131.15:131.27
-  plot.seed.lalo = 33.0651, 131.2076
-'''
-
-
-def createParser():
-    parser = argparse.ArgumentParser(description='Plot InSAR Product in 2D',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=EXAMPLE)
-
-    ##### Input 
-    infile = parser.add_argument_group('Input File', 'File/Dataset to display')
-    infile.add_argument('file', type=str, help='file for display')
-    infile.add_argument('dset', type=str, nargs='*', default=[], help='optional - dataset(s) to display')
-    infile.add_argument('--exact','--no-glob', dest='globSearch', action='store_false',\
-                        help='Disable glob search for input dset')
-    infile.add_argument('-n','--dset-num', dest='dsetNumList', metavar='NUM', type=int, nargs='*', default=[],\
-                        help='optional - order number of date/dataset(s) to display')
-    infile.add_argument('--ex','--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],\
-                        help='dates will not be displayed')
-    infile.add_argument('--mask', dest='mask_file', metavar='FILE',\
-                        help='mask file for display')
-    infile.add_argument('--zero-mask', dest='zero_mask', action='store_true', help='mask pixels with zero value.')
-
-    ##### Output
-    outfile = parser.add_argument_group('Output', 'Save figure and write to file(s)')
-    outfile.add_argument('--save', dest='save_fig', action='store_true',\
-                         help='save the figure')
-    outfile.add_argument('--nodisplay', dest='disp_fig', action='store_false',\
-                         help='save and do not display the figure')
-    outfile.add_argument('-o','--outfile',\
-                         help="save the figure with assigned filename.\n"
-                              "By default, it's calculated based on the input file name.")
-
-    ###### Data Display Option
-    disp = parser.add_argument_group('Display Options', 'Options to adjust the dataset display')
-    disp.add_argument('-m', dest='disp_min', type=float, help='minimum value of color scale')
-    disp.add_argument('-M', dest='disp_max', type=float, help='maximum value of color scale')
-    disp.add_argument('-u','--unit', dest='disp_unit', metavar='UNIT',\
-                      help='unit for display.  Its priority > wrap')
-    #disp.add_argument('--scale', dest='disp_scale', metavar='NUM', type=float, default=1.0,\
-    #                  help='display data in a scaled range. \n'
-    #                       'Equivelant to data*input_scale')
-    disp.add_argument('-c','--colormap', dest='colormap',\
-                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
-                           'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
-    disp.add_argument('--projection', dest='map_projection', default='cyl',\
-                      help='map projection when plotting in geo-coordinate. \n'
-                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
-
-    disp.add_argument('--wrap', action='store_true',\
-                      help='re-wrap data to display data in fringes.')
-    disp.add_argument('--opposite', action='store_true',\
-                      help='display in opposite sign, equivalent to multiply data by -1.')
-    disp.add_argument('--flip-lr', dest='flip_lr', action='store_true', help='flip left-right')
-    disp.add_argument('--flip-ud', dest='flip_ud', action='store_true', help='flip up-down')
-    disp.add_argument('--multilook-num', dest='multilook_num', type=int, default=1, \
-                      help='multilook data in X and Y direction with a factor for display')
-    disp.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',\
-                      help='do not multilook, for high quality display. \n'
-                           'If multilook and multilook_num=1, multilook_num will be estimated automatically.\n'
-                           'Useful when displaying big datasets.')
-    disp.add_argument('--alpha', dest='transparency', type=float,\
-                      help='Data transparency. \n'
-                           '0.0 - fully transparent, 1.0 - no transparency.')
-    disp.add_argument('--plot-setting', dest='disp_setting_file',\
-                      help='Template file with plot setting.\n'+PLOT_TEMPLATE)
-
-    ##### DEM
-    dem = parser.add_argument_group('DEM','display topography in the background')
-    dem.add_argument('-d','--dem', dest='dem_file', metavar='DEM_FILE',\
-                     help='DEM file to show topography as background')
-    dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',\
-                     help='do not show DEM shaded relief')
-    dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',\
-                     help='do not show DEM contour lines')
-    dem.add_argument('--contour-smooth', dest='dem_contour_smooth', type=float, default=3.0,\
-                     help='Background topography contour smooth factor - sigma of Gaussian filter. \n'
-                          'Default is 3.0; set to 0.0 for no smoothing.')
-    dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,\
-                     help='Background topography contour step in meters. \n'
-                          'Default is 200 meters.')
-
-    ###### Subset
-    subset = parser.add_argument_group('Subset','Display dataset in subset range')
-    subset.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar='X', \
-                        help='subset display in x/cross-track/range direction')
-    subset.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar='Y', \
-                        help='subset display in y/along-track/azimuth direction')
-    subset.add_argument('-l','--lat', dest='subset_lat', type=float, nargs=2, metavar='LAT', \
-                        help='subset display in latitude')
-    subset.add_argument('-L','--lon', dest='subset_lon', type=float, nargs=2, metavar='LON', \
-                        help='subset display in longitude')
-    #subset.add_argument('--pixel-box', dest='pix_box', type=tuple,\
-    #                    help='subset display in box define in pixel coord (x_start, y_start, x_end, y_end).\n'
-    #                         'i.e. (100, 500, 1100, 2500)')
-    #subset.add_argument('--geo-box', dest='geo_box', type=tuple,\
-    #                    help='subset display in box define in geo coord (UL_lon, UL_lat, LR_lon, LR_lat).\n'
-    #                         'i.e. (130.2, 33.8, 131.2, 31.8)')
-
-    ##### Reference
-    ref = parser.add_argument_group('Reference','Show / Modify reference in time and space for display')
-    ref.add_argument('--ref-date', dest='ref_date', metavar='DATE', \
-                     help='Change reference date for display')
-    ref.add_argument('--ref-lalo', dest='seed_lalo', metavar=('LAT','LON'), type=float, nargs=2,\
-                     help='Change referene point LAT LON for display')
-    ref.add_argument('--ref-yx', dest='seed_yx', metavar=('Y','X'), type=int, nargs=2,\
-                     help='Change referene point Y X for display')
-    ref.add_argument('--noreference', dest='disp_seed', action='store_false', help='do not show reference point')
-    ref.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',\
-                     help='marker color of reference point')
-    ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',\
-                     help='marker symbol of reference point')
-    ref.add_argument('--ref-size', dest='seed_size', metavar='SIZE_NUM', type=int, default=10,\
-                     help='marker size of reference point, default: 10')
-
-    ##### Vectors
-    #vec = parser.add_argument_group('Vectors','Plot vector geometry')
-    #vec.add_argument('--point-yx', dest='point_yx', type=int, nargs='')
-
-    ##### Figure 
-    fig = parser.add_argument_group('Figure','Figure settings for display')
-    fig.add_argument('-s','--fontsize', dest='font_size', type=int, help='font size')
-    fig.add_argument('--fontcolor', dest='font_color', default='k', help='font color')
-    fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,\
-                     help='DPI - dot per inch - for display/write')
-    fig.add_argument('-r','--row', dest='fig_row_num', type=int, default=1, help='subplot number in row')
-    fig.add_argument('-p','--col', dest='fig_col_num', type=int, default=1, help='subplot number in column')
-    fig.add_argument('--noaxis', dest='disp_axis', action='store_false', help='do not display axis')
-    fig.add_argument('--nocbar','--nocolorbar', dest='disp_cbar', action='store_false', help='do not display colorbar')
-    fig.add_argument('--cbar-nbins', dest='cbar_nbins', type=int, help='number of bins for colorbar')
-    fig.add_argument('--cbar-ext', dest='cbar_ext', default=None, choices={'neither','min','max','both',None},\
-                     help='Extend setting of colorbar; based on data stat by default.')
-    fig.add_argument('--cbar-label', dest='cbar_label', default=None, help='colorbar label')
-    fig.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
-    fig.add_argument('--notick', dest='disp_tick', action='store_false', help='do not display tick in x/y axis')
-    fig.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
-    fig.add_argument('--figtitle', dest='fig_title', help='Title shown in the figure.')
-    fig.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\
-                      help='figure size in inches - width and length')
-    fig.add_argument('--figext', dest='fig_ext',\
-                     default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
-                     help='File extension for figure output file')
-    fig.add_argument('--fignum', dest='fig_num', type=int, help='number of figure windows')
-    fig.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,\
-                     help='width space between subplots in inches')
-    fig.add_argument('--hspace', dest='fig_hei_space', type=float, default=0.05,\
-                     help='height space between subplots in inches')
-    fig.add_argument('--coord', dest='fig_coord', choices=['radar','geo'], default='geo',\
-                     help='Display in radar/geo coordination system, for geocoded file only.')
-    fig.add_argument('--animation', action='store_true', help='enable animation mode')
-    
-    ##### Map
-    map_group = parser.add_argument_group('Map', 'Map settings for display')
-    map_group.add_argument('--coastline', action='store_true', help='Draw coastline.')
-    map_group.add_argument('--resolution', default='c', choices={'c','l','i','h','f',None}, \
-                           help='Resolution of boundary database to use.\n'+\
-                                'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
-    map_group.add_argument('--lalo-label', dest='lalo_label', action='store_true',\
-                           help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
-                                'Useful for final figure output.')
-    map_group.add_argument('--lalo-step', dest='lalo_step', type=float, help='Lat/lon step for lalo-label option.')
-    map_group.add_argument('--scalebar', nargs=3, metavar=('DISTANCE','LAT_C','LON_C'), type=float,\
-                           help='set scale bar with DISTANCE in meters centered at [LAT_C, LON_C]\n'+\
-                                'set to 999 to use automatic value, e.g.\n'+\
-                                '--scalebar 2000 33.06 131.18\n'+\
-                                '--scalebar 500  999   999\n'+\
-                                '--scalebar 999  33.06 131.18')
-    map_group.add_argument('--noscalebar', dest='disp_scalebar', action='store_false', help='do not display scale bar.')
-    return parser
-
-
-def cmdLineParse(iargs=None):
-    '''Command line parser.'''
-    parser = createParser()
-    inps = parser.parse_args(args=iargs)
-
-    # If output flie name assigned or figure shown is turned off, turn on the figure save
-    if inps.outfile or not inps.disp_fig:
-        inps.save_fig = True
-    if inps.coastline and inps.resolution in ['c','l']:
-        inps.resolution = 'i'
-    if inps.lalo_step:
-        inps.lalo_label = True
-    return inps
-
-
 def check_input_file_info(inps):
     ########## File Baic Info
     if not os.path.isfile(inps.file):
@@ -1230,7 +1223,8 @@ def main(iargs=None):
             print('turn off reference pixel plot for more than 10 datasets to display')
 
         # Min/MaxValue
-        if not inps.disp_min and not inps.disp_max and 'MinValue' in atr.keys():
+        familyList = list(set([i.split('-')[0] for i in inps.dset]))
+        if not inps.disp_min and not inps.disp_max and 'MinValue' in atr.keys() and inps.key in timeseriesKeyNames:
             if not inps.disp_unit:
                 inps.disp_unit = auto_disp_unit(inps, atr)
             inps.disp_unit, inps.disp_scale = scale_data2disp_unit(atr, inps.disp_unit)[0:2]
@@ -1244,7 +1238,9 @@ def main(iargs=None):
         if inps.key == 'ifgramStack' and inps.disp_title:
             obj = ifgramStack(inps.file)
             obj.open(printMsg=False)
-            dropDatasetList = list(np.array(inps.dset)[obj.dropIfgram == 0]) 
+            dropDate12List = obj.get_drop_date12_list()
+            for i in familyList:
+                dropDatasetList += ['{}-{}'.format(i,j) for j in dropDate12List]
             print("mark interferograms with 'dropIfgram=False' in red colored title")
 
         # Read DEM

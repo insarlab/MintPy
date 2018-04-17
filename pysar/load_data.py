@@ -6,10 +6,10 @@ import argparse
 import datetime, time
 
 import pysar
-from pysar.utils import readfile, datetime as ptime, sensors, utils as ut
+from pysar.defaults import isceAutoPath, roipacAutoPath, gammaAutoPath
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, ifgramStack, geometry
 from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
-from pysar.defaults import isceAutoPath, roipacAutoPath, gammaAutoPath
+from pysar.utils import readfile, datetime as ptime, sensors, utils as ut
 from pysar import subset
 
 
@@ -89,7 +89,7 @@ def createParser():
     parser.add_argument('--project', type=str, dest='PROJECT_NAME', help='project name of dataset for INSARMAPS Web Viewer')
     parser.add_argument('--processor', type=str, dest='processor', choices={'isce','roipac','gamma','doris','gmtsar'},\
                         help='InSAR processor/software of the file', default='isce')
-    parser.add_argument('--enforce', dest='updateMode', action='store_false',\
+    parser.add_argument('--enforce','-f', dest='updateMode', action='store_false',\
                         help='Disable the update mode, or skip checking dataset already loaded.')
     parser.add_argument('--compression', choices={'gzip','lzf', None}, default=None,\
                         help='compress loaded geometry while writing HDF5 file, default: None.')
@@ -167,8 +167,7 @@ def read_subset_box(inpsDict):
         lookupFile = None
 
     try:
-        files = [glob.glob(inpsDict['pysar.load.unwFile'])+\
-                 glob.glob(inpsDict['pysar.load.demFile'])]
+        files = glob.glob(inpsDict['pysar.load.unwFile']) + glob.glob(inpsDict['pysar.load.demFile'])
         atr = readfile.read_attribute(files[0])
     except:
         atr = dict()

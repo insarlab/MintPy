@@ -253,13 +253,13 @@ class timeseries:
         dset.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
         dset.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
 
-        ##### 3D dataset - date / bperp
+        ##### 1D dataset - date / bperp
         print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))
-        dset = f.create_dataset('date', data=dates, chunks=True)
+        dset = f.create_dataset('date', data=dates)
 
         if bperp.shape != ():
             print('create dataset /bperp      of {:<10} in size of {}'.format(str(bperp.dtype), bperp.shape))
-            dset = f.create_dataset('bperp', data=bperp, chunks=True)
+            dset = f.create_dataset('bperp', data=bperp)
 
         #### Attributes
         for key, value in metadata.items():
@@ -602,6 +602,15 @@ class ifgramStack:
             dates = f['date'][:]
             if dropIfgram:
                 dates = dates[f['dropIfgram'][:],:]
+        mDates = np.array([i.decode('utf8') for i in dates[:,0]])
+        sDates = np.array([i.decode('utf8') for i in dates[:,1]])
+        date12List = ['{}_{}'.format(i,j) for i,j in zip(mDates, sDates)]
+        return date12List
+
+    def get_drop_date12_list(self):
+        with h5py.File(self.file, 'r') as f:
+            dates = f['date'][:]
+            dates = dates[~f['dropIfgram'][:],:]
         mDates = np.array([i.decode('utf8') for i in dates[:,0]])
         sDates = np.array([i.decode('utf8') for i in dates[:,1]])
         date12List = ['{}_{}'.format(i,j) for i,j in zip(mDates, sDates)]

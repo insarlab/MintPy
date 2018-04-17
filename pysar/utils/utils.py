@@ -554,6 +554,8 @@ def check_template_auto_value(templateDict):
             templateDict[key] = True
         elif value == 'no':
             templateDict[key] = False
+        elif value.lower() == 'none':
+            templateDict[key] = None
     return templateDict
 
 
@@ -1459,8 +1461,8 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
     if 'Y_FIRST' in atr_lut.keys():
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3
-        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord')[0]
-        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord')[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord', printMsg=printMsg)[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord', printMsg=printMsg)[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
@@ -1496,8 +1498,8 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
     #####For lookup table in radar-coord, search the buffer and use center pixel
     else:
-        lut_x = readfile.read(lookupFile[1], datasetName='longitude')[0]
-        lut_y = readfile.read(lookupFile[0], datasetName='latitude')[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='longitude', printMsg=printMsg)[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='latitude', printMsg=printMsg)[0]
         az = np.zeros(lat.shape)
         rg = np.zeros(lat.shape)
         x_factor = 10
@@ -1555,8 +1557,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
-        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord')[0]
-        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord')[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord', printMsg=printMsg)[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord', printMsg=printMsg)[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
@@ -1591,8 +1593,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
     #####For lookup table in radar-coord, read the value directly.
     else:
-        lut_x = readfile.read(lookupFile[1], datasetName='longitude')[0]
-        lut_y = readfile.read(lookupFile[0], datasetName='latitude')[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='longitude', printMsg=printMsg)[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='latitude', printMsg=printMsg)[0]
         lat = lut_y[az, rg]
         lon = lut_x[az, rg]
 
