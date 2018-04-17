@@ -332,16 +332,16 @@ def in_range(parameter, value):
     min_val, max_val = 0, 0
 
     if parameter is 'X':
-        min_val = attributes['XMIN']
+        min_val = 0
         max_val = attributes['XMAX']
     elif parameter is 'Y':
-        min_val = attributes['YMIN']
+        min_val = 0
         max_val = attributes['YMAX']
     elif parameter is 'LAT':
-        min_val = compute_lalo(0, attributes['YMIN'])[0]
+        min_val = compute_lalo(0, 0)[0]
         max_val = compute_lalo(0, attributes['YMAX'])[0]
     elif parameter is 'LON':
-        min_val = compute_lalo(attributes['XMIN'], 0)[1]
+        min_val = compute_lalo(0, 0)[1]
         max_val = compute_lalo(attributes['XMAX'], 0)[1]
     else:
         raise ValueError('Illegal Parameter. Accepted parameters are: X, Y, LAT, LON')
@@ -587,8 +587,8 @@ def set_variables_from_attributes():
 
         attributes['X_FIRST']
 
-        subset_x_from.set(attributes['XMIN'])
-        subset_y_from.set(attributes['YMIN'])
+        subset_x_from.set(0)
+        subset_y_from.set(0)
         subset_x_to.set(attributes['XMAX'])
         subset_y_to.set(attributes['YMAX'])
 
