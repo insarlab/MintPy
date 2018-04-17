@@ -356,6 +356,7 @@ def show_plot():
     options = [inps.file]
 
     print(inps.file)
+    print(attributes)
 
     if epoch.get() != "All" and epoch.get() != 'None':
         options.append(epoch.get())
@@ -414,7 +415,7 @@ def show_plot():
         options.append("-x")
         options.append(subset_x_from.get())
         options.append(subset_x_to.get())
-    else:
+    elif len(attributes) > 0 and attributes['XMIN']:
         options.append("-x")
         options.append(attributes['XMIN'])
         options.append(attributes['XMAX'])
@@ -423,7 +424,7 @@ def show_plot():
         options.append("-y")
         options.append(subset_y_from.get())
         options.append(subset_y_to.get())
-    else:
+    elif len(attributes) > 0 and attributes['YMIN']:
         options.append("-y")
         options.append(attributes['YMIN'])
         options.append(attributes['YMAX'])
@@ -436,6 +437,7 @@ def show_plot():
         options.append("--ref-lalo")
         options.append(ref_lat.get())
         options.append(ref_lon.get())
+
     if show_ref == 0:
         options.append("--noreference")
     if ref_color.get() != "":
@@ -1040,7 +1042,7 @@ def main():
     dem_short = StringVar()
     dem_short.set("No File Selected")
 
-    pick_dem_file_button = Button(pick_dem_file_frame, text='Select Topography File', anchor='w', width=15, command=lambda: pick_dem())
+    pick_dem_file_button = Button(pick_dem_file_frame, text='Select DEM File', width=15, command=lambda: pick_dem())
     selected_dem_file_label = Label(pick_dem_file_frame, textvariable=dem_short)
 
 

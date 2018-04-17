@@ -1127,7 +1127,7 @@ def main(argv):
             fig_scale = min(pysar.figsize_single_min/min(plot_shape), pysar.figsize_single_max/max(plot_shape))
             inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in plot_shape]
         print('create figure in size: '+str(inps.fig_size))
-        fig = plt.figure(figsize=inps.fig_size)
+        fig = plt.figure(inps.fig_title, figsize=inps.fig_size)
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
 
         # Plotting
@@ -1256,7 +1256,7 @@ def main(argv):
             print('----------------------------------------')
             print(fig_title)
             # Open a new figure object
-            fig = plt.figure(j, figsize=inps.fig_size)
+            fig = plt.figure(fig_title, figsize=inps.fig_size)
             fig.canvas.set_window_title(fig_title)
 
             fig_data_min=0
