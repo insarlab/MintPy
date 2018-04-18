@@ -97,11 +97,9 @@ def write_settings_file():
 
         value = str(settings_to_variable[setting].get())
 
-        if setting in [lr_flip, ud_flip, wrap, opposite, shading, countours, axis_show, cbar_show, title_show,
-                       tick_show, title_in, coastline, lalo_label, show_scalebar] and value is 0:
+        if setting in [title_show, no_flip, zfirst] and value is 0:
             value = "False"
-        elif setting in [lr_flip, ud_flip, wrap, opposite, shading, countours, axis_show, cbar_show, title_show,
-                         tick_show, title_in, coastline, lalo_label, show_scalebar] and value is 1:
+        elif setting in [title_show, no_flip, zfirst] and value is 1:
             value = "True"
 
         if value != "":
