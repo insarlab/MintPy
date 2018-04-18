@@ -56,7 +56,7 @@ def multilook_data(data, lksY, lksX):
     return coarseData
 
 
-def multilook_attribute(atr_dict,lks_y,lks_x, printMsg=True):
+def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
     #####
     atr = dict()
     for key, value in iter(atr_dict.items()):
@@ -75,38 +75,38 @@ def multilook_attribute(atr_dict,lks_y,lks_x, printMsg=True):
     atr['YMIN'] = '0'
     atr['XMAX'] = str(width_mli-1)
     atr['YMAX'] = str(length_mli-1)
-    if printMsg:
+    if print_msg:
         print('update LENGTH, WIDTH, YMIN, YMAX, XMIN, XMAX')
     
     try:
         atr['Y_STEP'] = str(lks_y*float(atr['Y_STEP']))
         atr['X_STEP'] = str(lks_x*float(atr['X_STEP']))
-        if printMsg: print('update Y/X_STEP')
+        if print_msg: print('update Y/X_STEP')
     except: pass
     try:
         atr['AZIMUTH_PIXEL_SIZE'] = str(lks_y*float(atr['AZIMUTH_PIXEL_SIZE']))
         atr['RANGE_PIXEL_SIZE']   = str(lks_x*float(atr['RANGE_PIXEL_SIZE']))
-        if printMsg: print('update AZIMUTH/RANGE_PIXEL_SIZE')
+        if print_msg: print('update AZIMUTH/RANGE_PIXEL_SIZE')
     except: pass
 
     if not 'Y_FIRST' in atr.keys():
         try:
             atr['RLOOKS'] = str(int(atr['RLOOKS'])*lks_x)
             atr['ALOOKS'] = str(int(atr['ALOOKS'])*lks_y)
-            if printMsg: print('update R/ALOOKS')
+            if print_msg: print('update R/ALOOKS')
         except: pass
 
     try:
         atr['REF_Y'] = str(int(int(atr['REF_Y'])/lks_y))
         atr['REF_X'] = str(int(int(atr['REF_X'])/lks_x))
-        if printMsg: print('update ref_y/x')
+        if print_msg: print('update ref_y/x')
     except: pass
     try:
         atr['SUBSET_YMIN'] = str(int(int(atr['SUBSET_YMIN'])/lks_y))
         atr['SUBSET_YMAX'] = str(int(int(atr['SUBSET_YMAX'])/lks_y))
         atr['SUBSET_XMIN'] = str(int(int(atr['SUBSET_XMIN'])/lks_x))
         atr['SUBSET_XMAX'] = str(int(int(atr['SUBSET_XMAX'])/lks_x))
-        if printMsg: print('update subset_y0/y1/x0/x1')
+        if print_msg: print('update subset_y0/y1/x0/x1')
     except: pass
 
     return atr
@@ -152,7 +152,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 atr = h5[k][epoch].attrs
 
                 data_mli = multilook_data(data,lks_y,lks_x)
-                atr_mli = multilook_attribute(atr,lks_y,lks_x,printMsg=False)
+                atr_mli = multilook_attribute(atr,lks_y,lks_x,print_msg=False)
 
                 gg = group.create_group(epoch)
                 dset = gg.create_dataset(epoch, data=data_mli)

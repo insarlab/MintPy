@@ -524,7 +524,7 @@ def main(iargs=None):
     out_fig_name = 'Network.pdf'
     print('plotting network / pairs  in temp/perp baseline domain to file: '+out_fig_name)
     fig1, ax1 = plt.subplots()
-    ax1 = pnet.plot_network(ax1, date12_list, date8_list, pbase_list, plot_dict=vars(inps), printMsg=False)
+    ax1 = pnet.plot_network(ax1, date12_list, date8_list, pbase_list, plot_dict=vars(inps), print_msg=False)
     plt.savefig(inps.out_dir+'/'+out_fig_name, bbox_inches='tight')
 
     out_fig_name = 'CoherenceMatrix.pdf'

@@ -69,32 +69,32 @@ def get_distance(lat, lon, i):
     dist = g.inv(lon1, lat1, lon, lat)[2]
     return dist
 
-def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, printMsg=True):    
+def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=True):    
     num_sample = len(data)
     distance = np.zeros((num_sample**2))
     variance = np.zeros((num_sample**2))
-    if printMsg:
+    if print_msg:
         prog_bar = ptime.progress_bar(maxValue=num_sample)
     for i in range(num_sample):
         distance[i*num_sample:(i+1)*num_sample] = get_distance(lat, lon, i)
         variance[i*num_sample:(i+1)*num_sample] = np.square(data - data[i])
-        if printMsg:
+        if print_msg:
             prog_bar.update(i+1, every=10)
-    if printMsg:
+    if print_msg:
         prog_bar.close()
 
-    dist, std, stdStd = bin_variance(distance, variance, step=step, min_pair_num=min_pair_num, printMsg=printMsg)
+    dist, std, stdStd = bin_variance(distance, variance, step=step, min_pair_num=min_pair_num, print_msg=print_msg)
     return dist, std, stdStd
 
 
-def bin_variance(distance, variance, step=5e3, min_pair_num=100e3, printMsg=True):
+def bin_variance(distance, variance, step=5e3, min_pair_num=100e3, print_msg=True):
     x_steps = np.arange(0,np.max(distance),step)
     num_step = len(x_steps)
     std = np.zeros(x_steps.shape)
     stdStd = np.zeros(std.shape)
     p_num = np.zeros(x_steps.shape)
     
-    if printMsg:
+    if print_msg:
         prog_bar = ptime.progress_bar(maxValue=num_step)
     for i in range(num_step):
         x = x_steps[i]
@@ -102,9 +102,9 @@ def bin_variance(distance, variance, step=5e3, min_pair_num=100e3, printMsg=True
         p_num[i] = np.sum(idx)
         std[i] = np.mean(np.sqrt(variance[idx]))
         stdStd[i] = np.std(np.sqrt(variance[idx]))
-        if printMsg:
+        if print_msg:
             prog_bar.update(i+1, every=10)
-    if printMsg:
+    if print_msg:
         prog_bar.close()
     
     max_step_idx = int(max(np.argwhere(p_num > min_pair_num)))

@@ -961,15 +961,15 @@ def get_file_dataset_list(fname, key):
         f = h5py.File(fname, 'r')
         if key in ['timeseries']:
             obj = timeseries(fname)
-            obj.open(printMsg=False)
+            obj.open(print_msg=False)
             datasetList = obj.datasetList
         elif key in ['geometry']:
             obj = geometry(fname)
-            obj.open(printMsg=False)
+            obj.open(print_msg=False)
             datasetList = obj.datasetList
         elif key in ['ifgramStack']:
             obj = ifgramStack(fname)
-            obj.open(printMsg=False)
+            obj.open(print_msg=False)
             datasetList = obj.datasetList
         elif key in ['GIANT_TS']:
             datasetList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
@@ -1002,7 +1002,7 @@ def check_dataset_input(allList, inList=[], inNumList=[], globSearch=True):
     return outList, outNumList
 
 
-def read_dataset_input(inps, printMsg=True):
+def read_dataset_input(inps, print_msg=True):
     '''Check input / exclude / reference dataset input with file dataset list'''
     if len(inps.dset) > 0 or len(inps.dsetNumList)>0:
         inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList, inps.globSearch)[1]
@@ -1026,14 +1026,14 @@ def read_dataset_input(inps, printMsg=True):
             inps.ref_date = None
         ref_date = check_dataset_input(inps.fileDatasetList, [inps.ref_date], inps.globSearch)[0][0]
         if not ref_date:
-            if printMsg:
+            if print_msg:
                 print('WARNING: input reference date is not included in input file!')
                 print('input reference date: '+inps.ref_date)
             inps.ref_date = None
         else:
             inps.ref_date = ref_date
 
-    if printMsg:
+    if print_msg:
         if inps.key in ['ifgramStack']:
             print('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.fileDatasetList)))
             print('num of datasets to exclude: {}'.format(len(inps.exDsetList)))
@@ -1181,9 +1181,9 @@ def main(iargs=None):
     ############################### One Subplot ###############################
     if inps.dsetNum == 1:
         print('reading data ...')
-        data, atr = readfile.read(inps.file, datasetName=inps.dset[0], box=inps.pix_box, printMsg=False)
+        data, atr = readfile.read(inps.file, datasetName=inps.dset[0], box=inps.pix_box, print_msg=False)
         if inps.ref_date:
-            data -= readfile.read(inps.file, datasetName=inps.ref_date, box=inps.pix_box, printMsg=False)[0]
+            data -= readfile.read(inps.file, datasetName=inps.ref_date, box=inps.pix_box, print_msg=False)[0]
         # Mask Data
         if inps.zero_mask:
             data[data==0] = np.nan
@@ -1210,7 +1210,7 @@ def main(iargs=None):
         # Reference date for timeseries
         if inps.ref_date:
             print('consider input reference date: '+inps.ref_date)
-            ref_data = readfile.read(inps.file, datasetName=inps.ref_date, box=inps.pix_box, printMsg=False)[0]
+            ref_data = readfile.read(inps.file, datasetName=inps.ref_date, box=inps.pix_box, print_msg=False)[0]
 
         # Reference pixel for timeseries and ifgramStack
         inps.file_ref_yx = None
@@ -1237,7 +1237,7 @@ def main(iargs=None):
         dropDatasetList = []
         if inps.key == 'ifgramStack' and inps.disp_title:
             obj = ifgramStack(inps.file)
-            obj.open(printMsg=False)
+            obj.open(print_msg=False)
             dropDate12List = obj.get_drop_date12_list()
             for i in familyList:
                 dropDatasetList += ['{}-{}'.format(i,j) for j in dropDate12List]
@@ -1246,7 +1246,7 @@ def main(iargs=None):
         # Read DEM
         if inps.dem_file:
             print('reading DEM: '+os.path.basename(inps.dem_file)+' ...')
-            dem, dem_meta_dict = readfile.read(inps.dem_file, datasetName='height', box=inps.pix_box, printMsg=False)
+            dem, dem_meta_dict = readfile.read(inps.dem_file, datasetName='height', box=inps.pix_box, print_msg=False)
             if inps.multilook:
                 dem = mli.multilook_data(dem, inps.multilook_num, inps.multilook_num)
 
@@ -1293,7 +1293,7 @@ def main(iargs=None):
                 progBar.update(i-i_start+1, suffix=suffix)
 
                 # Read Data
-                data = readfile.read(inps.file, datasetName=dset, box=inps.pix_box, printMsg=False)[0]
+                data = readfile.read(inps.file, datasetName=dset, box=inps.pix_box, print_msg=False)[0]
                 if inps.ref_date:
                     data -= ref_data
                 if inps.file_ref_yx:

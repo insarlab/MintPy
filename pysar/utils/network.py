@@ -307,7 +307,7 @@ def signal2noise_ratio(sensor):
     return SNR
 
 
-def critical_perp_baseline(sensor, inc_angle=None, printMsg=False):
+def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
     '''Critical Perpendicular Baseline for each satellite'''
     # Jers: 5.712e3 m (near_range=688849.0551m)
     # Alos: 6.331e3 m (near_range=842663.2917m)
@@ -319,7 +319,7 @@ def critical_perp_baseline(sensor, inc_angle=None, printMsg=False):
     rg_bandwidth = range_bandwidth(sensor)
     inc_angle    = incidence_angle(sensor, inc_angle) / 180 * np.pi
     Bperp_c      = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
-    if printMsg:
+    if print_msg:
         print(('Critical Perpendicular Baseline: '+str(Bperp_c)+' m'))
     return Bperp_c
 

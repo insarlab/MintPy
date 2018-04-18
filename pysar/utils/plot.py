@@ -354,7 +354,7 @@ def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
     return ax
 
 
-def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_drop=[], printMsg=True):
+def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_drop=[], print_msg=True):
     '''Plot Temporal-Perp baseline Network
     Inputs
         ax : matplotlib axes object
@@ -445,7 +445,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             disp_min = data_min
             disp_max = data_max
 
-        if printMsg:
+        if print_msg:
             print('showing coherence')
             print(('colormap: '+plot_dict['colormap']))
             print(('display range: '+str([disp_min, disp_max])))
@@ -464,7 +464,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
                     coh_thres = min(cohList_keep)
             if coh_thres < disp_min:
                 disp_min = 0.0
-                if printMsg:
+                if print_msg:
                     print(('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)))
             c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
             coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
@@ -472,7 +472,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
             colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
             cmap = LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
-            if printMsg:
+            if print_msg:
                 print(('color jump at '+str(coh_thres)))
         else:
             cmap = plt.get_cmap(plot_dict['colormap'])

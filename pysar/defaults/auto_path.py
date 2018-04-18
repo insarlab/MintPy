@@ -72,19 +72,19 @@ prefix = 'pysar.load.'
 
 
 ##----------------- Functions from pysar.utils.readfile to be independnt module ---------##
-def check_variable_name(path, printMsg=True):
+def check_variable_name(path, print_msg=True):
     s = path.split("/")[0]
     if len(s)>0 and s[0]=="$":
         try:
             p0 = os.getenv(s[1:])
             path = path.replace(path.split("/")[0], p0)
         except:
-            if printMsg:
+            if print_msg:
                 print('WARNING: Un-recognized environmental variable: '+s)
     return path
 
 
-def read_str2dict(inString, delimiter='=', printMsg=False):
+def read_str2dict(inString, delimiter='=', print_msg=False):
     '''Read multiple lines of string into dict
     Based on pysar.utils.readfile.read_template()
     '''
@@ -97,7 +97,7 @@ def read_str2dict(inString, delimiter='=', printMsg=False):
         else:
             key  = c[0]
             value = str.replace(c[1],'\n','').split("#")[0].strip()
-            value = check_variable_name(value, printMsg=printMsg)
+            value = check_variable_name(value, print_msg=print_msg)
             if value != '':
                 strDict[key] = value
     return strDict
@@ -106,7 +106,7 @@ def read_str2dict(inString, delimiter='=', printMsg=False):
 ##----------------------------------------------------------------------------------------##
 def get_auto_path4sentinel_stack(projectName, template=dict()):
     ## default file pattern
-    defDict = read_str2dict(isceAutoPath, printMsg=False)
+    defDict = read_str2dict(isceAutoPath, print_msg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 
@@ -131,7 +131,7 @@ def get_auto_path4sentinel_stack(projectName, template=dict()):
 
 def get_auto_path4roipac(projectName, template=dict()):
     ## default file pattern
-    defDict = read_str2dict(roipacAutoPath, printMsg=False)
+    defDict = read_str2dict(roipacAutoPath, print_msg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 
@@ -178,7 +178,7 @@ def get_auto_path4roipac(projectName, template=dict()):
 
 def get_auto_path4gamma(projectName, template=dict()):
     ## default file pattern
-    defDict = read_str2dict(gammaAutoPath, printMsg=False)
+    defDict = read_str2dict(gammaAutoPath, print_msg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 

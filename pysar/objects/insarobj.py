@@ -303,7 +303,7 @@ class geometryDict:
     def get_slantRangeDistance(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
             return None
-        data = ut.range_distance(self.ifgramMetadata, dimension=2, printMsg=False)
+        data = ut.range_distance(self.ifgramMetadata, dimension=2, print_msg=False)
         if box is not None:
             data = data[box[1]:box[3],box[0]:box[2]]
         return data
@@ -311,7 +311,7 @@ class geometryDict:
     def get_incidenceAngle(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
             return None
-        data = ut.incidence_angle(self.ifgramMetadata, dimension=2, printMsg=False)
+        data = ut.incidence_angle(self.ifgramMetadata, dimension=2, print_msg=False)
         if box is not None:
             data = data[box[1]:box[3],box[0]:box[2]]
         return data

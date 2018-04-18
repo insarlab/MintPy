@@ -134,7 +134,7 @@ def read_network_info(inps):
             inps.pbaseList = ifgramStack(inps.file).get_perp_baseline_timeseries(dropIfgram=False)
         elif k == 'timeseries':
             obj = timeseries(inps.file)
-            obj.open(printMsg=False)
+            obj.open(print_msg=False)
             inps.dateList = obj.dateList
             inps.pbaseList = obj.pbase
         else:

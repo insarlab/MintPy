@@ -105,7 +105,7 @@ def read_subset_template2box(templateFile):
     return pix_box, geo_box
 
 
-def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None, printMsg=False):
+def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None, print_msg=False):
     '''Calculate bounding box in x/y for file in radar coord, based on input geo box.
     Inputs:
         geo_box    - tuple of 4 float, indicating the UL/LR lon/lat 
@@ -122,13 +122,13 @@ def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None, printMsg=False):
         x = ut.coord_geo2radar(lon, atr_rdr, 'lon')
         pix_box = (x[0], y[2], x[1], y[0])
     else:
-        y, x, y_res, x_res = ut.glob2radar(lat, lon, lookupFile, atr_rdr, printMsg=printMsg)
+        y, x, y_res, x_res = ut.glob2radar(lat, lon, lookupFile, atr_rdr, print_msg=print_msg)
         buf = 2*(np.max(np.abs([x_res, y_res])))
         pix_box = (np.min(x)-buf, np.min(y)-buf, np.max(x)+buf, np.max(y)+buf)
     return pix_box
 
 
-def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None, printMsg=False):
+def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None, print_msg=False):
     '''Calculate bounding box in lat/lon for file in geo coord, based on input radar/pixel box
     Inputs:
         pix_box    - tuple of 4 int, indicating the UL/LR x/y
@@ -144,7 +144,7 @@ def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None, printMsg=False):
         lon = ut.coord_radar2geo(x, atr_rdr, 'x')
         geo_box = (lon[0], lat[0], lon[1], lat[2])
     else:
-        lat, lon, lat_res, lon_res = ut.radar2glob(y, x, lookupFile, atr_rdr, printMsg=printMsg)
+        lat, lon, lat_res, lon_res = ut.radar2glob(y, x, lookupFile, atr_rdr, print_msg=print_msg)
         buf = 2*(np.max(np.abs([lat_res,lon_res])))
         geo_box = (np.min(lon)-buf, np.max(lat)+buf, np.max(lon)+buf, np.min(lat)-buf)
     return geo_box
@@ -398,7 +398,7 @@ def subset_file(File, subset_dict_input, outFile=None):
             data = np.ones((pix_box[3]-pix_box[1], pix_box[2]-pix_box[0]))*subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
-            atr_dict  = ut.subset_attribute(atr_dict, pix_box, printMsg=False)
+            atr_dict  = ut.subset_attribute(atr_dict, pix_box, print_msg=False)
             gg = group.create_group(dsName)
             dset = gg.create_dataset(dsName, data=data)
             for key, value in iter(atr_dict.items()):

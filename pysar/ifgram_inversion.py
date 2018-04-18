@@ -231,13 +231,13 @@ def phase_variance_ps(L, coherence=None):
     return var, coherence
 
 
-def coherence2phase_variance_ds(coherence, L=32, printMsg=False):
+def coherence2phase_variance_ds(coherence, L=32, print_msg=False):
     '''Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)'''
     lineStr = '    number of multilooks L=%d' % L
     if L > 80:
         L = 80
         lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
-    if printMsg:
+    if print_msg:
         print(lineStr)
 
     epsilon = 1e-4
@@ -457,7 +457,7 @@ def read_coherence2weight(stackobj, inps, box):
     if inps.weightFunc == 'var':
         print('convert coherence to weight using inverse of phase variance')
         print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
-        weight = 1.0 / coherence2phase_variance_ds(weight, L, printMsg=True)
+        weight = 1.0 / coherence2phase_variance_ds(weight, L, print_msg=True)
 
     elif inps.weightFunc == 'coh':
         print('use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)')
@@ -707,7 +707,7 @@ def ifgram_inversion(ifgramStackFile='ifgramStack.h5', inps=None):
     return inps.timeseriesFile, inps.tempCohFile
 
 
-def split_into_boxes(inps, numIfgram, length, width, printMsg=True):
+def split_into_boxes(inps, numIfgram, length, width, print_msg=True):
     '''Split into chunks in rows to reduce memory usage'''
     #Get r_step / chunk_num
     r_step = inps.chunk_size / (numIfgram * width)         #split in lines
@@ -716,7 +716,7 @@ def split_into_boxes(inps, numIfgram, length, width, printMsg=True):
     r_step = int(ceil_to_1(r_step))
     chunk_num = int((length-1)/r_step) + 1
 
-    if printMsg and chunk_num > 1:
+    if print_msg and chunk_num > 1:
         print('maximum chunk size: %.1E' % (inps.chunk_size))
         print('split %d lines into %d patches for processing' % (length, chunk_num))
         print('    with each patch up to %d lines' % (r_step))

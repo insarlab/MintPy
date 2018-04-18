@@ -33,21 +33,21 @@ def mask_matrix(data_mat,mask_mat, fill_value=None):
 
 
 ############################################################
-def update_mask(mask, inps_dict, printMsg=True):
+def update_mask(mask, inps_dict, print_msg=True):
     '''Update mask matrix from input options: subset_x/y and threshold'''
     if inps_dict['subset_x']:
         mask[:,0:inps_dict['subset_x'][0]] = 0
         mask[:,inps_dict['subset_x'][1]:] = 0
-        if printMsg:
+        if print_msg:
             print('mask out area not in x: '+str(inps_dict['subset_x']))
     if inps_dict['subset_y']:
         mask[0:inps_dict['subset_y'][0],:] = 0
         mask[inps_dict['subset_y'][1]:,:] = 0
-        if printMsg:
+        if print_msg:
             print('mask out area not in y: '+str(inps_dict['subset_y']))
     if inps_dict['thr']:
         mask[mask<inps_dict['thr']] = 0
-        if printMsg:
+        if print_msg:
             print('mask out pixels < '+str(inps_dict['thr'])+' in mask file')
     return mask
 
@@ -128,7 +128,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
             if km == 'coherence':
                 mask = h5mask[km][coh].get(coh)[:]
                 if inps_dict:
-                    mask = update_mask(mask, inps_dict, printMsg=False)
+                    mask = update_mask(mask, inps_dict, print_msg=False)
 
             unw = mask_matrix(unw, mask, inps_dict['fill_value'])
 

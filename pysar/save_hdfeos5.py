@@ -434,7 +434,7 @@ def main(iargs=None):
 
     ## 3 - rangeCoord
     try:
-        data = readfile.read(inps.rg_coord_file, datasetName='rangeCoord', printMsg=False)[0]
+        data = readfile.read(inps.rg_coord_file, datasetName='rangeCoord', print_msg=False)[0]
         print('reading range coord     from file: '+inps.rg_coord_file)
         dset = groupGeom.create_dataset('rangeCoord', data=data, compression='gzip')
         dset.attrs['Title'] = 'Range Coordinates'
@@ -446,7 +446,7 @@ def main(iargs=None):
 
     ## 4 - azimuthCoord
     try:
-        data = readfile.read(inps.az_coord_file, datasetName='azimuthCoord', printMsg=False)[0]
+        data = readfile.read(inps.az_coord_file, datasetName='azimuthCoord', print_msg=False)[0]
         print('reading azimuth coord   from file: '+inps.az_coord_file)
         dset = groupGeom.create_dataset('azimuthCoord', data=data, compression='gzip')
         dset.attrs['Title'] = 'Azimuth Coordinates'
@@ -458,7 +458,7 @@ def main(iargs=None):
 
     ## 5 - headingAngle
     try:
-        data = readfile.read(inps.head_angle_file, datasetName='heandingAngle', printMsg=False)[0]
+        data = readfile.read(inps.head_angle_file, datasetName='heandingAngle', print_msg=False)[0]
         print('reading azimuth coord   from file: '+inps.head_angle_file)
         dset = groupGeom.create_dataset('heandingAngle', data=data, compression='gzip')
         dset.attrs['Title'] = 'Heanding Angle'
@@ -470,7 +470,7 @@ def main(iargs=None):
 
     ## 6 - slantRangeDistance
     try:
-        data = readfile.read(inps.slant_range_dist_file, datasetName='slantRangeDistance', printMsg=False)[0]
+        data = readfile.read(inps.slant_range_dist_file, datasetName='slantRangeDistance', print_msg=False)[0]
         print('reading slant range distance from file: '+inps.slant_range_dist_file)
         dset = groupGeom.create_dataset('slantRangeDistance', data=data, compression='gzip')
         dset.attrs['Title'] = 'Slant Range Distance'
@@ -482,7 +482,7 @@ def main(iargs=None):
 
     ## 7 - waterMask
     try:
-        data = readfile.read(inps.water_mask_file, datasetName='waterMask', printMsg=False)[0]
+        data = readfile.read(inps.water_mask_file, datasetName='waterMask', print_msg=False)[0]
         print('reading water mask      from file: '+inps.water_mask_file)
         dset = groupGeom.create_dataset('waterMask', data=data, compression='gzip')
         dset.attrs['Title'] = 'Water Mask'
@@ -494,7 +494,7 @@ def main(iargs=None):
 
     ## 8 - shadowMask
     try:
-        data = readfile.read(inps.shadow_mask_file, datasetName='shadowMask', printMsg=False)[0]
+        data = readfile.read(inps.shadow_mask_file, datasetName='shadowMask', print_msg=False)[0]
         print('reading shadow mask     from file: '+inps.shadow_mask_file)
         dset = groupGeom.create_dataset('shadowMask', data=data, compression='gzip')
         dset.attrs['Title'] = 'Shadow Mask'

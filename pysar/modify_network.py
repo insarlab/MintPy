@@ -126,9 +126,9 @@ def read_input_index_list(idxList, stackFile=None):
 
     if stackFile:
         obj = ifgramStack(stackFile)
-        obj.open(printMsg=False)
+        obj.open(print_msg=False)
         idxListOut = [i for i in idxListOut if i < obj.numIfgramOrig]
-        obj.close(printMsg=False)
+        obj.close(print_msg=False)
     return idxListOut
 
 
@@ -191,7 +191,7 @@ def reset_network(stackFile):
     '''Reset/restore all pairs within the input file by set all DROP_IFGRAM=no'''
     print("reset dataset 'dropIfgram' to True for all interferograms for file: "+stackFile)
     obj = ifgramStack(stackFile)
-    obj.open(printMsg=False)
+    obj.open(print_msg=False)
     if np.all(obj.dropIfgram):
         print('All dropIfgram are already True, no need to reset.')
     else:

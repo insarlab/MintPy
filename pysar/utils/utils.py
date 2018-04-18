@@ -159,7 +159,7 @@ def coord_radar2geo(radarCoordIn, atr, coordType):
     return geoCoord
 
 
-def subset_attribute(atr_dict, subset_box, printMsg=True):
+def subset_attribute(atr_dict, subset_box, print_msg=True):
     '''Update attributes dictionary due to subset
     Inputs:
         atr_dict   : dict, data attributes to update
@@ -182,10 +182,10 @@ def subset_attribute(atr_dict, subset_box, printMsg=True):
     atr['WIDTH']  = str(sub_x[1]-sub_x[0])
     atr['YMAX']   = str(sub_y[1]-sub_y[0] - 1)
     atr['XMAX']   = str(sub_x[1]-sub_x[0] - 1)
-    if printMsg:  print('update LENGTH, WIDTH, Y/XMAX')
+    if print_msg:  print('update LENGTH, WIDTH, Y/XMAX')
 
     # Subset atribute
-    if printMsg:  print('update/add SUBSET_YMIN/YMAX/XMIN/XMAX')
+    if print_msg:  print('update/add SUBSET_YMIN/YMAX/XMIN/XMAX')
     try:
         subset_y0_ori = int(atr['SUBSET_YMIN'])
         atr['SUBSET_YMIN'] = str(sub_y[0] + subset_y0_ori)
@@ -205,21 +205,21 @@ def subset_attribute(atr_dict, subset_box, printMsg=True):
     try:
         atr['Y_FIRST'] = str(float(atr['Y_FIRST'])+sub_y[0]*float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST'])+sub_x[0]*float(atr['X_STEP']))
-        if printMsg:  print('update Y/X_FIRST')
+        if print_msg:  print('update Y/X_FIRST')
     except: pass
 
     # Reference in space
     try:
         atr['REF_Y'] = str(int(atr['REF_Y']) - sub_y[0])
         atr['REF_X'] = str(int(atr['REF_X']) - sub_x[0])
-        if printMsg:  print('update REF_Y/X')
+        if print_msg:  print('update REF_Y/X')
     except: pass
 
     # Starting Range for file in radar coord
     if not 'Y_FIRST' in atr_dict.keys():
         try:
             atr['STARTING_RANGE'] = float(atr['STARTING_RANGE']) + float(atr['RANGE_PIXEL_SIZE'])*sub_x[0]
-            if printMsg:  print('update STARTING_RANGE')
+            if print_msg:  print('update STARTING_RANGE')
         except: pass
 
     return atr
@@ -255,7 +255,7 @@ def touch(fname_list, times=None):
     return fname_list
 
 
-def get_lookup_file(filePattern=None, abspath=False, printMsg=True):
+def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     '''Find lookup table file with/without input file pattern'''
     ##Search Existing Files
     if not filePattern:
@@ -268,7 +268,7 @@ def get_lookup_file(filePattern=None, abspath=False, printMsg=True):
     try:
         existFiles = get_file_list(filePattern)
     except:
-        if printMsg:
+        if print_msg:
             print('ERROR: No geometry / lookup table file found!')
             print('It should be like:')
             print(filePattern)
@@ -283,14 +283,14 @@ def get_lookup_file(filePattern=None, abspath=False, printMsg=True):
         else:
             dsName2check = 'latitude'
         try:
-            dset = readfile.read(fname, datasetName=dsName2check, printMsg=False)[0]
+            dset = readfile.read(fname, datasetName=dsName2check, print_msg=False)[0]
             outFile = fname
             break
         except:
             pass
 
     if not outFile:
-        if printMsg:
+        if print_msg:
             print('No lookup table info range/lat found in files.')
         return None
 
@@ -300,7 +300,7 @@ def get_lookup_file(filePattern=None, abspath=False, printMsg=True):
     return outFile
 
 
-def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, printMsg=True):
+def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, print_msg=True):
     '''Find geometry file containing input specific dataset'''
     if dset not in geometryDatasetNames:
         sys.exit('Unrecognized geometry dataset name: %s' % (dset))
@@ -321,7 +321,7 @@ def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, pri
     try:
         existFiles = get_file_list(filePattern)
     except:
-        if printMsg:
+        if print_msg:
             print('ERROR: No %s file found!' % (dset))
             print('It should be like:')
             print(filePattern)
@@ -338,13 +338,13 @@ def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, pri
                 continue
         #Check dataset
         try:
-            dset = readfile.read(fname, datasetName=dset, printMsg=False)[0]
+            dset = readfile.read(fname, datasetName=dset, print_msg=False)[0]
             outFile = fname
             break
         except:
             pass
     if not outFile:
-        if printMsg:
+        if print_msg:
             print('No %s info found in files.' % (dset))
         return None
 
@@ -354,7 +354,7 @@ def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, pri
     return outFile
 
 
-def check_loaded_dataset(workDir='./', inps=None, printMsg=True):
+def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
     '''Check the result of loading data for the following two rules:
         1. file existance
         2. file attribute readability
@@ -413,15 +413,15 @@ def check_loaded_dataset(workDir='./', inps=None, printMsg=True):
     geomFile = is_file_exist(fileList, abspath=True)
     #Check required dataset - height
     geomobj = geometry(geomFile)
-    geomobj.open(printMsg=False)
+    geomobj.open(print_msg=False)
     if geometryDatasetNames[0] not in geomobj.datasetNames:
         geomFile = None
-    geomobj.close(printMsg=False)
+    geomobj.close(print_msg=False)
 
     ##### Recommended files - lookup table (None if not found)
     ## could be different than geometry file in case of roipac and gamma
     fileList = [os.path.join(workDir, 'INPUTS/geometry*.h5')]
-    lookupFile = get_lookup_file(fileList, abspath=True, printMsg=printMsg)
+    lookupFile = get_lookup_file(fileList, abspath=True, print_msg=print_msg)
 
     if any(i is None for i in [stackFile, geomFile, lookupFile]):
         loadComplete = False
@@ -429,7 +429,7 @@ def check_loaded_dataset(workDir='./', inps=None, printMsg=True):
         loadComplete = True
 
     ##### print message
-    if printMsg:
+    if print_msg:
         print('Loaded dataset are processed by InSAR software: {}'.format(atr['PROCESSOR']))
         if geocoded:
             print('Loaded dataset is in GEO coordinates')
@@ -837,7 +837,7 @@ def add_attribute(File, atr_new=dict()):
     return File
 
 
-def check_parallel(file_num=1, printMsg=True, maxParallelNum=8):
+def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
     '''Check parallel option based file num and installed module
     Examples:
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
@@ -848,7 +848,7 @@ def check_parallel(file_num=1, printMsg=True, maxParallelNum=8):
     # Disable parallel option for one input file
     if file_num <= 1:
         enable_parallel = False
-        if printMsg:
+        if print_msg:
             print('parallel processing is diabled for one input file')
         return 1, enable_parallel, None, None
 
@@ -867,7 +867,7 @@ def check_parallel(file_num=1, printMsg=True, maxParallelNum=8):
         enable_parallel = False
         print('parallel processing is disabled because min of the following two numbers <= 1:')
         print('available cpu number of the computer: '+str(multiprocessing.cpu_count()))
-    elif printMsg:
+    elif print_msg:
         print('parallel processing using %d cores ...'%(num_cores))
 
     try:
@@ -915,7 +915,7 @@ def perp_baseline_timeseries(atr, dimension=1):
     return pbase
 
 
-def range_distance(atr, dimension=2, printMsg=True):
+def range_distance(atr, dimension=2, print_msg=True):
     '''Calculate slant range distance from input attribute dict
     Inputs:
         atr - dict, including the following ROI_PAC attributes:
@@ -932,7 +932,7 @@ def range_distance(atr, dimension=2, printMsg=True):
     # return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
-        if printMsg:
+        if print_msg:
             print('input file is geocoded, return center range distance for the whole area')
 
     near_range = float(atr['STARTING_RANGE'])
@@ -942,7 +942,7 @@ def range_distance(atr, dimension=2, printMsg=True):
 
     far_range = near_range + dR*(width-1)
     center_range = (far_range + near_range)/2.0
-    if printMsg:
+    if print_msg:
         print('center range : %.2f m' % (center_range))
         print('near   range : %.2f m' % (near_range))
         print('far    range : %.2f m' % (far_range))
@@ -958,7 +958,7 @@ def range_distance(atr, dimension=2, printMsg=True):
         return range_xy
 
 
-def incidence_angle(atr, dimension=2, printMsg=True):
+def incidence_angle(atr, dimension=2, print_msg=True):
     '''Calculate 2D matrix of incidence angle from ROI_PAC attributes, very accurate.
     Input:
         dictionary - ROI_PAC attributes including the following items:
@@ -977,7 +977,7 @@ def incidence_angle(atr, dimension=2, printMsg=True):
     # Return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
-        if printMsg:
+        if print_msg:
             print('input file is geocoded, return center incident angle only')
     
     ## Read Attributes
@@ -993,12 +993,12 @@ def incidence_angle(atr, dimension=2, printMsg=True):
     incidence_n = (np.pi - np.arccos((r**2+near_range**2-(r+H)**2)/(2*r*near_range))) * 180.0/np.pi
     incidence_f = (np.pi - np.arccos((r**2+ far_range**2-(r+H)**2)/(2*r*far_range))) * 180.0/np.pi
     incidence_c = (incidence_f+incidence_n)/2.0
-    if printMsg:
+    if print_msg:
         print('center incidence angle : %.4f degree' % (incidence_c))
     if dimension == 0:
         return np.array(incidence_c)
 
-    if printMsg:
+    if print_msg:
         print('near   incidence angle : %.4f degree' % (incidence_n))
         print('far    incidence angle : %.4f degree' % (incidence_f))
     incidence_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
@@ -1028,7 +1028,7 @@ def which(program):
     return None
 
 
-def check_drop_ifgram(h5, printMsg=True):
+def check_drop_ifgram(h5, print_msg=True):
     '''Update ifgram_list based on 'DROP_IFGRAM' attribute
     Input:
         h5          - HDF5 file object
@@ -1050,7 +1050,7 @@ def check_drop_ifgram(h5, printMsg=True):
         if 'DROP_IFGRAM' in h5[k][ds].attrs.keys() and h5[k][ds].attrs['DROP_IFGRAM'] == 'yes':
             dsListOut.remove(ds)
 
-    if len(dsList) > len(dsListOut) and printMsg:
+    if len(dsList) > len(dsListOut) and print_msg:
         print("remove interferograms with 'DROP_IFGRAM'='yes'")
     return dsListOut
 
@@ -1147,7 +1147,7 @@ def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=
     ## Calculate mean coherence list
     if k =='ifgramStack':
         obj = ifgramStack(File)
-        obj.open(printMsg=False)
+        obj.open(print_msg=False)
         meanList, dateList = obj.spatial_average(datasetName=datasetName, maskFile=maskFile, box=box)
         pbase = obj.pbaseIfgram
         tbase = obj.tbaseIfgram
@@ -1392,12 +1392,12 @@ def mode(thelist):
 
 
 ######################################################################################################
-def range_ground_resolution(atr, printMsg=False):
+def range_ground_resolution(atr, print_msg=False):
     '''Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no range resolution info.')
         return
-    inc_angle = incidence_angle(atr, 0, printMsg)
+    inc_angle = incidence_angle(atr, 0, print_msg)
     rg_step = float(atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
     return rg_step
 
@@ -1435,7 +1435,7 @@ def get_lookup_row_col(y, x, lut_y, lut_x, y_factor=10, x_factor=10, geoCoord=Fa
     row, col = np.nanmean(np.where(np.multiply(mask_y, mask_x)), axis=1)
     return row, col
 
-def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
+def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
     '''Convert geo coordinates into radar coordinates.
     Inputs:
         lat/lon    - np.array, float, latitude/longitude
@@ -1448,21 +1448,21 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
     if lookupFile is None:
         lookupFile = get_lookup_file(lookupFile)
         if lookupFile is None:
-            if printMsg:
+            if print_msg:
                 print('WARNING: No lookup table found! Can not convert coordinates without it.')
             return None
     if isinstance(lookupFile, str):
         lookupFile = [lookupFile, lookupFile]
     atr_lut = readfile.read_attribute(lookupFile[0])
-    if printMsg:
+    if print_msg:
         print('reading file: '+lookupFile[0])
 
     #####For lookup table in geo-coord, read value directly
     if 'Y_FIRST' in atr_lut.keys():
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3
-        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord', printMsg=printMsg)[0]
-        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord', printMsg=printMsg)[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord', print_msg=print_msg)[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord', print_msg=print_msg)[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
@@ -1479,7 +1479,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
         if 'Y_FIRST' not in atr_rdr.keys():
             try:
                 az_step = azimuth_ground_resolution(atr_rdr)
-                rg_step = range_ground_resolution(atr_rdr, printMsg)
+                rg_step = range_ground_resolution(atr_rdr, print_msg)
                 x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
                 y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
                 if 'SUBSET_YMIN' in atr_rdr.keys():
@@ -1498,8 +1498,8 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
     #####For lookup table in radar-coord, search the buffer and use center pixel
     else:
-        lut_x = readfile.read(lookupFile[1], datasetName='longitude', printMsg=printMsg)[0]
-        lut_y = readfile.read(lookupFile[0], datasetName='latitude', printMsg=printMsg)[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='longitude', print_msg=print_msg)[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='latitude', print_msg=print_msg)[0]
         az = np.zeros(lat.shape)
         rg = np.zeros(lat.shape)
         x_factor = 10
@@ -1527,7 +1527,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), printMsg=True):
     return az, rg, az_resid, rg_resid
 
 
-def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
+def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
     '''Convert radar coordinates into geo coordinates
     Inputs:
         rg/az      - np.array, int, range/azimuth pixel number
@@ -1540,13 +1540,13 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
     if lookupFile is None:
         lookupFile = get_lookup_file(lookupFile)
         if lookupFile is None:
-            if printMsg:
+            if print_msg:
                 print('WARNING: No lookup table found! Can not convert coordinates without it.')
             return None
     if isinstance(lookupFile, str):
         lookupFile = [lookupFile, lookupFile]
     atr_lut = readfile.read_attribute(lookupFile[0])
-    if printMsg:
+    if print_msg:
         print('reading file: '+lookupFile[0])
 
     #####For lookup table in geo-coord, search the buffer and use center pixel
@@ -1557,8 +1557,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3;    # in meter
-        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord', printMsg=printMsg)[0]
-        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord', printMsg=printMsg)[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord', print_msg=print_msg)[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord', print_msg=print_msg)[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
@@ -1573,7 +1573,7 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
         if 'Y_FIRST' not in atr_rdr.keys():
             try:
                 az_step = azimuth_ground_resolution(atr_rdr)
-                rg_step = range_ground_resolution(atr_rdr, printMsg)
+                rg_step = range_ground_resolution(atr_rdr, print_msg)
                 x_factor = 2*np.ceil(abs(lon_step)/rg_step)
                 y_factor = 2*np.ceil(abs(lat_step)/az_step)
             except:
@@ -1593,8 +1593,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), printMsg=True):
 
     #####For lookup table in radar-coord, read the value directly.
     else:
-        lut_x = readfile.read(lookupFile[1], datasetName='longitude', printMsg=printMsg)[0]
-        lut_y = readfile.read(lookupFile[0], datasetName='latitude', printMsg=printMsg)[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='longitude', print_msg=print_msg)[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='latitude', print_msg=print_msg)[0]
         lat = lut_y[az, rg]
         lon = lut_x[az, rg]
 

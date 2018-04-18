@@ -87,24 +87,24 @@ def print_timseries_date_stat(dateList):
     return
 
 
-def get_date_list(fname, printMsg=False):
+def get_date_list(fname, print_msg=False):
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     dateList = None
     if k in ['timeseries']:
         obj = timeseries(fname)
-        obj.open(printMsg=False)
+        obj.open(print_msg=False)
         dateList = obj.dateList
     elif k in ['ifgramStack']:
         obj = ifgramStack(fname)
-        obj.open(printMsg=False)
+        obj.open(print_msg=False)
         dateList = obj.date12List
     else:
         print('--date option can not be applied to {} file, ignore it.'.format(k))
-    try: obj.close(printMsg=False)
+    try: obj.close(print_msg=False)
     except: pass
 
-    if printMsg and dateList is not None:
+    if print_msg and dateList is not None:
         for i in dateList:
             print(i)
     return dateList
@@ -140,7 +140,7 @@ def main(iargs=None):
 
     ## --date option
     if inps.disp_date:
-        get_date_list(inps.file, printMsg=True)
+        get_date_list(inps.file, print_msg=True)
         return
 
     ## Basic info from PySAR reader

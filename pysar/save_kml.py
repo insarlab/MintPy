@@ -21,9 +21,70 @@ import numpy as np
 import matplotlib as mpl;  mpl.use('Agg')
 import matplotlib.pyplot as plt
 
+from pysar.objects import timeseriesKeyNames
 from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
-from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 import pysar.view as pv
+
+
+############################################################
+EXAMPLE='''example:
+  save_kml.py geo_velocity_masked.h5 
+  save_kml.py geo_timeseries_masked.h5  20101120
+  save_kml.py geo_unwrapIfgram.h5       101120-110220
+
+  save_kml.py geo_velocity_masked.h5 -u cm --ylim -2 2
+  save_kml.py geo_velocity_masked.h5 -u cm --ylim -2.5 0.5 -c jet_r
+  save_kml.py geo_velocity_masked.h5 -u cm --ylim -2 2 --ref-size 3 --fig-size 5 8
+  save_kml.py demGeo.h5 --cbar-label Elevation
+'''
+
+def createParser():
+    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file.',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('file', help='file to be converted, in geo coordinate.')
+    parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-o','--output', dest='outfile', help='output file base name. Extension is fixed with .kmz')
+
+    parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('MIN','MAX'), type=float,\
+                        help='Y/value limits for plotting.')
+    parser.add_argument('-u', dest='disp_unit', metavar='UNIT',\
+                        help='unit for display.')
+    parser.add_argument('-c','--cm','--colormap', dest='colormap', default='jet',\
+                        help='Colormap for plotting. Default: jet')
+    parser.add_argument('--wrap', action='store_true', help='re-wrap data to display data in fringes.')
+
+    # Figure
+    fig = parser.add_argument_group('Figure')
+    fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int, default=9,\
+                     help='Colorbar bin number. Default: 9')
+    fig.add_argument('--cbar-label', dest='cbar_label', metavar='LABEL', default='Mean LOS velocity',\
+                     help='Colorbar label. Default: Mean LOS velocity')
+    fig.add_argument('--cbar-height', dest='cbar_height',\
+                     help='Colorbar height/elevation/altitude in meters;\n'+\
+                          'if not specified and DEM file exists in current directory, use mean DEM height + 1000m;\n'+\
+                          'if not specified nor DEM exists, clampToGround.')
+    fig.add_argument('--dpi', dest='fig_dpi', metavar='NUM', type=int, default=300,\
+                     help='Figure DPI (dots per inch). Default: 300')
+    fig.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\
+                     help='Figure size in inches - width and length')
+
+    # Reference Pixel
+    ref = parser.add_argument_group('Reference Pixel')
+    ref.add_argument('--noreference', dest='disp_seed', action='store_false', help='do not show reference point')
+    ref.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',\
+                     help='marker color of reference point')
+    ref.add_argument('--ref-size', dest='seed_size', metavar='NUM', type=int, default=5,\
+                     help='marker size of reference point, default: 10')
+    ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',\
+                     help='marker symbol of reference point')
+    return parser
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+    return inps
 
 
 ############################################################
@@ -154,93 +215,28 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
                                  KML.LatLonBox(KML.north(str(cb_N)),KML.south(str(cb_N-0.5*cb_rg)),\
                                                KML.west( str(cb_W)),KML.east( str(cb_W+0.14*cb_rg))))
     doc.Folder.append(slc1)
+    kmlstr = etree.tostring(doc, pretty_print=True).decode('utf8')
 
     # Write KML file
-    kmlstr = etree.tostring(doc, pretty_print=True) 
-    kml_file = out_name_base + '.kml'
+    kml_file = '{}.kml'.format(out_name_base)
     print('writing '+kml_file)
-    f = open(kml_file, 'w')
-    f.write(kmlstr)
-    f.close()
+    with open(kml_file, 'w') as f:
+        f.write(kmlstr)
 
     ## 2.4 Generate KMZ file
-    kmz_file = out_name_base + '.kmz'
+    kmz_file = '{}.kmz'.format(out_name_base)
     print('writing '+kmz_file)
-    cmdKMZ = 'zip '+kmz_file+' '+kml_file+' '+data_png_file+' '+cbar_png_file
+    cmdKMZ = 'zip {} {} {} {}'.format(kmz_file, kml_file, data_png_file, cbar_png_file)
     os.system(cmdKMZ)
 
-    cmdClean = 'rm '+kml_file;         print(cmdClean);    os.system(cmdClean)
-    cmdClean = 'rm '+data_png_file;    print(cmdClean);    os.system(cmdClean)
-    cmdClean = 'rm '+cbar_png_file;    print(cmdClean);    os.system(cmdClean)
+    cmdClean = 'rm {} {} {}'.format(kml_file, data_png_file, cbar_png_file)
+    print(cmdClean)
+    os.system(cmdClean)
 
     return kmz_file
 
 
-############################################################
-EXAMPLE='''example:
-  save_kml.py geo_velocity_masked.h5 
-  save_kml.py geo_timeseries_masked.h5  20101120
-  save_kml.py geo_unwrapIfgram.h5       101120-110220
-
-  save_kml.py geo_velocity_masked.h5 -u cm --ylim -2 2
-  save_kml.py geo_velocity_masked.h5 -u cm --ylim -2.5 0.5 -c jet_r
-  save_kml.py geo_velocity_masked.h5 -u cm --ylim -2 2 --ref-size 3 --fig-size 5 8
-  save_kml.py demGeo.h5 --cbar-label Elevation
-'''
-
-def createParser():
-    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', help='file to be converted, in geo coordinate.')
-    parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-o','--output', dest='outfile', help='output file base name. Extension is fixed with .kmz')
-
-    parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('MIN','MAX'), type=float,\
-                        help='Y/value limits for plotting.')
-    parser.add_argument('-u', dest='disp_unit', metavar='UNIT',\
-                        help='unit for display.')
-    parser.add_argument('-c','--cm','--colormap', dest='colormap', default='jet',\
-                        help='Colormap for plotting. Default: jet')
-    parser.add_argument('--wrap', action='store_true', help='re-wrap data to display data in fringes.')
-
-    # Figure
-    fig = parser.add_argument_group('Figure')
-    fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int, default=9,\
-                     help='Colorbar bin number. Default: 9')
-    fig.add_argument('--cbar-label', dest='cbar_label', metavar='LABEL', default='Mean LOS velocity',\
-                     help='Colorbar label. Default: Mean LOS velocity')
-    fig.add_argument('--cbar-height', dest='cbar_height',\
-                     help='Colorbar height/elevation/altitude in meters;\n'+\
-                          'if not specified and DEM file exists in current directory, use mean DEM height + 1000m;\n'+\
-                          'if not specified nor DEM exists, clampToGround.')
-    fig.add_argument('--dpi', dest='fig_dpi', metavar='NUM', type=int, default=300,\
-                     help='Figure DPI (dots per inch). Default: 300')
-    fig.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\
-                     help='Figure size in inches - width and length')
-
-    # Reference Pixel
-    ref = parser.add_argument_group('Reference Pixel')
-    ref.add_argument('--noreference', dest='disp_seed', action='store_false', help='do not show reference point')
-    ref.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',\
-                     help='marker color of reference point')
-    ref.add_argument('--ref-size', dest='seed_size', metavar='NUM', type=int, default=5,\
-                     help='marker size of reference point, default: 10')
-    ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',\
-                     help='marker symbol of reference point')
-    return parser
-
-def cmdLineParse(iargs=None):
-    parser = createParser()
-    inps = parser.parse_args(args=iargs)
-    return inps
-
-
-############################################################
-def main(iargs=None):
-    inps = cmdLineParse(iargs)
-
+def read_data(inps):
     ##### 1. Read data
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
@@ -251,12 +247,19 @@ def main(iargs=None):
         sys.exit('ERROR: Input file is not geocoded.')
 
     # Check: dset is required for multi_dataset/group files
-    if not inps.dset and k in multi_group_hdf5_file+multi_dataset_hdf5_file:
+    if not inps.dset and k in ['ifgramStack']+timeseriesKeyNames:
         print("No date/date12 input.\nIt's required for "+k+" file")
         sys.exit(1)
 
     # Read data
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
+    return data, atr
+
+############################################################
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
+
+    data, atr = read_data(inps)
 
     # Output filename
     if not inps.outfile:

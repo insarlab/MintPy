@@ -132,7 +132,7 @@ class resample:
         dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
         return src_def, dest_def
 
-    def resample(self, data, src_def, dest_def, interpMethod='nearest', fillValue=np.nan, nprocs=None, printMsg=True):
+    def resample(self, data, src_def, dest_def, interpMethod='nearest', fillValue=np.nan, nprocs=None, print_msg=True):
         '''
         Resample input radar coded data into geocoded data
         Parameters: data : 2D np.array
@@ -150,7 +150,7 @@ class resample:
             nprocs = min(num_cores, nprocs)
 
         if interpMethod.startswith('near'):
-            if printMsg:
+            if print_msg:
                 print('nearest resampling using {} processor cores ...'.format(nprocs))
             geo_data = pr.kd_tree.resample_nearest(src_def, data, dest_def, nprocs=nprocs, fill_value=fillValue,\
                                                    radius_of_influence=200, epsilon=0)

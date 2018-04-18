@@ -179,18 +179,18 @@ def design_matrix4deformation(inps):
 
 def read_geometry(inps):
     tsobj = timeseries(inps.timeseries_file)
-    tsobj.open(printMsg=False)
+    tsobj.open(print_msg=False)
     ## 2D / 3D geometry
     if inps.geom_file:
         geomobj = geometry(inps.geom_file)
         geomobj.open()
         print('read 2D incidenceAngle,slantRangeDistance from {} file: {}'.format(geomobj.name,\
                                                                                   os.path.basename(geomobj.file)))
-        inps.incAngle = geomobj.read(datasetName='incidenceAngle', printMsg=False).flatten() * np.pi/180.
-        inps.rangeDist = geomobj.read(datasetName='slantRangeDistance', printMsg=False).flatten()
+        inps.incAngle = geomobj.read(datasetName='incidenceAngle', print_msg=False).flatten() * np.pi/180.
+        inps.rangeDist = geomobj.read(datasetName='slantRangeDistance', print_msg=False).flatten()
         if 'bperp' in geomobj.datasetNames:
             print('read 3D bperp from {} file: {} ...'.format(geomobj.name, os.path.basename(geomobj.file)))
-            inps.pbase = geomobj.read(datasetName='bperp', printMsg=False).reshape((geomobj.numDate, -1))
+            inps.pbase = geomobj.read(datasetName='bperp', print_msg=False).reshape((geomobj.numDate, -1))
             inps.pbase -= inps.pbase[tsobj.refIndex]
         else:
             print('read mean bperp from {} file'.format(tsobj.name))

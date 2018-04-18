@@ -251,20 +251,20 @@ def select_max_coherence_yx(cohFile, mask=None, min_coh=0.85):
     if not mask is None:
         coh[mask==0] = 0.0
     coh_mask = coh >= min_coh
-    y, x = random_select_reference_yx(coh_mask, printMsg=False)
+    y, x = random_select_reference_yx(coh_mask, print_msg=False)
     #y, x = np.unravel_index(np.argmax(coh), coh.shape)
     print('y/x: {}'.format((y, x)))
     return y, x
 
 
-def random_select_reference_yx(data_mat, printMsg=True):
+def random_select_reference_yx(data_mat, print_msg=True):
     nrow,ncol = np.shape(data_mat)
     y = random.choice(list(range(nrow)))
     x = random.choice(list(range(ncol)))
     while data_mat[y,x] == 0:
         y = random.choice(list(range(nrow)))
         x = random.choice(list(range(ncol)))
-    if printMsg:
+    if print_msg:
         print('random select pixel\ny/x: {}'.format((y,x)))
     return y,x
 

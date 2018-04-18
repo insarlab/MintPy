@@ -117,16 +117,16 @@ class timeseries:
         self.file = file
         self.name = 'timeseries'
 
-    def close(self, printMsg=True):
+    def close(self, print_msg=True):
         try:
             self.f.close()
-            if printMsg:
+            if print_msg:
                 print('close timeseries file: {}'.format(os.path.basename(self.file)))
         except:
             pass
 
-    def open(self, printMsg=True):
-        if printMsg:
+    def open(self, print_msg=True):
+        if print_msg:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
         self.get_metadata()
         self.get_size()
@@ -164,7 +164,7 @@ class timeseries:
             self.numDate, self.length, self.width = f[self.name].shape
         return self.numDate, self.length, self.width
 
-    def read(self, datasetName=None, box=None, printMsg=True):
+    def read(self, datasetName=None, box=None, print_msg=True):
         '''Read dataset from timeseries file
         Parameters: self : timeseries object
                     datasetName : (list of) string in YYYYMMDD format
@@ -177,9 +177,9 @@ class timeseries:
                     data = tsobj.read(datasetName=['20161020','20161026','20161101'])
                     data = tsobj.read(box=(100,300,500,800))
         '''
-        if printMsg:
+        if print_msg:
             print('reading {} data from file: {} ...'.format(self.name, self.file))
-        self.open(printMsg=False)
+        self.open(print_msg=False)
 
         with h5py.File(self.file, 'r') as f:
             ds = f[self.name]
@@ -227,14 +227,14 @@ class timeseries:
             outFile = self.file
         if refFile:
             refobj = timeseries(refFile)
-            refobj.open(printMsg=False)
+            refobj.open(print_msg=False)
             if metadata is None:
                 metadata = refobj.metadata
             if dates is None:
                 dates = refobj.dateList
             if bperp is None:
                 bperp = refobj.pbase
-            refobj.close(printMsg=False)
+            refobj.close(print_msg=False)
         data = np.array(data, dtype=np.float32)
         dates = np.array(dates, dtype=np.string_)
         bperp = np.array(bperp, dtype=np.float32)
@@ -320,7 +320,7 @@ class timeseries:
         return outFile
 
     def spatial_average(self, maskFile=None, box=None):
-        self.open(printMsg=False)
+        self.open(print_msg=False)
         data = self.read(box=box)
         if maskFile and os.path.isfile(maskFile):
             print('read mask from file: '+maskFile)
@@ -331,7 +331,7 @@ class timeseries:
 
     def temporal_average(self):
         print('calculating the temporal average of timeseries file: {}'.format(self.file))
-        self.open(printMsg=False)
+        self.open(print_msg=False)
         data = self.read()
         dmean = np.nanmean(data, axis=0)
         return dmean
@@ -358,16 +358,16 @@ class geometry:
         self.file = file
         self.name = 'geometry'
 
-    def close(self, printMsg=True):
+    def close(self, print_msg=True):
         try:
             self.f.close()
-            if printMsg:
+            if print_msg:
                 print('close geometry file: {}'.format(os.path.basename(self.file)))
         except: 
             pass
 
-    def open(self, printMsg=True):
-        if printMsg:
+    def open(self, print_msg=True):
+        if print_msg:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
         self.get_metadata()
         self.get_size()
@@ -407,7 +407,7 @@ class geometry:
             except:  self.metadata[key] = value
         return self.metadata
 
-    def read(self, datasetName=geometryDatasetNames[0], box=None, printMsg=True):
+    def read(self, datasetName=geometryDatasetNames[0], box=None, print_msg=True):
         '''Read 2D / 3D dataset with bounding box in space
         Parameters: datasetName : string, to point to specific 2D dataset, e.g.:
                         height
@@ -418,7 +418,7 @@ class geometry:
                         bperp-20161026
                         bperp-...
                     box : tuple of 4 int, for (x0,y0,x1,y1)
-                    printMsg : bool
+                    print_msg : bool
         Returns: data : 2D or 3D array
         Example:
             obj = geometry('./INPUTS/geometryRadar.h5')
@@ -427,13 +427,13 @@ class geometry:
             obj.read(datasetName='bperp')
             obj.read(datasetName='bperp-20161020')
         '''
-        self.open(printMsg=False)
+        self.open(print_msg=False)
         if box is None:
             box = (0,0,self.width,self.length)
         if datasetName is None:
             datasetName = geometryDatasetNames[0]
         datasetName = datasetName.split('-')
-        if printMsg:
+        if print_msg:
             print('reading {} data from file: {} ...'.format(datasetName[0], self.file))
 
         with h5py.File(self.file, 'r') as f:
@@ -473,21 +473,21 @@ class ifgramStack:
         self.file = file
         self.name = 'ifgramStack'
 
-    def close(self, printMsg=True):
+    def close(self, print_msg=True):
         try:
             self.f.close()
-            if printMsg:
+            if print_msg:
                 print('close {} file: {}'.format(self.name, os.path.basename(self.file)))
         except:
             pass
 
-    def open(self, printMsg=True):
+    def open(self, print_msg=True):
         '''
         Time format/rules:
             All datetime.datetime objects named with time
             All string in YYYYMMDD        named with date (following roipac)
         '''
-        if printMsg:
+        if print_msg:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
         self.get_metadata()
         self.get_size()
@@ -532,7 +532,7 @@ class ifgramStack:
         self.mTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.mDates])
         self.sTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.sDates])
 
-    def read(self, datasetName=ifgramDatasetNames[0], box=None, printMsg=True, dropIfgram=False):
+    def read(self, datasetName=ifgramDatasetNames[0], box=None, print_msg=True, dropIfgram=False):
         '''Read 3D dataset with bounding box in space
         Parameters: datasetName : string, to point to specific 2D dataset, e.g.:
                         unwrapPhase
@@ -544,7 +544,7 @@ class ifgramStack:
                         coherence-20161020_20161026
                         ...
                     box : tuple of 4 int, for (x0,y0,x1,y1)
-                    printMsg : bool
+                    print_msg : bool
         Returns: data : 2D or 3D array
         Example:
             obj = ifgramStack('./INPUTS/ifgramStack.h5')
@@ -626,11 +626,11 @@ class ifgramStack:
         dateList = sorted(list(set(mDates + sDates)))
         return dateList
 
-    def nonzero_mask(self, datasetName=None, printMsg=True, dropIfgram=True):
+    def nonzero_mask(self, datasetName=None, print_msg=True, dropIfgram=True):
         '''Return the common mask of pixels with non-zero value in dataset of all ifgrams.
            Ignoring dropped ifgrams
         '''
-        self.open(printMsg=False)
+        self.open(print_msg=False)
         with h5py.File(self.file, 'r') as f:
             if datasetName is None:
                 datasetName = [i for i in ['connectComponent','unwrapPhase'] if i in f.keys()][0]
@@ -653,7 +653,7 @@ class ifgramStack:
         return mask
 
     def temporal_average(self, datasetName=ifgramDatasetNames[1], dropIfgram=True):
-        self.open(printMsg=False)
+        self.open(print_msg=False)
         if datasetName is None:
             datasetName = ifgramDatasetNames[0]
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
@@ -747,10 +747,10 @@ class singleDataset:
     def __init__(self, file=None):
         self.file = file
 
-    def close(self, printMsg=True):
+    def close(self, print_msg=True):
         try:
             self.f.close()
-            if printMsg:
+            if print_msg:
                 print('close file: {}'.format(os.path.basename(self.file)))
         except:
             pass
@@ -805,10 +805,10 @@ class HDFEOS:
         self.file = file
         self.name = 'HDFEOS'
 
-    def close(self, printMsg=True):
+    def close(self, print_msg=True):
         try:
             self.f.close()
-            if printMsg:
+            if print_msg:
                 print('close timeseries file: {}'.format(os.path.basename(self.file)))
         except:
             pass
