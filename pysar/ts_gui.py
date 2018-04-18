@@ -31,6 +31,8 @@ ref_date, excludes_list_box, num, num_option_menu\
 
 ref_dates_list = ["All"]
 num_list = [""]
+settings_file = None
+settings_file_button = None
 
 colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap',
              'CMRmap_r', 'Dark2', 'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r',
@@ -58,6 +60,60 @@ starting_lower_lim = 0
 current_slider_scale = 1.0
 inps = None
 file_base = "/"
+settings_to_variable = None
+
+def parse_settings():
+
+    global settings_file
+
+    with open(settings_file.get(), 'r') as the_settings_file:
+        for line in the_settings_file:
+            if line is not "" and "=" in line:
+                parts = line.split("=")
+                key = parts[0].rstrip().strip("\t")
+                value = parts[1].strip(" \t\t").strip("\n").rstrip()
+
+                if key in settings_to_variable.keys():
+
+                    if value.lower() == 'false':
+                        value = 0
+                    elif value.lower() == 'true':
+                        value = 1
+
+                    if key in ['input.file']:
+                        inps.file = value
+                        on_file_selection(inps.file)
+
+                    print(key)
+                    print(settings_to_variable[key])
+                    settings_to_variable[key].set(value)
+
+
+def write_settings_file():
+
+    output = ""
+
+    for setting in sorted(settings_to_variable.keys()):
+
+        value = str(settings_to_variable[setting].get())
+
+        if setting in [lr_flip, ud_flip, wrap, opposite, shading, countours, axis_show, cbar_show, title_show,
+                       tick_show, title_in, coastline, lalo_label, show_scalebar] and value is 0:
+            value = "False"
+        elif setting in [lr_flip, ud_flip, wrap, opposite, shading, countours, axis_show, cbar_show, title_show,
+                         tick_show, title_in, coastline, lalo_label, show_scalebar] and value is 1:
+            value = "True"
+
+        if value != "":
+            output += "{0:35} = {1:10}\n".format(str(setting), str(value))
+            # "{0:35} = {1:10}\n".format(name, value)
+
+    f = filedialog.asksaveasfile(mode='w', defaultextension=".txt")
+    if f is None:  # asksaveasfile return `None` if dialog closed with "cancel".
+        return
+
+    f.write(output)
+    f.close()
 
 
 def cmdLineParse(argv):
@@ -69,6 +125,7 @@ def cmdLineParse(argv):
     ##### Input
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('--file', dest='file', metavar='FILE', help='file for display')
+    infile.add_argument('--settings', dest='settings', metavar='FILE', help='settings file to use in setup')
 
     inps = parser.parse_args(argv)
     return inps
@@ -111,9 +168,7 @@ def pick_mask():
         mask_short.set("No File Selected")
         pick_mask_file_button.config(text="Select Mask File")
 
-    if mask_file.get() == "":
-        mask_short.set("No File Selected")
-        pick_mask_file_button.config(text="Select Mask File")
+    set_mask_short()
 
 
 def pick_dem():
@@ -130,10 +185,44 @@ def pick_dem():
         dem_short.set("No File Selected")
         pick_dem_file_button.config(text="Select Topography File")
 
-    if dem_file.get() == "":
+    set_dem_short()
+
+
+def pick_settings():
+
+    global settings_file_button
+
+    if settings_file.get() == "":
+        filename = filedialog.askopenfilename(initialdir=file_base, title="Select file",
+                                              filetypes=(("TEXT files", "*.txt"), ("all files", "*.*")))
+        frame.filename = filename
+        if filename != "":
+            settings_file.set(frame.filename)
+            settings_file_button.config(text=str(frame.filename).split("/")[-1])
+            parse_settings()
+        #return frame.filename
+    else:
+        print("BAD")
+        settings_file.set("")
+        settings_file_button.config(text="Select a Settings File")
+
+
+def set_dem_short(x, y, z):
+    if dem_file.get() != "":
+        dem_short.set(dem_file.get().split("/")[-1])
+        pick_dem_file_button.config(text="Cancel")
+    else:
         dem_short.set("No File Selected")
         pick_dem_file_button.config(text="Select Topography File")
 
+
+def set_mask_short(x, y, z):
+    if mask_file.get() != "":
+        mask_short.set(mask_file.get().split("/")[-1])
+        pick_mask_file_button.config(text="Cancel")
+    else:
+        mask_short.set("No File Selected")
+        pick_mask_file_button.config(text="Select Mask File")
 
 def on_configure(event):
     canvas.configure(scrollregion=canvas.bbox('all'))
@@ -576,7 +665,7 @@ def main():
         ref_lat, ref_lon, ref_color, ref_sym, font_size, title_show, marker_size, edge_width, no_flip, zfirst, title_show, tick_show, \
         title_in, title, fig_size_width, fig_size_height, fig_ext, fig_num, fig_w_space, fig_h_space, coords, coastline, resolution, \
         lalo_label, lalo_step, scalebar_distance, scalebar_lat, scalebar_lon, show_scalebar, save, output_file, ref_date_option_menu, \
-        ref_date, excludes_list_box, num, num_option_menu
+        ref_date, excludes_list_box, num, num_option_menu, settings_file, settings_to_variable, settings_file_button
 
     '''     Setup window, widget canvas, and scrollbar. Add Submit Button to top of window      '''
     root = Tk()
@@ -586,8 +675,15 @@ def main():
 
     vcmd_num = (root.register(validate_numbers), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
 
-    reset_button = Button(root, text="Reset Settings", command=lambda: reset_plot(), padx=15)
-    reset_button.pack(side=TOP, pady=(10, 5))
+    reset_settings_file_frame = Frame(root)
+    reset_settings_file_frame.pack(side=TOP)
+
+    reset_button = Button(reset_settings_file_frame, text="Reset Settings", padx=15, command=lambda: reset_plot())
+    reset_button.pack(side=LEFT, pady=(10, 5))
+
+    settings_file = StringVar()
+    settings_file_button = Button(reset_settings_file_frame, text="Select Settings File", padx=15, command=lambda: pick_settings())
+    settings_file_button.pack(side=LEFT, pady=(10, 5))
 
     submit_button = Button(root, text="Show Plot", command=lambda: show_plot(), background="green", padx=15)
     submit_button.pack(side=TOP, pady=(10, 20))
@@ -619,6 +715,7 @@ def main():
     pick_mask_file_frame = Frame(frame)
 
     mask_file = StringVar()
+    mask_file.trace('w', callback=set_mask_short)
     mask_short = StringVar()
     mask_short.set("No File Selected")
 
@@ -630,6 +727,7 @@ def main():
     pick_dem_file_frame = Frame(frame)
 
     dem_file = StringVar()
+    dem_file.trace('w', callback=set_dem_short)
     dem_short = StringVar()
     dem_short.set("No File Selected")
 
@@ -873,7 +971,7 @@ def main():
     output_file_label = Label(output_frame, text="Output File: ")
     output_file_entry = Entry(output_frame, textvariable=output_file, width=12)
 
-
+    save_settings_button = Button(frame, text="Save Settings", command=write_settings_file, padx=15)
 
 
 
@@ -998,6 +1096,7 @@ def main():
 
     show_info_checkbutton.pack(anchor='center', pady=10)
 
+    save_settings_button.pack(side=TOP)
 
     space = Frame(frame)
     space.config(height=50)
@@ -1005,6 +1104,41 @@ def main():
 
     if inps.file:
         on_file_selection(inps.file)
+
+    settings_to_variable = {
+
+        "input.file": h5_file,
+        "input.num": num,
+        "input.mask": mask_file,
+        "input.dem": dem_file,
+
+        "output.save": save,
+        "output.outfile": output_file,
+
+        "display.min": y_lim_lower,
+        "display.max": y_lim_upper,
+        "display.unit": unit,
+        "display.ref_date": ref_date,
+        "display.colormap": colormap,
+        "display.no_flip": no_flip,
+        #"display.alpha": transparency,
+        "display.fig_length": fig_size_height,
+        "display.fig_width": fig_size_width,
+        "display.no_title": title_show,
+        "display.font_size": font_size,
+        "display.marker_size": marker_size,
+        "display.edge_width": edge_width,
+
+        "pixel.x": pix_input_xy_x,
+        "pixel.y": pix_input_xy_y,
+        "pixel.ref_x": ref_pix_input_xy_x,
+        "pixel.ref_y": ref_pix_input_xy_y
+
+    }
+
+    if inps.settings:
+        settings_file.set(inps.settings)
+        parse_settings()
 
     mainloop()
 

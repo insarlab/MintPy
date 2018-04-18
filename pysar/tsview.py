@@ -462,7 +462,7 @@ def set_dem_file():
 
     if inps.dem_file:
         dem = readfile.read(inps.dem_file, epoch='height')[0]
-        ax_v = view.plot_dem_yx(ax_v, dem)
+        ax_v = pp.plot_dem_yx(ax_v, dem)
 
     img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim_mat, interpolation='nearest')
 
