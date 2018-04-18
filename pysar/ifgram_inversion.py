@@ -6,27 +6,28 @@
 ############################################################
 
 
-import os, sys
-import time
 import argparse
-import string
-import h5py
+import os
+import sys
+import time
+
 import numpy as np
 from scipy.special import gamma
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
+
 from pysar.objects import ifgramStack, timeseries
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 
 ################################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   ifgram_inversion.py  ifgramStack.h5
   ifgram_inversion.py  ifgramStack.h5 -t pysarApp_template.txt
   ifgram_inversion.py  ifgramStack.h5 -w var
   ifgram_inversion.py  ifgramStack.h5 -w fim
   ifgram_inversion.py  ifgramStack.h5 -w coh
-'''
+"""
 
-TEMPLATE='''
+TEMPLATE = """
 ## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## There are 4 weighting options:
 ## 1) fim  - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
@@ -44,9 +45,9 @@ pysar.networkInversion.maskThreshold = auto #[0-1], auto for 0.4
 pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
 pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
-'''
+"""
 
-REFERENCE='''references:
+REFERENCE = """references:
 Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002). A new algorithm for surface 
     deformation monitoring based on small baseline differential SAR interferograms. IEEE TGRS,
     40(11), 2375-2383. doi:10.1109/TGRS.2002.803792
@@ -62,53 +63,54 @@ Samiei-Esfahany, S., J. E. Martins, F. v. Leijen, and R. F. Hanssen (2016), Phas
     Scatterers in InSAR Stacks Using Integer Least Squares Estimation, IEEE TGRS, 54(10), 5671-5687.
 Seymour, M. S., and I. G. Cumming (1994), Maximum likelihood estimation for SAR interferometry, 1994. 
     IGARSS '94., 8-12 Aug 1994.
-'''
+"""
 
-def createParser():
-    parser = argparse.ArgumentParser(description='Invert network of interferograms into timeseries.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Invert network of interferograms into timeseries.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
-    parser.add_argument('--template','-t', dest='templateFile',\
+    parser.add_argument('--template','-t', dest='templateFile',
                         help='template text file with the following options:\n'+TEMPLATE)
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
-    parser.add_argument('--maskDataset', dest='maskDataset', default='connComp',\
+    parser.add_argument('--maskDataset', dest='maskDataset', default='connComp',
                         help='dataset used to mask unwrapPhase')
-    parser.add_argument('--maskThreshold', type=float, default=0.4,\
+    parser.add_argument('--maskThreshold', type=float, default=0.4,
                         help='threshold to generate mask when mask is coherence')
 
-    parser.add_argument('--weight-function','-w', dest='weightFunc', default='no',\
-                        help='function used to convert coherence to weight for inversion:\n'+\
-                             'fim  - Fisher Information Matrix as weight'+\
-                             'var  - phase variance due to temporal decorrelation\n'+\
-                             'coh  - uniform distribution CDF function\n'+\
+    parser.add_argument('--weight-function','-w', dest='weightFunc', default='no',
+                        help='function used to convert coherence to weight for inversion:\n' +
+                             'fim  - Fisher Information Matrix as weight' +
+                             'var  - phase variance due to temporal decorrelation\n' +
+                             'coh  - uniform distribution CDF function\n' +
                              'sbas - uniform weight')
-    parser.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1','L2'],\
+    parser.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1','L2'],
                         help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
 
-    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.5e9,\
-                        help='max number of data (= ifgram_num * row_num * col_num) to read per loop\n'+\
+    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.5e9,
+                        help='max number of data (= ifgram_num * row_num * col_num) to read per loop\n' +
                              'default: 0.5G; adjust it according to your computer memory.')
-    parser.add_argument('--parallel', dest='parallel', action='store_true',\
+    parser.add_argument('--parallel', dest='parallel', action='store_true',
                         help='Enable parallel processing for the pixelwise weighted inversion. [not working yet]')
-    parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',\
+    parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
                         help='Skip checking reference pixel value, for simulation testing.')
-    parser.add_argument('-o','--output', dest='outfile', nargs=2, default=['timeseries.h5','temporalCoherence.h5'],\
-                        help='Output file name for timeseries and temporal coherence, default:\n'+\
+    parser.add_argument('-o','--output', dest='outfile', nargs=2, default=['timeseries.h5', 'temporalCoherence.h5'],
+                        help='Output file name for timeseries and temporal coherence, default:\n' +
                              'timeseries.h5 temporalCoherence.h5')
-    parser.add_argument('--update-mode', dest='update_mode', action='store_true',\
-                        help='Enable update mode, and skip inversion if output timeseries file already exists,\n'+\
+    parser.add_argument('--update-mode', dest='update_mode', action='store_true',
+                        help='Enable update mode, and skip inversion if output timeseries file already exists,\n' +
                              'readable and newer than input interferograms file')
-    parser.add_argument('--noskip-zero-phase', dest='skip_zero_phase', action='store_false',\
+    parser.add_argument('--noskip-zero-phase', dest='skip_zero_phase', action='store_false',
                         help='Do not skip interferograms with zero phase.')
-    parser.add_argument('--water-mask','-m', dest='waterMaskFile',\
+    parser.add_argument('--water-mask','-m', dest='waterMaskFile',
                         help='Skip inversion on the masked out region, i.e. water.')
     return parser
 
 
 def cmdLineParse(iargs=None):
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.parallel = False
     return inps
@@ -565,50 +567,50 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
             numAllNet = np.sum(maskAllNet)
             phaDataTemp = pha_data[:,maskAllNet]
             ts1 = np.zeros((date_num-1,numAllNet))
-            tempCoh1 = np.zeros((numAllNet))
+            temp_coh1 = np.zeros((numAllNet))
             step = 1000
             loopNum = int(np.floor(numAllNet/step))
-            progBar = ptime.progress_bar(maxValue=loopNum)
+            prog_bar = ptime.progressBar(maxValue=loopNum)
             for i in range(loopNum):
                 [i0, i1] = [i*step, min((i+1)*step, numAllNet)]
-                ts1[:,i0:i1], tempCoh1[i0:i1] = network_inversion_sbas(B, phaDataTemp[:,i0:i1], inps.tbaseDiff,\
+                ts1[:,i0:i1], temp_coh1[i0:i1] = network_inversion_sbas(B, phaDataTemp[:,i0:i1], inps.tbaseDiff,\
                                                                        skipZeroPhase=False)
-                progBar.update(i+1, suffix=i0)
-            progBar.close()
-            #ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,maskAllNet], inps.tbaseDiff, skipZeroPhase=False)
+                prog_bar.update(i+1, suffix=i0)
+            prog_bar.close()
+            #ts1, temp_coh1 = network_inversion_sbas(B, pha_data[:,maskAllNet], inps.tbaseDiff, skipZeroPhase=False)
             ts[1:,maskAllNet] = ts1
-            temp_coh[maskAllNet] = tempCoh1
+            temp_coh[maskAllNet] = temp_coh1
 
         if np.sum(maskPartNet) > 0:
             print('inverting pixels with valid phase in some ifgrams (%.0f pixels) ...' % (np.sum(maskPartNet)))
             pixel_num2inv = np.sum(maskPartNet)
             pixel_idx2inv = np.where(maskPartNet)[0]
-            progBar = ptime.progress_bar(maxValue=pixel_num2inv)
+            prog_bar = ptime.progressBar(maxValue=pixel_num2inv)
             for i in range(pixel_num2inv):
                 idx = pixel_idx2inv[i]
-                ts1, tempCoh1 = network_inversion_sbas(B, pha_data[:,idx], inps.tbaseDiff, inps.skip_zero_phase)
+                ts1, temp_coh1 = network_inversion_sbas(B, pha_data[:,idx], inps.tbaseDiff, inps.skip_zero_phase)
                 ts[1:, idx] = ts1.flatten()
-                temp_coh[idx] = tempCoh1
-                progBar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
-            progBar.close()
+                temp_coh[idx] = temp_coh1
+                prog_bar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
+            prog_bar.close()
 
 
     ##### Inversion - WLS
     else:
         weight = read_coherence2weight(stackobj, inps, box)
 
-        ##### Weighted Inversion pixel by pixel
+        # Weighted Inversion pixel by pixel
         print('inverting time series ...')
-        progBar = ptime.progress_bar(maxValue=pixel_num2inv)
+        prog_bar = ptime.progressBar(maxValue=pixel_num2inv)
         for i in range(pixel_num2inv):
             idx = pixel_idx2inv[i]
-            ts1, tempCoh1, tsStd1 = network_inversion_wls(A, pha_data[:,idx], weight[:,idx], Astd=Astd,\
-                                                          skipZeroPhase=inps.skip_zero_phase)
+            ts1, temp_coh1, ts_std1 = network_inversion_wls(A, pha_data[:, idx], weight[:, idx], Astd=Astd,
+                                                            skipZeroPhase=inps.skip_zero_phase)
             ts[1:, idx] = ts1.flatten()
-            temp_coh[idx] = tempCoh1
-            tsStd[timeIdx, idx] = tsStd1.flatten()
-            progBar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
-        progBar.close()
+            temp_coh[idx] = temp_coh1
+            tsStd[timeIdx, idx] = ts_std1.flatten()
+            prog_bar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
+        prog_bar.close()
 
 
     ts = ts.reshape(date_num, row_num, col_num)
@@ -787,7 +789,7 @@ def main(iargs=None):
     # Input file info
     atr = readfile.read_attribute(inps.ifgramStackFile)
     if atr['FILE_TYPE'] != 'ifgramStack':
-        print('ERROR: only ifgramStack file supported, input is '+k+' file!')
+        print('ERROR: only ifgramStack file supported, input is {} file!'.format(atr['FILE_TYPE']))
         sys.exit(1)
 
     # Network Inversion
@@ -804,4 +806,3 @@ def main(iargs=None):
 ################################################################################################
 if __name__ == '__main__':
     main()
-

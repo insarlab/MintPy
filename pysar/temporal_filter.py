@@ -61,7 +61,7 @@ def main(iargs=None):
     # Read timeseries
     print('loading time-series ...')
     timeseries = np.zeros((date_num, pixel_num))
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         d = h5[k].get(date)[:]
@@ -74,7 +74,7 @@ def main(iargs=None):
     # Smooth timeseries with moving window in time
     print('smoothing time-series using moving gaussian window with size of %.1f years' % inps.time_win)
     timeseries_filt = np.zeros((date_num, pixel_num))
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         # Weight from Gaussian (normal) distribution in time
@@ -104,7 +104,7 @@ def main(iargs=None):
 
     h5out = h5py.File(inps.outfile, 'w')
     group = h5out.create_group(k)
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         data = np.reshape(timeseries_filt[i,:], [length, width])

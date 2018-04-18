@@ -50,7 +50,7 @@ def main(argv):
 
     tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32)
 
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     timeseries = np.zeros((date_num, pixel_num),np.float32)
     for i in range(date_num):
         date = date_list[i]
@@ -78,7 +78,7 @@ def main(argv):
     h5out = h5py.File(outfile1, 'w')
     group = h5out.create_group(k)
 
-    prog_bar = ptime.progress_bar(maxValue=date_num-1)
+    prog_bar = ptime.progressBar(maxValue=date_num-1)
     for i in range(date_num-1):
         date = date_list[i+1]
         dset = group.create_dataset(date, data=np.reshape(timeseries_1st[i][:],[length,width]))
@@ -93,7 +93,7 @@ def main(argv):
     h5out = h5py.File(outfile2, 'w')
     group = h5out.create_group(k)
 
-    prog_bar = ptime.progress_bar(maxValue=date_num-2)
+    prog_bar = ptime.progressBar(maxValue=date_num-2)
     for i in range(date_num-2):
         date = date_list[i+2]
         dset = group.create_dataset(date, data=np.reshape(timeseries_2nd[i][:],[length,width]))

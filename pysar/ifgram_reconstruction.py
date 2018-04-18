@@ -57,7 +57,7 @@ def main(argv):
     timeseries = np.zeros((date_num, length*width))
 
     print('number of acquisitions: '+str(date_num))
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         d = h5ts['timeseries'].get(date)[:]
@@ -89,7 +89,7 @@ def main(argv):
     group = h5out.create_group('interferograms')
 
     print('number of interferograms: '+str(ifgram_num))
-    prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+    prog_bar = ptime.progressBar(maxValue=ifgram_num)
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
         data = np.reshape(estData[i,:],(length, width))

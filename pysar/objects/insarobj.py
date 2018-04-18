@@ -126,7 +126,7 @@ class ifgramStackDict:
 
             #dMin = 0
             #dMax = 0
-            progBar = ptime.progress_bar(maxValue=self.numIfgram)
+            prog_bar = ptime.progressBar(maxValue=self.numIfgram)
             for i in range(self.numIfgram):
                 ifgramObj = self.pairsDict[self.pairs[i]]
                 data = ifgramObj.read(dsName, box=box)[0]
@@ -134,8 +134,8 @@ class ifgramStackDict:
                 #dMax = max(dMax, np.nanmax(data))
                 ds[i,:,:] = data
                 self.bperp[i] = ifgramObj.get_perp_baseline()
-                progBar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],self.pairs[i][1]))
-            progBar.close()
+                prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],self.pairs[i][1]))
+            prog_bar.close()
 
             #ds.attrs['Title'] = dsName
             #ds.attrs['MinValue'] = dMin   #facilitate disp_min/max for mutiple subplots in view.py
@@ -406,13 +406,13 @@ class geometryDict:
                 print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
                       'in size of {s} with compression = {c}'.format(s=dsShape, c=str(compression)))
                 print('read coarse grid baseline files and linear interpolate into full resolution ...')
-                progBar = ptime.progress_bar(maxValue=self.numDate)
+                prog_bar = ptime.progressBar(maxValue=self.numDate)
                 for i in range(self.numDate):
                     fname = self.datasetDict[dsName][self.dateList[i]]
                     data = read_isce_bperp_file(fname=fname, outShape=(self.length, self.width), box=box)
                     ds[i,:,:] = data
-                    progBar.update(i+1, suffix=self.dateList[i])
-                progBar.close()
+                    prog_bar.update(i+1, suffix=self.dateList[i])
+                prog_bar.close()
 
                 ##Write 1D dataset date
                 dsName = 'date'

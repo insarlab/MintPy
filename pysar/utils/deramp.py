@@ -173,14 +173,14 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
         data = obj.read()
         numDate = data.shape[0]
         print('estimating ramp for each acquisition ...')
-        progBar = ptime.progress_bar(maxValue=numDate)
+        prog_bar = ptime.progressBar(maxValue=numDate)
         for i in range(numDate):
             if not ysub:
                 data[i,:,:] = remove_data_surface(np.squeeze(data[i,:,:]), mask, surf_type)[0]
             else:
                 data[i,:,:] = remove_data_multiple_surface(np.squeeze(data), mask, surf_type, ysub)
-            progBar.update(i+1, suffix=obj.dateList[i])
-        progBar.close()
+            prog_bar.update(i+1, suffix=obj.dateList[i])
+        prog_bar.close()
         objOut = timeseries(outFile)
         objOut.write2hdf5(data=data, refFile=File)
   

@@ -218,7 +218,7 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
 
 ###########################Simple progress bar######################
-class progress_bar:
+class progressBar:
     '''Creates a text-based progress bar. Call the object with 
     the simple `print'command to see the progress bar, which looks 
     something like this:
@@ -232,7 +232,7 @@ class progress_bar:
     example:
     import pysar.utils.datetime as ptime
     date12_list = ptime.list_ifgram2date12(ifgram_list)
-    prog_bar = ptime.progress_bar(maxValue=1000, prefix='calculating:')
+    prog_bar = ptime.progressBar(maxValue=1000, prefix='calculating:')
     for i in range(1000):
         prog_bar.update(i+1, suffix=date)
         prog_bar.update(i+1, suffix=date12_list[i])
@@ -240,7 +240,7 @@ class progress_bar:
     '''
 
     def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=100):
-        self.progBar = "[]" # This holds the progress bar string
+        self.prog_bar = "[]" # This holds the progress bar string
         self.min = minValue
         self.max = maxValue
         self.span = maxValue - minValue
@@ -277,27 +277,27 @@ class progress_bar:
         # Build a progress bar with an arrow of equal signs; special cases for
         # empty and full
         if numHashes == 0:
-            self.progBar = '%s[>%s]' % (self.prefix, ' '*(allFull-1))
+            self.prog_bar = '%s[>%s]' % (self.prefix, ' '*(allFull-1))
         elif numHashes == allFull:
-            self.progBar = '%s[%s]' % (self.prefix, '='*allFull)
+            self.prog_bar = '%s[%s]' % (self.prefix, '='*allFull)
             if suffix:
-                self.progBar += ' %s' % (suffix)
+                self.prog_bar += ' %s' % (suffix)
         else:
-            self.progBar = '[%s>%s]' % ('='*(numHashes-1), ' '*(allFull-numHashes))
+            self.prog_bar = '[%s>%s]' % ('='*(numHashes-1), ' '*(allFull-numHashes))
             # figure out where to put the percentage, roughly centered
-            percentPlace = int(len(self.progBar)/2 - len(str(percentDone)))
+            percentPlace = int(len(self.prog_bar)/2 - len(str(percentDone)))
             percentString = ' ' + str(percentDone) + '% '
             # slice the percentage into the bar
-            self.progBar = ''.join([self.progBar[0:percentPlace], percentString,
-                    self.progBar[percentPlace+len(percentString):], ])
+            self.prog_bar = ''.join([self.prog_bar[0:percentPlace], percentString,
+                    self.prog_bar[percentPlace+len(percentString):], ])
             # prefix and suffix
-            self.progBar = self.prefix + self.progBar
+            self.prog_bar = self.prefix + self.prog_bar
             if suffix:
-                self.progBar += ' %s' % (suffix)
+                self.prog_bar += ' %s' % (suffix)
             # time info - elapsed time and estimated remaining time
             if percentDone > 0:
                 elapsed_time = time.time() - self.start_time
-                self.progBar += '%5ds / %5ds' % (int(elapsed_time),
+                self.prog_bar += '%5ds / %5ds' % (int(elapsed_time),
                         int(elapsed_time*(100./percentDone-1)))
 
     def update(self, value, every=1, suffix=''):
@@ -306,7 +306,7 @@ class progress_bar:
           line in stdout."""
         if value % every == 0 or value >= self.max:
             self.update_amount(newAmount=value, suffix=suffix)
-            sys.stdout.write('\r' + self.progBar)
+            sys.stdout.write('\r' + self.prog_bar)
             sys.stdout.flush()
 
     def close(self):

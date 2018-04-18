@@ -1284,13 +1284,13 @@ def main(iargs=None):
             i_start = (j-1)*inps.fig_row_num*inps.fig_col_num
             i_end   = min([inps.dsetNum, i_start+inps.fig_row_num*inps.fig_col_num])
             ##### Loop 2 - Subplots
-            progBar = ptime.progress_bar(maxValue=i_end-i_start)
+            prog_bar = ptime.progressBar(maxValue=i_end-i_start)
             for i in range(i_start, i_end):
                 dset = inps.dset[i]
                 try: suffix = dset.split('-')[1]
                 except: suffix = dset
                 ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i-i_start+1)
-                progBar.update(i-i_start+1, suffix=suffix)
+                prog_bar.update(i-i_start+1, suffix=suffix)
 
                 # Read Data
                 data = readfile.read(inps.file, datasetName=dset, box=inps.pix_box, print_msg=False)[0]
@@ -1364,7 +1364,7 @@ def main(iargs=None):
                     ax.axis('off')
 
             ##### Figure Setting - End of Loop 2
-            progBar.close()
+            prog_bar.close()
             fig.tight_layout()
             # Min and Max for this figure
             all_data_min = np.nanmin([all_data_min, inps.data_min])

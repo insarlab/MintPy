@@ -2116,7 +2116,7 @@ def generate_curls(curlfile, h5file, Triangles, curls):
     gg = h5curlfile.create_group('interferograms')
 
     curl_num = np.shape(curls)[0]
-    prog_bar = ptime.progress_bar(maxValue=curl_num)
+    prog_bar = ptime.progressBar(maxValue=curl_num)
     for i in range(curl_num):
         ifgram1 = ifgram_list[curls[i,0]]
         ifgram2 = ifgram_list[curls[i,1]]

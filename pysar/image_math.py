@@ -50,7 +50,7 @@ def file_operation(fname, operator, operand, fname_out=None):
         h5 = h5py.File(fname,'r')
         epoch_list = sorted(h5[k].keys())
         epoch_num = len(epoch_list)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+        prog_bar = ptime.progressBar(maxValue=epoch_num)
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)

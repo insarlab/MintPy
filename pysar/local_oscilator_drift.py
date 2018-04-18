@@ -69,7 +69,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
         h5out = h5py.File(outFile,'w')
         group = h5out.create_group(k)
 
-        prog_bar = ptime.progress_bar(maxValue=epochNum)
+        prog_bar = ptime.progressBar(maxValue=epochNum)
         if k in ['interferograms','wrapped']:
             Ramp *= -4*np.pi / float(atr['WAVELENGTH'])
             print('number of interferograms: '+str(epochNum))

@@ -57,7 +57,7 @@ def main(argv):
     width  = int(atr['WIDTH'])
     D = np.zeros((date_num, length*width), np.float32)
 
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = dateList[i]
         d = h5timeseries['timeseries'].get(date)[:]

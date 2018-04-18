@@ -368,7 +368,7 @@ def subset_file(File, subset_dict_input, outFile=None):
         ##### Open Output File
         h5out = h5py.File(outFile,'w')
         group = h5out.create_group(k)
-        prog_bar = ptime.progress_bar(maxValue=dsNum)
+        prog_bar = ptime.progressBar(maxValue=dsNum)
 
     ## Loop
     if k in multi_dataset_hdf5_file:

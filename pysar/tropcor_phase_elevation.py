@@ -194,7 +194,7 @@ def main(iargs=None):
     h5out = h5py.File(inps.outfile,'w')
     group = h5out.create_group(k)
 
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         data = h5[k].get(date)[:]

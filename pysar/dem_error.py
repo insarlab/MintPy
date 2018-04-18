@@ -285,9 +285,9 @@ def estimate_dem_error(inps, A_def):
         print('number of pixels in   file: {}'.format(tsobj.numPixel))
         print('number of pixels to invert: {}'.format(numPixel2inv))
 
-        progBar = ptime.progress_bar(maxValue=tsobj.numPixel)
+        prog_bar = ptime.progressBar(maxValue=tsobj.numPixel)
         for i in range(numPixel2inv):
-            progBar.update(i+1, every=1000, suffix='{}/{}'.format(i+1,numPixel2inv))
+            prog_bar.update(i+1, every=1000, suffix='{}/{}'.format(i+1,numPixel2inv))
             idx = idxPixel2inv[i]
 
             if inps.pbase.shape[1] == 1:
@@ -304,7 +304,7 @@ def estimate_dem_error(inps, A_def):
             tsRes[:,idx:idx+1] = tsRes_i
             if inps.numStep > 0:
                 stepModel[:,idx:idx+1] = stepEst_i
-        progBar.close()
+        prog_bar.close()
 
     ##------------------------------------------------ Output  --------------------------------------------##
     print('-'*50)

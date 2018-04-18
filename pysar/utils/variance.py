@@ -74,7 +74,7 @@ def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=T
     distance = np.zeros((num_sample**2))
     variance = np.zeros((num_sample**2))
     if print_msg:
-        prog_bar = ptime.progress_bar(maxValue=num_sample)
+        prog_bar = ptime.progressBar(maxValue=num_sample)
     for i in range(num_sample):
         distance[i*num_sample:(i+1)*num_sample] = get_distance(lat, lon, i)
         variance[i*num_sample:(i+1)*num_sample] = np.square(data - data[i])
@@ -95,7 +95,7 @@ def bin_variance(distance, variance, step=5e3, min_pair_num=100e3, print_msg=Tru
     p_num = np.zeros(x_steps.shape)
     
     if print_msg:
-        prog_bar = ptime.progress_bar(maxValue=num_step)
+        prog_bar = ptime.progressBar(maxValue=num_step)
     for i in range(num_step):
         x = x_steps[i]
         idx = (distance > max(0, x-step/2.)) * (distance < x+step/2.)

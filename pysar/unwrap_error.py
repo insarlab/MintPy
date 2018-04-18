@@ -87,7 +87,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     print('reading interferograms...')
     print('Number of interferograms: '+ str(ifgram_num))
     data = np.zeros((ifgram_num,pixel_num),np.float32)
-    prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+    prog_bar = ptime.progressBar(maxValue=ifgram_num)
     for ni in range(ifgram_num):
         ifgram = ifgram_list[ni]
         d = h5[k][ifgram].get(ifgram)[:].flatten(1)
@@ -100,7 +100,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     h5curl = h5py.File(curl_file,'r')
     curl_list = sorted(h5curl[k].keys())
     curl_data = np.zeros((curl_num, pixel_num),np.float32)
-    prog_bar = ptime.progress_bar(maxValue=curl_num)
+    prog_bar = ptime.progressBar(maxValue=curl_num)
     for ni in range(curl_num):
         d = h5curl[k][curl_list[ni]].get(curl_list[ni])[:].flatten(1)
         curl_data[ni,:] = d.flatten(1)
@@ -110,7 +110,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
 
     print('estimating unwrapping error pixel by pixel ...')
     EstUnwrap = np.zeros((ifgram_num,pixel_num),np.float32)
-    prog_bar = ptime.progress_bar(maxValue=pixel_num)
+    prog_bar = ptime.progressBar(maxValue=pixel_num)
     for ni in range(pixel_num):
         if mask[ni]==1:
             dU = data[:,ni]
@@ -153,7 +153,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     h5unwCor = h5py.File(ifgram_cor_file,'w') 
     gg = h5unwCor.create_group(k) 
 
-    prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+    prog_bar = ptime.progressBar(maxValue=ifgram_num)
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
         group = gg.create_group(ifgram)
@@ -255,7 +255,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 
         ##### Loop
         print('Number of interferograms: '+str(ifgram_num))
-        prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+        prog_bar = ptime.progressBar(maxValue=ifgram_num)
         date12_list = ptime.list_ifgram2date12(ifgram_list)
         for i in range(ifgram_num):
             ifgram = ifgram_list[i]

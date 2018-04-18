@@ -75,7 +75,7 @@ def add_files(fname_list, fname_out=None):
         h5  = h5py.File(fname_list[0], 'r')
         epoch_list = sorted(h5[k].keys())
         epoch_num = len(epoch_list)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+        prog_bar = ptime.progressBar(maxValue=epoch_num)
 
     if k in multi_dataset_hdf5_file:
         print('number of acquisitions: %d' % epoch_num)
