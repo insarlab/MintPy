@@ -20,11 +20,11 @@ from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 ################################################################################################
 EXAMPLE = """example:
-  ifgram_inversion.py  ifgramStack.h5
-  ifgram_inversion.py  ifgramStack.h5 -t pysarApp_template.txt
-  ifgram_inversion.py  ifgramStack.h5 -w var
-  ifgram_inversion.py  ifgramStack.h5 -w fim
-  ifgram_inversion.py  ifgramStack.h5 -w coh
+  ifgram_inversion.py  INPUTS/ifgramStack.h5
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -t pysarApp_template.txt
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w fim
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -w coh
 """
 
 TEMPLATE = """
@@ -72,7 +72,7 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('ifgramStackFile', help='interferograms stack file to be inverted')
-    parser.add_argument('--template','-t', dest='templateFile',
+    parser.add_argument('--template', '-t', dest='templateFile',
                         help='template text file with the following options:\n'+TEMPLATE)
     parser.add_argument('--ref-date', dest='ref_date', help='Reference date, first date by default.')
     parser.add_argument('--maskDataset', dest='maskDataset', default='connComp',
@@ -80,36 +80,36 @@ def create_parser():
     parser.add_argument('--maskThreshold', type=float, default=0.4,
                         help='threshold to generate mask when mask is coherence')
 
-    parser.add_argument('--weight-function','-w', dest='weightFunc', default='no',
+    parser.add_argument('--weight-function', '-w', dest='weightFunc', default='sbas', choices={'fim', 'var', 'coh', 'sbas'},
                         help='function used to convert coherence to weight for inversion:\n' +
-                             'fim  - Fisher Information Matrix as weight' +
-                             'var  - phase variance due to temporal decorrelation\n' +
-                             'coh  - uniform distribution CDF function\n' +
-                             'sbas - uniform weight')
-    parser.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1','L2'],
+                        'fim  - Fisher Information Matrix as weight' +
+                        'var  - phase variance due to temporal decorrelation\n' +
+                        'coh  - uniform distribution CDF function\n' +
+                        'sbas - uniform weight')
+    parser.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
                         help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
 
-    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.5e9,
+    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.2e9,
                         help='max number of data (= ifgram_num * row_num * col_num) to read per loop\n' +
-                             'default: 0.5G; adjust it according to your computer memory.')
+                        'default: 0.2 G; adjust it according to your computer memory.')
     parser.add_argument('--parallel', dest='parallel', action='store_true',
                         help='Enable parallel processing for the pixelwise weighted inversion. [not working yet]')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
                         help='Skip checking reference pixel value, for simulation testing.')
-    parser.add_argument('-o','--output', dest='outfile', nargs=2, default=['timeseries.h5', 'temporalCoherence.h5'],
+    parser.add_argument('-o', '--output', dest='outfile', nargs=2, default=['timeseries.h5', 'temporalCoherence.h5'],
                         help='Output file name for timeseries and temporal coherence, default:\n' +
-                             'timeseries.h5 temporalCoherence.h5')
+                        'timeseries.h5 temporalCoherence.h5')
     parser.add_argument('--update-mode', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip inversion if output timeseries file already exists,\n' +
-                             'readable and newer than input interferograms file')
+                        'readable and newer than input interferograms file')
     parser.add_argument('--noskip-zero-phase', dest='skip_zero_phase', action='store_false',
                         help='Do not skip interferograms with zero phase.')
-    parser.add_argument('--water-mask','-m', dest='waterMaskFile',
+    parser.add_argument('--water-mask', '-m', dest='waterMaskFile',
                         help='Skip inversion on the masked out region, i.e. water.')
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.parallel = False
@@ -117,9 +117,9 @@ def cmdLineParse(iargs=None):
 
 
 def read_template2inps(template_file, inps):
-    '''Read input template options into Namespace inps'''
+    """Read input template options into Namespace inps"""
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     inpsDict = vars(inps)
     template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
@@ -133,71 +133,71 @@ def read_template2inps(template_file, inps):
         elif value:
             if key in ['maskThreshold']:
                 inpsDict[key] = float(value)
-            elif key in ['weightFunc','residualNorm','waterMaskFile']:
+            elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 inpsDict[key] = value
     return inps
 
 
 ################################################################################################
-def phase_pdf_ds(L, coherence=None, phiNum=1000):
-    '''Marginal PDF of interferometric phase for distributed scatterers (DS)
+def phase_pdf_ds(l, coherence=None, phi_num=1000):
+    """Marginal PDF of interferometric phase for distributed scatterers (DS)
     Eq. 66 (Tough et al., 1995) and Eq. 4.2.23 (Hanssen, 2001)
     Inputs:
-        L         - int, number of independent looks
+        l         - int, number of independent looks
         coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
-        phiNum    - int, number of phase sample for the numerical calculation
+        phi_num    - int, number of phase sample for the numerical calculation
     Output:
-        pdf       - 2D np.array, phase pdf in size of (phiNum, len(coherence))
+        pdf       - 2D np.array, phase pdf in size of (phi_num, len(coherence))
         coherence - 1D np.array for the range of coherence
     Example:
         epsilon = 1e-4
         coh = np.linspace(0., 1-epsilon, 1000)
         pdf, coh = phase_pdf_ds(1, coherence=coh)
-    '''
+    """
     epsilon = 1e-4
     if coherence is None:
         coherence = np.linspace(0., 1.-epsilon, 1000)
-    coherence = np.array(coherence, np.float64).reshape(1,-1)
-    phi = np.linspace(-np.pi, np.pi, phiNum, dtype=np.float64).reshape(-1,1)
+    coherence = np.array(coherence, np.float64).reshape(1, -1)
+    phi = np.linspace(-np.pi, np.pi, phi_num, dtype=np.float64).reshape(-1, 1)
 
-    ### Phase PDF - Eq. 4.2.32 (Hanssen, 2001)
-    A = np.power((1-np.square(coherence)), L) / (2*np.pi)
-    A = np.tile(A, (phiNum, 1))
-    B = gamma(2*L - 1) / ((gamma(L))**2 * 2**(2*(L-1)))
+    # Phase PDF - Eq. 4.2.32 (Hanssen, 2001)
+    A = np.power((1-np.square(coherence)), l) / (2*np.pi)
+    A = np.tile(A, (phi_num, 1))
+    B = gamma(2*l - 1) / ((gamma(l))**2 * 2**(2*(l-1)))
 
-    beta = np.multiply(np.abs(coherence), np.cos(phi), dtype=np.float64)
-    #C1 = np.power((1 - np.square(beta)), L+0.5)
-    #C1[C1 == 0.] = epsilon
-    #C = np.divide((2*L - 1) * beta, C1)
-    C = np.divide((2*L - 1) * beta, np.power((1 - np.square(beta)), L+0.5))
+    beta = np.multiply(np.abs(coherence), np.cos(phi))
+    # C1 = np.power((1 - np.square(beta)), l+0.5)
+    # C1[C1 == 0.] = epsilon
+    # C = np.divide((2*l - 1) * beta, C1)
+    C = np.divide((2*l - 1) * beta, np.power((1 - np.square(beta)), l+0.5))
     C = np.multiply(C, (np.pi/2 + np.arcsin(beta)))
-    #C2 = np.power((1 - np.square(beta)), L)
-    #C2[C2 == 0.0] = epsilon
-    #C += 1 / C2
-    C += 1 / np.power((1 - np.square(beta)), L)
+    # C2 = np.power((1 - np.square(beta)), l)
+    # C2[C2 == 0.0] = epsilon
+    # C += 1 / C2
+    C += 1 / np.power((1 - np.square(beta)), l)
 
     sumD = 0
-    if L > 1:
-        for r in range(L-1):
-            D = gamma(L-0.5) / gamma(L-0.5-r)
-            D *= gamma(L-1-r) / gamma(L-1)
-            #D1 = np.power((1 - np.square(beta)), r+2)
-            #D1[D1 == 0.] = epsilon
-            #D *= (1 + (2*r+1)*np.square(beta)) / D1
+    if l > 1:
+        for r in range(l-1):
+            D = gamma(l-0.5) / gamma(l-0.5-r)
+            D *= gamma(l-1-r) / gamma(l-1)
+            # D1 = np.power((1 - np.square(beta)), r+2)
+            # D1[D1 == 0.] = epsilon
+            # D *= (1 + (2*r+1)*np.square(beta)) / D1
             D *= (1 + (2*r+1)*np.square(beta)) / np.power((1 - np.square(beta)), r+2)
             sumD += D
-        sumD /= (2*(L-1))
+        sumD /= (2*(l-1))
 
     pdf = B*C + sumD
     pdf = np.multiply(A, pdf)
     return pdf, coherence.flatten()
 
 
-def phase_variance_ds(L,  coherence=None):
-    '''Interferometric phase variance for distributed scatterers (DS)
+def phase_variance_ds(l,  coherence=None):
+    """Interferometric phase variance for distributed scatterers (DS)
     Eq. 2.1.2 (Box et al., 2015) and Eq. 4.2.27 (Hanssen, 2001)
     Inputs:
-        L         - int, number of independent looks
+        l         - int, number of independent looks
         coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
         phiNum    - int, number of phase sample for the numerical calculation
     Output:
@@ -207,34 +207,34 @@ def phase_variance_ds(L,  coherence=None):
         epsilon = 1e-4
         coh = np.linspace(0., 1-epsilon, 1000)
         var, coh = phase_variance_ds(1, coherence=coh)
-    '''
+    """
     epsilon = 1e-4
     if coherence is None:
-        coherence = np.linspace(0., 1.-epsilon, 1000, np.float64)
+        coherence = np.linspace(0., 1.-epsilon, 1000, dtype=np.float64)
     phiNum = len(coherence)
 
-    phi = np.linspace(-np.pi, np.pi, phiNum, np.float64).reshape(-1,1)
+    phi = np.linspace(-np.pi, np.pi, phiNum, dtype=np.float64).reshape(-1, 1)
     phi_step = 2*np.pi/phiNum
 
-    pdf, coherence = phase_pdf_ds(L, coherence=coherence)
+    pdf, coherence = phase_pdf_ds(l, coherence=coherence)
     var = np.sum(np.multiply(np.square(np.tile(phi, (1, len(coherence)))), pdf)*phi_step, axis=0)
     return var, coherence
 
 
 def phase_variance_ps(L, coherence=None):
-    '''the Cramer-Rao bound (CRB) of phase variance
+    """the Cramer-Rao bound (CRB) of phase variance
     Given by Eq. 25 (Rodriguez and Martin, 1992)and Eq 4.2.32 (Hanssen, 2001)
     Valid when coherence is close to 1.
-    '''
+    """
     epsilon = 1e-4
     if coherence is None:
-        coherence = np.linspace(0.9, 1.-epsilon, 1000, np.float64)
+        coherence = np.linspace(0.9, 1.-epsilon, 1000, dtype=np.float64)
     var = (1-coherence**2) / (2*L*coherence**2)
     return var, coherence
 
 
 def coherence2phase_variance_ds(coherence, L=32, print_msg=False):
-    '''Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)'''
+    """Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)"""
     lineStr = '    number of multilooks L=%d' % L
     if L > 80:
         L = 80
@@ -260,8 +260,9 @@ def coherence2phase_variance_ds(coherence, L=32, print_msg=False):
     variance = var_lut[coherence_idx]
     return variance
 
+
 def coherence2fisher_info_index(coherence, L=32, epsilon=1e-4):
-    '''Convert coherence to Fisher information index (Seymour & Cumming, 1994, IGARSS)'''
+    """Convert coherence to Fisher information index (Seymour & Cumming, 1994, IGARSS)"""
     coherence = np.array(coherence, np.float64)
     coherence[coherence > 1-epsilon] = 1-epsilon
     weight = 2.0 * L * np.square(coherence) / (1 - np.square(coherence))
@@ -269,18 +270,19 @@ def coherence2fisher_info_index(coherence, L=32, epsilon=1e-4):
 
 
 def round_to_1(x):
-    '''Return the most significant digit of input number'''
+    """Return the most significant digit of input number"""
     digit = int(np.floor(np.log10(abs(x))))
     return round(x, -digit)
 
+
 def ceil_to_1(x):
-    '''Return the most significant digit of input number and ceiling it'''
+    """Return the most significant digit of input number and ceiling it"""
     digit = int(np.floor(np.log10(abs(x))))
     return round(x, -digit)+10**digit
 
 
 def network_inversion_sbas(B, ifgram, tbase_diff, skipZeroPhase=True):
-    ''' Network inversion based on Small BAseline Subsets (SBAS) algorithm (Berardino et al.,
+    """ Network inversion based on Small BAseline Subsets (SBAS) algorithm (Berardino et al.,
         2002, IEEE-TGRS). For full rank design matrix, a.k.a., fully connected network, ordinary
         least square (OLS) inversion is applied; otherwise, Singular Value Decomposition (SVD).
 
@@ -296,13 +298,13 @@ def network_inversion_sbas(B, ifgram, tbase_diff, skipZeroPhase=True):
     Output:
         ts      - 2D np.array in size of (date_num-1, pixel_num), phase time series
         tempCoh - 1D np.array in size of (pixel_num), temporal coherence
-    '''
-    ifgram = ifgram.reshape(B.shape[0],-1)
+    """
+    ifgram = ifgram.reshape(B.shape[0], -1)
     dateNum1 = B.shape[1]
     ts = np.zeros(dateNum1, np.float32)
     tempCoh = 0.
 
-    ## Skip Zero Phase Value
+    # Skip Zero Phase Value
     if skipZeroPhase and not np.all(ifgram):
         idx = (ifgram != 0.).flatten()
         B = B[idx, :]
@@ -311,13 +313,13 @@ def network_inversion_sbas(B, ifgram, tbase_diff, skipZeroPhase=True):
         ifgram = ifgram[idx, :]
 
     try:
-        ## Invert time-series
+        # Invert time-series
         B_inv = np.array(np.linalg.pinv(B), np.float32)
         ts_rate = np.dot(B_inv, ifgram)
         ts_diff = ts_rate * np.tile(tbase_diff, (1, ifgram.shape[1]))
         ts = np.cumsum(ts_diff, axis=0)
 
-        ## Temporal Coherence
+        # Temporal Coherence
         ifgram_diff = ifgram - np.dot(B, ts_rate)
         tempCoh = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / B.shape[0]
     except:
@@ -327,7 +329,7 @@ def network_inversion_sbas(B, ifgram, tbase_diff, skipZeroPhase=True):
 
 
 def network_inversion_wls(A, ifgram, weight, skipZeroPhase=True, Astd=None):
-    '''Network inversion based on Weighted Least Square (WLS) solution.
+    """Network inversion based on Weighted Least Square (WLS) solution.
     Inputs:
         A      - 2D np.array in size of (ifgram_num, date_num-1)
                  representing date configuration for each interferogram
@@ -343,7 +345,7 @@ def network_inversion_wls(A, ifgram, weight, skipZeroPhase=True, Astd=None):
         ts      - 1D np.array in size of (date_num-1,), phase time series
         tempCoh - float32, temporal coherence
         tsStd   - 1D np.array in size of (date_num-1,), decor noise std time series
-    '''
+    """
     if Astd is None:
         Astd = A
 
@@ -351,41 +353,40 @@ def network_inversion_wls(A, ifgram, weight, skipZeroPhase=True, Astd=None):
     ts = np.zeros(dateNum1, np.float32)
     tsStd = np.zeros(dateNum1, np.float32)
     tempCoh = 0.
-    ifgram = np.reshape(ifgram, (-1,1))
+    ifgram = np.reshape(ifgram, (-1, 1))
 
-    ## Skip Zero Phase Value
+    # Skip Zero Phase Value
     if skipZeroPhase and not np.all(ifgram):
-        idx = ifgram != 0.
-        A = A[idx,:]
+        idx = (ifgram != 0.).flatten()
+        A = A[idx, :]
         if A.shape[0] < dateNum1:
             return ts, tempCoh, tsStd
         ifgram = ifgram[idx]
         weight = weight[idx]
-        Astd = Astd[idx,:]
+        Astd = Astd[idx, :]
 
     W = np.diag(weight.flatten())
     try:
-        ## WLS Inversion
+        # WLS Inversion
         ATW = np.array(A.T.dot(W), np.float32)
         ts = np.array(np.linalg.inv(ATW.dot(A)).dot(ATW), np.float32).dot(ifgram)
-        #A_inv_wls = np.linalg.inv(A.T.dot(W).dot(A))
-        #ts = A_inv_wls.dot(A.T).dot(W).dot(ifgram.reshape(-1,1))
+        # A_inv_wls = np.linalg.inv(A.T.dot(W).dot(A))
+        # ts = A_inv_wls.dot(A.T).dot(W).dot(ifgram.reshape(-1,1))
 
-        ## Temporal Coherence
+        # Temporal Coherence
         ifgram_diff = ifgram - np.dot(A, ts)
         tempCoh = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / A.shape[0]
 
-        ## Decorrelation Noise Std
-        #tsStd = np.sqrt(np.diag(np.linalg.inv(Astd.T.dot(W).dot(Astd))))
-        connNet = True
+        # Decorrelation Noise Std
+        # tsStd = np.sqrt(np.diag(np.linalg.inv(Astd.T.dot(W).dot(Astd))))
     except:
-        connNet = False
+        pass
 
     return ts, tempCoh, tsStd
 
 
 def temporal_coherence(A, ts, ifgram, weight=None, chunk_size=500):
-    '''Calculate temporal coherence based on Tizzani et al. (2007, RSE)
+    """Calculate temporal coherence based on Tizzani et al. (2007, RSE)
     Inputs:
         A      - 2D np.array in size of (ifgram_num, date_num-1)
                  representing date configuration for each interferogram
@@ -396,7 +397,7 @@ def temporal_coherence(A, ts, ifgram, weight=None, chunk_size=500):
         chunk_size - int, max number of pixels per loop during the calculation
     Output:
         temp_coh - 1D np.array in size of (pixel_num), temporal coherence
-    '''
+    """
     # Default: uniform weight
     if weight is None:
         weight = np.ones(ifgram.shape, np.float32)
@@ -407,7 +408,7 @@ def temporal_coherence(A, ts, ifgram, weight=None, chunk_size=500):
         temp_coh = np.abs(np.sum(np.multiply(weight, np.exp(1j*ifgram_diff)), axis=0)) / np.sum(weight, axis=0)
 
     else:
-        #Loop chunk by chunk to reduce memory usage
+        # Loop chunk by chunk to reduce memory usage
         pixel_num = ifgram.shape[1]
         temp_coh = np.zeros(pixel_num, np.float32)
 
@@ -417,45 +418,43 @@ def temporal_coherence(A, ts, ifgram, weight=None, chunk_size=500):
             sys.stdout.flush()
             p0 = i*chunk_size
             p1 = min([p0+chunk_size, pixel_num])
-            ifgram_diff = ifgram[:,p0:p1] - np.dot(A, ts[:,p0:p1])
-            temp_coh[p0:p1] = np.abs(np.sum(np.multiply(weight[:,p0:p1], np.exp(1j*ifgram_diff)), axis=0)) /\
-                              np.sum(weight[:,p0:p1], axis=0)
+            ifgram_diff = ifgram[:, p0:p1] - np.dot(A, ts[:, p0:p1])
+            temp_coh[p0:p1] = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / np.sum(weight[:, p0:p1], axis=0)
         print('')
     return temp_coh
 
 
 def read_unwrap_phase(stackobj, inps, box):
-    ##### Read unwrapPhase
+    # Read unwrapPhase
     print('reading unwrapPhase in {} * {} ...'.format(box, inps.numIfgram))
-    pha_data = None
-    pha_data = stackobj.read(datasetName='unwrapPhase', box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
+    pha_data = stackobj.read(datasetName='unwrapPhase', box=box, dropIfgram=True).reshape(inps.numIfgram, -1)
     if inps.skip_zero_phase:
-        #print('skip zero phase value (masked out and filled during phase unwrapping)')
+        # print('skip zero phase value (masked out and filled during phase unwrapping)')
         for i in range(inps.numIfgram):
-            pha_data[i,:][pha_data[i,:] != 0.] -= inps.refPhase[i]            
+            pha_data[i, :][pha_data[i, :] != 0.] -= inps.refPhase[i]
 
-    ##### Read/Generate Mask
+    # Read/Generate Mask
     if inps.maskDataset and inps.maskDataset in stackobj.datasetNames:
         print('reading {} in {} * {} ...'.format(inps.maskDataset, box, inps.numIfgram))
-        msk_data = stackobj.read(datasetName=inps.maskDataset, box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
+        msk_data = stackobj.read(datasetName=inps.maskDataset, box=box, dropIfgram=True).reshape(inps.numIfgram, -1)
         if inps.maskDataset == 'coherence':
             msk_data = msk_data >= inps.maskThreshold
             print('mask out pixels with {} < {}'.format(inps.maskDataset, inps.maskThreshold))
         else:
             print('mask out pixels with {} == 0'.format(inps.maskDataset))
-        pha_data[msk_data==0.] = 0.
+        pha_data[msk_data == 0.] = 0.
     return pha_data
 
 
-def read_coherence2weight(stackobj, inps, box):
+def read_coherence2weight(stack_obj, inps, box):
     epsilon = 1e-4
     print('reading coherence in {} * {} ...'.format(box, inps.numIfgram))
-    coh_data = stackobj.read(datasetName='coherence', box=box, dropIfgram=True).reshape(inps.numIfgram,-1)
+    coh_data = stack_obj.read(datasetName='coherence', box=box, dropIfgram=True).reshape(inps.numIfgram, -1)
     coh_data[np.isnan(coh_data)] = epsilon
 
-    ##### Calculate Weight matrix
+    # Calculate Weight matrix
     weight = np.array(coh_data, np.float64)
-    L = int(stackobj.metadata['ALOOKS']) * int(stackobj.metadata['RLOOKS'])
+    L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
     if inps.weightFunc == 'var':
         print('convert coherence to weight using inverse of phase variance')
         print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
@@ -475,8 +474,8 @@ def read_coherence2weight(stackobj, inps, box):
     return weight
 
 
-def ifgram_inversion_patch(stackobj, inps, box=None):
-    '''
+def ifgram_inversion_patch(stack_obj, inps, box=None):
+    """
     Inputs:
         ifgramStackFile    - string, interferograms hdf5 file
         coherenceFile - string, coherence hdf5 file
@@ -501,41 +500,42 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
         ts       - 3D np.array in size of (date_num, row_num, col_num)
         temp_coh - 2D np.array in size of (row_num, col_num)
         tsStd    - 3D np.array in size of (date_num, row_num, col_num)
-    '''
+    """
 
-    ##### Get patch size/index
+    # Get patch size/index
     if not box:
-        box = (0,0,stackobj.width,stackobj.length)
-    print('processing %8d/%d lines ...' % (box[3], stackobj.length))
+        box = (0, 0, stack_obj.width, stack_obj.length)
+    print('processing %8d/%d lines ...' % (box[3], stack_obj.length))
     row_num = box[3] - box[1]
     col_num = box[2] - box[0]
     pixel_num = row_num * col_num
-    date_num = stackobj.numDate
+    date_num = stack_obj.numDate
 
-    ts    = np.zeros((date_num, pixel_num), np.float32)
+    ts = np.zeros((date_num, pixel_num), np.float32)
     tsStd = np.zeros((date_num, pixel_num), np.float32)
     temp_coh = np.zeros(pixel_num, np.float32)
 
-    ##### Read unwrapPhase
-    pha_data = read_unwrap_phase(stackobj, inps, box)
+    # Read unwrapPhase
+    pha_data = read_unwrap_phase(stack_obj, inps, box)
 
-
-    ##### Mask for pixels to invert
+    # Mask for pixels to invert
     mask = np.ones(pixel_num, np.bool_)
-    ## 1 - Water Mask
+    # 1 - Water Mask
     if inps.waterMaskFile:
         print('skip pixels on water with mask from file: %s' % (os.path.basename(inps.waterMaskFile)))
-        try:    waterMask = readfile.read(inps.waterMaskFile, datasetName='waterMask', box=box)[0].flatten()
-        except: waterMask = readfile.read(inps.waterMaskFile, datasetName='mask', box=box)[0].flatten()
+        try:
+            waterMask = readfile.read(inps.waterMaskFile, datasetName='waterMask', box=box)[0].flatten()
+        except:
+            waterMask = readfile.read(inps.waterMaskFile, datasetName='mask', box=box)[0].flatten()
         mask *= np.array(waterMask, np.bool_)
 
-    ## 2 - Mask for Zero Phase in ALL ifgrams
+    # 2 - Mask for Zero Phase in ALL ifgrams
     print('skip pixels with zero/nan value in all interferograms')
     phaseStack = np.nanmean(pha_data, axis=0)
     mask *= np.multiply(~np.isnan(phaseStack), phaseStack != 0.)
 
-    ## Invert pixels on mask 1+2
-    pixel_num2inv = np.sum(mask)
+    # Invert pixels on mask 1+2
+    pixel_num2inv = int(np.sum(mask))
     pixel_idx2inv = np.where(mask)[0]
     print('number of pixels to invert: %s out of %s' % (pixel_num2inv, pixel_num))
     if pixel_num2inv < 1:
@@ -544,60 +544,59 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
         tsStd = tsStd.reshape(date_num, row_num, col_num)
         return ts, temp_coh, tsStd
 
+    # Design matrix
+    A, B = stack_obj.get_design_matrix(dropIfgram=True)
+    try:
+        ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
+    except:
+        ref_date = stack_obj.dateList[0]
+    ref_idx = stack_obj.dateList.index(ref_date)
+    time_idx = [i for i in range(date_num)]
+    time_idx.remove(ref_idx)
+    Astd = stack_obj.get_design_matrix(refDate=ref_date, dropIfgram=True)[0]
 
-    ##### Design matrix
-    A, B = stackobj.get_design_matrix(dropIfgram=True)
-    try:    ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
-    except: ref_date = stackobj.dateList[0]
-    refIdx = stackobj.dateList.index(ref_date)
-    timeIdx = [i for i in range(date_num)]
-    timeIdx.remove(refIdx)
-    Astd = stackobj.get_design_matrix(refDate=ref_date, dropIfgram=True)[0]
-
-
-    ##### Inversion - SBAS
+    # Inversion - SBAS
     if inps.weightFunc == 'sbas':
-        ## Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
-        maskAllNet = np.all(pha_data, axis=0)
-        maskAllNet *= mask
-        maskPartNet = mask ^ maskAllNet
+        # Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
+        mask_all_net = np.all(pha_data, axis=0)
+        mask_all_net *= mask
+        mask_part_net = mask ^ mask_all_net
 
-        if np.sum(maskAllNet) > 0:
-            print('inverting pixels with valid phase in all  ifgrams: {} pixels ...'.format(np.sum(maskAllNet)))
-            numAllNet = np.sum(maskAllNet)
-            phaDataTemp = pha_data[:,maskAllNet]
-            ts1 = np.zeros((date_num-1,numAllNet))
-            temp_coh1 = np.zeros((numAllNet))
+        if np.sum(mask_all_net) > 0:
+            print('inverting pixels with valid phase in all  ifgrams: {} pixels ...'.format(np.sum(mask_all_net)))
+            num_all_net = int(np.sum(mask_all_net))
+            pha_data_temp = pha_data[:, mask_all_net]
+            ts1 = np.zeros((date_num-1, num_all_net))
+            temp_coh1 = np.zeros(num_all_net)
             step = 1000
-            loopNum = int(np.floor(numAllNet/step))
-            prog_bar = ptime.progressBar(maxValue=loopNum)
-            for i in range(loopNum):
-                [i0, i1] = [i*step, min((i+1)*step, numAllNet)]
-                ts1[:,i0:i1], temp_coh1[i0:i1] = network_inversion_sbas(B, phaDataTemp[:,i0:i1], inps.tbaseDiff,\
-                                                                       skipZeroPhase=False)
+            loop_num = int(np.floor(num_all_net/step))
+            prog_bar = ptime.progressBar(maxValue=loop_num)
+            for i in range(loop_num):
+                [i0, i1] = [i*step, min((i + 1) * step, num_all_net)]
+                ts1[:, i0:i1], temp_coh1[i0:i1] = network_inversion_sbas(B, pha_data_temp[:, i0:i1], inps.tbaseDiff,
+                                                                         skipZeroPhase=False)
                 prog_bar.update(i+1, suffix=i0)
             prog_bar.close()
-            #ts1, temp_coh1 = network_inversion_sbas(B, pha_data[:,maskAllNet], inps.tbaseDiff, skipZeroPhase=False)
-            ts[1:,maskAllNet] = ts1
-            temp_coh[maskAllNet] = temp_coh1
+            # ts1, temp_coh1 = network_inversion_sbas(B, pha_data[:,mask_all_net], inps.tbaseDiff, skipZeroPhase=False)
+            ts[1:, mask_all_net] = ts1
+            temp_coh[mask_all_net] = temp_coh1
 
-        if np.sum(maskPartNet) > 0:
-            print('inverting pixels with valid phase in some ifgrams (%.0f pixels) ...' % (np.sum(maskPartNet)))
-            pixel_num2inv = np.sum(maskPartNet)
-            pixel_idx2inv = np.where(maskPartNet)[0]
+        if np.sum(mask_part_net) > 0:
+            print('inverting pixels with valid phase in some ifgrams (%.0f pixels) ...' % (np.sum(mask_part_net)))
+            pixel_num2inv = int(np.sum(mask_part_net))
+            pixel_idx2inv = np.where(mask_part_net)[0]
             prog_bar = ptime.progressBar(maxValue=pixel_num2inv)
             for i in range(pixel_num2inv):
                 idx = pixel_idx2inv[i]
-                ts1, temp_coh1 = network_inversion_sbas(B, pha_data[:,idx], inps.tbaseDiff, inps.skip_zero_phase)
+                ts1, temp_coh1 = network_inversion_sbas(B, pha_data[:, idx], inps.tbaseDiff, inps.skip_zero_phase)
                 ts[1:, idx] = ts1.flatten()
                 temp_coh[idx] = temp_coh1
                 prog_bar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
             prog_bar.close()
 
-
-    ##### Inversion - WLS
+    # Inversion - WLS
     else:
-        weight = read_coherence2weight(stackobj, inps, box)
+        weight = read_coherence2weight(stack_obj, inps, box)
 
         # Weighted Inversion pixel by pixel
         print('inverting time series ...')
@@ -608,10 +607,9 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
                                                             skipZeroPhase=inps.skip_zero_phase)
             ts[1:, idx] = ts1.flatten()
             temp_coh[idx] = temp_coh1
-            tsStd[timeIdx, idx] = ts_std1.flatten()
+            tsStd[time_idx, idx] = ts_std1.flatten()
             prog_bar.update(i+1, every=100, suffix=str(i+1)+'/'+str(pixel_num2inv)+' pixels')
         prog_bar.close()
-
 
     ts = ts.reshape(date_num, row_num, col_num)
     tsStd = tsStd.reshape(date_num, row_num, col_num)
@@ -619,11 +617,11 @@ def ifgram_inversion_patch(stackobj, inps, box=None):
     return ts, temp_coh, tsStd
 
 
-def ifgram_inversion(ifgramStackFile='ifgramStack.h5', inps=None):
-    '''Implementation of the SBAS algorithm.
-    modified from sbas.py written by scott baker, 2012 
+def ifgram_inversion(ifgram_stack_file='ifgramStack.h5', inps=None):
+    """Implementation of the SBAS algorithm.
+    modified from sbas.py written by scott baker, 2012
 
-    Parameters: ifgramStackFile : string,
+    Parameters: ifgram_stack_file : string,
                     HDF5 file name of the interferograms stck
                 inps : namespace, including the following options:
     Returns:    timeseriesFile : string
@@ -633,71 +631,71 @@ def ifgram_inversion(ifgramStackFile='ifgramStack.h5', inps=None):
     Example:
         inps = cmdLineParse()
         ifgram_inversion('ifgramStack.h5', inps)
-    '''
+    """
     total = time.time()
 
-    ##Check Inputs
+    # Check Inputs
     if not inps:
-        inps = cmdLineParse()
-    inps.timeseriesStdFile = os.path.join(os.path.dirname(inps.timeseriesFile),'timeseriesDecorStd.h5')
+        inps = cmd_line_parse()
+    inps.timeseriesStdFile = os.path.join(os.path.dirname(inps.timeseriesFile), 'timeseriesDecorStd.h5')
 
-    if inps.update_mode and not ut.update_file(inps.timeseriesFile, ifgramStackFile):
+    if inps.update_mode and not ut.update_file(inps.timeseriesFile, ifgram_stack_file):
         return inps.timeseriesFile, inps.tempCohFile
 
-    ##### IfgramStack Info
-    stackobj = ifgramStack(ifgramStackFile)
-    stackobj.open()
-    inps.numIfgram = np.sum(stackobj.dropIfgram)
+    # IfgramStack Info
+    stack_obj = ifgramStack(ifgram_stack_file)
+    stack_obj.open()
+    inps.numIfgram = np.sum(stack_obj.dropIfgram)
     print('number of interferograms: {}'.format(inps.numIfgram))
-    print('number of acquisitions  : {}'.format(stackobj.numDate))
-    print('number of lines  : {}'.format(stackobj.length))
-    print('number of columns: {}'.format(stackobj.width))
+    print('number of acquisitions  : {}'.format(stack_obj.numDate))
+    print('number of lines  : {}'.format(stack_obj.length))
+    print('number of columns: {}'.format(stack_obj.width))
 
-    inps.dateList = stackobj.get_date_list(dropIfgram=True)
+    inps.dateList = stack_obj.get_date_list(dropIfgram=True)
     inps.tbase = ptime.date_list2tbase(inps.dateList)[0]
-    inps.tbaseDiff = np.diff(inps.tbase).reshape(-1,1)
+    inps.tbaseDiff = np.diff(inps.tbase).reshape(-1, 1)
 
-    inps.refPhase = check_ifgram_reference_phase(stackobj, inps)
-    check_design_matrix(stackobj, inps)
+    inps.refPhase = check_ifgram_reference_phase(stack_obj, inps)
+    check_design_matrix(stack_obj, inps)
 
-    ##### Invert time-series phase
-    boxList = split_into_boxes(inps, inps.numIfgram, stackobj.length, stackobj.width)
-    numBox = len(boxList)
-    ts    = np.zeros((stackobj.numDate, stackobj.length, stackobj.width), np.float32)
-    tsStd = np.zeros((stackobj.numDate, stackobj.length, stackobj.width), np.float32)
-    tempCoh = np.zeros((stackobj.length, stackobj.width), np.float32)
-    for i in range(numBox):
-        if numBox > 1:
-            print('\n------- Processing Patch %d out of %d --------------' % (i+1, numBox))
-        box = boxList[i]
-        tsi, tcohi, tsStdi = ifgram_inversion_patch(stackobj, inps, box)
-        tempCoh[box[1]:box[3],box[0]:box[2]] = tcohi
-        ts[:,box[1]:box[3],box[0]:box[2]] = tsi
-        tsStd[:,box[1]:box[3],box[0]:box[2]] = tsStdi
+    # Invert time-series phase
+    box_list = split_into_boxes(inps, inps.numIfgram, stack_obj.length, stack_obj.width)
+    num_box = len(box_list)
+    ts = np.zeros((stack_obj.numDate, stack_obj.length, stack_obj.width), np.float32)
+    tsStd = np.zeros((stack_obj.numDate, stack_obj.length, stack_obj.width), np.float32)
+    tempCoh = np.zeros((stack_obj.length, stack_obj.width), np.float32)
+    for i in range(num_box):
+        if num_box > 1:
+            print('\n------- Processing Patch %d out of %d --------------' % (i+1, num_box))
+        box = box_list[i]
+        tsi, tcohi, tsStdi = ifgram_inversion_patch(stack_obj, inps, box)
+        tempCoh[box[1]:box[3], box[0]:box[2]] = tcohi
+        ts[:, box[1]:box[3], box[0]:box[2]] = tsi
+        tsStd[:, box[1]:box[3], box[0]:box[2]] = tsStdi
 
     print('converting phase to range')
-    phase2range = -1*float(stackobj.metadata['WAVELENGTH'])/(4.*np.pi)
+    phase2range = -1*float(stack_obj.metadata['WAVELENGTH'])/(4.*np.pi)
     ts *= phase2range
     tsStd *= abs(phase2range)
 
-    ##### Output 
+    # Output
     print('calculating perpendicular baseline timeseries')
-    pbase = stackobj.get_perp_baseline_timeseries(dropIfgram=True)
-    atr = dict(stackobj.metadata)
-    stackobj.close()
+    pbase = stack_obj.get_perp_baseline_timeseries(dropIfgram=True)
+    atr = dict(stack_obj.metadata)
+    stack_obj.close()
 
     atr['REF_DATE'] = inps.dateList[0]
     atr['FILE_TYPE'] = 'timeseries'
     atr['UNIT'] = 'm'
 
     print('-'*50)
-    tsobj = timeseries(inps.timeseriesFile)
-    tsobj.write2hdf5(data=ts, dates=inps.dateList, bperp=pbase, metadata=atr)
+    ts_obj = timeseries(inps.timeseriesFile)
+    ts_obj.write2hdf5(data=ts, dates=inps.dateList, bperp=pbase, metadata=atr)
 
     if not np.all(tsStd == 0.):
         print('-'*50)
-        tsobj = timeseries(inps.timeseriesStdFile)
-        tsobj.write2hdf5(data=tsStd, refFile=inps.timeseriesFile)
+        ts_obj = timeseries(inps.timeseriesStdFile)
+        ts_obj.write2hdf5(data=tsStd, refFile=inps.timeseriesFile)
 
     print('-'*50)
     print('writing >>> '+inps.tempCohFile)
@@ -709,32 +707,32 @@ def ifgram_inversion(ifgramStackFile='ifgramStack.h5', inps=None):
     return inps.timeseriesFile, inps.tempCohFile
 
 
-def split_into_boxes(inps, numIfgram, length, width, print_msg=True):
-    '''Split into chunks in rows to reduce memory usage'''
-    #Get r_step / chunk_num
-    r_step = inps.chunk_size / (numIfgram * width)         #split in lines
-    if inps.weightFunc != 'sbas':  #more memory usage (coherence) for WLS
+def split_into_boxes(inps, num_ifgram, length, width, print_msg=True):
+    """Split into chunks in rows to reduce memory usage"""
+    # Get r_step / chunk_num
+    r_step = inps.chunk_size / (num_ifgram * width)         # split in lines
+    if inps.weightFunc != 'sbas':  # more memory usage (coherence) for WLS
         r_step /= 2.0
     r_step = int(ceil_to_1(r_step))
     chunk_num = int((length-1)/r_step) + 1
 
     if print_msg and chunk_num > 1:
-        print('maximum chunk size: %.1E' % (inps.chunk_size))
+        print('maximum chunk size: %.1E' % inps.chunk_size)
         print('split %d lines into %d patches for processing' % (length, chunk_num))
-        print('    with each patch up to %d lines' % (r_step))
+        print('    with each patch up to %d lines' % r_step)
 
-    ##Computing the inversion
-    boxList = []
+    # Computing the inversion
+    box_list = []
     for i in range(chunk_num):
         r0 = i*r_step
         r1 = min([length, r0+r_step])
-        box = (0,r0,width,r1)
-        boxList.append(box)
-    return boxList
+        box = (0, r0, width, r1)
+        box_list.append(box)
+    return box_list
 
 
 def check_design_matrix(stackobj, inps):
-    '''Check Rank of Design matrix for weighted inversion'''
+    """Check Rank of Design matrix for weighted inversion"""
     A = stackobj.get_design_matrix(dropIfgram=True)[0]
     print('-------------------------------------------------------------------------------')
     if inps.weightFunc == 'sbas':
@@ -761,7 +759,7 @@ def check_design_matrix(stackobj, inps):
 
 
 def check_ifgram_reference_phase(stackobj, inps):
-    '''Read refPhase'''
+    """Read refPhase"""
     try:
         ref_y = int(stackobj.metadata['REF_Y'])
         ref_x = int(stackobj.metadata['REF_X'])
@@ -781,7 +779,7 @@ def check_ifgram_reference_phase(stackobj, inps):
 
 ################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.templateFile:
         inps = read_template2inps(inps.templateFile, inps)
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
