@@ -4,7 +4,7 @@
 # Author:  Zhang Yunjun, 2018                              #
 ############################################################
 # Recommended usage:
-#     from pysar.objects import resample
+#     from pysar.objects.resample import resample
 
 
 import multiprocessing

@@ -13,7 +13,7 @@ import argparse
 import warnings
 import numpy as np
 from pysar.utils import readfile, writefile, utils as ut
-from pysar.objects import resample
+from pysar.objects.resample import resample
 
 ######################################################################################
 TEMPLATE = """template:
