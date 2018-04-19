@@ -437,14 +437,14 @@ class geometry:
             print('reading {} data from file: {} ...'.format(datasetName[0], self.file))
 
         with h5py.File(self.file, 'r') as f:
-            dset = f[datasetName[0]]
-            if len(dset.shape) == 2:
-                data = dset[box[1]:box[3], box[0]:box[2]]
-            elif len(dset.shape) == 3:      ## bperp
+            ds = f[datasetName[0]]
+            if len(ds.shape) == 2:
+                data = ds[box[1]:box[3], box[0]:box[2]]
+            elif len(ds.shape) == 3:      ## bperp
                 if len(datasetName) == 1:
-                    data = dset[:, box[1]:box[3], box[0]:box[2]]
+                    data = ds[:, box[1]:box[3], box[0]:box[2]]
                 else:
-                    data = dset[self.dateList.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
+                    data = ds[self.dateList.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
                     data = np.squeeze(data)
         return data
 

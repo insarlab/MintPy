@@ -65,7 +65,7 @@ DESCRIPTION='''
          if no multilooking applied, do not "_4rlks" in your file names.
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Prepare attributes file for Gamma product for PySAR.\n'+DESCRIPTION,\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -76,8 +76,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -164,7 +164,7 @@ def get_lalo_ref(m_par_file, atr_dict={}):
     return atr_dict
 
 
-def extract_attribute_interferogram(fname):
+def extract_metadata4interferogram(fname):
     '''Read/extract attributes for PySAR from Gamma .unw, .cor and .int file
     Inputs:
         fname : str, Gamma interferogram filename or path, i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
@@ -235,7 +235,7 @@ def extract_attribute_interferogram(fname):
     return rsc_file
 
 
-def extract_attribute_lookup_table(fname):
+def extract_metadata4lookup_table(fname):
     '''Read/extract attribute for .UTM_TO_RDC file from Gamma to ROI_PAC
     For example, it read input file, sim_150911-150922.UTM_TO_RDC, 
     find its associated par file, sim_150911-150922.utm.dem.par, read it, and
@@ -271,7 +271,7 @@ def extract_attribute_lookup_table(fname):
     return rsc_file
 
 
-def extract_attribute_dem_geo(fname):
+def extract_metadata4dem_geo(fname):
     '''Read/extract attribute for .dem file from Gamma to ROI_PAC
     For example, it read input file, sim_150911-150922.utm.dem, 
     find its associated par file, sim_150911-150922.utm.dem.par, read it, and
@@ -299,7 +299,7 @@ def extract_attribute_dem_geo(fname):
     return rsc_file
 
 
-def extract_attribute_dem_radar(fname):
+def extract_metadata4dem_radar(fname):
     '''Read/extract attribute for .hgt_sim file from Gamma to ROI_PAC
     Input:
         sim_150911-150922.hgt_sim
@@ -335,7 +335,7 @@ def extract_attribute_dem_radar(fname):
     return rsc_file
 
 
-def extract_metadata(inps):
+def prepare_metadata(inps):
     inps.file = ut.get_file_list(inps.file, abspath=True)
 
     # check outfile and parallel option
@@ -346,29 +346,29 @@ def extract_metadata(inps):
     ext = os.path.splitext(inps.file[0])[1]
     if ext in ['.unw','.cor','.int']:
         if len(inps.file) == 1:
-            extract_attribute_interferogram(inps.file[0])
+            extract_metadata4interferogram(inps.file[0])
         elif inps.parallel:
-            Parallel(n_jobs=num_cores)(delayed(extract_attribute_interferogram)(file) for file in inps.file)
+            Parallel(n_jobs=num_cores)(delayed(extract_metadata4interferogram)(file) for file in inps.file)
         else:
             for File in inps.file:
-                extract_attribute_interferogram(File)
+                extract_metadata4interferogram(File)
 
     ##### Single dataset files
     elif inps.file[0].endswith('.utm.dem'):
         for File in inps.file:
-            atr_file = extract_attribute_dem_geo(File)
+            atr_file = extract_metadata4dem_geo(File)
     elif inps.file[0].endswith(('.rdc.dem','.hgt_sim')):
         for File in inps.file:
-            atr_file = extract_attribute_dem_radar(File)
+            atr_file = extract_metadata4dem_radar(File)
     elif ext in ['.UTM_TO_RDC']:
         for File in inps.file:
-            atr_file = extract_attribute_lookup_table(File)
+            atr_file = extract_metadata4lookup_table(File)
     return
 
 ##################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
-    extract_metadata(inps)
+    inps = cmd_line_parse(iargs)
+    prepare_metadata(inps)
     return
 
 ###################################################################################################

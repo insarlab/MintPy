@@ -629,7 +629,7 @@ def ifgram_inversion(ifgram_stack_file='ifgramStack.h5', inps=None):
                 tempCohFile : string
                     HDF5 file name of temporal coherence
     Example:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
         ifgram_inversion('ifgramStack.h5', inps)
     """
     total = time.time()

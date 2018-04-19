@@ -477,7 +477,7 @@ EXAMPLE='''example:
   subset.py *.unw *.cor *.trans *.dem  -y 50 450 -x 1300 1800 --bbox geomap_4rlks.trans
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Generate a subset from file/dataset',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -520,15 +520,15 @@ def createParser():
                                  'All input radar coord file should be same size/coverage; same for all geo coord files.')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ###########################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.file = ut.get_file_list(inps.file)
     print('number of input files: '+str(len(inps.file)))
     print(inps.file)

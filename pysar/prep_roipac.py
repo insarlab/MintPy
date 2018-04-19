@@ -30,7 +30,7 @@ DESCRIPTION='''
   one file: filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Prepare attributes file for ROI_PAC products for PySAR.\n'+\
                                      DESCRIPTION,\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -42,14 +42,14 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ######################################## Sub Functions ############################################
-def extract_attribute(fname):
+def extract_metadata(fname):
     '''Read/extract attributes for PySAR from ROI_PAC .unw, .int, .cor file.
 
     For each unwrapped interferogram or spatial coherence file, there are 2 .rsc files:
@@ -91,38 +91,36 @@ def extract_attribute(fname):
     except: atr_orig = None
     keyList = [i for i in atr_orig.keys() if i in atr.keys()]
     if any(atr_orig[i] != atr[i] for i in keyList):
-        print 'merging {} into {} '.format(os.path.basename(baseline_rsc_file), os.path.basename(basic_rsc_file))
+        print('merging {} into {} '.format(os.path.basename(baseline_rsc_file), os.path.basename(basic_rsc_file)))
         writefile.write_roipac_rsc(atr, basic_rsc_file)
     return basic_rsc_file
 
 
-def extract_metadata(inps):
+def prepare_metadata(inps):
     inps.file = ut.get_file_list(inps.file, abspath=True)
 
     # Check input file type
     ext = os.path.splitext(inps.file[0])[1]
     if ext not in ['.unw','.cor','.int']:
-        #print('No need to extract attributes for ROI_PAC '+ext+' file')
         return
-    #print('number of files: '+str(len(inps.file)))
 
     # check outfile and parallel option
     if inps.parallel:
-        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
+        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file), print_msg=False)
     if len(inps.file) == 1:
-        extract_attribute(inps.file[0])
+        extract_metadata(inps.file[0])
     elif inps.parallel:
-        Parallel(n_jobs=num_cores)(delayed(extract_attribute)(fname) for fname in inps.file)
+        Parallel(n_jobs=num_cores)(delayed(extract_metadata)(fname) for fname in inps.file)
     else:
         for fname in inps.file:
-            extract_attribute(fname)
+            extract_metadata(fname)
     return
 
 
 ##################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
-    exract_metadata(inps)
+    inps = cmd_line_parse(iargs)
+    prepare_metadata(inps)
     return
 
 ###################################################################################################

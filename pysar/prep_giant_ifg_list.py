@@ -60,7 +60,7 @@ EXAMPLE='''example:
   prep_giant_ifg_list.py  unwrapIfgram.h5  --sensor SEN
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Prepare ifg.list file for GIAnT.\n',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -70,15 +70,15 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.outfile = os.path.abspath(inps.outfile)
     atr = readfile.read_attribute(inps.file[0])
     k = atr['FILE_TYPE']

@@ -77,7 +77,7 @@ EXAMPLE='''example:
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
 '''
 
-def createParser():
+def create_parser():
     '''Create command line parser.'''
     parser = argparse.ArgumentParser(description='Saving a stack of Interferograms to an HDF5 file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -100,9 +100,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     '''Command line parser.'''
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     if inps.print_example_template:
@@ -131,11 +131,16 @@ def read_inps2dict(inps):
     ## Read template file
     template = readfile.read_template(inps.template_file)
     template = ut.check_template_auto_value(template)
-    inpsDict.update(template)
+
     prefix = 'pysar.load.'
-    for key in ['processor','updateMode','compression']:
-        if prefix+key in inpsDict.keys():
-            inpsDict[key] = inpsDict[prefix+key]
+    key_list = [i.split(prefix)[1] for i in template.keys() if i.startswith(prefix)]
+    for key in key_list:
+        value = template[prefix+key]
+        if key in ['processor','updateMode','compression']:
+            inpsDict[key] = template[prefix+key]
+        elif value:
+            inpsDict[prefix+key] = template[prefix+key]
+
     if inpsDict['compression'] == False:
         inpsDict['compression'] = None
 
@@ -410,7 +415,7 @@ def print_write_setting(inpsDict):
 
 #################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if not os.path.isdir(inps.outdir):
         os.makedirs(inps.outdir)
         print('create directory: {}'.format(inps.outdir))

@@ -38,7 +38,7 @@ EXAMPLE='''example:
   save_kml.py demGeo.h5 --cbar-label Elevation
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -81,8 +81,8 @@ def createParser():
                      help='marker symbol of reference point')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -111,7 +111,7 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
         save_kml.write_kmz_file(data, atr, out_name_base)
     '''
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
 
     if not inps.ylim:
         inps.ylim = [np.nanmin(data), np.nanmax(data)]
@@ -257,7 +257,7 @@ def read_data(inps):
 
 ############################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
 
     data, atr = read_data(inps)
 

@@ -23,7 +23,7 @@ EXAMPLE='''example:
   ifgram_simulation.py  unwrapIfgram.h5  velocity.h5  -p 0.2  -m mask_aoi.h5
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Simulating a set of interferograms based on '+\
                                                  'real interferograms and an existing displacement velocity field.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -46,8 +46,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if not 0.0 <= inps.percentage <= 1.0:
         raise argparse.ArgumentTypeError('%r not in range [0.0, 1.0]' % inps.percentage)
@@ -56,7 +56,7 @@ def cmdLineParse(iargs=None):
 
 ##############################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
 
     atr = readfile.read_attribute(inps.velocity_file)
     length = int(atr['LENGTH'])

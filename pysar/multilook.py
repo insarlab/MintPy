@@ -210,7 +210,7 @@ EXAMPLE='''example:
   multilook.py  bperp.rdr  -10 -2 -o bperp_full.rdr
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Multilook.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -224,15 +224,15 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.file = ut.get_file_list(inps.file)
 
     # check outfile and parallel option

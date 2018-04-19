@@ -169,7 +169,7 @@ EXAMPLE='''example:
   mask.py  timeseries*.h5 velocity*.h5  -m temporal_coherence.h5  -t 0.7
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Mask File(s)',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -191,15 +191,15 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ############################################################
 def main(iargs=None): 
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     #print '\n****************** mask *********************'
     inps.file = ut.get_file_list(inps.file)
     print('number of file to mask: '+str(len(inps.file)))

@@ -58,7 +58,7 @@ To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA G
 '''
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Tropospheric correction using weather models\n'+\
                                      '  PyAPS is used to download and calculate the delay for each time-series epoch.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -90,16 +90,16 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     '''Command line parser.'''
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ###############################################################
 def check_inputs(inps):
-    parser = createParser()
+    parser = create_parser()
     atr = dict()
     if inps.timeseries_file:
         atr = readfile.read_attribute(inps.timeseries_file)
@@ -329,7 +329,7 @@ def correct_delay(inps, atr):
 
 ###############################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps, atr = check_inputs(inps)
 
     inps.grib_file_list = dload_grib_pyaps(inps.date_list, inps.hour, inps.trop_model, inps.weather_dir)

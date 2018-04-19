@@ -19,7 +19,7 @@ EXAMPLE='''example:
   stacking.py ifgramStack.h5 coherence   -o averageSpatialCoherence.h5
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Stack multiple layers dataset into one.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -31,15 +31,15 @@ def createParser():
     parser.add_argument('-o','--output', dest='outfile', help='output file name')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     print('\n*************** Stacking ******************')
     for File in inps.file:
         ut.temporal_average(File, datasetName=inps.dataset_name, maskFile=inps.mask_file)

@@ -45,7 +45,7 @@ pysar.network.startDate       = auto  #[20090101 / no], auto for no
 pysar.network.endDate         = auto  #[20110101 / no], auto for no
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Modify the network of interferograms',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -94,8 +94,8 @@ def createParser():
                         help='display network to manually choose line/interferogram to remove')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     inps.aoi_geo_box = None
@@ -135,7 +135,7 @@ def read_input_index_list(idxList, stackFile=None):
 def read_template2inps(template_file, inps=None):
     '''Read input template options into Namespace inps'''
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(inps.template_file)
@@ -390,7 +390,7 @@ def get_date12_to_drop(inps):
 
 #########################  Main Function  ##############################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 

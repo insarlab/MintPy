@@ -37,7 +37,7 @@ REFERENCE='''reference:
   IEEE TGRS, 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='DEM Error (Topographic Residual) Correction',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -62,9 +62,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     '''Command line parser.'''
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if inps.poly_order < 1:
         raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
@@ -75,7 +75,7 @@ def cmdLineParse(iargs=None):
 def read_template2inps(template_file, inps=None):
     '''Read input template file into inps.ex_date'''
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     template = readfile.read_template(template_file)
 
     # Read template option
@@ -345,7 +345,7 @@ def estimate_dem_error(inps, A_def):
 
 ############################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 

@@ -56,7 +56,7 @@ EXAMPLE='''example:
   reference_point.py timeseries.h5   --method global-average 
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Reference to the same pixel in space.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=NOTE+'\n'+EXAMPLE)
@@ -96,9 +96,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     '''Command line parser.'''
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -119,7 +119,7 @@ def reference_file(inps):
     Return output file name if succeed; otherwise, return None
     '''
     if not inps:
-        inps = cmdLineParse([''])
+        inps = cmd_line_parse([''])
     atr = readfile.read_attribute(inps.file)
     if (inps.ref_y and inps.ref_x and 'REF_Y' in atr.keys()\
         and inps.ref_y == int(atr['REF_Y']) and inps.ref_x == int(atr['REF_X'])):
@@ -283,7 +283,7 @@ def print_warning(next_method):
 def read_template_file2inps(template_file, inps=None):
     '''Read seed/reference info from template file and update input namespace'''
     if not inps:
-        inps = cmdLineParse([''])
+        inps = cmd_line_parse([''])
     template = readfile.read_template(template_file)
 
     prefix = 'pysar.reference.'
@@ -329,7 +329,7 @@ def read_template_file2inps(template_file, inps=None):
 def read_reference_file2inps(reference_file, inps=None):
     '''Read reference info from reference file and update input namespace'''
     if not inps:
-        inps = cmdLineParse([''])
+        inps = cmd_line_parse([''])
     atrRef = readfile.read_attribute(inps.reference_file)
     if (not inps.ref_y or not inps.ref_x) and 'REF_X' in atrRef.keys():
         inps.ref_y = int(atrRef['REF_Y'])
@@ -425,7 +425,7 @@ def remove_reference_pixel(File):
 
 #######################################  Main Function  ########################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.file = ut.get_file_list(inps.file)[0]
     inps = read_reference_input(inps)
     reference_file(inps)

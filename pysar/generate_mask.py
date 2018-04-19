@@ -26,7 +26,7 @@ EXAMPLE='''example:
   generate_mask.py ifgramStack.h5 connectComponent --nonzero -o maskConnComp.h5
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Generate mask file from input file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -48,8 +48,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -110,7 +110,7 @@ def create_threshold_mask(inps):
 
 ################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
     print('input {} file: {}'.format(k, inps.file))

@@ -139,7 +139,7 @@ EXAMPLE='''example:
   add.py  timeseries_ECMWF.h5  ECMWF.h5           -o  timeseries.h5
 '''
 
-def createParser():
+def create_parser():
     ''' Command line parser '''
     parser = argparse.ArgumentParser(description='Generate sum of multiple input files.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -150,8 +150,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if len(inps.file) < 2:
         parser.print_usage()
@@ -161,7 +161,7 @@ def cmdLineParse(iargs=None):
 
 ################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     print('Input files to be added: ')
     print(inps.file)
 

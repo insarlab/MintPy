@@ -44,7 +44,7 @@ EXAMPLE='''example:
   asc_desc.py  vel_EnvAT134_masked.h5   vel_EnvAT256_masked.h5  16
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Project Asc and Desc LOS displacement to Horizontal and Vertical direction',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -66,8 +66,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if inps.azimuth < 0.:
         inps.azimuth += 360.
@@ -77,7 +77,7 @@ def cmdLineParse(iargs=None):
 
 ################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
 
     ##### 1. Extract the common area of two input files
     # Basic info

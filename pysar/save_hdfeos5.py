@@ -203,7 +203,7 @@ def get_hdfeos5_filename(timeseriesFile):
 def read_template2inps(template_file, inps=None):
     '''Read input template options into Namespace inps'''
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
 
     print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(template_file)
@@ -234,7 +234,7 @@ EXAMPLE='''example:
   save_hdfeos5.py timeseries_ECMWF_demErr_refDate_plane.h5
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Convert PySAR timeseries product into HDF-EOS5 format\n'+\
                                      'https://earthdata.nasa.gov/user-resources/standards-and-references/hdf-eos5',\
                                      formatter_class=argparse.RawDescriptionHelpFormatter,\
@@ -268,15 +268,15 @@ def createParser():
                         help='Enable subset mode, a.k.a. put suffix _N31700_N32100_E130500_E131100')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 

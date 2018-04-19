@@ -28,7 +28,7 @@ REFERENCE='''reference:
   69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Stratified tropospheric delay correction using height-correlation approach',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -44,8 +44,8 @@ def createParser():
     parser.add_argument('-o','--outfile', help='output corrected timeseries file name')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     if inps.threshold and (not 0.0 <= inps.threshold <= 1.0):
@@ -55,7 +55,7 @@ def cmdLineParse(iargs=None):
 
 ############################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
 
     ##### Check default input arguments
     # default output filename

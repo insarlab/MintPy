@@ -6,7 +6,7 @@
 ############################################################
 # Yunjun, Jan 2016: put manual matching code to manual_offset_estimate()
 #                   put two files matching code into match_two_files()
-#                   add cmdLineParse(), merge matching_all.py to it.
+#                   add cmd_line_parse(), merge matching_all.py to it.
 
 
 import os
@@ -216,7 +216,7 @@ EXAMPLE='''example:
   match.py  vel_AlosAT422.h5  vel_AlosAT423.h5  --manual
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Match 2 or more geocoded datasets sharing common area.\n'
                                                  'Function automatically finds the common area and calculates\n'
                                                  'the average offset between the two velocity.',\
@@ -232,15 +232,15 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 #############################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     print('\n**************** Match Files *********************')
     print('Files to be matched:\n'+inps.first_file+', '+str(inps.other_file))
     

@@ -102,7 +102,7 @@ EXAMPLE='''example:
   diff.py  unwrapIfgram.h5  reconstruct_unwrapIfgram.h5
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Generates the difference of two input files.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -115,14 +115,14 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.outfile = diff_file(inps.file1, inps.file2, inps.outfile, force=inps.force)
     return inps.outfile
 

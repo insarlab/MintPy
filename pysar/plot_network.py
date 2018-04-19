@@ -45,7 +45,7 @@ pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no -
 '''
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Display Network of Interferograms',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -91,8 +91,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if not inps.disp_fig:
         inps.save_fig = True
@@ -102,7 +102,7 @@ def cmdLineParse(iargs=None):
 def read_template2inps(template_file, inps=None):
     '''Read input template options into Namespace inps'''
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(inps.template_file)
@@ -191,7 +191,7 @@ def read_network_info(inps):
 
 ##########################  Main Function  ##############################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 

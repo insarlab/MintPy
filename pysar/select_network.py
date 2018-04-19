@@ -52,7 +52,7 @@ def project_name2sensor(projectName):
 def read_template2inps(templateFile, inps=None):
     '''Read network options from template file into Namespace variable inps'''
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
 
     ##Read template file
     template = readfile.read_template(templateFile)
@@ -274,7 +274,7 @@ select.network.tempPerpList  = auto  #[btemp1,bperp1;...], auto for '16,1600;32,
 '''
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Select Interferometric Network / Pairs.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
@@ -330,8 +330,8 @@ def createParser():
     parser.add_argument('--inc-angle', dest='inc_angle', type=float, help='Center incidence angle in degrees.')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     try:    inps.reference_file = glob.glob(inps.reference_file)[0]
@@ -343,7 +343,7 @@ def cmdLineParse(iargs=None):
 
 #########################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps = read_template2inps(inps.template_file, inps)
     log(os.path.basename(sys.argv[0])+' '+inps.template_file)
 

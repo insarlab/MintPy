@@ -43,7 +43,7 @@ DROP_DATE_TXT='''exclude_date.txt:
 20090103
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Inverse velocity from time series.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
@@ -61,9 +61,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     '''Command line parser.'''
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if 'timeseries' != readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']:
         print('ERROR: input file is not timeseries!')
@@ -149,7 +149,7 @@ def read_date_info(inps):
 def read_template2inps(template_file, inps=None):
     '''Read input template file into inps.ex_date'''
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     template = readfile.read_template(template_file)
 
     # Read template option
@@ -229,7 +229,7 @@ def estimateVelocity(inps):
 
 ############################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps = read_date_info(inps)
     inps.outfile = estimateVelocity(inps)
     print('Done.')

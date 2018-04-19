@@ -24,7 +24,7 @@ EXAMPLE='''example:
 '''
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Remove phase ramp',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -45,8 +45,8 @@ def createParser():
                         help='Disable parallel processing. Diabled auto for 1 input file.')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     if inps.ysub and not len(inps.ysub)%2 == 0:
@@ -56,7 +56,7 @@ def cmdLineParse(iargs=None):
 
 ######################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.file = ut.get_file_list(inps.file)
     print('input file(s): '+str(len(inps.file)))
     print(inps.file)

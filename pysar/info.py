@@ -26,7 +26,7 @@ EXAMPLE='''example:
   info.py timeseries.h5 --date > date_list.txt   # print date list of timeseries and save it to txt file.
 '''
 
-def createParser():
+def create_parser():
     '''Create command line parser.'''
     parser = argparse.ArgumentParser(description='Display Metadata / Structure information of File',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -36,9 +36,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     '''Command line parser.'''
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -132,7 +132,7 @@ def print_pysar_info(fname):
 
 ############################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if not os.path.isfile(inps.file):
         print('ERROR: input file does not exists: {}'.format(inps.file))
         return

@@ -205,7 +205,7 @@ EXAMPLE='''example:
   transect.py AlosA*/velocity.h5 AlosD*/velocity.h5 --line-file  transect_lonlat.xy -d gsi10m.dem
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Generate transect/profile along a line',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -265,8 +265,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     inps.file = ut.get_file_list(inps.file)
@@ -277,7 +277,7 @@ def cmdLineParse(iargs=None):
 
 ############################ Main ###################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     print('\n**************** Transect *********************')
     print('number of file: '+str(len(inps.file)))
     print(inps.file)

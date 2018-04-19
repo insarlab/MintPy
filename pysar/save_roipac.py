@@ -41,7 +41,7 @@ EXAMPLE='''example:
   save_roipac.py  temporal_coherence.h5
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Convert PySAR HDF5 file to ROI_PAC format.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -54,15 +54,15 @@ def createParser():
     parser.add_argument('-r','--ref-date', dest='ref_date', help='Reference date for timeseries file')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##############################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
   
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']

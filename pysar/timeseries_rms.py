@@ -18,7 +18,7 @@ from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 def read_template2inps(templateFile, inps=None):
     '''Update inps with pysar.residualRms.* option from templateFile'''
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
 
     template = readfile.read_template(templateFile)
     prefix = 'pysar.residualRms.'
@@ -67,7 +67,7 @@ EXAMPLE='''example:
   timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --min-rms 0.03
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped time series.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -88,9 +88,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     '''Command line parser.'''
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -165,7 +165,7 @@ def plot_bar4date_rms(inps):
 
 ######################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file)
 

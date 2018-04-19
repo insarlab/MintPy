@@ -148,7 +148,7 @@ EXAMPLE='''example:
   save_gmt.py  gsi10m.dem
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Export geocoded file to GMT grd file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -158,15 +158,15 @@ def createParser():
     parser.add_argument('-o','--output', dest='outfile', help='output file base name. Extension is fixed with .kmz')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ####################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
 
     ##### 1. Read data
     atr = readfile.read_attribute(inps.file)

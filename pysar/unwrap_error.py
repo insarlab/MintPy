@@ -309,7 +309,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 def read_template2inps(template_file, inps=None):
     '''Read input template options into Namespace inps'''
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
 
     print('read options from tempalte file: '+os.path.basename(inps.template_file))
     template = readfile.read_template(inps.template_file)
@@ -410,7 +410,7 @@ DESCRIPTION='''
       c. add linear phase ramp estimated in step a back to the corrected phase in step b.
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Unwrapping Error Correction.'+DESCRIPTION,\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -443,8 +443,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     if inps.y and np.mod(len(inps.y),2) != 0:
@@ -456,7 +456,7 @@ def cmdLineParse(iargs=None):
 
 ####################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     # output filename
     ext = os.path.splitext(inps.ifgram_file)[1]
     if not inps.outfile:

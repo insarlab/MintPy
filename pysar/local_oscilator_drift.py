@@ -138,7 +138,7 @@ EXAMPLE='''example:
   local_oscilator_drift.py filt_101020_110220_4rlks.unw
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Local Oscilator Drift (LOD) correction of Envisat',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -151,15 +151,15 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 #########################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if not inps.outfile:
         inps.outfile = '{}_LODcor{}'.format(os.path.splitext(inps.file)[0], os.path.splitext(inps.file)[1])
     if not inps.range_dist_file:

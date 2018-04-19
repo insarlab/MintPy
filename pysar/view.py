@@ -64,7 +64,7 @@ PLOT_TEMPLATE='''Plot Setting:
 '''
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Plot InSAR Product in 2D',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -231,9 +231,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     '''Command line parser.'''
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     # If output flie name assigned or figure shown is turned off, turn on the figure save
@@ -719,7 +719,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
     #----------------------- 0. Initial a inps Namespace if no inps input --------------------#
     if not inps:
-        inps = cmdLineParse([''])
+        inps = cmd_line_parse([''])
         inps = update_inps_with_file_metadata(inps, meta_dict)
 
     #----------------------- 1.1 Update plot inps with metadata dict -------------------------#
@@ -1163,7 +1163,7 @@ def update_figure_setting(inps):
 
 #########################################  Main Function  ########################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if not inps.disp_fig:
         plt.switch_backend('Agg')  ##Backend setting
 

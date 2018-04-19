@@ -113,7 +113,7 @@ EXAMPLE='''example:
   image_math.py  timeseries.h5          '*'  1.5
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -125,15 +125,15 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 #######################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.outfile = file_operation(inps.file, inps.operator, inps.operand, inps.outfile)  
     print('Done.')
     return inps.outfile

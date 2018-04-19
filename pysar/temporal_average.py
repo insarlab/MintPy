@@ -18,7 +18,7 @@ EXAMPLE='''example:
   temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoherence.h5
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Calculate temporal average/mean of multi-temporal datasets',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -31,9 +31,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
+def cmd_line_parse(iargs=None):
     '''Command line parser.'''
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -61,7 +61,7 @@ def check_output_filename(inps):
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.outfile = check_output_filename(inps)
     inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
     print('Done.')
