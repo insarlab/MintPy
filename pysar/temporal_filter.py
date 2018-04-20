@@ -6,17 +6,12 @@
 ############################################################
 # Yunjun, Jul 2017: rewrite using pysay module
 
-import os
-import sys
-import time
-import datetime
+import os, sys
+import time, datetime
 import argparse
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile, datetime as ptime
 
 
 ############################################################
@@ -25,7 +20,7 @@ EXAMPLE='''example:
  temporal_filter.py timeseries_ECMWF_demErr_refDate.h5 -t 0.3
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Smoothing Timeseries using moving Gaussian window\n'+\
                                      '  https://en.wikipedia.org/wiki/Gaussian_blur',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -35,14 +30,17 @@ def cmdLineParse():
     parser.add_argument('-t','--time-win', dest='time_win', type=float, default=0.3,\
                         help='time window in years (Sigma of the assmued Gaussian distribution.)')
     parser.add_argument('-o','--outfile', help='Output file name.')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ############################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
 
     # Basic info
     atr = readfile.read_attribute(inps.timeseries_file)
@@ -63,7 +61,7 @@ def main(argv):
     # Read timeseries
     print('loading time-series ...')
     timeseries = np.zeros((date_num, pixel_num))
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         d = h5[k].get(date)[:]
@@ -76,7 +74,7 @@ def main(argv):
     # Smooth timeseries with moving window in time
     print('smoothing time-series using moving gaussian window with size of %.1f years' % inps.time_win)
     timeseries_filt = np.zeros((date_num, pixel_num))
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         # Weight from Gaussian (normal) distribution in time
@@ -106,11 +104,11 @@ def main(argv):
 
     h5out = h5py.File(inps.outfile, 'w')
     group = h5out.create_group(k)
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         data = np.reshape(timeseries_filt[i,:], [length, width])
-        dset = group.create_dataset(date, data=data-ref_data, compression='gzip')
+        dset = group.create_dataset(date, data=data-ref_data)
         prog_bar.update(i+1, suffix=date)
     for key,value in iter(atr.items()):
         group.attrs[key] = value
@@ -123,4 +121,4 @@ def main(argv):
 
 ############################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

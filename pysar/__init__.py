@@ -1,20 +1,23 @@
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          
-# Author:  Zhang Yunjun, Heresh Fattahi                    
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################################################
+# Program is part of PySAR v2.0                            #
+# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Author:  Zhang Yunjun, Heresh Fattahi, 2018 Mar          #
+############################################################
 
 
 from __future__ import print_function
-from .version import release_version, release_date
+from .version import *
 __version__ = release_version
 
 
 import sys, os
 pysar_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-#sys.path.insert(1,pysar_path)
-#sys.path.insert(1,os.path.join(pysar_path,'pysar'))
-#sys.path.insert(1,os.path.join(pysar_path,'pysar/pysarobj'))
-#sys.path.insert(1,os.path.join(pysar_path,'library'))
+sys.path.insert(1,pysar_path)
+sys.path.insert(1,os.path.join(pysar_path,'defaults'))
+sys.path.insert(1,os.path.join(pysar_path,'objects'))
+sys.path.insert(1,os.path.join(pysar_path,'simulation'))
+sys.path.insert(1,os.path.join(pysar_path,'utils'))
+
 
 try:
     os.environ['PYSAR_HOME']
@@ -23,12 +26,24 @@ except KeyError:
     os.environ['PYSAR_HOME'] = pysar_path
 
 
-########################################################################
-auto_path_miami = True         # Package-wide variable, Auto setting for file structure of Univ. of Miami
-                               # change it to False if you are not using it.
-parallel_num = 8               # max core number used in parallel processing
-figsize_single_min = 6.0       # default min size in inch, for single plot
-figsize_single_max = 12.0      # default min size in inch, for single plot
-figsize_multi = [15.0, 8.0]    # default size in inch, for multiple subplots
-
+##### PySAR modules listed by relative dependecies:
+## 0. Independent modules:
+# pysar.objects.pysarobj
+# pysar.defaults.auto_path
+# pysar.utils.writefile
+# pysar.utils.datetime
+# pysar.utils.sensor
+# 
+## Level 1 dependent modules (depends on Level 0):
+# pysar.utils.readfile
+# pysar.utils.network
+# pysar.utils.deramp
+#
+## Level 2 dependent modules (depends on Level 0,1):
+# pysar.utils.utils
+#
+## Level 3 dependent modules (depends on Level 0,1,2):
+# pysar.objects.insarobj
+# pysar.utils.plot
+# 
 

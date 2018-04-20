@@ -6,16 +6,12 @@
 ############################################################
 
 
-import os
-import sys
-import getopt
-
+import os, sys, glob
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
-
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile
 
 
 ############################################################

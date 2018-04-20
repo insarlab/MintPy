@@ -9,13 +9,9 @@
 import os
 import sys
 import argparse
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
+from pysar.utils import readfile, writefile, datetime as ptime
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -54,7 +50,7 @@ def file_operation(fname, operator, operand, fname_out=None):
         h5 = h5py.File(fname,'r')
         epoch_list = sorted(h5[k].keys())
         epoch_num = len(epoch_list)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+        prog_bar = ptime.progressBar(maxValue=epoch_num)
 
         h5out = h5py.File(fname_out,'w')
         group = h5out.create_group(k)
@@ -68,7 +64,7 @@ def file_operation(fname, operator, operand, fname_out=None):
 
                 data_out = data_operation(data, operator, operand)
 
-                dset = group.create_dataset(date, data=data_out, compression='gzip')
+                dset = group.create_dataset(date, data=data_out)
                 prog_bar.update(i+1, suffix=date)
             for key,value in iter(atr.items()):
                 group.attrs[key] = value
@@ -83,7 +79,7 @@ def file_operation(fname, operator, operand, fname_out=None):
                 data_out = data_operation(data, operator, operand)
 
                 gg = group.create_group(ifgram)
-                dset = gg.create_dataset(ifgram, data=data_out, compression='gzip')
+                dset = gg.create_dataset(ifgram, data=data_out)
                 for key, value in h5[k][ifgram].attrs.items():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
@@ -117,7 +113,7 @@ EXAMPLE='''example:
   image_math.py  timeseries.h5          '*'  1.5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -126,15 +122,18 @@ def cmdLineParse():
     parser.add_argument('-o','--output', dest='outfile', help='output file name.')
     parser.add_argument('operator', choices=['+','-','*','/','^'], help='mathmatical operator')
     parser.add_argument('operand', metavar='VALUE', type=float, help='value to be operated with input file')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 #######################################################################################
-def main(argv):
-    inps = cmdLineParse()
-
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.outfile = file_operation(inps.file, inps.operator, inps.operand, inps.outfile)  
     print('Done.')
     return inps.outfile
@@ -142,5 +141,5 @@ def main(argv):
 
 #######################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])  
+    main()  
 

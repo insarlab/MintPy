@@ -6,19 +6,13 @@
 ############################################################
 
 
-import os
-import sys
-import time
-import datetime
+import os, sys
+import time, datetime
 import argparse
-
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, datetime as ptime, utils as ut
 
 
 ############################################################################
@@ -34,7 +28,7 @@ REFERENCE='''reference:
   69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Stratified tropospheric delay correction using height-correlation approach',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -48,16 +42,20 @@ def cmdLineParse():
     parser.add_argument('--poly-order','-p', dest='poly_order', type=int, default=1, choices=[1,2,3],\
                         help='polynomial order of phase-height correlation. Default: 1')
     parser.add_argument('-o','--outfile', help='output corrected timeseries file name')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     if inps.threshold and (not 0.0 <= inps.threshold <= 1.0):
         raise argparse.ArgumentTypeError('%r not in range [0.0, 1.0]' % inps.threshold)
     return inps
 
 
 ############################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
 
     ##### Check default input arguments
     # default output filename
@@ -95,7 +93,7 @@ def main(argv):
 
     ##### Read Mask
     print('reading mask from file: '+inps.mask_file)
-    mask = readfile.read(inps.mask_file, epoch='mask')[0].flatten(1)
+    mask = readfile.read(inps.mask_file, datasetName='mask')[0].flatten(1)
     ndx = mask != 0
     msk_num = np.sum(ndx)
     print('total            pixel number: %d' % pix_num)
@@ -103,7 +101,7 @@ def main(argv):
 
     ##### Read DEM
     print('read DEM from file: '+inps.dem_file)
-    dem = readfile.read(inps.dem_file, epoch='height')[0]
+    dem = readfile.read(inps.dem_file, datasetName='height')[0]
 
     ref_y = int(atr['REF_Y'])
     ref_x = int(atr['REF_X'])
@@ -196,7 +194,7 @@ def main(argv):
     h5out = h5py.File(inps.outfile,'w')
     group = h5out.create_group(k)
 
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         data = h5[k].get(date)[:]
@@ -207,7 +205,7 @@ def main(argv):
             trop_delay -= trop_delay[ref_y, ref_x]
             data -= trop_delay
 
-        dset = group.create_dataset(date, data=data, compression='gzip')
+        dset = group.create_dataset(date, data=data)
         prog_bar.update(i+1, suffix=date)
 
     for key,value in iter(atr.items()):
@@ -223,6 +221,6 @@ def main(argv):
 
 ############################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 

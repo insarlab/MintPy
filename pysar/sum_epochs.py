@@ -6,16 +6,12 @@
 ############################################################
 
 
-import os
-import sys
+import os, sys
 import time
 import datetime
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile, datetime as ptime
 
 
 #####################################################################
@@ -61,7 +57,7 @@ def main(argv):
     width  = int(atr['WIDTH'])
     D = np.zeros((date_num, length*width), np.float32)
 
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = dateList[i]
         d = h5timeseries['timeseries'].get(date)[:]
@@ -94,7 +90,7 @@ def main(argv):
     for i in range(date_num):
         date = dateList[i]
         d = np.reshape(sumD[i][:],[length,width])
-        dset = group.create_dataset(date, data=d, compression='gzip')
+        dset = group.create_dataset(date, data=d)
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
 

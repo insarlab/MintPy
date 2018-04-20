@@ -12,13 +12,10 @@
 import os
 import sys
 import argparse
-
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
+from pysar.utils import readfile, writefile
 
 
 #############################################################################################
@@ -219,7 +216,7 @@ EXAMPLE='''example:
   match.py  vel_AlosAT422.h5  vel_AlosAT423.h5  --manual
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Match 2 or more geocoded datasets sharing common area.\n'
                                                  'Function automatically finds the common area and calculates\n'
                                                  'the average offset between the two velocity.',\
@@ -232,15 +229,18 @@ def cmdLineParse():
                         help='manually select lines to estimate offset for matching.')
     parser.add_argument('--display', dest='disp_fig', action='store_true',\
                         help='do not display the result ploting.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 #############################################################################################
-def main(argv):
-    # Inputs
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     print('\n**************** Match Files *********************')
     print('Files to be matched:\n'+inps.first_file+', '+str(inps.other_file))
     
@@ -257,7 +257,7 @@ def main(argv):
 
 #############################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 
 

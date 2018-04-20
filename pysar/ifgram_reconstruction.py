@@ -8,13 +8,9 @@
 import sys
 import time
 import datetime
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, datetime as ptime, utils as ut
 
 
 #####################################################################################
@@ -61,7 +57,7 @@ def main(argv):
     timeseries = np.zeros((date_num, length*width))
 
     print('number of acquisitions: '+str(date_num))
-    prog_bar = ptime.progress_bar(maxValue=date_num)
+    prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
         d = h5ts['timeseries'].get(date)[:]
@@ -93,13 +89,13 @@ def main(argv):
     group = h5out.create_group('interferograms')
 
     print('number of interferograms: '+str(ifgram_num))
-    prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+    prog_bar = ptime.progressBar(maxValue=ifgram_num)
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
         data = np.reshape(estData[i,:],(length, width))
 
         gg = group.create_group(ifgram)
-        dset = gg.create_dataset(ifgram, data=data, compression='gzip')
+        dset = gg.create_dataset(ifgram, data=data)
         for key, value in h5['interferograms'][ifgram].attrs.items():
             gg.attrs[key] = value
         prog_bar.update(i+1, suffix=date12_list[i])

@@ -6,16 +6,11 @@
 ############################################################
 
 
-import sys
-import os
+import os, sys
 import argparse
-
 import h5py
 from numpy import pi
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
+from pysar.utils import readfile, writefile, datetime as ptime
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -46,7 +41,7 @@ EXAMPLE='''example:
   save_roipac.py  temporal_coherence.h5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Convert PySAR HDF5 file to ROI_PAC format.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -57,19 +52,21 @@ def cmdLineParse():
     parser.add_argument('epoch', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o','--output', dest='outfile', help='output file name.')
     parser.add_argument('-r','--ref-date', dest='ref_date', help='Reference date for timeseries file')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##############################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
   
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
     atr['PROCESSOR'] = 'roipac'
-    atr['INSAR_PROCESSOR'] = 'roipac'
 
     h5file = h5py.File(inps.file,'r')
   
@@ -143,7 +140,6 @@ def main(argv):
             except:
                 print('No ref_y/x info found in attributes.')
         atr['PROCESSOR'] = 'roipac'
-        atr['INSAR_PROCESSOR'] = 'roipac'
 
         inps.outfile = inps.epoch
         print('writing >>> '+ inps.outfile)
@@ -169,4 +165,4 @@ def main(argv):
 
 ##########################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

@@ -8,12 +8,9 @@
 
 import os
 import sys
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile, datetime as ptime
 
 
 def usage():
@@ -50,7 +47,7 @@ def main(argv):
         h5 = h5py.File(file,'r')
         epochList = sorted(h5[k].keys())
         epoch_num = len(epochList)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+        prog_bar = ptime.progressBar(maxValue=epoch_num)
 
         print('writing >>> '+outfile)
         h5out = h5py.File(outfile,'w')
@@ -66,7 +63,7 @@ def main(argv):
                 data_wrap = rewrap(data)
 
                 gg = group.create_group(epoch)
-                dset = gg.create_dataset(epoch, data=data_wrap, compression='gzip')
+                dset = gg.create_dataset(epoch, data=data_wrap)
                 for key, value in h5[k][epoch].attrs.items():
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
@@ -79,7 +76,7 @@ def main(argv):
 
                 data_wrap = rewrap(data, one_cycle)
                 
-                dset = group.create_dataset(epoch, data=data_wrap, compression='gzip')
+                dset = group.create_dataset(epoch, data=data_wrap)
                 prog_bar.update(i+1, suffix=epoch)
             for key, value in h5[k].attrs.items():
                 group.attrs[key] = value

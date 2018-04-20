@@ -9,28 +9,22 @@
 # Yunjun, Aug 2016: Support multiple surfaces
 
 
-import os
-import sys
+import os, sys
 import argparse
-
 import h5py
 import numpy as np
-
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
-import pysar.utils.deramp as deramp
+from pysar.utils import readfile, writefile, utils as ut, deramp
 
 
 ######################################
 EXAMPLE='''example:
-  remove_plane.py  timeseries.h5      -m Mask.h5
-  remove_plane.py  timeseries.h5      -m Mask.h5         -s quadratic
-  remove_plane.py  090214_101120.unw  -m Mask_tempCoh.h5 -s quadratic  -y 0,2400,2000,6843
+  remove_ramp.py  timeseries.h5      -m Mask.h5
+  remove_ramp.py  timeseries.h5      -m Mask.h5         -s quadratic
+  remove_ramp.py  090214_101120.unw  -m Mask_tempCoh.h5 -s quadratic  -y 0,2400,2000,6843
 '''
 
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Remove phase ramp',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -49,17 +43,20 @@ def cmdLineParse():
     parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
     parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     if inps.ysub and not len(inps.ysub)%2 == 0:
         raise Exception('ERROR: -y input has to have even length!')
     return inps
 
 
 ######################################
-def main(argv):
-    
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.file = ut.get_file_list(inps.file)
     print('input file(s): '+str(len(inps.file)))
     print(inps.file)
@@ -82,7 +79,7 @@ def main(argv):
     if inps.ysub:
         # Read mask
         if not inps.mask_file:
-            Mask_temp = readfile.read(inps.mask_file, epoch='mask')[0]
+            Mask_temp = readfile.read(inps.mask_file, datasetName='mask')[0]
             Mask = np.zeros((length, width), dtype=np.float32)
             Mask[Mask_temp!=0] = 1
         else:
@@ -135,5 +132,5 @@ def main(argv):
 
 ###########################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

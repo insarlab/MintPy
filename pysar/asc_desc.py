@@ -6,18 +6,12 @@
 ############################################################
 # Yunjun, Jun 2017: rewrite using pysar module
 
-import os
-import sys
+import os, sys
 import argparse
-
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
-import pysar.subset as subset
+from pysar.utils import readfile, writefile, utils as ut
 
 
 ################################################################################
@@ -50,7 +44,7 @@ EXAMPLE='''example:
   asc_desc.py  vel_EnvAT134_masked.h5   vel_EnvAT256_masked.h5  16
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Project Asc and Desc LOS displacement to Horizontal and Vertical direction',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -69,8 +63,12 @@ def cmdLineParse():
                              '   each component in Wright et al., 2004, GRL')
     parser.add_argument('-o','--output', dest='outfile', nargs=2, default=['up.h5','hz.h5'],\
                         help='output file name for vertical and horizontal components')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     if inps.azimuth < 0.:
         inps.azimuth += 360.
     inps.azimuth *= np.pi/180.
@@ -78,8 +76,8 @@ def cmdLineParse():
 
 
 ################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
 
     ##### 1. Extract the common area of two input files
     # Basic info
@@ -108,9 +106,9 @@ def main(argv):
         print('reading '+fname)
         atr = readfile.read_attribute(fname)
 
-        [x0,x1] = subset.coord_geo2radar([west,east], atr, 'lon')
-        [y0,y1] = subset.coord_geo2radar([north,south], atr, 'lat')
-        V = readfile.read(fname, (x0,y0,x1,y1))[0]
+        [x0,x1] = ut.coord_geo2radar([west,east], atr, 'lon')
+        [y0,y1] = ut.coord_geo2radar([north,south], atr, 'lat')
+        V = readfile.read(fname, box=(x0,y0,x1,y1))[0]
         u_los[i,:] = V.flatten(0)
 
         heading_angle = float(atr['HEADING'])
@@ -169,5 +167,5 @@ def main(argv):
 
 ################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

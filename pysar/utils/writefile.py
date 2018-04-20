@@ -10,126 +10,126 @@
 
 
 import os
-
+import sys
 import h5py
 import numpy as np
 #from PIL import Image
+from pysar.objects import timeseries
 
 
-def write(*args):
+def write(data, metadata, outfile, infile=None):
     '''Write one dataset, i.e. interferogram, coherence, velocity, dem ...
         Return 0 if failed.
-  
+
     Usage:
-        write(data,atr,outname)
-        write(rg,az,atr,outname)
-    
+        write(data,metadata,outfile)
+
     Inputs:
         data : 2D data matrix
-        atr  : attribute object
-        outname : output file name
+        metadata  : attribute object
+        outfile : output file name
     
     Output:
         output file name
-    
+
     Examples:
-        write(data,atr,'velocity.h5')
-        write(data,atr,'temporal_coherence.h5')
-        write(data,atr,'100120-110214.unw')
-        write(data,atr,'strm1.dem')
-        write(data,atr,'100120.mli')
-        write(rg,az,atr,'geomap_4lks.trans')
+        write(data,metadata,'velocity.h5')
+        write(data,metadata,'temporal_coherence.h5')
+        write(data,metadata,'100120-110214.unw')
+        write(data,metadata,'strm1.dem')
+        write(data,metadata,'100120.mli')
+        write(rg,az,metadata,'geomap_4lks.trans')
     '''
+    ext = os.path.splitext(outfile)[1].lower()
 
-    ########## Check Inputs ##########
-    if len(args) == 4:       ## .trans file
-        rg      = args[0]
-        az      = args[1]
-        atr     = args[2]
-        outname = args[3]
-    else:
-        data    = args[0]
-        atr     = args[1]
-        outname = args[2]
-
-    ext = os.path.splitext(outname)[1].lower()
-    ############### Read ###############
-    #print 'writing >>> '+outname
     ##### PySAR HDF5 product
     if ext in ['.h5','.he5']:
-        k = atr['FILE_TYPE']
-        if k in ['interferograms','coherence','wrapped','timeseries']:
-            print('Un-supported file type: '+k)
-            print('Only support 1-dataset-1-attribute file, i.e. velocity, mask, ...')
-            return 0;
-        h5file = h5py.File(outname,'w')
-        group = h5file.create_group(k)
-        dset = group.create_dataset(k, data=data, compression='gzip')
-        for key , value in iter(atr.items()):
-            group.attrs[key]=value
-        h5file.close()
-        return outname
+        k = metadata['FILE_TYPE']
+        if k == 'timeseries':
+            if infile is None:
+                print('ERROR: can not write {} file with infile as reference file!'.format(k))
+                sys.exit(-1)
+            obj = timeseries(outfile)
+            obj.write2hdf5(data, metadata=metadata, refFile=infile)
+        else:
+            print('create HDF5 file: {} with w mode'.format(outfile))
+            f = h5py.File(outfile, 'w')
+
+            print('create dataset /{} of {:<10} in size of {}'.format(k, str(data.dtype), data.shape))
+            ds = f.create_dataset(k, data=data, chunks=True, compression="gzip")
+
+            for key, value in metadata.items():
+                f.attrs[key] = str(value)
+            f.close()
+            print('finished writing to {}'.format(outfile))
 
     ##### ISCE / ROI_PAC GAMMA / Image product
     else:
         ##### Write Data File
         if   ext in ['.unw','.cor','.hgt']:
-            write_float32(data,outname)
+            write_float32(data,outfile)
         elif ext == '.dem':
-            write_real_int16(data,outname)
+            write_real_int16(data,outfile)
         elif ext in ['.trans']:
-            write_float32(rg,az,outname)
+            write_float32(rg,az,outfile)
         elif ext in ['.utm_to_rdc','.UTM_TO_RDC']:
             data = np.zeros(rg.shape, dtype=np.complex64)
             data.real = rg
             data.imag = az
-            data.astype('>c8').tofile(outname)
+            data.astype('>c8').tofile(outfile)
         #elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
-        #    data.save(outname)
+        #    data.save(outfile)
         elif ext == '.mli':
-            write_real_float32(data,outname)
+            write_real_float32(data,outfile)
         elif ext == '.slc':
-            write_complex_int16(data,outname)
+            write_complex_int16(data,outfile)
         elif ext == '.int':
-            write_complex64(data, outname)
+            write_complex64(data, outfile)
+        elif metadata['DATA_TYPE'].lower() in ['float32','float']:
+            write_real_float32(data,outfile)
+        elif metadata['DATA_TYPE'].lower() in ['int16','short']:
+            write_real_int16(data,outfile)
         else: print('Un-supported file type: '+ext); return 0;
 
         ##### Write .rsc File
-        write_roipac_rsc(atr, outname+'.rsc')
-        return outname
+        write_roipac_rsc(metadata, outfile+'.rsc')
+        return outfile
 
 
-def write_roipac_rsc(atr, outname, sorting=True):
+def write_roipac_rsc(metadata, outfile, sorting=True):
     '''Write attribute dict into ROI_PAC .rsc file
     Inputs:
-        atr     - dict, attributes dictionary
-        outname - rsc file name, to which attribute is writen
+        metadata     - dict, attributes dictionary
+        outfile - rsc file name, to which attribute is writen
         sorting - bool, sort attributes in alphabetic order while writing
     Output:
-        outname
+        outfile
     '''
-    # sorting by key name
-    dictKey = atr.keys()
-    if sorting:
-        dictKey = sorted(dictKey)
-    
+    # Convert PYSAR attributes to ROI_PAC attributes
+    metadata['FILE_LENGTH'] = metadata['LENGTH']
+
     # Convert 3.333e-4 to 0.0003333
-    if 'X_STEP' in dictKey:
-        atr['X_STEP'] = str(float(atr['X_STEP']))
-        atr['Y_STEP'] = str(float(atr['Y_STEP']))
-        atr['X_FIRST'] = str(float(atr['X_FIRST']))
-        atr['Y_FIRST'] = str(float(atr['Y_FIRST']))
+    if 'X_STEP' in metadata.keys():
+        metadata['X_STEP'] = str(float(metadata['X_STEP']))
+        metadata['Y_STEP'] = str(float(metadata['Y_STEP']))
+        metadata['X_FIRST'] = str(float(metadata['X_FIRST']))
+        metadata['Y_FIRST'] = str(float(metadata['Y_FIRST']))
 
     # max digit for space formating
-    digits = max([len(key) for key in dictKey]+[2])
+    digits = max([len(key) for key in metadata.keys()]+[2])
     f = '{0:<%d}    {1}'%(digits)
-    
+
+    # sorting by key name
+    dictKey = metadata.keys()
+    if sorting:
+        dictKey = sorted(dictKey)
+
     # writing .rsc file
-    frsc = open(outname,'w')
+    frsc = open(outfile,'w')
     for key in dictKey:
-        frsc.write(f.format(str(key), str(atr[key]))+'\n')
+        frsc.write(f.format(str(key), str(metadata[key]))+'\n')
     frsc.close()
-    return outname
+    return outfile
 
 
 def write_float32(*args):
@@ -138,18 +138,18 @@ def write_float32(*args):
           should rename to write_rmg_float32()
     
     Exmaple:
-            write_float32(phase, outname)
-            write_float32(amp, phase, outname)
+            write_float32(phase, outfile)
+            write_float32(amp, phase, outfile)
     '''
  
     if len(args)==2:
         amp     = args[0]
         pha     = args[0]
-        outname = args[1]
+        outfile = args[1]
     elif len(args)==3:
         amp     = args[0]
         pha     = args[1]
-        outname = args[2]
+        outfile = args[2]
     else:
         print('Error while getting args: support 2/3 args only.')
         return
@@ -162,11 +162,11 @@ def write_float32(*args):
         F[(2*WIDTH)*(line) :       (2*WIDTH)*(line)+WIDTH]=np.reshape(amp[line][:],[WIDTH,1])
         F[(2*WIDTH)*(line)+WIDTH : (2*WIDTH)*(line+1)]    =np.reshape(pha[line][:],[WIDTH,1])
  
-    F.tofile(outname)
-    return outname
+    F.tofile(outfile)
+    return outfile
 
 
-def write_complex64(data,outname):
+def write_complex64(data,outfile):
     '''Writes roi_pac .int data'''
     nlines=data.shape[0]
     WIDTH=data.shape[1]
@@ -178,30 +178,30 @@ def write_complex64(data,outname):
     id2=list(range(1,2*nlines*WIDTH,2))
     F[id1]=np.reshape(R,(nlines*WIDTH,1))
     F[id2]=np.reshape(Im,(nlines*WIDTH,1))
-    F.tofile(outname)
-    return outname
+    F.tofile(outfile)
+    return outfile
 
 
-def write_real_int16(data,outname):
+def write_real_int16(data,outfile):
     data=np.array(data,dtype=np.int16)
-    data.tofile(outname)
-    return outname
+    data.tofile(outfile)
+    return outfile
 
 
-def write_dem(data,outname):
+def write_dem(data,outfile):
     data=np.array(data,dtype=np.int16)
-    data.tofile(outname)
-    return outname
+    data.tofile(outfile)
+    return outfile
 
 
-def write_real_float32(data,outname):
+def write_real_float32(data,outfile):
     '''write gamma float data, i.e. .mli file.'''
     data=np.array(data,dtype=np.float32)
-    data.tofile(outname)
-    return outname
+    data.tofile(outfile)
+    return outfile
 
 
-def write_complex_int16(data,outname):
+def write_complex_int16(data,outfile):
     '''Write gamma scomplex data, i.e. .slc file.
         data is complex 2-D matrix
         real, imagery, real, ...
@@ -215,6 +215,6 @@ def write_complex_int16(data,outname):
     F=np.zeros([2*nlines*WIDTH,1],np.int16)
     F[id1]=np.reshape(np.array(data.real,np.int16),(nlines*WIDTH,1))
     F[id2]=np.reshape(np.array(data.imag,np.int16),(nlines*WIDTH,1))
-    F.tofile(outname)
-    return outname
+    F.tofile(outfile)
+    return outfile
 

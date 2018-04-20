@@ -9,16 +9,12 @@
 #
 
 
-import os
-import sys
+import os, sys, re
 import argparse
-import re
 import datetime as dt
 import string
-
 import h5py
 import numpy as np
-
 import pysar.utils.readfile as readfile
 import pysar.info as info
 
@@ -238,7 +234,7 @@ EXAMPLE='''example:
   save_hdfeos5.py timeseries_ECMWF_demErr_refDate_plane.h5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Convert PySAR timeseries product into HDF-EOS5 format\n'+\
                                      'https://earthdata.nasa.gov/user-resources/standards-and-references/hdf-eos5',\
                                      formatter_class=argparse.RawDescriptionHelpFormatter,\
@@ -270,14 +266,17 @@ def cmdLineParse():
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
     parser.add_argument('--subset', action='store_true',\
                         help='Enable subset mode, a.k.a. put suffix _N31700_N32100_E130500_E131100')
+    return parser
 
-    inps = parser.parse_args()
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
@@ -357,19 +356,15 @@ def main(argv):
     ##### Open HDF5 File
     print('writing >>> '+outName)
     f = h5py.File(outName,'w')
-    hdfeos = f.create_group('HDFEOS')
     if 'Y_FIRST' in meta_dict.keys():
-        gg_coord = hdfeos.create_group('GRIDS')
+        group = f.create_group('HDFEOS/GRIDS/timeseries')
     else:
-        gg_coord = hdfeos.create_group('SWATHS')
-    group = gg_coord.create_group('timeseries')
-
+        group = f.create_group('HDFEOS/SWATHS/timeseries')
 
     ##### Write Attributes to the HDF File
     print('write metadata to '+str(f))
     for key,value in iter(meta_dict.items()):
         f.attrs[key] = value
-
 
     ##### Write Observation - Displacement
     groupObs = group.create_group('observation')
@@ -405,7 +400,7 @@ def main(argv):
 
     ## 2 - mask
     print('reading mask            from file: '+inps.mask_file)
-    data = readfile.read(inps.mask_file, epoch='mask')[0]
+    data = readfile.read(inps.mask_file, datasetName='mask')[0]
     dset = groupQ.create_dataset('mask', data=data, compression='gzip')
     dset.attrs['Title'] = 'Mask'
     dset.attrs['MissingValue'] = BOOL_ZERO
@@ -421,7 +416,7 @@ def main(argv):
 
     ## 1 - height
     print('reading height          from file: '+inps.dem_file)
-    data = readfile.read(inps.dem_file, epoch='height')[0]
+    data = readfile.read(inps.dem_file, datasetName='height')[0]
     dset = groupGeom.create_dataset('height', data=data, compression='gzip')
     dset.attrs['Title'] = 'Digital elevatino model'
     dset.attrs['MissingValue'] = INT_ZERO
@@ -430,7 +425,7 @@ def main(argv):
 
     ## 2 - incidenceAngle
     print('reading incidence angle from file: '+inps.inc_angle_file)
-    data = readfile.read(inps.inc_angle_file, epoch='incidenceAngle')[0]
+    data = readfile.read(inps.inc_angle_file, datasetName='incidenceAngle')[0]
     dset = groupGeom.create_dataset('incidenceAngle', data=data, compression='gzip')
     dset.attrs['Title'] = 'Incidence angle'
     dset.attrs['MissingValue'] = FLOAT_ZERO
@@ -439,7 +434,7 @@ def main(argv):
 
     ## 3 - rangeCoord
     try:
-        data = readfile.read(inps.rg_coord_file, epoch='rangeCoord', print_msg=False)[0]
+        data = readfile.read(inps.rg_coord_file, datasetName='rangeCoord', print_msg=False)[0]
         print('reading range coord     from file: '+inps.rg_coord_file)
         dset = groupGeom.create_dataset('rangeCoord', data=data, compression='gzip')
         dset.attrs['Title'] = 'Range Coordinates'
@@ -451,7 +446,7 @@ def main(argv):
 
     ## 4 - azimuthCoord
     try:
-        data = readfile.read(inps.az_coord_file, epoch='azimuthCoord', print_msg=False)[0]
+        data = readfile.read(inps.az_coord_file, datasetName='azimuthCoord', print_msg=False)[0]
         print('reading azimuth coord   from file: '+inps.az_coord_file)
         dset = groupGeom.create_dataset('azimuthCoord', data=data, compression='gzip')
         dset.attrs['Title'] = 'Azimuth Coordinates'
@@ -463,7 +458,7 @@ def main(argv):
 
     ## 5 - headingAngle
     try:
-        data = readfile.read(inps.head_angle_file, epoch='heandingAngle', print_msg=False)[0]
+        data = readfile.read(inps.head_angle_file, datasetName='heandingAngle', print_msg=False)[0]
         print('reading azimuth coord   from file: '+inps.head_angle_file)
         dset = groupGeom.create_dataset('heandingAngle', data=data, compression='gzip')
         dset.attrs['Title'] = 'Heanding Angle'
@@ -475,7 +470,7 @@ def main(argv):
 
     ## 6 - slantRangeDistance
     try:
-        data = readfile.read(inps.slant_range_dist_file, epoch='slantRangeDistance', print_msg=False)[0]
+        data = readfile.read(inps.slant_range_dist_file, datasetName='slantRangeDistance', print_msg=False)[0]
         print('reading slant range distance from file: '+inps.slant_range_dist_file)
         dset = groupGeom.create_dataset('slantRangeDistance', data=data, compression='gzip')
         dset.attrs['Title'] = 'Slant Range Distance'
@@ -487,7 +482,7 @@ def main(argv):
 
     ## 7 - waterMask
     try:
-        data = readfile.read(inps.water_mask_file, epoch='waterMask', print_msg=False)[0]
+        data = readfile.read(inps.water_mask_file, datasetName='waterMask', print_msg=False)[0]
         print('reading water mask      from file: '+inps.water_mask_file)
         dset = groupGeom.create_dataset('waterMask', data=data, compression='gzip')
         dset.attrs['Title'] = 'Water Mask'
@@ -499,7 +494,7 @@ def main(argv):
 
     ## 8 - shadowMask
     try:
-        data = readfile.read(inps.shadow_mask_file, epoch='shadowMask', print_msg=False)[0]
+        data = readfile.read(inps.shadow_mask_file, datasetName='shadowMask', print_msg=False)[0]
         print('reading shadow mask     from file: '+inps.shadow_mask_file)
         dset = groupGeom.create_dataset('shadowMask', data=data, compression='gzip')
         dset.attrs['Title'] = 'Shadow Mask'
@@ -516,4 +511,4 @@ def main(argv):
 
 ################################################################
 if __name__ == '__main__':
-    main(sys.argv[:])
+    main()

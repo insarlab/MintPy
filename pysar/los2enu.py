@@ -125,7 +125,7 @@ def main(argv):
     print('writing '+outName)    
     h5file2 = h5py.File(outName,'w')
     group=h5file2.create_group(k[0])
-    dset = group.create_dataset(k[0], data=P, compression='gzip')
+    dset = group.create_dataset(k[0], data=P)
     
     for key, value in h5file[k[0]].attrs.items():
             group.attrs[key] = value

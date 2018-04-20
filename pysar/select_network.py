@@ -8,22 +8,14 @@
 #
 
 
-import os
-import sys
+import os, sys, re, glob
 import argparse
-import re
-import glob
 import datetime
 import inspect
-
 import matplotlib.pyplot as plt
 import numpy as np
-
 import pysar
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.network as pnet
-import pysar.utils.plot as pp
+from pysar.utils import readfile, datetime as ptime, network as pnet, plot as pp
 
 
 sar_sensor_list=['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','Sen','Kmps5','G3']
@@ -282,7 +274,7 @@ select.network.tempPerpList  = auto  #[btemp1,bperp1;...], auto for '16,1600;32,
 '''
 
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Select Interferometric Network / Pairs.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
@@ -336,20 +328,22 @@ def cmdLineParse():
                                 'i.e. pairs in same/adjcent month within 3 years.')
 
     parser.add_argument('--inc-angle', dest='inc_angle', type=float, help='Center incidence angle in degrees.')
-    inps = parser.parse_args()
+    return parser
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     try:    inps.reference_file = glob.glob(inps.reference_file)[0]
     except: inps.reference_file = None
     if inps.temp_perp_list:
         inps.temp_perp_list = [[float(j) for j in i.split(',')] for i in inps.temp_perp_list.split(';')]
-
     return inps
 
 
 #########################################################################
-def main(argv):
-    
-    # Read inputs
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps = read_template2inps(inps.template_file, inps)
     log(os.path.basename(sys.argv[0])+' '+inps.template_file)
 
@@ -359,8 +353,8 @@ def main(argv):
         inps.sensor = project_name2sensor(project_name)
  
     # Auto path setting for Miami user
-    if not inps.baseline_file and pysar.auto_path_miami and 'SCRATCHDIR' in os.environ:
-        if pysar.auto_path_miami and 'SCRATCHDIR' in os.environ:
+    if not inps.baseline_file and pysar.defaults.autoPath and 'SCRATCHDIR' in os.environ:
+        if pysar.defaults.autoPath and 'SCRATCHDIR' in os.environ:
             try:    inps.baseline_file = glob.glob(os.getenv('SCRATCHDIR')+'/'+project_name+'/SLC/bl_list.txt')[0]
             except: inps.baseline_file = None
 
@@ -460,8 +454,8 @@ def main(argv):
         return None
 
     # date12_list to date_list
-    m_dates = [date12.replace('_','-').split('-')[0] for date12 in date12_list]
-    s_dates = [date12.replace('_','-').split('-')[1] for date12 in date12_list]
+    m_dates = [date12.replace('_','-').split('_')[0] for date12 in date12_list]
+    s_dates = [date12.replace('_','-').split('_')[1] for date12 in date12_list]
     try: print('number of acquisitions   input   : '+str(len(date6_list)))
     except: pass
     print('number of acquisitions   selected: '+str(len(list(set(m_dates + s_dates)))))
@@ -469,7 +463,7 @@ def main(argv):
 
     # Output directory/filename
     if not inps.outfile:
-        if pysar.auto_path_miami and 'SCRATCHDIR' in os.environ:
+        if pysar.defaults.autoPath and 'SCRATCHDIR' in os.environ:
             inps.out_dir = os.getenv('SCRATCHDIR')+'/'+project_name+'/PROCESS'
         else:
             try:    inps.out_dir = os.path.dirname(os.path.abspath(inps.reference_file))
@@ -491,7 +485,7 @@ def main(argv):
     ifgram_tbase_list = []
 
     for i in range(ifgram_num):
-        m_date, s_date = date12_list[i].split('-')
+        m_date, s_date = date12_list[i].split('_')
         m_idx = date6_list.index(m_date)
         s_idx = date6_list.index(s_date)
         pbase = pbase_list[s_idx] - pbase_list[m_idx]
@@ -547,6 +541,6 @@ def main(argv):
 
 ###########################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
  

@@ -18,9 +18,7 @@ import h5py
 import numpy as np
 
 import pysar
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
+from pysar.utils import datetime as ptime, readfile, writefile
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -77,7 +75,7 @@ def add_files(fname_list, fname_out=None):
         h5  = h5py.File(fname_list[0], 'r')
         epoch_list = sorted(h5[k].keys())
         epoch_num = len(epoch_list)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+        prog_bar = ptime.progressBar(maxValue=epoch_num)
 
     if k in multi_dataset_hdf5_file:
         print('number of acquisitions: %d' % epoch_num)
@@ -89,7 +87,7 @@ def add_files(fname_list, fname_out=None):
                 d = h5file[k].get(epoch)[:]
                 data = add_matrix(data, d)
 
-            dset = group.create_dataset(epoch, data=data, compression='gzip')
+            dset = group.create_dataset(epoch, data=data)
             prog_bar.update(i+1, suffix=epoch)
 
         for key,value in iter(atr.items()):
@@ -112,7 +110,7 @@ def add_files(fname_list, fname_out=None):
                 data = add_matrix(data,d)
 
             gg = group.create_group(epoch)
-            dset = gg.create_dataset(epoch, data=data, compression='gzip')
+            dset = gg.create_dataset(epoch, data=data)
             for key, value in h5[k][epoch].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
@@ -151,15 +149,8 @@ def createParser():
     parser.add_argument('-o','--output', dest='outfile', help='output file name')
     return parser
 
-def cmdLineParse(iargs = None):
-    parser = createParser()
-    inps = parser.parse_args(args=iargs)
-    if not inps.input and not inps.geometryDir:
-        parser.print_usage()
-        sys.exit('ERROR: Empty input directory!')
-    return inps
 
-def cmdLineParse(iargs = None):
+def cmdLineParse(iargs=None):
     parser = createParser()
     inps = parser.parse_args(args=iargs)
     if len(inps.file) < 2:
@@ -181,8 +172,5 @@ def main(iargs=None):
 
 ################################################################################
 if __name__ == '__main__':
-    '''
-    Main driver.
-    '''
     main()
 

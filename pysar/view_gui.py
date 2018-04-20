@@ -246,6 +246,7 @@ def update_sliders(unit, setValues=True):
 
     scale = 1.0
     new_max = starting_upper_lim
+    new_min = starting_lower_lim
 
     if unit == "m":
         scale = 1.0
@@ -260,10 +261,10 @@ def update_sliders(unit, setValues=True):
 
     current_slider_scale = scale
 
-    y_lim_upper_slider.configure(to_=new_max*scale)
-    y_lim_upper_slider.configure(from_=-1*(float(new_max*scale)/4))
-    y_lim_lower_slider.configure(to_=new_max*scale)
-    y_lim_lower_slider.configure(from_=-1*(float(new_max*scale)/4))
+    y_lim_upper_slider.configure(to_= new_max*scale)
+    y_lim_upper_slider.configure(from_= -1*float(new_max*scale)/4)
+    y_lim_lower_slider.configure(to_= float(new_max*scale)/4)
+    y_lim_lower_slider.configure(from_= new_min*scale)
 
     if setValues:
         current_y_lim_upper = y_lim_upper.get()
@@ -415,18 +416,18 @@ def show_plot():
         options.append("-x")
         options.append(subset_x_from.get())
         options.append(subset_x_to.get())
-    elif len(attributes) > 0 and attributes['XMIN']:
+    elif len(attributes) > 0 and attributes['XMAX']:
         options.append("-x")
-        options.append(attributes['XMIN'])
+        options.append(0)
         options.append(attributes['XMAX'])
 
     if subset_y_from.get() != "" and subset_y_to.get() != "" and in_range('Y', subset_y_from.get()) and in_range('Y', subset_y_to.get()):
         options.append("-y")
         options.append(subset_y_from.get())
         options.append(subset_y_to.get())
-    elif len(attributes) > 0 and attributes['YMIN']:
+    elif len(attributes) > 0 and attributes['YMAX']:
         options.append("-y")
-        options.append(attributes['YMIN'])
+        options.append(0)
         options.append(attributes['YMAX'])
 
     if ref_x.get() != "" and ref_y.get() != "":
@@ -550,7 +551,7 @@ def set_dem_short(x, y, z):
         pick_dem_file_button.config(text="Cancel")
     else:
         dem_short.set("No File Selected")
-        pick_dem_file_button.config(text="Select Topography File")
+        pick_dem_file_button.config(text="Select DEM File")
 
 
 def set_mask_short(x, y, z):
@@ -585,31 +586,29 @@ def set_variables_from_attributes():
 
     try:
 
-        attributes['X_FIRST']
-
         subset_x_from.set(0)
         subset_y_from.set(0)
         subset_x_to.set(attributes['XMAX'])
         subset_y_to.set(attributes['YMAX'])
 
-        ul_lon, ul_lat, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['FILE_LENGTH'], all_data=True)
+        '''ul_lon, ul_lat, lr_lon, lr_lat = compute_lalo(attributes['WIDTH'], attributes['LENGTH'], all_data=True)
 
         subset_lat_from.set(ul_lat)
         subset_lon_from.set(ul_lon)
         subset_lat_to.set(lr_lat)
-        subset_lon_to.set(lr_lon)
+        subset_lon_to.set(lr_lon)'''
 
         try:
-            attributes['ref_x']
+            attributes['REF_X']
 
-            ref_x.set(attributes['ref_x'])
-            ref_y.set(attributes["ref_y"])
+            ref_x.set(attributes['REF_X'])
+            ref_y.set(attributes["REF_Y"])
             ref_lon_data, ref_lat_data = compute_lalo(ref_x.get(), ref_y.get())
             ref_lat.set(ref_lat_data)
             ref_lon.set(ref_lon_data)
             ref_color.set("b")
             ref_sym.set(".")
-            ref_date.set(attributes['ref_date'])
+            ref_date.set(attributes['REF_DATE'])
         except:
             ref_x.set("")
             ref_y.set("")
@@ -655,14 +654,21 @@ def set_sliders(value=None):
         epoch.set(value)
 
     data = read_file_data(value)
-    max_val = numpy.amax(data)
-    starting_lower_lim = numpy.amin(data)
-    starting_upper_lim = max_val * 3
+
+    print(data)
+
+    max_val = numpy.nanmax(data)
+    min_val = numpy.nanmin(data)
+
+    print("SLL "+str(min_val))
+
+    starting_upper_lim = max_val * 5
+    starting_lower_lim = min_val * 5
 
     update_sliders("m", setValues=False)
 
-    y_lim_upper.set(starting_upper_lim / 3)
-    y_lim_lower.set(starting_lower_lim)
+    y_lim_upper.set(max_val)
+    y_lim_lower.set(min_val)
 
 
 def set_epoch_info():
@@ -695,21 +701,17 @@ def read_file_data(epoch=None):
     file_type = atr['FILE_TYPE']
     epoch_list = ["All"]
     ref_dates_list = [""]
-    h5file = h5py.File(h5_file.get(), 'r')
     print(file_type)
-    if file_type in ['HDFEOS']:
-        epoch_list += h5file.attrs['DATE_TIMESERIES'].split()
-        use_default.set(1)
-    else:
-        epoch_list += sorted(h5file[file_type].keys())
+
+    epoch_list = view.get_file_dataset_list(h5_file.get(), file_type)
 
     if file_type in readfile.multi_dataset_hdf5_file:
         use_default.set(1)
 
     if epoch and epoch is not "All":
-        data, attributes = readfile.read(h5_file.get(), epoch=epoch)
+        data, attributes = readfile.read(h5_file.get(), datasetName=epoch)
     else:
-        data, attributes = readfile.read(h5_file.get(), epoch=epoch_list[len(epoch_list) - 1])
+        data, attributes = readfile.read(h5_file.get(), datasetName=epoch_list[len(epoch_list)-1])
 
     return data
 
@@ -726,7 +728,7 @@ def compute_lalo(x, y, all_data=False):
         y_data = 0
 
     data_box = (0, 0, x_data, y_data)
-
+    print("Data Box:"+str(data_box))
     lalo = subset.box_pixel2geo(data_box, attributes)
 
     formatted_lalo = [str(round(num, 2)) for num in lalo]
@@ -741,7 +743,7 @@ def compute_xy(lat, lon):
     lat_data = round(float(lat), 4)
     lon_data = round(float(lon), 4)
 
-    data_box = (float(attributes['X_FIRST']), float(attributes['Y_FIRST']), lon_data, lat_data)
+    data_box = (float(attributes['LON_REF1']), float(attributes['LAT_REF1']), lon_data, lat_data)
 
     xy = subset.box_geo2pixel(data_box, attributes)
 

@@ -59,12 +59,12 @@ def main(argv):
   
     gm = h5laplace.create_group('mask')
     mask = h5file['mask'].get('mask')
-    dset = gm.create_dataset('mask', data=mask, compression='gzip')
+    dset = gm.create_dataset('mask', data=mask)
   
     try:
         meanCoherence = h5file['meanCoherence'].get('meanCoherence')
         gc = h5laplace.create_group('meanCoherence')
-        dset = gc.create_dataset('meanCoherence', data=meanCoherence, compression='gzip')
+        dset = gc.create_dataset('meanCoherence', data=meanCoherence)
     except:
         print('')   
   

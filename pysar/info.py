@@ -6,14 +6,41 @@
 ############################################################
 
 
-import os
-import sys
-
+import os, sys
+import argparse
+import time
 import h5py
 from numpy import std
+from pysar.utils import readfile, datetime as ptime
+from pysar.objects import timeseries, ifgramStack, geometry, HDFEOS
 
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
+
+############################################################
+EXAMPLE='''example:
+  info.py timeseries.h5
+  info.py velocity.h5
+  info.py ifgramStack.h5
+
+  info.py ifgramStack.h5 --date                  # print master/slave date pairs info of interferograms.
+  info.py timeseries.h5 --date                   # print date list of timeseries.
+  info.py timeseries.h5 --date > date_list.txt   # print date list of timeseries and save it to txt file.
+'''
+
+def createParser():
+    '''Create command line parser.'''
+    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of File',\
+                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                     epilog=EXAMPLE)
+    parser.add_argument('file', type=str, help='File to check')
+    parser.add_argument('--date', dest='disp_date', action='store_true', help='Show date/date12 info of input file')
+    return parser
+
+
+def cmdLineParse(iargs=None):
+    '''Command line parser.'''
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+    return inps
 
 output = ""
 
@@ -22,13 +49,11 @@ def attributes_string(atr, string=str(), sorting=True):
     ## Print Dictionary of Attributes
     digits = digits = max([len(key) for key in list(atr.keys())] + [0])
     f = '{0:<%d}    {1}' % (digits)
-
+    dictKey = atr.keys()
     if sorting:
-        keyList = sorted(atr.keys())
-    else:
-        keyList = iter(atr.keys())
-    for key in keyList:
-        string += f.format(str(key), str(atr[key]))
+        dictKey = sorted(dictKey)
+    for key in dictKey:
+        string += '  {k:<{d}}    {v}'.format(d=digits, k=key, v=atr[key])
         string += "\n"
 
     return string
@@ -44,13 +69,18 @@ def hdf5_structure_string(file):
 
     def print_hdf5_structure_obj(name, obj):
         global output
-        output = attributes_string(obj.attrs, output)
+        if isinstance(obj, h5py.Group):
+            output = 'HDF5 group "/{}"'.format(name)
+        elif isinstance(obj, h5py.Dataset):
+            output += 'HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype)
         output += "\n"
-        output += name
+        output += name+"\n"
 
-    h5file = h5py.File(file, 'r')
-    h5file.visititems(print_hdf5_structure_obj)
-    h5file.close()
+    f = h5py.File(file, 'r')
+    print('Attributes in / level:')
+    print_attributes(f.attrs)
+    f.visititems(print_hdf5_structure_obj)
+    f.close()
 
     local_output = output
     output = ""
@@ -64,14 +94,12 @@ def print_hdf5_structure(file):
     print(string)
 
 
-############################################################
-def print_timseries_date_info(dateList):
+def print_timseries_date_stat(dateList):
     datevector = ptime.date_list2vector(dateList)[1]
-    print('*************** Date Info ***************')
-    print(('Start Date: ' + dateList[0]))
-    print(('End   Date: ' + dateList[-1]))
-    print(('Number of acquisitions      : %d' % len(dateList)))
-    print(('Std.   of acquisition times : %.2f yeras' % std(datevector)))
+    print('Start Date: '+dateList[0])
+    print('End   Date: '+dateList[-1])
+    print('Number of acquisitions    : %d' % len(dateList))
+    print('Std. of acquisition times : %.2f yeras' % std(datevector))
     print('----------------------')
     print('List of dates:')
     print(dateList)
@@ -81,76 +109,47 @@ def print_timseries_date_info(dateList):
     return
 
 
-############################################################
-def usage():
-    print('usage: info.py file [eNum] [--tree/structure]\n'
-          '\n'
-          'Display the general information of File\n'
-          '\n'
-          'arguments:\n'
-          '  file : HDF5 file, support all .h5 files\n'
-          '  eNum : number of interferogram/coherence in the group\n'
-          '         (1 as the first)\n'
-          '  --struct/structure/tree : show the structure tree\n'
-          '\n'
-          'example:\n'
-          '  info.py timeseries.h5\n'
-          '  info.py velocity.h5\n'
-          '  info.py unwrapIfgram.h5\n'
-          '  info.py unwrapIfgram.h5    3\n'
-          '\n'
-          '  info.py timeseries.h5 --tree\n'
-          '  info.py timeseries.h5 --date   # print out date list of timeseries HDF5 file\n'
-          '    ')
-    return
-
-
-############################################################
-def main(argv):
-    ##### Check Inputs
-    try:
-        File = argv[0]
-    except:
-        usage();sys.exit(1)
-    ext = os.path.splitext(File)[1].lower()
-
-    #################### File Structure #####################
-    try:
-        print((argv[1]))
-        if argv[1] in ['--struct', '--structure', '--tree'] and ext in ['.h5', '.he5']:
-            print('***** HDF5 File Structure *****')
-            print_hdf5_structure(File)
-            return
-    except:
-        pass
-
-    #################### Basic Info #####################
-    try:
-        atr = readfile.read_attribute(File)
-    except:
-        print(('Can not read file: ' + File))
-        sys.exit(1)
+def get_date_list(fname, print_msg=False):
+    atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
-
-    # Print out date list for timeseries HDF5 file
-    try:
-        if k in ['timeseries'] and argv[1] in ['--date']:
-            h5 = h5py.File(File, 'r')
-            dateList = list(h5[k].keys())
-            for date in dateList:
-                print(date)
-            h5.close()
-            return
+    dateList = None
+    if k in ['timeseries']:
+        obj = timeseries(fname)
+        obj.open(print_msg=False)
+        dateList = obj.dateList
+    elif k in ['ifgramStack']:
+        obj = ifgramStack(fname)
+        obj.open(print_msg=False)
+        dateList = obj.date12List
+    else:
+        print('--date option can not be applied to {} file, ignore it.'.format(k))
+    try: obj.close(print_msg=False)
     except: pass
 
-    print('\n************************ File Info *****************************')
-    print(('File name   : '+os.path.basename(File)))
-    print(('File type   : '+atr['PROCESSOR']+' '+atr['FILE_TYPE']))
+    if print_msg and dateList is not None:
+        for i in dateList:
+            print(i)
+    return dateList
+
+
+def print_pysar_info(fname):
     try:
-        atr['X_FIRST']
-        print('Coordinates : GEO')
+        atr = readfile.read_attribute(fname)
+        k = atr['FILE_TYPE']
+        print('{} {:*<40}'.format('*'*20, 'Basic File Info '))
+        print('file name: '+atr['FILE_PATH'])
+        print('file type: '+atr['FILE_TYPE'])
+        if 'Y_FIRST' in atr.keys():
+            print('coordinates : GEO')
+        else:
+            print('coordinates : RADAR')
+        if k in ['timeseries']:
+            dateList = get_date_list(fname)
+            print('\n{} {:*<40}'.format('*'*20, 'Date Stat Info '))
+            print_timseries_date_stat(dateList)
     except:
-        print('Coordinates : radar')
+        pass
+    return
 
     print('\n************************ File Info *****************************')
     print(('File name   : ' + os.path.basename(File)))
@@ -161,62 +160,35 @@ def main(argv):
     except:
         print('Coordinates : radar')
 
-    #################### HDF5 File Info #####################
-    if ext in ['.h5', '.he5']:
-        h5file = h5py.File(File, 'r')
-        ##### Group Info
-        print('All groups in this file:')
-        print((list(h5file.keys())))
+############################################################
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
+    if not os.path.isfile(inps.file):
+        print('ERROR: input file does not exists: {}'.format(inps.file))
+        return
+    ext = os.path.splitext(inps.file)[1].lower()
 
-        ##### DateList / IgramList
-        if k in ['interferograms', 'coherence', 'wrapped', 'timeseries']:
-            epochList = sorted(h5file[k].keys())
+    ## --date option
+    if inps.disp_date:
+        get_date_list(inps.file, print_msg=True)
+        return
 
-    if k == 'timeseries':
-        try:
-            print_timseries_date_info(epochList)
-        except:
-            pass
-        print('*************** Attributes **************')
-        print_attributes(atr)
+    ## Basic info from PySAR reader
+    print_pysar_info(inps.file)
 
-    elif k in ['interferograms', 'coherence', 'wrapped']:
-        ##### Plot Attributes of One Epoch
-        try:
-            epochNum = int(argv[1])
-            epochAtr = h5file[k][epochList[epochNum - 1]].attrs
-            print('*****************************************')
-            print((epochList[epochNum - 1]))
-            print('*************** Attributes **************')
-            print_attributes(epochAtr)
-            print('*****************************************')
-            print((epochList[epochNum - 1]))
-        ##### Plot Epoch List Info
-        except:
-
-            print('*****************************************')
-            print(('Number of '+k+': '+str(len(epochList)) ))
-            print('*****************************************')
-            print(('List of the '+k+':             number'))
-            for i in range(len(epochList)):
-                print((epochList[i] + '    ' + str(i + 1)))
-            print('*****************************************')
-            print(('Number of ' + k + ': ' + str(len(epochList))))
-
-    ##### All other file types, except for timeseries/interferograms/coherence/wrapped
+    ## Generic Attribute/Structure of all files
+    if ext in ['.h5','.he5']:
+        print('\n{} {:*<40}'.format('*'*20, 'HDF5 File Structure '))
+        print_hdf5_structure(inps.file)
     else:
-        print('*************** Attributes **************')
+        print('\n{} {:*<40}'.format('*'*20, 'Binary File Attributes '))
+        atr = readfile.read_attribute(inps.file)
         print_attributes(atr)
 
-    try:
-        h5file.close()
-    except:
-        pass
-    print('****************************************************************')
     return
 
 
 ############################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

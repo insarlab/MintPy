@@ -32,20 +32,18 @@
 #
 
 
-import os
-import sys
-import re
+import os, sys, re
 from datetime import datetime as dt
-
 import h5py
 import numpy as np
-from lxml import objectify
 #from PIL import Image
 import json
 
+from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry, datasetUnitDict
+
 
 standardMetadataKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
-                      'length':'LENGTH','FILE_LENGTH':'LENGTH','lines':'WIDTH',
+                      'length':'LENGTH','FILE_LENGTH':'LENGTH','lines':'LENGTH',
                       'wavelength':'WAVELENGTH','Wavelength':'WAVELENGTH','radarWavelength':'WAVELENGTH',
                       'prf':'PRF',
                       'post_lat':'Y_STEP',
@@ -82,115 +80,120 @@ GDAL2NUMPY_DATATYPE = {
 
 }
 
-dataTypeDict = {'bool':np.bool_,'byte':np.bool_,'flag':np.bool_,
-                'int':np.int16,'int16':np.int16,'short':np.int16,'int32':np.int32,
-                'int64':np.int64,'long':np.int64,
-                'float':np.float32,'float32':np.float32,
-                'float_':np.float64,'float64':np.float64,
-                'complex':np.complex64,'complex64':np.complex64,'cpx_float32':np.complex64,
-                'cfloat':np.complex64,'cfloat32':np.complex64,
-                'complex128':np.complex128,'complex_':np.complex128,'cpx_float64':np.complex128
-               }
-
-
 #########################################################################
-'''Three types of HDF5 files in PySAR
-multi_group   : multiple groups with one      dataset and one attribute dict per group (Ngroup-1dset-1atr)
-multi_dataset : one      group  with multiple dataset and one attribute dict per group (1group-Ndset-1atr)
-single_dataset: one      group  with one      dataset and one attribute dict per gropu (1group-1dset-1atr)
-
-Recommend usage:
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
-'''
 multi_group_hdf5_file=['interferograms','coherence','wrapped','snaphu_connect_component']
 multi_dataset_hdf5_file=['timeseries','geometry']
-single_dataset_hdf5_file=['dem','mask','rmse','temporal_coherence', 'velocity']
-geometry_dataset=['rangeCoord','azimuthCoord','latitude','longitude','height',\
-                  'incidenceAngle','headingAngle','slantRangeDistance','waterMask','shadowMask']
+single_dataset_hdf5_file=['dem','mask','temporal_coherence', 'velocity']
 
 
 #########################################################################
-def read(fname, box=None, epoch=None, print_msg=True):
+def read(fname, box=None, datasetName=None, print_msg=True):
     '''Read one dataset and its attributes from input file.
+    Parameters: fname : str, path of file to read
+                    PySAR   file: interferograms, timeseries, velocity, etc.
+                    ROI_PAC file: .unw .cor .hgt .dem .trans
+                    Gamma   file: .mli .slc
+                    Image   file: .jpeg .jpg .png .ras .bmp
+                box : 4-tuple of int
+                    area to read, defined in (x0, y0, x1, y1) in pixel coordinate
+                datasetName : string
+                    dataset to read in the format of datasetName / datasetName-dateName / datasetName-date12Name
+                    for ifgramStack:
+                        unwrapPhase
+                        coherence
+                        ...
+                        unwrapPhase-20161020_20161026
+                        ...
+                    for timeseries:
+                        20161020
+                        20161026
+                        ...
+                    for geometry:
+                        height
+                        incidenceAngle
+                        bperp
+                        ...
+                        bperp-20161020
+                        bperp-20161026
+                        bperp-...
+                    for .trans and .utm_to_rdc:
+                        rangeCoord
+                        azimuthCoord
+                    for los.rdr:
+                        incidenceAngle
+                        headingAngle
+                    for GIANT_TS:
+                        rawts
+                        recons
+                        rawts-20161020
+                        rawts-20161026
+                        rawts-...
+                    for the other single dataset file:
+                        No need and will be ignored.
 
-    Read one dataset, i.e. interferogram, coherence, velocity, dem ...
-    return 0 if failed.
-
-    Inputs:
-        fname : str, path of file to read
-                PySAR   file: interferograms, timeseries, velocity, etc.
-                ROI_PAC file: .unw .cor .hgt .dem .trans
-                Gamma   file: .mli .slc
-                Image   file: .jpeg .jpg .png .ras .bmp
-        box   : 4-tuple of int, area to read, defined in (x0, y0, x1, y1) in pixel coordinate
-        epoch : string, epoch to read, for multi-dataset files
-                for .trans file:
-                '' - return both dataset
-                rg, range   - for geomap_*.trans file
-                az, azimuth - for geomap_*.trans file
-
-    Outputs:
-        data : 2-D matrix in numpy.array format, return None if failed
-        atr  : dictionary, attributes of data, return None if failed
+    Returns: data : 2/3-D matrix in numpy.array format, return None if failed
+             atr : dictionary, attributes of data, return None if failed
 
     Examples:
-        data, atr = read('velocity.h5')
-        data, atr = read('100120-110214.unw', box=(100,1100, 500, 2500))
-        data, atr = read('timeseries.h5', epoch='20101120')
-        data, atr = read('timeseries.h5', box=(100,1100, 500, 2500), epoch='20101120')
-        az,   atr = read('geomap*.trans', epoch='azimuth')
-        rg,az,atr = read('geomap*.trans')
+        from pysar.utils import readfile
+        data, atr = readfile.read('velocity.h5')
+        data, atr = readfile.read('timeseries.h5')
+        data, atr = readfile.read('timeseries.h5', datasetName='20161020')
+        data, atr = readfile.read('ifgramStack.h5', datasetName='unwrapPhase')
+        data, atr = readfile.read('ifgramStack.h5', datasetName='unwrapPhase-20161020_20161026')
+        data, atr = readfile.read('ifgramStack.h5', datasetName='coherence', box=(100,1100, 500, 2500))
+        data, atr = readfile.read('geometryRadar.h5', datasetName='height')
+        data, atr = readfile.read('geometryRadar.h5', datasetName='bperp')
+        data, atr = readfile.read('100120-110214.unw', box=(100,1100, 500, 2500))
     '''
 
     # Basic Info
     ext = os.path.splitext(fname)[1].lower()
     fbase = os.path.splitext(os.path.basename(fname))[0]
-    atr = read_attribute(fname, epoch)
+    if datasetName:
+        atr = read_attribute(fname, datasetName=datasetName.split('-')[0])
+    else:
+        atr = read_attribute(fname)
     k = atr['FILE_TYPE']
-    processor = atr['INSAR_PROCESSOR']
-    length = int(float(atr['LENGTH']))
-    width = int(float(atr['WIDTH']))
+    processor = atr['PROCESSOR']
+    length = int(atr['LENGTH'])
+    width = int(atr['WIDTH'])
     if not box:
         box = (0, 0, width, length)
 
     ##### HDF5
     if ext in ['.h5','.he5']:
-        h5file = h5py.File(fname,'r')
-
-        # Read Dataset
-        if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-            # Check input epoch exists or not
-            epoch_list = sorted(h5file[k].keys())
-            try:    epoch2read = [i for i in epoch_list if epoch.lower() in i.lower()][0]
-            except: epoch2read = None
-            if not epoch2read:
-                if print_msg:
-                    print('ERROR: no input epoch found!')
-                    print('input epoch: '+str(epoch))
-                    print('available epoches: '+str(epoch_list))
-                sys.exit(1)
-
-            elif k in multi_dataset_hdf5_file:
-                dset = h5file[k].get(epoch2read)
+        f = h5py.File(fname,'r')
+        if k in ['timeseries']:
+            obj = timeseries(fname)
+            data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
+        elif k in ['ifgramStack']:
+            obj = ifgramStack(fname)
+            data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
+            if datasetName in ['unwrapPhase','wrapPhase','iono']:
+                atr['UNIT'] = 'radian'
             else:
-                dset = h5file[k][epoch2read].get(epoch2read)
-
+                atr['UNIT'] = '1'
+        elif k in ['geometry']:
+            obj = geometry(fname)
+            data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
         elif k in ['GIANT_TS']:
-            dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5file['dates'][:].tolist()]
-            dateIndx = dateList.index(epoch)
-            if 'rawts' in list(h5file.keys()):
-                dset = h5file['rawts'][dateIndx,:,:]
-            elif 'recons' in list(h5file.keys()):
-                dset = h5file['recons'][dateIndx,:,:]
+            dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
+            dateIndx = dateList.index(datasetName)
+            if 'rawts' in list(f.keys()):
+                dset = f['rawts'][dateIndx,:,:]
+            elif 'recons' in list(f.keys()):
+                dset = f['recons'][dateIndx,:,:]
+            data = dset[box[1]:box[3],box[0]:box[2]]
         else:
-            dset = h5file[k].get(k)
-        #else:
-        #    print 'ERROR: Unrecognized h5 file type: '+k
-        #    sys.exit(1)
-
-        data = dset[box[1]:box[3],box[0]:box[2]]
-
-        h5file.close()
+            if not datasetName:
+                datasetName = k
+            try:    dset = f[k][datasetName]
+            except: dset = f[datasetName]
+            data = dset[box[1]:box[3],box[0]:box[2]]
+            atr['LENGTH'] = str(dset.shape[0])
+            atr['WIDTH'] = str(dset.shape[1])
+        f.close()
         return data, atr
 
     ###### Image
@@ -219,14 +222,14 @@ def read(fname, box=None, epoch=None, print_msg=True):
 
         elif fbase.startswith('los'):
             incAngle, azAngle, atr = read_float32(fname, box=box)
-            if not epoch:
+            if not datasetName:
                 return incAngle, azAngle, atr
-            elif epoch.startswith('inc'):
+            elif datasetName.startswith('inc'):
                 return incAngle, atr
-            elif epoch.startswith(('az','head')):
+            elif datasetName.startswith(('az','head')):
                 return azAngle, atr
             else:
-                sys.exit('Un-recognized epoch input: '+epoch)
+                sys.exit('Un-recognized datasetName input: '+datasetName)
 
         elif atr['DATA_TYPE'].lower() in ['float64','double']:
             data, atr = read_real_float64(fname, box=box)
@@ -274,14 +277,14 @@ def read(fname, box=None, epoch=None, print_msg=True):
 
         elif ext in ['.trans']:
             rg, az, atr = read_float32(fname, box=box)
-            if not epoch:
+            if not datasetName:
                 return rg, az, atr
-            elif epoch.startswith(('rg','range')):
+            elif datasetName.startswith(('rg','range')):
                 return rg, atr
-            elif epoch.startswith(('az','azimuth')):
+            elif datasetName.startswith(('az','azimuth')):
                 return az, atr
             else:
-                sys.exit('Un-recognized epoch input: '+epoch)
+                sys.exit('Un-recognized datasetName input: '+datasetName)
 
     ##### Gamma
     elif processor == 'gamma':
@@ -291,14 +294,14 @@ def read(fname, box=None, epoch=None, print_msg=True):
 
         elif ext in ['.UTM_TO_RDC', '.utm_to_rdc']:
             data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', band='complex')
-            if not epoch:
+            if not datasetName:
                 return data.real, data.imag, atr
-            elif epoch.startswith(('rg','range')):
+            elif datasetName.startswith(('rg','range')):
                 return data.real, atr
-            elif epoch.startswith(('az','azimuth')):
+            elif datasetName.startswith(('az','azimuth')):
                 return data.imag, atr
             else:
-                sys.exit('Un-recognized epoch input: '+epoch)
+                sys.exit('Un-recognized datasetName input: '+datasetName)
 
         elif ext in ['.int']:
             data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', band='phase')
@@ -323,9 +326,9 @@ def read(fname, box=None, epoch=None, print_msg=True):
 
 
 #########################################################################
-def read_attribute(fname, epoch=None):
+def read_attribute(fname, datasetName=None):
     '''Read attributes of input file into a dictionary
-    Input  : string, file name and epoch (optional)
+    Input  : string, file name
     Output : dictionary, attributes dictionary
     '''
     ext = os.path.splitext(fname)[1].lower()
@@ -336,59 +339,41 @@ def read_attribute(fname, epoch=None):
 
     ##### PySAR
     if ext in ['.h5','.he5']:
-        h5 = h5py.File(fname,'r')
-        if   'interferograms' in list(h5.keys()): k = 'interferograms'
-        elif 'coherence'      in list(h5.keys()): k = 'coherence'
-        elif 'timeseries'     in list(h5.keys()): k = 'timeseries'
-        else: k = list(h5.keys())[0]
-
-        attrs = None
-        if k in multi_group_hdf5_file:
-            if epoch:
-                # Check input epoch exists or not
-                epoch_list = sorted(h5[k].keys())
-                try:    epoch = [i for i in epoch_list if epoch in i][0]
-                except: epoch = None
-
-            if not epoch:
-                epoch = list(h5[k].keys())[0]
-            attrs = h5[k][epoch].attrs
-
-        #elif k in multi_dataset_hdf5_file+single_dataset_hdf5_file:
+        f = h5py.File(fname,'r')
+        ## Metadata dict
+        atr = None
+        key = 'WIDTH'
+        if key in f.attrs.keys():
+            atr = dict(f.attrs)
         else:
-            key = 'WIDTH'
-            if key in h5.attrs.keys():
-                attrs = h5.attrs
-            else:
-                for groupK in h5.keys():
-                    if key in h5[groupK].attrs.keys():
-                        attrs = h5[groupK].attrs
-                        break
-            if fname.endswith('PARAMS.h5'):
-                #dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
-                attrs = dict()
-                attrs['LENGTH'] = h5['cmask'].shape[0]
-                attrs['WIDTH'] = h5['cmask'].shape[1]
-                #attrs['ORBIT_DIRECTION'] = 'descending'
-                #attrs['REF_Y'] = '134'
-                #attrs['REF_X'] = '637'
-                #attrs['REF_DATE'] = '20141225'
-                k = 'GIANT_TS'
-            if attrs is None:
-                raise ValueError('No attribute '+key+' found in 1/2 group level!')
+            for g in f.keys():
+                if key in f[g].attrs.keys():
+                    atr = dict(f[g].attrs)
+                    break
+        if atr is None:
+            raise ValueError('No attribute {} found in 1/2 group level!'.format(key))
 
-        atr = dict()
-        for key, value in attrs.items():
-            try:     atr[key] = value.decode('utf-8')
+        for key, value in atr.items():
+            try:     atr[key] = value.decode('utf8')
             except:  atr[key] = value
 
+        if 'FILE_TYPE' in atr.keys():
+            k = atr['FILE_TYPE']
+        elif 'unwrapPhase' in f.keys():
+            k = 'ifgramStack'
+        elif 'timeseries' in f.keys():
+            k = 'timeseries'
+        elif 'height' in f.keys():
+            k = 'geometry'
+        else:
+            k = list(f.keys())[0]
         atr['FILE_TYPE'] = str(k)
 
-        if k == 'timeseries':
-            try:    atr['REF_DATE']
-            except: atr['REF_DATE'] = sorted(h5[k].keys())[0]
-
-        h5.close()
+        if k == 'timeseries' and 'MinValue' in f[k].attrs.keys():
+            atr.update(f[k].attrs)
+        elif datasetName and datasetName in f.keys() and 'MinValue' in f[datasetName].attrs.keys():
+            atr.update(f[datasetName].attrs)
+        f.close()
 
     else:
         ##Read metadata file
@@ -409,7 +394,6 @@ def read_attribute(fname, epoch=None):
             atr = read_template(fname+'.hdr')
             atr = attribute_envi2roipac(atr)
             atr['FILE_TYPE'] = atr['file type']
-
         else:
             sys.exit('Unrecognized file extension: '+ext)
 
@@ -425,17 +409,18 @@ def read_attribute(fname, epoch=None):
                 atr['PROCESSOR'] = 'roipac'
 
     # Unit - str
-    #if 'UNIT' not in atr.keys():
-    if atr['FILE_TYPE'] in ['interferograms','wrapped','.unw','.int','.flat','unw']:
-        atr['UNIT'] = 'radian'
-    elif atr['FILE_TYPE'] in ['timeseries','dem','.dem','.hgt']:
-        atr['UNIT'] = 'm'
-    elif atr['FILE_TYPE'] in ['velocity']:
-        atr['UNIT'] = 'm/yr'
-    elif atr['FILE_TYPE'] in ['GIANT_TS']:
-        atr['UNIT'] = 'mm'
-    else:
-        if 'UNIT' not in atr.keys():
+    k = atr['FILE_TYPE']
+    if k == 'ifgramStack':
+        if datasetName:
+            atr['UNIT'] = datasetUnitDict[datasetName]
+        else:
+            atr['UNIT'] = 'radian'
+    elif 'UNIT' not in atr.keys():
+        if k in datasetUnitDict.keys():
+            atr['UNIT'] = datasetUnitDict[k]
+        elif k in ['GIANT_TS']:
+            atr['UNIT'] = 'mm'
+        else:
             atr['UNIT'] = '1'
 
     atr['FILE_PATH'] = os.path.abspath(fname)
@@ -446,15 +431,30 @@ def read_attribute(fname, epoch=None):
     return atr
 
 
+def standardize_metadata(metaDict, standardMetadatKeys):
+    metaDict_standard = {}
+    for k in metaDict.keys():
+        if k in standardMetadataKeys.keys():
+            k2 = standardMetadatKeys[k]
+            if k2 in metaDict.keys():
+                metaDict_standard[k2] = metaDict[k2]
+            else:
+                metaDict_standard[k2] = metaDict[k]
+        else:
+            metaDict_standard[k] = metaDict[k]
+    return metaDict_standard
+
+
 #########################################################################
-def check_variable_name(path):
+def check_variable_name(path, print_msg=True):
     s=path.split("/")[0]
     if len(s)>0 and s[0]=="$":
         try:
             p0 = os.getenv(s[1:])
             path = path.replace(path.split("/")[0], p0)
         except:
-            print('WARNING: Un-recognized environmental variable: '+s)
+            if print_msg:
+                print('WARNING: Un-recognized environmental variable: '+s)
     return path
 
 
@@ -465,13 +465,21 @@ def is_plot_attribute(attribute):
     return tokens[0] == "plot" and len(tokens) > 1
 
 
-def read_template(fname, delimiter='='):
+def read_template(fname, delimiter='=', print_msg=True):
     '''Reads the template file into a python dictionary structure.
-    Input : string, full path to the template file
-    Output: dictionary, pysar template content
-    Example:
+    Parameters: fname : str
+                    full path to the template file
+                delimiter : str
+                    string to separate the key and value
+                print_msg : bool
+                    print message or not
+    Returns:    template_dict : dict
+                    file content
+    Examples:
         tmpl = read_template(KyushuT424F610_640AlosA.template)
         tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
+        from pysar.defaults.default_path import isceAutoPath
+        tmpl = read_template(isceAutoPath, print_msg=False)
     '''
     template_dict = {}
     plotAttributeDict = {}
@@ -481,7 +489,14 @@ def read_template(fname, delimiter='='):
     # if we assume that any plot attribute coming after a > belongs to the
     # same object. Must Ask Falk and Yunjung if we can assume this to eliminate
     # all these conditionals
-    for line in open(fname):
+
+    if os.path.isfile(fname):
+        f = open(fname, 'r')
+        lines = f.readlines()
+    elif isinstance(fname, str):
+        lines = fname.split('\n')
+
+    for line in lines:
         line = line.strip()
         c = [i.strip() for i in line.split(delimiter, 1)]  #split on the 1st occurrence of delimiter
         if len(c) < 2 or line.startswith(('%','#')):
@@ -498,7 +513,7 @@ def read_template(fname, delimiter='='):
         else:
             atrName  = c[0]
             atrValue = str.replace(c[1],'\n','').split("#")[0].strip()
-            atrValue = check_variable_name(atrValue)
+            atrValue = check_variable_name(atrValue, print_msg=print_msg)
 
             if insidePlotObject:
                 if is_plot_attribute(atrName):
@@ -511,6 +526,8 @@ def read_template(fname, delimiter='='):
 
             elif atrValue != '':
                 template_dict[atrName] = atrValue
+    if os.path.isfile(fname):
+        f.close()
 
     # what if no \n at end of file? write out last plot attributes dict
     if insidePlotObject:
@@ -578,6 +595,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
 
 def read_isce_xml(fname):
     '''Read ISCE .xml file input a python dictionary structure.'''
+    from lxml import objectify
     xmlDict={}
     fObj = objectify.parse(fname)
     root = fObj.getroot()
@@ -608,16 +626,6 @@ def read_isce_xml(fname):
     return xmlDict
 
 
-def standardize_metadata(metaDict, standardMetadatKeys):
-    metaDict_standard = {}
-    for k in metaDict.keys():
-        if k in standardMetadataKeys.keys():
-            metaDict_standard[standardMetadatKeys[k]] = metaDict[k]
-        else:
-            metaDict_standard[k] = metaDict[k]
-    return metaDict_standard
-
-
 def attribute_gamma2roipac(par_dict_in):
     '''Convert Gamma par attribute into ROI_PAC format'''
     par_dict = dict()
@@ -625,43 +633,43 @@ def attribute_gamma2roipac(par_dict_in):
         par_dict[key] = value
 
     # Length - number of rows
-    for key in par_dict.keys():
+    for key in par_dict_in.keys():
         if any(key.startswith(i) for i in ['azimuth_lines','nlines','az_samp','interferogram_azimuth_lines']):
             par_dict['LENGTH'] = par_dict[key]
 
     # Width - number of columns
-    for key in par_dict.keys():
+    for key in par_dict_in.keys():
         if any(key.startswith(i) for i in ['width','range_samp','interferogram_width']):
             par_dict['WIDTH'] = par_dict[key]
 
     # WAVELENGTH
     speed_of_light = 299792458.0   # meter/second
     key = 'radar_frequency'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['WAVELENGTH'] = str(speed_of_light/float(par_dict[key]))
 
     # HEIGHT & EARTH_RADIUS
     key = 'earth_radius_below_sensor'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['EARTH_RADIUS'] = par_dict[key]
 
         key2 = 'sar_to_earth_center'
-        if key2 in par_dict.keys():
+        if key2 in par_dict_in.keys():
             par_dict['HEIGHT'] = str(float(par_dict[key2]) - float(par_dict[key]))
 
     # STARTING_RANGE
     key = 'near_range_slc'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['STARTING_RANGE'] = par_dict[key]
 
     # PLATFORM
     key = 'sensor'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['PLATFORM'] = par_dict[key]
 
     # ORBIT_DIRECTION
     key = 'heading'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         value = float(par_dict[key])
         if 270 < value < 360 or -90 < value < 90:
             par_dict['ORBIT_DIRECTION'] = 'ascending'
@@ -673,17 +681,17 @@ def attribute_gamma2roipac(par_dict_in):
 
     ##### attributes in geo coordinates
     key = 'corner_lat'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['Y_FIRST'] = par_dict[key]
 
     key = 'corner_lon'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         par_dict['X_FIRST'] = par_dict[key]
 
     ##### Optional attributes for PySAR from ROI_PAC
     # ANTENNA_SIDE
     key = 'azimuth_angle'
-    if key in par_dict.keys():
+    if key in par_dict_in.keys():
         value = float(par_dict[key])
         if 0 < value < 180:
             par_dict['ANTENNA_SIDE'] = '-1'
@@ -704,7 +712,6 @@ def attribute_isce2roipac(metaDict, dates=[], baselineDict={}):
     rscDict['LENGTH'] = rscDict['length']
 
     rscDict['PROCESSOR'] = 'isce'
-    rscDict['INSAR_PROCESSOR'] = 'isce'
     rscDict['PLATFORM'] = 'Sentinel1'
 
     rscDict['ANTENNA_SIDE'] = '-1'

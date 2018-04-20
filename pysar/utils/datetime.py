@@ -22,15 +22,12 @@ import numpy as np
 def yyyymmdd2years(dates):
     if isinstance(dates, str):
         d = dt(*time.strptime(dates,"%Y%m%d")[0:5])
-        day_of_year = d.timetuple().tm_yday
-        yy = float(d.year)+float(day_of_year-1)/365.25
-        #yy = float(d.year) + float(d.month-1)/12 + float(d.day-1)/365.25
+        yy = float(d.year)+float(d.timetuple().tm_yday-1)/365.25
     elif isinstance(dates, list):
         yy = []
         for date in dates:
             d = dt(*time.strptime(date,"%Y%m%d")[0:5])
-            day_of_year = d.timetuple().tm_yday
-            yy.append(float(d.year)+float(day_of_year-1)/365.25)
+            yy.append(float(d.year)+float(d.timetuple().tm_yday-1)/365.25)
     else:
         print('Unrecognized date format. Only string and list supported.')
         sys.exit(1)
@@ -99,9 +96,11 @@ def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
     date_list = []
     ifgram_list = sorted(h5[k].keys())
     for ifgram in  ifgram_list:
-        date12 = h5[k][ifgram].attrs['DATE12'].split('-')
-        date_list.append(date12[0])
-        date_list.append(date12[1])
+        date12 = h5[k][ifgram].attrs['DATE12']
+        try: date12 = date12.decode('utf-8')
+        except: pass
+        date_list.append(date12.split('_')[0])
+        date_list.append(date12.split('_')[1])
     h5.close()
     date_list = sorted(list(set(date_list)))
 
@@ -140,18 +139,13 @@ def date_list2tbase(dateList):
                              value - int, temporal baseline in days
     '''
     dateList = yyyymmdd(dateList)
-    tbase=[]
-    d1 = dt(*time.strptime(dateList[0],"%Y%m%d")[0:5])
-    for ni in range(len(dateList)):
-        d2 = dt(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
-        diff = d2-d1
-        tbase.append(diff.days)
+    dates = [dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in dateList]
+    tbase = [(i-dates[0]).days for i in dates]
 
     ## Dictionary: key - date, value - temporal baseline
     dateDict = {}
     for i in range(len(dateList)):
         dateDict[dateList[i]] = tbase[i]
-
     return tbase, dateDict
 
 
@@ -164,18 +158,10 @@ def date_list2vector(dateList):
         datevector - list of float, years, i.e. 2010.8020547945205
     '''
     dateList = yyyymmdd(dateList)
-    dates=[]
-    for ni in range(len(dateList)):
-        d = dt(*time.strptime(dateList[ni],"%Y%m%d")[0:5])
-        dates.append(d)
-
+    dates = [dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in dateList]
     ## date in year - float format
-    datevector=[]
-    for i in range(len(dates)):
-        dvector = dates[i].year + (dates[i].month-1)/12.0 + (dates[i].day-1)/365.0
-        datevector.append(dvector)
-    datevector2=[round(i,2) for i in datevector]
-  
+    datevector = [i.year + (i.timetuple().tm_yday - 1)/365.25 for i in dates]
+    datevector2 = [round(i,2) for i in datevector]
     return dates, datevector
 
 
@@ -196,7 +182,7 @@ def list_ifgram2date12(ifgram_list):
 
     date12_list_out = []
     for date12 in date12_list:
-        m_date, s_date = yymmdd(date12.split('-'))
+        m_date, s_date = yymmdd(date12.split('_'))
         date12_list_out.append(m_date+'-'+s_date)
 
     return date12_list_out
@@ -210,18 +196,18 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
     Output:
         grib_hr - string, time of closest available weather product 
     Example:
-        '06:00' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'ECMWF')
-        '12'    = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
+        '06' = closest_weather_product_time(atr['CENTER_LINE_UTC'])
+        '12' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
     '''
     # Get hour/min of SAR acquisition time
     sar_time = float(sar_acquisition_time)
     #sar_hh = int(sar_time/3600.0)
     #sar_mm = int((sar_time-3600.0*sar_hh) / 60.0)
-    
+
     # Find closest time in available weather products
     grib_hr_list = [0, 6, 12, 18]
     grib_hr = int(min(grib_hr_list, key=lambda x:abs(x-sar_time/3600.)))
-    
+
     # Adjust time output format
     grib_hr = "%02d"%grib_hr
     #if grib_source == 'NARR':
@@ -232,7 +218,7 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
 
 ###########################Simple progress bar######################
-class progress_bar:
+class progressBar:
     '''Creates a text-based progress bar. Call the object with 
     the simple `print'command to see the progress bar, which looks 
     something like this:
@@ -246,15 +232,15 @@ class progress_bar:
     example:
     import pysar.utils.datetime as ptime
     date12_list = ptime.list_ifgram2date12(ifgram_list)
-    prog_bar = ptime.progress_bar(maxValue=1000, prefix='calculating:')
+    prog_bar = ptime.progressBar(maxValue=1000, prefix='calculating:')
     for i in range(1000):
         prog_bar.update(i+1, suffix=date)
         prog_bar.update(i+1, suffix=date12_list[i])
     prog_bar.close()
     '''
 
-    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=60):
-        self.progBar = "[]" # This holds the progress bar string
+    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=100):
+        self.prog_bar = "[]" # This holds the progress bar string
         self.min = minValue
         self.max = maxValue
         self.span = maxValue - minValue
@@ -291,27 +277,27 @@ class progress_bar:
         # Build a progress bar with an arrow of equal signs; special cases for
         # empty and full
         if numHashes == 0:
-            self.progBar = '%s[>%s]' % (self.prefix, ' '*(allFull-1))
+            self.prog_bar = '%s[>%s]' % (self.prefix, ' '*(allFull-1))
         elif numHashes == allFull:
-            self.progBar = '%s[%s]' % (self.prefix, '='*allFull)
+            self.prog_bar = '%s[%s]' % (self.prefix, '='*allFull)
             if suffix:
-                self.progBar += ' %s' % (suffix)
+                self.prog_bar += ' %s' % (suffix)
         else:
-            self.progBar = '[%s>%s]' % ('='*(numHashes-1), ' '*(allFull-numHashes))
+            self.prog_bar = '[%s>%s]' % ('='*(numHashes-1), ' '*(allFull-numHashes))
             # figure out where to put the percentage, roughly centered
-            percentPlace = int(len(self.progBar)/2 - len(str(percentDone)))
+            percentPlace = int(len(self.prog_bar)/2 - len(str(percentDone)))
             percentString = ' ' + str(percentDone) + '% '
             # slice the percentage into the bar
-            self.progBar = ''.join([self.progBar[0:percentPlace], percentString,
-                    self.progBar[percentPlace+len(percentString):], ])
+            self.prog_bar = ''.join([self.prog_bar[0:percentPlace], percentString,
+                    self.prog_bar[percentPlace+len(percentString):], ])
             # prefix and suffix
-            self.progBar = self.prefix + self.progBar
+            self.prog_bar = self.prefix + self.prog_bar
             if suffix:
-                self.progBar += ' %s' % (suffix)
+                self.prog_bar += ' %s' % (suffix)
             # time info - elapsed time and estimated remaining time
             if percentDone > 0:
                 elapsed_time = time.time() - self.start_time
-                self.progBar += '%5ds / %5ds' % (int(elapsed_time),
+                self.prog_bar += '%5ds / %5ds' % (int(elapsed_time),
                         int(elapsed_time*(100./percentDone-1)))
 
     def update(self, value, every=1, suffix=''):
@@ -320,7 +306,7 @@ class progress_bar:
           line in stdout."""
         if value % every == 0 or value >= self.max:
             self.update_amount(newAmount=value, suffix=suffix)
-            sys.stdout.write('\r' + self.progBar)
+            sys.stdout.write('\r' + self.prog_bar)
             sys.stdout.flush()
 
     def close(self):

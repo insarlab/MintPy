@@ -15,3 +15,5 @@ figure
 modis
 examples/plot_single_dataset.ipynb
 *.bak
+.idea
+

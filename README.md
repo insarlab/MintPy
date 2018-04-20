@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/yunjunz/PySAR)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/py-sar)
        
-PySAR is a open-source Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ROI_PAC, Gamma and ISCE format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) developed the code to prepare HDF-EOS5 InSAR product for [time series web viewer](http://insarmaps.miami.edu).      
+PySAR is a open-source Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ROI_PAC, Gamma and ISCE format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) linked PySAR product with [time series web viewer](http://insarmaps.miami.edu).      
    
 ### 1. Installation   
 
@@ -17,8 +17,10 @@ We recommend using [Anaconda](https://www.anaconda.com/) to install the python e
 - h5py
 - Matplotlib
 - Basemap (optional, for plotting in geo coordinate)
+- [pyresample](http://pyresample.readthedocs.org) (optional, for geocoding)
 - pykml (optional, for Google Earth KMZ file output)
 - joblib (optional, for parallel processing)
+- lxml (optional, for ISCE XML file parsing)
 - [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) (optional, for tropospheric correction using weather re-analysis models, i.e. ERA-Interim, NARR, MERRA)
 
 Here is a example on Mac OSX using csh/tcsh:   
@@ -38,7 +40,7 @@ Then run the following in your terminal:
     chmod +x Anaconda3-5.1.0-MacOSX-x86_64.sh
     ./Anaconda3-5.1.0-MacOSX-x86_64.sh -b -p $PYTHON3DIR
     $PYTHON3DIR/bin/conda config --add channels conda-forge
-    $PYTHON3DIR/bin/conda install basemap joblib pykml --yes   
+    $PYTHON3DIR/bin/conda install basemap joblib pykml lxml --yes   
    
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
 
@@ -64,7 +66,7 @@ For bash user, add to your .bashrc file:
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
     export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-1.3.0"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}  
-    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}   
+    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/bin:${PATH}   
 
 For csh/tcsh user, add to your .cshrc file:   
 
@@ -73,7 +75,7 @@ For csh/tcsh user, add to your .cshrc file:
     endif
     setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-1.3.0"
     setenv PYTHONPATH  ${PYSAR_HOME}:${PYTHONPATH}
-    setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}
+    setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/bin:${PATH}
    
    
 ### 2. Running PySAR

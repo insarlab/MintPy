@@ -1,24 +1,17 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR v2.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jan 2016: support ROI_PAC files
-# Yunjun, Jun 2016: use readfile.read()
-#                   Add nonzero method, equivalent to Mask.h5
 
 
-import os
-import sys
+import os, sys
 import argparse
-
-import numpy as np
 import h5py
-
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+import numpy as np
+from pysar.utils import readfile, writefile, utils as ut
+from pysar.objects import ifgramDatasetNames
 
 
 ################################################################################################
@@ -28,17 +21,20 @@ EXAMPLE='''example:
   generate_mask.py  srtm1.dem             -m 0.5 -o maskLand.h5
   generate_mask.py  unwrapIfgram.h5 101120-110220 -m 4
   generate_mask.py  unwrapIfgram.h5 --nonzero
+
+  generate_mask.py ifgramStack.h5 unwrapPhase --nonzero -o maskValidPhase.h5
+  generate_mask.py ifgramStack.h5 connectComponent --nonzero -o maskConnComp.h5
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Generate mask file from input file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='input file')
-    parser.add_argument('epoch', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o','--output', dest='outfile', help='output file name.')
-    
+
     parser.add_argument('-m','--min', dest='vmin', type=float, help='minimum value for selected pixels')
     parser.add_argument('-M','--max', dest='vmax', type=float, help='maximum value for selected pixels')
     parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN','XMAX'), \
@@ -49,45 +45,29 @@ def cmdLineParse():
     parser.add_argument('--nonzero', dest='nonzero', action='store_true',\
                         help='Select all non-zero pixels.\n'+\
                              'i.e. mask.h5 from unwrapIfgram.h5')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
-################################################################################################
-def main(argv):
-    inps = cmdLineParse()
-
-    # Input File Info
-    atr = readfile.read_attribute(inps.file)
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
-    k = atr['FILE_TYPE']
-    print('Input file is '+k+': '+inps.file)
-
-    # default output filename
-    if not inps.outfile:
-        if k == 'temporal_coherence':
-            inps.outfile = 'maskTempCoh.h5'
-        else:
-            inps.outfile = 'mask.h5'
-        if inps.file.startswith('geo_'):
-            inps.outfile = 'geo_'+inps.outfile
-
-    ##### Mask: Non-zero
-    if inps.nonzero and k == 'interferograms':
-        print('generate mask for all pixels with non-zero value')
-        inps.outfile = ut.nonzero_mask(inps.file, inps.outfile)
-        return inps.outfile
-
-    ##### Mask: Threshold 
-    print('create initial mask with the same size as the input file and all = 1')
-    mask = np.ones((length, width), dtype=np.float32)
-    if inps.epoch:
-        print('read %s %s' % (inps.file, inps.epoch))
+def create_threshold_mask(inps):
+    if inps.dset:
+        print('read %s %s' % (inps.file, inps.dset))
     else:
         print('read %s' % (inps.file))
-    data, atr = readfile.read(inps.file, epoch=inps.epoch)
+    data, atr = readfile.read(inps.file, datasetName=inps.dset)
+    if len(data.shape) > 2:
+        print('ERROR: Only 2D dataset is supported for threshold method, input is 3D')
+        sys.exit(1)
+    length = int(atr['LENGTH'])
+    width = int(atr['WIDTH'])
+
+    print('create initial mask with the same size as the input file and all = 1')
+    mask = np.ones((length, width), dtype=np.float32)
 
     if inps.nonzero:
         print('all pixels with zero value = 0')
@@ -129,6 +109,32 @@ def main(argv):
 
 
 ################################################################################################
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
+    atr = readfile.read_attribute(inps.file)
+    k = atr['FILE_TYPE']
+    print('input {} file: {}'.format(k, inps.file))
+
+    # default output filename
+    if not inps.outfile:
+        if inps.file.endswith('temporalCoherence.h5'):
+            inps.outfile = 'maskTempCoh.h5'
+        else:
+            inps.outfile = 'mask.h5'
+        if inps.file.startswith('geo_'):
+            inps.outfile = 'geo_'+inps.outfile
+
+    ##### Mask: Non-zero
+    if inps.nonzero and k == 'ifgramStack':
+        inps.outfile = ut.nonzero_mask(inps.file, outFile=inps.outfile, datasetName=inps.dset)
+        return inps.outfile
+
+    ##### Mask: Threshold
+    inps.outfile = create_threshold_mask(inps)
+    return inps.outfile
+
+
+################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

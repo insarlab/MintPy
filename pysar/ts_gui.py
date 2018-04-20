@@ -10,6 +10,7 @@ matplotlib.use('TkAgg')
 from tkinter import filedialog
 import pysar.tsview as ts_view
 import info
+import pysar.view as view
 import pysar.utils.readfile as readfile
 import subset
 import numpy
@@ -449,18 +450,18 @@ def set_variables_from_attributes():
     pix_input_xy_x.set("300")
     pix_input_xy_y.set("300")
 
-    lon, lat = compute_lalo("300", "300")
+    #lon, lat = compute_lalo("300", "300")
 
-    pix_input_lalo_la.set(lat)
-    pix_input_lalo_lo.set(lon)
+    #pix_input_lalo_la.set(lat)
+    #pix_input_lalo_lo.set(lon)
 
     ref_pix_input_xy_x.set(attributes['REF_X'])
     ref_pix_input_xy_y.set(attributes['REF_Y'])
 
-    ref_lon, ref_lat = compute_lalo(ref_pix_input_xy_x.get(), ref_pix_input_xy_y.get())
+    #ref_lon, ref_lat = compute_lalo(ref_pix_input_xy_x.get(), ref_pix_input_xy_y.get())
 
-    ref_pix_input_lalo_la.set(ref_lat)
-    ref_pix_input_lalo_lo.set(ref_lon)
+    #ref_pix_input_lalo_la.set(ref_lat)
+    #ref_pix_input_lalo_lo.set(ref_lon)
 
     set_epoch_info()
 
@@ -474,16 +475,17 @@ def set_sliders(value=None):
         num.set(1)
 
     data = read_file_data(value)
-    max_val = numpy.amax(data)
-    min_val = numpy.amin(data)
+
+    max_val = numpy.nanmax(data)
+    min_val = numpy.nanmin(data)
 
     starting_lower_lim = min_val * 5
     starting_upper_lim = max_val * 5
 
     unit.set(attributes['UNIT'])
     update_sliders(attributes['UNIT'])
-    y_lim_upper.set(starting_upper_lim / 5)
-    y_lim_lower.set(starting_lower_lim / 5)
+    y_lim_upper.set(max_val)
+    y_lim_lower.set(min_val)
 
 
 def set_epoch_info():
@@ -524,12 +526,12 @@ def read_file_data(epoch=None):
     if file_type in ['HDFEOS']:
         ref_dates_list += h5file.attrs['DATE_TIMESERIES'].split()
     else:
-        ref_dates_list += sorted(h5file[file_type].keys())
+        ref_dates_list = view.get_file_dataset_list(h5_file.get(), file_type)
 
     if epoch and epoch is not "All":
-        data, attributes = readfile.read(h5_file.get(), epoch=ref_dates_list[epoch])
+        data, attributes = readfile.read(h5_file.get(), datasetName=ref_dates_list[epoch])
     else:
-        data, attributes = readfile.read(h5_file.get(), epoch=ref_dates_list[len(ref_dates_list) - 1])
+        data, attributes = readfile.read(h5_file.get(), datasetName=ref_dates_list[len(ref_dates_list) - 1])
 
     return data
 

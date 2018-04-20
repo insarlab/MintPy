@@ -9,13 +9,9 @@
 import os
 import sys
 import argparse
-
 import h5py
 import numpy as np
-
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, writefile, utils as ut
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -77,7 +73,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
     km = atrm['FILE_TYPE']
     if km not in multi_group_hdf5_file+multi_dataset_hdf5_file:
         print('reading mask file: '+maskFile)
-        mask = readfile.read(maskFile, epoch='mask')[0]
+        mask = readfile.read(maskFile, datasetName='mask')[0]
         if inps_dict:
             mask = update_mask(mask, inps_dict)
     
@@ -101,7 +97,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
 
             unw = mask_matrix(unw, mask, inps_dict['fill_value'])
 
-            dset = group.create_dataset(d, data=unw, compression='gzip')
+            dset = group.create_dataset(d, data=unw)
         for key,value in iter(atr.items()):
             group.attrs[key] = value
 
@@ -137,7 +133,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
             unw = mask_matrix(unw, mask, inps_dict['fill_value'])
 
             group = gg.create_group(igram)
-            dset = group.create_dataset(igram, data=unw, compression='gzip')
+            dset = group.create_dataset(igram, data=unw)
             for key, value in h5file[k][igram].attrs.items():
                 group.attrs[key] = value
 
@@ -173,7 +169,7 @@ EXAMPLE='''example:
   mask.py  timeseries*.h5 velocity*.h5  -m temporal_coherence.h5  -t 0.7
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Mask File(s)',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -192,14 +188,18 @@ def cmdLineParse():
     parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
     parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
-############################################################
-def main(argv): 
 
-    inps = cmdLineParse()
+############################################################
+def main(iargs=None): 
+    inps = cmdLineParse(iargs)
     #print '\n****************** mask *********************'
     inps.file = ut.get_file_list(inps.file)
     print('number of file to mask: '+str(len(inps.file)))
@@ -228,5 +228,5 @@ def main(argv):
 
 ############################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

@@ -18,14 +18,9 @@ import sys
 import argparse
 import time
 import datetime
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
@@ -57,7 +52,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
         rangeDist = np.tile(rangeDist1D, (length, 1))
     else:
         print('read range distance from file: %s' % (rangeDistFile))
-        rangeDist = readfile.read(rangeDistFile, epoch='slantRangeDistance')[0]
+        rangeDist = readfile.read(rangeDistFile, datasetName='slantRangeDistance')[0]
 
     yref = int(atr['REF_Y'])
     xref = int(atr['REF_X'])
@@ -74,7 +69,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
         h5out = h5py.File(outFile,'w')
         group = h5out.create_group(k)
 
-        prog_bar = ptime.progress_bar(maxValue=epochNum)
+        prog_bar = ptime.progressBar(maxValue=epochNum)
         if k in ['interferograms','wrapped']:
             Ramp *= -4*np.pi / float(atr['WAVELENGTH'])
             print('number of interferograms: '+str(epochNum))
@@ -90,7 +85,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
                 data -= Ramp*dt
 
                 gg = group.create_group(epoch)
-                dset = gg.create_dataset(epoch, data=data, compression='gzip')
+                dset = gg.create_dataset(epoch, data=data)
                 for key, value in iter(atr.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12List[i])
@@ -104,7 +99,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
 
                 data -= Ramp*tbase[i]
 
-                dset = group.create_dataset(epoch, data=data, compression='gzip')
+                dset = group.create_dataset(epoch, data=data)
                 prog_bar.update(i+1, suffix=epoch)
             for key, value in iter(atr.items()):
                 group.attrs[key] = value
@@ -143,7 +138,7 @@ EXAMPLE='''example:
   local_oscilator_drift.py filt_101020_110220_4rlks.unw
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Local Oscilator Drift (LOD) correction of Envisat',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -153,28 +148,33 @@ def cmdLineParse():
                         help='Slant range distance file, i.e. rangeDistance.h5, geometryGeo.h5')
     parser.add_argument('-o','--output', dest='outfile',\
                         help='Output file name for corrected file.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 #########################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     if not inps.outfile:
-        inps.outfile = os.path.splitext(inps.file)[0]+'_LODcor'+os.path.splitext(inps.file)[1]
+        inps.outfile = '{}_LODcor{}'.format(os.path.splitext(inps.file)[0], os.path.splitext(inps.file)[1])
+    if not inps.range_dist_file:
+        atr = readfile.read_attribute(inps.file)
+        if 'Y_FIRST' in atr.keys():
+            coordType = 'geo'
+        else:
+            coordType = 'radar'
+        print('Input file is in %s coordinates' % (coordType))
+        inps.range_dist_file = ut.get_geometry_file('slantRangeDistance', coordType=coordType)
 
-    atr = readfile.read_attribute(inps.file)
-    if 'Y_FIRST' in atr.keys():
-        coordType = 'geo'
-    else:
-        coordType = 'radar'
-    print('Input file is in %s coordinates' % (coordType))
-    inps.range_dist_file = ut.get_geometry_file('slantRangeDistance', coordType=coordType)
     inps.outfile = correct_LOD(inps.file, inps.range_dist_file, inps.outfile)
     print('Done.')
 
 
 #########################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

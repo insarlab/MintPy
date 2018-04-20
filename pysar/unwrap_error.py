@@ -6,19 +6,12 @@
 ############################################################
 
 
-import os
-import sys
+import os, sys
 import argparse
-
 import h5py
 import numpy as np
 from scipy.linalg import pinv
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
-import pysar.utils.deramp as deramp
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut, deramp
 
 
 ##########################################################################################
@@ -58,7 +51,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
         'unwrapIfgram_unwCor.h5' = unwrap_error_correction_phase_closure('Seeded_unwrapIfgram.h5','mask.h5')
     '''
     print('read mask from file: '+mask_file)
-    mask = readfile.read(mask_file, epoch='mask')[0].flatten(1)
+    mask = readfile.read(mask_file, datasetName='mask')[0].flatten(1)
 
     atr = readfile.read_attribute(ifgram_file)
     length = int(atr['LENGTH'])
@@ -94,7 +87,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     print('reading interferograms...')
     print('Number of interferograms: '+ str(ifgram_num))
     data = np.zeros((ifgram_num,pixel_num),np.float32)
-    prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+    prog_bar = ptime.progressBar(maxValue=ifgram_num)
     for ni in range(ifgram_num):
         ifgram = ifgram_list[ni]
         d = h5[k][ifgram].get(ifgram)[:].flatten(1)
@@ -107,7 +100,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     h5curl = h5py.File(curl_file,'r')
     curl_list = sorted(h5curl[k].keys())
     curl_data = np.zeros((curl_num, pixel_num),np.float32)
-    prog_bar = ptime.progress_bar(maxValue=curl_num)
+    prog_bar = ptime.progressBar(maxValue=curl_num)
     for ni in range(curl_num):
         d = h5curl[k][curl_list[ni]].get(curl_list[ni])[:].flatten(1)
         curl_data[ni,:] = d.flatten(1)
@@ -117,7 +110,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
 
     print('estimating unwrapping error pixel by pixel ...')
     EstUnwrap = np.zeros((ifgram_num,pixel_num),np.float32)
-    prog_bar = ptime.progress_bar(maxValue=pixel_num)
+    prog_bar = ptime.progressBar(maxValue=pixel_num)
     for ni in range(pixel_num):
         if mask[ni]==1:
             dU = data[:,ni]
@@ -160,11 +153,11 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
     h5unwCor = h5py.File(ifgram_cor_file,'w') 
     gg = h5unwCor.create_group(k) 
 
-    prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+    prog_bar = ptime.progressBar(maxValue=ifgram_num)
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
         group = gg.create_group(ifgram)
-        dset = group.create_dataset(ifgram, data=np.reshape(dataCor[i,:],[width,length]).T, compression='gzip')
+        dset = group.create_dataset(ifgram, data=np.reshape(dataCor[i,:],[width,length]).T)
         for key, value in h5[k][ifgram].attrs.items():
             group.attrs[key] = value
         prog_bar.update(i+1)
@@ -191,7 +184,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
         unwrap_error_correction_bridging('unwrapIfgram.h5', 'mask_all.h5', y_list, x_list, 'quadratic')
     '''
     ##### Mask and Ramp
-    mask = readfile.read(mask_file, epoch='mask')[0]
+    mask = readfile.read(mask_file, datasetName='mask')[0]
     ramp_mask = mask == 1
     print('estimate phase ramp during the correction')
     print('ramp type: '+ramp_type)
@@ -262,7 +255,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 
         ##### Loop
         print('Number of interferograms: '+str(ifgram_num))
-        prog_bar = ptime.progress_bar(maxValue=ifgram_num)
+        prog_bar = ptime.progressBar(maxValue=ifgram_num)
         date12_list = ptime.list_ifgram2date12(ifgram_list)
         for i in range(ifgram_num):
             ifgram = ifgram_list[i]
@@ -274,13 +267,13 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 
             ramp[data == 0.] = 0.
             gg = group.create_group(ifgram)
-            dset = gg.create_dataset(ifgram, data=data_derampCor+ramp, compression='gzip')
+            dset = gg.create_dataset(ifgram, data=data_derampCor+ramp)
             for key, value in h5[k][ifgram].attrs.items():
                 gg.attrs[key]=value
 
             if save_cor_deramp_file:
                 gg_deramp = group_deramp.create_group(ifgram)
-                dset = gg_deramp.create_dataset(ifgram, data=data_derampCor, compression='gzip')
+                dset = gg_deramp.create_dataset(ifgram, data=data_derampCor)
                 for key, value in h5[k][ifgram].attrs.items():
                     gg_deramp.attrs[key]=value
             prog_bar.update(i+1, suffix=date12_list[i])
@@ -417,7 +410,7 @@ DESCRIPTION='''
       c. add linear phase ramp estimated in step a back to the corrected phase in step b.
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Unwrapping Error Correction.'+DESCRIPTION,\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -447,8 +440,13 @@ def cmdLineParse():
                                'pysar.unwrapError.yx = 283,1177,305,1247;350,2100,390,2200')
     bridging.add_argument('--ramp', dest='ramp_type', choices=['plane','quadratic'], default='plane',\
                           help='type of phase ramp to be removed before correction.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     if inps.y and np.mod(len(inps.y),2) != 0:
         raise argparse.ArgumentTypeError('Number of Y coordinates is not even')
     if inps.x and np.mod(len(inps.x),2) != 0:
@@ -457,8 +455,8 @@ def cmdLineParse():
 
 
 ####################################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     # output filename
     ext = os.path.splitext(inps.ifgram_file)[1]
     if not inps.outfile:
@@ -490,5 +488,5 @@ def main(argv):
 
 ####################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

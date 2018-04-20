@@ -6,19 +6,12 @@
 ############################################################
 
 
-import sys
-import os
+import os, sys, re
 import argparse
 import warnings
-import re
-
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 
 ######################################## Sub Functions ############################################
@@ -47,6 +40,20 @@ def multilook_matrix(matrix,lks_y,lks_x):
         for r in range(rows_mli):  matrix_mli[r,:]  = np.nanmean(matrix_Cmli[(r)*lks_y:(r+1)*lks_y,:],0)
     del matrix, matrix_Cmli
     return matrix_mli
+
+
+def multilook_data(data, lksY, lksX):
+    '''Modified from Praveen on StackOverflow:
+    https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution'''
+    shape = np.array(data.shape, dtype=float)
+    newShape = np.floor(shape / (lksY, lksX)).astype(int) * (lksY, lksX)
+    cropData = data[:newShape[0], :newShape[1]]
+    temp = cropData.reshape((newShape[0] // lksY, lksY,
+                             newShape[1] // lksX, lksX))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        coarseData = np.nanmean(temp, axis=(1,3))
+    return coarseData
 
 
 def multilook_attribute(atr_dict,lks_y,lks_x, print_msg=True):
@@ -110,9 +117,9 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     lks_x = int(lks_x)
 
     ## input file info
-    atr = readfile.read_attribute(infile)
+    atr = readfile.read_attribute(infile)    
     k = atr['FILE_TYPE']
-    print('multilooking '+k+' file '+infile)
+    print('multilooking {} {} file: {}'.format(atr['PROCESSOR'], k, infile))
     print('number of looks in y / azimuth direction: %d' % lks_y)
     print('number of looks in x / range   direction: %d' % lks_x)
 
@@ -131,7 +138,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         h5 = h5py.File(infile,'r')
         epochList = sorted(h5[k].keys())
         epoch_num = len(epochList)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
+        prog_bar = ptime.progressBar(maxValue=epoch_num)
 
         h5out = h5py.File(outfile,'w')
         group = h5out.create_group(k)
@@ -144,11 +151,11 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 data = h5[k][epoch].get(epoch)[:]
                 atr = h5[k][epoch].attrs
 
-                data_mli = multilook_matrix(data,lks_y,lks_x)
+                data_mli = multilook_data(data,lks_y,lks_x)
                 atr_mli = multilook_attribute(atr,lks_y,lks_x,print_msg=False)
 
                 gg = group.create_group(epoch)
-                dset = gg.create_dataset(epoch, data=data_mli, compression='gzip')
+                dset = gg.create_dataset(epoch, data=data_mli)
                 for key, value in iter(atr_mli.items()):
                     gg.attrs[key] = value
                 prog_bar.update(i+1, suffix=date12_list[i])
@@ -159,9 +166,9 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
                 epoch = epochList[i]
                 data = h5[k].get(epoch)[:]
 
-                data_mli = multilook_matrix(data,lks_y,lks_x)
+                data_mli = multilook_data(data,lks_y,lks_x)
                 
-                dset = group.create_dataset(epoch, data=data_mli, compression='gzip')
+                dset = group.create_dataset(epoch, data=data_mli)
                 prog_bar.update(i+1, suffix=epoch)
             atr = h5[k].attrs
             atr_mli = multilook_attribute(atr,lks_y,lks_x)
@@ -175,13 +182,19 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
     ## Read/Write single-dataset files
     elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:        
         rg,az,atr = readfile.read(infile)
-        rgmli = multilook_matrix(rg,lks_y,lks_x); #rgmli *= 1.0/lks_x
-        azmli = multilook_matrix(az,lks_y,lks_x); #azmli *= 1.0/lks_y
+        rgmli = multilook_data(rg,lks_y,lks_x); #rgmli *= 1.0/lks_x
+        azmli = multilook_data(az,lks_y,lks_x); #azmli *= 1.0/lks_y
         atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(rgmli,azmli,atr,outfile)
     else:
         data,atr = readfile.read(infile)
-        data_mli = multilook_matrix(data,lks_y,lks_x)
+        if lks_y < 0 and lks_x < 0:
+            lks_x = 1./abs(lks_x)
+            lks_y = 1./abs(lks_y)
+            outShape = (int(int(atr['LENGTH'])/lks_y), int(int(atr['WIDTH'])/lks_x))
+            data_mli = ut.interpolate_data(data, outShape=outShape, interpMethod='linear')
+        else:
+            data_mli = multilook_data(data, lks_y, lks_x)
         atr = multilook_attribute(atr,lks_y,lks_x)
         writefile.write(data_mli,atr,outfile)
 
@@ -192,9 +205,12 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 EXAMPLE='''example:
   multilook.py  velocity.h5  15 15
   multilook.py  srtm30m.dem  10 10  -o srtm30m_300m.dem
+
+  To interpolate input file into larger size file:
+  multilook.py  bperp.rdr  -10 -2 -o bperp_full.rdr
 '''
 
-def cmdLineParse():
+def createParser():
     parser = argparse.ArgumentParser(description='Multilook.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -205,14 +221,18 @@ def cmdLineParse():
     parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
     parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
                         help='Disable parallel processing. Diabled auto for 1 input file.')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmdLineParse(iargs)
     inps.file = ut.get_file_list(inps.file)
 
     # check outfile and parallel option
@@ -237,7 +257,7 @@ def main(argv):
 
 ###################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 
 
 

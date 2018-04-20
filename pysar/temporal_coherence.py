@@ -4,19 +4,12 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-#
 
 
-import sys
-import os
-
+import os, sys
 import h5py
 import numpy as np
-
-import pysar.utils.datetime as ptime
-import pysar.utils.readfile as readfile
-import pysar.utils.writefile as writefile
-import pysar.utils.utils as ut
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 
 ######################################################################################################
@@ -43,7 +36,7 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     print("load time series: "+timeseriesFile)
     print('number of acquisitions: '+str(date_num))
     timeseries = np.zeros((date_num, pixel_num), np.float32)
-    prog_bar = ptime.progress_bar(maxValue=date_num, prefix='loading: ')
+    prog_bar = ptime.progressBar(maxValue=date_num, prefix='loading: ')
     for i in range(date_num):
         date = date_list[i]
         d = h5timeseries['timeseries'].get(date)[:]
@@ -81,7 +74,7 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     print('calculating temporal coherence interferogram by interferogram ...')
     print('number of interferograms: '+str(ifgram_num))
     temp_coh = np.zeros(pixel_num, dtype=np.float32)+0j
-    prog_bar = ptime.progress_bar(maxValue=ifgram_num, prefix='calculating: ')
+    prog_bar = ptime.progressBar(maxValue=ifgram_num, prefix='calculating: ')
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
         # read interferogram

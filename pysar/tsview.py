@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 from pysar.mask import mask_matrix
+import pysar.view as view
 
 ############# Global Variables ################
 tims, inps, img, mask, d_v, d_ts = None, None, None, None, None, None
@@ -92,9 +93,8 @@ EXAMPLE='''example:
   tsviewer.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
 '''
 
-
-def cmdLineParse(argv):
-    parser = argparse.ArgumentParser(description='Interactive time-series viewer',\
+def createParser():
+    parser = argparse.ArgumentParser(description='Interactive Time-series Viewer',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
     parser.add_argument('timeseries_file', help='time series file to display')
@@ -154,8 +154,13 @@ def cmdLineParse(argv):
     #                  help='Point marker color. Default: crimson')
     disp.add_argument('--ew','--edgewidth', dest='edge_width', type=float, default=1.0,\
                       help='Edge width. Default: 1.0')
+    return parser
 
-    inps = parser.parse_args(argv)
+
+def cmdLineParse(iargs=None):
+    parser = createParser()
+    inps = parser.parse_args(args=iargs)
+
     if (not inps.disp_fig or inps.fig_base) and not inps.save_fig:
         inps.save_fig = True
     if inps.ylim:
@@ -163,7 +168,6 @@ def cmdLineParse(argv):
     return inps
 
 ################### HELPER FUNCTIONS ##########################
-
 
 ###################### EXTRANEOUS HELPER FUNCTIONS ######################
 
@@ -256,7 +260,7 @@ def read_timeseries_info():
     if k in ['GIANT_TS']:
         dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
     else:
-        dateList = sorted(h5[k].keys())
+        dateList = view.get_file_dataset_list(inps.timeseries_file, k)
     date_num = len(dateList)
     inps.dates, tims = ptime.date_list2vector(dateList)
 
@@ -374,7 +378,7 @@ def flip_map():
     global inps, atr
 
     if inps.auto_flip:
-        inps.flip_lr, inps.flip_ud = view.auto_flip_direction(atr)
+        inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(atr)
     else:
         inps.flip_ud = False
         inps.flip_lr = False
@@ -395,7 +399,7 @@ def set_mask():
             inps.mask_file = None
 
     try:
-        mask = readfile.read(inps.mask_file, epoch='mask')[0]
+        mask = readfile.read(inps.mask_file, datasetName='mask')[0]
         mask[mask!=0] = 1
         print(('load mask from file: '+inps.mask_file))
     except:
@@ -406,12 +410,13 @@ def set_mask():
 def set_initial_map():
     global d_v, h5, k, dateList, inps, data_lim
 
-    d_v = h5[k].get(dateList[inps.epoch_num])[:] * inps.unit_fac
+    d_v = h5['timeseries'][inps.epoch_num][:] * inps.unit_fac
     # Initial Map
-    d_v = readfile.read(inps.timeseries_file, epoch=dateList[inps.epoch_num])[0] * inps.unit_fac
+    print(str(dateList))
+    d_v = readfile.read(inps.timeseries_file, datasetName=dateList[inps.epoch_num])[0] * inps.unit_fac
     #d_v = h5[k].get(dateList[inps.epoch_num])[:]*inps.unit_fac
     if inps.ref_date:
-        inps.ref_d_v = readfile.read(inps.timeseries_file, epoch=inps.ref_date)[0]*inps.unit_fac
+        inps.ref_d_v = readfile.read(inps.timeseries_file, datasetName=inps.ref_date)[0]*inps.unit_fac
         d_v -= inps.ref_d_v
 
     if mask is not None:
@@ -424,6 +429,7 @@ def set_initial_map():
 
     if not inps.ylim_mat:
         inps.ylim_mat = data_lim
+
     print(('Initial data range: '+str(data_lim)))
     print(('Display data range: '+str(inps.ylim_mat)))
 
@@ -461,7 +467,7 @@ def set_dem_file():
     global ax_v, inps, img
 
     if inps.dem_file:
-        dem = readfile.read(inps.dem_file, epoch='height')[0]
+        dem = readfile.read(inps.dem_file, datasetName='height')[0]
         ax_v = pp.plot_dem_yx(ax_v, dem)
 
     img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim_mat, interpolation='nearest')
@@ -549,7 +555,7 @@ def time_slider_update(val):
     timein = tslider.val
     idx_nearest = np.argmin(np.abs(np.array(tims) - timein))
     ax_v.set_title('N = %d, Time = %s' % (idx_nearest, inps.dates[idx_nearest].strftime('%Y-%m-%d')))
-    d_v = h5[k].get(dateList[idx_nearest])[:] * inps.unit_fac
+    d_v = h5[k][idx_nearest][:] * inps.unit_fac
     if inps.ref_date:
         d_v -= inps.ref_d_v
     if mask is not None:
@@ -632,10 +638,10 @@ def update_timeseries(y, x, plot_number, data_only=False):
         axis = second_plot_axis
 
     d_ts = []
-    for date in dateList:
-        d = h5[k].get(date)[y, x]
+    for i, date in enumerate(dateList):
+        d = h5['timeseries'][i][y, x]
         if inps.ref_yx:
-            d -= h5[k].get(date)[inps.ref_yx[0], inps.ref_yx[1]]
+            d -= h5['timeseries'][i][inps.ref_yx[0], inps.ref_yx[1]]
         d_ts.append(d * inps.unit_fac)
 
     if inps.zero_first:
@@ -999,4 +1005,9 @@ def main(argv):
 ###########################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
+
+
+#########################################################################################
+if __name__ == '__main__':
+    main()
 
