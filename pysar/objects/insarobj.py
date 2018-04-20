@@ -43,6 +43,7 @@ class ifgramStackDict:
         self.name = name
         self.pairsDict = pairsDict
 
+
     def get_size(self, box=None):
         self.numIfgram = len(self.pairsDict)
         ifgramObj = [v for v in self.pairsDict.values()][0]
@@ -55,15 +56,18 @@ class ifgramStackDict:
             self.width = ifgramObj.width
         return self.numIfgram, self.length, self.width
 
+
     def get_date12_list(self):
         pairs = [pair for pair in self.pairsDict.keys()]
         self.date12List = ['{}_{}'.format(i[0],i[1]) for i in pairs]
         return self.date12List
 
+
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
         self.metadata = ifgramObj.get_metadata()
         return self.metadata
+
 
     def get_dataset_data_type(self, dsName):
         ifgramObj = [v for v in self.pairsDict.values()][0]
@@ -73,6 +77,7 @@ class ifgramStackDict:
         if 'DATA_TYPE' in metadata.keys():
             dsDataType = dataTypeDict[metadata['DATA_TYPE'].lower()]
         return dsDataType
+
 
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None):
         '''Save/write an ifgramStackDict object into an HDF5 file with the structure below:
@@ -181,6 +186,9 @@ class ifgramStackDict:
         return self.outputFile
 
 
+
+
+
 ########################################################################################
 class ifgramDict:
     """
@@ -211,10 +219,12 @@ class ifgramDict:
             for key , value in metadata.items():
                 setattr(self, key, value)
 
+
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
         data, metadata = readfile.read(self.file, box=box)
         return data, metadata
+
 
     def get_size(self):
         self.file = self.datasetDict[ifgramDatasetNames[0]]
@@ -223,6 +233,7 @@ class ifgramDict:
         self.width = int(metadata['WIDTH'])
         return self.length, self.width
 
+
     def get_perp_baseline(self):
         self.file = self.datasetDict[ifgramDatasetNames[0]]
         metadata = readfile.read_attribute(self.file)
@@ -230,6 +241,7 @@ class ifgramDict:
         self.bperp_bottom = float(metadata['P_BASELINE_BOTTOM_HDR'])
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
+
 
     def get_metadata(self, family=ifgramDatasetNames[0]):
         self.file = self.datasetDict[family]
@@ -261,6 +273,10 @@ class ifgramDict:
             self.metadata['PLATFORM'] = self.platform
 
         return self.metadata
+
+
+
+
 
 
 ########################################################################################
@@ -295,10 +311,12 @@ class geometryDict:
         self.datasetDict = datasetDict
         self.ifgramMetadata = ifgramMetadata
 
+
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
         data, metadata = readfile.read(self.file, datasetName=family, box=box)
         return data, metadata
+
 
     def get_slantRangeDistance(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
@@ -308,6 +326,7 @@ class geometryDict:
             data = data[box[1]:box[3],box[0]:box[2]]
         return data
 
+
     def get_incidenceAngle(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
             return None
@@ -315,6 +334,7 @@ class geometryDict:
         if box is not None:
             data = data[box[1]:box[3],box[0]:box[2]]
         return data
+
 
     def get_size(self, family=None, box=None):
         if not family:
@@ -329,9 +349,11 @@ class geometryDict:
             width = int(metadata['WIDTH'])
         return length, width
 
+
     def get_dataset_list(self):
         self.datasetList = list(self.datasetDict.keys())
         return self.datasetList
+
 
     def get_metadata(self, family=None):
         if not family:
@@ -358,6 +380,7 @@ class geometryDict:
         #        self.processor = 'isce'
         #self.metadata['PROCESSOR'] = self.processor
         return self.metadata
+
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression=None):
         '''

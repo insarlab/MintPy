@@ -832,7 +832,7 @@ def add_attribute(File, atr_new=dict()):
             try: f.attrs.pop(key)
             except: pass
         else:
-            f.attrs[key] = value
+            f.attrs[key] = str(value)
     f.close()
     return File
 

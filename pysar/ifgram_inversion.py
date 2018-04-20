@@ -563,7 +563,7 @@ def ifgram_inversion_patch(stack_obj, inps, box=None):
         mask_part_net = mask ^ mask_all_net
 
         if np.sum(mask_all_net) > 0:
-            print('inverting pixels with valid phase in all  ifgrams: {} pixels ...'.format(np.sum(mask_all_net)))
+            print('inverting pixels with valid phase in all  ifgrams ({:.0f} pixels) ...'.format(np.sum(mask_all_net)))
             num_all_net = int(np.sum(mask_all_net))
             pha_data_temp = pha_data[:, mask_all_net]
             ts1 = np.zeros((date_num-1, num_all_net))
@@ -582,7 +582,7 @@ def ifgram_inversion_patch(stack_obj, inps, box=None):
             temp_coh[mask_all_net] = temp_coh1
 
         if np.sum(mask_part_net) > 0:
-            print('inverting pixels with valid phase in some ifgrams (%.0f pixels) ...' % (np.sum(mask_part_net)))
+            print('inverting pixels with valid phase in some ifgrams ({:.0f} pixels) ...'.format(np.sum(mask_part_net)))
             pixel_num2inv = int(np.sum(mask_part_net))
             pixel_idx2inv = np.where(mask_part_net)[0]
             prog_bar = ptime.progressBar(maxValue=pixel_num2inv)

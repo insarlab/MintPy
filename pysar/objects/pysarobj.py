@@ -117,6 +117,7 @@ class timeseries:
         self.file = file
         self.name = 'timeseries'
 
+
     def close(self, print_msg=True):
         try:
             self.f.close()
@@ -124,6 +125,7 @@ class timeseries:
                 print('close timeseries file: {}'.format(os.path.basename(self.file)))
         except:
             pass
+
 
     def open(self, print_msg=True):
         if print_msg:
@@ -145,6 +147,7 @@ class timeseries:
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]  #list of float for year, 2014.95
         self.datasetList = list(self.dateList)
 
+
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
             self.metadata = dict(f.attrs)
@@ -159,10 +162,12 @@ class timeseries:
         self.refIndex = dateList.index(self.metadata['REF_DATE'])
         return self.metadata
 
+
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
             self.numDate, self.length, self.width = f[self.name].shape
         return self.numDate, self.length, self.width
+
 
     def read(self, datasetName=None, box=None, print_msg=True):
         '''Read dataset from timeseries file
@@ -202,6 +207,7 @@ class timeseries:
             data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
         data = np.squeeze(data)
         return data
+
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None):
         '''
@@ -269,6 +275,7 @@ class timeseries:
         print('finished writing to {}'.format(outFile))
         return outFile
 
+
     def timeseries_std(self, maskFile=None, outFile=None):
         '''Calculate the standard deviation (STD) for each epoch,
            output result to a text file.
@@ -293,6 +300,7 @@ class timeseries:
                    fmt='%s', delimiter='\t', header=header)
         print('save timeseries STD to text file: {}'.format(outFile))
         return outFile
+
 
     def timeseries_rms(self, maskFile=None, outFile=None):
         '''Calculate the Root Mean Square for each epoch of input timeseries file
@@ -319,6 +327,7 @@ class timeseries:
         print('save timeseries RMS to text file: {}'.format(outFile))
         return outFile
 
+
     def spatial_average(self, maskFile=None, box=None):
         self.open(print_msg=False)
         data = self.read(box=box)
@@ -329,12 +338,19 @@ class timeseries:
         dmean = np.nanmean(data, axis=(1,2))
         return dmean, self.dateList
 
+
     def temporal_average(self):
         print('calculating the temporal average of timeseries file: {}'.format(self.file))
         self.open(print_msg=False)
         data = self.read()
         dmean = np.nanmean(data, axis=0)
         return dmean
+
+
+
+
+
+
 
 
 ########################################################################################
@@ -358,6 +374,7 @@ class geometry:
         self.file = file
         self.name = 'geometry'
 
+
     def close(self, print_msg=True):
         try:
             self.f.close()
@@ -365,6 +382,7 @@ class geometry:
                 print('close geometry file: {}'.format(os.path.basename(self.file)))
         except: 
             pass
+
 
     def open(self, print_msg=True):
         if print_msg:
@@ -389,6 +407,7 @@ class geometry:
             else:
                 self.dateList = None
 
+
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
             dsName = [i for i in f.keys() if i in geometryDatasetNames][0]
@@ -399,6 +418,7 @@ class geometry:
                 self.length, self.width = dsShape
         return self.length, self.width
 
+
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
             self.metadata = dict(f.attrs)
@@ -406,6 +426,7 @@ class geometry:
             try:     self.metadata[key] = value.decode('utf8')
             except:  self.metadata[key] = value
         return self.metadata
+
 
     def read(self, datasetName=geometryDatasetNames[0], box=None, print_msg=True):
         '''Read 2D / 3D dataset with bounding box in space
@@ -473,6 +494,7 @@ class ifgramStack:
         self.file = file
         self.name = 'ifgramStack'
 
+
     def close(self, print_msg=True):
         try:
             self.f.close()
@@ -480,6 +502,7 @@ class ifgramStack:
                 print('close {} file: {}'.format(self.name, os.path.basename(self.file)))
         except:
             pass
+
 
     def open(self, print_msg=True):
         '''
@@ -510,6 +533,7 @@ class ifgramStack:
         self.dateList = self.get_date_list(dropIfgram=False)
         self.numDate = len(self.dateList)
 
+
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
             self.metadata = dict(f.attrs)
@@ -518,10 +542,12 @@ class ifgramStack:
             except:  self.metadata[key] = value
         return self.metadata
 
+
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
             self.numIfgram, self.length, self.width = f[ifgramDatasetNames[0]].shape
         return self.numIfgram, self.length, self.width
+
 
     def read_datetimes(self):
         '''Read master/slave dates into array of datetime.datetime objects'''
@@ -531,6 +557,7 @@ class ifgramStack:
         self.sDates = np.array([i.decode('utf8') for i in dates[:,1]])
         self.mTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.mDates])
         self.sTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.sDates])
+
 
     def read(self, datasetName=ifgramDatasetNames[0], box=None, print_msg=True, dropIfgram=False):
         '''Read 3D dataset with bounding box in space
@@ -572,6 +599,7 @@ class ifgramStack:
                 data = np.squeeze(data)
         return data
 
+
     def spatial_average(self, datasetName=ifgramDatasetNames[1], maskFile=None, box=None):
         if datasetName is None:
             datasetName = ifgramDatasetNames[1]
@@ -596,6 +624,7 @@ class ifgramStack:
             print('')
         return dmean, self.date12List
 
+
     ##### Functions considering dropIfgram value
     def get_date12_list(self, dropIfgram=True):
         with h5py.File(self.file, 'r') as f:
@@ -607,6 +636,7 @@ class ifgramStack:
         date12List = ['{}_{}'.format(i,j) for i,j in zip(mDates, sDates)]
         return date12List
 
+
     def get_drop_date12_list(self):
         with h5py.File(self.file, 'r') as f:
             dates = f['date'][:]
@@ -615,6 +645,7 @@ class ifgramStack:
         sDates = np.array([i.decode('utf8') for i in dates[:,1]])
         date12List = ['{}_{}'.format(i,j) for i,j in zip(mDates, sDates)]
         return date12List
+
 
     def get_date_list(self, dropIfgram=False):
         with h5py.File(self.file, 'r') as f:
@@ -625,6 +656,7 @@ class ifgramStack:
         sDates = [i.decode('utf8') for i in dates[:,1]]
         dateList = sorted(list(set(mDates + sDates)))
         return dateList
+
 
     def nonzero_mask(self, datasetName=None, print_msg=True, dropIfgram=True):
         '''Return the common mask of pixels with non-zero value in dataset of all ifgrams.
@@ -651,6 +683,7 @@ class ifgramStack:
                 sys.stdout.flush()
             print('')
         return mask
+
 
     def temporal_average(self, datasetName=ifgramDatasetNames[1], dropIfgram=True):
         self.open(print_msg=False)
@@ -679,6 +712,7 @@ class ifgramStack:
             print('')
         dmean /= np.sum(self.dropIfgram)
         return dmean
+
 
     ##### Functions for Network Inversion
     def get_design_matrix(self, refDate=None, dropIfgram=True):
@@ -710,6 +744,7 @@ class ifgramStack:
         B = B[:,:-1]
         return A, B
 
+
     def get_perp_baseline_timeseries(self, dropIfgram=True):
         '''Get spatial perpendicular baseline in timeseries from ifgramStack, ignoring dropped ifgrams'''
         ## Get tbaseDiff
@@ -730,6 +765,7 @@ class ifgramStack:
         pbaseTimeseries = np.concatenate((np.array([0.],dtype=np.float32), np.cumsum([pbaseRate * tbaseDiff])))
         return pbaseTimeseries
 
+
     def update_drop_ifgram(self, date12List_to_drop):
         '''Update dropIfgram dataset based on input date12List_to_drop'''
         if date12List_to_drop is None:
@@ -739,6 +775,10 @@ class ifgramStack:
             print('open file {} with r+ mode'.format(self.file))
             print('update HDF5 dataset "/dropIfgram".')
             f['dropIfgram'][:] = np.array([i not in date12List_to_drop for i in date12ListAll], dtype=np.bool_)
+
+
+
+
 
 
 

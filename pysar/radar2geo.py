@@ -28,14 +28,7 @@ pysar.geocode.fillValue    = auto  #[np.nan, 0, ...], auto for np.nan, fill valu
 EXAMPLE = """example:
   radar2geo.py velocity.h5
   radar2geo.py velocity.h5 -b -0.5 -0.25 -91.3 -91.1
-
-  radar2geo.py  velocity.h5 temporalCoherence.h5 timeseries_ECMWF_demErr_refDate.h5
-  radar2geo.py  velocity.h5 temporalCoherence.h5 timeseries_ECMWF_demErr_refDate.h5 -t pysarApp_template.txt
-
-  radar2geo.py  101120-110220.unw   -l geomap_4rlks.trans
-  radar2geo.py  velocity.h5         -l sim_150911-150922.UTM_TO_RDC
-  radar2geo.py  coherence.h5        -l geometryRadar.h5   --lalo-step 0.0003333
-  radar2geo.py  unwrapIfgram.h5     -l geometryRadar.h5   --lalo-step demGeo_tight.h5
+  radar2geo.py velocity.h5 timeseries.h5 -t pysarApp_template.txt --update
 """
 
 
@@ -66,6 +59,8 @@ def create_parser():
                         help='Value used for points outside of the interpolation domain.\n' +
                              'Default: np.nan')
 
+    parser.add_argument('--update', dest='updateMode', action='store_true',
+                        help='skip resampling if output file exists and newer than input file')
     parser.add_argument('-o', '--output', dest='outfile',
                         help="output file name. Default: add prefix 'geo_'")
 
@@ -172,6 +167,11 @@ def update_attribute(atr_in, inps, print_msg=True):
 def geocode_file(infile, inps, res_obj, outfile=None):
     print('-' * 50)
     print('geocode file: {}'.format(infile))
+    if not outfile:
+        outfile = os.path.join(os.path.dirname(infile), 'geo_' + os.path.basename(infile))
+    if inps.updateMode and not ut.update_file(outfile, [infile, inps.lookupFile]):
+        print('update mode is ON, skip geocoding.')
+        return outfile
 
     # read source data
     data, atr = readfile.read(infile, datasetName=inps.dset)
@@ -189,9 +189,6 @@ def geocode_file(infile, inps, res_obj, outfile=None):
     atr = update_attribute(atr, inps)
 
     # write to file
-    if not outfile:
-        outfile = os.path.join(os.path.dirname(infile), 'geo_' + os.path.basename(infile))
-    import pdb; pdb.set_trace()
     if inps.dset:
         atr['FILE_TYPE'] = inps.dset
     writefile.write(geo_data, atr, outfile, infile)
