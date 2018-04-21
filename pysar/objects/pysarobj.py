@@ -193,7 +193,7 @@ class timeseries:
 
             ##Get dateFlag - mark in time/1st dimension
             dateFlag = np.zeros((self.numDate), dtype=np.bool_)
-            if not datasetName:
+            if not datasetName or datasetName == self.name:
                 dateFlag[:] = True
             elif isinstance(datasetName, str):
                 dateFlag[self.dateList.index(datasetName)] = True
@@ -468,9 +468,6 @@ class geometry:
                     data = ds[self.dateList.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
                     data = np.squeeze(data)
         return data
-
-
-
 
 
 

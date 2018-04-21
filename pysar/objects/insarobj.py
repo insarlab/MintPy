@@ -124,8 +124,11 @@ class ifgramStackDict:
             dsDataType = dataType
             if dsName in ['connectComponent']:
                 dsDataType = np.bool_
-            print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                  'in size of {s} with compression = {c}'.format(s=dsShape, c=str(compression)))
+            print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
+                                                                                                     w=maxDigit,
+                                                                                                     t=str(dsDataType),
+                                                                                                     s=dsShape,
+                                                                                                     c=str(compression))
             ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                   dtype=dsDataType, chunks=True, compression=compression)
 
@@ -426,8 +429,11 @@ class geometryDict:
                 dsShape = (self.numDate, length, width)
                 ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                       dtype=dsDataType, chunks=True, compression=compression)
-                print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                      'in size of {s} with compression = {c}'.format(s=dsShape, c=str(compression)))
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
+                                                                                                         w=maxDigit,
+                                                                                                         t=str(dsDataType),
+                                                                                                         s=dsShape,
+                                                                                                         c=str(compression))
                 print('read coarse grid baseline files and linear interpolate into full resolution ...')
                 prog_bar = ptime.progressBar(maxValue=self.numDate)
                 for i in range(self.numDate):
@@ -441,8 +447,10 @@ class geometryDict:
                 dsName = 'date'
                 dsShape = (self.numDate,)
                 dsDataType = np.string_
-                print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                      'in size of {s}'.format(s=dsShape))
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                                  w=maxDigit,
+                                                                                  t=str(dsDataType),
+                                                                                  s=dsShape)
                 data = np.array(self.dateList, dtype=dsDataType)
                 ds = f.create_dataset(dsName, data=data)
 
@@ -452,8 +460,11 @@ class geometryDict:
                 if dsName.lower().endswith('mask'):
                     dsDataType = np.bool_
                 dsShape = (length, width)
-                print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                      'in size of {s} with compression = {c}'.format(s=dsShape, c=str(compression)))
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
+                                                                                                         w=maxDigit,
+                                                                                                         t=str(dsDataType),
+                                                                                                         s=dsShape,
+                                                                                                         c=str(compression))
                 data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
                 ds = f.create_dataset(dsName, data=data, chunks=True, compression=compression)
 
@@ -472,8 +483,11 @@ class geometryDict:
                 if data is not None:
                     dsShape = data.shape
                     dsDataType = dataType
-                    print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                          'in size of {s} with compression = {c}'.format(s=dsShape, c=str(compression)))
+                    print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
+                                                                                                             w=maxDigit,
+                                                                                                             t=str(dsDataType),
+                                                                                                             s=dsShape,
+                                                                                                             c=str(compression))
                     ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True, compression=compression)
 
         ###############################
@@ -496,10 +510,9 @@ def read_isce_bperp_file(fname, outShape, box=None):
                 fname : str, bperp file name
                 outShape : tuple of 2int, shape of file in full resolution
                 box : tuple of 4 int, subset range in (x0, y0, x1, y1) with respect to full resolution
-    Returns: data : 2D array of float32
-    Example:
-        fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
-        data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
+    Returns:    data : 2D array of float32
+    Example:    fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
+                data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
     '''
     dataC = readfile.read(fname)[0]
     data = ut.interpolate_data(dataC, outShape=outShape, interpMethod='linear')

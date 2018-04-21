@@ -325,6 +325,33 @@ def read(fname, box=None, datasetName=None, print_msg=True):
         sys.exit('Unrecognized file format: '+ext)
 
 
+def get_dataset_list(fname, datasetName=None):
+    """get list of 2D and 3D dataset to facilitate systematic file reading"""
+    if datasetName:
+        return [datasetName]
+
+    atr = read_attribute(fname)
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+
+    datasetList = []
+    fbase = os.path.basename(fname)
+    ext = os.path.splitext(fname)[1].lower()
+    if ext in ['.h5', '.he5']:
+        with h5py.File(fname, 'r') as f:
+            for key in f.keys():
+                obj = f[key]
+                if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
+                    datasetList.append(key)
+
+    elif ext in ['.trans', '.utm_to_rdc']:
+        datasetList = ['rangeCoord', 'azimuthCoord']
+    elif fbase.startswith('los'):
+        datasetList = ['incidenceAngle', 'headingAngle']
+    else:
+        datasetList = [os.path.split(fbase)[0]]
+    return datasetList
+
+
 #########################################################################
 def read_attribute(fname, datasetName=None):
     '''Read attributes of input file into a dictionary
@@ -333,14 +360,15 @@ def read_attribute(fname, datasetName=None):
     '''
     ext = os.path.splitext(fname)[1].lower()
     if not os.path.isfile(fname):
-        print('Input file not existed: '+fname)
-        print('Current directory: '+os.getcwd())
+        print('input file not existed: '+fname)
+        print('current directory: '+os.getcwd())
         sys.exit(1)
 
-    ##### PySAR
+    # HDF5 files
     if ext in ['.h5','.he5']:
         f = h5py.File(fname,'r')
-        ## Metadata dict
+
+        # search metadata dict
         atr = None
         key = 'WIDTH'
         if key in f.attrs.keys():
@@ -357,6 +385,7 @@ def read_attribute(fname, datasetName=None):
             try:     atr[key] = value.decode('utf8')
             except:  atr[key] = value
 
+        # get FILE_TYPE
         if 'FILE_TYPE' in atr.keys():
             k = atr['FILE_TYPE']
         elif 'unwrapPhase' in f.keys():
@@ -369,6 +398,7 @@ def read_attribute(fname, datasetName=None):
             k = list(f.keys())[0]
         atr['FILE_TYPE'] = str(k)
 
+        # read attribute of HDF5 dataset
         if k == 'timeseries' and 'MinValue' in f[k].attrs.keys():
             atr.update(f[k].attrs)
         elif datasetName and datasetName in f.keys() and 'MinValue' in f[datasetName].attrs.keys():

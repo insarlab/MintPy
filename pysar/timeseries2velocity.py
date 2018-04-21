@@ -221,8 +221,12 @@ def estimateVelocity(inps):
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
 
-    writefile.write(V, atr, outfile=inps.outfile)
-    writefile.write(Vstd, atr, outfile=outfileStd)
+    dsDict = dict()
+    dsDict['velocity'] = V
+    dsDict['velocityStd'] = Vstd
+    writefile.write(dsDict, outFile=inps.outfile, metadata=atr)
+    #writefile.write(V, atr, outfile=inps.outfile)
+    #writefile.write(Vstd, atr, outfile=outfileStd)
 
     return inps.outfile
 

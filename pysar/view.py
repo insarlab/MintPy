@@ -1224,7 +1224,7 @@ def main(iargs=None):
 
         # Min/MaxValue
         familyList = list(set([i.split('-')[0] for i in inps.dset]))
-        if not inps.disp_min and not inps.disp_max and 'MinValue' in atr.keys() and inps.key in timeseriesKeyNames:
+        if not inps.disp_min and not inps.disp_max and 'MinValue' in atr.keys():
             if not inps.disp_unit:
                 inps.disp_unit = auto_disp_unit(inps, atr)
             inps.disp_unit, inps.disp_scale = scale_data2disp_unit(atr, inps.disp_unit)[0:2]

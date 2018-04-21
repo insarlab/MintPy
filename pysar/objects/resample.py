@@ -8,7 +8,6 @@
 
 
 import sys
-import multiprocessing
 import numpy as np
 import pyresample as pr
 from pysar.utils import readfile
@@ -168,36 +167,34 @@ class resample:
         return src_def, dest_def
 
 
-    def resample(self, data, src_def, dest_def, interpMethod='nearest', fillValue=np.nan, nprocs=None, print_msg=True):
-        '''
+    def resample(self, data, src_def, dest_def, interp_method='nearest', fill_value=np.nan, nprocs=None, print_msg=True):
+        """
         Resample input radar coded data into geocoded data
         Parameters: data : 2D np.array
-        
-        
-        Returns:    geo_data
-        Example:
-            geo_data = reObj.resample(data, src_def, dest_def, interpMethod=inps.interpMethod,\
-                                      fillValue=np.fillValue, nprocs=4)
-        '''
-        num_cores = multiprocessing.cpu_count()
-        if nprocs is None:
-            nprocs = num_cores
-        else:
-            nprocs = min(num_cores, nprocs)
-
+                    src_def : pyresample.geometryDefinition objects
+                    dest_def : pyresample.geometryDefinition objects
+                    interp_method : str,
+                    fill_value : number
+                    nprocs : int
+                    print_msg : bool
+        Returns:    res_data
+        Example:    res_data = reObj.resample(data, src_def, dest_def, interp_method=inps.interpMethod,\
+                                              fill_value=np.fillValue, nprocs=4)
+        """
         if 'Y_FIRST' in self.src_metadata.keys():
-            radius = 100e3
+            radius = 100e3     # geo2radar
         else:
-            radius = 200
+            radius = 200       # radar2geo
 
-        if interpMethod.startswith('near'):
+        if interp_method.startswith('near'):
             if print_msg:
                 print('nearest resampling using {} processor cores ...'.format(nprocs))
-            geo_data = pr.kd_tree.resample_nearest(src_def, data, dest_def, nprocs=nprocs, fill_value=fillValue,\
+            res_data = pr.kd_tree.resample_nearest(src_def, data, dest_def, nprocs=nprocs, fill_value=fill_value,\
                                                    radius_of_influence=radius, epsilon=0)
-        elif interpMethod.endswith('linear'):
-            print('bilinear resampling using {} processor cores ...'.format(nprocs))
-            geo_data = pr.bilinear.resample_bilinear(data, src_def, dest_def, nprocs=nprocs, fill_value=fillValue,\
+        elif interp_method.endswith('linear'):
+            if print_msg:
+                print('bilinear resampling using {} processor cores ...'.format(nprocs))
+            res_data = pr.bilinear.resample_bilinear(data, src_def, dest_def, nprocs=nprocs, fill_value=fill_value,\
                                                      radius=radius, neighbours=32, epsilon=0, reduce_data=True)
-        return geo_data
+        return res_data
 
