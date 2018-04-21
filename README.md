@@ -16,6 +16,7 @@ We recommend using [Anaconda](https://www.anaconda.com/) to install the python e
 - Scipy
 - h5py
 - Matplotlib
+- multiprocessing
 - Basemap (optional, for plotting in geo coordinate)
 - [pyresample](http://pyresample.readthedocs.org) (optional, for geocoding)
 - pykml (optional, for Google Earth KMZ file output)
