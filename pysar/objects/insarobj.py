@@ -1,5 +1,5 @@
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2017, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun, 2017              #
 ############################################################
@@ -128,8 +128,8 @@ class ifgramStackDict:
                                                                                                      w=maxDigit,
                                                                                                      t=str(dsDataType),
                                                                                                      s=dsShape,
-                                                                                                     c=str(compression))
-            ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
+                                                                                                     c=str(compression)))
+            ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),
                                   dtype=dsDataType, chunks=True, compression=compression)
 
             #dMin = 0
@@ -433,7 +433,7 @@ class geometryDict:
                                                                                                          w=maxDigit,
                                                                                                          t=str(dsDataType),
                                                                                                          s=dsShape,
-                                                                                                         c=str(compression))
+                                                                                                         c=str(compression)))
                 print('read coarse grid baseline files and linear interpolate into full resolution ...')
                 prog_bar = ptime.progressBar(maxValue=self.numDate)
                 for i in range(self.numDate):
@@ -450,7 +450,7 @@ class geometryDict:
                 print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
                                                                                   w=maxDigit,
                                                                                   t=str(dsDataType),
-                                                                                  s=dsShape)
+                                                                                  s=dsShape))
                 data = np.array(self.dateList, dtype=dsDataType)
                 ds = f.create_dataset(dsName, data=data)
 
@@ -464,31 +464,30 @@ class geometryDict:
                                                                                                          w=maxDigit,
                                                                                                          t=str(dsDataType),
                                                                                                          s=dsShape,
-                                                                                                         c=str(compression))
+                                                                                                         c=str(compression)))
                 data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
                 ds = f.create_dataset(dsName, data=data, chunks=True, compression=compression)
 
         ###############################
         # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
-        for dsName in ['incidenceAngle', 'slantRangeDistance']:
-            if dsName not in self.dsNames:
-                ## Calculate data
-                data = None
-                if dsName == 'incidenceAngle':
-                    data = self.get_incidenceAngle(box=box)
-                elif dsName == 'slantRangeDistance':
-                    data = self.get_slantRangeDistance(box=box)
+        for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance'] if i not in self.dsNames]:
+            ## Calculate data
+            data = None
+            if dsName == 'incidenceAngle':
+                data = self.get_incidenceAngle(box=box)
+            elif dsName == 'slantRangeDistance':
+                data = self.get_slantRangeDistance(box=box)
 
-                ## Write dataset
-                if data is not None:
-                    dsShape = data.shape
-                    dsDataType = dataType
-                    print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
-                                                                                                             w=maxDigit,
-                                                                                                             t=str(dsDataType),
-                                                                                                             s=dsShape,
-                                                                                                             c=str(compression))
-                    ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True, compression=compression)
+            ## Write dataset
+            if data is not None:
+                dsShape = data.shape
+                dsDataType = dataType
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
+                                                                                                         w=maxDigit,
+                                                                                                         t=str(dsDataType),
+                                                                                                         s=dsShape,
+                                                                                                         c=str(compression)))
+                ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True, compression=compression)
 
         ###############################
         # Attributes

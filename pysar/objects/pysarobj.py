@@ -1,5 +1,5 @@
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2018, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi, 2018              #
 ############################################################

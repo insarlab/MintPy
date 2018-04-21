@@ -225,7 +225,7 @@ def auto_output_filename(infile, inps):
         outfile = '{}{}.h5'.format(prefix, inps.dset)
     else:
         if 'geometryRadar' in infile:
-            outfile = infile.replace('geometryRadar','geometryGeo')
+            outfile = 'geometryGeo.h5'
         else:
             outfile = '{}{}'.format(prefix, os.path.basename(infile))
     return outfile

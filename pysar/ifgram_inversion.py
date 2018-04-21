@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Program is part of PySAR                                 #
+# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
 
@@ -572,7 +572,7 @@ def ifgram_inversion_patch(stack_obj, inps, box=None):
             loop_num = int(np.floor(num_all_net/step))
             prog_bar = ptime.progressBar(maxValue=loop_num)
             for i in range(loop_num):
-                [i0, i1] = [i*step, min((i + 1) * step, num_all_net)]
+                [i0, i1] = [i * step, min((i + 1) * step, num_all_net)]
                 ts1[:, i0:i1], temp_coh1[i0:i1] = network_inversion_sbas(B, pha_data_temp[:, i0:i1], inps.tbaseDiff,
                                                                          skipZeroPhase=False)
                 prog_bar.update(i+1, suffix=i0)
@@ -724,7 +724,7 @@ def split_into_boxes(inps, num_ifgram, length, width, print_msg=True):
     # Computing the inversion
     box_list = []
     for i in range(chunk_num):
-        r0 = i*r_step
+        r0 = i * r_step
         r1 = min([length, r0+r_step])
         box = (0, r0, width, r1)
         box_list.append(box)
