@@ -599,6 +599,12 @@ def ifgram_inversion_patch(stack_obj, inps, box=None):
     else:
         weight = read_coherence2weight(stack_obj, inps, box)
 
+        # Converting to 32 bit floats leads to 2X speedup
+        A = np.array(A, np.float32)
+        pha_data = np.array(pha_data, np.float32)
+        weight = np.array(weight, np.float32)
+        Astd = np.array(Astd, np.float32)
+
         # Weighted Inversion pixel by pixel
         print('inverting time series ...')
         prog_bar = ptime.progressBar(maxValue=pixel_num2inv)
