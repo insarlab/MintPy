@@ -124,10 +124,10 @@ def add_files(fname_list, fname_out=None):
         for fname in fname_list:
             print('loading '+fname)
             d,r = readfile.read(fname)
-            data = add_matrix(data,d)
+            data = add_matrix(data, d)
 
         print('writing >>> '+fname_out)
-        writefile.write(data,atr,fname_out)
+        writefile.write(data, out_file=fname_out, metadata=atr)
 
     return fname_out
 

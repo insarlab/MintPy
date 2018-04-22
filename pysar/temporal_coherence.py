@@ -134,7 +134,7 @@ def main(argv):
     atr = readfile.read_attribute(timeseriesFile)
     atr['FILE_TYPE'] = 'temporal_coherence'
     atr['UNIT'] = '1'
-    writefile.write(temp_coherence, atr, tempCohFile)
+    writefile.write(temp_coherence, out_file=tempCohFile, metadata=atr)
     print('Done.')
     return tempCohFile
 

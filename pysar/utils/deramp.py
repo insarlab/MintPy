@@ -27,7 +27,7 @@
 #  DEALINGS IN THE SOFTWARE.
 ############################################################################### 
 # Recommend usage:
-#     import pysar.utils.deramp as deramp
+#     from pysar.utils import deramp
 #
 
 
@@ -217,7 +217,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
         print('Removing '+surf_type+' from '+k)
         data_n,ramp = remove_data_surface(data, mask, surf_type)
         print('writing >>> '+outFile)
-        writefile.write(data_n,atr,outFile)
+        writefile.write(data_n, out_file=outFile, metadata=atr)
   
     print('Remove '+surf_type+' took ' + str(time.time()-start) +' secs')
     return outFile

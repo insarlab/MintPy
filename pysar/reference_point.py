@@ -183,7 +183,7 @@ def reference_file(inps):
             data = readfile.read(inps.file)
             data -= data[inps.ref_y, inps.ref_x]
             atr.update(atrNew)
-            writefile.write(data, atr, inps.outfile)
+            writefile.write(data, out_file=inps.outfile, metadata=atr)
     ut.touch([inps.coherence_file, inps.mask_file])
     return inps.outfile
 

@@ -391,7 +391,7 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
 
     if not stackFile:
         if inps:
-            return inps
+            return inps, None
         else:
             return False
 
@@ -1055,7 +1055,7 @@ def check_drop_ifgram(h5, print_msg=True):
     return dsListOut
 
 
-def nonzero_mask(File, outFile='mask.h5', datasetName=None):
+def nonzero_mask(File, out_file='mask.h5', datasetName=None):
     '''Generate mask file for non-zero value of input multi-group hdf5 file'''
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
@@ -1066,9 +1066,8 @@ def nonzero_mask(File, outFile='mask.h5', datasetName=None):
         return None
 
     atr['FILE_TYPE'] = 'mask'
-    print('writing >>> '+outFile)
-    writefile.write(mask, atr, outFile)
-    return outFile
+    writefile.write(mask, out_file=out_file, metadata=atr)
+    return out_file
 
 
 ######################################################################################################
@@ -1250,8 +1249,7 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, 
         atr['FILE_TYPE'] = 'displacement'
 
     if outFile:
-        print('writing >>> '+outFile)
-        writefile.write(dataMean, atr, outFile)
+        writefile.write(dataMean, out_file=outFile, metadata=atr)
     return dataMean, outFile
 
 

@@ -321,7 +321,7 @@ def estimate_dem_error(inps, A_def):
     print('writing >>> '+outfile)
     atr['FILE_TYPE'] = 'dem'
     atr['UNIT'] = 'm'
-    writefile.write(deltaZ, atr, outfile)
+    writefile.write(deltaZ, out_file=outfile, metadata=atr)
 
     # 2. Time-series corrected for DEM error
     if not inps.outfile:

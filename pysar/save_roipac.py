@@ -79,7 +79,7 @@ def main(iargs=None):
 
         inps.outfile=inps.file.split('.')[0]+'.unw'
         print('writing >>> '+inps.outfile)
-        writefile.write(data,atr,inps.outfile)
+        writefile.write(data, out_file=inps.outfile, metadata=atr)
 
     elif k in multi_dataset_hdf5_file:
         dateList = sorted(h5file[k].keys())
@@ -116,7 +116,7 @@ def main(iargs=None):
             else:
                 inps.outfile = '%s.cor' % (inps.epoch)
         print('writing >>> '+inps.outfile)
-        writefile.write(data,atr,inps.outfile)
+        writefile.write(data, out_file=inps.outfile, metadata=atr)
 
     elif k in ['interferograms','coherence','wrapped']:
         ## Check input
@@ -143,7 +143,7 @@ def main(iargs=None):
 
         inps.outfile = inps.epoch
         print('writing >>> '+ inps.outfile)
-        writefile.write(data, atr, inps.outfile)  
+        writefile.write(data, out_file=inps.outfile, metadata=atr)  
 
     else:
         data = h5file[k].get(k)[:]
@@ -156,7 +156,7 @@ def main(iargs=None):
             else:
                 inps.outfile=inps.file.split('.')[0]+'.unw'
         print('writing >>> '+ inps.outfile)
-        writefile.write(data,atr,inps.outfile)
+        writefile.write(data, out_file=inps.outfile, metadata=atr)
 
 
     h5file.close()

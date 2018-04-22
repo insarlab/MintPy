@@ -247,7 +247,7 @@ def prepare_roipac_dem(demFile, geocoded=False):
     else:
         ext = '.hgt'
     demFileOut = '{}4pyaps{}'.format(os.path.splitext(demFile)[0], ext)
-    demFileOut = writefile.write(dem, atr, demFileOut)
+    demFileOut = writefile.write(dem, out_file=demFileOut, metadata=atr)
     return demFileOut
 
 

@@ -155,11 +155,11 @@ def main(iargs=None):
     print('---------------------')
     outname = inps.outfile[0]
     print('writing   vertical component to file: '+outname)
-    writefile.write(u_v, atr, outname)
+    writefile.write(u_v, out_file=outname, metadata=atr)
 
     outname = inps.outfile[1]
     print('writing horizontal component to file: '+outname)
-    writefile.write(u_h, atr, outname)
+    writefile.write(u_h, out_file=outname, metadata=atr)
 
     print('Done.')
     return

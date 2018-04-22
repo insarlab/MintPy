@@ -89,7 +89,7 @@ def diff_file(file1, file2, outFile=None, force=False):
         data2, atr2 = readfile.read(file2)
         data = data1 - data2
         print('writing >>> '+outFile)
-        writefile.write(data, atr1, outFile)
+        writefile.write(data, out_file=outFile, metadata=atr1)
 
     return outFile
 

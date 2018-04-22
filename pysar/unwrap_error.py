@@ -295,10 +295,10 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 
         print('writing >>> '+ifgram_cor_file)
         ramp[data == 0.] = 0.
-        ifgram_cor_file = writefile.write(data_derampCor+ramp, atr, ifgram_cor_file)
+        ifgram_cor_file = writefile.write(data_derampCor+ramp, out_file=ifgram_cor_file, metadata=atr)
         if save_cor_deramp_file:
             print('writing >>> '+ifgram_cor_deramp_file)
-            ifgram_cor_deramp_file = writefile.write(data_derampCor, atr, ifgram_cor_deramp_file)
+            ifgram_cor_deramp_file = writefile.write(data_derampCor, out_file=ifgram_cor_deramp_file, metadata=atr)
 
     else:
         sys.exit('Un-supported file type: '+ext)

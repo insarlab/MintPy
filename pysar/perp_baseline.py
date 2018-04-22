@@ -66,7 +66,7 @@ def main(argv):
     print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'
-    writefile.write(pbase_xy, atr, outFile)
+    writefile.write(pbase_xy, out_file=outFile, metadata=atr)
     return outFile
 
 ############################################################

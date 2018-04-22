@@ -70,7 +70,7 @@ def main(argv):
                 else:
                     atr[key] = value
             print(('writing >>> '+File+'.rsc'))
-            writefile.write_roipac_rsc(atr, File+'.rsc')
+            writefile.write_roipac_rsc(atr, out_file=File+'.rsc')
     return File
 
 

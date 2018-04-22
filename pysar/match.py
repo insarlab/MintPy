@@ -186,7 +186,7 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
     atr['LENGTH'] = length
     atr['X_FIRST'] = West
     atr['Y_FIRST'] = North
-    writefile.write(VV, atr, outName)
+    writefile.write(VV, out_file=outName, metadata=atr)
 
     # Display
     fig_size = [16.0,16.0]

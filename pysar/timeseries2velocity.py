@@ -224,10 +224,7 @@ def estimateVelocity(inps):
     dsDict = dict()
     dsDict['velocity'] = V
     dsDict['velocityStd'] = Vstd
-    writefile.write(dsDict, outFile=inps.outfile, metadata=atr)
-    #writefile.write(V, atr, outfile=inps.outfile)
-    #writefile.write(Vstd, atr, outfile=outfileStd)
-
+    writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
     return inps.outfile
 
 

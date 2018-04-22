@@ -17,25 +17,25 @@ from pysar.objects import timeseries
 from pysar.utils import readfile
 
 
-def write(datasetDict, outFile, metadata=None, refFile=None, compression=None):
+def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None):
     """ Write one file.
     Parameters: datasetDict : dict of dataset, with key = datasetName and value = 2D/3D array, e.g.:
                     {'height'        : np.ones((   200,300), dtype=np.int16),
                      'incidenceAngle': np.ones((   200,300), dtype=np.float32),
                      'bperp'         : np.ones((80,200,300), dtype=np.float32),
                      ...}
-                outFile : str, output file name
+                out_file : str, output file name
                 metadata : dict of attributes
-                refFile : str, reference file to get auxliary info
+                ref_file : str, reference file to get auxliary info
                 compression : str, compression while writing to HDF5 file, None, "lzf", "gzip"
-    Returns:    outFile : str
+    Returns:    out_file : str
     Examples:   dsDict = dict()
                 dsDict['velocity'] = np.ones((200,300), dtype=np.float32)
-                write(datasetDict=dsDict, outFile='velocity.h5', metadata=atr)
+                write(datasetDict=dsDict, out_file='velocity.h5', metadata=atr)
     """
-    ext = os.path.splitext(outFile)[1].lower()
-    if refFile and metadata is None:
-        metadata = readfile.read_attribute(refFile)
+    ext = os.path.splitext(out_file)[1].lower()
+    if ref_file and metadata is None:
+        metadata = readfile.read_attribute(ref_file)
 
     if type(datasetDict) is np.ndarray:
         data = np.array(datasetDict)
@@ -46,15 +46,15 @@ def write(datasetDict, outFile, metadata=None, refFile=None, compression=None):
     if ext in ['.h5','.he5']:
         k = metadata['FILE_TYPE']
         if k == 'timeseries':
-            if refFile is None:
+            if ref_file is None:
                 print('ERROR: can not write {} file without reference file!'.format(k))
                 sys.exit(-1)
-            obj = timeseries(outFile)
-            obj.write2hdf5(datasetDict[k], metadata=metadata, refFile=refFile)
+            obj = timeseries(out_file)
+            obj.write2hdf5(datasetDict[k], metadata=metadata, refFile=ref_file)
 
         else:
-            print('create HDF5 file: {} with w mode'.format(outFile))
-            f = h5py.File(outFile, 'w')
+            print('create HDF5 file: {} with w mode'.format(out_file))
+            f = h5py.File(out_file, 'w')
 
             # Write input datasets
             maxDigit = max([len(i) for i in list(datasetDict.keys())])
@@ -69,9 +69,9 @@ def write(datasetDict, outFile, metadata=None, refFile=None, compression=None):
                     ds.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
                     ds.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
 
-            # Write extra/auxliary datasets from refFile
-            if refFile:
-                fr = h5py.File(refFile, 'r')
+            # Write extra/auxliary datasets from ref_file
+            if ref_file:
+                fr = h5py.File(ref_file, 'r')
                 dsNames = [i for i in fr.keys() if i not in list(datasetDict.keys())]
                 for dsName in dsNames:
                     ds = fr[dsName]
@@ -86,50 +86,50 @@ def write(datasetDict, outFile, metadata=None, refFile=None, compression=None):
             for key, value in metadata.items():
                 f.attrs[key] = str(value)
             f.close()
-            print('finished writing to {}'.format(outFile))
+            print('finished writing to {}'.format(out_file))
 
     ##### ISCE / ROI_PAC GAMMA / Image product
     else:
         ##### Write Data File
         if   ext in ['.unw','.cor','.hgt']:
-            write_float32(data,outFile)
+            write_float32(data, out_file)
         elif ext == '.dem':
-            write_real_int16(data,outFile)
+            write_real_int16(data, out_file)
         elif ext in ['.trans']:
-            write_float32(rg,az,outFile)
+            write_float32(rg, az, out_file)
         elif ext in ['.utm_to_rdc','.UTM_TO_RDC']:
             data = np.zeros(rg.shape, dtype=np.complex64)
-            data.real = rg
-            data.imag = az
-            data.astype('>c8').tofile(outFile)
+            data.real = datasetDict['rangeCoord']
+            data.imag = datasetDict['azimuthCoord']
+            data.astype('>c8').tofile(out_file)
         #elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
-        #    data.save(outFile)
+        #    data.save(out_file)
         elif ext == '.mli':
-            write_real_float32(data,outFile)
+            write_real_float32(data, out_file)
         elif ext == '.slc':
-            write_complex_int16(data,outFile)
+            write_complex_int16(data, out_file)
         elif ext == '.int':
-            write_complex64(data, outFile)
-        elif metadata['DATA_TYPE'].lower() in ['float32','float']:
-            write_real_float32(data,outFile)
-        elif metadata['DATA_TYPE'].lower() in ['int16','short']:
-            write_real_int16(data,outFile)
+            write_complex64(data, out_file)
+        elif metadata['DATA_TYPE'].lower() in ['float32', 'float']:
+            write_real_float32(data, out_file)
+        elif metadata['DATA_TYPE'].lower() in ['int16', 'short']:
+            write_real_int16(data, out_file)
         else: print('Un-supported file type: '+ext); return 0;
 
         ##### Write .rsc File
-        write_roipac_rsc(metadata, outFile+'.rsc')
-        return outFile
+        write_roipac_rsc(metadata, out_file+'.rsc')
+        return out_file
 
 
-def write_roipac_rsc(metadata, outFile, sorting=True):
-    '''Write attribute dict into ROI_PAC .rsc file
+def write_roipac_rsc(metadata, out_file, sorting=True):
+    """Write attribute dict into ROI_PAC .rsc file
     Inputs:
         metadata     - dict, attributes dictionary
-        outFile - rsc file name, to which attribute is writen
+        out_file - rsc file name, to which attribute is writen
         sorting - bool, sort attributes in alphabetic order while writing
     Output:
-        outFile
-    '''
+        out_file
+    """
     # Convert PYSAR attributes to ROI_PAC attributes
     metadata['FILE_LENGTH'] = metadata['LENGTH']
 
@@ -140,106 +140,89 @@ def write_roipac_rsc(metadata, outFile, sorting=True):
         metadata['X_FIRST'] = str(float(metadata['X_FIRST']))
         metadata['Y_FIRST'] = str(float(metadata['Y_FIRST']))
 
-    # max digit for space formating
-    digits = max([len(key) for key in metadata.keys()]+[2])
-    f = '{0:<%d}    {1}'%(digits)
-
     # sorting by key name
     dictKey = metadata.keys()
     if sorting:
         dictKey = sorted(dictKey)
 
     # writing .rsc file
-    frsc = open(outFile,'w')
+    maxDigit = max([len(key) for key in metadata.keys()]+[2])
+    f = open(out_file, 'w')
     for key in dictKey:
-        frsc.write(f.format(str(key), str(metadata[key]))+'\n')
-    frsc.close()
-    return outFile
+        f.write('{k:<{d}}    {v}\n'.format(k=str(key), d=maxDigit, v=str(metadata[key])))
+    f.close()
+    return out_file
 
 
 def write_float32(*args):
-    '''Write ROI_PAC rmg format with float32 precision
+    """Write ROI_PAC rmg format with float32 precision
     Format of the binary file is same as roi_pac unw, cor, or hgt data.
           should rename to write_rmg_float32()
     
     Exmaple:
-            write_float32(phase, outFile)
-            write_float32(amp, phase, outFile)
-    '''
- 
+            write_float32(phase, out_file)
+            write_float32(amp, phase, out_file)
+    """
     if len(args)==2:
-        amp     = args[0]
-        pha     = args[0]
-        outFile = args[1]
+        amp = args[0]
+        pha = args[0]
+        out_file = args[1]
     elif len(args)==3:
-        amp     = args[0]
-        pha     = args[1]
-        outFile = args[2]
+        amp = args[0]
+        pha = args[1]
+        out_file = args[2]
     else:
         print('Error while getting args: support 2/3 args only.')
         return
- 
-    nlines = pha.shape[0]
-    WIDTH  = pha.shape[1]
-    F=np.zeros([2*nlines*WIDTH,1],np.float32)
 
-    for line in range(nlines):
-        F[(2*WIDTH)*(line) :       (2*WIDTH)*(line)+WIDTH]=np.reshape(amp[line][:],[WIDTH,1])
-        F[(2*WIDTH)*(line)+WIDTH : (2*WIDTH)*(line+1)]    =np.reshape(pha[line][:],[WIDTH,1])
- 
-    F.tofile(outFile)
-    return outFile
+    data = np.hstack((amp, pha)).flatten()
+    data.tofile(out_file)
+    return out_file
 
 
-def write_complex64(data,outFile):
-    '''Writes roi_pac .int data'''
-    nlines=data.shape[0]
-    WIDTH=data.shape[1]
-    R=np.cos(data)
-    Im=np.sin(data)
-    # F=np.zeros([2*nlines*WIDTH,1],np.complex64) 
-    F=np.zeros([2*nlines*WIDTH,1],np.float32)  
-    id1=list(range(0,2*nlines*WIDTH,2))
-    id2=list(range(1,2*nlines*WIDTH,2))
-    F[id1]=np.reshape(R,(nlines*WIDTH,1))
-    F[id2]=np.reshape(Im,(nlines*WIDTH,1))
-    F.tofile(outFile)
-    return outFile
+def write_complex64(data,out_file):
+    """Writes roi_pac .int data"""
+    num_pixel = data.size
+    F = np.zeros([2 * num_pixel, 1], np.float32)  
+    id1 = list(range(0, 2 * num_pixel, 2))
+    id2 = list(range(1, 2 * num_pixel, 2))
+    F[id1] = np.reshape(np.cos(data), (num_pixel, 1))
+    F[id2] = np.reshape(np.sin(data), (num_pixel, 1))
+    F.tofile(out_file)
+    return out_file
 
 
-def write_real_int16(data,outFile):
-    data=np.array(data,dtype=np.int16)
-    data.tofile(outFile)
-    return outFile
+def write_real_int16(data, out_file):
+    data = np.array(data, dtype=np.int16)
+    data.tofile(out_file)
+    return out_file
 
 
-def write_dem(data,outFile):
-    data=np.array(data,dtype=np.int16)
-    data.tofile(outFile)
-    return outFile
+def write_dem(data, out_file):
+    data = np.array(data, dtype=np.int16)
+    data.tofile(out_file)
+    return out_file
 
 
-def write_real_float32(data,outFile):
-    '''write gamma float data, i.e. .mli file.'''
-    data=np.array(data,dtype=np.float32)
-    data.tofile(outFile)
-    return outFile
+def write_real_float32(data, out_file):
+    """write gamma float data, i.e. .mli file."""
+    data = np.array(data, dtype=np.float32)
+    data.tofile(out_file)
+    return out_file
 
 
-def write_complex_int16(data,outFile):
-    '''Write gamma scomplex data, i.e. .slc file.
+def write_complex_int16(data,out_file):
+    """Write gamma scomplex data, i.e. .slc file.
         data is complex 2-D matrix
         real, imagery, real, ...
-    '''
+    """
+    num_pixel = data.size
+    id1 = list(range(0, 2 * num_pixel, 2))
+    id2 = list(range(1, 2 * num_pixel, 2))
 
-    nlines = data.shape[0]
-    WIDTH  = data.shape[1]
-    id1 = list(range(0,2*nlines*WIDTH,2))
-    id2 = list(range(1,2*nlines*WIDTH,2))
-
-    F=np.zeros([2*nlines*WIDTH,1],np.int16)
-    F[id1]=np.reshape(np.array(data.real,np.int16),(nlines*WIDTH,1))
-    F[id2]=np.reshape(np.array(data.imag,np.int16),(nlines*WIDTH,1))
-    F.tofile(outFile)
-    return outFile
+    F = np.zeros([2 * num_pixel, 1], np.int16)
+    F[id1] = np.reshape(np.array(data.real, np.int16), (num_pixel, 1))
+    F[id2] = np.reshape(np.array(data.imag, np.int16), (num_pixel, 1))
+    F.tofile(out_file)
+    return out_file
 

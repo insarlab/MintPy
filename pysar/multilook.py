@@ -185,7 +185,10 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         rgmli = multilook_data(rg,lks_y,lks_x); #rgmli *= 1.0/lks_x
         azmli = multilook_data(az,lks_y,lks_x); #azmli *= 1.0/lks_y
         atr = multilook_attribute(atr,lks_y,lks_x)
-        writefile.write(rgmli,azmli,atr,outfile)
+        dsDict = {}
+        dsDict['rangeCoord'] = rgmli
+        dsDict['azimuthCoord'] = azmli
+        writefile.write(dsDict, out_file=outfile, metadata=atr)
     else:
         data,atr = readfile.read(infile)
         if lks_y < 0 and lks_x < 0:
@@ -196,7 +199,7 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         else:
             data_mli = multilook_data(data, lks_y, lks_x)
         atr = multilook_attribute(atr,lks_y,lks_x)
-        writefile.write(data_mli,atr,outfile)
+        writefile.write(data_mli, out_file=outfile, metadata=atr)
 
     return outfile
 

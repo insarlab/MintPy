@@ -701,7 +701,7 @@ def ifgram_inversion(ifgram_stack_file='ifgramStack.h5', inps=None):
     print('writing >>> '+inps.tempCohFile)
     atr['FILE_TYPE'] = 'coherence'
     atr['UNIT'] = '1'
-    writefile.write(tempCoh, atr, inps.tempCohFile)
+    writefile.write(tempCoh, out_file=inps.tempCohFile, metadata=atr)
 
     print('network inversion took {:.1f} seconds\nDone.'.format(time.time()-total))
     return inps.timeseriesFile, inps.tempCohFile

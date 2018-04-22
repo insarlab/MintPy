@@ -102,9 +102,8 @@ def create_threshold_mask(inps):
         print('all pixels with x OUT of [%d, %d] = 0' % (x0,x1))
   
     ## Write mask file
-    print('writing >>> '+inps.outfile)
     atr['FILE_TYPE'] = 'mask'
-    writefile.write(mask, atr, inps.outfile)
+    writefile.write(mask, out_file=inps.outfile, metadata=atr)
     return inps.outfile
 
 
@@ -126,7 +125,7 @@ def main(iargs=None):
 
     ##### Mask: Non-zero
     if inps.nonzero and k == 'ifgramStack':
-        inps.outfile = ut.nonzero_mask(inps.file, outFile=inps.outfile, datasetName=inps.dset)
+        inps.outfile = ut.nonzero_mask(inps.file, out_file=inps.outfile, datasetName=inps.dset)
         return inps.outfile
 
     ##### Mask: Threshold

@@ -36,7 +36,7 @@ def main(argv):
     print('Correcting the DEM')
     sum = dem + dem_error
     print('Creating the new DEM')
-    writefile.write_real_int16(sum,'DEM_w_error.dem')
+    writefile.write_real_int16(sum, out_file='DEM_w_error.dem')
 
     rsc_file = open('DEM_w_error.dem.rsc','w')
     for k in list(demrsc.keys()):

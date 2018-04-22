@@ -59,7 +59,7 @@ def main(argv):
     atr['UNIT'] = 'm'
     try: atr.pop('REF_DATE')
     except: pass
-    writefile.write(range_dis, atr, outFile)
+    writefile.write(range_dis, out_file=outFile, metadata=atr)
     return outFile
 
 ############################################################

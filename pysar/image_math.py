@@ -93,15 +93,17 @@ def file_operation(fname, operator, operand, fname_out=None):
         rg, az, atr = readfile.read(fname)
         rg_out = data_operation(rg, operator, operand)
         az_out = data_operation(az, operator, operand)
-        print('writing >>> '+fname_out)
-        writefile.write(rg_out, az_out, atr, fname_out)
+        dsDict = {}
+        dsDict['rangeCoord'] = rg_out
+        dsDict['azimuthCoord'] = az_out
+        writefile.write(dsDict, out_file=fname_out, metadata=atr)
 
     ##### Single Dataset File
     else:
         data, atr = readfile.read(fname)
         data_out = data_operation(data, operator, operand)
         print('writing >>> '+fname_out)
-        writefile.write(data_out, atr, fname_out)
+        writefile.write(data_out, out_file=fname_out, metadata=atr)
 
     return fname_out
 

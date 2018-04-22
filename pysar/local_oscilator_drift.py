@@ -118,7 +118,7 @@ def correct_LOD(File, rangeDistFile=None, outFile=None):
         dt = dates[1] - dates[0]
         data -= Ramp * dt
         print('writing >>> %s' % (outFile))
-        writefile.write(data, atr, outFile)
+        writefile.write(data, out_file=outFile, metadata=atr)
     else:
         print('No need to correct for LOD for %s file' % (k))
 

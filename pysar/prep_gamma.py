@@ -230,7 +230,7 @@ def extract_metadata4interferogram(fname):
     if any(atr_orig[i] != atr[i] for i in keyList):
         print('merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),\
                                                os.path.basename(off_file), os.path.basename(rsc_file)))
-        writefile.write_roipac_rsc(atr, rsc_file)
+        writefile.write_roipac_rsc(atr, out_file=rsc_file)
 
     return rsc_file
 
@@ -267,7 +267,7 @@ def extract_metadata4lookup_table(fname):
     keyList = [i for i in atr_orig.keys() if i in atr.keys()]
     if any(atr_orig[i] != atr[i] for i in keyList):
         print('writing >>> '+os.path.basename(rsc_file))
-        writefile.write_roipac_rsc(atr, rsc_file)
+        writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
 
 
@@ -295,7 +295,7 @@ def extract_metadata4dem_geo(fname):
     keyList = [i for i in atr_orig.keys() if i in atr.keys()]
     if any(atr_orig[i] != atr[i] for i in keyList):
         print('writing >>> '+os.path.basename(rsc_file))
-        writefile.write_roipac_rsc(atr, rsc_file)
+        writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
 
 
@@ -331,7 +331,7 @@ def extract_metadata4dem_radar(fname):
     keyList = [i for i in atr_orig.keys() if i in atr.keys()]
     if any(atr_orig[i] != atr[i] for i in keyList):
         print('writing >>> '+os.path.basename(rsc_file))
-        writefile.write_roipac_rsc(atr, rsc_file)
+        writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
 
 

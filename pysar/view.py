@@ -265,8 +265,7 @@ def auto_figure_title(fname, dataset=[], inps_dict=None):
     '''
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
-    width = int(atr['WIDTH'])
-    length = int(atr['LENGTH'])
+    num_pixel = int(atr['WIDTH']) * int(atr['LENGTH'])
 
     if not dataset:
         dataset = []
@@ -287,50 +286,44 @@ def auto_figure_title(fname, dataset=[], inps_dict=None):
                 ref_date = atr['REF_DATE']
             except:
                 ref_date = None
+
         if not ref_date:
             fig_title = dataset[0]
         else:
-            fig_title = ptime.yymmdd(ref_date)+'-'+ptime.yymmdd(dataset[0])
+            fig_title = '{}_{}'.format(ref_date, dataset[0])
 
         try:
             ext = os.path.splitext(fname)[1]
             processMark = os.path.basename(fname).split('timeseries')[1].split(ext)[0]
             fig_title += processMark
-        except: pass
+        except:
+            pass
     else:
         fig_title = os.path.splitext(os.path.basename(fname))[0]
-
-
-    #if inps_dict['key'] in ['ifgramStack','HDFEOS']:
-    #    fig_title += inps_dict['datasetName'].capitalize()
 
     # mark - subset
     try:
         pix_box = inps_dict['pix_box']
-        if (pix_box[2]-pix_box[0])*(pix_box[3]-pix_box[1]) < width*length:
+        if (pix_box[2] - pix_box[0]) * (pix_box[3] - pix_box[1]) < num_pixel:
             fig_title += '_sub'
-    except: pass
+    except:
+        pass
 
     # mark - rewrapping
     try:
         rewrapping = inps_dict['wrap']
         if rewrapping:
             fig_title += '_wrap'
-    except: pass
-
-    ## mark - scale
-    #try:
-    #    scaling = inps_dict['disp_scale']
-    #    if not scaling == 1.0:
-    #        fig_title += '_scale'+str(scaling)
-    #except: pass
+    except:
+        pass
 
     # mark - opposite
     try:
         disp_opposite = inps_dict['opposite']
         if disp_opposite:
             fig_title += '_oppo'
-    except: pass
+    except:
+        pass
 
     return fig_title
 
@@ -1137,7 +1130,6 @@ def update_figure_setting(inps):
         print('figure  number: '+str(inps.fig_num))
 
         # Output File Name
-
         if inps.outfile:
             inps.fig_ext = os.path.splitext(inps.outfile)[1].lower()
             inps.outfile_base = os.path.basename(inps.outfile).split(inps.fig_ext)[0]
@@ -1331,7 +1323,7 @@ def main(iargs=None):
 
                 # Plot Data
                 try:
-                    im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest', alpha=inps.transparency,\
+                    im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest', alpha=inps.transparency,
                                    vmin=inps.disp_min, vmax=inps.disp_max)
                 except:
                     im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest', alpha=inps.transparency)

@@ -12,24 +12,64 @@
 import os, sys, re
 import argparse
 import datetime as dt
-import string
 import h5py
 import numpy as np
-import pysar.utils.readfile as readfile
-import pysar.info as info
+from pysar.objects import timeseries, geometry
+from pysar.utils import readfile
+from pysar import info
 
 
-################################################################
 BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)
 FLOAT_ZERO = np.float32(0.0)
 CPX_ZERO = np.complex64(0.0)
+compression = 'gzip'
+
+
+################################################################
+TEMPALTE='''
+pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
+pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
+pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
+'''
+
+EXAMPLE='''example:
+  save_hdfeos5.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
+                  -g geo_geometryRadar.h5
+'''
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Convert PySAR timeseries product into HDF-EOS5 format\n'+\
+                                     'https://earthdata.nasa.gov/user-resources/standards-and-references/hdf-eos5',\
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,\
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
+    parser.add_argument('-t', '--template', dest='template_file', help='Template file')
+
+    parser.add_argument('-c', '--coherence', dest='coherence_file',
+                        help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
+    parser.add_argument('-m', '--mask', dest='mask_file',help='Mask file')
+    parser.add_argument('-g', '--geometry', dest='geom_file', help='geometry file')
+
+    parser.add_argument('--update', action='store_true',\
+                        help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
+    parser.add_argument('--subset', action='store_true',\
+                        help='Enable subset mode, a.k.a. put suffix _N31700_N32100_E130500_E131100')
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    return inps
+
 
 ################################################################
 def get_mission_name(meta_dict):
     '''Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
     Input:  meta_dict : dict, attributes
-    Output: mission   : string, mission name in standard UNAVCO format.
+    Output: mission   : str, mission name in standard UNAVCO format.
     '''
     mission = None
 
@@ -176,13 +216,12 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
 def get_hdfeos5_filename(timeseriesFile):
     '''Get output file name of HDF-EOS5 time series file'''
     ##### Prepare Metadata
-    pysar_meta_dict = readfile.read_attribute(timeseriesFile)
-    k = pysar_meta_dict['FILE_TYPE']
-    h5_timeseries = h5py.File(timeseriesFile,'r')
-    dateList = sorted(h5_timeseries[k].keys())
-    unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
-    h5_timeseries.close()
+    ts_obj = timeseries(timeseriesFile)
+    ts_obj.open(print_msg=False)
+    pysar_meta_dict = dict(ts_obj.metadata)
+    dateList = ts_obj.dateList
 
+    unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
     meta_dict = pysar_meta_dict.copy()
     meta_dict.update(unavco_meta_dict)
 
@@ -223,74 +262,20 @@ def read_template2inps(template_file, inps=None):
 
 
 ################################################################
-TEMPALTE='''
-pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
-pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
-pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
-'''
-
-EXAMPLE='''example:
-  save_hdfeos5.py geo_timeseries_ECMWF_demErr_refDate_plane.h5
-  save_hdfeos5.py timeseries_ECMWF_demErr_refDate_plane.h5
-'''
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Convert PySAR timeseries product into HDF-EOS5 format\n'+\
-                                     'https://earthdata.nasa.gov/user-resources/standards-and-references/hdf-eos5',\
-                                     formatter_class=argparse.RawDescriptionHelpFormatter,\
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
-    parser.add_argument('--template','-t', dest='template_file', default='pysarApp_template.txt', help='Template file')
-
-    parser.add_argument('-c','--coherence', dest='coherence_file', default='temporalCoherence.h5',
-                        help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
-    parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5',help='Mask file')
-
-    geom = parser.add_argument_group('Geometry','Geometry files')
-    geom.add_argument('-d','--dem', dest='dem_file', default='geometryGeo.h5', help='DEM file')
-    geom.add_argument('--rg-coord', dest='rg_coord_file', default='geometryGeo.h5', help='DEM file')
-    geom.add_argument('--az-coord', dest='az_coord_file', default='geometryGeo.h5', help='DEM file')
-
-    geom.add_argument('-i','--incidence_angle', dest='inc_angle_file', default='geometryGeo.h5',\
-                      help='Incidence angle file')
-    geom.add_argument('--az-angle', dest='head_angle_file', default='geometryGeo.h5',\
-                      help='Incidence angle file')
-
-    geom.add_argument('--slant-range', dest='slant_range_dist_file', default='geometryGeo.h5',\
-                      help='Slant range distance file')
-    geom.add_argument('--water-mask', dest='water_mask_file', default='geometryGeo.h5', help='Water mask file')
-    geom.add_argument('--shadow-mask', dest='shadow_mask_file', default='geometryGeo.h5', help='Shadow mask file')
-
-    parser.add_argument('--update', action='store_true',\
-                        help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
-    parser.add_argument('--subset', action='store_true',\
-                        help='Enable subset mode, a.k.a. put suffix _N31700_N32100_E130500_E131100')
-    return parser
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
-
-
-################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
     ##### Prepare Metadata
-    pysar_meta_dict = readfile.read_attribute(inps.timeseries_file)
-    k = pysar_meta_dict['FILE_TYPE']
-    length = int(pysar_meta_dict['LENGTH'])
-    width = int(pysar_meta_dict['WIDTH'])
-    h5_timeseries = h5py.File(inps.timeseries_file,'r')
-    dateList = sorted(h5_timeseries[k].keys())
+    ts_obj = timeseries(inps.timeseries_file)
+    ts_obj.open(print_msg=False)
+    pysar_meta_dict = dict(ts_obj.metadata)
+    dateList = ts_obj.dateList
+    length = ts_obj.length
+    width = ts_obj.width
+
     dateNum = len(dateList)
-    dateListStr = str(dateList).translate(str.maketrans("[],u'", "     ")).strip()
-    pysar_meta_dict['DATE_TIMESERIES'] = dateListStr
-    
     unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
     print('## UNAVCO Metadata:')
     print('-----------------------------------------')
@@ -354,158 +339,128 @@ def main(iargs=None):
 
 
     ##### Open HDF5 File
-    print('writing >>> '+outName)
     f = h5py.File(outName,'w')
-    if 'Y_FIRST' in meta_dict.keys():
-        group = f.create_group('HDFEOS/GRIDS/timeseries')
-    else:
-        group = f.create_group('HDFEOS/SWATHS/timeseries')
-
-    ##### Write Attributes to the HDF File
-    print('write metadata to '+str(f))
-    for key,value in iter(meta_dict.items()):
-        f.attrs[key] = value
+    print('create HDF5 file: {} with w mode'.format(outName))
+    maxDigit = 20
 
     ##### Write Observation - Displacement
-    groupObs = group.create_group('observation')
-    print('write data to '+str(groupObs))
+    gName = 'HDFEOS/GRIDS/timeseries/observation'
+    print('create group   /{}'.format(gName))
+    group = f.create_group(gName)
 
-    disDset = np.zeros((dateNum, length, width), np.float32)
-    for i in range(dateNum):
-        sys.stdout.write('\rreading 3D displacement from file %s: %d/%d ...' % (inps.timeseries_file, i+1, dateNum))
-        sys.stdout.flush()
-        disDset[i] = h5_timeseries[k].get(dateList[i])[:]
-    print(' ')
-
-    dset = groupObs.create_dataset('displacement', data=disDset, dtype=np.float32)
-    dset.attrs['DATE_TIMESERIES'] = dateListStr
-    dset.attrs['Title'] = 'Displacement time-series'
+    dsName = 'displacement'
+    data = timeseries(inps.timeseries_file).read(print_msg=False)
+    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s} with compression={c}'.format(g=gName,
+                                                                                               d=dsName,
+                                                                                               w=maxDigit,
+                                                                                               t=str(data.dtype),
+                                                                                               s=data.shape,
+                                                                                               c=compression))
+    dset = group.create_dataset(dsName, data=data, dtype=np.float32, chunks=True, compression=compression)
+    dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = FLOAT_ZERO
-    dset.attrs['Units'] = 'meters'
     dset.attrs['_FillValue'] = FLOAT_ZERO
+    dset.attrs['Units'] = 'meters'
 
+    dsName = 'date'
+    data = np.array(dateList, dtype=np.string_)
+    group.create_dataset(dsName, data=data)
+    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'.format(g=gName,
+                                                                          d=dsName,
+                                                                          w=maxDigit,
+                                                                          t=str(data.dtype),
+                                                                          s=data.shape))
+
+    dsName = 'bperp'
+    data = np.array(ts_obj.pbase, dtype=np.float32)
+    group.create_dataset(dsName, data=data)
+    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'.format(g=gName,
+                                                                          d=dsName,
+                                                                          w=maxDigit,
+                                                                          t=str(data.dtype),
+                                                                          s=data.shape))
 
     ##### Write Quality
-    groupQ = group.create_group('quality')
-    print('write data to '+str(groupQ))
+    gName = 'HDFEOS/GRIDS/timeseries/quality'
+    print('create group   /{}'.format(gName))
+    group = group.create_group(gName)
 
     ## 1 - temporalCoherence
-    print('reading coherence       from file: '+inps.coherence_file)
+    dsName = 'temporalCoherence'
     data = readfile.read(inps.coherence_file)[0]
-    dset = groupQ.create_dataset('temporalCoherence', data=data, compression='gzip')
-    dset.attrs['Title'] = 'Temporal Coherence'
+    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s} with compression={c}'.format(g=gName,
+                                                                                               d=dsName,
+                                                                                               w=maxDigit,
+                                                                                               t=str(data.dtype),
+                                                                                               s=data.shape,
+                                                                                               c=compression))
+    dset = group.create_dataset(dsName, data=data, chunks=True, compression=compression)
+    dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = FLOAT_ZERO
-    dset.attrs['Units'] = '1'
     dset.attrs['_FillValue'] = FLOAT_ZERO
+    dset.attrs['Units'] = '1'
 
     ## 2 - mask
-    print('reading mask            from file: '+inps.mask_file)
+    dsName = 'mask'
     data = readfile.read(inps.mask_file, datasetName='mask')[0]
-    dset = groupQ.create_dataset('mask', data=data, compression='gzip')
-    dset.attrs['Title'] = 'Mask'
+    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s} with compression={c}'.format(g=gName,
+                                                                                               d=dsName,
+                                                                                               w=maxDigit,
+                                                                                               t=str(data.dtype),
+                                                                                               s=data.shape,
+                                                                                               c=compression))
+    dset = group.create_dataset(dsName, data=data, chunks=True, compression=compression)
+    dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = BOOL_ZERO
-    dset.attrs['Units'] = '1'
     dset.attrs['_FillValue'] = BOOL_ZERO
+    dset.attrs['Units'] = '1'
 
 
     ##### Write Geometry
     ## Required: height, incidenceAngle
     ## Optional: rangeCoord, azimuthCoord, headingAngle, slantRangeDistance, waterMask, shadowMask
-    groupGeom = group.create_group('geometry')
-    print('write data to '+str(groupGeom))
+    gName = 'HDFEOS/GRIDS/timeseries/geometry'
+    print('create group   /{}'.format(gName))
+    group = group.create_group(gName)
 
-    ## 1 - height
-    print('reading height          from file: '+inps.dem_file)
-    data = readfile.read(inps.dem_file, datasetName='height')[0]
-    dset = groupGeom.create_dataset('height', data=data, compression='gzip')
-    dset.attrs['Title'] = 'Digital elevatino model'
-    dset.attrs['MissingValue'] = INT_ZERO
-    dset.attrs['Units'] = 'meters'
-    dset.attrs['_FillValue'] = INT_ZERO
+    geom_obj = geometry(inps.geom_file)
+    geom_obj.open(print_msg=False)
+    for dsName in geom_obj.datasetNames:
+        data = geom_obj.read(datasetName=dsName, print_msg=False)
+        dset = group.create_dataset(dsName, data=data, chunks=True, compression=compression)
+        print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s} with compression={c}'.format(g=gName,
+                                                                                                   d=dsName,
+                                                                                                   w=maxDigit,
+                                                                                                   t=str(data.dtype),
+                                                                                                   s=data.shape,
+                                                                                                   c=compression))
+        dset.attrs['Title'] = dsName
+        if dsName in ['height', 'slantRangeDistance', 'bperp']:
+            dset.attrs['MissingValue'] = FLOAT_ZERO
+            dset.attrs['_FillValue'] = FLOAT_ZERO
+            dset.attrs['Units'] = 'meters'
 
-    ## 2 - incidenceAngle
-    print('reading incidence angle from file: '+inps.inc_angle_file)
-    data = readfile.read(inps.inc_angle_file, datasetName='incidenceAngle')[0]
-    dset = groupGeom.create_dataset('incidenceAngle', data=data, compression='gzip')
-    dset.attrs['Title'] = 'Incidence angle'
-    dset.attrs['MissingValue'] = FLOAT_ZERO
-    dset.attrs['Units'] = 'degrees'
-    dset.attrs['_FillValue'] = FLOAT_ZERO
+        elif dsName in ['incidenceAngle', 'headingAngle', 'latitude', 'longitude']:
+            dset.attrs['MissingValue'] = FLOAT_ZERO
+            dset.attrs['_FillValue'] = FLOAT_ZERO
+            dset.attrs['Units'] = 'degrees'
 
-    ## 3 - rangeCoord
-    try:
-        data = readfile.read(inps.rg_coord_file, datasetName='rangeCoord', print_msg=False)[0]
-        print('reading range coord     from file: '+inps.rg_coord_file)
-        dset = groupGeom.create_dataset('rangeCoord', data=data, compression='gzip')
-        dset.attrs['Title'] = 'Range Coordinates'
-        dset.attrs['MissingValue'] = FLOAT_ZERO
-        dset.attrs['Units'] = '1'
-        dset.attrs['_FillValue'] = FLOAT_ZERO
-    except:
-        print('No rangeCoord found in file %s' % (inps.rg_coord_file))
+        elif dsName in ['rangeCoord', 'azimuthCoord']:
+            dset.attrs['MissingValue'] = FLOAT_ZERO
+            dset.attrs['_FillValue'] = FLOAT_ZERO
+            dset.attrs['Units'] = '1'
 
-    ## 4 - azimuthCoord
-    try:
-        data = readfile.read(inps.az_coord_file, datasetName='azimuthCoord', print_msg=False)[0]
-        print('reading azimuth coord   from file: '+inps.az_coord_file)
-        dset = groupGeom.create_dataset('azimuthCoord', data=data, compression='gzip')
-        dset.attrs['Title'] = 'Azimuth Coordinates'
-        dset.attrs['MissingValue'] = FLOAT_ZERO
-        dset.attrs['Units'] = '1'
-        dset.attrs['_FillValue'] = FLOAT_ZERO
-    except:
-        print('No azimuthCoord found in file %s' % (inps.az_coord_file))
+        elif dsName in ['waterMask', 'shadowMask']:
+            dset.attrs['MissingValue'] = BOOL_ZERO
+            dset.attrs['_FillValue'] = BOOL_ZERO
+            dset.attrs['Units'] = '1'
 
-    ## 5 - headingAngle
-    try:
-        data = readfile.read(inps.head_angle_file, datasetName='heandingAngle', print_msg=False)[0]
-        print('reading azimuth coord   from file: '+inps.head_angle_file)
-        dset = groupGeom.create_dataset('heandingAngle', data=data, compression='gzip')
-        dset.attrs['Title'] = 'Heanding Angle'
-        dset.attrs['MissingValue'] = FLOAT_ZERO
-        dset.attrs['Units'] = 'degrees'
-        dset.attrs['_FillValue'] = FLOAT_ZERO
-    except:
-        print('No headingAngle found in file %s' % (inps.head_angle_file))
-
-    ## 6 - slantRangeDistance
-    try:
-        data = readfile.read(inps.slant_range_dist_file, datasetName='slantRangeDistance', print_msg=False)[0]
-        print('reading slant range distance from file: '+inps.slant_range_dist_file)
-        dset = groupGeom.create_dataset('slantRangeDistance', data=data, compression='gzip')
-        dset.attrs['Title'] = 'Slant Range Distance'
-        dset.attrs['MissingValue'] = FLOAT_ZERO
-        dset.attrs['Units'] = 'meters'
-        dset.attrs['_FillValue'] = FLOAT_ZERO
-    except:
-        print('No slantRangeDistance found in file %s' % (inps.slant_range_dist_file))
-
-    ## 7 - waterMask
-    try:
-        data = readfile.read(inps.water_mask_file, datasetName='waterMask', print_msg=False)[0]
-        print('reading water mask      from file: '+inps.water_mask_file)
-        dset = groupGeom.create_dataset('waterMask', data=data, compression='gzip')
-        dset.attrs['Title'] = 'Water Mask'
-        dset.attrs['MissingValue'] = BOOL_ZERO
-        dset.attrs['Units'] = '1'
-        dset.attrs['_FillValue'] = BOOL_ZERO
-    except:
-        print('No waterMask found in file %s' % (inps.water_mask_file))
-
-    ## 8 - shadowMask
-    try:
-        data = readfile.read(inps.shadow_mask_file, datasetName='shadowMask', print_msg=False)[0]
-        print('reading shadow mask     from file: '+inps.shadow_mask_file)
-        dset = groupGeom.create_dataset('shadowMask', data=data, compression='gzip')
-        dset.attrs['Title'] = 'Shadow Mask'
-        dset.attrs['MissingValue'] = BOOL_ZERO
-        dset.attrs['Units'] = '1'
-        dset.attrs['_FillValue'] = BOOL_ZERO
-    except:
-        print('No shadowMask found in file %s' % (inps.shadow_mask_file))
-
+    ##### Write Attributes to the HDF File
+    print('write metadata to root level')
+    for key,value in iter(meta_dict.items()):
+        f.attrs[key] = value
     f.close()
-    print('Done.')
+    print('finished writing to {}'.format(outName))
     return
 
 

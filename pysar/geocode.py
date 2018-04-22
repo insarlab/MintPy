@@ -224,10 +224,7 @@ def auto_output_filename(infile, inps):
     if inps.dset:
         outfile = '{}{}.h5'.format(prefix, inps.dset)
     else:
-        if 'geometryRadar' in infile:
-            outfile = 'geometryGeo.h5'
-        else:
-            outfile = '{}{}'.format(prefix, os.path.basename(infile))
+        outfile = '{}{}'.format(prefix, os.path.basename(infile))
     return outfile
 
 
@@ -272,7 +269,7 @@ def run_resample(inps):
             atr['FILE_TYPE'] = dsNames[0]
             infile = None
 
-        writefile.write(dsResDict, outFile=outfile, metadata=atr, refFile=infile)
+        writefile.write(dsResDict, out_file=outfile, metadata=atr, ref_file=infile)
 
     print('time used: {:.2f} secs\nDone.'.format(time.time() - start_time))
     return outfile

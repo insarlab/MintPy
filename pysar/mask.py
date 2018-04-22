@@ -142,14 +142,15 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
         rg, az, atr = readfile.read(File)
         rg = mask_matrix(rg, mask, inps_dict['fill_value'])
         az = mask_matrix(az, mask, inps_dict['fill_value'])
-        print('writing >>> '+outFile)
-        writefile.write(rg, az, atr, outFile)
+        dsDict = {}
+        dsDict['rangeCoord'] = rg
+        dsDict['azimuthCoord'] = az
+        writefile.write(dsDict, out_file=outFile, metadata=atr)
 
     else:
         unw,atr = readfile.read(File)
-        unw     = mask_matrix(unw, mask, inps_dict['fill_value'])
-        print('writing >>> '+outFile)
-        writefile.write(unw,atr,outFile)
+        unw = mask_matrix(unw, mask, inps_dict['fill_value'])
+        writefile.write(unw, out_file=outFile, metadata=atr)
 
     try: h5file.close()
     except: pass

@@ -410,7 +410,7 @@ def subset_file(File, subset_dict_input, outFile=None):
     elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
         data, atr_dict = readfile.read(File, box=pix_box)
         atr_dict = ut.subset_attribute(atr_dict, pix_box)
-        writefile.write(data,atr_dict,outFile)
+        writefile.write(data, out_file=outFile, metadata=atr_dict)
 
     elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
         rg_overlap, az_overlap, atr_dict = readfile.read(File, box=pix_box4data)
@@ -422,7 +422,10 @@ def subset_file(File, subset_dict_input, outFile=None):
         az[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = az_overlap
 
         atr_dict = ut.subset_attribute(atr_dict, pix_box)
-        writefile.write(rg,az,atr_dict,outFile)
+        dsDict = {}
+        dsDict['rangeCoord'] = rg
+        dsDict['azimuthCoord'] = az
+        writefile.write(dsDict, out_file=outFile, metadata=atr_dict)
     else:
         data_overlap, atr_dict = readfile.read(File, box=pix_box4data)
 
@@ -430,7 +433,7 @@ def subset_file(File, subset_dict_input, outFile=None):
         data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
         atr_dict = ut.subset_attribute(atr_dict, pix_box)
-        writefile.write(data, atr_dict, outFile)
+        writefile.write(data, out_file=outFile, metadata=atr_dict)
 
     ##### End Cleaning
     try:

@@ -62,7 +62,7 @@ def main(argv):
     atr['UNIT'] = 'degree'
     try: atr.pop('REF_DATE')
     except: pass
-    writefile.write(angle, atr, outFile)
+    writefile.write(angle, out_file=outFile, metadata=atr)
     return outFile
 
 ############################################################

@@ -159,7 +159,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
         if ref_yx and k in ['.unw','velocity']:
             data_filt -= data_filt[ref_yx[0], ref_yx[1]]
         print('writing >>> '+fname_out)
-        writefile.write(data_filt, atr, fname_out)
+        writefile.write(data_filt, out_file=fname_out, metadata=atr)
 
     return fname_out
 

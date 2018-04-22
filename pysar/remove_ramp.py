@@ -104,7 +104,7 @@ def main(iargs=None):
         # Write updated mask for multiple surfaces into file
         outFile = 'mask_'+str(surfNum)+inps.surface_type+'.h5'
         atr['FILE_TYPE'] = 'mask'
-        writefile.write(mask_multiSurface, atr, outFile)
+        writefile.write(mask_multiSurface, out_file=outFile, metadata=atr)
         print('saved mask to '+outFile)
 
     ############################## Removing Phase Ramp #######################################
