@@ -16,25 +16,30 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 
 ############################################################
-def mask_matrix(data_mat,mask_mat, fill_value=None):
-    '''mask a 2D matrxi data with mask'''
+def mask_matrix(data, mask, fill_value=None):
+    """mask a 2D matrxi data with mask
+    Parameters: data : 2D / 3D np.array
+                mask : 2D np.array of bool
+                fill_value : number
+    Returns:    data : same shape of array as input
+    """
     ## Masked Value
     if fill_value is None:
-        if data_mat.dtype == np.dtype('int16'):
+        if data.dtype == np.dtype('int16'):
             fill_value = np.ma.masked
         else:
             fill_value = np.nan
-    #data_mat = data_mat.astype(np.float32)
-    #mask_value = np.nan
 
-    data_mat[mask_mat==0]  = fill_value
-
-    return data_mat
+    if len(data.shape) == 2:
+        data[mask == 0] = fill_value
+    elif len(data.shape) == 3:
+        data[:, mask == 0] = fill_value
+    return data
 
 
 ############################################################
 def update_mask(mask, inps_dict, print_msg=True):
-    '''Update mask matrix from input options: subset_x/y and threshold'''
+    """Update mask matrix from input options: subset_x/y and threshold"""
     if inps_dict['subset_x']:
         mask[:,0:inps_dict['subset_x'][0]] = 0
         mask[:,inps_dict['subset_x'][1]:] = 0
@@ -54,7 +59,7 @@ def update_mask(mask, inps_dict, print_msg=True):
 
 ############################################################
 def mask_file(File, maskFile, outFile=None, inps_dict=None):
-    ''' Mask input File with maskFile
+    """ Mask input File with maskFile
     Inputs:
         File/maskFile - string, 
         inps_dict - dictionary including the following options:
@@ -62,7 +67,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
                     thr - float, threshold/minValue to generate mask
     Output:
         outFile - string
-    '''
+    """
     
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
@@ -162,13 +167,13 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
     
 
 ############################################################
-EXAMPLE='''example:
+EXAMPLE="""example:
   mask.py  velocity.h5     -m Mask.h5
   mask.py  timeseries.h5   -m temporal_coherence.h5  -t 0.7
   mask.py  unwrapIfgram.h5 -m 100102_101120.cor      -t 0.9  -y  200 300  -x 300 400
   mask.py  unwrapIfgram.h5 -m coherence.h5           -t 0.1  --fill 0
   mask.py  timeseries*.h5 velocity*.h5  -m temporal_coherence.h5  -t 0.7
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Mask File(s)',\

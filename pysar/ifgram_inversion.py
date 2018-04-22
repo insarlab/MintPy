@@ -89,7 +89,7 @@ def create_parser():
     parser.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
                         help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
 
-    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=0.2e9,
+    parser.add_argument('--chunk-size', dest='chunk_size', type=float, default=100e6,
                         help='max number of data (= ifgram_num * row_num * col_num) to read per loop\n' +
                         'default: 0.2 G; adjust it according to your computer memory.')
     parser.add_argument('--parallel', dest='parallel', action='store_true',
@@ -454,6 +454,7 @@ def read_coherence2weight(stack_obj, inps, box):
 
     # Calculate Weight matrix
     weight = np.array(coh_data, np.float64)
+    del coh_data
     L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
     if inps.weightFunc == 'var':
         print('convert coherence to weight using inverse of phase variance')

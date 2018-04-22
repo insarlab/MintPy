@@ -43,16 +43,28 @@ def multilook_matrix(matrix,lks_y,lks_x):
 
 
 def multilook_data(data, lksY, lksX):
-    '''Modified from Praveen on StackOverflow:
-    https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution'''
+    """Modified from Praveen on StackOverflow:
+    https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution
+    Parameters: data : 2D / 3D np.array
+                lksY : int, number of multilook in y/azimuth direction
+                lksX : int, number of multilook in x/range direction
+    Returns:    coarseData : 2D / 3D np.array after multilooking in last two dimension
+    """
     shape = np.array(data.shape, dtype=float)
-    newShape = np.floor(shape / (lksY, lksX)).astype(int) * (lksY, lksX)
-    cropData = data[:newShape[0], :newShape[1]]
-    temp = cropData.reshape((newShape[0] // lksY, lksY,
-                             newShape[1] // lksX, lksX))
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        coarseData = np.nanmean(temp, axis=(1,3))
+    if len(shape) == 2:
+        newShape = np.floor(shape / (lksY, lksX)).astype(int) * (lksY, lksX)
+        cropData = data[:newShape[0], :newShape[1]]
+        temp = cropData.reshape((newShape[0] // lksY, lksY, newShape[1] // lksX, lksX))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            coarseData = np.nanmean(temp, axis=(1,3))
+    elif len(shape) == 3:
+        newShape = np.floor(shape / (1, lksY, lksX)).astype(int) * (1, lksY, lksX)
+        cropData = data[:newShape[0], :newShape[1], :newShape[2]]
+        temp = cropData.reshape((newShape[0], newShape[1] // lksY, lksY, newShape[2] // lksX, lksX))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            coarseData = np.nanmean(temp, axis=(2,4))
     return coarseData
 
 
@@ -205,13 +217,13 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
 
 
 ##################################################################################################
-EXAMPLE='''example:
+EXAMPLE="""example:
   multilook.py  velocity.h5  15 15
   multilook.py  srtm30m.dem  10 10  -o srtm30m_300m.dem
 
   To interpolate input file into larger size file:
   multilook.py  bperp.rdr  -10 -2 -o bperp_full.rdr
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Multilook.',\
