@@ -7,7 +7,9 @@
 # Modified from load_data.py written by Heresh Fattahi.
 #
 
-import os, sys
+import os
+import sys
+import time
 import argparse
 from pysar.utils import utils as ut, readfile
 from pysar.objects import ifgramDatasetNames
@@ -61,10 +63,11 @@ def check_output_filename(inps):
 
 #############################  Main Function  ################################
 def main(iargs=None):
+    start_time = time.time()
     inps = cmd_line_parse(iargs)
     inps.outfile = check_output_filename(inps)
     inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
-    print('Done.')
+    print('time used: {:.2f} secs\nDone.'.format(time.time() - start_time))
     return inps.outfile
 
 

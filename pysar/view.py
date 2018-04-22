@@ -1182,8 +1182,7 @@ def main(iargs=None):
         if inps.msk is not None:
             data = mask.mask_matrix(data, inps.msk)
 
-        fig = plt.figure(figsize=inps.fig_size)
-        ax = fig.add_axes([0.1,0.1,0.8,0.8])
+        fig, ax = plt.subplots(figsize=inps.fig_size)
         ax, inps = plot_matrix(ax, data, atr, inps)
         if inps.disp_fig:
             print('showing ...')

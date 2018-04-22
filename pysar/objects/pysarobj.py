@@ -693,21 +693,32 @@ class ifgramStack:
 
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
-            dmean = np.zeros(dset.shape[1:3], dtype=np.float32)
-            dropIfgramFlag = np.ones(dset.shape[0], dtype=np.bool_)
+            num_ifgram, length, width = dset.shape
+            dmean = np.zeros((length, width), dtype=np.float32)
+            drop_ifgram_flag = np.ones(num_ifgram, dtype=np.bool_)
             if dropIfgram:
-                dropIfgramFlag = self.dropIfgram
-            num2read = np.sum(dropIfgramFlag)
-            idx2read = np.where(dropIfgramFlag)[0]
-            for i in range(num2read):
-                data = dset[idx2read[i],:,:]
-                if datasetName == 'unwrapPhase':
-                    data *= (phase2range * (1./tbaseIfgram[idx2read[i]]))
-                dmean += data
-                sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+                drop_ifgram_flag = self.dropIfgram
+
+            r_step = 100
+            for i in range(int(np.ceil(length / r_step))):
+                r0 = i * r_step
+                r1 = min(r0 + r_step, length)
+                data = dset[drop_ifgram_flag, r0:r1, :]
+                dmean[r0:r1, :] = np.nanmean(data, axis=0)
+                sys.stdout.write('\rreading lines {}/{} ...'.format(r0, length))
                 sys.stdout.flush()
+
+            #num2read = np.sum(drop_ifgram_flag)
+            #idx2read = np.where(drop_ifgram_flag)[0]
+            #for i in range(num2read):
+            #    data = dset[idx2read[i],:,:]
+            #    if datasetName == 'unwrapPhase':
+            #        data *= (phase2range * (1./tbaseIfgram[idx2read[i]]))
+            #    dmean += data
+            #    sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+            #    sys.stdout.flush()
+            #dmean /= np.sum(self.dropIfgram)
             print('')
-        dmean /= np.sum(self.dropIfgram)
         return dmean
 
 

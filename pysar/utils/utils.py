@@ -1120,7 +1120,7 @@ def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=
     ## Read existing txt file only if 1) data file is older AND 2) same AOI
     txtFile = os.path.splitext(os.path.basename(File))[0]+suffix
     file_line = '# Data file: {}\n'.format(os.path.basename(File))
-    mask_line = '# Mask file: {}\n'.format(os.path.basename(maskFile))
+    mask_line = '# Mask file: {}\n'.format(maskFile)
     aoi_line  = '# AOI box: {}\n'.format(box)
     try:
         # Read AOI line from existing txt file
