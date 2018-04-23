@@ -239,7 +239,7 @@ class progressBar:
     prog_bar.close()
     '''
 
-    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=100):
+    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=80):
         self.prog_bar = "[]" # This holds the progress bar string
         self.min = minValue
         self.max = maxValue

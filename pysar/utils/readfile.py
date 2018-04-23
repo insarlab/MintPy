@@ -39,7 +39,7 @@ import numpy as np
 #from PIL import Image
 import json
 
-from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry, datasetUnitDict
+from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry, datasetUnitDict, HDFEOS
 
 
 standardMetadataKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
@@ -178,6 +178,9 @@ def read(fname, box=None, datasetName=None, print_msg=True):
         elif k in ['geometry']:
             obj = geometry(fname)
             data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
+        elif k == 'HDFEOS':
+            obj = HDFEOS(fname)
+            data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
         elif k in ['GIANT_TS']:
             dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
             dateIndx = dateList.index(datasetName)
@@ -189,8 +192,10 @@ def read(fname, box=None, datasetName=None, print_msg=True):
         else:
             if not datasetName:
                 datasetName = k
-            try:    dset = f[k][datasetName]
-            except: dset = f[datasetName]
+            try:
+                dset = f[k][datasetName]
+            except:
+                dset = f[datasetName]
             data = dset[box[1]:box[3],box[0]:box[2]]
             atr['LENGTH'] = str(dset.shape[0])
             atr['WIDTH'] = str(dset.shape[1])
@@ -374,6 +379,10 @@ def get_2d_dataset_list(fname):
             obj = ifgramStack(fname)
             obj.open(print_msg=False)
             datasetList = obj.datasetList
+        elif file_type in ['HDFEOS']:
+            obj = HDFEOS(fname)
+            obj.open(print_msg=False)
+            datasetList = obj.datasetList
         elif file_type in ['GIANT_TS']:
             datasetList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
         else:
@@ -423,23 +432,25 @@ def read_attribute(fname, datasetName=None):
             except:  atr[key] = value
 
         # get FILE_TYPE
-        if 'FILE_TYPE' in atr.keys():
-            k = atr['FILE_TYPE']
-        elif 'unwrapPhase' in f.keys():
+        if 'unwrapPhase' in f.keys():
             k = 'ifgramStack'
         elif 'timeseries' in f.keys():
             k = 'timeseries'
         elif 'height' in f.keys():
             k = 'geometry'
+        elif 'HDFEOS' in f.keys():
+            k = 'HDFEOS'
+        elif 'FILE_TYPE' in atr.keys():
+            k = atr['FILE_TYPE']
         else:
             k = list(f.keys())[0]
         atr['FILE_TYPE'] = str(k)
 
         # read attribute of HDF5 dataset
-        if k == 'timeseries' and 'MinValue' in f[k].attrs.keys():
-            atr.update(f[k].attrs)
-        elif datasetName and datasetName in f.keys() and 'MinValue' in f[datasetName].attrs.keys():
-            atr.update(f[datasetName].attrs)
+        #if k == 'timeseries' and 'MinValue' in f[k].attrs.keys():
+        #    atr.update(f[k].attrs)
+        #elif datasetName and datasetName in f.keys() and 'MinValue' in f[datasetName].attrs.keys():
+        #    atr.update(f[datasetName].attrs)
         f.close()
 
     else:

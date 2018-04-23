@@ -381,7 +381,7 @@ def update_inps_with_file_metadata(inps, metadata):
 
 
 ##################################################################################################
-def update_matrix_with_plot_inps(data, metadata, inps):
+def update_data_with_plot_inps(data, metadata, inps):
     # Seed Point
     if inps.seed_yx and inps.seed_yx != [int(metadata['REF_Y']), int(metadata['REF_X'])]:
         ref_y, ref_x = inps.seed_yx[0] - inps.pix_box[1], inps.seed_yx[1] - inps.pix_box[0]
@@ -418,7 +418,7 @@ def update_matrix_with_plot_inps(data, metadata, inps):
 
 
 ##################################################################################################
-def plot_matrix(ax, data, metadata, inps=None):
+def plot_2d_matrix(ax, data, metadata, inps=None):
     """Plot 2D matrix 
     
     Inputs:
@@ -438,7 +438,7 @@ def plot_matrix(ax, data, metadata, inps=None):
         data, atr = readfile.read('velocity.h5')
         fig = plt.figure()
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
-        ax = pv.plot_matrix(ax, data, atr)
+        ax = pv.plot_2d_matrix(ax, data, atr)
         plt.show()
     """
 
@@ -447,8 +447,8 @@ def plot_matrix(ax, data, metadata, inps=None):
         inps = cmd_line_parse([''])
         inps = update_inps_with_file_metadata(inps, metadata)
 
-    #----------------------- 1.2 Update plot inps/data with data matrix ----------------------#
-    data, inps = update_matrix_with_plot_inps(data, metadata, inps)
+    #----------------------- 1. Update plot inps/data with data matrix -----------------------#
+    data, inps = update_data_with_plot_inps(data, metadata, inps)
     print('data    unit: {}'.format(metadata['UNIT']))
     print('display unit: {}'.format(inps.disp_unit))
 
@@ -686,6 +686,8 @@ def check_dataset_input(allList, inList=[], inNumList=[], globSearch=True):
     """Get dataset(es) from input dataset / dataset_num"""
     ## inList + inNumList --> outNumList --> outList
     if inList:
+        if isinstance(inList, str):
+            inList = [inList]
         tempList = []
         if globSearch:
             for i in inList:
@@ -700,19 +702,26 @@ def check_dataset_input(allList, inList=[], inNumList=[], globSearch=True):
 
 def read_dataset_input(inps, print_msg=True):
     """Check input / exclude / reference dataset input with file dataset list"""
+    # read inps.dset + inps.dsetNumList --> inps.dsetNumList
     if len(inps.dset) > 0 or len(inps.dsetNumList)>0:
         inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList, inps.globSearch)[1]
-    elif inps.key == 'geometry':
-        inps.dset = geometryDatasetNames
-        inps.dset.remove('bperp')
-        inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList, inps.globSearch)[1]
-    elif inps.key == 'ifgramStack':
-        inps.dset = ['unwrapPhase']
+    elif inps.key in ['geometry', 'ifgramStack', 'HDFEOS']:
+        # default dataset to display for certain type of files
+        if inps.key == 'geometry':
+            inps.dset = geometryDatasetNames
+            inps.dset.remove('bperp')
+        elif inps.key == 'ifgramStack':
+            inps.dset = ['unwrapPhase']
+        elif inps.key == 'HDFEOS':
+            inps.dset = ['displacement']
         inps.dsetNumList = check_dataset_input(inps.fileDatasetList, inps.dset, inps.dsetNumList, inps.globSearch)[1]
     else:
         inps.dsetNumList = range(len(inps.fileDatasetList))
+
+    # read inps.exDsetList
     inps.exDsetList, inps.exDsetNumList = check_dataset_input(inps.fileDatasetList, inps.exDsetList, [], inps.globSearch)
 
+    # get inps.dset
     inps.dsetNumList = sorted(list(set(inps.dsetNumList) - set(inps.exDsetNumList)))
     inps.dset = [inps.fileDatasetList[i] for i in inps.dsetNumList]
     inps.dsetNum = len(inps.dset)
@@ -783,7 +792,11 @@ def read_mask(inps, atr):
 
 
 def update_figure_setting(inps):
-    """Update figure setting based on number of subplots/datasets"""
+    """Update figure setting based on number of subplots/datasets
+    1) fig_size and font_size
+    2) for multi: figure/row/column number
+    3) for multi: output file name
+    """
     length = float(inps.pix_box[3]-inps.pix_box[1])
     width = float(inps.pix_box[2]-inps.pix_box[0])
 
@@ -847,6 +860,7 @@ def update_figure_setting(inps):
 
 
 def read_data4figure(inps, i_start, i_end):
+    """Read multiple datasets for one figure into 3D matrix based on i_start/end"""
     data = np.zeros((i_end - i_start, inps.pix_box[3] - inps.pix_box[1], inps.pix_box[2] - inps.pix_box[0]))
     prog_bar = ptime.progressBar(maxValue=i_end-i_start, prefix='reading')
     for i in range(i_start, i_end):
@@ -877,6 +891,10 @@ def read_data4figure(inps, i_start, i_end):
 
 
 def plot_subplot4figure(inps, ax, data, i):
+    """Plot one subplot for one 3D array
+    1) Plot DEM, data and reference pixel
+    2) axes setting: tick, ticklabel, title, axis etc.
+    """
     # Plot DEM
     if inps.dem_file:
         ax = pp.plot_dem_background(ax=ax, geo_box=None, dem_shade=inps.dem_shade,
@@ -904,7 +922,10 @@ def plot_subplot4figure(inps, ax, data, i):
     if inps.disp_title:
         # get title
         if inps.key in timeseriesKeyNames:
-            subplot_title = dt.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
+            try:
+                subplot_title = dt.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
+            except:
+                subplot_title = str(inps.dset[i])
         elif inps.key in ['ifgramStack']:
             subplot_title = str(i)
             if inps.fig_row_num * inps.fig_col_num < 100:
@@ -930,6 +951,118 @@ def plot_subplot4figure(inps, ax, data, i):
     if not inps.disp_axis:
         ax.axis('off')
     return im
+
+
+def plot_figure(inps, j, metadata):
+    """Plot one figure with multiple subplots
+    1) create figure
+    2) read all data into 3D array
+    3) loop to plot each subplot using plot_subplot4figure()
+    4) common colorbar and save
+    """
+    # Output file name for current figure
+    if inps.fig_num > 1:
+        inps.outfile = '{}_{}{}'.format(inps.outfile_base, str(j), inps.fig_ext)
+    else:
+        inps.outfile = '{}{}'.format(inps.outfile_base, inps.fig_ext)
+    fig_title = 'Figure {} - {}'.format(str(j), inps.outfile)
+    print('----------------------------------------')
+    print(fig_title)
+
+    # Open a new figure object
+    fig = plt.figure(j, figsize=inps.fig_size)
+    fig.canvas.set_window_title(fig_title)
+
+    # Read all data for the current figure into 3D np.array
+    i_start = (j - 1) * inps.fig_row_num * inps.fig_col_num
+    i_end = min([inps.dsetNum, i_start + inps.fig_row_num * inps.fig_col_num])
+    data = read_data4figure(inps, i_start, i_end)
+
+    # disp/data_min/max, adjust data if all subplots are the same type
+    if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity']:
+        data, inps = update_data_with_plot_inps(data, metadata, inps)
+        if not inps.disp_min and not inps.disp_max:
+            inps.disp_min = np.nanmin(data)
+            inps.disp_max = np.nanmax(data)
+    inps.data_min = np.nanmin(data)
+    inps.data_max = np.nanmax(data)
+
+    # Loop - Subplots
+    prog_bar = ptime.progressBar(maxValue=i_end - i_start, prefix='ploting')
+    for i in range(i_start, i_end):
+        ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i - i_start + 1)
+        im = plot_subplot4figure(inps, ax=ax, data=data[i - i_start, :, :], i=i)
+        prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
+    prog_bar.close()
+    fig.tight_layout()
+
+    # Min and Max for this figure
+    inps.all_data_min = np.nanmin([inps.all_data_min, inps.data_min])
+    inps.all_data_max = np.nanmax([inps.all_data_max, inps.data_max])
+    print('data    range: [%.2f, %.2f] %s' % (inps.data_min, inps.data_max, inps.disp_unit))
+    if inps.disp_min and inps.disp_max:
+        print('display range: [%.2f, %.2f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit))
+
+    # Colorbar
+    if not inps.disp_min and not inps.disp_max:
+        print('Note: different color scale for EACH subplot!')
+    else:
+        print('show colorbar')
+        fig.subplots_adjust(right=0.93)
+        cax = fig.add_axes([0.94, 0.3, 0.005, 0.4])
+        inps, cax = pp.plot_colorbar(inps, im, cax)
+
+    # Save Figure
+    if inps.save_fig:
+        print('save figure to '+inps.outfile)
+        fig.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+        if not inps.disp_fig:
+            fig.clf()
+    return
+
+
+def prepare4multi_subplots(inps):
+    """Prepare for multiple subplots:
+    1) check multilook to save memory
+    2) read existed reference pixel info for unwrapPhase
+    3) read dropIfgram info
+    4) read and prepare DEM for background
+    """
+    # Update multilook parameters with new num and col number
+    if inps.multilook and inps.multilook_num == 1:
+        inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box, inps.fig_row_num, inps.fig_col_num)
+        if inps.msk is not None:
+            inps.msk = mli.multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
+
+    # Reference pixel for timeseries and ifgramStack
+    inps.file_ref_yx = None
+    if inps.key in ['ifgramStack'] and 'REF_Y' in atr.keys():
+        inps.file_ref_yx = [int(atr[i]) for i in ['REF_Y','REF_X']]
+        print('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
+
+    if inps.dsetNum > 10:
+        inps.disp_seed = False
+        print('turn off reference pixel plot for more than 10 datasets to display')
+
+    # Check dropped interferograms
+    inps.dropDatasetList = []
+    inps.dsetFamilyList = list(set(i.split('-')[0] for i in inps.dset))
+    if inps.key == 'ifgramStack' and inps.disp_title:
+        obj = ifgramStack(inps.file)
+        obj.open(print_msg=False)
+        dropDate12List = obj.get_drop_date12_list()
+        for i in inps.dsetFamilyList:
+            inps.dropDatasetList += ['{}-{}'.format(i,j) for j in dropDate12List]
+        print("mark interferograms with 'dropIfgram=False' in red colored title")
+
+    # Read DEM
+    if inps.dem_file:
+        print('reading DEM: {} ... '.format(os.path.basename(inps.dem_file)))
+        dem, dem_metadata = readfile.read(inps.dem_file, datasetName='height', box=inps.pix_box, print_msg=False)
+        if inps.multilook:
+            dem = mli.multilook_data(dem, inps.multilook_num, inps.multilook_num)
+        inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prepare_dem_background(dem=dem, inps_dict=vars(inps))
+    return inps
 
 
 #########################################  Main Function  ########################################
@@ -960,125 +1093,27 @@ def main(iargs=None):
 
         fig, ax = plt.subplots(figsize=inps.fig_size)
 
-        ax, inps = plot_matrix(ax, data, atr, inps)
-
-        if inps.disp_fig:
-            print('showing ...')
-            plt.show()
-
+        ax, inps = plot_2d_matrix(ax, data, atr, inps)
 
     ############################### Multiple Subplots #########################
     else:
-        # Update multilook parameters with new num and col number
-        if inps.multilook and inps.multilook_num == 1:
-            inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box, inps.fig_row_num, inps.fig_col_num)
-            if inps.msk is not None:
-                inps.msk = mli.multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
+        inps = prepare4multi_subplots(inps)
 
-        ##### Aux Data
-        # Reference pixel for timeseries and ifgramStack
-        inps.file_ref_yx = None
-        if inps.key in ['ifgramStack'] and 'REF_Y' in atr.keys():
-            inps.file_ref_yx = [int(atr[i]) for i in ['REF_Y','REF_X']]
-            print('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
+        inps.all_data_min=0
+        inps.all_data_max=0
+        for j in range(1, inps.fig_num + 1):
+            plot_figure(inps, j, metadata=atr)
 
-        if inps.dsetNum > 10:
-            inps.disp_seed = False
-            print('turn off reference pixel plot for more than 10 datasets to display')
-
-        # Check dropped interferograms
-        inps.dropDatasetList = []
-        familyList = list(set(i.split('-')[0] for i in inps.dset))
-        if inps.key == 'ifgramStack' and inps.disp_title:
-            obj = ifgramStack(inps.file)
-            obj.open(print_msg=False)
-            dropDate12List = obj.get_drop_date12_list()
-            for i in familyList:
-                inps.dropDatasetList += ['{}-{}'.format(i,j) for j in dropDate12List]
-            print("mark interferograms with 'dropIfgram=False' in red colored title")
-
-        # Read DEM
-        if inps.dem_file:
-            print('reading DEM: {} ... '.format(os.path.basename(inps.dem_file)))
-            dem, dem_metadata = readfile.read(inps.dem_file, datasetName='height', box=inps.pix_box, print_msg=False)
-            if inps.multilook:
-                dem = mli.multilook_data(dem, inps.multilook_num, inps.multilook_num)
-            inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prepare_dem_background(dem=dem, inps_dict=vars(inps))
-
-        ################## Plot Loop ####################
-        ## Find min and value for all data, reference for better min/max setting next time
-        all_data_min=0
-        all_data_max=0
-
-        ##### Loop 1 - Figures
-        for j in range(1, inps.fig_num+1):
-            # Output file name for current figure
-            if inps.fig_num > 1:
-                inps.outfile = '{}_{}{}'.format(inps.outfile_base, str(j), inps.fig_ext)
-            else:
-                inps.outfile = '{}{}'.format(inps.outfile_base, inps.fig_ext)
-            fig_title = 'Figure {} - {}'.format(str(j), inps.outfile)
-            print('----------------------------------------')
-            print(fig_title)
-
-            # Open a new figure object
-            fig = plt.figure(j, figsize=inps.fig_size)
-            fig.canvas.set_window_title(fig_title)
-
-            ##### Read all data for the current figure
-            i_start = (j - 1) * inps.fig_row_num * inps.fig_col_num
-            i_end = min([inps.dsetNum, i_start + inps.fig_row_num * inps.fig_col_num])
-            data = read_data4figure(inps, i_start, i_end)
-
-            # disp/data_min/max
-            if len(familyList) == 1 or inps.key in ['velocity']:
-                data, inps = update_matrix_with_plot_inps(data, atr, inps)
-                if not inps.disp_min and not inps.disp_max:
-                    inps.disp_min = np.nanmin(data)
-                    inps.disp_max = np.nanmax(data)
-            inps.data_min = np.nanmin(data)
-            inps.data_max = np.nanmax(data)
-
-            ##### Loop 2 - Subplots
-            prog_bar = ptime.progressBar(maxValue=i_end - i_start, prefix='ploting')
-            for i in range(i_start, i_end):
-                ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i - i_start + 1)
-                im = plot_subplot4figure(inps, ax=ax, data=data[i - i_start, :, :], i=i)
-                prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
-            prog_bar.close()
-            fig.tight_layout()
-
-            # Min and Max for this figure
-            all_data_min = np.nanmin([all_data_min, inps.data_min])
-            all_data_max = np.nanmax([all_data_max, inps.data_max])
-            print('data    range: [%.2f, %.2f] %s' % (inps.data_min, inps.data_max, inps.disp_unit))
-            if inps.disp_min and inps.disp_max:
-                print('display range: [%.2f, %.2f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit))
-
-            # Colorbar
-            if not inps.disp_min and not inps.disp_max:
-                print('Note: different color scale for EACH subplot!')
-            else:
-                print('show colorbar')
-                fig.subplots_adjust(right=0.93)
-                cax = fig.add_axes([0.94, 0.3, 0.005, 0.4])
-                inps, cax = pp.plot_colorbar(inps, im, cax)
-
-            # Save Figure
-            if inps.save_fig:
-                print('save figure to '+inps.outfile)
-                fig.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-                if not inps.disp_fig:
-                    fig.clf()
         print('----------------------------------------')
-        print('all data range: [%f, %f] %s' % (all_data_min, all_data_max, inps.disp_unit))
+        print('all data range: [%f, %f] %s' % (inps.all_data_min, inps.all_data_max, inps.disp_unit))
         if inps.disp_min and inps.disp_max:
             print('display  range: [%f, %f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit))
 
-        # Display Figure
-        if inps.disp_fig:
-            print('showing ...')
-            plt.show()
+    # Display Figure
+    if inps.disp_fig:
+        print('showing ...')
+        plt.show()
+    return
 
 
 ##################################################################################################

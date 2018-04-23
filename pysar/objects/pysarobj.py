@@ -258,12 +258,12 @@ class timeseries:
         print('create dataset /timeseries of {:<10} in size of {}'.format(str(data.dtype), data.shape))
         dset = f.create_dataset('timeseries', data=data, chunks=True)
 
-        dset.attrs['Title'] = 'timeseries'
-        dset.attrs['MissingValue'] = FLOAT_ZERO
-        dset.attrs['Units'] = 'm'
-        dset.attrs['_FillValue'] = FLOAT_ZERO
-        dset.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
-        dset.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
+        #dset.attrs['Title'] = 'timeseries'
+        #dset.attrs['MissingValue'] = FLOAT_ZERO
+        #dset.attrs['Units'] = 'm'
+        #dset.attrs['_FillValue'] = FLOAT_ZERO
+        #dset.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
+        #dset.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
 
         ##### 1D dataset - date / bperp
         print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))
@@ -825,39 +825,31 @@ class HDFEOS:
     Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer (http://insarmaps.miami.edu)
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
 
-    /HDFEOS                           Root level group name
-        /GRIDS                        2nd level group name for products in geo coordinates
-            Attributes                metadata in dict.
-            /timeseries               3rd level group name for time-series InSAR product
-                /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
-                /bperp                1D array of float32 in size of (n,     ) in meter
-                /temporalCoherence    2D array of float32 in size of (   l, w).
-                /mask                 2D array of bool_   in size of (   l, w).
-                /raw                  3D array of float32 in size of (n, l, w) in meter
-                /troposphericDelay    3D array of float32 in size of (n, l, w) in meter
-                /topographicResidual  3D array of float32 in size of (n, l, w) in meter
-                /ramp                 3D array of float32 in size of (n, l, w) in meter
-                /displacement         3D array of float32 in size of (n, l, w) in meter
-            /geometry                 3rd level group name for geometry data
-                /height               2D array of float32 in size of (   l, w) in meter.
-                /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
-                /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
-                /azimuthCoord         2D array of float32 in size of (   l, w) in degree.
-                /rangeCoord           2D array of float32 in size of (   l, w) in degree.
-                /headingAngle         2D array of float32 in size of (   l, w) in degree. (optional)
-                /shadowMask           2D array of bool    in size of (   l, w).           (optional)
-                /waterMask            2D array of bool    in size of (   l, w).           (optional)
-                /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
-        /SWATHS
-            Attributes
-            /ifgramStack
-                ...
-            /geometry
-                ...
+    /                             Root level group
+    Attributes                    metadata in dict.
+    /HDFEOS/GRIDS/timeseries      timeseries group
+        /observation
+            /displacement         3D array of float32 in size of (n, l, w) in meter
+            /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
+            /bperp                1D array of float32 in size of (n,     ) in meter
+        /quality
+            /temporalCoherence    2D array of float32 in size of (   l, w).
+            /mask                 2D array of bool_   in size of (   l, w).
+        /geometry
+            /height               2D array of float32 in size of (   l, w) in meter.
+            /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
+            /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
+            /headingAngle         2D array of float32 in size of (   l, w) in degree. (optional)
+            /shadowMask           2D array of bool    in size of (   l, w).           (optional)
+            /waterMask            2D array of bool    in size of (   l, w).           (optional)
+            /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
     '''
     def __init__(self, file=None):
         self.file = file
         self.name = 'HDFEOS'
+        self.observationNames = timeseriesDatasetNames
+        self.qualityNames = ['mask', 'temporalCoherence', 'coherence', 'variance', 'uncertainty']
+        self.geometryNames = geometryDatasetNames
 
     def close(self, print_msg=True):
         try:
@@ -868,8 +860,73 @@ class HDFEOS:
             pass
 
 
+    def open(self, print_msg=True):
+        if print_msg:
+            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+        self.get_metadata()
+        self.length = int(self.metadata['LENGTH'])
+        self.width = int(self.metadata['WIDTH'])
+
+        self.datasetList = []
+        with h5py.File(self.file, 'r') as f:
+            g = f['HDFEOS/GRIDS/timeseries/observation']
+            self.dateList = [i.decode('utf8') for i in g['date'][:]]
+            self.pbase = g['bperp'][:]
+            self.datasetList += ['displacement-{}'.format(i) for i in self.dateList]
+            self.numDate = len(self.dateList)
+
+            g = f['HDFEOS/GRIDS/timeseries/quality']
+            for key in g.keys():
+                self.datasetList.append(key)
+
+            g = f['HDFEOS/GRIDS/timeseries/geometry']
+            for key in g.keys():
+                obj = g[key]
+                if isinstance(obj, h5py.Dataset):
+                    if len(obj.shape) == 2:
+                        self.datasetList.append(key)
+                    #elif len(obj.shape) == 3:
+                    #    self.datesetList += ['{}-{}'.format(key, i) for i in self.dateList]
 
 
+    def get_metadata(self):
+        with h5py.File(self.file, 'r') as f:
+            self.metadata = dict(f.attrs)
+        for key, value in self.metadata.items():
+            try:     self.metadata[key] = value.decode('utf8')
+            except:  self.metadata[key] = value
+        self.metadata['FILE_TYPE'] = self.name
+        return self.metadata
+
+
+    def read(self, datasetName=None, box=None, print_msg=True):
+        self.open(print_msg=False)
+        if box is None:
+            box = [0,0,self.width,self.length]
+        datasetFamily = datasetName.split('-')[0]
+
+        with h5py.File(self.file, 'r') as f:
+            g = f['HDFEOS/GRIDS/timeseries']
+
+            if datasetFamily in self.observationNames:
+                ds = g['observation/{}'.format(datasetFamily)]
+                dateFlag = np.zeros(self.numDate, np.bool_)
+                if '-' in datasetName:
+                    dsDate = datasetName.split('-')[1]
+                    dateFlag[self.dateList.index(dsDate)] = True
+                else:
+                    dateFlag[:] = True
+                data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+
+            elif datasetFamily in self.qualityNames:
+                ds = g['quality/{}'.format(datasetFamily)]
+                data = ds[box[1]:box[3], box[0]:box[2]]
+
+            elif datasetFamily in self.geometryNames:
+                ds = g['geometry/{}'.format(datasetFamily)]
+                data = ds[box[1]:box[3], box[0]:box[2]]
+        data = np.squeeze(data)
+        return data
 
 
 

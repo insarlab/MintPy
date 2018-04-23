@@ -65,9 +65,9 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                                                                                   t=str(data.dtype),
                                                                                   s=data.shape))
                 ds = f.create_dataset(dsName, data=data, chunks=True, compression=compression)
-                if dsName == 'velocity':
-                    ds.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
-                    ds.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
+                #if dsName == 'velocity':
+                #    ds.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
+                #    ds.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
 
             # Write extra/auxliary datasets from ref_file
             if ref_file:

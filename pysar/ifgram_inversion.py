@@ -706,7 +706,7 @@ def ifgram_inversion(ifgram_stack_file='ifgramStack.h5', inps=None):
 
     print('-'*50)
     print('writing >>> '+inps.tempCohFile)
-    atr['FILE_TYPE'] = 'coherence'
+    atr['FILE_TYPE'] = 'temporalCoherence'
     atr['UNIT'] = '1'
     writefile.write(tempCoh, out_file=inps.tempCohFile, metadata=atr)
 

@@ -283,6 +283,7 @@ def main(iargs=None):
 
     meta_dict = pysar_meta_dict.copy()
     meta_dict.update(unavco_meta_dict)
+    meta_dict['FILE_TYPE'] = 'HDFEOS'
     print('-----------------------------------------')
 
     ##### Open HDF5 File
@@ -383,7 +384,7 @@ def main(iargs=None):
     ##### Write Quality
     gName = 'HDFEOS/GRIDS/timeseries/quality'
     print('create group   /{}'.format(gName))
-    group = group.create_group(gName)
+    group = f.create_group(gName)
 
     ## 1 - temporalCoherence
     dsName = 'temporalCoherence'
@@ -421,7 +422,7 @@ def main(iargs=None):
     ## Optional: rangeCoord, azimuthCoord, headingAngle, slantRangeDistance, waterMask, shadowMask
     gName = 'HDFEOS/GRIDS/timeseries/geometry'
     print('create group   /{}'.format(gName))
-    group = group.create_group(gName)
+    group = f.create_group(gName)
 
     geom_obj = geometry(inps.geom_file)
     geom_obj.open(print_msg=False)
