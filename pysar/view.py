@@ -295,7 +295,7 @@ def update_inps_with_display_setting_file(inps, disp_set_file):
 
 def update_inps_with_file_metadata(inps, metadata):
     # default mask file:
-    if not inps.mask_file and inps.key in ['velocity','timeseries']:
+    if not inps.mask_file and inps.key in ['velocity','timeseries'] and 'masked' not in inps.file:
         if os.path.basename(metadata['FILE_PATH']).startswith('geo_'):
             inps.mask_file = 'geo_maskTempCoh.h5'
         else:
@@ -777,9 +777,7 @@ def read_mask(inps, atr):
 
     elif inps.key in ['HDFEOS']:
         inps.mask_file = inps.file
-        h5msk = h5py.File(inps.file, 'r')
-        inps.msk = h5msk[inps.key]['GRIDS']['timeseries']['quality'].get('mask')[:]
-        h5msk.close()
+        inps.msk = readfile.read(inps.file, datasetName='mask')[0]
         print('mask %s data with contained mask dataset.' % (inps.key))
 
     elif inps.file.endswith('PARAMS.h5'):
