@@ -47,7 +47,7 @@ output = ""
 ############################################################
 def attributes_string(atr, string=str(), sorting=True):
     ## Print Dictionary of Attributes
-    digits = digits = max([len(key) for key in list(atr.keys())] + [0])
+    digits = max([len(key) for key in list(atr.keys())] + [0])
     f = '{0:<%d}    {1}' % (digits)
     dictKey = atr.keys()
     if sorting:
@@ -70,15 +70,15 @@ def hdf5_structure_string(file):
     def print_hdf5_structure_obj(name, obj):
         global output
         if isinstance(obj, h5py.Group):
-            output = 'HDF5 group "/{}"'.format(name)
+            output += 'HDF5 group "/{}"'.format(name)
         elif isinstance(obj, h5py.Dataset):
             output += 'HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype)
         output += "\n"
         output += name+"\n"
 
     f = h5py.File(file, 'r')
-    print('Attributes in / level:')
-    print_attributes(f.attrs)
+    output += 'Attributes in / level:\n'
+    output = attributes_string(f.attrs, output, sorting=True)+"\n"
     f.visititems(print_hdf5_structure_obj)
     f.close()
 
