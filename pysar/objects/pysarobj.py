@@ -81,6 +81,7 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'commonMask'         :'1',
                    'bperp'              :'m',
 
+                   'timeseries'         :'m',
                    'raw'                :'m',
                    'troposphericDelay'  :'m',
                    'topographicResidual':'m',
@@ -145,7 +146,7 @@ class timeseries:
         self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
         self.dateList = [i.decode('utf8') for i in dates]
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]  #list of float for year, 2014.95
-        self.datasetList = list(self.dateList)
+        self.datasetList = ['{}-{}'.format(self.name, i) for i in self.dateList]
 
 
     def get_metadata(self):
@@ -186,6 +187,13 @@ class timeseries:
             print('reading {} data from file: {} ...'.format(self.name, self.file))
         self.open(print_msg=False)
 
+        # convert input datasetName into list of dates
+        if not datasetName:
+            datasetName = []
+        elif isinstance(datasetName, str):
+            datasetName = [datasetName]
+        datasetName = [i.replace('timeseries','').replace('-','') for i in datasetName]
+
         with h5py.File(self.file, 'r') as f:
             ds = f[self.name]
             if isinstance(ds, h5py.Group):    #support for old pysar files
@@ -193,11 +201,9 @@ class timeseries:
 
             ##Get dateFlag - mark in time/1st dimension
             dateFlag = np.zeros((self.numDate), dtype=np.bool_)
-            if not datasetName or datasetName == self.name:
+            if not datasetName:
                 dateFlag[:] = True
-            elif isinstance(datasetName, str):
-                dateFlag[self.dateList.index(datasetName)] = True
-            elif isinstance(datasetName, list):
+            else:
                 for e in datasetName:
                     dateFlag[self.dateList.index(e)] = True
 
