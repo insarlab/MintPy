@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 # Yunjun, Jun 2017: rewrite using pysar module
 
-import os, sys
+import os
+import sys
 import argparse
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
 from pysar.utils import readfile, writefile, utils as ut
 
 
 ################################################################################
 def get_overlap_lalo(atr1, atr2):
-    '''Find overlap area in lat/lon of two geocoded files
+    """Find overlap area in lat/lon of two geocoded files
     Inputs:
         atr1/2 - dict, attribute dictionary of two input files in geo coord
     Outputs:
         W/E/S/N - float, West/East/South/North in deg 
-    '''
+    """
     W1, E1, S1, N1 = ut.four_corners(atr1)
     W2, E2, S2, N2 = ut.four_corners(atr2)
     
@@ -34,17 +34,17 @@ def get_overlap_lalo(atr1, atr2):
 
 
 ################################################################################
-REFERENCE='''reference:
+REFERENCE = """reference:
   Wright, T. J., B. E. Parsons, and Z. Lu (2004), Toward mapping 
   surface deformation in three dimensions using InSAR, GRL, 31(1),
-'''
+"""
 
-EXAMPLE='''example:
+EXAMPLE = """example:
   asc_desc.py  vel_AlosAT424_masked.h5  vel_AlosDT73_masked.h5
   asc_desc.py  vel_EnvAT134_masked.h5   vel_EnvAT256_masked.h5  16
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Project Asc and Desc LOS displacement to Horizontal and Vertical direction',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -53,7 +53,7 @@ def createParser():
                         help='ascending and descending files\n'+\
                              'Both files need to be geocoded in the same spatial resolution.')
     parser.add_argument('--azimuth','--az', dest='azimuth', type=float, default=90.0,\
-                        help='azimuth angle (clockwise) of the direction of the horizontal movement\n'+\
+                        help='azimuth angle in degree (clockwise) of the direction of the horizontal movement\n'+\
                              'default is 90.0 for E-W component, assuming no N-S displacement.\n'+\
                              'i.e. azimuth angle of strike-slip fault\n\n'+\
                              'Note:\n'+\
@@ -66,8 +66,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if inps.azimuth < 0.:
         inps.azimuth += 360.
@@ -77,7 +77,7 @@ def cmdLineParse(iargs=None):
 
 ################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
 
     ##### 1. Extract the common area of two input files
     # Basic info
@@ -93,8 +93,8 @@ def main(iargs=None):
     west, east, south, north = get_overlap_lalo(atr1, atr2)
     lon_step = float(atr1['X_STEP'])
     lat_step = float(atr1['Y_STEP'])
-    width  = int(round((east  - west )/lon_step))
-    length = int(round((south - north)/lat_step))
+    width  = int(round((east - west) / lon_step))
+    length = int(round((south - north) / lat_step))
 
     # Read data in common AOI: LOS displacement, heading angle, incident angle
     u_los = np.zeros((2, width*length))
@@ -106,9 +106,9 @@ def main(iargs=None):
         print('reading '+fname)
         atr = readfile.read_attribute(fname)
 
-        [x0,x1] = ut.coord_geo2radar([west,east], atr, 'lon')
-        [y0,y1] = ut.coord_geo2radar([north,south], atr, 'lat')
-        V = readfile.read(fname, box=(x0,y0,x1,y1))[0]
+        [x0, x1] = ut.coord_geo2radar([west, east], atr, 'lon')
+        [y0, y1] = ut.coord_geo2radar([north, south], atr, 'lat')
+        V = readfile.read(fname, box=(x0, y0, x1, y1))[0]
         u_los[i,:] = V.flatten(0)
 
         heading_angle = float(atr['HEADING'])
@@ -117,9 +117,8 @@ def main(iargs=None):
         print('heading angle: '+str(heading_angle))
         heading_angle *= np.pi/180.
         heading.append(heading_angle)
-        
+
         inc_angle = float(ut.incidence_angle(atr, dimension=0))
-        #print 'incidence angle: '+str(inc_angle)
         inc_angle *= np.pi/180.
         incidence.append(inc_angle)
 
@@ -155,11 +154,11 @@ def main(iargs=None):
     print('---------------------')
     outname = inps.outfile[0]
     print('writing   vertical component to file: '+outname)
-    writefile.write(u_v, atr, outname)
+    writefile.write(u_v, out_file=outname, metadata=atr)
 
     outname = inps.outfile[1]
     print('writing horizontal component to file: '+outname)
-    writefile.write(u_h, atr, outname)
+    writefile.write(u_h, out_file=outname, metadata=atr)
 
     print('Done.')
     return

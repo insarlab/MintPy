@@ -1,23 +1,20 @@
 #! /usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2016, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-#
 
 
-import os, sys
-import h5py
-import numpy as np
+import os
+import sys
 from pysar.utils import readfile, writefile, utils as ut
 import pysar.info as info
 
 
 ################################################################################
-def usage():
-    print('''
-usage: add_attribute.py file metadataFile
+USAGE = """
+usage: add_attribute.py file metadata_file
        add_attribute.py file key1=value1 [key2=value2 [...]]
 
 Add/Update attributes to file.
@@ -28,23 +25,14 @@ Example:
 
   Use None value to delete attribute:
   add_attribute.py unwrapIfgram.h5  ref_y=None  ref_x=None
-    ''')
+"""
+
+def usage():
+    print(USAGE)
     return
 
 
-def main(argv):
-    ##### Check Inputs
-    if not argv or argv[0] in ['-h','--help']:
-        usage();  sys.exit(1)
-    if len(argv) < 2 or not argv[1]:
-        raise Exception('\nAt lease 2 inputs are needed.\n')
-
-    ##### Read Original Attributes
-    File = argv[0]
-    atr  = readfile.read_attribute(File)
-    print(('Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+File))
-
-    ##### Read New Attributes
+def read_input_attribute(argv, print_msg=True):
     atr_new = dict()
     for i in range(1,len(argv)):
         if os.path.isfile(argv[i]):
@@ -53,12 +41,21 @@ def main(argv):
         else:
             atr_tmp = argv[i].split('=')
             atr_new[atr_tmp[0].strip()] = atr_tmp[1].strip()
-    print("The following attributes will be added/updated, or removed if new value is 'None':")
-    info.print_attributes(atr_new)
 
-    ext = os.path.splitext(File)[1]
+    if print_msg:
+        print("The following attributes will be added/updated, or removed if new value is 'None':")
+        info.print_attributes(atr_new)
+    return atr_new
+
+
+def update_file_attribute(fname, atr_new):
+    ##### Read Original Attributes
+    atr  = readfile.read_attribute(fname)
+    print('update {} file attribute: {}'.format(atr['FILE_TYPE'], fname))
+
+    ext = os.path.splitext(fname)[1]
     if ext in ['.h5','.he5']:
-        File = ut.add_attribute(File, atr_new)
+        fname = ut.add_attribute(fname, atr_new)
     else:
         if not ut.update_attribute_or_not(atr_new, atr):
             print('All updated (removed) attributes already exists (do not exists) and have the same value, skip update.')
@@ -69,9 +66,26 @@ def main(argv):
                     except: pass
                 else:
                     atr[key] = value
-            print(('writing >>> '+File+'.rsc'))
-            writefile.write_roipac_rsc(atr, File+'.rsc')
-    return File
+
+            rsc_file = '{}.rsc'.format(fname)
+            print('writing >>> {}'.format(rsc_file))
+            writefile.write_roipac_rsc(atr, out_file=rsc_file)
+    return fname
+
+
+def main(argv):
+    ##### Check Inputs
+    if not argv or argv[0] in ['-h','--help']:
+        usage();  sys.exit(1)
+    if len(argv) < 2 or not argv[1]:
+        raise Exception('\nAt lease 2 inputs are needed.\n')
+    infile = argv[0]
+
+    atr_new = read_input_attribute(argv)
+
+    update_file_attribute(fname=infile, atr_new=atr_new)
+
+    return infile
 
 
 ################################################################################

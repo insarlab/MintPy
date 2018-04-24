@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import argparse
 import h5py
 from numpy import pi
@@ -15,33 +16,16 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 
 ##############################################################################
-def usage():
-    print('''usage: save_roipac.py  file  [date_info]
-
-Convert PySAR hdf5 file to ROI_PAC format 
-
-argument:
-  file : file to be converted.
-         for velocity  : the ouput will be a one year interferogram.
-         for timeseries: if date is not specified, the last date will be used
-                         if two dates are specified, the earlier date will be
-                             used as the reference date.
-
-example:
-    ''')
-    return
-
-############################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   save_roipac.py  velocity.h5
   save_roipac.py  timeseries.h5    20050601
   save_roipac.py  timeseries.h5    050601    --ref-date 040728
   save_roipac.py  unwrapIfgram.h5  filt_091225-100723-sim_HDR_8rlks_c10.unw
   save_roipac.py  unwrapIfgram.h5  091225-100723
   save_roipac.py  temporal_coherence.h5
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Convert PySAR HDF5 file to ROI_PAC format.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -54,15 +38,15 @@ def createParser():
     parser.add_argument('-r','--ref-date', dest='ref_date', help='Reference date for timeseries file')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##############################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
   
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
@@ -79,7 +63,7 @@ def main(iargs=None):
 
         inps.outfile=inps.file.split('.')[0]+'.unw'
         print('writing >>> '+inps.outfile)
-        writefile.write(data,atr,inps.outfile)
+        writefile.write(data, out_file=inps.outfile, metadata=atr)
 
     elif k in multi_dataset_hdf5_file:
         dateList = sorted(h5file[k].keys())
@@ -116,7 +100,7 @@ def main(iargs=None):
             else:
                 inps.outfile = '%s.cor' % (inps.epoch)
         print('writing >>> '+inps.outfile)
-        writefile.write(data,atr,inps.outfile)
+        writefile.write(data, out_file=inps.outfile, metadata=atr)
 
     elif k in ['interferograms','coherence','wrapped']:
         ## Check input
@@ -143,7 +127,7 @@ def main(iargs=None):
 
         inps.outfile = inps.epoch
         print('writing >>> '+ inps.outfile)
-        writefile.write(data, atr, inps.outfile)  
+        writefile.write(data, out_file=inps.outfile, metadata=atr)  
 
     else:
         data = h5file[k].get(k)[:]
@@ -156,7 +140,7 @@ def main(iargs=None):
             else:
                 inps.outfile=inps.file.split('.')[0]+'.unw'
         print('writing >>> '+ inps.outfile)
-        writefile.write(data,atr,inps.outfile)
+        writefile.write(data, out_file=inps.outfile, metadata=atr)
 
 
     h5file.close()

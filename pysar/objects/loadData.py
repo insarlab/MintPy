@@ -11,7 +11,7 @@ from insarStack import insarStack
 
 
 #################################################################
-def createParser():
+def create_parser():
     '''
     Create command line parser.
     '''
@@ -53,12 +53,12 @@ def createParser():
     
     return parser
 
-def cmdLineParse(iargs = None):
+def cmd_line_parse(iargs = None):
     '''
     Command line parser.
     '''
 
-    parser = createParser()
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     return inps
@@ -146,7 +146,7 @@ def write2h5(inps):
 
 def main(iargs=None):
 
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.refPixel:
         inps.refPixel=[int(i) for i in inps.refPixel.split(',')]
         inps.refPixel=(inps.refPixel[0],inps.refPixel[1])

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
@@ -17,13 +17,13 @@ import pysar.subset as subset
 
 
 ###############################  Usage  ################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   modify_network.py INPUTS/ifgramStack.h5 -t pysarApp_template.txt
   modify_network.py INPUTS/ifgramStack.h5 --reset
   modify_network.py INPUTS/ifgramStack.h5 --manual
-'''
+"""
 
-TEMPLATE='''
+TEMPLATE = """
 ## Coherence-based network modification = MST + Threshold, by default
 ## 1) calculate a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
 ## 2) find a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
@@ -43,9 +43,9 @@ pysar.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
 pysar.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of ifg index (start from 0)
 pysar.network.startDate       = auto  #[20090101 / no], auto for no
 pysar.network.endDate         = auto  #[20110101 / no], auto for no
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Modify the network of interferograms',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -94,8 +94,8 @@ def createParser():
                         help='display network to manually choose line/interferogram to remove')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     inps.aoi_geo_box = None
@@ -112,7 +112,7 @@ def cmdLineParse(iargs=None):
 
 
 def read_input_index_list(idxList, stackFile=None):
-    '''Read ['2','3:5','10'] into ['2','3','4','5','10']'''
+    """Read ['2','3:5','10'] into ['2','3','4','5','10']"""
     idxListOut = []
     for idx in idxList:
         c = sorted([int(i) for i in idx.split(':')])
@@ -133,9 +133,9 @@ def read_input_index_list(idxList, stackFile=None):
 
 
 def read_template2inps(template_file, inps=None):
-    '''Read input template options into Namespace inps'''
+    """Read input template options into Namespace inps"""
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(inps.template_file)
@@ -188,7 +188,7 @@ def read_template2inps(template_file, inps=None):
 
 ###########################  Sub Function  #############################
 def reset_network(stackFile):
-    '''Reset/restore all pairs within the input file by set all DROP_IFGRAM=no'''
+    """Reset/restore all pairs within the input file by set all DROP_IFGRAM=no"""
     print("reset dataset 'dropIfgram' to True for all interferograms for file: "+stackFile)
     obj = ifgramStack(stackFile)
     obj.open(print_msg=False)
@@ -216,7 +216,7 @@ def nearest_neighbor(x, y, x_array, y_array):
 
 
 def manual_select_pairs_to_remove(stackFile):
-    '''Manually select interferograms to remove'''
+    """Manually select interferograms to remove"""
     print('\n-------------------------------------------------------------')
     print('Manually select interferograms to remove')
     print('1) click two dates/points to select one pair of interferogram')
@@ -266,10 +266,10 @@ def manual_select_pairs_to_remove(stackFile):
 
 
 def get_date12_to_drop(inps):
-    '''Get date12 list to dropped
+    """Get date12 list to dropped
     Return [] if no ifgram to drop, thus KEEP ALL ifgrams;
            None if nothing to change, exit without doing anything.
-    '''
+    """
     obj = ifgramStack(inps.file)
     obj.open()
     date12ListAll = obj.date12List
@@ -390,7 +390,7 @@ def get_date12_to_drop(inps):
 
 #########################  Main Function  ##############################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 

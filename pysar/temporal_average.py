@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2016, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 # Modified from load_data.py written by Heresh Fattahi.
 #
 
-import os, sys
+import os
+import sys
+import time
 import argparse
 from pysar.utils import utils as ut, readfile
 from pysar.objects import ifgramDatasetNames
 
 
 #################################  Usage  ####################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoherence.h5
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Calculate temporal average/mean of multi-temporal datasets',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -31,9 +33,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    '''Command line parser.'''
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    """Command line parser."""
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -61,10 +63,11 @@ def check_output_filename(inps):
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    start_time = time.time()
+    inps = cmd_line_parse(iargs)
     inps.outfile = check_output_filename(inps)
     inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
-    print('Done.')
+    print('time used: {:.2f} secs\nDone.'.format(time.time() - start_time))
     return inps.outfile
 
 

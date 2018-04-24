@@ -6,7 +6,9 @@
 ############################################################
 
 
-import os, sys, glob
+import os
+import sys
+import glob
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
@@ -262,8 +264,7 @@ def get_transect(z,x0,y0,x1,y1,interpolation='nearest'):
 
 
 ############################################################
-def Usage():
-    print('''
+USAGE = """
 *****************************************************************************************
 
    Generating a transect [or multiple transects] of the velocity field. 
@@ -307,7 +308,10 @@ def Usage():
                    -n 100 -d 10 -p yes -g ../GPS_velocities_PBO_and_unavco.cmm4 -S pysar -r IMPS -n 230 -s '11904,93' -e '5389,5662' -E on
 
 *****************************************************************************************
-    ''')
+"""
+
+def Usage():
+    print(USAGE)
 
 
 #####################################################################
@@ -560,7 +564,7 @@ def main(argv):
             
          else:
             
-             print(''' 
+             print(""" 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       
       WARNING: nan value for InSAR data at the refernce pixel!
@@ -569,7 +573,7 @@ def main(argv):
                please select another GPS station as the reference station.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
-                   ''')
+                   """)
              sys.exit(1)
        else:
          print('WARNING:')
@@ -912,11 +916,10 @@ def main(argv):
     plt.savefig(figName)
     print('')
     print('________________________________')
-#############################################################################
     plt.show()
 
     
+#############################################################################
 if __name__ == '__main__':
-
-  main(sys.argv[1:])
+    main(sys.argv[1:])
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2016, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
@@ -14,12 +14,12 @@ from pysar.objects import ifgramDatasetNames
 
 
 #################################  Usage  ####################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   spatial_average.py ifgramStack.h5 -d coherence -m mask.h5
   spatial_average.py timeseries_ECMWF_demCor.h5 -m maskTempCoh.h5
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Calculate average in space',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -30,15 +30,16 @@ def createParser():
     parser.add_argument('--nodisplay', dest='disp_fig', action='store_false', help='save and do not display the figure')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 #############################  Main Function  ################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     print('\n*************** Spatial Average ******************')
     mean_list, date_list = ut.spatial_average(inps.file, datasetName=inps.datasetName, maskFile=inps.mask_file, saveList=True)
     atr = readfile.read_attribute(inps.file)

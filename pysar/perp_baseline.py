@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
@@ -13,7 +13,7 @@ from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 
 def usage():
-    print('''
+    print("""
 usage:  perp_baseline.py  timeseries_file   date  [outfile]
 
 Generates perpendicular baseline (in Radar Coordinate) for each pixel
@@ -27,7 +27,7 @@ input arguments:
 
 example:
   perp_baseline.py  timeseries.h5  20101020
-    ''')
+    """)
     return
 
 def main(argv):
@@ -66,7 +66,7 @@ def main(argv):
     print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'
-    writefile.write(pbase_xy, atr, outFile)
+    writefile.write(pbase_xy, out_file=outFile, metadata=atr)
     return outFile
 
 ############################################################

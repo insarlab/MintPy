@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 # Yunjun, Jul 2017: rewrite using pysay module
 
-import os, sys
-import time, datetime
+import os
+import sys
+import time
+import datetime
 import argparse
 import h5py
 import numpy as np
@@ -15,12 +17,12 @@ from pysar.utils import readfile, datetime as ptime
 
 
 ############################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
  temporal_filter.py timeseries_ECMWF_demErr_refDate.h5
  temporal_filter.py timeseries_ECMWF_demErr_refDate.h5 -t 0.3
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Smoothing Timeseries using moving Gaussian window\n'+\
                                      '  https://en.wikipedia.org/wiki/Gaussian_blur',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -32,15 +34,15 @@ def createParser():
     parser.add_argument('-o','--outfile', help='Output file name.')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ############################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
 
     # Basic info
     atr = readfile.read_attribute(inps.timeseries_file)

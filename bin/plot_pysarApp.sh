@@ -31,33 +31,29 @@ fi
 
 
 ## Plot Key files
-opt=' -d demRadar.h5 --mask '$mask_file' -u cm '
-#opt=' -d demRadar.h5 --mask '$mask_file' -u cm -m -2 -M 2 '
+opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm '
+#opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm -m -2 -M 2'
 if [ $plot_key_files -eq 1 ]; then
     view.py --nodisplay velocity.h5           $opt               | tee -a $log_file
     view.py --nodisplay temporalCoherence.h5  -c gray -m 0 -M 1  | tee -a $log_file
     view.py --nodisplay maskTempCoh.h5        -c gray -m 0 -M 1  | tee -a $log_file
-    view.py --nodisplay demRadar_error.h5 --mask $mask_file      | tee -a $log_file
-    view.py --nodisplay geometryGeo.h5                           | tee -a $log_file
-    view.py --nodisplay geometryRadar.h5                         | tee -a $log_file
+    view.py --nodisplay INPUTS/geometryGeo.h5                    | tee -a $log_file
+    view.py --nodisplay INPUTS/geometryRadar.h5                  | tee -a $log_file
 fi
 
 
 ## Loaded Dataset
 if [ $plot_loaded_data -eq 1 ]; then
-    view.py --nodisplay unwrapIfgram.h5        --mask no   | tee -a $log_file
-    view.py --nodisplay unwrapIfgram_unwCor.h5 --mask no   | tee -a $log_file
-    view.py --nodisplay coherence.h5 -c gray -m 0 -M 1     | tee -a $log_file
-    view.py --nodisplay demRadar.h5                        | tee -a $log_file
-    view.py --nodisplay demGeo.h5 --lalo-label             | tee -a $log_file
+    view.py --nodisplay INPUTS/ifgramStack.h5  unwrapPhase  --mask no   | tee -a $log_file
+    view.py --nodisplay INPUTS/ifgramStack.h5  coherence    --mask no   | tee -a $log_file
 fi
 
 
 ## Auxliary Files from loaded dataset
 if [ $plot_loaded_data_aux -eq 1 ]; then
-    view.py --nodisplay unwrapIfgram_stack.h5                        | tee -a $log_file
-    view.py --nodisplay mask.h5                    -c gray -m 0 -M 1 | tee -a $log_file
-    view.py --nodisplay averageSpatialCoherence.h5 -c gray -m 0 -M 1 | tee -a $log_file
+    view.py --nodisplay avgPhaseVelocity.h5                      | tee -a $log_file
+    view.py --nodisplay avgSpatialCoherence.h5 -c gray -m 0 -M 1 | tee -a $log_file
+    view.py --nodisplay mask.h5                -c gray -m 0 -M 1 | tee -a $log_file
 fi
 
 
@@ -94,7 +90,6 @@ fi
 
 ## Geo coordinates for UNAVCO Time-series InSAR Archive Product
 if [ $plot_geocoded_data -eq 1 ]; then
-    view.py --nodisplay --lalo-label geo_incidenceAngle.h5                                    | tee -a $log_file
     view.py --nodisplay --lalo-label geo_maskTempCoh.h5          -c gray -m 0 -M 1            | tee -a $log_file
     view.py --nodisplay --lalo-label geo_temporalCoherence.h5    -c gray -m 0 -M 1            | tee -a $log_file
     view.py --nodisplay --lalo-label geo_velocity.h5             --mask $geo_mask_file -u cm  | tee -a $log_file
@@ -105,7 +100,6 @@ fi
 
 
 if [ $plot_the_rest -eq 1 ]; then
-    view.py --nodisplay velocityStd.h5    --mask $mask_file -u cm  | tee -a $log_file
     view.py --nodisplay velocityEcmwf.h5  --mask $mask_file -u cm  | tee -a $log_file
 fi
 

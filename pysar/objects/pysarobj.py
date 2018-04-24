@@ -1,5 +1,5 @@
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2018, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi, 2018              #
 ############################################################
@@ -81,6 +81,7 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'commonMask'         :'1',
                    'bperp'              :'m',
 
+                   'timeseries'         :'m',
                    'raw'                :'m',
                    'troposphericDelay'  :'m',
                    'topographicResidual':'m',
@@ -117,6 +118,7 @@ class timeseries:
         self.file = file
         self.name = 'timeseries'
 
+
     def close(self, print_msg=True):
         try:
             self.f.close()
@@ -124,6 +126,7 @@ class timeseries:
                 print('close timeseries file: {}'.format(os.path.basename(self.file)))
         except:
             pass
+
 
     def open(self, print_msg=True):
         if print_msg:
@@ -143,7 +146,8 @@ class timeseries:
         self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
         self.dateList = [i.decode('utf8') for i in dates]
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]  #list of float for year, 2014.95
-        self.datasetList = list(self.dateList)
+        self.datasetList = ['{}-{}'.format(self.name, i) for i in self.dateList]
+
 
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
@@ -159,10 +163,12 @@ class timeseries:
         self.refIndex = dateList.index(self.metadata['REF_DATE'])
         return self.metadata
 
+
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
             self.numDate, self.length, self.width = f[self.name].shape
         return self.numDate, self.length, self.width
+
 
     def read(self, datasetName=None, box=None, print_msg=True):
         '''Read dataset from timeseries file
@@ -181,6 +187,13 @@ class timeseries:
             print('reading {} data from file: {} ...'.format(self.name, self.file))
         self.open(print_msg=False)
 
+        # convert input datasetName into list of dates
+        if not datasetName or datasetName == 'timeseries':
+            datasetName = []
+        elif isinstance(datasetName, str):
+            datasetName = [datasetName]
+        datasetName = [i.replace('timeseries','').replace('-','') for i in datasetName]
+
         with h5py.File(self.file, 'r') as f:
             ds = f[self.name]
             if isinstance(ds, h5py.Group):    #support for old pysar files
@@ -190,9 +203,7 @@ class timeseries:
             dateFlag = np.zeros((self.numDate), dtype=np.bool_)
             if not datasetName:
                 dateFlag[:] = True
-            elif isinstance(datasetName, str):
-                dateFlag[self.dateList.index(datasetName)] = True
-            elif isinstance(datasetName, list):
+            else:
                 for e in datasetName:
                     dateFlag[self.dateList.index(e)] = True
 
@@ -202,6 +213,7 @@ class timeseries:
             data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
         data = np.squeeze(data)
         return data
+
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None):
         '''
@@ -246,12 +258,12 @@ class timeseries:
         print('create dataset /timeseries of {:<10} in size of {}'.format(str(data.dtype), data.shape))
         dset = f.create_dataset('timeseries', data=data, chunks=True)
 
-        dset.attrs['Title'] = 'timeseries'
-        dset.attrs['MissingValue'] = FLOAT_ZERO
-        dset.attrs['Units'] = 'm'
-        dset.attrs['_FillValue'] = FLOAT_ZERO
-        dset.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
-        dset.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
+        #dset.attrs['Title'] = 'timeseries'
+        #dset.attrs['MissingValue'] = FLOAT_ZERO
+        #dset.attrs['Units'] = 'm'
+        #dset.attrs['_FillValue'] = FLOAT_ZERO
+        #dset.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
+        #dset.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
 
         ##### 1D dataset - date / bperp
         print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))
@@ -268,6 +280,7 @@ class timeseries:
         f.close()
         print('finished writing to {}'.format(outFile))
         return outFile
+
 
     def timeseries_std(self, maskFile=None, outFile=None):
         '''Calculate the standard deviation (STD) for each epoch,
@@ -294,6 +307,7 @@ class timeseries:
         print('save timeseries STD to text file: {}'.format(outFile))
         return outFile
 
+
     def timeseries_rms(self, maskFile=None, outFile=None):
         '''Calculate the Root Mean Square for each epoch of input timeseries file
             and output result to a text file.
@@ -319,6 +333,7 @@ class timeseries:
         print('save timeseries RMS to text file: {}'.format(outFile))
         return outFile
 
+
     def spatial_average(self, maskFile=None, box=None):
         self.open(print_msg=False)
         data = self.read(box=box)
@@ -329,12 +344,19 @@ class timeseries:
         dmean = np.nanmean(data, axis=(1,2))
         return dmean, self.dateList
 
+
     def temporal_average(self):
         print('calculating the temporal average of timeseries file: {}'.format(self.file))
         self.open(print_msg=False)
         data = self.read()
         dmean = np.nanmean(data, axis=0)
         return dmean
+
+
+
+
+
+
 
 
 ########################################################################################
@@ -358,6 +380,7 @@ class geometry:
         self.file = file
         self.name = 'geometry'
 
+
     def close(self, print_msg=True):
         try:
             self.f.close()
@@ -365,6 +388,7 @@ class geometry:
                 print('close geometry file: {}'.format(os.path.basename(self.file)))
         except: 
             pass
+
 
     def open(self, print_msg=True):
         if print_msg:
@@ -389,6 +413,7 @@ class geometry:
             else:
                 self.dateList = None
 
+
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
             dsName = [i for i in f.keys() if i in geometryDatasetNames][0]
@@ -399,6 +424,7 @@ class geometry:
                 self.length, self.width = dsShape
         return self.length, self.width
 
+
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
             self.metadata = dict(f.attrs)
@@ -406,6 +432,7 @@ class geometry:
             try:     self.metadata[key] = value.decode('utf8')
             except:  self.metadata[key] = value
         return self.metadata
+
 
     def read(self, datasetName=geometryDatasetNames[0], box=None, print_msg=True):
         '''Read 2D / 3D dataset with bounding box in space
@@ -437,19 +464,16 @@ class geometry:
             print('reading {} data from file: {} ...'.format(datasetName[0], self.file))
 
         with h5py.File(self.file, 'r') as f:
-            dset = f[datasetName[0]]
-            if len(dset.shape) == 2:
-                data = dset[box[1]:box[3], box[0]:box[2]]
-            elif len(dset.shape) == 3:      ## bperp
+            ds = f[datasetName[0]]
+            if len(ds.shape) == 2:
+                data = ds[box[1]:box[3], box[0]:box[2]]
+            elif len(ds.shape) == 3:      ## bperp
                 if len(datasetName) == 1:
-                    data = dset[:, box[1]:box[3], box[0]:box[2]]
+                    data = ds[:, box[1]:box[3], box[0]:box[2]]
                 else:
-                    data = dset[self.dateList.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
+                    data = ds[self.dateList.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
                     data = np.squeeze(data)
         return data
-
-
-
 
 
 
@@ -473,6 +497,7 @@ class ifgramStack:
         self.file = file
         self.name = 'ifgramStack'
 
+
     def close(self, print_msg=True):
         try:
             self.f.close()
@@ -480,6 +505,7 @@ class ifgramStack:
                 print('close {} file: {}'.format(self.name, os.path.basename(self.file)))
         except:
             pass
+
 
     def open(self, print_msg=True):
         '''
@@ -510,6 +536,7 @@ class ifgramStack:
         self.dateList = self.get_date_list(dropIfgram=False)
         self.numDate = len(self.dateList)
 
+
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
             self.metadata = dict(f.attrs)
@@ -518,10 +545,12 @@ class ifgramStack:
             except:  self.metadata[key] = value
         return self.metadata
 
+
     def get_size(self):
         with h5py.File(self.file, 'r') as f:
             self.numIfgram, self.length, self.width = f[ifgramDatasetNames[0]].shape
         return self.numIfgram, self.length, self.width
+
 
     def read_datetimes(self):
         '''Read master/slave dates into array of datetime.datetime objects'''
@@ -531,6 +560,7 @@ class ifgramStack:
         self.sDates = np.array([i.decode('utf8') for i in dates[:,1]])
         self.mTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.mDates])
         self.sTimes = np.array([dt(*time.strptime(i,"%Y%m%d")[0:5]) for i in self.sDates])
+
 
     def read(self, datasetName=ifgramDatasetNames[0], box=None, print_msg=True, dropIfgram=False):
         '''Read 3D dataset with bounding box in space
@@ -572,6 +602,7 @@ class ifgramStack:
                 data = np.squeeze(data)
         return data
 
+
     def spatial_average(self, datasetName=ifgramDatasetNames[1], maskFile=None, box=None):
         if datasetName is None:
             datasetName = ifgramDatasetNames[1]
@@ -596,6 +627,7 @@ class ifgramStack:
             print('')
         return dmean, self.date12List
 
+
     ##### Functions considering dropIfgram value
     def get_date12_list(self, dropIfgram=True):
         with h5py.File(self.file, 'r') as f:
@@ -607,6 +639,7 @@ class ifgramStack:
         date12List = ['{}_{}'.format(i,j) for i,j in zip(mDates, sDates)]
         return date12List
 
+
     def get_drop_date12_list(self):
         with h5py.File(self.file, 'r') as f:
             dates = f['date'][:]
@@ -615,6 +648,7 @@ class ifgramStack:
         sDates = np.array([i.decode('utf8') for i in dates[:,1]])
         date12List = ['{}_{}'.format(i,j) for i,j in zip(mDates, sDates)]
         return date12List
+
 
     def get_date_list(self, dropIfgram=False):
         with h5py.File(self.file, 'r') as f:
@@ -625,6 +659,7 @@ class ifgramStack:
         sDates = [i.decode('utf8') for i in dates[:,1]]
         dateList = sorted(list(set(mDates + sDates)))
         return dateList
+
 
     def nonzero_mask(self, datasetName=None, print_msg=True, dropIfgram=True):
         '''Return the common mask of pixels with non-zero value in dataset of all ifgrams.
@@ -652,6 +687,7 @@ class ifgramStack:
             print('')
         return mask
 
+
     def temporal_average(self, datasetName=ifgramDatasetNames[1], dropIfgram=True):
         self.open(print_msg=False)
         if datasetName is None:
@@ -663,22 +699,34 @@ class ifgramStack:
 
         with h5py.File(self.file, 'r') as f:
             dset = f[datasetName]
-            dmean = np.zeros(dset.shape[1:3], dtype=np.float32)
-            dropIfgramFlag = np.ones(dset.shape[0], dtype=np.bool_)
+            num_ifgram, length, width = dset.shape
+            dmean = np.zeros((length, width), dtype=np.float32)
+            drop_ifgram_flag = np.ones(num_ifgram, dtype=np.bool_)
             if dropIfgram:
-                dropIfgramFlag = self.dropIfgram
-            num2read = np.sum(dropIfgramFlag)
-            idx2read = np.where(dropIfgramFlag)[0]
-            for i in range(num2read):
-                data = dset[idx2read[i],:,:]
-                if datasetName == 'unwrapPhase':
-                    data *= (phase2range * (1./tbaseIfgram[idx2read[i]]))
-                dmean += data
-                sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+                drop_ifgram_flag = self.dropIfgram
+
+            r_step = 100
+            for i in range(int(np.ceil(length / r_step))):
+                r0 = i * r_step
+                r1 = min(r0 + r_step, length)
+                data = dset[drop_ifgram_flag, r0:r1, :]
+                dmean[r0:r1, :] = np.nanmean(data, axis=0)
+                sys.stdout.write('\rreading lines {}/{} ...'.format(r0, length))
                 sys.stdout.flush()
+
+            #num2read = np.sum(drop_ifgram_flag)
+            #idx2read = np.where(drop_ifgram_flag)[0]
+            #for i in range(num2read):
+            #    data = dset[idx2read[i],:,:]
+            #    if datasetName == 'unwrapPhase':
+            #        data *= (phase2range * (1./tbaseIfgram[idx2read[i]]))
+            #    dmean += data
+            #    sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+            #    sys.stdout.flush()
+            #dmean /= np.sum(self.dropIfgram)
             print('')
-        dmean /= np.sum(self.dropIfgram)
         return dmean
+
 
     ##### Functions for Network Inversion
     def get_design_matrix(self, refDate=None, dropIfgram=True):
@@ -710,6 +758,7 @@ class ifgramStack:
         B = B[:,:-1]
         return A, B
 
+
     def get_perp_baseline_timeseries(self, dropIfgram=True):
         '''Get spatial perpendicular baseline in timeseries from ifgramStack, ignoring dropped ifgrams'''
         ## Get tbaseDiff
@@ -730,6 +779,7 @@ class ifgramStack:
         pbaseTimeseries = np.concatenate((np.array([0.],dtype=np.float32), np.cumsum([pbaseRate * tbaseDiff])))
         return pbaseTimeseries
 
+
     def update_drop_ifgram(self, date12List_to_drop):
         '''Update dropIfgram dataset based on input date12List_to_drop'''
         if date12List_to_drop is None:
@@ -739,6 +789,10 @@ class ifgramStack:
             print('open file {} with r+ mode'.format(self.file))
             print('update HDF5 dataset "/dropIfgram".')
             f['dropIfgram'][:] = np.array([i not in date12List_to_drop for i in date12ListAll], dtype=np.bool_)
+
+
+
+
 
 
 
@@ -771,39 +825,31 @@ class HDFEOS:
     Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer (http://insarmaps.miami.edu)
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
 
-    /HDFEOS                           Root level group name
-        /GRIDS                        2nd level group name for products in geo coordinates
-            Attributes                metadata in dict.
-            /timeseries               3rd level group name for time-series InSAR product
-                /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
-                /bperp                1D array of float32 in size of (n,     ) in meter
-                /temporalCoherence    2D array of float32 in size of (   l, w).
-                /mask                 2D array of bool_   in size of (   l, w).
-                /raw                  3D array of float32 in size of (n, l, w) in meter
-                /troposphericDelay    3D array of float32 in size of (n, l, w) in meter
-                /topographicResidual  3D array of float32 in size of (n, l, w) in meter
-                /ramp                 3D array of float32 in size of (n, l, w) in meter
-                /displacement         3D array of float32 in size of (n, l, w) in meter
-            /geometry                 3rd level group name for geometry data
-                /height               2D array of float32 in size of (   l, w) in meter.
-                /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
-                /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
-                /azimuthCoord         2D array of float32 in size of (   l, w) in degree.
-                /rangeCoord           2D array of float32 in size of (   l, w) in degree.
-                /headingAngle         2D array of float32 in size of (   l, w) in degree. (optional)
-                /shadowMask           2D array of bool    in size of (   l, w).           (optional)
-                /waterMask            2D array of bool    in size of (   l, w).           (optional)
-                /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
-        /SWATHS
-            Attributes
-            /ifgramStack
-                ...
-            /geometry
-                ...
+    /                             Root level group
+    Attributes                    metadata in dict.
+    /HDFEOS/GRIDS/timeseries      timeseries group
+        /observation
+            /displacement         3D array of float32 in size of (n, l, w) in meter
+            /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
+            /bperp                1D array of float32 in size of (n,     ) in meter
+        /quality
+            /temporalCoherence    2D array of float32 in size of (   l, w).
+            /mask                 2D array of bool_   in size of (   l, w).
+        /geometry
+            /height               2D array of float32 in size of (   l, w) in meter.
+            /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
+            /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
+            /headingAngle         2D array of float32 in size of (   l, w) in degree. (optional)
+            /shadowMask           2D array of bool    in size of (   l, w).           (optional)
+            /waterMask            2D array of bool    in size of (   l, w).           (optional)
+            /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
     '''
     def __init__(self, file=None):
         self.file = file
         self.name = 'HDFEOS'
+        self.observationNames = timeseriesDatasetNames
+        self.qualityNames = ['mask', 'temporalCoherence', 'coherence', 'variance', 'uncertainty']
+        self.geometryNames = geometryDatasetNames
 
     def close(self, print_msg=True):
         try:
@@ -814,8 +860,73 @@ class HDFEOS:
             pass
 
 
+    def open(self, print_msg=True):
+        if print_msg:
+            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+        self.get_metadata()
+        self.length = int(self.metadata['LENGTH'])
+        self.width = int(self.metadata['WIDTH'])
+
+        self.datasetList = []
+        with h5py.File(self.file, 'r') as f:
+            g = f['HDFEOS/GRIDS/timeseries/observation']
+            self.dateList = [i.decode('utf8') for i in g['date'][:]]
+            self.pbase = g['bperp'][:]
+            self.datasetList += ['displacement-{}'.format(i) for i in self.dateList]
+            self.numDate = len(self.dateList)
+
+            g = f['HDFEOS/GRIDS/timeseries/quality']
+            for key in g.keys():
+                self.datasetList.append(key)
+
+            g = f['HDFEOS/GRIDS/timeseries/geometry']
+            for key in g.keys():
+                obj = g[key]
+                if isinstance(obj, h5py.Dataset):
+                    if len(obj.shape) == 2:
+                        self.datasetList.append(key)
+                    #elif len(obj.shape) == 3:
+                    #    self.datesetList += ['{}-{}'.format(key, i) for i in self.dateList]
 
 
+    def get_metadata(self):
+        with h5py.File(self.file, 'r') as f:
+            self.metadata = dict(f.attrs)
+        for key, value in self.metadata.items():
+            try:     self.metadata[key] = value.decode('utf8')
+            except:  self.metadata[key] = value
+        self.metadata['FILE_TYPE'] = self.name
+        return self.metadata
+
+
+    def read(self, datasetName=None, box=None, print_msg=True):
+        self.open(print_msg=False)
+        if box is None:
+            box = [0,0,self.width,self.length]
+        datasetFamily = datasetName.split('-')[0]
+
+        with h5py.File(self.file, 'r') as f:
+            g = f['HDFEOS/GRIDS/timeseries']
+
+            if datasetFamily in self.observationNames:
+                ds = g['observation/{}'.format(datasetFamily)]
+                dateFlag = np.zeros(self.numDate, np.bool_)
+                if '-' in datasetName:
+                    dsDate = datasetName.split('-')[1]
+                    dateFlag[self.dateList.index(dsDate)] = True
+                else:
+                    dateFlag[:] = True
+                data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+
+            elif datasetFamily in self.qualityNames:
+                ds = g['quality/{}'.format(datasetFamily)]
+                data = ds[box[1]:box[3], box[0]:box[2]]
+
+            elif datasetFamily in self.geometryNames:
+                ds = g['geometry/{}'.format(datasetFamily)]
+                data = ds[box[1]:box[3], box[0]:box[2]]
+        data = np.squeeze(data)
+        return data
 
 
 

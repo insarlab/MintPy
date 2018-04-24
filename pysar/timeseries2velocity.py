@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -9,41 +9,43 @@
 # Yunjun, Aug 2015: Support drop_date txt file input
 
 
-import os, sys
-import time, datetime
+import os
+import sys
+import time
+import datetime
 import argparse
 import h5py
 import numpy as np
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 from pysar.objects import timeseries
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 dataType = np.float32
 
 
 ############################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   timeseries2velocity.py  timeSeries_ECMWF_demCor.h5
   timeseries2velocity.py  timeseries_ECMWF_demCor_plane.h5  --template KyushuT73F2980_2990AlosD.template
   timeseries2velocity.py  timeseries.h5  --start-date 20080201
   timeseries2velocity.py  timeseries.h5  --start-date 20080201  --end-date 20100508
   timeseries2velocity.py  timeseries.h5  --exclude-date 20040502 20060708 20090103
   timeseries2velocity.py  timeseries.h5  --exclude-date exclude_date.txt
-'''
+"""
 
-TEMPLATE='''
+TEMPLATE = """
 ## estimate linear velocity from timeseries, and from tropospheric delay file if exists.
 pysar.velocity.excludeDate = auto   #[exclude_date.txt / 20080520,20090817 / no], auto for exclude_date.txt
 pysar.velocity.startDate   = auto   #[20070101 / no], auto for no
 pysar.velocity.endDate     = auto   #[20101230 / no], auto for no
-'''
+"""
 
-DROP_DATE_TXT='''exclude_date.txt:
+DROP_DATE_TXT = """exclude_date.txt:
 20040502
 20060708
 20090103
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Inverse velocity from time series.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
@@ -61,9 +63,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    '''Command line parser.'''
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    """Command line parser."""
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if 'timeseries' != readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']:
         print('ERROR: input file is not timeseries!')
@@ -118,12 +120,12 @@ def read_exclude_date(inps, dateListAll):
 
 
 def read_date_info(inps):
-    '''Get inps.ex_date full list
+    """Get inps.ex_date full list
     Inputs:
         inps          - Namespace, 
     Output:
         inps.ex_date  - list of string for exclude date in YYYYMMDD format
-    '''
+    """
     tsobj = timeseries(inps.timeseries_file)
     tsobj.open()
     inps.ex_date = read_exclude_date(inps, tsobj.dateList)
@@ -147,9 +149,9 @@ def read_date_info(inps):
 
 
 def read_template2inps(template_file, inps=None):
-    '''Read input template file into inps.ex_date'''
+    """Read input template file into inps.ex_date"""
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     template = readfile.read_template(template_file)
 
     # Read template option
@@ -180,11 +182,11 @@ def read_template2inps(template_file, inps=None):
 
 
 def design_matrix(years):
-    '''design matrix/function model of linear velocity estimation
+    """design matrix/function model of linear velocity estimation
     Parameters: years : 1D array of float in size of (numDate,),
                     date in years, e.g. 2015.1830937713896
     Returns:    A : 2D array of int in size of (numDate, 2)
-    '''
+    """
     A = np.ones([len(years),2], dtype=dataType)
     A[:,0] = years
     #A_inv = np.dot(np.linalg.inv(np.dot(A.T,A)), A.T)
@@ -221,15 +223,16 @@ def estimateVelocity(inps):
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
 
-    writefile.write(V, atr, outfile=inps.outfile)
-    writefile.write(Vstd, atr, outfile=outfileStd)
-
+    dsDict = dict()
+    dsDict['velocity'] = V
+    dsDict['velocityStd'] = Vstd
+    writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
     return inps.outfile
 
 
 ############################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps = read_date_info(inps)
     inps.outfile = estimateVelocity(inps)
     print('Done.')

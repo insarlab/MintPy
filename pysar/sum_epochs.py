@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import time
 import datetime
 import h5py
@@ -15,8 +16,8 @@ from pysar.utils import readfile, datetime as ptime
 
 
 #####################################################################
-def usage():
-    print('''usage: sum_epochs.py  timeseries_file  [output_file]
+USAGE = """
+usage: sum_epochs.py  timeseries_file  [output_file]
 
 Calculate the Sum of Time Series Displacement per epoch
   For each epoch, referencing it as the master date,
@@ -30,7 +31,10 @@ arguments:
 example:
   sum_epochs.py  timeseries_ECMWF_demErr.h5
   sum_epochs.py  timeseries_ECMWF_demErr_quadratic.h5  sum_timeseries_ECMWF_demErr_quadratic.h5
-    ''')
+"""
+
+def usage():
+    print(USAGE)
     return
 
 

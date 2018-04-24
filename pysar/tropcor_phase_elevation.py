@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
 
-import os, sys
-import time, datetime
+import os
+import sys
+import time
+import datetime
 import argparse
 import h5py
 import numpy as np
@@ -16,19 +18,19 @@ from pysar.utils import readfile, datetime as ptime, utils as ut
 
 
 ############################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   tropcor_phase_elevation.py  timeseries_demErr.h5
   tropcor_phase_elevation.py  timeseries_demErr.h5      -d demRadar.h5  -m maskTempCoh.h5      -p 1
   tropcor_phase_elevation.py  geo_timeseries_demErr.h5  -d demGeo.h5    -m geo_maskTempCoh.h5  -p 1
-'''
+"""
 
-REFERENCE='''reference:
+REFERENCE = """reference:
   Doin, M. P., C. Lasserre, G. Peltzer, O. Cavalie, and C. Doubre (2009), Corrections of stratified 
   tropospheric delays in SAR interferometry: Validation with global atmospheric models, J App. Geophy.,
   69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Stratified tropospheric delay correction using height-correlation approach',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+EXAMPLE)
@@ -44,8 +46,8 @@ def createParser():
     parser.add_argument('-o','--outfile', help='output corrected timeseries file name')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     if inps.threshold and (not 0.0 <= inps.threshold <= 1.0):
@@ -55,7 +57,7 @@ def cmdLineParse(iargs=None):
 
 ############################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
 
     ##### Check default input arguments
     # default output filename

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 def usage():
-    print('''
+    print("""
 *****************************************************************************************
    Generating multiple profiles(each profile includes seeveral transects [specified by -n])  
    perpendicular to a Fault . Fault is a path specified by lat and lon coordinates.
@@ -46,7 +46,9 @@ def usage():
        multi_transect.py -f geo_velocity_masked.h5 -n 50 -d 1 -W 10 -D 2 -F Chaman_fault.txt 
 
 ********************************************************************************************
-    ''')
+    """)
+    return
+
 
 def dms2d(Coord):
     d,m,s=Coord.split(' ')
@@ -700,7 +702,7 @@ def main(argv):
             
          else:
             
-             print(''' 
+             print(""" 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       
       WARNING: nan value for InSAR data at the refernce pixel!
@@ -709,7 +711,7 @@ def main(argv):
                please select another GPS station as the reference station.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
-                   ''')
+                   """)
              sys.exit(1)
        else:
          print('WARNING:')
@@ -1051,11 +1053,10 @@ def main(argv):
     plt.savefig(figName)
     print('')
     print('________________________________')
-#############################################################################
    # plt.show()
 
     
+#############################################################################
 if __name__ == '__main__':
-
-  main(sys.argv[1:])
+    main(sys.argv[1:])
 

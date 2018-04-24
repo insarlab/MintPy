@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
@@ -15,7 +15,7 @@ from pysar.objects import timeseries
 
 
 ##################################################################
-TEMPLATE = '''
+TEMPLATE = """
 ## 4.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
@@ -29,16 +29,16 @@ pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS
 ## minRMS - choose date with minimum residual RMS using value from step 8.1
 ## no     - do not change the default reference date (1st date)
 pysar.reference.date = auto   #[reference_date.txt / 20090214 / minRMS / no], auto for reference_date.txt
-'''
+"""
 
-EXAMPLE = '''example:
+EXAMPLE = """example:
   reference_date.py timeseries_ECMWF_demErr.h5  --ref-date 20050107
   reference_date.py timeseries_ECMWF_demErr.h5  --ref-date minRMS
   reference_date.py timeseries_ECMWF_demErr.h5  --template KujuAlosAT422F650.template
-'''
+"""
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Change reference date of timeseries.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
@@ -66,8 +66,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -75,7 +75,7 @@ def cmdLineParse(iargs=None):
 def read_template2inps(templateFile, inps=None):
     """Update inps with options from templateFile"""
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     template = readfile.read_template(templateFile)
     template = ut.check_template_auto_value(template)
 
@@ -151,7 +151,7 @@ def ref_date_file(inFile, refDate, outFile=None):
 
 ##################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file)
 

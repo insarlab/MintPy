@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
 
-import os, sys, re
+import os
+import sys
+import re
 import argparse
 import warnings
 import h5py
@@ -43,16 +45,28 @@ def multilook_matrix(matrix,lks_y,lks_x):
 
 
 def multilook_data(data, lksY, lksX):
-    '''Modified from Praveen on StackOverflow:
-    https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution'''
+    """Modified from Praveen on StackOverflow:
+    https://stackoverflow.com/questions/34689519/how-to-coarser-the-2-d-array-data-resolution
+    Parameters: data : 2D / 3D np.array
+                lksY : int, number of multilook in y/azimuth direction
+                lksX : int, number of multilook in x/range direction
+    Returns:    coarseData : 2D / 3D np.array after multilooking in last two dimension
+    """
     shape = np.array(data.shape, dtype=float)
-    newShape = np.floor(shape / (lksY, lksX)).astype(int) * (lksY, lksX)
-    cropData = data[:newShape[0], :newShape[1]]
-    temp = cropData.reshape((newShape[0] // lksY, lksY,
-                             newShape[1] // lksX, lksX))
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        coarseData = np.nanmean(temp, axis=(1,3))
+    if len(shape) == 2:
+        newShape = np.floor(shape / (lksY, lksX)).astype(int) * (lksY, lksX)
+        cropData = data[:newShape[0], :newShape[1]]
+        temp = cropData.reshape((newShape[0] // lksY, lksY, newShape[1] // lksX, lksX))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            coarseData = np.nanmean(temp, axis=(1,3))
+    elif len(shape) == 3:
+        newShape = np.floor(shape / (1, lksY, lksX)).astype(int) * (1, lksY, lksX)
+        cropData = data[:newShape[0], :newShape[1], :newShape[2]]
+        temp = cropData.reshape((newShape[0], newShape[1] // lksY, lksY, newShape[2] // lksX, lksX))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            coarseData = np.nanmean(temp, axis=(2,4))
     return coarseData
 
 
@@ -185,7 +199,10 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         rgmli = multilook_data(rg,lks_y,lks_x); #rgmli *= 1.0/lks_x
         azmli = multilook_data(az,lks_y,lks_x); #azmli *= 1.0/lks_y
         atr = multilook_attribute(atr,lks_y,lks_x)
-        writefile.write(rgmli,azmli,atr,outfile)
+        dsDict = {}
+        dsDict['rangeCoord'] = rgmli
+        dsDict['azimuthCoord'] = azmli
+        writefile.write(dsDict, out_file=outfile, metadata=atr)
     else:
         data,atr = readfile.read(infile)
         if lks_y < 0 and lks_x < 0:
@@ -196,21 +213,21 @@ def multilook_file(infile,lks_y,lks_x,outfile=None):
         else:
             data_mli = multilook_data(data, lks_y, lks_x)
         atr = multilook_attribute(atr,lks_y,lks_x)
-        writefile.write(data_mli,atr,outfile)
+        writefile.write(data_mli, out_file=outfile, metadata=atr)
 
     return outfile
 
 
 ##################################################################################################
-EXAMPLE='''example:
+EXAMPLE="""example:
   multilook.py  velocity.h5  15 15
   multilook.py  srtm30m.dem  10 10  -o srtm30m_300m.dem
 
   To interpolate input file into larger size file:
   multilook.py  bperp.rdr  -10 -2 -o bperp_full.rdr
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Multilook.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -224,15 +241,15 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.file = ut.get_file_list(inps.file)
 
     # check outfile and parallel option

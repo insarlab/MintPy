@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR                                 #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jun 2016: use read() and write() for IO
-#                   add incidence_angle()
-# Yunjun, Feb 2017: move incidence_angle() to _pysar_utilities
 
 
-import sys
 import os
+import sys
 import h5py
 import numpy as np
 from pysar.utils import readfile, writefile, utils as ut
 
 
-def usage():
-    print('''usage:  incidence_angle.py  file  [outfile]
+############################################################
+USAGE = """
+usage:  incidence_angle.py  file  [outfile]
 
 Generates incidence angles (in Radar Coordinate) for each pixel
   with required attributes read from the h5 file
@@ -31,9 +29,14 @@ example:
   incidence_angle.py  velocity.h5
   incidence_angle.py  timeseries.h5
   incidence_angle.py  temporal_coherence.h5
-    ''')
+"""
+
+def usage():
+    print(USAGE)
     return
 
+
+############################################################
 def main(argv):
     try:
         File = argv[0]
@@ -41,9 +44,11 @@ def main(argv):
     except:
         usage();  sys.exit(1)
     
-    try:    outFile = argv[1]
-    except: outFile = 'incidenceAngle.h5'
-    
+    try:
+        outFile = argv[1]
+    except:
+        outFile = 'incidenceAngle.h5'
+
     # Calculate look angle
     angle = ut.incidence_angle(atr, dimension=2)
     
@@ -57,19 +62,14 @@ def main(argv):
         angle_mat[:] = angle
         angle = angle_mat
 
-    print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'degree'
-    try: atr.pop('REF_DATE')
-    except: pass
-    writefile.write(angle, atr, outFile)
+    if 'REF_DATE' in atr.keys():
+        atr.pop('REF_DATE')
+    writefile.write(angle, out_file=outFile, metadata=atr)
     return outFile
+
 
 ############################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-
-
-
-

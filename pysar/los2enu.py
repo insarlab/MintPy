@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
 import sys
 import os 
-from  numpy import shape,pi,cos, sin
 import getopt
+import numpy as np
 import h5py 
 
 
-def usage():
-    print(''' 
-**************************************************************************
-  Projecting LOS (Line of Sight) InSAR measurements to different components
-    
-  Usage:
+############################################################################
+USAGE = """     
+usage:
       los2enu.py -f  LOS file  -c Components [ -i incidence angle file] 
                  [-F 'fault coordinates'] [-a azimuth] [-H heading]
-      
+
       -c : [E, N, U, H, Fpar]
       E : Projecting LOS to E (East), assuming zero North and Up components
       N : Projecting LOS to N (North), assuming zero East and Up components
@@ -28,14 +25,19 @@ def usage():
       H : Projecting LOS to H (Horizontal), assuming zero Up component
       Fpar : Projecting LOS to Fault Parallel , assuming zero Up component 
              (This needs the azimuth of the fault or the  coordinates of two points on the fault )
-      
+
       azimuth: azimuth angle of the fault from North (Clockwise in degrees)
       heading: heading angle of the satellite orbit from north (Clockwise in degrees)
- 
-   Example:
 
-***************************************************************
-    ''')
+Projecting LOS (Line of Sight) InSAR measurements to different components
+
+example:
+"""
+
+def usage():
+    print(USAGE)
+    return
+
 
 ############################################################################
 def main(argv):
@@ -70,21 +72,21 @@ def main(argv):
         inc=41.0
         print('Average look angle = '+str(inc))
   
-    inc=inc*pi/180.
+    inc=inc*np.pi/180.
    
     if component in 'U, u, Up, up, uP':
-        P = V/cos(inc) # projecting LOS to up assuming zero horizontal deformation
+        P = V/np.cos(inc) # projecting LOS to up assuming zero horizontal deformation
         outName='up.h5'
     
     elif component in 'H , h, horizontal, Horizontal':
-        P = V/sin(inc) # projecting LOS to up assuming zero horizontal deformation
+        P = V/np.sin(inc) # projecting LOS to up assuming zero horizontal deformation
         outName='Horizontal.h5'
   
     elif component=='Fpar':
-       # az=28.31*pi/180.
-       # h=346.8921*pi/180.
+       # az=28.31*np.pi/180.
+       # h=346.8921*np.pi/180.
         try:
-            az=azimuth*pi/180.
+            az=azimuth*np.pi/180.
         except:
             print('')         
             print('Error: azimuth of the fault is required!');
@@ -92,20 +94,20 @@ def main(argv):
             sys.exit(1)
   
         try:
-            h=heading*pi/180.
+            h=heading*np.pi/180.
         except:
             print('trying to use the heading angle from '+File) 
             heading = float(h5file[k[0]].attrs['HEADING'])
             if heading < 0:
                 heading=heading+360
-            h=heading*pi/180.
+            h=heading*np.pi/180.
         
         print('******************************************')  
         print('Fault Azimuth = '+str(azimuth))
         print('Satellite Heading Angle = '+str(heading))
         print('******************************************')
   
-        fac=sin(az)*cos(h)*sin(inc)-cos(az)*sin(h)*sin(inc)
+        fac=np.sin(az)*np.cos(h)*np.sin(inc)-np.cos(az)*np.sin(h)*np.sin(inc)
         P = V/fac 
         
         
@@ -113,13 +115,13 @@ def main(argv):
   
     elif component=='los':
         try:
-            proj_inc=proj_inc*pi/180.       
+            proj_inc=proj_inc*np.pi/180.       
         except:
             print('Error: los option projects the current los to a different los with \
             a given inc angle. It needs the new inc angle to be introdueced using -I option')
             sys.exit(1)
         inc=inc-proj_inc
-        P = V*cos(inc) # projecting LOS to up assuming zero horizontal deformation
+        P = V*np.cos(inc) # projecting LOS to up assuming zero horizontal deformation
         outName='projected_los.h5'
   
     print('writing '+outName)    

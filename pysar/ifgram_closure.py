@@ -6,18 +6,23 @@ import h5py
 import pysar.utils.utils as ut
 
 
-def usage():
-    print('''usage: ifgram_closure.py  ifgram_file  [output_file]
+############################################################
+USAGE = """
+usage: ifgram_closure.py  ifgram_file  [output_file]
 
 Generate closure file for interferograms.
 
 example:
-  ifgram_closure.py  unwrapIfgram.h5
-  ifgram_closure.py  unwrapIfgram.h5  curls.h5
-    ''')
+  ifgram_closure.py  INPUTS/ifgramStack.h5
+  ifgram_closure.py  INPUTS/ifgramStack.h5  curls.h5
+"""
+
+def usage():
+    print(USAGE)
     return
 
 
+############################################################
 def main(argv):
     try:
         file=argv[0]
@@ -38,6 +43,7 @@ def main(argv):
     return curlfile
 
 
+############################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
 

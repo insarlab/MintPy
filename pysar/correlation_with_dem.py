@@ -1,52 +1,58 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
 
 import os
-import sys 
-
+import sys
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
-
 import pysar.utils.readfile as readfile
 
 
 ################################################################################
-def usage():
-    print('''usage: correlation_with_dem.py  dem_file  file  [y0:y1 x0:x1]
+USAGE = """
+usage: correlation_with_dem.py data_file dem_file [y0:y1 x0:x1]
 
 Calculates the correlation of the DEM and file
 
 example:
-  correlation_with_dem.py   radar_8rlks.hgt  velocity_masked.h5
-    ''')
+  correlation_with_dem.py velocity_masked.h5 INPUTS/geometryRadar.h5
+  correlation_with_dem.py velocity_masked.h5 radar_8rlks.hgt
+"""
+
+def usage():
+    print(USAGE)
     return
 
 
 ################################################################################
 def main(argv):
     try:
-        demFile = argv[0]
-        File    = argv[1]
+        File = argv[0]
     except:
         usage(); sys.exit(1)
 
-    dem, demRsc = readfile.read(demFile)
-    data, atr   = readfile.read(File)
-    print('Input file is '+atr['FILE_TYPE'])
+    try:
+        demFile = argv[1]
+    except:
+        demFile = 'INPUTS/geometryRadar.h5'
+
+    dem, demRsc = readfile.read(demFile, datasetName='height')
+    data, atr = readfile.read(File)
+    print('input file is '+atr['FILE_TYPE'])
 
     # Subset
     try:
-        y0,y1 = [int(i) for i in argv[2].split(':')]
-        x0,x1 = [int(i) for i in argv[3].split(':')]
+        y0, y1 = [int(i) for i in argv[2].split(':')]
+        x0, x1 = [int(i) for i in argv[3].split(':')]
         data = data[y0:y1, x0:x1]
         dem = dem[y0:y1, x0:x1]
-    except: pass
+    except:
+        pass
 
     # Calculation
     dem = dem.flatten(1)
@@ -65,6 +71,7 @@ def main(argv):
     print('    Average        height: %.2f m' % np.mean(dem[ndx]))
     print('    Height            Std: %.2f m' % np.std(dem[ndx]))
     return
+
 
 ################################################################################
 if __name__ == '__main__':

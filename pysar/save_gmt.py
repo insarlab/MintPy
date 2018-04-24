@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-# Yunjun, Dec 2015: add support for ROI_PAC product
+# Based on _gmt.py from GIANT v1.0 from Caltech.
 
 
 import os
@@ -22,32 +22,26 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 ####################################################################################
 def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0, offset=0, units='meters'):
-    '''Writes a simple GMT grd file with one array.
+    """Writes a simple GMT grd file with one array.
     This is based on the gdal2grd.py script found at:
         http://http://www.vso.cape.com/~nhv/files/python/gdal/gdal2grd.py
     
-    .. Args:
-        
-        * lons     -> 1D Array of lon values
-        * lats     -> 1D Array of lat values
-        * z        -> 2D slice to be saved
-        * fname    -> Output file name
-        
-    .. Kwargs:
-        
-        * title    -> Title for the grd file
-        * name     -> Name of the field in the grd file
-        * scale    -> Scale value in the grd file
-        * offset   -> Offset value in the grd file
-        
-    .. Returns:
-        
-        * None'''
+    Parameters: lons : 1D Array of lon values
+                lats : 1D Array of lat values
+                z : 2D slice to be saved
+                fname : Output file name
+    Kwargs:     title : Title for the grd file
+                name : Name of the field in the grd file
+                scale : Scale value in the grd file
+                offset : Offset value in the grd file
+    Returns:    None
+    """
+
     fid = netcdf.netcdf_file(fname,'w')
 
     ####Create a dimension variable
-    fid.createDimension('side',2)
-    fid.createDimension('xysize',np.prod(z.shape))
+    fid.createDimension('side', 2)
+    fid.createDimension('xysize', np.prod(z.shape))
 
     ####Range variables
     fid.createVariable('x_range','d',('side',))
@@ -117,14 +111,14 @@ def get_geo_lat_lon(atr):
 
 
 def write_grd_file(data, atr, fname_out=None):
-    '''Write GMT .grd file for input data matrix, using giant._gmt module.
+    """Write GMT .grd file for input data matrix, using giant._gmt module.
     Inputs:
         data - 2D np.array in int/float, data matrix to write
         atr  - dict, attributes of input data matrix
         fname_out - string, output file name
     Output:
         fname_out - string, output file name
-    '''
+    """
     if not fname_out:
         fname_out = os.path.splitext(atr['FILE_PATH'])[0]+'.grd'
 
@@ -140,15 +134,15 @@ def write_grd_file(data, atr, fname_out=None):
 
 
 ####################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   save_gmt.py  geo_velocity.h5
   save_gmt.py  geo_timeseries.h5     20071031
   save_gmt.py  geo_timeseries.h5
   save_gmt.py  geo_filt_100608-101024-sim_HDR_16rlks_c10.unw
   save_gmt.py  gsi10m.dem
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Export geocoded file to GMT grd file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -158,15 +152,15 @@ def createParser():
     parser.add_argument('-o','--output', dest='outfile', help='output file base name. Extension is fixed with .kmz')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ####################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
 
     ##### 1. Read data
     atr = readfile.read_attribute(inps.file)

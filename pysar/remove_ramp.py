@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -9,7 +9,8 @@
 # Yunjun, Aug 2016: Support multiple surfaces
 
 
-import os, sys
+import os
+import sys
 import argparse
 import h5py
 import numpy as np
@@ -17,14 +18,14 @@ from pysar.utils import readfile, writefile, utils as ut, deramp
 
 
 ######################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   remove_ramp.py  timeseries.h5      -m Mask.h5
   remove_ramp.py  timeseries.h5      -m Mask.h5         -s quadratic
   remove_ramp.py  090214_101120.unw  -m Mask_tempCoh.h5 -s quadratic  -y 0,2400,2000,6843
-'''
+"""
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Remove phase ramp',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -45,8 +46,8 @@ def createParser():
                         help='Disable parallel processing. Diabled auto for 1 input file.')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     if inps.ysub and not len(inps.ysub)%2 == 0:
@@ -56,7 +57,7 @@ def cmdLineParse(iargs=None):
 
 ######################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.file = ut.get_file_list(inps.file)
     print('input file(s): '+str(len(inps.file)))
     print(inps.file)
@@ -104,7 +105,7 @@ def main(iargs=None):
         # Write updated mask for multiple surfaces into file
         outFile = 'mask_'+str(surfNum)+inps.surface_type+'.h5'
         atr['FILE_TYPE'] = 'mask'
-        writefile.write(mask_multiSurface, atr, outFile)
+        writefile.write(mask_multiSurface, out_file=outFile, metadata=atr)
         print('saved mask to '+outFile)
 
     ############################## Removing Phase Ramp #######################################

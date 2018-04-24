@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import h5py
 import numpy as np
 from pysar.utils import readfile, writefile, utils as ut
 
 
 def usage():
-    print('''
+    print("""
 usage:  range_distance.py  file  [outfile]
 
 Generates range distance (in Radar Coordinate) for each pixel
@@ -28,7 +29,7 @@ example:
   range_distance.py  velocity.h5
   range_distance.py  timeseries.h5
   range_distance.py  temporal_coherence.h5
-    ''')
+    """)
     return
 
 def main(argv):
@@ -59,7 +60,7 @@ def main(argv):
     atr['UNIT'] = 'm'
     try: atr.pop('REF_DATE')
     except: pass
-    writefile.write(range_dis, atr, outFile)
+    writefile.write(range_dis, out_file=outFile, metadata=atr)
     return outFile
 
 ############################################################

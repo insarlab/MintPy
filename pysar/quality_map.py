@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -16,7 +16,7 @@ from scipy.ndimage.filters import laplace
 
 ##############################################################################
 def usage():
-    print('''
+    print("""
 ***************************************************************************
    Usage:
        quality_map.py  file.h5 
@@ -25,7 +25,7 @@ def usage():
        quality_map.py  Seeded_Loaded_data.h5
 
 ***************************************************************************
-    ''')
+    """)
 #def Sudo_Correlation():
 
 #def Derivative_Variance():

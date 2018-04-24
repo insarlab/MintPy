@@ -1,5 +1,5 @@
 ###############################################################################
-# Program is part of PySAR v2.0 
+# Program is part of PySAR      
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun 
 # Author:  Heresh Fattahi, Zhang Yunjun
 ###############################################################################
@@ -391,7 +391,7 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
 
     if not stackFile:
         if inps:
-            return inps
+            return inps, None
         else:
             return False
 
@@ -832,7 +832,7 @@ def add_attribute(File, atr_new=dict()):
             try: f.attrs.pop(key)
             except: pass
         else:
-            f.attrs[key] = value
+            f.attrs[key] = str(value)
     f.close()
     return File
 
@@ -948,14 +948,14 @@ def range_distance(atr, dimension=2, print_msg=True):
         print('far    range : %.2f m' % (far_range))
 
     if dimension == 0:
-        return np.array(center_range)
+        return np.array(center_range, np.float32)
 
     range_x = np.linspace(near_range, far_range, num=width)
     if dimension == 1:
-        return range_x
+        return np.array(range_x, np.float32)
     else:
         range_xy = np.tile(range_x, (length, 1))
-        return range_xy
+        return np.array(range_xy, np.float32)
 
 
 def incidence_angle(atr, dimension=2, print_msg=True):
@@ -996,17 +996,17 @@ def incidence_angle(atr, dimension=2, print_msg=True):
     if print_msg:
         print('center incidence angle : %.4f degree' % (incidence_c))
     if dimension == 0:
-        return np.array(incidence_c)
+        return np.array(incidence_c, np.float32)
 
     if print_msg:
         print('near   incidence angle : %.4f degree' % (incidence_n))
         print('far    incidence angle : %.4f degree' % (incidence_f))
     incidence_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
     if dimension == 1:
-        return incidence_x
+        return np.array(incidence_x, np.float32)
     else:
         incidence_xy = np.tile(incidence_x,(length,1))
-        return incidence_xy
+        return np.array(incidence_xy, np.float32)
 
 
 def which(program):
@@ -1055,7 +1055,7 @@ def check_drop_ifgram(h5, print_msg=True):
     return dsListOut
 
 
-def nonzero_mask(File, outFile='mask.h5', datasetName=None):
+def nonzero_mask(File, out_file='mask.h5', datasetName=None):
     '''Generate mask file for non-zero value of input multi-group hdf5 file'''
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
@@ -1066,9 +1066,8 @@ def nonzero_mask(File, outFile='mask.h5', datasetName=None):
         return None
 
     atr['FILE_TYPE'] = 'mask'
-    print('writing >>> '+outFile)
-    writefile.write(mask, atr, outFile)
-    return outFile
+    writefile.write(mask, out_file=out_file, metadata=atr)
+    return out_file
 
 
 ######################################################################################################
@@ -1121,7 +1120,7 @@ def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=
     ## Read existing txt file only if 1) data file is older AND 2) same AOI
     txtFile = os.path.splitext(os.path.basename(File))[0]+suffix
     file_line = '# Data file: {}\n'.format(os.path.basename(File))
-    mask_line = '# Mask file: {}\n'.format(os.path.basename(maskFile))
+    mask_line = '# Mask file: {}\n'.format(maskFile)
     aoi_line  = '# AOI box: {}\n'.format(box)
     try:
         # Read AOI line from existing txt file
@@ -1250,8 +1249,7 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, 
         atr['FILE_TYPE'] = 'displacement'
 
     if outFile:
-        print('writing >>> '+outFile)
-        writefile.write(dataMean, atr, outFile)
+        writefile.write(dataMean, out_file=outFile, metadata=atr)
     return dataMean, outFile
 
 

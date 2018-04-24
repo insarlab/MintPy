@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -32,7 +32,7 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 ################################################################################################
 def filter_data(data, filter_type, filter_par=None):
-    '''Filter 2D matrix with selected filter
+    """Filter 2D matrix with selected filter
     Inputs:
         data        : 2D np.array, matrix to be filtered
         filter_type : string, filter type
@@ -41,7 +41,7 @@ def filter_data(data, filter_type, filter_par=None):
                       for low/highpass_gaussain, it's sigma in float
     Output:
         data_filt   : 2D np.array, matrix after filtering.
-    '''
+    """
 
     if   filter_type == "sobel":       data_filt = filters.sobel(data)
     elif filter_type == "roberts":     data_filt = filters.roberts(data)
@@ -72,7 +72,7 @@ def filter_data(data, filter_type, filter_par=None):
 
 ############################################################
 def filter_file(fname, filter_type, filter_par=None, fname_out=None):
-    '''Filter 2D matrix with selected filter
+    """Filter 2D matrix with selected filter
     Inputs:
         fname       : string, name/path of file to be filtered
         filter_type : string, filter type
@@ -81,7 +81,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
                       for low/highpass_gaussain, it's sigma in float
     Output:
         fname_out   : string, optional, output file name/path
-    '''
+    """
 
     # Basic info
     atr = readfile.read_attribute(fname)
@@ -159,21 +159,21 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
         if ref_yx and k in ['.unw','velocity']:
             data_filt -= data_filt[ref_yx[0], ref_yx[1]]
         print('writing >>> '+fname_out)
-        writefile.write(data_filt, atr, fname_out)
+        writefile.write(data_filt, out_file=fname_out, metadata=atr)
 
     return fname_out
 
 
 ################################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   spatial_filter.py  velocity.h5
   spatial_filter.py  timeseries.h5  lowpass_avg        5
   spatial_filter.py  velocity.h5    lowpass_avg        5
   spatial_filter.py  velocity.h5    highpass_gaussian  3
   spatial_filter.py  velocity.h5    sobel
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Spatial filtering of 2D image.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -192,8 +192,8 @@ def createParser():
     parser.add_argument('-o','--outfile', help='Output file name.')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.filter_type = inps.filter_type.lower()
     return inps
@@ -201,7 +201,7 @@ def cmdLineParse(iargs=None):
 
 ################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     print('Filter type: '+inps.filter_type)
     if inps.filter_type.startswith(('lowpass','highpass')):
         print('parameters: '+str(inps.filter_par))

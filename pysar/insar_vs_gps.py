@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -98,7 +98,7 @@ def find_row_column(Lon,Lat,lon,lat,lon_step,lat_step):
 
 ################################################
 def usage():
-    print('''
+    print("""
    ************************************************************************************************
    
    Compares InSAR and GPS velocities. Option G can be used to specify the mode of Comparison.
@@ -150,7 +150,7 @@ def usage():
     insar_vs_gps.py  -v geo_InSAR_velocity.h5  -g gpsVelocity.txt  -r BEMT -s simulated_velocity.h5
 
    ************************************************************************************************
-    ''')
+    """)
 
 
 def main(argv):
@@ -248,14 +248,14 @@ def main(argv):
         if not np.isnan(insarData[IDYref][IDXref]):
              insarData=insarData - insarData[IDYref][IDXref]
         else:
-            print(''' 
+            print(""" 
 %%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        WARNING: nan value for InSAR data at the refernce pixel!
                 reference station should be a pixel with valid value in InSAR data.
                                 
                 please select another GPS station as the reference station.
 %%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
-                  ''')
+                  """)
             sys.exit(1)
     else:
         print('WARNING:')

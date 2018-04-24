@@ -8,45 +8,41 @@ import h5py
 from pysar.utils import readfile, writefile
 
 
+################################################################################
+USAGE = """
+usage: correct_dem.py dem_file geo_demError_file
+
+example:
+  correct_dem.py $DEMDIR/Socorro-30/Socorro_30.dem geo_DEM_error.h5
+  correct_dem.py $DEMDIR/Socorro-30/Socorro_30.dem geo_DEM_error.h5
+"""
 
 def usage():
-    print('''
-*******************************************
-  Usage: correct_dem.py demFile geo_demErrorFile
-
-  Example:
-      correct_dem.py $DEMDIR/Socorro-30/Socorro_30.dem geo_DEM_error.h5
-      correct_dem.py $DEMDIR/Socorro-30/Socorro_30.dem geo_DEM_error.h5
-
-*******************************************         
-    ''')
+    print(USAGE)
 
 
 def main(argv):
     try:
         dem_file = argv[1]
-        dem_error = argv[2]
-    except: usage();  sys.exit(1)
-
-    dem, demrsc = readfile.read_real_int16(dem_file)
-    g = h5py.File(dem_error,'r')
-    dset  = g['dem'].get('dem')
-    dem_error = dset[0:dset.shape[0]]
+        dem_error_file = argv[2]
+    except:
+        usage()
+        sys.exit(1)
 
     print('Correcting the DEM')
-    sum = dem + dem_error
-    print('Creating the new DEM')
-    writefile.write_real_int16(sum,'DEM_w_error.dem')
 
-    rsc_file = open('DEM_w_error.dem.rsc','w')
-    for k in list(demrsc.keys()):
-        rsc_file.write(k+'	'+demrsc[k]+'\n')
-    rsc_file.close()
+    dem, demrsc = readfile.read(dem_file)
+    dem_error = readfile.read(dem_error_file)
+
+    dem_out = dem + dem_error
+    writefile.write(dem_out, out_file='DEM_w_error.dem', metadata=demrsc)
           
-    date12_file=open('111111-222222_baseline.rsc','w')
-    date12_file.write('P_BASELINE_TOP_ODR'+'     '+ '000')
+    date12_file = open('111111-222222_baseline.rsc', 'w')
+    date12_file.write('P_BASELINE_TOP_ODR'+'     '+'000')
     date12_file.close()
+    return
 
-##########
+
+################################################################################
 if __name__ == '__main__':
     main(sys.argv[:])

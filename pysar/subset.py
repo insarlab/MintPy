@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
@@ -19,11 +19,11 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 ################################################################
 def check_box_within_data_coverage(pixel_box, atr_dict):
-    '''Check the subset box's conflict with data coverage
+    """Check the subset box's conflict with data coverage
     Inputs:
         pixel_box : 4-tuple of int, indicating y/x coordinates of subset
         atr       : dictionary of file attributes
-    '''
+    """
 
     width  = int(atr_dict['WIDTH'])
     length = int(atr_dict['LENGTH'])
@@ -54,12 +54,12 @@ def check_box_within_data_coverage(pixel_box, atr_dict):
 
 ###########################################################
 def get_coverage_box(atr):
-    '''Get Coverage Box of data in geo and pixel coordinates
+    """Get Coverage Box of data in geo and pixel coordinates
     Inputs: atr - dict, meta data dictionary
     Outputs:
         pix_box : 4-tuple of int, defining in (UL_X, UL_Y, LR_X, LR_Y)
         geo_box : 4-tuple of float in lat/lon
-    '''
+    """
 
     length = int(atr['LENGTH'])
     width  = int(atr['WIDTH'])
@@ -84,9 +84,9 @@ def get_coverage_box(atr):
 
 
 def read_subset_template2box(templateFile):
-    '''Read pysar.subset.lalo/yx option from template file into box type
+    """Read pysar.subset.lalo/yx option from template file into box type
     Return None if not specified.
-    '''
+    """
     tmpl = readfile.read_template(templateFile)
     try:
         sub = [i.strip() for i in tmpl['pysar.subset.lalo'].split(',')]
@@ -106,7 +106,7 @@ def read_subset_template2box(templateFile):
 
 
 def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None, print_msg=False):
-    '''Calculate bounding box in x/y for file in radar coord, based on input geo box.
+    """Calculate bounding box in x/y for file in radar coord, based on input geo box.
     Inputs:
         geo_box    - tuple of 4 float, indicating the UL/LR lon/lat 
         atr_rdr    - dict, attributes of file in radar coord
@@ -114,7 +114,7 @@ def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None, print_msg=False):
     Output:
         pix_box - tuple of 4 int, indicating the UL/LR x/y of the bounding box in radar coord
                   for the corresponding lat/lon coverage.
-    '''
+    """
     lat = np.array([geo_box[3],geo_box[3],geo_box[1],geo_box[1]])
     lon = np.array([geo_box[0],geo_box[2],geo_box[0],geo_box[2]])
     if 'Y_FIRST' in atr_rdr.keys():
@@ -129,14 +129,14 @@ def bbox_geo2radar(geo_box, atr_rdr=dict(), lookupFile=None, print_msg=False):
 
 
 def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None, print_msg=False):
-    '''Calculate bounding box in lat/lon for file in geo coord, based on input radar/pixel box
+    """Calculate bounding box in lat/lon for file in geo coord, based on input radar/pixel box
     Inputs:
         pix_box    - tuple of 4 int, indicating the UL/LR x/y
         atr_rdr    - dict, attributes of file in radar coord
         lookupFile - string / list of string, path of transformation file, i.e. geomap_4rlks.trans
     Output:
         geo_box - tuple of 4 float, indicating the UL/LR lon/lat of the bounding box
-    '''
+    """
     x = np.array([pix_box[0],pix_box[2],pix_box[0],pix_box[2]])
     y = np.array([pix_box[1],pix_box[1],pix_box[3],pix_box[3]])
     if 'Y_FIRST' in atr_rdr.keys():
@@ -151,7 +151,7 @@ def bbox_radar2geo(pix_box, atr_rdr=dict(), lookupFile=None, print_msg=False):
 
 
 def subset_box2inps(inps, pix_box, geo_box):
-    '''Update inps.subset_y/x/lat/lon from pixel_box and geo_box'''
+    """Update inps.subset_y/x/lat/lon from pixel_box and geo_box"""
     if geo_box:
         inps.subset_lon = [geo_box[0], geo_box[2]]
         inps.subset_lat = [geo_box[1], geo_box[3]]
@@ -168,7 +168,7 @@ def subset_box2inps(inps, pix_box, geo_box):
 
 
 def get_box_overlap_index(box1,box2):
-    '''Get index box overlap area of two input boxes
+    """Get index box overlap area of two input boxes
     
     Inputs:
         box1/2 : 4-tuple of int, indicating coverage of box1/2
@@ -176,7 +176,7 @@ def get_box_overlap_index(box1,box2):
     Outputs:
         overlap_idx_box1/2 : 4-tuple of int, indicating index of overlap area in box1/2
                              defining in (idx_x0, idx_y0, idx_x1, idx_y1)
-    '''
+    """
     ## Calculate the overlap of two input boxes
     ##   and output the index box of the overlap in each's coord.
 
@@ -202,7 +202,7 @@ def get_box_overlap_index(box1,box2):
 
 ################################################################
 def subset_input_dict2box(subset_dict, meta_dict):
-    '''Convert subset inputs dict into box in radar and/or geo coord.
+    """Convert subset inputs dict into box in radar and/or geo coord.
     Inputs:
         subset_dict : dict, including the following 4 objects:
                       subset_x   : list of 2 int,   subset in x direction,   default=None
@@ -227,7 +227,7 @@ def subset_input_dict2box(subset_dict, meta_dict):
         subset_dict = {'subset_x': [100, 1100], 'subset_y': [2050, 2550], 'subset_lat': None, 'subset_lon': None}
         pixel_box          = subset_input_dict2box(subset_dict, pysar_meta_dict)[0]
         pixel_box, geo_box = subset_input_dict2box(subset_dict, pysar_meta_dict)
-    '''
+    """
 
     # Data Coverage
     width = int(float(meta_dict['WIDTH']))
@@ -260,7 +260,7 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
 
 def box_pixel2geo(pixel_box, meta_dict):
-    '''Convert pixel_box to geo_box'''
+    """Convert pixel_box to geo_box"""
     try:
         lon_step = float(meta_dict['X_STEP'])
         lat_step = float(meta_dict['Y_STEP'])
@@ -275,7 +275,7 @@ def box_pixel2geo(pixel_box, meta_dict):
 
 
 def box_geo2pixel(geo_box, meta_dict):
-    '''Convert geo_box to pixel_box'''
+    """Convert geo_box to pixel_box"""
     try:
         y = ut.coord_geo2radar([geo_box[1],geo_box[3]], meta_dict, 'latitude')
         x = ut.coord_geo2radar([geo_box[0],geo_box[2]], meta_dict, 'longitude')
@@ -287,7 +287,7 @@ def box_geo2pixel(geo_box, meta_dict):
 
 ################################################################
 def subset_file(File, subset_dict_input, outFile=None):
-    '''Subset file with
+    """Subset file with
     Inputs:
         File        : str, path/name of file
         outFile     : str, path/name of output file
@@ -303,7 +303,7 @@ def subset_file(File, subset_dict_input, outFile=None):
         outFile :  str, path/name of output file; 
                    outFile = 'subset_'+File, if File is in current directory;
                    outFile = File, if File is not in the current directory.
-    '''
+    """
 
     # Input File Info
     try:  atr_dict = readfile.read_attribute(File)
@@ -410,7 +410,7 @@ def subset_file(File, subset_dict_input, outFile=None):
     elif k in ['.jpeg','.jpg','.png','.ras','.bmp']:
         data, atr_dict = readfile.read(File, box=pix_box)
         atr_dict = ut.subset_attribute(atr_dict, pix_box)
-        writefile.write(data,atr_dict,outFile)
+        writefile.write(data, out_file=outFile, metadata=atr_dict)
 
     elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
         rg_overlap, az_overlap, atr_dict = readfile.read(File, box=pix_box4data)
@@ -422,7 +422,10 @@ def subset_file(File, subset_dict_input, outFile=None):
         az[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = az_overlap
 
         atr_dict = ut.subset_attribute(atr_dict, pix_box)
-        writefile.write(rg,az,atr_dict,outFile)
+        dsDict = {}
+        dsDict['rangeCoord'] = rg
+        dsDict['azimuthCoord'] = az
+        writefile.write(dsDict, out_file=outFile, metadata=atr_dict)
     else:
         data_overlap, atr_dict = readfile.read(File, box=pix_box4data)
 
@@ -430,7 +433,7 @@ def subset_file(File, subset_dict_input, outFile=None):
         data[pix_box4subset[1]:pix_box4subset[3], pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
         atr_dict = ut.subset_attribute(atr_dict, pix_box)
-        writefile.write(data, atr_dict, outFile)
+        writefile.write(data, out_file=outFile, metadata=atr_dict)
 
     ##### End Cleaning
     try:
@@ -441,7 +444,7 @@ def subset_file(File, subset_dict_input, outFile=None):
 
 
 def subset_file_list(fileList, inps):
-    '''Subset file list'''
+    """Subset file list"""
     # check outfile and parallel option
     if inps.parallel:
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(fileList))
@@ -462,7 +465,7 @@ def subset_file_list(fileList, inps):
 
 
 ###########################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   subset.py unwrapIfgram.h5    -y    400  1500   -x    200   600
   subset.py geo_velocity.h5    -l    30.5 30.8   -L    130.3 130.9
   subset.py geo_timeseries.h5  --lat 30.5 30.8   --lon 130.3 130.9
@@ -475,9 +478,9 @@ EXAMPLE='''example:
   
   subset.py unwrapIfgram.h5 coherence.h5 geomap*.trans  -l 33.10 33.50 -L 131.30 131.80 --bbox geomap_4rlks.trans
   subset.py *.unw *.cor *.trans *.dem  -y 50 450 -x 1300 1800 --bbox geomap_4rlks.trans
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Generate a subset from file/dataset',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -520,15 +523,15 @@ def createParser():
                                  'All input radar coord file should be same size/coverage; same for all geo coord files.')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ###########################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.file = ut.get_file_list(inps.file)
     print('number of input files: '+str(len(inps.file)))
     print(inps.file)

@@ -1,5 +1,5 @@
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2017, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun, 2017              #
 ############################################################
@@ -43,6 +43,7 @@ class ifgramStackDict:
         self.name = name
         self.pairsDict = pairsDict
 
+
     def get_size(self, box=None):
         self.numIfgram = len(self.pairsDict)
         ifgramObj = [v for v in self.pairsDict.values()][0]
@@ -55,15 +56,18 @@ class ifgramStackDict:
             self.width = ifgramObj.width
         return self.numIfgram, self.length, self.width
 
+
     def get_date12_list(self):
         pairs = [pair for pair in self.pairsDict.keys()]
         self.date12List = ['{}_{}'.format(i[0],i[1]) for i in pairs]
         return self.date12List
 
+
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
         self.metadata = ifgramObj.get_metadata()
         return self.metadata
+
 
     def get_dataset_data_type(self, dsName):
         ifgramObj = [v for v in self.pairsDict.values()][0]
@@ -74,7 +78,8 @@ class ifgramStackDict:
             dsDataType = dataTypeDict[metadata['DATA_TYPE'].lower()]
         return dsDataType
 
-    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None):
+
+    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
         '''Save/write an ifgramStackDict object into an HDF5 file with the structure below:
 
         /                  Root level
@@ -89,12 +94,10 @@ class ifgramStackDict:
         /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
         /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
 
-        Parameters: outputFile : string
-                        Name of the HDF5 file for the InSAR stack
-                    access_mode : string
-                        Access mode of output File, e.g. w, r+
-                    box : tuple
-                        Subset range in (x0, y0, x1, y1)
+        Parameters: outputFile : str, Name of the HDF5 file for the InSAR stack
+                    access_mode : str, access mode of output File, e.g. w, r+
+                    box : tuple, subset range in (x0, y0, x1, y1)
+                    extra_metadata : dict, extra metadata to be added into output file
         Returns:    outputFile
         '''
 
@@ -119,9 +122,12 @@ class ifgramStackDict:
             dsDataType = dataType
             if dsName in ['connectComponent']:
                 dsDataType = np.bool_
-            print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                  'in size of {s} with compression = {c}'.format(s=dsShape, c=str(compression)))
-            ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
+            print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
+                                                                                                     w=maxDigit,
+                                                                                                     t=str(dsDataType),
+                                                                                                     s=dsShape,
+                                                                                                     c=str(compression)))
+            ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),
                                   dtype=dsDataType, chunks=True, compression=compression)
 
             #dMin = 0
@@ -173,12 +179,18 @@ class ifgramStackDict:
         self.get_metadata()
         self.metadata = ut.subset_attribute(self.metadata, box)
         self.metadata['FILE_TYPE'] = self.name
+        if extra_metadata:
+            self.metadata.update(extra_metadata)
+            print('add extra metadata: {}'.format(extra_metadata))
         for key,value in self.metadata.items():
             f.attrs[key] = value
 
         f.close()
         print('Finished writing to {}'.format(self.outputFile))
         return self.outputFile
+
+
+
 
 
 ########################################################################################
@@ -211,10 +223,12 @@ class ifgramDict:
             for key , value in metadata.items():
                 setattr(self, key, value)
 
+
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
         data, metadata = readfile.read(self.file, box=box)
         return data, metadata
+
 
     def get_size(self):
         self.file = self.datasetDict[ifgramDatasetNames[0]]
@@ -223,6 +237,7 @@ class ifgramDict:
         self.width = int(metadata['WIDTH'])
         return self.length, self.width
 
+
     def get_perp_baseline(self):
         self.file = self.datasetDict[ifgramDatasetNames[0]]
         metadata = readfile.read_attribute(self.file)
@@ -230,6 +245,7 @@ class ifgramDict:
         self.bperp_bottom = float(metadata['P_BASELINE_BOTTOM_HDR'])
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
+
 
     def get_metadata(self, family=ifgramDatasetNames[0]):
         self.file = self.datasetDict[family]
@@ -261,6 +277,10 @@ class ifgramDict:
             self.metadata['PLATFORM'] = self.platform
 
         return self.metadata
+
+
+
+
 
 
 ########################################################################################
@@ -295,10 +315,12 @@ class geometryDict:
         self.datasetDict = datasetDict
         self.ifgramMetadata = ifgramMetadata
 
+
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
         data, metadata = readfile.read(self.file, datasetName=family, box=box)
         return data, metadata
+
 
     def get_slantRangeDistance(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
@@ -308,6 +330,7 @@ class geometryDict:
             data = data[box[1]:box[3],box[0]:box[2]]
         return data
 
+
     def get_incidenceAngle(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
             return None
@@ -315,6 +338,7 @@ class geometryDict:
         if box is not None:
             data = data[box[1]:box[3],box[0]:box[2]]
         return data
+
 
     def get_size(self, family=None, box=None):
         if not family:
@@ -329,9 +353,11 @@ class geometryDict:
             width = int(metadata['WIDTH'])
         return length, width
 
+
     def get_dataset_list(self):
         self.datasetList = list(self.datasetDict.keys())
         return self.datasetList
+
 
     def get_metadata(self, family=None):
         if not family:
@@ -358,6 +384,7 @@ class geometryDict:
         #        self.processor = 'isce'
         #self.metadata['PROCESSOR'] = self.processor
         return self.metadata
+
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression=None):
         '''
@@ -403,8 +430,11 @@ class geometryDict:
                 dsShape = (self.numDate, length, width)
                 ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
                                       dtype=dsDataType, chunks=True, compression=compression)
-                print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                      'in size of {s} with compression = {c}'.format(s=dsShape, c=str(compression)))
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
+                                                                                                         w=maxDigit,
+                                                                                                         t=str(dsDataType),
+                                                                                                         s=dsShape,
+                                                                                                         c=str(compression)))
                 print('read coarse grid baseline files and linear interpolate into full resolution ...')
                 prog_bar = ptime.progressBar(maxValue=self.numDate)
                 for i in range(self.numDate):
@@ -418,8 +448,10 @@ class geometryDict:
                 dsName = 'date'
                 dsShape = (self.numDate,)
                 dsDataType = np.string_
-                print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                      'in size of {s}'.format(s=dsShape))
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                                  w=maxDigit,
+                                                                                  t=str(dsDataType),
+                                                                                  s=dsShape))
                 data = np.array(self.dateList, dtype=dsDataType)
                 ds = f.create_dataset(dsName, data=data)
 
@@ -429,29 +461,34 @@ class geometryDict:
                 if dsName.lower().endswith('mask'):
                     dsDataType = np.bool_
                 dsShape = (length, width)
-                print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                      'in size of {s} with compression = {c}'.format(s=dsShape, c=str(compression)))
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
+                                                                                                         w=maxDigit,
+                                                                                                         t=str(dsDataType),
+                                                                                                         s=dsShape,
+                                                                                                         c=str(compression)))
                 data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
                 ds = f.create_dataset(dsName, data=data, chunks=True, compression=compression)
 
         ###############################
         # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
-        for dsName in ['incidenceAngle', 'slantRangeDistance']:
-            if dsName not in self.dsNames:
-                ## Calculate data
-                data = None
-                if dsName == 'incidenceAngle':
-                    data = self.get_incidenceAngle(box=box)
-                elif dsName == 'slantRangeDistance':
-                    data = self.get_slantRangeDistance(box=box)
+        for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance'] if i not in self.dsNames]:
+            ## Calculate data
+            data = None
+            if dsName == 'incidenceAngle':
+                data = self.get_incidenceAngle(box=box)
+            elif dsName == 'slantRangeDistance':
+                data = self.get_slantRangeDistance(box=box)
 
-                ## Write dataset
-                if data is not None:
-                    dsShape = data.shape
-                    dsDataType = dataType
-                    print('create dataset /{d:<{w}} of {t:<25} '.format(d=dsName, w=maxDigit, t=str(dsDataType))+\
-                          'in size of {s} with compression = {c}'.format(s=dsShape, c=str(compression)))
-                    ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True, compression=compression)
+            ## Write dataset
+            if data is not None:
+                dsShape = data.shape
+                dsDataType = dataType
+                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
+                                                                                                         w=maxDigit,
+                                                                                                         t=str(dsDataType),
+                                                                                                         s=dsShape,
+                                                                                                         c=str(compression)))
+                ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True, compression=compression)
 
         ###############################
         # Attributes
@@ -473,10 +510,9 @@ def read_isce_bperp_file(fname, outShape, box=None):
                 fname : str, bperp file name
                 outShape : tuple of 2int, shape of file in full resolution
                 box : tuple of 4 int, subset range in (x0, y0, x1, y1) with respect to full resolution
-    Returns: data : 2D array of float32
-    Example:
-        fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
-        data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
+    Returns:    data : 2D array of float32
+    Example:    fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
+                data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
     '''
     dataC = readfile.read(fname)[0]
     data = ut.interpolate_data(dataC, outShape=outShape, interpMethod='linear')

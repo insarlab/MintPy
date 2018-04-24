@@ -1,5 +1,5 @@
 ###############################################################################
-# Program is part of PySAR v2.0 
+# Program is part of PySAR      
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun
 # Author:  Heresh Fattahi, Zhang Yunjun
 ###############################################################################
@@ -39,7 +39,7 @@ import numpy as np
 #from PIL import Image
 import json
 
-from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry, datasetUnitDict
+from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry, datasetUnitDict, HDFEOS
 
 
 standardMetadataKeys={'width':'WIDTH','Width':'WIDTH','samples':'WIDTH',
@@ -88,7 +88,7 @@ single_dataset_hdf5_file=['dem','mask','temporal_coherence', 'velocity']
 
 #########################################################################
 def read(fname, box=None, datasetName=None, print_msg=True):
-    '''Read one dataset and its attributes from input file.
+    """Read one dataset and its attributes from input file.
     Parameters: fname : str, path of file to read
                     PySAR   file: interferograms, timeseries, velocity, etc.
                     ROI_PAC file: .unw .cor .hgt .dem .trans
@@ -105,8 +105,9 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                         unwrapPhase-20161020_20161026
                         ...
                     for timeseries:
-                        20161020
-                        20161026
+                        timeseries
+                        timeseries-20161020
+                        timeseries-20161026
                         ...
                     for geometry:
                         height
@@ -138,14 +139,14 @@ def read(fname, box=None, datasetName=None, print_msg=True):
         from pysar.utils import readfile
         data, atr = readfile.read('velocity.h5')
         data, atr = readfile.read('timeseries.h5')
-        data, atr = readfile.read('timeseries.h5', datasetName='20161020')
+        data, atr = readfile.read('timeseries.h5', datasetName='timeseries-20161020')
         data, atr = readfile.read('ifgramStack.h5', datasetName='unwrapPhase')
         data, atr = readfile.read('ifgramStack.h5', datasetName='unwrapPhase-20161020_20161026')
         data, atr = readfile.read('ifgramStack.h5', datasetName='coherence', box=(100,1100, 500, 2500))
         data, atr = readfile.read('geometryRadar.h5', datasetName='height')
         data, atr = readfile.read('geometryRadar.h5', datasetName='bperp')
         data, atr = readfile.read('100120-110214.unw', box=(100,1100, 500, 2500))
-    '''
+    """
 
     # Basic Info
     ext = os.path.splitext(fname)[1].lower()
@@ -177,6 +178,9 @@ def read(fname, box=None, datasetName=None, print_msg=True):
         elif k in ['geometry']:
             obj = geometry(fname)
             data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
+        elif k == 'HDFEOS':
+            obj = HDFEOS(fname)
+            data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
         elif k in ['GIANT_TS']:
             dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
             dateIndx = dateList.index(datasetName)
@@ -185,11 +189,18 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             elif 'recons' in list(f.keys()):
                 dset = f['recons'][dateIndx,:,:]
             data = dset[box[1]:box[3],box[0]:box[2]]
+
         else:
             if not datasetName:
                 datasetName = k
-            try:    dset = f[k][datasetName]
-            except: dset = f[datasetName]
+            try:
+                dset = f[k][datasetName]
+            except:
+                try:
+                    dset = f[datasetName]
+                except:
+                    dset = f[k]
+
             data = dset[box[1]:box[3],box[0]:box[2]]
             atr['LENGTH'] = str(dset.shape[0])
             atr['WIDTH'] = str(dset.shape[1])
@@ -325,22 +336,90 @@ def read(fname, box=None, datasetName=None, print_msg=True):
         sys.exit('Unrecognized file format: '+ext)
 
 
+def get_dataset_list(fname, datasetName=None):
+    """Get list of 2D and 3D dataset to facilitate systematic file reading"""
+    if datasetName:
+        return [datasetName]
+
+    atr = read_attribute(fname)
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+
+    datasetList = []
+    fbase = os.path.basename(fname)
+    ext = os.path.splitext(fname)[1].lower()
+    if ext in ['.h5', '.he5']:
+        with h5py.File(fname, 'r') as f:
+            for key in f.keys():
+                obj = f[key]
+                if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
+                    datasetList.append(key)
+
+    elif ext in ['.trans', '.utm_to_rdc']:
+        datasetList = ['rangeCoord', 'azimuthCoord']
+    elif fbase.startswith('los'):
+        datasetList = ['incidenceAngle', 'headingAngle']
+    else:
+        datasetList = [os.path.split(fbase)[0]]
+    return datasetList
+
+
+def get_2d_dataset_list(fname):
+    """Get list of 2D dataset existed in file (for display)"""
+    file_ext = os.path.splitext(fname)[1]
+    file_base = os.path.splitext(os.path.basename(fname))[0]
+    file_type = read_attribute(fname)['FILE_TYPE']
+    datasetList = []
+    # HDF5 Files
+    if file_ext in ['.h5','.he5']:
+        f = h5py.File(fname, 'r')
+        if file_type in ['timeseries']:
+            obj = timeseries(fname)
+            obj.open(print_msg=False)
+            datasetList = obj.datasetList
+        elif file_type in ['geometry']:
+            obj = geometry(fname)
+            obj.open(print_msg=False)
+            datasetList = obj.datasetList
+        elif file_type in ['ifgramStack']:
+            obj = ifgramStack(fname)
+            obj.open(print_msg=False)
+            datasetList = obj.datasetList
+        elif file_type in ['HDFEOS']:
+            obj = HDFEOS(fname)
+            obj.open(print_msg=False)
+            datasetList = obj.datasetList
+        elif file_type in ['GIANT_TS']:
+            datasetList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
+        else:
+            datasetList = sorted(list(f.keys()))
+    # Binary Files
+    else:
+        if file_ext.lower() in ['.trans','.utm_to_rdc']:
+            datasetList = ['rangeCoord','azimuthCoord']
+        elif file_base.startswith('los'):
+            datasetList = ['incidenceAngle','headingAngle']
+        else:
+            datasetList = ['']
+    return datasetList
+
+
 #########################################################################
 def read_attribute(fname, datasetName=None):
-    '''Read attributes of input file into a dictionary
+    """Read attributes of input file into a dictionary
     Input  : string, file name
     Output : dictionary, attributes dictionary
-    '''
+    """
     ext = os.path.splitext(fname)[1].lower()
     if not os.path.isfile(fname):
-        print('Input file not existed: '+fname)
-        print('Current directory: '+os.getcwd())
+        print('input file not existed: '+fname)
+        print('current directory: '+os.getcwd())
         sys.exit(1)
 
-    ##### PySAR
+    # HDF5 files
     if ext in ['.h5','.he5']:
         f = h5py.File(fname,'r')
-        ## Metadata dict
+
+        # search metadata dict
         atr = None
         key = 'WIDTH'
         if key in f.attrs.keys():
@@ -357,22 +436,26 @@ def read_attribute(fname, datasetName=None):
             try:     atr[key] = value.decode('utf8')
             except:  atr[key] = value
 
-        if 'FILE_TYPE' in atr.keys():
-            k = atr['FILE_TYPE']
-        elif 'unwrapPhase' in f.keys():
+        # get FILE_TYPE
+        if 'unwrapPhase' in f.keys():
             k = 'ifgramStack'
         elif 'timeseries' in f.keys():
             k = 'timeseries'
         elif 'height' in f.keys():
             k = 'geometry'
+        elif 'HDFEOS' in f.keys():
+            k = 'HDFEOS'
+        elif 'FILE_TYPE' in atr.keys():
+            k = atr['FILE_TYPE']
         else:
             k = list(f.keys())[0]
         atr['FILE_TYPE'] = str(k)
 
-        if k == 'timeseries' and 'MinValue' in f[k].attrs.keys():
-            atr.update(f[k].attrs)
-        elif datasetName and datasetName in f.keys() and 'MinValue' in f[datasetName].attrs.keys():
-            atr.update(f[datasetName].attrs)
+        # read attribute of HDF5 dataset
+        #if k == 'timeseries' and 'MinValue' in f[k].attrs.keys():
+        #    atr.update(f[k].attrs)
+        #elif datasetName and datasetName in f.keys() and 'MinValue' in f[datasetName].attrs.keys():
+        #    atr.update(f[datasetName].attrs)
         f.close()
 
     else:
@@ -466,7 +549,7 @@ def is_plot_attribute(attribute):
 
 
 def read_template(fname, delimiter='=', print_msg=True):
-    '''Reads the template file into a python dictionary structure.
+    """Reads the template file into a python dictionary structure.
     Parameters: fname : str
                     full path to the template file
                 delimiter : str
@@ -480,7 +563,7 @@ def read_template(fname, delimiter='=', print_msg=True):
         tmpl = read_template(R1_54014_ST5_L0_F898.000.pi, ':')
         from pysar.defaults.default_path import isceAutoPath
         tmpl = read_template(isceAutoPath, print_msg=False)
-    '''
+    """
     template_dict = {}
     plotAttributeDict = {}
     insidePlotObject = False
@@ -540,7 +623,7 @@ def read_template(fname, delimiter='=', print_msg=True):
 
 
 def read_roipac_rsc(fname):
-    '''Read ROI_PAC style RSC file.
+    """Read ROI_PAC style RSC file.
     Parameters: fname : str.
                     File path of .rsc file.
     Returns:    rscDict : dict
@@ -548,7 +631,7 @@ def read_roipac_rsc(fname):
     Examples:
         from pysar.utils import readfile
         atr = readfile.read_roipac_rsc('filt_101120_110220_c10.unw.rsc')
-    '''
+    """
     #rsc_dict = dict(np.loadtxt(fname, dtype=bytes, usecols=(0,1)).astype(str))
     #return rsc_dict
     f = open(fname, 'r')
@@ -562,7 +645,7 @@ def read_roipac_rsc(fname):
 
 
 def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
-    '''Read GAMMA .par/.off file into a python dictionary structure.
+    """Read GAMMA .par/.off file into a python dictionary structure.
     Parameters: fname : str. 
                     File path of .par, .off file.
                 delimiter : str, optional
@@ -571,7 +654,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
                     Skip the first skiprows lines.
     Returns:    parDict : dict
                     Attributes dictionary
-    '''
+    """
     parDict = {}
 
     # Read txt file
@@ -594,7 +677,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
 
 
 def read_isce_xml(fname):
-    '''Read ISCE .xml file input a python dictionary structure.'''
+    """Read ISCE .xml file input a python dictionary structure."""
     from lxml import objectify
     xmlDict={}
     fObj = objectify.parse(fname)
@@ -627,7 +710,7 @@ def read_isce_xml(fname):
 
 
 def attribute_gamma2roipac(par_dict_in):
-    '''Convert Gamma par attribute into ROI_PAC format'''
+    """Convert Gamma par attribute into ROI_PAC format"""
     par_dict = dict()
     for key, value in iter(par_dict_in.items()):
         par_dict[key] = value
@@ -702,7 +785,7 @@ def attribute_gamma2roipac(par_dict_in):
 
 
 def attribute_isce2roipac(metaDict, dates=[], baselineDict={}):
-    '''Convert ISCE xml attribute into ROI_PAC format'''
+    """Convert ISCE xml attribute into ROI_PAC format"""
 
     rscDict={}
     for key in metaDict.keys():
@@ -733,7 +816,7 @@ def attribute_isce2roipac(metaDict, dates=[], baselineDict={}):
     return rscDict
 
 def attribute_envi2roipac(metaDict):
-    '''Convert ISCE xml attribute into ROI_PAC format'''
+    """Convert ISCE xml attribute into ROI_PAC format"""
 
     rscDict={}
     for key in metaDict.keys():
@@ -747,7 +830,7 @@ def attribute_envi2roipac(metaDict):
 
 #########################################################################
 def read_float32(fname, box=None, byte_order='l'):
-    '''Reads roi_pac data (RMG format, interleaved line by line)
+    """Reads roi_pac data (RMG format, interleaved line by line)
     should rename it to read_rmg_float32()
     
     ROI_PAC file: .unw, .cor, .hgt, .trans, .msk
@@ -767,7 +850,7 @@ def read_float32(fname, box=None, byte_order='l'):
     Example:
        a,p,r = read_float32('100102-100403.unw')
        a,p,r = read_float32('100102-100403.unw',(100,1200,500,1500))
-    '''
+    """
 
     atr = read_attribute(fname)
     width  = int(float(atr['WIDTH']))
@@ -787,8 +870,8 @@ def read_float32(fname, box=None, byte_order='l'):
 
 
 def read_real_float64(fname, box=None, byte_order='l'):
-    '''Read real float64/double data matrix, i.e. isce lat/lon.rdr
-    '''
+    """Read real float64/double data matrix, i.e. isce lat/lon.rdr
+    """
     atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
@@ -804,7 +887,7 @@ def read_real_float64(fname, box=None, byte_order='l'):
     return data, atr
 
 def read_complex_float32(fname, box=None, byte_order='l', band='phase'):
-    '''Read complex float 32 data matrix, i.e. roi_pac int or slc data.
+    """Read complex float 32 data matrix, i.e. roi_pac int or slc data.
     old name: read_complex64()
 
     ROI_PAC file: .slc, .int, .amp
@@ -827,7 +910,7 @@ def read_complex_float32(fname, box=None, byte_order='l', band='phase'):
     Example:
         amp, phase, atr = read_complex_float32('geo_070603-070721_0048_00018.int')
         data, atr       = read_complex_float32('150707.slc', 1)
-    '''
+    """
 
     atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
@@ -857,14 +940,14 @@ def read_complex_float32(fname, box=None, byte_order='l', band='phase'):
 
 
 def read_real_float32(fname, box=None, byte_order='l'):
-    '''Read real float 32 data matrix, i.e. GAMMA .mli file
+    """Read real float 32 data matrix, i.e. GAMMA .mli file
     Parameters: fname     : str, path, filename to be read
                 byte_order : str, optional, order of reading byte in the file
     Returns: data : 2D np.array, data matrix 
              atr  : dict, attribute dictionary
     Usage: data, atr = read_real_float32('20070603.mli')
            data, atr = read_real_float32('diff_filt_130118-130129_4rlks.unw')
-    '''
+    """
     atr = read_attribute(fname)
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
@@ -881,7 +964,7 @@ def read_real_float32(fname, box=None, byte_order='l'):
 
 
 def read_complex_int16(fname, box=None, byte_order='l', cpx=False):
-    '''Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
+    """Read complex int 16 data matrix, i.e. GAMMA SCOMPLEX file (.slc)
     
     Gamma file: .slc
     
@@ -891,7 +974,7 @@ def read_complex_int16(fname, box=None, byte_order='l', cpx=False):
     Example:
        data,rsc = read_complex_int16('100102.slc')
        data,rsc = read_complex_int16('100102.slc',(100,1200,500,1500))
-    '''
+    """
 
     atr = read_attribute(fname)
     width  = int(float(atr['WIDTH']))
@@ -935,9 +1018,9 @@ def read_real_int16(fname, box=None, byte_order='l'):
 
 
 def read_bool(fname, box=None):
-    '''Read binary file with flags, 1-byte values with flags set in bits
+    """Read binary file with flags, 1-byte values with flags set in bits
     For ROI_PAC .flg, *_snap_connect.byt file.    
-    '''
+    """
     # Read attribute
     if fname.endswith('_snap_connect.byt'):
         rscFile = fname.split('_snap_connect.byt')[0]+'.unw.rsc'

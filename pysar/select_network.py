@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun, 2017 Mar 24                       #
 ############################################################
@@ -17,12 +17,12 @@ import numpy as np
 import pysar
 from pysar.utils import readfile, datetime as ptime, network as pnet, plot as pp
 
-
 sar_sensor_list=['Ers','Env','Jers','Alos','Alos2','Tsx','Csk','Rsat','Rsat2','Sen','Kmps5','G3']
+
 
 #########################################################################
 def log(msg):
-    '''Log function writen by Falk'''
+    """Log function writen by Falk"""
     f = open('log','a')
     callingFunction = os.path.basename(inspect.stack()[1][1])
     dateStr = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H:%M:%S')
@@ -50,9 +50,9 @@ def project_name2sensor(projectName):
 
 
 def read_template2inps(templateFile, inps=None):
-    '''Read network options from template file into Namespace variable inps'''
+    """Read network options from template file into Namespace variable inps"""
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
 
     ##Read template file
     template = readfile.read_template(templateFile)
@@ -209,7 +209,7 @@ def read_template2inps(templateFile, inps=None):
 
 
 #########################################################################
-REFERENCE='''References:
+REFERENCE = """References:
   Berardino, P., G. Fornaro, R. Lanari, and E. Sansosti (2002), A new algorithm for surface deformation monitoring
     based on small baseline differential SAR interferograms, IEEE TGRS, 40(11), 2375-2383.
   Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series, IEEE TGRS, 51(7), 4249-4259.
@@ -220,17 +220,17 @@ REFERENCE='''References:
   Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
   Zhao, W., (2015), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
     dissertation, Univ. of Miami, Section 6.3.
-'''
+"""
 
-EXAMPLE='''Examples:
+EXAMPLE = """Examples:
   select_network.py KirishimaT246EnvD2.template
   select_network.py KirishimaT246EnvD2.template -b bl_list.txt
   select_network.py KirishimaT246EnvD2.template -b bl_list.txt -o $SC/KirishimaT246EnvD2/PROCESS/ifgram_list.txt
   select_network.py KirishimaT246EnvD2.template -r Pairs.list
   select_network.py KirishimaT246EnvD2.template -r Modified_LoadedData.h5
-'''
+"""
 
-TEMPLATE='''Template:
+TEMPLATE = """Template:
 ## Select network (interferogram combination) in two steps
 ## 1) select initial network using method / reference File
 ## 2) filter network/pairs using temp/perp baseline, doppler overlap threshold, etc.
@@ -271,10 +271,10 @@ select.network.excludeDate   = auto  #[080520,100726 / no], auto for no, exclude
 
 select.network.incrementNum  = auto  #[1-inf], auto for 3, for sequential method, pairs num per new acquisition
 select.network.tempPerpList  = auto  #[btemp1,bperp1;...], auto for '16,1600;32,800;48,600;64,200'; max temp/perp baseline
-'''
+"""
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Select Interferometric Network / Pairs.',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
@@ -330,8 +330,8 @@ def createParser():
     parser.add_argument('--inc-angle', dest='inc_angle', type=float, help='Center incidence angle in degrees.')
     return parser
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     try:    inps.reference_file = glob.glob(inps.reference_file)[0]
@@ -343,7 +343,7 @@ def cmdLineParse(iargs=None):
 
 #########################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps = read_template2inps(inps.template_file, inps)
     log(os.path.basename(sys.argv[0])+' '+inps.template_file)
 

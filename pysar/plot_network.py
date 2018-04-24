@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
@@ -16,19 +16,19 @@ from pysar.objects import ifgramStack, timeseries
 
 
 ###########################  Sub Function  #############################
-BL_LIST='''
+BL_LIST = """
 070106     0.0   0.03  0.0000000  0.00000000000 2155.2 /scratch/SLC/070106/
 070709  2631.9   0.07  0.0000000  0.00000000000 2155.2 /scratch/SLC/070709/
 070824  2787.3   0.07  0.0000000  0.00000000000 2155.2 /scratch/SLC/070824/
-'''
+"""
 
-DATE12_LIST='''
+DATE12_LIST = """
 20070709_20100901
 20070709_20101017
 20070824_20071009
-'''
+"""
 
-EXAMPLE='''example:
+EXAMPLE = """example:
   plot_network.py INPUTS/ifgramStack.h5
   plot_network.py INPUTS/ifgramStack.h5 -t pysarApp_template.txt --nodisplay  #Plot/save figure to files without display
   plot_network.py INPUTS/ifgramStack.h5 -t pysarApp_template.txt --nodrop     #Do not plot dropped ifgrams
@@ -36,16 +36,16 @@ EXAMPLE='''example:
 
   ##Plot network after select_network.py (without ifgramStack.h5 file)
   plot_network.py ifgram_list.txt  -b bl_list.txt
-'''
+"""
 
-TEMPLATE='''
+TEMPLATE = """
 pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
 pysar.network.maskAoi.yx      = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
-'''
+"""
 
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Display Network of Interferograms',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -91,8 +91,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if not inps.disp_fig:
         inps.save_fig = True
@@ -100,9 +100,9 @@ def cmdLineParse(iargs=None):
 
 
 def read_template2inps(template_file, inps=None):
-    '''Read input template options into Namespace inps'''
+    """Read input template options into Namespace inps"""
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(inps.template_file)
@@ -191,7 +191,7 @@ def read_network_info(inps):
 
 ##########################  Main Function  ##############################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 

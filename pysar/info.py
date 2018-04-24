@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -16,7 +16,7 @@ from pysar.objects import timeseries, ifgramStack, geometry, HDFEOS
 
 
 ############################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   info.py timeseries.h5
   info.py velocity.h5
   info.py ifgramStack.h5
@@ -24,10 +24,10 @@ EXAMPLE='''example:
   info.py ifgramStack.h5 --date                  # print master/slave date pairs info of interferograms.
   info.py timeseries.h5 --date                   # print date list of timeseries.
   info.py timeseries.h5 --date > date_list.txt   # print date list of timeseries and save it to txt file.
-'''
+"""
 
-def createParser():
-    '''Create command line parser.'''
+def create_parser():
+    """Create command line parser."""
     parser = argparse.ArgumentParser(description='Display Metadata / Structure information of File',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -36,9 +36,9 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    '''Command line parser.'''
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    """Command line parser."""
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
@@ -151,18 +151,10 @@ def print_pysar_info(fname):
         pass
     return
 
-    print('\n************************ File Info *****************************')
-    print(('File name   : ' + os.path.basename(File)))
-    print(('File type   : ' + atr['PROCESSOR'] + ' ' + atr['FILE_TYPE']))
-    try:
-        atr['X_FIRST']
-        print('Coordinates : GEO')
-    except:
-        print('Coordinates : radar')
 
 ############################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     if not os.path.isfile(inps.file):
         print('ERROR: input file does not exists: {}'.format(inps.file))
         return

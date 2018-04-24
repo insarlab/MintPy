@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 # Author: Zhang Yunjun, 2018-Jan-27
 
-import os, sys, re
+import os
+import sys
+import re
 import argparse
 import h5py
 from pysar.utils import readfile, datetime as ptime, utils as ut
 
 
 def get_mission_name(meta_dict):
-    '''Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
+    """Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
     Input:  meta_dict : dict, attributes
     Output: mission   : string, mission name in standard UNAVCO format.
-    '''
+    """
     mission = None
 
     if 'mission' in meta_dict.keys():
@@ -55,12 +57,12 @@ def get_mission_name(meta_dict):
 
 
 ##################################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   prep_giant_ifg_list.py  filt_*.unw
   prep_giant_ifg_list.py  unwrapIfgram.h5  --sensor SEN
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Prepare ifg.list file for GIAnT.\n',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -70,15 +72,15 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 ##################################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     inps.outfile = os.path.abspath(inps.outfile)
     atr = readfile.read_attribute(inps.file[0])
     k = atr['FILE_TYPE']

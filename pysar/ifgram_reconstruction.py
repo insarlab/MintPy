@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -14,8 +14,8 @@ from pysar.utils import readfile, datetime as ptime, utils as ut
 
 
 #####################################################################################
-def usage():
-    print('''usage: ifgram_reconstruction.py  ifgram_file  timeseries_file  [output_name]
+USAGE = """
+usage: ifgram_reconstruction.py  ifgram_file  timeseries_file  [output_name]
 
 Reconstruct interferograms from time-series
 
@@ -28,7 +28,10 @@ arguments:
 example:
   ifgram_reconstruction.py  unwrapIfgram.h5  timeseries_ECMWF_demCor.h5
   ifgram_reconstruction.py  unwrapIfgram.h5  timeseries_ECMWF_demCor.h5  reconstructed_unwrapIfgram.h5
-    ''')
+"""
+
+def usage():
+    print(USAGE)
     return
 
 
@@ -42,8 +45,10 @@ def main(argv):
     except:
         usage(); sys.exit(1)
   
-    try:    outfile = argv[2]
-    except: outfile = 'reconstructed_'+ifgram_file
+    try:
+        outfile = argv[2]
+    except:
+        outfile = 'recon_'+ifgram_file
 
     atr = readfile.read_attribute(timeseries_file)
     length = int(atr['LENGTH'])

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v2.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 # Yunjun, Jan 2016: put manual matching code to manual_offset_estimate()
 #                   put two files matching code into match_two_files()
-#                   add cmdLineParse(), merge matching_all.py to it.
+#                   add cmd_line_parse(), merge matching_all.py to it.
 
 
 import os
@@ -20,7 +20,7 @@ from pysar.utils import readfile, writefile
 
 #############################################################################################
 def corners(atr):
-    '''Get corners coordinate.'''
+    """Get corners coordinate."""
     width  = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
     West  = float(atr['X_FIRST'])
@@ -46,10 +46,10 @@ def nearest(x, X):
 
 #############################################################################################
 def manual_offset_estimate(matrix1, matrix2):
-    '''Manually estimate offset between two data matrix.
+    """Manually estimate offset between two data matrix.
     By manually selecting a line from each of them, and estimate the difference.
     It usually used when 2 input data matrix have no area in common.
-    '''
+    """
     # Select line from data matrix 1
     fig = plt.figure()
     ax=fig.add_subplot(111)
@@ -96,9 +96,9 @@ def manual_offset_estimate(matrix1, matrix2):
 
 #############################################################################################
 def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=False):
-    '''Match two geocoded files by estimating their offset.
+    """Match two geocoded files by estimating their offset.
     Better for two files with common area overlaping.
-    '''
+    """
     
     # Read Input Files
     V1, atr1 = readfile.read(File1)
@@ -186,7 +186,7 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
     atr['LENGTH'] = length
     atr['X_FIRST'] = West
     atr['Y_FIRST'] = North
-    writefile.write(VV, atr, outName)
+    writefile.write(VV, out_file=outName, metadata=atr)
 
     # Display
     fig_size = [16.0,16.0]
@@ -208,15 +208,15 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
 
 
 #############################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   match.py  vel_AlosAT42*.h5
   match.py  vel_AlosAT42*.h5  -o vel_AlosA.h5
   match.py  vel_AlosAT422.h5  vel_AlosAT423.h5  vel_AlosAT424.h5  vel_AlosAT425.h5
   match.py  vel_AlosAT422.h5  vel_AlosAT423.h5
   match.py  vel_AlosAT422.h5  vel_AlosAT423.h5  --manual
-'''
+"""
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Match 2 or more geocoded datasets sharing common area.\n'
                                                  'Function automatically finds the common area and calculates\n'
                                                  'the average offset between the two velocity.',\
@@ -232,15 +232,15 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
 
 
 #############################################################################################
 def main(iargs=None):
-    inps = cmdLineParse(iargs)
+    inps = cmd_line_parse(iargs)
     print('\n**************** Match Files *********************')
     print('Files to be matched:\n'+inps.first_file+', '+str(inps.other_file))
     
