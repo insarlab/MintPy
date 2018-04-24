@@ -79,7 +79,7 @@ class ifgramStackDict:
         return dsDataType
 
 
-    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None):
+    def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
         '''Save/write an ifgramStackDict object into an HDF5 file with the structure below:
 
         /                  Root level
@@ -94,12 +94,10 @@ class ifgramStackDict:
         /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
         /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
 
-        Parameters: outputFile : string
-                        Name of the HDF5 file for the InSAR stack
-                    access_mode : string
-                        Access mode of output File, e.g. w, r+
-                    box : tuple
-                        Subset range in (x0, y0, x1, y1)
+        Parameters: outputFile : str, Name of the HDF5 file for the InSAR stack
+                    access_mode : str, access mode of output File, e.g. w, r+
+                    box : tuple, subset range in (x0, y0, x1, y1)
+                    extra_metadata : dict, extra metadata to be added into output file
         Returns:    outputFile
         '''
 
@@ -181,6 +179,9 @@ class ifgramStackDict:
         self.get_metadata()
         self.metadata = ut.subset_attribute(self.metadata, box)
         self.metadata['FILE_TYPE'] = self.name
+        if extra_metadata:
+            self.metadata.update(extra_metadata)
+            print('add extra metadata: {}'.format(extra_metadata))
         for key,value in self.metadata.items():
             f.attrs[key] = value
 

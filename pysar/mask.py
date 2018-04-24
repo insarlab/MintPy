@@ -167,7 +167,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
     
 
 ############################################################
-EXAMPLE="""example:
+EXAMPLE = """example:
   mask.py  velocity.h5     -m Mask.h5
   mask.py  timeseries.h5   -m temporal_coherence.h5  -t 0.7
   mask.py  unwrapIfgram.h5 -m 100102_101120.cor      -t 0.9  -y  200 300  -x 300 400

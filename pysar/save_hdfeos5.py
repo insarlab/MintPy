@@ -6,7 +6,6 @@
 ############################################################
 # Based on ProductArchive/he5_converters/isce2he5.py written
 # by Scott Baker
-#
 
 
 import os, sys, re
@@ -27,16 +26,16 @@ compression = 'gzip'
 
 
 ################################################################
-TEMPALTE='''
+TEMPALTE = """
 pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
 pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
 pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
-'''
+"""
 
-EXAMPLE='''example:
+EXAMPLE = """example:
   save_hdfeos5.py geo_timeseries_ECMWF_demErr_refDate_plane.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
                   -g geo_geometryRadar.h5
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Convert PySAR timeseries product into HDF-EOS5 format\n'+\
@@ -67,10 +66,10 @@ def cmd_line_parse(iargs=None):
 
 ################################################################
 def get_mission_name(meta_dict):
-    '''Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
+    """Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
     Input:  meta_dict : dict, attributes
     Output: mission   : str, mission name in standard UNAVCO format.
-    '''
+    """
     mission = None
 
     if 'mission' in meta_dict.keys():
@@ -214,7 +213,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
 
 
 def get_hdfeos5_filename(timeseriesFile):
-    '''Get output file name of HDF-EOS5 time series file'''
+    """Get output file name of HDF-EOS5 time series file"""
     ##### Prepare Metadata
     ts_obj = timeseries(timeseriesFile)
     ts_obj.open(print_msg=False)
@@ -240,7 +239,7 @@ def get_hdfeos5_filename(timeseriesFile):
     return outName
 
 def read_template2inps(template_file, inps=None):
-    '''Read input template options into Namespace inps'''
+    """Read input template options into Namespace inps"""
     if not inps:
         inps = cmd_line_parse()
 

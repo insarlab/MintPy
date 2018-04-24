@@ -32,7 +32,7 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 ################################################################################################
 def filter_data(data, filter_type, filter_par=None):
-    '''Filter 2D matrix with selected filter
+    """Filter 2D matrix with selected filter
     Inputs:
         data        : 2D np.array, matrix to be filtered
         filter_type : string, filter type
@@ -41,7 +41,7 @@ def filter_data(data, filter_type, filter_par=None):
                       for low/highpass_gaussain, it's sigma in float
     Output:
         data_filt   : 2D np.array, matrix after filtering.
-    '''
+    """
 
     if   filter_type == "sobel":       data_filt = filters.sobel(data)
     elif filter_type == "roberts":     data_filt = filters.roberts(data)
@@ -72,7 +72,7 @@ def filter_data(data, filter_type, filter_par=None):
 
 ############################################################
 def filter_file(fname, filter_type, filter_par=None, fname_out=None):
-    '''Filter 2D matrix with selected filter
+    """Filter 2D matrix with selected filter
     Inputs:
         fname       : string, name/path of file to be filtered
         filter_type : string, filter type
@@ -81,7 +81,7 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
                       for low/highpass_gaussain, it's sigma in float
     Output:
         fname_out   : string, optional, output file name/path
-    '''
+    """
 
     # Basic info
     atr = readfile.read_attribute(fname)
@@ -165,13 +165,13 @@ def filter_file(fname, filter_type, filter_par=None, fname_out=None):
 
 
 ################################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   spatial_filter.py  velocity.h5
   spatial_filter.py  timeseries.h5  lowpass_avg        5
   spatial_filter.py  velocity.h5    lowpass_avg        5
   spatial_filter.py  velocity.h5    highpass_gaussian  3
   spatial_filter.py  velocity.h5    sobel
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Spatial filtering of 2D image.',\

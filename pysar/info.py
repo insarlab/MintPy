@@ -16,7 +16,7 @@ from pysar.objects import timeseries, ifgramStack, geometry, HDFEOS
 
 
 ############################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   info.py timeseries.h5
   info.py velocity.h5
   info.py ifgramStack.h5
@@ -24,10 +24,10 @@ EXAMPLE='''example:
   info.py ifgramStack.h5 --date                  # print master/slave date pairs info of interferograms.
   info.py timeseries.h5 --date                   # print date list of timeseries.
   info.py timeseries.h5 --date > date_list.txt   # print date list of timeseries and save it to txt file.
-'''
+"""
 
 def create_parser():
-    '''Create command line parser.'''
+    """Create command line parser."""
     parser = argparse.ArgumentParser(description='Display Metadata / Structure information of File',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -37,7 +37,7 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    '''Command line parser.'''
+    """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
@@ -57,7 +57,7 @@ def print_attributes(atr, sorting=True):
 
 
 def print_hdf5_structure(File):
-    '''Modified from andrewcollette at https://github.com/h5py/h5py/issues/406'''
+    """Modified from andrewcollette at https://github.com/h5py/h5py/issues/406"""
     def print_hdf5_structure_obj(name, obj):
         if isinstance(obj, h5py.Group):
             print('HDF5 group   "/{}"'.format(name))

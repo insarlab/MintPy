@@ -37,6 +37,10 @@ mplColors = ['#1f77b4',\
              '#bcbd22',\
              '#17becf']
 
+min_figsize_single = 6.0       # default min size in inch, for single plot
+max_figsize_single = 10.0      # default min size in inch, for single plot
+default_figsize_multi = [15.0, 8.0]    # default size in inch, for multiple subplots
+
 
 ############################################ Class Begein ###############################################
 class BasemapExt(Basemap):
@@ -958,6 +962,9 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False):
         disp_unit
         wrap
     """
+    if not disp_unit:
+        disp_unit, wrap = check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=wrap)
+
     # Data Operation - Scale to display unit
     disp_scale = 1.0
     if not disp_unit == metadata['UNIT']:

@@ -14,31 +14,31 @@ from pysar import subset
 
 
 #################################################################
-datasetName2templateKey={'unwrapPhase'     :'pysar.load.unwFile',
-                         'coherence'       :'pysar.load.corFile',
-                         'connectComponent':'pysar.load.connCompFile',
-                         'wrapPhase'       :'pysar.load.intFile',
-                         'height'          :'pysar.load.demFile',
-                         'latitude'        :'pysar.load.lookupYFile',
-                         'longitude'       :'pysar.load.lookupXFile',
-                         'azimuthCoord'    :'pysar.load.lookupYFile',
-                         'rangeCoord'      :'pysar.load.lookupXFile',
-                         'incidenceAngle'  :'pysar.load.incAngleFile',
-                         'headingAngle'    :'pysar.load.headAngleFile',
-                         'shadowMask'      :'pysar.load.shadowMaskFile',
-                         'bperp'           :'pysar.load.bperpFile'
-                         }
+datasetName2templateKey = {'unwrapPhase'     :'pysar.load.unwFile',
+                           'coherence'       :'pysar.load.corFile',
+                           'connectComponent':'pysar.load.connCompFile',
+                           'wrapPhase'       :'pysar.load.intFile',
+                           'height'          :'pysar.load.demFile',
+                           'latitude'        :'pysar.load.lookupYFile',
+                           'longitude'       :'pysar.load.lookupXFile',
+                           'azimuthCoord'    :'pysar.load.lookupYFile',
+                           'rangeCoord'      :'pysar.load.lookupXFile',
+                           'incidenceAngle'  :'pysar.load.incAngleFile',
+                           'headingAngle'    :'pysar.load.headAngleFile',
+                           'shadowMask'      :'pysar.load.shadowMaskFile',
+                           'bperp'           :'pysar.load.bperpFile'
+                          }
 
-DEFAULT_TEMPLATE='''template:
+DEFAULT_TEMPLATE = """template:
 ########## 1. Load Data (--load to exit after this step)
 {}\n
 {}\n
 {}\n
-'''.format(isceAutoPath,\
+""".format(isceAutoPath,\
            roipacAutoPath,\
            gammaAutoPath)
 
-TEMPLATE='''template:
+TEMPLATE = """template:
 ########## 1. Load Data (--load to exit after this step)
 ## auto - automatic path pattern for Univ of Miami file structure
 ## load_data.py -H to check more details and example inputs.
@@ -63,22 +63,22 @@ pysar.load.bperpFile      = auto  #[path2bperp_file]
 pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
 pysar.subset.tightBox = auto    #[yes / no], auto for yes, tight bounding box for files in geo coord
-'''
+"""
 
-NOTE='''NOTE:
+NOTE = """NOTE:
   unwrapPhase is required, the other dataset are optional, including coherence, connectComponent, wrapPhase, etc.
   The unwrapPhase metadata file requires DATE12 attribute in YYMMDD-YYMMDD format.
   All path of data file must contain the master and slave date, either in file name or folder name.
-'''
+"""
 
-EXAMPLE='''example:
+EXAMPLE = """example:
   load_data.py -t GalapagosSenDT128.tempalte
   load_data.py -t pysarApp_template.txt
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
-'''
+"""
 
 def create_parser():
-    '''Create command line parser.'''
+    """Create command line parser."""
     parser = argparse.ArgumentParser(description='Saving a stack of Interferograms to an HDF5 file',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=TEMPLATE+'\n'+NOTE+'\n'+EXAMPLE)
@@ -101,7 +101,7 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    '''Command line parser.'''
+    """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
@@ -123,7 +123,7 @@ def cmd_line_parse(iargs=None):
 
 #################################################################
 def read_inps2dict(inps):
-    '''Read input Namespace object info into inpsDict'''
+    """Read input Namespace object info into inpsDict"""
     ## Read input info into inpsDict
     inpsDict = vars(inps)
     inpsDict['PLATFORM'] = None
@@ -145,11 +145,17 @@ def read_inps2dict(inps):
         inpsDict['compression'] = None
 
     ## PROJECT_NAME --> PLATFORM
-    if any(i in inps.template_file for i in sensors):
-        inpsDict['PROJECT_NAME'] = os.path.splitext(os.path.basename(inps.template_file))[1]
+    if not inpsDict['PROJECT_NAME'] and any(i in inps.template_file.lower() for i in sensors):
+        for p in inps.template_file.split('/'):
+            if any(i in p.lower() for i in sensors):
+                inpsDict['PROJECT_NAME'] = p
+
     if inpsDict['PROJECT_NAME']:
-        try:  inpsDict['PLATFORM'] = [i for i in sensors if i in inpsDict['PROJECT_NAME']][0].upper()
-        except:  pass
+        try:
+            inpsDict['PLATFORM'] = [i for i in sensors if i in inpsDict['PROJECT_NAME'].lower()][0].capitalize()
+            print('Find PLATFORM from PROJECT_NAME as: {}'.format(inpsDict['PLATFORM']))
+        except:
+            pass
 
     ##Here to insert code to check default file path for miami user
     # Check 1) SCRATCHDIR exists, 2) pysar.defaults.autoPath is True and 3) template['PROJECT_NAME'] is not None
@@ -217,7 +223,7 @@ def read_subset_box(inpsDict):
 
 
 def read_inps_dict2ifgram_stack_dict_object(inpsDict):
-    '''Read input arguments into dict of ifgramStackDict object'''
+    """Read input arguments into dict of ifgramStackDict object"""
     ########## inpsDict --> dsPathDict
     print('-'*50)
     print('searching interferometric pairs info')
@@ -362,9 +368,9 @@ def read_inps_dict2geometry_dict_object(inpsDict):
 
 
 def update_object(outFile, inObj, box, updateMode=True):
-    '''Do not write h5 file if: 1) h5 exists and readable,
+    """Do not write h5 file if: 1) h5 exists and readable,
                                 2) it contains all date12 from ifgramStackDict,
-                                            or all datasets from geometryDict'''
+                                            or all datasets from geometryDict"""
     updateFile = True
     if updateMode and not ut.update_file(outFile, check_readable=True):
         if inObj.name == 'ifgramStack':
@@ -413,6 +419,15 @@ def print_write_setting(inpsDict):
     return updateMode, comp, box, boxGeo
 
 
+def get_extra_metadata(inpsDict):
+    """Extra metadata to be written into stack file"""
+    extraDict = {}
+    for key in ['PROJECT_NAME', 'PLATFORM']:
+        if inpsDict[key]:
+            extraDict[key] = inpsDict[key]
+    return extraDict
+
+
 #################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
@@ -430,7 +445,8 @@ def main(iargs=None):
     updateMode, comp, box, boxGeo = print_write_setting(inpsDict)
     if stackObj and update_object(inps.outfile[0], stackObj, box, updateMode=updateMode):
         print('-'*50)
-        stackObj.write2hdf5(outputFile=inps.outfile[0], access_mode='w', box=box, compression=comp)
+        extraDict = get_extra_metadata(inpsDict)
+        stackObj.write2hdf5(outputFile=inps.outfile[0], access_mode='w', box=box, compression=comp, extra_metadata=extraDict)
 
     if geomRadarObj and update_object(inps.outfile[1], geomRadarObj, box, updateMode=updateMode):
         print('-'*50)
@@ -445,7 +461,7 @@ def main(iargs=None):
 
 #################################################################
 if __name__ == '__main__' :
-    '''
+    """
     loading a stack of InSAR pairs to and HDF5 file
-    '''
+    """
     main()

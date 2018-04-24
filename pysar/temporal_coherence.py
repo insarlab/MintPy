@@ -14,13 +14,13 @@ from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 ######################################################################################################
 def temporal_coherence(timeseriesFile, ifgramFile):
-    '''Calculate temporal coherence based on input timeseries file and interferograms file
+    """Calculate temporal coherence based on input timeseries file and interferograms file
     Inputs:
         timeseriesFile - string, path of time series file
         ifgramFile     - string, path of interferograms file
     Output:
         temp_coh - 2D np.array, temporal coherence in float32
-    '''
+    """
     
     # Basic Info
     atr_ts = readfile.read_attribute(timeseriesFile)
@@ -96,21 +96,21 @@ def temporal_coherence(timeseriesFile, ifgramFile):
 
 
 ######################################################################################################
-USAGE='''usage: temporal_coherence.py [-h] interferograms_file timeseries_file [ output_file ]'''
+USAGE = """usage: temporal_coherence.py [-h] interferograms_file timeseries_file [ output_file ]"""
 
-DESCRIPTION='''Generates temporal coherence map.'''
+DESCRIPTION = """Generates temporal coherence map."""
 
-REFERENCE='''reference:
+REFERENCE = """reference:
   Tizzani, P., P. Berardino, F. Casu, P. Euillades, M. Manzo, G. P. Ricciardi, G. Zeni,
   and R. Lanari (2007), Surface deformation of Long Valley Caldera and Mono Basin, 
   California, investigated with the SBAS-InSAR approach, Remote Sens. Environ., 108(3),
   277-289, doi:10.1016/j.rse.2006.11.015.
-'''
+"""
 
-EXAMPLE='''example:
+EXAMPLE = """example:
   temporal_coherence.py  unwrapIfgram.h5  timeseries.h5
   temporal_coherence.py  unwrapIfgram.h5  timeseries.h5  temporalCoherence.h5
-'''
+"""
 
 def usage():
     print(USAGE+'\n\n'+DESCRIPTION+'\n\n'+REFERENCE+'\n'+EXAMPLE)

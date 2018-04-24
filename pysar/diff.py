@@ -5,23 +5,23 @@
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
-import os, sys
+import os
+import sys
 import argparse
-import h5py
 import numpy as np
-from pysar.utils import datetime as ptime, readfile, writefile
-from pysar.objects import timeseries, ifgramStack
+from pysar.objects import timeseries
+from pysar.utils import readfile, writefile
 
 
 #####################################################################################
-def diff_data(data1,data2):
-    '''data1 - data2'''
+def diff_data(data1, data2):
+    """data1 - data2"""
     data = data1 - data2
     #data[np.isnan(data2)] = data1[np.isnan(data2)];
     return data
 
 
-def check_reference(atr1,atr2):
+def check_reference(atr1, atr2):
     if atr1['REF_DATE'] == atr2['REF_DATE']:
         ref_date = None
     else:
@@ -39,7 +39,7 @@ def check_reference(atr1,atr2):
 
 
 def diff_file(file1, file2, outFile=None, force=False):
-    '''Subtraction/difference of two input files'''
+    """Subtraction/difference of two input files"""
     if not outFile:
         fbase, fext = os.path.splitext(file1)
         outFile = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2))[0], fext)
@@ -95,12 +95,12 @@ def diff_file(file1, file2, outFile=None, force=False):
 
 
 #####################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   diff.py  velocity.h5      velocity_demCor.h5
   diff.py  timeseries.h5    ECMWF.h5  -o timeseries_ECMWF.h5
   diff.py  timeseries.h5    ECMWF.h5  -o timeseries_ECMWF.h5  --force
   diff.py  unwrapIfgram.h5  reconstruct_unwrapIfgram.h5
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Generates the difference of two input files.',\

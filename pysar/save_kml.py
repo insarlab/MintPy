@@ -23,11 +23,10 @@ import matplotlib.pyplot as plt
 
 from pysar.objects import timeseriesKeyNames
 from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
-import pysar.view as pv
 
 
 ############################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   save_kml.py geo_velocity_masked.h5 
   save_kml.py geo_timeseries_masked.h5  20101120
   save_kml.py geo_unwrapIfgram.h5       101120-110220
@@ -36,7 +35,7 @@ EXAMPLE='''example:
   save_kml.py geo_velocity_masked.h5 -u cm --ylim -2.5 0.5 -c jet_r
   save_kml.py geo_velocity_masked.h5 -u cm --ylim -2 2 --ref-size 3 --fig-size 5 8
   save_kml.py demGeo.h5 --cbar-label Elevation
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file.',\
@@ -89,7 +88,7 @@ def cmd_line_parse(iargs=None):
 
 ############################################################
 def write_kmz_file(data, atr, out_name_base, inps=None):
-    ''' Generate Google Earth KMZ file for input data matrix.
+    """ Generate Google Earth KMZ file for input data matrix.
     Inputs:
         data - 2D np.array in int/float, data matrix to write
         out_name_base - string, output file name base
@@ -102,14 +101,13 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     Output:
         kmz_file - string, output KMZ filename
     Example:
-        import pysar._readfile as readfile
-        import pysar.view as pv
-        import pysar.save_kml as save_kml
+        from pysar.utils import readfile, plot as pp
+        from pysar import save_kml
         fname = 'geo_velocity_masked.h5'
         data, atr = readfile.read(fname)
-        out_name_base = pv.auto_figure_title(fname, None)
+        out_name_base = pp.auto_figure_title(fname, None)
         save_kml.write_kmz_file(data, atr, out_name_base)
-    '''
+    """
     if not inps:
         inps = cmd_line_parse()
 
@@ -123,8 +121,8 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
 
     # Figure size
     if not inps.fig_size:
-        fig_scale = min(pp.minFigSizeSingle/min(data.shape),\
-                        pp.maxFigSizeSingle/max(data.shape))
+        fig_scale = min(pp.min_figsize_single/min(data.shape),\
+                        pp.max_figsize_single/max(data.shape))
         inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in data.shape]
     print('create figure in size: '+str(inps.fig_size))
     fig = plt.figure(figsize=inps.fig_size, frameon=False)
@@ -163,15 +161,15 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     norm = mpl.colors.Normalize(vmin=inps.ylim[0], vmax=inps.ylim[1])
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=inps.colormap, norm=norm, orientation='vertical')
 
-    cbar.set_label(inps.cbar_label+' ['+inps.disp_unit+']')
+    cbar.set_label('{} [{}]'.format(inps.cbar_label, inps.disp_unit))
     cbar.locator = mpl.ticker.MaxNLocator(nbins=inps.cbar_bin_num)
     cbar.update_ticks()
 
-    pc.subplots_adjust(left=0.2,bottom=0.3,right=0.4,top=0.7)
+    pc.subplots_adjust(left=0.2, bottom=0.3, right=0.4, top=0.7)
     pc.patch.set_facecolor('white')
     pc.patch.set_alpha(0.7)
 
-    cbar_png_file = out_name_base + '_cbar.png'
+    cbar_png_file = '{}_cbar.png'.format(out_name_base)
     print('writing '+cbar_png_file)
     pc.savefig(cbar_png_file, bbox_inches='tight', facecolor=pc.get_facecolor(), dpi=inps.fig_dpi)
 
@@ -188,8 +186,8 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     doc.Folder.append(slc)
 
     # Add colorbar png file
-    cb_rg = min(north-south, east-west)
-    cb_N = (north+south)/2.0 + 0.5*0.5*cb_rg
+    cb_rg = min(north - south, east - west)
+    cb_N = (north + south) / 2.0 + 0.5 * 0.5 * cb_rg
     cb_W = east  + 0.1*cb_rg
 
     ## Use mean height from existed DEM file
@@ -263,10 +261,13 @@ def main(iargs=None):
 
     # Output filename
     if not inps.outfile:
-        inps.outfile = pv.auto_figure_title(inps.file, inps.dset, vars(inps))
+        inps.outfile = pp.auto_figure_title(inps.file, inps.dset, vars(inps))
 
     # Data Operation - Display Unit & Rewrapping
-    data, inps.disp_unit, inps.wrap = pv.scale_data4disp_unit_and_rewrap(data, atr, inps.disp_unit, inps.wrap)
+    data, inps.disp_unit, inps.disp_scale, inps.wrap = pp.scale_data4disp_unit_and_rewrap(data=data,
+                                                                                          metadata=atr,
+                                                                                          disp_unit=inps.disp_unit,
+                                                                                          wrap=inps.wrap)
     if inps.wrap:
         inps.ylim = [-np.pi, np.pi]
 

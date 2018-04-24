@@ -6,16 +6,17 @@
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import argparse
 import h5py
 import numpy as np
-from pysar.utils import readfile, writefile, utils as ut
 from pysar.objects import ifgramDatasetNames
+from pysar.utils import readfile, writefile, utils as ut
 
 
 ################################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
   generate_mask.py  081018_090118.unw     -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
   generate_mask.py  srtm1.dem             -m 0.5 -o maskLand.h5
@@ -24,7 +25,7 @@ EXAMPLE='''example:
 
   generate_mask.py ifgramStack.h5 unwrapPhase --nonzero -o maskValidPhase.h5
   generate_mask.py ifgramStack.h5 connectComponent --nonzero -o maskConnComp.h5
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Generate mask file from input file',\

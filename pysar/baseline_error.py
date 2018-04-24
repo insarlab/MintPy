@@ -65,7 +65,8 @@ def main(argv):
 
     try:
         maskFile = argv[1]
-    except: pass
+    except:
+        pass
   
     ##################################
     h5file = h5py.File(File)
@@ -219,7 +220,7 @@ if __name__ == '__main__':
 
 
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR                                 #
 # Copyright 2013                                           #
 # Author:  Heresh Fattahi                                  #
 ############################################################

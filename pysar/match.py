@@ -20,7 +20,7 @@ from pysar.utils import readfile, writefile
 
 #############################################################################################
 def corners(atr):
-    '''Get corners coordinate.'''
+    """Get corners coordinate."""
     width  = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
     West  = float(atr['X_FIRST'])
@@ -46,10 +46,10 @@ def nearest(x, X):
 
 #############################################################################################
 def manual_offset_estimate(matrix1, matrix2):
-    '''Manually estimate offset between two data matrix.
+    """Manually estimate offset between two data matrix.
     By manually selecting a line from each of them, and estimate the difference.
     It usually used when 2 input data matrix have no area in common.
-    '''
+    """
     # Select line from data matrix 1
     fig = plt.figure()
     ax=fig.add_subplot(111)
@@ -96,9 +96,9 @@ def manual_offset_estimate(matrix1, matrix2):
 
 #############################################################################################
 def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=False):
-    '''Match two geocoded files by estimating their offset.
+    """Match two geocoded files by estimating their offset.
     Better for two files with common area overlaping.
-    '''
+    """
     
     # Read Input Files
     V1, atr1 = readfile.read(File1)
@@ -208,13 +208,13 @@ def match_two_files(File1, File2, outName=None, manual_match=False, disp_fig=Fal
 
 
 #############################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   match.py  vel_AlosAT42*.h5
   match.py  vel_AlosAT42*.h5  -o vel_AlosA.h5
   match.py  vel_AlosAT422.h5  vel_AlosAT423.h5  vel_AlosAT424.h5  vel_AlosAT425.h5
   match.py  vel_AlosAT422.h5  vel_AlosAT423.h5
   match.py  vel_AlosAT422.h5  vel_AlosAT423.h5  --manual
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Match 2 or more geocoded datasets sharing common area.\n'

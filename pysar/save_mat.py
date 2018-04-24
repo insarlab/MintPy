@@ -22,14 +22,14 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 ########################################################################################
 def usage():
-    print('''usage: save_mat.py  file  [outfile]
+    print("""usage: save_mat.py  file  [outfile]
 
 This function converts the PySAR hdf5 file formats to the matlab structure and saves to a .mat file.
 
 example:
   save_mat.py  velocity.h5
   save_mat.py  timeseries.h5
-    ''')
+    """)
     return
 
 

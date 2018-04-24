@@ -16,15 +16,18 @@ from pysar.utils import readfile, datetime as ptime
 
 
 ############################################################################
-def usage():
-    print('''usage:  temporal_derivative.py  timeseries_file 
+USAGE = """
+usage:  temporal_derivative.py  timeseries_file 
 
 Calculate the temporal derivative of time-series displacement.
   Useful to check time-dependent deformation.
 
 example:
   temporal_derivative.py  timeseries.h5 
-    ''')
+"""
+
+def usage():
+    print(USAGE)
     return
 
 

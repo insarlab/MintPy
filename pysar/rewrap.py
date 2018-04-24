@@ -14,14 +14,14 @@ from pysar.utils import readfile, datetime as ptime
 
 
 def usage():
-    print('''usage: rewrap.py  ifgram_file   [cycle_unit]
+    print("""usage: rewrap.py  ifgram_file   [cycle_unit]
 
 Re-wrap unwraped interferograms to wrapped interferograms.
 
 example:
   rewrap.py  interferograms.h5
   rewrap.py  timeseries_ECMWF_demErr_refDate.h5
-    ''')
+    """)
     return
 
 

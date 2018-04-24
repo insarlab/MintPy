@@ -189,13 +189,18 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             elif 'recons' in list(f.keys()):
                 dset = f['recons'][dateIndx,:,:]
             data = dset[box[1]:box[3],box[0]:box[2]]
+
         else:
             if not datasetName:
                 datasetName = k
             try:
                 dset = f[k][datasetName]
             except:
-                dset = f[datasetName]
+                try:
+                    dset = f[datasetName]
+                except:
+                    dset = f[k]
+
             data = dset[box[1]:box[3],box[0]:box[2]]
             atr['LENGTH'] = str(dset.shape[0])
             atr['WIDTH'] = str(dset.shape[1])

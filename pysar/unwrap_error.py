@@ -6,7 +6,8 @@
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import argparse
 import h5py
 import numpy as np
@@ -16,14 +17,14 @@ from pysar.utils import readfile, writefile, datetime as ptime, utils as ut, der
 
 ##########################################################################################
 def bridging_data(data,mask,x,y):
-    '''Phase Jump Correction, using phase continuity on bridge/bonding points in each pair of patches.
+    """Phase Jump Correction, using phase continuity on bridge/bonding points in each pair of patches.
     Inputs:
         data : 2D np.array, phase matrix need to be corrected
         mask : mask file marks different patches with different positive integers
         x/y  : list of int, array of bridge points, lied as: x_ref, x, x_ref, x
     Output:
         data : 2D np.array, phase corrected matrix
-    '''
+    """
 
     ## loop based on number of bridges
     n_bridge = len(x)/2
@@ -40,7 +41,7 @@ def bridging_data(data,mask,x,y):
 
 
 def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_file=None):
-    '''Correct unwrapping errors in network of interferograms using phase closure.
+    """Correct unwrapping errors in network of interferograms using phase closure.
     Inputs:
         ifgram_file     - string, name/path of interferograms file
         mask_file       - string, name/path of mask file to mask the pixels to be corrected
@@ -49,7 +50,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
         ifgram_cor_file
     Example:
         'unwrapIfgram_unwCor.h5' = unwrap_error_correction_phase_closure('Seeded_unwrapIfgram.h5','mask.h5')
-    '''
+    """
     print('read mask from file: '+mask_file)
     mask = readfile.read(mask_file, datasetName='mask')[0].flatten(1)
 
@@ -169,7 +170,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
 
 def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ramp_type='plane',\
                                      ifgram_cor_file=None, save_cor_deramp_file=False):
-    '''Unwrapping error correction with bridging.
+    """Unwrapping error correction with bridging.
     Inputs:
         ifgram_file : string, name/path of interferogram(s) to be corrected
         mask_file   : string, name/path of mask file to mark different patches 
@@ -182,7 +183,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
         y_list = [235, 270, 350, 390]
         x_list = [880, 890, 1200, 1270]
         unwrap_error_correction_bridging('unwrapIfgram.h5', 'mask_all.h5', y_list, x_list, 'quadratic')
-    '''
+    """
     ##### Mask and Ramp
     mask = readfile.read(mask_file, datasetName='mask')[0]
     ramp_mask = mask == 1
@@ -307,7 +308,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
 
 
 def read_template2inps(template_file, inps=None):
-    '''Read input template options into Namespace inps'''
+    """Read input template options into Namespace inps"""
     if not inps:
         inps = cmd_line_parse()
 
@@ -354,16 +355,16 @@ def read_template2inps(template_file, inps=None):
 
 
 ####################################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
 Phase Closure:
   unwrap_error.py  Seeded_unwrapIfgram.h5  --mask mask.h5
 Bridging:
   unwrap_error.py  unwrapIfgram.h5    -t ShikokuT417F650_690AlosA.template
   unwrap_error.py  unwrapIfgram.h5    --mask mask.h5     -x 283 305 -y 1177 1247
   unwrap_error.py  081018_090118.unw  --mask mask_all.h5 -x 283 305 -y 1177 1247 --ramp quadratic
-'''
+"""
 
-TEMPLATE='''
+TEMPLATE = """
 ## 4. Unwrapping Error Correction
 ## unwrapping error correction based on the following two methods:
 ## a. phase closure (Fattahi, 2015, PhD Thesis)
@@ -372,13 +373,13 @@ pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for n
 pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
 pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
 pysar.unwrapError.yx       = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,...], auto for none
-'''
+"""
 
-REFERENCE='''reference:
+REFERENCE = """reference:
   Fattahi, H. (2015), Geodetic Imaging of Tectonic Deformation with InSAR, 190 pp, University of Miami, Miami, FL.
-'''
+"""
 
-DESCRIPTION='''
+DESCRIPTION = """
   Two methods: 1) Phase closure, 2) Bridging
   -------------------------------------------------------------------
   1. Phase closure: correct unwrapping errors based on triangular consistency
@@ -408,7 +409,7 @@ DESCRIPTION='''
             phase to make sure their absolute phase difference is smaller than pi.
          2) add N*2pi to all pixels in 2nd point's patch.
       c. add linear phase ramp estimated in step a back to the corrected phase in step b.
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Unwrapping Error Correction.'+DESCRIPTION,\

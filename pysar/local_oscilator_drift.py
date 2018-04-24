@@ -4,13 +4,9 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-
-#########################################################################################
-#                                                                                       #
-# The empiriocal model in this program to correct the Local Oscilator Frequency Decay   #
-# of Envisat ASAR instrument was suggested by Petar Marinkovic and Yngvar Larsen, 2013. #
-#                                                                                       #
-#########################################################################################
+# The empiriocal model in this program to correct the Local 
+# Oscilator Frequency Decay of Envisat ASAR instrument was
+# suggested by Petar Marinkovic and Yngvar Larsen, 2013.
 
 
 import os
@@ -20,123 +16,89 @@ import time
 import datetime
 import h5py
 import numpy as np
+from pysar.objects import timeseries
 from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
-from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 #########################################################################################
-def correct_LOD(File, rangeDistFile=None, outFile=None):
-    # Check Sensor Type
+def get_relative_range_distance(metadata):
+    length, width = int(metadata['LENGTH']), int(metadata['WIDTH'])
+    range_dist_1d = float(metadata['RANGE_PIXEL_SIZE']) * np.linspace(0, width-1, width)
+    range_dist = np.tile(range_dist_1d, (length, 1))
+    range_dist -= range_dist[int(atr['REF_Y']), int(atr['REF_X'])]
+    return range_dist
+
+
+def correct_local_oscilator_drift(fname, rg_dist_file=None, out_file=None):
+    print('-'*50)
     print('correct Local Oscilator Drift for Envisat using an empirical model (Marinkovic and Larsen, 2013)')
-    print('input file: '+File)
-    atr = readfile.read_attribute(File)
-    k = atr['FILE_TYPE']
+    print('-'*50)
+    atr = readfile.read_attribute(fname)
+
+    # Check Sensor Type
     platform = atr['PLATFORM']
     print('platform: '+platform)
     if not platform.lower() in ['env','envisat']:
         print('No need to correct LOD for '+platform)
         sys.exit(1)
 
-    # Output Filename
-    if not outFile:
-        ext = os.path.splitext(File)[1]
-        outFile = os.path.splitext(File)[0]+'_LODcor'+ext
+    # output file name
+    if not out_file:
+        out_file = '{}_LODcor{}'.format(os.path.splitext(fname)[0], os.path.splitext(fname)[1])
 
-    # Get LOD phase ramp from empirical model
-    if not rangeDistFile:
-        print('calculate range distance from input file attributes')
-        width = int(atr['WIDTH'])
-        length = int(atr['LENGTH'])
-        range_resolution = float(atr['RANGE_PIXEL_SIZE'])
-        rangeDist1D = range_resolution * np.linspace(0, width-1, width)
-        rangeDist = np.tile(rangeDist1D, (length, 1))
+    # Get LOD ramp rate from empirical model
+    if not rg_dist_file:
+        print('calculate range distance from file metadata')
+        rg_dist = get_relative_range_distance(atr)
     else:
-        print('read range distance from file: %s' % (rangeDistFile))
-        rangeDist = readfile.read(rangeDistFile, datasetName='slantRangeDistance')[0]
+        print('read range distance from file: %s' % (rg_dist_file))
+        rg_dist = readfile.read(rg_dist_file, datasetName='slantRangeDistance', print_msg=False)[0]
+        rg_dist -= rg_dist[int(atr['REF_Y']), int(atr['REF_X'])]
+    ramp_rate = np.array(rg_dist * 3.87e-7, np.float32)
 
-    yref = int(atr['REF_Y'])
-    xref = int(atr['REF_X'])
-    rangeDist -= rangeDist[yref][xref]
-    Ramp = np.array(rangeDist * 3.87e-7, np.float32)
+    # Correct LOD Ramp for Input fname
+    range2phase = -4*np.pi / float(atr['WAVELENGTH'])
+    k = atr['FILE_TYPE']
+    if k == 'timeseries':
+        # read
+        obj = timeseries(fname)
+        obj.open()
+        data = obj.read()
 
-    # Correct LOD Ramp for Input File
-    if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-        h5 = h5py.File(File,'r')
-        epochList = sorted(h5[k].keys())
-        epochNum = len(epochList)
+        # correct LOD
+        diff_year = np.array(obj.yearList)
+        diff_year -= diff_year[obj.refIndex]
+        for i in range(data.shape[0]):
+            data[i, :, :] -= ramp_rate * diff_year[i]
 
-        print('writing >>> %s' % (outFile))
-        h5out = h5py.File(outFile,'w')
-        group = h5out.create_group(k)
-
-        prog_bar = ptime.progressBar(maxValue=epochNum)
-        if k in ['interferograms','wrapped']:
-            Ramp *= -4*np.pi / float(atr['WAVELENGTH'])
-            print('number of interferograms: '+str(epochNum))
-            date12List = ptime.list_ifgram2date12(epochList)
-            for i in range(epochNum):
-                epoch = epochList[i]
-                data = h5[k][epoch].get(epoch)[:]
-                atr = h5[k][epoch].attrs
-                
-                dates = ptime.yyyymmdd(atr['DATE12'].split('-'))
-                dates = ptime.yyyymmdd2years(dates)
-                dt = dates[1] - dates[0]
-                data -= Ramp*dt
-
-                gg = group.create_group(epoch)
-                dset = gg.create_dataset(epoch, data=data)
-                for key, value in iter(atr.items()):
-                    gg.attrs[key] = value
-                prog_bar.update(i+1, suffix=date12List[i])
-
-        elif k == 'timeseries':
-            print('number of acquisitions: '+str(len(epochList)))
-            tbase = [float(dy)/365.25 for dy in ptime.date_list2tbase(epochList)[0]]
-            for i in range(epochNum):
-                epoch = epochList[i]
-                data = h5[k].get(epoch)[:]
-
-                data -= Ramp*tbase[i]
-
-                dset = group.create_dataset(epoch, data=data)
-                prog_bar.update(i+1, suffix=epoch)
-            for key, value in iter(atr.items()):
-                group.attrs[key] = value
-        else:
-            print('No need to correct for LOD for '+k+' file')
-            sys.exit(1)
-        prog_bar.close()
-        h5.close()
-        h5out.close()
+        # write
+        obj_out = timeseries(out_file)
+        obj_out.write2hdf5(data, refFile=fname)
 
     elif k in ['.unw']:
-        data, atr = readfile.read(File)
-        Ramp *= -4*np.pi / float(atr['WAVELENGTH'])
-        dates = ptime.yyyymmdd(atr['DATE12'].split('-'))
-        dates = ptime.yyyymmdd2years(dates)
+        data, atr = readfile.read(fname)
+
+        dates = ptime.yyyymmdd2years(ptime.yyyymmdd(atr['DATE12'].split('-')))
         dt = dates[1] - dates[0]
-        data -= Ramp * dt
-        print('writing >>> %s' % (outFile))
-        writefile.write(data, out_file=outFile, metadata=atr)
+        data -= ramp_rate * range2phase * dt
+
+        writefile.write(data, out_file=out_file, metadata=atr)
     else:
         print('No need to correct for LOD for %s file' % (k))
-
-    return outFile
+    return out_file
 
 
 #########################################################################################
-REFERENCE='''reference:
+REFERENCE = """reference:
   Marinkovic, P., and Y. Larsen (2013), Consequences of long-term ASAR local oscillator 
   frequency decay - An empirical study of 10 years of data, in Living Planet Symposium,
   Edinburgh, U.K.
-'''
+"""
 
-EXAMPLE='''example:
-  local_oscilator_drift.py timeseries.h5
-  local_oscilator_drift.py unwrapIfgram.h5  -r geometryGeo.h5
-  local_oscilator_drift.py filt_101020_110220_4rlks.unw
-'''
+EXAMPLE = """example:
+  local_oscilator_drift.py  timeseries.h5                 INPUTS/geometryRadar.h5
+  local_oscilator_drift.py  filt_101020_110220_4rlks.unw  INPUTS/geometryRadar.h5
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Local Oscilator Drift (LOD) correction of Envisat',\
@@ -144,8 +106,9 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument(dest='file', help='timeseries / interferograms file, i.e. timeseries.h5')
-    parser.add_argument('-r','--range', dest='range_dist_file',\
-                        help='Slant range distance file, i.e. rangeDistance.h5, geometryGeo.h5')
+    parser.add_argument(dest='range_dist_file',
+                        help='Slant range distance file, i.e. INPUTS/geometryRadar.h5, INPUTS/geometryGeo.h5\n'+
+                        'or use range_distance.py to generate it.')
     parser.add_argument('-o','--output', dest='outfile',\
                         help='Output file name for corrected file.')
     return parser
@@ -160,19 +123,10 @@ def cmd_line_parse(iargs=None):
 #########################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    if not inps.outfile:
-        inps.outfile = '{}_LODcor{}'.format(os.path.splitext(inps.file)[0], os.path.splitext(inps.file)[1])
-    if not inps.range_dist_file:
-        atr = readfile.read_attribute(inps.file)
-        if 'Y_FIRST' in atr.keys():
-            coordType = 'geo'
-        else:
-            coordType = 'radar'
-        print('Input file is in %s coordinates' % (coordType))
-        inps.range_dist_file = ut.get_geometry_file('slantRangeDistance', coordType=coordType)
 
-    inps.outfile = correct_LOD(inps.file, inps.range_dist_file, inps.outfile)
+    inps.outfile = correct_local_oscilator_drift(inps.file, inps.range_dist_file, inps.outfile)
     print('Done.')
+    return
 
 
 #########################################################################################

@@ -14,10 +14,10 @@ from pysar.objects import ifgramDatasetNames
 
 
 #################################  Usage  ####################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   spatial_average.py ifgramStack.h5 -d coherence -m mask.h5
   spatial_average.py timeseries_ECMWF_demCor.h5 -m maskTempCoh.h5
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Calculate average in space',\
@@ -29,6 +29,7 @@ def create_parser():
     parser.add_argument('-m','--mask', dest='mask_file', help='Mask file for the calculation')
     parser.add_argument('--nodisplay', dest='disp_fig', action='store_false', help='save and do not display the figure')
     return parser
+
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()

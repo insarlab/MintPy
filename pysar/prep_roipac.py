@@ -6,21 +6,23 @@
 ############################################################
 # To do list: cp .unw.rsc to _snap_connect.byt.rsc
 
-import os, sys, re
+import os
+import sys
+import re
 import argparse
 import numpy as np
 from pysar.utils import readfile, writefile, utils as ut
 
 
 ##################################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   prep_roipac.py  filt_100901-110117-sim_HDR_4rlks_c10.unw
   prep_roipac.py  IFGRAM*/filt_*.unw
   prep_roipac.py  IFGRAM*/filt_*rlks.cor
   prep_roipac.py  IFGRAM*/filt_*rlks.int
-'''
+"""
 
-DESCRIPTION='''
+DESCRIPTION = """
   For each binary file (unwrapped/wrapped interferogram, spatial coherence file), there are 2 .rsc files:
   1) basic metadata file and 2) baseline parameter file. This script find those two rsc files based on
   input binary file name, and merge those two metadata files into one.
@@ -28,7 +30,7 @@ DESCRIPTION='''
   For example, if input binary file is filt_100901-110117-sim_HDR_4rlks_c10.unw, this script will find
   1) filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc and 2) 100901-110117_baseline.rsc and merge 1) and 2) into
   one file: filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Prepare attributes file for ROI_PAC products for PySAR.\n'+\
@@ -50,7 +52,7 @@ def cmd_line_parse(iargs=None):
 
 ######################################## Sub Functions ############################################
 def extract_metadata(fname):
-    '''Read/extract attributes for PySAR from ROI_PAC .unw, .int, .cor file.
+    """Read/extract attributes for PySAR from ROI_PAC .unw, .int, .cor file.
 
     For each unwrapped interferogram or spatial coherence file, there are 2 .rsc files:
         basic metadata file and baseline parameter file. 
@@ -62,7 +64,7 @@ def extract_metadata(fname):
                 i.e. /KujuT422F650AlosA/filt_100901-110117-sim_HDR_4rlks_c10.unw
     Outputs:
         atr : dict, Attributes dictionary
-    '''
+    """
     ## 1. Read basic metadata file
     basic_rsc_file = fname+'.rsc'
     basic_dict = readfile.read_roipac_rsc(basic_rsc_file)
@@ -126,6 +128,3 @@ def main(iargs=None):
 ###################################################################################################
 if __name__ == '__main__':
     main()
-
-
-

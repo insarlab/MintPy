@@ -14,10 +14,10 @@ from pysar.objects import ifgramDatasetNames
 
 
 #################################  Usage  ####################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   stacking.py ifgramStack.h5 unwrapPhase -o averagePhaseVelocity.h5
   stacking.py ifgramStack.h5 coherence   -o averageSpatialCoherence.h5
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Stack multiple layers dataset into one.',\

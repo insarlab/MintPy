@@ -5,7 +5,8 @@
 # Author:  Heresh Fattahi                                  #
 ############################################################
 
-import os, sys
+import os
+import sys
 import argparse
 import time
 import datetime
@@ -13,15 +14,14 @@ import datetime
 import h5py
 import numpy as np
 import random
-import matplotlib.pyplot as plt
 from pysar.utils import readfile, datetime as ptime
 
 
 ##############################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   ifgram_simulation.py  unwrapIfgram.h5  velocity.h5
   ifgram_simulation.py  unwrapIfgram.h5  velocity.h5  -p 0.2  -m mask_aoi.h5
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Simulating a set of interferograms based on '+\

@@ -27,10 +27,6 @@ from pysar.objects import ifgramDatasetNames, geometryDatasetNames, timeseriesKe
 from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 from pysar import mask, multilook as mli, subset
 
-min_figsize_single = 6.0       # default min size in inch, for single plot
-max_figsize_single = 10.0      # default min size in inch, for single plot
-default_figsize_multi = [15.0, 8.0]    # default size in inch, for multiple subplots
-
 
 ##################################################################################################
 EXAMPLE = """example:
@@ -804,7 +800,7 @@ def update_figure_setting(inps):
             inps.font_size = 16
         if not inps.fig_size:
             plot_shape = [width*1.25, length]
-            fig_scale = min(min_figsize_single/min(plot_shape), max_figsize_single/max(plot_shape))
+            fig_scale = min(pp.min_figsize_single/min(plot_shape), pp.max_figsize_single/max(plot_shape))
             inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in plot_shape]
             print('create figure in size: '+str(inps.fig_size))
 
@@ -813,7 +809,7 @@ def update_figure_setting(inps):
         if not inps.font_size:
             inps.font_size = 12
         if not inps.fig_size:
-            inps.fig_size = default_figsize_multi
+            inps.fig_size = pp.default_figsize_multi
             print('create figure in size: '+str(inps.fig_size))
 
         # Figure number (<= 200 subplots per figure)

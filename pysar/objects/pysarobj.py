@@ -188,7 +188,7 @@ class timeseries:
         self.open(print_msg=False)
 
         # convert input datasetName into list of dates
-        if not datasetName:
+        if not datasetName or datasetName == 'timeseries':
             datasetName = []
         elif isinstance(datasetName, str):
             datasetName = [datasetName]

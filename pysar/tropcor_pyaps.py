@@ -6,16 +6,20 @@
 ############################################################
 
 
-import os, sys, re
+import os
+import sys
+import re
+
 try:
     import pyaps as pa
 except:
     sys.exit('Cannot import pyaps into Python!')
+
 import argparse
 import h5py
 import numpy as np
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 from pysar.objects import timeseries, geometry
+from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 standardWeatherModelNames={'ERAI':'ECMWF','ERAINT':'ECMWF','ERAINTERIM':'ECMWF',
                            'MERRA2':'MERRA'
@@ -23,20 +27,20 @@ standardWeatherModelNames={'ERAI':'ECMWF','ERAINT':'ECMWF','ERAINTERIM':'ECMWF',
 
 
 ###############################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF
   tropcor_pyaps.py -d date_list.txt     --hour 12 -m MERRA
   tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF --dem geometryRadar.h5 --ref-yx 30 40 -i geometryRadar.h5
   tropcor_pyaps.py -m ECMWF --dem geometryRadar.h5 -i geometryRadar.h5 -f timeseries.h5
-'''
+"""
 
-REFERENCE='''reference:
+REFERENCE = """reference:
   Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer (2011), Systematic InSAR tropospheric
   phase delay corrections from global meteorological reanalysis data, Geophys. Res. Lett., 38, L17311,
   doi:10.1029/2011GL048757
-'''
+"""
 
-TEMPLATE='''
+TEMPLATE = """
 ## 7. Tropospheric Delay Correction (optional and recommended)
 ## correct tropospheric delay using the following methods:
 ## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS; Dee et al., 2011)
@@ -46,16 +50,16 @@ pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / base
 pysar.troposphericDelay.weatherModel = auto  #[ECMWF / MERRA / NARR], auto for ECMWF, for pyaps method
 pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
 pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, Number of looks to be applied to interferogram 
-'''
+"""
 
-DATA_INFO='''
+DATA_INFO = """
   re-analysis_dataset        coverage   temporal_resolution    spatial_resolution      latency     analysis
 ------------------------------------------------------------------------------------------------------------
 ERA-Interim (by ECMWF)        Global      00/06/12/18 UTC      0.75 deg (~83 km)       2-month      4D-var
 MERRA(2) (by NASA Goddard)    Global      00/06/12/18 UTC      0.5*0.625 (~50 km)     2-3 weeks     3D-var
 
 To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application, following https://disc.gsfc.nasa.gov/earthdata-login.
-'''
+"""
 
 
 def create_parser():
@@ -91,7 +95,7 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    '''Command line parser.'''
+    """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
@@ -187,7 +191,7 @@ def date_list2grib_file(date_list, hour, trop_model, grib_dir):
 
 
 def dload_grib_pyaps(date_list, hour, trop_model='ECMWF', weather_dir='./'):
-    '''Download weather re-analysis grib files using PyAPS
+    """Download weather re-analysis grib files using PyAPS
     Inputs:
         date_list   : list of string in YYYYMMDD format
         hour        : string in HH:MM or HH format
@@ -195,7 +199,7 @@ def dload_grib_pyaps(date_list, hour, trop_model='ECMWF', weather_dir='./'):
         weather_dir : string,
     Output:
         grib_file_list : list of string
-    '''
+    """
     print('*'*50+'\nDownloading weather model data using PyAPS (Jolivet et al., 2011, GRL) ...')
     ## Grib data directory
     grib_dir = weather_dir+'/'+trop_model
@@ -252,7 +256,7 @@ def prepare_roipac_dem(demFile, geocoded=False):
 
 
 def get_delay(grib_file, inps):
-    '''Get delay matrix using PyAPS for one acquisition
+    """Get delay matrix using PyAPS for one acquisition
     Inputs:
         grib_file - strng, grib file path
         atr       - dict, including the following attributes:
@@ -263,7 +267,7 @@ def get_delay(grib_file, inps):
                     inc_angle   - np.array, 0/1/2 D
     Output:
         phs - 2D np.array, absolute tropospheric phase delay relative to ref_y/x
-    '''
+    """
     if inps.geocoded:
         aps = pa.PyAPS_geo(grib_file, inps.dem_file, grib=inps.trop_model, verb=True, Del=inps.delay_type)
     else:
@@ -278,7 +282,7 @@ def get_delay(grib_file, inps):
 
 
 def get_delay_timeseries(inps, atr):
-    '''Calculate delay time-series and write it to HDF5 file.'''
+    """Calculate delay time-series and write it to HDF5 file."""
     print('*'*50+'\nCalcualting delay for each epoch using PyAPS ...')
     if any(i is None for i in [inps.dem_file, inps.inc_angle, inps.ref_yx]):
         print('No DEM / incidenceAngle / ref_yx found, exit.')

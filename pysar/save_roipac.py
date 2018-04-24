@@ -6,7 +6,8 @@
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import argparse
 import h5py
 from numpy import pi
@@ -15,31 +16,14 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 
 ##############################################################################
-def usage():
-    print('''usage: save_roipac.py  file  [date_info]
-
-Convert PySAR hdf5 file to ROI_PAC format 
-
-argument:
-  file : file to be converted.
-         for velocity  : the ouput will be a one year interferogram.
-         for timeseries: if date is not specified, the last date will be used
-                         if two dates are specified, the earlier date will be
-                             used as the reference date.
-
-example:
-    ''')
-    return
-
-############################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   save_roipac.py  velocity.h5
   save_roipac.py  timeseries.h5    20050601
   save_roipac.py  timeseries.h5    050601    --ref-date 040728
   save_roipac.py  unwrapIfgram.h5  filt_091225-100723-sim_HDR_8rlks_c10.unw
   save_roipac.py  unwrapIfgram.h5  091225-100723
   save_roipac.py  temporal_coherence.h5
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Convert PySAR HDF5 file to ROI_PAC format.',\

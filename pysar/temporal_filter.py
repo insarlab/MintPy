@@ -6,8 +6,10 @@
 ############################################################
 # Yunjun, Jul 2017: rewrite using pysay module
 
-import os, sys
-import time, datetime
+import os
+import sys
+import time
+import datetime
 import argparse
 import h5py
 import numpy as np
@@ -15,10 +17,10 @@ from pysar.utils import readfile, datetime as ptime
 
 
 ############################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
  temporal_filter.py timeseries_ECMWF_demErr_refDate.h5
  temporal_filter.py timeseries_ECMWF_demErr_refDate.h5 -t 0.3
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Smoothing Timeseries using moving Gaussian window\n'+\

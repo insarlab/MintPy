@@ -948,14 +948,14 @@ def range_distance(atr, dimension=2, print_msg=True):
         print('far    range : %.2f m' % (far_range))
 
     if dimension == 0:
-        return np.array(center_range)
+        return np.array(center_range, np.float32)
 
     range_x = np.linspace(near_range, far_range, num=width)
     if dimension == 1:
-        return range_x
+        return np.array(range_x, np.float32)
     else:
         range_xy = np.tile(range_x, (length, 1))
-        return range_xy
+        return np.array(range_xy, np.float32)
 
 
 def incidence_angle(atr, dimension=2, print_msg=True):
@@ -996,17 +996,17 @@ def incidence_angle(atr, dimension=2, print_msg=True):
     if print_msg:
         print('center incidence angle : %.4f degree' % (incidence_c))
     if dimension == 0:
-        return np.array(incidence_c)
+        return np.array(incidence_c, np.float32)
 
     if print_msg:
         print('near   incidence angle : %.4f degree' % (incidence_n))
         print('far    incidence angle : %.4f degree' % (incidence_f))
     incidence_x = np.linspace(incidence_n, incidence_f, num=width, endpoint='FALSE')
     if dimension == 1:
-        return incidence_x
+        return np.array(incidence_x, np.float32)
     else:
         incidence_xy = np.tile(incidence_x,(length,1))
-        return incidence_xy
+        return np.array(incidence_xy, np.float32)
 
 
 def which(program):

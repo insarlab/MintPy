@@ -9,7 +9,8 @@
 # Yunjun, Aug 2016: Support multiple surfaces
 
 
-import os, sys
+import os
+import sys
 import argparse
 import h5py
 import numpy as np
@@ -17,11 +18,11 @@ from pysar.utils import readfile, writefile, utils as ut, deramp
 
 
 ######################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   remove_ramp.py  timeseries.h5      -m Mask.h5
   remove_ramp.py  timeseries.h5      -m Mask.h5         -s quadratic
   remove_ramp.py  090214_101120.unw  -m Mask_tempCoh.h5 -s quadratic  -y 0,2400,2000,6843
-'''
+"""
 
 
 def create_parser():

@@ -6,27 +6,28 @@
 ############################################################
 
 
-import os
 import sys
-
-import h5py
 import numpy as np
+from pysar.utils import readfile, utils as ut
 
-from pysar.utils as readfile, writefile, utils as ut
 
-
-def usage():
-    print('''usage: coord_glob2radar.py lat lon [trans_file] [hdf5_file_radarCoord]
+USAGE = """
+usage: coord_glob2radar.py lat lon [trans_file] [hdf5_file_radarCoord]
 
 Generates the sum of two input files.
 
 example:
   coord_glob2radar.py 33.5 130.8
+  coord_glob2radar.py 33.5 130.8 INPUTS/geometryRadar.h5
   coord_glob2radar.py 33.5 130.8 geomap_4rlks.trans velocity.h5
-    ''')
+"""
+
+def usage():
+    print(USAGE)
+    return
+
 
 ################################################################################
-
 def main(argv):
     if len(sys.argv) < 3:
         usage(); sys.exit(1)
@@ -38,7 +39,7 @@ def main(argv):
     except: trans_file = ut.get_lookup_file()
 
     try:    radar_file = argv[3]
-    except: radar_file = 'unwrapIfgram.h5'
+    except: radar_file = 'INPUTS/ifgramStack.h5'
 
     atr_rdr = readfile.read_attribute(radar_file)
     
@@ -46,8 +47,8 @@ def main(argv):
      
     y, x = ut.glob2radar(np.array(lat), np.array(lon), trans_file, atr_rdr)[0:2]
     print('corresponding radar coord: y=%d, x=%d' % (y, x))
-
     return
+
 
 ################################################################################
 if __name__ == '__main__':

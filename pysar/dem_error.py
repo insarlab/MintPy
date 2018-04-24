@@ -6,9 +6,9 @@
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import argparse
-import h5py
 import numpy as np
 from scipy.special import gamma
 from pysar.utils import datetime as ptime, readfile, writefile, utils as ut
@@ -16,7 +16,7 @@ from pysar.objects import timeseries, geometry
 
 
 ############################################################################
-TEMPLATE='''
+TEMPLATE = """
 ## 8. Topographic Residual (DEM Error) Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
 ## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
 ## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
@@ -25,17 +25,17 @@ pysar.topographicResidual.polyOrder     = auto  #[1-inf], auto for 2, poly order
 pysar.topographicResidual.stepFuncDate  = auto  #[20080529,20100611 / no], auto for no, date of step jump
 pysar.topographicResidual.excludeDate   = auto  #[20070321 / txtFile / no], auto for no, date exlcuded for error estimation
 pysar.topographicResidual.phaseVelocity = auto  #[yes / no], auto for no - phase, use phase velocity for error estimation
-'''
+"""
 
-EXAMPLE='''example:
+EXAMPLE = """example:
   dem_error.py  timeseries_ECMWF.h5 -g geometryRadar.h5 -t pysarApp_template.txt
   dem_error.py  timeseries_ECMWF.h5
-'''
+"""
 
-REFERENCE='''reference:
+REFERENCE = """reference:
   Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series,
   IEEE TGRS, 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='DEM Error (Topographic Residual) Correction',\
@@ -63,7 +63,7 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    '''Command line parser.'''
+    """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if inps.poly_order < 1:
@@ -73,7 +73,7 @@ def cmd_line_parse(iargs=None):
 
 ############################################################################
 def read_template2inps(template_file, inps=None):
-    '''Read input template file into inps.ex_date'''
+    """Read input template file into inps.ex_date"""
     if not inps:
         inps = cmd_line_parse()
     template = readfile.read_template(template_file)
@@ -115,14 +115,14 @@ def read_template2inps(template_file, inps=None):
 
 
 def read_exclude_date(inps, dateList):
-    '''Read exclude dates info
+    """Read exclude dates info
     Inputs:
         exDateIn - list of string, date in YYMMDD or YYYYMMDD format,
                    or text file with date in it
         dateList - list of string, date in YYYYMMDD format
     Output:
         exDateOut - list of string, date in YYYYMMDD format
-    '''
+    """
     ##Read exclude date input
     if inps.ex_date:
         tempList = []
@@ -206,7 +206,7 @@ def read_geometry(inps):
 
 
 def estimate_dem_error_data(ts0, A0, inps):
-    '''
+    """
     Parameters: ts0 : 2D np.array in size of (numDate, numPixel)
                     original time series displacement
                 A0 : 2D np.array in size of (numDate, model_num)
@@ -225,7 +225,7 @@ def estimate_dem_error_data(ts0, A0, inps):
                     estimated step deformation
     Example:
         deltaZ, tsCor, tsRes = estimate_dem_error_data(ts, A, inps)
-    '''
+    """
     if len(ts0.shape) == 1:
         ts0 = ts0.reshape(-1,1)
     numDate, numPixel = ts0.shape
@@ -307,7 +307,6 @@ def estimate_dem_error(inps, A_def):
         prog_bar.close()
 
     ##------------------------------------------------ Output  --------------------------------------------##
-    print('-'*50)
     ##prepare for output
     tsCor = tsCor.reshape((tsobj.numDate, tsobj.length, tsobj.width))
     tsRes = tsRes.reshape((tsobj.numDate, tsobj.length, tsobj.width))
@@ -318,7 +317,6 @@ def estimate_dem_error(inps, A_def):
 
     # 1. Estimated DEM error
     outfile = 'demErr.h5'
-    print('writing >>> '+outfile)
     atr['FILE_TYPE'] = 'dem'
     atr['UNIT'] = 'm'
     writefile.write(deltaZ, out_file=outfile, metadata=atr)
@@ -355,6 +353,7 @@ def main(iargs=None):
 
     print('Done.')
     return
+
 
 ################################################################################
 if __name__ == '__main__':

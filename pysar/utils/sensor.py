@@ -7,8 +7,8 @@
 #   import pysar.utils.sensor as sensor
 #
 
-sensors=['ers','env','sen','rsat','rsat2','ksat5','gaofen3',\
-         'jers','alos','alos2','nisar',\
+sensors=['ers','env','sen','rsat','rsat2','ksat5','gaofen3',
+         'jers','alos','alos2','nisar',
          'tsx','csk'
         ]
 

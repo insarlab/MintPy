@@ -6,14 +6,15 @@
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import h5py
 import numpy as np
 from pysar.utils import readfile, writefile, utils as ut
 
 
 def usage():
-    print('''
+    print("""
 usage:  range_distance.py  file  [outfile]
 
 Generates range distance (in Radar Coordinate) for each pixel
@@ -28,7 +29,7 @@ example:
   range_distance.py  velocity.h5
   range_distance.py  timeseries.h5
   range_distance.py  temporal_coherence.h5
-    ''')
+    """)
     return
 
 def main(argv):

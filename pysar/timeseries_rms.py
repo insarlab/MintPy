@@ -6,7 +6,8 @@
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import argparse
 import numpy as np
 import matplotlib as mpl; mpl.use('Agg')
@@ -16,7 +17,7 @@ from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 
 ######################################################################################################
 def read_template2inps(templateFile, inps=None):
-    '''Update inps with pysar.residualRms.* option from templateFile'''
+    """Update inps with pysar.residualRms.* option from templateFile"""
     if not inps:
         inps = cmd_line_parse()
 
@@ -53,19 +54,19 @@ def read_template2inps(templateFile, inps=None):
 
 
 ######################################################################################################
-TEMPLATE='''
+TEMPLATE = """
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 pysar.residualRms.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
 pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
 pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
-'''
+"""
 
-EXAMPLE='''example:
+EXAMPLE = """example:
   timeseries_rms.py  timeseriesResidual.h5 
   timeseries_rms.py  timeseriesResidual.h5  --template pysarApp_template.txt
   timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --min-rms 0.03
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped time series.',\
@@ -89,7 +90,7 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    '''Command line parser.'''
+    """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps

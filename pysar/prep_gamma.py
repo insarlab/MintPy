@@ -6,14 +6,16 @@
 ############################################################
 
 
-import os, sys, re
+import os
+import sys
+import re
 import argparse
 import numpy as np
 from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 
 ##################################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   prep_gamma.py  diff_filt_HDR_130118-130129_4rlks.unw
   prep_gamma.py  IFGRAM*/diff_*rlks.unw
   prep_gamma.py  IFGRAM*/filt_*rlks.cor
@@ -21,9 +23,9 @@ EXAMPLE='''example:
   prep_gamma.py  sim_150911-150922.hgt_sim
   prep_gamma.py  sim_150911-150922.utm.dem
   prep_gamma.py  sim_150911-150922.UTM_TO_RDC
-'''
+"""
 
-DESCRIPTION='''
+DESCRIPTION = """
   For each interferogram, including unwrapped/wrapped interferograms and coherence, 3 metadata files are required:
   1) master .par file, e.g. 130118.amp.par
   2) slave  .par file, e.g. 130129.amp.par
@@ -63,7 +65,7 @@ DESCRIPTION='''
   Notes: both - and _ are supported; 
          both YYMMDD and YYYYMMDD naming are also supported;
          if no multilooking applied, do not "_4rlks" in your file names.
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Prepare attributes file for Gamma product for PySAR.\n'+DESCRIPTION,\
@@ -84,13 +86,13 @@ def cmd_line_parse(iargs=None):
 
 ######################################## Sub Functions ############################################
 def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
-    '''Get perpendicular baseline info from master/slave par file and off file.
+    """Get perpendicular baseline info from master/slave par file and off file.
     Parameters: m_par_file : str, path, master parameter file, i.e. 130118_4rlks.amp.par
                 s_par_file : str, path, slave  parameter file, i.e. 130129_4rlks.amp.oar
                 off_file   : str, path, interferogram off file, i.e. 130118-130129_4rlks.off
                 atr_dict   : dict, optional, attributes dictionary
     Returns:  bperp : str, perpendicular baseline for pixel at [0,0]
-    '''
+    """
     # Get Path Info
     off_file = os.path.abspath(off_file)
     file_dir = os.path.dirname(off_file)
@@ -129,13 +131,13 @@ def get_perp_baseline(m_par_file, s_par_file, off_file, atr_dict={}):
 
 
 def get_lalo_ref(m_par_file, atr_dict={}):
-    '''Extract LAT/LON_REF1/2/3/4 from corner file, e.g. 130118_4rlks.amp.corner.
+    """Extract LAT/LON_REF1/2/3/4 from corner file, e.g. 130118_4rlks.amp.corner.
     If it's not existed, call Gamma script - SLC_corners - to generate it from SLC par file, e.g. 130118_4rlks.amp.par
 
     Parameters: m_par_file : str, path, master date parameter file, i.e. 130118_4rlks.amp.par
                 atr_dict   : dict, optional, attributes dictionary
     Returns:  lalo_ref
-    '''
+    """
     m_par_file = os.path.abspath(m_par_file)
     m_corner_file = os.path.splitext(m_par_file)[0]+'.corner'
     m_corner_full_file = m_corner_file+'_full'
@@ -165,12 +167,12 @@ def get_lalo_ref(m_par_file, atr_dict={}):
 
 
 def extract_metadata4interferogram(fname):
-    '''Read/extract attributes for PySAR from Gamma .unw, .cor and .int file
+    """Read/extract attributes for PySAR from Gamma .unw, .cor and .int file
     Inputs:
         fname : str, Gamma interferogram filename or path, i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
     Output:
         atr : dict, Attributes dictionary
-    '''
+    """
     file_dir = os.path.dirname(fname)
     file_basename = os.path.basename(fname)
 
@@ -236,10 +238,10 @@ def extract_metadata4interferogram(fname):
 
 
 def extract_metadata4lookup_table(fname):
-    '''Read/extract attribute for .UTM_TO_RDC file from Gamma to ROI_PAC
+    """Read/extract attribute for .UTM_TO_RDC file from Gamma to ROI_PAC
     For example, it read input file, sim_150911-150922.UTM_TO_RDC, 
     find its associated par file, sim_150911-150922.utm.dem.par, read it, and
-    convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.UTM_TO_RDC.rsc'''
+    convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.UTM_TO_RDC.rsc"""
 
     ## Check existed .rsc file
     rsc_file_list = ut.get_file_list(fname+'.rsc')
@@ -272,11 +274,11 @@ def extract_metadata4lookup_table(fname):
 
 
 def extract_metadata4dem_geo(fname):
-    '''Read/extract attribute for .dem file from Gamma to ROI_PAC
+    """Read/extract attribute for .dem file from Gamma to ROI_PAC
     For example, it read input file, sim_150911-150922.utm.dem, 
     find its associated par file, sim_150911-150922.utm.dem.par, read it, and
     convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.utm.dem.rsc
-    '''
+    """
     atr = {}
     atr['PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
@@ -300,7 +302,7 @@ def extract_metadata4dem_geo(fname):
 
 
 def extract_metadata4dem_radar(fname):
-    '''Read/extract attribute for .hgt_sim file from Gamma to ROI_PAC
+    """Read/extract attribute for .hgt_sim file from Gamma to ROI_PAC
     Input:
         sim_150911-150922.hgt_sim
         sim_150911-150922.rdc.dem
@@ -309,7 +311,7 @@ def extract_metadata4dem_radar(fname):
     Output:
         sim_150911-150922.hgt_sim.rsc
         sim_150911-150922.rdc.dem.rsc
-    '''
+    """
     atr = {}
     atr['PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]

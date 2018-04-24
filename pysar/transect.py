@@ -61,12 +61,12 @@ def get_scale_from_disp_unit(disp_unit, data_unit):
 
 #####################################################################
 def read_lonlat_file(lonlat_file):
-    '''Read Start/End lat/lon from lonlat text file in gmt format.
+    """Read Start/End lat/lon from lonlat text file in gmt format.
     Inputs:
         lonlat_file : text file in gmt lonlat point file
     Outputs:
         start/end_lalo : list of 2 float
-    '''
+    """
     fll = open(lonlat_file,'r')
     lines = fll.read().splitlines()
     [lon0,lat0] = [float(i) for i in lines[1].split()]
@@ -80,7 +80,7 @@ def read_lonlat_file(lonlat_file):
 
 #####################################################################
 def manual_select_start_end_point(File):
-    '''Manual Select Start/End Point in display figure.'''
+    """Manual Select Start/End Point in display figure."""
     print('reading '+File+' ...')
     data, atr = readfile.read(File)
     print('displaying '+File+' ...')
@@ -108,7 +108,7 @@ def manual_select_start_end_point(File):
 
 #####################################################################
 def transect_yx(z,atr,start_yx,end_yx,interpolation='nearest'):
-    '''Extract 2D matrix (z) value along the line [x0,y0;x1,y1]
+    """Extract 2D matrix (z) value along the line [x0,y0;x1,y1]
     Ref link: http://stackoverflow.com/questions/7878398/how-to-e
               xtract-an-arbitrary-line-of-values-from-a-numpy-array
     
@@ -128,7 +128,7 @@ def transect_yx(z,atr,start_yx,end_yx,interpolation='nearest'):
     
     Example:
         transect = transect_yx(dem,demRsc,[10,15],[100,115])
-    '''
+    """
 
     ## Extract the line
     [y0,x0] = start_yx
@@ -164,14 +164,14 @@ def transect_yx(z,atr,start_yx,end_yx,interpolation='nearest'):
     return transect
 
 def transect_lalo(z,atr,start_lalo,end_lalo,interpolation='nearest'):
-    '''Extract 2D matrix (z) value along the line [start_lalo, end_lalo]'''
+    """Extract 2D matrix (z) value along the line [start_lalo, end_lalo]"""
     [y0,y1] = ut.coord_geo2radar([start_lalo[0],end_lalo[0]],atr,'lat')
     [x0,x1] = ut.coord_geo2radar([start_lalo[1],end_lalo[1]],atr,'lon')
     transect = transect_yx(z,atr,[y0,x0],[y1,x1],interpolation)
     return transect
 
 def transect_list(fileList, inps):
-    '''Get transection along input line from file list
+    """Get transection along input line from file list
     Inputs:
         fileList : list of str, path of files to get transect
         inps     : Namespace including the following items:
@@ -181,7 +181,7 @@ def transect_list(fileList, inps):
     Outputs:
         transectList : list of N*2 matrix containing distance and its value
         atrList      : list of attribute dictionary, for each input file
-    '''
+    """
 
     transectList = []
     atrList      = []
@@ -198,12 +198,12 @@ def transect_list(fileList, inps):
 
 
 #####################################################################
-EXAMPLE='''example:
+EXAMPLE="""example:
   transect.py velocity.h5 -s 5290 5579 -e 12177 482
   transect.py velocity.h5 --start-lalo 30.125 129.988 --end-lalo 30.250 130.116
   transect.py velocity.h5 --line-file  transect_lonlat.xy -d gsi10m.dem
   transect.py AlosA*/velocity.h5 AlosD*/velocity.h5 --line-file  transect_lonlat.xy -d gsi10m.dem
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Generate transect/profile along a line',\

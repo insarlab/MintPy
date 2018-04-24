@@ -15,7 +15,7 @@ from pysar.objects import timeseries
 
 
 ##################################################################
-TEMPLATE = '''
+TEMPLATE = """
 ## 4.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
@@ -29,13 +29,13 @@ pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS
 ## minRMS - choose date with minimum residual RMS using value from step 8.1
 ## no     - do not change the default reference date (1st date)
 pysar.reference.date = auto   #[reference_date.txt / 20090214 / minRMS / no], auto for reference_date.txt
-'''
+"""
 
-EXAMPLE = '''example:
+EXAMPLE = """example:
   reference_date.py timeseries_ECMWF_demErr.h5  --ref-date 20050107
   reference_date.py timeseries_ECMWF_demErr.h5  --ref-date minRMS
   reference_date.py timeseries_ECMWF_demErr.h5  --template KujuAlosAT422F650.template
-'''
+"""
 
 
 def create_parser():

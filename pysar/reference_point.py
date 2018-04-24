@@ -17,7 +17,7 @@ from pysar.objects import ifgramStack, timeseries
 
 
 #########################################  Usage  ##############################################
-TEMPLATE='''
+TEMPLATE = """
 ## reference all interferograms to one common point in space
 ## auto - randomly select a pixel with coherence > minCoherence
 pysar.reference.yx            = auto   #[257,151 / auto]
@@ -26,9 +26,9 @@ pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
 pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
 pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
 pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
-'''
+"""
 
-NOTE='''note: Reference value cannot be nan, thus, all selected reference point must be:
+NOTE = """note: Reference value cannot be nan, thus, all selected reference point must be:
   a. non zero in mask, if mask is given
   b. non nan  in data (stack)
   
@@ -40,9 +40,9 @@ NOTE='''note: Reference value cannot be nan, thus, all selected reference point 
       default selection methods:
           maxCoherence
           random
-'''
+"""
 
-EXAMPLE='''example:
+EXAMPLE = """example:
   reference_point.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geometryRadar.h5
 
   reference_point.py timeseries.h5     -r Seeded_velocity.h5
@@ -54,7 +54,7 @@ EXAMPLE='''example:
   reference_point.py unwrapIfgram.h5 --method manual
   reference_point.py unwrapIfgram.h5 --method random
   reference_point.py timeseries.h5   --method global-average 
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Reference to the same pixel in space.',\
@@ -97,7 +97,7 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    '''Command line parser.'''
+    """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
@@ -115,9 +115,9 @@ def nearest(x, tbase,xstep):
 
 
 def reference_file(inps):
-    '''Seed input file with option from input namespace
+    """Seed input file with option from input namespace
     Return output file name if succeed; otherwise, return None
-    '''
+    """
     if not inps:
         inps = cmd_line_parse([''])
     atr = readfile.read_attribute(inps.file)
@@ -201,11 +201,11 @@ def reference_point_attribute(atr,y,x):
 
 ###############################################################
 def manual_select_reference_yx(data, inps, mask=None):
-    '''
+    """
     Input: 
         data4display : 2D np.array, stack of input file
         inps    : namespace, with key 'REF_X' and 'REF_Y', which will be updated
-    '''
+    """
     print('\nManual select reference point ...')
     print('Click on a pixel that you want to choose as the refernce ')
     print('    pixel in the time-series analysis;')
@@ -244,7 +244,7 @@ def manual_select_reference_yx(data, inps, mask=None):
 
 
 def select_max_coherence_yx(cohFile, mask=None, min_coh=0.85):
-    '''Select pixel with coherence > min_coh in random'''
+    """Select pixel with coherence > min_coh in random"""
     print('random select pixel with coherence > {}'.format(min_coh))
     print('\tbased on coherence file: '+cohFile)
     coh, coh_atr = readfile.read(cohFile)
@@ -281,7 +281,7 @@ def print_warning(next_method):
 
 ###############################################################
 def read_template_file2inps(template_file, inps=None):
-    '''Read seed/reference info from template file and update input namespace'''
+    """Read seed/reference info from template file and update input namespace"""
     if not inps:
         inps = cmd_line_parse([''])
     template = readfile.read_template(template_file)
@@ -327,7 +327,7 @@ def read_template_file2inps(template_file, inps=None):
 
 
 def read_reference_file2inps(reference_file, inps=None):
-    '''Read reference info from reference file and update input namespace'''
+    """Read reference info from reference file and update input namespace"""
     if not inps:
         inps = cmd_line_parse([''])
     atrRef = readfile.read_attribute(inps.reference_file)
@@ -414,7 +414,7 @@ def read_reference_input(inps):
 
 
 def remove_reference_pixel(File):
-    '''Remove reference pixel info from input file'''
+    """Remove reference pixel info from input file"""
     print("remove REF_Y/X and/or ref_lat/lon from file: "+File)
     atrDrop = {}
     for i in ['REF_X','REF_Y','REF_LAT','REF_LON']:

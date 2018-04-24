@@ -13,7 +13,7 @@ from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 
 def usage():
-    print('''
+    print("""
 usage:  perp_baseline.py  timeseries_file   date  [outfile]
 
 Generates perpendicular baseline (in Radar Coordinate) for each pixel
@@ -27,7 +27,7 @@ input arguments:
 
 example:
   perp_baseline.py  timeseries.h5  20101020
-    ''')
+    """)
     return
 
 def main(argv):

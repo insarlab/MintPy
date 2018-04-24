@@ -6,14 +6,12 @@
 ############################################################
 
 
-import argparse
 import os
 import sys
 import time
-
+import argparse
 import numpy as np
 from scipy.special import gamma
-
 from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
@@ -29,18 +27,18 @@ EXAMPLE = """example:
 
 TEMPLATE = """
 ## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
-## There are 4 weighting options:
+## mask options for unwrapPhase of each interferogram before inversion:
+## 1) coherence        - mask out pixels with spatial coherence < maskThreshold [Recommended]
+## 2) connectComponent - mask out pixels with False/0 value
+## 3) no               - no masking.
+## weighting options for least square inversion:
 ## 1) fim  - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
 ## 2) var  - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
 ## 3) coh  - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
 ## 4) sbas - LS/SVD, uniform weight (Berardino et al., 2002, TGRS)
-## There are 3 mask options to mask unwrapPhase for each interferogram:
-## 1) connectComponent - mask out pixels with False/0 value [Recommended]
-## 2) coherence        - mask out pixels with value < maskThreshold
-## 3) no               - no masking.
 ## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
-pysar.networkInversion.weightFunc    = auto #[fim / var / coh / sbas], auto for sbas
-pysar.networkInversion.maskDataset   = auto #[connectComponent / coherence / no], auto for connectComponent
+pysar.networkInversion.weightFunc    = auto #[fim / var / coh / sbas], auto for fim
+pysar.networkInversion.maskDataset   = auto #[coherence / connectComponent / no], auto for coherence
 pysar.networkInversion.maskThreshold = auto #[0-1], auto for 0.4
 pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
 pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution

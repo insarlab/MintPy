@@ -6,7 +6,9 @@
 ############################################################
 
 
-import os, sys, re
+import os
+import sys
+import re
 import argparse
 import warnings
 import h5py

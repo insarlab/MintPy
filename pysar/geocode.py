@@ -13,8 +13,8 @@ import argparse
 import warnings
 import multiprocessing
 import numpy as np
-from pysar.utils import readfile, writefile, utils as ut
 from pysar.objects.resample import resample
+from pysar.utils import readfile, writefile, utils as ut
 
 
 ######################################################################################
@@ -145,6 +145,7 @@ def read_template2inps(template_file, inps):
 
 ############################################################################################
 def metadata_radar2geo(atr_in, inps, print_msg=True):
+    """update metadata for radar to geo coordinates"""
     atr = dict(atr_in)
     length, width = inps.outShape[-2:]
     atr['LENGTH'] = length
@@ -185,6 +186,7 @@ def metadata_radar2geo(atr_in, inps, print_msg=True):
 
 
 def metadata_geo2radar(atr_in, inps, print_msg=True):
+    """update metadata for geo to radar coordinates"""
     atr = dict(atr_in)
     length, width = inps.outShape[-2:]
     atr['LENGTH'] = length
@@ -199,7 +201,7 @@ def metadata_geo2radar(atr_in, inps, print_msg=True):
 
 
 def resample_data(data, inps, res_obj):
-    """resample radar coded 2D/3D data into geocoded data"""
+    """resample 2D/3D data"""
     if len(data.shape) == 3:
         data = np.moveaxis(data, 0, -1)
 
@@ -229,6 +231,7 @@ def auto_output_filename(infile, inps):
 
 
 def run_resample(inps):
+    """resample all input files"""
     start_time = time.time()
 
     # Prepare geometry for geocoding
@@ -283,7 +286,6 @@ def main(iargs=None):
     inps = _check_inps(inps)
 
     run_resample(inps)
-
     return
 
 

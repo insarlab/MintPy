@@ -6,8 +6,10 @@
 ############################################################
 
 
-import os, sys
-import time, datetime
+import os
+import sys
+import time
+import datetime
 import argparse
 import h5py
 import numpy as np
@@ -16,17 +18,17 @@ from pysar.utils import readfile, datetime as ptime, utils as ut
 
 
 ############################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   tropcor_phase_elevation.py  timeseries_demErr.h5
   tropcor_phase_elevation.py  timeseries_demErr.h5      -d demRadar.h5  -m maskTempCoh.h5      -p 1
   tropcor_phase_elevation.py  geo_timeseries_demErr.h5  -d demGeo.h5    -m geo_maskTempCoh.h5  -p 1
-'''
+"""
 
-REFERENCE='''reference:
+REFERENCE = """reference:
   Doin, M. P., C. Lasserre, G. Peltzer, O. Cavalie, and C. Doubre (2009), Corrections of stratified 
   tropospheric delays in SAR interferometry: Validation with global atmospheric models, J App. Geophy.,
   69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Stratified tropospheric delay correction using height-correlation approach',\

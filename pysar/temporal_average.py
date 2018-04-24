@@ -16,9 +16,9 @@ from pysar.objects import ifgramDatasetNames
 
 
 #################################  Usage  ####################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoherence.h5
-'''
+"""
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Calculate temporal average/mean of multi-temporal datasets',\
@@ -34,7 +34,7 @@ def create_parser():
 
 
 def cmd_line_parse(iargs=None):
-    '''Command line parser.'''
+    """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
