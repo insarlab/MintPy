@@ -952,6 +952,7 @@ def plot_subplot4figure(inps, ax, data, i):
 
 
 def plot_figure(inps, j, metadata):
+    global fig
     """Plot one figure with multiple subplots
     1) create figure
     2) read all data into 3D array
@@ -1065,6 +1066,8 @@ def prepare4multi_subplots(inps):
 
 #########################################  Main Function  ########################################
 def main(iargs=None):
+    global fig
+
     inps = cmd_line_parse(iargs)
     if not inps.disp_fig:
         plt.switch_backend('Agg')  ##Backend setting
@@ -1089,7 +1092,7 @@ def main(iargs=None):
         if inps.msk is not None:
             data = mask.mask_matrix(data, inps.msk)
 
-        fig, ax = plt.subplots(figsize=inps.fig_size)
+        fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
 
         ax, inps = plot_2d_matrix(ax, data, atr, inps)
 

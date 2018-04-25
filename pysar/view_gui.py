@@ -703,7 +703,7 @@ def read_file_data(epoch=None):
     ref_dates_list = [""]
     print(file_type)
 
-    epoch_list = view.get_file_dataset_list(h5_file.get(), file_type)
+    epoch_list = readfile.get_2d_dataset_list(h5_file.get())
 
     if file_type in readfile.multi_dataset_hdf5_file:
         use_default.set(1)
