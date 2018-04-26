@@ -409,8 +409,6 @@ def main(iargs=None):
         status = subprocess.Popen(networkCmd, shell=True).wait()
 
 
-    stackobj = ifgramStack(inps.stackFile)
-    stackobj.open()
     #########################################
     # Generating Aux files
     #########################################
@@ -497,8 +495,7 @@ def main(iargs=None):
     if ut.update_file(inps.timeseriesFile, inps.stackFile):
         status = subprocess.Popen(invCmd, shell=True).wait()
         if status is not 0:
-            print('\nError while inverting network of interferograms to time-series.\n')
-            sys.exit(-1)
+            raise Exception('ERROR while inverting network interferograms into timeseries')
 
     print('\n--------------------------------------------')
     print('Update Mask based on Temporal Coherence ...')
@@ -509,8 +506,7 @@ def main(iargs=None):
     if ut.update_file(inps.maskFile, inps.tempCohFile):
         status = subprocess.Popen(maskCmd, shell=True).wait()
         if status is not 0:
-            print('\nError while generating mask file from temporal coherence.\n')
-            sys.exit(-1)
+            raise Exception('ERROR while generating mask file from temporal coherence.')
 
     if inps.invert_network:
         sys.exit('Exit as planned after network inversion.')

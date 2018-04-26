@@ -1,5 +1,4 @@
-###############################################################################
-# Program is part of PySAR      
+############################################################################### # Program is part of PySAR      
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun 
 # Author:  Heresh Fattahi, Zhang Yunjun
 ###############################################################################
@@ -46,7 +45,7 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 ###############################################################################
 def yes_or_no(question):
-    '''garrettdreyfus on Github: https://gist.github.com/garrettdreyfus/8153571'''
+    """garrettdreyfus on Github: https://gist.github.com/garrettdreyfus/8153571"""
     reply = str(input(question+' (y/n): ')).lower().strip()
     if reply[0] == 'y':
         return True
@@ -57,13 +56,13 @@ def yes_or_no(question):
 
 
 def interpolate_data(inData, outShape, interpMethod='linear'):
-    '''Interpolate input 2D matrix into different shape.
+    """Interpolate input 2D matrix into different shape.
     Used to get full resolution perp baseline from ISCE coarse grid baseline file.
     Parameters: inData : 2D array
                 outShape : tuple of 2 int in (length, width)
                 interpMethod : string, choose in [nearest, linear, cubic]
     Returns:    outData : 2D array in outShape
-    '''
+    """
     inShape = inData.shape
     inPts = (np.arange(inShape[0]), np.arange(inShape[1]))
     xx,yy = np.meshgrid(np.linspace(0, inShape[1]-1, outShape[1], endpoint=False),\
@@ -160,13 +159,13 @@ def coord_radar2geo(radarCoordIn, atr, coordType):
 
 
 def subset_attribute(atr_dict, subset_box, print_msg=True):
-    '''Update attributes dictionary due to subset
+    """Update attributes dictionary due to subset
     Inputs:
         atr_dict   : dict, data attributes to update
         subset_box : 4-tuple of int, subset box defined in (x0, y0, x1, y1)
     Outputs:
         atr      : dict, updated data attributes
-    '''
+    """
     if subset_box is None:
         return atr_dict
 
@@ -226,17 +225,17 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
 
 
 def round_to_1(x):
-    '''Return the most significant digit of input number'''
+    """Return the most significant digit of input number"""
     return round(x, -int(np.floor(np.log10(abs(x)))))
 
 
 def touch(fname_list, times=None):
-    '''python equivalent function to Unix utily - touch
+    """python equivalent function to Unix utily - touch
     It sets the modification and access times of files to the current time of day.
     If the file doesn't exist, it is created with default permissions.
     Inputs/Output:
         fname_list - string / list of string
-    '''
+    """
     if not fname_list:
         return None
 
@@ -256,7 +255,7 @@ def touch(fname_list, times=None):
 
 
 def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
-    '''Find lookup table file with/without input file pattern'''
+    """Find lookup table file with/without input file pattern"""
     ##Search Existing Files
     if not filePattern:
         filePattern = ['geometryRadar.h5',\
@@ -301,7 +300,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
 
 
 def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, print_msg=True):
-    '''Find geometry file containing input specific dataset'''
+    """Find geometry file containing input specific dataset"""
     if dset not in geometryDatasetNames:
         sys.exit('Unrecognized geometry dataset name: %s' % (dset))
 
@@ -355,7 +354,7 @@ def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, pri
 
 
 def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
-    '''Check the result of loading data for the following two rules:
+    """Check the result of loading data for the following two rules:
         1. file existance
         2. file attribute readability
 
@@ -375,7 +374,7 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
         #if True, PROCESS, SLC folder could be removed.
         True = ut.check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR')
         inps,atr = ut.check_loaded_dataset(inps.workDir, inps)
-    '''
+    """
     if not workDir:
         workDir = os.getcwd()
     workDir = os.path.abspath(workDir)
@@ -456,13 +455,13 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
 
 
 def is_file_exist(fileList, abspath=True):
-    '''Check if any file in the file list 1) exists and 2) readable
+    """Check if any file in the file list 1) exists and 2) readable
     Inputs:
         fileList : list of string, file name with/without wildcards
         abspath   : bool, return absolute file name/path or not
     Output:
         file_path : string, found file name/path; None if not.
-    '''
+    """
     try:
         file = get_file_list(fileList, abspath=abspath)[0]
         atr = readfile.read_attribute(file)
@@ -472,7 +471,7 @@ def is_file_exist(fileList, abspath=True):
 
 
 def four_corners(atr):
-    '''Return 4 corners lat/lon'''
+    """Return 4 corners lat/lon"""
     width  = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
     lon_step = float(atr['X_STEP'])
@@ -486,7 +485,7 @@ def four_corners(atr):
 
 
 def circle_index(atr,circle_par):
-    '''Return Index of Elements within a Circle centered at input pixel
+    """Return Index of Elements within a Circle centered at input pixel
     Inputs: atr : dictionary
                 containging the following attributes:
                 WIDT
@@ -498,7 +497,7 @@ def circle_index(atr,circle_par):
                 mask matrix for those pixel falling into the circle defined by circle_par
     Examples: idx_mat = ut.circle_index(atr, '200,300,20')
               idx_mat = ut.circle_index(atr, '31.0214,130.5699,20')
-    '''
+    """
 
     width  = int(atr['WIDTH'])
     length = int(atr['LENGTH'])
@@ -537,10 +536,10 @@ def circle_index(atr,circle_par):
     return idx
 
 
-def check_template_auto_value(templateDict):
-    '''Replace auto value based on $PYSAR_HOME/pysar/defaults/template.cfg file.'''
+def check_template_auto_value(templateDict, auto_file='../defaults/template.cfg'):
+    """Replace auto value based on $PYSAR_HOME/pysar/defaults/template.cfg file."""
     ## Read default template value and turn yes/no to True/False
-    templateAutoFile = os.path.join(os.path.dirname(__file__),'../defaults/template.cfg')
+    templateAutoFile = os.path.join(os.path.dirname(__file__), auto_file)
     templateAutoDict = readfile.read_template(templateAutoFile)
 
     ## Update auto value of input template dict
@@ -549,18 +548,20 @@ def check_template_auto_value(templateDict):
             templateDict[key] = templateAutoDict[key]
 
     ## Change yes --> True and no --> False
+    specialValues = {'yes' : True,
+                     'no' : False,
+                     'none' : None
+                    }
     for key, value in templateDict.items():
-        if value == 'yes':
-            templateDict[key] = True
-        elif value == 'no':
-            templateDict[key] = False
-        elif value.lower() == 'none':
-            templateDict[key] = None
+        if value in specialValues.keys():
+            templateDict[key] = specialValues[value]
+    #templateDict = { key : mapping[value.lower()] for key, value in templateDict.items() } 
+    
     return templateDict
 
 
 def update_template_file(template_file, extra_dict):
-    '''Update option value in template_file with value from input extra_dict'''
+    """Update option value in template_file with value from input extra_dict"""
     ## Compare and skip updating template_file if no new option value found.
     update = False
     orig_dict = readfile.read_template(template_file)
@@ -592,7 +593,7 @@ def update_template_file(template_file, extra_dict):
 
 
 def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
-    '''Calculate deramped standard deviation in space for each epoch of input timeseries file.
+    """Calculate deramped standard deviation in space for each epoch of input timeseries file.
     Inputs:
         timeseries_resid_file - string, timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
         mask_file - string, mask file, e.g. maskTempCoh.h5
@@ -603,7 +604,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     Example:
         import pysar.utils.utils as ut
         std_list, date_list = ut.get_residual_std('timeseries_ECMWF_demErrInvResid.h5', 'maskTempCoh.h5')
-    '''
+    """
     # Intermediate files name
     if ramp_type == 'no':
         print('No ramp removal')
@@ -635,7 +636,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
 
 
 def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
-    '''Calculate deramped Root Mean Square in space for each epoch of input timeseries file.
+    """Calculate deramped Root Mean Square in space for each epoch of input timeseries file.
     Parameters: timeseries_resid_file : string, 
                     timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
                 mask_file : string,
@@ -650,7 +651,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     Example:
         import pysar.utils.utils as ut
         rms_list, date_list = ut.get_residual_rms('timeseriesResidual.h5', 'maskTempCoh.h5')
-    '''
+    """
     # Intermediate files name
     if ramp_type == 'no':
         print('No ramp removal')
@@ -681,14 +682,14 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
 
 
 def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
-    '''Calculate spatial average coherence for each epoch of input time series file
+    """Calculate spatial average coherence for each epoch of input time series file
     Inputs:
         inFile   - string, timeseries HDF5 file
         maskFile - string, mask file 
         outFile  - string, output text file 
     Example:
         txtFile = timeseries_coherence('timeseries_ECMWF_demErrInvResid_quadratic.h5')
-    '''
+    """
     try:
         mask = readfile.read(maskFile, datasetName='mask')[0]
         print('read mask from file: '+maskFile)
@@ -729,7 +730,7 @@ def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
 
 
 def normalize_timeseries(ts_mat, nanValue=0):
-    '''Normalize timeseries of 2D matrix in time domain'''
+    """Normalize timeseries of 2D matrix in time domain"""
     ts_mat -= np.min(ts_mat, 0)
     ts_mat *= 1/np.max(ts_mat, 0)
     ts_mat[np.isnan(ts_mat)] = 0
@@ -745,7 +746,7 @@ def normalize_timeseries_old(ts_mat, nanValue=0):
 
 ############################################################
 def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
-    '''Check whether to update outFile/outDir or not.
+    """Check whether to update outFile/outDir or not.
     return True if any of the following meets:
         1. if overwrite option set to True
         2. outFile is empty, e.g. None, []
@@ -764,7 +765,7 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
         if ut.update_file('timeseries_ECMWF_demErr.h5', 'timeseries_ECMWF.h5'):
         if ut.update_file('exclude_date.txt', ['timeseries_ECMWF_demErrInvResid.h5','maskTempCoh.h5','pysar_template.txt'],\
                           check_readable=False):
-    '''
+    """
     if overwrite:
         return True
 
@@ -794,7 +795,7 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
     return False
 
 def update_attribute_or_not(atr_new, atr_orig):
-    '''Compare new attributes with exsiting ones'''
+    """Compare new attributes with exsiting ones"""
     update=False
     for key in atr_new.keys():
         value = str(atr_new[key])
@@ -807,14 +808,14 @@ def update_attribute_or_not(atr_new, atr_orig):
 
 
 def add_attribute(File, atr_new=dict()):
-    '''Add/update input attribute into File
+    """Add/update input attribute into File
     Inputs:
         File - string, path/name of file
         atr_new - dict, attributes to be added/updated
                   if value is None, delete the item from input File attributes
     Output:
         File - string, path/name of updated file
-    '''
+    """
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
 
@@ -838,11 +839,11 @@ def add_attribute(File, atr_new=dict()):
 
 
 def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
-    '''Check parallel option based file num and installed module
+    """Check parallel option based file num and installed module
     Examples:
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file))
         num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(1000)
-    '''
+    """
     enable_parallel = True
 
     # Disable parallel option for one input file
@@ -877,7 +878,7 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
 
 
 def perp_baseline_timeseries(atr, dimension=1):
-    '''Calculate perpendicular baseline for each acquisition within timeseries
+    """Calculate perpendicular baseline for each acquisition within timeseries
     Inputs:
         atr - dict, including the following PySAR attribute
               LENGTH
@@ -889,7 +890,7 @@ def perp_baseline_timeseries(atr, dimension=1):
                     1 for linear P_BASELINE in azimuth direction, for radar coord only
     Output:
         pbase - np.array, with shape = [date_num, 1] or [date_num, length]
-    '''
+    """
     if dimension > 0 and 'Y_FIRST' in atr.keys():
         dimension = 0
         print('file is in geo coordinates, return constant P_BASELINE for one interferogram')
@@ -916,7 +917,7 @@ def perp_baseline_timeseries(atr, dimension=1):
 
 
 def range_distance(atr, dimension=2, print_msg=True):
-    '''Calculate slant range distance from input attribute dict
+    """Calculate slant range distance from input attribute dict
     Inputs:
         atr - dict, including the following ROI_PAC attributes:
               STARTING_RANGE
@@ -928,7 +929,7 @@ def range_distance(atr, dimension=2, print_msg=True):
                     1 for 1d matrix, in range direction, for radar coord file
                     0 for center value
     Output: np.array (0, 1 or 2 D) - range distance between antenna and ground target in meters
-    '''
+    """
     # return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
@@ -959,7 +960,7 @@ def range_distance(atr, dimension=2, print_msg=True):
 
 
 def incidence_angle(atr, dimension=2, print_msg=True):
-    '''Calculate 2D matrix of incidence angle from ROI_PAC attributes, very accurate.
+    """Calculate 2D matrix of incidence angle from ROI_PAC attributes, very accurate.
     Input:
         dictionary - ROI_PAC attributes including the following items:
                      STARTING_RANGE
@@ -973,7 +974,7 @@ def incidence_angle(atr, dimension=2, print_msg=True):
                     1 for 1d array
                     0 for one center value
     Output: 2D np.array - incidence angle in degree for each pixel
-    '''
+    """
     # Return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
         dimension = 0
@@ -1010,7 +1011,7 @@ def incidence_angle(atr, dimension=2, print_msg=True):
 
 
 def which(program):
-    '''Test if executable exists'''
+    """Test if executable exists"""
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
@@ -1029,7 +1030,7 @@ def which(program):
 
 
 def check_drop_ifgram(h5, print_msg=True):
-    '''Update ifgram_list based on 'DROP_IFGRAM' attribute
+    """Update ifgram_list based on 'DROP_IFGRAM' attribute
     Input:
         h5          - HDF5 file object
     Output:
@@ -1037,7 +1038,7 @@ def check_drop_ifgram(h5, print_msg=True):
     Example:
         h5 = h5py.File('unwrapIfgram.h5','r')
         ifgram_list = ut.check_drop_ifgram(h5)
-    '''
+    """
     # Return all interferogram list if 'DROP_IFGRAM' do not exist
     k = list(h5.keys())[0]
     dsList = sorted(h5[k].keys())
@@ -1056,7 +1057,7 @@ def check_drop_ifgram(h5, print_msg=True):
 
 
 def nonzero_mask(File, out_file='mask.h5', datasetName=None):
-    '''Generate mask file for non-zero value of input multi-group hdf5 file'''
+    """Generate mask file for non-zero value of input multi-group hdf5 file"""
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
     if k == 'ifgramStack':
@@ -1072,7 +1073,7 @@ def nonzero_mask(File, out_file='mask.h5', datasetName=None):
 
 ######################################################################################################
 def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=None, saveList=False, checkAoi=True):
-    '''Read/Calculate Spatial Average of input file.
+    """Read/Calculate Spatial Average of input file.
 
     If input file is text file, read it directly;
     If input file is data matrix file:
@@ -1094,7 +1095,7 @@ def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=
     Example:
         meanList = spatial_average('coherence.h5')[0]
         meanList, date12_list = spatial_average('coherence.h5', 'maskTempCoh.h5', saveList=True)
-    '''
+    """
     def read_text_file(fname):
         txtContent = np.loadtxt(fname, dtype=bytes).astype(str)
         meanList = [float(i) for i in txtContent[:,1]]
@@ -1187,7 +1188,7 @@ def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=
 
 
 def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, outFile=None):
-    '''Calculate temporal average of multi-temporal dataset, equivalent to stacking
+    """Calculate temporal average of multi-temporal dataset, equivalent to stacking
     For ifgramStakc/unwrapPhase, return average phase velocity
 
     Parameters: File : string,
@@ -1207,7 +1208,7 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, 
     Examples:
         avgPhaseVel = ut.temporal_average('ifgramStack.h5',datasetName='unwrapPhase')[0]
         ut.temporal_average('ifgramStack.h5', datasetName='coherence', outFile='avgSpatialCoherence.h5', updateMode=True)
-    '''
+    """
     atr = readfile.read_attribute(File, datasetName=datasetName)
     k = atr['FILE_TYPE']
     if k not in ['ifgramStack','timeseries']:
@@ -1256,7 +1257,7 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, 
 
 ######################################################################################################
 def get_file_list(fileList, abspath=False, coord=None):
-    '''Get all existed files matching the input list of file pattern
+    """Get all existed files matching the input list of file pattern
     Inputs:
         fileList - string or list of string, input file/directory pattern
         abspath  - bool, return absolute path or not
@@ -1267,7 +1268,7 @@ def get_file_list(fileList, abspath=False, coord=None):
     Example:
         fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
         fileList = get_file_list('timeseries*.h5')
-    '''
+    """
     if not fileList:
         return []
 
@@ -1301,7 +1302,7 @@ def get_file_list(fileList, abspath=False, coord=None):
 
 ##################################################################
 def check_file_size(fname_list, mode_width=None, mode_length=None):
-    '''Check file size in the list of files, and drop those not in the same size with majority.'''
+    """Check file size in the list of files, and drop those not in the same size with majority."""
     # If input file list is empty
     if not fname_list:
         return fname_list, None, None
@@ -1337,13 +1338,13 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
 
 
 def most_common(L):
-    '''Return the most common item in the list L. From Alex Martelli on Stack Overflow.
+    """Return the most common item in the list L. From Alex Martelli on Stack Overflow.
     If the "most common" items with the same highest count are > 1, return the earliest-occurring one.
     Link: https://stackoverflow.com/questions/1518522/python-most-common-element-in-a-list
     Examples:
         5 = most_common([4,5,5,5,5,8,9])
         'goose' = most_common(['goose','duck','duck','goose'])
-    '''
+    """
     import itertools
     import operator
     # get an iterable of (item, iterable) pairs
@@ -1363,7 +1364,7 @@ def most_common(L):
 
 
 def mode(thelist):
-    '''Find Mode (most common) item in the list'''
+    """Find Mode (most common) item in the list"""
     if not thelist:
         return None
     if len(thelist) == 1:
@@ -1391,7 +1392,7 @@ def mode(thelist):
 
 ######################################################################################################
 def range_ground_resolution(atr, print_msg=False):
-    '''Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
+    """Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord"""
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no range resolution info.')
         return
@@ -1400,7 +1401,7 @@ def range_ground_resolution(atr, print_msg=False):
     return rg_step
 
 def azimuth_ground_resolution(atr):
-    '''Get azimuth resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord'''
+    """Get azimuth resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord"""
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no azimuth resolution info.')
         return
@@ -1418,11 +1419,11 @@ def azimuth_ground_resolution(atr):
 #########################################################################
 ##### Use geomap*.trans file for precious (pixel-level) coord conversion
 def get_lookup_row_col(y, x, lut_y, lut_x, y_factor=10, x_factor=10, geoCoord=False):
-    '''Get row/col number in y/x value matrix from input y/x
+    """Get row/col number in y/x value matrix from input y/x
     Use overlap mean value between y and x buffer;
     To support point outside of value pool/matrix, could use np.polyfit to fit a line
     for y and x value buffer and return the intersection point row/col
-    '''
+    """
     ymin = y - y_factor
     xmin = x - x_factor
     if not geoCoord:
@@ -1434,7 +1435,7 @@ def get_lookup_row_col(y, x, lut_y, lut_x, y_factor=10, x_factor=10, geoCoord=Fa
     return row, col
 
 def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
-    '''Convert geo coordinates into radar coordinates.
+    """Convert geo coordinates into radar coordinates.
     Inputs:
         lat/lon    - np.array, float, latitude/longitude
         lookupFile - string, trans/look up file
@@ -1442,7 +1443,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
     Output:
         az/rg     - np.array, float, range/azimuth pixel number
         az/rg_res - float, residul/uncertainty of coordinate conversion
-    '''
+    """
     if lookupFile is None:
         lookupFile = get_lookup_file(lookupFile)
         if lookupFile is None:
@@ -1526,7 +1527,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
 
 
 def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
-    '''Convert radar coordinates into geo coordinates
+    """Convert radar coordinates into geo coordinates
     Inputs:
         rg/az      - np.array, int, range/azimuth pixel number
         lookupFile - string, trans/look up file
@@ -1534,7 +1535,7 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
     Output:
         lon/lat    - np.array, float, longitude/latitude of input point (rg,az); nan if not found.
         latlon_res - float, residul/uncertainty of coordinate conversion
-    '''
+    """
     if lookupFile is None:
         lookupFile = get_lookup_file(lookupFile)
         if lookupFile is None:
@@ -1623,7 +1624,7 @@ def check_variable_name(path):
 
 #########################################################################
 def hillshade(data,scale):
-    '''from scott baker, ptisk library '''
+    """from scott baker, ptisk library """
     azdeg  = 315.0
     altdeg = 45.0
     az  = azdeg  * np.pi/180.0
@@ -1670,7 +1671,7 @@ def date_list(h5file):
 
 ######################################
 def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None):
-    '''Make the design matrix for the inversion based on date12_list.
+    """Make the design matrix for the inversion based on date12_list.
     Reference:
         Berardino, P., Fornaro, G., Lanari, R., & Sansosti, E. (2002).
         A new algorithm for surface deformation monitoring based on small
@@ -1686,7 +1687,7 @@ def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None):
                 B : 2D np.array in size of (ifgram_num, date_num-1)
                     representing temporal baseline timeseries between master and slave date for each interferogram
                     used for SBAS algorithm
-    '''
+    """
     ## Get date12_list from Inputs
     if not date12_list:
         if ifgramFile:
@@ -1729,13 +1730,13 @@ def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None):
 
 ###################################################
 def timeseries_inversion_FGLS(h5flat,h5timeseries):
-    '''Implementation of the SBAS algorithm.
+    """Implementation of the SBAS algorithm.
     
     Usage:
     timeseries_inversion(h5flat,h5timeseries)
       h5flat: hdf5 file with the interferograms 
       h5timeseries: hdf5 file with the output from the inversion
-    ##################################################'''
+    ##################################################"""
   
     total = time.time()
     A,B = design_matrix(h5flat)
@@ -1908,7 +1909,7 @@ def timeseries_inversion_L1(h5flat,h5timeseries):
 
 
 def perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list=[]):
-    '''Calculate perpendicular baseline timeseries from input interferograms file
+    """Calculate perpendicular baseline timeseries from input interferograms file
     Input:
         ifgramFile - string, file name/path of interferograms file
         ifgram_list - list of string, group name that is used for calculation
@@ -1917,7 +1918,7 @@ def perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list=[]):
         pbase        - 1D np.array, P_BASELINE_TIMESERIES
         pbase_top    - 1D np.array, P_BASELINE_TOP_TIMESERIES
         pbase_bottom - 1D np.array, P_BASELINE_BOTTOM_TIMESERIES
-    '''
+    """
     k = readfile.read_attribute(ifgramFile)['FILE_TYPE']
     h5file = h5py.File(ifgramFile,'r')
 

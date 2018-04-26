@@ -367,11 +367,13 @@ def prepare_metadata(inps):
             atr_file = extract_metadata4lookup_table(File)
     return
 
+
 ##################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     prepare_metadata(inps)
     return
+
 
 ###################################################################################################
 if __name__ == '__main__':

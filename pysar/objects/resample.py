@@ -9,6 +9,7 @@
 
 import sys
 import numpy as np
+import multiprocessing
 import pyresample as pr
 from pysar.utils import readfile
 
@@ -32,11 +33,12 @@ class resample:
         self.lut_metadata = readfile.read_attribute(self.file)
         self.src_metadata = readfile.read_attribute(self.dataFile)
 
+        # get src_def and dest_def, update SNWE and laloStep
         if 'Y_FIRST' in self.lut_metadata.keys():
-            src_def, dest_def = self.get_geometry_definition4geo_lookup_table()
+            self.get_geometry_definition4geo_lookup_table()
         else:
-            src_def, dest_def = self.get_geometry_definition4radar_lookup_table()
-        return src_def, dest_def, self.SNWE
+            self.get_geometry_definition4radar_lookup_table()
+        self.length, self.width = self.dest_def.lats.shape
 
 
     def get_geometry_definition4radar_lookup_table(self):
@@ -47,33 +49,40 @@ class resample:
             # src_def
             src_lat = readfile.read(self.file, datasetName='latitude')[0]
             src_lon = readfile.read(self.file, datasetName='longitude')[0]
-            src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
+            self.src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
 
             # laloStep
             SNWE = (np.nanmin(src_lat), np.nanmax(src_lat), np.nanmin(src_lon), np.nanmax(src_lon))
             if self.laloStep is None:
-                self.laloStep = ((SNWE[0] - SNWE[1]) / src_lat.shape[0], (SNWE[3] - SNWE[2]) / src_lat.shape[1])
+                self.laloStep = ((SNWE[0] - SNWE[1]) / (src_lat.shape[0] - 1),
+                                 (SNWE[3] - SNWE[2]) / (src_lat.shape[1] - 1))
             else:
                 self.laloStep = (-1.*abs(self.laloStep[0]), 1.*abs(self.laloStep[1]))
             print('output pixel size in (lat, lon) in degree: {}'.format(self.laloStep))
 
             # SNWE
             if self.SNWE is None:
+                lat_num = int((SNWE[0] - SNWE[1]) / self.laloStep[0]) + 1
+                lon_num = int((SNWE[3] - SNWE[2]) / self.laloStep[1]) + 1
+                SNWE = (SNWE[1] + self.laloStep[0] * lat_num, SNWE[1],
+                        SNWE[2], SNWE[2] + self.laloStep[1] * lon_num)
                 self.SNWE = SNWE
             print('output area extent in (S N W E) in degree: {}'.format(self.SNWE))
 
             # dest_def
-            dest_lat = np.arange(self.SNWE[1], self.SNWE[0], self.laloStep[0])
-            dest_lon = np.arange(self.SNWE[2], self.SNWE[3], self.laloStep[1])
-            dest_def = pr.geometry.GridDefinition(lons=np.tile(dest_lon.reshape(1, -1), (dest_lat.size, 1)),
-                                                  lats=np.tile(dest_lat.reshape(-1, 1), (1, dest_lon.size)))
+            lat_num = int((self.SNWE[0] - self.SNWE[1]) / self.laloStep[0])
+            lon_num = int((self.SNWE[3] - self.SNWE[2]) / self.laloStep[1])
+            self.SNWE = (self.SNWE[1] + self.laloStep[0] * lat_num, self.SNWE[1],
+                         self.SNWE[2], self.SNWE[2] + self.laloStep[1] * lon_num)
+            dest_lat, dest_lon = np.mgrid[self.SNWE[1]:self.SNWE[0]:lat_num*1j, self.SNWE[2]:self.SNWE[3]:lon_num*1j]
+            self.dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
 
         # geo2radar
         else:
             # dest_def
             dest_lat = readfile.read(self.file, datasetName='latitude')[0]
             dest_lon = readfile.read(self.file, datasetName='longitude')[0]
-            dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
+            self.dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
 
             # src_def
             lat0 = float(self.src_metadata['Y_FIRST'])
@@ -86,21 +95,21 @@ class resample:
             lon1 = lon0 + lon_step * (lon_num - 1)
 
             src_lat, src_lon = np.mgrid[lat0:lat1:lat_num*1j, lon0:lon1:lon_num*1j]
-            src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
-
-        return src_def, dest_def
+            self.src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
 
 
     def get_geometry_definition4geo_lookup_table(self):
         '''Get src_def and dest_def for lookup table from Gamma and ROI_PAC.'''
-        def project_yx2lalo(yy, xx, SNWE, laloStep):
+        def project_yx2lalo(yy, xx, SNWE, laloStep=None):
             """scale/project coordinates in pixel number into lat/lon based on bbox and step"""
+            
             lats = SNWE[1] + yy * laloStep[0]
             lons = SNWE[2] + xx * laloStep[1]
             lats[np.isnan(lats)] = 90.
             lats[np.isnan(lons)] = 90.
             lons[lats==90.] = 0
             return lats, lons
+
 
         # radar2geo
         if 'Y_FIRST' not in self.src_metadata.keys():
@@ -154,47 +163,48 @@ class resample:
             dest_x[dest_x==0.] = np.nan
             dest_lat, dest_lon = project_yx2lalo(dest_y, dest_x, SNWEcomm, laloStep)
 
+            # src_def and dest_def
+            self.src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
+            self.dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
+
         # geo2radar
         else:
             # src_y/x
             print('Not implemented yet for GAMMA and ROIPAC products')
             sys.exit(-1)
-            
-
-        # src_def and dest_def
-        src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
-        dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
-        return src_def, dest_def
 
 
-    def resample(self, data, src_def, dest_def, interp_method='nearest', fill_value=np.nan, nprocs=None, print_msg=True):
+    def resample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=None, radius=None, print_msg=True):
         """
-        Resample input radar coded data into geocoded data
-        Parameters: data : 2D np.array
-                    src_def : pyresample.geometryDefinition objects
-                    dest_def : pyresample.geometryDefinition objects
+        Resample input src_data into dest_data
+        Parameters: src_data : 2D np.array
                     interp_method : str,
                     fill_value : number
                     nprocs : int
                     print_msg : bool
-        Returns:    res_data
-        Example:    res_data = reObj.resample(data, src_def, dest_def, interp_method=inps.interpMethod,\
-                                              fill_value=np.fillValue, nprocs=4)
+        Returns:    dest_data
+        Example:    dest_data = reObj.resample(src_data, src_def, dest_def, interp_method=inps.interpMethod,\
+                                               fill_value=np.fillValue, nprocs=4)
         """
-        if 'Y_FIRST' in self.src_metadata.keys():
-            radius = 100e3     # geo2radar
-        else:
-            radius = 200       # radar2geo
+        if not radius:
+            if 'Y_FIRST' in self.src_metadata.keys():
+                radius = 100e3     # geo2radar
+            else:
+                radius = 200       # radar2geo
+
+        if not nprocs:
+            nprocs = multiprocessing.cpu_count()
 
         if interp_method.startswith('near'):
             if print_msg:
                 print('nearest resampling using {} processor cores ...'.format(nprocs))
-            res_data = pr.kd_tree.resample_nearest(src_def, data, dest_def, nprocs=nprocs, fill_value=fill_value,\
-                                                   radius_of_influence=radius, epsilon=0)
+            dest_data = pr.kd_tree.resample_nearest(self.src_def, src_data, self.dest_def, nprocs=nprocs,
+                                                    fill_value=fill_value, radius_of_influence=radius, epsilon=0)
         elif interp_method.endswith('linear'):
             if print_msg:
                 print('bilinear resampling using {} processor cores ...'.format(nprocs))
-            res_data = pr.bilinear.resample_bilinear(data, src_def, dest_def, nprocs=nprocs, fill_value=fill_value,\
-                                                     radius=radius, neighbours=32, epsilon=0, reduce_data=True)
-        return res_data
+            dest_data = pr.bilinear.resample_bilinear(src_data, self.src_def, self.dest_def, nprocs=nprocs,
+                                                      fill_value=fill_value, radius=radius, neighbours=32, epsilon=0)
+        return dest_data
+
 

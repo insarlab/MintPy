@@ -976,8 +976,9 @@ def plot_figure(inps, j, metadata):
     if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity']:
         data, inps = update_data_with_plot_inps(data, metadata, inps)
         if not inps.disp_min and not inps.disp_max:
-            inps.disp_min = np.nanmin(data)
-            inps.disp_max = np.nanmax(data)
+            data_mli = mli.multilook_data(data, 10, 10)
+            inps.disp_min = np.nanmin(data_mli)
+            inps.disp_max = np.nanmax(data_mli)
     inps.data_min = np.nanmin(data)
     inps.data_max = np.nanmax(data)
 

@@ -55,7 +55,9 @@ def create_parser():
                         help="Template file with geocoding options.")
 
     parser.add_argument('-b', '--bbox', dest='SNWE', type=float, nargs=4, metavar=('S', 'N', 'W', 'E'),
-                        help='Bounding box of area to be geocoded.')
+                        help='Bounding box of area to be geocoded.\n'+
+                        'Include the uppler left corner of the first pixel'+
+                        '    and the lower right corner of the last pixel')
     parser.add_argument('-y', '--lat-step', dest='latStep', type=float,
                         help='output pixel size in degree in latitude.')
     parser.add_argument('-x', '--lon-step', dest='lonStep', type=float,
@@ -144,23 +146,22 @@ def read_template2inps(template_file, inps):
 
 
 ############################################################################################
-def metadata_radar2geo(atr_in, inps, print_msg=True):
+def metadata_radar2geo(atr_in, res_obj, print_msg=True):
     """update metadata for radar to geo coordinates"""
     atr = dict(atr_in)
-    length, width = inps.outShape[-2:]
-    atr['LENGTH'] = length
-    atr['WIDTH'] = width
-    atr['Y_FIRST'] = inps.SNWE[1]
-    atr['X_FIRST'] = inps.SNWE[2]
-    atr['Y_STEP'] = (inps.SNWE[0] - inps.SNWE[1]) / length
-    atr['X_STEP'] = (inps.SNWE[3] - inps.SNWE[2]) / width
+    atr['LENGTH'] = res_obj.length
+    atr['WIDTH'] = res_obj.width
+    atr['Y_FIRST'] = res_obj.SNWE[1]
+    atr['X_FIRST'] = res_obj.SNWE[2]
+    atr['Y_STEP'] = res_obj.laloStep[0]
+    atr['X_STEP'] = res_obj.laloStep[1]
     atr['Y_UNIT'] = 'degrees'
     atr['X_UNIT'] = 'degrees'
 
     # Reference point from y/x to lat/lon
     if 'REF_Y' in atr.keys():
         ref_lat, ref_lon = ut.radar2glob(np.array(int(atr['REF_Y'])), np.array(int(atr['REF_X'])),
-                                         inps.lookupFile, atr_in, print_msg=False)[0:2]
+                                         res_obj.file, atr_in, print_msg=False)[0:2]
         if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
             ref_y = int(np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP'])))
             ref_x = int(np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP'])))
@@ -185,12 +186,11 @@ def metadata_radar2geo(atr_in, inps, print_msg=True):
     return atr
 
 
-def metadata_geo2radar(atr_in, inps, print_msg=True):
+def metadata_geo2radar(atr_in, res_obj, print_msg=True):
     """update metadata for geo to radar coordinates"""
     atr = dict(atr_in)
-    length, width = inps.outShape[-2:]
-    atr['LENGTH'] = length
-    atr['WIDTH'] = width
+    atr['LENGTH'] = res_obj.length
+    atr['WIDTH'] = res_obj.width
     for i in ['Y_FIRST','X_FIRST','Y_STEP','X_STEP','Y_UNIT','X_UNIT',
               'REF_Y','REF_X','REF_LAT','REF_LON']:
         try:
@@ -206,8 +206,8 @@ def resample_data(data, inps, res_obj):
         data = np.moveaxis(data, 0, -1)
 
     # resample source data into target data
-    geo_data = res_obj.resample(data, inps.src_def, inps.dest_def, interp_method=inps.interpMethod,
-                                fill_value=inps.fillValue, nprocs=inps.nprocs, print_msg=False)
+    geo_data = res_obj.resample(src_data=data, interp_method=inps.interpMethod, fill_value=inps.fillValue,
+                                nprocs=inps.nprocs, print_msg=False)
 
     if len(geo_data.shape) == 3:
         geo_data = np.moveaxis(geo_data, -1, 0)
@@ -235,9 +235,9 @@ def run_resample(inps):
     start_time = time.time()
 
     # Prepare geometry for geocoding
-    res_obj = resample(lookupFile=inps.lookupFile, dataFile=inps.file[0], SNWE=inps.SNWE,
-                       laloStep=inps.latStep)
-    inps.src_def, inps.dest_def, inps.SNWE = res_obj.get_geometry_definition()
+    res_obj = resample(lookupFile=inps.lookupFile, dataFile=inps.file[0], SNWE=inps.SNWE, laloStep=inps.laloStep)
+    res_obj.get_geometry_definition()
+
     inps.nprocs = multiprocessing.cpu_count()
 
     # resample input files one by one
@@ -260,14 +260,13 @@ def run_resample(inps):
             data = readfile.read(infile, datasetName=dsName, print_msg=False)[0]
             res_data = resample_data(data, inps, res_obj)
             dsResDict[dsName] = res_data
-            inps.outShape = res_data.shape
 
         # update metadata
         atr = readfile.read_attribute(infile, datasetName=inps.dset)
         if inps.radar2geo:
-            atr = metadata_radar2geo(atr, inps)
+            atr = metadata_radar2geo(atr, res_obj)
         else:
-            atr = metadata_geo2radar(atr, inps)
+            atr = metadata_geo2radar(atr, res_obj)
         if len(dsNames) == 1 and dsName not in ['timeseries']:
             atr['FILE_TYPE'] = dsNames[0]
             infile = None

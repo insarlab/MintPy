@@ -205,8 +205,6 @@ def main(iargs=None):
 
     # Fig 1 - Baseline History
     fig, ax = plt.subplots(figsize=inps.fig_size)
-    #fig = plt.figure(figsize=inps.fig_size)
-    #ax = fig.add_subplot(111)
     ax = pp.plot_perp_baseline_hist(ax, inps.dateList, inps.pbaseList, vars(inps), inps.dateList_drop)
     if inps.save_fig:
         fig.savefig(figNames[0], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)

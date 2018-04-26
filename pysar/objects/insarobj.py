@@ -8,9 +8,12 @@
 #     from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
 
 
-import os, sys, glob
+import os
+import glob
+import warnings
 import h5py
 import numpy as np
+from skimage.transform import resize
 from pysar.utils import readfile, datetime as ptime, utils as ut
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, dataTypeDict
 
@@ -439,7 +442,7 @@ class geometryDict:
                 prog_bar = ptime.progressBar(maxValue=self.numDate)
                 for i in range(self.numDate):
                     fname = self.datasetDict[dsName][self.dateList[i]]
-                    data = read_isce_bperp_file(fname=fname, outShape=(self.length, self.width), box=box)
+                    data = read_isce_bperp_file(fname=fname, out_shape=(self.length, self.width), box=box)
                     ds[i,:,:] = data
                     prog_bar.update(i+1, suffix=self.dateList[i])
                 prog_bar.close()
@@ -504,7 +507,7 @@ class geometryDict:
 
 
 ########################################################################################
-def read_isce_bperp_file(fname, outShape, box=None):
+def read_isce_bperp_file(fname, out_shape, box=None):
     '''Read ISCE coarse grid perpendicular baseline file, and project it to full size
     Parameters: self : geometry object,
                 fname : str, bperp file name
@@ -514,8 +517,19 @@ def read_isce_bperp_file(fname, outShape, box=None):
     Example:    fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
                 data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
     '''
+    # read original data
     dataC = readfile.read(fname)[0]
-    data = ut.interpolate_data(dataC, outShape=outShape, interpMethod='linear')
+
+    # resize to full resolution
+    data_min, data_max = np.nanmin(dataC), np.nanmax(dataC)
+    if data_max != data_min:
+        dataC = (dataC - data_min) / (data_max - data_min)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        data = resize(dataC, out_shape)
+    if data_max != data_min:
+        data = data * (data_max - data_min) + data_min
+
     if box is not None:
         data = data[box[1]:box[3],box[0]:box[2]]
     return data

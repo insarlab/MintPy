@@ -178,8 +178,9 @@ def read_subset_box(inpsDict):
         lookupFile = None
 
     try:
-        files = glob.glob(inpsDict['pysar.load.unwFile']) + glob.glob(inpsDict['pysar.load.demFile'])
-        atr = readfile.read_attribute(files[0])
+        pathKey = [i for i in datasetName2templateKey.values() if i in inpsDict.keys()][0]
+        file = glob.glob(inpsDict[pathKey])[0]
+        atr = readfile.read_attribute(file)
     except:
         atr = dict()
 
