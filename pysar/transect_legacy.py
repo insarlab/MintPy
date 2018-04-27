@@ -35,26 +35,26 @@ def gps_to_LOS(Ve,Vn,theta,heading):
 
 ############################################################
 def check_st_in_box(x,y,x0,y0,x1,y1,X0,Y0,X1,Y1):
- 
+
     m1=float(y1-y0)/float((x1-x0))
     c1=float(y0-m1*x0)
- 
+
     m2=float(Y1-Y0)/float((X1-X0))
     c2=float(Y0-m2*X0)
- 
+
     m3=float(y0-Y0)/float((x0-X0))
     c3=float(Y0-m3*X0)
- 
+
     m4=float(y1-Y1)/float((x1-X1))
     c4=float(Y1-m4*X1)
- 
- 
+
+
     yy1=m1*x+c1
     yy2=m2*x+c2
- 
+
     yy=[yy1,yy2]
     yy.sort()
- 
+
     xx3=(y-c3)/m3
     xx4=(y-c4)/m4
     xx=[xx3,xx4]
@@ -63,7 +63,7 @@ def check_st_in_box(x,y,x0,y0,x1,y1,X0,Y0,X1,Y1):
         Check_result='True'
     else:
         Check_result='False'
- 
+
     return Check_result
 
 ############################################################
@@ -103,7 +103,7 @@ def line(x0,y0,x1,y1):
 def dist_point_from_line(m,c,x,y,dx,dy):
     # finds the distance of a point at x ,y xoordinate
     # from a line with Y =  mX +c
-  
+
     d=np.sqrt((((x+m*y-m*c)/(m**2+1)-x)*dx)**2+((m*(x+m*y-m*c)/(m**2+1)+c-y)*dy)**2)
     #  a=m;b=-1;
     # d=np.abs(a*x+b*y+c)/np.sqrt(a**2+b**2)
@@ -120,13 +120,13 @@ def get_intersect(m,c,x,y):
 ############################################################
 def readGPSfile(gpsFile,gps_source):
     if gps_source in ['cmm4','CMM4']:
- 
+
         gpsData = np.loadtxt(gpsFile,usecols = (1,2,3,4,5,6,7,8,9,10))
         Stations = np.loadtxt(gpsFile,dtype=str,usecols = (0,1))[:,0]
- 
+
         St=[]; Lon=[];Lat=[];Ve=[];Vn=[];Se=[];Sn=[]
         for i in range(gpsData.shape[0]):
-            if 'GPS' in Stations[i]:         
+            if 'GPS' in Stations[i]:
                 Lat.append(gpsData[i,0])
                 Lon.append(gpsData[i,1])
                 Ve.append(gpsData[i,2])
@@ -134,14 +134,14 @@ def readGPSfile(gpsFile,gps_source):
                 Vn.append(gpsData[i,4])
                 Sn.append(gpsData[i,5])
                 St.append(Stations[i])
- 
+
     elif gps_source == 'pysar':
- 
+
         gpsData = np.loadtxt(gpsFile,usecols = (1,2,3,4,5,6))#,7,8,9))
         Stations = np.loadtxt(gpsFile,dtype=str,usecols = (0,1))[:,0]
- 
+
         St=[];Lon=[];Lat=[];Ve=[];Vn=[];Se=[];Sn=[]
- 
+
         for i in range(gpsData.shape[0]):
             Lon.append(gpsData[i,0])
             Lat.append(gpsData[i,1])
@@ -150,16 +150,16 @@ def readGPSfile(gpsFile,gps_source):
             Se.append(gpsData[i,4])
             Sn.append(gpsData[i,5])
             St.append(Stations[i])
- 
+
     elif gps_source in ['usgs','USGS']:
- 
+
         gpsData_Hz = np.loadtxt(gpsFile,usecols = (0,1,2,3,4,5,6))
         gpsData_up = np.loadtxt(gpsFile,usecols = (8,9))
         gpsData=np.hstack((gpsData_Hz,gpsData_up))
         Stations = np.loadtxt(gpsFile,dtype=str,usecols = (7,8))[:,0]
- 
+
         St=[];Lon=[];Lat=[];Ve=[];Vn=[];Se=[];Sn=[]
- 
+
         for i in range(gpsData.shape[0]):
             Lat.append(gpsData[i,0])
             Lon.append(gpsData[i,1])
@@ -168,7 +168,7 @@ def readGPSfile(gpsFile,gps_source):
             Sn.append(gpsData[i,4])
             Se.append(gpsData[i,5])
             St.append(Stations[i])
- 
+
     return list(St),Lat,Lon,Ve,Se,Vn,Sn
 
 
@@ -187,7 +187,7 @@ def redGPSfile_cmm4(gpsFile):
     gpsData = np.loadtxt(gpsFile,usecols = (1,2,3,4,5,6,7,8,9))
     Stations = np.loadtxt(gpsFile,dtype=str,usecols = (0,1))[:,0]
     return list(Stations), gpsData
-  
+
 ############################################################
 def nearest(x, tbase,xstep):
     ## """ find nearest neighbour """
@@ -202,7 +202,7 @@ def nearest(x, tbase,xstep):
 def find_row_column(Lon,Lat,lon,lat,lon_step,lat_step):
     ################################################
     ## finding row and column numbers of the GPS point
-  
+
     idx= nearest(Lon, lon, lon_step)
     idy= nearest(Lat, lat, lat_step)
     if idx !=[] and idy != []:
@@ -212,7 +212,7 @@ def find_row_column(Lon,Lat,lon,lat,lon_step,lat_step):
         IDX=np.nan
         IDY=np.nan
     return IDY, IDX
-  
+
 ################################################
 def get_lat_lon(atr):
     Width    = float(atr['WIDTH'])
@@ -260,7 +260,8 @@ def get_transect(z,x0,y0,x1,y1,interpolation='nearest'):
     ## Extract the value along the line
     if   interpolation.lower() == 'cubic':     zi = scipy.ndimage.map_coordinates(z,np.vstack((x,y)))
     elif interpolation.lower() == 'bilinear':  zi = scipy.ndimage.map_coordinates(z,np.vstack((x,y)),order=2)
-    else:                                      zi = z[np.rint(y), np.rint(x)]     # nearest neighbour
+    else:                                      zi = z[y.astype(np.int), x.astype(np.int)]
+#    else:                                      zi = z[np.rint(y), np.rint(x)]     # nearest neighbour
 
     return zi
 
@@ -270,14 +271,14 @@ def Usage():
     print '''
 *****************************************************************************************
 
-   Generating a transect [or multiple transects] of the velocity field. 
+   Generating a transect [or multiple transects] of the velocity field.
    If GPS velocities are provided, it will be compared with InSAR.
 
    Usage:
 
-       transect.py -f velocity.h5 -s 'y1,x1' -e 'y2,x2  -n number_of_transects  -d distace_between_profiles(pixel) 
+       transect.py -f velocity.h5 -s 'y1,x1' -e 'y2,x2  -n number_of_transects  -d distace_between_profiles(pixel)
                    -g gps velocity file -r reference station -L List of stations
-   
+
        -s : strat point of the profile
        -e : end   point of the profile
        -F : Fault coordinates (lat_first, lon_first, lat_end, lon_end)
@@ -286,9 +287,9 @@ def Usage():
        -p : flip profile left - right (yes or no) [default: no]
        -u : flip profile up   - down              [default: no]
        -S : source of GPS velocities (usgs,cmm4,pysar)
-       -G : gps stations to compare with InSAR  (all,insar,profile)  
-            "all"     : all gps stations is projected to the profile 
-            "insar"   : same as all but limited to the area covered by insar    
+       -G : gps stations to compare with InSAR  (all,insar,profile)
+            "all"     : all gps stations is projected to the profile
+            "insar"   : same as all but limited to the area covered by insar
             "profile" : only those gps stations which are in the profile area]
 
        -l : lower  bound to display
@@ -302,12 +303,12 @@ def Usage():
 
        transect.py -f geo_velocity.h5
        transect.py -f geo_velocity.h5 -s '5290,5579' -e '12177,482'
-       transect.py -f geo_velocity_New_masked_masked.h5 -s '3967,7019' -e '12605,1261' -n 150 -d 10 
-                   -g usgs_velocities_NAfixed.txt -S usgs -r P625 
-       transect.py -f geo_velocity_New_masked_masked.h5 -g usgs_velocities_NAfixed.txt 
+       transect.py -f geo_velocity_New_masked_masked.h5 -s '3967,7019' -e '12605,1261' -n 150 -d 10
+                   -g usgs_velocities_NAfixed.txt -S usgs -r P625
+       transect.py -f geo_velocity_New_masked_masked.h5 -g usgs_velocities_NAfixed.txt
                    -r P625 -F '33 30 24,-115 20 15,33 35 21,-116 10 16' -s '12644,1183' -e '6512,6227'
-                   -n 100 -d 10 -p no -S usgs  -G insar 
-       transect.py -f geo_velocity_demCor_tropCor_masked_masked.h5 -F '33 30 24,-115 20 15,33 35 21,-116 10 16' 
+                   -n 100 -d 10 -p no -S usgs  -G insar
+       transect.py -f geo_velocity_demCor_tropCor_masked_masked.h5 -F '33 30 24,-115 20 15,33 35 21,-116 10 16'
                    -n 100 -d 10 -p yes -g ../GPS_velocities_PBO_and_unavco.cmm4 -S pysar -r IMPS -n 230 -s '11904,93' -e '5389,5662' -E on
 
 *****************************************************************************************
@@ -346,7 +347,7 @@ def main(argv):
         elif opt == '-u':   flip_updown  = arg; print flip_updown
         elif opt == '-G':   which_gps =arg
         elif opt == '-S':   gps_source=arg
-        elif opt == '-h':   hbound=float(arg) 
+        elif opt == '-h':   hbound=float(arg)
         elif opt == '-l':   lbound=float(arg)
         elif opt == '-I':   display_InSAR   = arg
         elif opt == '-A':   display_Average = arg
@@ -374,7 +375,7 @@ def main(argv):
         Length,Width=np.shape(z)
         Yf0,Xf0=find_row_column(Lon0,Lat0,lon,lat,lon_step,lat_step)
         Yf1,Xf1=find_row_column(Lon1,Lat1,lon,lat,lon_step,lat_step)
-  
+
         print '*********************************************'
         print ' Fault Coordinates:'
         print '   --------------------------  '
@@ -390,8 +391,8 @@ def main(argv):
         #cf=float(Yf0-mf*Xf0)   # intercept of the fault line
         #df0=dist_point_from_line(mf,cf,x0,y0,1,1)   #distance of the profile start point from the Fault line
         #df1=dist_point_from_line(mf,cf,x1,y1,1,1)  #distance of the profile end point from the Fault line
-  
-        #mp=-1./mf  # slope of profile which is perpendicualr to the fault line 
+
+        #mp=-1./mf  # slope of profile which is perpendicualr to the fault line
         #x1=int((df0+df1)/np.sqrt(1+mp**2)+x0)    # correcting the end point of the profile to be on a line perpendicular to the Fault
         #y1=int(mp*(x1-x0)+y0)
     except:
@@ -408,7 +409,7 @@ def main(argv):
         ax.imshow(z)
         try: ax.plot([Xf0,Xf1],[Yf0,Yf1],'k-')
         except: print 'Fault line is not specified'
-  
+
         xc=[]
         yc=[]
         print 'please click on start and end point of the desired profile'
@@ -427,8 +428,8 @@ def main(argv):
         cf=float(Yf0-mf*Xf0)   # intercept of the fault line
         df0=dist_point_from_line(mf,cf,x0,y0,1,1)   #distance of the profile start point from the Fault line
         df1=dist_point_from_line(mf,cf,x1,y1,1,1)  #distance of the profile end point from the Fault line
-  
-        mp=-1./mf  # slope of profile which is perpendicualr to the fault line 
+
+        mp=-1./mf  # slope of profile which is perpendicualr to the fault line
         x1=int((df0+df1)/np.sqrt(1+mp**2)+x0)    # correcting the end point of the profile to be on a line perpendicular to the Fault
         y1=int(mp*(x1-x0)+y0)
     except:
@@ -437,8 +438,8 @@ def main(argv):
 ##############################################################################
     print '******************************************************'
     print 'First profile coordinates:'
-    print 'Start point:  y = '+str(y0)+', x = '+str(x0) 
-    print 'End   point:  y = '+str(y1)+', x = '+str(x1)   
+    print 'Start point:  y = '+str(y0)+', x = '+str(x0)
+    print 'End   point:  y = '+str(y1)+', x = '+str(x1)
     print '******************************************************'
     length = int(np.hypot(x1-x0, y1-y0))
     x, y = np.linspace(x0, x1, length), np.linspace(y0, y1, length)
@@ -449,7 +450,7 @@ def main(argv):
     except:
         lat_transect='Nan'
         lon_transect='Nan'
- 
+
     earth_radius = 6371e3;    # in meter
     try:
         dx=float(atr['X_STEP'])*np.pi/180.0*earth_radius*np.sin(np.mean(lat)*np.pi/180)
@@ -466,14 +467,15 @@ def main(argv):
         DX=(x-x0)*dx
         DY=(y-y0)*dy
         D=np.hypot(DX, DY)
+
         print 'radar coordinate:'
-        print 'profile length = ' +str(D[-1]/1000.0) + ' km'       
+        print 'profile length = ' +str(D[-1]/1000.0) + ' km'
         # df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
 
     try: df0_km=dist_point_from_line(mf,cf,x0,y0,dx,dy)
     except: print 'Fault line is not specified'
 
-    import pdb; pdb.set_trace()
+#    import pdb; pdb.set_trace()
 
 
     transect      = np.zeros([len(D),ntrans])
@@ -485,15 +487,15 @@ def main(argv):
 
     if ntrans >1:
         m  = float(y1-y0)/float((x1-x0))
-        c  = float(y0-m*x0)       
+        c  = float(y0-m*x0)
         m1 = -1.0/m
         if lat_transect=='Nan':
             for i in range(1,ntrans):
-                X0=i*dp/np.sqrt(1+m1**2)+x0  
+                X0=i*dp/np.sqrt(1+m1**2)+x0
                 Y0=m1*(X0-x0)+y0
                 X1=i*dp/np.sqrt(1+m1**2)+x1
                 Y1=m1*(X1-x1)+y1
-                zi=get_transect(z,X0,Y0,X1,Y1)         
+                zi=get_transect(z,X0,Y0,X1,Y1)
                 transect[:,i]=zi
                 XX0.append(X0);XX1.append(X1);
                 YY0.append(Y0);YY1.append(Y1);
@@ -502,7 +504,7 @@ def main(argv):
             transect_lat[:,0] = lat_transect
             transect_lon      = np.zeros([len(D),ntrans])
             transect_lon[:,0] = lon_transect
-    
+
             for i in range(1,ntrans):
                 X0=i*dp/np.sqrt(1+m1**2)+x0
                 Y0=m1*(X0-x0)+y0
@@ -510,7 +512,7 @@ def main(argv):
                 Y1=m1*(X1-x1)+y1
                 zi=get_transect(z,X0,Y0,X1,Y1)
                 lat_transect=get_transect(lat_all,X0,Y0,X1,Y1)
-                lon_transect=get_transect(lon_all,X0,Y0,X1,Y1)       
+                lon_transect=get_transect(lon_all,X0,Y0,X1,Y1)
                 transect[:,i]=zi
                 transect_lat[:,i]=lat_transect
                 transect_lon[:,i]=lon_transect
@@ -519,15 +521,15 @@ def main(argv):
 
 
     #############################################
-    try:  m_prof_edge,c_prof_edge=line(XX0[0],YY0[0],XX0[-1],YY0[-1])    
-    except:  print 'Plotting one profile'    
+    try:  m_prof_edge,c_prof_edge=line(XX0[0],YY0[0],XX0[-1],YY0[-1])
+    except:  print 'Plotting one profile'
 
-    ###############################################################################    
+    ###############################################################################
     if flip_profile=='yes':
         transect=np.flipud(transect);
         try:         df0_km=np.max(D)-df0_km;
         except:    print '';
-    
+
 
     print '******************************************************'
     try:    gpsFile
@@ -552,7 +554,7 @@ def main(argv):
      #      Stations, gpsData = redGPSfile(gpsFile)
      #      idxRef=Stations.index(refStation)
      #      Lat,Lon,Vn,Ve,Sn,Se,Corr,Vu,Su = gpsData[idxRef,:]
-      
+
        Stations,Lat,Lon,Ve,Se,Vn,Sn=readGPSfile(gpsFile,gps_source)
        idxRef=Stations.index(refStation)
        Length,Width=np.shape(insarData)
@@ -564,18 +566,18 @@ def main(argv):
          if not np.isnan(insarData[IDYref][IDXref]):
              transect = transect - insarData[IDYref][IDXref]
              insarData=insarData - insarData[IDYref][IDXref]
-            
+
          else:
-            
-             print ''' 
+
+             print '''
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      
+
       WARNING: nan value for InSAR data at the refernce pixel!
                reference station should be a pixel with valid value in InSAR data.
-                               
+
                please select another GPS station as the reference station.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                    '''
              sys.exit(1)
        else:
@@ -583,13 +585,13 @@ def main(argv):
          print 'Reference GPS station is out of the area covered by InSAR data'
          print 'please select another GPS station as the reference station.'
          sys.exit(1)
-       
+
        try:
          stationsList
        except:
          stationsList = Stations
 
-        
+
       # theta=23.0*np.pi/180.0
        if os.path.isfile(incidence_file):
            print 'Using exact look angle for each pixel'
@@ -602,12 +604,12 @@ def main(argv):
            theta=np.ones(np.shape(insarData))*23.0*np.pi/180.0
 
        heading=193.0*np.pi/180.0
-       
+
      #  unitVec=[-np.sin(theta)*np.sin(heading),-np.cos(heading)*np.sin(theta),-np.cos(theta)]
        unitVec=[np.cos(heading)*np.sin(theta),-np.sin(theta)*np.sin(heading),0]#-np.cos(theta)]
-       
+
       #  [0.0806152480932643, 0.34918300221540616, -0.93358042649720174]
-       # print unitVec 
+       # print unitVec
        # unitVec=[0.3,-0.09,0.9]
       # unitVec=[-0.3,0.09,-0.9]
       # unitVec=[-0.3,0.09,0]
@@ -616,7 +618,7 @@ def main(argv):
       # print 'unit vector to project GPS to InSAR LOS:'
       # print unitVec
       # print '*******************************************'
-      # gpsLOS_ref=unitVec[0]*Ve[idxRef]+unitVec[1]*Vn[idxRef]#+unitVec[2]*Vu[idxRef]       
+      # gpsLOS_ref=unitVec[0]*Ve[idxRef]+unitVec[1]*Vn[idxRef]#+unitVec[2]*Vu[idxRef]
 
 #       print np.shape(theta)
 #       print IDYref
@@ -626,7 +628,7 @@ def main(argv):
        gpsLOS_ref = gps_to_LOS(Ve[idxRef],Vn[idxRef],theta[IDYref,IDXref],heading)
        print '%%%%%%^^^^^^^%%%%%%%%'
        print gpsLOS_ref/1000.0
-      # insarData=insarData -gpsLOS_ref/1000.0 
+      # insarData=insarData -gpsLOS_ref/1000.0
       # transect = transect -gpsLOS_ref/1000.0
 
        GPS=[]
@@ -638,9 +640,9 @@ def main(argv):
        for st in stationsList:
          try :
            idx=Stations.index(st)
-          
+
           # gpsLOS = unitVec[0]*Ve[idx]+unitVec[1]*Vn[idx]#+unitVec[2]*Vu[idx]
-            
+
          #  gpsLOS = gps_to_LOS(Ve[idx],Vn[idx],theta[idx],heading)
          #  gpsLOS=gpsLOS-gpsLOS_ref
 
@@ -656,7 +658,7 @@ def main(argv):
                GPSx.append(IDX)
                GPSy.append(IDY)
                GPS_lat.append(Lat[idx])
-               GPS_lon.append(Lon[idx])   
+               GPS_lon.append(Lon[idx])
            elif not np.isnan(insarData[IDY][IDX]):
              if theta[IDY,IDX]!=0.0:
                GPS.append(gpsLOS-gpsLOS_ref)
@@ -666,13 +668,13 @@ def main(argv):
                GPS_lat.append(Lat[idx])
                GPS_lon.append(Lon[idx])
          except:
-           NoInSAR='yes'   
-       
+           NoInSAR='yes'
+
       # print GPS_station
-      # print gpsLOS 
+      # print gpsLOS
        DistGPS=[]
        GPS_in_bound=[]
-       GPS_in_bound_st=[] 
+       GPS_in_bound_st=[]
        GPSxx=[]
        GPSyy=[]
        for i in range(len(GPS_station)):
@@ -691,7 +693,7 @@ def main(argv):
            GPS_in_bound_st.append(GPS_station[i])
            GPS_in_bound.append(GPS[i])
            GPSxx.append(GPSx[i])
-           GPSyy.append(GPSy[i])   
+           GPSyy.append(GPSy[i])
           # gy=y0+1
           # gx=x0+1
           # gxp,gyp=get_intersect(m,c,gx,gy)
@@ -703,12 +705,12 @@ def main(argv):
           # X0=dg/np.sqrt(1+m1**2)+x0
           # Y0=m1*(X0-x0)+y0
           # DistGPS.append(np.hypot(dx*(gx-X0), dy*(gy-Y0)))
-          
+
            DistGPS.append(dist_point_from_line(m_prof_edge,c_prof_edge,GPSx[i],GPSy[i],dx,dy))
-           
+
 
        print '****************************************************'
-       print 'GPS stations in the profile area:' 
+       print 'GPS stations in the profile area:'
        print GPS_in_bound_st
        print '****************************************************'
        GPS_in_bound = np.array(GPS_in_bound)
@@ -740,7 +742,7 @@ def main(argv):
 
 
     if flip_profile=='yes' and gpsFile!='Nogps':
-       
+
        GPS=np.flipud(GPS)
        GPS_in_bound=np.flipud(GPS_in_bound)
        DistGPS=np.flipud(max(D)-DistGPS)
@@ -754,7 +756,7 @@ def main(argv):
     axes[0].plot(GPSx,GPSy,'b^')
     axes[0].plot(GPSxx,GPSyy,'k^')
     if gpsFile!='Nogps':
-        axes[0].plot(IDXref,IDYref,'r^')       
+        axes[0].plot(IDXref,IDYref,'r^')
     axes[0].axis('image')
     axes[1].plot(D/1000.0,transect,'ko',ms=1)
 
@@ -762,7 +764,7 @@ def main(argv):
     stdInSAR=np.array(nanstd(transect,axis=1))
   #  print avgInSAR
   #  print stdInSAR
-    
+
       #std=np.std(transect,1)
    # axes[1].plot(D/1000.0, avgInSAR, 'r-')
     try:
@@ -785,7 +787,7 @@ def main(argv):
        axes2.plot([Xf0,Xf1],[Yf0,Yf1], 'k-')
     except:
        FaultLine='None'
-    
+
 
     axes2.plot(GPSx,GPSy,'b^')
     axes2.plot(GPSxx,GPSyy,'k^')
@@ -795,7 +797,7 @@ def main(argv):
 
     figName = 'transect_area.png'
     print 'writing '+figName
-    plt.savefig(figName)    
+    plt.savefig(figName)
 
 #############################################################################
     fig = plt.figure()
@@ -807,7 +809,7 @@ def main(argv):
 
 
 ############################################################################
-# save the profile data:     
+# save the profile data:
     if save_to_mat in ['ON','on','On','yes','y','YES','Yes']:
        import scipy.io as sio
        matFile='transect.mat'
@@ -829,13 +831,13 @@ def main(argv):
        print '*****************************************'
 ############################################################################
  #   ax.plot(D/1000.0, avgInSAR*1000, 'r-')
- 
+
 #    ax.plot(D/1000.0,transect*1000/(np.sin(23.*np.pi/180.)*np.cos(38.*np.pi/180.0)),'o',ms=1,mfc='Black', linewidth='0')
 #    ax.plot(D/1000.0, avgInSAR*1000/(np.sin(23.*np.pi/180.)*np.cos(38.*np.pi/180.0)), 'r-')
 
 #############################################################################
     if disp_std in ['on','On','ON']:
- 
+
        for i in np.arange(0.0,1.01,0.01):
           ax.plot(D/1000.0, (avgInSAR-i*stdInSAR)*1000, '-',color='#DCDCDC',alpha=0.5)#,color='#DCDCDC')#'LightGrey')
        for i in np.arange(0.0,1.01,0.01):
@@ -843,10 +845,10 @@ def main(argv):
 #############################################################################
     if display_Average in ['on','On','ON']:
        ax.plot(D/1000.0, avgInSAR*1000, 'r-')
-########### 
+###########
   # ax.fill_between(D/1000.0, (avgInSAR-stdInSAR)*1000, (avgInSAR+stdInSAR)*1000,where=(avgInSAR+stdInSAR)*1000>=(avgInSAR-stdInSAR)*1000,alpha=1, facecolor='Red')
 
-    try:      
+    try:
         ax.plot(DistGPS/1000.0, -1*GPS_in_bound, '^',ms=10,mfc='Cyan')
     except:
         print ''
@@ -878,14 +880,14 @@ def main(argv):
        fault_loc='None'
 
     ###################################################################
-    
 
-    try: 
+
+    try:
          ax.set_ylim(lbound,hbound)
     except:
          ylim='no'
 
-   # try: 
+   # try:
    #      ax.set_xlim(-10,300)
    # except:
     #     xlim='no'
@@ -907,7 +909,7 @@ def main(argv):
 #                tick.label.set_fontsize(26)
 #       for tick in ax.yaxis.get_major_ticks():
 #                tick.label.set_fontsize(26)
-#    
+#
 #       plt.tick_params(which='major', length=15,width=2)
 #       plt.tick_params(which='minor', length=6,width=2)
 #    except:
@@ -922,8 +924,7 @@ def main(argv):
 #############################################################################
     plt.show()
 
-    
+
 if __name__ == '__main__':
 
   main(sys.argv[1:])
-
