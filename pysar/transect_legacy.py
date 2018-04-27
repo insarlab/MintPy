@@ -260,8 +260,7 @@ def get_transect(z,x0,y0,x1,y1,interpolation='nearest'):
     ## Extract the value along the line
     if   interpolation.lower() == 'cubic':     zi = scipy.ndimage.map_coordinates(z,np.vstack((x,y)))
     elif interpolation.lower() == 'bilinear':  zi = scipy.ndimage.map_coordinates(z,np.vstack((x,y)),order=2)
-    else:                                      zi = z[y.astype(np.int), x.astype(np.int)]
-#    else:                                      zi = z[np.rint(y), np.rint(x)]     # nearest neighbour
+    else:                                      zi = z[np.rint(y)astype(np.int), np.rint(x).astype(np.int)]     # nearest neighbour
 
     return zi
 
