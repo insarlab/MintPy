@@ -22,7 +22,6 @@ import pysar
 from pysar.utils import readfile, writefile, utils as ut
 from pysar.objects import ifgramStack
 from pysar.defaults import autoPath
-#from pysar import geocode, subset, save_hdfeos5 as hdfeos5
 from pysar import subset, save_hdfeos5 as hdfeos5
 
 
