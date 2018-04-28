@@ -21,6 +21,7 @@ Usage: quality_map.py  stack_file
 Example: quality_map.py  INPUTS/ifgramStack.h5
 """
 
+
 def usage():
     print(USAGE)
     return

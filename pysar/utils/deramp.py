@@ -1,23 +1,23 @@
 ###############################################################################
-# Program is part of PySAR      
+# Program is part of PySAR
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun
-# Author:  Heresh Fattahi, Zhang Yunjun 
+# Author:  Heresh Fattahi, Zhang Yunjun
 ###############################################################################
 #  deramp are modified from a software originally
 #  written by Scott Baker with the following licence:
 #
-#  Copyright (c) 2011, Scott Baker 
-# 
+#  Copyright (c) 2011, Scott Baker
+#
 #  Permission is hereby granted, free of charge, to any person obtaining a
 #  copy of this software and associated documentation files (the "Software"),
 #  to deal in the Software without restriction, including without limitation
 #  the rights to use, copy, modify, merge, publish, distribute, sublicense,
 #  and/or sell copies of the Software, and to permit persons to whom the
 #  Software is furnished to do so, subject to the following conditions:
-# 
+#
 #  The above copyright notice and this permission notice shall be included
 #  in all copies or substantial portions of the Software.
-# 
+#
 #  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 #  OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -25,7 +25,7 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
-############################################################################### 
+###############################################################################
 # Recommend usage:
 #     from pysar.utils import deramp
 #
@@ -43,45 +43,45 @@ from pysar.objects import timeseries, ifgramStack
 def remove_data_surface(data, mask, surf_type='plane'):
     '''Remove surface from input data matrix based on pixel marked by mask'''
     mask[np.isnan(data)] = 0
-    mask = mask.flatten(1) 
+    mask = mask.flatten(1)
     z = data.flatten(1)
-    ndx= mask !=0
-    x = list(range(0,np.shape(data)[1]))
-    y = list(range(0,np.shape(data)[0]))
-    x1,y1 = np.meshgrid(x,y)
-    points = np.vstack((y1.flatten(1),x1.flatten(1))).T
-    if surf_type=='quadratic':
-        G = np.array([points[:,0]**2,points[:,1]**2,points[:,0],points[:,1],points[:,0]*points[:,1],\
-                     np.ones(np.shape(points)[0])],np.float32).T
-    elif surf_type=='plane':
-        G = np.array([points[:,0],points[:,1],\
-                     np.ones(np.shape(points)[0])],np.float32).T
+    ndx = mask != 0
+    x = list(range(0, np.shape(data)[1]))
+    y = list(range(0, np.shape(data)[0]))
+    x1, y1 = np.meshgrid(x, y)
+    points = np.vstack((y1.flatten(1), x1.flatten(1))).T
+    if surf_type == 'quadratic':
+        G = np.array([points[:, 0]**2, points[:, 1]**2, points[:, 0], points[:, 1], points[:, 0]*points[:, 1],
+                      np.ones(np.shape(points)[0])], np.float32).T
+    elif surf_type == 'plane':
+        G = np.array([points[:, 0], points[:, 1],
+                      np.ones(np.shape(points)[0])], np.float32).T
     elif surf_type == 'quadratic_range':
-        G = np.array([points[:,1]**2,points[:,1],\
-                     np.ones(np.shape(points)[0])],np.float32).T
+        G = np.array([points[:, 1]**2, points[:, 1],
+                      np.ones(np.shape(points)[0])], np.float32).T
     elif surf_type == 'quadratic_azimuth':
-        G = np.array([points[:,0]**2,points[:,0],\
-                     np.ones(np.shape(points)[0])],np.float32).T
-    elif surf_type=='plane_range':
-        G = np.array([points[:,1],\
-                     np.ones(np.shape(points)[0])],np.float32).T
-    elif surf_type=='plane_azimuth':
-        G = np.array([points[:,0],\
-                     np.ones(np.shape(points)[0])],np.float32).T
+        G = np.array([points[:, 0]**2, points[:, 0],
+                      np.ones(np.shape(points)[0])], np.float32).T
+    elif surf_type == 'plane_range':
+        G = np.array([points[:, 1],
+                      np.ones(np.shape(points)[0])], np.float32).T
+    elif surf_type == 'plane_azimuth':
+        G = np.array([points[:, 0],
+                      np.ones(np.shape(points)[0])], np.float32).T
 
     z = z[ndx]
     G = G[ndx]
-    G1=np.linalg.pinv(G)
-    plane = np.dot(G1,z)
+    G1 = np.linalg.pinv(G)
+    plane = np.dot(G1, z)
 
-    if   surf_type == 'quadratic':
-        zplane = plane[0]*y1**2 + plane[1]*x1**2 + plane[2]*y1 + plane[3]*x1 + plane[4]*y1*x1 + plane[5]
-    elif surf_type =='plane':
+    if surf_type == 'quadratic':
+        zplane = plane[0]*y1**2 + plane[1]*x1**2 + plane[2] * y1 + plane[3]*x1 + plane[4]*y1*x1 + plane[5]
+    elif surf_type == 'plane':
         zplane = plane[0]*y1 + plane[1]*x1 + plane[2]
     elif surf_type == 'quadratic_range':
-        zplane = plane[0]*x1**2  + plane[1]*x1 + plane[2]
+        zplane = plane[0]*x1**2 + plane[1]*x1 + plane[2]
     elif surf_type == 'quadratic_azimuth':
-        zplane = plane[0]*y1**2  + plane[1]*y1 + plane[2]
+        zplane = plane[0]*y1**2 + plane[1]*y1 + plane[2]
     elif surf_type == 'plane_range':
         zplane = plane[0]*x1 + plane[1]
     elif surf_type == 'plane_azimuth':
@@ -119,33 +119,33 @@ def remove_data_surface(data, mask, surf_type='plane'):
 ##################################################################
 def remove_data_multiple_surface(data, mask, surf_type, ysub):
     ## ysub = [0,2400,2000,6800]
-    dataOut = np.zeros(data.shape,data.dtype)
+    dataOut = np.zeros(data.shape, data.dtype)
     dataOut[:] = np.nan
 
     surfaceNum = len(ysub)/2
-    ## 1st mask
+    # 1st mask
     print('removing 1st surface ...')
     i = 0
-    mask_i = np.zeros(data.shape,data.dtype)
-    mask_i[ysub[2*i]:ysub[2*i+1],:] = mask[ysub[2*i]:ysub[2*i+1],:]
+    mask_i = np.zeros(data.shape, data.dtype)
+    mask_i[ysub[2*i]:ysub[2*i+1], :] = mask[ysub[2*i]:ysub[2*i+1], :]
 
-    dataOut_i,ramp_i = remove_data_surface(data,mask_i,surf_type)
-    dataOut[ysub[2*i]:ysub[2*i+1],:] = dataOut_i[ysub[2*i]:ysub[2*i+1],:]
+    dataOut_i, ramp_i = remove_data_surface(data, mask_i, surf_type)
+    dataOut[ysub[2*i]:ysub[2*i+1], :] = dataOut_i[ysub[2*i]:ysub[2*i+1], :]
 
-    ## 2 - last masks
-    for i in range(1,surfaceNum):
+    # 2 - last masks
+    for i in range(1, surfaceNum):
         print('removing '+str(i+1)+'th surface ...')
-        mask_i = np.zeros(data.shape,data.dtype)
-        mask_i[ysub[2*i]:ysub[2*i+1],:] = mask[ysub[2*i]:ysub[2*i+1],:]
+        mask_i = np.zeros(data.shape, data.dtype)
+        mask_i[ysub[2*i]:ysub[2*i+1], :] = mask[ysub[2*i]:ysub[2*i+1], :]
 
-        dataOut_i,ramp_i = remove_data_surface(data,mask_i,surf_type)
+        dataOut_i, ramp_i = remove_data_surface(data, mask_i, surf_type)
 
         if ysub[2*i] < ysub[2*i-1]:
-            dataOut[ysub[2*i]:ysub[2*i-1],:]  += dataOut_i[ysub[2*i]:ysub[2*i-1],:]
-            dataOut[ysub[2*i]:ysub[2*i-1],:]  /= 2
-            dataOut[ysub[2*i-1]:ysub[2*i+1],:] = dataOut_i[ysub[2*i-1]:ysub[2*i+1],:]
+            dataOut[ysub[2*i]:ysub[2*i-1], :] += dataOut_i[ysub[2*i]:ysub[2*i-1], :]
+            dataOut[ysub[2*i]:ysub[2*i-1], :] /= 2
+            dataOut[ysub[2*i-1]:ysub[2*i+1], :] = dataOut_i[ysub[2*i-1]:ysub[2*i+1], :]
         else:
-            dataOut[ysub[2*i]:ysub[2*i+1],:]   = dataOut_i[ysub[2*i]:ysub[2*i+1],:]
+            dataOut[ysub[2*i]:ysub[2*i+1], :] = dataOut_i[ysub[2*i]:ysub[2*i+1], :]
 
     return dataOut
 
@@ -159,7 +159,9 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
     print('remove ramp type: '+surf_type)
 
     if not outFile:
-        outFile = os.path.splitext(File)[0]+'_'+surf_type+os.path.splitext(File)[1]
+        outFile = '{}_{}{}'.format(os.path.splitext(File)[0],
+                                   surf_type,
+                                   os.path.splitext(File)[1])
 
     if maskFile:
         mask = readfile.read(maskFile, datasetName='mask')[0]
@@ -176,15 +178,19 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
         prog_bar = ptime.progressBar(maxValue=numDate)
         for i in range(numDate):
             if not ysub:
-                data[i,:,:] = remove_data_surface(np.squeeze(data[i,:,:]), mask, surf_type)[0]
+                data[i, :, :] = remove_data_surface(np.squeeze(data[i, :, :]),
+                                                    mask,
+                                                    surf_type)[0]
             else:
-                data[i,:,:] = remove_data_multiple_surface(np.squeeze(data), mask, surf_type, ysub)
+                data[i, :, :] = remove_data_multiple_surface(np.squeeze(data),
+                                                             mask,
+                                                             surf_type, ysub)
             prog_bar.update(i+1, suffix=obj.dateList[i])
         prog_bar.close()
         objOut = timeseries(outFile)
         objOut.write2hdf5(data=data, refFile=File)
-  
-    elif k in ['interferograms','wrapped','coherence']:
+
+    elif k in ['interferograms', 'wrapped', 'coherence']:
         print('number of interferograms: '+str(len(epochList)))
         date12_list = ptime.list_ifgram2date12(epochList)
 
@@ -201,24 +207,23 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
                 mask[data == 0.] = 0
 
             if not ysub:
-                data_n,ramp = remove_data_surface(data,mask,surf_type)
+                data_n, ramp = remove_data_surface(data, mask, surf_type)
             else:
                 data_n = remove_data_multiple_surface(data, mask, surf_type, ysub)
 
-            gg   = group.create_group(epoch)
+            gg = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data_n)
-            for key,value in h5file[k][epoch].attrs.items():
+            for key, value in h5file[k][epoch].attrs.items():
                 gg.attrs[key] = value
             prog_bar.update(i+1, suffix=date12_list[i])
 
-    ## Single Dataset File
+    # Single Dataset File
     else:
-        data,atr = readfile.read(File)
+        data, atr = readfile.read(File)
         print('Removing '+surf_type+' from '+k)
-        data_n,ramp = remove_data_surface(data, mask, surf_type)
+        data_n, ramp = remove_data_surface(data, mask, surf_type)
         print('writing >>> '+outFile)
         writefile.write(data_n, out_file=outFile, metadata=atr)
-  
-    print('Remove '+surf_type+' took ' + str(time.time()-start) +' secs')
-    return outFile
 
+    print('Remove '+surf_type+' took ' + str(time.time()-start) + ' secs')
+    return outFile

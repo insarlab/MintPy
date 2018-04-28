@@ -33,8 +33,8 @@ def add_file(fnames, out_file=None):
     ext = os.path.splitext(fnames[0])[1]
     if not out_file:
         out_file = os.path.splitext(fnames[0])[0]
-        for i in range(1,len(fnames)):
-            out_file += '_plus_'+os.path.splitext(os.path.basename(fnames[i]))[0]
+        for i in range(1, len(fnames)):
+            out_file += '_plus_' + os.path.splitext(os.path.basename(fnames[i]))[0]
         out_file += ext
 
     atr = readfile.read_attribute(fnames[0])
@@ -58,14 +58,15 @@ EXAMPLE = """example:
   add.py  timeseries_ECMWF.h5  ECMWF.h5           -o timeseries.h5
 """
 
+
 def create_parser():
     """ Command line parser """
-    parser = argparse.ArgumentParser(description='Generate sum of multiple input files.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Generate sum of multiple input files.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='files (2 or more) to be added')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name')
+    parser.add_argument('-o', '--output', dest='outfile', help='output file name')
     return parser
 
 
@@ -92,4 +93,3 @@ def main(iargs=None):
 ################################################################################
 if __name__ == '__main__':
     main()
-

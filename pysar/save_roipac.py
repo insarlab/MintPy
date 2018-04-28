@@ -25,18 +25,23 @@ EXAMPLE = """example:
   save_roipac.py  temporal_coherence.h5
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Convert PySAR HDF5 file to ROI_PAC format.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Convert PySAR HDF5 file to ROI_PAC format.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('file', help='HDF5 file to be converted.\n'+\
-                        'for velocity  : the ouput will be a one year interferogram.\n'+\
+    parser.add_argument('file', help='HDF5 file to be converted.\n' +
+                        'for velocity  : the ouput will be a one year interferogram.\n' +
                         'for timeseries: if date is not specified, the last date will be used.')
-    parser.add_argument('epoch', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name.')
-    parser.add_argument('-r','--ref-date', dest='ref_date', help='Reference date for timeseries file')
+    parser.add_argument('epoch', nargs='?',
+                        help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name.')
+    parser.add_argument('-r', '--ref-date', dest='ref_date',
+                        help='Reference date for timeseries file')
     return parser
+
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
@@ -47,21 +52,21 @@ def cmd_line_parse(iargs=None):
 ##############################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-  
+
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
     atr['PROCESSOR'] = 'roipac'
 
-    h5file = h5py.File(inps.file,'r')
-  
+    h5file = h5py.File(inps.file, 'r')
+
     if k == 'velocity':
         dset = h5file['velocity'].get('velocity')
-        data = dset[0:dset.shape[0],0:dset.shape[1]]
+        data = dset[0:dset.shape[0], 0:dset.shape[1]]
         print("converting velocity to a 1 year interferogram.")
-        wvl=float(h5file[k].attrs['WAVELENGTH'])
-        data=(-4*pi/wvl)*data
+        wvl = float(h5file[k].attrs['WAVELENGTH'])
+        data = (-4*pi/wvl)*data
 
-        inps.outfile=inps.file.split('.')[0]+'.unw'
+        inps.outfile = inps.file.split('.')[0]+'.unw'
         print('writing >>> '+inps.outfile)
         writefile.write(data, out_file=inps.outfile, metadata=atr)
 
@@ -75,35 +80,35 @@ def main(iargs=None):
         if k in ['timeseries']:
             inps.epoch = ptime.yyyymmdd(inps.epoch)
 
-        ## Data
+        # Data
         print('reading %s and %s ...' % (inps.ref_date, inps.epoch))
         data = h5file[k].get(inps.epoch)[:]
         if inps.ref_date:
             inps.ref_date = ptime.yyyymmdd(inps.ref_date)
             data -= h5file[k].get(inps.ref_date)[:]
 
-        ## Attributes
+        # Attributes
         if k in ['timeseries']:
             wvl = float(atr['WAVELENGTH'])
             data *= -4*pi/wvl
-            atr['FILE_TYPE']             = '.unw'
+            atr['FILE_TYPE'] = '.unw'
             atr['P_BASELINE_TIMESERIES'] = '0.0'
-            atr['UNIT']                  = 'radian'
+            atr['UNIT'] = 'radian'
         if inps.ref_date:
-            atr['DATE']              = inps.ref_date[2:8]
-            atr['DATE12']            = '%s-%s' % (inps.ref_date[2:8],inps.epoch[2:8])
+            atr['DATE'] = inps.ref_date[2:8]
+            atr['DATE12'] = '%s-%s' % (inps.ref_date[2:8], inps.epoch[2:8])
 
-        ## Writing
+        # Writing
         if not inps.outfile:
             if k in ['timeseries']:
-                inps.outfile = '%s_%s.unw' % (inps.ref_date[2:8],inps.epoch[2:8])
+                inps.outfile = '%s_%s.unw' % (inps.ref_date[2:8], inps.epoch[2:8])
             else:
                 inps.outfile = '%s.cor' % (inps.epoch)
         print('writing >>> '+inps.outfile)
         writefile.write(data, out_file=inps.outfile, metadata=atr)
 
-    elif k in ['interferograms','coherence','wrapped']:
-        ## Check input
+    elif k in ['interferograms', 'coherence', 'wrapped']:
+        # Check input
         igramList = sorted(h5file[k].keys())
         try:
             inps.epoch = [igram for igram in igramList if inps.epoch in igram][0]
@@ -119,29 +124,28 @@ def main(iargs=None):
             try:
                 ref_y = int(atr['REF_Y'])
                 ref_x = int(atr['REF_X'])
-                data -= data[ref_y,ref_x]
+                data -= data[ref_y, ref_x]
                 print('consider the reference pixel in y/x: %d/%d' % (ref_y, ref_x))
             except:
                 print('No ref_y/x info found in attributes.')
         atr['PROCESSOR'] = 'roipac'
 
         inps.outfile = inps.epoch
-        print('writing >>> '+ inps.outfile)
-        writefile.write(data, out_file=inps.outfile, metadata=atr)  
+        print('writing >>> ' + inps.outfile)
+        writefile.write(data, out_file=inps.outfile, metadata=atr)
 
     else:
         data = h5file[k].get(k)[:]
         if not inps.outfile:
             if k in ['temporal_coherence']:
-                inps.outfile=inps.file.split('.')[0]+'.cor'
-            elif k in ['dem','.hgt','.dem']:
+                inps.outfile = inps.file.split('.')[0]+'.cor'
+            elif k in ['dem', '.hgt', '.dem']:
                 atr['FILE_TYPE'] = '.dem'
-                inps.outfile=os.path.splitext(inps.file)[0]+'.dem'
+                inps.outfile = os.path.splitext(inps.file)[0]+'.dem'
             else:
-                inps.outfile=inps.file.split('.')[0]+'.unw'
-        print('writing >>> '+ inps.outfile)
+                inps.outfile = inps.file.split('.')[0]+'.unw'
+        print('writing >>> ' + inps.outfile)
         writefile.write(data, out_file=inps.outfile, metadata=atr)
-
 
     h5file.close()
     return

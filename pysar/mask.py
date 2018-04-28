@@ -20,25 +20,30 @@ EXAMPLE = """example:
   mask.py  ifgramStack.h5  -m 100102_101120.cor      -t 0.9  -y  200 300  -x 300 400
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Mask file',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Mask file',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='File to be masked')
-    parser.add_argument('-m','--mask', dest='mask_file', help='mask for pixels used in ramp estimation')
-    parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
+    parser.add_argument('-m', '--mask', dest='mask_file',
+                        help='mask for pixels used in ramp estimation')
+    parser.add_argument(
+        '-o', '--outfile', help='Output file name. Disabled when more than 1 input files')
 
     # modify input mask
-    parser.add_argument('-t', dest='threshold', type=float,\
-                        help='threshold value used for masking.\n'+\
+    parser.add_argument('-t', dest='threshold', type=float,
+                        help='threshold value used for masking.\n' +
                         'if not specified, only pixels with mask value equal to zero is masked out.')
-    parser.add_argument('--fill', dest='fill_value', type=float,\
+    parser.add_argument('--fill', dest='fill_value', type=float,
                         help="fill masked out area with input value. i.e. \n"
                              "np.nan, 0, 1000, ... \n"
                              "By default, it's np.ma.masked for int16 type and np.nan for all the others.")
-    parser.add_argument('-x', dest='subset_x', type=int, nargs=2, help='subset range in x/cross-track/column direction')
-    parser.add_argument('-y', dest='subset_y', type=int, nargs=2, help='subset range in y/along-track/row direction')
+    parser.add_argument('-x', dest='subset_x', type=int, nargs=2,
+                        help='subset range in x/cross-track/column direction')
+    parser.add_argument('-y', dest='subset_y', type=int, nargs=2,
+                        help='subset range in y/along-track/row direction')
     return parser
 
 
@@ -128,7 +133,7 @@ def mask_file(fname, mask_file, out_file=None, inps=None):
 
 
 ############################################################
-def main(iargs=None): 
+def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     inps.outfile = mask_file(inps.file, inps.mask_file, inps.outfile, inps)
@@ -140,4 +145,3 @@ def main(iargs=None):
 ############################################################
 if __name__ == '__main__':
     main()
-

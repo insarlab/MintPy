@@ -22,17 +22,20 @@ EXAMPLE = """example:
  temporal_filter.py timeseries_ECMWF_demErr_refDate.h5 -t 0.3
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Smoothing Timeseries using moving Gaussian window\n'+\
-                                     '  https://en.wikipedia.org/wiki/Gaussian_blur',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Smoothing Timeseries using moving Gaussian window\n' +
+                                     '  https://en.wikipedia.org/wiki/Gaussian_blur',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('timeseries_file', help='timeseries file to be smoothed.')
-    parser.add_argument('-t','--time-win', dest='time_win', type=float, default=0.3,\
+    parser.add_argument('timeseries_file',
+                        help='timeseries file to be smoothed.')
+    parser.add_argument('-t', '--time-win', dest='time_win', type=float, default=0.3,
                         help='time window in years (Sigma of the assmued Gaussian distribution.)')
-    parser.add_argument('-o','--outfile', help='Output file name.')
+    parser.add_argument('-o', '--outfile', help='Output file name.')
     return parser
+
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
@@ -50,14 +53,14 @@ def main(iargs=None):
     if k not in ['timeseries']:
         sys.exit('ERROR: only timeseries file supported, input is '+k+' file!')
 
-    h5 = h5py.File(inps.timeseries_file,'r')
+    h5 = h5py.File(inps.timeseries_file, 'r')
     date_list = sorted(h5[k].keys())
     date_num = len(date_list)
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     pixel_num = length*width
 
-    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32).reshape((date_num,1))
+    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32).reshape((date_num, 1))
     tbase /= 365.25
 
     # Read timeseries
@@ -67,7 +70,7 @@ def main(iargs=None):
     for i in range(date_num):
         date = date_list[i]
         d = h5[k].get(date)[:]
-        timeseries[i,:] = d.flatten(0)
+        timeseries[i, :] = d.flatten(0)
         prog_bar.update(i+1, suffix=date)
     del d
     h5.close()
@@ -83,21 +86,23 @@ def main(iargs=None):
         t_diff = tbase[i] - tbase
         weight = np.exp(-0.5*(t_diff**2)/(inps.time_win**2))
         weight /= np.sum(weight)
-        weightMat = np.tile(weight, (1,pixel_num))
+        weightMat = np.tile(weight, (1, pixel_num))
         # Smooth the current acquisition - moving window in time one by one
-        timeseries_filt[i,:] = np.sum(timeseries*weightMat, 0)
+        timeseries_filt[i, :] = np.sum(timeseries*weightMat, 0)
         prog_bar.update(i+1, suffix=date)
     del weightMat
     del timeseries
     prog_bar.close()
 
     # Write smoothed timeseries file
-    try:    ref_date = atr['REF_DATE']
-    except: ref_date = date_list[0]
+    try:
+        ref_date = atr['REF_DATE']
+    except:
+        ref_date = date_list[0]
     ref_date_idx = date_list.index(ref_date)
     print('reference date: '+ref_date)
     print('reference date index: '+str(ref_date_idx))
-    ref_data = np.reshape(timeseries_filt[ref_date_idx,:], [length, width])
+    ref_data = np.reshape(timeseries_filt[ref_date_idx, :], [length, width])
 
     if not inps.outfile:
         inps.outfile = os.path.splitext(inps.timeseries_file)[0]+'_smooth.h5'
@@ -109,10 +114,10 @@ def main(iargs=None):
     prog_bar = ptime.progressBar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
-        data = np.reshape(timeseries_filt[i,:], [length, width])
+        data = np.reshape(timeseries_filt[i, :], [length, width])
         dset = group.create_dataset(date, data=data-ref_data)
         prog_bar.update(i+1, suffix=date)
-    for key,value in iter(atr.items()):
+    for key, value in iter(atr.items()):
         group.attrs[key] = value
     h5out.close()
     prog_bar.close()

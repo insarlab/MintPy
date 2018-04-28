@@ -33,6 +33,7 @@ example:
   sum_epochs.py  timeseries_ECMWF_demErr_quadratic.h5  sum_timeseries_ECMWF_demErr_quadratic.h5
 """
 
+
 def usage():
     print(USAGE)
     return
@@ -43,12 +44,15 @@ def main(argv):
     try:
         timeseriesFile = argv[0]
     except:
-        usage(); sys.exit(1)
+        usage()
+        sys.exit(1)
 
-    try:    outname = argv[1]
-    except: outname = 'sum_'+timeseriesFile
+    try:
+        outname = argv[1]
+    except:
+        outname = 'sum_'+timeseriesFile
 
-    ##### Read Timeseries
+    # Read Timeseries
     atr = readfile.read_attribute(timeseriesFile)
     k = atr['FILE_TYPE']
     print("loading time series: " + timeseriesFile)
@@ -58,7 +62,7 @@ def main(argv):
     print('number of acquisitions: %d' % date_num)
 
     length = int(atr['LENGTH'])
-    width  = int(atr['WIDTH'])
+    width = int(atr['WIDTH'])
     D = np.zeros((date_num, length*width), np.float32)
 
     prog_bar = ptime.progressBar(maxValue=date_num)
@@ -70,35 +74,35 @@ def main(argv):
     prog_bar.close()
     h5timeseries.close()
 
-    ##### Calculate Sum
+    # Calculate Sum
     print('calculating epochs sum ...')
     sumD = np.zeros(D.shape)
     prog_bar.reset()
     for i in range(date_num):
-        sumD[j,:] = np.sum(np.abs(D-D[j,:]),0)/date_num
+        sumD[j, :] = np.sum(np.abs(D-D[j, :]), 0)/date_num
         prog_bar.update(i+1)
     prog_bar.close()
 
-    ## Normalize to 0 and 1
-    ## with high atmosphere equal to 0 and no atmosphere equal to 1
-    sumD -= np.max(sumD,0)
+    # Normalize to 0 and 1
+    # with high atmosphere equal to 0 and no atmosphere equal to 1
+    sumD -= np.max(sumD, 0)
     sumD *= -1
-    sumD /= np.max(sumD,0)
+    sumD /= np.max(sumD, 0)
     sumD[np.isnan(sumD)] = 1
 
-    ##### Write sum epochs file
+    # Write sum epochs file
     print('writing to >>> '+outname)
-    h5sum = h5py.File(outname,'w')
+    h5sum = h5py.File(outname, 'w')
     group = h5sum.create_group('timeseries')
     prog_bar.reset()
     for i in range(date_num):
         date = dateList[i]
-        d = np.reshape(sumD[i][:],[length,width])
+        d = np.reshape(sumD[i][:], [length, width])
         dset = group.create_dataset(date, data=d)
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
 
-    for key,value in iter(atr.items()):
+    for key, value in iter(atr.items()):
         group.attrs[key] = value
     h5sum.close()
     print('Done.')
@@ -107,4 +111,3 @@ def main(argv):
 #####################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-

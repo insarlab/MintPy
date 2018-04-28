@@ -101,7 +101,9 @@ def read_ref_date(inps):
     elif inps.refDate.lower() == 'minrms':
         print('-'*50)
         print('auto choose reference date based on minimum residual RMS')
-        rms_list, date_list = ut.get_residual_rms(inps.resid_file, inps.maskFile, inps.ramp_type)[0:2]
+        rms_list, date_list = ut.get_residual_rms(inps.resid_file,
+                                                  inps.maskFile,
+                                                  inps.ramp_type)[0:2]
         ref_idx = np.argmin(rms_list)
         inps.refDate = date_list[ref_idx]
         print('date with minimum residual RMS: %s - %.4f' % (inps.refDate, rms_list[ref_idx]))
@@ -157,7 +159,9 @@ def main(iargs=None):
 
     inps.refDate = read_ref_date(inps)
 
-    inps.outfile = ref_date_file(inps.timeseries_file, inps.refDate, inps.outfile)
+    inps.outfile = ref_date_file(inps.timeseries_file,
+                                 inps.refDate,
+                                 inps.outfile)
     return inps.outfile
 
 

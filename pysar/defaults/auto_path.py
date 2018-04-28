@@ -9,7 +9,7 @@
 import os
 import numpy as np
 
-## Auto setting for file structure of Univ. of Miami, as shown below. 
+# Auto setting for file structure of Univ. of Miami, as shown below.
 # It required 3 conditions: 1) autoPath = True
 #                           2) $SCRATCHDIR is defined in environmental variable
 #                           3) input custom template with basename same as projectName
@@ -17,7 +17,7 @@ import numpy as np
 autoPath = True
 
 
-###### Default path of data files from different InSAR processors to be loaded into PySAR
+# Default path of data files from different InSAR processors to be loaded into PySAR
 isceAutoPath = '''##----------Default file path of ISCE/SentinelStack products
 pysar.load.processor      = isce
 pysar.load.unwFile        = $PROJECT_DIR/merged/interferograms/*/filt*.unw
@@ -74,7 +74,7 @@ prefix = 'pysar.load.'
 ##----------------- Functions from pysar.utils.readfile to be independnt module ---------##
 def check_variable_name(path, print_msg=True):
     s = path.split("/")[0]
-    if len(s)>0 and s[0]=="$":
+    if len(s) > 0 and s[0] == "$":
         try:
             p0 = os.getenv(s[1:])
             path = path.replace(path.split("/")[0], p0)
@@ -92,36 +92,37 @@ def read_str2dict(inString, delimiter='=', print_msg=False):
     lines = inString.split('\n')
     for line in lines:
         c = [i.strip() for i in line.strip().split(delimiter, 1)]
-        if len(c) < 2 or line.startswith(('%','#')):
+        if len(c) < 2 or line.startswith(('%', '#')):
             next
         else:
-            key  = c[0]
-            value = str.replace(c[1],'\n','').split("#")[0].strip()
+            key = c[0]
+            value = str.replace(c[1], '\n', '').split("#")[0].strip()
             value = check_variable_name(value, print_msg=print_msg)
             if value != '':
                 strDict[key] = value
     return strDict
-                
+
 
 ##----------------------------------------------------------------------------------------##
 def get_auto_path4sentinel_stack(projectName, template=dict()):
-    ## default file pattern
+    # default file pattern
     defDict = read_str2dict(isceAutoPath, print_msg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 
-    projectDir = os.path.join(os.getenv('SCRATCHDIR'),projectName)
-    ifgramDir = os.path.join(projectDir,'merged','interferograms','*')
-    geomDir = os.path.join(projectDir,'merged','geom_master')
+    projectDir = os.path.join(os.getenv('SCRATCHDIR'), projectName)
+    ifgramDir = os.path.join(projectDir, 'merged', 'interferograms', '*')
+    geomDir = os.path.join(projectDir, 'merged', 'geom_master')
 
-    ## ifgramStack
-    for suffix in ['unwFile','corFile','connCompFile','intFile']:
+    # ifgramStack
+    for suffix in ['unwFile', 'corFile', 'connCompFile', 'intFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             template[key] = os.path.join(ifgramDir, defDict[key])
 
-    ## geometry
-    for suffix in ['demFile','lookupYFile','lookupXFile','incAngleFile','headAngleFile','shadowMaskFile']:
+    # geometry
+    for suffix in ['demFile', 'lookupYFile', 'lookupXFile',
+                   'incAngleFile', 'headAngleFile', 'shadowMaskFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             template[key] = os.path.join(geomDir, defDict[key])
@@ -130,46 +131,48 @@ def get_auto_path4sentinel_stack(projectName, template=dict()):
 
 
 def get_auto_path4roipac(projectName, template=dict()):
-    ## default file pattern
+    # default file pattern
     defDict = read_str2dict(roipacAutoPath, print_msg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 
-    projectDir = os.path.join(os.getenv('SCRATCHDIR'),projectName)
-    ifgramDir = os.path.join(projectDir,'PROCESS','DONE','IFG*')
-    geomDir = os.path.join(projectDir,'PROCESS','GEO')
+    projectDir = os.path.join(os.getenv('SCRATCHDIR'), projectName)
+    ifgramDir = os.path.join(projectDir, 'PROCESS', 'DONE', 'IFG*')
+    geomDir = os.path.join(projectDir, 'PROCESS', 'GEO')
 
-    ## ifgramStack
-    for suffix in ['unwFile','corFile','connCompFile','intFile']:
+    # ifgramStack
+    for suffix in ['unwFile', 'corFile', 'connCompFile', 'intFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             template[key] = os.path.join(ifgramDir, defDict[key])
 
-    ## geometry
+    # geometry
     m_date12 = None
-    masterIfgramTxtFile = os.path.join(projectDir,'PROCESS','master_ifgram.txt')
+    masterIfgramTxtFile = os.path.join(projectDir, 'PROCESS', 'master_ifgram.txt')
     if os.path.isfile(masterIfgramTxtFile):
         m_date12 = str(np.loadtxt(masterIfgramTxtFile, dtype=bytes).astype(str))
     else:
         try:
             m_date12 = os.walk(geomDir).next()[1][0].split('geo_')[1]
         except:
-            print("No master interferogram found! Check the {} folder".format(os.path.join(geomDir,'geo_')))
+            print("No master interferogram found! Check the {} folder".format(
+                os.path.join(geomDir, 'geo_')))
             m_date12 = None
 
-    for suffix in ['demFile','incAngleFile','headAngleFile','shadowMaskFile']:
+    for suffix in ['demFile', 'incAngleFile', 'headAngleFile', 'shadowMaskFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             if m_date12 and defDict[key] != 'None':
-                template[key] = os.path.join(projectDir,'PROCESS','DONE','*'+m_date12+'*',defDict[key])
+                template[key] = os.path.join(projectDir, 'PROCESS/DONE',
+                                             '*'+m_date12+'*', defDict[key])
             else:
                 template[key] = None
 
-    for suffix in ['lookupYFile','lookupXFile']:
+    for suffix in ['lookupYFile', 'lookupXFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             if m_date12:
-                template[key] = os.path.join(geomDir,'*'+m_date12+'*',defDict[key])
+                template[key] = os.path.join(geomDir, '*'+m_date12+'*', defDict[key])
             else:
                 template[key] = None
 
@@ -177,17 +180,17 @@ def get_auto_path4roipac(projectName, template=dict()):
 
 
 def get_auto_path4gamma(projectName, template=dict()):
-    ## default file pattern
+    # default file pattern
     defDict = read_str2dict(gammaAutoPath, print_msg=False)
     for key, value in defDict.item():
         defDict[key] = os.path.basename(value)
 
-    projectDir = os.path.join(os.getenv('SCRATCHDIR'),projectName)
-    ifgramDir = os.path.join(projectDir,'PROCESS','DONE','IFG*')
-    geomDir = os.path.join(projectDir,'PROCESS','SIM')
+    projectDir = os.path.join(os.getenv('SCRATCHDIR'), projectName)
+    ifgramDir = os.path.join(projectDir, 'PROCESS', 'DONE', 'IFG*')
+    geomDir = os.path.join(projectDir, 'PROCESS', 'SIM')
 
-    ## ifgramStack
-    for suffix in ['unwFile','corFile','connCompFile','intFile']:
+    # ifgramStack
+    for suffix in ['unwFile', 'corFile', 'connCompFile', 'intFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             if defDict[key] != 'None':
@@ -195,25 +198,27 @@ def get_auto_path4gamma(projectName, template=dict()):
             else:
                 template[key] = None
 
-    ## geometry
+    # geometry
     m_date12 = None
-    masterIfgramTxtFile = os.path.join(projectDir,'PROCESS','master_ifgram.txt')
+    masterIfgramTxtFile = os.path.join(
+        projectDir, 'PROCESS', 'master_ifgram.txt')
     if os.path.isfile(masterIfgramTxtFile):
         m_date12 = str(np.loadtxt(masterIfgramTxtFile, dtype=bytes).astype(str))
     else:
         try:
             m_date12 = os.walk(geomDir).next()[1][0].split('sim_')[1]
         except:
-            print("No master interferogram found! Check the {} folder".format(os.path.join(geomDir,'sim_')))
+            print("No master interferogram found! Check the {} folder".format(
+                os.path.join(geomDir, 'sim_')))
             m_date12 = None
 
-    for suffix in ['demFile','lookupYFile','lookupXFile','incAngleFile','headAngleFile','shadowMaskFile']:
+    for suffix in ['demFile', 'lookupYFile', 'lookupXFile',
+                   'incAngleFile', 'headAngleFile', 'shadowMaskFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             if m_date12 and defDict[key] != 'None':
-                template[key] = os.path.join(geomDir,'*'+m_date12+'*',defDict[key])
+                template[key] = os.path.join(geomDir, '*'+m_date12+'*', defDict[key])
             else:
                 template[key] = None
 
     return template
-

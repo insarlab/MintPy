@@ -2,13 +2,13 @@
 
 from .sensor import *
 
-## Independent utility scripts:
+# Independent utility scripts:
 # datetime
 # readfile
 # writefile
 # sensor
-# 
-## Dependent utility scripts:
+#
+# Dependent utility scripts:
 # network, deramp
 # utils
 # plot

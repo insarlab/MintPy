@@ -32,19 +32,23 @@ example:
     """)
     return
 
+
 def main(argv):
     try:
         File = argv[0]
         atr = readfile.read_attribute(File)
     except:
-        usage();  sys.exit(1)
-    
-    try:    outFile = argv[1]
-    except: outFile = 'rangeDistance.h5'
-    
+        usage()
+        sys.exit(1)
+
+    try:
+        outFile = argv[1]
+    except:
+        outFile = 'rangeDistance.h5'
+
     # Calculate look angle
     range_dis = ut.range_distance(atr, dimension=2)
-    
+
     # Geo coord
     if 'Y_FIRST' in atr.keys():
         print('Input file is geocoded, only center range distance is calculated: ')
@@ -58,16 +62,14 @@ def main(argv):
     print('writing >>> '+outFile)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 'm'
-    try: atr.pop('REF_DATE')
-    except: pass
+    try:
+        atr.pop('REF_DATE')
+    except:
+        pass
     writefile.write(range_dis, out_file=outFile, metadata=atr)
     return outFile
+
 
 ############################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-
-
-
-

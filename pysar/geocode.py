@@ -42,11 +42,11 @@ def create_parser():
                                      epilog=TEMPLATE + '\n' + EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='File(s) to be geocoded')
-    parser.add_argument('-d','--dset', help='dataset to be geocoded, for example:\n'+
-                        'height                        for geometryRadar.h5\n'+
+    parser.add_argument('-d', '--dset', help='dataset to be geocoded, for example:\n' +
+                        'height                        for geometryRadar.h5\n' +
                         'unwrapPhase-20100114_20101017 for ifgramStack.h5')
     parser.add_argument('--geo2radar', '--reverse', dest='radar2geo', action='store_false',
-                        help='reverse geocoding, or resample geocoded files into radar coordinates.\n'+
+                        help='reverse geocoding, or resample geocoded files into radar coordinates.\n' +
                         'For radar coded lookup table (ISCE, Doris) only.')
 
     parser.add_argument('-l', '--lookup', dest='lookupFile',
@@ -55,8 +55,8 @@ def create_parser():
                         help="Template file with geocoding options.")
 
     parser.add_argument('-b', '--bbox', dest='SNWE', type=float, nargs=4, metavar=('S', 'N', 'W', 'E'),
-                        help='Bounding box of area to be geocoded.\n'+
-                        'Include the uppler left corner of the first pixel'+
+                        help='Bounding box of area to be geocoded.\n' +
+                        'Include the uppler left corner of the first pixel' +
                         '    and the lower right corner of the last pixel')
     parser.add_argument('-y', '--lat-step', dest='latStep', type=float,
                         help='output pixel size in degree in latitude.')
@@ -191,8 +191,8 @@ def metadata_geo2radar(atr_in, res_obj, print_msg=True):
     atr = dict(atr_in)
     atr['LENGTH'] = res_obj.length
     atr['WIDTH'] = res_obj.width
-    for i in ['Y_FIRST','X_FIRST','Y_STEP','X_STEP','Y_UNIT','X_UNIT',
-              'REF_Y','REF_X','REF_LAT','REF_LON']:
+    for i in ['Y_FIRST', 'X_FIRST', 'Y_STEP', 'X_STEP', 'Y_UNIT', 'X_UNIT',
+              'REF_Y', 'REF_X', 'REF_LAT', 'REF_LON']:
         try:
             atr.pop(i)
         except:
@@ -235,7 +235,8 @@ def run_resample(inps):
     start_time = time.time()
 
     # Prepare geometry for geocoding
-    res_obj = resample(lookupFile=inps.lookupFile, dataFile=inps.file[0], SNWE=inps.SNWE, laloStep=inps.laloStep)
+    res_obj = resample(lookupFile=inps.lookupFile, dataFile=inps.file[0],
+                       SNWE=inps.SNWE, laloStep=inps.laloStep)
     res_obj.get_geometry_definition()
 
     inps.nprocs = multiprocessing.cpu_count()
@@ -253,10 +254,8 @@ def run_resample(inps):
         maxDigit = max([len(i) for i in dsNames])
         dsResDict = dict()
         for dsName in dsNames:
-            print('resampling {d:<{w}} from {f} using {n} processor cores ...'.format(d=dsName,
-                                                                                      w=maxDigit,
-                                                                                      f=os.path.basename(infile),
-                                                                                      n=inps.nprocs))
+            print('resampling {d:<{w}} from {f} using {n} processor cores ...'.format(
+                d=dsName, w=maxDigit, f=os.path.basename(infile), n=inps.nprocs))
             data = readfile.read(infile, datasetName=dsName, print_msg=False)[0]
             res_data = resample_data(data, inps, res_obj)
             dsResDict[dsName] = res_data

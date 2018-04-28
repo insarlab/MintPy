@@ -24,6 +24,7 @@ example:
   correlation_with_dem.py velocity_masked.h5 radar_8rlks.hgt
 """
 
+
 def usage():
     print(USAGE)
     return
@@ -34,7 +35,8 @@ def main(argv):
     try:
         File = argv[0]
     except:
-        usage(); sys.exit(1)
+        usage()
+        sys.exit(1)
 
     try:
         demFile = argv[1]
@@ -58,7 +60,7 @@ def main(argv):
     dem = dem.flatten(1)
     data = data.flatten(1)
     ndx = ~np.isnan(data)
-    C1 = np.zeros([2,len(dem[ndx])])
+    C1 = np.zeros([2, len(dem[ndx])])
     C1[0][:] = dem[ndx]
     C1[1][:] = data[ndx]
 
@@ -75,4 +77,4 @@ def main(argv):
 
 ################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:]) 
+    main(sys.argv[1:])

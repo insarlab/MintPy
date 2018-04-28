@@ -7,7 +7,8 @@
 # Yunjun, Jul 2017: re-write using pysar modules
 
 
-import os, sys
+import os
+import sys
 import time
 import datetime
 import h5py
@@ -26,6 +27,7 @@ example:
   temporal_derivative.py  timeseries.h5 
 """
 
+
 def usage():
     print(USAGE)
     return
@@ -36,7 +38,8 @@ def main(argv):
     try:
         timeseries_file = argv[0]
     except:
-        usage() ; sys.exit(1)
+        usage()
+        sys.exit(1)
 
     # Basic info
     atr = readfile.read_attribute(timeseries_file)
@@ -44,7 +47,7 @@ def main(argv):
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
-    ##### Read time-series
+    # Read time-series
     print("loading time series: " + timeseries_file)
     h5 = h5py.File(timeseries_file)
     date_list = sorted(h5[k].keys())
@@ -54,28 +57,28 @@ def main(argv):
     tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32)
 
     prog_bar = ptime.progressBar(maxValue=date_num)
-    timeseries = np.zeros((date_num, pixel_num),np.float32)
+    timeseries = np.zeros((date_num, pixel_num), np.float32)
     for i in range(date_num):
         date = date_list[i]
         d = h5[k].get(date)[:]
-        timeseries[i,:] = d.flatten(0)
+        timeseries[i, :] = d.flatten(0)
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
     del d
     h5.close()
 
-    ##### Calculate 1st and 2nd temporal derivatives
+    # Calculate 1st and 2nd temporal derivatives
     print("calculating temporal 1st derivative ... ")
-    timeseries_1st = np.zeros((date_num-1,pixel_num),np.float32)
+    timeseries_1st = np.zeros((date_num-1, pixel_num), np.float32)
     for i in range(date_num-1):
         timeseries_1st[i][:] = timeseries[i+1][:] - timeseries[i][:]
 
     print("calculating temporal 2nd derivative")
-    timeseries_2nd = np.zeros((date_num-2,pixel_num),np.float32)
+    timeseries_2nd = np.zeros((date_num-2, pixel_num), np.float32)
     for i in range(date_num-2):
         timeseries_2nd[i][:] = timeseries_1st[i+1][:] - timeseries_1st[i][:]
 
-    ##### Write 1st and 2nd temporal derivatives
+    # Write 1st and 2nd temporal derivatives
     outfile1 = os.path.splitext(timeseries_file)[0]+'_1stDerivative.h5'
     print('writing >>> '+outfile1)
     h5out = h5py.File(outfile1, 'w')
@@ -84,9 +87,10 @@ def main(argv):
     prog_bar = ptime.progressBar(maxValue=date_num-1)
     for i in range(date_num-1):
         date = date_list[i+1]
-        dset = group.create_dataset(date, data=np.reshape(timeseries_1st[i][:],[length,width]))
+        data = np.reshape(timeseries_1st[i][:], [length, width])
+        dset = group.create_dataset(date, data=data)
         prog_bar.update(i+1, suffix=date)
-    for key,value in iter(atr.items()):
+    for key, value in iter(atr.items()):
         group.attrs[key] = value
     prog_bar.close()
     h5out.close()
@@ -99,9 +103,10 @@ def main(argv):
     prog_bar = ptime.progressBar(maxValue=date_num-2)
     for i in range(date_num-2):
         date = date_list[i+2]
-        dset = group.create_dataset(date, data=np.reshape(timeseries_2nd[i][:],[length,width]))
+        data = np.reshape(timeseries_2nd[i][:], [length, width])
+        dset = group.create_dataset(date, data=data)
         prog_bar.update(i+1, suffix=date)
-    for key,value in iter(atr.items()):
+    for key, value in iter(atr.items()):
         group.attrs[key] = value
     prog_bar.close()
     h5out.close()
@@ -113,4 +118,3 @@ def main(argv):
 ############################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-

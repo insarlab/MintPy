@@ -34,7 +34,8 @@ def main(argv):
     try:
         file = argv[0]
     except:
-        usage(); sys.exit(1)
+        usage()
+        sys.exit(1)
 
     outfile = os.path.splitext(file)[0]+'_wrap'+os.path.splitext(file)[1]
     one_cycle = 2*np.pi
@@ -43,17 +44,17 @@ def main(argv):
     atr = readfile.read_attribute(file)
     k = atr['FILE_TYPE']
 
-    if k in ['interferograms','coherence','wrapped','timeseries']:
-        h5 = h5py.File(file,'r')
+    if k in ['interferograms', 'coherence', 'wrapped', 'timeseries']:
+        h5 = h5py.File(file, 'r')
         epochList = sorted(h5[k].keys())
         epoch_num = len(epochList)
         prog_bar = ptime.progressBar(maxValue=epoch_num)
 
         print('writing >>> '+outfile)
-        h5out = h5py.File(outfile,'w')
+        h5out = h5py.File(outfile, 'w')
         group = h5out.create_group(k)
 
-        if k in ['interferograms','coherence','wrapped']:
+        if k in ['interferograms', 'coherence', 'wrapped']:
             date12_list = ptime.list_ifgram2date12(epochList)
             print('number of interferograms: '+str(len(epochList)))
             for i in range(epoch_num):
@@ -75,7 +76,7 @@ def main(argv):
                 data = h5[k].get(epoch)[:]
 
                 data_wrap = rewrap(data, one_cycle)
-                
+
                 dset = group.create_dataset(epoch, data=data_wrap)
                 prog_bar.update(i+1, suffix=epoch)
             for key, value in h5[k].attrs.items():
@@ -91,5 +92,3 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-

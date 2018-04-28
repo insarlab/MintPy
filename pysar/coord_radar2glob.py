@@ -21,6 +21,7 @@ example:
   coord_radar2glob.py 400 800 geomap_4rlks.trans velocity.h5
 """
 
+
 def usage():
     print(USAGE)
     return
@@ -29,17 +30,22 @@ def usage():
 ################################################################################
 def main(argv):
     if len(sys.argv) < 3:
-        usage(); sys.exit(1)
+        usage()
+        sys.exit(1)
 
     y = int(argv[0])
     x = int(argv[1])
     print('input radar coord: y/azimuth=%d, x/range=%d' % (y, x))
 
-    try:    trans_file = argv[2]
-    except: trans_file = ut.get_lookup_file()
+    try:
+        trans_file = argv[2]
+    except:
+        trans_file = ut.get_lookup_file()
 
-    try:    radar_file = argv[3]
-    except: radar_file = 'INPUTS/ifgramStack.h5'
+    try:
+        radar_file = argv[3]
+    except:
+        radar_file = 'INPUTS/ifgramStack.h5'
     atr_rdr = readfile.read_attribute(radar_file)
 
     lat, lon = ut.radar2glob(np.array(y), np.array(x), trans_file, atr_rdr)[0:2]
@@ -49,5 +55,4 @@ def main(argv):
 
 ################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])  
-
+    main(sys.argv[1:])

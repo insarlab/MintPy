@@ -8,7 +8,8 @@
 #
 
 
-import os, sys
+import os
+import sys
 import datetime
 import itertools
 
@@ -30,7 +31,7 @@ from pysar.objects import ifgramStack, timeseries
 
 
 ##################################################################
-BASELINE_LIST_FILE='''
+BASELINE_LIST_FILE = '''
 # Date  Bperp    dop0/PRF  dop1/PRF   dop2/PRF   PRF    slcDir
 070106     0.0   0.03      0.0000000  0.000000   2155.2 /KyushuT422F650AlosA/SLC/070106/
 070709  2631.9   0.07      0.0000000  0.000000   2155.2 /KyushuT422F650AlosA/SLC/070709/
@@ -38,7 +39,7 @@ BASELINE_LIST_FILE='''
 ...
 '''
 
-IFGRAM_LIST_FILE='''
+IFGRAM_LIST_FILE = '''
 060713-070113
 060828-070113
 060828-070831
@@ -61,12 +62,14 @@ def read_pairs_list(date12ListFile, dateList=[]):
         dateList = []
         for date12 in date12List:
             dates = date12.split('_')
-            if not dates[0] in dateList: dateList.append(dates[0])
-            if not dates[1] in dateList: dateList.append(dates[1])
+            if not dates[0] in dateList:
+                dateList.append(dates[0])
+            if not dates[1] in dateList:
+                dateList.append(dates[1])
         dateList.sort()
     date6List = ptime.yymmdd(dateList)
-    
-    # Get pair index 
+
+    # Get pair index
     pairs_idx = []
     for date12 in date12List:
         dates = date12.split('_')
@@ -79,7 +82,7 @@ def read_pairs_list(date12ListFile, dateList=[]):
 def write_pairs_list(pairs, dateList, outName):
     '''Write pairs list file.'''
     dateList6 = ptime.yymmdd(dateList)
-    fl = open(outName,'w')
+    fl = open(outName, 'w')
     for idx in pairs:
         date12 = dateList6[idx[0]]+'-'+dateList6[idx[1]]+'\n'
         fl.write(date12)
@@ -89,22 +92,25 @@ def write_pairs_list(pairs, dateList, outName):
 
 def read_igram_pairs(igramFile):
     '''Read pairs index from hdf5 file'''
-    ## Read Igram file
-    h5file = h5py.File(igramFile,'r')
+    # Read Igram file
+    h5file = h5py.File(igramFile, 'r')
     k = list(h5file.keys())
-    if 'interferograms' in k: k[0] = 'interferograms'
-    elif 'coherence'    in k: k[0] = 'coherence'
-    if k[0] not in  ['interferograms','coherence','wrapped']:
-        print('Only interferograms / coherence / wrapped are supported.');  sys.exit(1)
+    if 'interferograms' in k:
+        k[0] = 'interferograms'
+    elif 'coherence' in k:
+        k[0] = 'coherence'
+    if k[0] not in ['interferograms', 'coherence', 'wrapped']:
+        print('Only interferograms / coherence / wrapped are supported.')
+        sys.exit(1)
 
-    dateList  = ptime.ifgram_date_list(igramFile)
+    dateList = ptime.ifgram_date_list(igramFile)
     dateList6 = ptime.yymmdd(dateList)
 
     pairs = []
-    igramList=list(h5file[k[0]].keys())
+    igramList = list(h5file[k[0]].keys())
     for igram in igramList:
         date12 = h5file[k[0]][igram].attrs['DATE12'].split('-')
-        pairs.append([dateList6.index(date12[0]),dateList6.index(date12[1])])
+        pairs.append([dateList6.index(date12[0]), dateList6.index(date12[1])])
     h5file.close()
 
     pairs = pair_sort(pairs)
@@ -119,28 +125,29 @@ def read_baseline_file(baselineFile, exDateList=[]):
     070709  2631.9   0.07      0.0000000  0.00000000000 2155.2 /scratch/KyushuT422F650AlosA/SLC/070709/
     070824  2787.3   0.07      0.0000000  0.00000000000 2155.2 /scratch/KyushuT422F650AlosA/SLC/070824/
     ...
-    
+
     Examples:
         date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile)
         date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile,['080520','100726'])
         date8List, perpBaseList = read_baseline_file(baselineFile)[0:2]
     '''
     exDateList = ptime.yymmdd(exDateList)
-    if not exDateList:  exDateList = []
+    if not exDateList:
+        exDateList = []
 
-    ## Read baseline file into lines
+    # Read baseline file into lines
     fb = open(baselineFile)
     lines = []
     for line in fb:
-        l = str.replace(line,'\n','').strip()
+        l = str.replace(line, '\n', '').strip()
         lines.append(l)
     fb.close()
 
-    ## Read each line and put the values into arrays
-    date6List    = []
+    # Read each line and put the values into arrays
+    date6List = []
     perpBaseList = []
-    dopplerList  = []
-    slcDirList   = []
+    dopplerList = []
+    slcDirList = []
     for line in lines:
         c = line.split()    # splits on white space
         date = c[0]
@@ -171,8 +178,8 @@ def date12_list2index(date12_list, date_list=[]):
         s_dates = [date12.split('_')[1] for date12 in date12_list]
         date_list = list(set(m_dates + s_dates))
     date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(date_list)))
-    
-    # Get pair index 
+
+    # Get pair index
     pairs_idx = []
     for date12 in date12_list:
         dates = date12.split('_')
@@ -205,8 +212,8 @@ def get_date12_list(File, dropIfgram=False):
     else:
         txtContent = np.loadtxt(File, dtype=bytes).astype(str)
         if len(txtContent.shape) == 1:
-            txtContent = txtContent.reshape(-1,1)
-        date12_list = [i for i in txtContent[:,0]]
+            txtContent = txtContent.reshape(-1, 1)
+        date12_list = [i for i in txtContent[:, 0]]
     date12_list = sorted(date12_list)
     return date12_list
 
@@ -219,7 +226,7 @@ def igram_perp_baseline_list(File):
     epochList = sorted(h5[k].keys())
     p_baseline_list = []
     for epoch in epochList:
-        p_baseline = (float(h5[k][epoch].attrs['P_BASELINE_BOTTOM_HDR'])+\
+        p_baseline = (float(h5[k][epoch].attrs['P_BASELINE_BOTTOM_HDR']) +
                       float(h5[k][epoch].attrs['P_BASELINE_TOP_HDR']))/2
         p_baseline_list.append(p_baseline)
     h5.close()
@@ -246,7 +253,7 @@ def azimuth_bandwidth(sensor):
 
 
 def range_bandwidth(sensor):
-    ## Range Bandwidth in Hz for the given satellite
+    # Range Bandwidth in Hz for the given satellite
     if    sensor == 'Ers' :  bandwidth = 15.55e6
     elif  sensor == 'Env' :  bandwidth = 16.00e6
     elif  sensor == 'Sen' :  bandwidth = 56.5e6    #IW1-56.5; IW2-48.3; IW3-42.79
@@ -273,7 +280,7 @@ def wavelength(sensor):
     elif  sensor == 'Csk'  :  center_frequency = 9.60e9
     elif  sensor == 'Kmps5':  center_frequency = 9.66e9
 
-    c = 299792458;   # m/s, speed of light
+    c = 299792458   # m/s, speed of light
     wavelength = c / center_frequency
     return wavelength
 
@@ -313,12 +320,13 @@ def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
     # Alos: 6.331e3 m (near_range=842663.2917m)
     # Tsx : 8.053e3 m (near_range=634509.1271m)
 
-    c = 299792458;   # m/s, speed of light
+    c = 299792458   # m/s, speed of light
     wvl = wavelength(sensor)
-    near_range = 688849;        # Yunjun 5/2016, case for Jers, need a automatic way to get this number
+    # Yunjun 5/2016, case for Jers, need a automatic way to get this number
+    near_range = 688849
     rg_bandwidth = range_bandwidth(sensor)
-    inc_angle    = incidence_angle(sensor, inc_angle) / 180 * np.pi
-    Bperp_c      = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
+    inc_angle = incidence_angle(sensor, inc_angle) / 180 * np.pi
+    Bperp_c = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
     if print_msg:
         print(('Critical Perpendicular Baseline: '+str(Bperp_c)+' m'))
     return Bperp_c
@@ -335,25 +343,25 @@ def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
     # Calculate mean Doppler difference between a and b
     no_of_rangepix = 5000
     ddiff = np.zeros(10)
-    for i in range (10):
+    for i in range(10):
         rangepix = (i-1)*no_of_rangepix/10 + 1
-        da       = dop_a[0]+(rangepix-1)*dop_a[1]+(rangepix-1)**2*dop_a[2]
-        db       = dop_b[0]+(rangepix-1)*dop_b[1]+(rangepix-1)**2*dop_b[2]
-        ddiff[i] =  abs(da - db)
+        da = dop_a[0]+(rangepix-1)*dop_a[1]+(rangepix-1)**2*dop_a[2]
+        db = dop_b[0]+(rangepix-1)*dop_b[1]+(rangepix-1)**2*dop_b[2]
+        ddiff[i] = abs(da - db)
     ddiff_mean = np.mean(ddiff)
 
     #dopOverlap_prf = bandwidth_az - ddiff
     #dopOverlap_percent = np.mean(dopOverlap_prf / bandwidth_az * 100)
     ##overlapLessthanZero = np.nonzero(dopOverlap_percent < 0)
     #dopOverlap_percent = np.mean(dopOverlap_percent)
-    #return dopOverlap_percent
-    
+    # return dopOverlap_percent
+
     # Doppler overlap
     dop_overlap = (bandwidth_az - ddiff_mean) / bandwidth_az
     return dop_overlap
 
 
-def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', inc_angle=22.8,\
+def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', inc_angle=22.8,
                        decor_time=200.0, coh_resid=0.2, display=False):
     '''Simulate coherence for a given set of interferograms
     Inputs:
@@ -387,7 +395,7 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
     date6_list = ptime.yymmdd(date8_list)
     tbase_list = ptime.date_list2tbase(date8_list)[0]
 
-    #Thermal decorrelation (Zebker and Villasenor, 1992, Eq.4)
+    # Thermal decorrelation (Zebker and Villasenor, 1992, Eq.4)
     SNR = signal2noise_ratio(sensor)
     coh_thermal = 1. / (1. + 1./SNR)
 
@@ -412,25 +420,26 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
         pbase = pbase_list[s_idx] - pbase_list[m_idx]
         tbase = tbase_list[s_idx] - tbase_list[m_idx]
 
-
-        #Geometric decorrelation (Hanssen, 2001, Eq. 4.4.12)
+        # Geometric decorrelation (Hanssen, 2001, Eq. 4.4.12)
         coh_geom = (pbase_c - abs(pbase)) / pbase_c
         if coh_geom < 0.:
             coh_geom = 0.
 
-        #Doppler centroid decorrelation (Hanssen, 2001, Eq. 4.4.13)
+        # Doppler centroid decorrelation (Hanssen, 2001, Eq. 4.4.13)
         if not dop_list:
             coh_dc = 1.
         else:
-            coh_dc = calculate_doppler_overlap(dop_list[m_idx], dop_list[s_idx], bandwidth_az)
+            coh_dc = calculate_doppler_overlap(dop_list[m_idx],
+                                               dop_list[s_idx],
+                                               bandwidth_az)
             if coh_dc < 0.:
                 coh_dc = 0.
 
-        #Option 1: Temporal decorrelation - exponential delay model (Parizzi et al., 2009; Morishita and Hanssen, 2015)
+        # Option 1: Temporal decorrelation - exponential delay model (Parizzi et al., 2009; Morishita and Hanssen, 2015)
         coh_temp = np.multiply((coh_thermal - coh_resid), np.exp(-1*abs(tbase)/decor_time)) + coh_resid
 
         coh = coh_geom * coh_dc * coh_temp
-        cohs[i,:] = coh
+        cohs[i, :] = coh
     #epsilon = 1e-3
     #cohs[cohs < epsilon] = epsilon
     if display:
@@ -462,7 +471,8 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
     Outputs:
         date12_list : list of string, for date12 in YYMMDD-YYMMDD format
     '''
-    if not date12_list:  return []
+    if not date12_list:
+        return []
     # Get date6_list
     if not date_list:
         m_dates = [date12.split('_')[0] for date12 in date12_list]
@@ -481,7 +491,9 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
         date1, date2 = date12.split('_')
         idx1 = date6_list.index(date1)
         idx2 = date6_list.index(date2)
-        dop_overlap = calculate_doppler_overlap(dop_list[idx1], dop_list[idx2], bandwidth_az)
+        dop_overlap = calculate_doppler_overlap(dop_list[idx1],
+                                                dop_list[idx2],
+                                                bandwidth_az)
         if dop_overlap >= dop_overlap_min:
             date12_list_out.append(date12)
     return date12_list_out
@@ -500,7 +512,8 @@ def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase
     Example:
         date12_list = threshold_perp_baseline(date12_list, date_list, pbase_list, 500)
     '''
-    if not date12_list:  return []
+    if not date12_list:
+        return []
     # Get date6_list
     if not date_list:
         m_dates = [date12.split('_')[0] for date12 in date12_list]
@@ -538,7 +551,8 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
         date12_list = threshold_temporal_baseline(date12_list, 200)
         date12_list = threshold_temporal_baseline(date12_list, 200, False)
     '''
-    if not date12_list:  return []
+    if not date12_list:
+        return []
     # Get date list and tbase list
     m_dates = [date12.split('_')[0] for date12 in date12_list]
     s_dates = [date12.split('_')[1] for date12 in date12_list]
@@ -555,8 +569,8 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
         tbase = int(abs(tbase_list[idx1] - tbase_list[idx2]))
         if btemp_min <= tbase <= btemp_max:
             date12_list_out.append(date12)
-        elif keep_seasonal and tbase/30 in [11,12]:
-            date12_list_out.append(date12)    
+        elif keep_seasonal and tbase/30 in [11, 12]:
+            date12_list_out.append(date12)
     return date12_list_out
 
 
@@ -583,7 +597,7 @@ def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
         idx1 = date_list.index(date1)
         idx2 = date_list.index(date2)
         coh = coh_list[date12_list.index(date12)]
-        coh_mat[idx1, idx2] = coh    #symmetric
+        coh_mat[idx1, idx2] = coh  # symmetric
         coh_mat[idx2, idx1] = coh
 
     if diagValue is not np.nan:
@@ -617,7 +631,8 @@ def threshold_coherence_based_mst(date12_list, coh_list):
     date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(list(set(m_dates + s_dates)))))
 
     # Convert MST index matrix into date12 list
-    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in sparse.find(mst_mat_csr)[0:2]]
+    [s_idx_list, m_idx_list] = [date_idx_array.tolist()
+                                for date_idx_array in sparse.find(mst_mat_csr)[0:2]]
     mst_date12_list = []
     for i in range(len(m_idx_list)):
         idx = sorted([m_idx_list[i], s_idx_list[i]])
@@ -633,17 +648,17 @@ def pair_sort(pairs):
             index2 = pairs[idx][0]
             pairs[idx][0] = index1
             pairs[idx][1] = index2
-    pairs=sorted(pairs)
+    pairs = sorted(pairs)
     return pairs
 
 
-def pair_merge(pairs1,pairs2):
+def pair_merge(pairs1, pairs2):
     pairs = pairs1
     for pair in pairs2:
         if not pair in pairs:
             pairs.append(pair)
 
-    pairs=sorted(pairs)
+    pairs = sorted(pairs)
     return pairs
 
 
@@ -673,7 +688,7 @@ def select_pairs_sequential(date_list, increment_num=2):
     date8_list = sorted(ptime.yyyymmdd(date_list))
     date6_list = ptime.yymmdd(date8_list)
     date_idx_list = list(range(len(date6_list)))
-    
+
     # Get pairs index list
     date12_idx_list = []
     for date_idx in date_idx_list:
@@ -683,7 +698,8 @@ def select_pairs_sequential(date_list, increment_num=2):
     date12_idx_list = [sorted(idx) for idx in sorted(date12_idx_list)]
 
     # Convert index into date12
-    date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]] for idx in date12_idx_list]
+    date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
+                   for idx in date12_idx_list]
     return date12_list
 
 
@@ -712,8 +728,13 @@ def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
     for temp_perp in temp_perp_list:
         tbase_max = temp_perp[0]
         pbase_max = temp_perp[1]
-        date12_list_tmp = threshold_temporal_baseline(date12_list_all, tbase_max, keep_seasonal=False)
-        date12_list_tmp = threshold_perp_baseline(date12_list_tmp, date_list, pbase_list, pbase_max)
+        date12_list_tmp = threshold_temporal_baseline(date12_list_all,
+                                                      tbase_max,
+                                                      keep_seasonal=False)
+        date12_list_tmp = threshold_perp_baseline(date12_list_tmp,
+                                                  date_list,
+                                                  pbase_list,
+                                                  pbase_max)
         date12_list += date12_list_tmp
     date12_list = sorted(list(set(date12_list)))
     return date12_list
@@ -743,13 +764,14 @@ def select_pairs_delaunay(date_list, pbase_list, norm=True):
     if norm:
         temp2perp_scale = (max(pbase_list)-min(pbase_list)) / (max(tbase_list)-min(tbase_list))
         tbase_list = [tbase*temp2perp_scale for tbase in tbase_list]
-    
+
     # Generate Delaunay Triangulation
     date12_idx_list = Triangulation(tbase_list, pbase_list).edges.tolist()
     date12_idx_list = [sorted(idx) for idx in sorted(date12_idx_list)]
 
     # Convert index into date12
-    date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]] for idx in date12_idx_list]
+    date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
+                   for idx in date12_idx_list]
     return date12_list
 
 
@@ -779,14 +801,16 @@ def select_pairs_mst(date_list, pbase_list):
     ttMat = np.abs(ttMat1 - ttMat2)  # temporal distance matrix
     ppMat = np.abs(ppMat1 - ppMat2)  # spatial distance matrix
 
-    weightMat = np.sqrt(np.square(ttMat) + np.square(ppMat))  # 2D distance matrix in temp/perp domain
+    # 2D distance matrix in temp/perp domain
+    weightMat = np.sqrt(np.square(ttMat) + np.square(ppMat))
     weightMat = sparse.csr_matrix(weightMat)  # compress sparse row matrix
 
     # MST path based on weight matrix
     mstMat = sparse.csgraph.minimum_spanning_tree(weightMat)
 
     # Convert MST index matrix into date12 list
-    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in sparse.find(mstMat)[0:2]]
+    [s_idx_list, m_idx_list] = [date_idx_array.tolist()
+                                for date_idx_array in sparse.find(mstMat)[0:2]]
     date12_list = []
     for i in range(len(m_idx_list)):
         idx = sorted([m_idx_list[i], s_idx_list[i]])
@@ -806,12 +830,12 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[]):
     '''
     date8_list = sorted(ptime.yyyymmdd(date_list))
     date6_list = ptime.yymmdd(date8_list)
-    
+
     # Select master date if not existed
     if not m_date:
         m_date = select_master_date(date8_list, pbase_list)
         print(('auto select master date: '+m_date))
-    
+
     # Check input master date
     m_date8 = ptime.yyyymmdd(m_date)
     if m_date8 not in date8_list:
@@ -819,12 +843,14 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[]):
         print(('Input master date: '+str(m_date8)))
         print(('Input date list: '+str(date8_list)))
         m_date8 = None
-    
+
     # Generate star/ps network
     m_idx = date8_list.index(m_date8)
-    date12_idx_list = [sorted([m_idx, s_idx]) for s_idx in range(len(date8_list)) if s_idx is not m_idx]
-    date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]] for idx in date12_idx_list]
-    
+    date12_idx_list = [sorted([m_idx, s_idx]) for s_idx in range(len(date8_list))
+                       if s_idx is not m_idx]
+    date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
+                   for idx in date12_idx_list]
+
     return date12_list
 
 
@@ -843,12 +869,15 @@ def select_master_date(date_list, pbase_list=[]):
         temp2perp_scale = (max(pbase_list)-min(pbase_list)) / (max(tbase_list)-min(tbase_list))
         tbase_list = [tbase*temp2perp_scale for tbase in tbase_list]
         # Get distance matrix
-        ttMat1, ttMat2 = np.meshgrid(np.array(tbase_list), np.array(tbase_list))
-        ppMat1, ppMat2 = np.meshgrid(np.array(pbase_list), np.array(pbase_list))
+        ttMat1, ttMat2 = np.meshgrid(np.array(tbase_list),
+                                     np.array(tbase_list))
+        ppMat1, ppMat2 = np.meshgrid(np.array(pbase_list),
+                                     np.array(pbase_list))
         ttMat = np.abs(ttMat1 - ttMat2)  # temporal distance matrix
         ppMat = np.abs(ppMat1 - ppMat2)  # spatial distance matrix
-        disMat = np.sqrt(np.square(ttMat) + np.square(ppMat))  # 2D distance matrix in temp/perp domain
-        
+        # 2D distance matrix in temp/perp domain
+        disMat = np.sqrt(np.square(ttMat) + np.square(ppMat))
+
         # Choose date minimize the total distance of temp/perp baseline
         disMean = np.mean(disMat, 0)
         m_idx = np.argmin(disMean)
@@ -872,12 +901,13 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
     # Normalization (Pepe and Lanari, 2006, TGRS)
     temp2perp_scale = (max(pbase_array)-min(pbase_array)) / (max(tbase_array)-min(tbase_array))
     tbase_array *= temp2perp_scale
-    
+
     # Calculate sqrt of temp/perp baseline for input pairs
     idx1 = np.array([date6_list.index(date12.split('_')[0]) for date12 in date12_list])
     idx2 = np.array([date6_list.index(date12.split('_')[1]) for date12 in date12_list])
-    base_distance = np.sqrt((tbase_array[idx2] - tbase_array[idx1])**2 + (pbase_array[idx2] - pbase_array[idx1])**2)
-    
+    base_distance = np.sqrt((tbase_array[idx2] - tbase_array[idx1])**2 +
+                            (pbase_array[idx2] - pbase_array[idx1])**2)
+
     # Get master interferogram index
     if not m_date:
         # Choose pair with shortest temp/perp baseline
@@ -885,11 +915,10 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
     else:
         m_date = ptime.yymmdd(m_date)
         # Choose pair contains m_date with shortest temp/perp baseline
-        m_date12_idx_array = np.array([date12_list.index(date12) for date12 in date12_list if m_date+'-' in date12])
+        m_date12_idx_array = np.array([date12_list.index(date12) for date12 in date12_list
+                                       if m_date+'-' in date12])
         min_base_distance = np.min(base_distance[m_date12_idx_array])
         m_date12_idx = np.where(base_distance == min_base_distance)[0][0]
-    
+
     m_date12 = date12_list[m_date12_idx]
     return m_date12
-
-

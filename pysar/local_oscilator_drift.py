@@ -4,7 +4,7 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-# The empiriocal model in this program to correct the Local 
+# The empiriocal model in this program to correct the Local
 # Oscilator Frequency Decay of Envisat ASAR instrument was
 # suggested by Petar Marinkovic and Yngvar Larsen, 2013.
 
@@ -38,7 +38,7 @@ def correct_local_oscilator_drift(fname, rg_dist_file=None, out_file=None):
     # Check Sensor Type
     platform = atr['PLATFORM']
     print('platform: '+platform)
-    if not platform.lower() in ['env','envisat']:
+    if not platform.lower() in ['env', 'envisat']:
         print('No need to correct LOD for '+platform)
         sys.exit(1)
 
@@ -100,16 +100,18 @@ EXAMPLE = """example:
   local_oscilator_drift.py  filt_101020_110220_4rlks.unw  INPUTS/geometryRadar.h5
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Local Oscilator Drift (LOD) correction of Envisat',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Local Oscilator Drift (LOD) correction of Envisat',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
-    parser.add_argument(dest='file', help='timeseries / interferograms file, i.e. timeseries.h5')
+    parser.add_argument(
+        dest='file', help='timeseries / interferograms file, i.e. timeseries.h5')
     parser.add_argument(dest='range_dist_file',
-                        help='Slant range distance file, i.e. INPUTS/geometryRadar.h5, INPUTS/geometryGeo.h5\n'+
+                        help='Slant range distance file, i.e. INPUTS/geometryRadar.h5, INPUTS/geometryGeo.h5\n' +
                         'or use range_distance.py to generate it.')
-    parser.add_argument('-o','--output', dest='outfile',\
+    parser.add_argument('-o', '--output', dest='outfile',
                         help='Output file name for corrected file.')
     return parser
 

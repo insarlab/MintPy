@@ -10,7 +10,8 @@ import os
 import sys
 import argparse
 import numpy as np
-import matplotlib as mpl; mpl.use('Agg')
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
 
@@ -68,24 +69,26 @@ EXAMPLE = """example:
   timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --min-rms 0.03
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped time series.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped time series.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('timeseries_file', help='Timeseries file')
-    parser.add_argument('-t','--template', dest='template_file',\
+    parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options below:\n'+TEMPLATE+'\n')
-    parser.add_argument('-m','--mask', dest='mask_file', default='maskTempCoh.h5',\
+    parser.add_argument('-m', '--mask', dest='mask_file', default='maskTempCoh.h5',
                         help='mask file for estimation')
-    parser.add_argument('-s', dest='ramp_type', default='quadratic',\
-                        help='ramp type to be remove for RMS calculation.\n'+\
+    parser.add_argument('-s', dest='ramp_type', default='quadratic',
+                        help='ramp type to be remove for RMS calculation.\n' +
                              'default - quadratic; no - do not remove ramp')
-    parser.add_argument('--min-rms', dest='min_rms', default='0.02', type=float,\
+    parser.add_argument('--min-rms', dest='min_rms', default='0.02', type=float,
                         help='minimum RMS in m, threshold used to exclude dates, default: 0.02 m')
-    parser.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2,\
+    parser.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                         help='figure size in inches - width and length')
-    parser.add_argument('--tick-year-num', dest='tick_year_num', type=int, default=1, help='Year number per major tick')
+    parser.add_argument('--tick-year-num', dest='tick_year_num',
+                        type=int, default=1, help='Year number per major tick')
     return parser
 
 
@@ -105,7 +108,7 @@ def save_date2txt_file(inps):
         print('save date to file: '+inps.refDateFile)
 
     inps.exDateFile = 'exclude_date.txt'
-    if inps.exIdxList and ut.update_file(inps.exDateFile, [inps.timeseries_file, inps.mask_file, inps.template_file],\
+    if inps.exIdxList and ut.update_file(inps.exDateFile, [inps.timeseries_file, inps.mask_file, inps.template_file],
                                          check_readable=False):
         f = open(inps.exDateFile, 'w')
         for i in inps.exIdxList:
@@ -128,8 +131,10 @@ def plot_bar4date_rms(inps):
         font_size = 12
 
         dates, datevector = ptime.date_list2vector(inps.dateList)
-        try:    bar_width = ut.most_common(np.diff(dates).tolist())*3/4
-        except: bar_width = np.min(np.diff(dates).tolist())*3/4
+        try:
+            bar_width = ut.most_common(np.diff(dates).tolist())*3/4
+        except:
+            bar_width = np.min(np.diff(dates).tolist())*3/4
         x_list = [i-bar_width/2 for i in dates]
 
         inps.rmsList = [i*1000. for i in inps.rmsList]
@@ -138,22 +143,25 @@ def plot_bar4date_rms(inps):
         ax.bar(x_list, inps.rmsList, bar_width.days)
 
         # Plot reference date
-        ax.bar(x_list[inps.refDateIndex], inps.rmsList[inps.refDateIndex], bar_width.days, label='Reference date')
+        ax.bar(x_list[inps.refDateIndex], inps.rmsList[inps.refDateIndex],
+               bar_width.days, label='Reference date')
 
         # Plot exclude dates
         if inps.exIdxList:
             ex_x_list = [x_list[i] for i in inps.exIdxList]
             inps.exRmsList = [inps.rmsList[i] for i in inps.exIdxList]
-            ax.bar(ex_x_list, inps.exRmsList, bar_width.days, color='darkgray', label='Exclude date(s)')
+            ax.bar(ex_x_list, inps.exRmsList, bar_width.days,
+                   color='darkgray', label='Exclude date(s)')
 
         # Plot min_rms line
-        ax, xmin, xmax = pp.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=inps.tick_year_num)
+        ax, xmin, xmax = pp.auto_adjust_xaxis_date(ax, datevector, font_size,
+                                                   every_year=inps.tick_year_num)
         ax.plot(np.array([xmin, xmax]), np.array([min_rms, min_rms]), '--k')
 
         # axis format
         ax = pp.auto_adjust_yaxis(ax, inps.rmsList+[min_rms], font_size, ymin=0.0)
-        ax.set_xlabel('Time [years]',fontsize=font_size)
-        ax.set_ylabel('Root Mean Square [mm]',fontsize=font_size)
+        ax.set_xlabel('Time [years]', fontsize=font_size)
+        ax.set_ylabel('Root Mean Square [mm]', fontsize=font_size)
         ax.yaxis.set_ticks_position('both')
         ax.tick_params(labelsize=font_size)
         plt.legend(fontsize=font_size)
@@ -170,16 +178,19 @@ def main(iargs=None):
     if inps.template_file:
         inps = read_template2inps(inps.template_file)
 
-    ##### calculate timeseries of residual Root Mean Square
-    inps.rmsList, inps.dateList, inps.rmsFile = ut.get_residual_rms(inps.timeseries_file, inps.mask_file, inps.ramp_type)
+    # calculate timeseries of residual Root Mean Square
+    inps.rmsList, inps.dateList, inps.rmsFile = ut.get_residual_rms(inps.timeseries_file,
+                                                                    inps.mask_file,
+                                                                    inps.ramp_type)
 
-    ##### reference date
+    # reference date
     inps.refDateIndex = np.argmin(inps.rmsList)
     inps.refDate = inps.dateList[inps.refDateIndex]
     print('-'*50)
-    print('date with minimum residual RMS: %s - %.4f' % (inps.refDate, inps.rmsList[inps.refDateIndex]))
+    print('date with minimum residual RMS: %s - %.4f' %
+          (inps.refDate, inps.rmsList[inps.refDateIndex]))
 
-    ##### exclude date(s)
+    # exclude date(s)
     inps.exIdxList = [inps.rmsList.index(i) for i in inps.rmsList if i > inps.min_rms]
     print('-'*50)
     print('date(s) with residual RMS > {}'.format(inps.min_rms))
@@ -187,10 +198,10 @@ def main(iargs=None):
         for i in inps.exIdxList:
             print('%s - %.4f' % (inps.dateList[i], inps.rmsList[i]))
 
-    ##### Save to text file
+    # Save to text file
     inps = save_date2txt_file(inps)
 
-    ##### Plot
+    # Plot
     inps = plot_bar4date_rms(inps)
 
     return
@@ -199,5 +210,3 @@ def main(iargs=None):
 ######################################################################################################
 if __name__ == '__main__':
     main()
-
-

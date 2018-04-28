@@ -32,14 +32,15 @@ DESCRIPTION = """
   one file: filt_100901-110117-sim_HDR_4rlks_c10.unw.rsc
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare attributes file for ROI_PAC products for PySAR.\n'+\
-                                     DESCRIPTION,\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Prepare attributes file for ROI_PAC products for PySAR.\n' +
+                                     DESCRIPTION,
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='Gamma file(s)')
-    parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
+    parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,
                         help='Disable parallel processing. Diabled auto for 1 input file.')
     return parser
 
@@ -65,7 +66,7 @@ def extract_metadata(fname):
     Outputs:
         atr : dict, Attributes dictionary
     """
-    ## 1. Read basic metadata file
+    # 1. Read basic metadata file
     basic_rsc_file = fname+'.rsc'
     basic_dict = readfile.read_roipac_rsc(basic_rsc_file)
 
@@ -77,23 +78,26 @@ def extract_metadata(fname):
     atr['PROCESSOR'] = 'roipac'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
 
-    ## 2. Read baseline metadata file
+    # 2. Read baseline metadata file
     date1, date2 = basic_dict['DATE12'].split('-')
     baseline_rsc_file = os.path.dirname(fname)+'/'+date1+'_'+date2+'_baseline.rsc'
     baseline_dict = readfile.read_roipac_rsc(baseline_rsc_file)
     #print('read '+os.path.basename(basic_rsc_file)+' and '+os.path.basename(baseline_rsc_file))
 
-    ## 3. Merge
+    # 3. Merge
     atr.update(basic_dict)
     atr.update(baseline_dict)
 
-    ## Write to rsc file
+    # Write to rsc file
     basic_rsc_file = fname+'.rsc'
-    try:    atr_orig = readfile.read_roipac_rsc(basic_rsc_file)
-    except: atr_orig = None
+    try:
+        atr_orig = readfile.read_roipac_rsc(basic_rsc_file)
+    except:
+        atr_orig = None
     keyList = [i for i in atr_orig.keys() if i in atr.keys()]
     if any(atr_orig[i] != atr[i] for i in keyList):
-        print('merging {} into {} '.format(os.path.basename(baseline_rsc_file), os.path.basename(basic_rsc_file)))
+        print('merging {} into {} '.format(os.path.basename(baseline_rsc_file),
+                                           os.path.basename(basic_rsc_file)))
         writefile.write_roipac_rsc(atr, out_file=basic_rsc_file)
     return basic_rsc_file
 
@@ -103,7 +107,7 @@ def prepare_metadata(inps):
 
     # Check input file type
     ext = os.path.splitext(inps.file[0])[1]
-    if ext not in ['.unw','.cor','.int']:
+    if ext not in ['.unw', '.cor', '.int']:
         return
 
     # check outfile and parallel option
@@ -124,6 +128,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     prepare_metadata(inps)
     return
+
 
 ###################################################################################################
 if __name__ == '__main__':

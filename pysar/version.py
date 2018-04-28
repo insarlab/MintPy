@@ -1,8 +1,8 @@
 release_version = '0.3.0'
 release_date = '2018-03-15'
 
-#generate_from: http://patorjk.com/software/taag/
-logo="""
+# generate_from: http://patorjk.com/software/taag/
+logo = """
 _________________________________________________
        ____             __     __     ____  
        /    )         /    )   / |    /    )
@@ -17,4 +17,3 @@ ____/________(___/_(____/___/____|_/_____|_______
  Geodesy Lab, University of Miami, Maimi FL, USA
 _________________________________________________
 """.format(release_version, release_date)
-

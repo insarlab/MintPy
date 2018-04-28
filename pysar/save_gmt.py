@@ -21,11 +21,40 @@ from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file,
 
 
 ####################################################################################
+EXAMPLE = """example:
+  save_gmt.py  geo_velocity.h5
+  save_gmt.py  geo_timeseries.h5     20071031
+  save_gmt.py  geo_timeseries.h5
+  save_gmt.py  geo_filt_100608-101024-sim_HDR_16rlks_c10.unw
+  save_gmt.py  gsi10m.dem
+"""
+
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Export geocoded file to GMT grd file',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('file', help='file to be converted, in geo coordinate.')
+    parser.add_argument('dset', nargs='?',
+                        help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file base name. Extension is fixed with .kmz')
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    return inps
+
+
+####################################################################################
 def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0, offset=0, units='meters'):
     """Writes a simple GMT grd file with one array.
     This is based on the gdal2grd.py script found at:
         http://http://www.vso.cape.com/~nhv/files/python/gdal/gdal2grd.py
-    
+
     Parameters: lons : 1D Array of lon values
                 lats : 1D Array of lat values
                 z : 2D slice to be saved
@@ -37,36 +66,36 @@ def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0,
     Returns:    None
     """
 
-    fid = netcdf.netcdf_file(fname,'w')
+    fid = netcdf.netcdf_file(fname, 'w')
 
-    ####Create a dimension variable
+    # Create a dimension variable
     fid.createDimension('side', 2)
     fid.createDimension('xysize', np.prod(z.shape))
 
-    ####Range variables
-    fid.createVariable('x_range','d',('side',))
+    # Range variables
+    fid.createVariable('x_range', 'd', ('side',))
     fid.variables['x_range'].units = 'degrees'
 
-    fid.createVariable('y_range','d',('side',))
+    fid.createVariable('y_range', 'd', ('side',))
     fid.variables['y_range'].units = 'degrees'
 
-    fid.createVariable('z_range','d',('side',))
+    fid.createVariable('z_range', 'd', ('side',))
     fid.variables['z_range'].units = units
 
-    #####Spacing
-    fid.createVariable('spacing','d',('side',))
-    fid.createVariable('dimension','i4',('side',))
+    # Spacing
+    fid.createVariable('spacing', 'd', ('side',))
+    fid.createVariable('dimension', 'i4', ('side',))
 
-    fid.createVariable('z','f',('xysize',))
+    fid.createVariable('z', 'f', ('xysize',))
     fid.variables['z'].long_name = name
     fid.variables['z'].scale_factor = scale
     fid.variables['z'].add_offset = offset
-    fid.variables['z'].node_offset=0
+    fid.variables['z'].node_offset = 0
 
     fid.title = title
     fid.source = 'PySAR v1.2'
 
-    #####Filling in the actual data
+    # Filling in the actual data
     fid.variables['x_range'][0] = lons[0]
     fid.variables['x_range'][1] = lons[-1]
     fid.variables['spacing'][0] = lons[1]-lons[0]
@@ -75,7 +104,7 @@ def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0,
     fid.variables['y_range'][1] = lats[-1]
     fid.variables['spacing'][1] = lats[1]-lats[0]
 
-    #####Range
+    # Range
     zmin = np.nanmin(z)
     zmax = np.nanmax(z)
 
@@ -103,11 +132,11 @@ def get_geo_lat_lon(atr):
     Y_END = Y_FIRST + L*Y_STEP
     X_END = X_FIRST + W*X_STEP
 
-    X = np.linspace(X_FIRST,X_END,W)
-    Y = np.linspace(Y_FIRST,Y_END,L)
+    X = np.linspace(X_FIRST, X_END, W)
+    Y = np.linspace(Y_FIRST, Y_END, L)
     #XI,YI = np.meshgrid(X,Y)
 
-    return Y,X
+    return Y, X
 
 
 def write_grd_file(data, atr, fname_out=None):
@@ -127,42 +156,16 @@ def write_grd_file(data, atr, fname_out=None):
 
     # writing
     print('writing >>> '+fname_out)
-    write_gmt_simple(lons, np.flipud(lats), np.flipud(data), fname_out,\
-                         title='default', name=atr['FILE_TYPE'], scale=1.0, offset=0, units=atr['UNIT'])
+    write_gmt_simple(lons, np.flipud(lats), np.flipud(data), fname_out,
+                     title='default', name=atr['FILE_TYPE'], scale=1.0, offset=0, units=atr['UNIT'])
     return fname_out
-
-
-
-####################################################################################
-EXAMPLE = """example:
-  save_gmt.py  geo_velocity.h5
-  save_gmt.py  geo_timeseries.h5     20071031
-  save_gmt.py  geo_timeseries.h5
-  save_gmt.py  geo_filt_100608-101024-sim_HDR_16rlks_c10.unw
-  save_gmt.py  gsi10m.dem
-"""
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Export geocoded file to GMT grd file',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file', help='file to be converted, in geo coordinate.')
-    parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-o','--output', dest='outfile', help='output file base name. Extension is fixed with .kmz')
-    return parser
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
 
 
 ####################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    ##### 1. Read data
+    # 1. Read data
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
     print('Input file is '+k)
@@ -191,7 +194,7 @@ def main(iargs=None):
         inps.outfile = pv.auto_figure_title(inps.file, inps.dset, vars(inps))
     inps.outfile = os.path.splitext(inps.outfile)[0]+'.grd'
 
-    ##### 2. Write GMT .grd file
+    # 2. Write GMT .grd file
     inps.outfile = write_grd_file(data, atr, inps.outfile)
     print('Done.')
     return inps.outfile
@@ -200,4 +203,3 @@ def main(iargs=None):
 ####################################################################################
 if __name__ == '__main__':
     main()
-

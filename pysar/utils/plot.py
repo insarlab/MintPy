@@ -1,6 +1,6 @@
 ###############################################################################
-# Program is part of PySAR      
-# Copyright(c) 2018, Zhang Yunjun 
+# Program is part of PySAR
+# Copyright(c) 2018, Zhang Yunjun
 # Author:  Zhang Yunjun
 ###############################################################################
 # Recommend usage:
@@ -26,20 +26,21 @@ from pysar.utils import datetime as ptime, readfile, network as pnet, utils as u
 from pysar.objects import timeseriesKeyNames
 
 
-mplColors = ['#1f77b4',\
-             '#ff7f0e',\
-             '#2ca02c',\
-             '#d62728',\
-             '#9467bd',\
-             '#8c564b',\
-             '#e377c2',\
-             '#7f7f7f',\
-             '#bcbd22',\
+mplColors = ['#1f77b4',
+             '#ff7f0e',
+             '#2ca02c',
+             '#d62728',
+             '#9467bd',
+             '#8c564b',
+             '#e377c2',
+             '#7f7f7f',
+             '#bcbd22',
              '#17becf']
 
 min_figsize_single = 6.0       # default min size in inch, for single plot
 max_figsize_single = 10.0      # default min size in inch, for single plot
-default_figsize_multi = [15.0, 8.0]    # default size in inch, for multiple subplots
+# default size in inch, for multiple subplots
+default_figsize_multi = [15.0, 8.0]
 
 
 ############################################ Class Begein ###############################################
@@ -47,7 +48,8 @@ class BasemapExt(Basemap):
     """
     Extend Basemap class to add drawscale(), because Basemap.drawmapscale() do not support 'cyl' projection.
     """
-    def draw_scale_bar(self, lat_c, lon_c, distance, ax=None, font_size=12, yoffset=None, color='k'): 
+
+    def draw_scale_bar(self, lat_c, lon_c, distance, ax=None, font_size=12, yoffset=None, color='k'):
         """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
         ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
         Parameters: lat_c/lon_c : float, longitude and latitude of scale bar center, in degree
@@ -55,8 +57,9 @@ class BasemapExt(Basemap):
                     yoffset     : float, optional, scale bar length at two ends, in degree
         Example:    m.drawscale(33.06, 131.18, 2000)
         """
-        gc = pyproj.Geod(a=self.rmajor, b=self.rminor) 
-        if distance > 1000.0: distance = np.rint(distance/1000.0)*1000.0
+        gc = pyproj.Geod(a=self.rmajor, b=self.rminor)
+        if distance > 1000.0:
+            distance = np.rint(distance/1000.0)*1000.0
         lon_c2, lat_c2, az21 = gc.fwd(lon_c, lat_c, 90, distance)
         length = np.abs(lon_c - lon_c2)
         lon0 = lon_c - length/2.0
@@ -64,19 +67,19 @@ class BasemapExt(Basemap):
         if not yoffset:
             yoffset = 0.1*length
 
-        self.plot([lon0,lon1],[lat_c,lat_c],color=color)
-        self.plot([lon0,lon0],[lat_c,lat_c+yoffset],color=color)
-        self.plot([lon1,lon1],[lat_c,lat_c+yoffset],color=color)
-        if not ax:  ax = plt.gca()
+        self.plot([lon0, lon1], [lat_c, lat_c], color=color)
+        self.plot([lon0, lon0], [lat_c, lat_c+yoffset], color=color)
+        self.plot([lon1, lon1], [lat_c, lat_c+yoffset], color=color)
+        if not ax:
+            ax = plt.gca()
         if distance < 1000.0:
-            ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d m'%(distance),\
-                    verticalalignment='top', horizontalalignment='center',fontsize=font_size, color=color) 
+            ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d m' % (distance),
+                    verticalalignment='top', horizontalalignment='center', fontsize=font_size, color=color)
         else:
-            ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d km'%(distance/1000.0),\
-                    verticalalignment='top', horizontalalignment='center',fontsize=font_size, color=color) 
+            ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d km' % (distance/1000.0),
+                    verticalalignment='top', horizontalalignment='center', fontsize=font_size, color=color)
 
-
-    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1,0,0,1], font_size=12, color='k'):
+    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1, 0, 0, 1], font_size=12, color='k'):
         """Auto draw lat/lon label/tick based on coverage from geo_box
         Inputs:
             geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -85,7 +88,7 @@ class BasemapExt(Basemap):
             ax      : axes object the labels are drawn
             draw    : bool, do not draw if False
         Outputs:
-            
+
         Example:
             geo_box = (128.0, 37.0, 138.0, 30.0)
             m.draw_lalo_label(geo_box)
@@ -93,7 +96,7 @@ class BasemapExt(Basemap):
         lats, lons, step = self.auto_lalo_sequence(geo_box, lalo_step=lalo_step)
 
         digit = np.int(np.floor(np.log10(step)))
-        fmt = '%.'+'%d'%(abs(min(digit, 0)))+'f'
+        fmt = '%.'+'%d' % (abs(min(digit, 0)))+'f'
         # Change the 2 lines below for customized label
         #lats = np.linspace(31.55, 31.60, 2)
         #lons = np.linspace(130.60, 130.70, 3)
@@ -101,22 +104,24 @@ class BasemapExt(Basemap):
         # Plot x/y tick without label
         if not ax:
             ax = plt.gca()
-        ax.tick_params(which='both', direction='in', labelsize=font_size, bottom=True, top=True, left=True, right=True)
+        ax.tick_params(which='both', direction='in', labelsize=font_size,
+                       bottom=True, top=True, left=True, right=True)
 
         ax.set_xticks(lons)
         ax.set_yticks(lats)
         ax.set_xticklabels([])
         ax.set_yticklabels([])
-        #ax.xaxis.tick_top()
-        
+        # ax.xaxis.tick_top()
+
         # Plot x/y label
-        labels_lat = np.multiply(labels, [1,1,0,0])
-        labels_lon = np.multiply(labels, [0,0,1,1])
-        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05, fontsize=font_size, color=color, textcolor=color)
-        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05, fontsize=font_size, color=color, textcolor=color)
+        labels_lat = np.multiply(labels, [1, 1, 0, 0])
+        labels_lon = np.multiply(labels, [0, 0, 1, 1])
+        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05,
+                           fontsize=font_size, color=color, textcolor=color)
+        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05,
+                           fontsize=font_size, color=color, textcolor=color)
 
-
-    def auto_lalo_sequence(self, geo_box, lalo_step=None, max_tick_num=4, step_candidate=[1,2,3,4,5]):
+    def auto_lalo_sequence(self, geo_box, lalo_step=None, max_tick_num=4, step_candidate=[1, 2, 3, 4, 5]):
         """Auto calculate lat/lon label sequence based on input geo_box
         Inputs:
             geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -138,24 +143,24 @@ class BasemapExt(Basemap):
             # Final tick step - choose from candidate list
             digit = np.int(np.floor(np.log10(lalo_step)))
             lalo_step_candidate = [i*10**digit for i in step_candidate]
-            distance = [(i - max_lalo_dist/max_tick_num)**2 for i in lalo_step_candidate]
+            distance = [(i - max_lalo_dist/max_tick_num) ** 2
+                        for i in lalo_step_candidate]
             lalo_step = lalo_step_candidate[distance.index(min(distance))]
         print('label step - '+str(lalo_step)+' degree')
 
         # Auto tick sequence
         digit = np.int(np.floor(np.log10(lalo_step)))
         lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
-        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step),\
+        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step),
                                     np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step))))
-        lats = np.sort(lats[np.where(np.logical_and(lats>=geo_box[3], lats<=geo_box[1]))])
+        lats = np.sort(lats[np.where(np.logical_and(lats >= geo_box[3], lats <= geo_box[1]))])
 
         lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
-        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step),\
+        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step),
                                     np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step))))
-        lons = np.sort(lons[np.where(np.logical_and(lons>=geo_box[0], lons<=geo_box[2]))])
- 
-        return lats, lons, lalo_step
+        lons = np.sort(lons[np.where(np.logical_and(lons >= geo_box[0], lons <= geo_box[2]))])
 
+        return lats, lons, lalo_step
 
 
 ############################################ Plot Utilities #############################################
@@ -200,7 +205,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
         else:
             fig_title = datasetNames[0].split('-')[0]
 
-    elif len(datasetNames)==1 and k in timeseriesKeyNames:
+    elif len(datasetNames) == 1 and k in timeseriesKeyNames:
         if 'ref_date' in inps_dict.keys():
             ref_date = inps_dict['ref_date']
         elif 'REF_DATE' in atr.keys():
@@ -215,7 +220,8 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
 
         try:
             ext = os.path.splitext(fname)[1]
-            processMark = os.path.basename(fname).split('timeseries')[1].split(ext)[0]
+            processMark = os.path.basename(fname).split(
+                'timeseries')[1].split(ext)[0]
             fig_title += processMark
         except:
             pass
@@ -268,7 +274,7 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
     row_num = np.sqrt(subplot_num_per_fig * num_ratio)
     col_num = np.sqrt(subplot_num_per_fig / num_ratio)
     while np.rint(row_num) * np.rint(col_num) < subplot_num_per_fig:
-        if row_num%1 > col_num%1:
+        if row_num % 1 > col_num % 1:
             row_num += 0.5
         else:
             col_num += 0.5
@@ -279,7 +285,7 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
 
 def check_colormap_input(metadata, colormap=None, datasetName=None):
     gray_dataset_key_words = ['coherence', 'temporal_coherence', 'connectComponent',
-                              '.cor','.mli','.slc','.amp','.ramp']
+                              '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not colormap:
         if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'], str(datasetName).split('-')[0]]):
             colormap = 'gray'
@@ -300,12 +306,12 @@ def check_colormap_input(metadata, colormap=None, datasetName=None):
                             (0.6, 1.0, 1.0),
                             (0.8, 0.0, 0.0),
                             (1.0, 0.0, 0.0)),
-                   'blue':  ((0.0, 0.5, .5),
+                  'blue':  ((0.0, 0.5, .5),
                             (0.2, 1.0, 1.0),
                             (0.4, 1.0, 1.0),
                             (0.5, 0.0, 0.0),
                             (1.0, 0.0, 0.0),)
-                 }
+                  }
         colormap = LinearSegmentedColormap('BlueRed1', cdict1)
     else:
         colormap = plt.get_cmap(colormap)
@@ -324,15 +330,15 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12, every_year=1):
         dee - datetime.date object, xmax
     """
     # Min/Max
-    ts=datevector[0] -0.2;  ys=int(ts);  ms=int((ts-ys)*12.0)
-    te=datevector[-1]+0.3;  ye=int(te);  me=int((te-ye)*12.0)
-    if ms>12:   ys = ys+1;   ms=1
-    if me>12:   ye = ye+1;   me=1
-    if ms<1:    ys = ys-1;   ms=12
-    if me<1:    ye = ye-1;   me=12
-    dss=datetime.date(ys,ms,1)
-    dee=datetime.date(ye,me,1)
-    ax.set_xlim(dss,dee)
+    ts = datevector[0]  - 0.2;  ys=int(ts);  ms=int((ts - ys) * 12.0)
+    te = datevector[-1] + 0.3;  ye=int(te);  me=int((te - ye) * 12.0)
+    if ms > 12:   ys = ys + 1;   ms = 1
+    if me > 12:   ye = ye + 1;   me = 1
+    if ms < 1:    ys = ys - 1;   ms = 12
+    if me < 1:    ye = ye - 1;   me = 12
+    dss = datetime.date(ys, ms, 1)
+    dee = datetime.date(ye, me, 1)
+    ax.set_xlim(dss, dee)
 
     # Label/Tick format
     ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
@@ -343,7 +349,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12, every_year=1):
     # Label font size
     for tick in ax.xaxis.get_major_ticks():
         tick.label.set_fontsize(fontSize)
-    #fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
+    # fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
     return ax, dss, dee
 
 
@@ -360,17 +366,18 @@ def auto_adjust_yaxis(ax, dataList, fontSize=12, ymin=None, ymax=None):
     """
     # Min/Max
     dataRange = max(dataList) - min(dataList)
-    if ymin is None:  ymin = min(dataList) - 0.1*dataRange
-    if ymax is None:  ymax = max(dataList) + 0.1*dataRange
+    if ymin is None:
+        ymin = min(dataList) - 0.1*dataRange
+    if ymax is None:
+        ymax = max(dataList) + 0.1*dataRange
     ax.set_ylim([ymin, ymax])
-    ## Tick/Label setting
+    # Tick/Label setting
     #xticklabels = plt.getp(ax, 'xticklabels')
     #yticklabels = plt.getp(ax, 'yticklabels')
     #plt.setp(yticklabels, 'color', 'k', fontsize=fontSize)
     #plt.setp(xticklabels, 'color', 'k', fontsize=fontSize)
 
     return ax
-
 
 
 ####################################### Plot ################################################
@@ -401,11 +408,12 @@ def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
     if plot_dict['disp_title']:
         ax.set_title('Coherence History of All Related Interferograms')
 
-    ax = auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
-    ax.set_ylim([0.0,1.0])
+    ax = auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'],
+                                every_year=plot_dict['every_year'])[0]
+    ax.set_ylim([0.0, 1.0])
 
-    ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Coherence',fontsize=plot_dict['fontsize'])
+    ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
+    ax.set_ylabel('Coherence', fontsize=plot_dict['fontsize'])
     ax.legend(loc='lower right')
 
     return ax
@@ -433,12 +441,13 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     Output
         ax : matplotlib axes object
     """
-    
+
     # Figure Setting
     if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
     if not 'linewidth'   in plot_dict.keys():   plot_dict['linewidth']   = 2
     if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
     if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
+
     # For colorful display of coherence
     if not 'cohList'     in plot_dict.keys():  plot_dict['cohList']    = None
     if not 'cbar_label'  in plot_dict.keys():  plot_dict['cbar_label'] = 'Average Spatial Coherence'
@@ -449,6 +458,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']  = None
     if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']  = True
     if not 'every_year'  in plot_dict.keys():  plot_dict['every_year'] = 1
+
     cohList = plot_dict['cohList']
     disp_min = plot_dict['disp_min']
     disp_max = plot_dict['disp_max']
@@ -488,10 +498,9 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     idx_date_keep = [dateList.index(i) for i in dateList_keep]
     idx_date_drop = [dateList.index(i) for i in dateList_drop]
 
-
     # Ploting
-    #ax=fig.add_subplot(111)
-    ## Colorbar when conherence is colored
+    # ax=fig.add_subplot(111)
+    # Colorbar when conherence is colored
     if cohList is not None:
         data_min = min(cohList)
         data_max = max(cohList)
@@ -522,7 +531,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             if coh_thres < disp_min:
                 disp_min = 0.0
                 if print_msg:
-                    print(('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)))
+                    print('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max))
             c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
             coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
             cmap = plt.get_cmap(plot_dict['colormap'])
@@ -540,21 +549,23 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
         cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
 
-        #plot low coherent ifgram first and high coherence ifgram later
+        # plot low coherent ifgram first and high coherence ifgram later
         cohList_keep = [cohList[date12List.index(i)] for i in date12List_keep]
-        date12List_keep = [x for _,x in sorted(zip(cohList_keep, date12List_keep))]
+        date12List_keep = [x for _, x in sorted(zip(cohList_keep, date12List_keep))]
 
-    ## Dot - SAR Acquisition
+    # Dot - SAR Acquisition
     if idx_date_keep:
         x_list = [dates[i] for i in idx_date_keep]
         y_list = [pbaseList[i] for i in idx_date_keep]
-        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
+        ax.plot(x_list, y_list, 'ko', alpha=0.7,
+                ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
     if idx_date_drop:
         x_list = [dates[i] for i in idx_date_drop]
         y_list = [pbaseList[i] for i in idx_date_drop]
-        ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc='gray')
+        ax.plot(x_list, y_list, 'ko', alpha=0.7,
+                ms=plot_dict['markersize'], mfc='gray')
 
-    ## Line - Pair/Interferogram        
+    ## Line - Pair/Interferogram
     # interferograms dropped
     if plot_dict['disp_drop']:
         for date12 in date12List_drop:
@@ -566,9 +577,11 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             if cohList:
                 coh = cohList[date12List.index(date12)]
                 coh_idx = (coh - disp_min) / (disp_max - disp_min)
-                ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
+                ax.plot(x, y, '--', lw=plot_dict['linewidth'],
+                        alpha=transparency, c=cmap(coh_idx))
             else:
-                ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c='k')
+                ax.plot(x, y, '--', lw=plot_dict['linewidth'],
+                        alpha=transparency, c='k')
 
     # interferograms kept
     for date12 in date12List_keep:
@@ -580,24 +593,27 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         if cohList is not None:
             coh = cohList[date12List.index(date12)]
             coh_idx = (coh - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
+            ax.plot(x, y, '-', lw=plot_dict['linewidth'],
+                    alpha=transparency, c=cmap(coh_idx))
         else:
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c='k')
+            ax.plot(x, y, '-', lw=plot_dict['linewidth'],
+                    alpha=transparency, c='k')
 
     if plot_dict['disp_title']:
         ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
+    ax = auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'],
+                                every_year=plot_dict['every_year'])[0]
     ax = auto_adjust_yaxis(ax, pbaseList, plot_dict['fontsize'])
-    ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Perp Baseline [m]',fontsize=plot_dict['fontsize'])
+    ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
+    ax.set_ylabel('Perp Baseline [m]', fontsize=plot_dict['fontsize'])
 
     # Legend
     if plot_dict['disp_drop']:
-        solid_line = mlines.Line2D([],[],color='k',ls='solid', label='Interferograms')
-        dash_line  = mlines.Line2D([],[],color='k',ls='dashed', label='Interferograms dropped')
-        ax.legend(handles=[solid_line,dash_line])
+        solid_line = mlines.Line2D([], [], color='k', ls='solid', label='Interferograms')
+        dash_line = mlines.Line2D([], [], color='k', ls='dashed', label='Interferograms dropped')
+        ax.legend(handles=[solid_line, dash_line])
 
     return ax
 
@@ -633,7 +649,7 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
     dates, datevector = ptime.date_list2vector(dateList)
 
     # Get index of date used and dropped
-    #dateList_drop = ['20080711', '20081011']  # for debug
+    # dateList_drop = ['20080711', '20081011']  # for debug
     idx_keep = list(range(len(dateList)))
     idx_drop = []
     for i in dateList_drop:
@@ -642,36 +658,38 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
         idx_drop.append(idx)
 
     # Plot
-    #ax=fig.add_subplot(111)
+    # ax=fig.add_subplot(111)
 
     # Plot date used
     if idx_keep:
         x_list = [dates[i] for i in idx_keep]
         y_list = [pbaseList[i] for i in idx_keep]
-        ax.plot(x_list, y_list, '-ko', alpha=transparency, lw=plot_dict['linewidth'], \
+        ax.plot(x_list, y_list, '-ko', alpha=transparency, lw=plot_dict['linewidth'],
                 ms=plot_dict['markersize'], mfc=plot_dict['markercolor'])
-    
+
     # Plot date dropped
     if idx_drop:
         x_list = [dates[i] for i in idx_drop]
         y_list = [pbaseList[i] for i in idx_drop]
-        ax.plot(x_list, y_list, 'ko', alpha=transparency, ms=plot_dict['markersize'], mfc='gray')
+        ax.plot(x_list, y_list, 'ko', alpha=transparency,
+                ms=plot_dict['markersize'], mfc='gray')
 
     if plot_dict['disp_title']:
-        ax.set_title('Perpendicular Baseline History',fontsize=plot_dict['fontsize'])
+        ax.set_title('Perpendicular Baseline History', fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
+    ax = auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'],
+                                every_year=plot_dict['every_year'])[0]
     ax = auto_adjust_yaxis(ax, pbaseList, plot_dict['fontsize'])
-    ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Perpendicular Baseline [m]',fontsize=plot_dict['fontsize'])
+    ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
+    ax.set_ylabel('Perpendicular Baseline [m]', fontsize=plot_dict['fontsize'])
 
     return ax
 
 
 def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict={}):
     """Plot Coherence Matrix of input network
-    
+
     if date12List_drop is not empty, plot KEPT pairs in the upper triangle and
                                            ALL  pairs in the lower triangle.
     """
@@ -695,7 +713,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
             idx1, idx2 = [dateList.index(i) for i in date12.split('_')]
             coh_mat[idx1, idx2] = np.nan
 
-    #Show diagonal value as black, to be distinguished from un-selected interferograms
+    # Show diagonal value as black, to be distinguished from un-selected interferograms
     diag_mat = np.diag(np.ones(coh_mat.shape[0]))
     diag_mat[diag_mat == 0.] = np.nan
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
@@ -703,9 +721,9 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
 
     date_num = coh_mat.shape[0]
     if date_num < 30:
-        tick_list = list(range(0,date_num,5))
+        tick_list = list(range(0, date_num, 5))
     else:
-        tick_list = list(range(0,date_num,10))
+        tick_list = list(range(0, date_num, 10))
     ax.get_xaxis().set_ticks(tick_list)
     ax.get_yaxis().set_ticks(tick_list)
     ax.set_xlabel('Image Number', fontsize=plot_dict['fontsize'])
@@ -722,8 +740,8 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
 
     # Legend
     if date12List_drop:
-        ax.plot([],[],label='Upper: used ifgrams')
-        ax.plot([],[],label='Lower: all ifgrams')
+        ax.plot([], [], label='Upper: used ifgrams')
+        ax.plot([], [], label='Lower: all ifgrams')
         ax.legend(handlelength=0)
 
     return ax
@@ -744,9 +762,9 @@ def prepare_dem_background(dem, inps_dict=dict()):
                 dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(dem=dem)
     """
     if not inps_dict:
-        inps_dict['disp_dem_shade']     = True
-        inps_dict['disp_dem_contour']   = True
-        inps_dict['dem_contour_step']   = 200.0
+        inps_dict['disp_dem_shade'] = True
+        inps_dict['disp_dem_contour'] = True
+        inps_dict['dem_contour_step'] = 200.0
         inps_dict['dem_contour_smooth'] = 3.0
 
     dem_shade = None
@@ -757,12 +775,15 @@ def prepare_dem_background(dem, inps_dict=dict()):
         ls = LightSource(azdeg=315, altdeg=45)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+2000)
+            dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray,
+                                 vmin=-5000, vmax=np.nanmax(dem)+2000)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         print('show shaded relief DEM')
 
     if inps_dict['disp_dem_contour']:
-        dem_contour = ndimage.gaussian_filter(dem, sigma=inps_dict['dem_contour_smooth'], order=0)
+        dem_contour = ndimage.gaussian_filter(dem,
+                                              sigma=inps_dict['dem_contour_smooth'],
+                                              order=0)
         dem_contour_sequence = np.arange(-6000, 9000, inps_dict['dem_contour_step'])
         print('show contour in step of {} m with smoothing factor of {}'.format(inps_dict['dem_contour_step'],
                                                                                 inps_dict['dem_contour_smooth']))
@@ -804,10 +825,12 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
         if isinstance(ax, BasemapExt) and geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper', colors='black', alpha=0.5, latlon='FALSE')
+            ax.contour(xx, yy, dem_contour, dem_contour_seq,
+                       origin='upper', colors='black', alpha=0.5, latlon='FALSE')
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.contour(dem_contour, dem_contour_seq, origin='lower', colors='black', alpha=0.5)
+            ax.contour(dem_contour, dem_contour_seq,
+                       origin='lower', colors='black', alpha=0.5)
     return ax
 
 
@@ -818,6 +841,7 @@ def plot_colorbar(inps, im, cax):
         elif inps.disp_min >  inps.data_min and inps.disp_max >= inps.data_max: inps.cbar_ext='min'
         elif inps.disp_min <= inps.data_min and inps.disp_max <  inps.data_max: inps.cbar_ext='max'
         else:  inps.cbar_ext='both'
+
     if inps.wrap and 'radian' in inps.disp_unit:
         cbar = plt.colorbar(im, cax=cax, ticks=[-np.pi, 0, np.pi])
         cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
@@ -846,7 +870,7 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False):
     if not disp_unit:
         k = metadata['FILE_TYPE']
         disp_unit = metadata['UNIT']
-        if k in ['timeseries','velocity']:
+        if k in ['timeseries', 'velocity']:
             disp_unit = 'cm'
         elif k in ['.mli', '.slc', '.amp']:
             disp_unit = 'dB'
@@ -883,7 +907,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         return data, metadata['UNIT'], scale
 
     # Calculate scaling factor  - 1
-    # phase unit - length / angle 
+    # phase unit - length / angle
     if data_unit[0].endswith('m'):
         if   disp_unit[0] == 'mm': scale *= 1000.0
         elif disp_unit[0] == 'cm': scale *= 100.0
@@ -928,7 +952,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         print('Un-scalable data unit: '+data_unit)
 
     # Calculate scaling factor  - 2
-    if len(data_unit)==2:
+    if len(data_unit) == 2:
         try:
             disp_unit[1]
             if   disp_unit[1] in ['y','yr','year'  ]: disp_unit[1] = 'year'
@@ -963,17 +987,19 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False):
         wrap
     """
     if not disp_unit:
-        disp_unit, wrap = check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=wrap)
+        disp_unit, wrap = check_disp_unit_and_wrap(metadata,
+                                                   disp_unit=None,
+                                                   wrap=wrap)
 
     # Data Operation - Scale to display unit
     disp_scale = 1.0
     if not disp_unit == metadata['UNIT']:
-        data, disp_unit, disp_scale = scale_data2disp_unit(data, metadata=metadata, disp_unit=disp_unit)
+        data, disp_unit, disp_scale = scale_data2disp_unit(data,
+                                                           metadata=metadata,
+                                                           disp_unit=disp_unit)
 
     # Data Operation - wrap
     if wrap:
         print('re-wrapping data to [-pi, pi]')
         data -= np.round(data/(2*np.pi)) * (2*np.pi)
     return data, disp_unit, disp_scale, wrap
-
-

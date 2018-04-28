@@ -6,7 +6,8 @@
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import h5py
 import numpy as np
 from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
@@ -21,7 +22,7 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     Output:
         temp_coh - 2D np.array, temporal coherence in float32
     """
-    
+
     # Basic Info
     atr_ts = readfile.read_attribute(timeseriesFile)
     length = int(atr_ts['LENGTH'])
@@ -52,25 +53,25 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     # interferograms data
     print("interferograms file: " + ifgramFile)
     atr_ifgram = readfile.read_attribute(ifgramFile)
-    h5ifgram   = h5py.File(ifgramFile, 'r')
+    h5ifgram = h5py.File(ifgramFile, 'r')
     ifgram_list = sorted(h5ifgram['interferograms'].keys())
     ifgram_list = ut.check_drop_ifgram(h5ifgram)
     ifgram_num = len(ifgram_list)
 
     # Design matrix
     date12_list = ptime.list_ifgram2date12(ifgram_list)
-    A1,B = ut.design_matrix(ifgramFile, date12_list)
-    A0 = -1*np.ones([ifgram_num,1])
+    A1, B = ut.design_matrix(ifgramFile, date12_list)
+    A0 = -1*np.ones([ifgram_num, 1])
     A = np.hstack((A0, A1))
 
     # Get reference pixel
     try:
         ref_x = int(atr_ts['REF_X'])
         ref_y = int(atr_ts['REF_Y'])
-        print('find reference pixel in y/x: [%d, %d]'%(ref_y, ref_x))
+        print('find reference pixel in y/x: [%d, %d]' % (ref_y, ref_x))
     except ValueError:
         print('No ref_x/y found! Can not calculate temporal coherence without it.')
-    
+
     print('calculating temporal coherence interferogram by interferogram ...')
     print('number of interferograms: '+str(ifgram_num))
     temp_coh = np.zeros(pixel_num, dtype=np.float32)+0j
@@ -83,7 +84,7 @@ def temporal_coherence(timeseriesFile, ifgramFile):
         data = data.flatten(0)
 
         # calculate difference between observed and estimated data
-        dataEst  = np.dot(A[i,:], timeseries)
+        dataEst = np.dot(A[i, :], timeseries)
         dataDiff = data - dataEst
         temp_coh += np.exp(1j*dataDiff)
         prog_bar.update(i+1, suffix=date12_list[i])
@@ -91,7 +92,8 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     del timeseries, data, dataEst, dataDiff
     h5ifgram.close()
 
-    temp_coh = np.array((np.absolute(temp_coh)/ifgram_num).reshape((length,width)), dtype=np.float32)
+    temp_coh = np.array((np.absolute(temp_coh) / ifgram_num).reshape((length, width)),
+                        dtype=np.float32)
     return temp_coh
 
 
@@ -112,6 +114,7 @@ EXAMPLE = """example:
   temporal_coherence.py  unwrapIfgram.h5  timeseries.h5  temporalCoherence.h5
 """
 
+
 def usage():
     print(USAGE+'\n\n'+DESCRIPTION+'\n\n'+REFERENCE+'\n'+EXAMPLE)
     return
@@ -120,17 +123,20 @@ def usage():
 ######################################################################################################
 def main(argv):
     try:
-        ifgramFile     = argv[0]
+        ifgramFile = argv[0]
         timeseriesFile = argv[1]
     except:
-        usage(); sys.exit()
+        usage()
+        sys.exit()
 
     temp_coherence = temporal_coherence(timeseriesFile, ifgramFile)
 
-    try:    tempCohFile = argv[2]
-    except: tempCohFile = 'temporalCoherence.h5'
+    try:
+        tempCohFile = argv[2]
+    except:
+        tempCohFile = 'temporalCoherence.h5'
     print('writing >>> '+tempCohFile)
-    
+
     atr = readfile.read_attribute(timeseriesFile)
     atr['FILE_TYPE'] = 'temporal_coherence'
     atr['UNIT'] = '1'
@@ -142,5 +148,3 @@ def main(argv):
 ######################################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-

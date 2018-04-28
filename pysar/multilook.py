@@ -17,7 +17,7 @@ from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
 
 
 ##################################################################################################
-EXAMPLE="""example:
+EXAMPLE = """example:
   multilook.py  velocity.h5  15 15
   multilook.py  srtm30m.dem  10 10  -o srtm30m_300m.dem
 
@@ -25,16 +25,20 @@ EXAMPLE="""example:
   multilook.py  bperp.rdr  -10 -2 -o bperp_full.rdr
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Multilook.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Multilook.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', nargs='+', help='File(s) to multilook')
-    parser.add_argument('lks_x', type=int, help='number of multilooking in azimuth/y direction')
-    parser.add_argument('lks_y', type=int, help='number of multilooking in range  /x direction')
-    parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')
-    parser.add_argument('--no-parallel',dest='parallel',action='store_false',default=True,\
+    parser.add_argument('lks_x', type=int,
+                        help='number of multilooking in azimuth/y direction')
+    parser.add_argument('lks_y', type=int,
+                        help='number of multilooking in range  /x direction')
+    parser.add_argument('-o', '--outfile',
+                        help='Output file name. Disabled when more than 1 input files')
+    parser.add_argument('--no-parallel', dest='parallel', action='store_false', default=True,
                         help='Disable parallel processing. Diabled auto for 1 input file.')
     return parser
 
@@ -47,30 +51,32 @@ def cmd_line_parse(iargs=None):
 
 
 ######################################## Sub Functions ############################################
-def multilook_matrix(matrix,lks_y,lks_x):
+def multilook_matrix(matrix, lks_y, lks_x):
     """Obsolete multilooking functions"""
-    rows,cols = matrix.shape
+    rows, cols = matrix.shape
     lks_x = int(lks_x)
     lks_y = int(lks_y)
     if lks_x == 1 and lks_y == 1:
         return matrix
 
-    rows_mli=int(np.floor(rows/lks_y))
-    cols_mli=int(np.floor(cols/lks_x))
+    rows_mli = int(np.floor(rows/lks_y))
+    cols_mli = int(np.floor(cols/lks_x))
     #thr = np.floor(lks_x*lks_y/2)
-    matrix_Cmli=np.zeros((rows,    cols_mli))
-    matrix_mli =np.zeros((rows_mli,cols_mli))
+    matrix_Cmli = np.zeros((rows,    cols_mli))
+    matrix_mli = np.zeros((rows_mli, cols_mli))
 
     #for c in range(lks_x):   matrix_Cmli = matrix_Cmli + matrix[:,range(c,cols_mli*lks_x,lks_x)]
     #for r in range(lks_y):   matrix_mli  = matrix_mli  + matrix_Cmli[  range(r,rows_mli*lks_y,lks_y),:]
     #for c in range(int(cols_mli)):  matrix_Cmli[:,c]=np.nansum(matrix[:,(c)*lks_x:(c+1)*lks_x],1)
     #for r in range(int(rows_mli)):  matrix_mli[r,:] =np.nansum(matrix_Cmli[(r)*lks_y:(r+1)*lks_y,:],0)
-    #matrix_mli=matrix_mli/(lks_y*lks_x)
+    # matrix_mli=matrix_mli/(lks_y*lks_x)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        for c in range(cols_mli):  matrix_Cmli[:,c] = np.nanmean(matrix[:,(c)*lks_x:(c+1)*lks_x],1)
-        for r in range(rows_mli):  matrix_mli[r,:]  = np.nanmean(matrix_Cmli[(r)*lks_y:(r+1)*lks_y,:],0)
+        for c in range(cols_mli):
+            matrix_Cmli[:, c] = np.nanmean(matrix[:, (c)*lks_x:(c+1)*lks_x], 1)
+        for r in range(rows_mli):
+            matrix_mli[r, :] = np.nanmean(matrix_Cmli[(r)*lks_y:(r+1)*lks_y, :], 0)
     del matrix, matrix_Cmli
     return matrix_mli
 
@@ -87,17 +93,20 @@ def multilook_data(data, lksY, lksX):
     if len(shape) == 2:
         newShape = np.floor(shape / (lksY, lksX)).astype(int) * (lksY, lksX)
         cropData = data[:newShape[0], :newShape[1]]
-        temp = cropData.reshape((newShape[0] // lksY, lksY, newShape[1] // lksX, lksX))
+        temp = cropData.reshape((newShape[0] // lksY, lksY,
+                                 newShape[1] // lksX, lksX))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            coarseData = np.nanmean(temp, axis=(1,3))
+            coarseData = np.nanmean(temp, axis=(1, 3))
     elif len(shape) == 3:
         newShape = np.floor(shape / (1, lksY, lksX)).astype(int) * (1, lksY, lksX)
         cropData = data[:newShape[0], :newShape[1], :newShape[2]]
-        temp = cropData.reshape((newShape[0], newShape[1] // lksY, lksY, newShape[2] // lksX, lksX))
+        temp = cropData.reshape((newShape[0],
+                                 newShape[1] // lksY, lksY,
+                                 newShape[2] // lksX, lksX))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            coarseData = np.nanmean(temp, axis=(2,4))
+            coarseData = np.nanmean(temp, axis=(2, 4))
     return coarseData
 
 
@@ -105,11 +114,11 @@ def multilook_attribute(atr_dict, lks_y, lks_x, print_msg=True):
     atr = dict()
     for key, value in iter(atr_dict.items()):
         atr[key] = str(value)
-  
+
     length_mli = int(np.floor(int(atr['LENGTH']) / lks_y))
     width_mli = int(np.floor(int(atr['WIDTH']) / lks_x))
-  
-    ##### Update attributes
+
+    # Update attributes
     atr['LENGTH'] = str(length_mli)
     atr['WIDTH'] = str(width_mli)
     atr['XMIN'] = '0'
@@ -158,7 +167,7 @@ def multilook_file(infile, lks_y, lks_x, outfile=None):
     lks_x = int(lks_x)
 
     # input file info
-    atr = readfile.read_attribute(infile)    
+    atr = readfile.read_attribute(infile)
     k = atr['FILE_TYPE']
     print('multilooking {} {} file: {}'.format(atr['PROCESSOR'], k, infile))
     print('number of looks in y / azimuth direction: %d' % lks_y)
@@ -178,7 +187,8 @@ def multilook_file(infile, lks_y, lks_x, outfile=None):
     maxDigit = max([len(i) for i in dsNames])
     dsDict = dict()
     for dsName in dsNames:
-        print('multilooking {d:<{w}} from {f} ...'.format(d=dsName, w=maxDigit, f=os.path.basename(infile)))
+        print('multilooking {d:<{w}} from {f} ...'.format(
+            d=dsName, w=maxDigit, f=os.path.basename(infile)))
         data = readfile.read(infile, datasetName=dsName, print_msg=False)[0]
         data = multilook_data(data, lks_y, lks_x)
         dsDict[dsName] = data
@@ -197,7 +207,7 @@ def main(iargs=None):
     print('Done.')
     return
 
+
 ###################################################################################################
 if __name__ == '__main__':
     main()
-

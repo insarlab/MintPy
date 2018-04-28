@@ -19,13 +19,16 @@ EXAMPLE = """example:
   prep_giant_ifg_list.py  INPUTS/ifgramStack.h5  --sensor SEN
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare ifg.list file for GIAnT.\n',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Prepare ifg.list file for GIAnT.\n',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
     parser.add_argument('file', nargs='+', help='Interferogram file(s)')
-    parser.add_argument('--sensor', '--mission', dest='sensor', help='Sensor name of SAR data')
-    parser.add_argument('-o', '--output', dest='outfile', default='ifg.list', help='Output list file')
+    parser.add_argument('--sensor', '--mission',
+                        dest='sensor', help='Sensor name of SAR data')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        default='ifg.list', help='Output list file')
     return parser
 
 
@@ -53,27 +56,27 @@ def get_mission_name(meta_dict):
         print('return None')
         return mission
 
-    ## Convert to UNAVCO Mission name
+    # Convert to UNAVCO Mission name
     ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
     if value.startswith('ers'):
         mission = 'ERS'
-    elif value.startswith(('env','asar')):
+    elif value.startswith(('env', 'asar')):
         mission = 'ENV'
-    elif value.startswith(('s1','sen')):
+    elif value.startswith(('s1', 'sen')):
         mission = 'S1'
-    elif value.startswith(('rs','rsat','radarsat')):
+    elif value.startswith(('rs', 'rsat', 'radarsat')):
         mission = 'RS'
         if value.endswith('1'):
             mission += '1'
         else:
             mission += '2'
-    elif value.startswith(('csk','cos')):
+    elif value.startswith(('csk', 'cos')):
         mission = 'CSK'
-    elif value.startswith(('tsx','tdx','terra','tandem')):
+    elif value.startswith(('tsx', 'tdx', 'terra', 'tandem')):
         mission = 'TSX'
     elif value.startswith('jers'):
         mission = 'JERS'
-    elif value.startswith(('alos','palsar')):
+    elif value.startswith(('alos', 'palsar')):
         if value.endswith('2'):
             mission = 'ALOS2'
         else:
@@ -103,12 +106,12 @@ def get_giant_ifg_list(fnames):
         for fname in fnames:
             atr = readfile.read_attribute(fname)
             m_date, s_date = ptime.yymmdd(atr['DATE12'].split('-'))
-            pbase = (float(atr['P_BASELINE_TOP_HDR']) + float(atr['P_BASELINE_BOTTOM_HDR'])) / 2.
+            pbase = (float(atr['P_BASELINE_TOP_HDR']) +
+                     float(atr['P_BASELINE_BOTTOM_HDR'])) / 2.
             m_date_list.append(m_date)
             s_date_list.append(s_date)
             pbase_list.append(pbase)
     return m_date_list, s_date_list, pbase_list
-
 
 
 ##################################################################################################
@@ -136,5 +139,3 @@ def main(iargs=None):
 ###################################################################################################
 if __name__ == '__main__':
     main()
-
-

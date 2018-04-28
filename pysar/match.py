@@ -28,15 +28,17 @@ EXAMPLE = """example:
   match.py  vel_AlosAT422.h5  vel_AlosAT423.h5  --manual
 """
 
+
 def create_parser():
     parser = argparse.ArgumentParser(description='Merge 2 or more geocoded datasets sharing common area into one.\n'
                                                  '\tFunction automatically finds the common area and calculates\n'
-                                                 '\tthe average offset between the two velocity.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+                                                 '\tthe average offset between the two velocity.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
     parser.add_argument('file1')
     parser.add_argument('file2s', nargs='+', help='file(s) to match')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name')
 
     parser.add_argument('--manual', dest='manual_match', action='store_true',
                         help='manually select lines to estimate offset for matching.')
@@ -82,44 +84,50 @@ def manual_offset_estimate(matrix1, matrix2):
     """
     # Select line from data matrix 1
     fig = plt.figure()
-    ax=fig.add_subplot(111)
+    ax = fig.add_subplot(111)
     ax.imshow(matrix1)
-    xc=[] 
-    yc=[] 
+    xc = []
+    yc = []
     print('please click on start and end point of the desired profile/line')
     print('afterward close the figure to continue the process')
+
     def onclick(event):
-        if event.button==1:
+        if event.button == 1:
             print('click')
             xc.append(int(event.xdata))
             yc.append(int(event.ydata))
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
-    x0=xc[0];x1=xc[1]
-    y0=yc[0];y1=yc[1]
+    x0 = xc[0]
+    x1 = xc[1]
+    y0 = yc[0]
+    y1 = yc[1]
 
     # Select line from data matrix 2
     fig = plt.figure()
-    ax=fig.add_subplot(111)
+    ax = fig.add_subplot(111)
     ax.imshow(matrix2)
-    xc=[]
-    yc=[]
+    xc = []
+    yc = []
     print('please click on start and end point of the desired profile')
     print('afterward close the figure to continue the process')
+
     def onclick(event):
-        if event.button==1:
+        if event.button == 1:
             print('click')
             xc.append(int(event.xdata))
             yc.append(int(event.ydata))
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
-    x00=xc[0];x11=xc[1]
-    y00=yc[0];y11=yc[1]
+    x00 = xc[0]
+    x11 = xc[1]
+    y00 = yc[0]
+    y11 = yc[1]
 
     # Calculate the Offset - Difference
-    #offset=V2[y00:y11,x00:x11]-V2[y0:y1,x0:x1]
-    offset = np.nansum(V2[y00:y11,x00:x11]) / np.sum(np.isfinite(V2[y00:y11,x00:x11]))\
-             - np.nansum(V1[y0:y1,x0:x1]) / np.sum(np.isfinite(V1[y0:y1,x0:x1]))
+    # offset=V2[y00:y11,x00:x11]-V2[y0:y1,x0:x1]
+    offset = np.nansum(V2[y00:y11, x00:x11]) / np.sum(np.isfinite(V2[y00:y11, x00:x11]))\
+        - np.nansum(V1[y0:y1, x0:x1]) / np.sum(np.isfinite(V1[y0:y1, x0:x1]))
 
     return offset
 
@@ -170,19 +178,19 @@ def match_two_files(file1, file2, out_file=None, manual_match=False, disp_fig=Fa
     lon_seq = np.arange(W, W + width * lon_step, lon_step)
     lat_seq = np.arange(N, N + length * lat_step, lat_step)
     indx1, indy1 = np.argmin(np.square(lon_seq - W1)), np.argmin(np.square(lat_seq - N1))
-    indx2, indy2 = np.argmin(np.square(lon_seq - W2)), np.argmin(np.square(lat_seq - N2)), 
+    indx2, indy2 = np.argmin(np.square(lon_seq - W2)), np.argmin(np.square(lat_seq - N2))
 
     # Estimate Offset of overlaping area
     VV1 = np.zeros([length, width])
     VV2 = np.zeros([length, width])
-    VV1[:,:] = np.nan
-    VV2[:,:] = np.nan
+    VV1[:, :] = np.nan
+    VV2[:, :] = np.nan
     VV1[indy1:indy1+length1, indx1:indx1+width1] = V1
     VV2[indy2:indy2+length2, indx2:indx2+width2] = V2
 
     if not manual_match:
         VV_diff = VV2 - VV1
-        offset = np.nansum(VV_diff) / np.sum(np.isfinite(VV_diff))  
+        offset = np.nansum(VV_diff) / np.sum(np.isfinite(VV_diff))
 
     if np.isnan(offset):
         print('**************************************************')
@@ -206,18 +214,18 @@ def match_two_files(file1, file2, out_file=None, manual_match=False, disp_fig=Fa
         print('')
         print('No offset is estimated and no matching applied.')
         print('continue to merge two input files without any adjustment.')
-        print('**************************************************')   
+        print('**************************************************')
     else:
         print('average offset between two velocity in the common area is: ' + str(offset))
         V2 = V2 - offset
 
     # Get merged data matrix value
     indv2 = np.isfinite(V2)
-    VV = np.zeros([length,width])
-    VV[:,:] = np.nan
+    VV = np.zeros([length, width])
+    VV[:, :] = np.nan
     VV[indy1:indy1+length1, indx1:indx1+width1] = V1
     VV[indy2:indy2+length2, indx2:indx2+width2][indv2] = V2[indv2]
-    
+
     # Write Output File
     if not out_file:
         out_file = '{}_{}{}'.format(os.path.splitext(os.path.basename(file1))[0],
@@ -237,6 +245,7 @@ def match_two_files(file1, file2, out_file=None, manual_match=False, disp_fig=Fa
     fig=plt.subplot(2,2,2);  plt.imshow(VV2);      plt.title('File2');   plt.colorbar()
     fig=plt.subplot(2,2,3);  plt.imshow(VV);       plt.title('Merged');  plt.colorbar()
     fig=plt.subplot(2,2,4);  plt.imshow(VV_diff);  plt.title('Offset');  plt.colorbar()
+
     plt.tight_layout()
     plt.savefig(out_file+'.png', bbox_inches='tight', transparent=True, dpi=150)
     print('save figure to '+out_file+'.png')
@@ -273,6 +282,3 @@ def main(iargs=None):
 #############################################################################################
 if __name__ == '__main__':
     main()
-
-
-

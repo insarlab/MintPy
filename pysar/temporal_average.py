@@ -20,16 +20,18 @@ EXAMPLE = """example:
   temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoherence.h5
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate temporal average/mean of multi-temporal datasets',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Calculate temporal average/mean of multi-temporal datasets',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', type=str, help='input file with multi-temporal datasets')
-    parser.add_argument('-d','--ds','--dataset', dest='datasetName', default=ifgramDatasetNames[1],\
-                        help='dataset name to be averaged, for file with multiple dataset family, e.g. ifgramStack.h5\n'+\
-                             'default: {}'.format(ifgramDatasetNames[1]))
-    parser.add_argument('-o','--outfile', help='output file name')
+    parser.add_argument('-d', '--ds', '--dataset', dest='datasetName', default=ifgramDatasetNames[1],
+                        help='dataset name to be averaged, for file with multiple dataset family,\n'+
+                        'e.g. ifgramStack.h5\n' +
+                        'default: {}'.format(ifgramDatasetNames[1]))
+    parser.add_argument('-o', '--outfile', help='output file name')
     return parser
 
 
@@ -66,7 +68,9 @@ def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
     inps.outfile = check_output_filename(inps)
-    inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
+    inps.outfile = ut.temporal_average(inps.file,
+                                       datasetName=inps.datasetName,
+                                       outFile=inps.outfile)
     print('time used: {:.2f} secs\nDone.'.format(time.time() - start_time))
     return inps.outfile
 

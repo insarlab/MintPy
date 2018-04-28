@@ -6,7 +6,8 @@
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import argparse
 import time
 import h5py
@@ -26,13 +27,15 @@ EXAMPLE = """example:
   info.py timeseries.h5 --date > date_list.txt   # print date list of timeseries and save it to txt file.
 """
 
+
 def create_parser():
     """Create command line parser."""
-    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of File',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of File',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
     parser.add_argument('file', type=str, help='File to check')
-    parser.add_argument('--date', dest='disp_date', action='store_true', help='Show date/date12 info of input file')
+    parser.add_argument('--date', dest='disp_date', action='store_true',
+                        help='Show date/date12 info of input file')
     return parser
 
 
@@ -45,9 +48,9 @@ def cmd_line_parse(iargs=None):
 
 ############################################################
 def print_attributes(atr, sorting=True):
-    ## Print Dictionary of Attributes
+    # Print Dictionary of Attributes
     digits = digits = max([len(key) for key in atr.keys()]+[0])
-    f = '{0:<%d}    {1}'%(digits)
+    f = '{0:<%d}    {1}' % (digits)
     dictKey = atr.keys()
     if sorting:
         dictKey = sorted(dictKey)
@@ -64,7 +67,7 @@ def print_hdf5_structure(File):
         elif isinstance(obj, h5py.Dataset):
             print('HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype))
         print_attributes(obj.attrs)
-    f=h5py.File(File,'r')
+    f = h5py.File(File, 'r')
     print('Attributes in / level:')
     print_attributes(f.attrs)
     f.visititems(print_hdf5_structure_obj)
@@ -101,8 +104,10 @@ def get_date_list(fname, print_msg=False):
         dateList = obj.date12List
     else:
         print('--date option can not be applied to {} file, ignore it.'.format(k))
-    try: obj.close(print_msg=False)
-    except: pass
+    try:
+        obj.close(print_msg=False)
+    except:
+        pass
 
     if print_msg and dateList is not None:
         for i in dateList:
@@ -138,16 +143,16 @@ def main(iargs=None):
         return
     ext = os.path.splitext(inps.file)[1].lower()
 
-    ## --date option
+    # --date option
     if inps.disp_date:
         get_date_list(inps.file, print_msg=True)
         return
 
-    ## Basic info from PySAR reader
+    # Basic info from PySAR reader
     print_pysar_info(inps.file)
 
-    ## Generic Attribute/Structure of all files
-    if ext in ['.h5','.he5']:
+    # Generic Attribute/Structure of all files
+    if ext in ['.h5', '.he5']:
         print('\n{} {:*<40}'.format('*'*20, 'HDF5 File Structure '))
         print_hdf5_structure(inps.file)
     else:
@@ -161,4 +166,3 @@ def main(iargs=None):
 ############################################################
 if __name__ == '__main__':
     main()
-
