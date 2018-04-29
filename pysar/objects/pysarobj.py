@@ -134,18 +134,17 @@ class timeseries:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
         self.get_metadata()
         self.get_size()
+        self.get_date_list()
         self.numPixel = self.length * self.width
 
         with h5py.File(self.file, 'r') as f:
-            dates = f['date'][:]
             try:
                 self.pbase = f['bperp'][:]
                 self.pbase -= self.pbase[self.refIndex]
             except:
                 self.pbase = None
-        self.times = np.array([dt(*time.strptime(i.decode('utf8'), "%Y%m%d")[0:5]) for i in dates])
+        self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
         self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
-        self.dateList = [i.decode('utf8') for i in dates]
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
         self.datasetList = ['{}-{}'.format(self.name, i) for i in self.dateList]
@@ -170,6 +169,11 @@ class timeseries:
         with h5py.File(self.file, 'r') as f:
             self.numDate, self.length, self.width = f[self.name].shape
         return self.numDate, self.length, self.width
+
+    def get_date_list(self):
+        with h5py.File(self.file, 'r') as f:
+            self.dateList = [i.decode('utf8') for i in f['date'][:]]
+        return self.dateList
 
     def read(self, datasetName=None, box=None, print_msg=True):
         '''Read dataset from timeseries file

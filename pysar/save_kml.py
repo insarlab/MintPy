@@ -16,7 +16,6 @@ except:
     sys.exit('pykml should be installed!')
 
 from lxml import etree
-import h5py
 import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')
@@ -90,16 +89,25 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # Check: file in geo coord
+    if 'X_FIRST' not in atr.keys():
+        raise Exception('ERROR: Input file is not geocoded.')
+
+    # Check: dset is required for multi_dataset/group files
+    if not inps.dset and atr['FILE_TYPE'] in ['ifgramStack']+timeseriesKeyNames:
+        raise Exception("No date/date12 input.\nIt's required for "+k+" file")
+
     return inps
 
 
 ############################################################
-def write_kmz_file(data, atr, out_name_base, inps=None):
+def write_kmz_file(data, metadata, out_name_base, inps=None):
     """ Generate Google Earth KMZ file for input data matrix.
     Inputs:
         data - 2D np.array in int/float, data matrix to write
         out_name_base - string, output file name base
-        atr  - dict, containing the following attributes:
+        metadata  - dict, containing the following attributes:
                WIDTH/LENGTH      : required, file size
                X/Y_FIRST/STEP    : required, for lat/lon spatial converage
                ref_x/y           : optional, column/row number of reference pixel
@@ -121,7 +129,7 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     if not inps.ylim:
         inps.ylim = [np.nanmin(data), np.nanmax(data)]
 
-    west, east, south, north = ut.four_corners(atr)
+    west, east, south, north = ut.four_corners(metadata)
 
     # 2.1 Make PNG file - Data
     print('plotting data ...')
@@ -146,16 +154,16 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     # Plot - reference pixel
     if inps.disp_seed == 'yes':
         try:
-            xref = int(atr['REF_X'])
-            yref = int(atr['REF_Y'])
+            xref = int(metadata['REF_X'])
+            yref = int(metadata['REF_Y'])
             ax.plot(xref, yref, 'ks', ms=inps.seed_size)
             print('show reference point')
         except:
             inps.disp_seed = False
             print('Cannot find reference point info!')
 
-    width = int(atr['WIDTH'])
-    length = int(atr['LENGTH'])
+    width = int(metadata['WIDTH'])
+    length = int(metadata['LENGTH'])
     ax.set_xlim([0, width])
     ax.set_ylim([length, 0])
 
@@ -187,15 +195,18 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
     # 2.3 Generate KML file
     print('generating kml file ...')
     try:
-        doc = KML.kml(KML.Folder(KML.name(atr['PROJECT_NAME'])))
+        doc = KML.kml(KML.Folder(KML.name(metadata['PROJECT_NAME'])))
     except:
         doc = KML.kml(KML.Folder(KML.name('PySAR product')))
 
     # Add data png file
-    slc = KML.GroundOverlay(KML.name(data_png_file), KML.Icon(KML.href(data_png_file)),
+    slc = KML.GroundOverlay(KML.name(data_png_file),
+                            KML.Icon(KML.href(data_png_file)),
                             KML.altitudeMode('clampToGround'),
-                            KML.LatLonBox(KML.north(str(north)), KML.east(str(east)),
-                                          KML.south(str(south)), KML.west(str(west))))
+                            KML.LatLonBox(KML.north(str(north)),
+                                          KML.east(str(east)),
+                                          KML.south(str(south)),
+                                          KML.west(str(west))))
     doc.Folder.append(slc)
 
     # Add colorbar png file
@@ -219,16 +230,23 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
 
     if inps.cbar_height:
         print('set colorbar in height: %.2f m' % inps.cbar_height)
-        slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),
-                                 KML.altitude(str(inps.cbar_height)), KML.altitudeMode('absolute'),
-                                 KML.LatLonBox(KML.north(str(cb_N)), KML.south(str(cb_N-0.5*cb_rg)),
-                                               KML.west(str(cb_W)), KML.east(str(cb_W+0.14*cb_rg))))
+        slc1 = KML.GroundOverlay(KML.name('colorbar'),
+                                 KML.Icon(KML.href(cbar_png_file)),
+                                 KML.altitude(str(inps.cbar_height)),
+                                 KML.altitudeMode('absolute'),
+                                 KML.LatLonBox(KML.north(str(cb_N)),
+                                               KML.south(str(cb_N-0.5*cb_rg)),
+                                               KML.west(str(cb_W)),
+                                               KML.east(str(cb_W+0.14*cb_rg))))
     else:
         print('set colorbar clampToGround')
-        slc1 = KML.GroundOverlay(KML.name('colorbar'), KML.Icon(KML.href(cbar_png_file)),
+        slc1 = KML.GroundOverlay(KML.name('colorbar'),
+                                 KML.Icon(KML.href(cbar_png_file)),
                                  KML.altitudeMode('clampToGround'),
-                                 KML.LatLonBox(KML.north(str(cb_N)), KML.south(str(cb_N-0.5*cb_rg)),
-                                               KML.west(str(cb_W)), KML.east(str(cb_W+0.14*cb_rg))))
+                                 KML.LatLonBox(KML.north(str(cb_N)),
+                                               KML.south(str(cb_N-0.5*cb_rg)),
+                                               KML.west(str(cb_W)),
+                                               KML.east(str(cb_W+0.14*cb_rg))))
     doc.Folder.append(slc1)
     kmlstr = etree.tostring(doc, pretty_print=True).decode('utf8')
 
@@ -240,52 +258,23 @@ def write_kmz_file(data, atr, out_name_base, inps=None):
 
     # 2.4 Generate KMZ file
     kmz_file = '{}.kmz'.format(out_name_base)
-    print('writing '+kmz_file)
-    cmdKMZ = 'zip {} {} {} {}'.format(kmz_file,
-                                      kml_file,
-                                      data_png_file,
-                                      cbar_png_file)
+    cmdKMZ = 'zip {} {} {} {}'.format(kmz_file, kml_file, data_png_file, cbar_png_file)
+    print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)
 
-    cmdClean = 'rm {} {} {}'.format(kml_file,
-                                    data_png_file,
-                                    cbar_png_file)
+    cmdClean = 'rm {} {} {}'.format(kml_file, data_png_file, cbar_png_file)
     print(cmdClean)
     os.system(cmdClean)
 
     return kmz_file
 
 
-def read_data(inps):
-    # 1. Read data
-    atr = readfile.read_attribute(inps.file)
-    k = atr['FILE_TYPE']
-    print('Input file is '+k)
-
-    # Check: file in geo coord
-    if 'X_FIRST' not in atr.keys():
-        sys.exit('ERROR: Input file is not geocoded.')
-
-    # Check: dset is required for multi_dataset/group files
-    if not inps.dset and k in ['ifgramStack']+timeseriesKeyNames:
-        print("No date/date12 input.\nIt's required for "+k+" file")
-        sys.exit(1)
-
-    # Read data
-    data, atr = readfile.read(inps.file, datasetName=inps.dset)
-    return data, atr
-
 ############################################################
-
-
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    data, atr = read_data(inps)
-
-    # Output filename
-    if not inps.outfile:
-        inps.outfile = pp.auto_figure_title(inps.file, inps.dset, vars(inps))
+    # Read data
+    data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
     # Data Operation - Display Unit & Rewrapping
     data, inps.disp_unit, inps.disp_scale, inps.wrap = pp.scale_data4disp_unit_and_rewrap(data=data,
@@ -295,8 +284,12 @@ def main(iargs=None):
     if inps.wrap:
         inps.ylim = [-np.pi, np.pi]
 
+    # Output filename
+    if not inps.outfile:
+        inps.outfile = pp.auto_figure_title(inps.file, datasetNames=inps.dset, inps_dict=vars(inps))
+
     # 2. Generate Google Earth KMZ
-    kmz_file = write_kmz_file(data, atr, inps.outfile, inps)
+    kmz_file = write_kmz_file(data, metadata=atr, out_name_base=inps.outfile, inps=inps)
 
     print('Done.')
     return

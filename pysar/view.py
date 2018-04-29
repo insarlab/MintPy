@@ -477,10 +477,12 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
     # 1.6 Min / Max - Data/Display
     inps.data_min = np.nanmin(data)
     inps.data_max = np.nanmax(data)
+    data_mli = mli.multilook_data(data, 10, 10)
     if inps.disp_min is None:
-        inps.disp_min = inps.data_min
+        inps.disp_min = np.nanmin(data_mli)
     if inps.disp_max is None:
-        inps.disp_max = inps.data_max
+        inps.disp_max = np.nanmax(data_mli)
+    del data_mli
     print('data    range: %f - %f' % (inps.data_min, inps.data_max))
     print('display range: %f - %f' % (inps.disp_min, inps.disp_max))
 
@@ -925,7 +927,7 @@ def read_data4figure(inps, i_start, i_end):
                           box=inps.pix_box,
                           print_msg=False)[0]
         # reference pixel info in unwrapPhase
-        if inps.dset[i].split('-')[0] == 'unwrapPhase':
+        if inps.dset[i].split('-')[0] == 'unwrapPhase' and inps.file_ref_yx:
             d -= d[inps.file_ref_yx[0], inps.file_ref_yx[1]]
         data[i - i_start, :, :] = d
         prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
@@ -972,6 +974,9 @@ def plot_subplot4figure(inps, ax, data, i):
     if inps.disp_seed and inps.seed_yx:
         ax.plot(inps.seed_yx[1]-inps.pix_box[0], inps.seed_yx[0]-inps.pix_box[1],
                 inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
+
+    ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
+    ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
 
     # Subplot Setting
     # Tick and Label
@@ -1044,10 +1049,12 @@ def plot_figure(inps, j, metadata):
     # disp/data_min/max, adjust data if all subplots are the same type
     if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity']:
         data, inps = update_data_with_plot_inps(data, metadata, inps)
-        if not inps.disp_min and not inps.disp_max:
+        if (not inps.disp_min and not inps.disp_max 
+                and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)):
             data_mli = mli.multilook_data(data, 10, 10)
             inps.disp_min = np.nanmin(data_mli)
             inps.disp_max = np.nanmax(data_mli)
+            del data_mli
     inps.data_min = np.nanmin(data)
     inps.data_max = np.nanmax(data)
 
@@ -1058,6 +1065,7 @@ def plot_figure(inps, j, metadata):
         im = plot_subplot4figure(inps, ax=ax, data=data[i - i_start, :, :], i=i)
         prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
     prog_bar.close()
+    del data
     fig.tight_layout()
 
     # Min and Max for this figure
@@ -1108,8 +1116,11 @@ def prepare4multi_subplots(inps, metadata):
     # Reference pixel for timeseries and ifgramStack
     inps.file_ref_yx = None
     if inps.key in ['ifgramStack'] and 'REF_Y' in metadata.keys():
-        inps.file_ref_yx = [int(metadata[i]) for i in ['REF_Y', 'REF_X']]
-        print('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
+        ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
+        length, width = int(metadata['LENGTH']), int(metadata['WIDTH'])
+        if 0 <= ref_y < length and 0 <= ref_x < width:
+            inps.file_ref_yx = [ref_y, ref_x]
+            print('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
 
     if inps.dsetNum > 10:
         inps.disp_seed = False
@@ -1122,7 +1133,6 @@ def prepare4multi_subplots(inps, metadata):
         obj = ifgramStack(inps.file)
         obj.open(print_msg=False)
         dropDate12List = obj.get_drop_date12_list()
-        import pdb; pdb.set_trace()
         for i in inps.dsetFamilyList:
             inps.dropDatasetList += ['{}-{}'.format(i, j) for j in dropDate12List]
         print("mark interferograms with 'dropIfgram=False' in red colored title")

@@ -4,20 +4,13 @@
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-# Based on _gmt.py from GIANT v1.0 from Caltech.
+# Modified from _gmt.py, GIANT v1.0, Caltech.
 
 
-import os
-import sys
 import argparse
-
-import h5py
 import numpy as np
 import scipy.io.netcdf as netcdf
-
-import pysar.utils.readfile as readfile
-import pysar.view as pv
-from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar.utils import readfile, plot as pp
 
 
 ####################################################################################
@@ -46,6 +39,13 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    atr = readfile.read_attribute(inps.file)
+    if 'Y_FIRST' not in atr.keys():
+        raise Exception('ERROR: input file is not geocoded.')
+
+    if not inps.dset and atr['FILE_TYPE'] in ['timeseries', 'ifgramStack']:
+        raise Exception("No dataset input, it's required for {} file".format(k))
     return inps
 
 
@@ -63,7 +63,7 @@ def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0,
                 name : Name of the field in the grd file
                 scale : Scale value in the grd file
                 offset : Offset value in the grd file
-    Returns:    None
+    Returns:    fname
     """
 
     fid = netcdf.netcdf_file(fname, 'w')
@@ -93,7 +93,7 @@ def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0,
     fid.variables['z'].node_offset = 0
 
     fid.title = title
-    fid.source = 'PySAR v1.2'
+    fid.source = 'PySAR'
 
     # Filling in the actual data
     fid.variables['x_range'][0] = lons[0]
@@ -105,16 +105,13 @@ def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0,
     fid.variables['spacing'][1] = lats[1]-lats[0]
 
     # Range
-    zmin = np.nanmin(z)
-    zmax = np.nanmax(z)
-
-    fid.variables['z_range'][0] = zmin
-    fid.variables['z_range'][1] = zmax
+    fid.variables['z_range'][0] = np.nanmin(z)
+    fid.variables['z_range'][1] = np.nanmax(z)
 
     fid.variables['dimension'][:] = z.shape[::-1]
     fid.variables['z'][:] = np.flipud(z).flatten()
     fid.close()
-
+    return fname
     ############################################################
     # Program is part of GIAnT v1.0                            #
     # Copyright 2012, by the California Institute of Technology#
@@ -149,15 +146,17 @@ def write_grd_file(data, atr, fname_out=None):
         fname_out - string, output file name
     """
     if not fname_out:
-        fname_out = os.path.splitext(atr['FILE_PATH'])[0]+'.grd'
-
+        fname_out = '{}.grd'.format(pp.auto_figure_title(inps.file,
+                                                         datasetNames=inps.dset,
+                                                         inps_dict=vars(inps)))
     # Get 1D array of lats and lons
     lats, lons = get_geo_lat_lon(atr)
 
     # writing
     print('writing >>> '+fname_out)
     write_gmt_simple(lons, np.flipud(lats), np.flipud(data), fname_out,
-                     title='default', name=atr['FILE_TYPE'], scale=1.0, offset=0, units=atr['UNIT'])
+                     title='default', name=atr['FILE_TYPE'],
+                     scale=1.0, offset=0, units=atr['UNIT'])
     return fname_out
 
 
@@ -165,34 +164,8 @@ def write_grd_file(data, atr, fname_out=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    # 1. Read data
-    atr = readfile.read_attribute(inps.file)
-    k = atr['FILE_TYPE']
-    print('Input file is '+k)
-
-    # Check: file in geo coord
-    if 'X_FIRST' not in atr.keys():
-        sys.exit('ERROR: Input file is not geocoded.')
-
-    # Check: dset is required for multi_dataset/group files
-    if not inps.dset:
-        if k in multi_group_hdf5_file:
-            print("No date/date12 input.\nIt's required for "+k+" file")
-            sys.exit(1)
-        elif k in multi_dataset_hdf5_file:
-            print('No input date ..., continue to convert the last date of time-series.')
-            h5 = h5py.File(inps.file, 'r')
-            date_list = sorted(h5[k].keys())
-            h5.close()
-            inps.dset = date_list[-1]
-
     # Read data
-    data, atr = readfile.read(inps.file, datasetName=inps.dset)
-
-    # Output filename
-    if not inps.outfile:
-        inps.outfile = pv.auto_figure_title(inps.file, inps.dset, vars(inps))
-    inps.outfile = os.path.splitext(inps.outfile)[0]+'.grd'
+    data, atr = readfile.read(inps.file, datasetName=inps.dset) 
 
     # 2. Write GMT .grd file
     inps.outfile = write_grd_file(data, atr, inps.outfile)

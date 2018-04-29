@@ -10,26 +10,25 @@ import os
 import sys
 import time
 import datetime
-
 import h5py
 import numpy as np
 import scipy.io as sio
-import matplotlib.pyplot as plt
-
 import pysar.utils.readfile as readfile
-from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
 ########################################################################################
-def usage():
-    print("""usage: save_mat.py  file  [outfile]
+USAGE = """
+usage: save_mat.py  file  [outfile]
 
 This function converts the PySAR hdf5 file formats to the matlab structure and saves to a .mat file.
 
 example:
   save_mat.py  velocity.h5
   save_mat.py  timeseries.h5
-    """)
+"""
+
+def usage():
+    print(USAGE)
     return
 
 
@@ -42,25 +41,24 @@ def yyyymmdd2years(date):
 ########################################################################################
 def main(argv):
     try:
-        File = argv[0]
+        fname = argv[0]
     except:
         usage()
         sys.exit(1)
 
-    atr = readfile.read_attribute(File)
+    atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
-    print('input is '+k+' file: '+File)
+    print('input is '+k+' file: '+fname)
 
     try:
-        matFile = argv[1]
+        mat_file = argv[1]
     except:
-        matFile = os.path.splitext(File)[0]+'.mat'
-    print('writing >>> '+matFile)
+        mat_file = os.path.splitext(fname)[0]+'.mat'
+    print('writing >>> '+mat_file)
 
     #####
-    h5file = h5py.File(File, 'r')
-    if k in single_dataset_hdf5_file:
-        data = h5file[k].get(k)[:]
+    if k not in ['timeseries', 'ifgramStack']:
+        data = readfile.read(fname)[0]
 
         V = {}
         V['time_range'] = ''
@@ -128,14 +126,15 @@ def main(argv):
 
         ########################################################
         V['data'] = data
-        sio.savemat(matFile, {k: V})
+        sio.savemat(mat_file, {k: V})
 
-    elif 'timeseries' in k:
-        epochList = sorted(h5file['timeseries'].keys())
+    elif k == 'timeseries':
+        f = h5py.File(fname, 'r')
+        epochList = sorted(f['timeseries'].keys())
         data_dict = {}
         for epoch in epochList:
             print(epoch)
-            d = h5file['timeseries'].get(epoch)
+            d = f['timeseries'].get(epoch)
             ts = {}
             ts['data'] = d[0:d.shape[0], 0:d.shape[1]]
             try:
@@ -175,10 +174,9 @@ def main(argv):
 
         data_dict['Number_of_epochs'] = len(epochList)
         data_dict['epoch_dates'] = epochList
-        sio.savemat(matFile, {k: data_dict})
-
-    h5file.close()
-    return
+        sio.savemat(mat_file, {k: data_dict})
+        f.close()
+    return mat_file
 
 
 ########################################################################################

@@ -10,7 +10,6 @@ import os
 import sys
 import argparse
 import h5py
-import matplotlib.pyplot as plt
 import numpy as np
 import random
 from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
@@ -66,7 +65,7 @@ def create_parser():
     parser.add_argument('file', type=str, help='file to be referenced.')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template with reference info as below:\n'+TEMPLATE)
-    parser.add_argument('-m', '--mask', dest='mask_file', help='mask file')
+    parser.add_argument('-m', '--mask', dest='maskFile', help='mask file')
     parser.add_argument('-o', '--outfile',
                         help='output file name, disabled when more than 1 input files.')
     parser.add_argument('--write-data', dest='write_data', action='store_true',
@@ -92,9 +91,9 @@ def create_parser():
                        help='Lookup table file from SAR to DEM, i.e. geomap_4rlks.trans\n' +
                             'Needed for radar coord input file with --lat/lon seeding option.')
 
-    parser.add_argument('-c', '--coherence', dest='coherence_file', default='averageSpatialCoherence.h5',
+    parser.add_argument('-c', '--coherence', dest='coherenceFile', default='averageSpatialCoherence.h5',
                         help='use input coherence file to find the pixel with max coherence for reference pixel.')
-    parser.add_argument('--min-coherence', dest='min_coherence', type=float, default=0.85,
+    parser.add_argument('--min-coherence', dest='minCoherence', type=float, default=0.85,
                         help='minimum coherence of reference pixel for max-coherence method.')
     parser.add_argument('--method', type=str, choices=['maxCoherence', 'manual', 'random'],
                         help='methods to select reference pixel if not given in specific y/x or lat/lon:\n' +
@@ -109,6 +108,40 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+    return inps
+
+
+def read_template_file2inps(template_file, inps=None):
+    """Read seed/reference info from template file and update input namespace"""
+    if not inps:
+        inps = cmd_line_parse([''])
+    inps_dict = vars(inps)
+    template = readfile.read_template(template_file)
+    template = ut.check_template_auto_value(template)
+
+    prefix = 'pysar.reference.'
+    key_list = [i for i in list(inps_dict)
+                if prefix+i in template.keys()]
+    for key in key_list:
+        value = template[prefix+key]
+        if value:
+            if key in ['coherenceFile', 'maskFile']:
+                inps_dict[key] = value
+            elif key == 'minCoherence':
+                inps_dict[key] = float(value)
+
+    key = prefix+'yx'
+    if key in template.keys():
+        value = template[key]
+        if value:
+            inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
+
+    key = prefix+'lalo'
+    if key in template.keys():
+        value = template[key]
+        if value:
+            inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
+
     return inps
 
 
@@ -153,9 +186,9 @@ def reference_file(inps):
     # Find reference y/x
     if not inps.ref_y or not inps.ref_x:
         if inps.method == 'maxCoherence':
-            inps.ref_y, inps.ref_x = select_max_coherence_yx(coh_file=inps.coherence_file,
+            inps.ref_y, inps.ref_x = select_max_coherence_yx(coh_file=inps.coherenceFile,
                                                              mask=mask,
-                                                             min_coh=inps.min_coherence)
+                                                             min_coh=inps.minCoherence)
         elif inps.method == 'random':
             inps.ref_y, inps.ref_x = random_select_reference_yx(mask)
         elif inps.method == 'manual':
@@ -199,7 +232,7 @@ def reference_file(inps):
             data -= data[inps.ref_y, inps.ref_x]
             atr.update(atrNew)
             writefile.write(data, out_file=inps.outfile, metadata=atr)
-    ut.touch([inps.coherence_file, inps.mask_file])
+    ut.touch([inps.coherenceFile, inps.maskFile])
     return inps.outfile
 
 
@@ -221,6 +254,7 @@ def manual_select_reference_yx(data, inps, mask=None):
         data4display : 2D np.array, stack of input file
         inps    : namespace, with key 'REF_X' and 'REF_Y', which will be updated
     """
+    import matplotlib.pyplot as plt
     print('\nManual select reference point ...')
     print('Click on a pixel that you want to choose as the refernce ')
     print('    pixel in the time-series analysis;')
@@ -295,52 +329,6 @@ def print_warning(next_method):
 
 
 ###############################################################
-def read_template_file2inps(template_file, inps=None):
-    """Read seed/reference info from template file and update input namespace"""
-    if not inps:
-        inps = cmd_line_parse([''])
-    template = readfile.read_template(template_file)
-
-    prefix = 'pysar.reference.'
-    key = prefix+'yx'
-    if key in template.keys():
-        value = template[key]
-        if value not in ['auto', 'no']:
-            inps.ref_y, inps.ref_x = [int(i) for i in value.split(',')]
-
-    key = prefix+'lalo'
-    if key in template.keys():
-        value = template[key]
-        if value not in ['auto', 'no']:
-            inps.ref_lat, inps.ref_lon = [float(i) for i in value.split(',')]
-
-    key = prefix+'maskFile'
-    if key in template.keys():
-        value = template[key]
-        if value in ['auto', 'no']:
-            inps.mask_file = None
-        else:
-            inps.mask_file = value
-
-    key = prefix+'coherenceFile'
-    if key in template.keys():
-        value = template[key]
-        if value == 'auto':
-            inps.coherence_file = 'avgSpatialCoherence.h5'
-        else:
-            inps.coherence_file = value
-
-    key = prefix+'minCoherence'
-    if key in template.keys():
-        value = template[key]
-        if value == 'auto':
-            inps.min_coherence = 0.85
-        else:
-            inps.min_coherence = float(value)
-
-    return inps
-
-
 def read_reference_file2inps(reference_file, inps=None):
     """Read reference info from reference file and update input namespace"""
     if not inps:
@@ -397,9 +385,9 @@ def read_reference_input(inps):
         print('Continue with other method to select reference point.')
 
     # Do not use ref_y/x in masked out area
-    if inps.ref_y and inps.ref_x and inps.mask_file:
-        print('mask: '+inps.mask_file)
-        mask = readfile.read(inps.mask_file, datasetName='mask')[0]
+    if inps.ref_y and inps.ref_x and inps.maskFile:
+        print('mask: '+inps.maskFile)
+        mask = readfile.read(inps.maskFile, datasetName='mask')[0]
         if mask[inps.ref_y, inps.ref_x] == 0:
             inps.ref_y = None
             inps.ref_x = None
@@ -419,7 +407,7 @@ def read_reference_input(inps):
                 sys.exit(1)
 
             # method to select reference point
-            elif inps.coherence_file and os.path.isfile(inps.coherence_file):
+            elif inps.coherenceFile and os.path.isfile(inps.coherenceFile):
                 inps.method = 'maxCoherence'
             else:
                 inps.method = 'random'

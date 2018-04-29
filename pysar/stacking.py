@@ -6,9 +6,7 @@
 ############################################################
 
 
-import sys
 import argparse
-import h5py
 from pysar.utils import utils as ut
 from pysar.objects import ifgramDatasetNames
 
@@ -25,11 +23,9 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('file', nargs='+', help='File(s) to be stacked')
+    parser.add_argument('file', help='File to be stacked')
     parser.add_argument('-d', '--dataset', dest='dataset_name', default=ifgramDatasetNames[0],
                         help='Dataset to be used for stacking, when input file is ifgramStack')
-    parser.add_argument('-m', '--mask', dest='mask_file',
-                        help='Mask file for the calculation')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name')
     return parser
@@ -45,10 +41,7 @@ def cmd_line_parse(iargs=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     print('\n*************** Stacking ******************')
-    for File in inps.file:
-        ut.temporal_average(File,
-                            datasetName=inps.dataset_name,
-                            maskFile=inps.mask_file)
+    ut.temporal_average(inps.file, datasetName=inps.dataset_name, outFile=inps.outfile)
     return
 
 

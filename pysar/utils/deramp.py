@@ -87,29 +87,8 @@ def remove_data_surface(data, mask, surf_type='plane'):
     elif surf_type == 'plane_azimuth':
         zplane = plane[0]*y1 + plane[1]
 
-    '''
-    ## Some notes from _pysar_utilities.py remove_surface_velocity()
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    print 'Plane parameters:'
-    if surf_type == 'plane_range':
-       print 'range gradient = ' + str(1000*plane[0][0]) + ' mm/yr/pixel'
-       width= float(h5file['velocity'].attrs['WIDTH'])
-       MaxRamp=width*1000*plane[0][0]
-       print 'Maximum ramp in range direction = ' + str(MaxRamp) + ' mm/yr'
-       h5flat['velocity'].attrs['Range_Gradient'] = str(1000*plane[0][0]) + '   mm/yr/pixel'
-       h5flat['velocity'].attrs['Range_Ramp'] = str(MaxRamp) + '   mm/yr'
-    elif surf_type == 'plane_azimuth':
-       print 'azimuth gradient = ' + str(1000*plane[0][0]) + ' mm/yr/pixel'
-       length= float(h5file['velocity'].attrs['LENGTH'])
-       MaxRamp=length*1000*plane[0][0]
-       h5flat['velocity'].attrs['Azimuth_Gradient'] = str(1000*plane[0][0]) + '   mm/yr/pixel'
-       h5flat['velocity'].attrs['Azimuth_Ramp'] = str(MaxRamp) +'   mm/yr'
-       print 'Maximum ramp in azimuth direction = '+ str(MaxRamp) + ' mm/yr'
-    print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    '''
-
     data_n = data - zplane
-    data_n[data == 0.] = 0.
+    data_n[data == 0.] = 0.       # Do not change zero phase value
     data_n = np.array(data_n, data.dtype)
     zplane = np.array(zplane, data.dtype)
 
@@ -151,79 +130,74 @@ def remove_data_multiple_surface(data, mask, surf_type, ysub):
 
 
 ##################################################################
-def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
-    start = time.time()
-    atr = readfile.read_attribute(File)
+def remove_surface(fname, surf_type, mask_file=None, out_file=None, ysub=None):
+    start_time = time.time()
+    atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
-    print('Input file is '+k)
-    print('remove ramp type: '+surf_type)
+    print('remove {} ramp from file: '.format(surf_type, fname))
 
-    if not outFile:
-        outFile = '{}_{}{}'.format(os.path.splitext(File)[0],
-                                   surf_type,
-                                   os.path.splitext(File)[1])
+    if not out_file:
+        out_file = '{base}_{ramp}{ext}'.format(base=os.path.splitext(fname)[0], ramp=surf_type,
+                                               ext=os.path.splitext(fname)[1])
 
-    if maskFile:
-        mask = readfile.read(maskFile, datasetName='mask')[0]
-        print('read mask file: '+maskFile)
+    if os.path.isfile(mask_file):
+        mask = readfile.read(mask_file, datasetName='mask')[0]
+        print('read mask file: '+mask_file)
     else:
         mask = np.ones((int(atr['LENGTH']), int(atr['WIDTH'])))
         print('use mask of the whole area')
 
     if k == 'timeseries':
-        obj = timeseries(File)
+        obj = timeseries(fname)
         data = obj.read()
         numDate = data.shape[0]
-        print('estimating ramp for each acquisition ...')
         prog_bar = ptime.progressBar(maxValue=numDate)
         for i in range(numDate):
             if not ysub:
                 data[i, :, :] = remove_data_surface(np.squeeze(data[i, :, :]),
-                                                    mask,
-                                                    surf_type)[0]
+                                                    mask, surf_type)[0]
             else:
                 data[i, :, :] = remove_data_multiple_surface(np.squeeze(data),
-                                                             mask,
-                                                             surf_type, ysub)
+                                                             mask, surf_type, ysub)
             prog_bar.update(i+1, suffix=obj.dateList[i])
         prog_bar.close()
-        objOut = timeseries(outFile)
-        objOut.write2hdf5(data=data, refFile=File)
+        objOut = timeseries(out_file)
+        objOut.write2hdf5(data=data, refFile=fname)
 
-    elif k in ['interferograms', 'wrapped', 'coherence']:
-        print('number of interferograms: '+str(len(epochList)))
-        date12_list = ptime.list_ifgram2date12(epochList)
+    elif k == 'ifgramStack':
+        obj = ifgramStack(fname)
+        obj.open(print_msg=False)
+        with h5py.File(fname, 'a') as f:
+            ds = f['unwrapPhase']
 
-        if k == 'interferograms':
-            mask_bk = np.zeros(mask.shape)
-            mask_bk = mask
-            print('do not consider zero value pixel for interferograms')
-
-        for i in range(epoch_num):
-            epoch = epochList[i]
-            data = h5file[k][epoch].get(epoch)[:]
-            if k == 'interferograms':
-                mask = mask_bk
-                mask[data == 0.] = 0
-
-            if not ysub:
-                data_n, ramp = remove_data_surface(data, mask, surf_type)
+            dsName = 'unwrapPhase_{}'.format(surf_type)
+            if dsName in f.keys():
+                dsOut = f[dsName]
+                print('access HDF5 dataset /{}'.format(dsName))
             else:
-                data_n = remove_data_multiple_surface(data, mask, surf_type, ysub)
+                dsOut = f.create_dataset(dsName, shape=(obj.numIfgram, obj.length, obj.width),
+                                      dtype=np.float32, chunks=True, compression=None)
+                print('create HDF5 dataset /{}'.format(dsName))
 
-            gg = group.create_group(epoch)
-            dset = gg.create_dataset(epoch, data=data_n)
-            for key, value in h5file[k][epoch].attrs.items():
-                gg.attrs[key] = value
-            prog_bar.update(i+1, suffix=date12_list[i])
+            prog_bar = ptime.progressBar(maxValue=obj.numIfgram)
+            for i in range(obj.numIfgram):
+                data = ds[i, :, :]
+                mask_n = np.array(mask, np.bool_)
+                mask_n[data == 0.] = 0
+
+                if not ysub:
+                    data_n = remove_data_surface(data, mask, surf_type)[0]
+                else:
+                    data_n = remove_data_multiple_surface(data, mask, surf_type, ysub)
+                dsOut[i, :, :] = data_n
+                prog_bar.update(i+1, suffix='{}/{}'.format(i+1, obj.numIfgram))
+            prog_bar.close()
 
     # Single Dataset File
     else:
-        data, atr = readfile.read(File)
-        print('Removing '+surf_type+' from '+k)
+        data, atr = readfile.read(fname)
         data_n, ramp = remove_data_surface(data, mask, surf_type)
-        print('writing >>> '+outFile)
-        writefile.write(data_n, out_file=outFile, metadata=atr)
+        writefile.write(data_n, out_file=out_file, metadata=atr)
 
-    print('Remove '+surf_type+' took ' + str(time.time()-start) + ' secs')
-    return outFile
+    print('time used: {} secs'.format(time.time()-start_time))
+    return out_file

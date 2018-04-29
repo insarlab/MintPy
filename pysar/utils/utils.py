@@ -1173,7 +1173,7 @@ def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=
 
     # Write mean coherence list into text file
     if saveList:
-        print('write average coherence in space into text file: '+txtFile)
+        print('write average value in space into text file: '+txtFile)
         fl = open(txtFile, 'w')
         # Write comments
         fl.write(file_line+mask_line+aoi_line)
@@ -1205,7 +1205,6 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, 
                 datasetName : string, dataset to be read from input file, for multiple
                     datasets file - ifgramStack - only
                     e.g.: coherence, unwrapPhase
-                maskFile : string, mask file used to calculate the mean
                 ignoreNan: bool, ignore NaNs for calculate or not.
     Returns:    dataMean : 2D array
                 outFile : string, output file name

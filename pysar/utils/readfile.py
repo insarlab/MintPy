@@ -501,7 +501,7 @@ def read_attribute(fname, datasetName=None):
     # Unit - str
     k = atr['FILE_TYPE']
     if k == 'ifgramStack':
-        if datasetName:
+        if datasetName and datasetName in datasetUnitDict.keys():
             atr['UNIT'] = datasetUnitDict[datasetName]
         else:
             atr['UNIT'] = 'radian'
