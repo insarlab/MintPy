@@ -10,7 +10,7 @@ import os
 import sys
 import h5py
 import numpy as np
-from pysar.utils import readfile, datetime as ptime
+from pysar.utils import readfile, ptime
 
 
 ############################################################

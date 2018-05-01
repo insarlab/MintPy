@@ -10,7 +10,7 @@ import os
 import argparse
 import numpy as np
 from pysar.objects import timeseries
-from pysar.utils import readfile, writefile, datetime as ptime
+from pysar.utils import readfile, writefile, ptime
 
 
 ##############################################################################

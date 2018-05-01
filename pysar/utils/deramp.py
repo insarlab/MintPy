@@ -35,7 +35,7 @@ import os
 import time
 import h5py
 import numpy as np
-from pysar.utils import datetime as ptime, readfile, writefile
+from pysar.utils import ptime, readfile, writefile
 from pysar.objects import timeseries, ifgramStack
 
 

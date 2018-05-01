@@ -9,7 +9,7 @@
 import sys
 import argparse
 import matplotlib.pyplot as plt
-from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
+from pysar.utils import readfile, ptime, utils as ut, plot as pp
 from pysar.objects import ifgramDatasetNames
 
 

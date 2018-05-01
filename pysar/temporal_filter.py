@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jul 2017: rewrite using pysay module
+
 
 import os
-import sys
-import time
-import datetime
 import argparse
-import h5py
 import numpy as np
-from pysar.utils import readfile, datetime as ptime
+from pysar.utils import ptime
+from pysar.objects import timeseries
 
 
 ############################################################
@@ -24,7 +21,7 @@ EXAMPLE = """example:
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Smoothing Timeseries using moving Gaussian window\n' +
+    parser = argparse.ArgumentParser(description='Smoothing timeseries in time using moving Gaussian window\n' +
                                      '  https://en.wikipedia.org/wiki/Gaussian_blur',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
@@ -47,82 +44,38 @@ def cmd_line_parse(iargs=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    # Basic info
-    atr = readfile.read_attribute(inps.timeseries_file)
-    k = atr['FILE_TYPE']
-    if k not in ['timeseries']:
-        sys.exit('ERROR: only timeseries file supported, input is '+k+' file!')
+    # read timeseries info / data
+    obj = timeseries(inps.timeseries_file)
+    obj.open()
 
-    h5 = h5py.File(inps.timeseries_file, 'r')
-    date_list = sorted(h5[k].keys())
-    date_num = len(date_list)
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
-    pixel_num = length*width
+    tbase = np.array(obj.yearList, np.float32).reshape(-1, 1)
+    tbase -= tbase[obj.refIndex]
 
-    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32).reshape((date_num, 1))
-    tbase /= 365.25
+    ts_data = obj.read().reshape(obj.numDate, -1)
 
-    # Read timeseries
-    print('loading time-series ...')
-    timeseries = np.zeros((date_num, pixel_num))
-    prog_bar = ptime.progressBar(maxValue=date_num)
-    for i in range(date_num):
-        date = date_list[i]
-        d = h5[k].get(date)[:]
-        timeseries[i, :] = d.flatten(0)
-        prog_bar.update(i+1, suffix=date)
-    del d
-    h5.close()
-    prog_bar.close()
-
-    # Smooth timeseries with moving window in time
-    print('smoothing time-series using moving gaussian window with size of %.1f years' % inps.time_win)
-    timeseries_filt = np.zeros((date_num, pixel_num))
-    prog_bar = ptime.progressBar(maxValue=date_num)
-    for i in range(date_num):
-        date = date_list[i]
+    # Smooth acquisitions / moving window in time one by one
+    print('-'*50)
+    print('filtering in time Gaussian window with size of {:.1f} years'.format(inps.time_win))
+    ts_data_filt = np.zeros(ts_data.shape, np.float32)
+    prog_bar = ptime.progressBar(maxValue=obj.numDate)
+    for i in range(obj.numDate):
         # Weight from Gaussian (normal) distribution in time
-        t_diff = tbase[i] - tbase
-        weight = np.exp(-0.5*(t_diff**2)/(inps.time_win**2))
+        tbase_diff = tbase[i] - tbase
+        weight = np.exp(-0.5 * (tbase_diff**2) / (inps.time_win**2))
         weight /= np.sum(weight)
-        weightMat = np.tile(weight, (1, pixel_num))
-        # Smooth the current acquisition - moving window in time one by one
-        timeseries_filt[i, :] = np.sum(timeseries*weightMat, 0)
-        prog_bar.update(i+1, suffix=date)
-    del weightMat
-    del timeseries
+        # Smooth the current acquisition
+        ts_data_filt[i, :] = np.sum(ts_data * weight, axis=0)
+        prog_bar.update(i+1, suffix=obj.dateList[i])
     prog_bar.close()
+    del ts_data
+    ts_data_filt -= ts_data_filt[obj.refIndex, :]
+    ts_data_filt = np.reshape(ts_data_filt, (obj.numDate, obj.length, obj.width))
 
-    # Write smoothed timeseries file
-    try:
-        ref_date = atr['REF_DATE']
-    except:
-        ref_date = date_list[0]
-    ref_date_idx = date_list.index(ref_date)
-    print('reference date: '+ref_date)
-    print('reference date index: '+str(ref_date_idx))
-    ref_data = np.reshape(timeseries_filt[ref_date_idx, :], [length, width])
-
+    # write filtered timeseries file
     if not inps.outfile:
-        inps.outfile = os.path.splitext(inps.timeseries_file)[0]+'_smooth.h5'
-    print('writing >>> '+inps.outfile)
-    print('number of acquisitions: '+str(date_num))
-
-    h5out = h5py.File(inps.outfile, 'w')
-    group = h5out.create_group(k)
-    prog_bar = ptime.progressBar(maxValue=date_num)
-    for i in range(date_num):
-        date = date_list[i]
-        data = np.reshape(timeseries_filt[i, :], [length, width])
-        dset = group.create_dataset(date, data=data-ref_data)
-        prog_bar.update(i+1, suffix=date)
-    for key, value in iter(atr.items()):
-        group.attrs[key] = value
-    h5out.close()
-    prog_bar.close()
-
-    print('Done.')
+        inps.outfile = '{}_tempGaussian.h5'.format(os.path.splitext(inps.timeseries_file)[0])
+    obj_out = timeseries(inps.outfile)
+    obj_out.write2hdf5(ts_data_filt, refFile=inps.timeseries_file)
     return inps.outfile
 
 

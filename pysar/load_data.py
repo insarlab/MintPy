@@ -12,7 +12,7 @@ import pysar
 from pysar.defaults import isceAutoPath, roipacAutoPath, gammaAutoPath
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, ifgramStack, geometry
 from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
-from pysar.utils import readfile, datetime as ptime, sensors, utils as ut
+from pysar.utils import readfile, ptime, sensors, utils as ut
 from pysar import subset
 
 

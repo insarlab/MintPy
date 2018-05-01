@@ -5,8 +5,7 @@
 ############################################################
 # Based on scripts writen by Heresh Fattahi
 # Recommended Usage:
-#   import pysar.utils.datetime as ptime
-#
+#   from pysar.utils import ptime
 
 
 import sys
@@ -244,13 +243,13 @@ class progressBar:
         Code originally from http://code.activestate.com/recipes/168639/
 
     example:
-    import pysar.utils.datetime as ptime
-    date12_list = ptime.list_ifgram2date12(ifgram_list)
-    prog_bar = ptime.progressBar(maxValue=1000, prefix='calculating:')
-    for i in range(1000):
-        prog_bar.update(i+1, suffix=date)
-        prog_bar.update(i+1, suffix=date12_list[i])
-    prog_bar.close()
+        from pysar.utils import ptime
+        date12_list = ptime.list_ifgram2date12(ifgram_list)
+        prog_bar = ptime.progressBar(maxValue=1000, prefix='calculating:')
+        for i in range(1000):
+            prog_bar.update(i+1, suffix=date)
+            prog_bar.update(i+1, suffix=date12_list[i])
+        prog_bar.close()
     '''
 
     def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=80):

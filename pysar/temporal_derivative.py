@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jul 2017: re-write using pysar modules
 
 
 import os
 import sys
-import time
-import datetime
-import h5py
 import numpy as np
-from pysar.utils import readfile, datetime as ptime
+from pysar.objects import timeseries
 
 
 ############################################################################
@@ -26,7 +22,6 @@ Calculate the temporal derivative of time-series displacement.
 example:
   temporal_derivative.py  timeseries.h5 
 """
-
 
 def usage():
     print(USAGE)
@@ -41,78 +36,20 @@ def main(argv):
         usage()
         sys.exit(1)
 
-    # Basic info
-    atr = readfile.read_attribute(timeseries_file)
-    k = atr['FILE_TYPE']
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
+    obj = timeseries(timeseries_file)
+    obj.open(print_msg=False)
+    print('reading timeseries data from file: {}'.format(timeseries_file))
+    ts_data = obj.read(print_msg=False)
 
-    # Read time-series
-    print("loading time series: " + timeseries_file)
-    h5 = h5py.File(timeseries_file)
-    date_list = sorted(h5[k].keys())
-    date_num = len(date_list)
-    pixel_num = length*width
+    print('calculate the 1st derivative of timeseries data')
+    ts_data_1d = np.zeros(ts_data.shape, np.float32)
+    ts_data_1d[1:, :, :] = np.diff(ts_data, n=1, axis=0)
 
-    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32)
+    out_file = '{}_1stDerivative.h5'.format(os.path.splitext(timeseries_file)[0])
+    obj_out = timeseries(out_file)
+    obj_out.write2hdf5(ts_data_1d, refFile=timeseries_file)
 
-    prog_bar = ptime.progressBar(maxValue=date_num)
-    timeseries = np.zeros((date_num, pixel_num), np.float32)
-    for i in range(date_num):
-        date = date_list[i]
-        d = h5[k].get(date)[:]
-        timeseries[i, :] = d.flatten(0)
-        prog_bar.update(i+1, suffix=date)
-    prog_bar.close()
-    del d
-    h5.close()
-
-    # Calculate 1st and 2nd temporal derivatives
-    print("calculating temporal 1st derivative ... ")
-    timeseries_1st = np.zeros((date_num-1, pixel_num), np.float32)
-    for i in range(date_num-1):
-        timeseries_1st[i][:] = timeseries[i+1][:] - timeseries[i][:]
-
-    print("calculating temporal 2nd derivative")
-    timeseries_2nd = np.zeros((date_num-2, pixel_num), np.float32)
-    for i in range(date_num-2):
-        timeseries_2nd[i][:] = timeseries_1st[i+1][:] - timeseries_1st[i][:]
-
-    # Write 1st and 2nd temporal derivatives
-    outfile1 = os.path.splitext(timeseries_file)[0]+'_1stDerivative.h5'
-    print('writing >>> '+outfile1)
-    h5out = h5py.File(outfile1, 'w')
-    group = h5out.create_group(k)
-
-    prog_bar = ptime.progressBar(maxValue=date_num-1)
-    for i in range(date_num-1):
-        date = date_list[i+1]
-        data = np.reshape(timeseries_1st[i][:], [length, width])
-        dset = group.create_dataset(date, data=data)
-        prog_bar.update(i+1, suffix=date)
-    for key, value in iter(atr.items()):
-        group.attrs[key] = value
-    prog_bar.close()
-    h5out.close()
-
-    outfile2 = os.path.splitext(timeseries_file)[0]+'_2ndDerivative.h5'
-    print('writing >>> '+outfile2)
-    h5out = h5py.File(outfile2, 'w')
-    group = h5out.create_group(k)
-
-    prog_bar = ptime.progressBar(maxValue=date_num-2)
-    for i in range(date_num-2):
-        date = date_list[i+2]
-        data = np.reshape(timeseries_2nd[i][:], [length, width])
-        dset = group.create_dataset(date, data=data)
-        prog_bar.update(i+1, suffix=date)
-    for key, value in iter(atr.items()):
-        group.attrs[key] = value
-    prog_bar.close()
-    h5out.close()
-
-    print('Done.')
-    return outfile1, outfile2
+    return out_file
 
 
 ############################################################################

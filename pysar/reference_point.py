@@ -12,7 +12,7 @@ import argparse
 import h5py
 import numpy as np
 import random
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
+from pysar.utils import readfile, writefile, ptime, utils as ut
 from pysar.objects import ifgramStack, timeseries
 
 

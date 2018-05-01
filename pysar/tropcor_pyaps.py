@@ -19,7 +19,7 @@ import argparse
 import h5py
 import numpy as np
 from pysar.objects import timeseries, geometry
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
+from pysar.utils import readfile, writefile, ptime, utils as ut
 
 standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': 'ECMWF',
                              'MERRA2': 'MERRA'
@@ -102,6 +102,10 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    if all(not i for i in [inps.date_list, inps.timeseries_file, inps.dem_file]):
+        parser.print_help()
+        sys.exit(1)
     return inps
 
 
@@ -119,6 +123,11 @@ def check_inputs(inps):
                                                 standardWeatherModelNames)
     print('weather model: '+inps.trop_model)
 
+    # output file name
+    if not inps.outfile:
+        fbase = os.path.splitext(inps.timeseries_file)[0]
+        inps.outfile = '{}_{}.h5'.format(fbase, inps.trop_model)
+
     # hour
     if not inps.hour:
         if 'CENTER_LINE_UTC' in atr.keys():
@@ -134,9 +143,8 @@ def check_inputs(inps):
     if inps.timeseries_file:
         print('read date list from timeseries file: {}'.format(inps.timeseries_file))
         tsobj = timeseries(inps.timeseries_file)
-        tsobj.open()
+        tsobj.open(print_msg=False)
         inps.date_list = tsobj.dateList
-        tsobj.close()
     elif len(inps.date_list) == 1:
         if os.path.isfile(inps.date_list[0]):
             print('read date list from text file: {}'.format(inps.date_list[0]))
@@ -145,8 +153,7 @@ def check_inputs(inps):
                                                        usecols=(0,)).astype(str).tolist())
         else:
             parser.print_usage()
-            print('ERROR: input date list < 2')
-            sys.exit(1)
+            raise Exception('ERROR: input date list < 2')
 
     # weather directory
     if not inps.weather_dir:
@@ -167,7 +174,9 @@ def check_inputs(inps):
     # Incidence angle: to map the zenith delay to the slant delay
     if os.path.isfile(inps.inc_angle):
         print('incidence angle from file: {}'.format(inps.inc_angle))
-        inps.inc_angle = readfile.read(inps.inc_angle, datasetName='incidenceAngle')[0]
+        inps.inc_angle = readfile.read(inps.inc_angle,
+                                       datasetName='incidenceAngle',
+                                       print_msg=False)[0]
     else:
         print('incidence angle from input: {}'.format(inps.inc_angle))
         inps.inc_angle = float(inps.inc_angle)
@@ -305,13 +314,13 @@ def get_delay_timeseries(inps, atr):
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     date_num = len(inps.date_list)
-    inps.trop_ts = np.zeros((date_num, length, width), np.float32)
+    drop_data = np.zeros((date_num, length, width), np.float32)
     for i in range(date_num):
         grib_file = inps.grib_file_list[i]
         date = inps.date_list[i]
         print('calculate phase delay on %s from file %s' %
               (date, os.path.basename(grib_file)))
-        inps.trop_ts[i] = get_delay(grib_file, inps)
+        drop_data[i] = get_delay(grib_file, inps)
 
     # Convert relative phase delay on reference date
     try:
@@ -320,36 +329,34 @@ def get_delay_timeseries(inps, atr):
         inps.ref_date = inps.date_list[0]
     print('convert to relative phase delay with reference date: '+inps.ref_date)
     inps.ref_idx = inps.date_list.index(inps.ref_date)
-    inps.trop_ts -= np.tile(inps.trop_ts[inps.ref_idx, :, :], (date_num, 1, 1))
+    drop_data -= np.tile(drop_data[inps.ref_idx, :, :], (date_num, 1, 1))
 
     # Write tropospheric delay to HDF5
     tropFile = os.path.join(os.path.dirname(inps.dem_file), inps.trop_model+'.h5')
     tsobj = timeseries(tropFile)
-    tsobj.write2hdf5(data=inps.trop_ts,
+    tsobj.write2hdf5(data=drop_data,
                      dates=inps.date_list,
                      metadata=atr,
                      refFile=inps.timeseries_file)
-    return inps
+
+    # Delete temporary DEM file in ROI_PAC format
+    if '4pyaps' in inps.dem_file:
+        rmCmd = 'rm {f} {f}.rsc'.format(f=inps.dem_file)
+        print(rmCmd)
+        os.system(rmCmd)
+
+    return drop_data
 
 
-def correct_delay(inps, atr):
+def correct_delay(timeseries_file, trop_data, out_file=None):
     print('*'*50+'\nCorrecting delay for input time-series')
-    if atr['FILE_TYPE'] != 'timeseries':
-        print('No input timeseries found, exit')
-        sys.exit(1)
-
-    if not inps.outfile:
-        inps.outfile = '{}_{}.h5'.format(os.path.splitext(inps.timeseries_file)[0],
-                                         inps.trop_model)
-
-    tsobj = timeseries(inps.timeseries_file)
+    tsobj = timeseries(timeseries_file)
     ts = tsobj.read()
-    tsobj.close()
+    ts -= trop_data
 
-    ts -= inps.trop_ts
-    tsobj = timeseries(inps.outfile)
-    tsobj.write2hdf5(data=ts, refFile=inps.timeseries_file)
-    return inps.outfile
+    tsobj = timeseries(out_file)
+    tsobj.write2hdf5(data=ts, refFile=timeseries_file)
+    return out_file
 
 
 ###############################################################
@@ -362,16 +369,11 @@ def main(iargs=None):
                                            inps.trop_model,
                                            inps.weather_dir)
 
-    inps = get_delay_timeseries(inps, atr)
+    drop_data = get_delay_timeseries(inps, atr)
 
-    inps.outfile = correct_delay(inps, atr)
+    if atr['FILE_TYPE'] == 'timeseries':
+        inps.outfile = correct_delay(inps.timeseries_file, drop_data, inps.outfile)
 
-    # Delete temporary DEM file in ROI_PAC format
-    if '4pyaps' in inps.dem_file:
-        rmCmd = 'rm {f} {f}.rsc'.format(f=inps.dem_file)
-        print(rmCmd)
-        os.system(rmCmd)
-    print('Done.')
     return inps.outfile
 
 

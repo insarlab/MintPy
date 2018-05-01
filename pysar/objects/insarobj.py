@@ -14,7 +14,7 @@ import warnings
 import h5py
 import numpy as np
 from skimage.transform import resize
-from pysar.utils import readfile, datetime as ptime, utils as ut
+from pysar.utils import readfile, ptime, utils as ut
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, dataTypeDict
 
 BOOL_ZERO = np.bool_(0)

@@ -22,7 +22,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 from pysar.objects import timeseriesKeyNames
-from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
+from pysar.utils import readfile, ptime, utils as ut, plot as pp
 
 
 ############################################################

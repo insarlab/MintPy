@@ -11,7 +11,7 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import laplace
-from pysar.utils import datetime as ptime
+from pysar.utils import ptime
 
 
 ##############################################################################

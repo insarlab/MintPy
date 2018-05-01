@@ -9,7 +9,7 @@
 import os
 import re
 import argparse
-from pysar.utils import readfile, datetime as ptime, utils as ut
+from pysar.utils import readfile, ptime, utils as ut
 from pysar.objects import ifgramStack
 
 

@@ -9,7 +9,7 @@ import os
 import shutil
 import argparse
 import numpy as np
-from pysar.utils import readfile, datetime as ptime, utils as ut
+from pysar.utils import readfile, ptime, utils as ut
 from pysar.objects import timeseries
 
 

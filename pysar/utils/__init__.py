@@ -3,7 +3,7 @@
 from .sensor import *
 
 # Independent utility scripts:
-# datetime
+# ptime
 # readfile
 # writefile
 # sensor

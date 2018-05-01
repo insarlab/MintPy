@@ -17,7 +17,7 @@ import datetime
 import h5py
 import numpy as np
 from pysar.objects import timeseries
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
+from pysar.utils import readfile, writefile, ptime, utils as ut
 
 
 #########################################################################################

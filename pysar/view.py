@@ -24,7 +24,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import cm, pyproj
 
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry
-from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
+from pysar.utils import readfile, ptime, utils as ut, plot as pp
 from pysar import mask, multilook as mli, subset
 
 
@@ -920,18 +920,27 @@ def read_data4figure(inps, i_start, i_end):
     data = np.zeros((i_end - i_start,
                      inps.pix_box[3] - inps.pix_box[1],
                      inps.pix_box[2] - inps.pix_box[0]))
-    prog_bar = ptime.progressBar(maxValue=i_end-i_start, prefix='reading')
-    for i in range(i_start, i_end):
-        d = readfile.read(inps.file,
-                          datasetName=inps.dset[i],
-                          box=inps.pix_box,
-                          print_msg=False)[0]
-        # reference pixel info in unwrapPhase
-        if inps.dset[i].split('-')[0] == 'unwrapPhase' and inps.file_ref_yx:
-            d -= d[inps.file_ref_yx[0], inps.file_ref_yx[1]]
-        data[i - i_start, :, :] = d
-        prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
-    prog_bar.close()
+
+    # fast reading for single dataset type
+    if len(inps.dsetFamilyList) == 1:
+        if inps.dsetFamilyList[0] == 'timeseries':
+            dset_list = [inps.dset[i] for i in range(i_start, i_end)]
+            data = timeseries(inps.file).read(datasetName=dset_list, box=inps.pix_box)
+
+    # slow reading with one 2D matrix at a time
+    else:
+        prog_bar = ptime.progressBar(maxValue=i_end-i_start, prefix='reading')
+        for i in range(i_start, i_end):
+            d = readfile.read(inps.file,
+                              datasetName=inps.dset[i],
+                              box=inps.pix_box,
+                              print_msg=False)[0]
+            # reference pixel info in unwrapPhase
+            if inps.dset[i].split('-')[0] == 'unwrapPhase' and inps.file_ref_yx:
+                d -= d[inps.file_ref_yx[0], inps.file_ref_yx[1]]
+            data[i - i_start, :, :] = d
+            prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
+        prog_bar.close()
 
     # ref_date for timeseries
     if inps.ref_date:

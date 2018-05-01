@@ -22,7 +22,7 @@ from matplotlib.patheffects import withStroke
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
-from pysar.utils import datetime as ptime, readfile, network as pnet, utils as ut
+from pysar.utils import ptime, readfile, network as pnet, utils as ut
 from pysar.objects import timeseriesKeyNames
 
 

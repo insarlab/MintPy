@@ -7,14 +7,10 @@
 
 
 import os
-import sys
-import time
-import datetime
 import argparse
-import h5py
 import numpy as np
 from pysar.objects import timeseries
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
+from pysar.utils import readfile, writefile, ptime, utils as ut
 
 dataType = np.float32
 
@@ -70,8 +66,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if 'timeseries' != readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']:
-        print('ERROR: input file is not timeseries!')
-        sys.exit(2)
+        raise Exception('input file is not timeseries!')
     return inps
 
 
@@ -220,8 +215,8 @@ def estimate_linear_velocity(inps):
             inps.outfile = 'velocityEx.h5'
         else:
             inps.outfile = 'velocity.h5'
-    outfileStd = '{}Std{}'.format(os.path.splitext(inps.outfile)[0],
-                                  os.path.splitext(inps.outfile)[1])
+    # outfileStd = '{}Std{}'.format(os.path.splitext(inps.outfile)[0],
+    #                               os.path.splitext(inps.outfile)[1])
 
     atr = tsobj.metadata.copy()
     atr['FILE_TYPE'] = 'velocity'

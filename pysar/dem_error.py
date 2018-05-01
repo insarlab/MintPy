@@ -11,7 +11,7 @@ import sys
 import argparse
 import numpy as np
 from scipy.special import gamma
-from pysar.utils import datetime as ptime, readfile, writefile, utils as ut
+from pysar.utils import ptime, readfile, writefile, utils as ut
 from pysar.objects import timeseries, geometry
 
 

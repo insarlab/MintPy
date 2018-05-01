@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jul 2017: rewrite using pysar module
 
 
 import os
@@ -21,13 +20,9 @@ except:
     print('++++++++++++++++++++++++++++++++++++++++++++')
     sys.exit(1)
 
-import h5py
 import numpy as np
-#from PIL import Image
 from scipy import ndimage
-
-from pysar.utils import readfile, writefile, datetime as ptime
-from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar.utils import readfile, writefile
 
 
 ################################################################################################

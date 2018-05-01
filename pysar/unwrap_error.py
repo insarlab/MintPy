@@ -12,7 +12,7 @@ import argparse
 import h5py
 import numpy as np
 from scipy.linalg import pinv
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut, deramp
+from pysar.utils import readfile, writefile, ptime, utils as ut, deramp
 
 
 ##########################################################################################

@@ -726,8 +726,8 @@ class ifgramStack:
         numDate = len(dateList)
 
         # calculate design matrix
-        A = np.zeros((numIfgram, numDate))
-        B = np.zeros(A.shape)
+        A = np.zeros((numIfgram, numDate), np.float32)
+        B = np.zeros(A.shape, np.float32)
         for i in range(numIfgram):
             m_idx, s_idx = [dateList.index(j) for j in date12List[i].split('_')]
             A[i, m_idx] = -1

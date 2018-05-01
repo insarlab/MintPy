@@ -4,8 +4,7 @@
 # Copyright(c) 2016, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-# Modified from load_data.py written by Heresh Fattahi.
-#
+
 
 import os
 import sys
@@ -19,7 +18,6 @@ from pysar.objects import ifgramDatasetNames
 EXAMPLE = """example:
   temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoherence.h5
 """
-
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Calculate temporal average/mean of multi-temporal datasets',

@@ -11,7 +11,7 @@ import sys
 import re
 import argparse
 import numpy as np
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
+from pysar.utils import readfile, writefile, ptime, utils as ut
 
 
 ##################################################################################################

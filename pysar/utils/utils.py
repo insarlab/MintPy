@@ -16,7 +16,7 @@ import warnings
 import h5py
 import numpy as np
 import multiprocessing
-from pysar.utils import readfile, writefile, datetime as ptime, network as pnet, deramp
+from pysar.utils import readfile, writefile, ptime, network as pnet, deramp
 from pysar.objects import timeseries, geometry, ifgramStack, geometryDatasetNames, ifgramDatasetNames
 
 
@@ -58,82 +58,82 @@ def standardize_trop_model(tropModel, standardWeatherModelNames):
     return tropModel
 
 
-def coord_geo2radar(geoCoordIn, atr, coordType):
+def coord_geo2radar(coord_in, metadata, coord_name):
     """convert geo coordinates into radar coordinates (round to nearest integer)
         for Geocoded file only
     Parameters: geoCoord  : coordinate (list / tuple) in latitude/longitude in float
-                atr : dictionary of file attributes
-                coordType : coordinate type: latitude, longitude
-    Example:    300 = coord_geo2radar(32.104990,    atr,'lat')
-                [1000,1500] = coord_geo2radar([130.5,131.4],atr,'lon')
+                metadata : dictionary of file attributes
+                coord_name : coordinate type: latitude, longitude
+    Example:    300 = coord_geo2radar(32.104990,    metadata,'lat')
+                [1000,1500] = coord_geo2radar([130.5,131.4],metadata,'lon')
     """
     try:
-        atr['X_FIRST']
+        metadata['X_FIRST']
     except:
-        sys.exit('Support geocoded file only!')
+        raise Exception('Support geocoded file only!')
 
-    # Convert to List if input is String
-    if isinstance(geoCoordIn, float):
-        geoCoordIn = [geoCoordIn]
-    geoCoord = list(geoCoordIn)
+    # input format
+    if isinstance(coord_in, float):
+        coord_in = [coord_in]
+    coord_in = list(coord_in)
 
-    radarCoord = []
-    coordType = coordType.lower()
-    for i in range(len(geoCoord)):
-        if coordType.startswith('lat'):
-            coord = np.rint((geoCoord[i]-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
-        elif coordType.startswith('lon'):
-            coord = np.rint((geoCoord[i]-float(atr['X_FIRST']))/float(atr['X_STEP']))
+    # convert coordinates
+    coord_out = []
+    for i in range(len(coord_in)):
+        if coord_name.lower().startswith('lat'):
+            coord = np.rint((coord_in[i]-float(metadata['Y_FIRST']))/float(metadata['Y_STEP']))
+        elif coord_name.lower().startswith('lon'):
+            coord = np.rint((coord_in[i]-float(metadata['X_FIRST']))/float(metadata['X_STEP']))
         else:
-            print('Unrecognized coordinate type: '+coordType)
-        radarCoord.append(int(coord))
+            print('Unrecognized coordinate type: '+coord_name)
+        coord_out.append(int(coord))
 
-    if len(radarCoord) == 1:
-        radarCoord = radarCoord[0]
-    elif isinstance(geoCoordIn, tuple):
-        radarCoord = tuple(radarCoord)
+    # output format
+    if len(coord_out) == 1:
+        coord_out = coord_out[0]
+    elif isinstance(coord_in, tuple):
+        coord_out = tuple(coord_out)
 
-    return radarCoord
+    return coord_out
 
 
 ################################################################
-def coord_radar2geo(radarCoordIn, atr, coordType):
+def coord_radar2geo(coord_in, metadata, coord_name):
     """convert radar coordinates into geo coordinates (pixel UL corner)
         for Geocoded file only
-    Parameters: radarCoord : coordinate (list) in row/col in int
-                atr : dictionary of file attributes
-                coordType  : coordinate type: row, col, y, x
-    Example:    32.104990 = coord_radar2geo(300, atr, 'y')
-                [130.5,131.4] = coord_radar2geo([1000,1500], atr, 'x')
+    Parameters: coord_in : coordinate (list) in row/col in int
+                metadata : dictionary of file attributes
+                coord_name  : coordinate type: row, col, y, x
+    Example:    32.104990 = coord_radar2geo(300, metadata, 'y')
+                [130.5,131.4] = coord_radar2geo([1000,1500], metadata, 'x')
     """
     try:
-        atr['X_FIRST']
+        metadata['X_FIRST']
     except:
-        sys.exit('Support geocoded file only!')
+        raise Exception('Support geocoded file only!')
 
     # Convert to List if input is String
-    if isinstance(radarCoordIn, int):
-        radarCoordIn = [radarCoordIn]
-    radarCoord = list(radarCoordIn)
+    if isinstance(coord_in, int):
+        coord_in = [coord_in]
+    coord_in = list(coord_in)
 
-    geoCoord = []
-    coordType = coordType.lower()
-    for i in range(len(radarCoord)):
-        if coordType.startswith(('row', 'y')):
-            coord = radarCoord[i]*float(atr['Y_STEP']) + float(atr['Y_FIRST'])
-        elif coordType.startswith(('col', 'x')):
-            coord = radarCoord[i]*float(atr['X_STEP']) + float(atr['X_FIRST'])
+    coord_out = []
+    for i in range(len(coord_in)):
+        if coord_name.lower().startswith(('row', 'y')):
+            coord = coord_in[i]*float(metadata['Y_STEP']) + float(metadata['Y_FIRST'])
+        elif coord_name.lower().startswith(('col', 'x')):
+            coord = coord_in[i]*float(metadata['X_STEP']) + float(metadata['X_FIRST'])
         else:
-            print('Unrecognized coordinate type: '+coordType)
-        geoCoord.append(coord)
-    # geoCoord.sort()
+            print('Unrecognized coordinate type: '+coord_name)
+        coord_out.append(coord)
+    # coord_out.sort()
 
-    if len(geoCoord) == 1:
-        geoCoord = geoCoord[0]
-    elif isinstance(radarCoordIn, tuple):
-        geoCoord = tuple(geoCoord)
+    if len(coord_out) == 1:
+        coord_out = coord_out[0]
+    elif isinstance(coord_in, tuple):
+        coord_out = tuple(coord_out)
 
-    return geoCoord
+    return coord_out
 
 
 def subset_attribute(atr_dict, subset_box, print_msg=True):

@@ -18,7 +18,7 @@ import inspect
 import matplotlib.pyplot as plt
 import numpy as np
 import pysar
-from pysar.utils import readfile, datetime as ptime, network as pnet, plot as pp
+from pysar.utils import readfile, ptime, network as pnet, plot as pp
 
 sar_sensor_list = ['Ers', 'Env', 'Jers', 'Alos', 'Alos2',
                    'Tsx', 'Csk', 'Rsat', 'Rsat2', 'Sen', 'Kmps5', 'G3']
@@ -65,12 +65,6 @@ def read_template2inps(templateFile, inps=None):
         print('Empty template: '+templateFile)
         return None
     prefix = 'select.network.'
-
-    # Extra keys
-    #extra_key_list = ['masterDate','startDate','endDate']
-    # for extra_key in extra_key_list:
-    #    if extra_key in template.keys():
-    #        template[prefix+extra_key] = template[extra_key]
 
     # Check option prefix
     for i in ['selectPairs.', 'selectNetwork.']:

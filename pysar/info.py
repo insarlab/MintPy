@@ -12,7 +12,7 @@ import argparse
 import time
 import h5py
 from numpy import std
-from pysar.utils import readfile, datetime as ptime
+from pysar.utils import readfile, ptime
 from pysar.objects import timeseries, ifgramStack, geometry, HDFEOS
 
 
