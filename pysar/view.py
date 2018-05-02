@@ -922,10 +922,16 @@ def read_data4figure(inps, i_start, i_end):
                      inps.pix_box[2] - inps.pix_box[0]))
 
     # fast reading for single dataset type
-    if len(inps.dsetFamilyList) == 1:
-        if inps.dsetFamilyList[0] == 'timeseries':
-            dset_list = [inps.dset[i] for i in range(i_start, i_end)]
+    if len(inps.dsetFamilyList) == 1 and inps.key in ['timeseries', 'ifgramStack']:
+        dset_list = [inps.dset[i] for i in range(i_start, i_end)]
+        if inps.key == 'timeseries':
             data = timeseries(inps.file).read(datasetName=dset_list, box=inps.pix_box)
+        elif inps.key == 'ifgramStack':
+            data = ifgramStack(inps.file).read(datasetName=dset_list, box=inps.pix_box)
+            # reference pixel info in unwrapPhase
+            if inps.dsetFamilyList[0] == 'unwrapPhase' and inps.file_ref_yx:
+                for i in range(data.shape[0]):
+                    data[i, :, :] -= data[i, inps.file_ref_yx[0], inps.file_ref_yx[1]]
 
     # slow reading with one 2D matrix at a time
     else:
@@ -935,9 +941,6 @@ def read_data4figure(inps, i_start, i_end):
                               datasetName=inps.dset[i],
                               box=inps.pix_box,
                               print_msg=False)[0]
-            # reference pixel info in unwrapPhase
-            if inps.dset[i].split('-')[0] == 'unwrapPhase' and inps.file_ref_yx:
-                d -= d[inps.file_ref_yx[0], inps.file_ref_yx[1]]
             data[i - i_start, :, :] = d
             prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
         prog_bar.close()

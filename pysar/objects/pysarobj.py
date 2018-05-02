@@ -215,8 +215,9 @@ class timeseries:
             # Get Index in space/2_3 dimension
             if box is None:
                 box = [0, 0, self.width, self.length]
+
             data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
-        data = np.squeeze(data)
+            data = np.squeeze(data)
         return data
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None):
@@ -562,6 +563,9 @@ class ifgramStack:
                         unwrapPhase-...
                         coherence-20161020_20161026
                         ...
+                        ['unwrapPhase-20161020_20161026',
+                         'unwrapPhase-20161020_20161101',
+                         ...]
                     box : tuple of 4 int, for (x0,y0,x1,y1)
                     print_msg : bool
         Returns: data : 2D or 3D array
@@ -570,25 +574,42 @@ class ifgramStack:
             obj.read(datasetName='unwrapPhase')
             obj.read(datasetName='coherence')
             obj.read(datasetName='unwrapPhase-20161020_20161026')
+            obj.read(datasetName=['unwrapPhase-20161020_20161026',
+                                  'unwrapPhase-20161020_20161101'])
         '''
         self.get_size()
-        date12List = self.get_date12_list(dropIfgram=dropIfgram)
-        if box is None:
-            box = (0, 0, self.width, self.length)
-        if datasetName is None:
-            datasetName = ifgramDatasetNames[0]
+        date12List = self.get_date12_list(dropIfgram=False)
 
-        datasetName = datasetName.split('-')
+        # convert input datasetName into list
+        if datasetName is None:
+            datasetName = [ifgramDatasetNames[0]]
+        elif isinstance(datasetName, str):
+            datasetName = [datasetName]
+
         with h5py.File(self.file, 'r') as f:
-            dset = f[datasetName[0]]
-            if len(datasetName) == 1:
+            familyName = datasetName[0].split('-')[0]
+            ds = f[familyName]
+            if print_msg:
+                print('reading {} data from file: {} ...'.format(familyName, self.file))
+
+            # get dateFlag - mark in time/1st dimension
+            dateFlag = np.zeros((self.numIfgram), dtype=np.bool_)
+            datasetName = [i.replace(familyName, '').replace('-', '') for i in datasetName]
+            if not datasetName:
                 if dropIfgram:
-                    data = dset[f['dropIfgram'][:], box[1]:box[3], box[0]:box[2]]
+                    dateFlag = f['dropIfgram'][:]
                 else:
-                    data = dset[:, box[1]:box[3], box[0]:box[2]]
+                    dateFlag[:] = True
             else:
-                data = dset[date12List.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
-                data = np.squeeze(data)
+                for e in datasetName:
+                    dateFlag[date12List.index(e)] = True
+
+            # get index in space/2-3 dimension
+            if box is None:
+                box = (0, 0, self.width, self.length)
+
+            data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+            data = np.squeeze(data)
         return data
 
     def spatial_average(self, datasetName=ifgramDatasetNames[1], maskFile=None, box=None):
