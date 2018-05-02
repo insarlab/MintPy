@@ -20,7 +20,7 @@ import subprocess
 import h5py
 import numpy as np
 
-import pysar
+import version
 from pysar.utils import readfile, writefile, utils as ut
 from pysar.objects import ifgramStack
 from pysar.defaults import autoPath
@@ -353,7 +353,7 @@ def main(iargs=None):
     #########################################
     # Initiation
     #########################################
-    print(pysar.logo)
+    print(version.logo)
 
     # Project Name
     inps.projectName = None
