@@ -857,6 +857,10 @@ def update_figure_setting(inps):
         if not inps.font_size:
             inps.font_size = 16
         if not inps.fig_size:
+            if inps.geo_box and inps.fig_coord == 'geo':
+                length = abs(inps.geo_box[3] - inps.geo_box[1])
+                width = abs(inps.geo_box[2] - inps.geo_box[0])
+                plot_shape = []
             plot_shape = [width*1.25, length]
             fig_scale = min(pp.min_figsize_single/min(plot_shape),
                             pp.max_figsize_single/max(plot_shape))

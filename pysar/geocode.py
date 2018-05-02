@@ -86,7 +86,7 @@ def cmd_line_parse(iargs=None):
 def _check_inps(inps):
     inps.file = ut.get_file_list(inps.file)
     if not inps.file:
-        sys.exit('ERROR: no input file found!')
+        raise Exception('ERROR: no input file found!')
     elif len(inps.file) > 1:
         inps.outfile = None
 

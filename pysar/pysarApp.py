@@ -770,11 +770,12 @@ def main(iargs=None):
     if not inps.geocoded:
         if template['pysar.geocode'] is True:
             print('\n--------------------------------------------')
-            geoCmd = 'geocode.py {} {} {} {} -l {} --update'.format(inps.velFile,
-                                                                    inps.tempCohFile,
-                                                                    inps.timeseriesFile,
-                                                                    inps.geomFile,
-                                                                    inps.lookupFile)
+            geoCmd = 'geocode.py {} {} {} {} -l {} -t {} --update'.format(inps.velFile,
+                                                                          inps.tempCohFile,
+                                                                          inps.timeseriesFile,
+                                                                          inps.geomFile,
+                                                                          inps.templateFile,
+                                                                          inps.lookupFile)
             print(geoCmd)
             status = subprocess.Popen(geoCmd, shell=True).wait()
             if status is not 0:
