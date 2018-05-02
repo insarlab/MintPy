@@ -194,15 +194,20 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             data = dset[box[1]:box[3], box[0]:box[2]]
 
         else:
-            if not datasetName:
-                datasetName = k
-            try:
-                dset = f[k][datasetName]
-            except:
-                try:
+            k0 = list(f.keys())[0]
+            if isinstance(f[k0], h5py.Dataset):
+                if datasetName:
                     dset = f[datasetName]
-                except:
-                    dset = f[k]
+                else:
+                    dset = f[k0]
+            else:
+                # support for old pysar format
+                k1 = list(f[k0].keys())[0]
+                if isinstance(f[k0][k1], h5py.Dataset):
+                    if datasetName:
+                        dset = f[k0][datasetName]
+                    else:
+                        dset = f[k0][k1]
 
             data = dset[box[1]:box[3], box[0]:box[2]]
             atr['LENGTH'] = str(dset.shape[0])
@@ -353,10 +358,20 @@ def get_dataset_list(fname, datasetName=None):
     ext = os.path.splitext(fname)[1].lower()
     if ext in ['.h5', '.he5']:
         with h5py.File(fname, 'r') as f:
-            for key in f.keys():
-                obj = f[key]
-                if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
-                    datasetList.append(key)
+            k0 = list(f.keys())[0]
+            if isinstance(f[k0], h5py.Dataset):
+                for key in f.keys():
+                    if (isinstance(f[key], h5py.Dataset)
+                            and f[key].shape[-2:] == (length, width)):
+                        datasetList.append(key)
+            else:
+                # support for old pysar format
+                k1 = list(f[k0].keys())[0]
+                if isinstance(f[k0][k1], h5py.Dataset):
+                    for key in f[k0].keys():
+                        if (isinstance(f[k0][key], h5py.Dataset)
+                                and f[k0][key].shape[-2:] == (length, width)):
+                            datasetList.append(key)
 
     elif ext in ['.trans', '.utm_to_rdc']:
         datasetList = ['rangeCoord', 'azimuthCoord']
@@ -375,28 +390,35 @@ def get_2d_dataset_list(fname):
     datasetList = []
     # HDF5 Files
     if file_ext in ['.h5', '.he5']:
-        f = h5py.File(fname, 'r')
-        if file_type in ['timeseries']:
-            obj = timeseries(fname)
-            obj.open(print_msg=False)
-            datasetList = obj.datasetList
-        elif file_type in ['geometry']:
-            obj = geometry(fname)
-            obj.open(print_msg=False)
-            datasetList = obj.datasetList
-        elif file_type in ['ifgramStack']:
-            obj = ifgramStack(fname)
-            obj.open(print_msg=False)
-            datasetList = obj.datasetList
-        elif file_type in ['HDFEOS']:
-            obj = HDFEOS(fname)
-            obj.open(print_msg=False)
-            datasetList = obj.datasetList
-        elif file_type in ['GIANT_TS']:
-            datasetList = [dt.fromordinal(int(i)).strftime('%Y%m%d')
-                           for i in f['dates'][:].tolist()]
-        else:
-            datasetList = sorted(list(f.keys()))
+        with h5py.File(fname, 'r') as f:
+            if file_type in ['timeseries']:
+                obj = timeseries(fname)
+                obj.open(print_msg=False)
+                datasetList = obj.datasetList
+            elif file_type in ['geometry']:
+                obj = geometry(fname)
+                obj.open(print_msg=False)
+                datasetList = obj.datasetList
+            elif file_type in ['ifgramStack']:
+                obj = ifgramStack(fname)
+                obj.open(print_msg=False)
+                datasetList = obj.datasetList
+            elif file_type in ['HDFEOS']:
+                obj = HDFEOS(fname)
+                obj.open(print_msg=False)
+                datasetList = obj.datasetList
+            elif file_type in ['GIANT_TS']:
+                datasetList = [dt.fromordinal(int(i)).strftime('%Y%m%d')
+                               for i in f['dates'][:].tolist()]
+            else:
+                k0 = list(f.keys())[0]
+                if isinstance(f[k0], h5py.Dataset):
+                    datasetList = sorted(list(f.keys()))
+                else:
+                    # support for old pysar format
+                    k1 = list(f[k0].keys())[0]
+                    if isinstance(f[k0][k1], h5py.Dataset):
+                        datasetList = sorted(list(f[k0].keys()))
     # Binary Files
     else:
         if file_ext.lower() in ['.trans', '.utm_to_rdc']:
@@ -457,6 +479,10 @@ def read_attribute(fname, datasetName=None):
         else:
             k = list(f.keys())[0]
         atr['FILE_TYPE'] = str(k)
+
+        # PROCESSOR
+        if 'INSAR_PROCESSOR' in atr.keys():
+            atr['PROCESSOR'] = atr['INSAR_PROCESSOR']
 
         # read attribute of HDF5 dataset
         # if k == 'timeseries' and 'MinValue' in f[k].attrs.keys():

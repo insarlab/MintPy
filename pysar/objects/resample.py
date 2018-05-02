@@ -41,18 +41,35 @@ class resample:
         self.length, self.width = self.dest_def.lats.shape
 
     def get_geometry_definition4radar_lookup_table(self):
-        '''Get src_def and dest_def for lookup table from ISCE, DORIS'''
+        """Get src_def and dest_def for lookup table from ISCE, DORIS"""
+
+        def mark_lalo_anomoly(lat, lon):
+            """mask pixels with abnormal values (0, etc.)
+            This is found on sentinelStack multiple swath lookup table file.
+            """
+            mask = np.multiply(lat != 0., lon != 0.)
+            for data in [lat, lon]:
+                d_hist = np.histogram(data[mask])
+                if np.max(d_hist[0]) > data[mask].size / 2:
+                    d_comm = d_hist[1][np.argmax(d_hist[0])]
+                    bin_step = d_hist[1][1] - d_hist[1][0]
+                    mask *= np.multiply(data > d_comm - bin_step/2,
+                                        data < d_comm + bin_step/2)
+            lat[mask == 0] = 90.
+            lon[mask == 0] = 0.
+            return lat, lon, mask
 
         # radar2geo
         if 'Y_FIRST' not in self.src_metadata.keys():
+
             # src_def
             src_lat = readfile.read(self.file, datasetName='latitude')[0]
             src_lon = readfile.read(self.file, datasetName='longitude')[0]
-            self.src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
+            src_lat, src_lon, mask = mark_lalo_anomoly(src_lat, src_lon)
 
             # laloStep
-            SNWE = (np.nanmin(src_lat), np.nanmax(src_lat),
-                    np.nanmin(src_lon), np.nanmax(src_lon))
+            SNWE = (np.nanmin(src_lat[mask]), np.nanmax(src_lat[mask]),
+                    np.nanmin(src_lon[mask]), np.nanmax(src_lon[mask]))
             if self.laloStep is None:
                 self.laloStep = ((SNWE[0] - SNWE[1]) / (src_lat.shape[0] - 1),
                                  (SNWE[3] - SNWE[2]) / (src_lat.shape[1] - 1))
@@ -64,25 +81,29 @@ class resample:
             if self.SNWE is None:
                 lat_num = int((SNWE[0] - SNWE[1]) / self.laloStep[0]) + 1
                 lon_num = int((SNWE[3] - SNWE[2]) / self.laloStep[1]) + 1
-                SNWE = (SNWE[1] + self.laloStep[0] * lat_num, SNWE[1],
-                        SNWE[2], SNWE[2] + self.laloStep[1] * lon_num)
+                SNWE = (SNWE[1] + self.laloStep[0] * lat_num,
+                        SNWE[1],
+                        SNWE[2],
+                        SNWE[2] + self.laloStep[1] * lon_num)
                 self.SNWE = SNWE
             print('output area extent in (S N W E) in degree: {}'.format(self.SNWE))
 
             # dest_def
             lat_num = int((self.SNWE[0] - self.SNWE[1]) / self.laloStep[0])
             lon_num = int((self.SNWE[3] - self.SNWE[2]) / self.laloStep[1])
-            self.SNWE = (self.SNWE[1] + self.laloStep[0] * lat_num, self.SNWE[1],
-                         self.SNWE[2], self.SNWE[2] + self.laloStep[1] * lon_num)
-            dest_lat, dest_lon = np.mgrid[self.SNWE[1]:self.SNWE[0]:lat_num*1j, self.SNWE[2]:self.SNWE[3]:lon_num*1j]
-            self.dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
+            self.SNWE = (self.SNWE[1] + self.laloStep[0] * lat_num,
+                         self.SNWE[1],
+                         self.SNWE[2],
+                         self.SNWE[2] + self.laloStep[1] * lon_num)
+            dest_lat, dest_lon = np.mgrid[self.SNWE[1]:self.SNWE[0]:lat_num*1j,
+                                          self.SNWE[2]:self.SNWE[3]:lon_num*1j]
 
         # geo2radar
         else:
             # dest_def
             dest_lat = readfile.read(self.file, datasetName='latitude')[0]
             dest_lon = readfile.read(self.file, datasetName='longitude')[0]
-            self.dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
+            dest_lat, dest_lon, mask = mark_lalo_anomoly(dest_lat, dest_lon)
 
             # src_def
             lat0 = float(self.src_metadata['Y_FIRST'])
@@ -96,10 +117,12 @@ class resample:
 
             src_lat, src_lon = np.mgrid[lat0:lat1:lat_num * 1j,
                                         lon0:lon1:lon_num * 1j]
-            self.src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
+
+        self.src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
+        self.dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
 
     def get_geometry_definition4geo_lookup_table(self):
-        '''Get src_def and dest_def for lookup table from Gamma and ROI_PAC.'''
+        """Get src_def and dest_def for lookup table from Gamma and ROI_PAC."""
         def project_yx2lalo(yy, xx, SNWE, laloStep=None):
             """scale/project coordinates in pixel number into lat/lon based on bbox and step"""
 
@@ -128,8 +151,10 @@ class resample:
 
             # SNWE
             if self.SNWE is None:
-                self.SNWE = (lat0 + lat_step * lat_num, lat0,
-                             lon0, lon0 + lon_step * lon_num)
+                self.SNWE = (lat0 + lat_step * lat_num,
+                             lat0,
+                             lon0,
+                             lon0 + lon_step * lon_num)
                 dest_box = None
             else:
                 dest_box = ((self.SNWE[2] - lon0) / lon_step, (self.SNWE[1] - lat0) / lat_step,
