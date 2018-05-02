@@ -528,7 +528,7 @@ def circle_index(atr, circle_par):
     return idx
 
 
-def check_template_auto_value(templateDict, auto_file='../defaults/template.cfg'):
+def check_template_auto_value(templateDict, auto_file='../defaults/pysarApp.cfg'):
     """Replace auto value based on $PYSAR_HOME/pysar/defaults/template.cfg file."""
     # Read default template value and turn yes/no to True/False
     templateAutoFile = os.path.join(os.path.dirname(__file__), auto_file)
