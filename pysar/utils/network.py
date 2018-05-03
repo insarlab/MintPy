@@ -506,7 +506,7 @@ def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
     date12_list = ptime.yymmdd_date12(date12_list)
     m_dates = [date12.split('-')[0] for date12 in date12_list]
     s_dates = [date12.split('-')[1] for date12 in date12_list]
-    date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
+    date_list = sorted(ptime.yymmdd(list(set(m_dates + s_dates))))
     date_num = len(date_list)
 
     coh_mat = np.zeros([date_num, date_num])

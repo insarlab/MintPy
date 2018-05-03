@@ -553,6 +553,7 @@ def ifgram_inversion_patch(stack_obj, inps, box=None):
         ts = ts.reshape(date_num, row_num, col_num)
         temp_coh = temp_coh.reshape(row_num, col_num)
         ts_std = ts_std.reshape(date_num, row_num, col_num)
+        inv_ifgram_num = inv_ifgram_num.reshape(row_num, col_num)
         return ts, temp_coh, ts_std, inv_ifgram_num
 
     # Design matrix
@@ -809,9 +810,9 @@ def check_ifgram_reference_phase(stack_obj, skip_reference=False):
     try:
         ref_y = int(stack_obj.metadata['REF_Y'])
         ref_x = int(stack_obj.metadata['REF_X'])
-        ref_phase = np.squeeze(stack_obj.read(datasetName='unwrapPhase',
-                                              box=[ref_x, ref_y, ref_x+1, ref_y+1],
-                                              dropIfgram=True))
+        ref_phase = stack_obj.read(datasetName='unwrapPhase',
+                                   box=(ref_x, ref_y, ref_x+1, ref_y+1),
+                                   dropIfgram=True)
         print('reference pixel in y/x: {}'.format((ref_y, ref_x)))
     except:
         if skip_reference:

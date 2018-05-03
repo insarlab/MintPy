@@ -595,7 +595,7 @@ class ifgramStack:
             # get dateFlag - mark in time/1st dimension
             dateFlag = np.zeros((self.numIfgram), dtype=np.bool_)
             datasetName = [i.replace(familyName, '').replace('-', '') for i in datasetName]
-            if not datasetName:
+            if any(not i for i in datasetName):
                 if dropIfgram:
                     dateFlag = f['dropIfgram'][:]
                 else:
