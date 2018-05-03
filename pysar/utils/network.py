@@ -26,34 +26,33 @@ import scipy.sparse as sparse
 from scipy.sparse.csgraph import minimum_spanning_tree
 
 from pysar.utils import ptime, readfile
-from pysar.utils.readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
-from pysar.objects import ifgramStack, timeseries
+from pysar.objects import ifgramStack, timeseries, sensor
 
 
 ##################################################################
-BASELINE_LIST_FILE = '''
+BASELINE_LIST_FILE = """
 # Date  Bperp    dop0/PRF  dop1/PRF   dop2/PRF   PRF    slcDir
 070106     0.0   0.03      0.0000000  0.000000   2155.2 /KyushuT422F650AlosA/SLC/070106/
 070709  2631.9   0.07      0.0000000  0.000000   2155.2 /KyushuT422F650AlosA/SLC/070709/
 070824  2787.3   0.07      0.0000000  0.000000   2155.2 /KyushuT422F650AlosA/SLC/070824/
 ...
-'''
+"""
 
-IFGRAM_LIST_FILE = '''
+IFGRAM_LIST_FILE = """
 060713-070113
 060828-070113
 060828-070831
 ...
-'''
+"""
 
 
 ##################################################################
 def read_pairs_list(date12ListFile, dateList=[]):
-    '''Read Pairs List file like below:
+    """Read Pairs List file like below:
     070311-070426
     070311-070611
     ...
-    '''
+    """
     # Read date12 list file
     date12List = sorted(list(np.loadtxt(date12ListFile, dtype=bytes).astype(str)))
 
@@ -61,7 +60,7 @@ def read_pairs_list(date12ListFile, dateList=[]):
     if not dateList:
         dateList = []
         for date12 in date12List:
-            dates = date12.split('_')
+            dates = date12.split('-')
             if not dates[0] in dateList:
                 dateList.append(dates[0])
             if not dates[1] in dateList:
@@ -72,7 +71,7 @@ def read_pairs_list(date12ListFile, dateList=[]):
     # Get pair index
     pairs_idx = []
     for date12 in date12List:
-        dates = date12.split('_')
+        dates = date12.split('-')
         pair_idx = [date6List.index(dates[0]), date6List.index(dates[1])]
         pairs_idx.append(pair_idx)
 
@@ -80,7 +79,7 @@ def read_pairs_list(date12ListFile, dateList=[]):
 
 
 def write_pairs_list(pairs, dateList, outName):
-    '''Write pairs list file.'''
+    """Write pairs list file."""
     dateList6 = ptime.yymmdd(dateList)
     fl = open(outName, 'w')
     for idx in pairs:
@@ -91,7 +90,7 @@ def write_pairs_list(pairs, dateList, outName):
 
 
 def read_igram_pairs(igramFile):
-    '''Read pairs index from hdf5 file'''
+    """Read pairs index from hdf5 file"""
     # Read Igram file
     h5file = h5py.File(igramFile, 'r')
     k = list(h5file.keys())
@@ -119,7 +118,7 @@ def read_igram_pairs(igramFile):
 
 
 def read_baseline_file(baselineFile, exDateList=[]):
-    '''Read bl_list.txt without dates listed in exDateList
+    """Read bl_list.txt without dates listed in exDateList
     # Date  Bperp    dop0/PRF  dop1/PRF   dop2/PRF      PRF    slcDir
     070106     0.0   0.03      0.0000000  0.00000000000 2155.2 /scratch/KyushuT422F650AlosA/SLC/070106/
     070709  2631.9   0.07      0.0000000  0.00000000000 2155.2 /scratch/KyushuT422F650AlosA/SLC/070709/
@@ -130,7 +129,7 @@ def read_baseline_file(baselineFile, exDateList=[]):
         date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile)
         date8List, perpBaseList, dopList, prfList, slcDirList = read_baseline_file(baselineFile,['080520','100726'])
         date8List, perpBaseList = read_baseline_file(baselineFile)[0:2]
-    '''
+    """
     exDateList = ptime.yymmdd(exDateList)
     if not exDateList:
         exDateList = []
@@ -171,18 +170,18 @@ def read_baseline_file(baselineFile, exDateList=[]):
 
 
 def date12_list2index(date12_list, date_list=[]):
-    '''Convert list of date12 string into list of index'''
+    """Convert list of date12 string into list of index"""
     # Get dateList from date12List
     if not date_list:
-        m_dates = [date12.split('_')[0] for date12 in date12_list]
-        s_dates = [date12.split('_')[1] for date12 in date12_list]
+        m_dates = [date12.split('-')[0] for date12 in date12_list]
+        s_dates = [date12.split('-')[1] for date12 in date12_list]
         date_list = list(set(m_dates + s_dates))
     date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(date_list)))
 
     # Get pair index
     pairs_idx = []
     for date12 in date12_list:
-        dates = date12.split('_')
+        dates = date12.split('-')
         pair_idx = [date6_list.index(dates[0]), date6_list.index(dates[1])]
         pairs_idx.append(pair_idx)
 
@@ -190,7 +189,7 @@ def date12_list2index(date12_list, date_list=[]):
 
 
 def get_date12_list(File, dropIfgram=False):
-    '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
+    """Read Date12 info from input file: Pairs.list or multi-group hdf5 file
     Inputs:
         File - string, path/name of input multi-group hdf5 file or text file
         check_drop_ifgram - bool, check the "DROP_IFGRAM" attribute or not for multi-group hdf5 file
@@ -200,7 +199,7 @@ def get_date12_list(File, dropIfgram=False):
         date12List = get_date12_list('unwrapIfgram.h5')
         date12List = get_date12_list('unwrapIfgram.h5', check_drop_ifgram=True)
         date12List = get_date12_list('Pairs.list')
-    '''
+    """
     date12_list = []
     ext = os.path.splitext(File)[1].lower()
     if ext == '.h5':
@@ -219,7 +218,7 @@ def get_date12_list(File, dropIfgram=False):
 
 
 def igram_perp_baseline_list(File):
-    '''Get perpendicular baseline list from input multi_group hdf5 file'''
+    """Get perpendicular baseline list from input multi_group hdf5 file"""
     print(('read perp baseline info from '+File))
     k = readfile.read_attribute(File)['FILE_TYPE']
     h5 = h5py.File(File, 'r')
@@ -233,99 +232,18 @@ def igram_perp_baseline_list(File):
     return p_baseline_list
 
 
-##################################################################
-def azimuth_bandwidth(sensor):
-    '''Find the hardwired azimuth bandwidth in hertz for the given satellite'''
-    if    sensor == 'Ers'  :  bandwidth =  1300.0
-    elif  sensor == 'Env'  :  bandwidth =  1340.0
-    elif  sensor == 'Sen'  :  bandwidth =   327.0   #IW1-327; IW2-313; IW3-314 (Yague-Martinez et al., 2016)
-    elif  sensor == 'Rsat' :  bandwidth =   900.0
-    elif  sensor == 'Rsat2':  bandwidth =   900.0
-
-    elif  sensor == 'Jers' :  bandwidth =   900.0   # FA 11/2015 just copied, need to research
-    elif  sensor == 'Alos' :  bandwidth =  1720.0
-
-    elif  sensor == 'Tsx'  :  bandwidth = 15000.0
-    elif  sensor == 'Csk'  :  bandwidth = 15000.0   # FA 9/2015  shoud be checked
-    elif  sensor == 'Kmps5':  bandwidth = 15000.0   # shong 08/2016 sould be checked
-    else: print('satellite not found'); bandwidth = None
-    return bandwidth
-
-
-def range_bandwidth(sensor):
-    # Range Bandwidth in Hz for the given satellite
-    if    sensor == 'Ers' :  bandwidth = 15.55e6
-    elif  sensor == 'Env' :  bandwidth = 16.00e6
-    elif  sensor == 'Sen' :  bandwidth = 56.5e6    #IW1-56.5; IW2-48.3; IW3-42.79
-
-    elif  sensor == 'Jers':  bandwidth = 15e6      # Jers only has HH pol
-    elif  sensor == 'Alos':  bandwidth = 14e6      # for FBD, 28MHz for FBS
-
-    elif  sensor == 'Tsx' :  bandwidth = 150e6
-    return bandwidth
-
-
-def wavelength(sensor):
-    if    sensor == 'Ers'  :  center_frequency = 5.300e9
-    elif  sensor == 'Env'  :  center_frequency = 5.331e9
-    elif  sensor == 'Sen'  :  center_frequency = 5.405e9
-    elif  sensor == 'Rsat' :  center_frequency = 5.300e9
-    elif  sensor == 'Rsat2':  center_frequency = 5.405e9
-
-    elif  sensor == 'Jers' :  center_frequency = 1.275e9
-    elif  sensor == 'Alos' :  center_frequency = 1.270e9
-    elif  sensor == 'Alos2':  center_frequency = 1.270e9
-
-    elif  sensor == 'Tsx'  :  center_frequency = 9.65e9
-    elif  sensor == 'Csk'  :  center_frequency = 9.60e9
-    elif  sensor == 'Kmps5':  center_frequency = 9.66e9
-
-    c = 299792458   # m/s, speed of light
-    wavelength = c / center_frequency
-    return wavelength
-
-
-def incidence_angle(sensor, inc_angle=None):
-    if not inc_angle:
-        if   sensor == 'Ers' :  inc_angle = 34.3
-        elif sensor == 'Env' :  inc_angle = 34.3
-        elif sensor == 'Sen' :  inc_angle = 32.9     #IW1 - 32.9; IW2 - 38.3; IW3 - 43.1 (Yague-Martinez et al., 2016)
-
-        elif sensor == 'Jers':  inc_angle = 35.21
-        elif sensor == 'Alos':  inc_angle = 34.3     # degree, for ALOS PALSAR Fine mode
-
-        elif sensor == 'Tsx' :  inc_angle = 39.23    # Yunjun 5/2016, for TaizhouTsx, not sure it's for all cases.
-    return inc_angle
-
-
-def signal2noise_ratio(sensor):
-    '''Fine the Signal to Noise Ratio in dB for the given satellite
-    Reference:
-        ERS - Zebker et al., 1994, TGRS
-        Envisat - Guarnieri, A.M., 2013. Introduction to RADAR. POLIMI DEI, Milano.
-        JERS - https://directory.eoportal.org/web/eoportal/satellite-missions/j/jers-1
-        Sentinel-1 - https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-1-sar/acquisition-modes/interferometric-wide-swath
-    '''
-    if   sensor.startswith('Ers') :  SNR = 11.7
-    elif sensor.startswith('Env') :  SNR = 19.5
-    elif sensor.startswith('Jers'):  SNR = 14
-    elif sensor.startswith('S'):     SNR = 22
-    else: print('satellite not found'); SNR = None
-    return SNR
-
-
 def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
-    '''Critical Perpendicular Baseline for each satellite'''
+    """Critical Perpendicular Baseline for each satellite"""
     # Jers: 5.712e3 m (near_range=688849.0551m)
     # Alos: 6.331e3 m (near_range=842663.2917m)
     # Tsx : 8.053e3 m (near_range=634509.1271m)
 
     c = 299792458   # m/s, speed of light
-    wvl = wavelength(sensor)
+    wvl = sensor.wavelength(sensor)
     # Yunjun 5/2016, case for Jers, need a automatic way to get this number
     near_range = 688849
-    rg_bandwidth = range_bandwidth(sensor)
-    inc_angle = incidence_angle(sensor, inc_angle) / 180 * np.pi
+    rg_bandwidth = sensor.range_bandwidth(sensor)
+    inc_angle = sensor.incidence_angle(sensor, inc_angle) / 180 * np.pi
     Bperp_c = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
     if print_msg:
         print(('Critical Perpendicular Baseline: '+str(Bperp_c)+' m'))
@@ -333,13 +251,13 @@ def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
 
 
 def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
-    '''Calculate Overlap Percentage of Doppler frequency in azimuth direction
+    """Calculate Overlap Percentage of Doppler frequency in azimuth direction
     Inputs:
         dop_a/b      : np.array of 3 floats, doppler frequency
         bandwidth_az : float, azimuth bandwidth
     Output:
         dop_overlap  : float, doppler frequency overlap between a & b.
-    '''
+    """
     # Calculate mean Doppler difference between a and b
     no_of_rangepix = 5000
     ddiff = np.zeros(10)
@@ -361,12 +279,12 @@ def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
     return dop_overlap
 
 
-def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', inc_angle=22.8,
+def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor='Env', inc_angle=22.8,
                        decor_time=200.0, coh_resid=0.2, display=False):
-    '''Simulate coherence for a given set of interferograms
+    """Simulate coherence for a given set of interferograms
     Inputs:
         date12_list  - list of string in YYMMDD-YYMMDD format, indicating pairs configuration
-        baselineFile - string, path of baseline list text file
+        baseline_file - string, path of baseline list text file
         sensor     - string, SAR sensor
         inc_angle  - float, incidence angle
         decor_time - float / 2D np.array in size of (1, pixel_num)
@@ -390,17 +308,17 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
         Parizzi, A., Cong, X., & Eineder, M. (2009). First Results from Multifrequency Interferometry.
             A comparison of different decorrelation time constants at L, C, and X Band. ESA Scientific
             Publications(SP-677), 1-5. 
-    '''
-    date8_list, pbase_list, dop_list = read_baseline_file(baselineFile)[0:3]
+    """
+    date8_list, pbase_list, dop_list = read_baseline_file(baseline_file)[0:3]
     date6_list = ptime.yymmdd(date8_list)
     tbase_list = ptime.date_list2tbase(date8_list)[0]
 
     # Thermal decorrelation (Zebker and Villasenor, 1992, Eq.4)
-    SNR = signal2noise_ratio(sensor)
+    SNR = sensor.signal2noise_ratio(sensor)
     coh_thermal = 1. / (1. + 1./SNR)
 
     pbase_c = critical_perp_baseline(sensor, inc_angle)
-    bandwidth_az = azimuth_bandwidth(sensor)
+    bandwidth_az = sensor.azimuth_bandwidth(sensor)
 
     ifgram_num = len(date12_list)
     if isinstance(decor_time, (int, float)):
@@ -461,7 +379,7 @@ def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', in
 
 ##################################################################
 def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, dop_overlap_min=0.15):
-    '''Remove pairs/interoferogram with doppler overlap larger than critical value
+    """Remove pairs/interoferogram with doppler overlap larger than critical value
     Inputs:
         date12_list : list of string, for date12 in YYMMDD-YYMMDD format
         date_list   : list of string, for date in YYMMDD/YYYYMMDD format, optional
@@ -470,13 +388,13 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
         dop_overlap_min : float, minimum overlap of azimuth Doppler frequency
     Outputs:
         date12_list : list of string, for date12 in YYMMDD-YYMMDD format
-    '''
+    """
     if not date12_list:
         return []
     # Get date6_list
     if not date_list:
-        m_dates = [date12.split('_')[0] for date12 in date12_list]
-        s_dates = [date12.split('_')[1] for date12 in date12_list]
+        m_dates = [date12.split('-')[0] for date12 in date12_list]
+        s_dates = [date12.split('-')[1] for date12 in date12_list]
         date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
         if not len(date_list) == len(pbase_list):
             print('ERROR: number of existing dates is not equal to number of perp baseline!')
@@ -488,7 +406,7 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
     # Threshold
     date12_list_out = []
     for date12 in date12_list:
-        date1, date2 = date12.split('_')
+        date1, date2 = date12.split('-')
         idx1 = date6_list.index(date1)
         idx2 = date6_list.index(date2)
         dop_overlap = calculate_doppler_overlap(dop_list[idx1],
@@ -500,7 +418,7 @@ def threshold_doppler_overlap(date12_list, date_list, dop_list, bandwidth_az, do
 
 
 def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase_min=0.0):
-    '''Remove pairs/interoferogram out of [pbase_min, pbase_max]
+    """Remove pairs/interoferogram out of [pbase_min, pbase_max]
     Inputs:
         date12_list : list of string for date12 in YYMMDD-YYMMDD format
         date_list   : list of string for date in YYMMDD/YYYYMMDD format, optional
@@ -511,13 +429,13 @@ def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase
         date12_list_out : list of string for date12 in YYMMDD-YYMMDD format
     Example:
         date12_list = threshold_perp_baseline(date12_list, date_list, pbase_list, 500)
-    '''
+    """
     if not date12_list:
         return []
     # Get date6_list
     if not date_list:
-        m_dates = [date12.split('_')[0] for date12 in date12_list]
-        s_dates = [date12.split('_')[1] for date12 in date12_list]
+        m_dates = [date12.split('-')[0] for date12 in date12_list]
+        s_dates = [date12.split('-')[1] for date12 in date12_list]
         date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
         if not len(date_list) == len(pbase_list):
             print('ERROR: number of existing dates is not equal to number of perp baseline!')
@@ -529,7 +447,7 @@ def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase
     # Threshold
     date12_list_out = []
     for date12 in date12_list:
-        date1, date2 = date12.split('_')
+        date1, date2 = date12.split('-')
         idx1 = date6_list.index(date1)
         idx2 = date6_list.index(date2)
         pbase = abs(pbase_list[idx1] - pbase_list[idx2])
@@ -539,7 +457,7 @@ def threshold_perp_baseline(date12_list, date_list, pbase_list, pbase_max, pbase
 
 
 def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btemp_min=0.0):
-    '''Remove pairs/interferograms out of min/max/seasonal temporal baseline limits
+    """Remove pairs/interferograms out of min/max/seasonal temporal baseline limits
     Inputs:
         date12_list : list of string for date12 in YYMMDD-YYMMDD format
         btemp_max   : float, maximum temporal baseline
@@ -550,12 +468,12 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     Example:
         date12_list = threshold_temporal_baseline(date12_list, 200)
         date12_list = threshold_temporal_baseline(date12_list, 200, False)
-    '''
+    """
     if not date12_list:
         return []
     # Get date list and tbase list
-    m_dates = [date12.split('_')[0] for date12 in date12_list]
-    s_dates = [date12.split('_')[1] for date12 in date12_list]
+    m_dates = [date12.split('-')[0] for date12 in date12_list]
+    s_dates = [date12.split('-')[1] for date12 in date12_list]
     date8_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
     date6_list = ptime.yymmdd(date8_list)
     tbase_list = ptime.date_list2tbase(date8_list)[0]
@@ -563,7 +481,7 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     # Threshold
     date12_list_out = []
     for date12 in date12_list:
-        date1, date2 = date12.split('_')
+        date1, date2 = date12.split('-')
         idx1 = date6_list.index(date1)
         idx2 = date6_list.index(date2)
         tbase = int(abs(tbase_list[idx1] - tbase_list[idx2]))
@@ -575,7 +493,7 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
 
 
 def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
-    '''Return coherence matrix based on input date12 list and its coherence
+    """Return coherence matrix based on input date12 list and its coherence
     Inputs:
         date12_list - list of string in YYMMDD-YYMMDD format
         coh_list    - list of float, average coherence for each interferograms
@@ -583,17 +501,18 @@ def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
         coh_matrix  - 2D np.array with dimension length = date num
                       np.nan value for interferograms non-existed.
                       1.0 for diagonal elements
-    '''
+    """
     # Get date list
-    m_dates = [date12.split('_')[0] for date12 in date12_list]
-    s_dates = [date12.split('_')[1] for date12 in date12_list]
+    date12_list = ptime.yymmdd_date12(date12_list)
+    m_dates = [date12.split('-')[0] for date12 in date12_list]
+    s_dates = [date12.split('-')[1] for date12 in date12_list]
     date_list = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
     date_num = len(date_list)
 
     coh_mat = np.zeros([date_num, date_num])
     coh_mat[:] = np.nan
     for date12 in date12_list:
-        date1, date2 = date12.split('_')
+        date1, date2 = date12.split('-')
         idx1 = date_list.index(date1)
         idx2 = date_list.index(date2)
         coh = coh_list[date12_list.index(date12)]
@@ -607,13 +526,13 @@ def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
 
 
 def threshold_coherence_based_mst(date12_list, coh_list):
-    '''Return a minimum spanning tree of network based on the coherence inverse.
+    """Return a minimum spanning tree of network based on the coherence inverse.
     Inputs:
         date12_list - list of string in YYMMDD-YYMMDD format
         coh_list    - list of float, average coherence for each interferogram
     Output:
         mst_date12_list - list of string in YYMMDD-YYMMDD format, for MST network of interferograms 
-    '''
+    """
     # coh_list --> coh_mat --> weight_mat
     coh_mat = coherence_matrix(date12_list, coh_list)
     mask = ~np.isnan(coh_mat)
@@ -626,8 +545,8 @@ def threshold_coherence_based_mst(date12_list, coh_list):
     mst_mat_csr = minimum_spanning_tree(wei_mat_csr)
 
     # Get date6_list
-    m_dates = [date12.split('_')[0] for date12 in date12_list]
-    s_dates = [date12.split('_')[1] for date12 in date12_list]
+    m_dates = [date12.split('-')[0] for date12 in date12_list]
+    s_dates = [date12.split('-')[1] for date12 in date12_list]
     date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(list(set(m_dates + s_dates)))))
 
     # Convert MST index matrix into date12 list
@@ -663,13 +582,13 @@ def pair_merge(pairs1, pairs2):
 
 
 def select_pairs_all(date_list):
-    '''Select All Possible Pairs/Interferograms
+    """Select All Possible Pairs/Interferograms
     Input : date_list   - list of date in YYMMDD/YYYYMMDD format
     Output: date12_list - list date12 in YYMMDD-YYMMDD format
     Reference:
         Berardino, P., G. Fornaro, R. Lanari, and E. Sansosti (2002), A new algorithm for surface deformation monitoring
         based on small baseline differential SAR interferograms, IEEE TGRS, 40(11), 2375-2383.
-    '''
+    """
     date8_list = sorted(ptime.yyyymmdd(date_list))
     date6_list = ptime.yymmdd(date8_list)
     date12_list = list(itertools.combinations(date6_list, 2))
@@ -678,13 +597,13 @@ def select_pairs_all(date_list):
 
 
 def select_pairs_sequential(date_list, increment_num=2):
-    '''Select Pairs in a Sequential way:
+    """Select Pairs in a Sequential way:
         For each acquisition, find its increment_num nearest acquisitions in the past time.
     Inputs:
         date_list  : list of date in YYMMDD/YYYYMMDD format
     Reference:
         Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series, IEEE TGRS, 51(7), 4249-4259.
-    '''
+    """
     date8_list = sorted(ptime.yyyymmdd(date_list))
     date6_list = ptime.yymmdd(date8_list)
     date_idx_list = list(range(len(date6_list)))
@@ -704,7 +623,7 @@ def select_pairs_sequential(date_list, increment_num=2):
 
 
 def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
-    '''Select Pairs in a hierarchical way using list of temporal and perpendicular baseline thresholds
+    """Select Pairs in a hierarchical way using list of temporal and perpendicular baseline thresholds
         For each temporal/perpendicular combination, select all possible pairs; and then merge all combination results
         together for the final output (Zhao, 2015).
     Inputs:
@@ -717,7 +636,7 @@ def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
     Reference:
         Zhao, W., (2015), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
         dissertation, Univ. of Miami, Section 6.3.
-    '''
+    """
     # Get all date12
     date12_list_all = select_pairs_all(date_list)
 
@@ -741,7 +660,7 @@ def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
 
 
 def select_pairs_delaunay(date_list, pbase_list, norm=True):
-    '''Select Pairs using Delaunay Triangulation based on temporal/perpendicular baselines
+    """Select Pairs using Delaunay Triangulation based on temporal/perpendicular baselines
     Inputs:
         date_list  : list of date in YYMMDD/YYYYMMDD format
         pbase_list : list of float, perpendicular spatial baseline
@@ -754,7 +673,7 @@ def select_pairs_delaunay(date_list, pbase_list, norm=True):
         Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
         of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
         Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
-    '''
+    """
     # Get temporal baseline in days
     date6_list = ptime.yymmdd(date_list)
     date8_list = ptime.yyyymmdd(date_list)
@@ -776,7 +695,7 @@ def select_pairs_delaunay(date_list, pbase_list, norm=True):
 
 
 def select_pairs_mst(date_list, pbase_list):
-    '''Select Pairs using Minimum Spanning Tree technique
+    """Select Pairs using Minimum Spanning Tree technique
         Connection Cost is calculated using the baseline distance in perp and scaled temporal baseline (Pepe and Lanari,
         2006, TGRS) plane.
     Inputs:
@@ -786,7 +705,7 @@ def select_pairs_mst(date_list, pbase_list):
         Pepe, A., and R. Lanari (2006), On the extension of the minimum cost flow algorithm for phase unwrapping
         of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
         Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
-    '''
+    """
     # Get temporal baseline in days
     date6_list = ptime.yymmdd(date_list)
     date8_list = ptime.yyyymmdd(date_list)
@@ -820,14 +739,14 @@ def select_pairs_mst(date_list, pbase_list):
 
 
 def select_pairs_star(date_list, m_date=None, pbase_list=[]):
-    '''Select Star-like network/interferograms/pairs, it's a single master network, similar to PS approach.
+    """Select Star-like network/interferograms/pairs, it's a single master network, similar to PS approach.
     Usage:
         m_date : master date, choose it based on the following cretiria:
                  1) near the center in temporal and spatial baseline
                  2) prefer winter season than summer season for less temporal decorrelation
     Reference:
         Ferretti, A., C. Prati, and F. Rocca (2001), Permanent scatterers in SAR interferometry, IEEE TGRS, 39(1), 8-20.
-    '''
+    """
     date8_list = sorted(ptime.yyyymmdd(date_list))
     date6_list = ptime.yymmdd(date8_list)
 
@@ -855,9 +774,9 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[]):
 
 
 def select_master_date(date_list, pbase_list=[]):
-    '''Select super master date based on input temporal and/or perpendicular baseline info.
+    """Select super master date based on input temporal and/or perpendicular baseline info.
     Return master date in YYYYMMDD format.
-    '''
+    """
     date8_list = ptime.yyyymmdd(date_list)
     if not pbase_list:
         # Choose date in the middle
@@ -886,13 +805,13 @@ def select_master_date(date_list, pbase_list=[]):
 
 
 def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None):
-    '''Select reference interferogram based on input temp/perp baseline info
+    """Select reference interferogram based on input temp/perp baseline info
     If master_date is specified, select its closest slave_date, which is newer than master_date;
         otherwise, choose the closest pair among all pairs as master interferogram.
     Example:
         master_date12   = pnet.select_master_ifgram(date12_list, date_list, pbase_list)
         '080211-080326' = pnet.select_master_ifgram(date12_list, date_list, pbase_list, m_date='080211')
-    '''
+    """
     pbase_array = np.array(pbase_list, dtype='float64')
     # Get temporal baseline
     date8_list = ptime.yyyymmdd(date_list)
@@ -903,8 +822,8 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
     tbase_array *= temp2perp_scale
 
     # Calculate sqrt of temp/perp baseline for input pairs
-    idx1 = np.array([date6_list.index(date12.split('_')[0]) for date12 in date12_list])
-    idx2 = np.array([date6_list.index(date12.split('_')[1]) for date12 in date12_list])
+    idx1 = np.array([date6_list.index(date12.split('-')[0]) for date12 in date12_list])
+    idx2 = np.array([date6_list.index(date12.split('-')[1]) for date12 in date12_list])
     base_distance = np.sqrt((tbase_array[idx2] - tbase_array[idx1])**2 +
                             (pbase_array[idx2] - pbase_array[idx1])**2)
 
