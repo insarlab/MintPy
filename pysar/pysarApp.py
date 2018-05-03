@@ -774,8 +774,8 @@ def main(iargs=None):
                                                                           inps.tempCohFile,
                                                                           inps.timeseriesFile,
                                                                           inps.geomFile,
-                                                                          inps.templateFile,
-                                                                          inps.lookupFile)
+                                                                          inps.lookupFile,
+                                                                          inps.templateFile)
             print(geoCmd)
             status = subprocess.Popen(geoCmd, shell=True).wait()
             if status is not 0:

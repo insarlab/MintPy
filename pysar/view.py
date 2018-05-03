@@ -935,7 +935,8 @@ def read_data4figure(inps, i_start, i_end):
             # reference pixel info in unwrapPhase
             if inps.dsetFamilyList[0] == 'unwrapPhase' and inps.file_ref_yx:
                 for i in range(data.shape[0]):
-                    data[i, :, :] -= data[i, inps.file_ref_yx[0], inps.file_ref_yx[1]]
+                    mask = data[i, :, :] != 0.
+                    data[i, mask] -= data[i, inps.file_ref_yx[0], inps.file_ref_yx[1]]
 
     # slow reading with one 2D matrix at a time
     else:

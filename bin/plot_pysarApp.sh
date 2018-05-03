@@ -44,7 +44,7 @@ fi
 
 ## Loaded Dataset
 if [ $plot_loaded_data -eq 1 ]; then
-    view.py --nodisplay INPUTS/ifgramStack.h5  unwrapPhase  --mask no   | tee -a $log_file
+    view.py --nodisplay INPUTS/ifgramStack.h5  unwrapPhase  --zero-mask | tee -a $log_file
     view.py --nodisplay INPUTS/ifgramStack.h5  coherence    --mask no   | tee -a $log_file
 fi
 
