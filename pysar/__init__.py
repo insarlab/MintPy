@@ -6,8 +6,6 @@
 
 
 from __future__ import print_function
-from .version import *
-__version__ = release_version
 
 
 import sys
@@ -19,6 +17,8 @@ sys.path.insert(1, os.path.join(pysar_path, 'objects'))
 sys.path.insert(1, os.path.join(pysar_path, 'simulation'))
 sys.path.insert(1, os.path.join(pysar_path, 'utils'))
 
+from pysar.version import *
+__version__ = release_version
 
 try:
     os.environ['PYSAR_HOME']
