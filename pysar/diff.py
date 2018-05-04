@@ -43,7 +43,9 @@ def diff_file(file1, file2, outFile=None, force=False):
     if not outFile:
         fbase, fext = os.path.splitext(file1)
         outFile = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2))[0], fext)
-    print('{} - {} --> {}'.format(file1, file2, outFile))
+    print('{} - {} --> {}'.format(os.path.basename(file1),
+                                  os.path.basename(file2),
+                                  os.path.basename(outFile)))
 
     # Read basic info
     atr1 = readfile.read_attribute(file1)

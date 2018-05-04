@@ -237,7 +237,7 @@ def create_parser():
 
     parser.add_argument('templateFileCustom', nargs='?',
                         help='custom template with option settings.\n' +
-                             "It's equivalent to None, if pysarApp_template.txt is input, as it will be read always.")
+                             "It's equivalent to None if default pysarApp_template.txt is input.")
     parser.add_argument('--dir', dest='workDir',
                         help='PySAR working directory, default is:\n' +
                              'a) current directory, or\n' +
@@ -264,7 +264,8 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    if inps.templateFileCustom and os.path.basename(inps.templateFileCustom) == 'pysarApp_template.txt':
+    if (inps.templateFileCustom 
+            and os.path.basename(inps.templateFileCustom) == 'pysarApp_template.txt'):
         inps.templateFileCustom = None
     return inps
 
@@ -276,7 +277,8 @@ def copy_aux_file(inps):
                 'SLC/summary*slc.jpg']
     try:
         projectDir = os.path.join(os.getenv('SCRATCHDIR'), inps.projectName)
-        fileList = ut.get_file_list([os.path.join(projectDir, i) for i in fileList], abspath=True)
+        fileList = ut.get_file_list([os.path.join(projectDir, i) for i in fileList],
+                                    abspath=True)
         for file in fileList:
             if ut.update_file(os.path.basename(file), file, check_readable=False):
                 shutil.copy2(file, inps.workDir)
@@ -302,7 +304,8 @@ def read_template(inps):
     templateCustom = None
     if inps.templateFileCustom:
         # Copy custom template file to work directory
-        if ut.update_file(os.path.basename(inps.templateFileCustom), inps.templateFileCustom, check_readable=False):
+        if ut.update_file(os.path.basename(inps.templateFileCustom),
+                          inps.templateFileCustom, check_readable=False):
             shutil.copy2(inps.templateFileCustom, inps.workDir)
 
         # Read custom template
@@ -573,11 +576,12 @@ def main(iargs=None):
         if inps.tropMethod == 'height_correlation':
             outName = '{}_tropHgt.h5'.format(fbase)
             print('tropospheric delay correction with height-correlation approach')
-            tropCmd = 'tropcor_phase_elevation.py {} -d {} -p {} -m {} -o {}'.format(inps.timeseriesFile,
-                                                                                     inps.geomFile,
-                                                                                     inps.tropPolyOrder,
-                                                                                     inps.maskFile,
-                                                                                     outName)
+            tropCmd = ('tropcor_phase_elevation.py {t} -d {d} -p {p}'
+                       ' -m {m} -o {o}').format(t=inps.timeseriesFile,
+                                                d=inps.geomFile,
+                                                p=inps.tropPolyOrder,
+                                                m=inps.maskFile,
+                                                o=outName)
             print(tropCmd)
             if ut.update_file(outName, inps.timeseriesFile):
                 status = subprocess.Popen(tropCmd, shell=True).wait()
@@ -589,13 +593,15 @@ def main(iargs=None):
         elif inps.tropMethod == 'pyaps':
             inps.weatherDir = template['pysar.troposphericDelay.weatherDir']
             outName = '{}_{}.h5'.format(fbase, inps.tropModel)
-            print('Atmospheric correction using Weather Re-analysis dataset (PyAPS, Jolivet et al., 2011)')
+            print(('Atmospheric correction using Weather Re-analysis dataset'
+                   ' (PyAPS, Jolivet et al., 2011)'))
             print('Weather Re-analysis dataset: '+inps.tropModel)
-            tropCmd = 'tropcor_pyaps.py -f {} --model {} --dem {} -i {} -w {}'.format(inps.timeseriesFile,
-                                                                                      inps.tropModel,
-                                                                                      inps.geomFile,
-                                                                                      inps.geomFile,
-                                                                                      inps.weatherDir)
+            tropCmd = ('tropcor_pyaps.py -f {t} --model {m} --dem {d}'
+                       ' -i {i} -w {w}').format(t=inps.timeseriesFile,
+                                                m=inps.tropModel,
+                                                d=inps.geomFile,
+                                                i=inps.geomFile,
+                                                w=inps.weatherDir)
             print(tropCmd)
             if ut.update_file(outName, inps.timeseriesFile):
                 if inps.tropFile:
@@ -690,7 +696,8 @@ def main(iargs=None):
     if inps.derampMethod:
         print('Phase Ramp Removal method: {}'.format(inps.derampMethod))
         if inps.geocoded and inps.derampMethod in ['baseline_cor', 'base_trop_cor']:
-            warnings.warn('dataset is in geo coordinates, can not apply {} method'.format(inps.derampMethod))
+            warnings.warn(('dataset is in geo coordinates,'
+                           ' can not apply {} method').format(inps.derampMethod))
             print('skip deramping and continue.')
 
         # Get executable command and output name
@@ -710,12 +717,14 @@ def main(iargs=None):
                                                          inps.maskFile)
 
         elif inps.derampMethod in ['base_trop_cor', 'basetropcor', 'baselinetropcor']:
-            print('Joint estimation of Baseline error and tropospheric delay [height-correlation approach]')
+            print('Joint estimation of Baseline error and tropospheric delay')
+            print('\t[height-correlation approach]')
             outName = '{}_baseTropCor.h5'.format(fbase)
-            derampCmd = 'baseline_trop.py {} {} {} range_and_azimuth {}'.format(inps.timeseriesFile,
-                                                                                inps.geomFile,
-                                                                                inps.tropPolyOrder,
-                                                                                inps.maskFile)
+            derampCmd = ('baseline_trop.py {t} {d} {p}'
+                         ' range_and_azimuth {m}').format(t=inps.timeseriesFile,
+                                                          d=inps.geomFile,
+                                                          p=inps.tropPolyOrder,
+                                                          m=inps.maskFile)
         else:
             warnings.warn('Unrecognized phase ramp method: {}'.format(template['pysar.deramp']))
 
@@ -725,7 +734,7 @@ def main(iargs=None):
             if ut.update_file(outName, inps.timeseriesFile):
                 status = subprocess.Popen(derampCmd, shell=True).wait()
                 if status is not 0:
-                    print('\nError while removing phase ramp for each acquisition of time-series.\n')
+                    print('\nError while removing phase ramp for time-series.\n')
                     sys.exit(-1)
             inps.timeseriesFile = outName
     else:
@@ -770,27 +779,33 @@ def main(iargs=None):
     if not inps.geocoded:
         if template['pysar.geocode'] is True:
             print('\n--------------------------------------------')
-            geoCmd = 'geocode.py {} {} {} {} -l {} -t {} --update'.format(inps.velFile,
-                                                                          inps.tempCohFile,
-                                                                          inps.timeseriesFile,
-                                                                          inps.geomFile,
-                                                                          inps.lookupFile,
-                                                                          inps.templateFile)
+            geo_dir = os.path.abspath('./GEOCODE')
+            if not os.path.isdir(geo_dir):
+                os.makedirs(geo_dir)
+                print('create directory: {}'.format(geo_dir))
+            geoCmd = ('geocode.py {v} {c} {t} {g} -l {l} -t {e}'
+                      ' --outdir {d} --update').format(v=inps.velFile,
+                                                       c=inps.tempCohFile,
+                                                       t=inps.timeseriesFile,
+                                                       g=inps.geomFile,
+                                                       l=inps.lookupFile,
+                                                       e=inps.templateFile,
+                                                       d=geo_dir)
             print(geoCmd)
             status = subprocess.Popen(geoCmd, shell=True).wait()
             if status is not 0:
                 print('\nError while geocoding.\n')
                 # sys.exit(-1)
             else:
-                inps.velFile = 'geo_' + inps.velFile
-                inps.tempCohFile = 'geo_' + inps.tempCohFile
-                inps.timeseriesFile = 'geo_' + inps.timeseriesFile
-                inps.geomFile = 'geo_'+os.path.basename(inps.geomFile)
+                inps.velFile        = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.velFile))
+                inps.tempCohFile    = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.tempCohFile))
+                inps.timeseriesFile = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.timeseriesFile))
+                inps.geomFile       = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.geomFile))
                 inps.geocoded = True
 
             # generate mask based on geocoded temporal coherence
             print('\n--------------------------------------------')
-            outName = 'geo_maskTempCoh.h5'
+            outName = os.path.join(geo_dir, 'geo_maskTempCoh.h5')
             genCmd = 'generate_mask.py {} -m {} -o {}'.format(inps.tempCohFile,
                                                               inps.minTempCoh,
                                                               outName)
@@ -816,9 +831,9 @@ def main(iargs=None):
     # Save to Google Earth KML file
     if inps.geocoded and inps.velFile and template['pysar.save.kml'] is True:
         print('\n--------------------------------------------')
-        print('creating Google Earth KMZ file for geocoded velocity file: {} ...'.format(inps.velFile))
-        outName = os.path.splitext(inps.velFile)[0]+'.kmz'
-        kmlCmd = 'save_kml.py {}'.format(inps.velFile)
+        print('creating Google Earth KMZ file for geocoded velocity file: ...')
+        outName = '{}.kmz'.format(os.path.splitext(os.path.basename(inps.velFile))[0])
+        kmlCmd = 'save_kml.py {} -o {}'.format(inps.velFile, outName)
         print(kmlCmd)
         if ut.update_file(outName, inps.velFile, check_readable=False):
             status = subprocess.Popen(kmlCmd, shell=True).wait()
@@ -837,18 +852,21 @@ def main(iargs=None):
 
             # Save to HDF-EOS5 format
             print('--------------------------------------------')
-            hdfeos5Cmd = 'save_hdfeos5.py {} -c {} -m {} -g {} -t {}'.format(inps.timeseriesFile,
-                                                                             inps.tempCohFile,
-                                                                             inps.maskFile,
-                                                                             inps.geomFile,
-                                                                             inps.templateFile)
+            hdfeos5Cmd = ('save_hdfeos5.py {t} -c {c} -m {m} -g {g}'
+                          ' -t {e}').format(t=inps.timeseriesFile,
+                                            c=inps.tempCohFile,
+                                            m=inps.maskFile,
+                                            g=inps.geomFile,
+                                            e=inps.templateFile)
             print(hdfeos5Cmd)
             SAT = hdfeos5.get_mission_name(atr)
             try:
                 inps.hdfeos5File = ut.get_file_list('{}_*.he5'.format(SAT))[0]
             except:
                 inps.hdfeos5File = None
-            if ut.update_file(inps.hdfeos5File, [inps.timeseriesFile, inps.tempCohFile, inps.maskFile,
+            if ut.update_file(inps.hdfeos5File, [inps.timeseriesFile,
+                                                 inps.tempCohFile,
+                                                 inps.maskFile,
                                                  inps.geomFile]):
                 status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
                 # if status is not 0:
@@ -864,7 +882,8 @@ def main(iargs=None):
 
         # Copy to workding directory if not existed yet.
         if not os.path.isfile('./'+inps.plotShellFile):
-            print('copy $PYSAR_HOME/bin/{} to work directory: {}'.format(inps.plotShellFile, inps.workDir))
+            print('copy $PYSAR_HOME/bin/{} to work directory: {}'.format(inps.plotShellFile,
+                                                                         inps.workDir))
             try:
                 shutil.copy2(ut.which(inps.plotShellFile), './')
             except:

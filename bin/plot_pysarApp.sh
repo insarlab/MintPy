@@ -16,7 +16,7 @@ plot_the_rest=1
 
 # Default file name
 mask_file='maskTempCoh.h5'
-geo_mask_file='geo_maskTempCoh.h5'
+geo_mask_file='./GEOCODE/geo_maskTempCoh.h5'
 
 ## Log File
 log_file='plot_pysarApp.log'
@@ -90,12 +90,10 @@ fi
 
 ## Geo coordinates for UNAVCO Time-series InSAR Archive Product
 if [ $plot_geocoded_data -eq 1 ]; then
-    view.py --nodisplay --lalo-label geo_maskTempCoh.h5          -c gray -m 0 -M 1            | tee -a $log_file
-    view.py --nodisplay --lalo-label geo_temporalCoherence.h5    -c gray -m 0 -M 1            | tee -a $log_file
-    view.py --nodisplay --lalo-label geo_velocity.h5             --mask $geo_mask_file -u cm  | tee -a $log_file
-    view.py --nodisplay --lalo-label geo_timeseries_LODcor*.h5 --noaxis --mask $geo_mask_file -u cm  | tee -a $log_file
-    view.py --nodisplay --lalo-label geo_timeseries_ECMWF*.h5  --noaxis --mask $geo_mask_file -u cm  | tee -a $log_file
-    view.py --nodisplay --lalo-label geo_timeseries_demErr*.h5 --noaxis --mask $geo_mask_file -u cm  | tee -a $log_file
+    view.py --nodisplay --lalo-label ./GEOCODE/geo_maskTempCoh.h5          -c gray -m 0 -M 1            | tee -a $log_file
+    view.py --nodisplay --lalo-label ./GEOCODE/geo_temporalCoherence.h5    -c gray -m 0 -M 1            | tee -a $log_file
+    view.py --nodisplay --lalo-label ./GEOCODE/geo_velocity.h5              --mask $geo_mask_file -u cm | tee -a $log_file
+    view.py --nodisplay --lalo-label ./GEOCODE/geo_timeseries_*.h5 --noaxis --mask $geo_mask_file -u cm | tee -a $log_file
 fi
 
 

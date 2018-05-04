@@ -25,7 +25,9 @@ from mpl_toolkits.basemap import cm, pyproj
 
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry
 from pysar.utils import readfile, ptime, utils as ut, plot as pp
-from pysar import mask, multilook as mli, subset
+from pysar.mask import mask_matrix
+from pysar.multilook import multilook_data
+from pysar import subset
 
 
 ##################################################################################################
@@ -149,21 +151,15 @@ def create_parser():
                           'Default is 200 meters.')
 
     # Subset
-    subset = parser.add_argument_group('Subset', 'Display dataset in subset range')
-    subset.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar='X',
-                        help='subset display in x/cross-track/range direction')
-    subset.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar='Y',
-                        help='subset display in y/along-track/azimuth direction')
-    subset.add_argument('-l', '--lat', dest='subset_lat', type=float, nargs=2, metavar='LAT',
-                        help='subset display in latitude')
-    subset.add_argument('-L', '--lon', dest='subset_lon', type=float, nargs=2, metavar='LON',
+    sub = parser.add_argument_group('Subset', 'Display dataset in subset range')
+    sub.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar='X',
+                     help='subset display in x/cross-track/range direction')
+    sub.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar='Y',
+                     help='subset display in y/along-track/azimuth direction')
+    sub.add_argument('-l', '--lat', dest='subset_lat', type=float, nargs=2, metavar='LAT',
+                     help='subset display in latitude')
+    sub.add_argument('-L', '--lon', dest='subset_lon', type=float, nargs=2, metavar='LON',
                         help='subset display in longitude')
-    # subset.add_argument('--pixel-box', dest='pix_box', type=tuple,\
-    #                    help='subset display in box define in pixel coord (x_start, y_start, x_end, y_end).\n'
-    #                         'i.e. (100, 500, 1100, 2500)')
-    # subset.add_argument('--geo-box', dest='geo_box', type=tuple,\
-    #                    help='subset display in box define in geo coord (UL_lon, UL_lat, LR_lon, LR_lat).\n'
-    #                         'i.e. (130.2, 33.8, 131.2, 31.8)')
 
     # Reference
     ref = parser.add_argument_group('Reference', 'Show / Modify reference in time and space for display')
@@ -317,9 +313,9 @@ def update_inps_with_file_metadata(inps, metadata):
     # default mask file:
     if not inps.mask_file and inps.key in ['velocity', 'timeseries'] and 'masked' not in inps.file:
         if os.path.basename(metadata['FILE_PATH']).startswith('geo_'):
-            inps.mask_file = 'geo_maskTempCoh.h5'
+            inps.mask_file = os.path.join(os.path.dirname(inps.file), 'geo_maskTempCoh.h5')
         else:
-            inps.mask_file = 'maskTempCoh.h5'
+            inps.mask_file = os.path.join(os.path.dirname(inps.file), 'maskTempCoh.h5')
         if not os.path.isfile(inps.mask_file):
             inps.mask_file = None
 
@@ -428,7 +424,7 @@ def update_data_with_plot_inps(data, metadata, inps):
 
     # Multilook
     if inps.multilook and inps.multilook_num > 1:
-        data = mli.multilook_data(data, inps.multilook_num, inps.multilook_num)
+        data = multilook_data(data, inps.multilook_num, inps.multilook_num)
 
     # Convert data to display unit and wrap
     data, inps.disp_unit, inps.disp_scale, inps.wrap = pp.scale_data4disp_unit_and_rewrap(data, metadata=metadata,
@@ -477,7 +473,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
     # 1.6 Min / Max - Data/Display
     inps.data_min = np.nanmin(data)
     inps.data_max = np.nanmax(data)
-    data_mli = mli.multilook_data(data, 10, 10)
+    data_mli = multilook_data(data, 10, 10)
     if inps.disp_min is None:
         inps.disp_min = np.nanmin(data_mli)
     if inps.disp_max is None:
@@ -961,11 +957,11 @@ def read_data4figure(inps, i_start, i_end):
 
     # multilook
     if inps.multilook:
-        data = mli.multilook_data(data, inps.multilook_num, inps.multilook_num)
+        data = multilook_data(data, inps.multilook_num, inps.multilook_num)
 
     # mask
     if inps.msk is not None:
-        data = mask.mask_matrix(data, inps.msk)
+        data = mask_matrix(data, inps.msk)
     if inps.zero_mask:
         data[data == 0.] = np.nan
     return data
@@ -1068,7 +1064,7 @@ def plot_figure(inps, j, metadata):
         data, inps = update_data_with_plot_inps(data, metadata, inps)
         if (not inps.disp_min and not inps.disp_max 
                 and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)):
-            data_mli = mli.multilook_data(data, 10, 10)
+            data_mli = multilook_data(data, 10, 10)
             inps.disp_min = np.nanmin(data_mli)
             inps.disp_max = np.nanmax(data_mli)
             del data_mli
@@ -1126,9 +1122,7 @@ def prepare4multi_subplots(inps, metadata):
                                                                    inps.fig_row_num,
                                                                    inps.fig_col_num)
         if inps.msk is not None:
-            inps.msk = mli.multilook_data(inps.msk,
-                                          inps.multilook_num,
-                                          inps.multilook_num)
+            inps.msk = multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
 
     # Reference pixel for timeseries and ifgramStack
     inps.file_ref_yx = None
@@ -1162,9 +1156,7 @@ def prepare4multi_subplots(inps, metadata):
                                           box=inps.pix_box,
                                           print_msg=False)
         if inps.multilook:
-            dem = mli.multilook_data(dem,
-                                     inps.multilook_num,
-                                     inps.multilook_num)
+            dem = multilook_data(dem, inps.multilook_num, inps.multilook_num)
         inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prepare_dem_background(dem=dem,
                                                                                            inps_dict=vars(inps))
     return inps
@@ -1200,7 +1192,7 @@ def main(iargs=None):
         if inps.zero_mask:
             data[data == 0] = np.nan
         if inps.msk is not None:
-            data = mask.mask_matrix(data, inps.msk)
+            data = mask_matrix(data, inps.msk)
 
         fig, ax = plt.subplots(figsize=inps.fig_size)
 
