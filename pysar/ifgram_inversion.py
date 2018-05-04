@@ -79,9 +79,9 @@ def create_parser():
                         help='template text file with the following options:\n'+TEMPLATE)
     parser.add_argument('--ref-date', dest='ref_date',
                         help='Reference date, first date by default.')
-    parser.add_argument('--maskDataset', dest='maskDataset',
+    parser.add_argument('--mask-dset', dest='maskDataset',
                         help='dataset used to mask unwrapPhase, e.g. coherence, connectComponent')
-    parser.add_argument('--maskThreshold', type=float, default=0.4,
+    parser.add_argument('--mask-threshold', dest='maskThreshold', type=float, default=0.4,
                         help='threshold to generate mask when mask is coherence')
 
     parser.add_argument('--weight-function', '-w', dest='weightFunc', default='sbas', choices={'fim', 'var', 'coh', 'sbas'},
@@ -648,6 +648,7 @@ def read_unwrap_phase(stack_obj, box, ref_phase, skip_zero_phase=True):
 
 def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshold=0.4):
     # Read/Generate Mask
+    num_ifgram = np.sum(stack_obj.dropIfgram)
     if mask_ds_name and mask_ds_name in stack_obj.datasetNames:
         print('reading {} in {} * {} ...'.format(mask_ds_name, box, num_ifgram))
         msk_data = stack_obj.read(datasetName=mask_ds_name,
