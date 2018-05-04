@@ -30,10 +30,10 @@ except KeyError:
 # PySAR modules listed by relative dependecies:
 # 0. Independent modules:
 # pysar.objects.pysarobj
+# pysar.objects.sensor
 # pysar.defaults.auto_path
 # pysar.utils.writefile
 # pysar.utils.datetime
-# pysar.utils.sensor
 #
 # Level 1 dependent modules (depends on Level 0):
 # pysar.utils.readfile

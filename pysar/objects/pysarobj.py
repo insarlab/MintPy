@@ -60,7 +60,8 @@ ifgramDatasetNames = ['unwrapPhase',
                       'wrapPhase',
                       'iono',
                       'rangeOffset',
-                      'azimuthOffset']
+                      'azimuthOffset',
+                      'refPhase']
 
 datasetUnitDict = {'unwrapPhase'        :'radian',
                    'coherence'          :'1',
@@ -144,7 +145,8 @@ class timeseries:
             except:
                 self.pbase = None
         self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
-        self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]], dtype=np.int16)
+        self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
+                              dtype=np.int16)
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
         self.datasetList = ['{}-{}'.format(self.name, i) for i in self.dateList]
@@ -215,8 +217,9 @@ class timeseries:
             # Get Index in space/2_3 dimension
             if box is None:
                 box = [0, 0, self.width, self.length]
+
             data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
-        data = np.squeeze(data)
+            data = np.squeeze(data)
         return data
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None):
@@ -261,13 +264,6 @@ class timeseries:
         f = h5py.File(outFile, 'w')
         print('create dataset /timeseries of {:<10} in size of {}'.format(str(data.dtype), data.shape))
         dset = f.create_dataset('timeseries', data=data, chunks=True)
-
-        #dset.attrs['Title'] = 'timeseries'
-        #dset.attrs['MissingValue'] = FLOAT_ZERO
-        #dset.attrs['Units'] = 'm'
-        #dset.attrs['_FillValue'] = FLOAT_ZERO
-        # dset.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
-        # dset.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
 
         # 1D dataset - date / bperp
         print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))
@@ -537,7 +533,7 @@ class ifgramStack:
                 self.metadata[key] = value
         return self.metadata
 
-    def get_size(self):
+    def get_size(self, dropIfgram=False):
         with h5py.File(self.file, 'r') as f:
             self.numIfgram, self.length, self.width = f[ifgramDatasetNames[0]].shape
         return self.numIfgram, self.length, self.width
@@ -562,6 +558,9 @@ class ifgramStack:
                         unwrapPhase-...
                         coherence-20161020_20161026
                         ...
+                        ['unwrapPhase-20161020_20161026',
+                         'unwrapPhase-20161020_20161101',
+                         ...]
                     box : tuple of 4 int, for (x0,y0,x1,y1)
                     print_msg : bool
         Returns: data : 2D or 3D array
@@ -570,25 +569,42 @@ class ifgramStack:
             obj.read(datasetName='unwrapPhase')
             obj.read(datasetName='coherence')
             obj.read(datasetName='unwrapPhase-20161020_20161026')
+            obj.read(datasetName=['unwrapPhase-20161020_20161026',
+                                  'unwrapPhase-20161020_20161101'])
         '''
         self.get_size()
-        date12List = self.get_date12_list(dropIfgram=dropIfgram)
-        if box is None:
-            box = (0, 0, self.width, self.length)
-        if datasetName is None:
-            datasetName = ifgramDatasetNames[0]
+        date12List = self.get_date12_list(dropIfgram=False)
 
-        datasetName = datasetName.split('-')
+        # convert input datasetName into list
+        if datasetName is None:
+            datasetName = [ifgramDatasetNames[0]]
+        elif isinstance(datasetName, str):
+            datasetName = [datasetName]
+
         with h5py.File(self.file, 'r') as f:
-            dset = f[datasetName[0]]
-            if len(datasetName) == 1:
+            familyName = datasetName[0].split('-')[0]
+            ds = f[familyName]
+            if print_msg:
+                print('reading {} data from file: {} ...'.format(familyName, self.file))
+
+            # get dateFlag - mark in time/1st dimension
+            dateFlag = np.zeros((self.numIfgram), dtype=np.bool_)
+            datasetName = [i.replace(familyName, '').replace('-', '') for i in datasetName]
+            if any(not i for i in datasetName):
                 if dropIfgram:
-                    data = dset[f['dropIfgram'][:], box[1]:box[3], box[0]:box[2]]
+                    dateFlag = f['dropIfgram'][:]
                 else:
-                    data = dset[:, box[1]:box[3], box[0]:box[2]]
+                    dateFlag[:] = True
             else:
-                data = dset[date12List.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
-                data = np.squeeze(data)
+                for e in datasetName:
+                    dateFlag[date12List.index(e)] = True
+
+            # get index in space/2-3 dimension
+            if box is None:
+                box = (0, 0, self.width, self.length)
+
+            data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+            data = np.squeeze(data)
         return data
 
     def spatial_average(self, datasetName=ifgramDatasetNames[1], maskFile=None, box=None):
@@ -653,7 +669,8 @@ class ifgramStack:
         self.open(print_msg=False)
         with h5py.File(self.file, 'r') as f:
             if datasetName is None:
-                datasetName = [i for i in ['connectComponent', 'unwrapPhase'] if i in f.keys()][0]
+                datasetName = [i for i in ['connectComponent', 'unwrapPhase']
+                               if i in f.keys()][0]
             print('calculate the common mask of pixels with non-zero {} value'.format(datasetName))
 
             dset = f[datasetName]
@@ -714,7 +731,12 @@ class ifgramStack:
     # Functions for Network Inversion
 
     def get_design_matrix(self, refDate=None, dropIfgram=True):
-        '''Return design matrix of the input ifgramStack, ignoring dropped ifgrams'''
+        '''Return design matrix of the input ifgramStack, ignoring dropped ifgrams
+        Parameters: refDate : str, date in YYYYMMDD format
+                    dropIfgram : bool, use dropped ifgram info or not
+        Returns:    A : 2D array of float32 in size of (num_ifgram, num_date-1)
+                    B : 2D array of float32 in size of (num_ifgram, num_date-1)
+        '''
         # Date info
         date12List = self.get_date12_list(dropIfgram=dropIfgram)
         mDates = [i.split('_')[0] for i in date12List]
@@ -771,7 +793,8 @@ class ifgramStack:
         with h5py.File(self.file, 'r+') as f:
             print('open file {} with r+ mode'.format(self.file))
             print('update HDF5 dataset "/dropIfgram".')
-            f['dropIfgram'][:] = np.array([i not in date12List_to_drop for i in date12ListAll], dtype=np.bool_)
+            f['dropIfgram'][:] = np.array([i not in date12List_to_drop for i in date12ListAll],
+                                          dtype=np.bool_)
 
 
 ########################################################################################
@@ -799,7 +822,8 @@ class singleDataset:
 ########################################################################################
 class HDFEOS:
     '''
-    Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer (http://insarmaps.miami.edu)
+    Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer
+        Link: http://insarmaps.miami.edu
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
 
     /                             Root level group

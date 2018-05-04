@@ -392,6 +392,7 @@ def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
     if not 'every_year'  in plot_dict.keys():   plot_dict['every_year']  = 1
 
     # Get date list
+    date12List = ptime.yyyymmdd_date12(date12List)
     m_dates = [date12.split('_')[0] for date12 in date12List]
     s_dates = [date12.split('_')[1] for date12 in date12List]
     dateList = sorted(ptime.yyyymmdd(list(set(m_dates + s_dates))))
@@ -471,6 +472,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     tbaseList = ptime.date_list2tbase(dateList)[0]
 
     ## maxBperp and maxBtemp
+    date12List = ptime.yyyymmdd_date12(date12List)
     ifgram_num = len(date12List)
     pbase12 = np.zeros(ifgram_num)
     tbase12 = np.zeros(ifgram_num)
@@ -480,8 +482,9 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         s_idx = dateList.index(s_date)
         pbase12[i] = pbaseList[s_idx] - pbaseList[m_idx]
         tbase12[i] = tbaseList[s_idx] - tbaseList[m_idx]
-    print(('max perpendicular baseline: %.2f m' % (np.max(np.abs(pbase12)))))
-    print(('max temporal      baseline: %d days' % (np.max(tbase12))))
+    if print_msg:
+        print('max perpendicular baseline: {:.2f} m'.format(np.max(np.abs(pbase12))))
+        print('max temporal      baseline: {} days'.format(np.max(tbase12)))
 
     ## Keep/Drop - date12
     date12List_keep = sorted(list(set(date12List) - set(date12List_drop)))
@@ -646,6 +649,7 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
     transparency = 0.7
 
     # Date Convert
+    dateList = ptime.yyyymmdd(dateList)
     dates, datevector = ptime.date_list2vector(dateList)
 
     # Get index of date used and dropped
@@ -701,6 +705,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
     if not 'cbar_label'  in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
 
+    date12List = ptime.yyyymmdd_date12(date12List)
     coh_mat = pnet.coherence_matrix(date12List, cohList)
 
     if date12List_drop:

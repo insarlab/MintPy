@@ -47,10 +47,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         k = metadata['FILE_TYPE']
         if k == 'timeseries':
             if ref_file is None:
-                print('ERROR: can not write {} file without reference file!'.format(k))
-                sys.exit(-1)
+                raise Exception('Can not write {} file without reference file!'.format(k))
             obj = timeseries(out_file)
-            obj.write2hdf5(datasetDict[k], metadata=metadata, refFile=ref_file)
+            obj.write2hdf5(datasetDict[k],
+                           metadata=metadata,
+                           refFile=ref_file)
 
         else:
             print('create HDF5 file: {} with w mode'.format(out_file))
@@ -60,26 +61,32 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             maxDigit = max([len(i) for i in list(datasetDict.keys())])
             for dsName in datasetDict.keys():
                 data = datasetDict[dsName]
-                print('create dataset /{d:<{w}} of {t:<10} in size of {s}'.format(d=dsName,
-                                                                                  w=maxDigit,
-                                                                                  t=str(data.dtype),
-                                                                                  s=data.shape))
-                ds = f.create_dataset(dsName, data=data, chunks=True, compression=compression)
-                # if dsName == 'velocity':
-                #    ds.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
-                #    ds.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
+                print(('create dataset /{d:<{w}} of {t:<10}'
+                       ' in size of {s}').format(d=dsName,
+                                                 w=maxDigit,
+                                                 t=str(data.dtype),
+                                                 s=data.shape))
+                ds = f.create_dataset(dsName,
+                                      data=data,
+                                      chunks=True,
+                                      compression=compression)
 
             # Write extra/auxliary datasets from ref_file
             if ref_file:
                 fr = h5py.File(ref_file, 'r')
-                dsNames = [i for i in fr.keys() if i not in list(datasetDict.keys())]
+                dsNames = [i for i in fr.keys()
+                           if i not in list(datasetDict.keys())]
                 for dsName in dsNames:
                     ds = fr[dsName]
-                    print('create dataset /{d:<{w}} of {t:<10} in size of {s}'.format(d=dsName,
-                                                                                      w=maxDigit,
-                                                                                      t=str(ds.dtype),
-                                                                                      s=ds.shape))
-                    f.create_dataset(dsName, data=ds[:], chunks=True, compression=compression)
+                    print(('create dataset /{d:<{w}} of {t:<10}'
+                           ' in size of {s}').format(d=dsName,
+                                                     w=maxDigit,
+                                                     t=str(ds.dtype),
+                                                     s=ds.shape))
+                    f.create_dataset(dsName,
+                                     data=ds[:],
+                                     chunks=True,
+                                     compression=compression)
                 fr.close()
 
             # metadata

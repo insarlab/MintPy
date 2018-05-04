@@ -30,7 +30,7 @@ pysar.geocode.fillValue    = auto  #[np.nan, 0, ...], auto for np.nan, fill valu
 EXAMPLE = """example:
   geocode.py velocity.h5
   geocode.py velocity.h5 -b -0.5 -0.25 -91.3 -91.1
-  geocode.py velocity.h5 timeseries.h5 -t pysarApp_template.txt --update
+  geocode.py velocity.h5 timeseries.h5 -t pysarApp_template.txt -o ./GEOCODE --update
 
   geocode.py geo_velocity.h5 --geo2radar
 """
@@ -73,6 +73,7 @@ def create_parser():
                         help='skip resampling if output file exists and newer than input file')
     parser.add_argument('-o', '--output', dest='outfile',
                         help="output file name. Default: add prefix 'geo_'")
+    parser.add_argument('--outdir', '--output-dir', dest='out_dir', help='output directory.')
 
     return parser
 
@@ -86,7 +87,7 @@ def cmd_line_parse(iargs=None):
 def _check_inps(inps):
     inps.file = ut.get_file_list(inps.file)
     if not inps.file:
-        sys.exit('ERROR: no input file found!')
+        raise Exception('ERROR: no input file found!')
     elif len(inps.file) > 1:
         inps.outfile = None
 
@@ -227,6 +228,9 @@ def auto_output_filename(infile, inps):
         outfile = '{}{}.h5'.format(prefix, inps.dset)
     else:
         outfile = '{}{}'.format(prefix, os.path.basename(infile))
+
+    if inps.out_dir:
+        outfile = os.path.join(inps.out_dir, outfile)
     return outfile
 
 

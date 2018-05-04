@@ -60,14 +60,12 @@ def calculate_temporal_coherence(ifgram_file, timeseries_file, ifg_num_file=None
     Returns:    temp_coh : 2D np.array, temporal coherence in float32
     """
 
-    # IfgramStack Info
-    stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open(print_msg=False)
-    stack_shape = (np.sum(stack_obj.dropIfgram), stack_obj.length, stack_obj.width)
-    box_list = ifginv.split_into_boxes(shape=stack_shape, chunk_size=chunk_size)
+    # get box list and size info
+    box_list = ifginv.split_into_boxes(ifgram_file, chunk_size=chunk_size)
     num_box = len(box_list)
 
-    temp_coh = np.zeros((stack_obj.length, stack_obj.width), np.float32)
+    stack_shape = ifgramStack(ifgram_file).get_size()
+    temp_coh = np.zeros(stack_shape[1:3], np.float32)
     for i in range(num_box):
         if num_box > 1:
             print('\n------- Processing Patch %d out of %d --------------' % (i+1, num_box))
@@ -99,7 +97,7 @@ def calculate_temporal_coherence_patch(ifgram_file, timeseries_file, box=None, i
     A = stack_obj.get_design_matrix(dropIfgram=True)[0]
     print('reading unwrapPhase data from file: {}'.format(ifgram_file))
     ifgram_data = stack_obj.read(datasetName='unwrapPhase', box=box).reshape(A.shape[0], -1)
-    ref_value = ifginv.check_ifgram_reference_phase(stack_obj).reshape((-1, 1))
+    ref_value = ifginv.get_ifgram_reference_phase(stack_obj).reshape((-1, 1))
     ifgram_data -= np.tile(ref_value, (1, ifgram_data.shape[1]))
 
     ifgram_diff = ifgram_data - np.dot(A, ts_data)

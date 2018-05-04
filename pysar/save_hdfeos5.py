@@ -355,7 +355,6 @@ def main(iargs=None):
         print('Update mode is enabled, put endDate as XXXXXXXX.')
         DATE2 = 'XXXXXXXX'
 
-    #outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
 
     if inps.subset:

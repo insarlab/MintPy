@@ -10,9 +10,9 @@ import time
 
 import pysar
 from pysar.defaults import isceAutoPath, roipacAutoPath, gammaAutoPath
-from pysar.objects import ifgramDatasetNames, geometryDatasetNames, ifgramStack, geometry
+from pysar.objects import ifgramDatasetNames, geometryDatasetNames, ifgramStack, geometry, sensor
 from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
-from pysar.utils import readfile, ptime, sensors, utils as ut
+from pysar.utils import readfile, ptime, utils as ut
 from pysar import subset
 
 
@@ -153,17 +153,10 @@ def read_inps2dict(inps):
         inpsDict['compression'] = None
 
     # PROJECT_NAME --> PLATFORM
-    if not inpsDict['PROJECT_NAME'] and any(i in inps.template_file.lower() for i in sensors):
-        for p in inps.template_file.split('/'):
-            if any(i in p.lower() for i in sensors):
-                inpsDict['PROJECT_NAME'] = p
-
-    if inpsDict['PROJECT_NAME']:
-        try:
-            inpsDict['PLATFORM'] = [i for i in sensors if i in inpsDict['PROJECT_NAME'].lower()][0].capitalize()
-            print('Find PLATFORM from PROJECT_NAME as: {}'.format(inpsDict['PLATFORM']))
-        except:
-            pass
+    inpsDict['PLATFORM'], inpsDict['PROJECT_NAME'] = sensor.project_name2sensor([inpsDict['PROJECT_NAME'],
+                                                                                 inps.template_file])
+    if inpsDict['PLATFORM']:
+        print('Find PLATFORM from PROJECT_NAME as: {}'.format(inpsDict['PLATFORM']))
 
     # Here to insert code to check default file path for miami user
     # Check 1) SCRATCHDIR exists, 2) pysar.defaults.autoPath is True and 3) template['PROJECT_NAME'] is not None

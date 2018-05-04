@@ -120,13 +120,18 @@ class ifgramStackDict:
             dsDataType = dataType
             if dsName in ['connectComponent']:
                 dsDataType = np.bool_
-            print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
-                                                                                                     w=maxDigit,
-                                                                                                     t=str(dsDataType),
-                                                                                                     s=dsShape,
-                                                                                                     c=str(compression)))
-            ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),
-                                  dtype=dsDataType, chunks=True, compression=compression)
+            print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                   ' with compression = {c}').format(d=dsName,
+                                                     w=maxDigit,
+                                                     t=str(dsDataType),
+                                                     s=dsShape,
+                                                     c=str(compression)))
+            ds = f.create_dataset(dsName,
+                                  shape=dsShape,
+                                  maxshape=(None, dsShape[1], dsShape[2]),
+                                  dtype=dsDataType,
+                                  chunks=True,
+                                  compression=compression)
 
             #dMin = 0
             #dMax = 0
@@ -138,19 +143,19 @@ class ifgramStackDict:
                 #dMax = max(dMax, np.nanmax(data))
                 ds[i, :, :] = data
                 self.bperp[i] = ifgramObj.get_perp_baseline()
-                prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0], self.pairs[i][1]))
+                prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
+                                                           self.pairs[i][1]))
             prog_bar.close()
-
-            #ds.attrs['Title'] = dsName
-            # ds.attrs['MinValue'] = dMin   #facilitate disp_min/max for mutiple subplots in view.py
-            # ds.attrs['MaxValue'] = dMax   #facilitate disp_min/max for mutiple subplots in view.py
 
         ###############################
         # 2D dataset containing master and slave dates of all pairs
         dsName = 'date'
         dsDataType = np.string_
         dsShape = (self.numIfgram, 2)
-        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
+        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                          w=maxDigit,
+                                                                          t=str(dsDataType),
+                                                                          s=dsShape))
         data = np.array(self.pairs, dtype=dsDataType)
         ds = f.create_dataset(dsName, data=data)
 
@@ -159,7 +164,10 @@ class ifgramStackDict:
         dsName = 'bperp'
         dsDataType = dataType
         dsShape = (self.numIfgram,)
-        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
+        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                          w=maxDigit,
+                                                                          t=str(dsDataType),
+                                                                          s=dsShape))
         data = np.array(self.bperp, dtype=dsDataType)
         ds = f.create_dataset(dsName, data=data)
 
@@ -168,7 +176,10 @@ class ifgramStackDict:
         dsName = 'dropIfgram'
         dsDataType = np.bool_
         dsShape = (self.numIfgram,)
-        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
+        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                          w=maxDigit,
+                                                                          t=str(dsDataType),
+                                                                          s=dsShape))
         data = np.ones(dsShape, dtype=dsDataType)
         dsDate = f.create_dataset(dsName, data=data)
 
@@ -305,13 +316,17 @@ class geometryDict:
 
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
-        data, metadata = readfile.read(self.file, datasetName=family, box=box)
+        data, metadata = readfile.read(self.file,
+                                       datasetName=family,
+                                       box=box)
         return data, metadata
 
     def get_slantRangeDistance(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
             return None
-        data = ut.range_distance(self.ifgramMetadata, dimension=2, print_msg=False)
+        data = ut.range_distance(self.ifgramMetadata,
+                                 dimension=2,
+                                 print_msg=False)
         if box is not None:
             data = data[box[1]:box[3], box[0]:box[2]]
         return data
@@ -319,7 +334,9 @@ class geometryDict:
     def get_incidenceAngle(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
             return None
-        data = ut.incidence_angle(self.ifgramMetadata, dimension=2, print_msg=False)
+        data = ut.incidence_angle(self.ifgramMetadata,
+                                  dimension=2,
+                                  print_msg=False)
         if box is not None:
             data = data[box[1]:box[3], box[0]:box[2]]
         return data
@@ -405,22 +422,29 @@ class geometryDict:
             # 3D datasets containing bperp
             if dsName == 'bperp':
                 self.dateList = list(self.datasetDict[dsName].keys())
-                # Write 3D dataset bperp
                 dsDataType = dataType
                 self.numDate = len(self.dateList)
                 dsShape = (self.numDate, length, width)
-                ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),
-                                      dtype=dsDataType, chunks=True, compression=compression)
-                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
-                                                                                                         w=maxDigit,
-                                                                                                         t=str(dsDataType),
-                                                                                                         s=dsShape,
-                                                                                                         c=str(compression)))
+                ds = f.create_dataset(dsName,
+                                      shape=dsShape,
+                                      maxshape=(None, dsShape[1], dsShape[2]),
+                                      dtype=dsDataType,
+                                      chunks=True,
+                                      compression=compression)
+                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                       ' with compression = {c}').format(d=dsName,
+                                                         w=maxDigit,
+                                                         t=str(dsDataType),
+                                                         s=dsShape,
+                                                         c=str(compression)))
+
                 print('read coarse grid baseline files and linear interpolate into full resolution ...')
                 prog_bar = ptime.progressBar(maxValue=self.numDate)
                 for i in range(self.numDate):
                     fname = self.datasetDict[dsName][self.dateList[i]]
-                    data = read_isce_bperp_file(fname=fname, out_shape=(self.length, self.width), box=box)
+                    data = read_isce_bperp_file(fname=fname,
+                                                out_shape=(self.length, self.width),
+                                                box=box)
                     ds[i, :, :] = data
                     prog_bar.update(i+1, suffix=self.dateList[i])
                 prog_bar.close()
@@ -429,10 +453,11 @@ class geometryDict:
                 dsName = 'date'
                 dsShape = (self.numDate,)
                 dsDataType = np.string_
-                print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
-                                                                                  w=maxDigit,
-                                                                                  t=str(dsDataType),
-                                                                                  s=dsShape))
+                print(('create dataset /{d:<{w}} of {t:<25}'
+                       ' in size of {s}').format(d=dsName,
+                                                 w=maxDigit,
+                                                 t=str(dsDataType),
+                                                 s=dsShape))
                 data = np.array(self.dateList, dtype=dsDataType)
                 ds = f.create_dataset(dsName, data=data)
 
@@ -442,17 +467,22 @@ class geometryDict:
                 if dsName.lower().endswith('mask'):
                     dsDataType = np.bool_
                 dsShape = (length, width)
-                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
-                                                                                                         w=maxDigit,
-                                                                                                         t=str(dsDataType),
-                                                                                                         s=dsShape,
-                                                                                                         c=str(compression)))
+                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                       ' with compression = {c}').format(d=dsName,
+                                                         w=maxDigit,
+                                                         t=str(dsDataType),
+                                                         s=dsShape,
+                                                         c=str(compression)))
                 data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
-                ds = f.create_dataset(dsName, data=data, chunks=True, compression=compression)
+                ds = f.create_dataset(dsName,
+                                      data=data,
+                                      chunks=True,
+                                      compression=compression)
 
         ###############################
         # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
-        for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance'] if i not in self.dsNames]:
+        for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance']
+                       if i not in self.dsNames]:
             # Calculate data
             data = None
             if dsName == 'incidenceAngle':
@@ -464,12 +494,17 @@ class geometryDict:
             if data is not None:
                 dsShape = data.shape
                 dsDataType = dataType
-                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
-                                                                                                         w=maxDigit,
-                                                                                                         t=str(dsDataType),
-                                                                                                         s=dsShape,
-                                                                                                         c=str(compression)))
-                ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True, compression=compression)
+                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                       ' with compression = {c}').format(d=dsName,
+                                                         w=maxDigit,
+                                                         t=str(dsDataType),
+                                                         s=dsShape,
+                                                         c=str(compression)))
+                ds = f.create_dataset(dsName,
+                                      data=data,
+                                      dtype=dataType,
+                                      chunks=True,
+                                      compression=compression)
 
         ###############################
         # Attributes

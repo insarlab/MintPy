@@ -77,16 +77,31 @@ def yymmdd(dates):
     return datesOut
 
 
+def yyyymmdd_date12(date12_list):
+    """Convert date12 into YYYYMMDD_YYYYMMDD format"""
+    m_dates = yyyymmdd([i.replace('-', '_').split('_')[0] for i in date12_list])
+    s_dates = yyyymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
+    date12_list = ['{}_{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
+    return date12_list
+
+def yymmdd_date12(date12_list):
+    """Convert date12 into YYMMDD-YYMMDD format"""
+    m_dates = yymmdd([i.replace('-', '_').split('_')[0] for i in date12_list])
+    s_dates = yymmdd([i.replace('-', '_').split('_')[1] for i in date12_list])
+    date12_list = ['{}-{}'.format(m, s) for m, s in zip(m_dates, s_dates)]
+    return date12_list
+
+
 #################################################################
 def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
-    '''Read Date List from Interferogram file
+    """Read Date List from Interferogram file
         for timeseries file, use h5file['timeseries'].keys() directly
     Inputs:
         ifgramFile - string, name/path of interferograms file
         fmt        - string, output date format, choices=['YYYYMMDD','YYMMDD']
     Output:
         date_list  - list of string, date included in ifgramFile in YYYYMMDD or YYMMDD format
-    '''
+    """
     if not ifgramFile:
         return []
 
@@ -120,7 +135,7 @@ def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
 
 #################################################################
 def read_date_list(date_list_file):
-    '''Read Date List from txt file'''
+    """Read Date List from txt file"""
     fl = open(date_list_file, 'r')
     dateList = fl.read().splitlines()
     fl.close()
@@ -142,13 +157,13 @@ def date_index(dateList):
 
 
 def date_list2tbase(dateList):
-    '''Get temporal Baseline in days with respect to the 1st date
+    """Get temporal Baseline in days with respect to the 1st date
     Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
     Output:
         tbase    - list of int, temporal baseline in days
         dateDict - dict with key   - string, date in YYYYMMDD format
                              value - int, temporal baseline in days
-    '''
+    """
     dateList = yyyymmdd(dateList)
     dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
     tbase = [(i-dates[0]).days for i in dates]
@@ -162,12 +177,12 @@ def date_list2tbase(dateList):
 
 ################################################################
 def date_list2vector(dateList):
-    '''Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
+    """Get time in datetime format: datetime.datetime(2006, 5, 26, 0, 0)
     Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
     Outputs:
         dates      - list of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
         datevector - list of float, years, i.e. 2010.8020547945205
-    '''
+    """
     dateList = yyyymmdd(dateList)
     dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
     # date in year - float format
@@ -178,7 +193,7 @@ def date_list2vector(dateList):
 
 ################################################################
 def list_ifgram2date12(ifgram_list):
-    '''Convert ifgram list into date12 list
+    """Convert ifgram list into date12 list
     Input:
         ifgram_list  - list of string in *YYMMDD-YYMMDD* or *YYMMDD_YYMMDD* format
     Output:
@@ -187,7 +202,7 @@ def list_ifgram2date12(ifgram_list):
         h5 = h5py.File('unwrapIfgram.h5','r')
         ifgram_list = sorted(h5['interferograms'].keys())
         date12_list = ptime.list_ifgram2date12(ifgram_list)
-    '''
+    """
     try:
         date12_list = [str(re.findall('\d{8}[-_]\d{8}', i)[0]).replace('_', '-') for i in ifgram_list]
     except:
@@ -202,7 +217,7 @@ def list_ifgram2date12(ifgram_list):
 
 
 def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
-    '''Find closest available time of weather product from SAR acquisition time
+    """Find closest available time of weather product from SAR acquisition time
     Inputs:
         sar_acquisition_time - string, SAR data acquisition time in seconds
         grib_source - string, Grib Source of weather reanalysis product
@@ -211,7 +226,7 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
     Example:
         '06' = closest_weather_product_time(atr['CENTER_LINE_UTC'])
         '12' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
-    '''
+    """
     # Get hour/min of SAR acquisition time
     sar_time = float(sar_acquisition_time)
     #sar_hh = int(sar_time/3600.0)
@@ -232,7 +247,7 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
 ###########################Simple progress bar######################
 class progressBar:
-    '''Creates a text-based progress bar. Call the object with 
+    """Creates a text-based progress bar. Call the object with 
     the simple `print'command to see the progress bar, which looks 
     something like this:
     [=======> 22% ]
@@ -250,7 +265,7 @@ class progressBar:
             prog_bar.update(i+1, suffix=date)
             prog_bar.update(i+1, suffix=date12_list[i])
         prog_bar.close()
-    '''
+    """
 
     def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=80):
         self.prog_bar = "[]"  # This holds the progress bar string

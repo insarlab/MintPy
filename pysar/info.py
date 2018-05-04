@@ -68,8 +68,9 @@ def print_hdf5_structure(File):
             print('HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype))
         print_attributes(obj.attrs)
     f = h5py.File(File, 'r')
-    print('Attributes in / level:')
-    print_attributes(f.attrs)
+    if len(f.attrs) > 0:
+        print('Attributes in / level:')
+        print_attributes(f.attrs)
     f.visititems(print_hdf5_structure_obj)
     f.close()
     return
