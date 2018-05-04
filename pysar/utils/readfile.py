@@ -100,7 +100,11 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                 box : 4-tuple of int
                     area to read, defined in (x0, y0, x1, y1) in pixel coordinate
                 datasetName : string
-                    dataset to read in the format of datasetName / datasetName-dateName / datasetName-date12Name
+                    dataset to read in the format of
+                        datasetName
+                        datasetName-dateName
+                        datasetName-date12Name
+
                     for ifgramStack:
                         unwrapPhase
                         coherence
@@ -170,22 +174,35 @@ def read(fname, box=None, datasetName=None, print_msg=True):
         f = h5py.File(fname, 'r')
         if k in ['timeseries']:
             obj = timeseries(fname)
-            data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
+            data = obj.read(datasetName=datasetName,
+                            box=box,
+                            print_msg=print_msg)
+
         elif k in ['ifgramStack']:
             obj = ifgramStack(fname)
-            data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
+            data = obj.read(datasetName=datasetName,
+                            box=box,
+                            print_msg=print_msg)
             if datasetName in ['unwrapPhase', 'wrapPhase', 'iono']:
                 atr['UNIT'] = 'radian'
             else:
                 atr['UNIT'] = '1'
+
         elif k in ['geometry']:
             obj = geometry(fname)
-            data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
+            data = obj.read(datasetName=datasetName,
+                            box=box,
+                            print_msg=print_msg)
+
         elif k == 'HDFEOS':
             obj = HDFEOS(fname)
-            data = obj.read(datasetName=datasetName, box=box, print_msg=print_msg)
+            data = obj.read(datasetName=datasetName,
+                            box=box,
+                            print_msg=print_msg)
+
         elif k in ['GIANT_TS']:
-            dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in f['dates'][:].tolist()]
+            dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d')
+                        for i in f['dates'][:].tolist()]
             dateIndx = dateList.index(datasetName)
             if 'rawts' in list(f.keys()):
                 dset = f['rawts'][dateIndx, :, :]
@@ -313,7 +330,8 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             return data, atr
 
         elif ext in ['.UTM_TO_RDC', '.utm_to_rdc']:
-            data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', band='complex')
+            data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be',
+                                             band='complex')
             if not datasetName:
                 return data.real, data.imag, atr
             elif datasetName.startswith(('rg', 'range')):
@@ -324,7 +342,8 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                 sys.exit('Un-recognized datasetName input: '+datasetName)
 
         elif ext in ['.int']:
-            data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be', band='phase')
+            data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be',
+                                             band='phase')
             return data, atr
 
         elif ext in ['.mli']:
@@ -364,8 +383,9 @@ def get_dataset_list(fname, datasetName=None):
                     if (isinstance(f[key], h5py.Dataset)
                             and f[key].shape[-2:] == (length, width)):
                         datasetList.append(key)
+
+            # support for old pysar format
             else:
-                # support for old pysar format
                 k1 = list(f[k0].keys())[0]
                 if isinstance(f[k0][k1], h5py.Dataset):
                     for key in f[k0].keys():
@@ -395,30 +415,37 @@ def get_2d_dataset_list(fname):
                 obj = timeseries(fname)
                 obj.open(print_msg=False)
                 datasetList = obj.datasetList
+
             elif file_type in ['geometry']:
                 obj = geometry(fname)
                 obj.open(print_msg=False)
                 datasetList = obj.datasetList
+
             elif file_type in ['ifgramStack']:
                 obj = ifgramStack(fname)
                 obj.open(print_msg=False)
                 datasetList = obj.datasetList
+
             elif file_type in ['HDFEOS']:
                 obj = HDFEOS(fname)
                 obj.open(print_msg=False)
                 datasetList = obj.datasetList
+
             elif file_type in ['GIANT_TS']:
                 datasetList = [dt.fromordinal(int(i)).strftime('%Y%m%d')
                                for i in f['dates'][:].tolist()]
+
             else:
                 k0 = list(f.keys())[0]
                 if isinstance(f[k0], h5py.Dataset):
                     datasetList = sorted(list(f.keys()))
+
+                # support for old pysar format
                 else:
-                    # support for old pysar format
                     k1 = list(f[k0].keys())[0]
                     if isinstance(f[k0][k1], h5py.Dataset):
                         datasetList = sorted(list(f[k0].keys()))
+
     # Binary Files
     else:
         if file_ext.lower() in ['.trans', '.utm_to_rdc']:
@@ -483,12 +510,6 @@ def read_attribute(fname, datasetName=None):
         # PROCESSOR
         if 'INSAR_PROCESSOR' in atr.keys():
             atr['PROCESSOR'] = atr['INSAR_PROCESSOR']
-
-        # read attribute of HDF5 dataset
-        # if k == 'timeseries' and 'MinValue' in f[k].attrs.keys():
-        #    atr.update(f[k].attrs)
-        # elif datasetName and datasetName in f.keys() and 'MinValue' in f[datasetName].attrs.keys():
-        #    atr.update(f[datasetName].attrs)
         f.close()
 
     else:
@@ -753,12 +774,17 @@ def attribute_gamma2roipac(par_dict_in):
 
     # Length - number of rows
     for key in par_dict_in.keys():
-        if any(key.startswith(i) for i in ['azimuth_lines', 'nlines', 'az_samp', 'interferogram_azimuth_lines']):
+        if any(key.startswith(i) for i in ['azimuth_lines',
+                                           'nlines',
+                                           'az_samp',
+                                           'interferogram_azimuth_lines']):
             par_dict['LENGTH'] = par_dict[key]
 
     # Width - number of columns
     for key in par_dict_in.keys():
-        if any(key.startswith(i) for i in ['width', 'range_samp', 'interferogram_width']):
+        if any(key.startswith(i) for i in ['width',
+                                           'range_samp',
+                                           'interferogram_width']):
             par_dict['WIDTH'] = par_dict[key]
 
     # WAVELENGTH
