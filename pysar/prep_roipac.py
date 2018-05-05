@@ -20,6 +20,7 @@ EXAMPLE = """example:
   prep_roipac.py  IFGRAM*/filt_*.unw
   prep_roipac.py  IFGRAM*/filt_*rlks.cor
   prep_roipac.py  IFGRAM*/filt_*rlks.int
+  prep_roipac.py  IFGRAM*/filt_*_snap_connect.byt
 """
 
 DESCRIPTION = """
@@ -68,6 +69,11 @@ def extract_metadata(fname):
     """
     # 1. Read basic metadata file
     basic_rsc_file = fname+'.rsc'
+    if not os.path.isfile(basic_rsc_file) and fname.endswith('_snap_connect.byt'):
+        unw_rsc_file = '{}.unw.rsc'.format(fname.split('_snap_connect.byt')[0])
+        copyCmd = 'cp {} {}'.format(unw_rsc_file, basic_rsc_file)
+        print(copyCmd)
+        os.system(copyCmd)
     basic_dict = readfile.read_roipac_rsc(basic_rsc_file)
 
     # return if baseline attributes are already there.
@@ -107,7 +113,7 @@ def prepare_metadata(inps):
 
     # Check input file type
     ext = os.path.splitext(inps.file[0])[1]
-    if ext not in ['.unw', '.cor', '.int']:
+    if ext not in ['.unw', '.cor', '.int', '.byt']:
         return
 
     # check outfile and parallel option
