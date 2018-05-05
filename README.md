@@ -41,7 +41,7 @@ Then run the following in your terminal:
     chmod +x Anaconda3-5.1.0-MacOSX-x86_64.sh
     ./Anaconda3-5.1.0-MacOSX-x86_64.sh -b -p $PYTHON3DIR
     $PYTHON3DIR/bin/conda config --add channels conda-forge
-    $PYTHON3DIR/bin/conda install basemap joblib pykml lxml --yes   
+    $PYTHON3DIR/bin/conda install basemap joblib pykml lxml pyresample --yes   
    
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
 
