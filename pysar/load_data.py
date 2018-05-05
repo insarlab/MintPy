@@ -159,13 +159,13 @@ def read_inps2dict(inps):
 
     # Here to insert code to check default file path for miami user
     if auto_path.autoPath and 'SCRATCHDIR' in os.environ and inpsDict['PROJECT_NAME'] is not None:
-        print('check auto path setting for {} for Univ of Miami users'.format(inpsDict['processor']))
+        print('check auto path setting for Univ of Miami users for processor: {}'.format(inpsDict['processor']))
         if inpsDict['processor'] == 'isce':
-            inpsDict = get_auto_path4isce(inpsDict['PROJECT_NAME'], inpsDict)
+            inpsDict = auto_path.get_auto_path4isce(inpsDict['PROJECT_NAME'], inpsDict)
         elif inpsDict['processor'] == 'roipac':
-            inpsDict = get_auto_path4roipac(inpsDict['PROJECT_NAME'], inpsDict)
+            inpsDict = auto_path.get_auto_path4roipac(inpsDict['PROJECT_NAME'], inpsDict)
         elif inpsDict['processor'] == 'gamma':
-            inpsDict = get_auto_path4gamma(inpsDict['PROJECT_NAME'], inpsDict)
+            inpsDict = auto_path.get_auto_path4gamma(inpsDict['PROJECT_NAME'], inpsDict)
     return inpsDict
 
 
@@ -177,14 +177,14 @@ def read_subset_box(inpsDict):
 
     # Grab required info to read input geo_box into pix_box
     try:
-        lookupFile = [glob.glob(inpsDict['pysar.load.lookupYFile'])[0],
-                      glob.glob(inpsDict['pysar.load.lookupXFile'])[0]]
+        lookupFile = [glob.glob(str(inpsDict['pysar.load.lookupYFile']))[0],
+                      glob.glob(str(inpsDict['pysar.load.lookupXFile']))[0]]
     except:
         lookupFile = None
 
     try:
         pathKey = [i for i in datasetName2templateKey.values() if i in inpsDict.keys()][0]
-        file = glob.glob(inpsDict[pathKey])[0]
+        file = glob.glob(str(inpsDict[pathKey]))[0]
         atr = readfile.read_attribute(file)
     except:
         atr = dict()
@@ -240,7 +240,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
     for dsName in [i for i in ifgramDatasetNames if i in datasetName2templateKey.keys()]:
         key = datasetName2templateKey[dsName]
         if key in inpsDict.keys():
-            files = sorted(glob.glob(inpsDict[key]))
+            files = sorted(glob.glob(str(inpsDict[key])))
             if len(files) > 0:
                 dsPathDict[dsName] = files
                 dsNumDict[dsName] = len(files)
@@ -317,7 +317,7 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     for dsName in [i for i in geometryDatasetNames if i in datasetName2templateKey.keys()]:
         key = datasetName2templateKey[dsName]
         if key in inpsDict.keys():
-            files = sorted(glob.glob(inpsDict[key]))
+            files = sorted(glob.glob(str(inpsDict[key])))
             if len(files) > 0:
                 if dsName == 'bperp':
                     bperpDict = {}
@@ -341,7 +341,7 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     ifgramRadarMetadata = None
     ifgramKey = datasetName2templateKey[ifgramDatasetNames[0]]
     if ifgramKey in inpsDict.keys():
-        ifgramFiles = glob.glob(inpsDict[ifgramKey])
+        ifgramFiles = glob.glob(str(inpsDict[ifgramKey]))
         if len(ifgramFiles) > 0:
             atr = readfile.read_attribute(ifgramFiles[0])
             if 'Y_FIRST' not in atr.keys():
@@ -405,7 +405,7 @@ def prepare_metadata(inpsDict):
         print('-'*50)
         print('prepare metadata files for {} products before loading into PySAR'.format(inpsDict['processor']))
         for key in inpsDict.keys():
-            if key.startswith('pysar.load.') and key.endswith('File') and len(glob.glob(inpsDict[key])) > 0:
+            if key.startswith('pysar.load.') and key.endswith('File') and len(glob.glob(str(inpsDict[key]))) > 0:
                 prepCmd = '{} {}'.format(prepCmd0, inpsDict[key])
                 print(prepCmd)
                 os.system(prepCmd)

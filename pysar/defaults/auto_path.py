@@ -7,6 +7,8 @@
 
 
 import os
+import re
+import glob
 import numpy as np
 
 # Auto setting for file structure of Univ. of Miami, as shown below.
@@ -107,7 +109,7 @@ def read_str2dict(inString, delimiter='=', print_msg=False):
 def get_auto_path4isce(project_name, template=dict()):
     # default file pattern
     auto_dict = read_str2dict(isceAutoPath, print_msg=False)
-    for key, value in auto_dict.item():
+    for key, value in auto_dict.items():
         auto_dict[key] = os.path.basename(value)
 
     project_dir = os.path.join(os.getenv('SCRATCHDIR'), project_name)
@@ -133,7 +135,7 @@ def get_auto_path4isce(project_name, template=dict()):
 def get_auto_path4roipac(project_name, template=dict()):
     # default file pattern
     auto_dict = read_str2dict(roipacAutoPath, print_msg=False)
-    for key, value in auto_dict.item():
+    for key, value in auto_dict.items():
         auto_dict[key] = os.path.basename(value)
 
     project_dir = os.path.join(os.getenv('SCRATCHDIR'), project_name)
@@ -192,7 +194,7 @@ def get_auto_path4roipac(project_name, template=dict()):
 def get_auto_path4gamma(project_name, template=dict()):
     # default file pattern
     auto_dict = read_str2dict(gammaAutoPath, print_msg=False)
-    for key, value in auto_dict.item():
+    for key, value in auto_dict.items():
         auto_dict[key] = os.path.basename(value)
 
     project_dir = os.path.join(os.getenv('SCRATCHDIR'), project_name)
