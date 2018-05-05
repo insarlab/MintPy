@@ -8,8 +8,7 @@ import argparse
 import datetime
 import time
 
-import pysar
-from pysar.defaults import isceAutoPath, roipacAutoPath, gammaAutoPath
+from pysar.defaults import auto_path
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, ifgramStack, geometry, sensor
 from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
 from pysar.utils import readfile, ptime, utils as ut
@@ -37,9 +36,9 @@ DEFAULT_TEMPLATE = """template:
 {}\n
 {}\n
 {}\n
-""".format(isceAutoPath,
-           roipacAutoPath,
-           gammaAutoPath)
+""".format(auto_path.isceAutoPath,
+           auto_path.roipacAutoPath,
+           auto_path.gammaAutoPath)
 
 TEMPLATE = """template:
 ########## 1. Load Data (--load to exit after this step)
@@ -159,8 +158,14 @@ def read_inps2dict(inps):
         print('Find PLATFORM from PROJECT_NAME as: {}'.format(inpsDict['PLATFORM']))
 
     # Here to insert code to check default file path for miami user
-    # Check 1) SCRATCHDIR exists, 2) pysar.defaults.autoPath is True and 3) template['PROJECT_NAME'] is not None
-
+    if auto_path.autoPath and 'SCRATCHDIR' in os.environ and inpsDict['PROJECT_NAME'] is not None:
+        print('check auto path setting for {} for Univ of Miami users'.format(inpsDict['processor']))
+        if inpsDict['processor'] == 'isce':
+            inpsDict = get_auto_path4isce(inpsDict['PROJECT_NAME'], inpsDict)
+        elif inpsDict['processor'] == 'roipac':
+            inpsDict = get_auto_path4roipac(inpsDict['PROJECT_NAME'], inpsDict)
+        elif inpsDict['processor'] == 'gamma':
+            inpsDict = get_auto_path4gamma(inpsDict['PROJECT_NAME'], inpsDict)
     return inpsDict
 
 

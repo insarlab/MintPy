@@ -23,7 +23,7 @@ import numpy as np
 import version
 from pysar.utils import readfile, writefile, utils as ut
 from pysar.objects import ifgramStack
-from pysar.defaults import autoPath
+from pysar.defaults.auto_path import autoPath
 from pysar import subset, save_hdfeos5 as hdfeos5
 
 

@@ -14,7 +14,7 @@ import datetime
 import inspect
 import matplotlib.pyplot as plt
 import numpy as np
-from pysar.defaults import autoPath
+from pysar.defaults.auto_path import autoPath
 from pysar.objects import sensor, ifgramStack
 from pysar.utils import readfile, ptime, network as pnet, plot as pp, utils as ut
 
