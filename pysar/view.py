@@ -1116,11 +1116,19 @@ def prepare4multi_subplots(inps, metadata):
     3) read dropIfgram info
     4) read and prepare DEM for background
     """
+    inps.dsetFamilyList = list(set(i.split('-')[0] for i in inps.dset))
+
     # Update multilook parameters with new num and col number
     if inps.multilook and inps.multilook_num == 1:
-        inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box,
-                                                                   inps.fig_row_num,
-                                                                   inps.fig_col_num)
+        # Do not auto multilook mask and lookup table file
+        auto_multilook = True
+        for dsFamily in inps.dsetFamilyList:
+            if any(i in dsFamily.lower() for i in ['mask', 'coord']):
+                auto_multilook = False
+        if auto_multilook:
+            inps.multilook, inps.multilook_num = check_multilook_input(inps.pix_box,
+                                                                       inps.fig_row_num,
+                                                                       inps.fig_col_num)
         if inps.msk is not None:
             inps.msk = multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
 
@@ -1139,7 +1147,6 @@ def prepare4multi_subplots(inps, metadata):
 
     # Check dropped interferograms
     inps.dropDatasetList = []
-    inps.dsetFamilyList = list(set(i.split('-')[0] for i in inps.dset))
     if inps.key == 'ifgramStack' and inps.disp_title:
         obj = ifgramStack(inps.file)
         obj.open(print_msg=False)

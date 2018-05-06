@@ -368,7 +368,7 @@ def network_inversion_wls(A, ifgram, weight, skip_zero_phase=True, Astd=None):
     if skip_zero_phase and not np.all(ifgram):
         idx = (ifgram != 0.).flatten()
         A = A[idx, :]
-        if A.shape[0] < dateNum1:
+        if A.shape[0] < dateNum1*2:
             return ts, temp_coh, ts_std, ifg_num
         ifgram = ifgram[idx]
         weight = weight[idx]

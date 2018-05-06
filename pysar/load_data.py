@@ -113,8 +113,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     if inps.print_example_template:
-        print(DEFAULT_TEMPLATE)
-        sys.exit(1)
+        sys.exit(DEFAULT_TEMPLATE)
 
     if not inps.template_file:
         parser.print_usage()

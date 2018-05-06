@@ -12,13 +12,12 @@ import argparse
 
 try:
     from pykml.factory import KML_ElementMaker as KML
-except:
-    sys.exit('pykml should be installed!')
+except ImportError:
+    print('Can not import pykml!')
 
 from lxml import etree
 import numpy as np
-import matplotlib as mpl
-mpl.use('Agg')
+import matplotlib as mpl     #mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 from pysar.objects import timeseriesKeyNames
@@ -90,6 +89,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
+    atr = readfile.read_attribute(inps.file)
     # Check: file in geo coord
     if 'X_FIRST' not in atr.keys():
         raise Exception('ERROR: Input file is not geocoded.')
@@ -272,6 +272,7 @@ def write_kmz_file(data, metadata, out_name_base, inps=None):
 ############################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    #plt.switch_backend('Agg')
 
     # Read data
     data, atr = readfile.read(inps.file, datasetName=inps.dset)

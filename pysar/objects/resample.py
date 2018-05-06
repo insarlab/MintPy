@@ -10,7 +10,10 @@
 import sys
 import numpy as np
 import multiprocessing
-import pyresample as pr
+try:
+    import pyresample as pr
+except ImportError:
+    print('Can not import pyresample!')
 from pysar.utils import readfile
 
 
@@ -191,7 +194,7 @@ class resample:
 
             # src_def and dest_def
             self.src_def = pr.geometry.SwathDefinition(lons=src_lon, lats=src_lat)
-            self.dest_def = pr.geometry.GridDefinition(lons=dest_lon, lats=dest_lat)
+            self.dest_def = pr.geometry.SwathDefinition(lons=dest_lon, lats=dest_lat)
 
         # geo2radar
         else:
@@ -230,4 +233,19 @@ class resample:
                 print('bilinear resampling using {} processor cores ...'.format(nprocs))
             dest_data = pr.bilinear.resample_bilinear(src_data, self.src_def, self.dest_def, nprocs=nprocs,
                                                       fill_value=fill_value, radius=radius, neighbours=32, epsilon=0)
+
+        # for debug
+        if False:
+            import matplotlib.pyplot as plt
+            fig, ((ax11, ax12, ax13), (ax21, ax22, ax23)) = plt.subplots(nrows=2, ncols=3, figsize=(12, 8))
+            dest_lats = np.array(self.dest_def.lats); dest_lats[dest_lats == 90.] = np.nan
+            dest_lons = np.array(self.dest_def.lons); dest_lons[dest_lons == 0.] = np.nan
+            im = ax11.imshow(self.src_def.lats);    fig.colorbar(im, ax=ax11);   ax11.set_title('src_lats')
+            im = ax12.imshow(self.src_def.lons);    fig.colorbar(im, ax=ax12);   ax12.set_title('src_lons')
+            im = ax13.imshow(src_data);             fig.colorbar(im, ax=ax13);   ax13.set_title('src_data')
+            im = ax21.imshow(dest_lats);            fig.colorbar(im, ax=ax21);   ax21.set_title('dest_lats')
+            im = ax22.imshow(dest_lons);            fig.colorbar(im, ax=ax22);   ax22.set_title('dest_lons')
+            im = ax23.imshow(dest_data);            fig.colorbar(im, ax=ax23);   ax23.set_title('dest_data')
+            plt.show()
+
         return dest_data

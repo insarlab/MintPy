@@ -4,7 +4,7 @@
 # Purpose: Python Module for InSAR Time Series Analysis
 # Author: Zhang Yunjun, Heresh Fattahi
 # Created: July 2013
-# Copyright (c) 2013, Zhang Yunjun, Heresh Fattahi
+# Copyright (c) 2013-2018, Zhang Yunjun, Heresh Fattahi
 ###############################################################################
 
 
@@ -205,13 +205,16 @@ EXAMPLE = """example:
   pysarApp.py  SanAndreasT356EnvD.template  --load-data
   pysarApp.py  SanAndreasT356EnvD.template  --dir ~/insarlab/SanAndreasT356EnvD/PYSAR
 
-  # Generate template file:
+  # Generate template file: pysarApp_template.txt
   pysarApp.py -g
   pysarApp.py SanAndreasT356EnvD.template -g
 
-  -----------------------------------------------------
-  Read pysar_template.txt file for more option details.
-  -----------------------------------------------------
+  # Show template file:
+  load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
+
+  --------------------------------------------------------
+  Read pysarApp_template.txt file for more option details.
+  --------------------------------------------------------
 """
 
 UM_FILE_STRUCT = """
@@ -247,6 +250,9 @@ def create_parser():
                              '    3) input custom template with basename same as projectName\n')
     parser.add_argument('-g', dest='generate_template', action='store_true',
                         help='Generate default template (and merge with custom template), then exit.')
+    parser.add_argument('-H', dest='print_example_template', action='store_true',
+                        help='Print/Show the example template file for routine processing.')
+
     parser.add_argument('--reset', action='store_true',
                         help='Reset files attributes to re-run pysarApp.py after loading data by:\n' +
                              '    1) removing ref_y/x/lat/lon for unwrapIfgram.h5 and coherence.h5\n' +
@@ -264,6 +270,10 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    if inps.print_example_template:
+        sys.exit(TEMPLATE)
+
     if (inps.templateFileCustom 
             and os.path.basename(inps.templateFileCustom) == 'pysarApp_template.txt'):
         inps.templateFileCustom = None
