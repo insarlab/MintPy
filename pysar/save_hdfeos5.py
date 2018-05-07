@@ -8,7 +8,9 @@
 # by Scott Baker
 
 
-import os, sys, re
+import os
+import sys
+import re
 import argparse
 import datetime as dt
 import h5py
@@ -37,23 +39,27 @@ EXAMPLE = """example:
                   -g geo_geometryRadar.h5
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Convert PySAR timeseries product into HDF-EOS5 format\n'+\
-                                     'https://earthdata.nasa.gov/user-resources/standards-and-references/hdf-eos5',\
-                                     formatter_class=argparse.RawDescriptionHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Convert PySAR timeseries product into HDF-EOS5 format\n' +
+                                     'https://earthdata.nasa.gov/user-resources/standards-and-references/hdf-eos5',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
-    parser.add_argument('-t', '--template', dest='template_file', help='Template file')
+    parser.add_argument('timeseries_file',
+                        default='timeseries.h5', help='Timeseries file')
+    parser.add_argument('-t', '--template',
+                        dest='template_file', help='Template file')
 
     parser.add_argument('-c', '--coherence', dest='coherence_file',
                         help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
-    parser.add_argument('-m', '--mask', dest='mask_file',help='Mask file')
-    parser.add_argument('-g', '--geometry', dest='geom_file', help='geometry file')
+    parser.add_argument('-m', '--mask', dest='mask_file', help='Mask file')
+    parser.add_argument('-g', '--geometry',
+                        dest='geom_file', help='geometry file')
 
-    parser.add_argument('--update', action='store_true',\
+    parser.add_argument('--update', action='store_true',
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')
-    parser.add_argument('--subset', action='store_true',\
+    parser.add_argument('--subset', action='store_true',
                         help='Enable subset mode, a.k.a. put suffix _N31700_N32100_E130500_E131100')
     return parser
 
@@ -81,27 +87,27 @@ def get_mission_name(meta_dict):
         print('return None')
         return mission
 
-    ## Convert to UNAVCO Mission name
+    # Convert to UNAVCO Mission name
     ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
     if value.startswith('ers'):
         mission = 'ERS'
-    elif value.startswith(('env','asar')):
+    elif value.startswith(('env', 'asar')):
         mission = 'ENV'
-    elif value.startswith(('s1','sen')):
+    elif value.startswith(('s1', 'sen')):
         mission = 'S1'
-    elif value.startswith(('rs','rsat','radarsat')):
+    elif value.startswith(('rs', 'rsat', 'radarsat')):
         mission = 'RS'
         if value.endswith('1'):
             mission += '1'
         else:
             mission += '2'
-    elif value.startswith(('csk','cos')):
+    elif value.startswith(('csk', 'cos')):
         mission = 'CSK'
-    elif value.startswith(('tsx','tdx','terra','tandem')):
+    elif value.startswith(('tsx', 'tdx', 'terra', 'tandem')):
         mission = 'TSX'
     elif value.startswith('jers'):
         mission = 'JERS'
-    elif value.startswith(('alos','palsar')):
+    elif value.startswith(('alos', 'palsar')):
         if value.endswith('2'):
             mission = 'ALOS2'
         else:
@@ -112,8 +118,8 @@ def get_mission_name(meta_dict):
     return mission
 
 
-def metadata_pysar2unavco(pysar_meta_dict,dateList):
-    ## Extract UNAVCO format metadata from PySAR attributes dictionary and dateList 
+def metadata_pysar2unavco(pysar_meta_dict, dateList):
+    # Extract UNAVCO format metadata from PySAR attributes dictionary and dateList
 
     for key in pysar_meta_dict.keys():
         if 'unavco.' in key:
@@ -124,48 +130,61 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     unavco_meta_dict = dict()
 
     #################################
-    ##### Required metadata
+    # Required metadata
     #################################
-    ##### Given manually
-    ## mission
+    # Given manually
+    # mission
     # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
-    try: unavco_meta_dict['mission'] = get_mission_name(pysar_meta_dict)
+    try:
+        unavco_meta_dict['mission'] = get_mission_name(pysar_meta_dict)
     except ValueError:
         print('Missing required attribute: mission')
 
-    ## beam_mode/swath
-    unavco_meta_dict['beam_mode']  = pysar_meta_dict['beam_mode']
-    try:    unavco_meta_dict['beam_swath'] = int(pysar_meta_dict['beam_swath'])
-    except: unavco_meta_dict['beam_swath'] = 0
+    # beam_mode/swath
+    unavco_meta_dict['beam_mode'] = pysar_meta_dict['beam_mode']
+    try:
+        unavco_meta_dict['beam_swath'] = int(pysar_meta_dict['beam_swath'])
+    except:
+        unavco_meta_dict['beam_swath'] = 0
 
-    ## relative_orbit, or track number
+    # relative_orbit, or track number
     #atr_dict['relative_orbit'] = int(re.match(r'(\w+)T([0-9+])',atr['PROJECT_NAME']).groups()[1])
     unavco_meta_dict['relative_orbit'] = int(pysar_meta_dict['relative_orbit'])
 
-    ## processing info
-    try:    unavco_meta_dict['processing_type'] = pysar_meta_dict['processing_type']
-    except: unavco_meta_dict['processing_type'] = 'LOS_TIMESERIES'
+    # processing info
+    try:
+        unavco_meta_dict['processing_type'] = pysar_meta_dict['processing_type']
+    except:
+        unavco_meta_dict['processing_type'] = 'LOS_TIMESERIES'
     #unavco_meta_dict['processing_software'] = pysar_meta_dict['processing_software']
 
-    ##### Grabbed by script
-    ## date info
+    # Grabbed by script
+    # date info
     unavco_meta_dict['first_date'] = dt.datetime.strptime(dateList[0], '%Y%m%d').isoformat()[0:10]
-    unavco_meta_dict['last_date']  = dt.datetime.strptime(dateList[-1],'%Y%m%d').isoformat()[0:10]
+    unavco_meta_dict['last_date'] = dt.datetime.strptime(dateList[-1], '%Y%m%d').isoformat()[0:10]
 
-    ## footprint
-    lons = [pysar_meta_dict['LON_REF1'], pysar_meta_dict['LON_REF3'], pysar_meta_dict['LON_REF4'],\
-            pysar_meta_dict['LON_REF2'], pysar_meta_dict['LON_REF1']]
-    lats = [pysar_meta_dict['LAT_REF1'], pysar_meta_dict['LAT_REF3'], pysar_meta_dict['LAT_REF4'],\
-            pysar_meta_dict['LAT_REF2'], pysar_meta_dict['LAT_REF1']]
-    unavco_meta_dict['scene_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
+    # footprint
+    lons = [pysar_meta_dict['LON_REF1'],
+            pysar_meta_dict['LON_REF3'],
+            pysar_meta_dict['LON_REF4'],
+            pysar_meta_dict['LON_REF2'],
+            pysar_meta_dict['LON_REF1']]
+
+    lats = [pysar_meta_dict['LAT_REF1'],
+            pysar_meta_dict['LAT_REF3'],
+            pysar_meta_dict['LAT_REF4'],
+            pysar_meta_dict['LAT_REF2'],
+            pysar_meta_dict['LAT_REF1']]
+
+    unavco_meta_dict['scene_footprint'] = "POLYGON((" + ",".join(
+        [lon+' '+lat for lon, lat in zip(lons, lats)]) + "))"
 
     unavco_meta_dict['history'] = dt.datetime.utcnow().isoformat()[0:10]
 
-
     #################################
-    ##### Recommended metadata
+    # Recommended metadata
     #################################
-    ##### Given manually
+    # Given manually
     if 'frame' in pysar_meta_dict.keys():
         unavco_meta_dict['frame'] = int(pysar_meta_dict['frame'])
     elif 'first_frame' in pysar_meta_dict.keys():
@@ -173,29 +192,47 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
     else:
         unavco_meta_dict['frame'] = 0
 
-    try:    unavco_meta_dict['atmos_correct_method'] = pysar_meta_dict['atmos_correct_method']
-    except: pass
-    try:    unavco_meta_dict['post_processing_method'] = pysar_meta_dict['post_processing_method']
-    except: unavco_meta_dict['post_processing_method'] = 'PYSAR'
-    try:  unavco_meta_dict['processing_dem'] = pysar_meta_dict['processing_dem']
-    except: pass
-    try:  unavco_meta_dict['unwrap_method'] = pysar_meta_dict['unwrap_method']
-    except: pass
+    try:
+        unavco_meta_dict['atmos_correct_method'] = pysar_meta_dict['atmos_correct_method']
+    except:
+        pass
+    try:
+        unavco_meta_dict['post_processing_method'] = pysar_meta_dict['post_processing_method']
+    except:
+        unavco_meta_dict['post_processing_method'] = 'PYSAR'
+    try:
+        unavco_meta_dict['processing_dem'] = pysar_meta_dict['processing_dem']
+    except:
+        pass
+    try:
+        unavco_meta_dict['unwrap_method'] = pysar_meta_dict['unwrap_method']
+    except:
+        pass
 
-    ##### Grabbed by script
-    try: unavco_meta_dict['flight_direction'] = pysar_meta_dict['ORBIT_DIRECTION'][0].upper()
-    except: pass
-    if pysar_meta_dict['ANTENNA_SIDE'] == '-1':  unavco_meta_dict['look_direction'] = 'R'
-    else:                                        unavco_meta_dict['look_direction'] = 'L'
-    try: unavco_meta_dict['polarization'] = pysar_meta_dict['POLARIZATION']
-    except: pass
-    try: unavco_meta_dict['prf'] = float(pysar_meta_dict['PRF'])
-    except: pass
-    try: unavco_meta_dict['wavelength'] = float(pysar_meta_dict['WAVELENGTH'])
-    except: pass
+    # Grabbed by script
+    try:
+        unavco_meta_dict['flight_direction'] = pysar_meta_dict['ORBIT_DIRECTION'][0].upper()
+    except:
+        pass
+    if pysar_meta_dict['ANTENNA_SIDE'] == '-1':
+        unavco_meta_dict['look_direction'] = 'R'
+    else:
+        unavco_meta_dict['look_direction'] = 'L'
+    try:
+        unavco_meta_dict['polarization'] = pysar_meta_dict['POLARIZATION']
+    except:
+        pass
+    try:
+        unavco_meta_dict['prf'] = float(pysar_meta_dict['PRF'])
+    except:
+        pass
+    try:
+        unavco_meta_dict['wavelength'] = float(pysar_meta_dict['WAVELENGTH'])
+    except:
+        pass
 
     #################################
-    ##### insarmaps metadata
+    # insarmaps metadata
     #################################
     # footprint for data coverage
     if 'X_FIRST' in pysar_meta_dict.keys():
@@ -205,7 +242,8 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
         lat1 = lat0 + float(pysar_meta_dict['Y_STEP'])*int(pysar_meta_dict['LENGTH'])
         lons = [str(lon0), str(lon1), str(lon1), str(lon0), str(lon0)]
         lats = [str(lat0), str(lat0), str(lat1), str(lat1), str(lat0)]
-        unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join([lon+' '+lat for lon,lat in zip(lons,lats)]) + "))"
+        unavco_meta_dict['data_footprint'] = "POLYGON((" + ",".join(
+            [lon+' '+lat for lon, lat in zip(lons, lats)]) + "))"
     else:
         print('Input file is not geocoded, no data_footprint without X/Y_FIRST/STEP info.')
 
@@ -214,7 +252,7 @@ def metadata_pysar2unavco(pysar_meta_dict,dateList):
 
 def get_hdfeos5_filename(timeseriesFile):
     """Get output file name of HDF-EOS5 time series file"""
-    ##### Prepare Metadata
+    # Prepare Metadata
     ts_obj = timeseries(timeseriesFile)
     ts_obj.open(print_msg=False)
     pysar_meta_dict = dict(ts_obj.metadata)
@@ -224,19 +262,21 @@ def get_hdfeos5_filename(timeseriesFile):
     meta_dict = pysar_meta_dict.copy()
     meta_dict.update(unavco_meta_dict)
 
-    #### Open HDF5 File
+    # Open HDF5 File
     SAT = meta_dict['mission']
-    SW  = meta_dict['beam_mode']    # should be like FB08 for ALOS, need to find out, Yunjun, 2016-12-26
-    RELORB = "%03d"%(int(meta_dict['relative_orbit']))
-    FRAME  = "%04d"%(int(meta_dict['frame']))
-    DATE1 = dt.datetime.strptime(meta_dict['first_date'],'%Y-%m-%d').strftime('%Y%m%d')
+    # should be like FB08 for ALOS, need to find out, Yunjun, 2016-12-26
+    SW = meta_dict['beam_mode']
+    RELORB = "%03d" % (int(meta_dict['relative_orbit']))
+    FRAME = "%04d" % (int(meta_dict['frame']))
+    DATE1 = dt.datetime.strptime(meta_dict['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
     DATE2 = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
-    TBASE = "%04d"%(0)
-    BPERP = "%05d"%(0)
+    TBASE = "%04d" % (0)
+    BPERP = "%05d" % (0)
     #outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'.he5'
 
     return outName
+
 
 def read_template2inps(template_file, inps=None):
     """Read input template options into Namespace inps"""
@@ -266,7 +306,7 @@ def main(iargs=None):
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
-    ##### Prepare Metadata
+    # Prepare Metadata
     ts_obj = timeseries(inps.timeseries_file)
     ts_obj.open(print_msg=False)
     pysar_meta_dict = dict(ts_obj.metadata)
@@ -285,37 +325,36 @@ def main(iargs=None):
     meta_dict['FILE_TYPE'] = 'HDFEOS'
     print('-----------------------------------------')
 
-    ##### Open HDF5 File
-    #####Get output filename
+    # Open HDF5 File
+    # Get output filename
     SAT = meta_dict['mission']
-    SW  = meta_dict['beam_mode']
+    SW = meta_dict['beam_mode']
     if meta_dict['beam_swath']:
         SW += str(meta_dict['beam_swath'])
-    RELORB = "%03d"%(int(meta_dict['relative_orbit']))
+    RELORB = "%03d" % (int(meta_dict['relative_orbit']))
 
-    ##Frist and/or Last Frame
+    # Frist and/or Last Frame
     frame1 = int(meta_dict['frame'])
     key = 'first_frame'
     if key in meta_dict.keys():
         frame1 = int(meta_dict[key])
-    FRAME  = "%04d"%(frame1)
+    FRAME = "%04d" % (frame1)
     key = 'last_frame'
     if key in meta_dict.keys():
         frame2 = int(meta_dict[key])
         if frame2 != frame1:
-            FRAME += "_%04d"%(frame2)
+            FRAME += "_%04d" % (frame2)
 
-    TBASE = "%04d"%(0)
-    BPERP = "%05d"%(0)
-    DATE1 = dt.datetime.strptime(meta_dict['first_date'],'%Y-%m-%d').strftime('%Y%m%d')
+    TBASE = "%04d" % (0)
+    BPERP = "%05d" % (0)
+    DATE1 = dt.datetime.strptime(meta_dict['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
     DATE2 = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
     #end_date = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d')
-    #if inps.update and (dt.datetime.utcnow() - end_date) < dt.timedelta(days=365):
+    # if inps.update and (dt.datetime.utcnow() - end_date) < dt.timedelta(days=365):
     if inps.update:
         print('Update mode is enabled, put endDate as XXXXXXXX.')
         DATE2 = 'XXXXXXXX'
 
-    #outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
     outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
 
     if inps.subset:
@@ -335,15 +374,16 @@ def main(iargs=None):
         if lon1 < 0.0: lon1Str = 'W%06d' % (round(abs(lon1)*1e3))
 
         SUB = '_%s_%s_%s_%s' % (lat0Str, lat1Str, lon0Str, lon1Str)
-        outName = os.path.splitext(outName)[0] + SUB + os.path.splitext(outName)[1]
+        outName = '{}{}{}'.format(os.path.splitext(outName)[0],
+                                  SUB,
+                                  os.path.splitext(outName)[1])
 
-
-    ##### Open HDF5 File
-    f = h5py.File(outName,'w')
+    # Open HDF5 File
+    f = h5py.File(outName, 'w')
     print('create HDF5 file: {} with w mode'.format(outName))
     maxDigit = 20
 
-    ##### Write Observation - Displacement
+    # Write Observation - Displacement
     gName = 'HDFEOS/GRIDS/timeseries/observation'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
@@ -380,7 +420,7 @@ def main(iargs=None):
                                                                           t=str(data.dtype),
                                                                           s=data.shape))
 
-    ##### Write Quality
+    # Write Quality
     gName = 'HDFEOS/GRIDS/timeseries/quality'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
@@ -415,10 +455,9 @@ def main(iargs=None):
     dset.attrs['_FillValue'] = BOOL_ZERO
     dset.attrs['Units'] = '1'
 
-
-    ##### Write Geometry
-    ## Required: height, incidenceAngle
-    ## Optional: rangeCoord, azimuthCoord, headingAngle, slantRangeDistance, waterMask, shadowMask
+    # Write Geometry
+    # Required: height, incidenceAngle
+    # Optional: rangeCoord, azimuthCoord, headingAngle, slantRangeDistance, waterMask, shadowMask
     gName = 'HDFEOS/GRIDS/timeseries/geometry'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
@@ -455,9 +494,9 @@ def main(iargs=None):
             dset.attrs['_FillValue'] = BOOL_ZERO
             dset.attrs['Units'] = '1'
 
-    ##### Write Attributes to the HDF File
+    # Write Attributes to the HDF File
     print('write metadata to root level')
-    for key,value in iter(meta_dict.items()):
+    for key, value in iter(meta_dict.items()):
         f.attrs[key] = value
     f.close()
     print('finished writing to {}'.format(outName))

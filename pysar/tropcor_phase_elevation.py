@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
 
@@ -14,14 +14,16 @@ import argparse
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-from pysar.utils import readfile, datetime as ptime, utils as ut
+from pysar.objects import timeseries
+from pysar.utils import readfile, ptime, utils as ut
+from pysar.multilook import multilook_data
+from pysar.mask import mask_matrix
 
 
 ############################################################################
 EXAMPLE = """example:
-  tropcor_phase_elevation.py  timeseries_demErr.h5
-  tropcor_phase_elevation.py  timeseries_demErr.h5      -d demRadar.h5  -m maskTempCoh.h5      -p 1
-  tropcor_phase_elevation.py  geo_timeseries_demErr.h5  -d demGeo.h5    -m geo_maskTempCoh.h5  -p 1
+  tropcor_phase_elevation.py  timeseries_demErr.h5      -d INPUTS/geometryRadar.h5  -m maskTempCoh.h5    
+  tropcor_phase_elevation.py  geo_timeseries_demErr.h5  -d geo_geometryRadar.h5     -m geo_maskTempCoh.h5
 """
 
 REFERENCE = """reference:
@@ -30,21 +32,32 @@ REFERENCE = """reference:
   69(1), 35-50, doi:http://dx.doi.org/10.1016/j.jappgeo.2009.03.010.
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Stratified tropospheric delay correction using height-correlation approach',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Correct Topo-correlated Stratified tropospheric delay',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=REFERENCE+'\n'+EXAMPLE)
 
-    parser.add_argument('timeseries_file', help='time-series file to be corrected')
-    parser.add_argument('-d','--dem', dest='dem_file', help='DEM file used for correlation calculation.')
-    parser.add_argument('-t','--threshold', type=float,\
-                        help='correlation threshold to apply phase correction.\n'+\
+    parser.add_argument('timeseries_file',
+                        help='time-series file to be corrected')
+    parser.add_argument('-g', '--geometry', dest='geom_file', required=True,
+                        help='DEM file used for correlation calculation.')
+    parser.add_argument('-m', '--mask', dest='mask_file', required=True,
+                        help='mask file for pixels used for correlation calculation')
+
+    parser.add_argument('-t', '--threshold', type=float, default=0.,
+                        help='correlation threshold to apply phase correction.\n' +
                              'if not set, all dates will be corrected.')
-    parser.add_argument('-m','--mask', dest='mask_file', help='mask file for pixels used for correlation calculation')
-    parser.add_argument('--poly-order','-p', dest='poly_order', type=int, default=1, choices=[1,2,3],\
+    parser.add_argument('-l', '--looks', dest='num_multilook', type=int, default=8, 
+                        help='number of looks applied to data for empirical estimation.\n'+
+                        'default: 8')
+
+    parser.add_argument('--poly-order', '-p', dest='poly_order', type=int, default=1, choices=[1, 2, 3],
                         help='polynomial order of phase-height correlation. Default: 1')
-    parser.add_argument('-o','--outfile', help='output corrected timeseries file name')
+    parser.add_argument('-o', '--outfile',
+                        help='output corrected timeseries file name')
     return parser
+
 
 def cmd_line_parse(iargs=None):
     parser = create_parser()
@@ -55,174 +68,168 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+def design_matrix(dem, poly_order=1):
+    """Design matrix for phase/elevation ratio estimation
+    Parameters: dem : 1D array in size of (length*width, ), or
+                      2D array in size of (length, width)
+                poly_order : int
+    Returns:    A : 2D array in size of (length*width, poly_order+1)
+    """
+    dem = np.reshape(dem, (-1, 1))
+    A = np.ones((dem.size, 1), np.float32)
+    for i in range(poly_order):
+        Ai = np.array(dem**(i+1), np.float32)
+        A = np.hstack((A, Ai))
+    return A
+
+
+def read_topographic_data(geom_file, metadata):
+    print('read DEM from file: '+geom_file)
+    dem = readfile.read(geom_file,
+                        datasetName='height',
+                        print_msg=False)[0]
+
+    print('considering the incidence angle of each pixel ...')
+    inc_angle = readfile.read(geom_file,
+                              datasetName='incidenceAngle',
+                              print_msg=False)[0]
+    dem *= 1.0/np.cos(inc_angle*np.pi/180.0)
+
+    ref_y = int(metadata['REF_Y'])
+    ref_x = int(metadata['REF_X'])
+    dem -= dem[ref_y, ref_x]
+
+    # Design matrix for elevation v.s. phase
+    # dem = dem.flatten()
+    return dem
+
+
+def estimate_phase_elevation_ratio(dem, ts_data, inps):
+    """Estimate phase/elevation ratio for each acquisition of timeseries
+    Parameters: dem     : 2D array in size of (          length, width)
+                ts_data : 3D array in size of (num_date, length, width)
+                inps    : Namespace
+    Returns:    X       : 2D array in size of (poly_num+1, num_date)
+    """
+    num_date = ts_data.shape[0]
+
+    # prepare phase and elevation data
+    print('reading mask from file: '+inps.mask_file)
+    mask = readfile.read(inps.mask_file, datasetName='mask')[0]
+    dem = mask_matrix(np.array(dem), mask)
+    ts_data = mask_matrix(np.array(ts_data), mask)
+
+    # display
+    # 1. effect of multilooking --> narrow phase range --> better ratio estimation
+    if False:
+        import matplotlib.pyplot as plt
+        #d_index = np.argmax(topo_trop_corr)
+        d_index = 47
+        data = ts_data[d_index, :, :]
+        title = inps.date_list[d_index]
+        fig = plt.figure()
+        plt.plot(dem[~np.isnan(dem)],
+                 data[~np.isnan(dem)],
+                 '.', label='Number of Looks = 1')
+        mli_dem = multilook_data(dem, 8, 8)
+        mli_data = multilook_data(data, 8, 8)
+        plt.plot(mli_dem[~np.isnan(mli_dem)],
+                 mli_data[~np.isnan(mli_dem)],
+                 '.', label='Number of Looks = 8')
+        plt.legend()
+        plt.xlabel('Elevation (m)')
+        plt.ylabel('Range Change (m)')
+        plt.title(title)
+        out_file = 'phase_elevation_ratio_{}.png'.format(title)
+        plt.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
+        print('save to {}'.format(out_file))
+        #plt.show()
+        #sys.exit(0)
+
+    print('----------------------------------------------------------')
+    print('Empirical tropospheric delay correction based on phase/elevation ratio (Doin et al., 2009)')
+    print('polynomial order: {}'.format(inps.poly_order))
+
+    if inps.num_multilook > 1:
+        print('number of multilook: {} (multilook data for estimation only)'.format(inps.num_multilook))
+        mask = multilook_data(mask, inps.num_multilook, inps.num_multilook)
+        dem = multilook_data(dem, inps.num_multilook, inps.num_multilook)
+        ts_data = multilook_data(ts_data, inps.num_multilook, inps.num_multilook)
+
+    mask_nan = ~np.isnan(dem)
+    dem = dem[mask_nan]
+    ts_data = ts_data[:, mask_nan]
+
+    # calculate correlation coefficient
+    print('----------------------------------------------------------')
+    print('calculate correlation of DEM with each acquisition')
+    topo_trop_corr = np.zeros(num_date, np.float32)
+    for i in range(num_date):
+        phase = ts_data[i, :]
+        cc = 0.
+        if np.count_nonzero(phase) > 0:
+            comp_data = np.vstack((dem, phase))
+            cc = np.corrcoef(comp_data)[0, 1]
+            topo_trop_corr[i] = cc
+        print('{}: {:>5.2f}'.format(inps.date_list[i], cc))
+    topo_trop_corr = np.abs(topo_trop_corr)
+    print('average correlation magnitude: {:>5.2f}'.format(np.nanmean(topo_trop_corr)))
+
+    # estimate ratio parameter
+    print('----------------------------------------------------------')
+    print('estimate phase/elevation ratio')
+    A = design_matrix(dem=dem, poly_order=inps.poly_order)
+    A_inv = np.linalg.pinv(A)
+    X = np.array(np.dot(A_inv, ts_data.T), np.float32)
+    X[:, topo_trop_corr < inps.threshold] = 0.
+    return X
+
+
+def estimate_tropospheric_delay(dem, X, metadata):
+    poly_order = X.shape[0]-1
+    num_date = X.shape[1]
+    length, width = dem.shape
+
+    print('estimate the stratified tropospheric delay')
+    B = design_matrix(dem=dem, poly_order=poly_order)
+    trop_data = np.dot(B, X).T
+
+    ref_index = int(metadata['REF_Y']) * width + int(metadata['REF_X'])
+    ref_value = trop_data[:, ref_index].reshape(-1, 1)
+    trop_data -= np.tile(ref_value, (1, length*width))
+
+    trop_data = np.reshape(trop_data, (num_date, length, width))
+    return trop_data
+
+
 ############################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
-    ##### Check default input arguments
-    # default output filename
+    # read timeseries data
+    obj = timeseries(inps.timeseries_file)
+    obj.open()
+    ts_data = obj.read()
+    inps.date_list = list(obj.dateList)
+
+    # read topographic data (DEM)
+    dem = read_topographic_data(inps.geom_file, obj.metadata)
+
+    # estimate phase/elevation ratio parameters
+    X = estimate_phase_elevation_ratio(dem, ts_data, inps)
+
+    # correct trop delay in timeseries
+    trop_data = estimate_tropospheric_delay(dem, X, obj.metadata)
+    ts_data -= trop_data
+
+    # write time-series file
     if not inps.outfile:
-        inps.outfile = os.path.splitext(inps.timeseries_file)[0]+'_tropHgt.h5'
-
-    # Basic info
-    atr = readfile.read_attribute(inps.timeseries_file)
-    k = atr['FILE_TYPE']
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
-    pix_num = length*width
-
-    # default DEM file
-    if not inps.dem_file:
-        if 'X_FIRST' in atr.keys():
-            inps.dem_file = ['demGeo_tight.h5', 'demGeo.h5']
-        else:
-            inps.dem_file = ['demRadar.h5']
-    try:
-        inps.dem_file = ut.get_file_list(inps.dem_file)[0]
-    except:
-        inps.dem_file = None
-        sys.exit('ERROR: No DEM file found!')
-
-    # default Mask file
-    if not inps.mask_file:
-        if 'X_FIRST' in atr.keys():
-            inps.mask_file = 'geo_maskTempCoh.h5'
-        else:
-            inps.mask_file = 'maskTempCoh.h5'
-        if not os.path.isfile(inps.mask_file):
-            inps.mask_file = None
-            sys.exit('ERROR: No mask file found!')
-
-    ##### Read Mask
-    print('reading mask from file: '+inps.mask_file)
-    mask = readfile.read(inps.mask_file, datasetName='mask')[0].flatten(1)
-    ndx = mask != 0
-    msk_num = np.sum(ndx)
-    print('total            pixel number: %d' % pix_num)
-    print('estimating using pixel number: %d' % msk_num)
-
-    ##### Read DEM
-    print('read DEM from file: '+inps.dem_file)
-    dem = readfile.read(inps.dem_file, datasetName='height')[0]
-
-    ref_y = int(atr['REF_Y'])
-    ref_x = int(atr['REF_X'])
-    dem -= dem[ref_y,ref_x]
-
-    print('considering the incidence angle of each pixel ...')
-    inc_angle = ut.incidence_angle(atr, dimension=2)
-    dem *= 1.0/np.cos(inc_angle*np.pi/180.0)
-
-    ##### Design matrix for elevation v.s. phase
-    dem = dem.flatten(1)
-    if inps.poly_order == 1:
-        A = np.vstack((dem[ndx], np.ones(msk_num))).T
-        B = np.vstack((dem,      np.ones(pix_num))).T
-    elif inps.poly_order == 2: 
-        A = np.vstack((dem[ndx]**2, dem[ndx], np.ones(msk_num))).T
-        B = np.vstack((dem**2,      dem,      np.ones(pix_num))).T  
-    elif inps.poly_order == 3:
-        A = np.vstack((dem[ndx]**3, dem[ndx]**2, dem[ndx], np.ones(msk_num))).T
-        B = np.vstack((dem**3,      dem**2,      dem,      np.ones(pix_num))).T
-    print('polynomial order: %d' % inps.poly_order)
-
-    A_inv = np.linalg.pinv(A)
-
-    ##### Calculate correlation coefficient
-    print('Estimating the tropospheric effect between the differences of the subsequent epochs and DEM')
-
-    h5 = h5py.File(inps.timeseries_file)
-    date_list = sorted(h5[k].keys())
-    date_num = len(date_list)
-    print('number of acquisitions: '+str(date_num))
-    try:    ref_date = atr['REF_DATE']
-    except: ref_date = date_list[0]
-
-    print('----------------------------------------------------------')
-    print('correlation of DEM with each time-series epoch:')
-    corr_array = np.zeros(date_num)
-    par_dict = {}
-    for i in range(date_num):
-        date = date_list[i]
-        if date == ref_date:
-            cc = 0.0
-            par = np.zeros(inps.poly_order+1)
-        else:
-            data = h5[k].get(date)[:].flatten(1)
-
-            C = np.zeros((2, msk_num))
-            C[0,:] = dem[ndx]
-            C[1,:] = data[ndx]
-            cc = np.corrcoef(C)[0,1]
-
-            corr_array[i] = cc
-            if inps.threshold and np.abs(cc) < inps.threshold:
-                par = np.zeros(inps.poly_order+1)
-            else:
-                par = np.dot(A_inv, data[ndx])
-        print('%s: %.2f' % (date, cc))
-        par_dict[date] = par
-
-    average_phase_height_corr = np.nansum(np.abs(corr_array))/(date_num-1)
-    print('----------------------------------------------------------')
-    print('Average Correlation of DEM with time-series epochs: %.2f' % average_phase_height_corr)
-
-    # Correlation of DEM with Difference of subsequent epochs (Not used for now)
-    corr_diff_dict = {}
-    par_diff_dict = {}
-    for i in range(date_num-1):
-        date1 = date_list[i]
-        date2 = date_list[i+1]
-        date12 = date1+'-'+date2
-
-        data1 = h5[k].get(date1)[:].flatten(1)
-        data2 = h5[k].get(date2)[:].flatten(1)
-        data_diff = data2-data1
-
-        C_diff = np.zeros((2, msk_num))
-        C_diff[0,:] = dem[ndx]
-        C_diff[1,:] = data_diff[ndx]
-        cc_diff = np.corrcoef(C_diff)[0,1]
-
-        corr_diff_dict[date12] = cc_diff
-        par = np.dot(A_inv, data_diff[ndx])
-        par_diff_dict[date12] = par
-
-
-    ##### Correct and write time-series file
-    print('----------------------------------------------------------')
-    print('removing the stratified tropospheric delay from each epoch')
-    print('writing >>> '+inps.outfile)
-    h5out = h5py.File(inps.outfile,'w')
-    group = h5out.create_group(k)
-
-    prog_bar = ptime.progressBar(maxValue=date_num)
-    for i in range(date_num):
-        date = date_list[i]
-        data = h5[k].get(date)[:]
-
-        if date != ref_date:
-            par = par_dict[date]
-            trop_delay = np.reshape(np.dot(B, par), [width, length]).T
-            trop_delay -= trop_delay[ref_y, ref_x]
-            data -= trop_delay
-
-        dset = group.create_dataset(date, data=data)
-        prog_bar.update(i+1, suffix=date)
-
-    for key,value in iter(atr.items()):
-        group.attrs[key] = value
-
-    prog_bar.close()
-    h5out.close()
-    h5.close()
-
-    print('Done.')
+        inps.outfile = '{}_tropHgt.h5'.format(os.path.splitext(inps.timeseries_file)[0])
+    obj_out = timeseries(inps.outfile)
+    obj_out.write2hdf5(ts_data, refFile=inps.timeseries_file)
     return inps.outfile
 
 
 ############################################################################
 if __name__ == '__main__':
     main()
-
-

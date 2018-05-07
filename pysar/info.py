@@ -6,12 +6,13 @@
 ############################################################
 
 
-import os, sys
+import os
+import sys
 import argparse
 import time
 import h5py
 from numpy import std
-from pysar.utils import readfile, datetime as ptime
+from pysar.utils import readfile, ptime
 from pysar.objects import timeseries, ifgramStack, geometry, HDFEOS
 
 
@@ -26,13 +27,15 @@ EXAMPLE = """example:
   info.py timeseries.h5 --date > date_list.txt   # print date list of timeseries and save it to txt file.
 """
 
+
 def create_parser():
     """Create command line parser."""
-    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of File',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of File',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
     parser.add_argument('file', type=str, help='File to check')
-    parser.add_argument('--date', dest='disp_date', action='store_true', help='Show date/date12 info of input file')
+    parser.add_argument('--date', dest='disp_date', action='store_true',
+                        help='Show date/date12 info of input file')
     return parser
 
 
@@ -77,14 +80,15 @@ def hdf5_structure_string(file):
         output += name+"\n"
 
     f = h5py.File(file, 'r')
-    output += 'Attributes in / level:\n'
-    output = attributes_string(f.attrs, output, sorting=True)+"\n"
+    if len(f.attrs) > 0:
+        output += 'Attributes in / level:\n'
+        output = attributes_string(f.attrs, output, sorting=True)+"\n"
+
     f.visititems(print_hdf5_structure_obj)
     f.close()
 
     local_output = output
     output = ""
-
     return local_output
 
 
@@ -123,8 +127,10 @@ def get_date_list(fname, print_msg=False):
         dateList = obj.date12List
     else:
         print('--date option can not be applied to {} file, ignore it.'.format(k))
-    try: obj.close(print_msg=False)
-    except: pass
+    try:
+        obj.close(print_msg=False)
+    except:
+        pass
 
     if print_msg and dateList is not None:
         for i in dateList:
@@ -160,16 +166,16 @@ def main(iargs=None):
         return
     ext = os.path.splitext(inps.file)[1].lower()
 
-    ## --date option
+    # --date option
     if inps.disp_date:
         get_date_list(inps.file, print_msg=True)
         return
 
-    ## Basic info from PySAR reader
+    # Basic info from PySAR reader
     print_pysar_info(inps.file)
 
-    ## Generic Attribute/Structure of all files
-    if ext in ['.h5','.he5']:
+    # Generic Attribute/Structure of all files
+    if ext in ['.h5', '.he5']:
         print('\n{} {:*<40}'.format('*'*20, 'HDF5 File Structure '))
         print_hdf5_structure(inps.file)
     else:
@@ -183,4 +189,3 @@ def main(iargs=None):
 ############################################################
 if __name__ == '__main__':
     main()
-

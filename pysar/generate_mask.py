@@ -27,24 +27,29 @@ EXAMPLE = """example:
   generate_mask.py ifgramStack.h5 connectComponent --nonzero -o maskConnComp.h5
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Generate mask file from input file',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Generate mask file from input file',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='input file')
-    parser.add_argument('dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name.')
+    parser.add_argument(
+        'dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name.')
 
-    parser.add_argument('-m','--min', dest='vmin', type=float, help='minimum value for selected pixels')
-    parser.add_argument('-M','--max', dest='vmax', type=float, help='maximum value for selected pixels')
-    parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN','XMAX'), \
-                              help='selection range in x/cross-track/range direction')
-    parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN','YMAX'), \
-                              help='selection range in y/along-track/azimuth direction')
+    parser.add_argument('-m', '--min', dest='vmin', type=float,
+                        help='minimum value for selected pixels')
+    parser.add_argument('-M', '--max', dest='vmax', type=float,
+                        help='maximum value for selected pixels')
+    parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
+                        help='selection range in x/cross-track/range direction')
+    parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
+                        help='selection range in y/along-track/azimuth direction')
 
-    parser.add_argument('--nonzero', dest='nonzero', action='store_true',\
-                        help='Select all non-zero pixels.\n'+\
+    parser.add_argument('--nonzero', dest='nonzero', action='store_true',
+                        help='Select all non-zero pixels.\n' +
                              'i.e. mask.h5 from unwrapIfgram.h5')
     return parser
 
@@ -76,12 +81,12 @@ def create_threshold_mask(inps):
 
     # min threshold
     if inps.vmin:
-        mask[data<inps.vmin] = 0
+        mask[data < inps.vmin] = 0
         print('all pixels with value < %s = 0' % str(inps.vmin))
 
     # max threshold
     if inps.vmax:
-        mask[data>inps.vmax] = 0
+        mask[data > inps.vmax] = 0
         print('all pixels with value > %s = 0' % str(inps.vmax))
 
     # nan value
@@ -90,19 +95,19 @@ def create_threshold_mask(inps):
 
     # subset in Y
     if inps.subset_y:
-        y0,y1 = sorted(inps.subset_y)
-        mask[0:y0,:] = 0
-        mask[y1:length,:] = 0
-        print('all pixels with y OUT of [%d, %d] = 0' % (y0,y1))
+        y0, y1 = sorted(inps.subset_y)
+        mask[0:y0, :] = 0
+        mask[y1:length, :] = 0
+        print('all pixels with y OUT of [%d, %d] = 0' % (y0, y1))
 
     # subset in x
     if inps.subset_x:
-        x0,x1 = sorted(inps.subset_x)
-        mask[:,0:x0] = 0
-        mask[:,x1:width] = 0
-        print('all pixels with x OUT of [%d, %d] = 0' % (x0,x1))
-  
-    ## Write mask file
+        x0, x1 = sorted(inps.subset_x)
+        mask[:, 0:x0] = 0
+        mask[:, x1:width] = 0
+        print('all pixels with x OUT of [%d, %d] = 0' % (x0, x1))
+
+    # Write mask file
     atr['FILE_TYPE'] = 'mask'
     writefile.write(mask, out_file=inps.outfile, metadata=atr)
     return inps.outfile
@@ -137,4 +142,3 @@ def main(iargs=None):
 ################################################################################################
 if __name__ == '__main__':
     main()
-

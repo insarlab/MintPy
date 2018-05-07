@@ -31,6 +31,7 @@ example:
   incidence_angle.py  temporal_coherence.h5
 """
 
+
 def usage():
     print(USAGE)
     return
@@ -42,8 +43,9 @@ def main(argv):
         File = argv[0]
         atr = readfile.read_attribute(File)
     except:
-        usage();  sys.exit(1)
-    
+        usage()
+        sys.exit(1)
+
     try:
         outFile = argv[1]
     except:
@@ -51,7 +53,7 @@ def main(argv):
 
     # Calculate look angle
     angle = ut.incidence_angle(atr, dimension=2)
-    
+
     # Geo coord
     if 'Y_FIRST' in atr.keys():
         print('Input file is geocoded, only center incident angle is calculated: ')

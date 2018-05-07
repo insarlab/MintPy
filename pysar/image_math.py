@@ -11,17 +11,22 @@ import sys
 import argparse
 import h5py
 import numpy as np
-from pysar.utils import readfile, writefile, datetime as ptime
+from pysar.utils import readfile, writefile, ptime
 
 
 #######################################################################################
 def data_operation(data, operator, operand):
     """Mathmatic operation of 2D matrix"""
-    if   operator == '+':  data_out = data + operand
-    elif operator == '-':  data_out = data - operand
-    elif operator == '*':  data_out = data * operand
-    elif operator == '/':  data_out = data * (1.0/operand)
-    elif operator == '^':  data_out = data**operand
+    if operator == '+':
+        data_out = data + operand
+    elif operator == '-':
+        data_out = data - operand
+    elif operator == '*':
+        data_out = data * operand
+    elif operator == '/':
+        data_out = data * (1.0/operand)
+    elif operator == '^':
+        data_out = data**operand
     data_out = np.array(data_out, data.dtype)
     return data_out
 
@@ -37,12 +42,18 @@ def file_operation(fname, operator, operand, out_file=None):
 
     # default output filename
     if not out_file:
-        if   operator in ['+','plus',  'add',      'addition']:        suffix = 'plus'
-        elif operator in ['-','minus', 'substract','substraction']:    suffix = 'minus'
-        elif operator in ['*','times', 'multiply', 'multiplication']:  suffix = 'multiply'
-        elif operator in ['/','obelus','divide',   'division']:        suffix = 'divide'
-        elif operator in ['^','pow','power']:                          suffix = 'pow'
-        out_file = '{}_{}{}{}'.format(os.path.splitext(fname)[0], suffix, str(operand), os.path.splitext(fname)[1])
+        if operator in ['+', 'plus',  'add',      'addition']:
+            suffix = 'plus'
+        elif operator in ['-', 'minus', 'substract', 'substraction']:
+            suffix = 'minus'
+        elif operator in ['*', 'times', 'multiply', 'multiplication']:
+            suffix = 'multiply'
+        elif operator in ['/', 'obelus', 'divide',   'division']:
+            suffix = 'divide'
+        elif operator in ['^', 'pow', 'power']:
+            suffix = 'pow'
+        out_file = '{}_{}{}{}'.format(os.path.splitext(fname)[0], suffix,
+                                      str(operand), os.path.splitext(fname)[1])
 
     atr = readfile.read_attribute(fname)
     dsNames = readfile.get_dataset_list(fname)
@@ -64,15 +75,19 @@ EXAMPLE = """example:
   image_math.py  velocity.h5            '^'  2.0
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='input file')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name.')
-    parser.add_argument('operator', choices=['+','-','*','/','^'], help='mathmatical operator')
-    parser.add_argument('operand', metavar='VALUE', type=float, help='value to be operated with input file')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name.')
+    parser.add_argument('operator', choices=[
+                        '+', '-', '*', '/', '^'], help='mathmatical operator')
+    parser.add_argument('operand', metavar='VALUE', type=float,
+                        help='value to be operated with input file')
     return parser
 
 
@@ -94,5 +109,4 @@ def main(iargs=None):
 
 #######################################################################################
 if __name__ == '__main__':
-    main()  
-
+    main()

@@ -12,21 +12,20 @@ import numpy as np
 import pyproj
 import random
 import matplotlib.pyplot as plt
-
-import pysar.utils.datetime as ptime
+from pysar.utils import ptime
 
 
 def get_lat_lon(atr):
     '''Get lat/lon of all pixels'''
     length = int(atr['LENGTH'])
-    width  = int(atr['WIDTH'])
+    width = int(atr['WIDTH'])
     lat0 = float(atr['Y_FIRST'])
     lon0 = float(atr['X_FIRST'])
     lat_step = float(atr['Y_STEP'])
     lon_step = float(atr['X_STEP'])
     lat1 = lat0 + lat_step*length
     lon1 = lon0 + lon_step*width
-    
+
     lat, lon = np.mgrid[lat0:lat1:length*1j, lon0:lon1:width*1j]
     lat = lat.flatten()
     lon = lon.flatten()
@@ -35,12 +34,12 @@ def get_lat_lon(atr):
 
 def sample_data(lat, lon, mask=None, num_sample=500):
     ''''''
-    ## Flatten input data
+    # Flatten input data
     for i in [lat, lon]:
         if len(i.shape) != 1:
             i = i.flatten()
 
-    ## Check number of samples and number of pixels
+    # Check number of samples and number of pixels
     num_pixel = len(lat)
     if num_sample > num_pixel:
         print('Number of samples > number of pixels, fix number of samples to number of pixels.')
@@ -52,7 +51,7 @@ def sample_data(lat, lon, mask=None, num_sample=500):
 
     # Random select samples
     idx = np.arange(num_pixel)
-    idx_sample = random.sample(idx[mask.flatten()==1.0], int(num_sample))
+    idx_sample = random.sample(idx[mask.flatten() == 1.0], int(num_sample))
 
     lat_sample = lat[idx_sample]
     lon_sample = lon[idx_sample]
@@ -64,12 +63,13 @@ def get_distance(lat, lon, i):
     '''Return the distance of all points in lat/lon from its ith point'''
     lat1 = lat[i]*np.ones(lat.shape)
     lon1 = lon[i]*np.ones(lon.shape)
-    
+
     g = pyproj.Geod(ellps='WGS84')
     dist = g.inv(lon1, lat1, lon, lat)[2]
     return dist
 
-def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=True):    
+
+def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=True):
     num_sample = len(data)
     distance = np.zeros((num_sample**2))
     variance = np.zeros((num_sample**2))
@@ -83,17 +83,18 @@ def structure_function(data, lat, lon, step=5e3, min_pair_num=100e3, print_msg=T
     if print_msg:
         prog_bar.close()
 
-    dist, std, stdStd = bin_variance(distance, variance, step=step, min_pair_num=min_pair_num, print_msg=print_msg)
+    dist, std, stdStd = bin_variance(
+        distance, variance, step=step, min_pair_num=min_pair_num, print_msg=print_msg)
     return dist, std, stdStd
 
 
 def bin_variance(distance, variance, step=5e3, min_pair_num=100e3, print_msg=True):
-    x_steps = np.arange(0,np.max(distance),step)
+    x_steps = np.arange(0, np.max(distance), step)
     num_step = len(x_steps)
     std = np.zeros(x_steps.shape)
     stdStd = np.zeros(std.shape)
     p_num = np.zeros(x_steps.shape)
-    
+
     if print_msg:
         prog_bar = ptime.progressBar(maxValue=num_step)
     for i in range(num_step):
@@ -106,7 +107,6 @@ def bin_variance(distance, variance, step=5e3, min_pair_num=100e3, print_msg=Tru
             prog_bar.update(i+1, every=10)
     if print_msg:
         prog_bar.close()
-    
+
     max_step_idx = int(max(np.argwhere(p_num > min_pair_num)))
     return x_steps[0:max_step_idx], std[0:max_step_idx], stdStd[0:max_step_idx]
-

@@ -1,23 +1,16 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Aug 2015: Add -m/M/d option
-# Yunjun, Jun 2016: Add -t option
-# Yunjun, Aug 2015: Support drop_date txt file input
 
 
 import os
-import sys
-import time
-import datetime
 import argparse
-import h5py
 import numpy as np
 from pysar.objects import timeseries
-from pysar.utils import readfile, writefile, datetime as ptime, utils as ut
+from pysar.utils import readfile, writefile, ptime, utils as ut
 
 dataType = np.float32
 
@@ -45,21 +38,26 @@ DROP_DATE_TXT = """exclude_date.txt:
 20090103
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Inverse velocity from time series.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Inverse velocity from time series.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
 
-    parser.add_argument('timeseries_file', help='Time series file for velocity inversion.')
-    parser.add_argument('--start-date', dest='min_date', help='start date for velocity estimation')
-    parser.add_argument('--end-date', dest='max_date', help='end date for velocity estimation')
-    parser.add_argument('--exclude','--ex', dest='ex_date', nargs='+', default=[],\
-                        help='date(s) not included in velocity estimation, could be list of string or text file, i.e.:\n'+\
-                             '--exclude 20040502 20060708 20090103\n'+\
+    parser.add_argument('timeseries_file',
+                        help='Time series file for velocity inversion.')
+    parser.add_argument('--start-date', dest='min_date',
+                        help='start date for velocity estimation')
+    parser.add_argument('--end-date', dest='max_date',
+                        help='end date for velocity estimation')
+    parser.add_argument('--exclude', '--ex', dest='ex_date', nargs='+', default=[],
+                        help='date(s) not included in velocity estimation, could be list of string or text file, i.e.:\n' +
+                             '--exclude 20040502 20060708 20090103\n' +
                              '--exclude exclude_date.txt\n'+DROP_DATE_TXT)
-    parser.add_argument('--template','-t', dest='template_file',\
+    parser.add_argument('--template', '-t', dest='template_file',
                         help='template file with the following items:'+TEMPLATE)
-    parser.add_argument('-o','--output', dest='outfile', help='output file name')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name')
     return parser
 
 
@@ -68,14 +66,13 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if 'timeseries' != readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']:
-        print('ERROR: input file is not timeseries!')
-        sys.exit(2)
+        raise Exception('input file is not timeseries!')
     return inps
 
 
 ############################################################################
 def read_exclude_date(inps, dateListAll):
-    ##### Merge ex_date/min_date/max_date into ex_date
+    # Merge ex_date/min_date/max_date into ex_date
     yy_list_all = ptime.yyyymmdd2years(dateListAll)
     exDateList = []
     # 1. template_file
@@ -130,7 +127,7 @@ def read_date_info(inps):
     tsobj.open()
     inps.ex_date = read_exclude_date(inps, tsobj.dateList)
 
-    ##### Date used for estimation inps.dateList
+    # Date used for estimation inps.dateList
     inps.dateList = [i for i in tsobj.dateList if i not in inps.ex_date]
     inps.numDate = len(inps.dateList)
     print('-'*50)
@@ -141,6 +138,7 @@ def read_date_info(inps):
     else:
         print('dates used to estimate the velocity: {}\n{}'.format(inps.numDate, inps.dateList))
     print('-'*50)
+
     # Date Aux Info
     inps.dropDate = np.array([i not in inps.ex_date for i in tsobj.dateList], dtype=np.bool_)
     inps.years = np.array(tsobj.yearList)[inps.dropDate]
@@ -164,18 +162,18 @@ def read_template2inps(template_file, inps=None):
         elif value == 'no':
             inps.ex_date = []
         else:
-            inps.ex_date = value.replace(',',' ').split()
+            inps.ex_date = value.replace(',', ' ').split()
 
     key = prefix+'startDate'
     if key in template.keys():
         value = template[key]
-        if value not in ['auto','no']:
+        if value not in ['auto', 'no']:
             inps.min_date = ptime.yyyymmdd(value)
 
     key = prefix+'endDate'
     if key in template.keys():
         value = template[key]
-        if value not in ['auto','no']:
+        if value not in ['auto', 'no']:
             inps.max_date = ptime.yyyymmdd(value)
 
     return inps
@@ -187,37 +185,38 @@ def design_matrix(years):
                     date in years, e.g. 2015.1830937713896
     Returns:    A : 2D array of int in size of (numDate, 2)
     """
-    A = np.ones([len(years),2], dtype=dataType)
-    A[:,0] = years
+    A = np.ones([len(years), 2], dtype=dataType)
+    A[:, 0] = years
     #A_inv = np.dot(np.linalg.inv(np.dot(A.T,A)), A.T)
     #A_inv = np.array(A_inv, dataType)
     return A
 
 
-def estimateVelocity(inps):
+def estimate_linear_velocity(inps):
     A = design_matrix(inps.years)
     A_inv = np.array(np.linalg.pinv(A), dataType)
-    #A_inv = np.array(np.linalg.inv(A.T.dot(A)).dot(A.T), dataType)  #Give wrong and different result, find reason.
+    # A_inv = np.array(np.linalg.inv(A.T.dot(A)).dot(A.T), dataType)  #Give wrong and different result, find reason.
 
     tsobj = timeseries(inps.timeseries_file)
-    tsData = tsobj.read()[inps.dropDate,:,:].reshape(inps.numDate, -1)
+    tsData = tsobj.read()[inps.dropDate, :, :].reshape(inps.numDate, -1)
     dsShape = (tsobj.length, tsobj.width)
 
     X = np.dot(A_inv, tsData)
-    V = np.reshape(X[0,:], dsShape)
+    V = np.reshape(X[0, :], dsShape)
 
     tsResidual = tsData - np.dot(A, X)
     timeStd = np.sqrt(np.sum((inps.years - np.mean(inps.years))**2))
     Vstd = np.sqrt(np.sum(tsResidual**2, axis=0) / (inps.numDate-2)) / timeStd
     Vstd = Vstd.reshape(dsShape)
 
-    ## Write h5 file
+    # Write h5 file
     if not inps.outfile:
         if inps.ex_date:
             inps.outfile = 'velocityEx.h5'
         else:
             inps.outfile = 'velocity.h5'
-    outfileStd = '{}Std{}'.format(os.path.splitext(inps.outfile)[0], os.path.splitext(inps.outfile)[1])
+    # outfileStd = '{}Std{}'.format(os.path.splitext(inps.outfile)[0],
+    #                               os.path.splitext(inps.outfile)[1])
 
     atr = tsobj.metadata.copy()
     atr['FILE_TYPE'] = 'velocity'
@@ -234,7 +233,7 @@ def estimateVelocity(inps):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     inps = read_date_info(inps)
-    inps.outfile = estimateVelocity(inps)
+    inps.outfile = estimate_linear_velocity(inps)
     print('Done.')
     return inps.outfile
 
@@ -242,4 +241,3 @@ def main(iargs=None):
 ############################################################################
 if __name__ == '__main__':
     main()
-

@@ -43,24 +43,30 @@ def diff_file(file1, file2, outFile=None, force=False):
     if not outFile:
         fbase, fext = os.path.splitext(file1)
         outFile = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2))[0], fext)
-    print('{} - {} --> {}'.format(file1,file2,outFile))
+    print('{} - {} --> {}'.format(os.path.basename(file1),
+                                  os.path.basename(file2),
+                                  os.path.basename(outFile)))
 
     # Read basic info
-    atr1 = readfile.read_attribute(file1);  k1 = atr1['FILE_TYPE']
-    atr2 = readfile.read_attribute(file2);  k2 = atr1['FILE_TYPE']
-    print('input files are: {} and {}'.format(k1,k2))
+    atr1 = readfile.read_attribute(file1)
+    k1 = atr1['FILE_TYPE']
+    atr2 = readfile.read_attribute(file2)
+    k2 = atr1['FILE_TYPE']
+    print('input files are: {} and {}'.format(k1, k2))
 
     if k1 == 'timeseries':
         if k2 != 'timeseries':
             print('ERROR: input multiple dataset files are not the same file type!')
             sys.exit(1)
 
-        obj1 = timeseries(file1);  obj1.open()
-        obj2 = timeseries(file2);  obj2.open()
+        obj1 = timeseries(file1)
+        obj1.open()
+        obj2 = timeseries(file2)
+        obj2.open()
         ref_date, ref_y, ref_x = check_reference(obj1.metadata, obj2.metadata)
 
         dateListShared = [i for i in obj1.dateList if i in obj2.dateList]
-        dateShared = np.ones((obj1.numDate),dtype=np.bool_)
+        dateShared = np.ones((obj1.numDate), dtype=np.bool_)
         if dateListShared != obj1.dateList:
             print('WARNING: {} does not contain all dates in {}'.format(file2, file1))
             if force:
@@ -74,9 +80,9 @@ def diff_file(file1, file2, outFile=None, force=False):
 
         data2 = obj2.read(dateListShared)
         if ref_date:
-            data2 -= data2[obj2.dateList.index(ref_date),:,:]
+            data2 -= data2[obj2.dateList.index(ref_date), :, :]
         if ref_y and ref_x:
-            data2 -= data2[:,ref_y,ref_x]
+            data2 -= data2[:, ref_y, ref_x]
 
         data = obj1.read()
         data[dateShared] -= data2
@@ -102,15 +108,17 @@ EXAMPLE = """example:
   diff.py  unwrapIfgram.h5  reconstruct_unwrapIfgram.h5
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Generates the difference of two input files.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Generates the difference of two input files.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file1', help='file to be substracted.')
     parser.add_argument('file2', help='file used to substract')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name, default is file1_diff_file2.h5')
-    parser.add_argument('--force', action='store_true',\
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name, default is file1_diff_file2.h5')
+    parser.add_argument('--force', action='store_true',
                         help='Enforce the differencing for the shared dates only for time-series files')
     return parser
 
@@ -129,5 +137,4 @@ def main(iargs=None):
 
 #####################################################################################
 if __name__ == '__main__':
-    main()  
-
+    main()

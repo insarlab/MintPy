@@ -43,14 +43,15 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         datasetDict[metadata['FILE_TYPE']] = data
 
     # HDF5 File
-    if ext in ['.h5','.he5']:
+    if ext in ['.h5', '.he5']:
         k = metadata['FILE_TYPE']
         if k == 'timeseries':
             if ref_file is None:
-                print('ERROR: can not write {} file without reference file!'.format(k))
-                sys.exit(-1)
+                raise Exception('Can not write {} file without reference file!'.format(k))
             obj = timeseries(out_file)
-            obj.write2hdf5(datasetDict[k], metadata=metadata, refFile=ref_file)
+            obj.write2hdf5(datasetDict[k],
+                           metadata=metadata,
+                           refFile=ref_file)
 
         else:
             print('create HDF5 file: {} with w mode'.format(out_file))
@@ -60,26 +61,33 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             maxDigit = max([len(i) for i in list(datasetDict.keys())])
             for dsName in datasetDict.keys():
                 data = datasetDict[dsName]
-                print('create dataset /{d:<{w}} of {t:<10} in size of {s}'.format(d=dsName,
-                                                                                  w=maxDigit,
-                                                                                  t=str(data.dtype),
-                                                                                  s=data.shape))
-                ds = f.create_dataset(dsName, data=data, chunks=True, compression=compression)
-                #if dsName == 'velocity':
-                #    ds.attrs['MaxValue'] = np.nanmax(data)  #facilitate disp_min/max for mutiple subplots in view.py
-                #    ds.attrs['MinValue'] = np.nanmin(data)  #facilitate disp_min/max for mutiple subplots in view.py
+                print(('create dataset /{d:<{w}} of {t:<10}'
+                       ' in size of {s}').format(d=dsName,
+                                                 w=maxDigit,
+                                                 t=str(data.dtype),
+                                                 s=data.shape))
+                ds = f.create_dataset(dsName,
+                                      data=data,
+                                      chunks=True,
+                                      compression=compression)
 
             # Write extra/auxliary datasets from ref_file
             if ref_file:
                 fr = h5py.File(ref_file, 'r')
-                dsNames = [i for i in fr.keys() if i not in list(datasetDict.keys())]
+                dsNames = [i for i in fr.keys()
+                           if (i not in list(datasetDict.keys())
+                               and isinstance(i, h5py.Dataset))]
                 for dsName in dsNames:
                     ds = fr[dsName]
-                    print('create dataset /{d:<{w}} of {t:<10} in size of {s}'.format(d=dsName,
-                                                                                      w=maxDigit,
-                                                                                      t=str(ds.dtype),
-                                                                                      s=ds.shape))
-                    f.create_dataset(dsName, data=ds[:], chunks=True, compression=compression)
+                    print(('create dataset /{d:<{w}} of {t:<10}'
+                           ' in size of {s}').format(d=dsName,
+                                                     w=maxDigit,
+                                                     t=str(ds.dtype),
+                                                     s=ds.shape))
+                    f.create_dataset(dsName,
+                                     data=ds[:],
+                                     chunks=True,
+                                     compression=compression)
                 fr.close()
 
             # metadata
@@ -88,21 +96,21 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             f.close()
             print('finished writing to {}'.format(out_file))
 
-    ##### ISCE / ROI_PAC GAMMA / Image product
+    # ISCE / ROI_PAC GAMMA / Image product
     else:
-        ##### Write Data File
-        if   ext in ['.unw','.cor','.hgt']:
+        # Write Data File
+        if ext in ['.unw', '.cor', '.hgt']:
             write_float32(data, out_file)
         elif ext == '.dem':
             write_real_int16(data, out_file)
         elif ext in ['.trans']:
             write_float32(rg, az, out_file)
-        elif ext in ['.utm_to_rdc','.UTM_TO_RDC']:
+        elif ext in ['.utm_to_rdc', '.UTM_TO_RDC']:
             data = np.zeros(rg.shape, dtype=np.complex64)
             data.real = datasetDict['rangeCoord']
             data.imag = datasetDict['azimuthCoord']
             data.astype('>c8').tofile(out_file)
-        #elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
+        # elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
         #    data.save(out_file)
         elif ext == '.mli':
             write_real_float32(data, out_file)
@@ -114,9 +122,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_real_float32(data, out_file)
         elif metadata['DATA_TYPE'].lower() in ['int16', 'short']:
             write_real_int16(data, out_file)
-        else: print('Un-supported file type: '+ext); return 0;
+        else:
+            print('Un-supported file type: '+ext)
+            return 0
 
-        ##### Write .rsc File
+        # Write .rsc File
         write_roipac_rsc(metadata, out_file+'.rsc')
         return out_file
 
@@ -149,7 +159,9 @@ def write_roipac_rsc(metadata, out_file, sorting=True):
     maxDigit = max([len(key) for key in metadata.keys()]+[2])
     f = open(out_file, 'w')
     for key in dictKey:
-        f.write('{k:<{d}}    {v}\n'.format(k=str(key), d=maxDigit, v=str(metadata[key])))
+        f.write('{k:<{d}}    {v}\n'.format(k=str(key),
+                                           d=maxDigit,
+                                           v=str(metadata[key])))
     f.close()
     return out_file
 
@@ -158,16 +170,16 @@ def write_float32(*args):
     """Write ROI_PAC rmg format with float32 precision
     Format of the binary file is same as roi_pac unw, cor, or hgt data.
           should rename to write_rmg_float32()
-    
+
     Exmaple:
             write_float32(phase, out_file)
             write_float32(amp, phase, out_file)
     """
-    if len(args)==2:
+    if len(args) == 2:
         amp = args[0]
         pha = args[0]
         out_file = args[1]
-    elif len(args)==3:
+    elif len(args) == 3:
         amp = args[0]
         pha = args[1]
         out_file = args[2]
@@ -180,10 +192,10 @@ def write_float32(*args):
     return out_file
 
 
-def write_complex64(data,out_file):
+def write_complex64(data, out_file):
     """Writes roi_pac .int data"""
     num_pixel = data.size
-    F = np.zeros([2 * num_pixel, 1], np.float32)  
+    F = np.zeros([2 * num_pixel, 1], np.float32)
     id1 = list(range(0, 2 * num_pixel, 2))
     id2 = list(range(1, 2 * num_pixel, 2))
     F[id1] = np.reshape(np.cos(data), (num_pixel, 1))
@@ -211,7 +223,7 @@ def write_real_float32(data, out_file):
     return out_file
 
 
-def write_complex_int16(data,out_file):
+def write_complex_int16(data, out_file):
     """Write gamma scomplex data, i.e. .slc file.
         data is complex 2-D matrix
         real, imagery, real, ...
@@ -225,4 +237,3 @@ def write_complex_int16(data,out_file):
     F[id2] = np.reshape(np.array(data.imag, np.int16), (num_pixel, 1))
     F.tofile(out_file)
     return out_file
-

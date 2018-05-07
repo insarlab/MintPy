@@ -10,7 +10,7 @@ import time
 import datetime
 import h5py
 import numpy as np
-from pysar.utils import readfile, datetime as ptime, utils as ut
+from pysar.utils import readfile, ptime, utils as ut
 
 
 #####################################################################################
@@ -30,6 +30,7 @@ example:
   ifgram_reconstruction.py  unwrapIfgram.h5  timeseries_ECMWF_demCor.h5  reconstructed_unwrapIfgram.h5
 """
 
+
 def usage():
     print(USAGE)
     return
@@ -38,13 +39,14 @@ def usage():
 #####################################################################################
 def main(argv):
 
-    ##### Inputs
+    # Inputs
     try:
         ifgram_file = argv[0]
         timeseries_file = argv[1]
     except:
-        usage(); sys.exit(1)
-  
+        usage()
+        sys.exit(1)
+
     try:
         outfile = argv[2]
     except:
@@ -54,7 +56,7 @@ def main(argv):
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
-    ##### Read time-series file
+    # Read time-series file
     print('loading timeseries ...')
     h5ts = h5py.File(timeseries_file, 'r')
     date_list = sorted(h5ts['timeseries'].keys())
@@ -66,7 +68,7 @@ def main(argv):
     for i in range(date_num):
         date = date_list[i]
         d = h5ts['timeseries'].get(date)[:]
-        timeseries[i,:] = d.flatten(0)
+        timeseries[i, :] = d.flatten(0)
         prog_bar.update(i+1, suffix=date)
     prog_bar.close()
     h5ts.close()
@@ -75,29 +77,29 @@ def main(argv):
     range2phase = -4*np.pi/float(atr['WAVELENGTH'])
     timeseries = range2phase*timeseries
 
-    #####  Estimate interferograms from timeseries
+    # Estimate interferograms from timeseries
     print('estimating interferograms from timeseries using design matrix from input interferograms')
-    A,B = ut.design_matrix(ifgram_file)
-    p = -1*np.ones([A.shape[0],1])
-    Ap = np.hstack((p,A))
+    A, B = ut.design_matrix(ifgram_file)
+    p = -1*np.ones([A.shape[0], 1])
+    Ap = np.hstack((p, A))
     estData = np.dot(Ap, timeseries)
     del timeseries
 
-    ##### Write interferograms file
+    # Write interferograms file
     print('writing >>> '+outfile)
-    h5 = h5py.File(ifgram_file,'r')
+    h5 = h5py.File(ifgram_file, 'r')
     ifgram_list = sorted(h5['interferograms'].keys())
     ifgram_num = len(ifgram_list)
     date12_list = ptime.list_ifgram2date12(ifgram_list)
-    
-    h5out = h5py.File(outfile,'w')
+
+    h5out = h5py.File(outfile, 'w')
     group = h5out.create_group('interferograms')
 
     print('number of interferograms: '+str(ifgram_num))
     prog_bar = ptime.progressBar(maxValue=ifgram_num)
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
-        data = np.reshape(estData[i,:],(length, width))
+        data = np.reshape(estData[i, :], (length, width))
 
         gg = group.create_group(ifgram)
         dset = gg.create_dataset(ifgram, data=data)
@@ -114,5 +116,3 @@ def main(argv):
 #####################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-

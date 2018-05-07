@@ -8,9 +8,8 @@
 import os
 import shutil
 import argparse
-import h5py
 import numpy as np
-from pysar.utils import readfile, datetime as ptime, utils as ut
+from pysar.utils import readfile, ptime, utils as ut
 from pysar.objects import timeseries
 
 
@@ -28,7 +27,7 @@ pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS
 ## reference all timeseries to one date in time
 ## minRMS - choose date with minimum residual RMS using value from step 8.1
 ## no     - do not change the default reference date (1st date)
-pysar.reference.date = auto   #[reference_date.txt / 20090214 / minRMS / no], auto for reference_date.txt
+pysar.reference.date = auto   #[reference_date.txt / 20090214 / minRMS / no], auto for minRMS
 """
 
 EXAMPLE = """example:
@@ -101,7 +100,9 @@ def read_ref_date(inps):
     elif inps.refDate.lower() == 'minrms':
         print('-'*50)
         print('auto choose reference date based on minimum residual RMS')
-        rms_list, date_list = ut.get_residual_rms(inps.resid_file, inps.maskFile, inps.ramp_type)[0:2]
+        rms_list, date_list = ut.get_residual_rms(inps.resid_file,
+                                                  inps.maskFile,
+                                                  inps.ramp_type)[0:2]
         ref_idx = np.argmin(rms_list)
         inps.refDate = date_list[ref_idx]
         print('date with minimum residual RMS: %s - %.4f' % (inps.refDate, rms_list[ref_idx]))
@@ -157,7 +158,9 @@ def main(iargs=None):
 
     inps.refDate = read_ref_date(inps)
 
-    inps.outfile = ref_date_file(inps.timeseries_file, inps.refDate, inps.outfile)
+    inps.outfile = ref_date_file(inps.timeseries_file,
+                                 inps.refDate,
+                                 inps.outfile)
     return inps.outfile
 
 

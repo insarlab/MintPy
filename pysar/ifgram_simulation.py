@@ -14,7 +14,7 @@ import datetime
 import h5py
 import numpy as np
 import random
-from pysar.utils import readfile, datetime as ptime
+from pysar.utils import readfile, ptime
 
 
 ##############################################################################################
@@ -23,25 +23,28 @@ EXAMPLE = """example:
   ifgram_simulation.py  unwrapIfgram.h5  velocity.h5  -p 0.2  -m mask_aoi.h5
 """
 
+
 def create_parser():
-    parser = argparse.ArgumentParser(description='Simulating a set of interferograms based on '+\
-                                                 'real interferograms and an existing displacement velocity field.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+    parser = argparse.ArgumentParser(description='Simulating a set of interferograms based on ' +
+                                                 'real interferograms and an existing displacement velocity field.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('ifgram_file', help='real interferograms file, e.g. unwrapIfgram.h5')
+    parser.add_argument(
+        'ifgram_file', help='real interferograms file, e.g. unwrapIfgram.h5')
     parser.add_argument('velocity_file', help='velocity file')
-    parser.add_argument('-o','--output', dest='outfile', default='simulated_unwrapIfgram.h5',\
+    parser.add_argument('-o', '--output', dest='outfile', default='simulated_unwrapIfgram.h5',
                         help='output filename for simulated interferograms file. Default: simulated_unwrapIfgram.h5')
-    parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN','XMAX'), \
+    parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
                         help='subset for simulation in x/cross-track/range direction')
-    parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN','YMAX'), \
+    parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
                         help='subset for simulation in y/along-track/azimuth direction')
 
-    unwErr = parser.add_argument_group('Add unwrapping error to the simulation.')
-    unwErr.add_argument('-p','--percentage', type=float, default=0.0,\
+    unwErr = parser.add_argument_group(
+        'Add unwrapping error to the simulation.')
+    unwErr.add_argument('-p', '--percentage', type=float, default=0.0,
                         help='percentage of unwrapping error, [0.0-1.0]. Default: 0.0')
-    unwErr.add_argument('-m','--mask', dest='mask_file', default='mask.h5', \
+    unwErr.add_argument('-m', '--mask', dest='mask_file', default='mask.h5',
                         help='mask for pixels with unwrapping error. Default: mask.h5')
     return parser
 
@@ -88,7 +91,7 @@ def main(iargs=None):
     date12_list = ptime.list_ifgram2date12(ifgram_list)
     print('number of interferograms: '+str(ifgram_num))
 
-    ##### Select interferograms with unwrapping error
+    # Select interferograms with unwrapping error
     if inps.percentage > 0.0:
         mask = readfile.read(inps.mask_file, datasetName='mask')[0]
         print('read mask for pixels with unwrapping error from file: '+inps.mask_file)
@@ -104,33 +107,33 @@ def main(iargs=None):
     else:
         unw_err_ifgram_list = []
 
-    ###### Generate simulated interferograms
+    # Generate simulated interferograms
     m_dates = ptime.yyyymmdd([i.split('_')[0] for i in date12_list])
     s_dates = ptime.yyyymmdd([i.split('_')[1] for i in date12_list])
     range2phase = -4.0*np.pi/float(atr['WAVELENGTH'])
 
     print('writing simulated interferograms file: '+inps.outfile)
-    h5out=h5py.File(inps.outfile,'w') 
+    h5out = h5py.File(inps.outfile, 'w')
     group = h5out.create_group('interferograms')
     for i in range(ifgram_num):
         ifgram = ifgram_list[i]
         # Get temporal baseline in years
-        t1 = datetime.datetime(*time.strptime(m_dates[i],"%Y%m%d")[0:5])
-        t2 = datetime.datetime(*time.strptime(s_dates[i],"%Y%m%d")[0:5])
+        t1 = datetime.datetime(*time.strptime(m_dates[i], "%Y%m%d")[0:5])
+        t2 = datetime.datetime(*time.strptime(s_dates[i], "%Y%m%d")[0:5])
         dt = (t2-t1)
         dt = float(dt.days)/365.25
 
         # Simuated interferograms with unwrap error
         unw = velocity*dt*range2phase
         if ifgram in unw_err_ifgram_list:
-            rand_int = random.sample(list(range(1,10)),1)[0]
+            rand_int = random.sample(list(range(1, 10)), 1)[0]
             unw += rand_int * unit_unw_err
             print(ifgram+'  - add unwrapping error of %d*2*pi' % rand_int)
         else:
             print(ifgram)
 
         gg = group.create_group(ifgram)
-        dset = gg.create_dataset(ifgram, data=unw[y0:y1,x0:x1])
+        dset = gg.create_dataset(ifgram, data=unw[y0:y1, x0:x1])
 
         for key, value in h5[k][ifgram].attrs.items():
             gg.attrs[key] = value
@@ -148,5 +151,4 @@ def main(iargs=None):
 
 ##############################################################################################
 if __name__ == '__main__':
-    main() 
-
+    main()

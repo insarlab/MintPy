@@ -8,10 +8,13 @@
 #     from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
 
 
-import os, sys, glob
+import os
+import glob
+import warnings
 import h5py
 import numpy as np
-from pysar.utils import readfile, datetime as ptime, utils as ut
+from skimage.transform import resize
+from pysar.utils import readfile, ptime, utils as ut
 from pysar.objects import ifgramDatasetNames, geometryDatasetNames, dataTypeDict
 
 BOOL_ZERO = np.bool_(0)
@@ -43,7 +46,6 @@ class ifgramStackDict:
         self.name = name
         self.pairsDict = pairsDict
 
-
     def get_size(self, box=None):
         self.numIfgram = len(self.pairsDict)
         ifgramObj = [v for v in self.pairsDict.values()][0]
@@ -56,18 +58,15 @@ class ifgramStackDict:
             self.width = ifgramObj.width
         return self.numIfgram, self.length, self.width
 
-
     def get_date12_list(self):
         pairs = [pair for pair in self.pairsDict.keys()]
-        self.date12List = ['{}_{}'.format(i[0],i[1]) for i in pairs]
+        self.date12List = ['{}_{}'.format(i[0], i[1]) for i in pairs]
         return self.date12List
-
 
     def get_metadata(self):
         ifgramObj = [v for v in self.pairsDict.values()][0]
         self.metadata = ifgramObj.get_metadata()
         return self.metadata
-
 
     def get_dataset_data_type(self, dsName):
         ifgramObj = [v for v in self.pairsDict.values()][0]
@@ -77,7 +76,6 @@ class ifgramStackDict:
         if 'DATA_TYPE' in metadata.keys():
             dsDataType = dataTypeDict[metadata['DATA_TYPE'].lower()]
         return dsDataType
-
 
     def write2hdf5(self, outputFile='ifgramStack.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
         '''Save/write an ifgramStackDict object into an HDF5 file with the structure below:
@@ -122,13 +120,18 @@ class ifgramStackDict:
             dsDataType = dataType
             if dsName in ['connectComponent']:
                 dsDataType = np.bool_
-            print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
-                                                                                                     w=maxDigit,
-                                                                                                     t=str(dsDataType),
-                                                                                                     s=dsShape,
-                                                                                                     c=str(compression)))
-            ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),
-                                  dtype=dsDataType, chunks=True, compression=compression)
+            print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                   ' with compression = {c}').format(d=dsName,
+                                                     w=maxDigit,
+                                                     t=str(dsDataType),
+                                                     s=dsShape,
+                                                     c=str(compression)))
+            ds = f.create_dataset(dsName,
+                                  shape=dsShape,
+                                  maxshape=(None, dsShape[1], dsShape[2]),
+                                  dtype=dsDataType,
+                                  chunks=True,
+                                  compression=compression)
 
             #dMin = 0
             #dMax = 0
@@ -138,21 +141,21 @@ class ifgramStackDict:
                 data = ifgramObj.read(dsName, box=box)[0]
                 #dMin = min(dMin, np.nanmin(data))
                 #dMax = max(dMax, np.nanmax(data))
-                ds[i,:,:] = data
+                ds[i, :, :] = data
                 self.bperp[i] = ifgramObj.get_perp_baseline()
-                prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],self.pairs[i][1]))
+                prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
+                                                           self.pairs[i][1]))
             prog_bar.close()
-
-            #ds.attrs['Title'] = dsName
-            #ds.attrs['MinValue'] = dMin   #facilitate disp_min/max for mutiple subplots in view.py
-            #ds.attrs['MaxValue'] = dMax   #facilitate disp_min/max for mutiple subplots in view.py
 
         ###############################
         # 2D dataset containing master and slave dates of all pairs
         dsName = 'date'
         dsDataType = np.string_
-        dsShape = (self.numIfgram,2)
-        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
+        dsShape = (self.numIfgram, 2)
+        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                          w=maxDigit,
+                                                                          t=str(dsDataType),
+                                                                          s=dsShape))
         data = np.array(self.pairs, dtype=dsDataType)
         ds = f.create_dataset(dsName, data=data)
 
@@ -161,7 +164,10 @@ class ifgramStackDict:
         dsName = 'bperp'
         dsDataType = dataType
         dsShape = (self.numIfgram,)
-        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
+        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                          w=maxDigit,
+                                                                          t=str(dsDataType),
+                                                                          s=dsShape))
         data = np.array(self.bperp, dtype=dsDataType)
         ds = f.create_dataset(dsName, data=data)
 
@@ -170,7 +176,10 @@ class ifgramStackDict:
         dsName = 'dropIfgram'
         dsDataType = np.bool_
         dsShape = (self.numIfgram,)
-        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName, w=maxDigit, t=str(dsDataType), s=dsShape))
+        print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
+                                                                          w=maxDigit,
+                                                                          t=str(dsDataType),
+                                                                          s=dsShape))
         data = np.ones(dsShape, dtype=dsDataType)
         dsDate = f.create_dataset(dsName, data=data)
 
@@ -182,15 +191,12 @@ class ifgramStackDict:
         if extra_metadata:
             self.metadata.update(extra_metadata)
             print('add extra metadata: {}'.format(extra_metadata))
-        for key,value in self.metadata.items():
+        for key, value in self.metadata.items():
             f.attrs[key] = value
 
         f.close()
         print('Finished writing to {}'.format(self.outputFile))
         return self.outputFile
-
-
-
 
 
 ########################################################################################
@@ -210,6 +216,7 @@ class ifgramDict:
         ifgramObj = ifgramDict(dates=('20160524','20160530'), datasetDict=datasetDict)
         data, atr = ifgramObj.read('unwrapPhase')
     """
+
     def __init__(self, name='ifgram', dates=None, datasetDict={}, metadata=None):
         self.name = name
         self.masterDate, self.slaveDate = dates
@@ -218,17 +225,15 @@ class ifgramDict:
         self.platform = None
         self.track = None
         self.processor = None
-        # platform, track and processor can get values from metadat if they exist   
+        # platform, track and processor can get values from metadat if they exist
         if metadata is not None:
-            for key , value in metadata.items():
+            for key, value in metadata.items():
                 setattr(self, key, value)
-
 
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
         data, metadata = readfile.read(self.file, box=box)
         return data, metadata
-
 
     def get_size(self):
         self.file = self.datasetDict[ifgramDatasetNames[0]]
@@ -236,7 +241,6 @@ class ifgramDict:
         self.length = int(metadata['LENGTH'])
         self.width = int(metadata['WIDTH'])
         return self.length, self.width
-
 
     def get_perp_baseline(self):
         self.file = self.datasetDict[ifgramDatasetNames[0]]
@@ -246,19 +250,18 @@ class ifgramDict:
         self.bperp = (self.bperp_top + self.bperp_bottom) / 2.0
         return self.bperp
 
-
     def get_metadata(self, family=ifgramDatasetNames[0]):
         self.file = self.datasetDict[family]
         self.metadata = readfile.read_attribute(self.file)
         self.length = int(self.metadata['LENGTH'])
         self.width = int(self.metadata['WIDTH'])
 
-        #if self.processor is None:
+        # if self.processor is None:
         #    ext = self.file.split('.')[-1]
         #    if 'PROCESSOR' in self.metadata.keys():
         #        self.processor = self.metadata['PROCESSOR']
         #    elif os.path.exists(self.file+'.xml'):
-        #        self.processor = 'isce' 
+        #        self.processor = 'isce'
         #    elif os.path.exists(self.file+'.rsc'):
         #        self.processor = 'roipac'
         #    elif os.path.exists(self.file+'.par'):
@@ -277,10 +280,6 @@ class ifgramDict:
             self.metadata['PLATFORM'] = self.platform
 
         return self.metadata
-
-
-
-
 
 
 ########################################################################################
@@ -315,30 +314,32 @@ class geometryDict:
         self.datasetDict = datasetDict
         self.ifgramMetadata = ifgramMetadata
 
-
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
-        data, metadata = readfile.read(self.file, datasetName=family, box=box)
+        data, metadata = readfile.read(self.file,
+                                       datasetName=family,
+                                       box=box)
         return data, metadata
-
 
     def get_slantRangeDistance(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
             return None
-        data = ut.range_distance(self.ifgramMetadata, dimension=2, print_msg=False)
+        data = ut.range_distance(self.ifgramMetadata,
+                                 dimension=2,
+                                 print_msg=False)
         if box is not None:
-            data = data[box[1]:box[3],box[0]:box[2]]
+            data = data[box[1]:box[3], box[0]:box[2]]
         return data
-
 
     def get_incidenceAngle(self, box=None):
         if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
             return None
-        data = ut.incidence_angle(self.ifgramMetadata, dimension=2, print_msg=False)
+        data = ut.incidence_angle(self.ifgramMetadata,
+                                  dimension=2,
+                                  print_msg=False)
         if box is not None:
-            data = data[box[1]:box[3],box[0]:box[2]]
+            data = data[box[1]:box[3], box[0]:box[2]]
         return data
-
 
     def get_size(self, family=None, box=None):
         if not family:
@@ -353,11 +354,9 @@ class geometryDict:
             width = int(metadata['WIDTH'])
         return length, width
 
-
     def get_dataset_list(self):
         self.datasetList = list(self.datasetDict.keys())
         return self.datasetList
-
 
     def get_metadata(self, family=None):
         if not family:
@@ -367,12 +366,12 @@ class geometryDict:
         self.length = int(self.metadata['LENGTH'])
         self.width = int(self.metadata['WIDTH'])
 
-        #if self.processor is None:
+        # if self.processor is None:
         #    ext = self.file.split('.')[-1]
         #    if 'PROCESSOR' in self.metadata.keys():
         #        self.processor = self.metadata['PROCESSOR']
         #    elif os.path.exists(self.file+'.xml'):
-        #        self.processor = 'isce' 
+        #        self.processor = 'isce'
         #    elif os.path.exists(self.file+'.rsc'):
         #        self.processor = 'roipac'
         #    elif os.path.exists(self.file+'.par'):
@@ -384,7 +383,6 @@ class geometryDict:
         #        self.processor = 'isce'
         #self.metadata['PROCESSOR'] = self.processor
         return self.metadata
-
 
     def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression=None):
         '''
@@ -421,81 +419,99 @@ class geometryDict:
 
         ###############################
         for dsName in self.dsNames:
-            ## 3D datasets containing bperp
+            # 3D datasets containing bperp
             if dsName == 'bperp':
                 self.dateList = list(self.datasetDict[dsName].keys())
-                ##Write 3D dataset bperp
                 dsDataType = dataType
                 self.numDate = len(self.dateList)
                 dsShape = (self.numDate, length, width)
-                ds = f.create_dataset(dsName, shape=dsShape, maxshape=(None, dsShape[1], dsShape[2]),\
-                                      dtype=dsDataType, chunks=True, compression=compression)
-                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
-                                                                                                         w=maxDigit,
-                                                                                                         t=str(dsDataType),
-                                                                                                         s=dsShape,
-                                                                                                         c=str(compression)))
+                ds = f.create_dataset(dsName,
+                                      shape=dsShape,
+                                      maxshape=(None, dsShape[1], dsShape[2]),
+                                      dtype=dsDataType,
+                                      chunks=True,
+                                      compression=compression)
+                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                       ' with compression = {c}').format(d=dsName,
+                                                         w=maxDigit,
+                                                         t=str(dsDataType),
+                                                         s=dsShape,
+                                                         c=str(compression)))
+
                 print('read coarse grid baseline files and linear interpolate into full resolution ...')
                 prog_bar = ptime.progressBar(maxValue=self.numDate)
                 for i in range(self.numDate):
                     fname = self.datasetDict[dsName][self.dateList[i]]
-                    data = read_isce_bperp_file(fname=fname, outShape=(self.length, self.width), box=box)
-                    ds[i,:,:] = data
+                    data = read_isce_bperp_file(fname=fname,
+                                                out_shape=(self.length, self.width),
+                                                box=box)
+                    ds[i, :, :] = data
                     prog_bar.update(i+1, suffix=self.dateList[i])
                 prog_bar.close()
 
-                ##Write 1D dataset date
+                # Write 1D dataset date
                 dsName = 'date'
                 dsShape = (self.numDate,)
                 dsDataType = np.string_
-                print('create dataset /{d:<{w}} of {t:<25} in size of {s}'.format(d=dsName,
-                                                                                  w=maxDigit,
-                                                                                  t=str(dsDataType),
-                                                                                  s=dsShape))
+                print(('create dataset /{d:<{w}} of {t:<25}'
+                       ' in size of {s}').format(d=dsName,
+                                                 w=maxDigit,
+                                                 t=str(dsDataType),
+                                                 s=dsShape))
                 data = np.array(self.dateList, dtype=dsDataType)
                 ds = f.create_dataset(dsName, data=data)
 
-            ## 2D datasets containing height, latitude, incidenceAngle, shadowMask, etc.
+            # 2D datasets containing height, latitude, incidenceAngle, shadowMask, etc.
             else:
                 dsDataType = dataType
                 if dsName.lower().endswith('mask'):
                     dsDataType = np.bool_
                 dsShape = (length, width)
-                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
-                                                                                                         w=maxDigit,
-                                                                                                         t=str(dsDataType),
-                                                                                                         s=dsShape,
-                                                                                                         c=str(compression)))
+                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                       ' with compression = {c}').format(d=dsName,
+                                                         w=maxDigit,
+                                                         t=str(dsDataType),
+                                                         s=dsShape,
+                                                         c=str(compression)))
                 data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
-                ds = f.create_dataset(dsName, data=data, chunks=True, compression=compression)
+                ds = f.create_dataset(dsName,
+                                      data=data,
+                                      chunks=True,
+                                      compression=compression)
 
         ###############################
         # Generate Dataset if not existed in binary file: incidenceAngle, slantRangeDistance
-        for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance'] if i not in self.dsNames]:
-            ## Calculate data
+        for dsName in [i for i in ['incidenceAngle', 'slantRangeDistance']
+                       if i not in self.dsNames]:
+            # Calculate data
             data = None
             if dsName == 'incidenceAngle':
                 data = self.get_incidenceAngle(box=box)
             elif dsName == 'slantRangeDistance':
                 data = self.get_slantRangeDistance(box=box)
 
-            ## Write dataset
+            # Write dataset
             if data is not None:
                 dsShape = data.shape
                 dsDataType = dataType
-                print('create dataset /{d:<{w}} of {t:<25} in size of {s} with compression = {c}'.format(d=dsName,
-                                                                                                         w=maxDigit,
-                                                                                                         t=str(dsDataType),
-                                                                                                         s=dsShape,
-                                                                                                         c=str(compression)))
-                ds = f.create_dataset(dsName, data=data, dtype=dataType, chunks=True, compression=compression)
+                print(('create dataset /{d:<{w}} of {t:<25} in size of {s}'
+                       ' with compression = {c}').format(d=dsName,
+                                                         w=maxDigit,
+                                                         t=str(dsDataType),
+                                                         s=dsShape,
+                                                         c=str(compression)))
+                ds = f.create_dataset(dsName,
+                                      data=data,
+                                      dtype=dataType,
+                                      chunks=True,
+                                      compression=compression)
 
         ###############################
         # Attributes
         self.get_metadata()
         self.metadata = ut.subset_attribute(self.metadata, box)
         self.metadata['FILE_TYPE'] = self.name
-        for key,value in self.metadata.items():
+        for key, value in self.metadata.items():
             f.attrs[key] = value
 
         f.close()
@@ -504,7 +520,7 @@ class geometryDict:
 
 
 ########################################################################################
-def read_isce_bperp_file(fname, outShape, box=None):
+def read_isce_bperp_file(fname, out_shape, box=None):
     '''Read ISCE coarse grid perpendicular baseline file, and project it to full size
     Parameters: self : geometry object,
                 fname : str, bperp file name
@@ -514,25 +530,36 @@ def read_isce_bperp_file(fname, outShape, box=None):
     Example:    fname = '$PROJECT_DIR/merged/baselines/20160418/bperp'
                 data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
     '''
+    # read original data
     dataC = readfile.read(fname)[0]
-    data = ut.interpolate_data(dataC, outShape=outShape, interpMethod='linear')
+
+    # resize to full resolution
+    data_min, data_max = np.nanmin(dataC), np.nanmax(dataC)
+    if data_max != data_min:
+        dataC = (dataC - data_min) / (data_max - data_min)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        data = resize(dataC, out_shape)
+    if data_max != data_min:
+        data = data * (data_max - data_min) + data_min
+
     if box is not None:
-        data = data[box[1]:box[3],box[0]:box[2]]
+        data = data[box[1]:box[3], box[0]:box[2]]
     return data
 
 
 ########################################################################################
 class platformTrack:
 
-    def __init__(self, name='platformTrack'): #, pairDict = None):
+    def __init__(self, name='platformTrack'):  # , pairDict = None):
         self.pairs = None
-         
+
     def getPairs(self, pairDict, platTrack):
         pairs = pairDict.keys()
         self.pairs = {}
         for pair in pairs:
             if pairDict[pair].platform_track == platTrack:
-                self.pairs[pair]=pairDict[pair]
+                self.pairs[pair] = pairDict[pair]
 
     def getSize_geometry(self, dsName):
         pairs = self.pairs.keys()
@@ -549,10 +576,10 @@ class platformTrack:
                 length.append(self.pairs[pair].length)
 
         length = median(length)
-        width  = median(width)
+        width = median(width)
         return pairs2, length, width
- 
-    def getSize(self): 
+
+    def getSize(self):
         pairs = self.pairs.keys()
         self.numPairs = len(pairs)
         width = []
@@ -561,34 +588,34 @@ class platformTrack:
             length.append(self.pairs[pair].length)
             width.append(self.pairs[pair].width)
         self.length = median(length)
-        self.width  = median(width)
+        self.width = median(width)
 
-    def getDatasetNames(self): 
-        # extract the name of the datasets which are actually the keys of 
+    def getDatasetNames(self):
+        # extract the name of the datasets which are actually the keys of
         # observations, quality and geometry dictionaries.
 
         pairs = [pair for pair in self.pairs.keys()]
-        # Assuming all pairs of a given platform-track have the same observations 
+        # Assuming all pairs of a given platform-track have the same observations
         # let's extract the keys of the observations of the first pair.
-         
-        if self.pairs[pairs[0]].observationsDict is not None: 
+
+        if self.pairs[pairs[0]].observationsDict is not None:
             self.dsetObservationNames = [k for k in self.pairs[pairs[0]].observationsDict.keys()]
         else:
             self.dsetObservationNames = []
 
         # Assuming all pairs of a given platform-track have the same quality files
-        # let's extract the keys of the quality dictionary of the first pair. 
+        # let's extract the keys of the quality dictionary of the first pair.
         if self.pairs[pairs[0]].qualityDict is not None:
-            self.dsetQualityNames = [k for k in self.pairs[pairs[0]].qualityDict.keys()]                
+            self.dsetQualityNames = [k for k in self.pairs[pairs[0]].qualityDict.keys()]
         else:
             self.dsetQualityNames = []
 
         ##################
         # Despite the observation and quality files, the geometry may not exist
-        # for all pairs. Therfore we need to look at all pairs and get possible 
+        # for all pairs. Therfore we need to look at all pairs and get possible
         # dataset names.
         self.dsetGeometryNames = []
         for pair in pairs:
-            if self.pairs[pair].geometryDict  is not None:
-                keys = [k for k in self.pairs[pair].geometryDict.keys()]       
+            if self.pairs[pair].geometryDict is not None:
+                keys = [k for k in self.pairs[pair].geometryDict.keys()]
                 self.dsetGeometryNames = list(set(self.dsetGeometryNames) | set(keys))

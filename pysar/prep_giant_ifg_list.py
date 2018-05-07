@@ -1,12 +1,43 @@
 #!/usr/bin/env python3
-# Author: Zhang Yunjun, 2018-Jan-27
+############################################################
+# Program is part of PySAR                                 #
+# Copyright(c) 2018, Zhang Yunjun                          #
+# Author:  Zhang Yunjun, 2018 Jan                          #
+############################################################
+
 
 import os
-import sys
 import re
 import argparse
-import h5py
-from pysar.utils import readfile, datetime as ptime, utils as ut
+from pysar.utils import readfile, ptime, utils as ut
+from pysar.objects import ifgramStack
+
+
+##################################################################################################
+EXAMPLE = """example:
+  prep_giant_ifg_list.py  filt_*.unw
+  prep_giant_ifg_list.py  INPUTS/ifgramStack.h5  --sensor SEN
+"""
+
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Prepare ifg.list file for GIAnT.\n',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
+    parser.add_argument('file', nargs='+', help='Interferogram file(s)')
+    parser.add_argument('--sensor', '--mission',
+                        dest='sensor', help='Sensor name of SAR data')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        default='ifg.list', help='Output list file')
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    inps.file = ut.get_file_list(inps.file, abspath=True)
+    inps.outfile = os.path.abspath(inps.outfile)
+    return inps
 
 
 def get_mission_name(meta_dict):
@@ -25,27 +56,27 @@ def get_mission_name(meta_dict):
         print('return None')
         return mission
 
-    ## Convert to UNAVCO Mission name
+    # Convert to UNAVCO Mission name
     ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
     if value.startswith('ers'):
         mission = 'ERS'
-    elif value.startswith(('env','asar')):
+    elif value.startswith(('env', 'asar')):
         mission = 'ENV'
-    elif value.startswith(('s1','sen')):
+    elif value.startswith(('s1', 'sen')):
         mission = 'S1'
-    elif value.startswith(('rs','rsat','radarsat')):
+    elif value.startswith(('rs', 'rsat', 'radarsat')):
         mission = 'RS'
         if value.endswith('1'):
             mission += '1'
         else:
             mission += '2'
-    elif value.startswith(('csk','cos')):
+    elif value.startswith(('csk', 'cos')):
         mission = 'CSK'
-    elif value.startswith(('tsx','tdx','terra','tandem')):
+    elif value.startswith(('tsx', 'tdx', 'terra', 'tandem')):
         mission = 'TSX'
     elif value.startswith('jers'):
         mission = 'JERS'
-    elif value.startswith(('alos','palsar')):
+    elif value.startswith(('alos', 'palsar')):
         if value.endswith('2'):
             mission = 'ALOS2'
         else:
@@ -56,72 +87,51 @@ def get_mission_name(meta_dict):
     return mission
 
 
-##################################################################################################
-EXAMPLE = """example:
-  prep_giant_ifg_list.py  filt_*.unw
-  prep_giant_ifg_list.py  unwrapIfgram.h5  --sensor SEN
-"""
+def get_giant_ifg_list(fnames):
+    m_date_list = []
+    s_date_list = []
+    pbase_list = []
 
-def create_parser():
-    parser = argparse.ArgumentParser(description='Prepare ifg.list file for GIAnT.\n',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=EXAMPLE)
-    parser.add_argument('file', nargs='+', help='Interferogram file(s)')
-    parser.add_argument('--sensor','--mission', dest='sensor', help='Sensor name of SAR data')
-    parser.add_argument('-o','--output',dest='outfile', default='ifg.list', help='Output list file')
-    return parser
+    ext = os.path.splitext(fnames[0])[1]
+    if ext == '.h5':
+        obj = ifgramStack(fnames[0])
+        obj.open()
+        m_date_list = obj.mDates[obj.dropIfgram].tolist()
+        s_date_list = obj.sDates[obj.dropIfgram].tolist()
+        pbase_list = obj.pbaseIfgram[obj.dropIfgram].tolist()
 
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
+    else:
+        ifgramNum = len(fnames)
+        print('Number of interferograms: %d' % (ifgramNum))
+        for fname in fnames:
+            atr = readfile.read_attribute(fname)
+            m_date, s_date = ptime.yymmdd(atr['DATE12'].split('-'))
+            pbase = (float(atr['P_BASELINE_TOP_HDR']) +
+                     float(atr['P_BASELINE_BOTTOM_HDR'])) / 2.
+            m_date_list.append(m_date)
+            s_date_list.append(s_date)
+            pbase_list.append(pbase)
+    return m_date_list, s_date_list, pbase_list
 
 
 ##################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-    inps.outfile = os.path.abspath(inps.outfile)
     atr = readfile.read_attribute(inps.file[0])
-    k = atr['FILE_TYPE']
 
     if not inps.sensor:
         inps.sensor = get_mission_name(atr)
     print('Sensor name: %s' % (inps.sensor))
 
-    m_date_list = []
-    s_date_list = []
-    bperp_list = []
+    m_date_list, s_date_list, pbase_list = get_giant_ifg_list(inps.file)
 
-    inps.file = ut.get_file_list(inps.file, abspath=True)
-    if os.path.splitext(inps.file[0])[1] not in ['.h5','.he5']:
-        ifgramNum = len(inps.file)
-        print('Number of interferograms: %d' % (ifgramNum))
-        for fname in inps.file:
-            try:    date12 = str(re.findall('\d{8}[-_]\d{8}', os.path.basename(fname))[0]).replace('-','_')
-            except: date12 = str(re.findall('\d{6}[-_]\d{6}', os.path.basename(fname))[0]).replace('-','_')
-            m_date, s_date = date12.split('_')
-            bperp = readfile.read_attribute(fname)['P_BASELINE_TOP_HDR']
-            m_date_list.append(m_date)
-            s_date_list.append(s_date)
-            bperp_list.append(bperp)
-
-    else:
-        h5 = h5py.File(inps.file[0],'r')
-        ifgram_list = ut.check_drop_ifgram(h5)
-        date12_list = ptime.list_ifgram2date12(ifgram_list)
-        m_date_list = [date12.split('_')[0] for date12 in date12_list]
-        s_date_list = [date12.split('_')[1] for date12 in date12_list]
-        for ifgram in ifgram_list:
-            bperp = h5[k][ifgram].attrs['P_BASELINE_TOP_HDR']
-            bperp_list.append(bperp)
-        ifgramNum = len(ifgram_list)
-
-    fout = '{0} {1}     {2:<15}   {3}\n'
-    fl = open(inps.outfile, 'w')
-    for i in range(ifgramNum):
-        fl.write(fout.format(m_date_list[i], s_date_list[i], bperp_list[i], inps.sensor))
-    fl.close()
+    # Write to text file
+    with open(inps.outfile, 'w') as f:
+        for i in range(len(pbase_list)):
+            f.write('{0} {1}     {2:<10.2f}   {3}\n'.format(m_date_list[i],
+                                                            s_date_list[i],
+                                                            pbase_list[i],
+                                                            inps.sensor))
     print('write to %s' % (inps.outfile))
     return
 
@@ -129,5 +139,3 @@ def main(iargs=None):
 ###################################################################################################
 if __name__ == '__main__':
     main()
-
-
