@@ -9,8 +9,10 @@ import argparse
 
 matplotlib.use('TkAgg')
 from tkinter import filedialog
-from pysar import tsview as ts_view, view, info, subset
+
+from pysar.objects import timeseries
 from pysar.utils import readfile
+from pysar import tsview as ts_view, view, info, subset
 
 
 canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
@@ -524,7 +526,7 @@ def read_file_data(epoch=None):
     if file_type in ['HDFEOS']:
         ref_dates_list += h5file.attrs['DATE_TIMESERIES'].split()
     else:
-        ref_dates_list = view.get_file_dataset_list(h5_file.get(), file_type)
+        ref_dates_list = timeseries(h5_file.get()).get_date_list()
 
     if epoch and epoch is not "All":
         data, attributes = readfile.read(h5_file.get(), datasetName=ref_dates_list[epoch])
