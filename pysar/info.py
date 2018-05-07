@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
 
@@ -15,6 +15,8 @@ from numpy import std
 from pysar.utils import readfile, ptime
 from pysar.objects import timeseries, ifgramStack, geometry, HDFEOS
 
+
+output = ""
 
 ############################################################
 EXAMPLE = """example:
@@ -45,7 +47,6 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
     return inps
 
-output = ""
 
 ############################################################
 def attributes_string(atr, string=str(), sorting=True):
@@ -58,7 +59,6 @@ def attributes_string(atr, string=str(), sorting=True):
     for key in dictKey:
         string += '  {k:<{d}}    {v}'.format(d=digits, k=key, v=atr[key])
         string += "\n"
-
     return string
 
 
@@ -73,11 +73,9 @@ def hdf5_structure_string(file):
     def print_hdf5_structure_obj(name, obj):
         global output
         if isinstance(obj, h5py.Group):
-            output += 'HDF5 group "/{}"'.format(name)
+            output += 'HDF5 group "/{}"\n'.format(name)
         elif isinstance(obj, h5py.Dataset):
-            output += 'HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype)
-        output += "\n"
-        output += name+"\n"
+            output += 'HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>\n'.format(name, str(obj.shape), obj.dtype)
 
     f = h5py.File(file, 'r')
     if len(f.attrs) > 0:

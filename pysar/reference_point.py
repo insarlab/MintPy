@@ -165,7 +165,7 @@ def reference_file(inps):
     atr = readfile.read_attribute(inps.file)
     if (inps.ref_y and inps.ref_x and 'REF_Y' in atr.keys()
             and inps.ref_y == int(atr['REF_Y']) and inps.ref_x == int(atr['REF_X'])
-            and not inps.force:
+            and not inps.force):
         print('Same reference pixel is already selected/saved in file, skip updating.')
         return inps.file
 
