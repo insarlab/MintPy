@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2017, Zhang Yunjun, Heresh Fattahi          #
+# Copyright(c) 2017-2018, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 # Recommended usage:
-#   import pysar.view as pv
+#   import pysar.view as view
 #
 
 

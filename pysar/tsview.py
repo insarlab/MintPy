@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
+############################################################
+# Program is part of PySAR                                 #
+# Copyright(c) 2017-2018, Joshua Zahner, Zhang Yunjun      #
+# Author:  Joshua Zahner, Zhang Yunjun                     #
+############################################################
 
-# Adopted from plotts.py from GIAnT v1.0 for PySAR products
 
-import os, sys
+import os
+import sys
 import argparse
 from datetime import datetime as dt
 import h5py
@@ -10,9 +15,11 @@ import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
-from pysar.utils import readfile, datetime as ptime, utils as ut, plot as pp
+from pysar.objects import timeseries
+from pysar.utils import readfile, ptime, utils as ut, plot as pp
 from pysar.mask import mask_matrix
-import pysar.view as view
+from pysar import view
+
 
 ############# Global Variables ################
 tims, inps, img, mask, d_v, d_ts = None, None, None, None, None, None
@@ -87,10 +94,10 @@ def read_timeseries_lalo(timeseries_file, lat, lon):
 
 ###########################################################################################
 EXAMPLE='''example:
-  tsviewer.py timeseries.h5 --ylim -10 10
-  tsviewer.py timeseries_demErr_plane.h5 -n 5 -m maskTempCoh.h5
-  tsviewer.py timeseries_demErr_plane.h5 --yx 300 400 --nodisplay --zero-first
-  tsviewer.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
+  tsview.py timeseries.h5 --ylim -10 10
+  tsview.py timeseries_demErr_plane.h5 -n 5 -m maskTempCoh.h5
+  tsview.py timeseries_demErr_plane.h5 --yx 300 400 --nodisplay --zero-first
+  tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
 '''
 
 def createParser():
@@ -260,7 +267,7 @@ def read_timeseries_info():
     if k in ['GIANT_TS']:
         dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
     else:
-        dateList = view.get_file_dataset_list(inps.timeseries_file, k)
+        dateList = timeseries(inps.timeseries_file).get_date_list()
     date_num = len(dateList)
     inps.dates, tims = ptime.date_list2vector(dateList)
 
@@ -526,7 +533,7 @@ def make_color_bar():
 def make_time_slider():
     global tslider, fig_v, tims, inps
 
-    ax_time = fig_v.add_axes([0.07, 0.10, 0.37, 0.07], axisbg='lightgoldenrodyellow', yticks=[])
+    ax_time = fig_v.add_axes([0.07, 0.10, 0.37, 0.07], facecolor='lightgoldenrodyellow', yticks=[])
     tslider = Slider(ax_time, '', tims[0], tims[-1], valinit=tims[inps.epoch_num])
     tslider.ax.bar(tims, np.ones(len(tims)), facecolor='black', width=0.01, ecolor=None)
     tslider.ax.set_xticks(np.round(np.linspace(tims[0], tims[-1], num=5) * 100) / 100)
@@ -1005,9 +1012,3 @@ def main(argv):
 ###########################################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-
-#########################################################################################
-if __name__ == '__main__':
-    main()
-

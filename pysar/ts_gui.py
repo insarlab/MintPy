@@ -3,17 +3,15 @@
 from tkinter import *
 
 import h5py
+import numpy
 import matplotlib
 import argparse
 
 matplotlib.use('TkAgg')
 from tkinter import filedialog
-import pysar.tsview as ts_view
-import info
-import pysar.view as view
-import pysar.utils.readfile as readfile
-import subset
-import numpy
+from pysar import tsview as ts_view, view, info, subset
+from pysar.utils import readfile
+
 
 canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
 pick_mask_file_button, starting_upper_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
