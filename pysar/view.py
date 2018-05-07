@@ -29,7 +29,7 @@ from pysar.mask import mask_matrix
 from pysar.multilook import multilook_data
 from pysar import subset
 
-
+fig = None
 ##################################################################################################
 EXAMPLE = """example:
   view.py velocity.h5
@@ -264,6 +264,7 @@ def cmd_line_parse(iargs=None):
         inps.lalo_label = True
     return inps
 
+fig = None
 
 ##################################################################################################
 def check_multilook_input(pixel_box, row_num, col_num):
@@ -732,6 +733,7 @@ def check_dataset_input(allList, inList=[], inNumList=[], globSearch=True):
                 tempList += [e for e in allList if i in e]
         else:
             tempList += [i for i in inList if i in allList]
+
         inNumList += [allList.index(e) for e in set(tempList)]
     outNumList = sorted(list(set(inNumList)))
     outList = [allList[i] for i in outNumList]
@@ -885,6 +887,7 @@ def update_figure_setting(inps):
                 fig_size4plot = inps.fig_size
             else:
                 fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
+
             inps.fig_row_num, inps.fig_col_num = pp.auto_row_col_num(inps.dsetNum,
                                                                      data_shape,
                                                                      fig_size4plot,
@@ -1035,6 +1038,7 @@ def plot_subplot4figure(inps, ax, data, i):
 
 
 def plot_figure(inps, j, metadata):
+    global fig
     """Plot one figure with multiple subplots
     1) create figure
     2) read all data into 3D array
@@ -1171,6 +1175,8 @@ def prepare4multi_subplots(inps, metadata):
 
 #########################################  Main Function  ########################################
 def main(iargs=None):
+    global fig
+
     inps = cmd_line_parse(iargs)
     if not inps.disp_fig:
         plt.switch_backend('Agg')  # Backend setting
@@ -1201,7 +1207,7 @@ def main(iargs=None):
         if inps.msk is not None:
             data = mask_matrix(data, inps.msk)
 
-        fig, ax = plt.subplots(figsize=inps.fig_size)
+        fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
 
         ax, inps = plot_2d_matrix(ax, data, atr, inps)
 

@@ -45,35 +45,57 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
     return inps
 
+output = ""
 
 ############################################################
-def print_attributes(atr, sorting=True):
-    # Print Dictionary of Attributes
-    digits = digits = max([len(key) for key in atr.keys()]+[0])
+def attributes_string(atr, string=str(), sorting=True):
+    ## Print Dictionary of Attributes
+    digits = max([len(key) for key in list(atr.keys())] + [0])
     f = '{0:<%d}    {1}' % (digits)
     dictKey = atr.keys()
     if sorting:
         dictKey = sorted(dictKey)
     for key in dictKey:
-        print('  {k:<{d}}    {v}'.format(d=digits, k=key, v=atr[key]))
-    return
+        string += '  {k:<{d}}    {v}'.format(d=digits, k=key, v=atr[key])
+        string += "\n"
+
+    return string
 
 
-def print_hdf5_structure(File):
-    """Modified from andrewcollette at https://github.com/h5py/h5py/issues/406"""
+def print_attributes(atr, string=str(), sorting=True):
+    print((attributes_string(atr, string, sorting)))
+
+
+############################################################
+def hdf5_structure_string(file):
+    global output
+
     def print_hdf5_structure_obj(name, obj):
+        global output
         if isinstance(obj, h5py.Group):
-            print('HDF5 group   "/{}"'.format(name))
+            output += 'HDF5 group "/{}"'.format(name)
         elif isinstance(obj, h5py.Dataset):
-            print('HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype))
-        print_attributes(obj.attrs)
-    f = h5py.File(File, 'r')
+            output += 'HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>'.format(name, str(obj.shape), obj.dtype)
+        output += "\n"
+        output += name+"\n"
+
+    f = h5py.File(file, 'r')
     if len(f.attrs) > 0:
-        print('Attributes in / level:')
-        print_attributes(f.attrs)
+        output += 'Attributes in / level:\n'
+        output = attributes_string(f.attrs, output, sorting=True)+"\n"
+
     f.visititems(print_hdf5_structure_obj)
     f.close()
-    return
+
+    local_output = output
+    output = ""
+    return local_output
+
+
+## By andrewcollette at https://github.com/h5py/h5py/issues/406
+def print_hdf5_structure(file):
+    string = hdf5_structure_string(file)
+    print(string)
 
 
 def print_timseries_date_stat(dateList):
