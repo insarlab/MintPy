@@ -111,7 +111,7 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ## 4) sbas - LS/SVD, uniform weight (Berardino et al., 2002, TGRS)
 ## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
 pysar.networkInversion.weightFunc    = auto #[fim / var / coh / sbas], auto for fim
-pysar.networkInversion.maskDataset   = auto #[coherence / connectComponent / no], auto for coherence
+pysar.networkInversion.maskDataset   = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold = auto #[0-1], auto for 0.4
 pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
 pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution

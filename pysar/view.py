@@ -30,6 +30,8 @@ from pysar.multilook import multilook_data
 from pysar import subset
 
 fig = None
+
+
 ##################################################################################################
 EXAMPLE = """example:
   view.py velocity.h5
@@ -264,7 +266,6 @@ def cmd_line_parse(iargs=None):
         inps.lalo_label = True
     return inps
 
-fig = None
 
 ##################################################################################################
 def check_multilook_input(pixel_box, row_num, col_num):

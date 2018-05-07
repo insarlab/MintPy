@@ -36,63 +36,6 @@ second_plot_axis_visible = False
 
 
 ###########################################################################################
-def read_timeseries_yx(timeseries_file, y, x, ref_yx=None):
-    '''Read time-series displacement on point (y,x) from timeseries_file
-    Inputs:
-        timeseries_file : string, name/path of timeseries hdf5 file
-        y/x : int, row/column number of point of interest
-    Output:
-        dis_ts : list of float, displacement time-series of point of interest
-    '''
-    atr = readfile.read_attribute(timeseries_file)
-    k = atr['FILE_TYPE']
-    dis_ts = []
-
-    h5 = h5py.File(timeseries_file, 'r')
-    if k in ['GIANT_TS']:
-        date_list = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
-        dname = [i for i in ['rawts','recons'] if i in list(h5.keys())][0]
-        dis_ts = h5[dname][:,y,x]
-        if ref_yx is not None:
-            dis_ts = h5[dname][:,ref_yx[0],ref_yx[1]]
-    else:
-        date_list = list(h5[k].keys())
-        for date in date_list:
-            dis = h5[k].get(date)[y,x]
-            if inps.ref_yx:
-                dis -= h5[k].get(date)[ref_yx[0], ref_yx[1]]
-            dis_ts.append(dis)
-        dis_ts = np.array(dis_ts)
-
-    h5.close()
-    return dis_ts
-
-
-def read_timeseries_lalo(timeseries_file, lat, lon):
-    '''Read time-series displacement on point (y,x) from timeseries_file
-    Inputs:
-        timeseries_file : string, name/path of timeseries hdf5 file
-        lat/lon : float, latitude/longitude of point of interest
-    Output:
-        dis_ts : list of float, displacement time-series of point of interest
-    '''
-
-    atr = readfile.read_attribute(timeseries_file)
-    if 'X_FIRST' not in list(atr.keys()):
-        print('ERROR: input file is not geocoded')
-        return None
-
-    lat0 = float(atr['Y_FIRST'])
-    lat_step = float(atr['Y_STEP'])
-    lon0 = float(atr['X_FIRST'])
-    lon_step = float(atr['X_STEP'])
-    y = int(np.rint((lat-lat0)/lat_step))
-    x = int(np.rint((lon-lon0)/lon_step))
-    dis_ts = read_timeseries_yx(timeseries_file, y, x)
-    return dis_ts
-
-
-###########################################################################################
 EXAMPLE='''example:
   tsview.py timeseries.h5 --ylim -10 10
   tsview.py timeseries_demErr_plane.h5 -n 5 -m maskTempCoh.h5
@@ -100,7 +43,7 @@ EXAMPLE='''example:
   tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
 '''
 
-def createParser():
+def create_parser():
     parser = argparse.ArgumentParser(description='Interactive Time-series Viewer',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
@@ -164,8 +107,8 @@ def createParser():
     return parser
 
 
-def cmdLineParse(iargs=None):
-    parser = createParser()
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
     if (not inps.disp_fig or inps.fig_base) and not inps.save_fig:
@@ -173,6 +116,66 @@ def cmdLineParse(iargs=None):
     if inps.ylim:
         inps.ylim = sorted(inps.ylim)
     return inps
+
+
+###########################################################################################
+def read_timeseries_yx(timeseries_file, y, x, ref_yx=None):
+    '''Read time-series displacement on point (y,x) from timeseries_file
+    Inputs:
+        timeseries_file : string, name/path of timeseries hdf5 file
+        y/x : int, row/column number of point of interest
+    Output:
+        dis_ts : list of float, displacement time-series of point of interest
+    '''
+    atr = readfile.read_attribute(timeseries_file)
+    k = atr['FILE_TYPE']
+    dis_ts = []
+
+    if k in ['GIANT_TS']:
+        h5 = h5py.File(timeseries_file, 'r')
+        date_list = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
+        dname = [i for i in ['rawts','recons'] if i in list(h5.keys())][0]
+        dis_ts = h5[dname][:,y,x]
+        if ref_yx is not None:
+            dis_ts = h5[dname][:,ref_yx[0],ref_yx[1]]
+        h5.close()
+    else:
+        box = [x, y, x+1, y+1]
+        dis_ts = timeseries(timeseries_file).read(box=box, print_msg=False)
+        #date_list = list(h5[k].keys())
+        #for date in date_list:
+        #    dis = h5[k].get(date)[y,x]
+        #    if inps.ref_yx:
+        #        dis -= h5[k].get(date)[ref_yx[0], ref_yx[1]]
+        #    dis_ts.append(dis)
+        #dis_ts = np.array(dis_ts)
+
+    return dis_ts
+
+
+def read_timeseries_lalo(timeseries_file, lat, lon):
+    '''Read time-series displacement on point (y,x) from timeseries_file
+    Inputs:
+        timeseries_file : string, name/path of timeseries hdf5 file
+        lat/lon : float, latitude/longitude of point of interest
+    Output:
+        dis_ts : list of float, displacement time-series of point of interest
+    '''
+
+    atr = readfile.read_attribute(timeseries_file)
+    if 'X_FIRST' not in list(atr.keys()):
+        print('ERROR: input file is not geocoded')
+        return None
+
+    lat0 = float(atr['Y_FIRST'])
+    lat_step = float(atr['Y_STEP'])
+    lon0 = float(atr['X_FIRST'])
+    lon_step = float(atr['X_STEP'])
+    y = int(np.rint((lat-lat0)/lat_step))
+    x = int(np.rint((lon-lon0)/lon_step))
+    dis_ts = read_timeseries_yx(timeseries_file, y, x)
+    return dis_ts
+
 
 ################### HELPER FUNCTIONS ##########################
 
@@ -959,10 +962,10 @@ def compute_timeseries_data(plot_number, x_point, y_point):
 
 
 ######################## MAIN FUNCTION ########################
-def main(argv):
+def main(iargs=None):
     global fig_v, ax_v, inps, ax_ts, fig_ts, second_plot_axis
 
-    inps = cmdLineParse(argv)
+    inps = cmd_line_parse(iargs)
 
     setup_plot()
 
@@ -970,7 +973,7 @@ def main(argv):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
-    fig_v = plt.figure('Cumulative Displacement', figsize=inps.fig_size)
+    fig_v = plt.figure('Cumulative Time-series Displacement', figsize=inps.fig_size)
 
     ######### Map Axis - Displacement Map Axis
     ax_v = fig_v.add_axes([0.035, 0.42, 0.5, 0.5])
@@ -1011,4 +1014,4 @@ def main(argv):
 
 ###########################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
