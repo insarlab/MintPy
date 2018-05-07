@@ -164,15 +164,13 @@ def reference_file(inps):
         inps = cmd_line_parse([''])
     atr = readfile.read_attribute(inps.file)
     if (inps.ref_y and inps.ref_x and 'REF_Y' in atr.keys()
-            and inps.ref_y == int(atr['REF_Y']) and inps.ref_x == int(atr['REF_X'])):
+            and inps.ref_y == int(atr['REF_Y']) and inps.ref_x == int(atr['REF_X'])
+            and not inps.force:
         print('Same reference pixel is already selected/saved in file, skip updating.')
         return inps.file
 
     # Get stack and mask
-    stack = ut.temporal_average(inps.file,
-                                datasetName='unwrapPhase',
-                                outFile='avgPhaseVelocity.h5',
-                                updateMode=True)[0]
+    stack = ut.temporal_average(inps.file, updateMode=True)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
         print('\n'+'*'*40)
@@ -214,14 +212,16 @@ def reference_file(inps):
         if k == 'ifgramStack':
             f = h5py.File(inps.file, 'r+')
             ds = f[k].get('unwrapPhase')
-            ds[...] -= ds[:, inps.ref_y, inps.ref_x]
+            for i in range(ds.shape[0]):
+                ds[i, :, :] -= ds[i, inps.ref_y, inps.ref_x]
             f[k].attrs.update(atrNew)
             f.close()
             inps.outfile = inps.file
 
         elif k == 'timeseries':
             data = timeseries(inps.file).read()
-            data -= data[:, inps.ref_y, inps.ref_x]
+            for i in range(data.shape[0]):
+                data[i, :, :] -= data[i, inps.ref_y, inps.ref_x]
             obj = timeseries(inps.outfile)
             atr.update(atrNew)
             obj.write2hdf5(data=data, metadata=atr, refFile=inps.file)

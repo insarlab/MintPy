@@ -75,7 +75,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             if ref_file:
                 fr = h5py.File(ref_file, 'r')
                 dsNames = [i for i in fr.keys()
-                           if i not in list(datasetDict.keys())]
+                           if (i not in list(datasetDict.keys())
+                               and isinstance(i, h5py.Dataset))]
                 for dsName in dsNames:
                     ds = fr[dsName]
                     print(('create dataset /{d:<{w}} of {t:<10}'

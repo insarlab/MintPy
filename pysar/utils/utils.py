@@ -1231,8 +1231,9 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, 
                 else:
                     outFile = 'avg{}.h5'.format(datasetName)
             elif k == 'timeseries':
-                processMark = os.path.basename(File).split('timeseries')[1].split(ext)[0]
-                outFile = 'avgDisplacement{}.h5'.format(processMark)
+                if k in File:
+                    processMark = os.path.basename(File).split('timeseries')[1].split(ext)[0]
+                    outFile = 'avgDisplacement{}.h5'.format(processMark)
             else:
                 outFile = 'avg{}.h5'.format(File)
 
