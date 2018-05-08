@@ -808,7 +808,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, weight_func='f
     if weight_func == 'sbas':
         # get tbase_diff (for SBAS approach)
         date_list = stack_obj.get_date_list(dropIfgram=True)
-        tbase = ptime.date_list2tbase(date_list)[0]
+        tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / 365.25
         tbase_diff = np.diff(tbase).reshape(-1, 1)
 
         # Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
@@ -915,7 +915,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         inps = cmd_line_parse()
         ifgram_inversion('ifgramStack.h5', inps)
     """
-    total = time.time()
+    start_time = time.time()
 
     # Check Inputs
     if not inps:
@@ -987,7 +987,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         metadata[key_prefix+'weightFunc'] = inps.weightFunc
         write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifgram, suffix='')
 
-    print('network inversion took {:.1f} seconds\nDone.'.format(time.time()-total))
+    print('time used: {:.1f} seconds\nDone.'.format(time.time()-start_time))
     return
 
 

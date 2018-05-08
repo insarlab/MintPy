@@ -235,7 +235,8 @@ class resample:
                                                       fill_value=fill_value, radius=radius, neighbours=32, epsilon=0)
 
         # for debug
-        if False:
+        debug_mode = False
+        if debug_mode:
             import matplotlib.pyplot as plt
             fig, ((ax11, ax12, ax13), (ax21, ax22, ax23)) = plt.subplots(nrows=2, ncols=3, figsize=(12, 8))
             dest_lats = np.array(self.dest_def.lats); dest_lats[dest_lats == 90.] = np.nan

@@ -81,9 +81,9 @@ def coord_geo2radar(coord_in, metadata, coord_name):
     coord_out = []
     for i in range(len(coord_in)):
         if coord_name.lower().startswith('lat'):
-            coord = np.rint((coord_in[i]-float(metadata['Y_FIRST']))/float(metadata['Y_STEP']))
+            coord = np.rint((coord_in[i]-float(metadata['Y_FIRST'])) / float(metadata['Y_STEP']))
         elif coord_name.lower().startswith('lon'):
-            coord = np.rint((coord_in[i]-float(metadata['X_FIRST']))/float(metadata['X_STEP']))
+            coord = np.rint((coord_in[i]-float(metadata['X_FIRST'])) / float(metadata['X_STEP']))
         else:
             print('Unrecognized coordinate type: '+coord_name)
         coord_out.append(int(coord))

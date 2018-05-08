@@ -146,7 +146,7 @@ class timeseries:
                 self.pbase = None
         self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
         self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
-                              dtype=np.int16)
+                              dtype=np.float32)
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
         self.datasetList = ['{}-{}'.format(self.name, i) for i in self.dateList]
@@ -525,7 +525,7 @@ class ifgramStack:
             self.pbaseIfgram = f['bperp'][:]
             self.datasetNames = [i for i in ifgramDatasetNames if i in f.keys()]
         self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
-        self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.int16)
+        self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.float32)
 
         # Get datasetList for self.read()
         self.datasetList = []
@@ -756,7 +756,7 @@ class ifgramStack:
         sDates = [i.split('_')[1] for i in date12List]
         dateList = sorted(list(set(mDates + sDates)))
         dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-        tbase = np.array([(i - dates[0]).days for i in dates])
+        tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
         numIfgram = len(date12List)
         numDate = len(dateList)
 
@@ -779,13 +779,14 @@ class ifgramStack:
 
     def get_perp_baseline_timeseries(self, dropIfgram=True):
         '''Get spatial perpendicular baseline in timeseries from ifgramStack, ignoring dropped ifgrams'''
-        # Get tbaseDiff
+        # Get tbase_diff
         date12List = self.get_date12_list(dropIfgram=dropIfgram)
         mDates = [i.split('_')[0] for i in date12List]
         sDates = [i.split('_')[1] for i in date12List]
         dateList = sorted(list(set(mDates + sDates)))
         dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
-        tbaseDiff = np.diff([(i - dates[0]).days for i in dates]).flatten()
+        tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
+        tbase_diff = np.diff(tbase).flatten()
 
         B = self.get_design_matrix(dropIfgram=dropIfgram)[1]
         B_inv = np.linalg.pinv(B)
@@ -795,7 +796,7 @@ class ifgramStack:
                 pbaseIfgram = pbaseIfgram[f['dropIfgram'][:]]
         pbaseRate = np.dot(B_inv, pbaseIfgram)
         pbaseTimeseries = np.concatenate((np.array([0.], dtype=np.float32),
-                                          np.cumsum([pbaseRate * tbaseDiff])))
+                                          np.cumsum([pbaseRate * tbase_diff])))
         return pbaseTimeseries
 
     def update_drop_ifgram(self, date12List_to_drop):

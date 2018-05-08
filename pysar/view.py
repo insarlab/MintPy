@@ -508,6 +508,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
     print('display data in transparency: '+str(inps.transparency))
 
     #-------------------- 2.1 Plot in Geo-coordinate using Basemap --------------------------------#
+    num_row, num_col = data.shape
     if inps.geo_box and inps.fig_coord == 'geo':
         print('plot in Lat/Lon coordinate')
         # Map Setup
@@ -593,19 +594,18 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
         def format_coord(x, y):
             col = ut.coord_geo2radar(x, metadata, 'lon') - inps.pix_box[0]
             row = ut.coord_geo2radar(y, metadata, 'lat') - inps.pix_box[1]
-            if 0 <= col < data.shape[1] and 0 <= row < data.shape[0]:
+            msg = 'Lon={:.4f}, Lat={:.4f}'.format(x, y)
+            if 0 <= col < num_col and 0 <= row < num_row:
                 z = data[row, col]
+                msg += ', value={:.4f}'.format(z)
                 if inps.dem_file:
                     dem_col = ut.coord_geo2radar(x, dem_metadata, 'lon') - inps.dem_pix_box[0]
                     dem_row = ut.coord_geo2radar(y, dem_metadata, 'lat') - inps.dem_pix_box[1]
                     h = dem[dem_row, dem_col]
-                    return 'lon=%.4f, lat=%.4f, value=%.4f, elev=%.1f m, x=%.1f, y=%.1f'\
-                           % (x, y, z, h, col + inps.pix_box[0], row + inps.pix_box[1])
-                else:
-                    return 'lon=%.4f, lat=%.4f, value=%.4f, x=%.1f, y=%.1f'\
-                           % (x, y, z, col + inps.pix_box[0], row + inps.pix_box[0])
-            else:
-                return 'lon=%.4f, lat=%.4f' % (x, y)
+                    msg += ', elev={:.1f}'.format(h)
+                msg += ', x={:.1f}, y={:.1f}'.format(col+inps.pix_box[0],
+                                                     row+inps.pix_box[1])
+            return msg
         ax.format_coord = format_coord
 
     #-------------------- 2.2 Plot in Y/X-coordinate ------------------------------------------------#
@@ -630,22 +630,21 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
                     inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
             print('plot reference point')
 
-        ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
-        ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
+        ax.set_xlim(-0.5, num_col-0.5)
+        ax.set_ylim(num_row-0.5, -0.5)
 
         # Status bar
         def format_coord(x, y):
-            col = int(x)
-            row = int(y)
-            if 0 <= col < data.shape[1] and 0 <= row < data.shape[0]:
+            col = int(x+0.5)
+            row = int(y+0.5)
+            msg = 'x={:.1f}, y={:.1f}'.format(x, y)
+            if 0 <= col < num_col and 0 <= row < num_row:
                 z = data[row, col]
+                msg += ', value={:.4f}'.format(z)
                 if inps.dem_file:
                     h = dem[row, col]
-                    return 'x=%.4f,  y=%.4f,  elev=%.1f m,  value=%.4f' % (x, y, h, z)
-                else:
-                    return 'x=%.4f,  y=%.4f,  value=%.4f' % (x, y, z)
-            else:
-                return 'x=%.4f,  y=%.4f' % (x, y)
+                    msg += ', elev={:.1f} m'.format(h)
+            return msg
         ax.format_coord = format_coord
 
     #-------------------- 3 Figure Setting --------------------------------------------------------#
@@ -871,8 +870,6 @@ def update_figure_setting(inps):
 
     # Multiple Plots
     else:
-        if not inps.font_size:
-            inps.font_size = 12
         if not inps.fig_size:
             inps.fig_size = pp.default_figsize_multi
             print('create figure in size: '+str(inps.fig_size))
@@ -901,6 +898,11 @@ def update_figure_setting(inps):
         print('row     number: '+str(inps.fig_row_num))
         print('column  number: '+str(inps.fig_col_num))
         print('figure  number: '+str(inps.fig_num))
+
+        if not inps.font_size:
+            inps.font_size = 12
+            if inps.fig_row_num * inps.fig_col_num > 50:
+                inps.font_size = 8
 
         # Output File Name
         if inps.outfile:

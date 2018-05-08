@@ -317,6 +317,7 @@ def read_template(inps):
         if ut.update_file(os.path.basename(inps.templateFileCustom),
                           inps.templateFileCustom, check_readable=False):
             shutil.copy2(inps.templateFileCustom, inps.workDir)
+            print('copy {} to work directory'.format(os.path.basename(inps.templateFileCustom)))
 
         # Read custom template
         print('read custom template file: '+inps.templateFileCustom)
