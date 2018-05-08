@@ -72,10 +72,18 @@ def hdf5_structure_string(file):
 
     def print_hdf5_structure_obj(name, obj):
         global output
+        maxDigit = 25
+        if name.startswith('HDFEOS'):
+            maxDigit += 30
+
         if isinstance(obj, h5py.Group):
-            output += 'HDF5 group "/{}"\n'.format(name)
+            output += 'HDF5 group   "/{n}"\n'.format(n=name)
         elif isinstance(obj, h5py.Dataset):
-            output += 'HDF5 dataset "/{:<25}": shape {:<20}, dtype <{}>\n'.format(name, str(obj.shape), obj.dtype)
+            output += ('HDF5 dataset "/{n:<{w}}": shape {s:<20}, '
+                       'dtype <{t}>\n').format(n=name,
+                                               w=maxDigit,
+                                               s=str(obj.shape),
+                                               t=obj.dtype)
 
     f = h5py.File(file, 'r')
     if len(f.attrs) > 0:
