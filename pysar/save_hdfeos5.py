@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2016, Zhang Yunjun                          #
+# Copyright(c) 2016-2018, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 # Based on ProductArchive/he5_converters/isce2he5.py written
@@ -390,13 +390,18 @@ def main(iargs=None):
 
     dsName = 'displacement'
     data = timeseries(inps.timeseries_file).read(print_msg=False)
-    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s} with compression={c}'.format(g=gName,
-                                                                                               d=dsName,
-                                                                                               w=maxDigit,
-                                                                                               t=str(data.dtype),
-                                                                                               s=data.shape,
-                                                                                               c=compression))
-    dset = group.create_dataset(dsName, data=data, dtype=np.float32, chunks=True, compression=compression)
+    print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
+           ' with compression={c}').format(g=gName,
+                                           d=dsName,
+                                           w=maxDigit,
+                                           t=str(data.dtype),
+                                           s=data.shape,
+                                           c=compression))
+    dset = group.create_dataset(dsName,
+                                data=data,
+                                dtype=np.float32,
+                                chunks=True,
+                                compression=compression)
     dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = FLOAT_ZERO
     dset.attrs['_FillValue'] = FLOAT_ZERO
@@ -428,13 +433,17 @@ def main(iargs=None):
     ## 1 - temporalCoherence
     dsName = 'temporalCoherence'
     data = readfile.read(inps.coherence_file)[0]
-    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s} with compression={c}'.format(g=gName,
-                                                                                               d=dsName,
-                                                                                               w=maxDigit,
-                                                                                               t=str(data.dtype),
-                                                                                               s=data.shape,
-                                                                                               c=compression))
-    dset = group.create_dataset(dsName, data=data, chunks=True, compression=compression)
+    print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
+           ' with compression={c}').format(g=gName,
+                                           d=dsName,
+                                           w=maxDigit,
+                                           t=str(data.dtype),
+                                           s=data.shape,
+                                           c=compression))
+    dset = group.create_dataset(dsName,
+                                data=data,
+                                chunks=True,
+                                compression=compression)
     dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = FLOAT_ZERO
     dset.attrs['_FillValue'] = FLOAT_ZERO
@@ -443,13 +452,17 @@ def main(iargs=None):
     ## 2 - mask
     dsName = 'mask'
     data = readfile.read(inps.mask_file, datasetName='mask')[0]
-    print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s} with compression={c}'.format(g=gName,
-                                                                                               d=dsName,
-                                                                                               w=maxDigit,
-                                                                                               t=str(data.dtype),
-                                                                                               s=data.shape,
-                                                                                               c=compression))
-    dset = group.create_dataset(dsName, data=data, chunks=True, compression=compression)
+    print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
+           ' with compression={c}').format(g=gName,
+                                           d=dsName,
+                                           w=maxDigit,
+                                           t=str(data.dtype),
+                                           s=data.shape,
+                                           c=compression))
+    dset = group.create_dataset(dsName,
+                                data=data,
+                                chunks=True,
+                                compression=compression)
     dset.attrs['Title'] = dsName
     dset.attrs['MissingValue'] = BOOL_ZERO
     dset.attrs['_FillValue'] = BOOL_ZERO
@@ -466,20 +479,30 @@ def main(iargs=None):
     geom_obj.open(print_msg=False)
     for dsName in geom_obj.datasetNames:
         data = geom_obj.read(datasetName=dsName, print_msg=False)
-        dset = group.create_dataset(dsName, data=data, chunks=True, compression=compression)
-        print('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s} with compression={c}'.format(g=gName,
-                                                                                                   d=dsName,
-                                                                                                   w=maxDigit,
-                                                                                                   t=str(data.dtype),
-                                                                                                   s=data.shape,
-                                                                                                   c=compression))
+        print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
+               ' with compression={c}').format(g=gName,
+                                               d=dsName,
+                                               w=maxDigit,
+                                               t=str(data.dtype),
+                                               s=data.shape,
+                                               c=compression))
+        dset = group.create_dataset(dsName,
+                                    data=data,
+                                    chunks=True,
+                                    compression=compression)
+
         dset.attrs['Title'] = dsName
-        if dsName in ['height', 'slantRangeDistance', 'bperp']:
+        if dsName in ['height',
+                      'slantRangeDistance',
+                      'bperp']:
             dset.attrs['MissingValue'] = FLOAT_ZERO
             dset.attrs['_FillValue'] = FLOAT_ZERO
             dset.attrs['Units'] = 'meters'
 
-        elif dsName in ['incidenceAngle', 'headingAngle', 'latitude', 'longitude']:
+        elif dsName in ['incidenceAngle',
+                        'headingAngle',
+                        'latitude',
+                        'longitude']:
             dset.attrs['MissingValue'] = FLOAT_ZERO
             dset.attrs['_FillValue'] = FLOAT_ZERO
             dset.attrs['Units'] = 'degrees'

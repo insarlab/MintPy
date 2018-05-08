@@ -23,7 +23,8 @@ from matplotlib.colors import LightSource
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import cm, pyproj
 
-from pysar.objects import ifgramDatasetNames, geometryDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry
+from pysar.objects import ifgramDatasetNames, geometryDatasetNames, timeseriesKeyNames, timeseriesDatasetNames
+from pysar.objects import timeseries, ifgramStack, geometry, HDFEOS
 from pysar.utils import readfile, ptime, utils as ut, plot as pp
 from pysar.mask import mask_matrix
 from pysar.multilook import multilook_data
@@ -812,6 +813,8 @@ def read_dataset_input(inps, print_msg=True):
 
 
 def read_mask(inps, atr):
+    familyName = inps.dset[0].split('-')[0]
+
     # Read mask file if inputed
     inps.msk = None
     if os.path.isfile(str(inps.mask_file)):
@@ -828,7 +831,7 @@ def read_mask(inps, atr):
             print('Can not open mask file: '+inps.mask_file)
             inps.mask_file = None
 
-    elif inps.key in ['HDFEOS']:
+    elif inps.key in ['HDFEOS'] and familyName in timeseriesDatasetNames:
         inps.mask_file = inps.file
         inps.msk = readfile.read(inps.file, datasetName='mask')[0]
         print('mask %s data with contained mask dataset.' % (inps.key))
@@ -926,7 +929,7 @@ def read_data4figure(inps, i_start, i_end):
                      inps.pix_box[2] - inps.pix_box[0]))
 
     # fast reading for single dataset type
-    if len(inps.dsetFamilyList) == 1 and inps.key in ['timeseries', 'ifgramStack']:
+    if len(inps.dsetFamilyList) == 1 and inps.key in ['timeseries', 'ifgramStack', 'HDFEOS', 'geometry']:
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
         if inps.key == 'timeseries':
             data = timeseries(inps.file).read(datasetName=dset_list, box=inps.pix_box)
@@ -937,6 +940,10 @@ def read_data4figure(inps, i_start, i_end):
                 for i in range(data.shape[0]):
                     mask = data[i, :, :] != 0.
                     data[i, mask] -= data[i, inps.file_ref_yx[0], inps.file_ref_yx[1]]
+        elif inps.key == 'HDFEOS':
+            data = HDFEOS(inps.file).read(datasetName=dset_list, box=inps.pix_box)
+        elif inps.key == 'geometry':
+            data = geometry(inps.file).read(datasetName=dset_list, box=inps.pix_box)
 
     # slow reading with one 2D matrix at a time
     else:
@@ -1014,6 +1021,8 @@ def plot_subplot4figure(inps, ax, data, i):
             subplot_title = str(i)
             if inps.fig_row_num * inps.fig_col_num < 100:
                 subplot_title += '\n{}'.format(inps.dset[i])
+            elif inps.fig_row_num * inps.fig_col_num > 300:
+                subplot_title = ''
         else:
             subplot_title = str(inps.dset[i])
         # plot title

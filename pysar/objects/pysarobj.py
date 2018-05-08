@@ -426,7 +426,7 @@ class geometry:
 
     def read(self, datasetName=geometryDatasetNames[0], box=None, print_msg=True):
         '''Read 2D / 3D dataset with bounding box in space
-        Parameters: datasetName : string, to point to specific 2D dataset, e.g.:
+        Parameters: datasetName : (list of) string, to point to specific 2D dataset, e.g.:
                         height
                         incidenceAngle
                         bperp
@@ -443,26 +443,39 @@ class geometry:
             obj.read(datasetName='incidenceAngle')
             obj.read(datasetName='bperp')
             obj.read(datasetName='bperp-20161020')
+            obj.read(datasetName=['bperp-20161020',
+                                  'bperp-20161026'])
         '''
         self.open(print_msg=False)
         if box is None:
             box = (0, 0, self.width, self.length)
+
         if datasetName is None:
             datasetName = geometryDatasetNames[0]
-        datasetName = datasetName.split('-')
-        if print_msg:
-            print('reading {} data from file: {} ...'.format(datasetName[0], self.file))
+        elif isinstance(datasetName, str):
+            datasetName = [datasetName]
 
         with h5py.File(self.file, 'r') as f:
-            ds = f[datasetName[0]]
-            if len(ds.shape) == 2:
+            familyName = datasetName[0].split('-')[0]
+            ds = f[familyName]
+            if print_msg:
+                print('reading {} data from file: {} ...'.format(familyName, self.file))
+
+            if len(ds.shape) == 1:
+                data = ds[:]
+            elif len(ds.shape) == 2:
                 data = ds[box[1]:box[3], box[0]:box[2]]
-            elif len(ds.shape) == 3:  # bperp
-                if len(datasetName) == 1:
-                    data = ds[:, box[1]:box[3], box[0]:box[2]]
+            else:
+                # get dateFlag - mark in time/1st dimension
+                dateFlag = np.zeros((ds.shape[0]), dtype=np.bool_)
+                datasetName = [i.replace(familyName, '').replace('-', '') for i in datasetName]
+                if any(not i for i in datasetName):
+                    dateFlag[:] = True
                 else:
-                    data = ds[self.dateList.index(datasetName[1]), box[1]:box[3], box[0]:box[2]]
-                    data = np.squeeze(data)
+                    for e in datasetName:
+                        dateFlag[self.dateList.index(e)] = True
+                data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+                data = np.squeeze(data)
         return data
 
 
@@ -849,10 +862,25 @@ class HDFEOS:
     def __init__(self, file=None):
         self.file = file
         self.name = 'HDFEOS'
-        self.observationNames = timeseriesDatasetNames
-        self.qualityNames = ['mask', 'temporalCoherence',
-                             'coherence', 'variance', 'uncertainty']
-        self.geometryNames = geometryDatasetNames
+        self.datasetGroupNameDict = {'displacement'       : 'observation',
+                                     'raw'                : 'observation',
+                                     'troposphericDelay'  : 'observation',
+                                     'topographicResidual': 'observation',
+                                     'ramp'               : 'observation',
+                                     'date'               : 'observation', 
+                                     'temporalCoherence'  : 'quality', 
+                                     'mask'               : 'quality', 
+                                     'coherence'          : 'quality', 
+                                     'variance'           : 'quality', 
+                                     'uncertainty'        : 'quality', 
+                                     'height'             : 'geometry',
+                                     'incidenceAngle'     : 'geometry',
+                                     'slantRangeDistance' : 'geometry',
+                                     'headingAngle'       : 'geometry',
+                                     'shadowMask'         : 'geometry',
+                                     'waterMask'          : 'geometry',
+                                     'bperp'              : 'geometry'
+                                    }
 
     def close(self, print_msg=True):
         try:
@@ -902,30 +930,48 @@ class HDFEOS:
         return self.metadata
 
     def read(self, datasetName=None, box=None, print_msg=True):
+        """Read dataset from HDF-EOS5 file
+        Parameters: self : HDFEOS object
+                    datasetName : (list of) str
+                    box : tuple of 4 int, for (x0, y0, x1, y1)
+                    print_msg : bool
+        Returns:    data: 2D or 3D array
+        Example:    obj = HDFEOS('S1_IW1_128_0593_0597_20141213_20171221.he5')
+                    obj.read(datasetName='displacement')
+                    obj.read(datasetName='displacement-20150915')
+                    obj.read(datasetName=['displacement-20150915',
+                                          'displacement-20150921'])
+                    obj.read(datasetName='incidenceAngle')
+        """
         self.open(print_msg=False)
         if box is None:
             box = [0, 0, self.width, self.length]
-        datasetFamily = datasetName.split('-')[0]
+
+        if datasetName is None:
+            datasetName = [timeseriesDatasetNames[-1]]
+        elif isinstance(datasetName, str):
+            datasetName = [datasetName]
 
         with h5py.File(self.file, 'r') as f:
-            g = f['HDFEOS/GRIDS/timeseries']
+            familyName = datasetName[0].split('-')[0]
+            groupName = self.datasetGroupNameDict[familyName]
+            ds = f['HDFEOS/GRIDS/timeseries/{}/{}'.format(groupName, familyName)]
+            if print_msg:
+                print('reading {} data from file: {} ...'.format(familyName, self.file))
 
-            if datasetFamily in self.observationNames:
-                ds = g['observation/{}'.format(datasetFamily)]
-                dateFlag = np.zeros(self.numDate, np.bool_)
-                if '-' in datasetName:
-                    dsDate = datasetName.split('-')[1]
-                    dateFlag[self.dateList.index(dsDate)] = True
-                else:
+            if len(ds.shape) == 1:
+                data = ds[:]
+            elif len(ds.shape) == 2:
+                data = ds[box[1]:box[3], box[0]:box[2]]
+            else:
+                # get dateFlag - mark in time/1st dimension
+                dateFlag = np.zeros((ds.shape[0]), dtype=np.bool_)
+                datasetName = [i.replace(familyName, '').replace('-', '') for i in datasetName]
+                if any(not i for i in datasetName):
                     dateFlag[:] = True
+                else:
+                    for e in datasetName:
+                        dateFlag[self.dateList.index(e)] = True
                 data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
-
-            elif datasetFamily in self.qualityNames:
-                ds = g['quality/{}'.format(datasetFamily)]
-                data = ds[box[1]:box[3], box[0]:box[2]]
-
-            elif datasetFamily in self.geometryNames:
-                ds = g['geometry/{}'.format(datasetFamily)]
-                data = ds[box[1]:box[3], box[0]:box[2]]
-        data = np.squeeze(data)
+                data = np.squeeze(data)
         return data
