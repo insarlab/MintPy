@@ -304,15 +304,23 @@ class geometryDict:
                      ...
                     }
         metadata = readfile.read_attribute('$PROJECT_DIR/merged/interferograms/20160629_20160723/filt_fine.unw')
-        geomObj = geometryDict(processor='isce', datasetDict=datasetDict, metadata=metadata)
+        geomObj = geometryDict(processor='isce', datasetDict=datasetDict, extraMetadata=metadata)
         geomObj.write2hdf5(outputFile='geometryRadar.h5', access_mode='w', box=(200,500,300,600))
     '''
 
-    def __init__(self, name='geometry', processor=None, datasetDict={}, ifgramMetadata=None):
+    def __init__(self, name='geometry', processor=None, datasetDict={}, extraMetadata=None):
         self.name = name
         self.processor = processor
         self.datasetDict = datasetDict
-        self.ifgramMetadata = ifgramMetadata
+        self.extraMetadata = extraMetadata
+
+        # get extra metadata from geometry file if possible
+        self.dsNames = list(self.datasetDict.keys())
+        if not self.extraMetadata:
+            dsFile = self.datasetDict[self.dsNames[0]]
+            metadata = readfile.read_attribute(dsFile)
+            if all(i in metadata.keys() for i in ['STARTING_RANGE', 'RANGE_PIXEL_SIZE']):
+                self.extraMetadata = metadata
 
     def read(self, family, box=None):
         self.file = self.datasetDict[family]
@@ -321,20 +329,20 @@ class geometryDict:
                                        box=box)
         return data, metadata
 
-    def get_slantRangeDistance(self, box=None):
-        if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
+    def get_slant_range_distance(self, box=None):
+        if not self.extraMetadata or 'Y_FIRST' in self.extraMetadata.keys():
             return None
-        data = ut.range_distance(self.ifgramMetadata,
+        data = ut.range_distance(self.extraMetadata,
                                  dimension=2,
                                  print_msg=False)
         if box is not None:
             data = data[box[1]:box[3], box[0]:box[2]]
         return data
 
-    def get_incidenceAngle(self, box=None):
-        if not self.ifgramMetadata or 'Y_FIRST' in self.ifgramMetadata.keys():
+    def get_incidence_angle(self, box=None):
+        if not self.extraMetadata or 'Y_FIRST' in self.extraMetadata.keys():
             return None
-        data = ut.incidence_angle(self.ifgramMetadata,
+        data = ut.incidence_angle(self.extraMetadata,
                                   dimension=2,
                                   print_msg=False)
         if box is not None:
@@ -412,7 +420,6 @@ class geometryDict:
         #group = f.create_group(groupName)
         #print('create group   /{}'.format(groupName))
 
-        self.dsNames = list(self.datasetDict.keys())
         maxDigit = max([len(i) for i in geometryDatasetNames])
         length, width = self.get_size(box=box)
         self.length, self.width = self.get_size()
@@ -486,9 +493,9 @@ class geometryDict:
             # Calculate data
             data = None
             if dsName == 'incidenceAngle':
-                data = self.get_incidenceAngle(box=box)
+                data = self.get_incidence_angle(box=box)
             elif dsName == 'slantRangeDistance':
-                data = self.get_slantRangeDistance(box=box)
+                data = self.get_slant_range_distance(box=box)
 
             # Write dataset
             if data is not None:
@@ -531,17 +538,26 @@ def read_isce_bperp_file(fname, out_shape, box=None):
                 data = self.read_sice_bperp_file(fname, (3600,2200), box=(200,400,1000,1000))
     '''
     # read original data
-    dataC = readfile.read(fname)[0]
+    data_c = readfile.read(fname)[0]
 
     # resize to full resolution
-    data_min, data_max = np.nanmin(dataC), np.nanmax(dataC)
+    data_min, data_max = np.nanmin(data_c), np.nanmax(data_c)
     if data_max != data_min:
-        dataC = (dataC - data_min) / (data_max - data_min)
+        data_c = (data_c - data_min) / (data_max - data_min)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
-        data = resize(dataC, out_shape)
+        data = resize(data_c, out_shape, order=1, mode='edge')
     if data_max != data_min:
         data = data * (data_max - data_min) + data_min
+
+    # for debug
+    debug_mode=False
+    if debug_mode:
+        import matplotlib.pyplot as plt
+        fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(8,6));
+        im = ax1.imshow(readfile.read(fname)[0]); fig.colorbar(im, ax=ax1)
+        im = ax2.imshow(data);  fig.colorbar(im, ax=ax2)
+        plt.show()
 
     if box is not None:
         data = data[box[1]:box[3], box[0]:box[2]]

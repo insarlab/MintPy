@@ -475,7 +475,11 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
     # 1.6 Min / Max - Data/Display
     inps.data_min = np.nanmin(data)
     inps.data_max = np.nanmax(data)
-    data_mli = multilook_data(data, 10, 10)
+
+    if data.size > 4e4:
+        data_mli = multilook_data(data, 10, 10)
+    else:
+        data_mli = np.array(data)
     if inps.disp_min is None:
         inps.disp_min = np.nanmin(data_mli)
     if inps.disp_max is None:
@@ -1014,7 +1018,7 @@ def plot_subplot4figure(inps, ax, data, i):
     # Title
     if inps.disp_title:
         # get title
-        if inps.key in timeseriesKeyNames:
+        if inps.key in timeseriesKeyNames or inps.dset[0].startswith('bperp'):
             try:
                 subplot_title = dt.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
             except:
@@ -1027,6 +1031,7 @@ def plot_subplot4figure(inps, ax, data, i):
                 subplot_title = ''
         else:
             subplot_title = str(inps.dset[i])
+
         # plot title
         if not inps.fig_title_in:
             if inps.dset[i] in inps.dropDatasetList:

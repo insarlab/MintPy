@@ -364,10 +364,10 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     geomGeoObj = None
     if len(dsRadarPathDict) > 0:
         geomRadarObj = geometryDict(processor=inpsDict['processor'], datasetDict=dsRadarPathDict,
-                                    ifgramMetadata=ifgramRadarMetadata)
+                                    extraMetadata=ifgramRadarMetadata)
     if len(dsGeoPathDict) > 0:
         geomGeoObj = geometryDict(processor=inpsDict['processor'], datasetDict=dsGeoPathDict,
-                                  ifgramMetadata=None)
+                                  extraMetadata=None)
     return geomRadarObj, geomGeoObj
 
 

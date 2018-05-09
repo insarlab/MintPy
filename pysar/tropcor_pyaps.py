@@ -12,8 +12,8 @@ import re
 
 try:
     import pyaps as pa
-except:
-    sys.exit('Cannot import pyaps into Python!')
+except ImportError:
+    print('Cannot import pyaps into Python!')
 
 import argparse
 import h5py
