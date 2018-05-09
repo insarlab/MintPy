@@ -199,5 +199,6 @@ def remove_surface(fname, surf_type, mask_file=None, out_file=None, ysub=None):
         data_n, ramp = remove_data_surface(data, mask, surf_type)
         writefile.write(data_n, out_file=out_file, metadata=atr)
 
-    print('time used: {} secs'.format(time.time()-start_time))
+    m, s = divmod(time.time()-start_time, 60)
+    print('\ntime used: {:02.0f} mins {:02.1f} secs'.format(m, s))
     return out_file

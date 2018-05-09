@@ -276,7 +276,8 @@ def run_resample(inps):
 
         writefile.write(dsResDict, out_file=outfile, metadata=atr, ref_file=infile)
 
-    print('time used: {:.2f} secs\nDone.'.format(time.time() - start_time))
+    m, s = divmod(time.time()-start_time, 60)
+    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return outfile
 
 

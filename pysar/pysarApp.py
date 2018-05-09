@@ -362,7 +362,7 @@ def read_template(inps):
 
 ##########################################################################
 def main(iargs=None):
-    start = time.time()
+    start_time = time.time()
     inps = cmd_line_parse(iargs)
     #########################################
     # Initiation
@@ -914,10 +914,8 @@ def main(iargs=None):
     #############################################
     # Time                                      #
     #############################################
-    s = time.time()-start
-    m, s = divmod(s, 60)
-    h, m = divmod(m, 60)
-    print('\nTime used: %02d hours %02d mins %02d secs' % (h, m, s))
+    m, s = divmod(time.time()-start_time, 60)
+    print('\ntime used: {:02.0f} mins {:02.1f} secs'.format(m, s))
     print('\n###############################################')
     print('End of PySAR processing!')
     print('################################################\n')

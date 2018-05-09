@@ -65,11 +65,14 @@ def check_output_filename(inps):
 def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
+
     inps.outfile = check_output_filename(inps)
     inps.outfile = ut.temporal_average(inps.file,
                                        datasetName=inps.datasetName,
                                        outFile=inps.outfile)
-    print('time used: {:.2f} secs\nDone.'.format(time.time() - start_time))
+
+    m, s = divmod(time.time()-start_time, 60)
+    print('\ntime used: {:02.0f} mins {:02.1f} secs'.format(m, s))
     return inps.outfile
 
 

@@ -785,7 +785,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, weight_func='f
     # Invert pixels on mask 1+2
     num_pixel2inv = int(np.sum(mask))
     idx_pixel2inv = np.where(mask)[0]
-    print('number of pixels to invert: %s out of %s' % (num_pixel2inv, num_pixel))
+    print(('number of pixels to invert: {} out of {}'
+           ' ({:.1f}%)').format(num_pixel2inv,
+                                num_pixel,
+                                num_pixel2inv/num_pixel*100))
     if num_pixel2inv < 1:
         ts = ts.reshape(num_date, num_row, num_col)
         temp_coh = temp_coh.reshape(num_row, num_col)
@@ -987,7 +990,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         metadata[key_prefix+'weightFunc'] = inps.weightFunc
         write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifgram, suffix='')
 
-    print('time used: {:.1f} seconds\nDone.'.format(time.time()-start_time))
+    m, s = divmod(time.time()-start_time, 60)
+    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return
 
 
@@ -1011,7 +1015,6 @@ def main(iargs=None):
     else:
         print('inverse time-series using L1 norm minimization')
         ut.timeseries_inversion_L1(inps.ifgramStackFile, inps.timeseriesFile)
-
     return
 
 

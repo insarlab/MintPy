@@ -18,7 +18,6 @@ import h5py
 import numpy as np
 import scipy.ndimage as ndimage
 import matplotlib.pyplot as plt
-from matplotlib import ticker
 from matplotlib.colors import LightSource
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import cm, pyproj
@@ -864,8 +863,9 @@ def update_figure_setting(inps):
                 plot_shape = []
             plot_shape = [width*1.25, length]
             fig_scale = min(pp.min_figsize_single/min(plot_shape),
-                            pp.max_figsize_single/max(plot_shape))
-            inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in plot_shape]
+                            pp.max_figsize_single/max(plot_shape),
+                            pp.max_figsize_height/plot_shape[1])
+            inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
             print('create figure in size: '+str(inps.fig_size))
 
     # Multiple Plots
@@ -1079,7 +1079,8 @@ def plot_figure(inps, j, metadata):
     if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity']:
         data, inps = update_data_with_plot_inps(data, metadata, inps)
         if (not inps.disp_min and not inps.disp_max 
-                and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)):
+                and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
+                and inps.dsetFamilyList[0] not in ['bperp']):
             data_mli = multilook_data(data, 10, 10)
             inps.disp_min = np.nanmin(data_mli)
             inps.disp_max = np.nanmax(data_mli)

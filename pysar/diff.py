@@ -85,7 +85,9 @@ def diff_file(file1, file2, outFile=None, force=False):
             data2 -= data2[:, ref_y, ref_x]
 
         data = obj1.read()
+        mask = data == 0.
         data[dateShared] -= data2
+        data[mask] = 0.               # Do not change zero phase value
         objOut = timeseries(outFile)
         objOut.write2hdf5(data=data, refFile=file1)
 

@@ -10,12 +10,10 @@ import os
 import warnings
 import datetime
 import numpy as np
-import scipy.ndimage as ndimage
+from scipy import ndimage
 
 import matplotlib as mpl
-import matplotlib.dates as mdates
-import matplotlib.lines as mlines
-import matplotlib.pyplot as plt
+from matplotlib import ticker, dates as mdates, lines as mlines, pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, LightSource
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.patheffects import withStroke
@@ -41,6 +39,7 @@ min_figsize_single = 6.0       # default min size in inch, for single plot
 max_figsize_single = 10.0      # default min size in inch, for single plot
 # default size in inch, for multiple subplots
 default_figsize_multi = [15.0, 8.0]
+max_figsize_height = 8.0       # max figure size in vertical direction in inch
 
 
 ############################################ Class Begein ###############################################

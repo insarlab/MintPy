@@ -220,7 +220,9 @@ def main(iargs=None):
 
     # correct trop delay in timeseries
     trop_data = estimate_tropospheric_delay(dem, X, obj.metadata)
+    mask = ts_data == 0.
     ts_data -= trop_data
+    ts_data[mask] = 0.
 
     # write time-series file
     if not inps.outfile:
