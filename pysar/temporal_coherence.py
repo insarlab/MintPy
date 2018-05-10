@@ -61,7 +61,7 @@ def temporal_coherence(timeseriesFile, ifgramFile):
     atr_ifgram = readfile.read_attribute(ifgramFile)
     h5ifgram   = h5py.File(ifgramFile, 'r')
     ifgram_list = sorted(h5ifgram['interferograms'].keys())
-    ifgram_list = ut.check_drop_ifgram(h5ifgram, atr_ifgram, ifgram_list)
+    ifgram_list = ut.check_drop_ifgram(h5ifgram)
     ifgram_num = len(ifgram_list)
 
     # Design matrix

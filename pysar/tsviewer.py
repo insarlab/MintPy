@@ -20,7 +20,7 @@ from pysar.mask import mask_matrix
 
 
 ###########################################################################################
-def read_timeseries_yx(timeseries_file, y, x):
+def read_timeseries_yx(timeseries_file, y, x, ref_yx=None):
     '''Read time-series displacement on point (y,x) from timeseries_file
     Inputs:
         timeseries_file : string, name/path of timeseries hdf5 file
@@ -30,12 +30,24 @@ def read_timeseries_yx(timeseries_file, y, x):
     '''
     atr = readfile.read_attribute(timeseries_file)
     k = atr['FILE_TYPE']
-    h5 = h5py.File(timeseries_file, 'r')
-    date_list = h5[k].keys()
-
     dis_ts = []
-    for date in date_list:
-        dis_ts.append(h5[k].get(date)[y,x])
+
+    h5 = h5py.File(timeseries_file, 'r')
+    if k in ['GIANT_TS']:
+        date_list = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
+        dname = [i for i in ['rawts','recons'] if i in h5.keys()][0]
+        dis_ts = h5[dname][:,y,x]
+        if ref_yx is not None:
+            dis_ts = h5[dname][:,ref_yx[0],ref_yx[1]]
+    else:
+        date_list = h5[k].keys()
+        for date in date_list:
+            dis = h5[k].get(date)[y,x]
+            if inps.ref_yx:
+                dis -= h5[k].get(date)[ref_yx[0], ref_yx[1]]
+            dis_ts.append(dis)
+        dis_ts = np.array(dis_ts)
+
     h5.close()
     return dis_ts
 
@@ -107,7 +119,10 @@ def cmdLineParse():
     disp.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2, default=[10.0,5.0],\
                       help='Figure size in inches - width and length. Default: 10.0 5.0\n'+\
                            'i.e. 3.5 2 for ppt; ')
-    disp.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN','YMAX'), type=float, help='Y Limits for plotting.')
+    disp.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN','YMAX'), type=float,\
+                      help='Y limits for point plotting.')
+    disp.add_argument('--ylim-mat', dest='ylim_mat', nargs=2, metavar=('YMIN','YMAX'), type=float,\
+                      help='Display limits for matrix plotting.')
     disp.add_argument('--ref-date', dest='ref_date', help='Change reference date for display')
     disp.add_argument('--exclude','--ex', dest='ex_date_list', nargs='*', help='Exclude date shown as gray.')
     disp.add_argument('--zf','--zero-first', dest='zero_first', action='store_true',\
@@ -148,11 +163,14 @@ if __name__ == '__main__':
     atr = readfile.read_attribute(inps.timeseries_file)
     k = atr['FILE_TYPE']
     print 'input file is '+k+': '+inps.timeseries_file
-    if not k == 'timeseries':
+    if not k in ['timeseries','GIANT_TS']:
         raise ValueError('Only timeseries file is supported!')
 
     h5 = h5py.File(inps.timeseries_file,'r')
-    dateList = sorted(h5[k].keys())
+    if k in ['GIANT_TS']:
+        dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5['dates'][:].tolist()]
+    else:
+        dateList = sorted(h5[k].keys())
     date_num = len(dateList)
     inps.dates, tims = ptime.date_list2vector(dateList)
 
@@ -213,7 +231,11 @@ if __name__ == '__main__':
     elif inps.disp_unit == 'mm': inps.unit_fac = 1000.0
     elif inps.disp_unit == 'km': inps.unit_fac = 0.001
     else: raise ValueError('Un-recognized unit: '+inps.disp_unit)
-    print 'data    unit: m'
+    if k in ['GIANT_TS']:
+        print 'data    unit: mm'
+        inps.unit_fac *= 0.001
+    else:
+        print 'data    unit: m'
     print 'display unit: '+inps.disp_unit
 
     # Flip up-down / left-right
@@ -225,14 +247,14 @@ if __name__ == '__main__':
 
     # Mask file
     if not inps.mask_file:
-        if 'X_FIRST' in atr.keys():
+        if os.path.basename(inps.timeseries_file).startswith('geo_'):
             file_list = ['geo_maskTempCoh.h5']
         else:
             file_list = ['maskTempCoh.h5','mask.h5']
         try:    inps.mask_file = ut.get_file_list(file_list)[0]
         except: inps.mask_file = None
     try:
-        mask = readfile.read(inps.mask_file)[0]
+        mask = readfile.read(inps.mask_file, epoch='mask')[0]
         mask[mask!=0] = 1
         print 'load mask from file: '+inps.mask_file
     except:
@@ -240,9 +262,10 @@ if __name__ == '__main__':
         print 'No mask used.'
 
     # Initial Map
-    d_v = h5[k].get(dateList[inps.epoch_num])[:]*inps.unit_fac
+    d_v = readfile.read(inps.timeseries_file, epoch=dateList[inps.epoch_num])[0] * inps.unit_fac
+    #d_v = h5[k].get(dateList[inps.epoch_num])[:]*inps.unit_fac
     if inps.ref_date:
-        inps.ref_d_v = h5[k].get(inps.ref_date)[:]*inps.unit_fac
+        inps.ref_d_v = readfile.read(inps.timeseries_file, epoch=inps.ref_date)[0]*inps.unit_fac
         d_v -= inps.ref_d_v
     if mask is not None:
         d_v = mask_matrix(d_v, mask)
@@ -250,10 +273,10 @@ if __name__ == '__main__':
         d_v -= d_v[inps.ref_yx[0], inps.ref_yx[1]]
     data_lim = [np.nanmin(d_v), np.nanmax(d_v)]
 
-    if not inps.ylim:
-        inps.ylim = data_lim
+    if not inps.ylim_mat:
+        inps.ylim_mat = data_lim
     print 'Initial data range: '+str(data_lim)
-    print 'Display data range: '+str(inps.ylim)
+    print 'Display data range: '+str(inps.ylim_mat)
 
     ########## Fig 1 - Cumulative Displacement Map
     if not inps.disp_fig:
@@ -268,9 +291,9 @@ if __name__ == '__main__':
     # rect[left, bottom, width, height]
     ax_v = fig_v.add_axes([0.125,0.25,0.75,0.65])
     if inps.dem_file:
-        dem = readfile.read(inps.dem_file)[0]
+        dem = readfile.read(inps.dem_file, epoch='height')[0]
         ax_v = view.plot_dem_yx(ax_v, dem)
-    img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim, interpolation='nearest')
+    img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim_mat, interpolation='nearest')
 
     # Reference Pixel
     if inps.ref_yx:
@@ -399,12 +422,12 @@ if __name__ == '__main__':
     def update_timeseries(y, x):
         '''Plot point time series displacement at pixel [y, x]'''
         global fig_ts,ax_ts,inps
-        d_ts = []
-        for date in dateList:
-            d = h5[k].get(date)[y,x]
-            if inps.ref_yx:
-                d -= h5[k].get(date)[inps.ref_yx[0], inps.ref_yx[1]]
-            d_ts.append(d*inps.unit_fac)
+        d_ts = read_timeseries_yx(inps.timeseries_file, y, x, ref_yx=inps.ref_yx) * inps.unit_fac
+        #for date in dateList:
+        #    d = h5[k].get(date)[y,x]
+        #    if inps.ref_yx:
+        #        d -= h5[k].get(date)[inps.ref_yx[0], inps.ref_yx[1]]
+        #    d_ts.append(d*inps.unit_fac)
         
         if inps.zero_first:
             d_ts -= d_ts[inps.zero_idx]
@@ -414,7 +437,8 @@ if __name__ == '__main__':
             ax_ts = plot_timeseries_errorbar(ax_ts, d_ts, inps)
         else:
             ax_ts = plot_timeseries_scatter(ax_ts, d_ts, inps)
-        ax_ts.set_ylim(inps.ylim)
+        if inps.ylim:
+            ax_ts.set_ylim(inps.ylim)
         for tick in ax_ts.yaxis.get_major_ticks():
             tick.label.set_fontsize(inps.font_size)
 

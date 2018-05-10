@@ -4,6 +4,11 @@
 # Copyright(c) 2017, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
+#
+# Recommended usage:
+#   import pysar.view as pp
+#
+
 
 import os
 import sys
@@ -15,6 +20,7 @@ import numpy as np
 import numpy.matlib as matlib
 import scipy.ndimage as ndimage
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 from matplotlib.colors import LinearSegmentedColormap, LightSource
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.patheffects import withStroke
@@ -32,11 +38,24 @@ from pysar.multilook import multilook_matrix
 from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
 
 
+
+mplColors = ['#1f77b4',\
+             '#ff7f0e',\
+             '#2ca02c',\
+             '#d62728',\
+             '#9467bd',\
+             '#8c564b',\
+             '#e377c2',\
+             '#7f7f7f',\
+             '#bcbd22',\
+             '#17becf']
+
+
 ############################################ Class ###############################################
 class Basemap2(Basemap): 
     # add drawscale method to Basemap class. 
     # Basemap.drawmapscale() do not support 'cyl' projection.
-    def drawscale(self, lat_c, lon_c, distance, ax=None, font_size=12, yoffset=None): 
+    def drawscale(self, lat_c, lon_c, distance, ax=None, font_size=12, yoffset=None, color='k'): 
         """draw a simple map scale from x1,y to x2,y in map projection 
         coordinates, label it with actual distance
         Inputs:
@@ -56,18 +75,18 @@ class Basemap2(Basemap):
         if not yoffset:
             yoffset = 0.1*length
 
-        self.plot([lon0,lon1],[lat_c,lat_c],color='k')
-        self.plot([lon0,lon0],[lat_c,lat_c+yoffset],color='k')
-        self.plot([lon1,lon1],[lat_c,lat_c+yoffset],color='k')
+        self.plot([lon0,lon1],[lat_c,lat_c],color=color)
+        self.plot([lon0,lon0],[lat_c,lat_c+yoffset],color=color)
+        self.plot([lon1,lon1],[lat_c,lat_c+yoffset],color=color)
         if not ax:  ax = plt.gca()
         if distance < 1000.0:
             ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d m'%(distance),\
-                    verticalalignment='top', horizontalalignment='center',fontsize=font_size) 
+                    verticalalignment='top', horizontalalignment='center',fontsize=font_size, color=color) 
         else:
             ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d km'%(distance/1000.0),\
-                    verticalalignment='top', horizontalalignment='center',fontsize=font_size) 
+                    verticalalignment='top', horizontalalignment='center',fontsize=font_size, color=color) 
     
-    def auto_lalo_sequence(self, geo_box, max_tick_num=4, step_candidate=[1,2,3,4,5]):
+    def auto_lalo_sequence(self, geo_box, lalo_step=None, max_tick_num=4, step_candidate=[1,2,3,4,5]):
         '''Auto calculate lat/lon label sequence based on input geo_box
         Inputs:
             geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -80,32 +99,35 @@ class Basemap2(Basemap):
             geo_box = (128.0, 37.0, 138.0, 30.0)
             lats, lons, step = m.auto_lalo_sequence(geo_box)
         '''
-        # Initial tick step
         max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
-        lalo_step = round_to_1(max_lalo_dist/max_tick_num)
-        
-        # Final tick step - choose from candidate list
-        digit = np.int(np.floor(np.log10(lalo_step)))
-        lalo_step_candidate = [i*10**digit for i in step_candidate]
-        distance = [(i - max_lalo_dist/max_tick_num)**2 for i in lalo_step_candidate]
-        lalo_step = lalo_step_candidate[distance.index(min(distance))]
-        #lalo_step = 0.1
+
+        if not lalo_step:
+            # Initial tick step
+            lalo_step = round_to_1(max_lalo_dist/max_tick_num)
+
+            # Final tick step - choose from candidate list
+            digit = np.int(np.floor(np.log10(lalo_step)))
+            lalo_step_candidate = [i*10**digit for i in step_candidate]
+            distance = [(i - max_lalo_dist/max_tick_num)**2 for i in lalo_step_candidate]
+            lalo_step = lalo_step_candidate[distance.index(min(distance))]
+        print 'label step - '+str(lalo_step)+' degree'
 
         # Auto tick sequence
+        digit = np.int(np.floor(np.log10(lalo_step)))
         lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
-        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-max_lalo_dist, -lalo_step),\
-                                    np.arange(lat_major, lat_major+max_lalo_dist, lalo_step))))
+        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step),\
+                                    np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step))))
         lats = np.sort(lats[np.where(np.logical_and(lats>=geo_box[3], lats<=geo_box[1]))])
-        
+
         lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
-        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-max_lalo_dist, -lalo_step),\
-                                    np.arange(lon_major, lon_major+max_lalo_dist, lalo_step))))
+        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step),\
+                                    np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step))))
         lons = np.sort(lons[np.where(np.logical_and(lons>=geo_box[0], lons<=geo_box[2]))])
  
         return lats, lons, lalo_step
 
 
-    def draw_lalo_label(self, geo_box, ax=None, labels=[1,0,0,1], font_size=12):
+    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1,0,0,1], font_size=12, color='k'):
         '''Auto draw lat/lon label/tick based on coverage from geo_box
         Inputs:
             geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -119,9 +141,8 @@ class Basemap2(Basemap):
             geo_box = (128.0, 37.0, 138.0, 30.0)
             m.draw_lalo_label(geo_box)
         '''
-        lats, lons, step = self.auto_lalo_sequence(geo_box)
-        #lats = np.array([-0.18,-0.17,-0.16,-0.15])
-        
+        lats, lons, step = self.auto_lalo_sequence(geo_box, lalo_step=lalo_step)
+
         digit = np.int(np.floor(np.log10(step)))
         fmt = '%.'+'%d'%(abs(min(digit, 0)))+'f'
         # Change the 2 lines below for customized label
@@ -131,7 +152,7 @@ class Basemap2(Basemap):
         # Plot x/y tick without label
         if not ax:
             ax = plt.gca()
-        ax.tick_params(direction='in')
+        ax.tick_params(which='both', direction='in', labelsize=font_size, bottom=True, top=True, left=True, right=True)
 
         ax.set_xticks(lons)
         ax.set_yticks(lats)
@@ -142,8 +163,8 @@ class Basemap2(Basemap):
         # Plot x/y label
         labels_lat = np.multiply(labels, [1,1,0,0])
         labels_lon = np.multiply(labels, [0,0,1,1])
-        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05, fontsize=font_size)
-        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05, fontsize=font_size)
+        self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05, fontsize=font_size, color=color, textcolor=color)
+        self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05, fontsize=font_size, color=color, textcolor=color)
 
 
 ##########################################  Sub Function  ########################################
@@ -220,18 +241,18 @@ def auto_figure_title(fname, epoch=[], inps_dict=None):
         if 'unwCor' in fname:
             fig_title += '_unwCor'
 
-    elif len(epoch)==1 and k in ['timeseries']:
+    elif len(epoch)==1 and k in multi_dataset_hdf5_file+['GIANT_TS']:
         if inps_dict['ref_date']:
             ref_date = inps_dict['ref_date']
         else:
             try:
                 ref_date = atr['ref_date']
             except:
-                h5 = h5py.File(fname, 'r')
-                epoch_list = sorted(h5[k].keys())
-                h5.close()
-                ref_date = epoch_list[0]
-        fig_title = ptime.yymmdd(ref_date)+'-'+ptime.yymmdd(epoch[0])
+                ref_date = None
+        if not ref_date:
+            fig_title = epoch[0]
+        else:
+            fig_title = ptime.yymmdd(ref_date)+'-'+ptime.yymmdd(epoch[0])
 
         try:
             ext = os.path.splitext(fname)[1]
@@ -307,7 +328,7 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
 def check_colormap_input(atr_dict, colormap=None):
     if not colormap:
         if atr_dict['FILE_TYPE'] in ['coherence','temporal_coherence','.cor',\
-                                     '.mli','.slc','.amp']:
+                                     '.mli','.slc','.amp','.ramp']:
               colormap = 'gray'
         else: colormap = 'jet'
     print 'colormap: '+colormap
@@ -370,7 +391,7 @@ def get_epoch_full_list_from_input(all_epoch_list, epoch_input_list=[], epoch_nu
     # Update epoch_num_list from epoch_input_list
     if epoch_input_list:
         for epoch_input in epoch_input_list:
-            epoch_list_tmp = [s for s in all_epoch_list if epoch_input in s]
+            epoch_list_tmp = [s for s in all_epoch_list if epoch_input.lower() in s.lower()]
             epoch_list += list(set(epoch_list_tmp) - set(epoch_list))
         epoch_num_list += [all_epoch_list.index(s) for s in epoch_list]
 
@@ -410,7 +431,7 @@ def plot_dem_lalo(bmap, dem, box, inps_dict):
         ### mask out water
         #dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray, vmin=-5000, vmax=np.nanmax(dem)+500)
         #mask_file = '/Users/jeromezhang/Documents/insarlab/Kyushu/Velocity/mask_land.h5'
-        #mask_mat = readfile.read(mask_file, inps_dict['dem_pix_box'])[0]
+        #mask_mat = readfile.read(mask_file, inps_dict['dem_pix_box'], epoch='mask')[0]
         #dem_shade = mask.mask_matrix(dem_shade, mask_mat)
 
         bmap.imshow(dem_shade, origin='upper', interpolation='spline16')
@@ -545,7 +566,7 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
 
     # Calculate scaling factor  - 1
     # phase unit - length / angle 
-    if data_unit[0] == 'm':
+    if data_unit[0].endswith('m'):
         if   disp_unit[0] == 'mm': scale *= 1000.0
         elif disp_unit[0] == 'cm': scale *= 100.0
         elif disp_unit[0] == 'dm': scale *= 10.0
@@ -554,8 +575,14 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
             range2phase = -(4*np.pi) / float(atr_dict['WAVELENGTH'])
             scale *= range2phase
         else:
-            print 'Unrecognized phase/length unit: '+disp_unit[0]
+            print 'Unrecognized display phase/length unit: '+disp_unit[0]
             return
+        
+        if   data_unit[0] == 'mm': scale *= 0.001
+        elif data_unit[0] == 'cm': scale *= 0.01
+        elif data_unit[0] == 'dm': scale *= 0.1
+        elif data_unit[0] == 'km': scale *= 1000.
+        
     elif data_unit[0] == 'radian':
         phase2range = -float(atr_dict['WAVELENGTH']) / (4*np.pi)
         if   disp_unit[0] == 'mm': scale *= phase2range * 1000.0
@@ -572,10 +599,13 @@ def scale_data2disp_unit(matrix, atr_dict, disp_unit):
     elif data_unit[0] == '1':
         if disp_unit[0] == 'db':
             ind = np.nonzero(matrix)
-            matrix[ind] = np.log10(np.absolute(matrix[ind]))
+            matrix[ind] = 10*np.log10(np.absolute(matrix[ind]))
             disp_unit[0] = 'dB'
         else:
-            print 'Un-scalable display unit: '+disp_unit[0]
+            try:
+                scale /= float(disp_unit[0])
+            except:
+                print 'Un-scalable display unit: '+disp_unit[0]
     else:
         print 'Un-scalable data unit: '+data_unit
 
@@ -629,8 +659,8 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     length = int(float(meta_dict['FILE_LENGTH']))
 
     # default mask file:
-    if not inps.mask_file and k in ['velocity','timeseries','interferograms']:
-        if 'X_FIRST' in meta_dict.keys():
+    if not inps.mask_file and k in ['velocity','timeseries']:
+        if os.path.basename(meta_dict['FILE_PATH']).startswith('geo_'):
             inps.mask_file = 'geo_maskTempCoh.h5'
         else:
             inps.mask_file = 'maskTempCoh.h5'
@@ -713,6 +743,7 @@ def update_plot_inps_with_meta_dict(inps, meta_dict):
     if not inps.fig_title:
         try:    inps.fig_title = auto_figure_title(meta_dict['FILE_PATH'], inps.epoch, vars(inps))
         except: inps.fig_title = os.path.splitext(os.path.basename(meta_dict['FILE_PATH']))[0]
+    print 'figure title: '+inps.fig_title
 
     # Figure output file name
     if not inps.outfile:
@@ -727,7 +758,8 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
     # Seed Point
     # If value of new seed point is not nan, re-seed the data and update inps.seed_yx/lalo
     # Otherwise, try to read seed info from atrributes into inps.seed_yx/lalo
-    if inps.seed_yx and inps.seed_yx != [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]:
+    if inps.seed_yx and ('ref_y' not in meta_dict.keys() or \
+                         inps.seed_yx != [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]):
         inps.seed_value = data[inps.seed_yx[0]-inps.pix_box[1], inps.seed_yx[1]-inps.pix_box[0]]
         if not np.isnan(inps.seed_value):
             data -= inps.seed_value
@@ -742,10 +774,18 @@ def update_matrix_with_plot_inps(data, meta_dict, inps):
             print 'WARNING: input reference point has nan value, continue with original reference info'
             inps.seed_yx = None
     else:
-        try:    inps.seed_yx = [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]
-        except: inps.seed_yx = None
-        try:    inps.seed_lalo = [float(meta_dict['ref_lat']), float(meta_dict['ref_lon'])]
-        except: inps.seed_lalo = None
+        if 'ref_y' in meta_dict.keys():
+            inps.seed_yx = [int(meta_dict['ref_y']), int(meta_dict['ref_x'])]
+        else:
+            inps.seed_yx = None
+
+        if 'ref_lat' in meta_dict.keys():
+            inps.seed_lalo = [float(meta_dict['ref_lat']), float(meta_dict['ref_lon'])]
+        elif inps.seed_yx and inps.geo_box:
+            inps.seed_lalo = [subset.coord_radar2geo(inps.seed_yx[0], meta_dict, 'y'), \
+                              subset.coord_radar2geo(inps.seed_yx[1], meta_dict, 'x')]
+        else:
+            inps.seed_lalo = None
 
     # Multilook
     if inps.multilook and inps.multilook_num > 1:
@@ -819,8 +859,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     data_max = np.nanmax(data)
     if inps.disp_min is None:  inps.disp_min = data_min
     if inps.disp_max is None:  inps.disp_max = data_max
-    print 'data    range: '+str(data_min)+' - '+str(data_max)
-    print 'display range: '+str(inps.disp_min)+' - '+str(inps.disp_max)
+    print 'data    range: %f - %f' % (data_min, data_max)
+    print 'display range: %f - %f' % (inps.disp_min, inps.disp_max)
 
     # 1.7 DEM
     if inps.dem_file:
@@ -831,7 +871,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             inps.dem_pix_box = subset.box_geo2pixel(inps.geo_box, dem_meta_dict)
         else:
             inps.dem_pix_box = inps.pix_box
-        dem, dem_meta_dict = readfile.read(inps.dem_file, inps.dem_pix_box)
+        dem, dem_meta_dict = readfile.read(inps.dem_file, inps.dem_pix_box, epoch='height')
 
         # If data is too large, do not show DEM contour
         if inps.geo_box:
@@ -881,7 +921,7 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         # Plot Data
         print 'plotting Data ...'
         im = m.imshow(data, cmap=inps.colormap, origin='upper', vmin=inps.disp_min, vmax=inps.disp_max,\
-                      alpha=inps.transparency, interpolation='nearest')
+                      alpha=inps.transparency, interpolation='nearest', animated=inps.animation)
 
         # Scale Bar
         if inps.disp_scalebar:
@@ -896,14 +936,15 @@ def plot_matrix(ax, data, meta_dict, inps=None):
             if inps.scalebar[1] == 999.0:  inps.scalebar[1] = inps.geo_box[3]+0.1*(inps.geo_box[1]-inps.geo_box[3])
             if inps.scalebar[2] == 999.0:  inps.scalebar[2] = inps.geo_box[0]+0.2*(inps.geo_box[2]-inps.geo_box[0])
             # Draw scale bar
-            m.drawscale(inps.scalebar[1], inps.scalebar[2], inps.scalebar[0], ax=ax, font_size=inps.font_size)
+            m.drawscale(inps.scalebar[1], inps.scalebar[2], inps.scalebar[0], ax=ax,\
+                        font_size=inps.font_size, color=inps.font_color)
 
         # Lat Lon labels
         if inps.lalo_label:
             print 'plot lat/lon labels'
-            m.draw_lalo_label(inps.geo_box, ax=ax, font_size=inps.font_size)
+            m.draw_lalo_label(inps.geo_box, ax=ax, lalo_step=inps.lalo_step, font_size=inps.font_size, color=inps.font_color)
         else:
-            ax.tick_params(labelsize=inps.font_size)
+            ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
         
         # Plot Seed Point
         if inps.disp_seed and inps.seed_lalo:
@@ -943,14 +984,16 @@ def plot_matrix(ax, data, meta_dict, inps=None):
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.disp_min, vmax=inps.disp_max,\
                        alpha=inps.transparency, interpolation='nearest')
 
+        ax.tick_params(labelsize=inps.font_size)
+
         # Plot Seed Point
         if inps.disp_seed and inps.seed_yx:
             ax.plot(inps.seed_yx[1]-inps.pix_box[0], inps.seed_yx[0]-inps.pix_box[1],\
                     inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
             print 'plot reference point'
 
-        ax.set_xlim(0,np.shape(data)[1])
-        ax.set_ylim(np.shape(data)[0],0)
+        ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
+        ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
 
         # Status bar
         def format_coord(x,y):
@@ -972,21 +1015,30 @@ def plot_matrix(ax, data, meta_dict, inps=None):
     # 3.1 Colorbar
     if inps.disp_cbar:
         # Colorbar Extend
-        if   inps.disp_min <= data_min and inps.disp_max >= data_max:  cb_extend='neither'
-        elif inps.disp_min >  data_min and inps.disp_max >= data_max:  cb_extend='min'
-        elif inps.disp_min <= data_min and inps.disp_max <  data_max:  cb_extend='max'
-        else:  cb_extend='both'
-
+        if not inps.cbar_ext:
+            if   inps.disp_min <= data_min and inps.disp_max >= data_max: inps.cbar_ext='neither'
+            elif inps.disp_min >  data_min and inps.disp_max >= data_max: inps.cbar_ext='min'
+            elif inps.disp_min <= data_min and inps.disp_max <  data_max: inps.cbar_ext='max'
+            else:  inps.cbar_ext='both'
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
-        cbar = plt.colorbar(im, cax=cax, extend=cb_extend)
-        cbar.ax.tick_params(labelsize=inps.font_size)
-        cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
-        #cbar.set_label('Temporal Coherence', fontsize=inps.font_size)
+        if inps.wrap and 'radian' in inps.disp_unit:
+            cbar = plt.colorbar(im, cax=cax, ticks=[-np.pi, 0, np.pi])
+            cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+        else:
+            cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
+        if inps.cbar_nbins:
+            cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
+            cbar.update_ticks()
+        cbar.ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
+        if not inps.cbar_label:
+            cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
+        else:
+            cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
 
     # 3.2 Title
     if inps.disp_title:
-        ax.set_title(inps.fig_title, fontsize=inps.font_size)
+        ax.set_title(inps.fig_title, fontsize=inps.font_size, color=inps.font_color)
 
     # 3.3 Flip Left-Right / Up-Down
     if inps.flip_lr:
@@ -1010,8 +1062,8 @@ def plot_matrix(ax, data, meta_dict, inps=None):
 
     # Figure Output
     if inps.save_fig:
+        print 'save figure to '+inps.outfile
         plt.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print 'Saved figure to '+inps.outfile
 
     return ax, inps
 
@@ -1072,6 +1124,7 @@ def cmdLineParse(argv):
                         help='dates will not be displayed')
     infile.add_argument('--mask', dest='mask_file', metavar='FILE',\
                         help='mask file for display')
+    infile.add_argument('--zero-mask', dest='zero_mask', action='store_true', help='mask pixels with zero value.')
 
     ##### Output
     outfile = parser.add_argument_group('Output', 'Save figure and write to file(s)')
@@ -1119,7 +1172,7 @@ def cmdLineParse(argv):
 
     ##### DEM
     dem = parser.add_argument_group('DEM','display topography in the background')
-    dem.add_argument('-d','--dem', dest='dem_file', metavar='FILE',\
+    dem.add_argument('-d','--dem', dest='dem_file', metavar='DEM_FILE',\
                      help='DEM file to show topography as background')
     dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',\
                      help='do not show DEM shaded relief')
@@ -1172,12 +1225,17 @@ def cmdLineParse(argv):
     ##### Figure 
     fig = parser.add_argument_group('Figure','Figure settings for display')
     fig.add_argument('-s','--fontsize', dest='font_size', type=int, help='font size')
+    fig.add_argument('--fontcolor', dest='font_color', default='k', help='font color')
     fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,\
                      help='DPI - dot per inch - for display/write')
     fig.add_argument('-r','--row', dest='fig_row_num', type=int, default=1, help='subplot number in row')
     fig.add_argument('-p','--col', dest='fig_col_num', type=int, default=1, help='subplot number in column')
     fig.add_argument('--noaxis', dest='disp_axis', action='store_false', help='do not display axis')
     fig.add_argument('--nocbar','--nocolorbar', dest='disp_cbar', action='store_false', help='do not display colorbar')
+    fig.add_argument('--cbar-nbins', dest='cbar_nbins', type=int, help='number of bins for colorbar')
+    fig.add_argument('--cbar-ext', dest='cbar_ext', default=None, choices={'neither','min','max','both',None},\
+                     help='Extend setting of colorbar; based on data stat by default.')
+    fig.add_argument('--cbar-label', dest='cbar_label', default=None, help='colorbar label')
     fig.add_argument('--notitle', dest='disp_title', action='store_false', help='do not display title')
     fig.add_argument('--notick', dest='disp_tick', action='store_false', help='do not display tick in x/y axis')
     fig.add_argument('--title-in', dest='fig_title_in', action='store_true', help='draw title in/out of axes')
@@ -1187,13 +1245,14 @@ def cmdLineParse(argv):
     fig.add_argument('--figext', dest='fig_ext',\
                      default='.png', choices=['.emf','.eps','.pdf','.png','.ps','.raw','.rgba','.svg','.svgz'],\
                      help='File extension for figure output file')
-    fig.add_argument('--fignum', dest='fig_num', type=int, default=1, help='number of figure windows')
+    fig.add_argument('--fignum', dest='fig_num', type=int, help='number of figure windows')
     fig.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,\
                      help='width space between subplots in inches')
     fig.add_argument('--hspace', dest='fig_hei_space', type=float, default=0.05,\
                      help='height space between subplots in inches')
     fig.add_argument('--coord', dest='fig_coord', choices=['radar','geo'], default='geo',\
                      help='Display in radar/geo coordination system, for geocoded file only.')
+    fig.add_argument('--animation', action='store_true', help='enable animation mode')
     
     ##### Map
     map_group = parser.add_argument_group('Map', 'Map settings for display')
@@ -1219,6 +1278,8 @@ def cmdLineParse(argv):
         inps.save_fig = True
     if inps.coastline and inps.resolution in ['c','l']:
         inps.resolution = 'i'
+    if inps.lalo_step:
+        inps.lalo_label = True
     return inps
 
 
@@ -1230,9 +1291,14 @@ def main(argv):
     print '\n******************** Display ********************'
 
     # File Basic Info
-    try: atr = readfile.read_attribute(inps.file)
-    except: print 'Can not read file: '+inps.file; sys.exit(1)
     ext = os.path.splitext(inps.file)[1].lower()
+    fbase = os.path.splitext(os.path.basename(inps.file))[0]
+
+    try:
+        atr = readfile.read_attribute(inps.file)
+    except:
+        sys.exit('Can not read file: '+inps.file)
+
     print 'Input file is '+atr['PROCESSOR']+' '+atr['FILE_TYPE']+': '+inps.file
     k = atr['FILE_TYPE']
     width = int(float(atr['WIDTH']))
@@ -1241,20 +1307,24 @@ def main(argv):
 
     #------------------------------ Epoch/Date Info -------------------------------------------#
     # Read "epoch list to display' and 'reference date' for multi-dataset files
-    if k in multi_group_hdf5_file+multi_dataset_hdf5_file+['HDFEOS']:
+    if k in multi_group_hdf5_file+multi_dataset_hdf5_file+['HDFEOS', 'GIANT_TS']:
         # Read Epoch List
         h5file = h5py.File(inps.file,'r')
         if k in ['HDFEOS']:
-            epochList = h5file[k]['GRIDS']['timeseries'].keys()
+            epochList = h5file.attrs['DATE_TIMESERIES'].split()
+        elif k in ['GIANT_TS']:
+            epochList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in h5file['dates'][:].tolist()]
+            print 'dates:'
+            print epochList
         else:
             epochList = sorted(h5file[k].keys())
-        h5file.close()
+        #h5file.close()
 
         # Epochs to display
         inps.epoch = get_epoch_full_list_from_input(epochList, inps.epoch, inps.epoch_num)[0]
         # If no epoch info input, display all the epochs
         if not inps.epoch:
-            inps.epoch = list(epochList) 
+            inps.epoch = list(epochList)
 
         # Epochs to exclude
         if inps.exclude_epoch:
@@ -1268,9 +1338,9 @@ def main(argv):
 
         # Output message
         if k in multi_dataset_hdf5_file:
-            print 'dates in file '+inps.file+':\n'+str(epochList)
-            print 'dates to exclude:'+'\n'+str(inps.exclude_epoch)
-            print 'dates to display:'+'\n'+str(inps.epoch)
+            print 'num of dates in file %s : %d' % (inps.file, len(epochList))
+            print 'dates to exclude (%d):' % (len(inps.exclude_epoch));     print inps.exclude_epoch
+            print 'dates to display (%d):' % (len(inps.epoch));             print inps.epoch
         else:
             print 'num of dates in file   :'+str(len(epochList))
             print 'num of dates to exclude:'+str(len(inps.exclude_epoch))
@@ -1281,9 +1351,9 @@ def main(argv):
             ref_date_list = get_epoch_full_list_from_input(epochList, [inps.ref_date])[0]
             if ref_date_list:
                 inps.ref_date = ref_date_list[0]
-                if inps.ref_date == atr['ref_date']:
-                    inps.ref_date = None
-                    print 'Input date is already the reference date: '+atr['ref_date']
+                #if inps.ref_date == atr['ref_date']:
+                #    inps.ref_date = None
+                #    print 'Input date is already the reference date: '+atr['ref_date']
             else:
                 print 'input reference date is not included in file '+inps.file
                 print 'input reference date: '+inps.ref_date
@@ -1294,12 +1364,20 @@ def main(argv):
         # Raise Error if no epoch left
         if epochNum == 0:
             raise Exception('Zero epoch found!')
+
     # for single-dataset file
-    elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
-        if not inps.epoch:
-            inps.epoch = ['range']
+    elif k.lower() in ['.trans','.utm_to_rdc']:
+        epochList = ['range','azimuth']
+    elif fbase.startswith('los'):
+        epochList = ['incidenceAngle','headingAngle']
     else:
-        inps.epoch = ['']
+        epochList = ['']
+
+    if not inps.epoch:
+        inps.epoch = epochList
+    else:
+        inps.epoch = get_epoch_full_list_from_input(epochList, inps.epoch)[0]
+
     epochNum = len(inps.epoch)
 
 
@@ -1318,11 +1396,28 @@ def main(argv):
     # Read mask file if inputed
     if inps.mask_file:
         try:
-            msk = readfile.read(inps.mask_file, inps.pix_box)[0]
-            print 'mask data with: '+os.path.basename(inps.mask_file)
+            atrMsk = readfile.read_attribute(inps.mask_file)
+            if atrMsk['FILE_LENGTH'] == atr['FILE_LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
+                msk = readfile.read(inps.mask_file, inps.pix_box, epoch='mask')[0]
+                print 'mask data with: '+os.path.basename(inps.mask_file)
+            else:
+                print 'WARNING: input file has different size from mask file: %s. Continue without mask' % (inps.mask_file)
+                inps.mask_file = None
         except:
             print 'Can not open mask file: '+inps.mask_file
             inps.mask_file = None
+    elif k in ['HDFEOS']:
+        inps.mask_file = inps.file
+        h5msk = h5py.File(inps.file, 'r')
+        msk = h5msk[k]['GRIDS']['timeseries']['quality'].get('mask')[:]
+        h5msk.close()
+        print 'mask %s data with contained mask dataset.' % (k)
+    elif inps.file.endswith('PARAMS.h5'):
+        inps.mask_file = inps.file
+        h5msk = h5py.File(inps.file, 'r')
+        msk = h5msk['cmask'][:] == 1.
+        h5msk.close()
+        print 'mask data with contained cmask dataset'
 
     ############################### Read Data and Display ###############################
     ##### Display One Dataset
@@ -1330,6 +1425,9 @@ def main(argv):
         # Read Data
         print 'reading data ...'
         data, atr = readfile.read(inps.file, inps.pix_box, inps.epoch[0])
+        
+        if inps.zero_mask:
+            data[data==0] = np.nan
         if inps.ref_date:
             ref_data = readfile.read(inps.file, inps.pix_box, inps.ref_date)[0]
             data -= ref_data
@@ -1340,12 +1438,12 @@ def main(argv):
             del msk
 
         # Figure Setting 
-        if not inps.font_size:  inps.font_size = 16
+        if not inps.font_size:
+            inps.font_size = 16
         if not inps.fig_size:
-            # Auto size proportional to data size, with min len = 8.0 inches
-            fig_scale = min(pysar.figsize_single_min/min(data.shape), pysar.figsize_single_max/max(data.shape))
-            inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in [data.shape[1]*1.25, data.shape[0]]]
-            #inps.fig_size = [12.5,8.0]
+            plot_shape = [data.shape[1]*1.25, data.shape[0]]
+            fig_scale = min(pysar.figsize_single_min/min(plot_shape), pysar.figsize_single_max/max(plot_shape))
+            inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in plot_shape]
         print 'create figure in size: '+str(inps.fig_size)
         fig = plt.figure(figsize=inps.fig_size)
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
@@ -1363,7 +1461,8 @@ def main(argv):
     else:
         #plt.switch_backend('Agg')   #to depress the warning from tight_layout.
         ##### Figure Setting 
-        if not inps.font_size:  inps.font_size = 12
+        if not inps.font_size:
+            inps.font_size = 12
         if not inps.fig_size:
             # Get screen size in inch
             #screen_dpi = plt.figure().dpi
@@ -1373,6 +1472,12 @@ def main(argv):
             #screen_height_res = root.winfo_screenheight() / screen_dpi
             inps.fig_size = pysar.figsize_multi
         print 'create figure in size: '+str(inps.fig_size)
+
+        # Figure number (<= 200 subplots per figure)
+        if not inps.fig_num:
+            inps.fig_num = 1
+            while epochNum/float(inps.fig_num) > 200.0:
+                inps.fig_num += 1
 
         # Row/Column number
         if inps.fig_row_num==1 and inps.fig_col_num==1:
@@ -1428,7 +1533,7 @@ def main(argv):
         # Read DEM
         if inps.dem_file:
             print 'reading DEM: '+os.path.basename(inps.dem_file)+' ...'
-            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box)
+            dem, dem_meta_dict = readfile.read(inps.dem_file, inps.pix_box, epoch='height')
             if inps.multilook:
                 dem = multilook_matrix(dem, inps.multilook_num, inps.multilook_num)
 
@@ -1448,12 +1553,12 @@ def main(argv):
         all_data_min=0
         all_data_max=0
 
-        h5file = h5py.File(inps.file, 'r')
+        #h5file = h5py.File(inps.file, 'r')
         # Check dropped interferograms
         drop_epoch_list = []
         if k in multi_group_hdf5_file and inps.disp_title:
             drop_epoch_list = sorted(list(set(inps.epoch) - \
-                                          set(ut.check_drop_ifgram(h5file, atr, inps.epoch, print_msg=False))))
+                                          set(ut.check_drop_ifgram(h5file, print_msg=False))))
             print "mark interferograms with 'drop_ifgram'='yes' in red colored title"
 
         ##### Loop 1 - Figures
@@ -1463,7 +1568,7 @@ def main(argv):
                 inps.outfile = inps.outfile_base+'_'+str(j)+inps.fig_ext
             else:
                 inps.outfile = inps.outfile_base+inps.fig_ext
-            fig_title = 'Figure '+str(j)+' - '+inps.outfile_base
+            fig_title = 'Figure '+str(j)+' - '+inps.outfile
             print '----------------------------------------'
             print fig_title
             # Open a new figure object
@@ -1487,7 +1592,8 @@ def main(argv):
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
                     if inps.ref_date:
                         data -= ref_data
-                    subplot_title = dt.strptime(epoch, '%Y%m%d').isoformat()[0:10]
+                    try:    subplot_title = dt.strptime(epoch, '%Y%m%d').isoformat()[0:10]
+                    except: subplot_title = epoch
                 elif k in multi_group_hdf5_file:
                     if inps.fig_row_num*inps.fig_col_num > 100:
                         subplot_title = str(epochList.index(epoch)+1)
@@ -1495,11 +1601,16 @@ def main(argv):
                         subplot_title = str(epochList.index(epoch)+1)+'\n'+h5file[k][epoch].attrs['DATE12']
                     dset = h5file[k][epoch].get(epoch)
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
-                    if ref_yx:
+                    if inps.zero_mask:
+                        data[data==0] = np.nan
+                    elif ref_yx:
                         data -= data[ref_yx[0], ref_yx[1]]
                 elif k in ['HDFEOS']:
-                    dset = h5file[k]['GRIDS']['timeseries'].get(epoch)
+                    dset = h5file[k]['GRIDS']['timeseries']['observation'].get('displacement')[i,:,:]
                     data = dset[inps.pix_box[1]:inps.pix_box[3], inps.pix_box[0]:inps.pix_box[2]]
+                    subplot_title = str(epoch)
+                else:
+                    data = readfile.read(inps.file, epoch=epoch)[0]
                     subplot_title = str(epoch)
                 # mask
                 if inps.mask_file:
@@ -1510,7 +1621,7 @@ def main(argv):
 
                 # Data Min/Max
                 fig_data_min = np.nanmin([fig_data_min, np.nanmin(data)])
-                fig_data_max = np.nanmax([fig_data_min, np.nanmax(data)])
+                fig_data_max = np.nanmax([fig_data_max, np.nanmax(data)])
 
                 # Plot DEM
                 if inps.dem_file and inps.disp_dem_shade:
@@ -1561,31 +1672,43 @@ def main(argv):
             if not inps.disp_min and not inps.disp_max:
                 print 'Note: different color scale for EACH subplot!'
             else:
-                if   inps.disp_min <= fig_data_min and inps.disp_max >= fig_data_max: cb_extend='neither'
-                elif inps.disp_min >  fig_data_min and inps.disp_max >= fig_data_max: cb_extend='min'
-                elif inps.disp_min <= fig_data_min and inps.disp_max <  fig_data_max: cb_extend='max'
-                else:  cb_extend='both'
+                if not inps.cbar_ext:
+                    if   inps.disp_min <= fig_data_min and inps.disp_max >= fig_data_max: inps.cbar_ext='neither'
+                    elif inps.disp_min >  fig_data_min and inps.disp_max >= fig_data_max: inps.cbar_ext='min'
+                    elif inps.disp_min <= fig_data_min and inps.disp_max <  fig_data_max: inps.cbar_ext='max'
+                    else:  inps.cbar_ext='both'
                 print 'show colorbar'
                 #fig.subplots_adjust(wspace=inps.fig_wid_space, hspace=inps.fig_hei_space, right=0.965)
                 fig.subplots_adjust(right=0.95)
                 cax = fig.add_axes([0.96, 0.25, 0.01, 0.5])
-                cbar = fig.colorbar(im, cax=cax, extend=cb_extend)
-                cbar.ax.tick_params(labelsize=inps.font_size)
-                cbar.set_label(inps.disp_unit, fontsize=inps.font_size)
+                if inps.wrap and 'radian' in inps.disp_unit:
+                    cbar = plt.colorbar(im, cax=cax, ticks=[-np.pi, 0, np.pi])
+                    cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+                else:
+                    cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
+                if inps.cbar_nbins:
+                    cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
+                    cbar.update_ticks()
+                cbar.ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
+                if not inps.cbar_label:
+                    cbar.set_label(inps.disp_unit, fontsize=inps.font_size, color=inps.font_color)
+                else:
+                    cbar.set_label(inps.cbar_label, fontsize=inps.font_size, color=inps.font_color)
 
             # Save Figure
             if inps.save_fig:
+                print 'save figure to '+inps.outfile
                 fig.savefig(inps.outfile, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-                print 'saved figure to '+inps.outfile
                 if not inps.disp_fig:
                     fig.clf()
 
         ##### End of Loop 1
-        h5file.close()
+        try: h5file.close()
+        except: pass
         print '----------------------------------------'
-        print 'all data range: [%.2f, %.2f] %s' % (all_data_min, all_data_max, inps.disp_unit)
+        print 'all data range: [%f, %f] %s' % (all_data_min, all_data_max, inps.disp_unit)
         if inps.disp_min and inps.disp_max:
-            print 'display  range: [%.2f, %.2f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit)
+            print 'display  range: [%f, %f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit)
 
         # Display Figure
         if inps.disp_fig:

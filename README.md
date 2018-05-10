@@ -3,7 +3,7 @@
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/yunjunz/PySAR)
 [![Badges](http://img.shields.io/:badges-7/7-ff6799.svg)](https://github.com/yunjunz/PySAR)
        
-PySAR is a Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of unwrapped interferograms in ROI_PAC, Gamma and ISCE format, and produces three dimensional (2D in space and 1D in time) ground displacement.   
+PySAR is a open-source Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ROI_PAC, Gamma and ISCE format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) developed the code to prepare UNAVCO InSAR product for [time series web viewer](http://insarmaps.miami.edu).      
    
 ### 1. Installation   
 
@@ -24,8 +24,8 @@ Here is a example on Mac OSX using csh/tcsh:
 Add the following in ~/.cshrc file and source it.   
 
     ############################ Python ############################### 
-    setenv PYTHON2DIR ~/python/anaconda2
-    set path = ( ${PYTHON2DIR}/bin $path )
+    setenv PYTHON2DIR  ~/python/anaconda2
+    setenv PATH        ${PYTHON2DIR}/bin:${PATH}
 
 Install Xcode with command line tools, follow instructions [here](https://github.com/yunjunz/macOS_Setup).
 
@@ -34,9 +34,9 @@ Then run the following in your terminal:
     cd ~/python
     wget https://repo.continuum.io/archive/Anaconda2-4.4.0-MacOSX-x86_64.sh
     chmod +x Anaconda2-4.4.0-MacOSX-x86_64.sh
-    ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p ${PYTHON2DIR}
-    ${PYTHON2DIR}/bin/conda config --add channels conda-forge
-    ${PYTHON2DIR}/bin/conda install basemap joblib pykml --yes   
+    ./Anaconda2-4.2.0-MacOSX-x86_64.sh -b -p $PYTHON2DIR
+    $PYTHON2DIR/bin/conda config --add channels conda-forge
+    $PYTHON2DIR/bin/conda install basemap joblib pykml --yes   
    
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
 
@@ -53,19 +53,25 @@ or download the development version using git:
     cd ~/python
     git clone https://github.com/yunjunz/PySAR.git
    
-To use the package, you need to: 1) add the path to PySAR directory to your $PYTHONPATH and 2) add ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/shellscripts to your $path. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file.   
+To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file. They are for:   
+1. To make pysar importable in python, by adding the path to PySAR directory to your $PYTHONPATH    
+2. To make utility scripts available in command line, by adding ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/shellscripts to your $path.   
    
 For bash user, add to your .bashrc file:   
 
-    export PYSAR_HOME="~/python/PySAR"   #for released version, "~/python/PySAR-1.2.0"
-    export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}   
-    export PATH="${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:$PATH"   
+    if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
+    export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-1.2.0"
+    export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}  
+    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}   
 
 For csh/tcsh user, add to your .cshrc file:   
 
-    setenv PYSAR_HOME ~/python/PySAR   #for released version, "~/python/PySAR-1.2.0"
-    setenv PYTHONPATH ${PYSAR_HOME}
-    set path = ( $PYSAR_HOME/pysar $PYSAR_HOME/shellscripts $path)
+    if ( ! $?PYTHONPATH ) then
+        setenv PYTHONPATH ""
+    endif
+    setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-1.2.0"
+    setenv PYTHONPATH  ${PYSAR_HOME}:${PYTHONPATH}
+    setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/shellscripts:${PATH}
    
    
 ### 2. Running PySAR
@@ -82,7 +88,7 @@ Download the test data: [Download Link](https://miami.app.box.com/v/pysar-demo-K
 Create a custom template file:   
 
     cd ~/KujuAlosAT422F650/PYSAR
-    vi KujuAlosAT422F650.template
+    vi KujuAlosAT422F650_template.txt
    
 Include the following pysar options in your template:   
 
@@ -93,10 +99,13 @@ Include the following pysar options in your template:
     pysar.geomap         = ~/KujuAlosAT422F650/ROIPAC/RADAR/geomap*.trans
     pysar.dem.radarCoord = ~/KujuAlosAT422F650/ROIPAC/RADAR/radar*.hgt
     pysar.dem.geoCoord   = ~/KujuAlosAT422F650/ROIPAC/RADAR/*.dem
-
+    
+    pysar.reference.lalo      = 33.0655, 131.2076
+    pysar.deramp              = plane     
+    
 Save your template file and run PySAR as:   
 
-    pysarApp.py KujuAlosAT422F650.template
+    pysarApp.py KujuAlosAT422F650_template.txt
 
 Inside pysarApp.py, it reads the unwrapped interferograms, refernces all of them to the same coherent pixel (a seed point point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the interferograms, calculates a parameter called "temporal_coherence" which can be used to evaluate the quality of inversion, removes ramps or surface from time-series epochs, corrects dem errors, corrects local oscilator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps and using phase-elevation approach), ... and finally estimates the velocity.   
 

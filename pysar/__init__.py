@@ -1,12 +1,12 @@
-#!/usr/bin/env python2
+#! /usr/bin/env python2
 
 ########################################################################
 miami_path = True    # Package-wide variable, Auto setting for University of Miami
                      # change it to False if you are not using the file structure of University of Miami
 parallel_num = 8     # max core number used in parallel processing
-figsize_single_min = 6.0        # default min size in inch, for single plot
-figsize_single_max = 12.0        # default min size in inch, for single plot
-figsize_multi = [20.0, 12.0]    # default size in inch, for multiple subplots
+figsize_single_min = 6.0       # default min size in inch, for single plot
+figsize_single_max = 12.0      # default min size in inch, for single plot
+figsize_multi = [15.0, 8.0]    # default size in inch, for multiple subplots
 
 
 ###################### Do not change below this line ###################
@@ -62,7 +62,7 @@ import modify_network
 #import save_kml
 #import save_unw
 #import save_mat
-import save_unavco
+#import save_hdfeos5
 import seed_data
 #import spatial_filter
 import sum_epochs

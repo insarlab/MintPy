@@ -78,8 +78,13 @@ def write(*args):
             write_float32(data,outname)
         elif ext == '.dem':
             write_real_int16(data,outname)
-        elif ext == '.trans':
+        elif ext in ['.trans']:
             write_float32(rg,az,outname)
+        elif ext in ['.utm_to_rdc','.UTM_TO_RDC']:
+            data = np.zeros(rg.shape, dtype=np.complex64)
+            data.real = rg
+            data.imag = az
+            data.astype('>c8').tofile(outname)
         elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
             data.save(outname)
         elif ext == '.mli':
@@ -116,7 +121,7 @@ def write_roipac_rsc(atr, outname, sorting=True):
         atr['Y_STEP'] = str(float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST']))
         atr['Y_FIRST'] = str(float(atr['Y_FIRST']))
-    
+
     # max digit for space formating
     digits = max([len(key) for key in keyList]+[2])
     f = '{0:<%d}    {1}'%(digits)
@@ -154,7 +159,7 @@ def write_float32(*args):
     nlines = pha.shape[0]
     WIDTH  = pha.shape[1]
     F=np.zeros([2*nlines*WIDTH,1],np.float32)
- 
+
     for line in range(nlines):
         F[(2*WIDTH)*(line) :       (2*WIDTH)*(line)+WIDTH]=np.reshape(amp[line][:],[WIDTH,1])
         F[(2*WIDTH)*(line)+WIDTH : (2*WIDTH)*(line+1)]    =np.reshape(pha[line][:],[WIDTH,1])

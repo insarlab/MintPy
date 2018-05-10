@@ -1,12 +1,32 @@
 #! /usr/bin/env python2
 ############################################################
 # Program is part of PySAR v1.2                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jun 2016: merge functions for interferograms, timeseries
-#                   into one, and use read() for all the others
-# Yunjun, Aug 2016: add remove*multiple_surface()
+# remove_plane are modified from a software originally
+# written by Scott Baker with the following licence:
+###############################################################################
+#  Copyright (c) 2011, Scott Baker 
+# 
+#  Permission is hereby granted, free of charge, to any person obtaining a
+#  copy of this software and associated documentation files (the "Software"),
+#  to deal in the Software without restriction, including without limitation
+#  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+#  and/or sell copies of the Software, and to permit persons to whom the
+#  Software is furnished to do so, subject to the following conditions:
+# 
+#  The above copyright notice and this permission notice shall be included
+#  in all copies or substantial portions of the Software.
+# 
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+#  OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+#  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+#  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+#  DEALINGS IN THE SOFTWARE.
+############################################################################### 
 # Recommend usage:
 #     import pysar._remove_surface as rm
 
@@ -51,12 +71,12 @@ def remove_data_surface(data, mask, surf_type='plane'):
     elif surf_type=='plane_azimuth':
         G = np.array([points[:,0],\
                      np.ones(np.shape(points)[0])],np.float32).T
-  
+
     z = z[ndx]
     G = G[ndx]
     G1=np.linalg.pinv(G)
     plane = np.dot(G1,z)
-  
+
     if   surf_type == 'quadratic':
         zplane = plane[0]*y1**2 + plane[1]*x1**2 + plane[2]*y1 + plane[3]*x1 + plane[4]*y1*x1 + plane[5]
     elif surf_type =='plane':
@@ -90,12 +110,12 @@ def remove_data_surface(data, mask, surf_type='plane'):
        print 'Maximum ramp in azimuth direction = '+ str(MaxRamp) + ' mm/yr'
     print '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     '''
-  
+
     data_n = data - zplane
     data_n[data == 0.] = 0.
-    data_n = np.array(data_n,data.dtype)
-    zplane = np.array(zplane,data.dtype)
-  
+    data_n = np.array(data_n, data.dtype)
+    zplane = np.array(zplane, data.dtype)
+
     return data_n, zplane
 
 
@@ -143,7 +163,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
         outFile = os.path.splitext(File)[0]+'_'+surf_type+os.path.splitext(File)[1]
     
     if maskFile:
-        Mask = readfile.read(maskFile)[0]
+        Mask = readfile.read(maskFile, epoch='mask')[0]
         print 'read mask file: '+maskFile
     else:
         Mask = np.ones((int(atr['FILE_LENGTH']), int(atr['WIDTH'])))
@@ -185,15 +205,24 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
     elif k in ['interferograms','wrapped','coherence']:
         print 'number of interferograms: '+str(len(epochList))
         date12_list = ptime.list_ifgram2date12(epochList)
+
+        if k == 'interferograms':
+            mask_bk = np.zeros(Mask.shape)
+            mask_bk = Mask
+            print 'do not consider zero value pixel for interferograms'
+
         for i in range(epoch_num):
             epoch = epochList[i]
             data = h5file[k][epoch].get(epoch)[:]
-            
+            if k == 'interferograms':
+                Mask = mask_bk
+                Mask[data == 0.] = 0
+
             if not ysub:
                 data_n,ramp = remove_data_surface(data,Mask,surf_type)
             else:
                 data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
-  
+
             gg   = group.create_group(epoch)
             dset = gg.create_dataset(epoch, data=data_n, compression='gzip')
             for key,value in h5file[k][epoch].attrs.iteritems():
@@ -209,7 +238,7 @@ def remove_surface(File, surf_type, maskFile=None, outFile=None, ysub=None):
             data_n,ramp = remove_data_surface(data, Mask, surf_type)
         else:
             data_n = remove_data_multiple_surface(data, Mask, surf_type, ysub)
-        
+
         print 'writing >>> '+outFile
         writefile.write(data_n,atr,outFile)
   

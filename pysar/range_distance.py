@@ -53,15 +53,19 @@ def main(argv):
     if 'Y_FIRST' in atr.keys():
         print 'Input file is geocoded, only center range distance is calculated: '
         print range_dis
-        return range_dis
+        length = int(atr['FILE_LENGTH'])
+        width = int(atr['WIDTH'])
+        range_dis_mat = np.zeros((length, width), np.float32)
+        range_dis_mat[:] = range_dis
+        range_dis = range_dis_mat
 
-    # Radar coord
-    else:
-        print 'writing >>> '+outFile
-        atr['FILE_TYPE'] = 'mask'
-        atr['UNIT'] = 'm'
-        writefile.write(range_dis, atr, outFile)
-        return outFile
+    print 'writing >>> '+outFile
+    atr['FILE_TYPE'] = 'mask'
+    atr['UNIT'] = 'm'
+    try: atr.pop('ref_date')
+    except: pass
+    writefile.write(range_dis, atr, outFile)
+    return outFile
 
 ############################################################
 if __name__ == '__main__':

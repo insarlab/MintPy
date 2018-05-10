@@ -23,6 +23,12 @@ log_file='plot_pysarApp.log'
 echo "touch log file: "$log_file
 touch $log_file
 
+## Create PIC folder
+if [ ! -d "PIC" ]; then
+    echo 'Create PIC folder'
+    mkdir PIC
+fi
+
 
 ## Plot Key files
 opt=' -d demRadar.h5 --mask '$mask_file' -u cm '
@@ -32,12 +38,15 @@ if [ $plot_key_files -eq 1 ]; then
     view.py --nodisplay temporalCoherence.h5  -c gray -m 0 -M 1  | tee -a $log_file
     view.py --nodisplay maskTempCoh.h5        -c gray -m 0 -M 1  | tee -a $log_file
     view.py --nodisplay demRadar_error.h5 --mask $mask_file      | tee -a $log_file
+    view.py --nodisplay geometryGeo.h5                           | tee -a $log_file
+    view.py --nodisplay geometryRadar.h5                         | tee -a $log_file
 fi
 
 
 ## Loaded Dataset
 if [ $plot_loaded_data -eq 1 ]; then
-    view.py --nodisplay unwrapIfgram.h5 --mask $mask_file  | tee -a $log_file
+    view.py --nodisplay unwrapIfgram.h5        --mask no   | tee -a $log_file
+    view.py --nodisplay unwrapIfgram_unwCor.h5 --mask no   | tee -a $log_file
     view.py --nodisplay coherence.h5 -c gray -m 0 -M 1     | tee -a $log_file
     view.py --nodisplay demRadar.h5                        | tee -a $log_file
     view.py --nodisplay demGeo.h5 --lalo-label             | tee -a $log_file
@@ -101,13 +110,7 @@ if [ $plot_the_rest -eq 1 ]; then
 fi
 
 
-
-## Move all figure files to PIC
-if [ ! -d "PIC" ]; then
-    echo 'Create PIC folder'
-    mkdir PIC
-fi
-
+## Move picture files to PIC folder
 echo "Move *.png *.pdf into PIC folder"
 mv *.png PIC/
 mv *.pdf PIC/

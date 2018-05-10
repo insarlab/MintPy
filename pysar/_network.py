@@ -1,8 +1,8 @@
 #! /usr/bin/env python2
 ############################################################
 # Program is part of PySAR v1.2                            #
-# Copyright(c) 2016, Yunjun Zhang                          #
-# Author:  Yunjun Zhang                                    #
+# Copyright(c) 2016, Zhang Yunjun                          #
+# Author:  Zhang Yunjun                                    #
 ############################################################
 # Recommended Usage:
 #   import pysar._network as pnet
@@ -10,6 +10,7 @@
 
 
 import os
+import sys
 import datetime
 import itertools
 
@@ -22,7 +23,7 @@ import matplotlib.colors as colors
 import matplotlib.lines as mlines
 from matplotlib.tri import Triangulation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy.sparse import csr_matrix, find
+import scipy.sparse as sparse
 from scipy.sparse.csgraph import minimum_spanning_tree
 
 import pysar._datetime as ptime
@@ -148,11 +149,17 @@ def read_baseline_file(baselineFile, exDateList=[]):
         if not date in exDateList:
             date6List.append(date)
             perpBaseList.append(float(c[1]))
-            dop = np.array([float(c[2]), float(c[3]), float(c[4])])
-            prf = float(c[5])
-            dop *= prf
-            dopplerList.append(dop)
-            slcDirList.append(c[6])
+            try:
+                dop = np.array([float(c[2]), float(c[3]), float(c[4])])
+                prf = float(c[5])
+                dop *= prf
+                dopplerList.append(dop)
+            except:
+                pass
+            try:
+                slcDirList.append(c[6])
+            except:
+                pass
 
     date8List = ptime.yyyymmdd(date6List)
     return date8List, perpBaseList, dopplerList, slcDirList
@@ -177,12 +184,16 @@ def date12_list2index(date12_list, date_list=[]):
     return pairs_idx
 
 
-def get_date12_list(File):
+def get_date12_list(File, check_drop_ifgram=False):
     '''Read Date12 info from input file: Pairs.list or multi-group hdf5 file
+    Inputs:
+        File - string, path/name of input multi-group hdf5 file or text file
+        check_drop_ifgram - bool, check the "drop_ifgram" attribute or not for multi-group hdf5 file
     Output:
         date12_list - list of string in YYMMDD-YYMMDD format
     Example:
         date12List = get_date12_list('unwrapIfgram.h5')
+        date12List = get_date12_list('unwrapIfgram.h5', check_drop_ifgram=True)
         date12List = get_date12_list('Pairs.list')
     '''
     #print 'read pairs info from '+File
@@ -193,12 +204,17 @@ def get_date12_list(File):
         h5 = h5py.File(File, 'r')
         epochList = sorted(h5[k].keys())
         for epoch in epochList:
-            date12 = h5[k][epoch].attrs['DATE12']
-            date12_list.append(date12)
+            atr = h5[k][epoch].attrs
+            if not check_drop_ifgram or 'drop_ifgram' not in atr.keys() or atr['drop_ifgram'] == 'no':
+                date12 = atr['DATE12']
+                date12_list.append(date12)
         h5.close()
     else:
-        date12_list = np.loadtxt(File, dtype=str).tolist()
-    
+        txtContent = np.loadtxt(File, dtype=str)
+        if len(txtContent.shape) == 1:
+            txtContent = txtContent.reshape(-1,1)
+        date12_list = [i for i in txtContent[:,0]]
+
     date12_list = sorted(date12_list)
     return date12_list
 
@@ -206,10 +222,10 @@ def get_date12_list(File):
 def igram_perp_baseline_list(File):
     '''Get perpendicular baseline list from input multi_group hdf5 file'''
     print 'read perp baseline info from '+File
-    p_baseline_list = []
     k = readfile.read_attribute(File)['FILE_TYPE']
     h5 = h5py.File(File, 'r')
     epochList = sorted(h5[k].keys())
+    p_baseline_list = []
     for epoch in epochList:
         p_baseline = (float(h5[k][epoch].attrs['P_BASELINE_BOTTOM_HDR'])+\
                       float(h5[k][epoch].attrs['P_BASELINE_TOP_HDR']))/2
@@ -223,13 +239,15 @@ def azimuth_bandwidth(sensor):
     '''Find the hardwired azimuth bandwidth in hertz for the given satellite'''
     if    sensor == 'Ers'  :  bandwidth =  1300.0
     elif  sensor == 'Env'  :  bandwidth =  1340.0
-    elif  sensor == 'Jers' :  bandwidth =   900.0   # FA 11/2015 just copied, need to research
-    elif  sensor == 'Alos' :  bandwidth =  1720.0
-    elif  sensor == 'Tsx'  :  bandwidth = 15000.0
-    elif  sensor == 'Csk'  :  bandwidth = 15000.0   # FA 9/2015  shoud be checked
+    elif  sensor == 'Sen'  :  bandwidth =   327.0   #IW1-327; IW2-313; IW3-314 (Yague-Martinez et al., 2016)
     elif  sensor == 'Rsat' :  bandwidth =   900.0
     elif  sensor == 'Rsat2':  bandwidth =   900.0
-    elif  sensor == 'S1'   :  bandwidth =  4000.0   # shong 08/2016 sould be checked
+
+    elif  sensor == 'Jers' :  bandwidth =   900.0   # FA 11/2015 just copied, need to research
+    elif  sensor == 'Alos' :  bandwidth =  1720.0
+
+    elif  sensor == 'Tsx'  :  bandwidth = 15000.0
+    elif  sensor == 'Csk'  :  bandwidth = 15000.0   # FA 9/2015  shoud be checked
     elif  sensor == 'Kmps5':  bandwidth = 15000.0   # shong 08/2016 sould be checked
     else: print 'satellite not found'; bandwidth = None
     return bandwidth
@@ -237,27 +255,47 @@ def azimuth_bandwidth(sensor):
 
 def range_bandwidth(sensor):
     ## Range Bandwidth in Hz for the given satellite
-    if    sensor == 'Alos':  bandwidth = 14e6      # for FBD, 28MHz for FBS
-    elif  sensor == 'Ers' :  bandwidth = 15.55e6
+    if    sensor == 'Ers' :  bandwidth = 15.55e6
+    elif  sensor == 'Env' :  bandwidth = 16.00e6
+    elif  sensor == 'Sen' :  bandwidth = 56.5e6    #IW1-56.5; IW2-48.3; IW3-42.79
+
     elif  sensor == 'Jers':  bandwidth = 15e6      # Jers only has HH pol
+    elif  sensor == 'Alos':  bandwidth = 14e6      # for FBD, 28MHz for FBS
+
     elif  sensor == 'Tsx' :  bandwidth = 150e6
     return bandwidth
 
 
 def wavelength(sensor):
+    if    sensor == 'Ers'  :  center_frequency = 5.300e9
+    elif  sensor == 'Env'  :  center_frequency = 5.331e9
+    elif  sensor == 'Sen'  :  center_frequency = 5.405e9
+    elif  sensor == 'Rsat' :  center_frequency = 5.300e9
+    elif  sensor == 'Rsat2':  center_frequency = 5.405e9
+
+    elif  sensor == 'Jers' :  center_frequency = 1.275e9
+    elif  sensor == 'Alos' :  center_frequency = 1.270e9
+    elif  sensor == 'Alos2':  center_frequency = 1.270e9
+
+    elif  sensor == 'Tsx'  :  center_frequency = 9.65e9
+    elif  sensor == 'Csk'  :  center_frequency = 9.60e9
+    elif  sensor == 'Kmps5':  center_frequency = 9.66e9
+
     c = 299792458;   # m/s, speed of light
-    if    sensor == 'Alos':  center_frequency = 1.270e9
-    elif  sensor == 'Ers' :  center_frequency = 5.3e9
-    elif  sensor == 'Jers':  center_frequency = 1.275e9  # Hz
-    elif  sensor == 'Tsx' :  center_frequency = 9.65e9
     wavelength = c / center_frequency
     return wavelength
 
 
-def incidence_angle(sensor):
-    if   sensor == 'Alos':  inc_angle = 34.3     # degree, for ALOS PALSAR Fine mode
-    elif sensor == 'Jers':  inc_angle = 35.21
-    elif sensor == 'Tsx' :  inc_angle = 39.23    # Yunjun 5/2016, for TaizhouTsx, not sure it's for all cases.
+def incidence_angle(sensor, inc_angle=None):
+    if not inc_angle:
+        if   sensor == 'Ers' :  inc_angle = 34.3
+        elif sensor == 'Env' :  inc_angle = 34.3
+        elif sensor == 'Sen' :  inc_angle = 32.9     #IW1 - 32.9; IW2 - 38.3; IW3 - 43.1 (Yague-Martinez et al., 2016)
+
+        elif sensor == 'Jers':  inc_angle = 35.21
+        elif sensor == 'Alos':  inc_angle = 34.3     # degree, for ALOS PALSAR Fine mode
+
+        elif sensor == 'Tsx' :  inc_angle = 39.23    # Yunjun 5/2016, for TaizhouTsx, not sure it's for all cases.
     return inc_angle
 
 
@@ -267,15 +305,17 @@ def signal2noise_ratio(sensor):
         ERS - Zebker et al., 1994, TGRS
         Envisat - Guarnieri, A.M., 2013. Introduction to RADAR. POLIMI DEI, Milano.
         JERS - https://directory.eoportal.org/web/eoportal/satellite-missions/j/jers-1
+        Sentinel-1 - https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-1-sar/acquisition-modes/interferometric-wide-swath
     '''
-    if   sensor == 'Ers' :  SNR = 11.7
-    elif sensor == 'Env' :  SNR = 19.5
-    elif sensor == 'Jers':  SNR = 14
+    if   sensor.startswith('Ers') :  SNR = 11.7
+    elif sensor.startswith('Env') :  SNR = 19.5
+    elif sensor.startswith('Jers'):  SNR = 14
+    elif sensor.startswith('S'):     SNR = 22
     else: print 'satellite not found'; SNR = None
     return SNR
 
 
-def critical_perp_baseline(sensor):
+def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
     '''Critical Perpendicular Baseline for each satellite'''
     # Jers: 5.712e3 m (near_range=688849.0551m)
     # Alos: 6.331e3 m (near_range=842663.2917m)
@@ -285,9 +325,10 @@ def critical_perp_baseline(sensor):
     wvl = wavelength(sensor)
     near_range = 688849;        # Yunjun 5/2016, case for Jers, need a automatic way to get this number
     rg_bandwidth = range_bandwidth(sensor)
-    inc_angle    = incidence_angle(sensor) / 180 * np.pi;
-    Bperp_c      = wvl * (rg_bandwidth/c) * near_range * math.tan(inc_angle)
-    print 'Critical Perpendicular Baseline: '+str(Bperp_c)+' m'
+    inc_angle    = incidence_angle(sensor, inc_angle) / 180 * np.pi
+    Bperp_c      = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
+    if print_msg:
+        print 'Critical Perpendicular Baseline: '+str(Bperp_c)+' m'
     return Bperp_c
 
 
@@ -315,9 +356,106 @@ def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
     #dopOverlap_percent = np.mean(dopOverlap_percent)
     #return dopOverlap_percent
     
-    # Doppler overlap 
+    # Doppler overlap
     dop_overlap = (bandwidth_az - ddiff_mean) / bandwidth_az
     return dop_overlap
+
+
+def simulate_coherence(date12_list, baselineFile='bl_list.txt', sensor='Env', inc_angle=22.8,\
+                       decor_time=200.0, coh_resid=0.2, display=False):
+    '''Simulate coherence for a given set of interferograms
+    Inputs:
+        date12_list  - list of string in YYMMDD-YYMMDD format, indicating pairs configuration
+        baselineFile - string, path of baseline list text file
+        sensor     - string, SAR sensor
+        inc_angle  - float, incidence angle
+        decor_time - float / 2D np.array in size of (1, pixel_num)
+                     decorrelation rate in days, time for coherence to drop to 1/e of its initial value
+        coh_resid  - float / 2D np.array in size of (1, pixel_num)
+                     long-term coherence, minimum attainable coherence value
+        display    - bool, display result as matrix or not
+    Output:
+        cohs       - 2D np.array in size of (ifgram_num, pixel_num)
+    Example:
+        date12_list = pnet.get_date12_list('ifgram_list.txt')
+        cohs = simulate_coherences(date12_list, 'bl_list.txt', sensor='Tsx')
+
+    References:
+        Zebker, H. A., & Villasenor, J. (1992). Decorrelation in interferometric radar echoes.
+            IEEE-TGRS, 30(5), 950-959. 
+        Hanssen, R. F. (2001). Radar interferometry: data interpretation and error analysis
+            (Vol. 2). Dordrecht, Netherlands: Kluwer Academic Pub.
+        Morishita, Y., & Hanssen, R. F. (2015). Temporal decorrelation in L-, C-, and X-band satellite
+            radar interferometry for pasture on drained peat soils. IEEE-TGRS, 53(2), 1096-1104. 
+        Parizzi, A., Cong, X., & Eineder, M. (2009). First Results from Multifrequency Interferometry.
+            A comparison of different decorrelation time constants at L, C, and X Band. ESA Scientific
+            Publications(SP-677), 1-5. 
+    '''
+    date8_list, pbase_list, dop_list = read_baseline_file(baselineFile)[0:3]
+    date6_list = ptime.yymmdd(date8_list)
+    tbase_list = ptime.date_list2tbase(date8_list)[0]
+
+    #Thermal decorrelation (Zebker and Villasenor, 1992, Eq.4)
+    SNR = signal2noise_ratio(sensor)
+    coh_thermal = 1. / (1. + 1./SNR)
+
+    pbase_c = critical_perp_baseline(sensor, inc_angle)
+    bandwidth_az = azimuth_bandwidth(sensor)
+
+    ifgram_num = len(date12_list)
+    if isinstance(decor_time, (int, float)):
+        pixel_num = 1
+        decor_time = float(decor_time)
+    else:
+        pixel_num = decor_time.shape[1]
+    cohs = np.zeros((ifgram_num, pixel_num), np.float32)
+    for i in range(ifgram_num):
+        if display:
+            sys.stdout.write('\rinterferogram = %4d/%4d' % (i, ifgram_num))
+            sys.stdout.flush()
+        m_date, s_date = date12_list[i].split('-')
+        m_idx = date6_list.index(m_date)
+        s_idx = date6_list.index(s_date)
+
+        pbase = pbase_list[s_idx] - pbase_list[m_idx]
+        tbase = tbase_list[s_idx] - tbase_list[m_idx]
+
+
+        #Geometric decorrelation (Hanssen, 2001, Eq. 4.4.12)
+        coh_geom = (pbase_c - abs(pbase)) / pbase_c
+        if coh_geom < 0.:
+            coh_geom = 0.
+
+        #Doppler centroid decorrelation (Hanssen, 2001, Eq. 4.4.13)
+        if not dop_list:
+            coh_dc = 1.
+        else:
+            coh_dc = calculate_doppler_overlap(dop_list[m_idx], dop_list[s_idx], bandwidth_az)
+            if coh_dc < 0.:
+                coh_dc = 0.
+
+        #Option 1: Temporal decorrelation - exponential delay model (Parizzi et al., 2009; Morishita and Hanssen, 2015)
+        coh_temp = np.multiply((coh_thermal - coh_resid), np.exp(-1*abs(tbase)/decor_time)) + coh_resid
+
+        coh = coh_geom * coh_dc * coh_temp
+        cohs[i,:] = coh
+    #epsilon = 1e-3
+    #cohs[cohs < epsilon] = epsilon
+    if display:
+        print ''
+
+    if display:
+        print 'critical perp baseline: %.f m' % pbase_c
+        cohs_mat = coherence_matrix(date12_list, cohs)
+        plt.figure()
+        plt.imshow(cohs_mat, vmin=0.0, vmax=1.0, cmap='jet')
+        plt.xlabel('Image number')
+        plt.ylabel('Image number')
+        cbar = plt.colorbar()
+        cbar.set_label('Coherence')
+        plt.title('Coherence matrix')
+        plt.show()
+    return cohs
 
 
 ##################################################################
@@ -430,7 +568,7 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     return date12_list_out
 
 
-def coherence_matrix(date12_list, coh_list):
+def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
     '''Return coherence matrix based on input date12 list and its coherence
     Inputs:
         date12_list - list of string in YYMMDD-YYMMDD format
@@ -456,8 +594,9 @@ def coherence_matrix(date12_list, coh_list):
         coh_mat[idx1, idx2] = coh    #symmetric
         coh_mat[idx2, idx1] = coh
 
-    #for i in range(date_num):    # diagonal value
-    #    coh_mat[i, i] = 1.0
+    if diagValue is not np.nan:
+        for i in range(date_num):    # diagonal value
+            coh_mat[i, i] = diagValue
 
     return coh_mat
 
@@ -478,7 +617,7 @@ def threshold_coherence_based_mst(date12_list, coh_list):
     wei_mat[mask] = 1/coh_mat[mask]
 
     # MST path based on weight matrix
-    wei_mat_csr = csr_matrix(wei_mat)
+    wei_mat_csr = sparse.csr_matrix(wei_mat)
     mst_mat_csr = minimum_spanning_tree(wei_mat_csr)
 
     # Get date6_list
@@ -487,7 +626,7 @@ def threshold_coherence_based_mst(date12_list, coh_list):
     date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(list(set(m_dates + s_dates)))))
 
     # Convert MST index matrix into date12 list
-    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in find(mst_mat_csr)[0:2]]
+    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in sparse.find(mst_mat_csr)[0:2]]
     mst_date12_list = []
     for i in range(len(m_idx_list)):
         idx = sorted([m_idx_list[i], s_idx_list[i]])
@@ -650,14 +789,18 @@ def select_pairs_mst(date_list, pbase_list):
     ppMat = np.abs(ppMat1 - ppMat2)  # spatial distance matrix
 
     weightMat = np.sqrt(np.square(ttMat) + np.square(ppMat))  # 2D distance matrix in temp/perp domain
-    weightMat = csr_matrix(weightMat)  # compress sparse row matrix
+    weightMat = sparse.csr_matrix(weightMat)  # compress sparse row matrix
 
     # MST path based on weight matrix
-    mstMat = minimum_spanning_tree(weightMat)
+    mstMat = sparse.csgraph.minimum_spanning_tree(weightMat)
 
     # Convert MST index matrix into date12 list
-    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in find(mstMat)[0:2]]
-    date12_list = [date6_list[m_idx_list[i]]+'-'+date6_list[s_idx_list[i]] for i in range(len(m_idx_list))]
+    [s_idx_list, m_idx_list] = [date_idx_array.tolist() for date_idx_array in sparse.find(mstMat)[0:2]]
+    date12_list = []
+    for i in range(len(m_idx_list)):
+        idx = sorted([m_idx_list[i], s_idx_list[i]])
+        date12 = date6_list[idx[0]]+'-'+date6_list[idx[1]]
+        date12_list.append(date12)
     return date12_list
 
 
@@ -724,10 +867,11 @@ def select_master_date(date_list, pbase_list=[]):
 
 def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None):
     '''Select reference interferogram based on input temp/perp baseline info
-    If master_date is specified, select its closest slave_date; otherwise, choose the closest pair
-    among all pairs as master interferogram.
+    If master_date is specified, select its closest slave_date, which is newer than master_date;
+        otherwise, choose the closest pair among all pairs as master interferogram.
     Example:
-        master_date12 = pnet.select_master_ifgram(date12_list, date_list, pbase_list)
+        master_date12   = pnet.select_master_ifgram(date12_list, date_list, pbase_list)
+        '080211-080326' = pnet.select_master_ifgram(date12_list, date_list, pbase_list, m_date='080211')
     '''
     pbase_array = np.array(pbase_list, dtype='float64')
     # Get temporal baseline
@@ -746,11 +890,11 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
     # Get master interferogram index
     if not m_date:
         # Choose pair with shortest temp/perp baseline
-        m_date12_idx = np.argmin(base_distance)        
+        m_date12_idx = np.argmin(base_distance)
     else:
         m_date = ptime.yymmdd(m_date)
         # Choose pair contains m_date with shortest temp/perp baseline
-        m_date12_idx_array = np.array([date12_list.index(date12) for date12 in date12_list if m_date in date12])
+        m_date12_idx_array = np.array([date12_list.index(date12) for date12 in date12_list if m_date+'-' in date12])
         min_base_distance = np.min(base_distance[m_date12_idx_array])
         m_date12_idx = np.where(base_distance == min_base_distance)[0][0]
     
@@ -759,7 +903,7 @@ def select_master_interferogram(date12_list, date_list, pbase_list, m_date=None)
 
 
 ##################################################################
-def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_list_drop=[]):
+def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_list_drop=[], print_msg=True):
     '''Plot Temporal-Perp baseline Network
     Inputs
         ax : matplotlib axes object
@@ -790,12 +934,14 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
     # For colorful display of coherence
     if not 'coherence_list' in keyList:  plot_dict['coherence_list'] = None
+    if not 'cbar_label'     in keyList:  plot_dict['cbar_label']     = 'Coherence'
     if not 'disp_min'       in keyList:  plot_dict['disp_min']       = 0.2
     if not 'disp_max'       in keyList:  plot_dict['disp_max']       = 1.0
     if not 'colormap'       in keyList:  plot_dict['colormap']       = 'RdBu'
     if not 'disp_title'     in keyList:  plot_dict['disp_title']     = True
     if not 'coh_thres'      in keyList:  plot_dict['coh_thres']      = None
     if not 'disp_drop'      in keyList:  plot_dict['disp_drop']      = True
+    if not 'every_year'     in keyList:  plot_dict['every_year']     = 1
     coh_list = plot_dict['coherence_list']
     disp_min = plot_dict['disp_min']
     disp_max = plot_dict['disp_max']
@@ -806,11 +952,27 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
     date8_list = ptime.yyyymmdd(sorted(date_list))
     date6_list = ptime.yymmdd(date8_list)
     dates, datevector = ptime.date_list2vector(date8_list)
+    tbase_list = ptime.date_list2tbase(date8_list)[0]
+
+    ## maxBperp and maxBtemp
+    ifgram_num = len(date12_list)
+    pbase12 = np.zeros(ifgram_num)
+    tbase12 = np.zeros(ifgram_num)
+    for i in range(ifgram_num):
+        m_date, s_date = date12_list[i].split('-')
+        m_idx = date6_list.index(m_date)
+        s_idx = date6_list.index(s_date)
+        pbase12[i] = pbase_list[s_idx] - pbase_list[m_idx]
+        tbase12[i] = tbase_list[s_idx] - tbase_list[m_idx]
+    print 'max perpendicular baseline: %.2f m' % (np.max(np.abs(pbase12)))
+    print 'max temporal      baseline: %d days' % (np.max(tbase12))
 
     ## Keep/Drop - date12
     date12_list_keep = sorted(list(set(date12_list) - set(date12_list_drop)))
     idx_date12_keep = [date12_list.index(i) for i in date12_list_keep]
     idx_date12_drop = [date12_list.index(i) for i in date12_list_drop]
+    if not date12_list_drop:
+        plot_dict['disp_drop'] = False
 
     ## Keep/Drop - date
     m_dates = [i.split('-')[0] for i in date12_list_keep]
@@ -834,10 +996,11 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             disp_min = data_min
             disp_max = data_max
 
-        print 'showing coherence'
-        print 'colormap: '+plot_dict['colormap']
-        print 'display range: '+str([disp_min, disp_max])
-        print 'data    range: '+str([data_min, data_max])
+        if print_msg:
+            print 'showing coherence'
+            print 'colormap: '+plot_dict['colormap']
+            print 'display range: '+str([disp_min, disp_max])
+            print 'data    range: '+str([data_min, data_max])
 
         # Use lower/upper part of colormap to emphasis dropped interferograms
         if not coh_thres:
@@ -849,19 +1012,28 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             else:
                 coh_thres = min(coh_list_keep)
 
+        if coh_thres < disp_min:
+            disp_min = 0.0
+            if print_msg:
+                print 'data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max)
         c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
         coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
         cmap = plt.get_cmap(plot_dict['colormap'])
         colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
         colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
         cmap = colors.LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
-        print 'color jump at '+str(coh_thres)
+        if print_msg:
+            print 'color jump at '+str(coh_thres)
 
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", "5%", pad="3%")
+        cax = divider.append_axes("right", "3%", pad="3%")
         norm = mpl.colors.Normalize(vmin=disp_min, vmax=disp_max)
         cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
-        cbar.set_label('Average Spatial Coherence', fontsize=plot_dict['fontsize'])
+        cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
+
+        #plot low coherent ifgram first and high coherence ifgram later
+        coh_list_keep = [coh_list[date12_list.index(i)] for i in date12_list_keep]
+        date12_list_keep = [x for _,x in sorted(zip(coh_list_keep, date12_list_keep))]
 
     ## Dot - SAR Acquisition
     if idx_date_keep:
@@ -874,20 +1046,6 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
         ax.plot(x_list, y_list, 'ko', alpha=0.7, ms=plot_dict['markersize'], mfc='gray')
 
     ## Line - Pair/Interferogram        
-    # interferograms kept
-    for date12 in date12_list_keep:
-        date1, date2 = date12.split('-')
-        idx1 = date6_list.index(date1)
-        idx2 = date6_list.index(date2)
-        x = np.array([dates[idx1], dates[idx2]])
-        y = np.array([pbase_list[idx1], pbase_list[idx2]])
-        if coh_list:
-            coh = coh_list[date12_list.index(date12)]
-            coh_idx = (coh - disp_min) / (disp_max - disp_min)
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
-        else:
-            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c='k')
-
     # interferograms dropped
     if plot_dict['disp_drop']:
         for date12 in date12_list_drop:
@@ -903,19 +1061,34 @@ def plot_network(ax, date12_list, date_list, pbase_list, plot_dict={}, date12_li
             else:
                 ax.plot(x, y, '--', lw=plot_dict['linewidth'], alpha=transparency, c='k')
 
+    # interferograms kept
+    for date12 in date12_list_keep:
+        date1, date2 = date12.split('-')
+        idx1 = date6_list.index(date1)
+        idx2 = date6_list.index(date2)
+        x = np.array([dates[idx1], dates[idx2]])
+        y = np.array([pbase_list[idx1], pbase_list[idx2]])
+        if coh_list:
+            coh = coh_list[date12_list.index(date12)]
+            coh_idx = (coh - disp_min) / (disp_max - disp_min)
+            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c=cmap(coh_idx)) 
+        else:
+            ax.plot(x, y, '-', lw=plot_dict['linewidth'], alpha=transparency, c='k')
+
     if plot_dict['disp_title']:
         ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
     ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perp Baseline [m]',fontsize=plot_dict['fontsize'])
 
     # Legend
-    solid_line = mlines.Line2D([],[],color='k',ls='solid', label='Interferograms')
-    dash_line  = mlines.Line2D([],[],color='k',ls='dashed', label='Interferograms dropped')
-    ax.legend(handles=[solid_line,dash_line])
+    if plot_dict['disp_drop']:
+        solid_line = mlines.Line2D([],[],color='k',ls='solid', label='Interferograms')
+        dash_line  = mlines.Line2D([],[],color='k',ls='dashed', label='Interferograms dropped')
+        ax.legend(handles=[solid_line,dash_line])
 
     return ax
 
@@ -932,6 +1105,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
                     markercolor
                     markersize
                     disp_title : bool, show figure title or not, default: True
+                    every_year : int, number of years for the major tick on xaxis
         date8_list_drop : list of string, date dropped in YYYYMMDD format
                           e.g. ['20080711', '20081011']
     Output:
@@ -944,6 +1118,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
     if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
+    if not 'every_year'  in keyList:   plot_dict['every_year']  = 1
     transparency = 0.7
 
     # Date Convert
@@ -978,7 +1153,7 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
         ax.set_title('Perpendicular Baseline History',fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
     ax = auto_adjust_yaxis(ax, pbase_list, plot_dict['fontsize'])
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perpendicular Baseline [m]',fontsize=plot_dict['fontsize'])
@@ -986,8 +1161,12 @@ def plot_perp_baseline_hist(ax, date8_list, pbase_list, plot_dict={}, date8_list
     return ax
 
 
-def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
-    '''Plot Coherence Matrix of input network'''
+def plot_coherence_matrix(ax, date12_list, coherence_list, date12_list_drop=[], plot_dict={}):
+    '''Plot Coherence Matrix of input network
+    
+    if date12_list_drop is not empty, plot KEPT pairs in the upper triangle and
+                                           ALL  pairs in the lower triangle.
+    '''
     # Figure Setting
     keyList = plot_dict.keys()
     if not 'fontsize'    in keyList:   plot_dict['fontsize']    = 12
@@ -995,25 +1174,27 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
     if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
+    if not 'cbar_label'  in keyList:   plot_dict['cbar_label']  = 'Coherence'
 
     coh_mat = coherence_matrix(date12_list, coherence_list)
 
-    ## Plot coherence matrix for 1 or 2 ifgrams only
-    #m_dates = [i.split('-')[0] for i in date12_list]
-    #s_dates = [i.split('-')[1] for i in date12_list]
-    #date6_list = sorted(list(set(m_dates + s_dates)))
-    #coh_mat[:] = np.nan
-    #example_date12_list = ['070718-080720']
-    ##example_date12_list = ['070718-080720', '070115-110126']
-    #for date12 in example_date12_list:
-    #    d1,d2 = date12.split('-')
-    #    idx1 = date6_list.index(d1)
-    #    idx2 = date6_list.index(d2)
-    #    coh = coherence_list[date12_list.index(date12)]
-    #    coh_mat[idx1,idx2] = coh
-    #    coh_mat[idx2,idx1] = coh
+    if date12_list_drop:
+        # Date Convert
+        m_dates = [i.split('-')[0] for i in date12_list]
+        s_dates = [i.split('-')[1] for i in date12_list]
+        date6_list = ptime.yymmdd(sorted(list(set(m_dates + s_dates))))
+        # Set dropped pairs' value to nan, in upper triangle only.
+        for date12 in date12_list_drop:
+            idx1, idx2 = [date6_list.index(i) for i in date12.split('-')]
+            coh_mat[idx1, idx2] = np.nan
 
+    #Show diagonal value as black, to be distinguished from un-selected interferograms
+    diag_mat = np.diag(np.ones(coh_mat.shape[0]))
+    diag_mat[diag_mat == 0.] = np.nan
+    im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
+    #Show coherence matrix
     im = ax.imshow(coh_mat, cmap='jet', vmin=0.0, vmax=1.0, interpolation='nearest')
+
     date_num = coh_mat.shape[0]
     if date_num < 30:
         tick_list = range(0,date_num,5)
@@ -1031,7 +1212,14 @@ def plot_coherence_matrix(ax, date12_list, coherence_list, plot_dict={}):
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "3%", pad="3%")
     cbar = plt.colorbar(im, cax=cax)
-    cbar.set_label('Spatial Coherence', fontsize=plot_dict['fontsize'])
+    cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
+
+    # Legend
+    if date12_list_drop:
+        ax.plot([],[],label='Upper: used ifgrams')
+        ax.plot([],[],label='Lower: all ifgrams')
+        ax.legend(handlelength=0)
+
     return ax
 
 
@@ -1048,20 +1236,23 @@ def mode (thelist):
     for item in thelist:
         counts[item] = counts.get(item, 0) + 1
     maxcount = 0
-    maxitem  = None
+    maxitem  = []
     for k, v in counts.items():
-        if v > maxcount:
-            maxitem  = k
+        if v == maxcount and v > 0:
+            maxitem.append(k)
+        elif v > maxcount:
+            maxitem = []
+            maxitem.append(k)
             maxcount = v
 
     if maxcount == 1:
-        print "All values only appear once"
-        return None
+        print "All values only appear once, return the least/smallest one."
+        return sorted(maxitem)[0]
     elif counts.values().count(maxcount) > 1:
-        print "List has multiple modes"
-        return None
+        print "List has multiple modes, return the least/smallest one."
+        return sorted(maxitem)[0]
     else:
-        return maxitem
+        return maxitem[0]
 
 
 def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
@@ -1073,6 +1264,7 @@ def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
     if not 'markercolor' in keyList:   plot_dict['markercolor'] = 'orange'
     if not 'markersize'  in keyList:   plot_dict['markersize']  = 16
     if not 'disp_title'  in keyList:   plot_dict['disp_title']  = True
+    if not 'every_year'  in keyList:   plot_dict['every_year']  = 1
 
     # Get date list
     m_dates = [date12.split('-')[0] for date12 in date12_list]
@@ -1091,7 +1283,7 @@ def plot_coherence_history(ax, date12_list, coherence_list, plot_dict={}):
     if plot_dict['disp_title']:
         ax.set_title('Coherence History of All Related Interferograms')
 
-    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'])[0]
+    ax = ptime.auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'], every_year=plot_dict['every_year'])[0]
     ax.set_ylim([0.0,1.0])
 
     ax.set_xlabel('Time [years]',fontsize=plot_dict['fontsize'])

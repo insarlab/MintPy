@@ -73,8 +73,12 @@ def main(argv):
         if   os.path.isfile('Modified_Mask.h5'):  maskFile = 'Modified_Mask.h5'
         elif os.path.isfile('Mask.h5'):           maskFile = 'Mask.h5'
         else: print 'No mask found!'; sys.exit(1)
-    try:  Mask,Matr = readfile.read(maskFile);   print 'mask: '+maskFile
-    except: print 'Can not open mask file: '+maskFile; sys.exit(1)
+    try:
+        Mask,Matr = readfile.read(maskFile, epoch='mask')
+        print 'mask: '+maskFile
+    except:
+        print 'Can not open mask file: '+maskFile
+        sys.exit(1)
   
     #try:
     #  maskFile=argv[4]

@@ -122,8 +122,11 @@ def main(argv):
     print '\n************************ File Info *****************************'
     print 'File name   : '+os.path.basename(File)
     print 'File type   : '+atr['PROCESSOR']+' '+atr['FILE_TYPE']
-    try:  atr['X_FIRST'];  print 'Coordinates : GEO'
-    except:                print 'Coordinates : radar'
+    try:
+        atr['X_FIRST']
+        print 'Coordinates : GEO'
+    except:
+        print 'Coordinates : radar'
 
 
     #################### HDF5 File Info #####################
@@ -155,7 +158,7 @@ def main(argv):
             print '*****************************************'
             print epochList[epochNum-1]
         ##### Plot Epoch List Info
-        except: 
+        except:
             print '*****************************************'
             print 'Number of '+k+': '+str(len(epochList)) 
             print '*****************************************'

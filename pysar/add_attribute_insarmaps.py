@@ -11,6 +11,8 @@ import pycurl
 from cStringIO import StringIO
 import urllib
 
+# TODO: fix these classes. apparantly, need to call commit() method after execute even if you fetch something
+
 class InsarDatabaseController(object):
     def __init__(self, username, password, host, db):
         self.username = username
@@ -34,6 +36,15 @@ class InsarDatabaseController(object):
         self.con = None
         self.cursor = None
 
+    def run_raw_query(self, query):
+        self.cursor.execute(query)
+        self.con.commit()
+
+        if self.cursor.rowcount > 0:
+            return self.cursor.fetchall()
+
+        return None
+
     def get_dataset_names(self):
         sql = "SELECT * FROM area"
         self.cursor.execute(sql)
@@ -43,8 +54,12 @@ class InsarDatabaseController(object):
     def get_dataset_id(self, dataset):
         sql = "SELECT id from area WHERE area.unavco_name = '" + dataset + "'"
         self.cursor.execute(sql)
+        id = self.cursor.fetchone()
 
-        return self.cursor.fetchone()[0]
+        if id:
+            return id[0]
+
+        return -1
 
     def table_exists(self, table):
         sql = "SELECT exists(SELECT * FROM information_schema.tables WHERE table_name=%s)"
@@ -111,7 +126,7 @@ class InsarDatabaseController(object):
         # can't remove single quotes from table name, so we do it manually
         sql = None
         if index_name:
-            sql = 'CREATE INDEX ' + index_name + ' ON "' + table + '" (' + on + ');'
+            sql = 'CREATE INDEX "' + index_name + '" ON "' + table + '" (' + on + ');'
         else:
             sql = 'CREATE INDEX ON "' + table + '" (' + on + ');'
 
@@ -120,10 +135,21 @@ class InsarDatabaseController(object):
             self.con.commit()
         # index exists most probably if exception thrown
         except Exception, e:
-            pass
+            print str(e)
 
-    def remove_point_table_if_there(self, unavco_name): 
-        sql = 'DROP TABLE IF EXISTS "' + unavco_name + '"'
+    def cluster_table_using(self, table, index_name):
+        sql = None
+        sql = 'CLUSTER "' + table + '" USING "' + index_name + '";'
+
+        try:
+            self.cursor.execute(sql)
+            self.con.commit()
+        # index exists most probably if exception thrown
+        except Exception, e:
+            print str(e)
+
+    def remove_point_table_if_there(self, table_name):
+        sql = 'DROP TABLE IF EXISTS "' + table_name + '"'
         self.cursor.execute(sql)
         self.con.commit()
         
@@ -145,16 +171,22 @@ class InsarDatabaseController(object):
         self.con.commit()
 
     def remove_dataset_if_there(self, unavco_name):
-        # try to drop table first in case extra_attributes or area table isn't populated
-        self.remove_point_table_if_there(unavco_name)
+        dataset_id = self.get_dataset_id(unavco_name)
+
+        if dataset_id == -1:
+            return
+
+        dataset_id_str = str(dataset_id)
+        table_name = dataset_id_str
+        self.remove_point_table_if_there(table_name)
         # then try to delete from area and extra_attributes
         try:
             dataset_id = self.get_dataset_id(unavco_name)
-            sql = "DELETE from area WHERE id = " + str(dataset_id)
+            sql = "DELETE from area WHERE id = " + dataset_id_str
             self.cursor.execute(sql)
-            sql = "DELETE from extra_attributes WHERE area_id = " + str(dataset_id)
+            sql = "DELETE from extra_attributes WHERE area_id = " + dataset_id_str
             self.cursor.execute(sql)
-            sql = "DELETE from plot_attributes WHERE area_id = " + str(dataset_id) 
+            sql = "DELETE from plot_attributes WHERE area_id = " + dataset_id_str
             self.cursor.execute(sql)
             self.con.commit()
         except Exception, e:
@@ -201,6 +233,8 @@ class InsarDatasetController(InsarDatabaseController):
             print "Successfully uploaded " + fileName
         elif responseCode == 302:
             sys.stderr.write("Server redirected us... Please check username and password, and try again")
+        elif responseCode == 301:
+            sys.stderr.write("Server redirected us... Please check host address, and try again")
         else:
             sys.stderr.write("The server responded with code: " + str(responseCode))
 
@@ -217,6 +251,8 @@ class InsarDatasetController(InsarDatabaseController):
 
         if responseCode == 302:
             sys.stderr.write("Server redirected us... Please check username and password, and try again")
+        elif responseCode == 301:
+            sys.stderr.write("Server redirected us... Please check host address, and try again")
             
 def build_parser():
     dbHost = "insarmaps.rsmas.miami.edu"
@@ -249,7 +285,7 @@ def main(argv):
     unavco_name = parseArgs.unavco_name
     attributes_file = working_dir + "add_Attribute.txt"
     attributes = readfile.read_template(attributes_file)
-    dbController = InsarDatabaseController(username, password, host, db)    
+    dbController = InsarDatabaseController(username, password, host, db)
     dbController.connect()
 
     for key in attributes:

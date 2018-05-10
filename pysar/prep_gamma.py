@@ -1,8 +1,8 @@
 #! /usr/bin/env python2
 ############################################################
 # Program is part of PySAR v1.2                            #
-# Copyright(c) 2017, Zhang Yunjun                          #
-# Author:  Zhang Yunjun                                    #
+# Copyright(c) 2017, Zhang Yunjun, Yunmeng Cao             #
+# Author:  Zhang Yunjun, Yunmeng Cao                       #
 ############################################################
 
 
@@ -111,9 +111,9 @@ def extract_attribute_interferogram(fname):
     file_dir = os.path.dirname(fname)
     file_basename = os.path.basename(fname)
 
-    atr_file = fname+'.rsc'
-    #if os.path.isfile(atr_file):
-    #    return atr_file
+    rsc_file = fname+'.rsc'
+    #if os.path.isfile(rsc_file):
+    #    return rsc_file
 
     atr = {}
     atr['PROCESSOR'] = 'gamma'
@@ -129,8 +129,8 @@ def extract_attribute_interferogram(fname):
 
     ## Read .off and .par file
     off_file   = file_dir+'/*'+date12+lks+'.off'
-    m_par_file = file_dir+'/*'+m_date+lks+'.amp.par'
-    s_par_file = file_dir+'/*'+s_date+lks+'.amp.par'
+    m_par_file = [file_dir+'/*'+m_date+lks+i for i in ['.amp.par','.ramp.par']]
+    s_par_file = [file_dir+'/*'+s_date+lks+i for i in ['.amp.par','.ramp.par']]
 
     try:
         off_file   = ut.get_file_list(off_file)[0]
@@ -164,12 +164,15 @@ def extract_attribute_interferogram(fname):
     atr = get_lalo_ref(m_par_file, atr)
 
     ## Write to .rsc file
-    #print 'writing >>> '+atr_file
-    print 'merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),\
-                                           os.path.basename(off_file), os.path.basename(atr_file))
-    writefile.write_roipac_rsc(atr, atr_file)
+    #print 'writing >>> '+rsc_file
+    try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
+    except: atr_orig = None
+    if atr_orig != atr:
+        print 'merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),\
+                                               os.path.basename(off_file), os.path.basename(rsc_file))
+        writefile.write_roipac_rsc(atr, rsc_file)
 
-    return atr_file
+    return rsc_file
 
 
 def extract_attribute_lookup_table(fname):
@@ -177,6 +180,14 @@ def extract_attribute_lookup_table(fname):
     For example, it read input file, sim_150911-150922.UTM_TO_RDC, 
     find its associated par file, sim_150911-150922.utm.dem.par, read it, and
     convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.UTM_TO_RDC.rsc'''
+
+    ## Check existed .rsc file
+    rsc_file_list = ut.get_file_list(fname+'.rsc')
+    if rsc_file_list:
+        rsc_file = rsc_file_list[0]
+        print rsc_file+' is existed, no need to re-extract.'
+        return rsc_file
+
     atr = {}
     atr['PROCESSOR'] = 'gamma'
     atr['INSAR_PROCESSOR'] = 'gamma'
@@ -185,16 +196,21 @@ def extract_attribute_lookup_table(fname):
     atr['X_UNIT'] = 'degrees'
 
     par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
+
     print 'read '+os.path.basename(par_file)
-    print 'convert Gamma attribute to ROI_PAC style'
     par_dict = readfile.read_gamma_par(par_file)
+
+    print 'convert Gamma attribute to ROI_PAC style'
     par_dict = readfile.attribute_gamma2roipac(par_dict)
     atr.update(par_dict)
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
-    print 'writing >>> '+os.path.basename(rsc_file)
-    writefile.write_roipac_rsc(atr, rsc_file)
+    try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
+    except: atr_orig = None
+    if atr_orig != atr:
+        print 'writing >>> '+os.path.basename(rsc_file)
+        writefile.write_roipac_rsc(atr, rsc_file)
     return rsc_file
 
 
@@ -220,23 +236,36 @@ def extract_attribute_dem_geo(fname):
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
-    print 'writing >>> '+os.path.basename(rsc_file)
-    writefile.write_roipac_rsc(atr, rsc_file)
+    try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
+    except: atr_orig = None
+    if atr_orig != atr:
+        print 'writing >>> '+os.path.basename(rsc_file)
+        writefile.write_roipac_rsc(atr, rsc_file)
     return rsc_file
 
 
 def extract_attribute_dem_radar(fname):
     '''Read/extract attribute for .hgt_sim file from Gamma to ROI_PAC
-    For example, it read input file, sim_150911-150922.hgt_sim, 
-    find its associated par file, sim_150911-150922.diff_par, read it, and
-    convert to ROI_PAC style and write it to an rsc file, sim_150911-150922.hgt_sim.rsc
+    Input:
+        sim_150911-150922.hgt_sim
+        sim_150911-150922.rdc.dem
+    Search for:
+        sim_150911-150922.diff_par
+    Output:
+        sim_150911-150922.hgt_sim.rsc
+        sim_150911-150922.rdc.dem.rsc
     '''
     atr = {}
     atr['PROCESSOR'] = 'gamma'
     atr['INSAR_PROCESSOR'] = 'gamma'
     atr['FILE_TYPE'] = os.path.splitext(fname)[1]
 
-    par_file = os.path.splitext(fname)[0]+'.diff_par'
+    # Get basename of file
+    fname_base = os.path.splitext(fname)[0]    
+    for i in range(5):
+        fname_base = os.path.splitext(fname_base)[0]
+
+    par_file = fname_base+'.diff_par'
     print 'read '+os.path.basename(par_file)
     print 'convert Gamma attribute to ROI_PAC style'
     par_dict = readfile.read_gamma_par(par_file)
@@ -245,8 +274,11 @@ def extract_attribute_dem_radar(fname):
 
     ## Write to .rsc file
     rsc_file = fname+'.rsc'
-    print 'writing >>> '+os.path.basename(rsc_file)
-    writefile.write_roipac_rsc(atr, rsc_file)
+    try:    atr_orig = readfile.read_roipac_rsc(rsc_file)
+    except: atr_orig = None
+    if atr_orig != atr:
+        print 'writing >>> '+os.path.basename(rsc_file)
+        writefile.write_roipac_rsc(atr, rsc_file)
     return rsc_file
 
 
@@ -293,7 +325,7 @@ DESCRIPTION='''
       130129_4rlks.amp.par
   For each dataset, only one sim* folder with 5 files are needed, 
       sim_130118-130129.hgt_sim
-      sim_130118-130129.hgt_sim.diff_par
+      sim_130118-130129.diff_par
       sim_130118-130129.utm.dem
       sim_130118-130129.utm.dem.par
       sim_130118-130129.UTM_TO_RDC
@@ -338,10 +370,10 @@ def main(argv):
                 extract_attribute_interferogram(File)
 
     ##### Single dataset files
-    elif ext in ['.dem']:
+    elif inps.file[0].endswith('.utm.dem'):
         for File in inps.file:
             atr_file = extract_attribute_dem_geo(File)
-    elif ext in ['.hgt_sim']:
+    elif inps.file[0].endswith(('.rdc.dem','.hgt_sim')):
         for File in inps.file:
             atr_file = extract_attribute_dem_radar(File)
     elif ext in ['.UTM_TO_RDC']:

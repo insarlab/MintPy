@@ -1,13 +1,10 @@
 #! /usr/bin/env python2
 ############################################################
 # Program is part of PySAR v1.2                            #
-# Copyright(c) 2016, Yunjun Zhang                          #
-# Author:  Yunjun Zhang                                    #
+# Copyright(c) 2016, Zhang Yunjun                          #
+# Author:  Zhang Yunjun                                    #
 ############################################################
 # Based on scripts writen by Heresh Fattahi
-# Yunjun, Aug 2016: add read_date_list()
-# Yunjun, Oct 2016: update yymmdd() for string and list input
-#
 # Recommended Usage:
 #   import pysar._datetime as ptime
 #   date_list = ptime.ifgram_date_list('unwrapIfgram.h5')
@@ -156,7 +153,7 @@ def date_list2tbase(dateList):
     dateDict = {}
     for i in range(len(dateList)):
         dateDict[dateList[i]] = tbase[i]
-  
+
     return tbase, dateDict
 
 
@@ -185,7 +182,7 @@ def date_list2vector(dateList):
 
 
 ################################################################
-def auto_adjust_xaxis_date(ax, datevector, fontSize=12):
+def auto_adjust_xaxis_date(ax, datevector, fontSize=12, every_year=1):
     '''Adjust X axis
     Input:
         ax : matplotlib figure axes object
@@ -210,7 +207,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12):
 
     # Label/Tick format
     ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M:%S')
-    ax.xaxis.set_major_locator(mdates.YearLocator())
+    ax.xaxis.set_major_locator(mdates.YearLocator(every_year))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
     ax.xaxis.set_minor_locator(mdates.MonthLocator())
 
@@ -241,6 +238,35 @@ def list_ifgram2date12(ifgram_list):
         date12_list_out.append(m_date+'-'+s_date)
 
     return date12_list_out
+
+
+def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
+    '''Find closest available time of weather product from SAR acquisition time
+    Inputs:
+        sar_acquisition_time - string, SAR data acquisition time in seconds
+        grib_source - string, Grib Source of weather reanalysis product
+    Output:
+        grib_hr - string, time of closest available weather product 
+    Example:
+        '06:00' = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'ECMWF')
+        '12'    = closest_weather_product_time(atr['CENTER_LINE_UTC'], 'NARR')
+    '''
+    # Get hour/min of SAR acquisition time
+    sar_time = float(sar_acquisition_time)
+    #sar_hh = int(sar_time/3600.0)
+    #sar_mm = int((sar_time-3600.0*sar_hh) / 60.0)
+    
+    # Find closest time in available weather products
+    grib_hr_list = [0, 6, 12, 18]
+    grib_hr = int(min(grib_hr_list, key=lambda x:abs(x-sar_time/3600.)))
+    
+    # Adjust time output format
+    grib_hr = "%02d"%grib_hr
+    #if grib_source == 'NARR':
+    #    grib_hr = "%02d"%grib_hr
+    #else:
+    #    grib_hr = "%02d:00"%grib_hr
+    return grib_hr
 
 
 ###########################Simple progress bar######################

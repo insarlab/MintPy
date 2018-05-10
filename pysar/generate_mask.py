@@ -76,7 +76,7 @@ def main(argv):
             inps.outfile = 'geo_'+inps.outfile
 
     ##### Mask: Non-zero
-    if inps.nonzero:
+    if inps.nonzero and k == 'interferograms':
         print 'generate mask for all pixels with non-zero value'
         inps.outfile = ut.nonzero_mask(inps.file, inps.outfile)
         return inps.outfile
@@ -84,8 +84,15 @@ def main(argv):
     ##### Mask: Threshold 
     print 'create initial mask with the same size as the input file and all = 1'
     mask = np.ones((length, width), dtype=np.float32)
+    if inps.epoch:
+        print 'read %s %s' % (inps.file, inps.epoch)
+    else:
+        print 'read %s' % (inps.file)
+    data, atr = readfile.read(inps.file, epoch=inps.epoch)
 
-    data, atr = readfile.read(inps.file, inps.epoch)
+    if inps.nonzero:
+        print 'all pixels with zero value = 0'
+        mask[data == 0] = 0
 
     # min threshold
     if inps.vmin:

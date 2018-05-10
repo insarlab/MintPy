@@ -61,7 +61,7 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
             print 'Reference List epoch number: '+str(refList)
             print 'Input file     epoch number: '+str(epochNum)
             sys.exit(1)
-  
+
         ##### Output File Info
         h5out = h5py.File(outName,'w')
         group = h5out.create_group(k)
@@ -90,7 +90,10 @@ def seed_file_reference_value(File, outName, refList, ref_y='', ref_x=''):
             data = h5file[k][epoch].get(epoch)[:]
             atr  = h5file[k][epoch].attrs
 
-            data -= refList[i]
+            if k == 'interferograms':
+                data[data != 0.] -= refList[i]
+            else:
+                data -= refList[i]
             atr  = seed_attributes(atr,ref_x,ref_y)
 
             gg = group.create_group(epoch)
@@ -184,13 +187,18 @@ def seed_file_inps(File, inps=None, outFile=None):
                 atr_ref = dict()
                 atr_ref['ref_x'] = str(inps.ref_x)
                 atr_ref['ref_y'] = str(inps.ref_y)
+                if 'X_FIRST' in atr.keys():
+                    atr_ref['ref_lat'] = str(subset.coord_radar2geo(inps.ref_y, atr, 'y'))
+                    atr_ref['ref_lon'] = str(subset.coord_radar2geo(inps.ref_x, atr, 'x'))
                 print atr_ref
                 outFile = ut.add_attribute(File, atr_ref)
+                ut.touch([inps.coherence_file, inps.mask_file])
         else:
             print 'Referencing input file to pixel in y/x: (%d, %d)'%(inps.ref_y, inps.ref_x)
             box = (inps.ref_x, inps.ref_y, inps.ref_x+1, inps.ref_y+1)
             refList = ut.spatial_average(File, mask, box)[0]
             outFile = seed_file_reference_value(File, outFile, refList, inps.ref_y, inps.ref_x)
+            ut.touch([inps.coherence_file, inps.mask_file])
     else:
         raise ValueError('Can not find reference y/x or Nan value.')
 
@@ -202,7 +210,7 @@ def seed_attributes(atr_in,x,y):
     atr = dict()
     for key, value in atr_in.iteritems():
         atr[key] = str(value)
-    
+
     atr['ref_y'] = str(y)
     atr['ref_x'] = str(x)
     if 'X_FIRST' in atr.keys():
@@ -409,12 +417,12 @@ NOTE='''note: Reference value cannot be nan, thus, all selected reference point 
 '''
 
 EXAMPLE='''example:
-  seed_data.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --trans geomap_4rlks.trans
+  seed_data.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geomap_4rlks.trans
 
   seed_data.py timeseries.h5     -r Seeded_velocity.h5
   seed_data.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
   seed_data.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
-  seed_data.py unwrapIfgram.h5   -l 34.45  -L -116.23  --trans geomap_4rlks.trans
+  seed_data.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
   
   seed_data.py unwrapIfgram.h5 -c average_spatial_coherence.h5
   seed_data.py unwrapIfgram.h5 --method manual
@@ -445,8 +453,8 @@ def cmdLineParse():
     coord_group.add_argument('-L','--lon', dest='ref_lon', type=float, help='longitude of reference pixel')
     
     coord_group.add_argument('-r','--reference', dest='reference_file', help='use reference/seed info of this file')
-    coord_group.add_argument('--trans', dest='trans_file',\
-                             help='Mapping transformation file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
+    coord_group.add_argument('--lookup', dest='lookup_file',\
+                             help='Lookup table file from SAR to DEM, i.e. geomap_4rlks.trans\n'+\
                                   'Needed for radar coord input file with --lat/lon seeding option.')
     coord_group.add_argument('-t','--template', dest='template_file',\
                              help='template with reference info as below:\n'+TEMPLATE)
@@ -509,7 +517,7 @@ def main(argv):
         else:
             # Convert lat/lon to az/rg for radar coord file using geomap*.trans file
             inps.ref_y, inps.ref_x = ut.glob2radar(np.array(inps.ref_lat), np.array(inps.ref_lon),\
-                                                   inps.trans_file, atr)[0:2]
+                                                   inps.lookup_file, atr)[0:2]
         print 'Input reference point in lat/lon: '+str([inps.ref_lat, inps.ref_lon])
     print 'Input reference point in   y/x  : '+str([inps.ref_y, inps.ref_x])
 
@@ -524,7 +532,7 @@ def main(argv):
     # Do not use ref_y/x in masked out area
     if inps.ref_y and inps.ref_x and inps.mask_file:
         print 'mask: '+inps.mask_file
-        mask = readfile.read(inps.mask_file)[0]
+        mask = readfile.read(inps.mask_file, epoch='mask')[0]
         if mask[inps.ref_y, inps.ref_x] == 0:
             inps.ref_y = None
             inps.ref_x = None

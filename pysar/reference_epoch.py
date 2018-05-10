@@ -8,6 +8,7 @@
 import sys
 import os
 import argparse
+import shutil
 
 import h5py
 import numpy as np
@@ -218,7 +219,7 @@ def main(argv):
         print '------------------------------------------------------------'
         print 'auto choose reference date based on minimum residual RMS'
         if not inps.resid_file:
-            inps.resid_file = os.path.splitext(inps.timeseries_file)[0]+'InvResid.h5'
+            inps.resid_file = os.path.join(os.path.dirname(inps.timeseries_file), 'timeseriesResidual.h5')
         rms_list, date_list = ut.get_residual_rms(inps.resid_file, inps.mask_file, inps.ramp_type)
         ref_idx = np.argmin(rms_list)
         inps.ref_date = date_list[ref_idx]
@@ -230,7 +231,13 @@ def main(argv):
         inps.ref_date = ptime.read_date_list(inps.ref_date)[0]
 
     # Referencing input file
-    inps.outfile = ref_date_file(inps.timeseries_file, inps.ref_date, inps.outfile)
+    if not inps.outfile:
+        inps.outfile = os.path.splitext(inps.timeseries_file)[0]+'_refDate.h5'
+    try:    ref_date_comp = readfile.read_attribute(inps.outfile)['ref_date']
+    except: ref_date_comp = readfile.read_attribute(inps.timeseries_file)['ref_date']
+    if inps.ref_date != ref_date_comp or ut.update_file(inps.outfile, inps.timeseries_file):
+        inps.outfile = ref_date_file(inps.timeseries_file, inps.ref_date, inps.outfile)
+
     return inps.outfile
 
 

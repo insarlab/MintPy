@@ -1,7 +1,7 @@
 ###############################################################################
 # 
 # Project: PySAR 
-# Purpose: Python Module for InSAR Time-series Analysis
+# Purpose: Python Package for InSAR Time Series Analysis
 # Author: Heresh Fattahi, Zhang Yunjun
 # Created: August 2015
 #

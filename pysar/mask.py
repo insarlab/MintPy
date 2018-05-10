@@ -22,35 +22,39 @@ from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, sing
 
 
 ############################################################
-def mask_matrix(data_mat,mask_mat):
+def mask_matrix(data_mat,mask_mat, fill_value=None):
     '''mask a 2D matrxi data with mask'''
     ## Masked Value
-    if data_mat.dtype == np.dtype('int16'):
-        mask_value = np.ma.masked
-    else:
-        mask_value = np.nan
+    if fill_value is None:
+        if data_mat.dtype == np.dtype('int16'):
+            fill_value = np.ma.masked
+        else:
+            fill_value = np.nan
     #data_mat = data_mat.astype(np.float32)
     #mask_value = np.nan
 
-    data_mat[mask_mat==0]  = mask_value
+    data_mat[mask_mat==0]  = fill_value
 
     return data_mat
 
 
 ############################################################
-def update_mask(mask, inps_dict=None):
+def update_mask(mask, inps_dict, print_msg=True):
     '''Update mask matrix from input options: subset_x/y and threshold'''
     if inps_dict['subset_x']:
         mask[:,0:inps_dict['subset_x'][0]] = 0
         mask[:,inps_dict['subset_x'][1]:] = 0
-        print 'mask out area not in x: '+str(inps_dict['subset_x'])
+        if print_msg:
+            print 'mask out area not in x: '+str(inps_dict['subset_x'])
     if inps_dict['subset_y']:
         mask[0:inps_dict['subset_y'][0],:] = 0
         mask[inps_dict['subset_y'][1]:,:] = 0
-        print 'mask out area not in y: '+str(inps_dict['subset_y'])
+        if print_msg:
+            print 'mask out area not in y: '+str(inps_dict['subset_y'])
     if inps_dict['thr']:
         mask[mask<inps_dict['thr']] = 0
-        print 'mask out pixels < '+str(inps_dict['thr'])+' in mask file'
+        if print_msg:
+            print 'mask out pixels < '+str(inps_dict['thr'])+' in mask file'
     return mask
 
 
@@ -75,7 +79,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
     km = atrm['FILE_TYPE']
     if km not in multi_group_hdf5_file+multi_dataset_hdf5_file:
         print 'reading mask file: '+maskFile
-        mask = readfile.read(maskFile)[0]
+        mask = readfile.read(maskFile, epoch='mask')[0]
         if inps_dict:
             mask = update_mask(mask, inps_dict)
     
@@ -97,7 +101,7 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
             print d
             unw = h5file[k].get(d)[:]
 
-            unw = mask_matrix(unw,mask)
+            unw = mask_matrix(unw, mask, inps_dict['fill_value'])
 
             dset = group.create_dataset(d, data=unw, compression='gzip')
         for key,value in atr.iteritems():   group.attrs[key] = value
@@ -113,20 +117,25 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
             if len(cohList) != len(epochList):
                 sys.exit('ERROR: cohERROR: erence mask file has different\
                 number of interferograms than input file!')
-        
+
         for i in range(len(epochList)):
             igram = epochList[i]
-            print igram
-            unw = h5file[k][igram].get(igram)[:]
-            
             if km == 'coherence':
                 coh = cohList[i]
-                print coh
+                sys.stdout.write('\r%s %s %s/%s ...' % (igram, coh, i+1, len(epochList)))
+                sys.stdout.flush()
+            else:
+                sys.stdout.write('\r%s %s/%s ...' % (igram, i+1, len(epochList)))
+                sys.stdout.flush()
+
+            unw = h5file[k][igram].get(igram)[:]
+
+            if km == 'coherence':
                 mask = h5mask[km][coh].get(coh)[:]
-                if not inps_dict:
-                    mask = update_mask(mask, inps_dict)                
-            
-            unw = mask_matrix(unw,mask)
+                if inps_dict:
+                    mask = update_mask(mask, inps_dict, print_msg=False)
+
+            unw = mask_matrix(unw, mask, inps_dict['fill_value'])
 
             group = gg.create_group(igram)
             dset = group.create_dataset(igram, data=unw, compression='gzip')
@@ -134,9 +143,16 @@ def mask_file(File, maskFile, outFile=None, inps_dict=None):
                 group.attrs[key] = value
 
     ##### Single Dataset File
+    elif k in ['.trans','.utm_to_rdc','.UTM_TO_RDC']:
+        rg, az, atr = readfile.read(File)
+        rg = mask_matrix(rg, mask, inps_dict['fill_value'])
+        az = mask_matrix(az, mask, inps_dict['fill_value'])
+        print 'writing >>> '+outFile
+        writefile.write(rg, az, atr, outFile)
+
     else:
         unw,atr = readfile.read(File)
-        unw     = mask_matrix(unw,mask)
+        unw     = mask_matrix(unw, mask, inps_dict['fill_value'])
         print 'writing >>> '+outFile
         writefile.write(unw,atr,outFile)
 
@@ -154,6 +170,7 @@ EXAMPLE='''example:
   mask.py  velocity.h5     -m Mask.h5
   mask.py  timeseries.h5   -m temporal_coherence.h5  -t 0.7
   mask.py  unwrapIfgram.h5 -m 100102_101120.cor      -t 0.9  -y  200 300  -x 300 400
+  mask.py  unwrapIfgram.h5 -m coherence.h5           -t 0.1  --fill 0
   mask.py  timeseries*.h5 velocity*.h5  -m temporal_coherence.h5  -t 0.7
 '''
 
@@ -167,6 +184,10 @@ def cmdLineParse():
     parser.add_argument('-t', dest='thr', type=float,\
                         help='threshold value used for masking.\n'+\
                         'if not specified, only pixels with mask value equal to zero is masked out.')
+    parser.add_argument('--fill', dest='fill_value', type=float,\
+                        help="fill masked out area with input value. i.e. \n"
+                             "np.nan, 0, 1000, ... \n"
+                             "By default, it's np.ma.masked for int16 type and np.nan for all the others.")
     parser.add_argument('-x', dest='subset_x', type=int, nargs=2, help='subset range in x/cross-track/column direction')
     parser.add_argument('-y', dest='subset_y', type=int, nargs=2, help='subset range in y/along-track/row direction')
     parser.add_argument('-o','--outfile', help='Output file name. Disabled when more than 1 input files')

@@ -1,13 +1,15 @@
 # Doxyfile 1.8.13
+# cd $PYSAR_HOME/docs
+# /Applications/Doxygen.app/Contents/Resources/doxygen Doxyfile
 
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = PySAR
-PROJECT_NUMBER         = 1.2
+PROJECT_NUMBER         = 1.3
 PROJECT_BRIEF          = "A Python package for InSAR time series analysis"
-PROJECT_LOGO           = /Users/jeromezhang/Documents/development/python/PySAR-1.2.0/docs/resources/logo.pdf
+PROJECT_LOGO           = ./resources/logo.pdf
 OUTPUT_DIRECTORY       = ../../PySAR_docs
 CREATE_SUBDIRS         = NO
 ALLOW_UNICODE_NAMES    = NO
@@ -262,7 +264,7 @@ PAPER_TYPE             = a4
 EXTRA_PACKAGES         =
 LATEX_HEADER           =
 LATEX_FOOTER           =
-LATEX_EXTRA_STYLESHEET = /Users/jeromezhang/Documents/development/python/PySAR/docs/latex.sty
+LATEX_EXTRA_STYLESHEET = ./latex.sty
 LATEX_EXTRA_FILES      =
 PDF_HYPERLINKS         = YES
 USE_PDFLATEX           = YES
