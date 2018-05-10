@@ -339,7 +339,7 @@ def correct_dem_error(inps, A_def):
         ts_data = ts_data[:, mask]
         inps.rangeDist = inps.rangeDist[mask]
         inps.sinIncAngle = inps.sinIncAngle[mask]
-        if inps.pbase.shape[1] == 3:
+        if inps.pbase.shape[1] != 1:
             inps.pbase = inps.pbase[:, mask]
 
         # loop pixel by pixel

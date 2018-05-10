@@ -409,14 +409,14 @@ def update_inps_with_file_metadata(inps, metadata):
 ##################################################################################################
 def update_data_with_plot_inps(data, metadata, inps):
     # Seed Point
-    if inps.seed_yx and inps.seed_yx != [int(metadata['REF_Y']), int(metadata['REF_X'])]:
+    if inps.seed_yx:   # and inps.seed_yx != [int(metadata['REF_Y']), int(metadata['REF_X'])]:
         ref_y = inps.seed_yx[0] - inps.pix_box[1]
         ref_x = inps.seed_yx[1] - inps.pix_box[0]
         if len(data.shape) == 2:
             data -= data[ref_y, ref_x]
         elif len(data.shape) == 3:
-            for i in range(data.shape[0]):
-                data[i, :, :] -= data[i, ref_y, ref_x]
+            data -= np.tile(data[:, ref_y, ref_x],
+                            (1, data.shape[1], data.shape[2]))
         print('set reference pixel to: {}'.format(inps.seed_yx))
     else:
         if 'REF_Y' in metadata.keys():
@@ -429,9 +429,13 @@ def update_data_with_plot_inps(data, metadata, inps):
         data = multilook_data(data, inps.multilook_num, inps.multilook_num)
 
     # Convert data to display unit and wrap
-    data, inps.disp_unit, inps.disp_scale, inps.wrap = pp.scale_data4disp_unit_and_rewrap(data, metadata=metadata,
-                                                                                          disp_unit=inps.disp_unit,
-                                                                                          wrap=inps.wrap)
+    (data,
+     inps.disp_unit,
+     inps.disp_scale,
+     inps.wrap) = pp.scale_data4disp_unit_and_rewrap(data,
+                                                     metadata=metadata,
+                                                     disp_unit=inps.disp_unit,
+                                                     wrap=inps.wrap)
     if inps.wrap:
         inps.disp_min = -np.pi
         inps.disp_max = np.pi
@@ -972,6 +976,20 @@ def read_data4figure(inps, i_start, i_end):
                                  print_msg=False)[0]
         data -= ref_data
 
+    # disp/data_min/max, adjust data if all subplots are the same type
+    metadata = readfile.read_attribute(inps.file)
+    if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity']:
+        data, inps = update_data_with_plot_inps(data, metadata, inps)
+        if (not inps.disp_min and not inps.disp_max 
+                and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
+                and inps.dsetFamilyList[0] not in ['bperp']):
+            data_mli = multilook_data(data, 10, 10)
+            inps.disp_min = np.nanmin(data_mli)
+            inps.disp_max = np.nanmax(data_mli)
+            del data_mli
+    inps.data_min = np.nanmin(data)
+    inps.data_max = np.nanmax(data)
+
     # multilook
     if inps.multilook:
         data = multilook_data(data, inps.multilook_num, inps.multilook_num)
@@ -1054,7 +1072,7 @@ def plot_subplot4figure(inps, ax, data, i):
     return im
 
 
-def plot_figure(inps, j, metadata):
+def plot_figure(inps, j):
     global fig
     """Plot one figure with multiple subplots
     1) create figure
@@ -1079,19 +1097,6 @@ def plot_figure(inps, j, metadata):
     i_start = (j - 1) * inps.fig_row_num * inps.fig_col_num
     i_end = min([inps.dsetNum, i_start + inps.fig_row_num * inps.fig_col_num])
     data = read_data4figure(inps, i_start, i_end)
-
-    # disp/data_min/max, adjust data if all subplots are the same type
-    if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity']:
-        data, inps = update_data_with_plot_inps(data, metadata, inps)
-        if (not inps.disp_min and not inps.disp_max 
-                and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
-                and inps.dsetFamilyList[0] not in ['bperp']):
-            data_mli = multilook_data(data, 10, 10)
-            inps.disp_min = np.nanmin(data_mli)
-            inps.disp_max = np.nanmax(data_mli)
-            del data_mli
-    inps.data_min = np.nanmin(data)
-    inps.data_max = np.nanmax(data)
 
     # Loop - Subplots
     prog_bar = ptime.progressBar(maxValue=i_end - i_start, prefix='ploting')
@@ -1131,7 +1136,7 @@ def plot_figure(inps, j, metadata):
     return
 
 
-def prepare4multi_subplots(inps, metadata):
+def prepare4multi_subplots(inps):
     """Prepare for multiple subplots:
     1) check multilook to save memory
     2) read existed reference pixel info for unwrapPhase
@@ -1155,6 +1160,7 @@ def prepare4multi_subplots(inps, metadata):
             inps.msk = multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
 
     # Reference pixel for timeseries and ifgramStack
+    metadata = readfile.read_attribute(inps.file)
     inps.file_ref_yx = None
     if inps.key in ['ifgramStack'] and 'REF_Y' in metadata.keys():
         ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
@@ -1231,12 +1237,12 @@ def main(iargs=None):
 
     ############################### Multiple Subplots #########################
     else:
-        inps = prepare4multi_subplots(inps, atr)
+        inps = prepare4multi_subplots(inps)
 
         inps.all_data_min = 0
         inps.all_data_max = 0
         for j in range(1, inps.fig_num + 1):
-            plot_figure(inps, j, metadata=atr)
+            plot_figure(inps, j)
 
         print('----------------------------------------')
         print('all data range: [%f, %f] %s' % (inps.all_data_min, inps.all_data_max, inps.disp_unit))

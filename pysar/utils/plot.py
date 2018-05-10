@@ -239,6 +239,13 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
             fig_title += processMark
         except:
             pass
+    elif k == 'geometry':
+        if len(datasetNames) == 1:
+            fig_title = datasetNames[0]
+        elif datasetNames[0].startswith('bperp'):
+            fig_title = 'bperp'
+        else:
+            fig_title = os.path.splitext(os.path.basename(fname))[0]
     else:
         fig_title = os.path.splitext(os.path.basename(fname))[0]
 

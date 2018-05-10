@@ -65,6 +65,7 @@ def diff_file(file1, file2, outFile=None, force=False):
         obj2.open()
         ref_date, ref_y, ref_x = check_reference(obj1.metadata, obj2.metadata)
 
+        # check dates shared by two timeseries files
         dateListShared = [i for i in obj1.dateList if i in obj2.dateList]
         dateShared = np.ones((obj1.numDate), dtype=np.bool_)
         if dateListShared != obj1.dateList:
@@ -75,14 +76,16 @@ def diff_file(file1, file2, outFile=None, force=False):
                 print('\twith following dates are ignored for differencing:\n{}'.format(dateExcluded))
                 dateShared[np.array([obj1.dateList.index(i) for i in dateExcluded])] = 0
             else:
-                print('Exit. To enforce the differencing anyway, use --force option.')
-                sys.exit(1)
+                raise Exception('To enforce the differencing anyway, use --force option.')
 
+        # consider different reference_date/pixel
         data2 = obj2.read(dateListShared)
         if ref_date:
-            data2 -= data2[obj2.dateList.index(ref_date), :, :]
+            data2 -= np.tile(data2[obj2.dateList.index(ref_date), :, :],
+                             (data2.shape[0], 1, 1))
         if ref_y and ref_x:
-            data2 -= data2[:, ref_y, ref_x]
+            data2 -= np.tile(data2[:, ref_y, ref_x].reshape(-1, 1, 1),
+                             (1, data2.shape[1], data2.shape[2]))
 
         data = obj1.read()
         mask = data == 0.
