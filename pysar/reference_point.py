@@ -43,10 +43,10 @@ NOTE = """note: Reference value cannot be nan, thus, all selected reference poin
 """
 
 EXAMPLE = """example:
-  reference_point.py unwrapIfgram.h5 -t pysarApp_template.txt  --mark-attribute --lookup geometryRadar.h5
+  reference_point.py unwrapIfgram.h5 -t pysarApp_template.txt --lookup geometryRadar.h5
 
   reference_point.py timeseries.h5     -r Seeded_velocity.h5
-  reference_point.py 091120_100407.unw -y 257    -x 151      -m Mask.h5
+  reference_point.py 091120_100407.unw -y 257    -x 151      -m Mask.h5 --write-data
   reference_point.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
   reference_point.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
   
@@ -203,8 +203,8 @@ def reference_file(inps):
 
     else:
         if not inps.outfile:
-            inps.outfile = '{}_seeded{}'.format(os.path.splitext(File)[0],
-                                                os.path.splitext(File)[1])
+            inps.outfile = '{}_seeded{}'.format(os.path.splitext(inps.file)[0],
+                                                os.path.splitext(inps.file)[1])
         ext = os.path.splitext(inps.file)[1]
         k = atr['FILE_TYPE']
 

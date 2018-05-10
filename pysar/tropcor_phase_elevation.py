@@ -121,7 +121,8 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
 
     # display
     # 1. effect of multilooking --> narrow phase range --> better ratio estimation
-    if False:
+    debug_mode = False
+    if debug_mode:
         import matplotlib.pyplot as plt
         #d_index = np.argmax(topo_trop_corr)
         d_index = 47
