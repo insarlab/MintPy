@@ -941,20 +941,20 @@ def range_distance(atr, dimension=2, print_msg=True):
         if print_msg:
             print('input file is geocoded, return center range distance for the whole area')
 
-    near_range, dR = float(atr['STARTING_RANGE']), float(atr['RANGE_PIXEL_SIZE'])
+    range_n, dR = float(atr['STARTING_RANGE']), float(atr['RANGE_PIXEL_SIZE'])
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
 
-    far_range = near_range + dR*(width-1)
-    center_range = (far_range + near_range)/2.0
+    range_f = range_n + dR*(width-1)
+    range_c = (range_f + range_n)/2.0
     if print_msg:
-        print('center range : %.2f m' % (center_range))
-        print('near   range : %.2f m' % (near_range))
-        print('far    range : %.2f m' % (far_range))
+        print('center range : %.2f m' % (range_c))
+        print('near   range : %.2f m' % (range_n))
+        print('far    range : %.2f m' % (range_f))
 
     if dimension == 0:
-        return np.array(center_range, np.float32)
+        return np.array(range_c, np.float32)
 
-    range_x = np.linspace(near_range, far_range, num=width)
+    range_x = np.linspace(range_n, range_f, num=width)
     if dimension == 1:
         return np.array(range_x, np.float32)
     else:
@@ -962,21 +962,25 @@ def range_distance(atr, dimension=2, print_msg=True):
         return np.array(range_xy, np.float32)
 
 
-def incidence_angle(atr, dimension=2, print_msg=True):
+def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
     """Calculate 2D matrix of incidence angle from ROI_PAC attributes, very accurate.
-    Input:
-        dictionary - ROI_PAC attributes including the following items:
+    Parameters: atr : dict - ROI_PAC attributes including the following items:
                      STARTING_RANGE
                      RANGE_PIXEL_SIZE
                      EARTH_RADIUS
                      HEIGHT
                      LENGTH
                      WIDTH
-        dimension - int,
-                    2 for 2d matrix
-                    1 for 1d array
-                    0 for one center value
-    Output: 2D np.array - incidence angle in degree for each pixel
+                dem : 2D array for height to calculate local incidence angle
+                dimension : int,
+                            2 for 2d matrix
+                            1 for 1d array
+                            0 for one center value
+                print_msg : bool
+    Returns:    inc_angle : 2D np.array, incidence angle in degree for each pixel
+    Example:    dem = readfile.read('hgt.rdr')[0]
+                atr = readfile.read_attribute('filt_fine.unw')
+                inc_angle = ut.incidence_angle(atr, dem=dem)
     """
     # Return center value for geocoded input file
     if 'Y_FIRST' in atr.keys() and dimension > 0:
@@ -985,7 +989,7 @@ def incidence_angle(atr, dimension=2, print_msg=True):
             print('input file is geocoded, return center incident angle only')
 
     # Read Attributes
-    near_range = float(atr['STARTING_RANGE'])
+    range_n = float(atr['STARTING_RANGE'])
     dR = float(atr['RANGE_PIXEL_SIZE'])
     r = float(atr['EARTH_RADIUS'])
     H = float(atr['HEIGHT'])
@@ -993,25 +997,34 @@ def incidence_angle(atr, dimension=2, print_msg=True):
     width = int(atr['WIDTH'])
 
     # Calculation
-    far_range = near_range+dR*width
-    incidence_n = (np.pi - np.arccos((r**2 + near_range**2 - (r+H)**2)/(2*r*near_range))) * 180.0/np.pi
-    incidence_f = (np.pi - np.arccos((r**2 + far_range**2 - (r+H)**2)/(2*r*far_range))) * 180.0/np.pi
-    incidence_c = (incidence_f+incidence_n)/2.0
+    range_f = range_n+dR*width
+    inc_angle_n = (np.pi - np.arccos((r**2 + range_n**2 - (r+H)**2)/(2*r*range_n))) * 180.0/np.pi
+    inc_angle_f = (np.pi - np.arccos((r**2 + range_f**2 - (r+H)**2)/(2*r*range_f))) * 180.0/np.pi
     if print_msg:
-        print('center incidence angle : %.4f degree' % (incidence_c))
-    if dimension == 0:
-        return np.array(incidence_c, np.float32)
+        print('near   incidence angle : {:.4f} degree'.format(inc_angle_n))
+        print('far    incidence angle : {:.4f} degree'.format(inc_angle_f))
 
-    if print_msg:
-        print('near   incidence angle : %.4f degree' % (incidence_n))
-        print('far    incidence angle : %.4f degree' % (incidence_f))
-    incidence_x = np.linspace(incidence_n, incidence_f,
-                              num=width, endpoint='FALSE')
-    if dimension == 1:
-        return np.array(incidence_x, np.float32)
+    if dimension == 0:
+        inc_angle = np.array((inc_angle_n+inc_angle_f)/2.0, np.float32)
+        if print_msg:
+            print('center incidence angle : {:.4f} degree'.format(inc_angle))
+
+    elif dimension == 1:
+        inc_angle = np.linspace(inc_angle_n, inc_angle_f, num=width,
+                                endpoint='FALSE', dtype=np.float32)
+
+    elif dimension == 2:
+        # consider the local variable due to topography
+        if dem is not None:
+            range_dist = range_distance(atr, dimension=2, print_msg=False)
+            inc_angle = (np.pi - np.arccos(((r+dem)**2 + range_dist**2 - (r+H)**2) / 
+                                           (2*(r+dem)*range_dist))) * 180.0/np.pi
+        else:
+            inc_angle = np.tile(np.linspace(inc_angle_n, inc_angle_f, num=width,
+                                            endpoint='FALSE', dtype=np.float32), (length, 1))
     else:
-        incidence_xy = np.tile(incidence_x, (length, 1))
-        return np.array(incidence_xy, np.float32)
+        raise Exception('un-supported dimension input: {}'.format(dimension))
+    return inc_angle
 
 
 def which(program):

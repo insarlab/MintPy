@@ -342,7 +342,12 @@ class geometryDict:
     def get_incidence_angle(self, box=None):
         if not self.extraMetadata or 'Y_FIRST' in self.extraMetadata.keys():
             return None
+        if 'height' in self.dsNames:
+            dem = readfile.read(self.datasetDict['height'], datasetName='height')[0]
+        else:
+            dem = None
         data = ut.incidence_angle(self.extraMetadata,
+                                  dem=dem,
                                   dimension=2,
                                   print_msg=False)
         if box is not None:
