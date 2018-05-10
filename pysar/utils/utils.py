@@ -1418,7 +1418,7 @@ def range_ground_resolution(atr, print_msg=False):
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no range resolution info.')
         return
-    inc_angle = incidence_angle(atr, 0, print_msg)
+    inc_angle = incidence_angle(atr, dimension=0, print_msg=print_msg)
     rg_step = float(atr['RANGE_PIXEL_SIZE'])/np.sin(inc_angle/180.0*np.pi)
     return rg_step
 

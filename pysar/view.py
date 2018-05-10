@@ -415,7 +415,7 @@ def update_data_with_plot_inps(data, metadata, inps):
         if len(data.shape) == 2:
             data -= data[ref_y, ref_x]
         elif len(data.shape) == 3:
-            data -= np.tile(data[:, ref_y, ref_x],
+            data -= np.tile(data[:, ref_y, ref_x].reshape(-1, 1, 1),
                             (1, data.shape[1], data.shape[2]))
         print('set reference pixel to: {}'.format(inps.seed_yx))
     else:
@@ -423,10 +423,6 @@ def update_data_with_plot_inps(data, metadata, inps):
             inps.seed_yx = [int(metadata['REF_Y']), int(metadata['REF_X'])]
         else:
             inps.seed_yx = None
-
-    # Multilook
-    if inps.multilook and inps.multilook_num > 1:
-        data = multilook_data(data, inps.multilook_num, inps.multilook_num)
 
     # Convert data to display unit and wrap
     (data,
@@ -473,6 +469,10 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
 
     #----------------------- 1. Update plot inps/data with data matrix -----------------------#
     data, inps = update_data_with_plot_inps(data, metadata, inps)
+    # Multilook
+    if inps.multilook and inps.multilook_num > 1:
+        data = multilook_data(data, inps.multilook_num, inps.multilook_num)
+
     print('data    unit: {}'.format(metadata['UNIT']))
     print('display unit: {}'.format(inps.disp_unit))
 

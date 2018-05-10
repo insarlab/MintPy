@@ -151,6 +151,7 @@ def remove_surface(fname, surf_type, mask_file=None, out_file=None, ysub=None):
         obj = timeseries(fname)
         data = obj.read()
         numDate = data.shape[0]
+        print('estimating phase ramp ...')
         prog_bar = ptime.progressBar(maxValue=numDate)
         for i in range(numDate):
             if not ysub:
