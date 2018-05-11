@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.0                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi                        #
 # Author:  Heresh Fattahi                                  #
 ############################################################
@@ -35,36 +35,36 @@ def gps_to_LOS(Ve, Vn, theta, heading):
     return gpsLOS
 
 ############################################################
+def check_st_in_box(x,y,x0,y0,x1,y1,X0,Y0,X1,Y1):
+
+    m1=float(y1-y0)/float((x1-x0))
+    c1=float(y0-m1*x0)
+
+    m2=float(Y1-Y0)/float((X1-X0))
+    c2=float(Y0-m2*X0)
+
+    m3=float(y0-Y0)/float((x0-X0))
+    c3=float(Y0-m3*X0)
+
+    m4=float(y1-Y1)/float((x1-X1))
+    c4=float(Y1-m4*X1)
 
 
-def check_st_in_box(x, y, x0, y0, x1, y1, X0, Y0, X1, Y1):
+    yy1=m1*x+c1
+    yy2=m2*x+c2
 
-    m1 = float(y1-y0)/float((x1-x0))
-    c1 = float(y0-m1*x0)
-
-    m2 = float(Y1-Y0)/float((X1-X0))
-    c2 = float(Y0-m2*X0)
-
-    m3 = float(y0-Y0)/float((x0-X0))
-    c3 = float(Y0-m3*X0)
-
-    m4 = float(y1-Y1)/float((x1-X1))
-    c4 = float(Y1-m4*X1)
-
-    yy1 = m1*x+c1
-    yy2 = m2*x+c2
-
-    yy = [yy1, yy2]
+    yy=[yy1,yy2]
     yy.sort()
 
-    xx3 = (y-c3)/m3
-    xx4 = (y-c4)/m4
-    xx = [xx3, xx4]
+    xx3=(y-c3)/m3
+    xx4=(y-c4)/m4
+    xx=[xx3,xx4]
     xx.sort()
     if y >= yy[0] and y <= yy[1] and x >= xx[0] and x <= xx[1]:
         Check_result = 'True'
     else:
-        Check_result = 'False'
+        Check_result='False'
+
 
     return Check_result
 
@@ -106,9 +106,9 @@ def line(x0, y0, x1, y1):
 def dist_point_from_line(m, c, x, y, dx, dy):
     # finds the distance of a point at x ,y xoordinate
     # from a line with Y =  mX +c
-
     d = np.sqrt((((x+m*y-m*c)/(m**2+1)-x)*dx)**2 +
                 ((m*(x+m*y-m*c)/(m**2+1)+c-y)*dy)**2)
+
     #  a=m;b=-1;
     # d=np.abs(a*x+b*y+c)/np.sqrt(a**2+b**2)
     return d
@@ -291,13 +291,13 @@ def get_transect(z, x0, y0, x1, y1, interpolation='nearest'):
     length = int(np.hypot(x1-x0, y1-y0))
     x, y = np.linspace(x0, x1, length), np.linspace(y0, y1, length)
 
-    # Extract the value along the line
-    if interpolation.lower() == 'cubic':
-        zi = scipy.ndimage.map_coordinates(z, np.vstack((x, y)))
+    ## Extract the value along the line
+    if   interpolation.lower() == 'cubic':
+      zi = scipy.ndimage.map_coordinates(z, np.vstack((x, y)))
     elif interpolation.lower() == 'bilinear':
-        zi = scipy.ndimage.map_coordinates(z, np.vstack((x, y)), order=2)
+      zi = scipy.ndimage.map_coordinates(z, np.vstack((x, y)), order=2)
     else:
-        zi = z[np.rint(y).astype(np.int16), np.rint(x).astype(np.int16)]     # nearest neighbour
+      zi = z[np.rint(y).astype(np.int), np.rint(x).astype(np.int)]     # nearest neighbour
 
     return zi
 
@@ -306,14 +306,14 @@ def get_transect(z, x0, y0, x1, y1, interpolation='nearest'):
 USAGE = """
 *****************************************************************************************
 
-   Generating a transect [or multiple transects] of the velocity field. 
+   Generating a transect [or multiple transects] of the velocity field.
    If GPS velocities are provided, it will be compared with InSAR.
 
    Usage:
 
-       transect.py -f velocity.h5 -s 'y1,x1' -e 'y2,x2  -n number_of_transects  -d distace_between_profiles(pixel) 
+       transect.py -f velocity.h5 -s 'y1,x1' -e 'y2,x2  -n number_of_transects  -d distace_between_profiles(pixel)
                    -g gps velocity file -r reference station -L List of stations
-   
+
        -s : strat point of the profile
        -e : end   point of the profile
        -F : Fault coordinates (lat_first, lon_first, lat_end, lon_end)
@@ -322,9 +322,9 @@ USAGE = """
        -p : flip profile left - right (yes or no) [default: no]
        -u : flip profile up   - down              [default: no]
        -S : source of GPS velocities (usgs,cmm4,pysar)
-       -G : gps stations to compare with InSAR  (all,insar,profile)  
-            "all"     : all gps stations is projected to the profile 
-            "insar"   : same as all but limited to the area covered by insar    
+       -G : gps stations to compare with InSAR  (all,insar,profile)
+            "all"     : all gps stations is projected to the profile
+            "insar"   : same as all but limited to the area covered by insar
             "profile" : only those gps stations which are in the profile area]
 
        -l : lower  bound to display
@@ -338,12 +338,12 @@ USAGE = """
 
        transect.py -f geo_velocity.h5
        transect.py -f geo_velocity.h5 -s '5290,5579' -e '12177,482'
-       transect.py -f geo_velocity_New_masked_masked.h5 -s '3967,7019' -e '12605,1261' -n 150 -d 10 
-                   -g usgs_velocities_NAfixed.txt -S usgs -r P625 
-       transect.py -f geo_velocity_New_masked_masked.h5 -g usgs_velocities_NAfixed.txt 
+       transect.py -f geo_velocity_New_masked_masked.h5 -s '3967,7019' -e '12605,1261' -n 150 -d 10
+                   -g usgs_velocities_NAfixed.txt -S usgs -r P625
+       transect.py -f geo_velocity_New_masked_masked.h5 -g usgs_velocities_NAfixed.txt
                    -r P625 -F '33 30 24,-115 20 15,33 35 21,-116 10 16' -s '12644,1183' -e '6512,6227'
-                   -n 100 -d 10 -p no -S usgs  -G insar 
-       transect.py -f geo_velocity_demCor_tropCor_masked_masked.h5 -F '33 30 24,-115 20 15,33 35 21,-116 10 16' 
+                   -n 100 -d 10 -p no -S usgs  -G insar
+       transect.py -f geo_velocity_demCor_tropCor_masked_masked.h5 -F '33 30 24,-115 20 15,33 35 21,-116 10 16'
                    -n 100 -d 10 -p yes -g ../GPS_velocities_PBO_and_unavco.cmm4 -S pysar -r IMPS -n 230 -s '11904,93' -e '5389,5662' -E on
 
 *****************************************************************************************
@@ -367,63 +367,41 @@ def main(argv):
     display_Average = 'on'
     disp_std = 'on'
 
-    # Input Args
+    ##### Input Args
     try:
-        opts, args = getopt.getopt(
-            argv, "f:s:e:n:d:g:l:h:r:L:F:p:u:G:S:i:I:A:U:E:")
+      opts, args = getopt.getopt(argv,"f:s:e:n:d:g:l:h:r:L:F:p:u:G:S:i:I:A:U:E:")
     except getopt.GetoptError:
-        Usage()
-        sys.exit(1)
+      Usage()
+      sys.exit(1)
 
-    for opt, arg in opts:
-        if opt == '-f':
-            velocityFile = arg
-        elif opt == '-s':
-            y0, x0 = [int(i) for i in arg.split(',')]
-        elif opt == '-e':
-            y1, x1 = [int(i) for i in arg.split(',')]
-        elif opt == '-n':
-            ntrans = int(arg)
-        elif opt == '-d':
-            dp = float(arg)
-        elif opt == '-g':
-            gpsFile = arg
-        elif opt == '-r':
-            refStation = arg
-        elif opt == '-i':
-            incidence_file = arg
-        elif opt == '-L':
-            stationsList = arg.split(',')
-        elif opt == '-F':
-            FaultCoords = arg.split(',')
-        elif opt == '-p':
-            flip_profile = arg
-        elif opt == '-u':
-            flip_updown = arg
-            print(flip_updown)
-        elif opt == '-G':
-            which_gps = arg
-        elif opt == '-S':
-            gps_source = arg
-        elif opt == '-h':
-            hbound = float(arg)
-        elif opt == '-l':
-            lbound = float(arg)
-        elif opt == '-I':
-            display_InSAR = arg
-        elif opt == '-A':
-            display_Average = arg
-        elif opt == '-U':
-            disp_std = arg
-        elif opt == '-E':
-            save_to_mat = arg
+    for opt,arg in opts:
+        if   opt == '-f':   velocityFile = arg
+        elif opt == '-s':   y0,x0  = [int(i) for i in arg.split(',')]
+        elif opt == '-e':   y1,x1  = [int(i) for i in arg.split(',')]
+        elif opt == '-n':   ntrans = int(arg)
+        elif opt == '-d':   dp     = float(arg)
+        elif opt == '-g':   gpsFile=arg
+        elif opt == '-r':   refStation=arg
+        elif opt == '-i':   incidence_file=arg
+        elif opt == '-L':   stationsList = arg.split(',')
+        elif opt == '-F':   FaultCoords  = arg.split(',')
+        elif opt == '-p':   flip_profile = arg
+        elif opt == '-u':   flip_updown  = arg; print flip_updown
+        elif opt == '-G':   which_gps =arg
+        elif opt == '-S':   gps_source=arg
+        elif opt == '-h':   hbound=float(arg)
+        elif opt == '-l':   lbound=float(arg)
+        elif opt == '-I':   display_InSAR   = arg
+        elif opt == '-A':   display_Average = arg
+        elif opt == '-U':   disp_std        = arg
+        elif opt == '-E':   save_to_mat     = arg
 
-    # Input File Info
+    ##### Input File Info
     try:
-        atr = readfile.read_attribute(velocityFile)
+      atr = readfile.read_attribute(velocityFile)
     except:
-        Usage()
-        sys.exit(1)
+      Usage()
+      sys.exit(1)
     k = atr['FILE_TYPE']
     print('input file is '+k)
 
@@ -489,7 +467,6 @@ def main(argv):
         xc = []
         yc = []
         print('please click on start and end point of the desired profile')
-
         def onclick(event):
             if event.button == 1:
                 print('click')
@@ -666,10 +643,10 @@ def main(argv):
 
                 print(""" 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      
+
       WARNING: nan value for InSAR data at the refernce pixel!
                reference station should be a pixel with valid value in InSAR data.
-                               
+
                please select another GPS station as the reference station.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                       
@@ -869,6 +846,7 @@ def main(argv):
 
     # std=np.std(transect,1)
     # axes[1].plot(D/1000.0, avgInSAR, 'r-')
+
     try:
         axes[1].plot(DistGPS/1000.0, -1*GPS_in_bound/1000, 'b^', ms=10)
     except:
@@ -982,7 +960,6 @@ def main(argv):
         fault_loc = 'None'
 
     ###################################################################
-
     try:
         ax.set_ylim(lbound, hbound)
     except:
@@ -1027,3 +1004,4 @@ def main(argv):
 #############################################################################
 if __name__ == '__main__':
     main(sys.argv[1:])
+
