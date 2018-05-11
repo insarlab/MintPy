@@ -1,14 +1,13 @@
 #! /usr/bin/env python2
 
-import urllib2
-import getopt
+import urllib.request, urllib.error, urllib.parse
 import os
 import argparse
 
 class BasicHTTP:
     @staticmethod
     def get(url):
-        res = urllib2.urlopen(url)
+        res = urllib.request.urlopen(url)
         return res.read()
 
 def buildURL(args):
@@ -43,7 +42,7 @@ def main():
 
     url = buildURL(parseArgs)
 
-    print BasicHTTP.get(url)
+    print(BasicHTTP.get(url))
 
 if __name__ == '__main__':
     main()

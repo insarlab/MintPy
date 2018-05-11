@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
@@ -8,75 +8,94 @@
 
 import os
 import sys
+import time
 import argparse
-
-import h5py
 import numpy as np
 from scipy.special import gamma
-
-import pysar._datetime as ptime
-import pysar._pysar_utilities as ut
-import pysar._readfile as readfile
-import pysar._writefile as writefile
+from pysar.utils import ptime, readfile, writefile, utils as ut
+from pysar.objects import timeseries, geometry
 
 
-def topographic_residual_inversion(ts0, A0, inps):
-    '''
-    Inputs:
-        ts0  - 2D np.array in size of (date_num, pixel_num), original time series displacement
-        A0   - 2D np.array in size of (date_num, model_num), design matrix in [A_deltaZ, A_def]
-        inps - Namespace with the following settings:
-               tbase     - 2D np.array in size of (date_num, 1), temporal baseline
-               date_flag - 1D np.array in bool data type, mark the date used in the estimation
-               phase_velocity - bool, use phase history or phase velocity for minimization
-    Outputs:
-        deltaZ - 2D np.array in size of (1,        pixel_num), estimated DEM residual
-        tsCor  - 2D np.array in size of (date_num, pixel_num), corrected timeseries = tsOrig - topoRes
-        tsRes  - 2D np.array in size of (date_num, pixel_num), resudal   timeseries = tsOrig - topoRes - defModel
-        stepEst- 2D np.array in size of (step_num, pixel_num), estimated step deformation
-    Example:
-        deltaZ, tsCor, tsRes = topographic_residual_inversion(ts, A, inps)
-    '''
-    if len(ts0.shape) == 1:
-        ts0 = ts0.reshape(-1,1)
-    date_num, pixel_num = ts0.shape
+############################################################################
+TEMPLATE = """
+## 8. Topographic Residual (DEM Error) Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
+## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
+## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
+pysar.topographicResidual               = auto  #[yes / no], auto for yes
+pysar.topographicResidual.polyOrder     = auto  #[1-inf], auto for 2, poly order of temporal deformation model
+pysar.topographicResidual.stepFuncDate  = auto  #[20080529,20100611 / no], auto for no, date of step jump
+pysar.topographicResidual.excludeDate   = auto  #[20070321 / txtFile / no], auto for no, date exlcuded for error estimation
+pysar.topographicResidual.phaseVelocity = auto  #[yes / no], auto for no - phase, use phase velocity for error estimation
+"""
 
-    ##Prepare Design matrix A and observations ts for inversion
-    A = A0[inps.date_flag,:]
-    ts = ts0[inps.date_flag,:]
-    if inps.phase_velocity:
-        ts = np.diff(ts, axis=0) / np.diff(inps.tbase, axis=0)
-        A = np.diff(A, axis=0) / np.diff(inps.tbase, axis=0)
+EXAMPLE = """example:
+  # correct DEM error with pixel-wise geometry parameters
+  dem_error.py  timeseries_ECMWF.h5 -g INPUTS/geometryRadar.h5 -t pysarApp_template.txt
 
-    ##Inverse using L-2 norm to get unknown parameters X = [deltaZ, vel, acc, deltaAcc, ...]
-    X = np.linalg.pinv(A).dot(ts)   #equivalent to X = np.linalg.inv(A.T.dot(A)).dot(A.T).dot(ts)
+  # correct DEM error with mean geometry parameters
+  dem_error.py  timeseries_ECMWF.h5
 
-    ##Prepare Outputs
-    deltaZ = X[0,:]
-    tsCor = ts0 - np.dot(A0[:,0].reshape(-1,1), deltaZ.reshape(1,-1))
-    tsRes = ts0 - np.dot(A0, X)
+  # get time-series of estimated deformation model
+  diff.py timeseries_ECMWF_demErr.h5 timeseriesResidual.h5 -o timeseriesDefModel.h5
+"""
 
-    stepEst = None
-    if inps.step_num > 0:
-        s0 = inps.poly_order+2
-        s1 = inps.poly_order+2+inps.step_num
-        stepEst = X[s0:s1,:].reshape(inps.step_num,-1)
-
-    return deltaZ, tsCor, tsRes, stepEst
+REFERENCE = """reference:
+  Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series,
+  IEEE TGRS, 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
+"""
 
 
+def create_parser():
+    parser = argparse.ArgumentParser(description='DEM Error (Topographic Residual) Correction',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
+
+    parser.add_argument('timeseries_file',
+                        help='Timeseries file to be corrrected')
+    parser.add_argument('-g', '--geometry', dest='geom_file',
+                        help='geometry file including datasets:\n'+
+                             'incidence angle\n'+
+                             'slant range distance\n' +
+                             'and/or 3D perpendicular baseline')
+    parser.add_argument('-o', '--outfile',
+                        help='Output file name for corrected time series')
+
+    parser.add_argument('--ex', '--exclude', dest='ex_date', nargs='*', default=[],
+                        help='Exclude date(s) for DEM error estimation.\n' +
+                             'All dates will be corrected for DEM residual phase still.')
+    parser.add_argument('-t', '--template', dest='template_file',
+                        help='template file with the following items:'+TEMPLATE)
+    parser.add_argument('-s', '--step-date', dest='step_date', nargs='*', default=[],
+                        help='Date of step jump for temporal deformation model,'+
+                             ' i.e. date of earthquake/volcanic eruption')
+    parser.add_argument('--phase-velocity', dest='min_phase_velocity', action='store_true',
+                        help='Use phase velocity instead of phase for inversion constrain.')
+    parser.add_argument('-p', '--poly-order', dest='poly_order', type=int, default=2,
+                        help='polynomial order number of temporal deformation model, default = 2')
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    """Command line parser."""
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    if inps.poly_order < 1:
+        raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
+    return inps
+
+
+############################################################################
 def read_template2inps(template_file, inps=None):
-    '''Read input template file into inps.ex_date'''
+    """Read input template file into inps.ex_date"""
     if not inps:
-        inps = cmdLineParse()
+        inps = cmd_line_parse()
     template = readfile.read_template(template_file)
-    key_list = template.keys()
 
     # Read template option
     prefix = 'pysar.topographicResidual.'
 
     key = prefix+'polyOrder'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
         if value == 'auto':
             inps.poly_order = 2
@@ -84,316 +103,332 @@ def read_template2inps(template_file, inps=None):
             inps.poly_order = int(value)
 
     key = prefix+'excludeDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
-        if value not in ['auto','no']:
-            value = value.replace(',',' ').split()
+        if value not in ['auto', 'no']:
+            value = value.replace(',', ' ').split()
             value = ptime.yyyymmdd(value)
             inps.ex_date += value
 
     key = prefix+'stepFuncDate'
-    if key in key_list:
+    if key in template.keys():
         value = template[key]
-        if value not in ['auto','no']:
-            value = value.replace(',',' ').split()
+        if value not in ['auto', 'no']:
+            value = value.replace(',', ' ').split()
             value = ptime.yyyymmdd(value)
             inps.step_date += value
 
+    key = prefix+'phaseVelocity'
+    if key in template.keys():
+        value = template[key]
+        if value.lower() not in ['auto', 'no']:
+            inps.min_phase_velocity = True
+
     return inps
 
 
-def check_exclude_date(exDateIn, dateList):
-    '''Read exclude dates info
-    Inputs:
-        exDateIn - list of string, date in YYMMDD or YYYYMMDD format,
-                   or text file with date in it
-        dateList - list of string, date in YYYYMMDD format
-    Output:
-        exDateOut - list of string, date in YYYYMMDD format
-    '''
-    if not exDateIn:
-        return []
+def read_exclude_date(ex_date_list, date_list_all):
+    """Read exclude dates info
+    Parameters: ex_date_list  : list of string, date in YYMMDD or YYYYMMDD format,
+                                or text file with date in it
+                date_list_all : list of string, date in YYYYMMDD format
+    Returns:    drop_date     : 1D array of bool in size of (num_date,)
+    """
+    # Read exclude date input
+    if ex_date_list:
+        tempList = []
+        for d in ex_date_list:
+            if os.path.isfile(d):
+                tempList += ptime.read_date_list(d)
+            else:
+                tempList.append(d)
+        ex_date_list = sorted(ptime.yyyymmdd(tempList))
+        print(('exclude the following dates for DEM error estimation:'
+               ' ({})\n{}').format(len(ex_date_list), ex_date_list))
+    else:
+        ex_date_list = []
 
-    exDateOut = []
-    for exDate in exDateIn:
-        if os.path.isfile(exDate):
-            exDate = ptime.read_date_list(exDate)
-        else:
-            exDate = [ptime.yyyymmdd(exDate)]
-        exDateOut += exDate
-    exDateOut = sorted(list(set(exDateOut).intersection(dateList)))
-    print 'Exclude date for DEM error estimation:'
-    print exDateOut
-    return exDateOut
-
-
-######################################
-TEMPLATE='''
-## 8. Topographic (DEM) Residual Correction (Fattahi and Amelung, 2013, IEEE-TGRS)
-## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
-## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
-pysar.topographicResidual              = auto  #[yes / no], auto for yes
-pysar.topographicResidual.polyOrder    = auto  #[1-inf], auto for 2, polynomial order of temporal deformation model
-pysar.topographicResidual.stepFuncDate = auto  #[20080529,20100611 / no], auto for no, date of step jump
-pysar.topographicResidual.excludeDate  = auto  #[20070321 / txtFile / no], auto for no, date exlcuded for error estimation
-'''
-
-EXAMPLE='''example:
-  dem_error.py  timeseries_ECMWF.h5 --template pysarApp_template.txt
-  dem_error.py  timeseries_ECMWF.h5
-  dem_error.py  geo_timeseries_ECMWF.h5  --phase-velocity
-
-  dem_error.py  timeseries.h5        -i geometryRadar.h5       -r geometryRadar.h5
-  dem_error.py  geo_timeseries.h5    -i geo_incidenceAngle.h5  -r geo_rangeDistance.h5
-'''
-
-REFERENCE='''reference:
-  Fattahi, H., and F. Amelung (2013), DEM Error Correction in InSAR Time Series,
-  IEEE TGRS, 51(7), 4249-4259, doi:10.1109/TGRS.2012.2227761.
-'''
-
-def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Topographic (DEM) Residual Correction',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
-                                     epilog=REFERENCE+'\n'+EXAMPLE)
-
-    parser.add_argument('timeseries_file', help='Timeseries file to be corrrected')
-    parser.add_argument('-o','--outfile', help='Output file name for corrected time series')
-    parser.add_argument('--exclude','--ex', dest='ex_date', nargs='*', default=[],\
-                        help='Exclude date(s) for DEM error estimation.\n'+\
-                             'All dates will be corrected for DEM residual phase still.')
-    parser.add_argument('--template','-t', dest='template_file',\
-                        help='template file with the following items:'+TEMPLATE)
-    parser.add_argument('--step-date', dest='step_date', nargs='*', default=[],\
-                        help='Date of step jump for temporal deformation model, i.e. date of earthquake/volcanic eruption')
-
-    parser.add_argument('-i', dest='inc_angle_file', default=['geometry*.h5','*incidenceAngle.h5'],\
-                        help='Incidence angle file in degrees')
-    parser.add_argument('-r','--range-distance', dest='range_dist_file', default=['geometry*.h5','*angeDistance.h5'],\
-                        help='Range distance file with value in meter')
-    parser.add_argument('--phase-velocity', dest='phase_velocity', action='store_true',\
-                        help='Use phase velocity instead of phase for inversion constrain.')
-    #parser.add_argument('--no-update-timeseries', dest='update_timeseries', action='store_false',\
-    #                    help='Do not update timeseries; if specified, only DEM error will be calculated.')
-    parser.add_argument('--poly-order','-p', dest='poly_order', type=int, default=2,\
-                        help='polynomial order number of temporal deformation model, default = 2')
-
-    inps = parser.parse_args()
-    if inps.poly_order < 1:
-        raise argparse.ArgumentTypeError("Minimum polynomial order is 1")
-    return inps
+    # convert to mark array
+    drop_date = np.array([i not in ex_date_list for i in date_list_all],
+                         dtype=np.bool_)
+    return drop_date
 
 
-######################################
-def main(argv):
-    inps = cmdLineParse()
-    suffix = '_demErr'
-    if not inps.outfile:
-        inps.outfile = os.path.splitext(inps.timeseries_file)[0]+suffix+os.path.splitext(inps.timeseries_file)[1]
-    if inps.template_file:
-        print 'read option from template file: '+inps.template_file
-        inps = read_template2inps(inps.template_file, inps)
+def design_matrix4deformation(inps):
+    # Date Info
+    ts_obj = timeseries(inps.timeseries_file)
+    ts_obj.open()
 
-    ##### Read Data
-    atr = readfile.read_attribute(inps.timeseries_file)
-    coordType = 'radar'
-    if 'Y_FIRST' in atr.keys():
-        coordType = 'geo'
-
-    # 1. Incidence angle
-    try:
-        inps.inc_angle_file = ut.get_file_list(inps.inc_angle_file, coord=coordType)[0]
-    except ValueError:
-        print 'No incidence angle file found!\nRun incidence_angle.py to generate it.'
-    print 'read incidence angle from file: '+str(inps.inc_angle_file)
-    inps.inc_angle = readfile.read(inps.inc_angle_file, epoch='incidenceAngle')[0].flatten()
-    inps.inc_angle *= np.pi/180.0
-
-    # 2. Slant Range distance
-    try:
-        inps.range_dist_file = ut.get_file_list(inps.range_dist_file, coord=coordType)[0]
-    except ValueError:
-        print 'No range distance file found!\nRun range_distance.py to generate it.'
-    print 'read slant range distance from file: '+str(inps.range_dist_file)
-    inps.range_dist = readfile.read(inps.range_dist_file, epoch='slantRangeDistance')[0].flatten()
-
-    # 3. Perp Baseline - 1D in time, 0D/1D in space (azimuth)
-    print 'read perpendicular baseline'
-    try:
-        inps.pbase = ut.perp_baseline_timeseries(atr, dimension=1)
-        if inps.pbase.shape[1] > 1:
-            print 'consider perp baseline variance in azimuth direction'
-    except valueError:
-        print 'No P_BASELINE_TIMESERIES found in timeseries file.\n'+\
-              'Can not correct for DEM residula without it!'
-
-    # 4. Time Series - 1D in time, 1D in space (flattened)
-    print "read time series file: " + inps.timeseries_file
-    h5 = h5py.File(inps.timeseries_file)
-    date_list = sorted(h5['timeseries'].keys())
-    date_num = len(date_list)
-    inps.tbase = np.array(ptime.date_list2tbase(date_list)[0]).reshape(-1,1)
-
-    #Mark dates used in the estimation
-    inps.ex_date = check_exclude_date(inps.ex_date, date_list)
-    inps.date_flag = np.array([i not in inps.ex_date for i in date_list], dtype=np.bool_)
-    if inps.poly_order > np.sum(inps.date_flag):
-        raise ValueError("ERROR: input polynomial order=%d is larger than number of acquisition=%d used in estimation!" %\
-                         (inps.poly_order, np.sum(inps.date_flag)))
-
-    length = int(atr['FILE_LENGTH'])
-    width = int(atr['WIDTH'])
-    pixel_num = length*width
-    timeseries = np.zeros((date_num, pixel_num),np.float32)
-    for i in range(date_num):
-        timeseries[i] = h5['timeseries'].get(date_list[i])[:].flatten()
-        sys.stdout.write('\rreading acquisition %3d/%3d ...' % (i+1, date_num))
-        sys.stdout.flush()
-    h5.close()
-    print ''
-
-
-    ##### Design matrix - temporal deformation model
-    print '-------------------------------------------------'
-    print 'Correct topographic phase residual using Fattahi and Amelung (2013, IEEE-TGRS)'
-    msg = 'minimum-norm constrain on: phase'
-    if inps.phase_velocity:
+    # Design matrix - temporal deformation model
+    print('-'*50)
+    print('correct topographic phase residual (DEM error) using Fattahi and Amelung (2013, IEEE-TGRS)')
+    msg = 'ordinal least squares (OLS) inversion with L2-norm minimization on: phase'
+    if inps.min_phase_velocity:
         msg += ' velocity'
-    print msg
+    if inps.rangeDist.size != 1:
+        msg += ' (pixel-wisely)'
+    print(msg)
 
-    # Heresh's original code for phase history approach
-    #A1 = np.hstack((np.ones((date_num, 1)), inps.tbase))
-    #A2 = inps.tbase**2 / 2.0
-    #A_def = np.hstack((A2,A1,np.ones((date_num,1))))
+    tbase = np.array(ts_obj.tbase, np.float32) / 365.25
 
-    # 1. Polynomial - 2D matrix in size of (date_num, polyOrder+1)
-    print "temporal deformation model: polynomial order = "+str(inps.poly_order)
-    A_def = np.ones((date_num, 1), np.float32)
+    # 1. Polynomial - 2D matrix in size of (numDate, polyOrder+1)
+    print("temporal deformation model: polynomial order = "+str(inps.poly_order))
+    A_def = np.ones((ts_obj.numDate, 1), np.float32)
     for i in range(inps.poly_order):
-        Ai = inps.tbase**(i+1) / gamma(i+2)
-        Ai = np.array(Ai, np.float32).reshape(-1,1)
+        Ai = np.array(tbase**(i+1) / gamma(i+2), np.float32).reshape(-1, 1)
         A_def = np.hstack((A_def, Ai))
 
-    # 2. Step function - 2D matrix in size of (date_num, stepNum)
+    # 2. Step function - 2D matrix in size of (numDate, len(inps.step_date))
     if inps.step_date:
-        print "temporal deformation model: step functions at "+str(inps.step_date)
-        yySteps = ptime.yyyymmdd2years(inps.step_date)
-        yyList = np.array(ptime.yyyymmdd2years(date_list)).reshape(-1,1)
-        for yyStep in yySteps:
-            Ai = yyList > yyStep
-            Ai = np.array(Ai, np.float32).reshape(-1,1)
+        print("temporal deformation model: step functions at "+str(inps.step_date))
+        t_steps = ptime.yyyymmdd2years(inps.step_date)
+        t = np.array(ptime.yyyymmdd2years(ts_obj.dateList))
+        for t_step in t_steps:
+            Ai = np.array(t > t_step, np.float32).reshape(-1, 1)
             A_def = np.hstack((A_def, Ai))
-    inps.step_num = len(inps.step_date)
-
-    print '-------------------------------------------------'
-
-
-    ##---------------------------------------- Loop for L2-norm inversion  -----------------------------------##
-    ## Output estimated steps 
-    print 'ordinal least squares (OLS) inversion using L2-norm minimization'
-    timeseriesCor = np.zeros((date_num, pixel_num), dtype=np.float32)
-    timeseriesRes = np.zeros((date_num, pixel_num), dtype=np.float32)
-    topoRes = np.zeros(pixel_num, dtype=np.float32)
-    constC  = np.zeros(pixel_num, dtype=np.float32)
-    if inps.step_num > 0:
-        stepModel = np.zeros((inps.step_num, pixel_num), dtype=np.float32)
-
-    print 'skip pixels with zero/nan value in geometry files - incidence angle and range distance'
-    mask = np.multiply(~np.isnan(inps.inc_angle), ~np.isnan(inps.range_dist))
-    mask[inps.inc_angle == 0.] = 0
-    mask[inps.range_dist == 0.] = 0
-    pixel_num2inv = np.sum(mask)
-    pixel_idx2inv = np.where(mask)[0]
-    print 'number of pixels in the file: %d' % (pixel_num)
-    print 'number of pixels to  inverse: %d' % (pixel_num2inv)
-
-    if inps.pbase.shape[1] == 1:
-        pbase = inps.pbase
-    prog_bar = ptime.progress_bar(maxValue=pixel_num)
-    for i in range(pixel_num2inv):
-        prog_bar.update(i+1, every=1000, suffix='%s/%s pixels'%(str(i+1), str(pixel_num2inv)))
-        idx = pixel_idx2inv[i]
-
-        r = inps.range_dist[idx]
-        inc_angle = inps.inc_angle[idx]
-        if inps.pbase.shape[1] > 1:
-            pbase = inps.pbase[:, int(idx/width)].reshape(-1,1)
-        A_deltaZ = pbase / (r * np.sin(inc_angle))
-
-        A = np.hstack((A_deltaZ, A_def))
-        ts = timeseries[:,idx].reshape(date_num,-1)
-        deltaZ, tsCor, tsRes, stepEst = topographic_residual_inversion(ts, A, inps)
-        topoRes[idx:idx+1] = deltaZ
-        timeseriesCor[:,idx:idx+1] = tsCor
-        timeseriesRes[:,idx:idx+1] = tsRes
-        if inps.step_num > 0:
-            stepModel[:,idx:idx+1] = stepEst
-    prog_bar.close()
+    print('-'*50)
+    return A_def
 
 
-    ##------------------------------------------------ Output  --------------------------------------------##
-    # 1. DEM error file
-    if 'Y_FIRST' in atr.keys():
-        deltaZFile = 'demGeo_error.h5'
+def read_geometry(inps):
+    ts_obj = timeseries(inps.timeseries_file)
+    ts_obj.open(print_msg=False)
+    # 2D / 3D geometry
+    if inps.geom_file:
+        geom_obj = geometry(inps.geom_file)
+        geom_obj.open()
+        print(('read 2D incidenceAngle,slantRangeDistance from {} file:'
+               ' {}').format(geom_obj.name, os.path.basename(geom_obj.file)))
+        inps.incAngle = geom_obj.read(datasetName='incidenceAngle', print_msg=False).flatten()
+        inps.rangeDist = geom_obj.read(datasetName='slantRangeDistance', print_msg=False).flatten()
+        if 'bperp' in geom_obj.datasetNames:
+            print('read 3D bperp from {} file: {} ...'.format(geom_obj.name, os.path.basename(geom_obj.file)))
+            inps.pbase = geom_obj.read(datasetName='bperp', print_msg=False).reshape((geom_obj.numDate, -1))
+            inps.pbase -= inps.pbase[ts_obj.refIndex]
+        else:
+            print('read mean bperp from {} file'.format(ts_obj.name))
+            inps.pbase = ts_obj.pbase.reshape((-1, 1))
+
+    # 0D geometry
     else:
-        deltaZFile = 'demRadar_error.h5'
-    print 'writing >>> '+deltaZFile
-    atrDeltaZ = atr.copy()
-    atrDeltaZ['FILE_TYPE'] = 'dem'
-    atrDeltaZ['UNIT'] = 'm'
-    writefile.write(topoRes.reshape(length, width), atrDeltaZ, deltaZFile)
+        print('read mean incidenceAngle,slantRangeDistance,bperp value from {} file'.format(ts_obj.name))
+        inps.incAngle = ut.incidence_angle(ts_obj.metadata, dimension=0)
+        inps.rangeDist = ut.range_distance(ts_obj.metadata, dimension=0)
+        inps.pbase = ts_obj.pbase.reshape((-1, 1))
 
-    # 2. Topo Residual Corrected Time Series
-    print 'writing >>> '+inps.outfile
-    h5 = h5py.File(inps.outfile,'w')
-    group = h5.create_group('timeseries')
-    for i in range(date_num):
-        sys.stdout.write('\rwriting acquisition %3d/%3d ...' % (i+1, date_num))
-        sys.stdout.flush()
-        dset = group.create_dataset(date_list[i], data=timeseriesCor[i].reshape(length, width), compression='gzip')
-    print ''
-    for key,value in atr.iteritems():
-        group.attrs[key] = value
-    h5.close()
+    inps.sinIncAngle = np.sin(inps.incAngle * np.pi / 180.)
+    return inps
 
-    # 3. Inversion residual Time Series
-    tsResFile = os.path.join(os.path.dirname(inps.outfile), 'timeseriesResidual.h5')
-    print 'writing >>> '+os.path.basename(tsResFile)
-    h5 = h5py.File(tsResFile,'w')
-    group = h5.create_group('timeseries')
-    for i in range(date_num):
-        sys.stdout.write('\rwriting acquisition %3d/%3d ...' % (i+1, date_num))
-        sys.stdout.flush()
-        dset = group.create_dataset(date_list[i], data=timeseriesRes[i].reshape(length, width), compression='gzip')
-    print ''
-    # Attribute
-    for key,value in atr.iteritems():
-        group.attrs[key] = value
-    h5.close()
 
-    # 4. Step temporal Model estimation
-    if inps.step_num > 0:
-        stepFile = os.path.join(os.path.dirname(inps.outfile), 'timeseriesStepModel.h5')
-        print 'writing >>> '+os.path.basename(stepFile)
-        h5 = h5py.File(stepFile,'w')
-        group = h5.create_group('timeseries')
-        for i in range(inps.step_num):
-            sys.stdout.write('\rwriting acquisition %3d/%3d ...' % (i+1, inps.step_num))
-            sys.stdout.flush()
-            dset = group.create_dataset(inps.step_date[i], data=stepModel[i].reshape(length, width), compression='gzip')
-        print ''
-        # Attribute
-        for key,value in atr.iteritems():
-            group.attrs[key] = value
-        group.attrs.pop('ref_date')
-        h5.close()
+def estimate_dem_error(ts0, A0, tbase, drop_date=None, min_phase_velocity=False, num_step=0):
+    """Estimate DEM error with least square optimization.
+    Parameters: ts0 : 2D np.array in size of (numDate, numPixel), original time series displacement
+                A0  : 2D np.array in size of (numDate, model_num), design matrix in [A_geom, A_def]
+                tbase : 2D np.array in size of (numDate, 1), temporal baseline
+                drop_date : 1D np.array in bool data type, mark the date used in the estimation
+                min_phase_velocity : bool, use phase history or phase velocity for minimization
+    Returns:    delta_z: 2D np.array in size of (1,       numPixel) estimated DEM residual
+                ts_cor : 2D np.array in size of (numDate, numPixel),
+                            corrected timeseries = tsOrig - delta_z_phase
+                ts_res : 2D np.array in size of (numDate, numPixel),
+                            residual timeseries = tsOrig - delta_z_phase - defModel
+    Example:    delta_z, ts_cor, ts_res = estimate_dem_error(ts, A, tbase, drop_date)
+    """
+    if len(ts0.shape) == 1:
+        ts0 = ts0.reshape(-1, 1)
+    if drop_date is None:
+        drop_date = np.ones(ts0.shape[0], np.bool_)
 
-    print 'Done.'
+    # Prepare Design matrix A and observations ts for inversion
+    A = A0[drop_date, :]
+    ts = ts0[drop_date, :]
+    if min_phase_velocity:
+        tbase = tbase[drop_date, :]
+        ts = np.diff(ts, axis=0) / np.diff(tbase, axis=0)
+        A = np.diff(A, axis=0) / np.diff(tbase, axis=0)
+
+    # Inverse using L-2 norm to get unknown parameters X
+    # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
+    # equivalent to X = np.linalg.inv(A.T.dot(A)).dot(A.T).dot(ts)
+    X = np.linalg.pinv(A).dot(ts)
+
+    # Prepare Outputs
+    delta_z = X[0, :]
+    ts_cor = ts0 - np.dot(A0[:, 0].reshape(-1, 1), delta_z.reshape(1, -1))
+    ts_res = ts0 - np.dot(A0, X)
+
+    step_def = None
+    if num_step > 0:
+        step_def = X[-1*num_step:, :].reshape(num_step, -1)
+
+    # for debug
+    debug_mode = False
+    if debug_mode:
+        import matplotlib.pyplot as plt
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, ncols=1, figsize=(8, 8))
+        ts_all = np.hstack((ts0, ts_res, ts_cor))
+        ymin = np.min(ts_all)
+        ymax = np.max(ts_all)
+        ax1.plot(ts0, '.');           ax1.set_ylim((ymin, ymax)); ax1.set_title('Original  Timeseries')
+        ax2.plot(ts_cor, '.');        ax2.set_ylim((ymin, ymax)); ax2.set_title('Corrected Timeseries')
+        ax3.plot(ts_res, '.');        ax3.set_ylim((ymin, ymax)); ax3.set_title('Fitting Residual')
+        ax4.plot(ts_cor-ts_res, '.'); ax4.set_ylim((ymin, ymax)); ax4.set_title('Fitted Deformation Model')
+        plt.show()
+
+    return delta_z, ts_cor, ts_res, step_def
+
+
+def correct_dem_error(inps, A_def):
+    """Correct DEM error of input timeseries file"""
+    # Read Date Info
+    ts_obj = timeseries(inps.timeseries_file)
+    ts_obj.open()
+    num_date = ts_obj.numDate
+    num_pixel = ts_obj.numPixel
+    tbase = np.array(ts_obj.tbase, np.float32) / 365.25
+
+    num_step = len(inps.step_date)
+    drop_date = read_exclude_date(inps.ex_date, ts_obj.dateList)
+    if inps.poly_order > np.sum(drop_date):
+        raise ValueError(("ERROR: input poly order {} > number of acquisition {}!"
+                          " Reduce it!").format(inps.poly_order, np.sum(drop_date)))
+
+    # Read time-series Data
+    print('reading time-series data ...')
+    ts_data = ts_obj.read().reshape((num_date, -1))
+
+    ##-------------------------------- Loop for L2-norm inversion  --------------------------------##
+    print('inverting DEM error ...')
+    if inps.rangeDist.size == 1:
+        A_geom = inps.pbase / (inps.rangeDist * inps.sinIncAngle)
+        A = np.hstack((A_geom, A_def))
+        (delta_z,
+         ts_cor,
+         ts_res,
+         step_model) = estimate_dem_error(ts_data,
+                                          A,
+                                          tbase=tbase,
+                                          drop_date=drop_date,
+                                          min_phase_velocity=inps.min_phase_velocity,
+                                          num_step=num_step)
+
+    else:
+        ts_cor = np.zeros((num_date, num_pixel), dtype=np.float32)
+        ts_res = np.zeros((num_date, num_pixel), dtype=np.float32)
+        delta_z = np.zeros(num_pixel, dtype=np.float32)
+        #constC = np.zeros(num_pixel, dtype=np.float32)
+        if num_step > 0:
+            step_model = np.zeros((num_step, num_pixel), dtype=np.float32)
+
+        # mask
+        print('skip pixels with zero/nan value in geometry: incidence angle or range distance')
+        mask = np.multiply(inps.sinIncAngle != 0., inps.rangeDist != 0.)
+        print('skip pixels with zero value in all acquisitions')
+        ts_mean = np.nanmean(ts_data, axis=0)
+        mask *= ts_mean != 0.
+        del ts_mean
+
+        num_pixel2inv = np.sum(mask)
+        idx_pixel2inv = np.where(mask)[0]
+        print(('number of pixels to invert: {} out of {}'
+               ' ({:.1f}%)').format(num_pixel2inv,
+                                    num_pixel,
+                                    num_pixel2inv/num_pixel*100))
+
+        # update data matrix to save memory and IO
+        ts_data = ts_data[:, mask]
+        inps.rangeDist = inps.rangeDist[mask]
+        inps.sinIncAngle = inps.sinIncAngle[mask]
+        if inps.pbase.shape[1] != 1:
+            inps.pbase = inps.pbase[:, mask]
+
+        # loop pixel by pixel
+        prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
+        for i in range(num_pixel2inv):
+            prog_bar.update(i+1, every=1000, suffix='{}/{}'.format(i+1, num_pixel2inv))
+            idx = idx_pixel2inv[i]
+
+            # design matrix
+            if inps.pbase.shape[1] == 1:
+                pbase = inps.pbase
+            else:
+                pbase = inps.pbase[:, i].reshape(-1, 1)
+            A_geom = pbase / (inps.rangeDist[i] * inps.sinIncAngle[i])
+            A = np.hstack((A_geom, A_def))
+
+            (delta_z_i,
+             ts_cor_i,
+             ts_res_i,
+             step_model_i) = estimate_dem_error(ts_data[:, i],
+                                                A,
+                                                tbase=tbase,
+                                                drop_date=drop_date,
+                                                min_phase_velocity=inps.min_phase_velocity,
+                                                num_step=num_step)
+            delta_z[idx:idx+1] = delta_z_i
+            ts_cor[:, idx:idx+1] = ts_cor_i
+            ts_res[:, idx:idx+1] = ts_res_i
+            if num_step > 0:
+                step_model[:, idx:idx+1] = step_model_i
+        prog_bar.close()
+    del ts_data
+
+    ##---------------------------------------- Output  -----------------------------------------##
+    # prepare for output
+    ts_cor = ts_cor.reshape((num_date, ts_obj.length, ts_obj.width))
+    ts_res = ts_res.reshape((num_date, ts_obj.length, ts_obj.width))
+    delta_z = delta_z.reshape((ts_obj.length, ts_obj.width))
+    if num_step > 0:
+        step_model = step_model.reshape((num_step, ts_obj.length, ts_obj.width))
+    atr = dict(ts_obj.metadata)
+
+    # 1. Estimated DEM error
+    outfile = 'demErr.h5'
+    atr['FILE_TYPE'] = 'dem'
+    atr['UNIT'] = 'm'
+    writefile.write(delta_z, out_file=outfile, metadata=atr)
+
+    # 2. Time-series corrected for DEM error
+    if not inps.outfile:
+        inps.outfile = '{}_demErr.h5'.format(os.path.splitext(inps.timeseries_file)[0])
+    ts_cor_obj = timeseries(inps.outfile)
+    ts_cor_obj.write2hdf5(data=ts_cor, refFile=ts_obj.file)
+
+    # 3. Time-series of inversion residual
+    ts_res_obj = timeseries(os.path.join(os.path.dirname(inps.outfile), 'timeseriesResidual.h5'))
+    ts_res_obj.write2hdf5(data=ts_res, refFile=ts_obj.file)
+
+    # 4. Time-series of estimated Step Model
+    if num_step > 0:
+        atr['FILE_TYPE'] = 'timeseries'
+        atr.pop('REF_DATE')
+        step_obj = timeseries(os.path.join(os.path.dirname(inps.outfile), 'timeseriesStepModel.h5'))
+        step_obj.write2hdf5(data=step_model, metadata=atr, dates=inps.step_date)
+
+    ## 5. Time-series of estimated Deformation Model = poly model + step model
+    #ts_def_obj = timeseries(os.path.join(os.path.dirname(inps.outfile), 'timeseriesDefModel.h5'))
+    #ts_def_obj.write2hdf5(data=ts_cor - ts_res, refFile=ts_obj.file)
+    #del ts_cor, ts_res
+
+    return inps
+
+
+############################################################################
+def main(iargs=None):
+    inps = cmd_line_parse(iargs)
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
+
+    start_time = time.time()
+    inps = read_geometry(inps)
+    A_def = design_matrix4deformation(inps)
+    inps = correct_dem_error(inps, A_def)
+
+    m, s = divmod(time.time()-start_time, 60)
+    print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return
+
 
 ################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])  
-
-
-
+    main()
