@@ -51,8 +51,8 @@ For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthde
 Download the latest released version at [https://github.com/yunjunz/PySAR/releases](https://github.com/yunjunz/PySAR/releases), or use the command below.    
    
     cd ~/python
-    wget https://github.com/yunjunz/PySAR/archive/v1.3.0.tar.gz
-    tar -zxvf v1.3.0.tar.gz
+    wget https://github.com/yunjunz/PySAR/archive/v0.4.0.tar.gz
+    tar -zxvf v0.4.0.tar.gz
    
 or download the development version using git:   
    
@@ -66,7 +66,7 @@ To use the package, you need to setup the environment. Depending on your shell, 
 For bash user, add to your .bashrc file:   
 
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
-    export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-1.3.0"
+    export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-0.4.0"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}  
     export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/bin:${PATH}   
 
@@ -75,7 +75,7 @@ For csh/tcsh user, add to your .cshrc file:
     if ( ! $?PYTHONPATH ) then
         setenv PYTHONPATH ""
     endif
-    setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-1.3.0"
+    setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-0.4.0"
     setenv PYTHONPATH  ${PYSAR_HOME}:${PYTHONPATH}
     setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/bin:${PATH}
    
