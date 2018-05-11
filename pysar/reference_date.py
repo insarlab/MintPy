@@ -140,7 +140,8 @@ def ref_date_file(inFile, refDate, outFile=None):
 
     # Referencing in time
     data = obj.read()
-    data -= data[obj.dateList.index(refDate), :, :]
+    data -= np.tile(data[obj.dateList.index(refDate), :, :].reshape(1, data.shape[1], data.shape[2]),
+                    (data.shape[0], 1, 1))
     atr['REF_DATE'] = refDate
 
     if not outFile:

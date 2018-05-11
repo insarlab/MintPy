@@ -802,7 +802,7 @@ def update_attribute_or_not(atr_new, atr_orig):
     update = False
     for key in atr_new.keys():
         value = str(atr_new[key])
-        if ((key in atr_orig.keys() and value == str(atr_orig[key]))
+        if ((key in atr_orig.keys() and value == str(atr_orig[key]) and value != 'None')
                 or (key not in atr_orig.keys() and value == 'None')):
             next
         else:
@@ -825,14 +825,15 @@ def add_attribute(File, atr_new=dict()):
     # Compare new attributes with exsiting ones
     update = update_attribute_or_not(atr_new, atr)
     if not update:
-        print('All updated (removed) attributes already exists (do not exists) and have the same value, skip update.')
+        print(('All updated (removed) attributes already exists (do not exists)'
+               ' and have the same value, skip update.'))
         return File
 
     # Update attributes
     f = h5py.File(File, 'r+')
     for key, value in iter(atr_new.items()):
         # delete the item is new value is None
-        if value == 'None':
+        if value == 'None' or value is None:
             try:
                 f.attrs.pop(key)
             except:
@@ -1484,8 +1485,8 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
     if 'Y_FIRST' in atr_lut.keys():
         # Get lat/lon resolution/step in meter
         earth_radius = 6371.0e3
-        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord', print_msg=print_msg)[0]
-        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord', print_msg=print_msg)[0]
+        lut_x = readfile.read(lookupFile[1], datasetName='rangeCoord', print_msg=False)[0]
+        lut_y = readfile.read(lookupFile[0], datasetName='azimuthCoord', print_msg=False)[0]
         lat0 = float(atr_lut['Y_FIRST'])
         lon0 = float(atr_lut['X_FIRST'])
         lat_center = lat0 + float(atr_lut['Y_STEP'])*float(atr_lut['LENGTH'])/2
@@ -1502,7 +1503,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
         if 'Y_FIRST' not in atr_rdr.keys():
             try:
                 az_step = azimuth_ground_resolution(atr_rdr)
-                rg_step = range_ground_resolution(atr_rdr, print_msg)
+                rg_step = range_ground_resolution(atr_rdr, print_msg=False)
                 x_factor = np.ceil(abs(lon_step)/rg_step).astype(int)
                 y_factor = np.ceil(abs(lat_step)/az_step).astype(int)
                 if 'SUBSET_YMIN' in atr_rdr.keys():
@@ -1531,7 +1532,7 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
         except:
             earth_radius = 6371.0e3
         az_step = azimuth_ground_resolution(atr_rdr)
-        rg_step = range_ground_resolution(atr_rdr)
+        rg_step = range_ground_resolution(atr_rdr, print_msg=False)
         lat0 = np.nanmax(lat)
         lat1 = np.nanmin(lat)
         az_step_deg = 180. / np.pi * az_step / earth_radius
@@ -1599,7 +1600,7 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
         if 'Y_FIRST' not in atr_rdr.keys():
             try:
                 az_step = azimuth_ground_resolution(atr_rdr)
-                rg_step = range_ground_resolution(atr_rdr, print_msg)
+                rg_step = range_ground_resolution(atr_rdr, print_msg=False)
                 x_factor = 2*np.ceil(abs(lon_step)/rg_step)
                 y_factor = 2*np.ceil(abs(lat_step)/az_step)
             except:
@@ -1634,7 +1635,7 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
         except:
             earth_radius = 6371.0e3
         az_step = azimuth_ground_resolution(atr_rdr)
-        rg_step = range_ground_resolution(atr_rdr)
+        rg_step = range_ground_resolution(atr_rdr, print_msg=False)
         lat0 = np.nanmax(lat)
         lat1 = np.nanmin(lat)
         az_step_deg = 180. / np.pi * az_step / earth_radius

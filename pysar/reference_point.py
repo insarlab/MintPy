@@ -347,10 +347,13 @@ def read_reference_input(inps):
     atr = readfile.read_attribute(inps.file)
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
+    inps.go_reference = True
 
     if inps.reset:
         remove_reference_pixel(inps.file)
-        return inps.file
+        inps.outfile = inps.file
+        inps.go_reference = False
+        return inps
 
     print('-'*50)
     # Check Input Coordinates
@@ -404,7 +407,7 @@ def read_reference_input(inps):
                 print('REF_Y: '+atr['REF_Y'])
                 print('REF_X: '+atr['REF_X'])
                 inps.outfile = inps.file
-                sys.exit(1)
+                inps.go_reference = False
 
             # method to select reference point
             elif inps.coherenceFile and os.path.isfile(inps.coherenceFile):
@@ -418,10 +421,10 @@ def read_reference_input(inps):
 
 def remove_reference_pixel(File):
     """Remove reference pixel info from input file"""
-    print("remove REF_Y/X and/or ref_lat/lon from file: "+File)
+    print("remove REF_Y/X and/or REF_LAT/LON from file: "+File)
     atrDrop = {}
     for i in ['REF_X', 'REF_Y', 'REF_LAT', 'REF_LON']:
-        atrDrop[i] = None
+        atrDrop[i] = 'None'
     File = ut.add_attribute(File, atrDrop)
     return File
 
@@ -431,7 +434,9 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     inps.file = ut.get_file_list(inps.file)[0]
     inps = read_reference_input(inps)
-    reference_file(inps)
+
+    if inps.go_reference:
+        reference_file(inps)
     print('Done.')
     return
 
