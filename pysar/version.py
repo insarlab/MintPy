@@ -1,4 +1,4 @@
-release_version = '0.3.0'
+release_version = '0.4.0'
 release_date = '2018-03-15'
 
 # generate_from: http://patorjk.com/software/taag/
