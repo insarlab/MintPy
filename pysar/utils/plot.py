@@ -887,6 +887,96 @@ def plot_colorbar(inps, im, cax):
     return inps, cax
 
 
+def set_shared_ylabel(axes_list, label, labelpad = 0.01, font_size=12, position='left'):
+    """Set a y label shared by multiple axes
+    Parameters: axes_list : list of axes in left/right most col direction
+                label : string
+                labelpad : float, Sets the padding between ticklabels and axis label
+                font_size : int
+                position : string, 'left' or 'right'
+    """
+
+    f = axes_list[0].get_figure()
+    f.canvas.draw() #sets f.canvas.renderer needed below
+
+    # get the center position for all plots
+    top = axes_list[0].get_position().y1
+    bottom = axes_list[-1].get_position().y0
+
+    # get the coordinates of the left side of the tick labels 
+    x0 = 1
+    x1 = 0
+    for ax in axes_list:
+        ax.set_ylabel('') # just to make sure we don't and up with multiple labels
+        bboxes = ax.yaxis.get_ticklabel_extents(f.canvas.renderer)[0]
+        bboxes = bboxes.inverse_transformed(f.transFigure)
+        x0t = bboxes.x0
+        if x0t < x0:
+            x0 = x0t
+        x1t = bboxes.x1
+        if x1t > x1:
+            x1 = x1t
+    tick_label_left = x0
+    tick_label_right = x1
+
+    # set position of label
+    axes_list[-1].set_ylabel(label, fontsize=font_size)
+    if position == 'left':
+        axes_list[-1].yaxis.set_label_coords(tick_label_left - labelpad,
+                                             (bottom + top)/2,
+                                             transform=f.transFigure)
+    else:
+        axes_list[-1].yaxis.set_label_coords(tick_label_right + labelpad,
+                                             (bottom + top)/2,
+                                             transform=f.transFigure)
+    return
+
+
+def set_shared_xlabel(axes_list, label, labelpad = 0.01, font_size=12, position='top'):
+    """Set a y label shared by multiple axes
+    Parameters: axes_list : list of axes in top/bottom row direction
+                label : string
+                labelpad : float, Sets the padding between ticklabels and axis label
+                font_size : int
+                position : string, 'top' or 'bottom'
+    """
+
+    f = axes_list[0].get_figure()
+    f.canvas.draw() #sets f.canvas.renderer needed below
+
+    # get the center position for all plots
+    left = axes_list[0].get_position().x0
+    right = axes_list[-1].get_position().x1
+
+    # get the coordinates of the left side of the tick labels 
+    y0 = 1
+    y1 = 0
+    for ax in axes_list:
+        ax.set_xlabel('') # just to make sure we don't and up with multiple labels
+        bboxes = ax.yaxis.get_ticklabel_extents(f.canvas.renderer)[0]
+        bboxes = bboxes.inverse_transformed(f.transFigure)
+        y0t = bboxes.y0
+        if y0t < y0:
+            y0 = y0t
+        y1t = bboxes.y1
+        if y1t > y1:
+            y1 = y1t
+    tick_label_bottom = y0
+    tick_label_top = y1
+
+    # set position of label
+    axes_list[-1].set_xlabel(label, fontsize=font_size)
+    if position == 'top':
+        axes_list[-1].xaxis.set_label_coords((left + right) / 2,
+                                             tick_label_top + labelpad,
+                                             transform=f.transFigure)
+    else:
+        axes_list[-1].xaxis.set_label_coords((left + right) / 2,
+                                             tick_label_bottom - labelpad,
+                                             transform=f.transFigure)
+    return
+
+
 def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False):
     """Get auto disp_unit for input dataset
     Example:
