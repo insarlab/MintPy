@@ -98,16 +98,31 @@ Create a custom template file:
    
 Include the following pysar options in your template:   
 
-    ##———————————————————————————————— Data Loading ——————————————————————————————##
-    # RADAR COORD ROIPAC PRODUCTS
-    pysar.unwrapFiles    = ~/KujuAlosAT422F650/ROIPAC/RADAR/filt_*.unw
-    pysar.corFiles       = ~/KujuAlosAT422F650/ROIPAC/RADAR/filt_*.cor
-    pysar.geomap         = ~/KujuAlosAT422F650/ROIPAC/RADAR/geomap*.trans
-    pysar.dem.radarCoord = ~/KujuAlosAT422F650/ROIPAC/RADAR/radar*.hgt
-    pysar.dem.geoCoord   = ~/KujuAlosAT422F650/ROIPAC/RADAR/*.dem
+    # vim: set filetype=cfg:
+    ########## 1. Load Data (--load to exit after this step)
+    ## auto - automatic path pattern for Univ of Miami file structure
+    ## load_data.py -H to check more details and example inputs.
+    pysar.load.processor      = roipac  #[isce,roipac,gamma,], auto for isce
+    ##---------interferogram datasets:
+    pysar.load.unwFile        = ./../ROIPAC/interferograms/*/filt_*.unw
+    pysar.load.corFile        = ./../ROIPAC/interferograms/*/filt_*.cor
+    pysar.load.connCompFile   = None
+    pysar.load.intFile        = None
+    ##---------geometry datasets:
+    pysar.load.demFile        = ./../ROIPAC/geom_master/radar*.hgt
+    pysar.load.lookupYFile    = ./../ROIPAC/geom_master/geomap*.trans
+    pysar.load.lookupXFile    = ./../ROIPAC/geom_master/geomap*.trans
+    pysar.load.incAngleFile   = None
+    pysar.load.headAngleFile  = None
+    pysar.load.shadowMaskFile = None
+    pysar.load.bperpFile      = None
     
-    pysar.reference.lalo      = 33.0655, 131.2076
-    pysar.deramp              = plane     
+    ##————————————————————————————— Processing Options ———————————————————————————##
+    pysar.reference.lalo               = 33.0655, 131.2076
+    pysar.networkInversion.weightFunc  = sbas
+    pysar.troposphericDelay.weatherDir = ~/insarlab/WEATHER
+    pysar.deramp                       = plane    
+
     
 Save your template file and run PySAR as:   
 
