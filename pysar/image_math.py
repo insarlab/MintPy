@@ -1,6 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2015, Zhang Yunjun                          #
 # Author:  Zhang Yunjun                                    #
 ############################################################
@@ -9,138 +9,104 @@
 import os
 import sys
 import argparse
-
 import h5py
 import numpy as np
-
-import pysar._datetime as ptime
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+from pysar.utils import readfile, writefile, ptime
 
 
 #######################################################################################
 def data_operation(data, operator, operand):
-    '''Mathmatic operation of 2D matrix'''
-    if   operator == '+':  data += operand
-    elif operator == '-':  data -= operand
-    elif operator == '*':  data *= operand
-    elif operator == '/':  data *= 1.0/operand
-    elif operator == '^':  data = data**operand
-    return data
+    """Mathmatic operation of 2D matrix"""
+    if operator == '+':
+        data_out = data + operand
+    elif operator == '-':
+        data_out = data - operand
+    elif operator == '*':
+        data_out = data * operand
+    elif operator == '/':
+        data_out = data * (1.0/operand)
+    elif operator == '^':
+        data_out = data**operand
+    data_out = np.array(data_out, data.dtype)
+    return data_out
 
 
-def file_operation(fname, operator, operand, fname_out=None):
-    '''Mathmathic operation of file'''
+def file_operation(fname, operator, operand, out_file=None):
+    """Mathmathic operation of file"""
 
     # Basic Info
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
-    print 'input is '+k+' file: '+fname
-    print 'operation: file %s %f' % (operator, operand)
+    print('input is '+k+' file: '+fname)
+    print('operation: file %s %f' % (operator, operand))
 
     # default output filename
-    if not fname_out:
-        if   operator in ['+','plus',  'add',      'addition']:        suffix = 'plus'
-        elif operator in ['-','minus', 'substract','substraction']:    suffix = 'minus'
-        elif operator in ['*','times', 'multiply', 'multiplication']:  suffix = 'multiply'
-        elif operator in ['/','obelus','divide',   'division']:        suffix = 'divide'
-        elif operator in ['^','pow','power']:                          suffix = 'pow'
-        ext = os.path.splitext(fname)[1]
-        fname_out = os.path.splitext(fname)[0]+'_'+suffix+str(operand)+ext
+    if not out_file:
+        if operator in ['+', 'plus',  'add',      'addition']:
+            suffix = 'plus'
+        elif operator in ['-', 'minus', 'substract', 'substraction']:
+            suffix = 'minus'
+        elif operator in ['*', 'times', 'multiply', 'multiplication']:
+            suffix = 'multiply'
+        elif operator in ['/', 'obelus', 'divide',   'division']:
+            suffix = 'divide'
+        elif operator in ['^', 'pow', 'power']:
+            suffix = 'pow'
+        out_file = '{}_{}{}{}'.format(os.path.splitext(fname)[0], suffix,
+                                      str(operand), os.path.splitext(fname)[1])
 
-    ##### Multiple Dataset HDF5 File
-    if k in multi_group_hdf5_file+multi_dataset_hdf5_file:
-        h5 = h5py.File(fname,'r')
-        epoch_list = sorted(h5[k].keys())
-        epoch_num = len(epoch_list)
-        prog_bar = ptime.progress_bar(maxValue=epoch_num)
-
-        h5out = h5py.File(fname_out,'w')
-        group = h5out.create_group(k)
-        print 'writing >>> '+fname_out
-
-        if k == 'timeseries':
-            print 'number of acquisitions: '+str(epoch_num)
-            for i in range(epoch_num):
-                date = epoch_list[i]
-                data = h5[k].get(date)[:]
-
-                data_out = data_operation(data, operator, operand)
-
-                dset = group.create_dataset(date, data=data_out, compression='gzip')
-                prog_bar.update(i+1, suffix=date)
-            for key,value in atr.iteritems():
-                group.attrs[key] = value
-
-        elif k in ['interferograms','wrapped','coherence']:
-            print 'number of interferograms: '+str(epoch_num)
-            date12_list = ptime.list_ifgram2date12(epoch_list)
-            for i in range(epoch_num):
-                ifgram = epoch_list[i]
-                data = h5[k][ifgram].get(ifgram)[:]
-
-                data_out = data_operation(data, operator, operand)
-
-                gg = group.create_group(ifgram)
-                dset = gg.create_dataset(ifgram, data=data_out, compression='gzip')
-                for key, value in h5[k][ifgram].attrs.iteritems():
-                    gg.attrs[key] = value
-                prog_bar.update(i+1, suffix=date12_list[i])
-
-        h5.close()
-        h5out.close()
-        prog_bar.close()
-
-    ##### Duo datasets non-HDF5 File
-    elif k in ['.trans']:
-        rg, az, atr = readfile.read(fname)
-        rg_out = data_operation(rg, operator, operand)
-        az_out = data_operation(az, operator, operand)
-        print 'writing >>> '+fname_out
-        writefile.write(rg_out, az_out, atr, fname_out)
-
-    ##### Single Dataset File
-    else:
-        data, atr = readfile.read(fname)
-        data_out = data_operation(data, operator, operand)
-        print 'writing >>> '+fname_out
-        writefile.write(data_out, atr, fname_out)
-
-    return fname_out
+    atr = readfile.read_attribute(fname)
+    dsNames = readfile.get_dataset_list(fname)
+    dsDict = {}
+    for dsName in dsNames:
+        data = readfile.read(fname, datasetName=dsName)[0]
+        data = data_operation(data, operator, operand)
+        dsDict[dsName] = data
+    writefile.write(dsDict, out_file=out_file, metadata=atr, ref_file=fname)
+    return out_file
 
 
 #######################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   image_math.py  velocity.h5            '+'  0.5
   image_math.py  geo_080212_101120.cor  '-'  0.2
   image_math.py  timeseries.h5          '*'  1.5
-'''
+  image_math.py  velocity.h5            '/'  2.0
+  image_math.py  velocity.h5            '^'  2.0
+"""
 
-def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Basic Mathmatic Operation of file',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='input file')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name.')
-    parser.add_argument('operator', choices=['+','-','*','/','^'], help='mathmatical operator')
-    parser.add_argument('operand', metavar='VALUE', type=float, help='value to be operated with input file')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name.')
+    parser.add_argument('operator', choices=[
+                        '+', '-', '*', '/', '^'], help='mathmatical operator')
+    parser.add_argument('operand', metavar='VALUE', type=float,
+                        help='value to be operated with input file')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 #######################################################################################
-def main(argv):
-    inps = cmdLineParse()
+def main(iargs=None):
+    inps = cmd_line_parse(iargs)
 
-    inps.outfile = file_operation(inps.file, inps.operator, inps.operand, inps.outfile)  
-    print 'Done.'
+    inps.outfile = file_operation(inps.file, inps.operator, inps.operand, inps.outfile)
+
+    print('Done.')
     return inps.outfile
 
 
 #######################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])  
-
+    main()

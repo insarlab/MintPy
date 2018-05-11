@@ -1,74 +1,128 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Program is part of PySAR                                 #
+# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jan 2016: support ROI_PAC files
-# Yunjun, Jun 2016: use readfile.read()
-#                   Add nonzero method, equivalent to Mask.h5
 
 
 import os
 import sys
 import argparse
-import getopt
-
-import numpy as np
 import h5py
-
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._pysar_utilities as ut
+import numpy as np
+from pysar.objects import ifgramDatasetNames
+from pysar.utils import readfile, writefile, utils as ut
 
 
 ################################################################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
   generate_mask.py  081018_090118.unw     -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
   generate_mask.py  srtm1.dem             -m 0.5 -o maskLand.h5
   generate_mask.py  unwrapIfgram.h5 101120-110220 -m 4
   generate_mask.py  unwrapIfgram.h5 --nonzero
-'''
 
-def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Generate mask file from input file',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+  generate_mask.py ifgramStack.h5 unwrapPhase --nonzero -o maskValidPhase.h5
+  generate_mask.py ifgramStack.h5 connectComponent --nonzero -o maskConnComp.h5
+"""
+
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Generate mask file from input file',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='input file')
-    parser.add_argument('epoch', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name.')
-    
-    parser.add_argument('-m','--min', dest='vmin', type=float, help='minimum value for selected pixels')
-    parser.add_argument('-M','--max', dest='vmax', type=float, help='maximum value for selected pixels')
-    parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN','XMAX'), \
-                              help='selection range in x/cross-track/range direction')
-    parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN','YMAX'), \
-                              help='selection range in y/along-track/azimuth direction')
+    parser.add_argument(
+        'dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name.')
 
-    parser.add_argument('--nonzero', dest='nonzero', action='store_true',\
-                        help='Select all non-zero pixels.\n'+\
+    parser.add_argument('-m', '--min', dest='vmin', type=float,
+                        help='minimum value for selected pixels')
+    parser.add_argument('-M', '--max', dest='vmax', type=float,
+                        help='maximum value for selected pixels')
+    parser.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar=('XMIN', 'XMAX'),
+                        help='selection range in x/cross-track/range direction')
+    parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
+                        help='selection range in y/along-track/azimuth direction')
+
+    parser.add_argument('--nonzero', dest='nonzero', action='store_true',
+                        help='Select all non-zero pixels.\n' +
                              'i.e. mask.h5 from unwrapIfgram.h5')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
-################################################################################################
-def main(argv):
-    inps = cmdLineParse()
-
-    # Input File Info
-    atr = readfile.read_attribute(inps.file)
-    length = int(atr['FILE_LENGTH'])
+def create_threshold_mask(inps):
+    if inps.dset:
+        print('read %s %s' % (inps.file, inps.dset))
+    else:
+        print('read %s' % (inps.file))
+    data, atr = readfile.read(inps.file, datasetName=inps.dset)
+    if len(data.shape) > 2:
+        print('ERROR: Only 2D dataset is supported for threshold method, input is 3D')
+        sys.exit(1)
+    length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
+
+    print('create initial mask with the same size as the input file and all = 1')
+    mask = np.ones((length, width), dtype=np.float32)
+
+    if inps.nonzero:
+        print('all pixels with zero value = 0')
+        mask[data == 0] = 0
+
+    # min threshold
+    if inps.vmin is not None:
+        mask[data < inps.vmin] = 0
+        print('all pixels with value < %s = 0' % str(inps.vmin))
+
+    # max threshold
+    if inps.vmax is not None:
+        mask[data > inps.vmax] = 0
+        print('all pixels with value > %s = 0' % str(inps.vmax))
+
+    # nan value
+    mask[np.isnan(data)] = 0
+    print('all pixels with nan value = 0')
+
+    # subset in Y
+    if inps.subset_y is not None:
+        y0, y1 = sorted(inps.subset_y)
+        mask[0:y0, :] = 0
+        mask[y1:length, :] = 0
+        print('all pixels with y OUT of [%d, %d] = 0' % (y0, y1))
+
+    # subset in x
+    if inps.subset_x is not None:
+        x0, x1 = sorted(inps.subset_x)
+        mask[:, 0:x0] = 0
+        mask[:, x1:width] = 0
+        print('all pixels with x OUT of [%d, %d] = 0' % (x0, x1))
+
+    # Write mask file
+    atr['FILE_TYPE'] = 'mask'
+    writefile.write(mask, out_file=inps.outfile, metadata=atr)
+    return inps.outfile
+
+
+################################################################################################
+def main(iargs=None):
+    inps = cmd_line_parse(iargs)
+    atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
-    print 'Input file is '+k+': '+inps.file
+    print('input {} file: {}'.format(k, inps.file))
 
     # default output filename
     if not inps.outfile:
-        if k == 'temporal_coherence':
+        if inps.file.endswith('temporalCoherence.h5'):
             inps.outfile = 'maskTempCoh.h5'
         else:
             inps.outfile = 'mask.h5'
@@ -76,60 +130,15 @@ def main(argv):
             inps.outfile = 'geo_'+inps.outfile
 
     ##### Mask: Non-zero
-    if inps.nonzero and k == 'interferograms':
-        print 'generate mask for all pixels with non-zero value'
-        inps.outfile = ut.nonzero_mask(inps.file, inps.outfile)
+    if inps.nonzero and k == 'ifgramStack':
+        inps.outfile = ut.nonzero_mask(inps.file, out_file=inps.outfile, datasetName=inps.dset)
         return inps.outfile
 
-    ##### Mask: Threshold 
-    print 'create initial mask with the same size as the input file and all = 1'
-    mask = np.ones((length, width), dtype=np.float32)
-    if inps.epoch:
-        print 'read %s %s' % (inps.file, inps.epoch)
-    else:
-        print 'read %s' % (inps.file)
-    data, atr = readfile.read(inps.file, epoch=inps.epoch)
-
-    if inps.nonzero:
-        print 'all pixels with zero value = 0'
-        mask[data == 0] = 0
-
-    # min threshold
-    if inps.vmin:
-        mask[data<inps.vmin] = 0
-        print 'all pixels with value < %s = 0' % str(inps.vmin)
-
-    # max threshold
-    if inps.vmax:
-        mask[data>inps.vmax] = 0
-        print 'all pixels with value > %s = 0' % str(inps.vmax)
-
-    # nan value
-    mask[np.isnan(data)] = 0
-    print 'all pixels with nan value = 0'
-
-    # subset in Y
-    if inps.subset_y:
-        y0,y1 = sorted(inps.subset_y)
-        mask[0:y0,:] = 0
-        mask[y1:length,:] = 0
-        print 'all pixels with y OUT of [%d, %d] = 0' % (y0,y1)
-
-    # subset in x
-    if inps.subset_x:
-        x0,x1 = sorted(inps.subset_x)
-        mask[:,0:x0] = 0
-        mask[:,x1:width] = 0
-        print 'all pixels with x OUT of [%d, %d] = 0' % (x0,x1)
-  
-    ## Write mask file
-    print 'writing >>> '+inps.outfile
-    atr['FILE_TYPE'] = 'mask'
-    writefile.write(mask, atr, inps.outfile)
+    ##### Mask: Threshold
+    inps.outfile = create_threshold_mask(inps)
     return inps.outfile
 
 
 ################################################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
-
+    main()

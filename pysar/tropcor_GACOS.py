@@ -52,7 +52,7 @@ def get_delay(delay_file,atr,lookup_file,cinc):
     RGI_func=RGI(pts_old,data,method='linear',bounds_error=False)
     latd=np.zeros((4,1));lond=np.zeros((4,1));
     rx=np.int(atr['ref_x']);ry=np.int(atr['ref_y'])
-    if 'X_FIRST' in atr.keys():
+    if 'X_FIRST' in list(atr.keys()):
         nxd=np.int(atr['WIDTH']);nyd=np.int(atr['FILE_LENGTH'])
         latd[0]=np.float(atr['Y_FIRST']);latd[2]=np.float(atr['Y_FIRST'])+(nyd-1)*np.float(atr['Y_STEP']);
         lond[0]=np.float(atr['X_FIRST']);lond[1]=np.float(atr['X_FIRST'])+(nxd-1)*np.float(atr['X_STEP']);
@@ -69,7 +69,7 @@ def get_delay(delay_file,atr,lookup_file,cinc):
         
     else:
         if atr['processor']=='isce':
-            print 'interferogram processor is isce'
+            print('interferogram processor is isce')
             len_rdr = int(atr['FILE_LENGTH']);wid_rdr = int(atr['WIDTH']);
             lons=np.tile(lons,ny);lats=np.repeat(lats,nx);
             pts_old=np.hstack((lats.reshape(-1,1), lons.reshape(-1,1)));
@@ -84,7 +84,7 @@ def get_delay(delay_file,atr,lookup_file,cinc):
             delay=delay_rdr; del delay_rdr, pts_new
             
         else:
-            print 'interferogram processor is roi_pac'
+            print('interferogram processor is roi_pac')
             [latd,lond,nxd,nyd] = read_params(lookup_file); 
             xarr,step = np.linspace(lond[0],lond[1],num=nxd,endpoint=True,retstep=True);
             yarr,step = np.linspace(latd[2],latd[0],num=nyd,endpoint=True,retstep=True);
@@ -156,8 +156,8 @@ def main(argv):
         inps.timeseries_file=ut.get_file_list([inps.timeseries_file])[0]
         atr=readfile.read_attribute(inps.timeseries_file)
         k = atr['FILE_TYPE']
-        if 'ref_y' not in atr.keys() and inps.ref_yx:
-            print 'No reference info found in input file, use input ref_yx: '+str(inps.ref_yx)
+        if 'ref_y' not in list(atr.keys()) and inps.ref_yx:
+            print('No reference info found in input file, use input ref_yx: '+str(inps.ref_yx))
             atr['ref_y'] = inps.ref_yx[0]
             atr['ref_x'] = inps.ref_yx[1]
 
@@ -167,7 +167,7 @@ def main(argv):
         inps.inc_angle=np.nan_to_num(inps.inc_angle)
     else:
         inps.inps.inc_angle = float(inps.inc_angle)
-        print 'incidence angle: '+str(inps.inc_angle)
+        print('incidence angle: '+str(inps.inc_angle))
     cinc=np.cos(inps.inc_angle*np.pi/180.0);
 
     #****look up file****/
@@ -185,15 +185,15 @@ def main(argv):
         else:
             inps.GACOS_dir = os.path.abspath(os.getcwd())
     
-    print 'Store weather data into directory: '+inps.GACOS_dir
+    print('Store weather data into directory: '+inps.GACOS_dir)
         
     #source_dir=os.path.dirname(os.path.abspath('timeseries_file'))+'/Agung/GACOS/data';print source_dir
     #os.makedirs(GACOS_dir)  -----------------------------------------------add part to copy/download weather data------#
     #----get date list-----#
     if not inps.date_list_file:
-        print 'read date list info from: '+inps.timeseries_file
+        print('read date list info from: '+inps.timeseries_file)
         h5=h5py.File(inps.timeseries_file,'r')
-        if 'timeseries' in h5.keys():
+        if 'timeseries' in list(h5.keys()):
             date_list=sorted(h5[k].keys())
         elif k in ['interferograms','coherence','wrapped']:
             ifgram_list = sorted(h5[k].keys())
@@ -206,10 +206,10 @@ def main(argv):
         h5.close()
     else:
         date_list = ptime.yyyymmdd(np.loadtxt(inps.date_list_file, dtype=str, usecols=(0,)).tolist())
-        print 'read date list info from: '+inps.date_list_file
+        print('read date list info from: '+inps.date_list_file)
 
     #****cheacking availability of delays****/
-    print 'checking availability of delays'
+    print('checking availability of delays')
     delay_file_list=[]
     for d in date_list:
         if   delay_source == 'GACOS':  delay_file = inps.GACOS_dir+'/'+d+'.ztd';
@@ -217,13 +217,13 @@ def main(argv):
     delay_file_existed = ut.get_file_list(delay_file_list)
 
     if len(delay_file_existed)==len(date_list):
-        print 'no missing files'
+        print('no missing files')
     else:
-        print 'no. of date files found:', len(delay_file_existed);
-        print 'no. of dates:', len(date_list)
+        print('no. of date files found:', len(delay_file_existed));
+        print('no. of dates:', len(date_list))
 
     #*****Calculating delays***/
-    print 'calculating delays'
+    print('calculating delays')
 
     length=int(atr['FILE_LENGTH'])
     width=int(atr['WIDTH'])
@@ -235,24 +235,24 @@ def main(argv):
     for i in range(date_num):
         delay_file=delay_file_existed[i]
         date=date_list[i]
-        print 'calculating delay for date',date
+        print('calculating delay for date',date)
         trop_ts[i] =get_delay(delay_file,atr,inps.lookup_file,cinc)  
 
 
-    print 'Delays Calculated'
+    print('Delays Calculated')
     # Convert relative phase delay on reference date
     try:    ref_date = atr['ref_date']
     except: ref_date = date_list[0]
-    print 'convert to relative phase delay with reference date: '+ref_date
+    print('convert to relative phase delay with reference date: '+ref_date)
     ref_idx = date_list.index(ref_date)
     trop_ts -= np.tile(trop_ts[ref_idx,:,:], (date_num, 1, 1))
 
     ## Write tropospheric delay to HDF5
     tropFile = 'GACOSdelays'+'.h5'
-    print 'writing >>> %s' % (tropFile)
+    print('writing >>> %s' % (tropFile))
     h5trop = h5py.File(tropFile, 'w')
     group_trop = h5trop.create_group('timeseries')
-    print 'number of acquisitions: '+str(date_num)
+    print('number of acquisitions: '+str(date_num))
     prog_bar = ptime.progress_bar(maxValue=date_num)
     for i in range(date_num):
         date = date_list[i]
@@ -261,7 +261,7 @@ def main(argv):
     prog_bar.close()
 
     # Write Attributes
-    for key,value in atr.iteritems():
+    for key,value in atr.items():
         group_trop.attrs[key] = value
     h5trop.close()
 
@@ -269,26 +269,26 @@ def main(argv):
     if k == 'timeseries':
         if not inps.out_file:
             inps.out_file = os.path.splitext(inps.timeseries_file)[0]+'_'+'GACOS'+'.h5'
-        print 'writing trop corrected timeseries file %s' % (inps.out_file)
+        print('writing trop corrected timeseries file %s' % (inps.out_file))
         h5ts = h5py.File(inps.timeseries_file, 'r')
         h5tsCor = h5py.File(inps.out_file, 'w')
         group_tsCor = h5tsCor.create_group('timeseries')
-        print 'number of acquisitions: '+str(date_num)
+        print('number of acquisitions: '+str(date_num))
         prog_bar = ptime.progress_bar(maxValue=date_num)
         for i in range(date_num):
-            date = date_list[i];print date
+            date = date_list[i];print(date)
             ts = h5ts['timeseries'].get(date)[:]
             group_tsCor.create_dataset(date, data=ts-trop_ts[i], compression='gzip')
             prog_bar.update(i+1, suffix=date)
         prog_bar.close()
         h5ts.close()
         # Write Attributes
-        for key,value in atr.iteritems():
+        for key,value in atr.items():
             group_tsCor.attrs[key] = value
         h5tsCor.close()
-        print 'delays written to %s' % (inps.out_file)
+        print('delays written to %s' % (inps.out_file))
 
-    print 'finished'
+    print('finished')
     return inps.out_file
     
 ###############################################################

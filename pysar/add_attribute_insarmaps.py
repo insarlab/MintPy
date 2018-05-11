@@ -1,15 +1,14 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 
 import psycopg2
 import sys
-import getopt
 import os
 import argparse
-import pysar._readfile as readfile
+import pysar.utils.readfile as readfile
 import json
 import pycurl
-from cStringIO import StringIO
-import urllib
+from io import StringIO
+import urllib.request, urllib.parse, urllib.error
 
 # TODO: fix these classes. apparantly, need to call commit() method after execute even if you fetch something
 
@@ -26,9 +25,9 @@ class InsarDatabaseController(object):
         try:
             self.con = psycopg2.connect("dbname='pgis' user='" + self.username + "' host='" + self.host + "' password='" + self.password + "'")
             self.cursor = self.con.cursor()
-        except Exception, e:
-            print "Error While Connecting"
-            print e
+        except Exception as e:
+            print("Error While Connecting")
+            print(e)
             sys.exit()
 
     def close(self):
@@ -134,8 +133,8 @@ class InsarDatabaseController(object):
             self.cursor.execute(sql)
             self.con.commit()
         # index exists most probably if exception thrown
-        except Exception, e:
-            print str(e)
+        except Exception as e:
+            print(str(e))
 
     def cluster_table_using(self, table, index_name):
         sql = None
@@ -145,8 +144,8 @@ class InsarDatabaseController(object):
             self.cursor.execute(sql)
             self.con.commit()
         # index exists most probably if exception thrown
-        except Exception, e:
-            print str(e)
+        except Exception as e:
+            print(str(e))
 
     def remove_point_table_if_there(self, table_name):
         sql = 'DROP TABLE IF EXISTS "' + table_name + '"'
@@ -189,7 +188,7 @@ class InsarDatabaseController(object):
             sql = "DELETE from plot_attributes WHERE area_id = " + dataset_id_str
             self.cursor.execute(sql)
             self.con.commit()
-        except Exception, e:
+        except Exception as e:
             pass
 
 class InsarDatasetController(InsarDatabaseController):
@@ -211,7 +210,7 @@ class InsarDatasetController(InsarDatabaseController):
     def curl_login(self, username, password):
         curl = self.setup_curl()
         curl.setopt(curl.POST, 1)
-        loginParams =  urllib.urlencode([("email", username), ("password", password)])
+        loginParams =  urllib.parse.urlencode([("email", username), ("password", password)])
         curl.setopt(curl.POSTFIELDS, loginParams)
         loginURL = self.host + "/auth/login"
         curl.setopt(curl.URL, loginURL)
@@ -230,7 +229,7 @@ class InsarDatasetController(InsarDatabaseController):
 
         responseCode = curl.getinfo(pycurl.HTTP_CODE)
         if responseCode == 200:
-            print "Successfully uploaded " + fileName
+            print("Successfully uploaded " + fileName)
         elif responseCode == 302:
             sys.stderr.write("Server redirected us... Please check username and password, and try again")
         elif responseCode == 301:
@@ -289,7 +288,7 @@ def main(argv):
     dbController.connect()
 
     for key in attributes:
-        print "Setting attribute " + key + " to " + attributes[key]
+        print("Setting attribute " + key + " to " + attributes[key])
         if key == "plotAttributes":
             dbController.add_plot_attribute(unavco_name, key, attributes[key])
         else:

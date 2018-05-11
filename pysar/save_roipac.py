@@ -1,172 +1,144 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
 
-import sys
 import os
 import argparse
-
-from numpy import pi
-import h5py
-
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import pysar._datetime as ptime
-from pysar._readfile import multi_group_hdf5_file, multi_dataset_hdf5_file, single_dataset_hdf5_file
+import numpy as np
+from pysar.objects import timeseries
+from pysar.utils import readfile, writefile, ptime
 
 
 ##############################################################################
-def usage():
-    print '''usage: save_roipac.py  file  [date_info]
-
-Convert PySAR hdf5 file to ROI_PAC format 
-
-argument:
-  file : file to be converted.
-         for velocity  : the ouput will be a one year interferogram.
-         for timeseries: if date is not specified, the last date will be used
-                         if two dates are specified, the earlier date will be
-                             used as the reference date.
-
-example:
-    '''
-    return
-
-############################################################
-EXAMPLE='''example:
+EXAMPLE = """example:
   save_roipac.py  velocity.h5
   save_roipac.py  timeseries.h5    20050601
-  save_roipac.py  timeseries.h5    050601    --ref-date 040728
-  save_roipac.py  unwrapIfgram.h5  filt_091225-100723-sim_HDR_8rlks_c10.unw
-  save_roipac.py  unwrapIfgram.h5  091225-100723
+  save_roipac.py  timeseries.h5    20050601    --ref-date 20040728
+  save_roipac.py  INPUTS/ifgramStack.h5  unwrapPhase-20091225_20100723
+  save_roipac.py  INPUTS/ifgramStack.h5    coherence-20091225_20100723
   save_roipac.py  temporal_coherence.h5
-'''
+"""
 
-def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Convert PySAR HDF5 file to ROI_PAC format.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Convert PySAR HDF5 file to ROI_PAC format.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('file', help='HDF5 file to be converted.\n'+\
-                        'for velocity  : the ouput will be a one year interferogram.\n'+\
+    parser.add_argument('file', help='HDF5 file to be converted.\n' +
+                        'for velocity  : the ouput will be a one year interferogram.\n' +
                         'for timeseries: if date is not specified, the last date will be used.')
-    parser.add_argument('epoch', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
-    parser.add_argument('-o','--output', dest='outfile', help='output file name.')
-    parser.add_argument('-r','--ref-date', dest='ref_date', help='Reference date for timeseries file')
+    parser.add_argument('dset', nargs='?',
+                        help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name.')
+    parser.add_argument('-r', '--ref-date', dest='ref_date',
+                        help='Reference date for timeseries file')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    if inps.ref_date:
+        inps.ref_date = ptime.yyyymmdd(inps.ref_date)
     return inps
 
 
-##############################################################################
-def main(argv):
-    inps = cmdLineParse()
-  
+def read_data(inps):
     atr = readfile.read_attribute(inps.file)
     k = atr['FILE_TYPE']
-    atr['PROCESSOR'] = 'roipac'
-    atr['INSAR_PROCESSOR'] = 'roipac'
+    if not inps.dset:
+        if k == 'timeseries':
+            print('No input date specified >>> continue with the last date')
+            inps.dset = timeseries(inps.file).get_date_list()[-1]
+        elif k == 'ifgramStack':
+            raise Exception("No input dataset! It's required for {} file".format(k))
 
-    h5file = h5py.File(inps.file,'r')
-  
+    print('read {} from file {}'.format(inps.dset, inps.file))
+    data = readfile.read(inps.file, datasetName=inps.dset, print_msg=False)[0]
+    range2phase = -4 * np.pi / float(atr['WAVELENGTH'])
     if k == 'velocity':
-        dset = h5file['velocity'].get('velocity')
-        data = dset[0:dset.shape[0],0:dset.shape[1]]
-        print "converting velocity to a 1 year interferogram."
-        wvl=float(h5file[k].attrs['WAVELENGTH'])
-        data=(-4*pi/wvl)*data
-
-        inps.outfile=inps.file.split('.')[0]+'.unw'
-        print 'writing >>> '+inps.outfile
-        writefile.write(data,atr,inps.outfile)
-
-    elif k in multi_dataset_hdf5_file:
-        dateList = sorted(h5file[k].keys())
-        try:
-            inps.epoch = [date for date in dateList if inps.epoch in date][0]
-        except:
-            print 'No input date specified >>> continue with the last date'
-            inps.epoch = dateList[-1]
-        if k in ['timeseries']:
-            inps.epoch = ptime.yyyymmdd(inps.epoch)
-
-        ## Data
-        print 'reading %s and %s ...' % (inps.ref_date, inps.epoch)
-        data = h5file[k].get(inps.epoch)[:]
-        if inps.ref_date:
-            inps.ref_date = ptime.yyyymmdd(inps.ref_date)
-            data -= h5file[k].get(inps.ref_date)[:]
-
-        ## Attributes
-        if k in ['timeseries']:
-            wvl = float(atr['WAVELENGTH'])
-            data *= -4*pi/wvl
-            atr['FILE_TYPE']             = '.unw'
-            atr['P_BASELINE_TIMESERIES'] = '0.0'
-            atr['UNIT']                  = 'radian'
-        if inps.ref_date:
-            atr['DATE']              = inps.ref_date[2:8]
-            atr['DATE12']            = '%s-%s' % (inps.ref_date[2:8],inps.epoch[2:8])
-
-        ## Writing
+        print("converting velocity to a 1 year interferogram.")
+        data *= range2phase
+        atr['FILE_TYPE'] = '.unw'
+        atr['UNIT'] = 'radian'
         if not inps.outfile:
-            if k in ['timeseries']:
-                inps.outfile = '%s_%s.unw' % (inps.ref_date[2:8],inps.epoch[2:8])
+            inps.outfile = '{}{}'.format(os.path.splitext(inps.file)[0], atr['FILE_TYPE'])
+
+    elif k == 'timeseries':
+        if inps.ref_date:
+            print('read {} from file {}'.format(inps.ref_date, inps.file))
+            data -= readfile.read(inps.file, datasetName=inps.ref_date)[0]
+            atr['DATE'] = inps.ref_date[2:8]
+            atr['DATE12'] = '{}-{}'.format(inps.ref_date[2:8], inps.dset[2:8])
+        else:
+            atr['DATE'] = atr['REF_DATE']
+            atr['DATE12'] = '{}-{}'.format(atr['REF_DATE'][2:8], inps.dset[2:8])
+
+        data *= range2phase
+        atr['FILE_TYPE'] = '.unw'
+        atr['UNIT'] = 'radian'
+        if not inps.outfile:
+            inps.outfile = '{}{}'.format(atr['DATE12'], atr['FILE_TYPE'])
+
+    elif k == 'ifgramStack':
+        dsetFamily, atr['DATE12'] = inps.dset.split('-')
+        if dsetFamily == 'unwrapPhase':
+            if 'REF_X' in atr.keys():
+                data -= data[int(atr['REF_Y']), int(atr['REF_X'])]
+                print('consider the reference pixel in y/x: ({}, {})'.format(ref_y, ref_x))
             else:
-                inps.outfile = '%s.cor' % (inps.epoch)
-        print 'writing >>> '+inps.outfile
-        writefile.write(data,atr,inps.outfile)
+                print('No ref_y/x info found in attributes.')
+            atr['FILE_TYPE'] = '.unw'
+            atr['UNIT'] = 'radian'
+        elif dsetFamily == 'coherence':
+            atr['FILE_TYPE'] = '.cor'
+            atr['UNIT'] = '1'
+        elif dsetFamily == 'wrapPhase':
+            atr['FILE_TYPE'] = '.int'
+            atr['UNIT'] = 'radian'
+        else:
+            raise Exception('unrecognized dataset type: {}'.format(inps.dset))
 
-    elif k in ['interferograms','coherence','wrapped']:
-        ## Check input
-        igramList = sorted(h5file[k].keys())
-        try:
-            inps.epoch = [igram for igram in igramList if inps.epoch in igram][0]
-        except:
-            print 'No input interferogram specified >>> continue with the last one'
-            inps.epoch = igramList[-1]
-
-        ## Read and Write
-        print 'reading '+inps.epoch+' ... '
-        atr = dict(h5file[k][inps.epoch].attrs)
-        data = h5file[k][inps.epoch].get(inps.epoch)[:]
-        if k == 'interferograms':
-            try:
-                ref_y = int(atr['ref_y'])
-                ref_x = int(atr['ref_x'])
-                data -= data[ref_y,ref_x]
-                print 'consider the reference pixel in y/x: %d/%d' % (ref_y, ref_x)
-            except:
-                print 'No ref_y/x info found in attributes.'
-        atr['PROCESSOR'] = 'roipac'
-        atr['INSAR_PROCESSOR'] = 'roipac'
-
-        inps.outfile = inps.epoch
-        print 'writing >>> '+ inps.outfile
-        writefile.write(data, atr, inps.outfile)  
+        if not inps.outfile:
+            inps.outfile = '{}{}'.format(atr['DATE12'], atr['FILE_TYPE'])
 
     else:
-        data = h5file[k].get(k)[:]
-        if not inps.outfile:
-            if k in ['temporal_coherence']:
-                inps.outfile=inps.file.split('.')[0]+'.cor'
-            elif k in ['dem','.hgt','.dem']:
+        if 'coherence' in k.lower():
+            atr['FILE_TYPE'] = '.cor'
+        elif k in ['mask']:
+            atr['FILE_TYPE'] = '.msk'
+        elif k in ['geometry'] and inps.dset == 'height':
+            if 'Y_FIRST' in atr.keys():
                 atr['FILE_TYPE'] = '.dem'
-                inps.outfile=os.path.splitext(inps.file)[0]+'.dem'
             else:
-                inps.outfile=inps.file.split('.')[0]+'.unw'
-        print 'writing >>> '+ inps.outfile
-        writefile.write(data,atr,inps.outfile)
+                atr['FILE_TYPE'] = '.hgt'
+        else:
+            atr['FILE_TYPE'] = '.unw'
+
+        if not inps.outfile:
+            inps.outfile = '{}{}'.format(os.path.splitext(inps.file)[0], atr['FILE_TYPE'])
+
+    atr['PROCESSOR'] = 'roipac'
+    return data, atr, inps.outfile
 
 
-    h5file.close()
-    return
+##############################################################################
+def main(iargs=None):
+    inps = cmd_line_parse(iargs)
+
+    data, atr, out_file = read_data(inps)
+
+    print('writing >>> {}'.format(out_file))
+    writefile.write(data, out_file=out_file, metadata=atr)
+    return inps.outfile
 
 
 ##########################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
