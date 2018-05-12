@@ -9,6 +9,10 @@ import json
 import pycurl
 from io import StringIO
 import urllib.request, urllib.parse, urllib.error
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 # TODO: fix these classes. apparantly, need to call commit() method after execute even if you fetch something
 
@@ -204,6 +208,13 @@ class InsarDatasetController(InsarDatabaseController):
         curl.setopt(curl.WRITEFUNCTION, self.bodyOutput.write)
         curl.setopt(curl.HEADERFUNCTION, self.headersOutput.write)
         curl.setopt(pycurl.COOKIEFILE, "")
+        curl.setopt(pycurl.SSL_VERIFYPEER, 0)   
+        curl.setopt(pycurl.SSL_VERIFYHOST, 0)
+
+        # hackish way of finding if the host url gets redirected to https version of site
+        # TODO: find more elegant solution when time permits, and use requests instead of curl
+        # for all of these HTTP requests...
+        self.host = requests.get("https://" + self.host, verify=False).url
 
         return curl
 
