@@ -61,14 +61,14 @@ or download the development version using git:
    
 To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file. They are for:   
 1. To make pysar importable in python, by adding the path to PySAR directory to your $PYTHONPATH    
-2. To make utility scripts available in command line, by adding ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/shellscripts to your $path.   
+2. To make utility scripts available in command line, by adding ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/sh to your $path.   
    
 For bash user, add to your .bashrc file:   
 
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
     export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-0.4.0"
     export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}  
-    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/bin:${PATH}   
+    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh:${PATH}   
 
 For csh/tcsh user, add to your .cshrc file:   
 
@@ -77,7 +77,7 @@ For csh/tcsh user, add to your .cshrc file:
     endif
     setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-0.4.0"
     setenv PYTHONPATH  ${PYSAR_HOME}:${PYTHONPATH}
-    setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/bin:${PATH}
+    setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh:${PATH}
    
    
 ### 2. Running PySAR
