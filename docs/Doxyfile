@@ -7,7 +7,7 @@
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = PySAR
-PROJECT_NUMBER         = 1.3
+PROJECT_NUMBER         = 0.4.0
 PROJECT_BRIEF          = "A Python package for InSAR time series analysis"
 PROJECT_LOGO           = ./resources/logo.pdf
 OUTPUT_DIRECTORY       = ../../PySAR_docs
