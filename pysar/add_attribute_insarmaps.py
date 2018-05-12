@@ -7,7 +7,7 @@ import argparse
 import pysar.utils.readfile as readfile
 import json
 import pycurl
-from io import StringIO
+from io import BytesIO
 import urllib.request, urllib.parse, urllib.error
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -198,8 +198,8 @@ class InsarDatabaseController(object):
 class InsarDatasetController(InsarDatabaseController):
     def __init__(self, username, password, host, db, serverUsername, serverPassword):
         super(InsarDatasetController, self).__init__(username, password, host, db)
-        self.bodyOutput = StringIO()
-        self.headersOutput = StringIO()
+        self.bodyOutput = BytesIO()
+        self.headersOutput = BytesIO()
         self.serverUsername = serverUsername
         self.serverPassword = serverPassword
 
