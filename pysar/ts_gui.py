@@ -450,19 +450,6 @@ def set_variables_from_attributes():
     pix_input_xy_x.set("300")
     pix_input_xy_y.set("300")
 
-    #lon, lat = compute_lalo("300", "300")
-
-    #pix_input_lalo_la.set(lat)
-    #pix_input_lalo_lo.set(lon)
-
-    ref_pix_input_xy_x.set(attributes['REF_X'])
-    ref_pix_input_xy_y.set(attributes['REF_Y'])
-
-    #ref_lon, ref_lat = compute_lalo(ref_pix_input_xy_x.get(), ref_pix_input_xy_y.get())
-
-    #ref_pix_input_lalo_la.set(ref_lat)
-    #ref_pix_input_lalo_lo.set(ref_lon)
-
     set_epoch_info()
 
 

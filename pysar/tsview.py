@@ -328,6 +328,7 @@ def compute_lat_lon_params():
         lrlon = ullon + width * lon_step
         lrlat = ullat + length * lat_step
         print(('data size in [lat0,lat1,lon0,lon1]: [%.4f, %.4f, %.4f, %.4f]' % (lrlat, ullat, ullon, lrlon)))
+        return ullon, ullat, lon_step, lat_step, lrlon, lrlat
     except:
         pass
 
@@ -355,6 +356,7 @@ def set_inital_pixel_coords():
     else:
         print('data    unit: m')
     print(('display unit: '+inps.disp_unit))
+
 
 def set_yx_coords(y_input, x_input):
     global ullat, ullon, lat_step, lon_step
