@@ -18,7 +18,6 @@ from matplotlib.widgets import Slider, Button
 from pysar.objects import timeseries
 from pysar.utils import readfile, ptime, utils as ut, plot as pp
 from pysar.mask import mask_matrix
-from pysar import view
 
 
 ############# Global Variables ################
@@ -43,6 +42,9 @@ EXAMPLE='''example:
   tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
 '''
 
+'''
+    Creates command line argument parser and sets inps default values
+'''
 def create_parser():
     parser = argparse.ArgumentParser(description='Interactive Time-series Viewer',\
                                      formatter_class=argparse.RawTextHelpFormatter,\
@@ -181,14 +183,19 @@ def read_timeseries_lalo(timeseries_file, lat, lon):
 
 ###################### EXTRANEOUS HELPER FUNCTIONS ######################
 
-
+'''
+    Handles displaying of the plot and figure
+'''
 def display_figure():
     global inps
 
     if inps.disp_fig:
         plt.show()
 
-
+'''
+    Plots initial point on map and sets timeseries data points on scatter plot
+    to appropriate values
+'''
 def plot_data_from_inital_point():
     global ax_ts, inps, tims, d_ts
 
@@ -198,7 +205,9 @@ def plot_data_from_inital_point():
         d_ts = np.zeros(len(tims))
         ax_ts, scatter = plot_timeseries_scatter(ax_ts, d_ts, inps)
 
-
+'''
+    Reads list of errors from error file
+'''
 def read_error_list():
     global inps, date_num
 
@@ -211,7 +220,9 @@ def read_error_list():
             inps.ex_error_ts = np.array([e_ts[i] for i in inps.ex_idx_list])
             inps.error_ts = np.array([e_ts[i] for i in range(date_num) if i not in inps.ex_idx_list])
 
-
+'''
+    Saves figure and data to output file
+'''
 def save_output():
     global inps, lat, lon, ullat, lat_step, ullon, lon_step, atr, fig_ts, dateList
 
@@ -257,6 +268,9 @@ def save_output():
 
 ################### PLOT SETUP HELPER FUCNTIONS ###################
 
+'''
+    Reads basic information about timeseries file being viewed
+'''
 def read_timeseries_info():
     global atr, k, h5, dateList, tims, date_num, inps
 
@@ -275,6 +289,9 @@ def read_timeseries_info():
     inps.dates, tims = ptime.date_list2vector(dateList)
 
 
+'''
+    Sets dates to be excluded from timeseries data points
+'''
 def exclude_dates():
     global inps, dateList
 
@@ -299,6 +316,9 @@ def exclude_dates():
             print(('exclude date:' + str(inps.ex_date_list)))
 
 
+'''
+    Sets the 'zero' value for the plot
+'''
 def set_zero_displacement():
     global inps, date_num
 
@@ -309,6 +329,9 @@ def set_zero_displacement():
             inps.zero_idx = 0
 
 
+'''
+    Computed dimensions of file (width, length)
+'''
 def compute_file_size():
     global atr, width, length
 
@@ -317,6 +340,9 @@ def compute_file_size():
     print(('data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, length, 0, width)))
 
 
+'''
+    Computes parameters needed for setting lat/lon values
+'''
 def compute_lat_lon_params():
     global ullon, ullat, lon_step, lat_step, atr, width, length
 
@@ -328,10 +354,14 @@ def compute_lat_lon_params():
         lrlon = ullon + width * lon_step
         lrlat = ullat + length * lat_step
         print(('data size in [lat0,lat1,lon0,lon1]: [%.4f, %.4f, %.4f, %.4f]' % (lrlat, ullat, ullon, lrlon)))
+        return ullon, ullat, lon_step, lat_step, lrlon, lrlat
     except:
         pass
 
 
+'''
+    Sets coordinates of initial pixel
+'''
 def set_inital_pixel_coords():
     global inps, atr
 
@@ -356,6 +386,10 @@ def set_inital_pixel_coords():
         print('data    unit: m')
     print(('display unit: '+inps.disp_unit))
 
+
+'''
+    Sets x/y coordinates from lalo valyes
+'''
 def set_yx_coords(y_input, x_input):
     global ullat, ullon, lat_step, lon_step
 
@@ -365,6 +399,9 @@ def set_yx_coords(y_input, x_input):
     return y, x
 
 
+'''
+    Sets multiplier for data based on display unit
+'''
 def set_unit_fraction():
     global inps
 
@@ -384,6 +421,9 @@ def set_unit_fraction():
     print(('display unit: ' + inps.disp_unit))
 
 
+'''
+    Flips displat map ud/lr
+'''
 def flip_map():
     global inps, atr
 
@@ -394,6 +434,9 @@ def flip_map():
         inps.flip_lr = False
 
 
+'''
+    Sets mask for map
+'''
 def set_mask():
     global mask, inps, atr
 
@@ -417,6 +460,9 @@ def set_mask():
         print('No mask used.')
 
 
+'''
+    Sets the initial map plot
+'''
 def set_initial_map():
     global d_v, h5, k, dateList, inps, data_lim
 
@@ -473,6 +519,9 @@ def setup_plot():
 
 ################# PLOT CONFIGURATION HELPER METHODS #######################
 
+'''
+    Sets DEM topography file for the map
+'''
 def set_dem_file():
     global ax_v, inps, img
 
@@ -483,6 +532,9 @@ def set_dem_file():
     img = ax_v.imshow(d_v, cmap=inps.colormap, clim=inps.ylim_mat, interpolation='nearest')
 
 
+'''
+    Sets reference pixel on map
+'''
 def set_map_reference_pixel():
     global d_v, inps, ax_v, atr
 
@@ -496,6 +548,9 @@ def set_map_reference_pixel():
             pass
 
 
+'''
+    Sets axis limits, labels, and titles
+'''
 def set_plot_axis_params():
     global inps, d_v, ax_v, atr
 
@@ -514,6 +569,9 @@ def set_plot_axis_params():
         ax_v.set_ylabel('Azimuth')
 
 
+'''
+    Flips axis lr/ud
+'''
 def flip_axis():
     global inps, ax_v
 
@@ -525,6 +583,9 @@ def flip_axis():
         print('flip map up and down')
 
 
+'''
+    Creates colorbar for figure
+'''
 def make_color_bar():
     global fig_v, img, inps
     # Colorbar
@@ -533,6 +594,9 @@ def make_color_bar():
     cbar.set_label('Displacement [%s]' % inps.disp_unit)
 
 
+'''
+    Creates timeseries slider for figure
+'''
 def make_time_slider():
     global tslider, fig_v, tims, inps
 
@@ -577,7 +641,8 @@ def time_slider_update(val):
 
 
 def format_coord(x, y):
-    global width, length, ullat, lat_step, ullon, lon_step, d_v, lat, lonf
+    '''Formats x, y coordinates into useful output string (used for creating plot titles)'''
+    global width, length, ullat, lat_step, ullon, lon_step, d_v, lat, lon
 
     col = int(x + 0.5)
     row = int(y + 0.5)
@@ -592,8 +657,8 @@ def format_coord(x, y):
 
 
 def plot_timeseries_errorbar(ax, dis_ts, inps):
+    '''Plots errorbars for timeseries data'''
     global date_num
-
     dates = list(inps.dates)
     d_ts = dis_ts[:]
     if inps.ex_date_list:
@@ -615,6 +680,16 @@ def plot_timeseries_errorbar(ax, dis_ts, inps):
 
 
 def plot_timeseries_scatter(ax, dis_ts, inps, plot_num=1):
+    '''Plots scatter points on provioded axis
+        Inputs:
+            ax      : mpl axis, matplotlib axis object on which to plot scattaer data
+            dis_ts  : [float], data points for timeseries
+            inps    : [Object], plot settings
+            plot_num: int, plot delimiter to determine which scatter plot (1/2) is being updated
+        Output:
+            ax      : mpl axis, matplotlib axis object on which to plot scattaer data
+            scatter : mpl scatter, matplotlib scatter object
+    '''
     global date_num
 
     dates = list(inps.dates)
@@ -637,7 +712,15 @@ def plot_timeseries_scatter(ax, dis_ts, inps, plot_num=1):
 
 
 def update_timeseries(y, x, plot_number, data_only=False):
-    '''Plot point time series displacement at pixel [y, x]'''
+    '''Plot point time series displacement at pixel [y, x]
+        Inputs:
+            y           : int, y coordinate to update
+            x           : int, x coordinate to update
+            plot_number : int, plot number (1/2) to update
+            data_only   : bool, compute and return data only, or set remainder of plot variables
+        Outputs:
+            d_ts        : [float], timeseries data at x, y point
+    '''
     global fig_ts, ax_ts, second_plot_axis, inps, dateList, h5, k, inps, tims, fig_v, date_num, d_ts
 
     set_scatter_coords(plot_number, x, y)
@@ -657,6 +740,7 @@ def update_timeseries(y, x, plot_number, data_only=False):
     if inps.zero_first:
         d_ts -= d_ts[inps.zero_idx]
 
+    # Returns computed data without setting any plot or figure parameters
     if data_only:
         return d_ts
 
@@ -694,6 +778,13 @@ def update_timeseries(y, x, plot_number, data_only=False):
 
 
 def set_axis_title(x, y):
+    '''Sets title of axis for a given X, Y Point
+        Inputs:
+            x   : int, x coordinate
+            y   : int, y coordinate
+        Outputs:
+            title_ts    : string, computed axis title
+    '''
     global lat, lon, ullon, ullat, lat_step, lon_step
 
     if x is None:
@@ -711,6 +802,14 @@ def set_axis_title(x, y):
 
 
 def xy_to_lat_lon(x, y):
+    '''Converst x,y coordinated to lat/lon coordinates
+        Inputs:
+            x   : int, x coordinate
+            y`  : int, y coordinate
+        Outputs:
+            latitude    : double, computed latitude coordinate
+            longitude   : double, computed longitude coordinate
+    '''
     global ullat, ullon, lat_step, lon_step
 
     latitude = ullat + y * lat_step
@@ -720,6 +819,7 @@ def xy_to_lat_lon(x, y):
 
 
 def estimate_slope():
+    '''Estimates slope of timeseries scatter data'''
     global inps, tims, d_ts, date_num
 
     if inps.ex_date_list:
@@ -733,11 +833,17 @@ def estimate_slope():
 
 
 def set_scatter_coords(plot_number, x, y):
+    '''Sets the coordinates or the starting scatter point
+        Inputs:
+            plot_number     : int, the plot number (1 or 2)
+            x               : int, x coordinate
+            y               : int, y coordinate
+    '''
     global p1_x, p1_y, p2_x, p2_y
 
-    if plot_number == 1:
+    if plot_number == 1:        # Set scatter point 1 coordinates
         p1_x, p1_y = x, y
-    else:
+    else:                       # Set scatter point 2 coordinates
         p2_x, p2_y = x, y
 
 
@@ -751,26 +857,26 @@ def plot_timeseries_event(event):
     ii = int(event.ydata + 0.5)
     jj = int(event.xdata + 0.5)
 
-    if event.button == 1:
+    if event.button == 1:       # Compute and update plot 1 data on left mouse-click
 
         if p1_scatter_point is not None:
-            p1_scatter_point.remove()
+            p1_scatter_point.remove()   # remove previous scatter point
 
-        p1_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='red', marker='o')
+        p1_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='red', marker='o') # place new sactter point
 
-        d_ts = update_timeseries(ii, jj, 1)
+        d_ts = update_timeseries(ii, jj, 1)     # update timeseries scatter plot for plot 1
 
-    elif event.button == 3 and second_plot_axis_visible:
+    elif event.button == 3 and second_plot_axis_visible:    # COmpute and update plot 2 on right mouse-click
 
         if p2_scatter_point is not None:
-            p2_scatter_point.remove()
+            p2_scatter_point.remove()   # remove previous scatter point
 
-        p2_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='blue', marker='o')
+        p2_scatter_point = ax_v.scatter(event.xdata, event.ydata, s=50, c='blue', marker='o') # place new scatter point
 
-        d_ts = update_timeseries(ii, jj, 2)
+        d_ts = update_timeseries(ii, jj, 2)     # update timeseries scatter plot for plot 2
 
 
-# Displays second data plot to screen
+'''Displays second data plot to screen'''
 def show_second_plot(event):
 
     global fig_v, second_plot_axis, second_plot_axis_visible
@@ -781,7 +887,7 @@ def show_second_plot(event):
     fig_v.canvas.draw()
 
 
-# Hides second data plot from screen
+'''Hides second data plot from screen'''
 def hide_second_plot(event):
     global second_plot_axis, fig_v, p2_scatter_point, second_plot_axis_visible
 
@@ -796,7 +902,7 @@ def hide_second_plot(event):
     fig_v.canvas.draw()
 
 
-# Displays Scatter Plot Data from one or both data axes in separate figure for anlaysis
+'''Displays Scatter Plot Data from one or both data axes in separate figure for anlaysis'''
 def show_data_as_fig(event):
     global second_plot_axis, ax_ts, second_plot_axis_visible
 
@@ -808,21 +914,28 @@ def show_data_as_fig(event):
 
 # Configures and Shows Data Plot as Separate Figure Window
 def show_figure(plot_number):
+    '''Configures and shows timeseries scatter plot as separate figure window
+        Inputs:
+            plot_number : int, plot number to show data of
+    '''
     global p2_x, p2_y, p1_x, p1_y, ax_ts, inps, plot_figure, p1_scatter, p2_scatter, new_axes, annot
 
+    # Set up new plot figure, window, and axes
     plot_figure = plt.figure("PLOT!!", figsize=(10, 5))
-
     new_axes = plot_figure.add_subplot(111)
     new_axes.set_ylim(inps.ylim_mat[0]*2, inps.ylim_mat[1]*2)
 
+    # Set annotations for new acis
     annot = new_axes.annotate("", xy=(0, 0), xytext=(445, 10), textcoords="axes points", bbox=dict(boxstyle="round", fc="w"))
-
     annot.set_visible(False)
 
+    # Compute timeseries data
     d_ts_n = set_timeseries_data(plot_number)
 
+    # Compute and plot scatter points on acis
     scatter = plot_timeseries_scatter(new_axes, d_ts_n, inps, plot_number)
 
+    # Set appropriate scatter variable
     if plot_number == 1:
         _, p1_scatter = scatter
     elif plot_number == 2:
@@ -830,13 +943,14 @@ def show_figure(plot_number):
 
     set_title_and_legend(new_axes)
 
+    # Connect events to canvas
     plot_figure.canvas.mpl_connect('pick_event', hide_scatter)
     plot_figure.canvas.mpl_connect('motion_notify_event', on_hover)
 
     plot_figure.show()
     plot_figure.canvas.draw()
 
-
+''' Defines behavior when hovering over a given data point (ie. showing annotation)'''
 def on_hover(event):
     global plot_figure, annot, p1_scatter, p2_scatter, new_axes
 
@@ -858,7 +972,7 @@ def on_hover(event):
                     annot.set_visible(False)
                     plot_figure.canvas.draw_idle()
 
-
+''' Defins annotation styles when hovering over a data point '''
 def update_annot(ind, sc):
     global p1_x, p1_y, p2_x, p2_y, annot, p1_scatter, p2_scatter, tims, lat, lon
 
@@ -889,7 +1003,7 @@ def update_annot(ind, sc):
     annot.get_bbox_patch().set_alpha(0.4)
 
 
-# Hides Scatter Plot Data on Data Point Figure on Legend Item Click
+'''Hides Scatter Plot Data on Data Point Figure on Legend Item Click'''
 def hide_scatter(event):
     global scatts, plot_figure
 
@@ -908,7 +1022,7 @@ def hide_scatter(event):
     plot_figure.canvas.draw_idle()
 
 
-# Sets title and legend information in Data Point Figure
+'''Sets title and legend information in Data Point Figure'''
 def set_title_and_legend(axis):
     global p1_x, p1_y, p2_x, p2_y, inps, p1_scatter, p2_scatter, scatts
 
@@ -937,9 +1051,9 @@ def set_title_and_legend(axis):
             legline.set_picker(5)  # 5 pts tolerance
             scatts[legline] = scatter
 
-
+''' Sets timeseries data (x/y points) prior to computing timeseries data'''
 def set_timeseries_data(plot_number):
-    global tims, p1_y, p1_x, p2_y, p2_x, ax_ts, second_plot_axes
+    global p1_y, p1_x, p2_y, p2_x
 
     x_point, y_point = p1_x, p1_y
 
@@ -949,7 +1063,7 @@ def set_timeseries_data(plot_number):
 
     return compute_timeseries_data(plot_number, x_point, y_point)
 
-
+''' Computes timeseries data for a given x, y points '''
 def compute_timeseries_data(plot_number, x_point, y_point):
     global tims
 
