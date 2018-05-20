@@ -67,8 +67,8 @@ For bash user, add to your .bashrc file:
 
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
     export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-0.4.0"
-    export PYTHONPATH=${PYSAR_HOME}:${PYTHONPATH}  
-    export PATH=${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh:${PATH}   
+    export PYTHONPATH=${PYTHONPATH}:${PYSAR_HOME}   
+    export PATH=${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh   
 
 For csh/tcsh user, add to your .cshrc file:   
 
@@ -76,8 +76,8 @@ For csh/tcsh user, add to your .cshrc file:
         setenv PYTHONPATH ""
     endif
     setenv PYSAR_HOME  ~/python/PySAR       #for released version, "~/python/PySAR-0.4.0"
-    setenv PYTHONPATH  ${PYSAR_HOME}:${PYTHONPATH}
-    setenv PATH        ${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh:${PATH}
+    setenv PYTHONPATH  ${PYTHONPATH}:${PYSAR_HOME}
+    setenv PATH        ${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh
    
    
 ### 2. Running PySAR
