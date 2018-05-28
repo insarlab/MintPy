@@ -4,13 +4,12 @@ import sys
 import argparse
 from datetime import datetime as dt
 
-# Matplotlib Package Imports
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button
-
 # PyQT Package Imports
 from PyQt5 import QtWidgets as qt
 from PyQt5 import Qt as Qt
+
+# Matplotlib Package Imports
+from matplotlib.widgets import Slider
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -26,11 +25,11 @@ from pysar.utils import readfile, ptime, utils as ut, plot as pp
 from pysar.mask import mask_matrix
 
 
-class TimeSerieWidget(qt.QWidget):
+class TimeSeriesWidget(qt.QWidget):
 
     def __init__(self, parent=None, iargs=None):
 
-        super(TimeSerieWidget, self).__init__(parent)
+        super(TimeSeriesWidget, self).__init__(parent)
 
         # Declaration of All Instance Variables
         self.canvas, self.toolbar                               =       None, None
@@ -61,7 +60,7 @@ class TimeSerieWidget(qt.QWidget):
 
 
         # Setup Matplotlib Widgets
-        self.fig_v, self.canvas, self.toolbar = self.main(['/Users/joshua/Desktop/pysar/test_data/new_data/timeseries_ECMWF_demErr_plane.h5', '--figsize', '5', '3'])
+        self.fig_v, self.canvas, self.toolbar = self.main(iargs)
 
         # Set layout parameters
         layout = qt.QVBoxLayout()
@@ -121,7 +120,7 @@ class TimeSerieWidget(qt.QWidget):
             self.canvas.draw()
 
         # Disconnect the button press listener
-        self.fig_v.canvas.mpl_disconnect(self.first_data_point)
+        #self.fig_v.canvas.mpl_disconnect(self.first_data_point)
 
         return self.fig_v, self.canvas, self.toolbar
 
@@ -883,7 +882,7 @@ class TimeSerieWidget(qt.QWidget):
 if __name__ == '__main__':
     app = qt.QApplication(sys.argv)
 
-    main = TimeSerieWidget()
+    main = TimeSeriesWidget(iargs=sys.argv[1:])
     main.show()
 
     sys.exit(app.exec_())
