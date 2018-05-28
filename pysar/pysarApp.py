@@ -209,12 +209,8 @@ EXAMPLE = """example:
   pysarApp.py -g
   pysarApp.py SanAndreasT356EnvD.template -g
 
-  # Show template file:
+  # Show template content:
   load_data.py -H #Show example input template for ISCE/ROI_PAC/GAMMA products
-
-  --------------------------------------------------------
-  Read pysarApp_template.txt file for more option details.
-  --------------------------------------------------------
 """
 
 UM_FILE_STRUCT = """
@@ -886,24 +882,17 @@ def main(iargs=None):
     #############################################
     # Plot Figures
     #############################################
+    inps.plotShellFile = os.path.join(os.path.dirname(__file__), '../sh/plot_pysarApp.sh')
+    plotCmd = './'+os.path.basename(inps.plotShellFile)
     inps.plot = template['pysar.plot']
     if inps.plot is True:
         print('\n**********  Plot Results / Save to PIC  **********')
-        inps.plotShellFile = 'plot_pysarApp.sh'
-
         # Copy to workding directory if not existed yet.
-        if not os.path.isfile('./'+inps.plotShellFile):
-            print('copy $PYSAR_HOME/bin/{} to work directory: {}'.format(inps.plotShellFile,
-                                                                         inps.workDir))
-            try:
-                shutil.copy2(ut.which(inps.plotShellFile), './')
-            except:
-                print('WARNING: no {} found in the environment variable path.'.format(inps.plotShellFile))
-                print('Check if $PYSAR_HOME/bin is in $PATH, and re-run')
-                inps.plot = False
+        if not os.path.isfile(plotCmd):
+            print('copy {} to work directory: {}'.format(inps.plotShellFile, inps.workDir))
+            shutil.copy2(inps.plotShellFile, inps.workDir)
 
-    if inps.plot:
-        plotCmd = './'+inps.plotShellFile
+    if inps.plot and os.path.isfile(plotCmd):
         print(plotCmd)
         status = subprocess.Popen(plotCmd, shell=True).wait()
         print('\n'+'-'*50)

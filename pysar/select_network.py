@@ -189,7 +189,7 @@ def read_template2inps(templateFile, inps=None):
     # Check obsolete option prefix
     for i in ['selectPairs.', 'select.network.']:
         if any(i in key for key in template.keys()):
-            msg = 'obsolete option prefix detected: {}'.format(i)
+            msg = 'obsolete option prefix detected: {}\n'.format(i)
             msg += 'Use {} instead'.format(prefix)
             raise Exception(msg)
     if all(prefix not in key for key in template.keys()):
