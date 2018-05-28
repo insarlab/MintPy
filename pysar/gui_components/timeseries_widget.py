@@ -10,6 +10,7 @@ from matplotlib.widgets import Slider, Button
 
 # PyQT Package Imports
 from PyQt5 import QtWidgets as qt
+from PyQt5 import Qt as Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -28,43 +29,28 @@ from pysar.mask import mask_matrix
 class TimeSerieWidget(qt.QWidget):
 
     def __init__(self, parent=None, iargs=None):
+
         super(TimeSerieWidget, self).__init__(parent)
 
-        # fig_v, ax_v, inps, ax_ts, fig_ts, second_plot_axis
-        self.canvas = None
-        self.toolbar = None
+        # Declaration of All Instance Variables
+        self.canvas, self.toolbar                               =       None, None
+        self.fig_v, self.fig_ts, self.ax_v, self.ax_ts          =       None, None, None, None
+        self.second_plot_axis, self.second_plot_axis_visible    =       None, False
 
-        self.fig_v = None
-        self.fig_ts = None
-        self.ax_v = None
-        self.inps = None
-        self.ax_ts = None
-        self.fig_ts = None
-        self.second_plot_axis = None
+        self.atr, self.k, self.h5                               =       None, None, None
+        self.dateList, self.date_num, self.tims                 =       None, None, None
 
-        self.atr = None
-        self.k = None
-        self.h5 = None
-        self.dateList = None
-        self.date_num = None
-        self.tims = None
-        
-        self.width = None
-        self.length = None
-        self.ullon = None
-        self.ullat = None
-        self.lon_step = None
-        self.lat_step = None
-        self.lat = None
-        self.lon = None
+        self.width, self.length                                 =       None, None
+        self.ullat, self.lat_step, self.lat                     =       None, None, None
+        self.ullon, self.lon_step, self.lon                     =       None, None, None
 
-        self.mask = None
+        self.d_v, self.d_ts, self.data_lim                      =       None, None, None
 
-        self.d_v = None
-        self.d_ts = None
-        self.data_lim = None
-        self.img = None
-        self.tslider = None
+        self.p1_scatter_point, self.p1_x, self.p1_y             =       None, None, None
+        self.p2_scatter_point, self.p2_x, self.p2_y             =       None, None, None
+
+        self.inps, self.mask, self.img, self.tslider            =       None, None, None, None
+        self.first_data_point = None
 
         self.EXAMPLE = '''example:
                           tsview.py timeseries.h5 --ylim -10 10
@@ -73,8 +59,11 @@ class TimeSerieWidget(qt.QWidget):
                           tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
                        '''
 
+
+        # Setup Matplotlib Widgets
         self.fig_v, self.canvas, self.toolbar = self.main(['/Users/joshua/Desktop/pysar/test_data/new_data/timeseries_ECMWF_demErr_plane.h5', '--figsize', '5', '3'])
 
+        # Set layout parameters
         layout = qt.QVBoxLayout()
         layout.addWidget(self.canvas)
         layout.addWidget(self.toolbar)
@@ -84,48 +73,89 @@ class TimeSerieWidget(qt.QWidget):
 
     def main(self, args=None):
 
+        # Parse command line arguments into inps
         self.inps = self.cmd_line_parse(args)
 
+        # Do inital setup of plot axes and elements
         self.setup_plot()
 
+        # Create new figure object
         self.fig_v = Figure(self.inps.fig_size)
+        # Create new figure canvas object
         self.canvas = FigureCanvas(self.fig_v)
+        # Create new MPL toolbar object
         self.toolbar = NavigationToolbar(self.canvas, self)
 
+        # Set click focus to be on the figure canvas
+        self.canvas.setFocusPolicy(Qt.Qt.ClickFocus)
+        self.canvas.setFocus()
+
+        # Set image plotting axis
         self.ax_v = self.fig_v.add_axes([0.035, 0.42, 0.5, 0.5])
 
+        # Do initial plot configuration
         self.configure_plot()
 
+        # Set timeseries data axis
         self.ax_ts = self.fig_v.add_axes([0.55, 0.62, 0.42, 0.3])
+
+        # Set second timeseries data axis
         self.second_plot_axis = self.fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
+        # Remove second timeseries data axis from screen
         self.second_plot_axis.remove()
 
+        # Read in error file and compute error list
+        self.read_error_list()
+
+        # Plot data from initial point on timeseries axis
+        self.plot_data_from_inital_point()
+
+        # Save output to file if necesarry
+        self.save_output()
+
+        # Setup button press event to a new plot_timeseries_event
+        self.first_data_point = self.fig_v.canvas.mpl_connect('button_press_event', self.plot_timeseries_event)
+
+        # Refresh the canvas to display changes
         if self.inps.disp_fig:
             self.canvas.draw()
+
+        # Disconnect the button press listener
+        self.fig_v.canvas.mpl_disconnect(self.first_data_point)
 
         return self.fig_v, self.canvas, self.toolbar
 
 
     ###########################################   Setting Up Plot     ###########################################
     def setup_plot(self):
+
         # Time Series Info
         self.read_timeseries_info()
+
         # Read exclude dates
         self.exclude_dates()
+
         # Zero displacement for 1st acquisition
         self.set_zero_displacement()
+
         # File Size
         self.compute_file_size()
+
         # Latitude Longitude Parameters
         self.compute_lat_lon_params()
+
         # Initial Pixel Coordinates
         self.set_inital_pixel_coords()
+
         # Display Unit
         self.set_unit_fraction()
+
         # Flip up-down / left-right
         self.flip_map()
+
         # Mask file
         self.set_mask()
+
         # Initial Map
         self.set_initial_map()
 
@@ -342,16 +372,22 @@ class TimeSerieWidget(qt.QWidget):
     ###########################################   Configuring Plot  ###########################################
 
     def configure_plot(self):
+
         # DEM File
         self.set_dem_file()
+
         # Reference Pixel
         self.set_map_reference_pixel()
+
         # Initial Pixel
         self.set_plot_axis_params()
+
         # Flip Axis
         self.flip_axis()
+
         # Construct Color Bar
         self.make_color_bar()
+
         # Construct Time Slider
         self.make_time_slider()
 
@@ -417,7 +453,7 @@ class TimeSerieWidget(qt.QWidget):
     def make_color_bar(self):
 
         # Colorbar
-        cbar_axes = self.fig_v.add_axes([0.065, 0.32, 0.40, 0.03])
+        cbar_axes = self.fig_v.add_axes([0.075, 0.28, 0.40, 0.03])
         cbar = self.fig_v.colorbar(self.img, cax=cbar_axes, orientation='horizontal')
         cbar.set_label('Displacement [%s]' % self.inps.disp_unit)
 
@@ -476,7 +512,7 @@ class TimeSerieWidget(qt.QWidget):
             error_file_content = np.loadtxt(self.inps.error_file, dtype=str)
             self.inps.error_ts = error_file_content[:, 1].astype(np.float) * self.inps.unit_fac
             if self.inps.ex_date_list:
-                e_ts = inps.error_ts[:]
+                e_ts = self.inps.error_ts[:]
                 self.inps.ex_error_ts = np.array([e_ts[i] for i in self.inps.ex_idx_list])
                 self.inps.error_ts = np.array([e_ts[i] for i in range(self.date_num) if i not in self.inps.ex_idx_list])
 
@@ -533,6 +569,239 @@ class TimeSerieWidget(qt.QWidget):
         else:
             self.d_ts = np.zeros(len(self.tims))
             self.ax_ts, scatter = self.plot_timeseries_scatter(self.ax_ts, self.d_ts, self.inps)
+
+    ###########################################   Timeseries Data Functions #########################################
+
+    def plot_timeseries_errorbar(self, ax, dis_ts, inps):
+        '''Plots errorbars for timeseries data'''
+
+        dates = list(self.inps.dates)
+        self.d_ts = dis_ts[:]
+        if self.inps.ex_date_list:
+            # Update displacement time-series
+            dates = sorted(list(set(self.inps.dates) - set(self.inps.ex_dates)))
+            ex_d_ts = np.array([dis_ts[i] for i in self.inps.ex_idx_list])
+            self.d_ts = np.array([dis_ts[i] for i in range(self.date_num) if i not in inps.ex_idx_list])
+            # Plot excluded dates
+            (_, caps, _) = ax.errorbar(self.inps.ex_dates, 
+                                       ex_d_ts, 
+                                       yerr=self.nps.ex_error_ts, 
+                                       fmt='-o', color='gray', 
+                                       ms=self.inps.marker_size, 
+                                       lw=0, alpha=1, mfc='gray',
+                                       elinewidth=self.inps.edge_width, 
+                                       ecolor='black', 
+                                       capsize=self.inps.marker_size * 0.5)
+            
+            for cap in caps:  cap.set_markeredgewidth(self.inps.edge_width)
+        
+        # Plot kept dates
+        (_, caps, _) = ax.errorbar(dates, 
+                                   self.d_ts, 
+                                   yerr=self.inps.error_ts, 
+                                   fmt='-o',
+                                   ms=self.inps.marker_size, 
+                                   lw=0, alpha=1,
+                                   elinewidth=self.inps.edge_width, 
+                                   ecolor='black', 
+                                   capsize=self.inps.marker_size * 0.5)
+        
+        for cap in caps:  cap.set_markeredgewidth(self.inps.edge_width)
+        return ax
+
+    def plot_timeseries_scatter(self, ax, dis_ts, inps, plot_num=1):
+        '''Plots scatter points on provioded axis
+            Inputs:
+                ax      : mpl axis, matplotlib axis object on which to plot scattaer data
+                dis_ts  : [float], data points for timeseries
+                inps    : [Object], plot settings
+                plot_num: int, plot delimiter to determine which scatter plot (1/2) is being updated
+            Output:
+                ax      : mpl axis, matplotlib axis object on which to plot scattaer data
+                scatter : mpl scatter, matplotlib scatter object
+        '''
+
+        dates = list(self.inps.dates)
+
+        print(dis_ts)
+
+        self.d_ts = dis_ts[:]
+        if self.inps.ex_date_list:
+            # Update displacement time-series
+            dates = sorted(list(set(self.inps.dates) - set(self.inps.ex_dates)))
+            ex_d_ts = np.array([dis_ts[i] for i in self.inps.ex_idx_list])
+            self.d_ts = np.array([dis_ts[i] for i in range(self.date_num) if i not in self.inps.ex_idx_list])
+            # Plot excluded dates
+            ax.scatter(self.inps.ex_dates, ex_d_ts, s=self.inps.marker_size ** 2, color='gray')  # color='crimson'
+
+        # Plot kept dates
+        color = 'blue'
+        if plot_num == 2:
+            color = 'crimson'
+        print(('Color is ' + color))
+
+        print(dates)
+        print(self.d_ts)
+
+        scatter = ax.scatter(dates, self.d_ts, s=self.inps.marker_size ** 2, label='1', color=color)
+
+        return ax, scatter
+
+    def update_timeseries(self, y, x, plot_number, data_only=False):
+        '''Plot point time series displacement at pixel [y, x]
+            Inputs:
+                y           : int, y coordinate to update
+                x           : int, x coordinate to update
+                plot_number : int, plot number (1/2) to update
+                data_only   : bool, compute and return data only, or set remainder of plot variables
+            Outputs:
+                d_ts        : [float], timeseries data at x, y point
+        '''
+
+        self.set_scatter_coords(plot_number, x, y)
+
+        if plot_number == 1:
+            axis = self.ax_ts
+        #else:
+            #axis = second_plot_axis
+
+            self.d_ts = []
+        for i, date in enumerate(self.dateList):
+            d = self.h5['timeseries'][i][y, x]
+            if self.inps.ref_yx:
+                d -= self.h5['timeseries'][i][self.inps.ref_yx[0], self.inps.ref_yx[1]]
+
+            self.d_ts.append(d * self.inps.unit_fac)
+
+        if self.inps.zero_first:
+            self.d_ts -= self.d_ts[self.inps.zero_idx]
+
+        # Returns computed data without setting any plot or figure parameters
+        if data_only:
+            return self.d_ts
+
+        axis.cla()
+        if self.inps.error_file:
+            axis = self.plot_timeseries_errorbar(self.ax_ts, self.d_ts, self.inps)
+        else:
+            axis, scatter = self.plot_timeseries_scatter(axis, self.d_ts, self.inps, plot_number)
+            scatter.set_label('2')
+
+        axis.set_ylim(self.inps.ylim_mat[0] * 2, self.inps.ylim_mat[1] * 2)
+        for tick in axis.yaxis.get_major_ticks():
+            tick.label.set_fontsize(self.inps.font_size)
+
+        # Title
+        title_ts = self.set_axis_title(x, y)
+        if self.inps.disp_title:
+            axis.set_title(title_ts)
+
+        axis = pp.auto_adjust_xaxis_date(axis, self.tims, fontSize=self.inps.font_size)[0]
+        axis.set_xlabel('Time', fontsize=self.inps.font_size)
+        axis.set_ylabel('Displacement [%s]' % self.inps.disp_unit, fontsize=self.inps.font_size)
+
+        self.fig_v.canvas.draw()
+
+        # Print to terminal
+        print('\n---------------------------------------')
+        print(title_ts)
+        print(self.d_ts)
+
+        # Slope estimation
+        self.estimate_slope()
+
+        return self.d_ts
+
+    def set_axis_title(self, x, y):
+        '''Sets title of axis for a given X, Y Point
+            Inputs:
+                x   : int, x coordinate
+                y   : int, y coordinate
+            Outputs:
+                title_ts    : string, computed axis title
+        '''
+
+        if x is None:
+            title_ts = 'No Point Selected'
+        else:
+
+            title_ts = 'Y = %d, X = %d' % (y, x)
+            try:
+                lat, lon = self.xy_to_lat_lon(x, y)
+                title_ts += ', lat = %.4f, lon = %.4f' % (lat, lon)
+            except:
+                pass
+
+        return title_ts
+
+    def xy_to_lat_lon(self, x, y):
+        '''Converst x,y coordinated to lat/lon coordinates
+            Inputs:
+                x   : int, x coordinate
+                y`  : int, y coordinate
+            Outputs:
+                latitude    : double, computed latitude coordinate
+                longitude   : double, computed longitude coordinate
+        '''
+
+        latitude = self.ullat + y * self.lat_step
+        longitude = self.ullon + x * self.lon_step
+
+        return latitude, longitude
+
+    def estimate_slope(self):
+        '''Estimates slope of timeseries scatter data'''
+
+        if self.inps.ex_date_list:
+            tims_kept = [self.tims[i] for i in range(self.date_num) if i not in self.inps.ex_idx_list]
+            d_ts_kept = [self.d_ts[i] for i in range(self.date_num) if i not in self.inps.ex_idx_list]
+            d_slope = stats.linregress(np.array(tims_kept), np.array(d_ts_kept))
+        else:
+            d_slope = stats.linregress(np.array(self.tims), np.array(self.d_ts))
+
+        print(('linear velocity: %.2f +/- %.2f [%s/yr]' % (d_slope[0], d_slope[4], self.inps.disp_unit)))
+
+    def set_scatter_coords(self, plot_number, x, y):
+        '''Sets the coordinates or the starting scatter point
+            Inputs:
+                plot_number     : int, the plot number (1 or 2)
+                x               : int, x coordinate
+                y               : int, y coordinate
+        '''
+
+        if plot_number == 1:  # Set scatter point 1 coordinates
+            self.p1_x, self.p1_y = x, y
+        else:  # Set scatter point 2 coordinates
+            self.p2_x, self.p2_y = x, y
+
+    def plot_timeseries_event(self, event):
+        '''Event function to get y/x from button press'''
+
+        if event.inaxes != self.ax_v:
+            return
+
+        ii = int(event.ydata + 0.5)
+        jj = int(event.xdata + 0.5)
+
+        if event.button == 1:  # Compute and update plot 1 data on left mouse-click
+
+            if self.p1_scatter_point is not None:
+                self.p1_scatter_point.remove()  # remove previous scatter point
+
+            self.p1_scatter_point = self.ax_v.scatter(event.xdata, event.ydata, s=50, c='red',
+                                            marker='o')  # place new sactter point
+
+            self.d_ts = self.update_timeseries(ii, jj, 1)  # update timeseries scatter plot for plot 1
+
+        elif event.button == 3 and self.second_plot_axis_visible:  # Compute and update plot 2 on right mouse-click
+
+            if self.p2_scatter_point is not None:
+                self.p2_scatter_point.remove()  # remove previous scatter point
+
+            self.p2_scatter_point = self.ax_v.scatter(event.xdata, event.ydata, s=50, c='blue',
+                                            marker='o')  # place new scatter point
+
+            self.d_ts = self.update_timeseries(ii, jj, 2)  # update timeseries scatter plot for plot 2
 
     ###########################################   Parser Information  ###########################################
 
