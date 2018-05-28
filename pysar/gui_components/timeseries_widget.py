@@ -51,13 +51,6 @@ class TimeSeriesWidget(qt.QWidget):
         self.inps, self.mask, self.img, self.tslider            =       None, None, None, None
         self.first_data_point = None
 
-        self.EXAMPLE = '''example:
-                          tsview.py timeseries.h5 --ylim -10 10
-                          tsview.py timeseries_demErr_plane.h5 -n 5 -m maskTempCoh.h5
-                          tsview.py timeseries_demErr_plane.h5 --yx 300 400 --nodisplay --zero-first
-                          tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
-                       '''
-
 
         # Setup Matplotlib Widgets
         self.fig_v, self.canvas, self.toolbar = self.main(iargs)
@@ -126,6 +119,10 @@ class TimeSeriesWidget(qt.QWidget):
 
 
     ###########################################   Setting Up Plot     ###########################################
+
+    '''
+        Sets up plotting interface
+    '''
     def setup_plot(self):
 
         # Time Series Info
@@ -158,29 +155,53 @@ class TimeSeriesWidget(qt.QWidget):
         # Initial Map
         self.set_initial_map()
 
+    '''
+        Reads basic information about timeseries file being viewed
+    '''
     def read_timeseries_info(self):
 
+        # Read file attributes from timeseries file
         self.atr = readfile.read_attribute(self.inps.timeseries_file)
+
+        # Determine file type of input file
         self.k = self.atr['FILE_TYPE']
         print(('input file is ' + self.k + ': ' + self.inps.timeseries_file))
+
+        # Raise error if file is not a timeseries file
         if not self.k in ['timeseries', 'GIANT_TS']:
             raise ValueError('Only timeseries file is supported!')
 
+        # Read data out of h5 input file
         self.h5 = h5py.File(self.inps.timeseries_file, 'r')
+
+        # Sets datelist for each valid file type
         if self.k in ['GIANT_TS']:
             self.dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in self.h5['dates'][:].tolist()]
         else:
             self.dateList = timeseries(self.inps.timeseries_file).get_date_list()
+
+        # Determine number of dates in datelist
         self.date_num = len(self.dateList)
+
+        # Formats dates into useful objects
         self.inps.dates, self.tims = ptime.date_list2vector(self.dateList)
 
+    '''
+        Sets dates to be excluded from timeseries data points
+    '''
     def exclude_dates(self):
-        
+
+        # Determines if any dates are to be excluded
         if self.inps.ex_date_list:
+
+            # Gets list of dates to be excluded
             input_ex_date = list(self.inps.ex_date_list)
             self.inps.ex_date_list = []
 
             if input_ex_date:
+
+                # For each date to be excluded, format the date properly and add it
+                # to the excluded date list
                 for ex_date in input_ex_date:
 
                     if os.path.isfile(ex_date):
@@ -190,7 +211,7 @@ class TimeSeriesWidget(qt.QWidget):
 
                     self.inps.ex_date_list += list(set(ex_date) - set(self.inps.ex_date_list))
 
-                # delete dates not existed in input file
+                # Remove dates that don't exist in the input file
                 self.inps.ex_date_list = sorted(list(set(self.inps.ex_date_list).intersection(self.dateList)))
                 self.inps.ex_dates = ptime.date_list2vector(self.inps.ex_date_list)[0]
                 self.inps.ex_idx_list = sorted([self.dateList.index(i) for i in self.inps.ex_date_list])
@@ -202,6 +223,8 @@ class TimeSeriesWidget(qt.QWidget):
     def set_zero_displacement(self):
 
         if self.inps.zero_first:
+
+            # Set 'zero-value' for the plot to be true '0' or smallest value in excluded date list
             if self.inps.ex_date_list:
                 self.inps.zero_idx = min(list(set(range(self.date_num)) - set(self.inps.ex_idx_list)))
             else:
@@ -212,6 +235,7 @@ class TimeSeriesWidget(qt.QWidget):
     '''
     def compute_file_size(self):
 
+        # Computes and assigns the length and width of the file
         self.length = int(self.atr['LENGTH'])
         self.width = int(self.atr['WIDTH'])
         print(('data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, self.length, 0, self.width)))
@@ -222,11 +246,15 @@ class TimeSeriesWidget(qt.QWidget):
     def compute_lat_lon_params(self):
 
         try:
+
+            # Sets series of parameters needed for computing visual length of a
+            # latitude/longitude parameter
             self.ullon = float(self.atr['X_FIRST'])
             self.ullat = float(self.atr['Y_FIRST'])
             self.lon_step = float(self.atr['X_STEP'])
             self.lat_step = float(self.atr['Y_STEP'])
-            
+
+            # Computes visual length of latitude/longitude on screen
             lrlon = self.ullon + self.width * self.lon_step
             lrlat = self.ullat + self.length * self.lat_step
             
@@ -244,38 +272,25 @@ class TimeSeriesWidget(qt.QWidget):
     '''
     def set_inital_pixel_coords(self):
 
+        # Sets (x, y) coordinates for provided (lat, lon) coordinates of initial pixel
         if self.inps.lalo and 'Y_FIRST' in list(self.atr.keys()):
             y, x = self.set_yx_coords(self.inps.lalo[0], self.inps.lalo[1])
             self.inps.yx = [y, x]
+
+        # Sets (x, y) coordinates for provided (lat, lon) coordinates of reference pixel
         if self.inps.ref_lalo and 'Y_FIRST' in list(self.atr.keys()):
             y, x = self.set_yx_coords(self.inps.ref_lalo[0], self.inps.ref_lalo[1])
             self.inps.ref_yx = [y, x]
 
-        # Display Unit
-        if self.inps.disp_unit == 'cm':
-            self.inps.unit_fac = 100.0
-        elif self.inps.disp_unit == 'm':
-            self.inps.unit_fac = 1.0
-        elif self.inps.disp_unit == 'dm':
-            self.inps.unit_fac = 10.0
-        elif self.inps.disp_unit == 'mm':
-            self.inps.unit_fac = 1000.0
-        elif self.inps.disp_unit == 'km':
-            self.inps.unit_fac = 0.001
-        else:
-            raise ValueError('Un-recognized unit: ' + self.inps.disp_unit)
-        if self.k in ['GIANT_TS']:
-            print('data    unit: mm')
-            self.inps.unit_fac *= 0.001
-        else:
-            print('data    unit: m')
-        print(('display unit: ' + self.inps.disp_unit))
+        # Set unit scaling fraction based on display unit
+        self.set_unit_fraction()
 
     '''
-        Sets x/y coordinates from lalo valyes
+        Sets x/y coordinates from lalo values
     '''
     def set_yx_coords(self, y_input, x_input):
 
+        # Computes (x, y) coords from provided (lat, lon) values
         y = int((y_input - self.ullat) / self.lat_step + 0.5)
         x = int((x_input - self.ullon) / self.lon_step + 0.5)
 
@@ -286,6 +301,7 @@ class TimeSeriesWidget(qt.QWidget):
     '''
     def set_unit_fraction(self):
 
+        # Set unit scaling fraction based on display unit
         if self.inps.disp_unit == 'cm':
             self.inps.unit_fac = 100.0
         elif self.inps.disp_unit == 'm':
@@ -299,14 +315,20 @@ class TimeSeriesWidget(qt.QWidget):
         else:
             raise ValueError('Un-recognized unit: ' + self.inps.disp_unit)
 
-        print('data    unit: m')
+        # Defines default unit for each file type
+        if self.k in ['GIANT_TS']:
+            print('data    unit: mm')
+            self.inps.unit_fac *= 0.001
+        else:
+            print('data    unit: m')
         print(('display unit: ' + self.inps.disp_unit))
 
     '''
-        Flips displat map ud/lr
+        Flips display map ud/lr
     '''
     def flip_map(self):
 
+        # Flips map left/right, or up/down, as specified
         if self.inps.auto_flip:
             self.inps.flip_lr, self.inps.flip_ud = pp.auto_flip_direction(self.atr)
         else:
@@ -318,17 +340,22 @@ class TimeSeriesWidget(qt.QWidget):
     '''
     def set_mask(self):
 
+        # If mask has not been explcitly set
         if not self.inps.mask_file:
+
+            # Create file list of potential mask files
             if os.path.basename(self.inps.timeseries_file).startswith('geo_'):
                 file_list = ['geo_maskTempCoh.h5']
             else:
                 file_list = ['maskTempCoh.h5', 'mask.h5']
 
+            # Sets mask file from potential list if exists
             try:
                 self.inps.mask_file = ut.get_file_list(file_list)[0]
             except:
                 self.inps.mask_file = None
 
+        # Attempt to read in mask file and create masking matrix
         try:
             self.mask = readfile.read(self.inps.mask_file, datasetName='mask')[0]
             self.mask[self.mask != 0] = 1
@@ -342,23 +369,32 @@ class TimeSeriesWidget(qt.QWidget):
     '''
     def set_initial_map(self):
 
+        # Set inital data values for map
         self.d_v = self.h5['timeseries'][self.inps.epoch_num][:] * self.inps.unit_fac
-        # Initial Map
+
+        # Read in initial data values from file, provided the starting epoch
         print(str(self.dateList))
         self.d_v = readfile.read(self.inps.timeseries_file, datasetName=self.dateList[self.inps.epoch_num])[0] * self.inps.unit_fac
-        # d_v = h5[k].get(dateList[self.inps.epoch_num])[:]*self.inps.unit_fac
+
+        # If reference data is specified, read in data values for that date, and subtract
+        # values from inital values to create data value relative to the provided date
         if self.inps.ref_date:
             self.inps.ref_d_v = readfile.read(self.inps.timeseries_file, datasetName=self.inps.ref_date)[0] * self.inps.unit_fac
             self.d_v -= self.inps.ref_d_v
 
+        # If mask if set, mask the data values using the computed masking file and matrix
         if self.mask is not None:
             self.d_v = mask_matrix(self.d_v, self.mask)
 
+        # If a reference pixel was set, subtract data values of that (x, y) point from the
+        # initial data values matrix
         if self.inps.ref_yx:
             self.d_v -= self.d_v[self.inps.ref_yx[0], self.inps.ref_yx[1]]
 
+        # Determine minimum and maximum data values in matrix
         self.data_lim = [np.nanmin(self.d_v), np.nanmax(self.d_v)]
 
+        # Assign y-limits to min and max values, if not set explicitly
         if not self.inps.ylim_mat:
             self.inps.ylim_mat = self.data_lim
 
@@ -805,9 +841,17 @@ class TimeSeriesWidget(qt.QWidget):
     ###########################################   Parser Information  ###########################################
 
     def create_parser(self):
+
+        EXAMPLE = '''example:
+                      tsview.py timeseries.h5 --ylim -10 10
+                      tsview.py timeseries_demErr_plane.h5 -n 5 -m maskTempCoh.h5
+                      tsview.py timeseries_demErr_plane.h5 --yx 300 400 --nodisplay --zero-first
+                      tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
+                   '''
+
         parser = argparse.ArgumentParser(description='Interactive Time-series Viewer', \
                                          formatter_class=argparse.RawTextHelpFormatter, \
-                                         epilog=self.EXAMPLE)
+                                         epilog=EXAMPLE)
         parser.add_argument('timeseries_file', help='time series file to display')
         parser.add_argument('-n', dest='epoch_num', metavar='NUM', type=int, default='-2', \
                             help='Epoch/slice number to display, default: the 2nd last.')
