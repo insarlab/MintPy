@@ -33,13 +33,38 @@ class TimeSerieWidget(qt.QWidget):
         # fig_v, ax_v, inps, ax_ts, fig_ts, second_plot_axis
         self.canvas = None
         self.toolbar = None
+
         self.fig_v = None
+        self.fig_ts = None
         self.ax_v = None
         self.inps = None
         self.ax_ts = None
         self.fig_ts = None
         self.second_plot_axis = None
 
+        self.atr = None
+        self.k = None
+        self.h5 = None
+        self.dateList = None
+        self.date_num = None
+        self.tims = None
+        
+        self.width = None
+        self.length = None
+        self.ullon = None
+        self.ullat = None
+        self.lon_step = None
+        self.lat_step = None
+        self.lat = None
+        self.lon = None
+
+        self.mask = None
+
+        self.d_v = None
+        self.d_ts = None
+        self.data_lim = None
+        self.img = None
+        self.tslider = None
 
         self.EXAMPLE = '''example:
                           tsview.py timeseries.h5 --ylim -10 10
@@ -61,11 +86,16 @@ class TimeSerieWidget(qt.QWidget):
 
         self.inps = self.cmd_line_parse(args)
 
+        self.setup_plot()
+
         self.fig_v = Figure(self.inps.fig_size)
         self.canvas = FigureCanvas(self.fig_v)
         self.toolbar = NavigationToolbar(self.canvas, self)
 
         self.ax_v = self.fig_v.add_axes([0.035, 0.42, 0.5, 0.5])
+
+        self.configure_plot()
+
         self.ax_ts = self.fig_v.add_axes([0.55, 0.62, 0.42, 0.3])
         self.second_plot_axis = self.fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
         self.second_plot_axis.remove()
@@ -75,6 +105,436 @@ class TimeSerieWidget(qt.QWidget):
 
         return self.fig_v, self.canvas, self.toolbar
 
+
+    ###########################################   Setting Up Plot     ###########################################
+    def setup_plot(self):
+        # Time Series Info
+        self.read_timeseries_info()
+        # Read exclude dates
+        self.exclude_dates()
+        # Zero displacement for 1st acquisition
+        self.set_zero_displacement()
+        # File Size
+        self.compute_file_size()
+        # Latitude Longitude Parameters
+        self.compute_lat_lon_params()
+        # Initial Pixel Coordinates
+        self.set_inital_pixel_coords()
+        # Display Unit
+        self.set_unit_fraction()
+        # Flip up-down / left-right
+        self.flip_map()
+        # Mask file
+        self.set_mask()
+        # Initial Map
+        self.set_initial_map()
+
+    def read_timeseries_info(self):
+
+        self.atr = readfile.read_attribute(self.inps.timeseries_file)
+        self.k = self.atr['FILE_TYPE']
+        print(('input file is ' + self.k + ': ' + self.inps.timeseries_file))
+        if not self.k in ['timeseries', 'GIANT_TS']:
+            raise ValueError('Only timeseries file is supported!')
+
+        self.h5 = h5py.File(self.inps.timeseries_file, 'r')
+        if self.k in ['GIANT_TS']:
+            self.dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d') for i in self.h5['dates'][:].tolist()]
+        else:
+            self.dateList = timeseries(self.inps.timeseries_file).get_date_list()
+        self.date_num = len(self.dateList)
+        self.inps.dates, self.tims = ptime.date_list2vector(self.dateList)
+
+    def exclude_dates(self):
+        
+        if self.inps.ex_date_list:
+            input_ex_date = list(self.inps.ex_date_list)
+            self.inps.ex_date_list = []
+
+            if input_ex_date:
+                for ex_date in input_ex_date:
+
+                    if os.path.isfile(ex_date):
+                        ex_date = ptime.read_date_list(ex_date)
+                    else:
+                        ex_date = [ptime.yyyymmdd(ex_date)]
+
+                    self.inps.ex_date_list += list(set(ex_date) - set(self.inps.ex_date_list))
+
+                # delete dates not existed in input file
+                self.inps.ex_date_list = sorted(list(set(self.inps.ex_date_list).intersection(self.dateList)))
+                self.inps.ex_dates = ptime.date_list2vector(self.inps.ex_date_list)[0]
+                self.inps.ex_idx_list = sorted([self.dateList.index(i) for i in self.inps.ex_date_list])
+                print(('exclude date:' + str(self.inps.ex_date_list)))
+
+    '''
+        Sets the 'zero' value for the plot
+    '''
+    def set_zero_displacement(self):
+
+        if self.inps.zero_first:
+            if self.inps.ex_date_list:
+                self.inps.zero_idx = min(list(set(range(self.date_num)) - set(self.inps.ex_idx_list)))
+            else:
+                self.inps.zero_idx = 0
+
+    '''
+        Computed dimensions of file (width, length)
+    '''
+    def compute_file_size(self):
+
+        self.length = int(self.atr['LENGTH'])
+        self.width = int(self.atr['WIDTH'])
+        print(('data size in [y0,y1,x0,x1]: [%d, %d, %d, %d]' % (0, self.length, 0, self.width)))
+
+    '''
+        Computes parameters needed for setting lat/lon values
+    '''
+    def compute_lat_lon_params(self):
+
+        try:
+            self.ullon = float(self.atr['X_FIRST'])
+            self.ullat = float(self.atr['Y_FIRST'])
+            self.lon_step = float(self.atr['X_STEP'])
+            self.lat_step = float(self.atr['Y_STEP'])
+            
+            lrlon = self.ullon + self.width * self.lon_step
+            lrlat = self.ullat + self.length * self.lat_step
+            
+            print(('data size in [lat0,lat1,lon0,lon1]: [%.4f, %.4f, %.4f, %.4f]' % (self.lrlat, 
+                                                                                     self.ullat,
+                                                                                     self.ullon,
+                                                                                     self.lrlon)
+                   ))
+            return self.ullon, self.ullat, self.lon_step, self.lat_step, lrlon, lrlat
+        except:
+            pass
+
+    '''
+        Sets coordinates of initial pixel
+    '''
+    def set_inital_pixel_coords(self):
+
+        if self.inps.lalo and 'Y_FIRST' in list(self.atr.keys()):
+            y, x = self.set_yx_coords(self.inps.lalo[0], self.inps.lalo[1])
+            self.inps.yx = [y, x]
+        if self.inps.ref_lalo and 'Y_FIRST' in list(self.atr.keys()):
+            y, x = self.set_yx_coords(self.inps.ref_lalo[0], self.inps.ref_lalo[1])
+            self.inps.ref_yx = [y, x]
+
+        # Display Unit
+        if self.inps.disp_unit == 'cm':
+            self.inps.unit_fac = 100.0
+        elif self.inps.disp_unit == 'm':
+            self.inps.unit_fac = 1.0
+        elif self.inps.disp_unit == 'dm':
+            self.inps.unit_fac = 10.0
+        elif self.inps.disp_unit == 'mm':
+            self.inps.unit_fac = 1000.0
+        elif self.inps.disp_unit == 'km':
+            self.inps.unit_fac = 0.001
+        else:
+            raise ValueError('Un-recognized unit: ' + self.inps.disp_unit)
+        if self.k in ['GIANT_TS']:
+            print('data    unit: mm')
+            self.inps.unit_fac *= 0.001
+        else:
+            print('data    unit: m')
+        print(('display unit: ' + self.inps.disp_unit))
+
+    '''
+        Sets x/y coordinates from lalo valyes
+    '''
+    def set_yx_coords(self, y_input, x_input):
+
+        y = int((y_input - self.ullat) / self.lat_step + 0.5)
+        x = int((x_input - self.ullon) / self.lon_step + 0.5)
+
+        return y, x
+
+    '''
+        Sets multiplier for data based on display unit
+    '''
+    def set_unit_fraction(self):
+
+        if self.inps.disp_unit == 'cm':
+            self.inps.unit_fac = 100.0
+        elif self.inps.disp_unit == 'm':
+            self.inps.unit_fac = 1.0
+        elif self.inps.disp_unit == 'dm':
+            self.inps.unit_fac = 10.0
+        elif self.inps.disp_unit == 'mm':
+            self.inps.unit_fac = 1000.0
+        elif self.inps.disp_unit == 'km':
+            self.inps.unit_fac = 0.001
+        else:
+            raise ValueError('Un-recognized unit: ' + self.inps.disp_unit)
+
+        print('data    unit: m')
+        print(('display unit: ' + self.inps.disp_unit))
+
+    '''
+        Flips displat map ud/lr
+    '''
+    def flip_map(self):
+
+        if self.inps.auto_flip:
+            self.inps.flip_lr, self.inps.flip_ud = pp.auto_flip_direction(self.atr)
+        else:
+            self.inps.flip_ud = False
+            self.inps.flip_lr = False
+
+    '''
+        Sets mask for map
+    '''
+    def set_mask(self):
+
+        if not self.inps.mask_file:
+            if os.path.basename(self.inps.timeseries_file).startswith('geo_'):
+                file_list = ['geo_maskTempCoh.h5']
+            else:
+                file_list = ['maskTempCoh.h5', 'mask.h5']
+
+            try:
+                self.inps.mask_file = ut.get_file_list(file_list)[0]
+            except:
+                self.inps.mask_file = None
+
+        try:
+            self.mask = readfile.read(self.inps.mask_file, datasetName='mask')[0]
+            self.mask[self.mask != 0] = 1
+            print(('load mask from file: ' + self.inps.mask_file))
+        except:
+            self.mask = None
+            print('No mask used.')
+
+    '''
+        Sets the initial map plot
+    '''
+    def set_initial_map(self):
+
+        self.d_v = self.h5['timeseries'][self.inps.epoch_num][:] * self.inps.unit_fac
+        # Initial Map
+        print(str(self.dateList))
+        self.d_v = readfile.read(self.inps.timeseries_file, datasetName=self.dateList[self.inps.epoch_num])[0] * self.inps.unit_fac
+        # d_v = h5[k].get(dateList[self.inps.epoch_num])[:]*self.inps.unit_fac
+        if self.inps.ref_date:
+            self.inps.ref_d_v = readfile.read(self.inps.timeseries_file, datasetName=self.inps.ref_date)[0] * self.inps.unit_fac
+            self.d_v -= self.inps.ref_d_v
+
+        if self.mask is not None:
+            self.d_v = mask_matrix(self.d_v, self.mask)
+
+        if self.inps.ref_yx:
+            self.d_v -= self.d_v[self.inps.ref_yx[0], self.inps.ref_yx[1]]
+
+        self.data_lim = [np.nanmin(self.d_v), np.nanmax(self.d_v)]
+
+        if not self.inps.ylim_mat:
+            self.inps.ylim_mat = self.data_lim
+
+        print(('Initial data range: ' + str(self.data_lim)))
+        print(('Display data range: ' + str(self.inps.ylim_mat)))
+
+        print(('Initial data range: ' + str(self.data_lim)))
+        print(('Display data range: ' + str(self.inps.ylim)))
+
+    ###########################################   Configuring Plot  ###########################################
+
+    def configure_plot(self):
+        # DEM File
+        self.set_dem_file()
+        # Reference Pixel
+        self.set_map_reference_pixel()
+        # Initial Pixel
+        self.set_plot_axis_params()
+        # Flip Axis
+        self.flip_axis()
+        # Construct Color Bar
+        self.make_color_bar()
+        # Construct Time Slider
+        self.make_time_slider()
+
+    '''
+        Sets DEM topography file for the map
+    '''
+    def set_dem_file(self):
+
+        if self.inps.dem_file:
+            dem = readfile.read(self.inps.dem_file, datasetName='height')[0]
+            self.ax_v = pp.plot_dem_yx(self.ax_v, dem)
+
+        self.img = self.ax_v.imshow(self.d_v, cmap=self.inps.colormap, clim=self.inps.ylim_mat, interpolation='nearest')
+
+    '''
+        Sets reference pixel on map
+    '''
+    def set_map_reference_pixel(self):
+
+        if self.inps.ref_yx:
+            self.d_v -= self.d_v[self.inps.ref_yx[0], self.inps.ref_yx[1]]
+            self.ax_v.plot(self.inps.ref_yx[1], self.inps.ref_yx[0], 'ks', ms=6)
+        else:
+            try:
+                self.ax_v.plot(int(self.atr['ref_x']), int(self.atr['ref_y']), 'ks', ms=6)
+            except:
+                pass
+
+    '''
+        Sets axis limits, labels, and titles
+    '''
+    def set_plot_axis_params(self):
+
+        if self.inps.yx:
+            self.ax_v.plot(self.inps.yx[1], self.inps.yx[0], 'ro', markeredgecolor='black')
+
+        self.ax_v.set_xlim(0, np.shape(self.d_v)[1])
+        self.ax_v.set_ylim(np.shape(self.d_v)[0], 0)
+        self.ax_v.format_coord = self.format_coord
+
+        # Title and Axis Label
+        self.ax_v.set_title('N = %d, Time = %s' % (self.inps.epoch_num, self.inps.dates[self.inps.epoch_num].strftime('%Y-%m-%d')))
+
+        if not 'Y_FIRST' in list(self.atr.keys()):
+            self.ax_v.set_xlabel('Range')
+            self.ax_v.set_ylabel('Azimuth')
+
+    '''
+        Flips axis lr/ud
+    '''
+    def flip_axis(self):
+
+        if self.inps.flip_lr:
+            self.ax_v.invert_xaxis()
+            print('flip map left and right')
+        if self.inps.flip_ud:
+            self.ax_v.invert_yaxis()
+            print('flip map up and down')
+
+    '''
+        Creates colorbar for figure
+    '''
+    def make_color_bar(self):
+
+        # Colorbar
+        cbar_axes = self.fig_v.add_axes([0.065, 0.32, 0.40, 0.03])
+        cbar = self.fig_v.colorbar(self.img, cax=cbar_axes, orientation='horizontal')
+        cbar.set_label('Displacement [%s]' % self.inps.disp_unit)
+
+    '''
+        Creates timeseries slider for figure
+    '''
+    def make_time_slider(self):
+
+        ax_time = self.fig_v.add_axes([0.07, 0.10, 0.37, 0.07], facecolor='lightgoldenrodyellow', yticks=[])
+        self.tslider = Slider(ax_time, '', self.tims[0], self.tims[-1], valinit=self.tims[self.inps.epoch_num])
+        self.tslider.ax.bar(self.tims, np.ones(len(self.tims)), facecolor='black', width=0.01, ecolor=None)
+        self.tslider.ax.set_xticks(np.round(np.linspace(self.tims[0], self.tims[-1], num=5) * 100) / 100)
+        self.tslider.on_changed(self.time_slider_update)
+
+    def time_slider_update(self, val):
+        '''Update Displacement Map using Slider'''
+
+        timein = self.tslider.val
+        idx_nearest = np.argmin(np.abs(np.array(self.tims) - timein))
+
+        self.ax_v.set_title('N = %d, Time = %s' % (idx_nearest, self.inps.dates[idx_nearest].strftime('%Y-%m-%d')))
+        self.d_v = self.h5[self.k][idx_nearest][:] * self.inps.unit_fac
+
+        if self.inps.ref_date:
+            self.d_v -= self.inps.ref_d_v
+
+        if self.mask is not None:
+            self.d_v = mask_matrix(self.d_v, self.mask)
+
+        if self.inps.ref_yx:
+            self.d_v -= self.d_v[self.inps.ref_yx[0], self.inps.ref_yx[1]]
+
+        self.img.set_data(self.d_v)
+        self.fig_v.canvas.draw()
+
+    def format_coord(self, x, y):
+        '''Formats x, y coordinates into useful output string (used for creating plot titles)'''
+
+        col = int(x + 0.5)
+        row = int(y + 0.5)
+        if 0 <= col < self.width and 0 <= row < self.length:
+            z = self.d_v[row, col]
+            try:
+                self.lon = self.ullon + x * self.lon_step
+                self.lat = self.ullat + y * self.lat_step
+                return 'x=%.0f, y=%.0f, value=%.4f, lon=%.4f, lat=%.4f' % (x, y, z, self.lon, self.lat)
+            except:
+                return 'x=%.0f, y=%.0f, value=%.4f' % (x, y, z)
+
+    ###########################################   Miscellaneous Functions  ###########################################
+
+    def read_error_list(self):
+
+        self.inps.error_ts = None
+        if self.inps.error_file:
+            error_file_content = np.loadtxt(self.inps.error_file, dtype=str)
+            self.inps.error_ts = error_file_content[:, 1].astype(np.float) * self.inps.unit_fac
+            if self.inps.ex_date_list:
+                e_ts = inps.error_ts[:]
+                self.inps.ex_error_ts = np.array([e_ts[i] for i in self.inps.ex_idx_list])
+                self.inps.error_ts = np.array([e_ts[i] for i in range(self.date_num) if i not in self.inps.ex_idx_list])
+
+    '''
+        Saves figure and data to output file
+    '''
+    def save_output(self):
+
+        if self.inps.save_fig and self.inps.yx:
+            print(('save info for pixel ' + str(self.inps.yx)))
+            if not self.inps.fig_base:
+                self.inps.fig_base = 'y%d_x%d' % (self.inps.yx[0], self.inps.yx[1])
+
+            # TXT - point time series
+            outName = self.inps.fig_base + '_ts.txt'
+            header_info = 'timeseries_file=' + self.inps.timeseries_file
+            header_info += '\ny=%d, x=%d' % (self.inps.yx[0], self.inps.yx[1])
+
+            try:
+                lat = self.ullat + self.inps.yx[0] * self.lat_step
+                lon = self.ullon + self.inps.yx[1] * self.lon_step
+                header_info += '\nlat=%.6f, lon=%.6f' % (lat, lon)
+            except:
+                pass
+
+            if self.inps.ref_yx:
+                header_info += '\nreference pixel: y=%d, x=%d' % (self.inps.ref_yx[0], self.inps.ref_yx[1])
+            else:
+                header_info += '\nreference pixel: y=%s, x=%s' % (self.atr['ref_y'], self.atr['ref_x'])
+
+            header_info += '\nunit=m/yr'
+            np.savetxt(outName, list(zip(np.array(self.dateList), np.array(self.d_ts) / self.inps.unit_fac)), fmt='%s', \
+                       delimiter='    ', header=header_info)
+            print(('save time series displacement in meter to ' + outName))
+
+            # Figure - point time series
+            outName = self.inps.fig_base + '_ts.pdf'
+            self.fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=self.inps.fig_dpi)
+            print(('save time series plot to ' + outName))
+
+            # Figure - map
+            outName = self.inps.fig_base + '_' + self.dateList[self.inps.epoch_num] + '.png'
+            self.fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=self.inps.fig_dpi)
+            print(('save map plot to ' + outName))
+
+    '''
+        Plots initial point on map and sets timeseries data points on scatter plot
+        to appropriate values
+    '''
+    def plot_data_from_inital_point(self):
+
+        if self.inps.yx:
+            self.d_ts = self.update_timeseries(self.inps.yx[0], self.inps.yx[1], 1)
+        else:
+            self.d_ts = np.zeros(len(self.tims))
+            self.ax_ts, scatter = self.plot_timeseries_scatter(self.ax_ts, self.d_ts, self.inps)
+
+    ###########################################   Parser Information  ###########################################
 
     def create_parser(self):
         parser = argparse.ArgumentParser(description='Interactive Time-series Viewer', \
