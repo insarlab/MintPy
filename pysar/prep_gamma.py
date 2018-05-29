@@ -178,10 +178,9 @@ def get_lalo_ref(m_par_file, atr_dict={}):
 
 def extract_metadata4interferogram(fname):
     """Read/extract attributes for PySAR from Gamma .unw, .cor and .int file
-    Inputs:
-        fname : str, Gamma interferogram filename or path, i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
-    Output:
-        atr : dict, Attributes dictionary
+    Parameters: fname : str, Gamma interferogram filename or path,
+                    i.e. /PopoSLT143TsxD/diff_filt_HDR_130118-130129_4rlks.unw
+    Returns:    atr : dict, Attributes dictionary
     """
     file_dir = os.path.dirname(fname)
     file_basename = os.path.basename(fname)
@@ -229,7 +228,7 @@ def extract_metadata4interferogram(fname):
     atr.update(off_dict)
 
     # Perp Baseline Info
-    # print 'extract baseline info from %s, %s and %s file' % (m_par_file, s_par_file, off_file)
+    # print('extract baseline info from %s, %s and %s file' % (m_par_file, s_par_file, off_file))
     atr = get_perp_baseline(m_par_file, s_par_file, off_file, atr)
 
     # LAT/LON_REF1/2/3/4
@@ -242,10 +241,13 @@ def extract_metadata4interferogram(fname):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = None
-    keyList = [i for i in atr_orig.keys() if i in atr.keys()]
-    if any(atr_orig[i] != atr[i] for i in keyList):
-        print('merge %s, %s and %s into %s' % (os.path.basename(m_par_file), os.path.basename(s_par_file),
-                                               os.path.basename(off_file), os.path.basename(rsc_file)))
+    #keyList = [i for i in atr_orig.keys() if i in atr.keys()]
+    if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
+           for i in atr.keys()):
+        print('merge %s, %s and %s into %s' % (os.path.basename(m_par_file),
+                                               os.path.basename(s_par_file),
+                                               os.path.basename(off_file),
+                                               os.path.basename(rsc_file)))
         writefile.write_roipac_rsc(atr, out_file=rsc_file)
 
     return rsc_file
@@ -282,8 +284,9 @@ def extract_metadata4lookup_table(fname):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = None
-    keyList = [i for i in atr_orig.keys() if i in atr.keys()]
-    if any(atr_orig[i] != atr[i] for i in keyList):
+    #keyList = [i for i in atr_orig.keys() if i in atr.keys()]
+    if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
+           for i in atr.keys()):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
@@ -312,8 +315,9 @@ def extract_metadata4dem_geo(fname):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = None
-    keyList = [i for i in atr_orig.keys() if i in atr.keys()]
-    if any(atr_orig[i] != atr[i] for i in keyList):
+    #keyList = [i for i in atr_orig.keys() if i in atr.keys()]
+    if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
+           for i in atr.keys()):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
@@ -350,8 +354,9 @@ def extract_metadata4dem_radar(fname):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = None
-    keyList = [i for i in atr_orig.keys() if i in atr.keys()]
-    if any(atr_orig[i] != atr[i] for i in keyList):
+    #keyList = [i for i in atr_orig.keys() if i in atr.keys()]
+    if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
+           for i in keyList):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
@@ -362,7 +367,10 @@ def prepare_metadata(inps):
 
     # check outfile and parallel option
     if inps.parallel:
-        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file), print_msg=False)
+        num_cores,
+        inps.parallel,
+        Parallel,
+        delayed = ut.check_parallel(len(inps.file), print_msg=False)
 
     # multiple datasets files
     ext = os.path.splitext(inps.file[0])[1]
@@ -370,7 +378,8 @@ def prepare_metadata(inps):
         if len(inps.file) == 1:
             extract_metadata4interferogram(inps.file[0])
         elif inps.parallel:
-            Parallel(n_jobs=num_cores)(delayed(extract_metadata4interferogram)(file) for file in inps.file)
+            Parallel(n_jobs=num_cores)(delayed(extract_metadata4interferogram)(file)
+                                       for file in inps.file)
         else:
             for File in inps.file:
                 extract_metadata4interferogram(File)

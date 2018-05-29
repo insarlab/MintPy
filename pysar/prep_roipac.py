@@ -101,7 +101,8 @@ def extract_metadata(fname):
     except:
         atr_orig = None
     keyList = [i for i in atr_orig.keys() if i in atr.keys()]
-    if any(atr_orig[i] != atr[i] for i in keyList):
+    if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
+           for i in keyList):
         print('merging {} into {} '.format(os.path.basename(baseline_rsc_file),
                                            os.path.basename(basic_rsc_file)))
         writefile.write_roipac_rsc(atr, out_file=basic_rsc_file)
