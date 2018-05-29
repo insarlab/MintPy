@@ -414,7 +414,7 @@ def read_reference_input(inps):
                 inps.method = 'maxCoherence'
             else:
                 inps.method = 'random'
-        print('reference point selection method: '+inps.method)
+        print('reference point selection method: '+str(inps.method))
     print('-'*50)
     return inps
 

@@ -545,6 +545,7 @@ def threshold_coherence_based_mst(date12_list, coh_list):
     mst_mat_csr = minimum_spanning_tree(wei_mat_csr)
 
     # Get date6_list
+    date12_list = ptime.yymmdd_date12(date12_list)
     m_dates = [date12.split('-')[0] for date12 in date12_list]
     s_dates = [date12.split('-')[1] for date12 in date12_list]
     date6_list = ptime.yymmdd(sorted(ptime.yyyymmdd(list(set(m_dates + s_dates)))))

@@ -207,7 +207,7 @@ def reset_network(stackFile):
     else:
         with h5py.File(stackFile, 'r+') as f:
             f['dropIfgram'][:] = True
-        ut.touch(os.path.splitext(os.path.basename(inps.file))[0]+'_coherence_spatialAvg.txt')
+        ut.touch(os.path.splitext(os.path.basename(stackFile))[0]+'_coherence_spatialAvg.txt')
     return stackFile
 
 

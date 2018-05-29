@@ -155,9 +155,9 @@ def read_inps2dict(inps):
         inpsDict['compression'] = None
 
     # PROJECT_NAME --> PLATFORM
-    inpsDict['PLATFORM'],
-    inpsDict['PROJECT_NAME'] = sensor.project_name2sensor([inpsDict['PROJECT_NAME'],
-                                                           inps.template_file])
+    (inpsDict['PLATFORM'],
+     inpsDict['PROJECT_NAME']) = sensor.project_name2sensor([inpsDict['PROJECT_NAME'],
+                                                             inps.template_file])
     if inpsDict['PLATFORM']:
         print('Find PLATFORM from PROJECT_NAME as: {}'.format(inpsDict['PLATFORM']))
 
