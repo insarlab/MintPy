@@ -569,17 +569,16 @@ def read_attribute(fname, datasetName=None):
 
 
 def standardize_metadata(metaDict, standardMetadatKeys):
-    metaDict_standard = {}
+    metaDict_out = {}
     for k in metaDict.keys():
+        metaDict_out[k] = metaDict[k]
         if k in standardMetadataKeys.keys():
             k2 = standardMetadatKeys[k]
             if k2 in metaDict.keys():
-                metaDict_standard[k2] = metaDict[k2]
+                metaDict_out[k2] = metaDict[k2]
             else:
-                metaDict_standard[k2] = metaDict[k]
-        else:
-            metaDict_standard[k] = metaDict[k]
-    return metaDict_standard
+                metaDict_out[k2] = metaDict[k]
+    return metaDict_out
 
 
 #########################################################################
