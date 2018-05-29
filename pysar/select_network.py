@@ -253,6 +253,17 @@ def read_template2inps(templateFile, inps=None):
     if not inps.sensor:
         inps.sensor = sensor.project_name2sensor(project_name)[0]
 
+    # Output directory/filename
+    if not inps.outfile:
+        if autoPath and 'SCRATCHDIR' in os.environ:
+            inps.out_dir = os.getenv('SCRATCHDIR')+'/'+project_name+'/PROCESS'
+        else:
+            try:
+                inps.out_dir = os.path.dirname(os.path.abspath(inps.referenceFile))
+            except:
+                inps.out_dir = os.path.dirname(os.path.abspath(inps.baseline_file))
+        inps.outfile = inps.out_dir+'/ifgram_list.txt'
+
     # Auto path of bl_list.txt file (for Miami user)
     if not inps.baseline_file and autoPath and 'SCRATCHDIR' in os.environ:
         bl_file = os.path.join(os.getenv('SCRATCHDIR'), '{}/SLC/bl_list.txt'.format(project_name))
@@ -408,15 +419,6 @@ def prune_network(date12_list, inps):
 
 def write_ifgram_list(inps):
     # Output directory/filename
-    if not inps.outfile:
-        if autoPath and 'SCRATCHDIR' in os.environ:
-            inps.out_dir = os.getenv('SCRATCHDIR')+'/'+project_name+'/PROCESS'
-        else:
-            try:
-                inps.out_dir = os.path.dirname(os.path.abspath(inps.referenceFile))
-            except:
-                inps.out_dir = os.path.dirname(os.path.abspath(inps.baseline_file))
-        inps.outfile = inps.out_dir+'/ifgram_list.txt'
     inps.outfile = os.path.abspath(inps.outfile)
     inps.out_dir = os.path.dirname(inps.outfile)
     if not os.path.isdir(inps.out_dir):
