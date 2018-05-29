@@ -9,7 +9,7 @@ PySAR is a open-source Python package for InSAR (Interferometric Synthetic Apert
    
 
 ### 1. Download    
-Download the stable version at [Release Page](https://github.com/yunjunz/PySAR/releases), or use the command below. Note that PySAR release version 0.x is using Python 2.7.     
+Download the stable version at [Release Page](https://github.com/yunjunz/PySAR/releases), or use the command below. Note that PySAR release version 0.x uses Python 2.7 while PySAR version 1.x uses Python 3.     
    
     cd ~/python
     wget https://github.com/yunjunz/PySAR/archive/v0.4.0.tar.gz
