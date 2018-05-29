@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/yunjunz/PySAR)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/py-sar)
        
-PySAR is a open-source Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ROI_PAC, Gamma and ISCE format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) linked PySAR product with [time series web viewer](http://insarmaps.miami.edu).      
+PySAR is a open-source Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ISCE, Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) linked PySAR product with [time series web viewer](http://insarmaps.miami.edu).      
    
 
 ### 1. Download    
@@ -61,7 +61,7 @@ Source the file for the first time. It will be sourced automatically next time w
    
    
 #### 2.2 Install Pre-requisites
-PySAR relies on the following Python modules. We recommend using [Anaconda](https://www.anaconda.com/) for Linux users and [Macports](https://www.macports.org/install.php) for Mac users to install the python environment and the prerequisite packages.
+PySAR relies on the following Python modules. We recommend using [Anaconda](https://www.anaconda.com/download/) for Linux users and [Macports](https://www.macports.org/install.php) for Mac users to install the python environment and the prerequisite packages.
 - [Python3.6](https://www.anaconda.com/download/)
 - Numpy
 - Scipy
@@ -90,9 +90,10 @@ For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthde
    
 ### 3. Running PySAR
 
-The current version is compatible with ROI_PAC and Gamma products. PySAR reads unwrapped interefrograms (at the same coordinate system: radar or geo) and the baseline files for each interefrogram. You need to give the path to where the interferograms are and PySAR takes care of the rest!   
+PySAR reads a stack of interferograms (unwrapped interefrograms, coherence, wrapped interferograms and connecting components from SNAPHU if available) and the geometry files (DEM, lookup table, etc.). You need to give the path to where the files are and PySAR takes care of the rest!   
 
 Run pysarApp.py -h see the processing options.   
+Run pysarApp.py -H see the default template options with explanation.   
 Run pysarApp.py -g to generate a default template file and see the detailed settings.   
 
 #### Example: [Kuju Volcano example with ALOS data](https://github.com/yunjunz/PySAR/wiki/Example)   
@@ -136,7 +137,7 @@ Save your template file and run PySAR as:
 
     pysarApp.py KujuAlosAT422F650_template.txt
 
-Inside pysarApp.py, it reads the unwrapped interferograms, refernces all of them to the same coherent pixel (a seed point point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the interferograms, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, removes ramps or surface from time-series epochs, corrects dem errors, corrects local oscilator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps and using phase-elevation approach), ... and finally estimates the velocity.   
+Inside pysarApp.py, it reads the unwrapped interferograms, refernces all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscilator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), corrects DEM error, removes phase ramps (if it has been asked for),... and finally estimates the velocity.   
 
 Use view.py to view any pysar output.   
 
