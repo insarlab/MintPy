@@ -330,10 +330,6 @@ def read_template(inps):
             if key in templateCustom.keys():
                 templateCustom[key] = templateCustom[key].lower().replace('-', '_')
 
-        # FA 1/18: insert general options from template file as pysar.* options
-        if 'processor' in templateCustom.keys():
-            templateCustom['pysar.load.processor'] = templateCustom['processor']
-
         # Update default template with custom input template
         print('update default template based on input custom template')
         inps.templateFile = ut.update_template_file(inps.templateFile, templateCustom)

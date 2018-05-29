@@ -547,7 +547,6 @@ def check_template_auto_value(templateDict, auto_file='../defaults/pysarApp.cfg'
     for key, value in templateDict.items():
         if value in specialValues.keys():
             templateDict[key] = specialValues[value]
-    #templateDict = { key : mapping[value.lower()] for key, value in templateDict.items() }
 
     return templateDict
 
