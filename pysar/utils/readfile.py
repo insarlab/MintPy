@@ -458,7 +458,7 @@ def get_2d_dataset_list(fname):
 
 
 #########################################################################
-def read_attribute(fname, datasetName=None):
+def read_attribute(fname, datasetName=None, standardize=True):
     """Read attributes of input file into a dictionary
     Input  : string, file name
     Output : dictionary, attributes dictionary
@@ -564,7 +564,8 @@ def read_attribute(fname, datasetName=None):
     if atr['PROCESSOR'] == 'isce' and ext == '.wgs84':
         atr['FILE_TYPE'] = 'dem'
 
-    atr = standardize_metadata(atr, standardMetadataKeys)
+    if standardize:
+        atr = standardize_metadata(atr, standardMetadataKeys)
     return atr
 
 
@@ -676,7 +677,7 @@ def read_template(fname, delimiter='=', print_msg=True):
     return template_dict
 
 
-def read_roipac_rsc(fname):
+def read_roipac_rsc(fname, standardize=True):
     """Read ROI_PAC style RSC file.
     Parameters: fname : str.
                     File path of .rsc file.
@@ -695,10 +696,13 @@ def read_roipac_rsc(fname):
     for line in lines:
         key, value = line.strip().split()[0:2]
         rscDict[key] = value
+
+    if standardize:
+        rscDict = standardize_metadata(rscDict, standardMetadataKeys)
     return rscDict
 
 
-def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
+def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True, standardize=True):
     """Read GAMMA .par/.off file into a python dictionary structure.
     Parameters: fname : str. 
                     File path of .par, .off file.
@@ -725,12 +729,16 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True):
             parDict[key] = value
     f.close()
 
-    parDict = attribute_gamma2roipac(parDict)
+    if convert2roipac:
+        parDict = attribute_gamma2roipac(parDict)
+
+    if standardize:
+        parDict = standardize_metadata(parDict, standardMetadataKeys)
 
     return parDict
 
 
-def read_isce_xml(fname):
+def read_isce_xml(fname, convert2roipac=True, standardize=True):
     """Read ISCE .xml file input a python dictionary structure."""
     from lxml import objectify
     xmlDict = {}
@@ -761,7 +769,10 @@ def read_isce_xml(fname):
     except:
         pass
 
-    xmlDict = attribute_isce2roipac(xmlDict)
+    if convert2roipac:
+        xmlDict = attribute_isce2roipac(xmlDict)
+    if standardize:
+        parDict = standardize_metadata(parDict, standardMetadataKeys)
     return xmlDict
 
 

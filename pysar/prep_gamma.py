@@ -356,7 +356,7 @@ def extract_metadata4dem_radar(fname):
         atr_orig = None
     #keyList = [i for i in atr_orig.keys() if i in atr.keys()]
     if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-           for i in keyList):
+           for i in atr.keys()):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
