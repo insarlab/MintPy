@@ -231,18 +231,18 @@ def igram_perp_baseline_list(File):
     return p_baseline_list
 
 
-def critical_perp_baseline(sensor, inc_angle=None, print_msg=False):
+def critical_perp_baseline(sensor_name, inc_angle=None, print_msg=False):
     """Critical Perpendicular Baseline for each satellite"""
     # Jers: 5.712e3 m (near_range=688849.0551m)
     # Alos: 6.331e3 m (near_range=842663.2917m)
     # Tsx : 8.053e3 m (near_range=634509.1271m)
 
     c = 299792458   # m/s, speed of light
-    wvl = sensor.wavelength(sensor)
+    wvl = sensor.wavelength(sensor_name)
     # Yunjun 5/2016, case for Jers, need a automatic way to get this number
     near_range = 688849
-    rg_bandwidth = sensor.range_bandwidth(sensor)
-    inc_angle = sensor.incidence_angle(sensor, inc_angle) / 180 * np.pi
+    rg_bandwidth = sensor.range_bandwidth(sensor_name)
+    inc_angle = sensor.incidence_angle(sensor_name, inc_angle) / 180 * np.pi
     Bperp_c = wvl * (rg_bandwidth/c) * near_range * np.tan(inc_angle)
     if print_msg:
         print(('Critical Perpendicular Baseline: '+str(Bperp_c)+' m'))
@@ -278,13 +278,13 @@ def calculate_doppler_overlap(dop_a, dop_b, bandwidth_az):
     return dop_overlap
 
 
-def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor='Env', inc_angle=22.8,
+def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='Env', inc_angle=22.8,
                        decor_time=200.0, coh_resid=0.2, display=False):
     """Simulate coherence for a given set of interferograms
     Inputs:
         date12_list  - list of string in YYMMDD-YYMMDD format, indicating pairs configuration
         baseline_file - string, path of baseline list text file
-        sensor     - string, SAR sensor
+        sensor_name     - string, SAR sensor name
         inc_angle  - float, incidence angle
         decor_time - float / 2D np.array in size of (1, pixel_num)
                      decorrelation rate in days, time for coherence to drop to 1/e of its initial value
@@ -295,7 +295,7 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor='Env', i
         cohs       - 2D np.array in size of (ifgram_num, pixel_num)
     Example:
         date12_list = pnet.get_date12_list('ifgram_list.txt')
-        cohs = simulate_coherences(date12_list, 'bl_list.txt', sensor='Tsx')
+        cohs = simulate_coherences(date12_list, 'bl_list.txt', sensor_name='Tsx')
 
     References:
         Zebker, H. A., & Villasenor, J. (1992). Decorrelation in interferometric radar echoes.
@@ -308,17 +308,17 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor='Env', i
             A comparison of different decorrelation time constants at L, C, and X Band. ESA Scientific
             Publications(SP-677), 1-5. 
     """
-    date8_list, pbase_list, dop_list = read_baseline_file(baseline_file)[0:3]
-    date6_list = ptime.yymmdd(date8_list)
-    tbase_list = ptime.date_list2tbase(date8_list)[0]
+    date_list, pbase_list, dop_list = read_baseline_file(baseline_file)[0:3]
+    tbase_list = ptime.date_list2tbase(date_list)[0]
 
     # Thermal decorrelation (Zebker and Villasenor, 1992, Eq.4)
-    SNR = sensor.signal2noise_ratio(sensor)
+    SNR = sensor.signal2noise_ratio(sensor_name)
     coh_thermal = 1. / (1. + 1./SNR)
 
-    pbase_c = critical_perp_baseline(sensor, inc_angle)
-    bandwidth_az = sensor.azimuth_bandwidth(sensor)
+    pbase_c = critical_perp_baseline(sensor_name, inc_angle)
+    bandwidth_az = sensor.azimuth_bandwidth(sensor_name)
 
+    date12_list = ptime.yyyymmdd_date12(date12_list)
     ifgram_num = len(date12_list)
     if isinstance(decor_time, (int, float)):
         pixel_num = 1
@@ -331,8 +331,8 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor='Env', i
             sys.stdout.write('\rinterferogram = %4d/%4d' % (i, ifgram_num))
             sys.stdout.flush()
         m_date, s_date = date12_list[i].split('_')
-        m_idx = date6_list.index(m_date)
-        s_idx = date6_list.index(s_date)
+        m_idx = date_list.index(m_date)
+        s_idx = date_list.index(s_date)
 
         pbase = pbase_list[s_idx] - pbase_list[m_idx]
         tbase = tbase_list[s_idx] - tbase_list[m_idx]

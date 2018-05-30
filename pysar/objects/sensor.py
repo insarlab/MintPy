@@ -119,7 +119,7 @@ def signal2noise_ratio(sensor):
     if   sensor.startswith('Ers') :  SNR = 11.7
     elif sensor.startswith('Env') :  SNR = 19.5
     elif sensor.startswith('Jers'):  SNR = 14
-    elif sensor.startswith('S'):     SNR = 22
+    elif sensor.startswith('Sen'):     SNR = 22
     else: print('satellite not found'); SNR = None
     return SNR
 

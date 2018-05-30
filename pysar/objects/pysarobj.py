@@ -744,15 +744,21 @@ class ifgramStack:
 
     # Functions for Network Inversion
 
-    def get_design_matrix(self, refDate=None, dropIfgram=True):
+    def get_design_matrix(self, refDate=None, dropIfgram=True, date12_list=None):
         '''Return design matrix of the input ifgramStack, ignoring dropped ifgrams
         Parameters: refDate : str, date in YYYYMMDD format
                     dropIfgram : bool, use dropped ifgram info or not
         Returns:    A : 2D array of float32 in size of (num_ifgram, num_date-1)
                     B : 2D array of float32 in size of (num_ifgram, num_date-1)
+        Examples:   stack_obj = ifgramStack('./INPUTS/ifgramStack.h5')
+                    A, B = stack_obj.get_design_matrix()
+                    A, B = stack_obj.get_design_matrix(date12_list=date12_list)
         '''
         # Date info
-        date12List = self.get_date12_list(dropIfgram=dropIfgram)
+        if date12_list:
+            date12List = list(date12_list)
+        else:
+            date12List = self.get_date12_list(dropIfgram=dropIfgram)
         mDates = [i.split('_')[0] for i in date12List]
         sDates = [i.split('_')[1] for i in date12List]
         dateList = sorted(list(set(mDates + sDates)))
