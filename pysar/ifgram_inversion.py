@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
-# recommend usage:
+# Recommend import:
 #     from pysar import ifgram_inversion as ifginv
 
 

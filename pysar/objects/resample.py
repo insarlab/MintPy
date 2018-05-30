@@ -3,7 +3,7 @@
 # Copyright(c) 2018, Zhang Yunjun                          #
 # Author:  Zhang Yunjun, 2018                              #
 ############################################################
-# Recommended usage:
+# Recommend import:
 #     from pysar.objects.resample import resample
 
 

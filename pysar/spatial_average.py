@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2016, Zhang Yunjun                          #
+# Copyright(c) 2016-2018, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-#
+
 
 import sys
 import argparse
 import matplotlib.pyplot as plt
-from pysar.utils import readfile, ptime, utils as ut, plot as pp
 from pysar.objects import ifgramDatasetNames
+from pysar.utils import readfile, ptime, utils as ut, plot as pp
 
 
 #################################  Usage  ####################################

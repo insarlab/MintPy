@@ -1,11 +1,11 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2016, Yunjun Zhang                          #
+# Copyright(c) 2016-2018, Yunjun Zhang                     #
 # Author:  Yunjun Zhang                                    #
 ############################################################
-# Recommended Usage:
+# Recommend import:
 #   from pysar.objects import sensor
-#
+
 
 import os
 

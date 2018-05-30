@@ -4,8 +4,9 @@
 # Author:  Zhang Yunjun, Heresh Fattahi, 2018              #
 ############################################################
 # class used for file operation within PySAR
-# Recommended usage:
+# Recommend import:
 #     from pysar.objects import timeseries, ifgramStack, geometry
+
 
 import os
 import sys

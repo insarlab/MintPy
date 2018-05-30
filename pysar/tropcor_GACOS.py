@@ -1,8 +1,10 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.2                            #   
+# Program is part of PySAR                                 #
+# Copyright(c) 2018, Bhuvan Varugu, Zhang Yunjun           #
 # Author:  Bhuvan Varugu, Zhang Yunjun                     #
 ############################################################
+
 
 import os
 import numpy as np

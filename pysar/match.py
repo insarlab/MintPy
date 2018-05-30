@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jan 2016: put manual matching code to manual_offset_estimate()
-#                   put two files matching code into match_two_files()
-#                   add cmd_line_parse(), merge matching_all.py to it.
 
 
 import os

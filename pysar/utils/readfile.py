@@ -1,35 +1,10 @@
-###############################################################################
-# Program is part of PySAR
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun
-# Author:  Heresh Fattahi, Zhang Yunjun
-###############################################################################
-#  This program is modified from the software originally written by Scott Baker
-#  with the following licence:
-#
-#  Copyright (c) 2011, Scott Baker
-#
-#  Permission is hereby granted, free of charge, to any person obtaining a
-#  copy of this software and associated documentation files (the "Software"),
-#  to deal in the Software without restriction, including without limitation
-#  the rights to use, copy, modify, merge, publish, distribute, sublicense,
-#  and/or sell copies of the Software, and to permit persons to whom the
-#  Software is furnished to do so, subject to the following conditions:
-#
-#  The above copyright notice and this permission notice shall be included
-#  in all copies or substantial portions of the Software.
-#
-#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-#  OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-#  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-#  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-#  DEALINGS IN THE SOFTWARE.
-###############################################################################
-#
-# Recommend usage:
-#   import pysar.utils.readfile as readfile
-#
+############################################################
+# Program is part of PySAR                                 #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi, 2013              #
+############################################################
+# Recommend import:
+#   from pysar.utils import readfile
 
 
 import os
@@ -934,10 +909,13 @@ def read_float32(fname, box=None, byte_order='l'):
     if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
         data_type = '>f4'
 
-    data = np.fromfile(fname, dtype=data_type,
+    data = np.fromfile(fname,
+                       dtype=data_type,
                        count=box[3]*2*width).reshape(box[3], 2*width)
-    amplitude = data[box[1]:box[3], box[0]:box[2]]
-    phase = data[box[1]:box[3], width+box[0]:width+box[2]]
+    amplitude = data[box[1]:box[3],
+                     box[0]:box[2]]
+    phase = data[box[1]:box[3],
+                 width+box[0]:width+box[2]]
 
     return amplitude, phase, atr
 
@@ -955,9 +933,11 @@ def read_real_float64(fname, box=None, byte_order='l'):
     if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
         data_type = '>f8'
 
-    data = np.fromfile(fname, dtype=data_type,
+    data = np.fromfile(fname,
+                       dtype=data_type,
                        count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[0]:box[2]]
+    data = data[box[1]:box[3],
+                box[0]:box[2]]
     return data, atr
 
 
@@ -997,9 +977,11 @@ def read_complex_float32(fname, box=None, byte_order='l', band='phase'):
     if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
         data_type = '>c8'
 
-    data = np.fromfile(fname, dtype=data_type,
+    data = np.fromfile(fname,
+                       dtype=data_type,
                        count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[0]:box[2]]
+    data = data[box[1]:box[3],
+                box[0]:box[2]]
 
     if band == 'phase':
         dataOut = np.angle(data)
@@ -1034,9 +1016,11 @@ def read_real_float32(fname, box=None, byte_order='l'):
     if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
         data_type = '>f4'
 
-    data = np.fromfile(fname, dtype=data_type,
+    data = np.fromfile(fname,
+                       dtype=data_type,
                        count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[0]:box[2]]
+    data = data[box[1]:box[3],
+                box[0]:box[2]]
     return data, atr
 
 
@@ -1063,13 +1047,17 @@ def read_complex_int16(fname, box=None, byte_order='l', cpx=False):
     if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
         data_type = '>i2'
 
-    data = np.fromfile(fname, dtype=data_type,
+    data = np.fromfile(fname,
+                       dtype=data_type,
                        count=box[3]*2*width).reshape(box[3], 2*width)
-    data = data[box[1]:box[3], 2*box[0]:2*box[2]].flatten()
+    data = data[box[1]:box[3],
+                2*box[0]:2*box[2]].flatten()
 
     odd_idx = np.arange(1, len(data), 2)
-    real = data[odd_idx-1].reshape(box[3]-box[1], box[2]-box[0])
-    imag = data[odd_idx].reshape(box[3]-box[1], box[2]-box[0])
+    real = data[odd_idx-1].reshape(box[3]-box[1],
+                                   box[2]-box[0])
+    imag = data[odd_idx].reshape(box[3]-box[1],
+                                 box[2]-box[0])
 
     if cpx:
         return real, imag, atr
@@ -1090,9 +1078,11 @@ def read_real_int16(fname, box=None, byte_order='l'):
     if byte_order in ['b', 'big', 'big-endian', 'ieee-be']:
         data_type = '>i2'
 
-    data = np.fromfile(fname, dtype=data_type,
+    data = np.fromfile(fname,
+                       dtype=data_type,
                        count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[0]:box[2]]
+    data = data[box[1]:box[3],
+                box[0]:box[2]]
     return data, atr
 
 
@@ -1111,14 +1101,18 @@ def read_bool(fname, box=None):
     if not box:
         box = [0, 0, width, length]
 
-    data = np.fromfile(fname, dtype=np.bool_,
+    data = np.fromfile(fname,
+                       dtype=np.bool_,
                        count=box[3]*width).reshape(box[3], width)
-    data = data[box[1]:box[3], box[0]:box[2]]
+    data = data[box[1]:box[3],
+                box[0]:box[2]]
     return data, atr
 
 
 def read_GPS_USGS(fname):
-    yyyymmdd = np.loadtxt(fname, dtype=bytes, usecols=(0, 1)).astype(str)[:, 0]
+    yyyymmdd = np.loadtxt(fname,
+                          dtype=bytes,
+                          usecols=(0, 1)).astype(str)[:, 0]
     YYYYMMDD = []
     for y in yyyymmdd:
         YYYYMMDD.append(y)

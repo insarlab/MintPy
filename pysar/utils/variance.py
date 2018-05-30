@@ -1,12 +1,11 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2017, Zhang Yunjun                          #
+# Copyright(c) 2017-2018, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-#
-# Recommended usage:
-#   import pysar.utils.variance as pvar
-#
+# Recommend import:
+#   from pysar.utils import variance as pvar
+
 
 import numpy as np
 import pyproj

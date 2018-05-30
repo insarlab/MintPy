@@ -1,11 +1,10 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
-# Recommend usage:
+# Recommend import:
 #   from pysar.utils import writefile
-#
 
 
 import os

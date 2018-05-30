@@ -1,10 +1,11 @@
-###############################################################################
-# Program is part of PySAR
-# Copyright(c) 2018, Zhang Yunjun
-# Author:  Zhang Yunjun
-###############################################################################
-# Recommend usage:
-#     import pysar.utils.plot as pp
+############################################################
+# Program is part of PySAR                                 #
+# Copyright(c) 2018, Zhang Yunjun                          #
+# Author:  Zhang Yunjun, 2018                              #
+############################################################
+# Recommend import:
+#     from pysar.utils import plot as pp
+
 
 import os
 import warnings

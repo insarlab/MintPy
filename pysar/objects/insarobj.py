@@ -1,10 +1,10 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2017, Heresh Fattahi, Zhang Yunjun          #
+# Copyright(c) 2017-2018, Heresh Fattahi, Zhang Yunjun     #
 # Author:  Heresh Fattahi, Zhang Yunjun, 2017              #
 ############################################################
 # class used for data loading from InSAR stack to PySAR timeseries
-# Recommended usage:
+# Recommend import:
 #     from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
 
 

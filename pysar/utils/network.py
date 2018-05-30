@@ -1,11 +1,10 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2016, Zhang Yunjun                          #
+# Copyright(c) 2016-2018, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-# Recommended Usage:
-#   import pysar.utils.network as pnet
-#
+# Recommend import:
+#   from pysar.utils import network as pnet
 
 
 import os

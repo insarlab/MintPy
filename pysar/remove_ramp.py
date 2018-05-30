@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi                        #
-# Author:  Heresh Fattahi                                  #
+# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
+# Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-# Yunjun, Jun 2016: Add template input option
-#                   Add multiple files support
-# Yunjun, Aug 2016: Support multiple surfaces
 
 
 import os

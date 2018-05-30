@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2017, Zhang Yunjun                          #
+# Copyright(c) 2017-2018, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-# To do list: cp .unw.rsc to _snap_connect.byt.rsc
+
 
 import os
 import sys

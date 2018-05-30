@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
+
 
 import os
 import shutil
 import argparse
 import numpy as np
-from pysar.utils import readfile, ptime, utils as ut
 from pysar.objects import timeseries
+from pysar.utils import readfile, ptime, utils as ut
 
 
 ##################################################################

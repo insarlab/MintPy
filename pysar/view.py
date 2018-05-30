@@ -4,9 +4,8 @@
 # Copyright(c) 2017-2018, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
-# Recommended usage:
+# Recommend import:
 #   import pysar.view as view
-#
 
 
 import os

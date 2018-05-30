@@ -1,6 +1,6 @@
 ###############################################################################
 # Program is part of PySAR
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun
+# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun
 # Author:  Heresh Fattahi, Zhang Yunjun
 ###############################################################################
 #  deramp are modified from a software originally
@@ -26,9 +26,9 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 ###############################################################################
-# Recommend usage:
+# Recommend import:
 #     from pysar.utils import deramp
-#
+
 
 
 import os

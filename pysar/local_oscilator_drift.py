@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi                        #
+# Copyright(c) 2013-2018, Heresh Fattahi                   #
 # Author:  Heresh Fattahi                                  #
 ############################################################
-# The empiriocal model in this program to correct the Local
-# Oscilator Frequency Decay of Envisat ASAR instrument was
-# suggested by Petar Marinkovic and Yngvar Larsen, 2013.
 
 
 import os
 import sys
 import argparse
-import time
-import datetime
-import h5py
 import numpy as np
 from pysar.objects import timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut

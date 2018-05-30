@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2017, Zhang Yunjun, Yunmeng Cao             #
+# Copyright(c) 2017-2018, Zhang Yunjun, Yunmeng Cao        #
 # Author:  Zhang Yunjun, Yunmeng Cao                       #
 ############################################################
 

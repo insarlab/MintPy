@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2017, Zhang Yunjun                          #
+# Copyright(c) 2017-2018, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 
 
 import argparse
-from pysar.utils import utils as ut
 from pysar.objects import ifgramDatasetNames
+from pysar.utils import utils as ut
 
 
 #################################  Usage  ####################################

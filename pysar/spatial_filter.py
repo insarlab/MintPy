@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
+# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
@@ -12,13 +12,12 @@ import argparse
 
 try:
     from skimage import filters, feature
-except:
+except ImportError:
     print('++++++++++++++++++++++++++++++++++++++++++++')
     print('Could not import skimage')
     print('To use filter.py you must install skimage')
     print('See: http://scikit-image.org/')
     print('++++++++++++++++++++++++++++++++++++++++++++')
-    sys.exit(1)
 
 import numpy as np
 from scipy import ndimage

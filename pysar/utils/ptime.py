@@ -1,10 +1,9 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2016, Zhang Yunjun                          #
-# Author:  Zhang Yunjun                                    #
+# Copyright(c) 2016-2018, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi, 2016              #
 ############################################################
-# Based on scripts writen by Heresh Fattahi
-# Recommended Usage:
+# Recommend import:
 #   from pysar.utils import ptime
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013, Heresh Fattahi                        #
+# Copyright(c) 2013-2018, Heresh Fattahi                   #
 # Author:  Heresh Fattahi                                  #
 ############################################################
 

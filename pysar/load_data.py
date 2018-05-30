@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-# Author: Heresh Fattahi, Zhang Yunjun
+############################################################
+# Program is part of PySAR                                 #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
+############################################################
+
 
 import os
 import sys
