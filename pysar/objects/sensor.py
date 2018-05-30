@@ -4,7 +4,7 @@
 # Author:  Yunjun Zhang                                    #
 ############################################################
 # Recommended Usage:
-#   import pysar.objects.sensor as sensor
+#   from pysar.objects import sensor
 #
 
 import os

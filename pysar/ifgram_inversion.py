@@ -4,6 +4,8 @@
 # Copyright(c) 2013, Zhang Yunjun, Heresh Fattahi          #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
+# recommend usage:
+#     from pysar import ifgram_inversion as ifginv
 
 
 import os

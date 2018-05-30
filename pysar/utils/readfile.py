@@ -772,7 +772,7 @@ def read_isce_xml(fname, convert2roipac=True, standardize=True):
     if convert2roipac:
         xmlDict = attribute_isce2roipac(xmlDict)
     if standardize:
-        parDict = standardize_metadata(parDict, standardMetadataKeys)
+        xmlDict = standardize_metadata(xmlDict, standardMetadataKeys)
     return xmlDict
 
 
