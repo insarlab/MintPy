@@ -413,15 +413,15 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
     # could be different than geometry file in case of roipac and gamma
     fileList = [os.path.join(workDir, 'INPUTS/geometry*.h5')]
     lookupFile = get_lookup_file(fileList, abspath=True, print_msg=print_msg)
-    # Check required dataset - height
+    # Check required dataset
     lut_obj = geometry(lookupFile)
     lut_obj.open(print_msg=False)
     if (not all(i in lut_obj.datasetNames for i in ['latitude', 'longitude'])
-            or not all(i in lut_obj.datasetNames for i in ['latitude', 'longitude'])):
+            or not all(i in lut_obj.datasetNames for i in ['rangeCoord', 'azimuthCoord'])):
         lookupFile = None
     lut_obj.close(print_msg=False)
 
-    # Set loadComplete to True if all required datasets exists
+    # Set loadComplete to True only if all required datasets exists
     if any(i is None for i in [stackFile, geomFile, lookupFile]):
         loadComplete = False
     else:
