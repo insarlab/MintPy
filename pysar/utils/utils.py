@@ -403,17 +403,25 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
         fileList = [os.path.join(workDir, 'INPUTS/geometryRadar.h5')]
     geomFile = is_file_exist(fileList, abspath=True)
     # Check required dataset - height
-    geomobj = geometry(geomFile)
-    geomobj.open(print_msg=False)
-    if geometryDatasetNames[0] not in geomobj.datasetNames:
+    geom_obj = geometry(geomFile)
+    geom_obj.open(print_msg=False)
+    if geometryDatasetNames[0] not in geom_obj.datasetNames:
         geomFile = None
-    geomobj.close(print_msg=False)
+    geom_obj.close(print_msg=False)
 
     # Recommended files - lookup table (None if not found)
     # could be different than geometry file in case of roipac and gamma
     fileList = [os.path.join(workDir, 'INPUTS/geometry*.h5')]
     lookupFile = get_lookup_file(fileList, abspath=True, print_msg=print_msg)
+    # Check required dataset - height
+    lut_obj = geometry(lookupFile)
+    lut_obj.open(print_msg=False)
+    if (not all(i in lut_obj.datasetNames for i in ['latitude', 'longitude'])
+            or not all(i in lut_obj.datasetNames for i in ['latitude', 'longitude'])):
+        lookupFile = None
+    lut_obj.close(print_msg=False)
 
+    # Set loadComplete to True if all required datasets exists
     if any(i is None for i in [stackFile, geomFile, lookupFile]):
         loadComplete = False
     else:
