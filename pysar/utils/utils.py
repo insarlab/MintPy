@@ -345,7 +345,7 @@ def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, pri
     return outFile
 
 
-def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
+def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     """Check the result of loading data for the following two rules:
         1. file existance
         2. file attribute readability
@@ -353,7 +353,7 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
     If inps is valid/not_empty: return updated inps;
     Otherwise, return True/False if all recommended file are loaded and readably or not
 
-    Parameters: workDir : string,
+    Parameters: work_dir : string,
                     PySAR working directory
                 inps : Namespace, optional
                     variable for pysarApp.py. Not needed for check loading result.
@@ -367,9 +367,9 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
         True = ut.check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR')
         inps,atr = ut.check_loaded_dataset(inps.workDir, inps)
     """
-    if not workDir:
-        workDir = os.getcwd()
-    workDir = os.path.abspath(workDir)
+    if not work_dir:
+        work_dir = os.getcwd()
+    work_dir = os.path.abspath(work_dir)
 
     if inps:
         inps.stackFile = None
@@ -377,52 +377,52 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
         inps.lookupFile = None
 
     # Required files - interferograms stack
-    fileList = [os.path.join(workDir, 'INPUTS/ifgramStack.h5')]
-    stackFile = is_file_exist(fileList, abspath=True)
+    file_list = [os.path.join(work_dir, 'INPUTS/ifgramStack.h5')]
+    stack_file = is_file_exist(file_list, abspath=True)
 
-    if not stackFile:
+    if not stack_file:
         if inps:
             return inps, None
         else:
             return False
 
-    atr = readfile.read_attribute(stackFile)
+    atr = readfile.read_attribute(stack_file)
     # Check required dataset - unwrapPhase
     dsList = []
-    with h5py.File(stackFile, 'r') as f:
+    with h5py.File(stack_file, 'r') as f:
         dsList = list(f.keys())
     if ifgramDatasetNames[0] not in dsList:
-        stackFile = None
+        stack_file = None
 
     # Recommended files - geometry (None if not found)
     if 'X_FIRST' in atr.keys():
         geocoded = True
-        fileList = [os.path.join(workDir, 'INPUTS/geometryGeo.h5')]
+        file_list = [os.path.join(work_dir, 'INPUTS/geometryGeo.h5')]
     else:
         geocoded = False
-        fileList = [os.path.join(workDir, 'INPUTS/geometryRadar.h5')]
-    geomFile = is_file_exist(fileList, abspath=True)
+        file_list = [os.path.join(work_dir, 'INPUTS/geometryRadar.h5')]
+    geom_file = is_file_exist(file_list, abspath=True)
     # Check required dataset - height
-    geom_obj = geometry(geomFile)
-    geom_obj.open(print_msg=False)
-    if geometryDatasetNames[0] not in geom_obj.datasetNames:
-        geomFile = None
-    geom_obj.close(print_msg=False)
+    if geom_file is not None:
+        geom_obj = geometry(geom_file)
+        geom_obj.open(print_msg=False)
+        if geometryDatasetNames[0] not in geom_obj.datasetNames:
+            geom_file = None
 
     # Recommended files - lookup table (None if not found)
     # could be different than geometry file in case of roipac and gamma
-    fileList = [os.path.join(workDir, 'INPUTS/geometry*.h5')]
-    lookupFile = get_lookup_file(fileList, abspath=True, print_msg=print_msg)
+    file_list = [os.path.join(work_dir, 'INPUTS/geometry*.h5')]
+    lookup_file = get_lookup_file(file_list, abspath=True, print_msg=print_msg)
     # Check required dataset
-    lut_obj = geometry(lookupFile)
-    lut_obj.open(print_msg=False)
-    if (not all(i in lut_obj.datasetNames for i in ['latitude', 'longitude'])
-            or not all(i in lut_obj.datasetNames for i in ['rangeCoord', 'azimuthCoord'])):
-        lookupFile = None
-    lut_obj.close(print_msg=False)
+    if lookup_file is not None:
+        lut_obj = geometry(lookup_file)
+        lut_obj.open(print_msg=False)
+        if not (all(i in lut_obj.datasetNames for i in ['latitude', 'longitude'])
+                or all(i in lut_obj.datasetNames for i in ['rangeCoord', 'azimuthCoord'])):
+            lookup_file = None
 
     # Set loadComplete to True only if all required datasets exists
-    if any(i is None for i in [stackFile, geomFile, lookupFile]):
+    if any(i is None for i in [stack_file, geom_file, lookup_file]):
         loadComplete = False
     else:
         loadComplete = True
@@ -434,18 +434,18 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
             print('Loaded dataset is in GEO coordinates')
         else:
             print('Loaded dataset is in RADAR coordinates')
-        print('Interferograms Stack: {}'.format(stackFile))
-        print('Geometry File       : {}'.format(geomFile))
-        print('Lookup Table File   : {}'.format(lookupFile))
+        print('Interferograms Stack: {}'.format(stack_file))
+        print('Geometry File       : {}'.format(geom_file))
+        print('Lookup Table File   : {}'.format(lookup_file))
         if loadComplete:
             print('-'*50+'\nAll data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
         print('-'*50)
 
     # Update namespace inps if inputed
     if inps:
-        inps.stackFile = stackFile
-        inps.geomFile = geomFile
-        inps.lookupFile = lookupFile
+        inps.stackFile = stack_file
+        inps.geomFile = geom_file
+        inps.lookupFile = lookup_file
         inps.geocoded = geocoded
         return inps, atr
 
@@ -454,16 +454,16 @@ def check_loaded_dataset(workDir='./', inps=None, print_msg=True):
         return loadComplete
 
 
-def is_file_exist(fileList, abspath=True):
+def is_file_exist(file_list, abspath=True):
     """Check if any file in the file list 1) exists and 2) readable
     Inputs:
-        fileList : list of string, file name with/without wildcards
+        file_list : list of string, file name with/without wildcards
         abspath   : bool, return absolute file name/path or not
     Output:
         file_path : string, found file name/path; None if not.
     """
     try:
-        file = get_file_list(fileList, abspath=abspath)[0]
+        file = get_file_list(file_list, abspath=abspath)[0]
         atr = readfile.read_attribute(file)
     except:
         file = None
@@ -1280,49 +1280,48 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, 
 
 
 ######################################################################################################
-def get_file_list(fileList, abspath=False, coord=None):
+def get_file_list(file_list, abspath=False, coord=None):
     """Get all existed files matching the input list of file pattern
     Inputs:
-        fileList - string or list of string, input file/directory pattern
+        file_list - string or list of string, input file/directory pattern
         abspath  - bool, return absolute path or not
         coord    - string, return files with specific coordinate type: geo or radar
                    if none, skip the checking and return all files
     Output:
-        fileListOut - list of string, existed file path/name, [] if not existed
+        file_list_out - list of string, existed file path/name, [] if not existed
     Example:
-        fileList = get_file_list(['*velocity*.h5','timeseries*.h5'])
-        fileList = get_file_list('timeseries*.h5')
+        file_list = get_file_list(['*velocity*.h5','timeseries*.h5'])
+        file_list = get_file_list('timeseries*.h5')
     """
-    if not fileList:
+    if not file_list:
         return []
 
-    if isinstance(fileList, str):
-        fileList = [fileList]
+    if isinstance(file_list, str):
+        file_list = [file_list]
 
     # Get rid of None element
-    fileList = [x for x in fileList if x != None]
-    fileListOut = []
-    for i in range(len(fileList)):
-        file0 = fileList[i]
-        fileList0 = glob.glob(file0)
-        fileListOut += sorted(list(set(fileList0) - set(fileListOut)))
+    file_list = [x for x in file_list if x != None]
+    file_list_out = []
+    for i in range(len(file_list)):
+        file0 = file_list[i]
+        file_list0 = glob.glob(file0)
+        file_list_out += sorted(list(set(file_list0) - set(file_list_out)))
 
     if abspath:
-        fileListOut = [os.path.abspath(i) for i in fileListOut]
+        file_list_out = [os.path.abspath(i) for i in file_list_out]
 
     if coord is not None:
-        fileListOutBk = list(fileListOut)
-        for fname in fileListOutBk:
+        for fname in list(file_list_out):
             atr = readfile.read_attribute(fname)
             if coord in ['geo'] and 'Y_FIRST' not in atr.keys():
-                fileListOut.remove(fname)
+                file_list_out.remove(fname)
             elif coord in ['radar', 'rdr', 'rdc'] and 'Y_FIRST' in atr.keys():
-                fileListOut.remove(fname)
+                file_list_out.remove(fname)
             else:
                 raise ValueError('Input coord type: '+str(coord) +
                                  '\n. Only support geo, radar, rdr, rdc inputs.')
 
-    return fileListOut
+    return file_list_out
 
 
 ##################################################################

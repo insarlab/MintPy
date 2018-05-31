@@ -143,7 +143,6 @@ def read_inps2dict(inps):
     # Read template file
     template = readfile.read_template(inps.template_file)
     template = ut.check_template_auto_value(template)
-    # FA 1/18: insert general options from template file as pysar.* options
     if 'processor' in template.keys():
         template['pysar.load.processor'] = template['processor']
 
@@ -164,7 +163,8 @@ def read_inps2dict(inps):
      inpsDict['PROJECT_NAME']) = sensor.project_name2sensor([inpsDict['PROJECT_NAME'],
                                                              inps.template_file])
     if inpsDict['PLATFORM']:
-        print('Find PLATFORM from PROJECT_NAME as: {}'.format(inpsDict['PLATFORM']))
+        print('platform : {}'.format(inpsDict['PLATFORM']))
+    print('processor: {}'.format(inpsDict['processor']))
 
     # Here to insert code to check default file path for miami user
     if (auto_path.autoPath

@@ -329,6 +329,8 @@ def read_template(inps):
         for key in ['pysar.deramp', 'pysar.troposphericDelay.method']:
             if key in templateCustom.keys():
                 templateCustom[key] = templateCustom[key].lower().replace('-', '_')
+        if 'processor' in templateCustom.keys():
+            templateCustom['pysar.load.processor'] = templateCustom['processor']
 
         # Update default template with custom input template
         print('update default template based on input custom template')
