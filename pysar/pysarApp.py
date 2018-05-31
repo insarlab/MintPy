@@ -399,8 +399,6 @@ def main(iargs=None):
 
     print('-'*50)
     inps, atr = ut.check_loaded_dataset(inps.workDir, inps)
-    if not inps.stackFile:
-        sys.exit('ERROR: No interferograms stack file found!')
 
     # Add template options into HDF5 file metadata
     # if inps.templateFileCustom:

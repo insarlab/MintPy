@@ -12,7 +12,7 @@ import sys
 import glob
 import time
 import datetime
-import warnings
+import errno
 import h5py
 import numpy as np
 import multiprocessing
@@ -353,19 +353,15 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     If inps is valid/not_empty: return updated inps;
     Otherwise, return True/False if all recommended file are loaded and readably or not
 
-    Parameters: work_dir : string,
-                    PySAR working directory
-                inps : Namespace, optional
-                    variable for pysarApp.py. Not needed for check loading result.
-    Returns:    loadComplete : bool,
-                    complete loading or not
-            or  inps : Namespace, if it's inputed
-                atr : dict,
-                    metadata of found ifgramStack file
-    Example:
-        #if True, PROCESS, SLC folder could be removed.
-        True = ut.check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR')
-        inps,atr = ut.check_loaded_dataset(inps.workDir, inps)
+    Parameters: work_dir : string, PySAR working directory
+                inps : Namespace, optional, variable for pysarApp.py.
+                    Not needed for check loading result.
+    Returns:    loadComplete : bool, complete loading or not
+                    #if True, PROCESS, SLC folder could be removed.
+                or  inps : Namespace, if it's inputed
+                    atr : dict, metadata of found ifgramStack file
+    Example:    True = ut.check_loaded_dataset($SCRATCHDIR+'/SinabungT495F50AlosA/PYSAR')
+                inps, atr = ut.check_loaded_dataset(inps.workDir, inps)
     """
     if not work_dir:
         work_dir = os.getcwd()
@@ -376,25 +372,19 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
         inps.geomFile = None
         inps.lookupFile = None
 
-    # Required files - interferograms stack
+    #--------------------------- Search file ------------------------#
+    # 1. interferograms stack
     file_list = [os.path.join(work_dir, 'INPUTS/ifgramStack.h5')]
     stack_file = is_file_exist(file_list, abspath=True)
-
     if not stack_file:
         if inps:
             return inps, None
         else:
             return False
+    else:
+        atr = readfile.read_attribute(stack_file)
 
-    atr = readfile.read_attribute(stack_file)
-    # Check required dataset - unwrapPhase
-    dsList = []
-    with h5py.File(stack_file, 'r') as f:
-        dsList = list(f.keys())
-    if ifgramDatasetNames[0] not in dsList:
-        stack_file = None
-
-    # Recommended files - geometry (None if not found)
+    # 2. geometry
     if 'X_FIRST' in atr.keys():
         geocoded = True
         file_list = [os.path.join(work_dir, 'INPUTS/geometryGeo.h5')]
@@ -402,34 +392,74 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
         geocoded = False
         file_list = [os.path.join(work_dir, 'INPUTS/geometryRadar.h5')]
     geom_file = is_file_exist(file_list, abspath=True)
-    # Check required dataset - height
+
+    # 3. lookup table
+    # could be different than geometry file in case of roipac and gamma
+    file_list = [os.path.join(work_dir, 'INPUTS/geometry*.h5')]
+    lookup_file = get_lookup_file(file_list,
+                                  abspath=True,
+                                  print_msg=print_msg)
+
+    #------------------ Check required datasets -----------------------#
+    # set loadComplete to False if any required dataset is missing
+    loadComplete = True
+
+    # 1. stack_file: unwrapPhase, coherence
+    if stack_file is not None:
+        stack_obj = ifgramStack(stack_file)
+        stack_obj.open(print_msg=False)
+        for dsName in [ifgramDatasetNames[0], ifgramDatasetNames[1]]:
+            if dsName not in stack_obj.datasetNames:
+                loadComplete = False
+                raise Exception(('required dataset "{}" is missing'
+                                 ' in file {}'.format(dsName, stack_file)))
+    else:
+        loadComplete = False
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
+                                './INPUTS/ifgramStack.h5')
+
+    # 2. geom_file: height
     if geom_file is not None:
         geom_obj = geometry(geom_file)
         geom_obj.open(print_msg=False)
-        if geometryDatasetNames[0] not in geom_obj.datasetNames:
-            geom_file = None
+        dsName = geometryDatasetNames[0]
+        if dsName not in geom_obj.datasetNames:
+            loadComplete = False
+            raise Exception(('required dataset "{}" is missing'
+                             ' in file {}'.format(dsName, geom_file)))
+    else:
+        loadComplete = False
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
+                                './INPUTS/geometry*.h5')
 
-    # Recommended files - lookup table (None if not found)
-    # could be different than geometry file in case of roipac and gamma
-    file_list = [os.path.join(work_dir, 'INPUTS/geometry*.h5')]
-    lookup_file = get_lookup_file(file_list, abspath=True, print_msg=print_msg)
-    # Check required dataset
+    # 3. lookup_file: latitude,longitude or rangeCoord,azimuthCoord
     if lookup_file is not None:
         lut_obj = geometry(lookup_file)
         lut_obj.open(print_msg=False)
-        if not (all(i in lut_obj.datasetNames for i in ['latitude', 'longitude'])
-                or all(i in lut_obj.datasetNames for i in ['rangeCoord', 'azimuthCoord'])):
-            lookup_file = None
 
-    # Set loadComplete to True only if all required datasets exists
-    if any(i is None for i in [stack_file, geom_file, lookup_file]):
-        loadComplete = False
+        if atr['PROCESSOR'] in ['isce', 'doris']:
+            dsNames = [geometryDatasetNames[1],
+                       geometryDatasetNames[2]]
+        elif atr['PROCESSOR'] in ['gamma', 'roipac']:
+            dsNames = [geometryDatasetNames[3],
+                       geometryDatasetNames[4]]
+        else:
+            raise AttributeError('InSAR processor: {}'.format(atr['PROCESSOR']))
+
+        for dsName in dsNames:
+            if dsName not in lut_obj.datasetNames:
+                loadComplete = False
+                raise Exception(('required dataset "{}" is missing'
+                                 ' in file {}'.format(dsName, lookup_file)))
     else:
-        loadComplete = True
+        loadComplete = False
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
+                                './INPUTS/geometry*.h5')
 
     # print message
     if print_msg:
-        print('Loaded dataset are processed by InSAR software: {}'.format(atr['PROCESSOR']))
+        print(('Loaded dataset are processed by '
+               'InSAR software: {}'.format(atr['PROCESSOR'])))
         if geocoded:
             print('Loaded dataset is in GEO coordinates')
         else:
@@ -438,29 +468,26 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
         print('Geometry File       : {}'.format(geom_file))
         print('Lookup Table File   : {}'.format(lookup_file))
         if loadComplete:
-            print('-'*50+'\nAll data needed found/loaded/copied. Processed 2-pass InSAR data can be removed.')
+            print(('-'*50+'\nAll data needed found/loaded/copied. '
+                   'Processed 2-pass InSAR data can be removed.'))
         print('-'*50)
 
-    # Update namespace inps if inputed
+    # Return & Update namespace inps if inputed
     if inps:
         inps.stackFile = stack_file
         inps.geomFile = geom_file
         inps.lookupFile = lookup_file
         inps.geocoded = geocoded
         return inps, atr
-
-    # Check
     else:
         return loadComplete
 
 
 def is_file_exist(file_list, abspath=True):
     """Check if any file in the file list 1) exists and 2) readable
-    Inputs:
-        file_list : list of string, file name with/without wildcards
-        abspath   : bool, return absolute file name/path or not
-    Output:
-        file_path : string, found file name/path; None if not.
+    Parameters: file_list : list of string, file name with/without wildcards
+                abspath   : bool, return absolute file name/path or not
+    Returns:    file_path : string, found file name/path; None if not.
     """
     try:
         file = get_file_list(file_list, abspath=abspath)[0]
@@ -486,17 +513,18 @@ def four_corners(atr):
 
 def circle_index(atr, circle_par):
     """Return Index of Elements within a Circle centered at input pixel
-    Inputs: atr : dictionary
-                containging the following attributes:
-                WIDT
-                LENGTH
-            circle_par : string in the format of 'y,x,radius'
-                i.e. '200,300,20'          for radar coord
-                     '31.0214,130.5699,20' for geo   coord
-    Output: idx : 2D np.array in bool type
-                mask matrix for those pixel falling into the circle defined by circle_par
-    Examples: idx_mat = ut.circle_index(atr, '200,300,20')
-              idx_mat = ut.circle_index(atr, '31.0214,130.5699,20')
+    Parameters: atr : dictionary
+                    containging the following attributes:
+                    WIDT
+                    LENGTH
+                circle_par : string in the format of 'y,x,radius'
+                    i.e. '200,300,20'          for radar coord
+                         '31.0214,130.5699,20' for geo   coord
+    Returns:    idx : 2D np.array in bool type
+                    mask matrix for those pixel falling into the circle
+                    defined by circle_par
+    Examples:   idx_mat = ut.circle_index(atr, '200,300,20')
+                idx_mat = ut.circle_index(atr, '31.0214,130.5699,20')
     """
 
     width = int(atr['WIDTH'])
@@ -520,9 +548,10 @@ def circle_index(atr, circle_par):
             c_lat = float(cir_par[0])
             c_lon = float(cir_par[1])
             radius = int(float(cir_par[2]))
-            c_y = np.rint((c_lat-float(atr['Y_FIRST']))/float(atr['Y_STEP']))
-            c_x = np.rint((c_lon-float(atr['X_FIRST']))/float(atr['X_STEP']))
-            print('Input circle index in lat/lon coord: %.4f, %.4f, %d' % (c_lat, c_lon, radius))
+            c_y = np.rint((c_lat-float(atr['Y_FIRST'])) / float(atr['Y_STEP']))
+            c_x = np.rint((c_lon-float(atr['X_FIRST'])) / float(atr['X_STEP']))
+            print(('Input circle index in lat/lon coord: '
+                   '{:.4f}, {:.4f}, {}'.format(c_lat, c_lon, radius)))
         except:
             print('\nERROR: Unrecognized circle index format: '+circle_par)
             print('Supported format:')
@@ -593,16 +622,15 @@ def update_template_file(template_file, extra_dict):
 
 def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_type='quadratic'):
     """Calculate deramped standard deviation in space for each epoch of input timeseries file.
-    Inputs:
-        timeseries_resid_file - string, timeseries HDF5 file, e.g. timeseries_ECMWF_demErrInvResid.h5
-        mask_file - string, mask file, e.g. maskTempCoh.h5
-        ramp_type - string, ramp type, e.g. plane, quadratic, no for do not remove ramp
-    outputs:
-        std_list  - list of float, standard deviation of deramped input timeseries file
-        date_list - list of string in YYYYMMDD format, corresponding dates
-    Example:
-        import pysar.utils.utils as ut
-        std_list, date_list = ut.get_residual_std('timeseries_ECMWF_demErrInvResid.h5', 'maskTempCoh.h5')
+    Parameters: timeseries_resid_file - string, timeseries HDF5 file,
+                    e.g. timeseries_ECMWF_demErrInvResid.h5
+                mask_file - string, mask file, e.g. maskTempCoh.h5
+                ramp_type - string, ramp type, e.g. plane, quadratic, no for do not remove ramp
+    Returns:    std_list  - list of float, standard deviation of deramped input timeseries file
+                date_list - list of string in YYYYMMDD format, corresponding dates
+    Example:    import pysar.utils.utils as ut
+                std_list, date_list = ut.get_residual_std('timeseries_ECMWF_demErrInvResid.h5',
+                                                          'maskTempCoh.h5')
     """
     # Intermediate files name
     if ramp_type == 'no':
@@ -620,11 +648,12 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
-                print('removing a {} ramp from file: '.format(ramp_type, timeseries_resid_file))
+                print('removing a {} ramp from file: '.format(ramp_type,
+                                                              timeseries_resid_file))
                 deramp_file = deramp.remove_surface(timeseries_resid_file,
-                                                    ramp_type,
-                                                    mask_file,
-                                                    deramp_file)
+                                                    surf_type=ramp_type,
+                                                    mask_file=mask_file,
+                                                    out_file=deramp_file)
         print('calculating residual standard deviation for each epoch from file: '+deramp_file)
         std_file = timeseries(deramp_file).timeseries_std(maskFile=mask_file,
                                                           outFile=std_file)
@@ -671,11 +700,12 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
-                print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
+                print('removing a {} ramp from file: {}'.format(ramp_type,
+                                                                timeseries_resid_file))
                 deramp_file = deramp.remove_surface(timeseries_resid_file,
-                                                    ramp_type,
-                                                    mask_file,
-                                                    deramp_file)
+                                                    surf_type=ramp_type,
+                                                    mask_file=mask_file,
+                                                    out_file=deramp_file)
         print('Calculating residual RMS for each epoch from file: '+deramp_file)
         rms_file = timeseries(deramp_file).timeseries_rms(maskFile=mask_file,
                                                           outFile=rms_file)
@@ -690,12 +720,11 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
 
 def timeseries_coherence(inFile, maskFile='maskTempCoh.h5', outFile=None):
     """Calculate spatial average coherence for each epoch of input time series file
-    Inputs:
-        inFile   - string, timeseries HDF5 file
-        maskFile - string, mask file 
-        outFile  - string, output text file 
-    Example:
-        txtFile = timeseries_coherence('timeseries_ECMWF_demErrInvResid_quadratic.h5')
+    Parameters: inFile   - string, timeseries HDF5 file
+                maskFile - string, mask file 
+                outFile  - string, output text file 
+    Returns:    outFile  - string, output text file 
+    Example:    txtFile = timeseries_coherence('timeseries_ECMWF_demErrInvResid_quadratic.h5')
     """
     try:
         mask = readfile.read(maskFile, datasetName='mask')[0]
@@ -819,12 +848,10 @@ def update_attribute_or_not(atr_new, atr_orig):
 
 def add_attribute(File, atr_new=dict()):
     """Add/update input attribute into File
-    Inputs:
-        File - string, path/name of file
-        atr_new - dict, attributes to be added/updated
-                  if value is None, delete the item from input File attributes
-    Output:
-        File - string, path/name of updated file
+    Parameters: File - string, path/name of file
+                atr_new - dict, attributes to be added/updated
+                    if value is None, delete the item from input File attributes
+    Returns:    File - string, path/name of updated file
     """
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']
@@ -892,17 +919,15 @@ def check_parallel(file_num=1, print_msg=True, maxParallelNum=8):
 
 def perp_baseline_timeseries(atr, dimension=1):
     """Calculate perpendicular baseline for each acquisition within timeseries
-    Inputs:
-        atr - dict, including the following PySAR attribute
-              LENGTH
-              P_BASELINE_TIMESERIES
-              P_BASELINE_TOP_TIMESERIES (optional)
-              P_BASELINE_BOTTOM_TIMESERIES (optional)
-        dimension - int, choices = [0, 1]
+    Parameters: atr - dict, including the following PySAR attribute
+                    LENGTH
+                    P_BASELINE_TIMESERIES
+                    P_BASELINE_TOP_TIMESERIES (optional)
+                    P_BASELINE_BOTTOM_TIMESERIES (optional)
+                dimension - int, choices = [0, 1]
                     0 for constant P_BASELINE in azimuth direction
                     1 for linear P_BASELINE in azimuth direction, for radar coord only
-    Output:
-        pbase - np.array, with shape = [date_num, 1] or [date_num, length]
+    Returns:    pbase - np.array, with shape = [date_num, 1] or [date_num, length]
     """
     if dimension > 0 and 'Y_FIRST' in atr.keys():
         dimension = 0
@@ -910,15 +935,18 @@ def perp_baseline_timeseries(atr, dimension=1):
     if dimension > 0 and any(i not in atr.keys() for i in ['P_BASELINE_TOP_TIMESERIES',
                                                            'P_BASELINE_BOTTOM_TIMESERIES']):
         dimension = 0
-        print('No P_BASELINE_TOP/BOTTOM_TIMESERIES attributes found, return constant P_BASELINE for one interferogram')
+        print(('No P_BASELINE_TOP/BOTTOM_TIMESERIES attributes found,'
+               ' return constant P_BASELINE for one interferogram'))
 
     pbase_center = np.array(
         [float(i) for i in atr['P_BASELINE_TIMESERIES'].split()]).reshape(-1, 1)
     if dimension == 0:
         pbase = pbase_center
     elif dimension == 1:
-        pbase_top = np.array([float(i) for i in atr['P_BASELINE_TOP_TIMESERIES'].split()]).reshape(-1, 1)
-        pbase_bottom = np.array([float(i) for i in atr['P_BASELINE_BOTTOM_TIMESERIES'].split()]).reshape(-1, 1)
+        pbase_top = [float(i) for i in atr['P_BASELINE_TOP_TIMESERIES'].split()]
+        pbase_bottom = [float(i) for i in atr['P_BASELINE_BOTTOM_TIMESERIES'].split()]
+        pbase_top = np.array(pbase_top).reshape(-1, 1)
+        pbase_bottom = np.array(pbase_bottom).reshape(-1, 1)
         length = int(atr['LENGTH'])
         date_num = pbase_center.shape[0]
         pbase = np.zeros((date_num, length))
@@ -938,7 +966,8 @@ def range_distance(atr, dimension=2, print_msg=True):
                     LENGTH
                     WIDTH
                 dimension : int, choices = [0,1,2]
-                    2 for 2d matrix, vary in range direction, constant in az direction, for radar coord only
+                    2 for 2d matrix, vary in range direction, constant in az direction,
+                        for radar coord only
                     1 for 1d matrix, in range direction, for radar coord file
                     0 for center value
     Returns:    np.array (0, 1 or 2 D) : range distance between antenna and ground target in meters
@@ -1094,7 +1123,8 @@ def nonzero_mask(File, out_file='mask.h5', datasetName=None):
 
 
 ######################################################################################################
-def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=None, saveList=False, checkAoi=True):
+def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=None,
+                    saveList=False, checkAoi=True):
     """Read/Calculate Spatial Average of input file.
 
     If input file is text file, read it directly;
@@ -1103,20 +1133,19 @@ def spatial_average(File, datasetName=ifgramDatasetNames[1], maskFile=None, box=
         Otherwise, calculate it from data file.
 
         Only non-nan pixel is considered.
-    Input:
-        File     : string, path of input file
-        maskFile : string, path of mask file, e.g. maskTempCoh.h5
-        box      : 4-tuple defining the left, upper, right, and lower pixel coordinate
-        saveList : bool, save (list of) mean value into text file
-    Output:
-        meanList : list for float, average value in space for each epoch of input file
-        dateList : list of string for date info
+    Parameters: File     : string, path of input file
+                maskFile : string, path of mask file, e.g. maskTempCoh.h5
+                box      : 4-tuple defining the left, upper, right, and lower pixel coordinate
+                saveList : bool, save (list of) mean value into text file
+    Returns:    meanList : list for float, average value in space for each epoch of input file
+                dateList : list of string for date info
                     date12_list, e.g. 101120-110220, for interferograms/coherence
                     date8_list, e.g. 20101120, for timeseries
                     file name, e.g. velocity.h5, for all the other file types
-    Example:
-        meanList = spatial_average('coherence.h5')[0]
-        meanList, date12_list = spatial_average('coherence.h5', 'maskTempCoh.h5', saveList=True)
+    Example:    meanList = spatial_average('coherence.h5')[0]
+                meanList, date12_list = spatial_average('coherence.h5',
+                                                        'maskTempCoh.h5',
+                                                        saveList=True)
     """
     def read_text_file(fname):
         txtContent = np.loadtxt(fname, dtype=bytes).astype(str)
@@ -1282,16 +1311,13 @@ def temporal_average(File, datasetName=ifgramDatasetNames[1], updateMode=False, 
 ######################################################################################################
 def get_file_list(file_list, abspath=False, coord=None):
     """Get all existed files matching the input list of file pattern
-    Inputs:
-        file_list - string or list of string, input file/directory pattern
-        abspath  - bool, return absolute path or not
-        coord    - string, return files with specific coordinate type: geo or radar
-                   if none, skip the checking and return all files
-    Output:
-        file_list_out - list of string, existed file path/name, [] if not existed
-    Example:
-        file_list = get_file_list(['*velocity*.h5','timeseries*.h5'])
-        file_list = get_file_list('timeseries*.h5')
+    Parameters: file_list - string or list of string, input file/directory pattern
+                abspath - bool, return absolute path or not
+                coord - string, return files with specific coordinate type: geo or radar
+                    if none, skip the checking and return all files
+    Returns:    file_list_out - list of string, existed file path/name, [] if not existed
+    Example:    file_list = get_file_list(['*velocity*.h5','timeseries*.h5'])
+                file_list = get_file_list('timeseries*.h5')
     """
     if not file_list:
         return []
@@ -1347,7 +1373,8 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
 
     # Update Input List
     fname_list_out = list(fname_list)
-    if width_list.count(mode_width) != len(width_list) or length_list.count(mode_length) != len(length_list):
+    if (width_list.count(mode_width) != len(width_list)
+            or length_list.count(mode_length) != len(length_list)):
         print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
         print('WARNING: Some files may have the wrong dimensions!')
         print('All files should have the same size.')
@@ -1421,7 +1448,9 @@ def mode(thelist):
 
 ######################################################################################################
 def range_ground_resolution(atr, print_msg=False):
-    """Get range resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord"""
+    """Get range resolution on the ground in meters,
+        from ROI_PAC attributes, for file in radar coord
+    """
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no range resolution info.')
         return
@@ -1431,7 +1460,9 @@ def range_ground_resolution(atr, print_msg=False):
 
 
 def azimuth_ground_resolution(atr):
-    """Get azimuth resolution on the ground in meters, from ROI_PAC attributes, for file in radar coord"""
+    """Get azimuth resolution on the ground in meters,
+        from ROI_PAC attributes, for file in radar coord
+    """
     if 'X_FIRST' in atr.keys():
         print('Input file is in geo coord, no azimuth resolution info.')
         return
@@ -1567,7 +1598,8 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
     Parameters: rg/az : np.array, int, range/azimuth pixel number
                 lookupFile : string, trans/look up file
                 atr_rdr : dict, attributes of file in radar coord, optional but recommended.
-    Returns:    lon/lat : np.array, float, longitude/latitude of input point (rg,az); nan if not found.
+    Returns:    lon/lat : np.array, float, longitude/latitude of input point (rg,az);
+                    nan if not found.
                 latlon_res : float, residul/uncertainty of coordinate conversion
     """
     if lookupFile is None:
@@ -1732,10 +1764,12 @@ def design_matrix(ifgramFile=None, date12_list=[], referenceDate=None):
                 date12_list : list of string in YYMMDD-YYMMDD format
                     use all date12 from ifgramFile if input is empty
     Returns:    A : 2D np.array in size of (ifgram_num, date_num-1)
-                    representing date combination for each interferogram (-1 for master, 1 for slave, 0 for others)
+                    representing date combination for each interferogram
+                    (-1 for master, 1 for slave, 0 for others)
                     used for LS and WLS optimization
                 B : 2D np.array in size of (ifgram_num, date_num-1)
-                    representing temporal baseline timeseries between master and slave date for each interferogram
+                    representing temporal baseline timeseries between master and
+                    slave date for each interferogram
                     used for SBAS algorithm
     """
     # Get date12_list from Inputs
@@ -1786,7 +1820,8 @@ def timeseries_inversion_FGLS(h5flat, h5timeseries):
     timeseries_inversion(h5flat,h5timeseries)
       h5flat: hdf5 file with the interferograms 
       h5timeseries: hdf5 file with the output from the inversion
-    ##################################################"""
+    ##################################################
+    """
 
     total = time.time()
     A, B = design_matrix(h5flat)
@@ -1830,7 +1865,6 @@ def timeseries_inversion_FGLS(h5flat, h5timeseries):
             zero = np.array([0.], np.float32)
             defo = np.concatenate((zero, np.cumsum([tmpe_ratea*dt])))
             ts_data[:, ni] = defo
-        # if not np.remainder(ni,10000): print 'Processing point: %7d of %7d ' % (ni,pixel_num)
         if not np.remainder(ni, pixel_num_step):
             print('Processing point: %8d of %8d, %3d' %
                   (ni, pixel_num, (10*ni/pixel_num_step))+'%')
@@ -1956,58 +1990,6 @@ def timeseries_inversion_L1(h5flat, h5timeseries):
     gr = L1orL2h5.create_group('mask')
     dset = gr.create_dataset('mask', data=L1ORL2, compression='gzip')
     L1orL2h5.close()
-
-
-def perp_baseline_ifgram2timeseries(ifgramFile, ifgram_list=[]):
-    """Calculate perpendicular baseline timeseries from input interferograms file
-    Input:
-        ifgramFile - string, file name/path of interferograms file
-        ifgram_list - list of string, group name that is used for calculation
-                      use all if it's empty
-    Outputs:
-        pbase        - 1D np.array, P_BASELINE_TIMESERIES
-        pbase_top    - 1D np.array, P_BASELINE_TOP_TIMESERIES
-        pbase_bottom - 1D np.array, P_BASELINE_BOTTOM_TIMESERIES
-    """
-    k = readfile.read_attribute(ifgramFile)['FILE_TYPE']
-    h5file = h5py.File(ifgramFile, 'r')
-
-    if not ifgram_list:
-        ifgram_list = sorted(h5file[k].keys())
-
-    # P_BASELINE of all interferograms
-    pbase_ifgram = []
-    pbase_top_ifgram = []
-    pbase_bottom_ifgram = []
-    for ifgram in ifgram_list:
-        pbase_top = float(h5file[k][ifgram].attrs['P_BASELINE_TOP_HDR'])
-        pbase_bottom = float(h5file[k][ifgram].attrs['P_BASELINE_BOTTOM_HDR'])
-        pbase_ifgram.append((pbase_bottom+pbase_top)/2.0)
-        pbase_top_ifgram.append(pbase_top)
-        pbase_bottom_ifgram.append(pbase_bottom)
-    h5file.close()
-
-    # Temporal baseline velocity
-    date12_list = ptime.list_ifgram2date12(ifgram_list)
-    m_dates = [i.split('_')[0] for i in date12_list]
-    s_dates = [i.split('_')[1] for i in date12_list]
-    date8_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))
-    tbase_list = ptime.date_list2tbase(date8_list)[0]
-    tbase_v = np.diff(tbase_list)
-
-    A, B = design_matrix(ifgramFile, date12_list)
-    B_inv = np.linalg.pinv(B)
-
-    pbase_rate = np.dot(B_inv, pbase_ifgram)
-    pbase_top_rate = np.dot(B_inv, pbase_top_ifgram)
-    pbase_bottom_rate = np.dot(B_inv, pbase_bottom_ifgram)
-
-    zero = np.array([0.], np.float32)
-    pbase = np.concatenate((zero, np.cumsum([pbase_rate*tbase_v])))
-    pbase_top = np.concatenate((zero, np.cumsum([pbase_top_rate*tbase_v])))
-    pbase_bottom = np.concatenate((zero, np.cumsum([pbase_bottom_rate*tbase_v])))
-
-    return pbase, pbase_top, pbase_bottom
 
 
 def dBh_dBv_timeseries(ifgramFile):
@@ -2151,9 +2133,10 @@ def get_triangles(h5file):
 
         for date in igram2_date2:
             if date in igram3_date2:
-                Igramtriangle, IgramtriangleIndexes = make_triangle(dates12, igram1,
-                                                                    igram2[igram2_date2.index(date)],
-                                                                    igram3[igram3_date2.index(date)])
+                (Igramtriangle,
+                 IgramtriangleIndexes) = make_triangle(dates12, igram1,
+                                                       igram2[igram2_date2.index(date)],
+                                                       igram3[igram3_date2.index(date)])
                 if not Igramtriangle in Triangles:
                     Triangles.append(Igramtriangle)
                     Triangles_indexes.append(IgramtriangleIndexes)
