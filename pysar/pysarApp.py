@@ -116,6 +116,7 @@ pysar.networkInversion.maskThreshold = auto #[0-1], auto for 0.4
 pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
 pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
+pysar.networkInversion.minNumPixel   = auto #[int > 0], auto for 100, min number of pixels in mask above
 
 
 ########## Local Oscillator Drift (LOD) Correction (for Envisat only)
@@ -269,7 +270,7 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     if inps.print_example_template:
-        sys.exit(TEMPLATE)
+        raise SystemExit(TEMPLATE)
 
     if (inps.templateFileCustom 
             and os.path.basename(inps.templateFileCustom) == 'pysarApp_template.txt'):
@@ -295,17 +296,35 @@ def copy_aux_file(inps):
     return inps
 
 
+def check_obsolete_default_template(template_file='./pysarApp_template.txt'):
+    """Update pysarApp_template.txt file if it's obsolete, a.k.a. lack new option names"""
+    obsolete_template = False
+    current_dict = readfile.read_template(template_file)
+    latest_dict = readfile.read_template(TEMPLATE)
+    for key in latest_dict.keys():
+        if key not in current_dict.keys():
+            obsolete_template = True
+
+    if obsolete_template:
+        print('obsolete default template detected, update to the latest template options.')
+        with open(template_file, 'w') as f:
+            f.write(TEMPLATE)
+        template_file = ut.update_template_file(template_file, current_dict)
+    else:
+        print('default template file exists: '+template_file)
+    return template_file
+
+
 def read_template(inps):
     print('\n**********  Read Template File  **********')
     # default template
     inps.templateFile = os.path.join(inps.workDir, 'pysarApp_template.txt')
     if not os.path.isfile(inps.templateFile):
         print('generate default template file: '+inps.templateFile)
-        f = open(inps.templateFile, 'w')
-        f.write(TEMPLATE)
-        f.close()
+        with open(inps.templateFile, 'w') as f:
+            f.write(TEMPLATE)
     else:
-        print('default template file exists: '+inps.templateFile)
+        inps.templateFile = check_obsolete_default_template(inps.templateFile)
 
     # custom template
     templateCustom = None
@@ -338,8 +357,7 @@ def read_template(inps):
         inps.templateFile = ut.update_template_file(inps.templateFile, templateCustom)
 
     if inps.generate_template:
-        print('Exit as planned after template file generation.')
-        sys.exit(0)
+        raise SystemExit('Exit as planned after template file generation.')
 
     print('read default template file: '+inps.templateFile)
     template = readfile.read_template(inps.templateFile)
@@ -360,8 +378,7 @@ def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
     if inps.version:
-        print(version.version_description)
-        sys.exit(0)
+        raise SystemExit(version.version_description)
 
     #########################################
     # Initiation
@@ -413,8 +430,7 @@ def main(iargs=None):
     #ut.add_attribute(inps.stackFile, template)
 
     if inps.load_dataset:
-        print('Exit as planned after loading/checking the dataset.')
-        sys.exit(0)
+        raise SystemExit('Exit as planned after loading/checking the dataset.')
 
     if inps.reset:
         print('Reset dataset attributtes for a fresh re-run.\n'+'-'*50)
@@ -457,8 +473,7 @@ def main(iargs=None):
     print(refPointCmd)
     status = subprocess.Popen(refPointCmd, shell=True).wait()
     if status is not 0:
-        print('\nError while finding reference pixel in space.\n')
-        sys.exit(-1)
+        raise Exception('Error while finding reference pixel in space.\n')
 
     ############################################
     # Unwrapping Error Correction (Optional)
@@ -476,8 +491,7 @@ def main(iargs=None):
             print('This might take a while depending on the size of your data set!')
             status = subprocess.Popen(unwCmd, shell=True).wait()
             if status is not 0:
-                print('\nError while correcting phase unwrapping errors.\n')
-                sys.exit(-1)
+                raise Exception('Error while correcting phase unwrapping errors.\n')
         inps.stackFile = outName
 
     #########################################
@@ -489,8 +503,7 @@ def main(iargs=None):
     print(networkCmd)
     status = subprocess.Popen(networkCmd, shell=True).wait()
     if status is not 0:
-        print('\nError while modifying the network of interferograms.\n')
-        sys.exit(-1)
+        raise Exception('Error while modifying the network of interferograms.\n')
 
     # Plot network colored in spatial coherence
     print('--------------------------------------------------')
@@ -505,7 +518,7 @@ def main(iargs=None):
         status = subprocess.Popen(plotCmd, shell=True).wait()
 
     if inps.modify_network:
-        sys.exit('Exit as planned after network modification.')
+        raise SystemExit('Exit as planned after network modification.')
 
     #########################################
     # Inversion of Interferograms
@@ -519,7 +532,7 @@ def main(iargs=None):
     if ut.update_file(inps.timeseriesFile, inps.stackFile):
         status = subprocess.Popen(invCmd, shell=True).wait()
         if status is not 0:
-            raise Exception('ERROR while inverting network interferograms into timeseries')
+            raise Exception('Error while inverting network interferograms into timeseries')
 
     print('\n--------------------------------------------')
     print('Update Mask based on Temporal Coherence ...')
@@ -532,10 +545,23 @@ def main(iargs=None):
     if ut.update_file(inps.maskFile, inps.tempCohFile):
         status = subprocess.Popen(maskCmd, shell=True).wait()
         if status is not 0:
-            raise Exception('ERROR while generating mask file from temporal coherence.')
+            raise Exception('Error while generating mask file from temporal coherence.')
 
     if inps.invert_network:
-        sys.exit('Exit as planned after network inversion.')
+        raise SystemExit('Exit as planned after network inversion.')
+
+    # check number of pixels selected in mask file for following analysis
+    min_num_pixel = float(template['pysar.networkInversion.minNumPixel'])
+    msk = readfile.read(inps.maskFile)[0]
+    num_pixel = np.sum(msk != 0.)
+    print('number of pixels selected: {}'.format(num_pixel))
+    if num_pixel < min_num_pixel:
+        msg = "Not enought coherent pixels selected (minimum of {}). Try the following:\n".format(int(min_num_pixel))
+        msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
+        msg += "2) Check the network and make sure it's fully connected without subsets"
+        raise RuntimeError(msg)
+    del msk
+
 
     ##############################################
     # LOD (Local Oscillator Drift) Correction
@@ -551,8 +577,7 @@ def main(iargs=None):
         if ut.update_file(outName, [inps.timeseriesFile, inps.geomFile]):
             status = subprocess.Popen(lodCmd, shell=True).wait()
             if status is not 0:
-                print('\nError while correcting Local Oscillator Drift.\n')
-                sys.exit(-1)
+                raise Exception('Error while correcting Local Oscillator Drift.\n')
         inps.timeseriesFile = outName
 
     ##############################################
@@ -594,8 +619,7 @@ def main(iargs=None):
             if ut.update_file(outName, inps.timeseriesFile):
                 status = subprocess.Popen(tropCmd, shell=True).wait()
                 if status is not 0:
-                    print('\nError while correcting tropospheric delay.\n')
-                    sys.exit(-1)
+                    raise Exception('Error while correcting tropospheric delay.\n')
             inps.timeseriesFile = outName
 
         elif inps.tropMethod == 'pyaps':
@@ -627,7 +651,7 @@ def main(iargs=None):
                     print('   Try in command line: python -c "import pyaps"')
                     print('2) Use other tropospheric correction method, height-correlation, for example')
                     print('3) or turn off the option by setting pysar.troposphericDelay.method = no.\n')
-                    sys.exit(-1)
+                    raise RuntimeError()
             inps.timeseriesFile = outName
         else:
             print('No atmospheric delay correction.')
@@ -654,8 +678,7 @@ def main(iargs=None):
         if ut.update_file(outName, inps.timeseriesFile):
             status = subprocess.Popen(topoCmd, shell=True).wait()
             if status is not 0:
-                print('\nError while correcting topographic phase residual.\n')
-                sys.exit(-1)
+                raise Exception('Error while correcting topographic phase residual.\n')
         inps.timeseriesFile = outName
         inps.timeseriesResFile = 'timeseriesResidual.h5'
     else:
@@ -671,8 +694,7 @@ def main(iargs=None):
         print(rmsCmd)
         status = subprocess.Popen(rmsCmd, shell=True).wait()
         if status is not 0:
-            print('\nError while calculating RMS of time series phase residual.\n')
-            sys.exit(-1)
+            raise Exception('Error while calculating RMS of time series phase residual.\n')
     else:
         print('No timeseries residual file found! Skip residual RMS analysis.')
 
@@ -689,8 +711,7 @@ def main(iargs=None):
         if ut.update_file(outName, inps.timeseriesFile):
             status = subprocess.Popen(refCmd, shell=True).wait()
             if status is not 0:
-                print('\nError while changing reference date.\n')
-                sys.exit(-1)
+                raise Exception('Error while changing reference date.\n')
         inps.timeseriesFile = outName
     else:
         print('No reference change in time.')
@@ -742,8 +763,7 @@ def main(iargs=None):
             if ut.update_file(outName, inps.timeseriesFile):
                 status = subprocess.Popen(derampCmd, shell=True).wait()
                 if status is not 0:
-                    print('\nError while removing phase ramp for time-series.\n')
-                    sys.exit(-1)
+                    raise Exception('Error while removing phase ramp for time-series.\n')
             inps.timeseriesFile = outName
     else:
         print('No phase ramp removal.')
@@ -760,8 +780,7 @@ def main(iargs=None):
     if ut.update_file(inps.velFile, [inps.timeseriesFile, inps.templateFile]):
         status = subprocess.Popen(velCmd, shell=True).wait()
         if status is not 0:
-            print('\nError while estimating linear velocity from time-series.\n')
-            sys.exit(-1)
+            raise Exception('Error while estimating linear velocity from time-series.\n')
 
     # Velocity from Tropospheric delay
     if inps.tropFile:
@@ -802,8 +821,7 @@ def main(iargs=None):
             print(geoCmd)
             status = subprocess.Popen(geoCmd, shell=True).wait()
             if status is not 0:
-                print('\nError while geocoding.\n')
-                # sys.exit(-1)
+                raise Exception('Error while geocoding.\n')
             else:
                 inps.velFile        = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.velFile))
                 inps.tempCohFile    = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.tempCohFile))
@@ -845,6 +863,8 @@ def main(iargs=None):
         print(kmlCmd)
         if ut.update_file(outName, inps.velFile, check_readable=False):
             status = subprocess.Popen(kmlCmd, shell=True).wait()
+            if status is not 0:
+                raise Exception('Error while generating Google Earth KMZ file.')
 
     #############################################
     # Save Timeseries to HDF-EOS5 format
@@ -877,8 +897,8 @@ def main(iargs=None):
                                                  inps.maskFile,
                                                  inps.geomFile]):
                 status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
-                # if status is not 0:
-                #    sys.exit('\nError while generating HDF-EOS5 time-series file.\n')
+                if status is not 0:
+                    raise Exception('Error while generating HDF-EOS5 time-series file.\n')
 
     #############################################
     # Plot Figures
@@ -900,6 +920,8 @@ def main(iargs=None):
         print('For better figures:')
         print('  1) Edit parameters in plot_pysarApp.sh and re-run this script.')
         print('  2) Play with view.py, tsview.py and save_kml.py for more advanced/customized figures.')
+        if status is not 0:
+            raise Exception('Error while plotting data files using {}'.format(plotCmd))
 
     #############################################
     # Time                                      #
@@ -909,7 +931,6 @@ def main(iargs=None):
     print('\n###############################################')
     print('End of PySAR processing!')
     print('################################################\n')
-
 
 
 ###########################################################################################

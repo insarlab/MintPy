@@ -698,14 +698,12 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
 def check_input_file_info(inps):
     # File Baic Info
     if not os.path.isfile(inps.file):
-        print('ERROR: input file does not exists: {}'.format(inps.file))
-        sys.exit(1)
+        raise SystemExit('input file does not exists: {}'.format(inps.file))
     else:
         try:
             atr = readfile.read_attribute(inps.file)
         except:
-            print('ERROR: can not read attribute of input file: {}'.format(inps.file))
-            sys.exit(1)
+            raise SystemExit('can not read attribute of input file: {}'.format(inps.file))
     print('\n******************** Display ********************')
     print('input file is {} {}: {}'.format(atr['PROCESSOR'],
                                            atr['FILE_TYPE'],
@@ -811,7 +809,7 @@ def read_dataset_input(inps, print_msg=True):
     if inps.dsetNum == 0:
         print('ERROR: no input dataset found!')
         print('available datasets:\n{}'.format(inps.fileDatasetList))
-        sys.exit(1)
+        raise Exception()
 
     atr = readfile.read_attribute(inps.file, datasetName=inps.dset[0].split('-')[0])
     return inps, atr
