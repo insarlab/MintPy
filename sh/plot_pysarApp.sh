@@ -51,7 +51,7 @@ fi
 
 ## Auxliary Files from loaded dataset
 if [ $plot_loaded_data_aux -eq 1 ]; then
-    view.py --nodisplay avgPhaseVelocity.h5                      | tee -a $log_file
+    file=avgPhaseVelocity.h5; test -f $file && view.py --nodisplay  $file | tee -a $log_file
     view.py --nodisplay avgSpatialCoherence.h5 -c gray -m 0 -M 1 | tee -a $log_file
     view.py --nodisplay mask.h5                -c gray -m 0 -M 1 | tee -a $log_file
 fi
@@ -61,30 +61,30 @@ fi
 view='view.py --nodisplay --mask '$mask_file' --noaxis -u cm '
 #view='view.py --nodisplay --mask '$mask_file' --noaxis -u cm -m -10 -M 10 '
 if [ $plot_timeseries -eq 1 ]; then
-    $view timeseries.h5        | tee -a $log_file
+    file=timeseries.h5;                                       test -f $file && $view $file | tee -a $log_file
 
-    $view timeseries_LODcor_ECMWF.h5                           | tee -a $log_file
-    $view timeseries_LODcor_ECMWF_demErr.h5                    | tee -a $log_file
-    $view timeseries_LODcor_ECMWF_demErr_refDate.h5            | tee -a $log_file
-    $view timeseries_LODcor_ECMWF_demErr_refDate_plane.h5      | tee -a $log_file
-    $view timeseries_LODcor_ECMWF_demErr_refDate_quadratic.h5  | tee -a $log_file
+    file=timeseries_LODcor_ECMWF.h5;                          test -f $file && $view $file | tee -a $log_file
+    file=timeseries_LODcor_ECMWF_demErr.h5;                   test -f $file && $view $file | tee -a $log_file
+    file=timeseries_LODcor_ECMWF_demErr_refDate.h5;           test -f $file && $view $file | tee -a $log_file
+    file=timeseries_LODcor_ECMWF_demErr_refDate_plane.h5;     test -f $file && $view $file | tee -a $log_file
+    file=timeseries_LODcor_ECMWF_demErr_refDate_quadratic.h5; test -f $file && $view $file | tee -a $log_file
 
-    $view timeseries_ECMWF.h5                           | tee -a $log_file
-    $view timeseries_ECMWF_demErr.h5                    | tee -a $log_file
-    $view timeseries_ECMWF_demErr_refDate.h5            | tee -a $log_file
-    $view timeseries_ECMWF_demErr_refDate_plane.h5      | tee -a $log_file
-    $view timeseries_ECMWF_demErr_refDate_quadratic.h5  | tee -a $log_file
+    file=timeseries_ECMWF.h5;                                 test -f $file && $view $file | tee -a $log_file
+    file=timeseries_ECMWF_demErr.h5;                          test -f $file && $view $file | tee -a $log_file
+    file=timeseries_ECMWF_demErr_refDate.h5;                  test -f $file && $view $file | tee -a $log_file
+    file=timeseries_ECMWF_demErr_refDate_plane.h5;            test -f $file && $view $file | tee -a $log_file
+    file=timeseries_ECMWF_demErr_refDate_quadratic.h5;        test -f $file && $view $file | tee -a $log_file
 
-    $view timeseries_demErr.h5                    | tee -a $log_file
-    $view timeseries_demErr_refDate.h5            | tee -a $log_file
-    $view timeseries_demErr_refDate_plane.h5      | tee -a $log_file
-    $view timeseries_demErr_refDate_quadratic.h5  | tee -a $log_file
+    file=timeseries_demErr.h5;                                test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_refDate.h5;                        test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_refDate_plane.h5;                  test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_refDate_quadratic.h5;              test -f $file && $view $file | tee -a $log_file
 
-    $view timeseries_demErr.h5                            | tee -a $log_file
-    $view timeseries_demErr_tropHgt.h5                    | tee -a $log_file
-    $view timeseries_demErr_tropHgt_refDate.h5            | tee -a $log_file
-    $view timeseries_demErr_tropHgt_refDate_plane.h5      | tee -a $log_file
-    $view timeseries_demErr_tropHgt_refDate_quadratic.h5  | tee -a $log_file
+    file=timeseries_demErr.h5;                                test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_tropHgt.h5;                        test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_tropHgt_refDate.h5;                test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_tropHgt_refDate_plane.h5;          test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_tropHgt_refDate_quadratic.h5;      test -f $file && $view $file | tee -a $log_file
 fi
 
 
@@ -98,7 +98,7 @@ fi
 
 
 if [ $plot_the_rest -eq 1 ]; then
-    view.py --nodisplay velocityEcmwf.h5  --mask $mask_file -u cm  | tee -a $log_file
+    file=velocityEcmwf.h5;    test -f $file && $view $file | tee -a $log_file
 fi
 
 
