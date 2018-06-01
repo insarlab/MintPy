@@ -17,3 +17,15 @@ ____/________(___/_(____/___/____|_/_____|_______
  Geodesy Lab, University of Miami, Maimi FL, USA
 _________________________________________________
 """.format(release_version, release_date)
+
+website = 'https://yunjunz.github.io/PySAR/'
+
+version_description="""PySAR  version {v}  release date {d}
+Copyright (C) 2013-2018 by Zhang Yunjun, Heresh Fattahi and others
+Website: {w}
+
+PySAR comes with ABSOLUTELY NO WARRANTY. This is free software, and
+you are welcome to redistribute it under certain conditions. See the
+GNU General Public License v3.0 for details.""".format(v=release_version,
+                                                       d=release_date,
+                                                       w=website)

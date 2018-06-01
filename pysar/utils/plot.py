@@ -599,7 +599,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             idx2 = dateList.index(date2)
             x = np.array([dates[idx1], dates[idx2]])
             y = np.array([pbaseList[idx1], pbaseList[idx2]])
-            if cohList:
+            if cohList is not None:
                 coh = cohList[date12List.index(date12)]
                 coh_idx = (coh - disp_min) / (disp_max - disp_min)
                 ax.plot(x, y, '--', lw=plot_dict['linewidth'],

@@ -118,17 +118,17 @@ def get_mission_name(meta_dict):
     return mission
 
 
-def metadata_pysar2unavco(pysar_meta_dict, dateList):
+def metadata_pysar2unavco(pysar_meta_dict_in, dateList):
     # Extract UNAVCO format metadata from PySAR attributes dictionary and dateList
-
-    for key in pysar_meta_dict.keys():
+    pysar_meta_dict = {}
+    for key in pysar_meta_dict_in.keys():
+        pysar_meta_dict[key] = pysar_meta_dict_in[key]
         if 'unavco.' in key:
-            pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict[key]
+            pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict_in[key]
         if 'hdfEos5.' in key:
-            pysar_meta_dict[key.split('hdfEos5.')[1]] = pysar_meta_dict[key]
+            pysar_meta_dict[key.split('hdfEos5.')[1]] = pysar_meta_dict_in[key]
 
     unavco_meta_dict = dict()
-
     #################################
     # Required metadata
     #################################

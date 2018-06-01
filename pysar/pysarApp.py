@@ -248,6 +248,7 @@ def create_parser():
                         help='Generate default template (and merge with custom template), then exit.')
     parser.add_argument('-H', dest='print_example_template', action='store_true',
                         help='Print/Show the example template file for routine processing.')
+    parser.add_argument('--version', action='store_true', help='print version number')
 
     parser.add_argument('--reset', action='store_true',
                         help='Reset files attributes to re-run pysarApp.py after loading data by:\n' +
@@ -358,6 +359,10 @@ def read_template(inps):
 def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
+    if inps.version:
+        print(version.version_description)
+        sys.exit(0)
+
     #########################################
     # Initiation
     #########################################

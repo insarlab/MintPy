@@ -578,7 +578,7 @@ def check_design_matrix(ifgram_file, weight_func='fim'):
             print("    2) Use '-w no' option for non-weighted SVD solution.")
             raise Exception()
     print('-------------------------------------------------------------------------------')
-    return
+    return A
 
 
 def get_ifgram_reference_phase(ifgram_file, skip_reference=False):
@@ -739,9 +739,21 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, weight_func='f
         num_col = stack_obj.width
     num_pixel = num_row * num_col
 
+    # Design matrix
+    date12_list = stack_obj.get_date12_list(dropIfgram=True)
+    A, B = stack_obj.get_design_matrix(date12_list=date12_list)
+    num_ifgram = len(date12_list)
+    num_date = A.shape[1] + 1
+    try:
+        ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
+    except:
+        ref_date = stack_obj.dateList[0]
+    ref_idx = stack_obj.dateList.index(ref_date)
+    time_idx = [i for i in range(num_date)]
+    time_idx.remove(ref_idx)
+    Astd = stack_obj.get_design_matrix(refDate=ref_date, dropIfgram=True)[0]
+
     # Initialization of output matrix
-    num_ifgram = np.sum(stack_obj.dropIfgram)
-    num_date = stack_obj.numDate
     print('number of interferograms: {}'.format(num_ifgram))
     print('number of acquisitions  : {}'.format(num_date))
     print('number of lines  : {}'.format(stack_obj.length))
@@ -797,17 +809,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, weight_func='f
         ts_std = ts_std.reshape(num_date, num_row, num_col)
         num_inv_ifgram = num_inv_ifgram.reshape(num_row, num_col)
         return ts, temp_coh, ts_std, num_inv_ifgram
-
-    # Design matrix
-    A, B = stack_obj.get_design_matrix(dropIfgram=True)
-    try:
-        ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
-    except:
-        ref_date = stack_obj.dateList[0]
-    ref_idx = stack_obj.dateList.index(ref_date)
-    time_idx = [i for i in range(num_date)]
-    time_idx.remove(ref_idx)
-    Astd = stack_obj.get_design_matrix(refDate=ref_date, dropIfgram=True)[0]
 
     # Inversion - SBAS
     if weight_func == 'sbas':
@@ -929,7 +930,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     if inps.update_mode and not ut.update_file(inps.timeseriesFile, ifgram_file):
         return inps.timeseriesFile, inps.tempCohFile
 
-    check_design_matrix(ifgram_file, weight_func=inps.weightFunc)
+    A = check_design_matrix(ifgram_file, weight_func=inps.weightFunc)
+    num_date = A.shape[1] + 1
 
     # split ifgram_file into blocks to save memory
     box_list = split_into_boxes(ifgram_file, chunk_size=inps.chunk_size)
@@ -960,10 +962,10 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         # Initialization of output matrix
         stack_obj = ifgramStack(ifgram_file)
         stack_obj.open(print_msg=False)
-        ts = np.zeros((stack_obj.numDate, stack_obj.length, stack_obj.width), np.float32)
-        ts_std = np.zeros((stack_obj.numDate, stack_obj.length, stack_obj.width), np.float32)
+        ts = np.zeros((num_date, stack_obj.length, stack_obj.width), np.float32)
         temp_coh = np.zeros((stack_obj.length, stack_obj.width), np.float32)
-        num_inv_ifgram = np.zeros((stack_obj.length, stack_obj.width), np.int16)
+        ts_std = np.zeros(ts.shape, np.float32)
+        num_inv_ifgram = np.zeros(temp_coh.shape, np.int16)
 
         # Loop
         for i in range(num_box):
