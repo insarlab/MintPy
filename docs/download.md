@@ -1,4 +1,4 @@
-### Download
+### Download PySAR
 
 Download the stable version at [Release Page](https://github.com/yunjunz/PySAR/releases), or use the command below.     
    
