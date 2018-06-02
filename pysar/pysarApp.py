@@ -556,7 +556,8 @@ def main(iargs=None):
     num_pixel = np.sum(msk != 0.)
     print('number of pixels selected: {}'.format(num_pixel))
     if num_pixel < min_num_pixel:
-        msg = "Not enought coherent pixels selected (minimum of {}). Try the following:\n".format(int(min_num_pixel))
+        msg = "Not enought coherent pixels selected (minimum of {}). ".format(int(min_num_pixel))
+        msg += "Try the following:\n"
         msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
         msg += "2) Check the network and make sure it's fully connected without subsets"
         raise RuntimeError(msg)
