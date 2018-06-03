@@ -57,6 +57,9 @@ needed_attributes = {
 def serialize_dictionary(dictionary, fileName):
     with open(fileName, "w") as file:
         pickle.dump(dictionary, file)
+    return
+
+
 # ---------------------------------------------------------------------------------------
 # convert h5 file to json and upload it. folder_name == unavco_name
 def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_path, folder_name):
@@ -183,6 +186,9 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
     insarmapsMetadata["needed_attributes"] = needed_attributes
     metadataFilePath = json_path + "/metadata.pickle" 
     serialize_dictionary(insarmapsMetadata, metadataFilePath)
+    return
+
+
 # ---------------------------------------------------------------------------------------
 # create a json file out of siu man array
 # then put json file into directory named after the h5 file
@@ -201,6 +207,8 @@ def make_json_file(chunk_num, points, dates, json_path, folder_name):
     json_file.close()
 
     print("converted chunk " + str(chunk_num))
+    return chunk
+
 
 # ---------------------------------------------------------------------------------------
 def build_parser():
@@ -238,6 +246,7 @@ def main():
     if should_mask:
         print("Masking displacement")
         displacement_3d_matrix = mask_matrix(displacement_3d_matrix, mask)
+    del mask
 
     dates = he_obj.dateList
     attributes = dict(he_obj.metadata)
@@ -264,6 +273,7 @@ def main():
         d = get_date(dates[i])
         decimal = get_decimal_date(d)
         decimal_dates.append(decimal)
+    del displacement_3d_matrix
 
     #for displacement_2d_matrix in displacement_3d_matrix:
     #    dataset = displacement_2d_matrix[:]
