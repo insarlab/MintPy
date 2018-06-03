@@ -107,21 +107,24 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
 
 
 ########################################################################################
+FILE_STRUCTURE_TIMESERIES = """
+/                Root level
+Attributes       Dictionary for metadata
+/timeseries      3D array of float32 in size of (n, l, w) in meter.
+/date            1D array of string  in size of (n,     ) in YYYYMMDD format
+/bperp           1D array of float32 in size of (n,     ) in meter. (optional)
+"""
+
 class timeseries:
-    '''
+    """
     Time-series object for displacement of a set of SAR images from the same platform and track.
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
-
-    /                Root level
-    Attributes       Dictionary for metadata
-    /timeseries      3D array of float32 in size of (n, l, w) in meter.
-    /date            1D array of string  in size of (n,     ) in YYYYMMDD format
-    /bperp           1D array of float32 in size of (n,     ) in meter. (optional)
-    '''
+    """
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'timeseries'
+        self.file_structure = FILE_STRUCTURE_TIMESERIES
 
     def close(self, print_msg=True):
         try:
@@ -179,7 +182,7 @@ class timeseries:
         return self.dateList
 
     def read(self, datasetName=None, box=None, print_msg=True):
-        '''Read dataset from timeseries file
+        """Read dataset from timeseries file
         Parameters: self : timeseries object
                     datasetName : (list of) string in YYYYMMDD format
                     box : tuple of 4 int, indicating x0,y0,x1,y1 of range
@@ -190,7 +193,7 @@ class timeseries:
                     data = tsobj.read(datasetName='20161020', box=(100,300,500,800))
                     data = tsobj.read(datasetName=['20161020','20161026','20161101'])
                     data = tsobj.read(box=(100,300,500,800))
-        '''
+        """
         if print_msg:
             print('reading {} data from file: {} ...'.format(self.name, self.file))
         self.open(print_msg=False)
@@ -224,7 +227,7 @@ class timeseries:
         return data
 
     def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None):
-        '''
+        """
         Parameters: data  : 3D array of float32
                     dates : 1D array/list of string in YYYYMMDD format
                     bperp : 1D array/list of float32 (optional)
@@ -242,7 +245,7 @@ class timeseries:
             ##Generate a timeseries with same attributes and same date/bperp info
             tsobj = timeseries('timeseries_demErr.h5')
             timeseries.write(data, refFile='timeseries.h5')
-        '''
+        """
         if not outFile:
             outFile = self.file
         if refFile:
@@ -283,9 +286,9 @@ class timeseries:
         return outFile
 
     def timeseries_std(self, maskFile=None, outFile=None):
-        '''Calculate the standard deviation (STD) for each epoch,
+        """Calculate the standard deviation (STD) for each epoch,
            output result to a text file.
-        '''
+        """
         # Calculate STD
         data = self.read()
         if maskFile:
@@ -308,9 +311,9 @@ class timeseries:
         return outFile
 
     def timeseries_rms(self, maskFile=None, outFile=None):
-        '''Calculate the Root Mean Square for each epoch of input timeseries file
+        """Calculate the Root Mean Square for each epoch of input timeseries file
             and output result to a text file.
-        '''
+        """
         # Calculate RMS
         data = self.read()
         if maskFile and os.path.isfile(maskFile):
@@ -351,26 +354,29 @@ class timeseries:
 
 
 ########################################################################################
+FILE_STRUCTURE_GEOMETRY = """
+/                        Root level
+Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
+/height                  2D array of float32 in size of (l, w   ) in meter.
+/latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
+/longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
+/incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
+/slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
+/headingAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
+/shadowMask              2D array of bool    in size of (l, w   ).           (optional)
+/waterMask               2D array of bool    in size of (l, w   ).           (optional)
+/bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
+/date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
+...
+"""
+
 class geometry:
-    ''' Geometry object.
-    /                        Root level
-    Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
-    /height                  2D array of float32 in size of (l, w   ) in meter.
-    /latitude (azimuthCoord) 2D array of float32 in size of (l, w   ) in degree.
-    /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
-    /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
-    /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
-    /headingAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
-    /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
-    /waterMask               2D array of bool    in size of (l, w   ).           (optional)
-    /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
-    /date                    1D array of string  in size of (n,     ) in YYYYMMDD(optional)
-    ...
-    '''
+    """ Geometry object."""
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'geometry'
+        self.file_structure = FILE_STRUCTURE_GEOMETRY
 
     def close(self, print_msg=True):
         try:
@@ -426,7 +432,7 @@ class geometry:
         return self.metadata
 
     def read(self, datasetName=geometryDatasetNames[0], box=None, print_msg=True):
-        '''Read 2D / 3D dataset with bounding box in space
+        """Read 2D / 3D dataset with bounding box in space
         Parameters: datasetName : (list of) string, to point to specific 2D dataset, e.g.:
                         height
                         incidenceAngle
@@ -446,7 +452,7 @@ class geometry:
             obj.read(datasetName='bperp-20161020')
             obj.read(datasetName=['bperp-20161020',
                                   'bperp-20161026'])
-        '''
+        """
         self.open(print_msg=False)
         if box is None:
             box = (0, 0, self.width, self.length)
@@ -481,24 +487,27 @@ class geometry:
 
 
 ########################################################################################
+FILE_STRUCTURE_IFGRMA_STACK = """
+/                  Root level group name
+Attributes         Dictionary for metadata
+/date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
+/bperp             1D array of float32 in size of (m,     ) in meter.
+/dropIfgram        1D array of bool    in size of (m,     ) with 0 for drop and 1 for keep
+/unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
+/coherence         3D array of float32 in size of (m, l, w).
+/connectComponent  3D array of int16   in size of (m, l, w).           (optional)
+/wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
+/rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
+/azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
+"""
+
 class ifgramStack:
-    ''' Interferograms Stack object.
-    /                  Root level group name
-    Attributes         Dictionary for metadata
-    /date              2D array of string  in size of (m, 2   ) in YYYYMMDD format for master and slave date
-    /bperp             1D array of float32 in size of (m,     ) in meter.
-    /dropIfgram        1D array of bool    in size of (m,     ) with 0 for drop and 1 for keep
-    /unwrapPhase       3D array of float32 in size of (m, l, w) in radian.
-    /coherence         3D array of float32 in size of (m, l, w).
-    /connectComponent  3D array of int16   in size of (m, l, w).           (optional)
-    /wrapPhase         3D array of float32 in size of (m, l, w) in radian. (optional)
-    /rangeOffset       3D array of float32 in size of (m, l, w).           (optional)
-    /azimuthOffset     3D array of float32 in size of (m, l, w).           (optional)
-    '''
+    """ Interferograms Stack object."""
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'ifgramStack'
+        self.file_structure = FILE_STRUCTURE_IFGRMA_STACK
 
     def close(self, print_msg=True):
         try:
@@ -509,11 +518,11 @@ class ifgramStack:
             pass
 
     def open(self, print_msg=True):
-        '''
+        """
         Time format/rules:
             All datetime.datetime objects named with time
             All string in YYYYMMDD        named with date (following roipac)
-        '''
+        """
         if print_msg:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
         self.get_metadata()
@@ -553,7 +562,7 @@ class ifgramStack:
         return self.numIfgram, self.length, self.width
 
     def read_datetimes(self):
-        '''Read master/slave dates into array of datetime.datetime objects'''
+        """Read master/slave dates into array of datetime.datetime objects"""
         with h5py.File(self.file, 'r') as f:
             dates = f['date'][:]
         self.mDates = np.array([i.decode('utf8') for i in dates[:, 0]])
@@ -562,7 +571,7 @@ class ifgramStack:
         self.sTimes = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.sDates])
 
     def read(self, datasetName=ifgramDatasetNames[0], box=None, print_msg=True, dropIfgram=False):
-        '''Read 3D dataset with bounding box in space
+        """Read 3D dataset with bounding box in space
         Parameters: datasetName : string, to point to specific 2D dataset, e.g.:
                         unwrapPhase
                         coherence
@@ -585,7 +594,7 @@ class ifgramStack:
             obj.read(datasetName='unwrapPhase-20161020_20161026')
             obj.read(datasetName=['unwrapPhase-20161020_20161026',
                                   'unwrapPhase-20161020_20161101'])
-        '''
+        """
         self.get_size()
         date12List = self.get_date12_list(dropIfgram=False)
 
@@ -677,9 +686,9 @@ class ifgramStack:
         return dateList
 
     def nonzero_mask(self, datasetName=None, print_msg=True, dropIfgram=True):
-        '''Return the common mask of pixels with non-zero value in dataset of all ifgrams.
+        """Return the common mask of pixels with non-zero value in dataset of all ifgrams.
            Ignoring dropped ifgrams
-        '''
+        """
         self.open(print_msg=False)
         with h5py.File(self.file, 'r') as f:
             if datasetName is None:
@@ -745,7 +754,7 @@ class ifgramStack:
     # Functions for Network Inversion
 
     def get_design_matrix(self, refDate=None, dropIfgram=True, date12_list=None):
-        '''Return design matrix of the input ifgramStack, ignoring dropped ifgrams
+        """Return design matrix of the input ifgramStack, ignoring dropped ifgrams
         Parameters: refDate : str, date in YYYYMMDD format
                     dropIfgram : bool, use dropped ifgram info or not
         Returns:    A : 2D array of float32 in size of (num_ifgram, num_date-1)
@@ -753,7 +762,7 @@ class ifgramStack:
         Examples:   stack_obj = ifgramStack('./INPUTS/ifgramStack.h5')
                     A, B = stack_obj.get_design_matrix()
                     A, B = stack_obj.get_design_matrix(date12_list=date12_list)
-        '''
+        """
         # Date info
         if date12_list:
             date12List = list(date12_list)
@@ -785,7 +794,7 @@ class ifgramStack:
         return A, B
 
     def get_perp_baseline_timeseries(self, dropIfgram=True):
-        '''Get spatial perpendicular baseline in timeseries from ifgramStack, ignoring dropped ifgrams'''
+        """Get spatial perpendicular baseline in timeseries from ifgramStack, ignoring dropped ifgrams"""
         # Get tbase_diff
         date12List = self.get_date12_list(dropIfgram=dropIfgram)
         mDates = [i.split('_')[0] for i in date12List]
@@ -807,7 +816,7 @@ class ifgramStack:
         return pbaseTimeseries
 
     def update_drop_ifgram(self, date12List_to_drop):
-        '''Update dropIfgram dataset based on input date12List_to_drop'''
+        """Update dropIfgram dataset based on input date12List_to_drop"""
         if date12List_to_drop is None:
             return
         date12ListAll = self.get_date12_list(dropIfgram=False)
@@ -841,35 +850,38 @@ class singleDataset:
 
 
 ########################################################################################
+FILE_STRUCTURE_HDFEOS = """
+/                             Root level group
+Attributes                    metadata in dict.
+/HDFEOS/GRIDS/timeseries      timeseries group
+    /observation
+        /displacement         3D array of float32 in size of (n, l, w) in meter
+        /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
+        /bperp                1D array of float32 in size of (n,     ) in meter
+    /quality
+        /temporalCoherence    2D array of float32 in size of (   l, w).
+        /mask                 2D array of bool_   in size of (   l, w).
+    /geometry
+        /height               2D array of float32 in size of (   l, w) in meter.
+        /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
+        /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
+        /headingAngle         2D array of float32 in size of (   l, w) in degree. (optional)
+        /shadowMask           2D array of bool    in size of (   l, w).           (optional)
+        /waterMask            2D array of bool    in size of (   l, w).           (optional)
+        /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
+"""
+
 class HDFEOS:
-    '''
+    """
     Time-series object in HDF-EOS5 format for Univ of Miami's InSAR Time-series Web Viewer
         Link: http://insarmaps.miami.edu
     It contains a "timeseries" group and three datasets: date, bperp and timeseries.
-
-    /                             Root level group
-    Attributes                    metadata in dict.
-    /HDFEOS/GRIDS/timeseries      timeseries group
-        /observation
-            /displacement         3D array of float32 in size of (n, l, w) in meter
-            /date                 1D array of string  in size of (n,     ) in YYYYMMDD format.
-            /bperp                1D array of float32 in size of (n,     ) in meter
-        /quality
-            /temporalCoherence    2D array of float32 in size of (   l, w).
-            /mask                 2D array of bool_   in size of (   l, w).
-        /geometry
-            /height               2D array of float32 in size of (   l, w) in meter.
-            /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
-            /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
-            /headingAngle         2D array of float32 in size of (   l, w) in degree. (optional)
-            /shadowMask           2D array of bool    in size of (   l, w).           (optional)
-            /waterMask            2D array of bool    in size of (   l, w).           (optional)
-            /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
-    '''
+    """
 
     def __init__(self, file=None):
         self.file = file
         self.name = 'HDFEOS'
+        self.file_structure = FILE_STRUCTURE_HDFEOS
         self.datasetGroupNameDict = {'displacement'       : 'observation',
                                      'raw'                : 'observation',
                                      'troposphericDelay'  : 'observation',
@@ -983,3 +995,4 @@ class HDFEOS:
                 data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
                 data = np.squeeze(data)
         return data
+

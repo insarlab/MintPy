@@ -15,7 +15,7 @@ import argparse
 import datetime as dt
 import h5py
 import numpy as np
-from pysar.objects import timeseries, geometry
+from pysar.objects import timeseries, geometry, HDFEOS
 from pysar.utils import readfile
 from pysar import info
 
@@ -250,31 +250,73 @@ def metadata_pysar2unavco(pysar_meta_dict_in, dateList):
     return unavco_meta_dict
 
 
-def get_hdfeos5_filename(timeseriesFile):
-    """Get output file name of HDF-EOS5 time series file"""
-    # Prepare Metadata
-    ts_obj = timeseries(timeseriesFile)
+def prep_metadata(ts_file, print_msg=True):
+    """Prepare metadata for HDF-EOS5 file"""
+    ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
-    pysar_meta_dict = dict(ts_obj.metadata)
-    dateList = ts_obj.dateList
+    unavco_meta_dict = metadata_pysar2unavco(ts_obj.metadata, ts_obj.dateList)
+    if print_msg:
+        print('## UNAVCO Metadata:')
+        print('-----------------------------------------')
+        info.print_attributes(unavco_meta_dict)
+        print('-----------------------------------------')
 
-    unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
-    meta_dict = pysar_meta_dict.copy()
+    meta_dict = dict(ts_obj.metadata)
     meta_dict.update(unavco_meta_dict)
+    meta_dict['FILE_TYPE'] = 'HDFEOS'
+    return meta_dict
 
-    # Open HDF5 File
-    SAT = meta_dict['mission']
-    # should be like FB08 for ALOS, need to find out, Yunjun, 2016-12-26
-    SW = meta_dict['beam_mode']
-    RELORB = "%03d" % (int(meta_dict['relative_orbit']))
-    FRAME = "%04d" % (int(meta_dict['frame']))
-    DATE1 = dt.datetime.strptime(meta_dict['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
-    DATE2 = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
+
+def get_output_filename(metadata, update_mode=False, subset_mode=False):
+    """Get output file name of HDF-EOS5 time series file"""
+    SAT = metadata['mission']
+    SW = metadata['beam_mode']
+    if metadata['beam_swath']:
+        SW += str(metadata['beam_swath'])
+    RELORB = "%03d" % (int(metadata['relative_orbit']))
+
+    # Frist and/or Last Frame
+    frame1 = int(metadata['frame'])
+    key = 'first_frame'
+    if key in metadata.keys():
+        frame1 = int(metadata[key])
+    FRAME = "%04d" % (frame1)
+    key = 'last_frame'
+    if key in metadata.keys():
+        frame2 = int(metadata[key])
+        if frame2 != frame1:
+            FRAME += "_%04d" % (frame2)
+
     TBASE = "%04d" % (0)
     BPERP = "%05d" % (0)
-    #outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'_'+TBASE+'_'+BPERP+'.he5'
-    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'-'+DATE2+'.he5'
+    DATE1 = dt.datetime.strptime(metadata['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
+    DATE2 = dt.datetime.strptime(metadata['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
+    if update_mode:
+        print('Update mode is enabled, put endDate as XXXXXXXX.')
+        DATE2 = 'XXXXXXXX'
 
+    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
+
+    if subset_mode:
+        print('Subset mode is enabled, put subset range info in output filename.')
+        lat1 = float(metadata['Y_FIRST'])
+        lon0 = float(metadata['X_FIRST'])
+        lat0 = lat1 + float(metadata['Y_STEP']) * int(metadata['LENGTH'])
+        lon1 = lon0 + float(metadata['X_STEP']) * int(metadata['WIDTH'])
+
+        lat0Str = 'N%05d' % (round(lat0*1e3))
+        lat1Str = 'N%05d' % (round(lat1*1e3))
+        lon0Str = 'E%06d' % (round(lon0*1e3))
+        lon1Str = 'E%06d' % (round(lon1*1e3))
+        if lat0 < 0.0: lat0Str = 'S%05d' % (round(abs(lat0)*1e3))
+        if lat1 < 0.0: lat1Str = 'S%05d' % (round(abs(lat1)*1e3))
+        if lon0 < 0.0: lon0Str = 'W%06d' % (round(abs(lon0)*1e3))
+        if lon1 < 0.0: lon1Str = 'W%06d' % (round(abs(lon1)*1e3))
+
+        SUB = '_%s_%s_%s_%s' % (lat0Str, lat1Str, lon0Str, lon1Str)
+        outName = '{}{}{}'.format(os.path.splitext(outName)[0],
+                                  SUB,
+                                  os.path.splitext(outName)[1])
     return outName
 
 
@@ -300,87 +342,15 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
-################################################################
-def main(iargs=None):
-    inps = cmd_line_parse(iargs)
-    if inps.template_file:
-        inps = read_template2inps(inps.template_file, inps)
-
-    # Prepare Metadata
-    ts_obj = timeseries(inps.timeseries_file)
+def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
+    """Write HDF5 file in HDF-EOS5 format"""
+    ts_obj = timeseries(ts_file)
     ts_obj.open(print_msg=False)
-    pysar_meta_dict = dict(ts_obj.metadata)
     dateList = ts_obj.dateList
-    length = ts_obj.length
-    width = ts_obj.width
-
-    dateNum = len(dateList)
-    unavco_meta_dict = metadata_pysar2unavco(pysar_meta_dict, dateList)
-    print('## UNAVCO Metadata:')
-    print('-----------------------------------------')
-    info.print_attributes(unavco_meta_dict)
-
-    meta_dict = pysar_meta_dict.copy()
-    meta_dict.update(unavco_meta_dict)
-    meta_dict['FILE_TYPE'] = 'HDFEOS'
-    print('-----------------------------------------')
 
     # Open HDF5 File
-    # Get output filename
-    SAT = meta_dict['mission']
-    SW = meta_dict['beam_mode']
-    if meta_dict['beam_swath']:
-        SW += str(meta_dict['beam_swath'])
-    RELORB = "%03d" % (int(meta_dict['relative_orbit']))
-
-    # Frist and/or Last Frame
-    frame1 = int(meta_dict['frame'])
-    key = 'first_frame'
-    if key in meta_dict.keys():
-        frame1 = int(meta_dict[key])
-    FRAME = "%04d" % (frame1)
-    key = 'last_frame'
-    if key in meta_dict.keys():
-        frame2 = int(meta_dict[key])
-        if frame2 != frame1:
-            FRAME += "_%04d" % (frame2)
-
-    TBASE = "%04d" % (0)
-    BPERP = "%05d" % (0)
-    DATE1 = dt.datetime.strptime(meta_dict['first_date'], '%Y-%m-%d').strftime('%Y%m%d')
-    DATE2 = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d').strftime('%Y%m%d')
-    #end_date = dt.datetime.strptime(meta_dict['last_date'], '%Y-%m-%d')
-    # if inps.update and (dt.datetime.utcnow() - end_date) < dt.timedelta(days=365):
-    if inps.update:
-        print('Update mode is enabled, put endDate as XXXXXXXX.')
-        DATE2 = 'XXXXXXXX'
-
-    outName = SAT+'_'+SW+'_'+RELORB+'_'+FRAME+'_'+DATE1+'_'+DATE2+'.he5'
-
-    if inps.subset:
-        print('Subset mode is enabled, put subset range info in output filename.')
-        lat1 = float(meta_dict['Y_FIRST'])
-        lon0 = float(meta_dict['X_FIRST'])
-        lat0 = lat1 + float(meta_dict['Y_STEP']) * length
-        lon1 = lon0 + float(meta_dict['X_STEP']) * width
-
-        lat0Str = 'N%05d' % (round(lat0*1e3))
-        lat1Str = 'N%05d' % (round(lat1*1e3))
-        lon0Str = 'E%06d' % (round(lon0*1e3))
-        lon1Str = 'E%06d' % (round(lon1*1e3))
-        if lat0 < 0.0: lat0Str = 'S%05d' % (round(abs(lat0)*1e3))
-        if lat1 < 0.0: lat1Str = 'S%05d' % (round(abs(lat1)*1e3))
-        if lon0 < 0.0: lon0Str = 'W%06d' % (round(abs(lon0)*1e3))
-        if lon1 < 0.0: lon1Str = 'W%06d' % (round(abs(lon1)*1e3))
-
-        SUB = '_%s_%s_%s_%s' % (lat0Str, lat1Str, lon0Str, lon1Str)
-        outName = '{}{}{}'.format(os.path.splitext(outName)[0],
-                                  SUB,
-                                  os.path.splitext(outName)[1])
-
-    # Open HDF5 File
-    f = h5py.File(outName, 'w')
-    print('create HDF5 file: {} with w mode'.format(outName))
+    f = h5py.File(out_file, 'w')
+    print('create HDF5 file: {} with w mode'.format(out_file))
     maxDigit = 20
 
     # Write Observation - Displacement
@@ -389,7 +359,7 @@ def main(iargs=None):
     group = f.create_group(gName)
 
     dsName = 'displacement'
-    data = timeseries(inps.timeseries_file).read(print_msg=False)
+    data = ts_obj.read(print_msg=False)
     print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
            ' with compression={c}').format(g=gName,
                                            d=dsName,
@@ -432,7 +402,7 @@ def main(iargs=None):
 
     ## 1 - temporalCoherence
     dsName = 'temporalCoherence'
-    data = readfile.read(inps.coherence_file)[0]
+    data = readfile.read(coh_file)[0]
     print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
            ' with compression={c}').format(g=gName,
                                            d=dsName,
@@ -451,7 +421,7 @@ def main(iargs=None):
 
     ## 2 - mask
     dsName = 'mask'
-    data = readfile.read(inps.mask_file, datasetName='mask')[0]
+    data = readfile.read(mask_file, datasetName='mask')[0]
     print(('create dataset /{g}/{d:<{w}} of {t:<10} in size of {s}'
            ' with compression={c}').format(g=gName,
                                            d=dsName,
@@ -475,7 +445,7 @@ def main(iargs=None):
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
 
-    geom_obj = geometry(inps.geom_file)
+    geom_obj = geometry(geom_file)
     geom_obj.open(print_msg=False)
     for dsName in geom_obj.datasetNames:
         data = geom_obj.read(datasetName=dsName, print_msg=False)
@@ -519,11 +489,36 @@ def main(iargs=None):
 
     # Write Attributes to the HDF File
     print('write metadata to root level')
-    for key, value in iter(meta_dict.items()):
+    for key, value in iter(metadata.items()):
         f.attrs[key] = value
     f.close()
-    print('finished writing to {}'.format(outName))
-    return
+    print('finished writing to {}'.format(out_file))
+
+    return out_file
+
+
+################################################################
+def main(iargs=None):
+    inps = cmd_line_parse(iargs)
+    if inps.template_file:
+        inps = read_template2inps(inps.template_file, inps)
+
+    # Prepare Metadata
+    meta_dict = prep_metadata(ts_file=inps.timeseries_file, print_msg=True)
+
+    # Get output filename
+    outName = get_output_filename(metadata=meta_dict,
+                                  update_mode=inps.update,
+                                  subset_mode=inps.subset)
+
+    # Open HDF5 File
+    write2hdf5(out_file=outName,
+               ts_file=inps.timeseries_file,
+               coh_file=inps.coherence_file,
+               mask_file=inps.mask_file,
+               geom_file=inps.geom_file,
+               metadata=meta_dict)
+    return outName
 
 
 ################################################################

@@ -11,6 +11,7 @@ import sys
 import psycopg2
 import geocoder
 from pysar.add_attribute_insarmaps import InsarDatabaseController
+from pysar.objects import HDFEOS
 from pysar.mask import mask_matrix
 import argparse
 import pickle
@@ -28,6 +29,8 @@ def get_date(date_string):
     month = int(date_string[4:6])
     day = int(date_string[6:8])
     return date(year, month, day)
+
+
 # ---------------------------------------------------------------------------------------
 # takes a date and calculates the number of days elapsed in the year of that date
 # returns year + (days_elapsed / 365), a decimal representation of the date necessary
@@ -61,7 +64,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
     region_file = None
     project_name = attributes["PROJECT_NAME"]
     region = region_name_from_project_name(project_name)
-# get the attributes for calculating latitude and longitude
+    # get the attributes for calculating latitude and longitude
     x_step = float(attributes["X_STEP"])
     y_step = float(attributes["Y_STEP"])
     x_first = float(attributes["X_FIRST"])
@@ -222,44 +225,60 @@ def main():
     path_name_and_extension = os.path.basename(file_name).split(".")
     path_name = path_name_and_extension[0]
     extension = path_name_and_extension[1]
-# ---------------------------------------------------------------------------------------
-# start clock to track how long conversion process takes
+    # ---------------------------------------------------------------------------------------
+    # start clock to track how long conversion process takes
     start_time = time.clock()
 
-# use h5py to open specified group(s) in the h5 file 
-# then read datasets from h5 file into memory for faster reading of data
-    file = h5py.File(file_name,  "r")
-    timeseries_group = file["HDFEOS"]["GRIDS"]["timeseries"]
-    displacement_3d_matrix = timeseries_group["observation"]["displacement"]
+    # use h5py to open specified group(s) in the h5 file 
+    # then read datasets from h5 file into memory for faster reading of data
+    he_obj = HDFEOS(file_name)
+    he_obj.open(print_msg=False)
+    displacement_3d_matrix = he_obj.read(datasetName='displacement')
+    mask = he_obj.read(datasetName='mask')
+    if should_mask:
+        print("Masking displacement")
+        displacement_3d_matrix = mask_matrix(displacement_3d_matrix, mask)
 
-# get attributes (stored at root) of UNAVCO timeseries file
-    attributes = dict(file.attrs)
+    dates = he_obj.dateList
+    attributes = dict(he_obj.metadata)
 
-# in timeseries displacement_3d_matrix, there are datasets
-# need to get datasets with dates - strings that can be converted to integers
-    dates = displacement_3d_matrix.attrs["DATE_TIMESERIES"].split(" ")
+    #file = h5py.File(file_name,  "r")
+    #timeseries_group = file["HDFEOS"]["GRIDS"]["timeseries"]
+    #displacement_3d_matrix = timeseries_group["observation"]["displacement"]
 
-# array that stores dates from dates that have been converted to decimal
+    # get attributes (stored at root) of UNAVCO timeseries file
+    #attributes = dict(file.attrs)
+
+    # in timeseries displacement_3d_matrix, there are datasets
+    # need to get datasets with dates - strings that can be converted to integers
+    #dates = displacement_3d_matrix.attrs["DATE_TIMESERIES"].split(" ")
+
+    # array that stores dates from dates that have been converted to decimal
     decimal_dates = []
 
-# read datasets in the group into a dictionary of 2d arrays and intialize decimal dates
+    # read datasets in the group into a dictionary of 2d arrays and intialize decimal dates
     timeseries_datasets = {}
-    i = 0
-    for displacement_2d_matrix in displacement_3d_matrix:
-        dataset = displacement_2d_matrix[:]
-        if should_mask:
-            print("Masking " + dates[i])
-            mask = timeseries_group["quality"]["mask"][:]
-            dataset = mask_matrix(dataset, mask)
-
-        timeseries_datasets[dates[i]] = dataset
+    num_date = len(dates)
+    for i in range(num_date):
+        timeseries_datasets[dates[i]] = np.squeeze(displacement_3d_matrix[i, :, :])
         d = get_date(dates[i])
         decimal = get_decimal_date(d)
         decimal_dates.append(decimal)
-        i += 1
 
-# close h5 file
-    file.close()
+    #for displacement_2d_matrix in displacement_3d_matrix:
+    #    dataset = displacement_2d_matrix[:]
+    #    if should_mask:
+    #        print("Masking " + dates[i])
+    #        mask = timeseries_group["quality"]["mask"][:]
+    #        dataset = mask_matrix(dataset, mask)
+    #    timeseries_datasets[dates[i]] = dataset
+    #    d = get_date(dates[i])
+    #    decimal = get_decimal_date(d)
+    #    decimal_dates.append(decimal)
+    #    i += 1
+
+    # close h5 file
+    #file.close()
 
     path_list = path_name.split("/")
     folder_name = path_name.split("/")[len(path_list)-1]
@@ -269,18 +288,19 @@ def main():
     except:
         print(output_folder + " already exists")
 
-# read and convert the datasets, then write them into json files and insert into database
+    # read and convert the datasets, then write them into json files and insert into database
     convert_data(attributes, decimal_dates, timeseries_datasets, dates, output_folder, folder_name)
 
-# run tippecanoe command to get mbtiles file
+    # run tippecanoe command to get mbtiles file
     os.chdir(os.path.abspath(output_folder))
     os.system("tippecanoe *.json -l chunk_1 -x d -pf -pk -Bg -d9 -D12 -g12 -r0 -o " + folder_name + ".mbtiles")
 
-# ---------------------------------------------------------------------------------------
-# check how long it took to read h5 file data and create json files
+    # ---------------------------------------------------------------------------------------
+    # check how long it took to read h5 file data and create json files
     end_time =  time.clock()
     print(("time elapsed: " + str(end_time - start_time)))
-# ---------------------------------------------------------------------------------------
+    return
 
+# ---------------------------------------------------------------------------------------
 if __name__ == '__main__':
     main()
