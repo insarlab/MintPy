@@ -161,10 +161,11 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
     # and all attributes will be put in extra_attributes table
     attribute_keys = '{'
     attribute_values = '{'
+    max_digit = max([len(key) for key in list(needed_attributes)] + [0])
     for k in attributes:
         v = attributes[k]
         if k in needed_attributes:
-            print(str(k) + ": " + str(v))
+            print('{k:<{w}}     {v}'.format(k=k, w=max_digit, v=v))
             attribute_keys += (str(k) + ",")
             attribute_values += (str(v) + ',')
     attribute_keys = attribute_keys[:len(attribute_keys)-1] + '}'

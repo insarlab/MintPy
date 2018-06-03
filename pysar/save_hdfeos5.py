@@ -4,8 +4,6 @@
 # Copyright(c) 2016-2018, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-# Based on ProductArchive/he5_converters/isce2he5.py written
-# by Scott Baker
 
 
 import os
