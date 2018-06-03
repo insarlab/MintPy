@@ -48,7 +48,7 @@ PySAR relies on the following Python modules. We recommend using [Anaconda](http
 - [scikit-image](http://scikit-image.org)
 - Basemap (optional, for plotting in geo coordinate)
 - [pyresample](http://pyresample.readthedocs.org) (optional, for geocoding)
-- pykml (optional, for Google Earth KMZ file output)
+- [pykml](https://github.com/yunjunz/pykml) (optional, for Google Earth KMZ file output)
 - joblib (optional, for parallel processing)
 - lxml (optional, for ISCE XML file parsing)
 - [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) (optional, for tropospheric correction using weather re-analysis models, i.e. ERA-Interim, NARR, MERRA)
@@ -60,6 +60,11 @@ Run the following in your terminal (using conda):
     chmod +x Anaconda3-5.1.0-MacOSX-x86_64.sh
     ./Anaconda3-5.1.0-MacOSX-x86_64.sh -b -p $PYTHON3DIR
     $PYTHON3DIR/bin/conda config --add channels conda-forge
-    $PYTHON3DIR/bin/conda install basemap joblib pykml lxml pyresample --yes   
+    $PYTHON3DIR/bin/conda install basemap joblib lxml pyresample --yes   
+    git clone https://github.com/yunjunz/pykml.git; cd pykml
+    $PYTHON3DIR/bin/python setup.py build     
+    $PYTHON3DIR/bin/python setup.py install    
    
+Note that pykml through conda is in python2, we provide a python3 version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above.
+  
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
