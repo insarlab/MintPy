@@ -4,6 +4,7 @@
 [![Release](https://img.shields.io/badge/release-v0.4.0-green.svg)](https://github.com/yunjunz/PySAR/releases)
 [![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/yunjunz/PySAR)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/py-sar)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR?ref=badge_shield)
        
 PySAR is a open-source Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ISCE, Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) linked PySAR product with [time series web viewer](http://insarmaps.miami.edu).      
    
@@ -82,3 +83,7 @@ PySAR is a toolbox with a lot of individual utility scripts, highly modulized in
 ### 5. Google Group
 
 Join our google group [https://groups.google.com/forum/#!forum/py-sar](https://groups.google.com/forum/#!forum/py-sar) to ask questions, get notice of latest features pushed to you!
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR?ref=badge_large)
