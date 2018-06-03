@@ -55,7 +55,7 @@ needed_attributes = {
 }
 
 def serialize_dictionary(dictionary, fileName):
-    with open(fileName, "w") as file:
+    with open(fileName, "wb") as file:
         pickle.dump(dictionary, file)
     return
 
