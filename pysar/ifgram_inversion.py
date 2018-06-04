@@ -493,7 +493,7 @@ def split_ifgram_file(ifgram_file, chunk_size=100e6):
     metadata = dict(stack_obj.metadata)
 
     # get reference phase
-    ref_phase = get_ifgram_reference_phase(ifgram_file)
+    ref_phase = get_ifgram_reference_phase(ifgram_file, drop_ifgram=False)
 
     # get list of boxes
     box_list = split_into_boxes(ifgram_file,
@@ -581,7 +581,7 @@ def check_design_matrix(ifgram_file, weight_func='fim'):
     return A
 
 
-def get_ifgram_reference_phase(ifgram_file, skip_reference=False):
+def get_ifgram_reference_phase(ifgram_file, skip_reference=False, drop_ifgram=True):
     """Read refPhase"""
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.get_size()
@@ -591,7 +591,7 @@ def get_ifgram_reference_phase(ifgram_file, skip_reference=False):
         ref_x = int(stack_obj.metadata['REF_X'])
         ref_phase = np.squeeze(stack_obj.read(datasetName='unwrapPhase',
                                               box=(ref_x, ref_y, ref_x+1, ref_y+1),
-                                              dropIfgram=False,
+                                              dropIfgram=drop_ifgram,
                                               print_msg=False))
         print('reference pixel in y/x: {}'.format((ref_y, ref_x)))
     except:
@@ -739,16 +739,21 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, weight_func='f
         num_col = stack_obj.width
     num_pixel = num_row * num_col
 
+    # get tbase_diff
+    date_list = stack_obj.get_date_list(dropIfgram=True)
+    num_date = len(date_list)
+    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / 365.25
+    tbase_diff = np.diff(tbase).reshape(-1, 1)
+
     # Design matrix
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
     A, B = stack_obj.get_design_matrix(date12_list=date12_list)
     num_ifgram = len(date12_list)
-    num_date = A.shape[1] + 1
     try:
         ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
     except:
-        ref_date = stack_obj.dateList[0]
-    ref_idx = stack_obj.dateList.index(ref_date)
+        ref_date = date_list[0]
+    ref_idx = date_list.index(ref_date)
     time_idx = [i for i in range(num_date)]
     time_idx.remove(ref_idx)
     Astd = stack_obj.get_design_matrix(refDate=ref_date, dropIfgram=True)[0]
@@ -812,11 +817,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, weight_func='f
 
     # Inversion - SBAS
     if weight_func == 'sbas':
-        # get tbase_diff (for SBAS approach)
-        date_list = stack_obj.get_date_list(dropIfgram=True)
-        tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / 365.25
-        tbase_diff = np.diff(tbase).reshape(-1, 1)
-
         # Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
         mask_all_net = np.all(pha_data, axis=0)
         mask_all_net *= mask
@@ -957,7 +957,9 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                    skip_zero_phase=inps.skip_zero_phase)
     else:
         # read ifgram_file in small patches and write them together
-        ref_phase = get_ifgram_reference_phase(ifgram_file, skip_reference=inps.skip_ref)
+        ref_phase = get_ifgram_reference_phase(ifgram_file,
+                                               skip_reference=inps.skip_ref,
+                                               drop_ifgram=True)
 
         # Initialization of output matrix
         stack_obj = ifgramStack(ifgram_file)
