@@ -130,6 +130,7 @@ pysar.networkInversion.minNumPixel   = auto #[int > 0], auto for 100, min number
 ## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS)
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
 ## c. base_trop_cor - (not recommend) baseline error and stratified tropo simultaneously (Jo et al., 2010, Geo J)
+## For pyaps method, correction is applied to dates with data available, and skipped for dates (usually recent) without it.
 pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / base_trop_cor / no], auto for pyaps
 pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
 pysar.troposphericDelay.weatherDir   = auto  #[path2directory], auto for "./../WEATHER"
@@ -638,9 +639,9 @@ def main(iargs=None):
             print(tropCmd)
             if ut.update_file(outName, inps.timeseriesFile):
                 if inps.tropFile:
-                    tropCmd = 'diff.py {} {} -o {}'.format(inps.timeseriesFile,
-                                                           inps.tropFile,
-                                                           outName)
+                    tropCmd = 'diff.py {} {} -o {} --force'.format(inps.timeseriesFile,
+                                                                   inps.tropFile,
+                                                                   outName)
                     print('--------------------------------------------')
                     print('Use existed tropospheric delay file: {}'.format(inps.tropFile))
                     print(tropCmd)

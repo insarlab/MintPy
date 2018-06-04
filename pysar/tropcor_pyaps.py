@@ -9,7 +9,7 @@
 import os
 import sys
 import re
-
+import subprocess
 try:
     import pyaps as pa
 except ImportError:
@@ -42,14 +42,10 @@ REFERENCE = """reference:
 
 TEMPLATE = """
 ## 7. Tropospheric Delay Correction (optional and recommended)
-## correct tropospheric delay using the following methods:
-## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS; Dee et al., 2011)
-## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
-## c. base_trop_cor - (not recommend) baseline error and stratified tropo simultaneously (Jo et al., 2010, Geo J)
+## For pyaps method, correction is applied to dates with data available, and skipped for dates (usually recent) without it.
 pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / base_trop_cor / no], auto for pyaps
-pysar.troposphericDelay.weatherModel = auto  #[ECMWF / MERRA / NARR], auto for ECMWF, for pyaps method
-pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
-pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, Number of looks to be applied to interferogram 
+pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
+pysar.troposphericDelay.weatherDir   = auto  #[path2directory], auto for "./../WEATHER"
 """
 
 DATA_INFO = """
@@ -78,6 +74,8 @@ def create_parser():
     parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir',
                         help='directory to put downloaded weather data, i.e. ./../WEATHER\n' +
                              'use directory of input timeseries_file if not specified.')
+    parser.add_argument('--offline', action='store_true',
+                        help='Enable offline mode: use existing local data and do not download.')
 
     # For delay calculation
     parser.add_argument('--dem', dest='dem_file',
@@ -167,6 +165,18 @@ def check_inputs(inps):
             inps.weather_dir = os.path.abspath(os.getcwd())
     print('weather data directory: '+inps.weather_dir)
 
+    # Grib data directory
+    inps.grib_dir = os.path.join(inps.weather_dir, inps.trop_model)
+    if not os.path.isdir(inps.grib_dir):
+        os.makedirs(inps.grib_dir)
+        print('making directory: '+inps.grib_dir)
+
+    # Date list to grib file list
+    inps.grib_file_list = date_list2grib_file(inps.date_list,
+                                              inps.hour,
+                                              inps.trop_model,
+                                              inps.grib_dir)
+
     if 'REF_Y' in atr.keys():
         inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
         print('reference pixel: {}'.format(inps.ref_yx))
@@ -209,27 +219,8 @@ def date_list2grib_file(date_list, hour, trop_model, grib_dir):
     return grib_file_list
 
 
-def dload_grib_pyaps(date_list, hour, trop_model='ECMWF', weather_dir='./'):
-    """Download weather re-analysis grib files using PyAPS
-    Inputs:
-        date_list   : list of string in YYYYMMDD format
-        hour        : string in HH:MM or HH format
-        trop_model : string, 
-        weather_dir : string,
-    Output:
-        grib_file_list : list of string
-    """
-    print('*'*50+'\nDownloading weather model data using PyAPS (Jolivet et al., 2011, GRL) ...')
-    # Grib data directory
-    grib_dir = weather_dir+'/'+trop_model
-    if not os.path.isdir(grib_dir):
-        os.makedirs(grib_dir)
-        print('making directory: '+grib_dir)
-
-    # Date list to grib file list
-    grib_file_list = date_list2grib_file(date_list, hour, trop_model, grib_dir)
-
-    # Get date list to download (skip already downloaded files)
+def check_exist_grib_file(grib_file_list, print_msg=True):
+    """Check input list of grib files, and return the existing ones with right size."""
     grib_file_existed = ut.get_file_list(grib_file_list)
     if grib_file_existed:
         grib_filesize_digit = ut.most_common([len(str(os.path.getsize(i))) for i in grib_file_existed])
@@ -237,29 +228,50 @@ def dload_grib_pyaps(date_list, hour, trop_model='ECMWF', weather_dir='./'):
         grib_file_corrupted = [i for i in grib_file_existed
                                if (len(str(os.path.getsize(i))) != grib_filesize_digit
                                    or str(os.path.getsize(i))[0:2] != grib_filesize_max2)]
-        print('file size mode: %se%d bytes' % (grib_filesize_max2, grib_filesize_digit-2))
-        print('number of grib files existed    : %d' % len(grib_file_existed))
+        if print_msg:
+            print('file size mode: %se%d bytes' % (grib_filesize_max2, grib_filesize_digit-2))
+            print('number of grib files existed    : %d' % len(grib_file_existed))
         if grib_file_corrupted:
-            print('------------------------------------------------------------------------------')
-            print('corrupted grib files detected! Delete them and re-download...')
-            print('number of grib files corrupted  : %d' % len(grib_file_corrupted))
+            if print_msg:
+                print('------------------------------------------------------------------------------')
+                print('corrupted grib files detected! Delete them and re-download...')
+                print('number of grib files corrupted  : %d' % len(grib_file_corrupted))
             for i in grib_file_corrupted:
                 rmCmd = 'rm '+i
                 print(rmCmd)
                 os.system(rmCmd)
                 grib_file_existed.remove(i)
-            print('------------------------------------------------------------------------------')
+            if print_msg:
+                print('------------------------------------------------------------------------------')
+    return grib_file_existed
+
+
+def dload_grib_pyaps(grib_file_list, trop_model='ECMWF'):
+    """Download weather re-analysis grib files using PyAPS
+    Parameters: grib_file_list : list of string in YYYYMMDD format
+                trop_model     : string, 
+    Returns:    grib_file_list : list of string
+    """
+    print('*'*50+'\nDownloading weather model data using PyAPS (Jolivet et al., 2011, GRL) ...')
+
+    # Get date list to download (skip already downloaded files)
+    grib_file_existed = check_exist_grib_file(grib_file_list, print_msg=True)
     grib_file2download = sorted(list(set(grib_file_list) - set(grib_file_existed)))
     date_list2download = [str(re.findall('\d{8}', i)[0]) for i in grib_file2download]
     print('number of grib files to download: %d' % len(date_list2download))
     print('------------------------------------------------------------------------------\n')
 
     # Download grib file using PyAPS
-    if   trop_model == 'ECMWF' :  pa.ECMWFdload( date_list2download, hour, grib_dir)
-    elif trop_model == 'MERRA' :  pa.MERRAdload( date_list2download, hour, grib_dir)
-    elif trop_model == 'NARR'  :  pa.NARRdload(  date_list2download, hour, grib_dir)
-    elif trop_model == 'ERA'   :  pa.ERAdload(   date_list2download, hour, grib_dir)
-    elif trop_model == 'MERRA1':  pa.MERRA1dload(date_list2download, hour, grib_dir)
+    if len(date_list2download) > 0:
+        hour = re.findall('\d{8}[-_]\d{2}', grib_file2download[0])[0].replace('-', '_').split('_')[1]
+        grib_dir = os.path.dirname(grib_file2download[0])
+        if   trop_model == 'ECMWF' :  pa.ECMWFdload( date_list2download, hour, grib_dir)
+        elif trop_model == 'MERRA' :  pa.MERRAdload( date_list2download, hour, grib_dir)
+        elif trop_model == 'NARR'  :  pa.NARRdload(  date_list2download, hour, grib_dir)
+        elif trop_model == 'ERA'   :  pa.ERAdload(   date_list2download, hour, grib_dir)
+        elif trop_model == 'MERRA1':  pa.MERRA1dload(date_list2download, hour, grib_dir)
+
+    grib_file_list = check_exist_grib_file(grib_file_list, print_msg=False)
     return grib_file_list
 
 
@@ -313,29 +325,30 @@ def get_delay_timeseries(inps, atr):
 
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
-    date_num = len(inps.date_list)
-    drop_data = np.zeros((date_num, length, width), np.float32)
-    for i in range(date_num):
+    date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_file_list]
+    num_date = len(date_list)
+    trop_data = np.zeros((num_date, length, width), np.float32)
+    for i in range(num_date):
         grib_file = inps.grib_file_list[i]
-        date = inps.date_list[i]
+        date = date_list[i]
         print('calculate phase delay on %s from file %s' %
               (date, os.path.basename(grib_file)))
-        drop_data[i] = get_delay(grib_file, inps)
+        trop_data[i] = get_delay(grib_file, inps)
 
     # Convert relative phase delay on reference date
     try:
         inps.ref_date = atr['REF_DATE']
     except:
-        inps.ref_date = inps.date_list[0]
+        inps.ref_date = date_list[0]
     print('convert to relative phase delay with reference date: '+inps.ref_date)
-    inps.ref_idx = inps.date_list.index(inps.ref_date)
-    drop_data -= np.tile(drop_data[inps.ref_idx, :, :], (date_num, 1, 1))
+    inps.ref_idx = date_list.index(inps.ref_date)
+    trop_data -= np.tile(trop_data[inps.ref_idx, :, :], (num_date, 1, 1))
 
     # Write tropospheric delay to HDF5
-    tropFile = os.path.join(os.path.dirname(inps.dem_file), inps.trop_model+'.h5')
-    ts_obj = timeseries(tropFile)
-    ts_obj.write2hdf5(data=drop_data,
-                     dates=inps.date_list,
+    trop_file = os.path.join(os.path.dirname(inps.dem_file), inps.trop_model+'.h5')
+    ts_obj = timeseries(trop_file)
+    ts_obj.write2hdf5(data=trop_data,
+                     dates=date_list,
                      metadata=atr,
                      refFile=inps.timeseries_file)
 
@@ -345,19 +358,26 @@ def get_delay_timeseries(inps, atr):
         print(rmCmd)
         os.system(rmCmd)
 
-    return drop_data
+    return trop_file
 
 
-def correct_delay(timeseries_file, trop_data, out_file=None):
+def correct_timeseries(timeseries_file, trop_file, out_file):
     print('*'*50+'\nCorrecting delay for input time-series')
-    ts_obj = timeseries(timeseries_file)
-    ts_data = ts_obj.read()
-    mask = ts_data == 0.
-    ts_data -= trop_data
-    ts_data[mask] = 0.
-
-    ts_obj = timeseries(out_file)
-    ts_obj.write2hdf5(data=ts_data, refFile=timeseries_file)
+    #ts_obj = timeseries(timeseries_file)
+    #ts_data = ts_obj.read()
+    #mask = ts_data == 0.
+    #ts_data -= trop_data
+    #ts_data[mask] = 0.
+    #ts_obj = timeseries(out_file)
+    #ts_obj.write2hdf5(data=ts_data, refFile=timeseries_file)
+    cmd = 'diff.py {} {} -o {} --force'.format(timeseries_file,
+                                               trop_file,
+                                               out_file)
+    print(cmd)
+    status = subprocess.Popen(cmd, shell=True).wait()
+    if status is not 0:
+        raise Exception(('Error while correcting timeseries file '
+                         'using diff.py with tropospheric delay file.'))
     return out_file
 
 
@@ -366,15 +386,20 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     inps, atr = check_inputs(inps)
 
-    inps.grib_file_list = dload_grib_pyaps(inps.date_list,
-                                           inps.hour,
-                                           inps.trop_model,
-                                           inps.weather_dir)
+    if inps.offline:
+        print('offline mode = True, skip data downloading.')
+        inps.grib_file_list = check_exist_grib_file(inps.grib_file_list,
+                                                    print_msg=True)
+    else:
+        inps.grib_file_list = dload_grib_pyaps(inps.grib_file_list,
+                                               trop_model=inps.trop_model)
 
-    drop_data = get_delay_timeseries(inps, atr)
+    trop_file = get_delay_timeseries(inps, atr)
 
     if atr['FILE_TYPE'] == 'timeseries':
-        inps.outfile = correct_delay(inps.timeseries_file, drop_data, inps.outfile)
+        inps.outfile = correct_timeseries(inps.timeseries_file,
+                                          trop_file,
+                                          out_file=inps.outfile)
 
     return inps.outfile
 
