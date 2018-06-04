@@ -55,10 +55,23 @@ class TimeSeriesWidget(qt.QWidget):
         # Setup Matplotlib Widgets
         self.fig_v, self.canvas, self.toolbar = self.main(iargs)
 
+        hz_layout = qt.QHBoxLayout()
+
+        self.show_plot_2_button = qt.QPushButton("Show Plot 2", self)
+        self.show_plot_2_button.clicked.connect(self.show_second_plot)
+
+        self.hide_plot_2_button = qt.QPushButton("Hide Plot 2", self)
+        self.hide_plot_2_button.clicked.connect(self.hide_second_plot)
+
+        hz_layout.addSpacing(500)
+        hz_layout.addWidget(self.show_plot_2_button)
+        hz_layout.addWidget(self.hide_plot_2_button)
+
         # Set layout parameters
         layout = qt.QVBoxLayout()
         layout.addWidget(self.canvas)
         layout.addWidget(self.toolbar)
+        layout.addLayout(hz_layout)
         self.setLayout(layout)
 
         self.resize(1000, 600)
@@ -697,10 +710,10 @@ class TimeSeriesWidget(qt.QWidget):
 
         if plot_number == 1:
             axis = self.ax_ts
-        #else:
-            #axis = second_plot_axis
+        else:
+            axis = self.second_plot_axis
 
-            self.d_ts = []
+        self.d_ts = []
         for i, date in enumerate(self.dateList):
             d = self.h5['timeseries'][i][y, x]
             if self.inps.ref_yx:
@@ -837,6 +850,32 @@ class TimeSeriesWidget(qt.QWidget):
                                             marker='o')  # place new scatter point
 
             self.d_ts = self.update_timeseries(ii, jj, 2)  # update timeseries scatter plot for plot 2
+
+
+    ###########################################   Second Plot Information #######################################
+
+    '''Displays second data plot to screen'''
+
+    def show_second_plot(self):
+
+        self.second_plot_axis = self.fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
+        self.second_plot_axis_visible = True
+
+        self.fig_v.canvas.draw()
+
+
+    '''Hides second data plot from screen'''
+    def hide_second_plot(self):
+
+        if self.p2_scatter_point is not None:
+            self.p2_scatter_point.remove()
+            self.p2_scatter_point = None
+
+        self.second_plot_axis.remove()
+
+        self.second_plot_axis_visible = False
+
+        self.fig_v.canvas.draw()
 
     ###########################################   Parser Information  ###########################################
 
