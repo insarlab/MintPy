@@ -194,7 +194,7 @@ ____/________(___/_(____/___/____|_/_____|_______
             (_ /                            
 
  A Python package for InSAR time series analysis.
-               PySAR v1.3, Mar 2018
+               PySAR v0.4-dev, Mar 2018
  Geodesy Lab, University of Miami, Maimi FL, USA
 _________________________________________________
 '''
@@ -419,7 +419,7 @@ def cmdLineParse():
                                      epilog=EXAMPLE)
                                      #epilog=TEMPLATE+'\n'+EXAMPLE)
 
-    parser.add_argument('-v','--version', action='version', version='%(prog)s 1.2')
+    parser.add_argument('-v','--version', action='version', version='%(prog)s 0.4')
     parser.add_argument('custom_template_file', nargs='?',\
                         help='custom template with option settings.\n'+\
                              "It's equivalent to None, if pysarApp_template.txt is input, as it will be read always.")
