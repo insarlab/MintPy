@@ -47,9 +47,12 @@ class TimeSeriesWidget(qt.QWidget):
 
         self.p1_scatter_point, self.p1_x, self.p1_y             =       None, None, None
         self.p2_scatter_point, self.p2_x, self.p2_y             =       None, None, None
+        self.p1_scatter, self.p2_scatter                        =       None, None
+
 
         self.inps, self.mask, self.img, self.tslider            =       None, None, None, None
-        self.first_data_point = None
+        self.first_data_point, self.show_data_figure            =       None, None
+        self.annot, self.scatts, self.ts_axis                   =       None, None, None
 
 
         # Setup Matplotlib Widgets
@@ -120,6 +123,7 @@ class TimeSeriesWidget(qt.QWidget):
 
         # Setup button press event to a new plot_timeseries_event
         self.first_data_point = self.fig_v.canvas.mpl_connect('button_press_event', self.plot_timeseries_event)
+        self.show_data_figure = self.fig_v.canvas.mpl_connect('button_press_event', self.show_data_as_fig)
 
         # Refresh the canvas to display changes
         if self.inps.disp_fig:
@@ -783,7 +787,7 @@ class TimeSeriesWidget(qt.QWidget):
         return title_ts
 
     def xy_to_lat_lon(self, x, y):
-        '''Converst x,y coordinated to lat/lon coordinates
+        '''Converst x,y coordinates to lat/lon coordinates
             Inputs:
                 x   : int, x coordinate
                 y`  : int, y coordinate
@@ -791,6 +795,8 @@ class TimeSeriesWidget(qt.QWidget):
                 latitude    : double, computed latitude coordinate
                 longitude   : double, computed longitude coordinate
         '''
+
+        print(self.lat_step)
 
         latitude = self.ullat + y * self.lat_step
         longitude = self.ullon + x * self.lon_step
@@ -863,7 +869,6 @@ class TimeSeriesWidget(qt.QWidget):
 
         self.fig_v.canvas.draw()
 
-
     '''Hides second data plot from screen'''
     def hide_second_plot(self):
 
@@ -876,6 +881,199 @@ class TimeSeriesWidget(qt.QWidget):
         self.second_plot_axis_visible = False
 
         self.fig_v.canvas.draw()
+
+    ########################################## Timeseries Data Information ######################################
+
+    '''Displays Scatter Plot Data from one or both data axes in separate figure for anlaysis'''
+
+    def show_data_as_fig(self, event):
+
+        if self.ax_ts == event.inaxes or self.second_plot_axis == event.inaxes:
+
+            dialog = qt.QDialog(self)
+
+            # Create new figure object
+            self.fig_ts = Figure(self.inps.fig_size)
+            # Create new figure canvas object
+            ts_canvas = FigureCanvas(self.fig_ts)
+            # Create new MPL toolbar object
+            ts_toolbar = NavigationToolbar(ts_canvas, dialog)
+
+            # Set layout parameters
+            ts_layout = qt.QVBoxLayout()
+            ts_layout.addWidget(ts_canvas)
+            ts_layout.addWidget(ts_toolbar)
+
+            dialog.setLayout(ts_layout)
+
+
+            self.show_figure(1)
+            if self.second_plot_axis_visible:
+                self.show_figure(2)
+
+
+            ts_canvas.draw()
+            dialog.exec_()
+
+    # Configures and Shows Data Plot as Separate Figure Window
+    def show_figure(self, plot_number):
+        '''Configures and shows timeseries scatter plot as separate figure window
+            Inputs:
+                plot_number : int, plot number to show data of
+        '''
+
+        # Set up new plot figure, window, and axes
+        self.ts_axis = self.fig_ts.add_subplot(111)
+        self.ts_axis.set_ylim(self.inps.ylim_mat[0] * 2, self.inps.ylim_mat[1] * 2)
+
+        # Set annotations for new acis
+        self.annot = self.ts_axis.annotate("", xy=(0, 0), xytext=(445, 10), textcoords="axes points",
+                                  bbox=dict(boxstyle="round", fc="w"))
+        self.annot.set_visible(False)
+
+        # Compute timeseries data
+        d_ts_n = self.set_timeseries_data(plot_number)
+
+        # Compute and plot scatter points on axis
+        scatter = self.plot_timeseries_scatter(self.ts_axis, d_ts_n, self.inps, plot_number)
+
+        # Set appropriate scatter variable
+        if plot_number == 1:
+            _, self.p1_scatter = scatter
+        elif plot_number == 2:
+            _, self.p2_scatter = scatter
+
+        self.set_title_and_legend(self.ts_axis)
+
+        # Connect events to canvas
+        self.fig_ts.canvas.mpl_connect('pick_event', self.hide_scatter)
+        self.fig_ts.canvas.mpl_connect('motion_notify_event', self.on_hover)
+
+        self.fig_ts.canvas.draw()
+
+    ''' Defines behavior when hovering over a given data point (ie. showing annotation)'''
+
+    def on_hover(self, event):
+
+        vis = self.annot.get_visible()
+        if event.inaxes == self.ts_axis:
+            cont, ind = self.p1_scatter.contains(event)
+            if cont:
+                self.update_annot(ind, self.p1_scatter)
+                self.annot.set_visible(True)
+                self.fig_ts.canvas.draw_idle()
+            else:
+                cont, ind = self.p2_scatter.contains(event) if self.p2_scatter is not None else (False, 0)
+                if cont:
+                    self.update_annot(ind, self.p2_scatter)
+                    self.annot.set_visible(True)
+                    self.plot_figure.canvas.draw_idle()
+                else:
+                    if vis:
+                        self.annot.set_visible(False)
+                        self.plot_figure.canvas.draw_idle()
+
+
+    ''' Defines annotation styles when hovering over a data point '''
+
+    def update_annot(self, ind, sc):
+
+        pos = sc.get_offsets()[ind["ind"][0]]
+        self.annot.xy = pos
+
+        if sc is self.p1_scatter and self.p1_x is not None:
+            data = self.update_timeseries(self.p1_y, self.p1_x, 1, True)
+            latitude, longitude = self.xy_to_lat_lon(self.p1_x, self.p1_y)
+        elif sc is self.p2_scatter and self.p2_x is not None:
+            data = self.update_timeseries(self.p2_y, self.p2_x, 2, True)
+            latitude, longitude = self.xy_to_lat_lon(self.p2_x, self.p2_y)
+        else:
+            data = np.zeros(len(self.tims))
+            latitude, longitude = None, None
+
+        raw_date = str(self.dateList[ind["ind"][0]])
+        date = list(raw_date)
+        date.insert(4, '-')
+        date.insert(7, '-')
+        date = "".join(date)
+        datum = str(data[ind["ind"][0]])
+
+        text = "(%.4f , %.4f)" % (latitude, longitude)
+        text += "\nDate: " + date + "\n" + datum
+        self.annot.set_text(text)
+        self.annot.get_bbox_patch().set_facecolor('b')
+        self.annot.get_bbox_patch().set_alpha(0.4)
+
+    '''Hides Scatter Plot Data on Data Point Figure on Legend Item Click'''
+
+    def hide_scatter(self, event):
+
+        legline = event.artist
+        origline = self.scatts[legline]
+        vis = not origline.get_visible()
+        origline.set_visible(vis)
+
+        # Change the alpha on the line in the legend so we can see what lines
+        # have been toggled
+        if vis:
+            legline.set_alpha(1.0)
+        else:
+            legline.set_alpha(0.2)
+
+        self.fig_ts.canvas.draw_idle()
+
+    '''Sets title and legend information in Data Point Figure'''
+
+    def set_title_and_legend(self, axis):
+
+        # Compute title based off lat/lon coords
+        series_label_1 = self.set_axis_title(self.p1_x, self.p1_y)
+        series_label_2 = None
+
+        title = series_label_1
+
+        if self.p2_x is not None:
+            series_label_2 = self.set_axis_title(self.p2_x, self.p2_y)
+            title += " vs " + series_label_2
+
+        # Display title
+        if self.inps.disp_title:
+            axis.set_title(title)
+
+        # Set Legend
+        legend = axis.legend((self.p1_scatter, self.p2_scatter), (series_label_1, series_label_2), fancybox=True)
+        legend.get_frame().set_alpha(0.4)
+        scatters = [self.p1_scatter, self.p2_scatter]
+        self.scatts = dict()
+
+        for legline, scatter in zip(legend.legendHandles, scatters):
+            if legline is not None:
+                legline.set_picker(5)  # 5 pts tolerance
+                self.scatts[legline] = scatter
+
+    ''' Sets timeseries data (x/y points) prior to computing timeseries data'''
+
+    def set_timeseries_data(self, plot_number):
+        global p1_y, p1_x, p2_y, p2_x
+
+        x_point, y_point = self.p1_x, self.p1_y
+
+        if plot_number == 2:
+            x_point = self.p2_x
+            y_point = self.p2_y
+
+        return self.compute_timeseries_data(plot_number, x_point, y_point)
+
+    ''' Computes timeseries data for a given x, y points '''
+
+    def compute_timeseries_data(self, plot_number, x_point, y_point):
+
+        if x_point is not None:
+            d_ts_n = self.update_timeseries(y_point, x_point, plot_number)
+        else:
+            d_ts_n = np.zeros(len(self.tims))
+
+        return d_ts_n
 
     ###########################################   Parser Information  ###########################################
 
