@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 ############################################################
 # Program is part of PySAR                                 #
 # Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
-
 
 import os
 import sys
@@ -65,7 +64,7 @@ def create_parser():
                      help='Colorbar label. Default: Mean LOS velocity')
     fig.add_argument('--cbar-height', dest='cbar_height',
                      help='Colorbar height/elevation/altitude in meters;\n' +
-                          'if not specified and DEM file exists in current directory, use mean DEM height + 1000m;\n' +
+                          'if not specified and DEM exists in current directory, use mean DEM height + 1000m;\n' +
                           'if not specified nor DEM exists, clampToGround.')
     fig.add_argument('--dpi', dest='fig_dpi', metavar='NUM', type=int, default=300,
                      help='Figure DPI (dots per inch). Default: 300')
@@ -274,23 +273,33 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     #plt.switch_backend('Agg')
 
+    #print("The Python version is %s.%s.%s" % sys.version_info[:3])
+
     # Read data
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
 
     # Data Operation - Display Unit & Rewrapping
-    data, inps.disp_unit, inps.disp_scale, inps.wrap = pp.scale_data4disp_unit_and_rewrap(data=data,
-                                                                                          metadata=atr,
-                                                                                          disp_unit=inps.disp_unit,
-                                                                                          wrap=inps.wrap)
+    (data,
+     inps.disp_unit,
+     inps.disp_scale,
+     inps.wrap) = pp.scale_data4disp_unit_and_rewrap(data=data,
+                                                     metadata=atr,
+                                                     disp_unit=inps.disp_unit,
+                                                     wrap=inps.wrap)
     if inps.wrap:
         inps.ylim = [-np.pi, np.pi]
 
     # Output filename
     if not inps.outfile:
-        inps.outfile = pp.auto_figure_title(inps.file, datasetNames=inps.dset, inps_dict=vars(inps))
+        inps.outfile = pp.auto_figure_title(inps.file,
+                                            datasetNames=inps.dset,
+                                            inps_dict=vars(inps))
 
     # 2. Generate Google Earth KMZ
-    kmz_file = write_kmz_file(data, metadata=atr, out_name_base=inps.outfile, inps=inps)
+    kmz_file = write_kmz_file(data,
+                              metadata=atr,
+                              out_name_base=inps.outfile,
+                              inps=inps)
 
     print('Done.')
     return
