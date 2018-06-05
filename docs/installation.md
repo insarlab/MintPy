@@ -5,8 +5,8 @@ For Mac users, Xcode with command line tools are needed, follow instructions [he
 #### 1. Prepare source file    
 
 To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file. They are for:   
-1. To make pysar importable in python, by adding the path to PySAR directory to your $PYTHONPATH    
-2. To make utility scripts available in command line, by adding ${PYSAR_HOME}/pysar and ${PYSAR_HOME}/sh to your $path.   
+1. To make pysar importable in python, by adding the path to PySAR directory to your _$PYTHONPATH_    
+2. To make utility scripts available in command line, by adding _${PYSAR_HOME}/pysar_ and _${PYSAR_HOME}/sh_ to your _$path_.   
    
 For csh/tcsh user, add to your **_~/.cshrc_** file for example:   
 
@@ -65,6 +65,6 @@ Run the following in your terminal (using conda):
     $PYTHON3DIR/bin/python setup.py build     
     $PYTHON3DIR/bin/python setup.py install    
    
-Note that pykml through conda is in python2, we provide a python3 version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above.
+Note that pykml through conda supports python2 only, we provide a python2/3 compatible version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
   
 For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
