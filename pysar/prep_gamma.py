@@ -367,10 +367,10 @@ def prepare_metadata(inps):
 
     # check outfile and parallel option
     if inps.parallel:
-        num_cores,
-        inps.parallel,
-        Parallel,
-        delayed = ut.check_parallel(len(inps.file), print_msg=False)
+        (num_cores,
+         inps.parallel,
+         Parallel,
+         delayed) = ut.check_parallel(len(inps.file), print_msg=False)
 
     # multiple datasets files
     ext = os.path.splitext(inps.file[0])[1]

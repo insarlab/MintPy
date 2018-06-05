@@ -94,8 +94,11 @@ def create_parser():
     fig.add_argument('--figsize', dest='fig_size', type=float, nargs=2,
                      help='figure size in inches - width and length')
     fig.add_argument('--figext', dest='fig_ext',
-                     default='.pdf', choices=['.emf', '.eps', '.pdf', '.png', '.ps', '.raw', '.rgba', '.svg', '.svgz'],
+                     default='.pdf', choices=['.emf', '.eps', '.pdf', '.png',
+                                              '.ps', '.raw', '.rgba', '.svg',
+                                              '.svgz', '.jpg'],
                      help='File extension for figure output file\n\n')
+    fig.add_argument('--notitle', dest='disp_title', action='store_false', help='Do not display figure title.')
 
     fig.add_argument('--list', dest='save_list', action='store_true',
                      help='save pairs/date12 list into text file')
@@ -256,6 +259,7 @@ def main(iargs=None):
         print('save figure to {}'.format(figNames[3]))
 
     if inps.disp_fig:
+        print('showing ...')
         plt.show()
 
 

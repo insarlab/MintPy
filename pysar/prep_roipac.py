@@ -119,7 +119,10 @@ def prepare_metadata(inps):
 
     # check outfile and parallel option
     if inps.parallel:
-        num_cores, inps.parallel, Parallel, delayed = ut.check_parallel(len(inps.file), print_msg=False)
+        (num_cores,
+         inps.parallel,
+         Parallel,
+         delayed) = ut.check_parallel(len(inps.file), print_msg=False)
     if len(inps.file) == 1:
         extract_metadata(inps.file[0])
     elif inps.parallel:

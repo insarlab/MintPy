@@ -40,11 +40,12 @@ EXAMPLE = """example:
   view.py velocity.h5 -l 31.05 31.10 -L 130.05 130.10  #plot subset in lalo
 
   view.py timeseries.h5 
+  view.py timeseries.h5 --mask no
   view.py timeseries.h5 --ref-date 20101120            #Change reference date
   view.py timeseries.h5 -ex drop_date.txt              #Exclude dates to plot
 
   view.py INPUTS/ifgramStack.h5 coherence
-  view.py INPUTS/ifgramStack.h5 unwrapPhase-20070927_20100217
+  view.py INPUTS/ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap
   view.py INPUTS/ifgramStack.h5 -n 6
   view.py INPUTS/ifgramStack.h5 20171010_20171115      #Display all data related with one interferometric pair
 
@@ -738,8 +739,8 @@ def check_dataset_input(allList, inList=[], inNumList=[], globSearch=True):
                 tempList += [e for e in allList if i in e]
         else:
             tempList += [i for i in inList if i in allList]
-
-        inNumList += [allList.index(e) for e in set(tempList)]
+        tempList = sorted(list(set(tempList)))
+        inNumList += [allList.index(e) for e in tempList]
     outNumList = sorted(list(set(inNumList)))
     outList = [allList[i] for i in outNumList]
     return outList, outNumList
@@ -785,6 +786,7 @@ def read_dataset_input(inps, print_msg=True):
             inps.ref_date = None
         ref_date = check_dataset_input(inps.fileDatasetList,
                                        [inps.ref_date],
+                                       [],
                                        inps.globSearch)[0][0]
         if not ref_date:
             if print_msg:

@@ -18,8 +18,10 @@ from pysar.defaults.auto_path import autoPath
 from pysar.objects import sensor, ifgramStack
 from pysar.utils import readfile, ptime, network as pnet, plot as pp, utils as ut
 
-sar_sensor_list = ['Ers', 'Env', 'Jers', 'Alos', 'Alos2',
-                   'Tsx', 'Csk', 'Rsat', 'Rsat2', 'Sen', 'Kmps5', 'G3']
+sar_sensor_list = ['Ers', 'Env', 'Sen',
+                   'Jers', 'Alos', 'Alos2',
+                   'Tsx', 'Csk', 'Rsat', 'Rsat2',
+                   'Kmps5', 'Gaofen3', 'Nisar']
 
 
 #########################################################################
@@ -48,7 +50,7 @@ TEMPLATE = """Template:
 ## Select network (interferometric combination)
 ## 1) select initial network using method / reference File
 ## selection method includes:
-##     all          - all possible pairs, pair number = N*(N-1)/2 where N is acquisition num 
+##     all/sb       - all possible pairs, pair number = N*(N-1)/2 where N is acquisition num 
 ##                    default, (Berardino et al., 2002, TGRS).
 ##     delaunay     - Delaunay triangulation (Fattahi and Amelung, 2013, TGRS).
 ##                    By default, temporal baseline is normalized using a maxPerpDiff/maxTempDiff
@@ -237,6 +239,8 @@ def read_template2inps(templateFile, inps=None):
         inps.method = 'hierarchical'
     elif inps.method in ['mst', 'min_spanning_tree', 'minimum_spanning_tree']:
         inps.method = 'mst'
+    elif inps.method in ['all', 'sb']:
+        inps.method = 'all'
 
     # for coherence prediction
     key = 'PLATFORM'

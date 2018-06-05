@@ -148,10 +148,14 @@ def read(fname, box=None, datasetName=None, print_msg=True):
     if ext in ['.h5', '.he5']:
         f = h5py.File(fname, 'r')
         if k in ['timeseries']:
-            obj = timeseries(fname)
-            data = obj.read(datasetName=datasetName,
-                            box=box,
-                            print_msg=print_msg)
+            if isinstance(f[k], h5py.Dataset):
+                obj = timeseries(fname)
+                data = obj.read(datasetName=datasetName,
+                                box=box,
+                                print_msg=print_msg)
+            else:
+                date = datasetName.split('-')[1]
+                data = f[k][date][box[1]:box[3], box[0]:box[2]]
 
         elif k in ['ifgramStack']:
             obj = ifgramStack(fname)
@@ -387,9 +391,13 @@ def get_2d_dataset_list(fname):
     if file_ext in ['.h5', '.he5']:
         with h5py.File(fname, 'r') as f:
             if file_type in ['timeseries']:
-                obj = timeseries(fname)
-                obj.open(print_msg=False)
-                datasetList = obj.datasetList
+                if isinstance(f[file_type], h5py.Dataset):
+                    obj = timeseries(fname)
+                    obj.open(print_msg=False)
+                    datasetList = obj.datasetList
+                else:
+                    date_list = list(f[file_type].keys())
+                    datasetList = ['{}-{}'.format(file_type, i) for i in date_list]
 
             elif file_type in ['geometry']:
                 obj = geometry(fname)
