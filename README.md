@@ -27,49 +27,16 @@ Run pysarApp.py -g to generate a default template file and see the detailed sett
 
 Download the test data: [Download Link](https://miami.app.box.com/v/pysar-demo-KujuAlosAT422F650) and unzip it.   
 
-Create a custom template file:   
+Run pysarApp.py with setting file as below:   
 
     cd ~/KujuAlosAT422F650/PYSAR
-    vi KujuAlosAT422F650_template.txt
-   
-Include the following pysar options in your template:   
-
-    # vim: set filetype=cfg:
-    ########## 1. Load Data (--load to exit after this step)
-    ## auto - automatic path pattern for Univ of Miami file structure
-    ## load_data.py -H to check more details and example inputs.
-    pysar.load.processor      = roipac  #[isce,roipac,gamma,], auto for isce
-    ##---------interferogram datasets:
-    pysar.load.unwFile        = ./../ROIPAC/interferograms/*/filt_*.unw
-    pysar.load.corFile        = ./../ROIPAC/interferograms/*/filt_*.cor
-    pysar.load.connCompFile   = None
-    pysar.load.intFile        = None
-    ##---------geometry datasets:
-    pysar.load.demFile        = ./../ROIPAC/geom_master/radar*.hgt
-    pysar.load.lookupYFile    = ./../ROIPAC/geom_master/geomap*.trans
-    pysar.load.lookupXFile    = ./../ROIPAC/geom_master/geomap*.trans
-    pysar.load.incAngleFile   = None
-    pysar.load.headAngleFile  = None
-    pysar.load.shadowMaskFile = None
-    pysar.load.bperpFile      = None
-    
-    ##————————————————————————————— Processing Options ———————————————————————————##
-    pysar.reference.lalo               = 33.0655, 131.2076
-    pysar.networkInversion.weightFunc  = sbas
-    pysar.troposphericDelay.weatherDir = ~/insarlab/WEATHER
-    pysar.deramp                       = plane    
-
-    
-Save your template file and run PySAR as:   
-
     pysarApp.py KujuAlosAT422F650_template.txt
 
 Inside pysarApp.py, it reads the unwrapped interferograms, refernces all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscilator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), corrects DEM error, removes phase ramps (if it has been asked for),... and finally estimates the velocity.   
 
-Use view.py to view any pysar output.   
-
-Use tsview.py to plot the time-series for each point (relative to the refernce point and epoch!).    
-
+Check ./PIC folder for auto generated figures. Use view.py to plot 2D image and tsview.py to plot the time-series for each point. More details about this test data is in [here](https://github.com/yunjunz/PySAR/wiki/Example).       
+     <img src="https://github.com/yunjunz/PySAR/blob/master/docs/resources/vel_KujuAlosAT422F650.jpg" width="600">     
+             
 #### Build your own processing recipe   
 
 PySAR is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentaion or simple run it with -h to see its usage, you could build your own customized processing recipe!
