@@ -1,6 +1,6 @@
 ### Install PySAR
 
-For Mac users, Xcode with command line tools are needed, follow instructions [here](https://github.com/yunjunz/macOS_Setup#macports). 
+For Mac users, Xcode with command line tools are needed, follow instructions [here](https://github.com/yunjunz/macOS_Setup#macports) for section "Macports 1-3" only. 
 
 #### 1. Prepare source file    
 
