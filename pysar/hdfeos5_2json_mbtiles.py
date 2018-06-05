@@ -56,7 +56,7 @@ needed_attributes = {
 
 def serialize_dictionary(dictionary, fileName):
     with open(fileName, "wb") as file:
-        pickle.dump(dictionary, file)
+        pickle.dump(dictionary, file, protocol=pickle.HIGHEST_PROTOCOL)
     return
 
 

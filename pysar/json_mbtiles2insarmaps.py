@@ -15,7 +15,7 @@ def get_unavco_name(json_path):
     insarmapsMetadata = None
     fileName = json_path + "/metadata.pickle"
 
-    with open(fileName, "r") as file:
+    with open(fileName, "rb") as file:
         insarmapsMetadata = pickle.load(file)
 
     return insarmapsMetadata["area"]
@@ -23,7 +23,7 @@ def get_unavco_name(json_path):
 def upload_insarmaps_metadata(fileName):
     insarmapsMetadata = None
 
-    with open(fileName, "r") as file:
+    with open(fileName, "rb") as file:
         insarmapsMetadata = pickle.load(file)
 
     area = insarmapsMetadata["area"]
@@ -50,6 +50,11 @@ def upload_insarmaps_metadata(fileName):
     # put in attributes into standalone attributes table
     for k in attributes:
         v = attributes[k]
+        # convert numpy.int64 objects to native python types otherwise psycopg2 can't upload to db
+        # needed because we use pickle.HIGHEST_PROTOCOL to serialize with pickle now
+        if isinstance(v, numpy.int64):
+            v = v.item()
+
         if k in needed_attributes:
             attributesController.add_attribute(area, k, v)
         elif k == "plotAttributes":
