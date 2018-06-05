@@ -5,6 +5,7 @@ import argparse
 from pysar.add_attribute_insarmaps import InsarDatabaseController, InsarDatasetController
 import os
 import pickle
+import numpy
 
 dbUsername = "INSERT"
 dbPassword = "INSERT"
