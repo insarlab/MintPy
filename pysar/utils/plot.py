@@ -369,8 +369,7 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12, every_year=1):
     ax.xaxis.set_minor_locator(mdates.MonthLocator())
 
     # Label font size
-    for tick in ax.xaxis.get_major_ticks():
-        tick.label.set_fontsize(fontSize)
+    ax.tick_params(labelsize=fontSize)
     # fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
     return ax, dss, dee
 
@@ -431,7 +430,7 @@ def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
     if plot_dict['disp_title']:
         ax.set_title('Coherence History of All Related Interferograms')
 
-    ax = auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'],
+    ax = auto_adjust_xaxis_date(ax, datevector, fontSize=plot_dict['fontsize'],
                                 every_year=plot_dict['every_year'])[0]
     ax.set_ylim([0.0, 1.0])
 
@@ -466,10 +465,10 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     """
 
     # Figure Setting
-    if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
-    if not 'linewidth'   in plot_dict.keys():   plot_dict['linewidth']   = 2
-    if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
-    if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
+    if not 'fontsize'    in plot_dict.keys():  plot_dict['fontsize']    = 12
+    if not 'linewidth'   in plot_dict.keys():  plot_dict['linewidth']   = 2
+    if not 'markercolor' in plot_dict.keys():  plot_dict['markercolor'] = 'orange'
+    if not 'markersize'  in plot_dict.keys():  plot_dict['markersize']  = 16
 
     # For colorful display of coherence
     if not 'cohList'     in plot_dict.keys():  plot_dict['cohList']    = None
@@ -481,6 +480,8 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']  = None
     if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']  = True
     if not 'every_year'  in plot_dict.keys():  plot_dict['every_year'] = 1
+
+    if not 'number'      in plot_dict.keys():  plot_dict['number']     = None
 
     cohList = plot_dict['cohList']
     disp_min = plot_dict['disp_min']
@@ -572,6 +573,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         cax = divider.append_axes("right", "3%", pad="3%")
         norm = mpl.colors.Normalize(vmin=disp_min, vmax=disp_max)
         cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
+        cbar.ax.tick_params(labelsize=plot_dict['fontsize'])
         cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
 
         # plot low coherent ifgram first and high coherence ifgram later
@@ -628,11 +630,17 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'],
+    ax = auto_adjust_xaxis_date(ax, datevector, fontSize=plot_dict['fontsize'],
                                 every_year=plot_dict['every_year'])[0]
-    ax = auto_adjust_yaxis(ax, pbaseList, plot_dict['fontsize'])
+    ax = auto_adjust_yaxis(ax, pbaseList, fontSize=plot_dict['fontsize'])
     ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perp Baseline [m]', fontsize=plot_dict['fontsize'])
+    ax.tick_params(which='both', direction='in', labelsize=plot_dict['fontsize'],
+                   bottom=True, top=True, left=True, right=True)
+
+    if plot_dict['number'] is not None:
+        ax.annotate(plot_dict['number'], xy=(0.03, 0.92), color='k',
+                    xycoords='axes fraction', fontsize=plot_dict['fontsize'])
 
     # Legend
     if plot_dict['disp_drop']:
@@ -704,9 +712,9 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
         ax.set_title('Perpendicular Baseline History', fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = auto_adjust_xaxis_date(ax, datevector, plot_dict['fontsize'],
+    ax = auto_adjust_xaxis_date(ax, datevector, fontSize=plot_dict['fontsize'],
                                 every_year=plot_dict['every_year'])[0]
-    ax = auto_adjust_yaxis(ax, pbaseList, plot_dict['fontsize'])
+    ax = auto_adjust_yaxis(ax, pbaseList, fontSize=plot_dict['fontsize'])
     ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perpendicular Baseline [m]', fontsize=plot_dict['fontsize'])
 

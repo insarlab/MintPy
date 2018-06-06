@@ -352,6 +352,17 @@ class timeseries:
         dmean = np.nanmean(data, axis=0)
         return dmean
 
+    def save2bl_list_file(self, out_file='bl_list.txt'):
+        """Generate bl_list.txt file from timeseries h5 file."""
+        self.open(print_msg=False)
+        date6_list = [i[2:8] for i in self.dateList]
+        pbase_list = self.pbase.tolist()
+        print('write baseline list info to file: {}'.format(out_file))
+        with open(out_file, 'w') as f:
+            for d, pbase in zip(date6_list, pbase_list):
+                f.write('{}\t{}\n'.format(d, pbase))
+        return out_file
+
 
 ########################################################################################
 FILE_STRUCTURE_GEOMETRY = """

@@ -98,7 +98,12 @@ def create_parser():
                                               '.ps', '.raw', '.rgba', '.svg',
                                               '.svgz', '.jpg'],
                      help='File extension for figure output file\n\n')
-    fig.add_argument('--notitle', dest='disp_title', action='store_false', help='Do not display figure title.')
+    fig.add_argument('--notitle', dest='disp_title', action='store_false',
+                     help='Do not display figure title.')
+    fig.add_argument('--number', dest='number', type=str,
+                     help='number mark to be plot at the corner of figure.')
+
+
 
     fig.add_argument('--list', dest='save_list', action='store_true',
                      help='save pairs/date12 list into text file')
