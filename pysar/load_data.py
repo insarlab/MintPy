@@ -14,8 +14,14 @@ import datetime
 import time
 
 from pysar.defaults import auto_path
-from pysar.objects import ifgramDatasetNames, geometryDatasetNames, ifgramStack, geometry, sensor
-from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
+from pysar.objects import (geometryDatasetNames,
+                           geometry,
+                           ifgramDatasetNames,
+                           ifgramStack,
+                           sensor)
+from pysar.objects.insarobj import (geometryDict,
+                                    ifgramStackDict,
+                                    ifgramDict)
 from pysar.utils import readfile, ptime, utils as ut
 from pysar import subset
 

@@ -14,15 +14,21 @@ import numpy as np
 from scipy import ndimage
 
 import matplotlib as mpl
-from matplotlib import ticker, dates as mdates, lines as mlines, pyplot as plt
+from matplotlib import (dates as mdates,
+                        lines as mlines,
+                        pyplot as plt,
+                        ticker)
 from matplotlib.colors import LinearSegmentedColormap, LightSource
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.patheffects import withStroke
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
-from pysar.utils import ptime, readfile, network as pnet, utils as ut
 from pysar.objects import timeseriesKeyNames
+from pysar.utils import (ptime,
+                         readfile,
+                         network as pnet,
+                         utils as ut)
 
 
 mplColors = ['#1f77b4',

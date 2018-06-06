@@ -13,7 +13,7 @@ import datetime
 import h5py
 import numpy as np
 import scipy.io as sio
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile
 
 
 ########################################################################################

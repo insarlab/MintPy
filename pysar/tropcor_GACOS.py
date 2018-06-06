@@ -7,20 +7,15 @@
 
 
 import os
-import numpy as np
 import sys
-import pyaps as pa
-import scipy as sc
-from scipy.interpolate import RegularGridInterpolator as RGI
-from scipy.interpolate import griddata
-import pyaps as pa
-import matplotlib.pyplot as plt
-import pysar._pysar_utilities as ut
-import pysar._readfile as readfile
-import pysar._writefile as writefile
-import h5py
-import pysar._datetime as ptime
 import argparse
+import h5py
+import numpy as np
+import scipy as sc
+import matplotlib.pyplot as plt
+from scipy.interpolate import griddata, RegularGridInterpolator as RGI
+import pyaps as pa
+from pysar.utils import ptime, readfile, writefile, utils as ut
 
 
 ##########################################################
@@ -114,9 +109,7 @@ def get_delay(delay_file,atr,lookup_file,cinc):
 
 ###############################################################
 EXAMPLE='''example:
-  tropcor_GACOS.py timeseries.h5 -l geomap_*rlks.trans -i incidenceAngle.h5
-  tropcor_pyaps.py timeseries.h5 -l geometryRadar.h5   -i geometryRadar.h5   --weather-dir /famelung/data/WEATHER
-  tropcor_pyaps.py geo_timeseries.h5 -l geometryGeo.h5
+  tropcor_gacos.py timeseries.h5 -l geomap_*rlks.trans -i incidenceAngle.h5
 '''
 TEMPLATE='''
 pysar.troposphericDelay.method        = GACOS   #[pyaps, height-correlation,GACOS] 

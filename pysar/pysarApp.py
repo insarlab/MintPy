@@ -20,11 +20,10 @@ import subprocess
 import h5py
 import numpy as np
 
-import version
-from pysar.utils import readfile, writefile, utils as ut
 from pysar.objects import ifgramStack
 from pysar.defaults.auto_path import autoPath
-from pysar import subset, save_hdfeos5 as hdfeos5
+from pysar.utils import readfile, writefile, utils as ut
+from pysar import version, subset, save_hdfeos5 as hdfeos5
 
 
 ##########################################################################

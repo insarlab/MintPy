@@ -16,7 +16,13 @@ import numpy as np
 #from PIL import Image
 import json
 
-from pysar.objects import ifgramDatasetNames, timeseriesKeyNames, timeseries, ifgramStack, geometry, datasetUnitDict, HDFEOS
+from pysar.objects import (datasetUnitDict,
+                           geometry,
+                           ifgramDatasetNames,
+                           ifgramStack,
+                           timeseriesKeyNames,
+                           timeseries,
+                           HDFEOS)
 
 
 standardMetadataKeys = {'width': 'WIDTH', 'Width': 'WIDTH', 'samples': 'WIDTH',

@@ -16,7 +16,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pysar.defaults.auto_path import autoPath
 from pysar.objects import sensor, ifgramStack
-from pysar.utils import readfile, ptime, network as pnet, plot as pp, utils as ut
+from pysar.utils import (ptime,
+                         readfile,
+                         network as pnet,
+                         plot as pp,
+                         utils as ut)
 
 sar_sensor_list = ['Ers', 'Env', 'Sen',
                    'Jers', 'Alos', 'Alos2',

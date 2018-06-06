@@ -5,7 +5,9 @@
 ############################################################
 # class used for data loading from InSAR stack to PySAR timeseries
 # Recommend import:
-#     from pysar.objects.insarobj import ifgramDict, ifgramStackDict, geometryDict
+#     from pysar.objects.insarobj import (geometryDict,
+#                                         ifgramStackDict, 
+#                                         ifgramDict)
 
 
 import os
@@ -15,7 +17,10 @@ import h5py
 import numpy as np
 from skimage.transform import resize
 from pysar.utils import readfile, ptime, utils as ut
-from pysar.objects import ifgramDatasetNames, geometryDatasetNames, dataTypeDict
+from pysar.objects import (dataTypeDict,
+                           geometryDatasetNames,
+                           ifgramDatasetNames)
+
 
 BOOL_ZERO = np.bool_(0)
 INT_ZERO = np.int16(0)

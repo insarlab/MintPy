@@ -16,8 +16,16 @@ import errno
 import h5py
 import numpy as np
 import multiprocessing
-from pysar.utils import readfile, writefile, ptime, network as pnet, deramp
-from pysar.objects import timeseries, geometry, ifgramStack, geometryDatasetNames, ifgramDatasetNames
+from pysar.utils import (ptime,
+                         readfile,
+                         writefile,
+                         network as pnet,
+                         deramp)
+from pysar.objects import (geometryDatasetNames,
+                           geometry,
+                           ifgramDatasetNames,
+                           ifgramStack,
+                           timeseries)
 
 
 ###############################################################################

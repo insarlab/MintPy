@@ -11,21 +11,17 @@ import os
 import sys
 import datetime
 import itertools
-
 import h5py
 import numpy as np
-import matplotlib as mpl
-import matplotlib.dates as mdates
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import matplotlib.lines as mlines
+from scipy import sparse
+from matplotlib import (colors,
+                        dates as mdates,
+                        lines as mlines,
+                        pyplot as plt)
 from matplotlib.tri import Triangulation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import scipy.sparse as sparse
-from scipy.sparse.csgraph import minimum_spanning_tree
-
-from pysar.utils import ptime, readfile
 from pysar.objects import ifgramStack, timeseries, sensor
+from pysar.utils import ptime, readfile
 
 
 ##################################################################
@@ -541,7 +537,7 @@ def threshold_coherence_based_mst(date12_list, coh_list):
 
     # MST path based on weight matrix
     wei_mat_csr = sparse.csr_matrix(wei_mat)
-    mst_mat_csr = minimum_spanning_tree(wei_mat_csr)
+    mst_mat_csr = sparse.csgraph.minimum_spanning_tree(wei_mat_csr)
 
     # Get date6_list
     date12_list = ptime.yymmdd_date12(date12_list)
