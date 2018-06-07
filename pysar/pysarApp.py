@@ -231,7 +231,7 @@ UM_FILE_STRUCT = """
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Time Series Analysis Routine',
+    parser = argparse.ArgumentParser(description='PySAR Routine Time Series Analysis',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
@@ -610,7 +610,7 @@ def main(iargs=None):
         if inps.tropMethod == 'height_correlation':
             outName = '{}_tropHgt.h5'.format(fbase)
             print('tropospheric delay correction with height-correlation approach')
-            tropCmd = ('tropcor_phase_elevation.py {t} -d {d} -p {p}'
+            tropCmd = ('tropcor_phase_elevation.py {t} -g {d} -p {p}'
                        ' -m {m} -o {o}').format(t=inps.timeseriesFile,
                                                 d=inps.geomFile,
                                                 p=inps.tropPolyOrder,

@@ -22,8 +22,8 @@ from pysar.mask import mask_matrix
 
 ############################################################################
 EXAMPLE = """example:
-  tropcor_phase_elevation.py  timeseries_demErr.h5      -d INPUTS/geometryRadar.h5  -m maskTempCoh.h5    
-  tropcor_phase_elevation.py  geo_timeseries_demErr.h5  -d geo_geometryRadar.h5     -m geo_maskTempCoh.h5
+  tropcor_phase_elevation.py  timeseries_demErr.h5      -g INPUTS/geometryRadar.h5  -m maskTempCoh.h5    
+  tropcor_phase_elevation.py  geo_timeseries_demErr.h5  -g geo_geometryRadar.h5     -m geo_maskTempCoh.h5
 """
 
 REFERENCE = """reference:
