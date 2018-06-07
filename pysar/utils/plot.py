@@ -769,6 +769,8 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     ax.get_yaxis().set_ticks(tick_list)
     ax.set_xlabel('Image Number', fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Image Number', fontsize=plot_dict['fontsize'])
+    ax.tick_params(which='both', direction='in', labelsize=plot_dict['fontsize'],
+                   bottom=True, top=True, left=True, right=True)
 
     if plot_dict['disp_title']:
         ax.set_title('Coherence Matrix')
