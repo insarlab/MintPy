@@ -49,7 +49,6 @@ class TimeSeriesWidget(qt.QWidget):
         self.p2_scatter_point, self.p2_x, self.p2_y             =       None, None, None
         self.p1_scatter, self.p2_scatter                        =       None, None
 
-
         self.inps, self.mask, self.img, self.tslider            =       None, None, None, None
         self.first_data_point, self.show_data_figure            =       None, None
         self.annot, self.scatts, self.ts_axis                   =       None, None, None
@@ -861,7 +860,6 @@ class TimeSeriesWidget(qt.QWidget):
     ###########################################   Second Plot Information #######################################
 
     '''Displays second data plot to screen'''
-
     def show_second_plot(self):
 
         self.second_plot_axis = self.fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
@@ -952,7 +950,6 @@ class TimeSeriesWidget(qt.QWidget):
         self.fig_ts.canvas.draw()
 
     ''' Defines behavior when hovering over a given data point (ie. showing annotation)'''
-
     def on_hover(self, event):
 
         vis = self.annot.get_visible()
@@ -975,7 +972,6 @@ class TimeSeriesWidget(qt.QWidget):
 
 
     ''' Defines annotation styles when hovering over a data point '''
-
     def update_annot(self, ind, sc):
 
         pos = sc.get_offsets()[ind["ind"][0]]
@@ -1005,7 +1001,6 @@ class TimeSeriesWidget(qt.QWidget):
         self.annot.get_bbox_patch().set_alpha(0.4)
 
     '''Hides Scatter Plot Data on Data Point Figure on Legend Item Click'''
-
     def hide_scatter(self, event):
 
         legline = event.artist
@@ -1023,7 +1018,6 @@ class TimeSeriesWidget(qt.QWidget):
         self.fig_ts.canvas.draw_idle()
 
     '''Sets title and legend information in Data Point Figure'''
-
     def set_title_and_legend(self, axis):
 
         # Compute title based off lat/lon coords
@@ -1052,7 +1046,6 @@ class TimeSeriesWidget(qt.QWidget):
                 self.scatts[legline] = scatter
 
     ''' Sets timeseries data (x/y points) prior to computing timeseries data'''
-
     def set_timeseries_data(self, plot_number):
         global p1_y, p1_x, p2_y, p2_x
 
@@ -1065,7 +1058,6 @@ class TimeSeriesWidget(qt.QWidget):
         return self.compute_timeseries_data(plot_number, x_point, y_point)
 
     ''' Computes timeseries data for a given x, y points '''
-
     def compute_timeseries_data(self, plot_number, x_point, y_point):
 
         if x_point is not None:
