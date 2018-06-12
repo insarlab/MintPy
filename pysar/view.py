@@ -1235,7 +1235,11 @@ def main(iargs=None):
                                   box=inps.pix_box,
                                   print_msg=False)[0]
         if inps.zero_mask:
-            data[data == 0] = np.nan
+            try:
+                data[data == 0.] = np.nan
+            except:
+                data = np.array(data, np.float32)
+                data[data == 0.] = np.nan
         if inps.msk is not None:
             data = mask_matrix(data, inps.msk)
 
