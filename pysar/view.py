@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2017-2018, Zhang Yunjun, Heresh Fattahi     #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
 # Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 # Recommend import:
@@ -33,7 +33,6 @@ from pysar.utils import (ptime,
                          readfile,
                          utils as ut,
                          plot as pp)
-from pysar.mask import mask_matrix
 from pysar.multilook import multilook_data
 from pysar import subset
 
@@ -428,10 +427,7 @@ def update_data_with_plot_inps(data, metadata, inps):
                             (1, data.shape[1], data.shape[2]))
         print('set reference pixel to: {}'.format(inps.seed_yx))
     else:
-        if 'REF_Y' in metadata.keys():
-            inps.seed_yx = [int(metadata['REF_Y']), int(metadata['REF_X'])]
-        else:
-            inps.seed_yx = None
+        inps.seed_yx = None
 
     # Convert data to display unit and wrap
     (data,
@@ -612,8 +608,11 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
             row = ut.coord_geo2radar(y, metadata, 'lat') - inps.pix_box[1]
             msg = 'Lon={:.4f}, Lat={:.4f}'.format(x, y)
             if 0 <= col < num_col and 0 <= row < num_row:
-                z = data[row, col]
-                msg += ', value={:.4f}'.format(z)
+                try:
+                    z = data[row, col]
+                    msg += ', value={:.4f}'.format(z)
+                except:
+                    msg += ', value=[]'
                 if inps.dem_file:
                     dem_col = ut.coord_geo2radar(x, dem_metadata, 'lon') - inps.dem_pix_box[0]
                     dem_row = ut.coord_geo2radar(y, dem_metadata, 'lat') - inps.dem_pix_box[1]
@@ -641,10 +640,18 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
-        if inps.disp_seed and inps.seed_yx:
-            ax.plot(inps.seed_yx[1]-inps.pix_box[0], inps.seed_yx[0]-inps.pix_box[1],
-                    inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
-            print('plot reference point')
+        if inps.disp_seed:
+            ref_y, ref_x = None, None
+            if inps.seed_yx:
+                ref_y, ref_x = inps.seed_yx[0], inps.seed_yx[1]
+            elif 'REF_Y' in metadata.keys():
+                ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
+
+            if ref_y and ref_x:            
+                ax.plot(ref_x - inps.pix_box[0],
+                        ref_y - inps.pix_box[1],
+                        inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
+                print('plot reference point')
 
         ax.set_xlim(-0.5, num_col-0.5)
         ax.set_ylim(num_row-0.5, -0.5)
@@ -655,8 +662,11 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
             row = int(y+0.5)
             msg = 'x={:.1f}, y={:.1f}'.format(x, y)
             if 0 <= col < num_col and 0 <= row < num_row:
-                z = data[row, col]
-                msg += ', value={:.4f}'.format(z)
+                try:
+                    z = data[row, col]
+                    msg += ', value={:.4f}'.format(z)
+                except:
+                    msg += ', value=[]'
                 if inps.dem_file:
                     h = dem[row, col]
                     msg += ', elev={:.1f} m'.format(h)
@@ -836,7 +846,7 @@ def read_mask(inps, atr):
             atrMsk = readfile.read_attribute(inps.mask_file)
             if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
                 inps.msk = readfile.read(inps.mask_file, datasetName='mask', box=inps.pix_box)[0]
-                print('mask data with: '+os.path.basename(inps.mask_file))
+                print('read mask from file: '+os.path.basename(inps.mask_file))
             else:
                 print('WARNING: input file has different size from mask file: {}'.format(inps.mask_file))
                 print('    Continue without mask')
@@ -848,14 +858,14 @@ def read_mask(inps, atr):
     elif inps.key in ['HDFEOS'] and familyName in timeseriesDatasetNames:
         inps.mask_file = inps.file
         inps.msk = readfile.read(inps.file, datasetName='mask')[0]
-        print('mask %s data with contained mask dataset.' % (inps.key))
+        print('read {} contained mask dataset.'.format(inps.key))
 
     elif inps.file.endswith('PARAMS.h5'):
         inps.mask_file = inps.file
         h5msk = h5py.File(inps.file, 'r')
         inps.msk = h5msk['cmask'][:] == 1.
         h5msk.close()
-        print('mask data with contained cmask dataset')
+        print('read {} contained cmask dataset'.format(os.path.basename(inps.file)))
     return inps
 
 
@@ -940,7 +950,7 @@ def update_figure_setting(inps):
     return inps
 
 
-def read_data4figure(inps, i_start, i_end):
+def read_data4figure(i_start, i_end, inps, metadata):
     """Read multiple datasets for one figure into 3D matrix based on i_start/end"""
     data = np.zeros((i_end - i_start,
                      inps.pix_box[3] - inps.pix_box[1],
@@ -985,7 +995,7 @@ def read_data4figure(inps, i_start, i_end):
         data -= ref_data
 
     # disp/data_min/max, adjust data if all subplots are the same type
-    metadata = readfile.read_attribute(inps.file)
+    #metadata = readfile.read_attribute(inps.file)
     if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity']:
         data, inps = update_data_with_plot_inps(data, metadata, inps)
         if (not inps.disp_min and not inps.disp_max 
@@ -1004,13 +1014,16 @@ def read_data4figure(inps, i_start, i_end):
 
     # mask
     if inps.msk is not None:
-        data = mask_matrix(data, inps.msk)
+        print('masking data')
+        msk = np.tile(inps.msk, (data.shape[0], 1, 1))
+        data = np.ma.masked_where(msk == 0., data)
     if inps.zero_mask:
-        data[data == 0.] = np.nan
+        print('masking pixels with zero value')
+        data = np.ma.masked_where(data == 0., data)
     return data
 
 
-def plot_subplot4figure(inps, ax, data, i):
+def plot_subplot4figure(i, inps, ax, data, metadata):
     """Plot one subplot for one 3D array
     1) Plot DEM, data and reference pixel
     2) axes setting: tick, ticklabel, title, axis etc.
@@ -1027,9 +1040,17 @@ def plot_subplot4figure(inps, ax, data, i):
         im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest',
                        alpha=inps.transparency)
     # Plot Seed Point
-    if inps.disp_seed and inps.seed_yx:
-        ax.plot(inps.seed_yx[1]-inps.pix_box[0], inps.seed_yx[0]-inps.pix_box[1],
-                inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
+    if inps.disp_seed:
+        ref_y, ref_x = None, None
+        if inps.seed_yx:
+            ref_y, ref_x = inps.seed_yx[0], inps.seed_yx[1]
+        elif 'REF_Y' in metadata.keys():
+            ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
+
+        if ref_y and ref_x:            
+            ax.plot(ref_x - inps.pix_box[0],
+                    ref_y - inps.pix_box[1],
+                    inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
 
     ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
     ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
@@ -1051,9 +1072,9 @@ def plot_subplot4figure(inps, ax, data, i):
                 subplot_title = str(inps.dset[i])
         elif inps.key in ['ifgramStack']:
             subplot_title = str(i)
-            if inps.fig_row_num * inps.fig_col_num < 100:
+            if inps.fig_row_num * inps.fig_col_num < 50:
                 subplot_title += '\n{}'.format(inps.dset[i])
-            elif inps.fig_row_num * inps.fig_col_num > 300:
+            elif inps.fig_row_num * inps.fig_col_num > 200:
                 subplot_title = ''
         else:
             subplot_title = str(inps.dset[i])
@@ -1080,7 +1101,7 @@ def plot_subplot4figure(inps, ax, data, i):
     return im
 
 
-def plot_figure(inps, j):
+def plot_figure(j, inps, metadata):
     global fig
     """Plot one figure with multiple subplots
     1) create figure
@@ -1104,13 +1125,13 @@ def plot_figure(inps, j):
     # Read all data for the current figure into 3D np.array
     i_start = (j - 1) * inps.fig_row_num * inps.fig_col_num
     i_end = min([inps.dsetNum, i_start + inps.fig_row_num * inps.fig_col_num])
-    data = read_data4figure(inps, i_start, i_end)
+    data = read_data4figure(i_start, i_end, inps, metadata)
 
     # Loop - Subplots
     prog_bar = ptime.progressBar(maxValue=i_end - i_start, prefix='ploting')
     for i in range(i_start, i_end):
         ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i - i_start + 1)
-        im = plot_subplot4figure(inps, ax=ax, data=data[i - i_start, :, :], i=i)
+        im = plot_subplot4figure(i, inps, ax=ax, data=data[i - i_start, :, :], metadata=metadata)
         prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
     prog_bar.close()
     del data
@@ -1144,7 +1165,7 @@ def plot_figure(inps, j):
     return
 
 
-def prepare4multi_subplots(inps):
+def prepare4multi_subplots(inps, metadata):
     """Prepare for multiple subplots:
     1) check multilook to save memory
     2) read existed reference pixel info for unwrapPhase
@@ -1168,7 +1189,7 @@ def prepare4multi_subplots(inps):
             inps.msk = multilook_data(inps.msk, inps.multilook_num, inps.multilook_num)
 
     # Reference pixel for timeseries and ifgramStack
-    metadata = readfile.read_attribute(inps.file)
+    #metadata = readfile.read_attribute(inps.file)
     inps.file_ref_yx = None
     if inps.key in ['ifgramStack'] and 'REF_Y' in metadata.keys():
         ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
@@ -1235,13 +1256,11 @@ def main(iargs=None):
                                   box=inps.pix_box,
                                   print_msg=False)[0]
         if inps.zero_mask:
-            try:
-                data[data == 0.] = np.nan
-            except:
-                data = np.array(data, np.float32)
-                data[data == 0.] = np.nan
+            print('masking pixels with zero value')
+            data = np.ma.masked_where(data == 0., data)
         if inps.msk is not None:
-            data = mask_matrix(data, inps.msk)
+            print('masking data')
+            data = np.ma.masked_where(inps.msk == 0., data)
 
         fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
 
@@ -1249,12 +1268,12 @@ def main(iargs=None):
 
     ############################### Multiple Subplots #########################
     else:
-        inps = prepare4multi_subplots(inps)
+        inps = prepare4multi_subplots(inps, metadata=atr)
 
         inps.all_data_min = 0
         inps.all_data_max = 0
         for j in range(1, inps.fig_num + 1):
-            plot_figure(inps, j)
+            plot_figure(j, inps, metadata=atr)
 
         print('----------------------------------------')
         print('all data range: [%f, %f] %s' % (inps.all_data_min, inps.all_data_max, inps.disp_unit))
