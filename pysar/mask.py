@@ -63,10 +63,10 @@ def mask_matrix(data, mask, fill_value=None):
     """
     # Masked Value
     if fill_value is None:
-        if data.dtype == np.dtype('int16'):
-            fill_value = np.ma.masked
-        else:
+        if data.dtype == np.float32:
             fill_value = np.nan
+        else:
+            raise ValueError('specify fill_value for input data type: {}'.format(data.dtype))
 
     if len(data.shape) == 2:
         data[mask == 0] = fill_value

@@ -739,6 +739,9 @@ class ifgramStack:
             drop_ifgram_flag = np.ones(num_ifgram, dtype=np.bool_)
             if dropIfgram:
                 drop_ifgram_flag = self.dropIfgram
+                if np.all(drop_ifgram_flag == 0.):
+                    raise Exception(('ALL interferograms are marked as dropped, '
+                                     'can not calculate temporal average.'))
 
             r_step = 100
             for i in range(int(np.ceil(length / r_step))):

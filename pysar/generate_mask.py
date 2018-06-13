@@ -67,8 +67,7 @@ def create_threshold_mask(inps):
         print('read %s' % (inps.file))
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
     if len(data.shape) > 2:
-        print('ERROR: Only 2D dataset is supported for threshold method, input is 3D')
-        sys.exit(1)
+        raise Exception('Only 2D dataset is supported for threshold method, input is 3D')
     length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
 
@@ -128,6 +127,10 @@ def main(iargs=None):
             inps.outfile = 'mask.h5'
         if inps.file.startswith('geo_'):
             inps.outfile = 'geo_'+inps.outfile
+
+    # default vmin for temporal coherence
+    if not inps.vmin and inps.file.endswith('temporalCoherence.h5'):
+        inps.vmin = 0.7
 
     ##### Mask: Non-zero
     if inps.nonzero and k == 'ifgramStack':

@@ -315,21 +315,26 @@ def get_date12_to_drop(inps):
             print('input AOI in (x0,y0,x1,y1): {}'.format(inps.aoi_pix_box))
 
         # Calculate spatial average coherence
-        cohList = ut.spatial_average(inps.file, datasetName='coherence', maskFile=inps.maskFile,
-                                     box=inps.aoi_pix_box, saveList=True)[0]
+        cohList = ut.spatial_average(inps.file,
+                                     datasetName='coherence',
+                                     maskFile=inps.maskFile,
+                                     box=inps.aoi_pix_box,
+                                     saveList=True)[0]
         coh_date12_list = list(np.array(date12ListAll)[np.array(cohList) >= inps.minCoherence])
 
         # MST network
         if inps.keepMinSpanTree:
             print('Get minimum spanning tree (MST) of interferograms with inverse of coherence.')
-            msg = 'Drop ifgrams with 1) average coherence < {} AND 2) not in MST network: '.format(inps.minCoherence)
+            msg = ('Drop ifgrams with '
+                   '1) average coherence < {} AND '
+                   '2) not in MST network: '.format(inps.minCoherence))
             mst_date12_list = pnet.threshold_coherence_based_mst(date12ListAll, cohList)
+            mst_date12_list = ptime.yyyymmdd_date12(mst_date12_list)
         else:
             msg = 'Drop ifgrams with average coherence < {}: '.format(inps.minCoherence)
             mst_date12_list = []
 
-        tempList = [i for i in date12ListAll if (i in coh_date12_list and i not in mst_date12_list)]
-        #tempList = sorted(list(set(date12ListAll) - set(coh_date12_list) - set(mst_date12_list)))
+        tempList = sorted(list(set(date12ListAll) - set(coh_date12_list + mst_date12_list)))
         date12_to_drop += tempList
         print(msg+'({})\n{}'.format(len(tempList), tempList))
 
@@ -405,6 +410,8 @@ def get_date12_to_drop(inps):
     if date12_to_drop == date12ListDropped:
         print('Calculated date12 to drop is the same as exsiting marked input file, skip updating file.')
         date12_to_drop = None
+    elif date12_to_drop == date12ListAll:
+        raise Exception('Zero interferogram left! Please adjust your setting and try again.')
     return date12_to_drop
 
 
