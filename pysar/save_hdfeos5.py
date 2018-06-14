@@ -121,10 +121,10 @@ def metadata_pysar2unavco(pysar_meta_dict_in, dateList):
     pysar_meta_dict = {}
     for key in pysar_meta_dict_in.keys():
         pysar_meta_dict[key] = pysar_meta_dict_in[key]
-        if 'unavco.' in key:
-            pysar_meta_dict[key.split('unavco.')[1]] = pysar_meta_dict_in[key]
-        if 'hdfEos5.' in key:
-            pysar_meta_dict[key.split('hdfEos5.')[1]] = pysar_meta_dict_in[key]
+        for prefix in ['unavco.', 'hdfeos5.']:
+            if prefix in key.lower():
+                key2 = key.lower().split(prefix)[1]
+                pysar_meta_dict[key2] = pysar_meta_dict_in[key]
 
     unavco_meta_dict = dict()
     #################################
