@@ -42,7 +42,7 @@ fig = None
 ##################################################################################################
 EXAMPLE = """example:
   view.py velocity.h5
-  view.py velocity.h5 velocity -m -2 -M 2 -c bwr --no-glob
+  view.py velocity.h5 velocity -m -2 -M 2 -c bwr
   view.py velocity.h5 --ref-yx  210 566                #Change reference pixel
   view.py velocity.h5 -x 100 600 -y 200 800            #plot subset in yx
   view.py velocity.h5 -l 31.05 31.10 -L 130.05 130.10  #plot subset in lalo
@@ -769,6 +769,9 @@ def read_dataset_input(inps, print_msg=True):
     """Check input / exclude / reference dataset input with file dataset list"""
     # read inps.dset + inps.dsetNumList --> inps.dsetNumList
     if len(inps.dset) > 0 or len(inps.dsetNumList) > 0:
+        if inps.key == 'velocity':
+            inps.globSearch = False
+            print('turning glob search OFF for {} file'.format(inps.key))
         inps.dsetNumList = check_dataset_input(inps.fileDatasetList,
                                                inps.dset,
                                                inps.dsetNumList,
@@ -1056,11 +1059,21 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
 
     # Subplot Setting
-    # Tick and Label
-    ax.set_yticklabels([])
-    ax.set_xticklabels([])
-    ax.set_xticks([])
-    ax.set_yticks([])
+    ## Tick and Label
+    #ax.set_yticklabels([])
+    #ax.set_xticklabels([])
+    #ax.set_xticks([])
+    #ax.set_yticks([])
+    if not inps.disp_tick or inps.fig_row_num * inps.fig_col_num > 10:
+        # ax.set_xticklabels([])
+        # ax.set_yticklabels([])
+        ax.get_xaxis().set_ticks([])
+        ax.get_yaxis().set_ticks([])
+
+    # status bar
+    def format_coord(x, y):
+        return 'x={:.1f}, y={:.1f}'.format(x, y)
+    ax.format_coord = format_coord
 
     # Title
     if inps.disp_title:
