@@ -83,7 +83,7 @@ pysar.unwrapError.yx       = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,.
 ## 3) for all interferograms except for MST's, exclude those with average coherence < minCoherence.
 pysar.network.coherenceBased  = auto  #[yes / no], auto for no, exclude interferograms with coherence < minCoherence
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
-pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.5
+pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
 pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
 pysar.network.maskAoi.yx      = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
@@ -104,18 +104,19 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ## 2) connectComponent - mask out pixels with False/0 value
 ## 3) no               - no masking.
 ## weighting options for least square inversion:
-## 1) fim  - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
-## 2) var  - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
-## 3) coh  - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
-## 4) sbas - LS/SVD, uniform weight (Berardino et al., 2002, TGRS)
+## 1) fim - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
+## 2) var - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
+## 3) coh - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
+## 4) no  - LS/SVD, uniform weight (Berardino et al., 2002, TGRS)
 ## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
-pysar.networkInversion.weightFunc    = auto #[fim / var / coh / sbas], auto for fim
-pysar.networkInversion.maskDataset   = auto #[coherence / connectComponent / no], auto for no
-pysar.networkInversion.maskThreshold = auto #[0-1], auto for 0.4
-pysar.networkInversion.waterMaskFile = auto #[filename / no], auto for no
-pysar.networkInversion.residualNorm  = auto #[L2 ], auto for L2, norm minimization solution
-pysar.networkInversion.minTempCoh    = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
-pysar.networkInversion.minNumPixel   = auto #[int > 0], auto for 100, min number of pixels in mask above
+pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
+pysar.networkInversion.weightFunc      = auto #[fim / var / coh / no], auto for fim
+pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
+pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
+pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
+pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
+pysar.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
+pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min number of pixels in mask above
 
 
 ########## Local Oscillator Drift (LOD) Correction (for Envisat only)
