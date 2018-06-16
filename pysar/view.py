@@ -484,16 +484,10 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
     # 1.6 Min / Max - Data/Display
     inps.data_min = np.nanmin(data)
     inps.data_max = np.nanmax(data)
-
-    if data.size > 4e4:
-        data_mli = multilook_data(data, 10, 10)
-    else:
-        data_mli = np.array(data)
     if inps.disp_min is None:
-        inps.disp_min = np.nanmin(data_mli)
+        inps.disp_min = np.nanmin(data)
     if inps.disp_max is None:
-        inps.disp_max = np.nanmax(data_mli)
-    del data_mli
+        inps.disp_max = np.nanmax(data)
     print('data    range: %f - %f' % (inps.data_min, inps.data_max))
     print('display range: %f - %f' % (inps.disp_min, inps.disp_max))
 
