@@ -368,8 +368,9 @@ def get_date12_to_drop(inps):
     if inps.excludeDate:
         tempList = [i for i in date12ListAll if any(j in inps.excludeDate for j in i.split('_'))]
         date12_to_drop += tempList
-        print('-'*50+'\nDrop ifgrams including the following dates:\n{}'.format(inps.excludeDate))
-        print('-'*20+'Ifgrams dropped: ({})\n{}'.format(len(templist), tempList))
+        print('-'*50+'\nDrop ifgrams including the following dates: ({})\n{}'.format(
+            len(tempList), inps.excludeDate))
+        print('-'*30+'\n{}'.format(tempList))
 
     # 2.6 Update date12_to_drop from startDate
     if inps.startDate:

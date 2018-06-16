@@ -101,11 +101,11 @@ def cmd_line_parse(iargs=None):
 
 
 ############################################################
-def write_kmz_file(data, metadata, out_name_base, inps=None):
+def write_kmz_file(data, metadata, out_file, inps=None):
     """ Generate Google Earth KMZ file for input data matrix.
     Inputs:
         data - 2D np.array in int/float, data matrix to write
-        out_name_base - string, output file name base
+        out_file - string, output file name
         metadata  - dict, containing the following attributes:
                WIDTH/LENGTH      : required, file size
                X/Y_FIRST/STEP    : required, for lat/lon spatial converage
@@ -119,8 +119,8 @@ def write_kmz_file(data, metadata, out_name_base, inps=None):
         from pysar import save_kml
         fname = 'geo_velocity_masked.h5'
         data, atr = readfile.read(fname)
-        out_name_base = pp.auto_figure_title(fname, None)
-        save_kml.write_kmz_file(data, atr, out_name_base)
+        out_file = pp.auto_figure_title(fname, None)+'.kmz'
+        save_kml.write_kmz_file(data, atr, out_file)
     """
     if not inps:
         inps = cmd_line_parse()
@@ -166,6 +166,7 @@ def write_kmz_file(data, metadata, out_name_base, inps=None):
     ax.set_xlim([0, width])
     ax.set_ylim([length, 0])
 
+    out_name_base = os.path.splitext(out_file)[0]
     data_png_file = out_name_base + '.png'
     print('writing '+data_png_file)
     plt.savefig(data_png_file, pad_inches=0.0,
@@ -272,7 +273,6 @@ def write_kmz_file(data, metadata, out_name_base, inps=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     #plt.switch_backend('Agg')
-
     #print("The Python version is %s.%s.%s" % sys.version_info[:3])
 
     # Read data
@@ -291,14 +291,14 @@ def main(iargs=None):
 
     # Output filename
     if not inps.outfile:
-        inps.outfile = pp.auto_figure_title(inps.file,
-                                            datasetNames=inps.dset,
-                                            inps_dict=vars(inps))
+        inps.outfile = '{}.kmz'.format(pp.auto_figure_title(inps.file,
+                                                            datasetNames=inps.dset,
+                                                            inps_dict=vars(inps)))
 
     # 2. Generate Google Earth KMZ
     kmz_file = write_kmz_file(data,
                               metadata=atr,
-                              out_name_base=inps.outfile,
+                              out_file=inps.outfile,
                               inps=inps)
 
     print('Done.')
