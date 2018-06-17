@@ -72,7 +72,7 @@ def create_threshold_mask(inps):
     width = int(atr['WIDTH'])
 
     print('create initial mask with the same size as the input file and all = 1')
-    mask = np.ones((length, width), dtype=np.float32)
+    mask = np.ones((length, width), dtype=np.bool_)
 
     if inps.nonzero:
         print('all pixels with zero value = 0')

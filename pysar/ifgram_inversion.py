@@ -362,6 +362,11 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight=None,
                 # then, follow equations on https://github.com/yunjunz/GSVD to get u, s, vh from weighted solution
                 # and B_inv = np.dot(np.dot(vh.T, np.diag(1./s)), u.T)
 
+                # Note for speedup with 3D matrix for multiple pixels --> not practical (Yunjun, 2018-06-19)
+                # np.linalg.inv and np.linalg.pinv is fast, but np.einsum is very slow
+                # BTWB = np.einsum('ij,jk,jl->kil', B.T, weight, B, optimize=True)
+                # B_inv = np.einsum('ijk,kl,lm->ijm', inv(BTWB), B.T, weight, optimize=True)
+
             # generalized ordinary least square inversion (SVD / LS)
             # SBAS (Berardino et al., 2002)
             else:
