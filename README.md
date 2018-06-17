@@ -34,7 +34,7 @@ Inside pysarApp.py, it reads the unwrapped interferograms, refernces all of them
 
 Check **./PIC** folder for auto generated figures. Use view.py to plot 2D image and tsview.py to plot the time-series for each point. More details about this test data is in [here](https://github.com/yunjunz/PySAR/wiki/Example).    
 
-![velocity on Kuju](https://github.com/yunjunz/PySAR/blob/master/docs/resources/vel_KujuAlosAT422F650.jpg)
+![velocity on Kuju](https://yunjunzhang.files.wordpress.com/2018/06/vel_kujualosat422f650.jpg)
      
              
 #### Build your own processing recipe   
