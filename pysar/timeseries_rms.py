@@ -10,63 +10,32 @@ import os
 import sys
 import argparse
 import numpy as np
-import matplotlib as mpl
-mpl.use('Agg')
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pysar.utils import readfile, ptime, utils as ut, plot as pp
 
 
 ######################################################################################################
-def read_template2inps(templateFile, inps=None):
-    """Update inps with pysar.residualRms.* option from templateFile"""
-    if not inps:
-        inps = cmd_line_parse()
-
-    template = readfile.read_template(templateFile)
-    prefix = 'pysar.residualRms.'
-
-    key = prefix+'maskFile'
-    if key in template.keys():
-        value = template[key]
-        if value == 'auto':
-            inps.mask_file = 'maskTempCoh.h5'
-        elif value == 'no':
-            inps.mask_file = None
-        else:
-            inps.mask_file = value
-
-    key = prefix+'ramp'
-    if key in template.keys():
-        value = template[key]
-        if value == 'auto':
-            inps.ramp_type = 'quadratic'
-        else:
-            inps.ramp_type = value
-
-    key = prefix+'threshold'
-    if key in template.keys():
-        value = template[key]
-        if value == 'auto':
-            inps.min_rms = 0.02
-        else:
-            inps.min_rms = float(value)
-
-    return inps
-
-
-######################################################################################################
 TEMPLATE = """
-## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
+## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
-pysar.residualRms.maskFile        = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
-pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
-pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
+## Set optimal reference date to date with min RMS
+## Set exclude dates (outliers) to dates with RMS > Mscore * MAD (Median Absolute Deviation)
+pysar.residualRms.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
+pysar.residualRms.ramp     = auto  #[quadratic / plane / no], auto for quadratic
+pysar.residualRms.Mscore   = auto  #[0.0-inf], auto for 3, minimum RMS in meter for exclude date(s)
 """
 
 EXAMPLE = """example:
   timeseries_rms.py  timeseriesResidual.h5 
   timeseries_rms.py  timeseriesResidual.h5  --template pysarApp_template.txt
-  timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --min-rms 0.03
+  timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --Mscore 3
+"""
+
+REFERENCE="""reference:
+Rousseeuw, P. J., and M. Hubert (2011), Robust statistics for outlier detection,
+    Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 1(1),
+    73-79, doi:doi:10.1002/widm.2.
 """
 
 
@@ -83,8 +52,9 @@ def create_parser():
     parser.add_argument('-s', dest='ramp_type', default='quadratic',
                         help='ramp type to be remove for RMS calculation.\n' +
                              'default - quadratic; no - do not remove ramp')
-    parser.add_argument('--min-rms', dest='min_rms', default='0.02', type=float,
-                        help='minimum RMS in m, threshold used to exclude dates, default: 0.02 m')
+    parser.add_argument('--Mscore','--M-score', dest='Mscore', default='3.', type=float,
+                        help='M-score used for outlier detection based on standardised residuals\n'+
+                             'Recommend range: [3, 4], default is 3.')
     parser.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                         help='figure size in inches - width and length')
     parser.add_argument('--tick-year-num', dest='tick_year_num',
@@ -99,77 +69,168 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def save_date2txt_file(inps):
-    inps.refDateFile = 'reference_date.txt'
-    if ut.update_file(inps.refDateFile, [inps.timeseries_file, inps.mask_file, inps.template_file], check_readable=False):
-        f = open(inps.refDateFile, 'w')
-        f.write(inps.refDate+'\n')
-        f.close()
-        print('save date to file: '+inps.refDateFile)
+def read_template2inps(templateFile, inps=None):
+    """Update inps with pysar.residualRms.* option from templateFile"""
+    if not inps:
+        inps = cmd_line_parse()
+    inpsDict = vars(inps)
+    print('read options from template file: '+os.path.basename(templateFile))
+    template = readfile.read_template(templateFile)
+    template = ut.check_template_auto_value(template)
 
-    inps.exDateFile = 'exclude_date.txt'
-    if inps.exIdxList and ut.update_file(inps.exDateFile, [inps.timeseries_file, inps.mask_file, inps.template_file],
-                                         check_readable=False):
-        f = open(inps.exDateFile, 'w')
-        for i in inps.exIdxList:
-            f.write(inps.dateList[i]+'\n')
-        f.close()
-        print('save date(s) to file: '+inps.exDateFile)
+    prefix = 'pysar.residualRms.'
+    keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
+    for key in keyList:
+        value = template[prefix+key]
+        if value:
+            if key in ['maskFile', 'ramp']:
+                inpsDict[key] = value
+            elif key in ['Mscore']:
+                inpsDict[key] = float(value)
+    return inps
+
+
+def analyze_rms(date_list, rms_list, inps):
+    # reference date
+    ref_idx = np.argmin(rms_list)
+    print('-'*50+'\ndate with min residual RMS: {} - {:.4f}'.format(date_list[ref_idx],
+                                                                    rms_list[ref_idx]))
+    ref_date_file = 'reference_date.txt'
+    if ut.update_file(ref_date_file, [inps.timeseries_file,
+                                      inps.mask_file,
+                                      inps.template_file], check_readable=False):
+        with open(ref_date_file, 'w') as f:
+            f.write(date_list[ref_idx]+'\n')
+        print('save date to file: '+ref_date_file)
+
+    # exclude date(s) - outliers
+    rms_threshold = median_abs_deviation_threshold(rms_list,
+                                                   center=0.,
+                                                   kappa=inps.Mscore)
+    ex_idx = [rms_list.index(i) for i in rms_list if i > rms_threshold]
+    print('-'*50+'\ndate(s) with residual RMS > 0 + {} * MAD ({:.4f})'.format(inps.Mscore,
+                                                                              rms_threshold))
+    ex_date_file = 'exclude_date.txt'
+    if ex_idx:
+        # print
+        for i in ex_idx:
+            print('{} - {:.4f}'.format(date_list[i], rms_list[i]))
+        # save to text file
+        if ut.update_file(ex_date_file, [inps.timeseries_file,
+                                         inps.mask_file,
+                                         inps.template_file], check_readable=False):
+            with open(ex_date_file, 'w') as f:
+                for i in ex_idx:
+                    f.write(date_list[i]+'\n')
+            print('save date(s) to file: '+ex_date_file)
     else:
         print('None.')
+
+    # plot bar figure and save
+    fig_file = os.path.splitext(inps.rms_file)[0]+'.pdf'
+    if ut.update_file(fig_file, [ex_date_file,
+                                 ref_date_file,
+                                 inps.template_file], check_readable=False):
+        fig, ax = plt.subplots(figsize=inps.fig_size)
+        ax = plot_rms_bar(ax, date_list, rms_list, rms_threshold, Mscore=inps.Mscore)
+        fig.savefig(fig_file, bbox_inches='tight', transparent=True)
+        print('save figure to file: '+fig_file)
     return inps
 
 
-def plot_bar4date_rms(inps):
-    inps.figName = os.path.splitext(inps.rmsFile)[0]+'.pdf'
-    if ut.update_file(inps.figName, [inps.exDateFile, inps.refDateFile, inps.template_file], check_readable=False):
-        if inps.fig_size:
-            fig = plt.figure(figsize=inps.fig_size)
-        else:
-            fig = plt.figure()
-        ax = fig.add_subplot(111)
-        font_size = 12
+def median_abs_deviation_threshold(data, center=0., kappa=3.):
+    """calculate rms_threshold based on the standardised residual
+    outlier detection with median absolute deviation"""
+    from statsmodels.robust import mad
+    rms_mad = mad(data, c=0.67448975019608171, center=center)
+    rms_threshold = center + kappa * rms_mad
+    return rms_threshold
 
-        dates, datevector = ptime.date_list2vector(inps.dateList)
-        try:
-            bar_width = ut.most_common(np.diff(dates).tolist())*3/4
-        except:
-            bar_width = np.min(np.diff(dates).tolist())*3/4
-        x_list = [i-bar_width/2 for i in dates]
 
-        inps.rmsList = [i*1000. for i in inps.rmsList]
-        min_rms = inps.min_rms * 1000.
-        # Plot all dates
-        ax.bar(x_list, inps.rmsList, bar_width.days)
+def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
+                 unit_scale=1000., font_size=12,
+                 tick_year_num=1, legend_loc='best', Mscore=3.):
+    """
+        legend_loc - 'upper right' or (0.5, 0.5)
+    """
+    dates, datevector = ptime.date_list2vector(date_list)
+    try:
+        bar_width = ut.most_common(np.diff(dates).tolist())*3/4
+    except:
+        bar_width = np.min(np.diff(dates).tolist())*3/4
+    datex = np.array(dates) - bar_width / 2
+    rms = np.array(rms_list)
 
-        # Plot reference date
-        ax.bar(x_list[inps.refDateIndex], inps.rmsList[inps.refDateIndex],
-               bar_width.days, label='Reference date')
+    # Plot all dates
+    ax.bar(datex, rms * unit_scale, bar_width.days, color=pp.mplColors[0])
 
-        # Plot exclude dates
-        if inps.exIdxList:
-            ex_x_list = [x_list[i] for i in inps.exIdxList]
-            inps.exRmsList = [inps.rmsList[i] for i in inps.exIdxList]
-            ax.bar(ex_x_list, inps.exRmsList, bar_width.days,
-                   color='darkgray', label='Exclude date(s)')
+    # Plot reference date
+    ref_idx = np.argmin(rms)
+    ax.bar(datex[ref_idx],
+           rms[ref_idx] * unit_scale,
+           bar_width.days,
+           color=pp.mplColors[1],
+           label='Reference date')
 
-        # Plot min_rms line
-        ax, xmin, xmax = pp.auto_adjust_xaxis_date(ax, datevector, font_size,
-                                                   every_year=inps.tick_year_num)
-        ax.plot(np.array([xmin, xmax]), np.array([min_rms, min_rms]), '--k')
+    # Plot exclude dates
+    ex_idx = rms > rms_threshold
+    if not np.all(ex_idx==False):
+        ax.bar(datex[ex_idx],
+               rms[ex_idx] * unit_scale,
+               bar_width.days,
+               color='darkgray',
+               label='Exclude date')
 
-        # axis format
-        ax = pp.auto_adjust_yaxis(ax, inps.rmsList+[min_rms], font_size, ymin=0.0)
-        ax.set_xlabel('Time [years]', fontsize=font_size)
-        ax.set_ylabel('Root Mean Square [mm]', fontsize=font_size)
-        ax.yaxis.set_ticks_position('both')
-        ax.tick_params(labelsize=font_size)
-        plt.legend(fontsize=font_size)
+    # Plot rms_threshold line
+    (ax, xmin, xmax) = pp.auto_adjust_xaxis_date(ax, datevector, font_size,
+                                                 every_year=tick_year_num)
+    ax.plot(np.array([xmin, xmax]),
+            np.array([rms_threshold, rms_threshold]) * unit_scale,
+            '--k',
+            label='RMS Threshold')
 
-        # save figure
-        fig.savefig(inps.figName, bbox_inches='tight', transparent=True)
-        print('save figure to file: '+inps.figName)
-    return inps
+    # axis format
+    ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold) * unit_scale,
+                              font_size, ymin=0.0)
+    ax.set_xlabel('Time [years]', fontsize=font_size)
+    ax.set_ylabel('Phase residual RMS [mm]', fontsize=font_size)
+    #ax.yaxis.set_ticks_position('both')
+    ax.tick_params(which='both', direction='in', labelsize=font_size,
+                   bottom=True, top=True, left=True, right=True)
+
+    # 2nd axes for circles
+    divider = make_axes_locatable(ax)
+    ax2 = divider.append_axes("right", "10%", pad="2%")
+    ax2.plot(np.ones(rms.shape, np.float32) * 0.5,
+             rms * unit_scale,
+             'o', mfc='none',
+             color=pp.mplColors[0])
+    ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5,
+             rms[ref_idx] * unit_scale,
+             'o', mfc='none',
+             color=pp.mplColors[1])
+    if not np.all(ex_idx==False):
+        ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5,
+                 rms[ex_idx] * unit_scale,
+                 'o', mfc='none',
+                 color='darkgray')
+    ax2.plot(np.array([0, 1]),
+             np.array([rms_threshold, rms_threshold]) * unit_scale,
+             '--k')
+
+    ax2.set_ylim(ax.get_ylim())
+    ax2.set_xlim([0, 1])
+    ax2.tick_params(which='both', direction='in', labelsize=font_size,
+                    bottom=True, top=True, left=True, right=True)
+    ax2.get_xaxis().set_ticks([])
+    ax2.get_yaxis().set_ticklabels([])
+
+    ax.legend(loc=legend_loc, fontsize=font_size)
+    ymin, ymax = ax.get_ylim()
+    ax.annotate('mean + MAD * {}'.format(Mscore),
+                xy=(xmin + (xmax-xmin)*0.05, rms_threshold * unit_scale - (ymax-ymin)*0.1),
+                color='k', xycoords='data', fontsize=font_size)
+    return ax
 
 
 ######################################################################################################
@@ -179,31 +240,13 @@ def main(iargs=None):
         inps = read_template2inps(inps.template_file)
 
     # calculate timeseries of residual Root Mean Square
-    inps.rmsList, inps.dateList, inps.rmsFile = ut.get_residual_rms(inps.timeseries_file,
-                                                                    inps.mask_file,
-                                                                    inps.ramp_type)
+    (inps.rms_list,
+     inps.date_list,
+     inps.rms_file) = ut.get_residual_rms(inps.timeseries_file,
+                                          inps.mask_file,
+                                          inps.ramp_type)
 
-    # reference date
-    inps.refDateIndex = np.argmin(inps.rmsList)
-    inps.refDate = inps.dateList[inps.refDateIndex]
-    print('-'*50)
-    print('date with minimum residual RMS: %s - %.4f' %
-          (inps.refDate, inps.rmsList[inps.refDateIndex]))
-
-    # exclude date(s)
-    inps.exIdxList = [inps.rmsList.index(i) for i in inps.rmsList if i > inps.min_rms]
-    print('-'*50)
-    print('date(s) with residual RMS > {}'.format(inps.min_rms))
-    if inps.exIdxList:
-        for i in inps.exIdxList:
-            print('%s - %.4f' % (inps.dateList[i], inps.rmsList[i]))
-
-    # Save to text file
-    inps = save_date2txt_file(inps)
-
-    # Plot
-    inps = plot_bar4date_rms(inps)
-
+    analyze_rms(inps.date_list, inps.rms_list, inps)
     return
 
 

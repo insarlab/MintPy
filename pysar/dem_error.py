@@ -160,7 +160,7 @@ def design_matrix4deformation(inps):
     ts_obj.open()
 
     # Design matrix - temporal deformation model
-    print('-'*50)
+    print('-'*80)
     print('correct topographic phase residual (DEM error) using Fattahi and Amelung (2013, IEEE-TGRS)')
     msg = 'ordinal least squares (OLS) inversion with L2-norm minimization on: phase'
     if inps.min_phase_velocity:
@@ -186,7 +186,7 @@ def design_matrix4deformation(inps):
         for t_step in t_steps:
             Ai = np.array(t > t_step, np.float32).reshape(-1, 1)
             A_def = np.hstack((A_def, Ai))
-    print('-'*50)
+    print('-'*80)
     return A_def
 
 
