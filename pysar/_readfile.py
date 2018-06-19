@@ -134,10 +134,20 @@ def read(File, box=None, epoch=None, print_msg=True):
             elif 'recons' in h5file.keys():
                 dset = h5file['recons'][dateIndx,:,:]
         else:
-            dset = h5file[k].get(k)
-        #else:
-        #    print 'ERROR: Unrecognized h5 file type: '+k
-        #    sys.exit(1)
+            k0 = list(h5file.keys())[0]
+            if isinstance(h5file[k0], h5py.Dataset):
+                if datasetName:
+                    dset = h5file[datasetName]
+                else:
+                    dset = h5file[k0]
+            else:
+                # support for old pysar format
+                k1 = list(h5file[k0].keys())[0]
+                if isinstance(h5file[k0][k1], h5py.Dataset):
+                    if datasetName:
+                        dset = h5file[k0][datasetName]
+                    else:
+                        dset = h5file[k0][k1]
 
         data = dset[box[1]:box[3],box[0]:box[2]]
 
