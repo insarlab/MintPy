@@ -309,7 +309,10 @@ def main(argv):
     print 'Calcualting delay for each epoch.'
 
     ## Calculate tropo delay using pyaps
-    length = int(atr['FILE_LENGTH'])
+    try:
+        length = int(atr['FILE_LENGTH'])
+    except:
+        length = int(atr['LENGTH'])
     width = int(atr['WIDTH'])
     date_num = len(date_list)
     trop_ts = np.zeros((date_num, length, width), np.float32)

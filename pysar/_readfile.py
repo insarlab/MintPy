@@ -133,20 +133,29 @@ def read(File, box=None, epoch=None, print_msg=True):
                 dset = h5file['rawts'][dateIndx,:,:]
             elif 'recons' in h5file.keys():
                 dset = h5file['recons'][dateIndx,:,:]
+
         else:
             k0 = list(h5file.keys())[0]
+            try:
+                k0 = k0.encode('utf8')
+            except:
+                pass
             if isinstance(h5file[k0], h5py.Dataset):
-                if epoch:
+                try:
                     dset = h5file[epoch]
-                else:
+                except:
                     dset = h5file[k0]
             else:
                 # support for old pysar format
                 k1 = list(h5file[k0].keys())[0]
+                try:
+                    k1 = k1.encode('utf8')
+                except:
+                    pass
                 if isinstance(h5file[k0][k1], h5py.Dataset):
-                    if epoch:
+                    try:
                         dset = h5file[k0][epoch]
-                    else:
+                    except:
                         dset = h5file[k0][k1]
 
         data = dset[box[1]:box[3],box[0]:box[2]]
@@ -423,6 +432,9 @@ def read_attribute(File, epoch=None):
     else:
         if 'UNIT' not in atr.keys():
             atr['UNIT'] = '1'
+
+    if 'LENGTH' in atr.keys():
+        atr['FILE_LENGTH'] = atr['LENGTH']
 
     atr['FILE_PATH'] = os.path.abspath(File)
     if 'INSAR_PROCESSOR' not in atr.keys():
