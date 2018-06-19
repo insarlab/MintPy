@@ -227,7 +227,7 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
 
     ax.legend(loc=legend_loc, fontsize=font_size)
     ymin, ymax = ax.get_ylim()
-    ax.annotate('mean + MAD * {}'.format(Mscore),
+    ax.annotate('MAD * {}'.format(Mscore),
                 xy=(xmin + (xmax-xmin)*0.05, rms_threshold * unit_scale - (ymax-ymin)*0.1),
                 color='k', xycoords='data', fontsize=font_size)
     return ax
