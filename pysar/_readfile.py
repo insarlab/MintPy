@@ -96,8 +96,11 @@ def read(File, box=None, epoch=None, print_msg=True):
     atr = read_attribute(File, epoch)
     k = atr['FILE_TYPE']
     processor = atr['INSAR_PROCESSOR']
-    length = int(float(atr['FILE_LENGTH']))
-    width = int(float(atr['WIDTH']))
+    try:
+        length = int(atr['FILE_LENGTH'])
+    except:
+        length = int(atr['LENGTH'])
+    width = int(atr['WIDTH'])
     if not box:
         box = (0, 0, width, length)
 
@@ -784,8 +787,11 @@ def read_float32(File, box=None, byte_order='l'):
     '''
 
     atr = read_attribute(File)
-    width  = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
+    width  = int(atr['WIDTH'])
+    try:
+        length = int(atr['FILE_LENGTH'])
+    except:
+        length = int(atr['LENGTH'])
     if not box:
         box = [0,0,width,length]
 
@@ -804,8 +810,11 @@ def read_real_float64(fname, box=None, byte_order='l'):
     '''Read real float64/double data matrix, i.e. isce lat/lon.rdr
     '''
     atr = read_attribute(fname)
-    width = int(float(atr['WIDTH']))
-    length = int(float(atr['FILE_LENGTH']))
+    width = int(atr['WIDTH'])
+    try:
+        length = int(atr['FILE_LENGTH'])
+    except:
+        length = int(atr['LENGTH'])
     if not box:
         box = [0, 0, width, length]
 
