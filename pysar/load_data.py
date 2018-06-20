@@ -166,8 +166,8 @@ def read_inps2dict(inps):
 
     # PROJECT_NAME --> PLATFORM
     (inpsDict['PLATFORM'],
-     inpsDict['PROJECT_NAME']) = sensor.project_name2sensor([inpsDict['PROJECT_NAME'],
-                                                             inps.template_file])
+     inpsDict['PROJECT_NAME']) = sensor.project_name2sensor_name([inpsDict['PROJECT_NAME'],
+                                                                  inps.template_file])
     if inpsDict['PLATFORM']:
         print('platform : {}'.format(inpsDict['PLATFORM']))
     print('processor: {}'.format(inpsDict['processor']))

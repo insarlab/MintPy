@@ -22,10 +22,7 @@ from pysar.utils import (ptime,
                          plot as pp,
                          utils as ut)
 
-sar_sensor_list = ['Ers', 'Env', 'Sen',
-                   'Jers', 'Alos', 'Alos2',
-                   'Tsx', 'Csk', 'Rsat', 'Rsat2',
-                   'Kmps5', 'Gaofen3', 'Nisar']
+sensorNames = [i.capitalize() for i in sensor.sensorNames]
 
 
 #########################################################################
@@ -147,7 +144,7 @@ def create_parser():
                              '--temp-perp-list 16,1600;32,800;48,600;64,200')
     method.add_argument('--no-norm', dest='norm', action='store_false',
                         help='do not normalize temp/perp baseline, for delaunay method')
-    method.add_argument('--sensor', help='Name of sensor, choose from the list below:\n'+str(sar_sensor_list))
+    method.add_argument('--sensor', help='Name of sensor, choose from the list below:\n'+str(sensorNames))
     method.add_argument('--master-date', dest='masterDate',
                         help='Master date in YYMMDD or YYYYMMDD format, for star/ps method')
 
@@ -282,7 +279,7 @@ def read_template2inps(templateFile, inps=None):
     project_name = os.path.splitext(os.path.basename(inps.template_file))[0]
     log('project name: '+project_name)
     if not inps.sensor:
-        inps.sensor = sensor.project_name2sensor(project_name)[0]
+        inps.sensor = sensor.project_name2sensor_name(project_name)[0]
 
     # Output directory/filename
     if not inps.outfile:
