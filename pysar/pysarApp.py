@@ -154,11 +154,10 @@ pysar.topographicResidual.phaseVelocity = auto  #[yes / no], auto for no - phase
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Set optimal reference date to date with min RMS
-## Set exclude dates (outliers) to dates with RMS > Mscore * MAD (Median Absolute Deviation)
+## Set exclude dates (outliers) to dates with RMS > cutoff * median RMS (Median Absolute Deviation)
 pysar.residualRms.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
 pysar.residualRms.ramp     = auto  #[quadratic / plane / no], auto for quadratic
-pysar.residualRms.Mscore   = auto  #[0.0-inf], auto for 3, minimum RMS in meter for exclude date(s)
-
+pysar.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
 
 ## 4.2 Select Reference Date
 ## reference all timeseries to one date in time

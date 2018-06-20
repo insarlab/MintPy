@@ -16,7 +16,7 @@ except ImportError:
 
 from lxml import etree
 import numpy as np
-import matplotlib as mpl;   mpl.use('Agg')
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from pysar.objects import timeseriesKeyNames
@@ -272,6 +272,7 @@ def write_kmz_file(data, metadata, out_file, inps=None):
 ############################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    plt.switch_backend('Agg')  # Backend setting
     #print("The Python version is %s.%s.%s" % sys.version_info[:3])
 
     # Read data

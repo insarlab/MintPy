@@ -10,7 +10,6 @@ import os
 import sys
 import argparse
 import numpy as np
-import matplotlib as mpl;  mpl.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pysar.utils import readfile, ptime, utils as ut, plot as pp
@@ -21,16 +20,16 @@ TEMPLATE = """
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Set optimal reference date to date with min RMS
-## Set exclude dates (outliers) to dates with RMS > Mscore * MAD (Median Absolute Deviation)
+## Set exclude dates (outliers) to dates with RMS > cutoff * median RMS (Median Absolute Deviation)
 pysar.residualRms.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
 pysar.residualRms.ramp     = auto  #[quadratic / plane / no], auto for quadratic
-pysar.residualRms.Mscore   = auto  #[0.0-inf], auto for 3, minimum RMS in meter for exclude date(s)
+pysar.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
 """
 
 EXAMPLE = """example:
   timeseries_rms.py  timeseriesResidual.h5 
   timeseries_rms.py  timeseriesResidual.h5  --template pysarApp_template.txt
-  timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --Mscore 3
+  timeseries_rms.py  timeseriesResidual.h5  -m maskTempCoh.h5  --cutoff 3
 """
 
 REFERENCE="""reference:
@@ -53,7 +52,7 @@ def create_parser():
     parser.add_argument('-s', dest='ramp_type', default='quadratic',
                         help='ramp type to be remove for RMS calculation.\n' +
                              'default - quadratic; no - do not remove ramp')
-    parser.add_argument('--Mscore','--M-score', dest='Mscore', default='3.', type=float,
+    parser.add_argument('--cutoff', dest='cutoff', default='3', type=float,
                         help='M-score used for outlier detection based on standardised residuals\n'+
                              'Recommend range: [3, 4], default is 3.')
     parser.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
@@ -86,7 +85,7 @@ def read_template2inps(templateFile, inps=None):
         if value:
             if key in ['maskFile', 'ramp']:
                 inpsDict[key] = value
-            elif key in ['Mscore']:
+            elif key in ['cutoff']:
                 inpsDict[key] = float(value)
     return inps
 
@@ -94,8 +93,8 @@ def read_template2inps(templateFile, inps=None):
 def analyze_rms(date_list, rms_list, inps):
     # reference date
     ref_idx = np.argmin(rms_list)
-    print('-'*50+'\ndate with min residual RMS: {} - {:.4f}'.format(date_list[ref_idx],
-                                                                    rms_list[ref_idx]))
+    print('-'*50+'\ndate with min RMS: {} - {:.4f}'.format(date_list[ref_idx],
+                                                           rms_list[ref_idx]))
     ref_date_file = 'reference_date.txt'
     if ut.update_file(ref_date_file, [inps.timeseries_file,
                                       inps.mask_file,
@@ -107,10 +106,10 @@ def analyze_rms(date_list, rms_list, inps):
     # exclude date(s) - outliers
     rms_threshold = median_abs_deviation_threshold(rms_list,
                                                    center=0.,
-                                                   kappa=inps.Mscore)
+                                                   kappa=inps.cutoff)
     ex_idx = [rms_list.index(i) for i in rms_list if i > rms_threshold]
-    print('-'*50+'\ndate(s) with residual RMS > MAD * {} ({:.4f})'.format(inps.Mscore,
-                                                                              rms_threshold))
+    print(('-'*50+'\ndate(s) with RMS > {} * median RMS'
+           ' ({:.4f})'.format(inps.cutoff, rms_threshold)))
     ex_date_file = 'exclude_date.txt'
     if ex_idx:
         # print
@@ -133,7 +132,7 @@ def analyze_rms(date_list, rms_list, inps):
                                  ref_date_file,
                                  inps.template_file], check_readable=False):
         fig, ax = plt.subplots(figsize=inps.fig_size)
-        ax = plot_rms_bar(ax, date_list, rms_list, rms_threshold, Mscore=inps.Mscore)
+        ax = plot_rms_bar(ax, date_list, rms_list, rms_threshold, cutoff=inps.cutoff)
         fig.savefig(fig_file, bbox_inches='tight', transparent=True)
         print('save figure to file: '+fig_file)
     return inps
@@ -141,7 +140,11 @@ def analyze_rms(date_list, rms_list, inps):
 
 def median_abs_deviation_threshold(data, center=0., kappa=3.):
     """calculate rms_threshold based on the standardised residual
-    outlier detection with median absolute deviation"""
+    outlier detection with median absolute deviation.
+    
+    With the default input arguments, it's equivalent to:
+        np.median(data) / .6745 * 3.0
+    """
     from statsmodels.robust import mad
     rms_mad = mad(data, c=0.67448975019608171, center=center)
     rms_threshold = center + kappa * rms_mad
@@ -150,7 +153,7 @@ def median_abs_deviation_threshold(data, center=0., kappa=3.):
 
 def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
                  unit_scale=1000., font_size=12,
-                 tick_year_num=1, legend_loc='best', Mscore=3.):
+                 tick_year_num=1, legend_loc='best', cutoff=3.):
     """
         legend_loc - 'upper right' or (0.5, 0.5)
     """
@@ -228,7 +231,7 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
 
     ax.legend(loc=legend_loc, fontsize=font_size)
     ymin, ymax = ax.get_ylim()
-    ax.annotate('MAD * {}'.format(Mscore),
+    ax.annotate('median RMS * {}'.format(cutoff),
                 xy=(xmin + (xmax-xmin)*0.05, rms_threshold * unit_scale - (ymax-ymin)*0.1),
                 color='k', xycoords='data', fontsize=font_size)
     return ax
@@ -236,6 +239,8 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
 
 ######################################################################################################
 def main(iargs=None):
+    plt.switch_backend('Agg')  # Backend setting
+
     inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file)
