@@ -54,7 +54,7 @@ def write_gmt_simple(lons, lats, z, fname, title='default', name='z', scale=1.0,
     fid.variables['z'].node_offset=0
 
     fid.title = title
-    fid.source = 'PySAR v1.2'
+    fid.source = 'PySAR'
 
     #####Filling in the actual data
     fid.variables['x_range'][0] = lons[0]

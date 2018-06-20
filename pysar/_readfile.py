@@ -1,6 +1,6 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2013, Heresh Fattahi, Zhang Yunjun          #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################

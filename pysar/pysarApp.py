@@ -45,9 +45,7 @@ import pysar
 import pysar._pysar_utilities as ut
 import pysar._readfile as readfile
 import pysar._writefile as writefile
-import pysar.geocode as geocode
-import pysar.subset as subset
-import pysar.save_hdfeos5 as hdfeos5
+from pysar import version, geocode, subset, save_hdfeos5 as hdfeos5
 
 
 ###############################################################################
@@ -183,23 +181,6 @@ def multilook_dataset(inps, lks_y=None, lks_x=None):
 
 
 ##########################################################################
-LOGO='''
-_________________________________________________
-       ____             __     __     ____  
-       /    )         /    )   / |    /    )
-------/____/----------\-------/__|---/___ /------
-     /        /   /    \     /   |  /    |  
-____/________(___/_(____/___/____|_/_____|_______
-                /                           
-            (_ /                            
-
- A Python package for InSAR time series analysis.
-               PySAR v0.4-dev, Mar 2018
- Geodesy Lab, University of Miami, Maimi FL, USA
-_________________________________________________
-'''
-#generate_from: http://patorjk.com/software/taag/
-
 TEMPLATE='''# vim: set filetype=cfg:
 ##------------------------ pysarApp_template.txt ------------------------##
 ########## 1. Load Data (--load to exit after this step)
@@ -414,12 +395,10 @@ UM_FILE_STRUCT='''
 
 
 def cmdLineParse():
-    parser = argparse.ArgumentParser(description=LOGO,
+    parser = argparse.ArgumentParser(description='PySAR Routine Time Series Analysis',
                                      formatter_class=argparse.RawTextHelpFormatter,\
                                      epilog=EXAMPLE)
-                                     #epilog=TEMPLATE+'\n'+EXAMPLE)
 
-    parser.add_argument('-v','--version', action='version', version='%(prog)s 0.4')
     parser.add_argument('custom_template_file', nargs='?',\
                         help='custom template with option settings.\n'+\
                              "It's equivalent to None, if pysarApp_template.txt is input, as it will be read always.")
@@ -460,7 +439,7 @@ def main(argv):
     #########################################
     # Initiation
     #########################################
-    print LOGO
+    print version.logo
 
     # Project Name
     inps.project_name = None

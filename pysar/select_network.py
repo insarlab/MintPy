@@ -1,6 +1,6 @@
 #! /usr/bin/env python2
 ############################################################
-# Program is part of PySAR v1.2                            #
+# Program is part of PySAR                                 #
 # Copyright(c) 2017, Zhang Yunjun                          #
 # Author:  Zhang Yunjun, 2017 Mar 24                       #
 ############################################################

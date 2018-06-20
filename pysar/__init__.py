@@ -10,6 +10,10 @@ figsize_multi = [15.0, 8.0]    # default size in inch, for multiple subplots
 
 
 ###################### Do not change below this line ###################
+from version import *
+__version__ = release_version
+
+
 import _datetime
 import _gmt
 import _readfile
