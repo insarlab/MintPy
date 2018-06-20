@@ -10,6 +10,7 @@ import os
 import sys
 import argparse
 import numpy as np
+import matplotlib as mpl;  mpl.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pysar.utils import readfile, ptime, utils as ut, plot as pp
@@ -108,7 +109,7 @@ def analyze_rms(date_list, rms_list, inps):
                                                    center=0.,
                                                    kappa=inps.Mscore)
     ex_idx = [rms_list.index(i) for i in rms_list if i > rms_threshold]
-    print('-'*50+'\ndate(s) with residual RMS > 0 + {} * MAD ({:.4f})'.format(inps.Mscore,
+    print('-'*50+'\ndate(s) with residual RMS > MAD * {} ({:.4f})'.format(inps.Mscore,
                                                                               rms_threshold))
     ex_date_file = 'exclude_date.txt'
     if ex_idx:
