@@ -64,7 +64,6 @@ def serialize_dictionary(dictionary, fileName):
 # convert h5 file to json and upload it. folder_name == unavco_name
 def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_path, folder_name):
 
-    region_file = None
     project_name = attributes["PROJECT_NAME"]
     region = region_name_from_project_name(project_name)
     # get the attributes for calculating latitude and longitude
@@ -142,7 +141,7 @@ def convert_data(attributes, decimal_dates, timeseries_datasets, dates, json_pat
     try:
         g = geocoder.google([mid_lat,mid_long], method='reverse', timeout=60.0)
         country = str(g.country_long)
-    except Exception as e:
+    except Exception:
         sys.stderr.write("timeout reverse geocoding country name")
 
     area = folder_name
@@ -213,7 +212,6 @@ def make_json_file(chunk_num, points, dates, json_path, folder_name):
 
 # ---------------------------------------------------------------------------------------
 def build_parser():
-    dbHost = "insarmaps.rsmas.miami.edu"
     parser = argparse.ArgumentParser(description='Convert a Unavco format H5 file for ingestion into insarmaps.')
     required = parser.add_argument_group("required arguments")
     required.add_argument("file", help="unavco file to ingest")
@@ -233,7 +231,6 @@ def main():
 
     path_name_and_extension = os.path.basename(file_name).split(".")
     path_name = path_name_and_extension[0]
-    extension = path_name_and_extension[1]
     # ---------------------------------------------------------------------------------------
     # start clock to track how long conversion process takes
     start_time = time.clock()

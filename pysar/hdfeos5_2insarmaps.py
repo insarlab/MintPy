@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import sys
 import os
 import argparse
 import glob
@@ -35,7 +34,6 @@ def main():
     bjobScriptFilename = "run_pysar2insarmaps.py"
 
     path = parseArgs.file
-    path_absolute = os.path.abspath(path)
 
     h5FileFullName = parseArgs.file
 

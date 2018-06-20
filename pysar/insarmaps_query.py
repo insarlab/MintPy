@@ -1,7 +1,6 @@
 #! /usr/bin/env python2
 
 import urllib.request, urllib.error, urllib.parse
-import os
 import argparse
 
 class BasicHTTP:
