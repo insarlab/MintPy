@@ -89,6 +89,10 @@ def hdf5_structure_string(file):
     if len(f.attrs) > 0:
         output += 'Attributes in / level:\n'
         output = attributes_string(f.attrs, output, sorting=True)+"\n"
+    else:
+        atr = readfile.read_attribute(file)
+        output += 'Attributes:\n'
+        output = attributes_string(atr, output, sorting=True)+"\n"
 
     f.visititems(print_hdf5_structure_obj)
     f.close()

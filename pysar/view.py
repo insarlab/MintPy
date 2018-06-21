@@ -717,7 +717,7 @@ def check_input_file_info(inps):
         try:
             atr = readfile.read_attribute(inps.file)
         except:
-            raise SystemExit('can not read attribute of input file: {}'.format(inps.file))
+            raise Exception('can not read attribute of input file: {}'.format(inps.file))
     print('\n******************** Display ********************')
     print('input file is {} {}: {}'.format(atr['PROCESSOR'],
                                            atr['FILE_TYPE'],

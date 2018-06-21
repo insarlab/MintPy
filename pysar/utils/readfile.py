@@ -549,8 +549,11 @@ def read_attribute(fname, datasetName=None, standardize=True):
         else:
             atr['UNIT'] = '1'
 
+    if 'PROCESSOR' not in atr.keys():
+        atr['PROCESSOR'] = 'pysar'
+
     atr['FILE_PATH'] = os.path.abspath(fname)
-    if atr['PROCESSOR'] == 'isce' and ext == '.wgs84':
+    if ext == '.wgs84' and atr['PROCESSOR'] == 'isce':
         atr['FILE_TYPE'] = 'dem'
 
     if standardize:
