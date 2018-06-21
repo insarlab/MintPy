@@ -15,7 +15,10 @@ import glob
 import warnings
 import h5py
 import numpy as np
-from skimage.transform import resize
+try:
+    from skimage.transform import resize
+except ImportError:
+    raise ImportError('Could not import skimage!')
 from pysar.utils import readfile, ptime, utils as ut
 from pysar.objects import (dataTypeDict,
                            geometryDatasetNames,

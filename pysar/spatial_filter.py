@@ -13,11 +13,7 @@ import argparse
 try:
     from skimage import filters, feature
 except ImportError:
-    print('++++++++++++++++++++++++++++++++++++++++++++')
-    print('Could not import skimage')
-    print('To use filter.py you must install skimage')
-    print('See: http://scikit-image.org/')
-    print('++++++++++++++++++++++++++++++++++++++++++++')
+    raise ImportError('Could not import skimage!')
 
 import numpy as np
 from scipy import ndimage

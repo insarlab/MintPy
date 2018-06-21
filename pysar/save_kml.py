@@ -12,7 +12,7 @@ import argparse
 try:
     from pykml.factory import KML_ElementMaker as KML
 except ImportError:
-    print('Can not import pykml!')
+    raise ImportError('Can not import pykml!')
 
 from lxml import etree
 import numpy as np

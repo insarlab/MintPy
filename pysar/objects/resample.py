@@ -13,7 +13,7 @@ import multiprocessing
 try:
     import pyresample as pr
 except ImportError:
-    print('Can not import pyresample!')
+    raise ImportError('Can not import pyresample!')
 from pysar.utils import readfile
 
 

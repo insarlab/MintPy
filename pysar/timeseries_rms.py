@@ -104,9 +104,14 @@ def analyze_rms(date_list, rms_list, inps):
         print('save date to file: '+ref_date_file)
 
     # exclude date(s) - outliers
-    rms_threshold = median_abs_deviation_threshold(rms_list,
-                                                   center=0.,
-                                                   kappa=inps.cutoff)
+    try:
+        rms_threshold = median_abs_deviation_threshold(rms_list,
+                                                       center=0.,
+                                                       kappa=inps.cutoff)
+    except:
+        # equivalent calculation using numpy assuming Gaussian distribution
+        rms_threshold = np.median(rms_list) / .6745 * inps.cutoff
+
     ex_idx = [rms_list.index(i) for i in rms_list if i > rms_threshold]
     print(('-'*50+'\ndate(s) with RMS > {} * median RMS'
            ' ({:.4f})'.format(inps.cutoff, rms_threshold)))

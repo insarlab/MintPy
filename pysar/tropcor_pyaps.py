@@ -13,7 +13,7 @@ import subprocess
 try:
     import pyaps as pa
 except ImportError:
-    print('Cannot import pyaps into Python!')
+    raise ImportError('Cannot import pyaps!')
 
 import argparse
 import h5py
