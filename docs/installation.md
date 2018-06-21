@@ -14,9 +14,11 @@ For csh/tcsh user, add to your **_~/.cshrc_** file for example:
     if ( ! $?PYTHONPATH ) then
         setenv PYTHONPATH ""
     endif
+    
     ##--------- Anaconda ---------------## 
     setenv PYTHON3DIR    ~/python/anaconda3
     setenv PATH          ${PATH}:${PYTHON3DIR}/bin
+    
     ##--------- PySAR ------------------## 
     setenv PYSAR_HOME    ~/python/PySAR       #for released version, "~/python/PySAR-0.4.0"
     setenv PYTHONPATH    ${PYTHONPATH}:${PYSAR_HOME}
@@ -26,9 +28,11 @@ For bash user, add to your **_~/.bashrc_** file for example:
 
     ############################  Python  ###############################
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
+    
     ##--------- Anaconda ---------------## 
     export PYTHON3DIR=~/python/anaconda3
     export PATH=${PATH}:${PYTHON3DIR}/bin
+    
     ##--------- PySAR ------------------## 
     export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-0.4.0"
     export PYTHONPATH=${PYTHONPATH}:${PYSAR_HOME}   
@@ -59,8 +63,10 @@ Run the following in your terminal (using conda):
     wget https://repo.continuum.io/archive/Anaconda3-5.1.0-MacOSX-x86_64.sh
     chmod +x Anaconda3-5.1.0-MacOSX-x86_64.sh
     ./Anaconda3-5.1.0-MacOSX-x86_64.sh -b -p $PYTHON3DIR
+    
     $PYTHON3DIR/bin/conda config --add channels conda-forge
     $PYTHON3DIR/bin/conda install basemap joblib lxml pyresample --yes   
+    
     git clone https://github.com/yunjunz/pykml.git; cd pykml
     $PYTHON3DIR/bin/python setup.py build     
     $PYTHON3DIR/bin/python setup.py install    
