@@ -157,8 +157,8 @@ def get_lalo_ref(m_par_file, atr_dict={}):
                                                      m_corner_full_file)
             print(cornerCmd)
             os.system(cornerCmd)
-        extractCmd = "awk 'NR==3,NR==6 {print $3,$6} ' {} > {}".format(m_corner_full_file,
-                                                                       m_corner_file)
+        extractCmd = "awk 'NR==3,NR==6 {print $3,$6} ' "
+        extractCmd += "{} > {}".format(m_corner_full_file, m_corner_file)
         print(extractCmd)
         os.system(extractCmd)
 
@@ -220,30 +220,24 @@ def extract_metadata4interferogram(fname):
     except:
         print('\nERROR: Can not find slave date .par file, it supposed to be like: '+s_par_file)
 
-    # print 'read '+m_par_file
-    # print 'read '+off_file
     par_dict = readfile.read_gamma_par(m_par_file)
     off_dict = readfile.read_gamma_par(off_file)
     atr.update(par_dict)
     atr.update(off_dict)
 
     # Perp Baseline Info
-    # print('extract baseline info from %s, %s and %s file' % (m_par_file, s_par_file, off_file))
     atr = get_perp_baseline(m_par_file, s_par_file, off_file, atr)
 
     # LAT/LON_REF1/2/3/4
-    # print 'extract LAT/LON_REF1/2/3/4 from '+m_par_file
     atr = get_lalo_ref(m_par_file, atr)
 
     # Write to .rsc file
-    # print 'writing >>> '+rsc_file
     try:
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = None
-    #keyList = [i for i in atr_orig.keys() if i in atr.keys()]
-    if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-           for i in atr.keys()):
+    if not atr_orig or any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
+                           for i in atr.keys()):
         print('merge %s, %s and %s into %s' % (os.path.basename(m_par_file),
                                                os.path.basename(s_par_file),
                                                os.path.basename(off_file),
@@ -263,7 +257,6 @@ def extract_metadata4lookup_table(fname):
     rsc_file_list = ut.get_file_list(fname+'.rsc')
     if rsc_file_list:
         rsc_file = rsc_file_list[0]
-        #print(rsc_file+' is existed, no need to re-extract.')
         return rsc_file
 
     atr = {}
@@ -274,7 +267,6 @@ def extract_metadata4lookup_table(fname):
 
     par_file = os.path.splitext(fname)[0]+'.utm.dem.par'
 
-    #print('read '+os.path.basename(par_file))
     par_dict = readfile.read_gamma_par(par_file)
     atr.update(par_dict)
 
@@ -284,9 +276,8 @@ def extract_metadata4lookup_table(fname):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = None
-    #keyList = [i for i in atr_orig.keys() if i in atr.keys()]
-    if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-           for i in atr.keys()):
+    if not atr_orig or any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
+                           for i in atr.keys()):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
@@ -305,7 +296,6 @@ def extract_metadata4dem_geo(fname):
     atr['X_UNIT'] = 'degrees'
 
     par_file = fname+'.par'
-    #print('read '+os.path.basename(par_file))
     par_dict = readfile.read_gamma_par(par_file)
     atr.update(par_dict)
 
@@ -315,9 +305,8 @@ def extract_metadata4dem_geo(fname):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = None
-    #keyList = [i for i in atr_orig.keys() if i in atr.keys()]
-    if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-           for i in atr.keys()):
+    if not atr_orig or any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
+                           for i in atr.keys()):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
@@ -344,7 +333,6 @@ def extract_metadata4dem_radar(fname):
         fname_base = os.path.splitext(fname_base)[0]
 
     par_file = fname_base+'.diff_par'
-    #print('read '+os.path.basename(par_file))
     par_dict = readfile.read_gamma_par(par_file)
     atr.update(par_dict)
 
@@ -354,9 +342,8 @@ def extract_metadata4dem_radar(fname):
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
         atr_orig = None
-    #keyList = [i for i in atr_orig.keys() if i in atr.keys()]
-    if any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-           for i in atr.keys()):
+    if not atr_orig or any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
+                           for i in atr.keys()):
         print('writing >>> '+os.path.basename(rsc_file))
         writefile.write_roipac_rsc(atr, out_file=rsc_file)
     return rsc_file
