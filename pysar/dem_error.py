@@ -205,7 +205,7 @@ def read_geometry(inps):
             print('read 3D bperp from {} file: {} ...'.format(geom_obj.name, os.path.basename(geom_obj.file)))
             inps.pbase = geom_obj.read(datasetName='bperp', print_msg=False).reshape((geom_obj.numDate, -1))
             for i in range(ts_obj.numDate):
-                inps.pbase[i, :, :] -= inps.pbase[ts_obj.refIndex, :, :]
+                inps.pbase[i, :] -= inps.pbase[ts_obj.refIndex, :]
         else:
             print('read mean bperp from {} file'.format(ts_obj.name))
             inps.pbase = ts_obj.pbase.reshape((-1, 1))

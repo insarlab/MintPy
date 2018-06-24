@@ -1050,7 +1050,7 @@ def incidence_angle(atr, dem=None, dimension=2, print_msg=True):
         print('far    incidence angle : {:.4f} degree'.format(inc_angle_f))
 
     if dimension == 0:
-        inc_angle = np.array((inc_angle_n+inc_angle_f)/2.0, np.float32)
+        inc_angle = (inc_angle_n + inc_angle_f) / 2.0
         if print_msg:
             print('center incidence angle : {:.4f} degree'.format(inc_angle))
 
