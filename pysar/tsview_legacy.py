@@ -294,11 +294,9 @@ def main(iargs=None):
         print('No mask used.')
 
     # Initial Map
-    d_v = readfile.read(inps.timeseries_file, datasetName=dateList[inps.epoch_num])[
-        0] * inps.unit_fac
+    d_v = readfile.read(inps.timeseries_file, datasetName=dateList[inps.epoch_num])[0] * inps.unit_fac
     if inps.ref_date:
-        inps.ref_d_v = readfile.read(inps.timeseries_file, datasetName=inps.ref_date)[
-            0]*inps.unit_fac
+        inps.ref_d_v = readfile.read(inps.timeseries_file, datasetName=inps.ref_date)[0]*inps.unit_fac
         d_v -= inps.ref_d_v
     if mask is not None:
         d_v = mask_matrix(d_v, mask)
@@ -382,8 +380,7 @@ def main(iargs=None):
     # Axes 2 - Time Slider
     ax_time = fig_v.add_axes([0.125, 0.1, 0.6, 0.07],
                              facecolor='lightgoldenrodyellow', yticks=[])
-    tslider = Slider(
-        ax_time, 'Years', inps.yearList[0], inps.yearList[-1], valinit=inps.yearList[inps.epoch_num])
+    tslider = Slider(ax_time, 'Years', inps.yearList[0], inps.yearList[-1], valinit=inps.yearList[inps.epoch_num])
     tslider.ax.bar(inps.yearList, np.ones(len(inps.yearList)),
                    facecolor='black', width=0.01, ecolor=None)
     tslider.ax.set_xticks(np.round(np.linspace(
@@ -393,9 +390,12 @@ def main(iargs=None):
         """Update Displacement Map using Slider"""
         timein = tslider.val
         idx_nearest = np.argmin(np.abs(np.array(inps.yearList)-timein))
-        ax_v.set_title('N = %d, Time = %s' % (
-            idx_nearest, inps.dates[idx_nearest].strftime('%Y-%m-%d')))
-        d_v = h5[dateList[idx_nearest]][:]*inps.unit_fac
+        ax_v.set_title('N = {n}, Time = {t}'.format(n=idx_nearest,
+                                                    t=inps.dates[idx_nearest].strftime('%Y-%m-%d')))
+        d_v = readfile.read(inps.timeseries_file,
+                            datasetName=dateList[idx_nearest],
+                            print_msg=False)[0] * inps.unit_fac
+        #d_v = h5[dateList[idx_nearest]][:]*inps.unit_fac
         if inps.ref_date:
             d_v -= inps.ref_d_v
         if mask is not None:

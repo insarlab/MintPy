@@ -198,7 +198,7 @@ def read(fname, box=None, datasetName=None, print_msg=True):
         else:
             k0 = list(f.keys())[0]
             if isinstance(f[k0], h5py.Dataset):
-                if datasetName:
+                if datasetName and datasetName in f.keys():
                     dset = f[datasetName]
                 else:
                     dset = f[k0]

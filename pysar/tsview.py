@@ -15,6 +15,7 @@ import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pysar.objects import timeseries
 from pysar.utils import readfile, ptime, utils as ut, plot as pp
 from pysar.mask import mask_matrix
@@ -77,8 +78,8 @@ def create_parser():
                         help='DPI - dot per inch - for display/write')
 
     disp = parser.add_argument_group('Display Setting')
-    disp.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2, default=[10.0,5.0],\
-                      help='Figure size in inches - width and length. Default: 10.0 5.0\n'+\
+    disp.add_argument('--figsize', dest='fig_size', metavar=('WID','LEN'), type=float, nargs=2, default=[12.0,5.0],\
+                      help='Figure size in inches - width and length. Default: 12.0 5.0\n'+\
                            'i.e. 3.5 2 for ppt; ')
     disp.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN','YMAX'), type=float,\
                       help='Y limits for point plotting.')
@@ -100,8 +101,8 @@ def create_parser():
                            'Default: flip left-right for descending data in radar coord\n'+\
                            '         flip up-down    for ascending  data in radar coord\n'+\
                            '         no flip for data in geo coord')
-    disp.add_argument('--ms','--markersize', dest='marker_size', type=float, default=12.0,\
-                      help='Point marker size. Default: 12.0')
+    disp.add_argument('--ms','--markersize', dest='marker_size', type=float, default=8.0,\
+                      help='Point marker size. Default: 8.0')
     #disp.add_argument('--mc','--markercolor', dest='marker_color', default='crimson',\
     #                  help='Point marker color. Default: crimson')
     disp.add_argument('--ew','--edgewidth', dest='edge_width', type=float, default=1.0,\
@@ -246,7 +247,7 @@ def save_output():
         if inps.ref_yx:
             header_info += '\nreference pixel: y=%d, x=%d' % (inps.ref_yx[0], inps.ref_yx[1])
         else:
-            header_info += '\nreference pixel: y=%s, x=%s' % (atr['ref_y'], atr['ref_x'])
+            header_info += '\nreference pixel: y=%s, x=%s' % (atr['REF_Y'], atr['REF_X'])
 
         header_info += '\nunit=m/yr'
         np.savetxt(outName, list(zip(np.array(dateList), np.array(d_ts) / inps.unit_fac)), fmt='%s', \
@@ -255,14 +256,14 @@ def save_output():
 
 
         # Figure - point time series
-        outName = inps.fig_base + '_ts.pdf'
-        fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print(('save time series plot to ' + outName))
+        #outName = inps.fig_base + '_ts.pdf'
+        #fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+        #print(('save time series plot to ' + outName))
 
         # Figure - map
-        outName = inps.fig_base + '_' + dateList[inps.epoch_num] + '.png'
+        outName = '{}_ts.png'.format(inps.fig_base)   # , dateList[inps.epoch_num])
         fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-        print(('save map plot to ' + outName))
+        print(('save plot to ' + outName))
 
 
 
@@ -543,7 +544,7 @@ def set_map_reference_pixel():
         ax_v.plot(inps.ref_yx[1], inps.ref_yx[0], 'ks', ms=6)
     else:
         try:
-            ax_v.plot(int(atr['ref_x']), int(atr['ref_y']), 'ks', ms=6)
+            ax_v.plot(int(atr['REF_X']), int(atr['REF_Y']), 'ks', ms=6)
         except:
             pass
 
@@ -563,10 +564,12 @@ def set_plot_axis_params():
 
     # Title and Axis Label
     ax_v.set_title('N = %d, Time = %s' % (inps.epoch_num, inps.dates[inps.epoch_num].strftime('%Y-%m-%d')))
+    ax_v.yaxis.set_label_position("right")
+    ax_v.yaxis.tick_right()
 
-    if not 'Y_FIRST' in list(atr.keys()):
-        ax_v.set_xlabel('Range')
-        ax_v.set_ylabel('Azimuth')
+    #if not 'Y_FIRST' in list(atr.keys()):
+    #    ax_v.set_xlabel('Range')
+    #    ax_v.set_ylabel('Azimuth')
 
 
 '''
@@ -587,12 +590,15 @@ def flip_axis():
     Creates colorbar for figure
 '''
 def make_color_bar():
-    global fig_v, img, inps
-    # Colorbar
-    cbar_axes = fig_v.add_axes([0.065, 0.32, 0.40, 0.03])
-    cbar = fig_v.colorbar(img, cax=cbar_axes, orientation='horizontal')
+    global fig_v, ax_v, img, inps
+    #divider = make_axes_locatable(ax_v)
+    #cax = divider.append_axes("left", "3%", pad="3%")
+    cax = fig_v.add_axes([0.03, 0.4, 0.01, 0.4])
+    cbar = fig_v.colorbar(img, cax=cax, orientation='vertical')
+    #cbar = fig_v.colorbar(img, orientation='vertical')
     cbar.set_label('Displacement [%s]' % inps.disp_unit)
-
+    cbar.ax.yaxis.set_label_position('left')
+    cbar.ax.yaxis.tick_right()
 
 '''
     Creates timeseries slider for figure
@@ -600,7 +606,9 @@ def make_color_bar():
 def make_time_slider():
     global tslider, fig_v, tims, inps
 
-    ax_time = fig_v.add_axes([0.07, 0.10, 0.37, 0.07], facecolor='lightgoldenrodyellow', yticks=[])
+    #tdivider = make_axes_locatable(ax_v)
+    #ax_time = tdivider.append_axes("bottom", "10%", pad="50%")
+    ax_time = fig_v.add_axes([0.03, 0.10, 0.30, 0.07], facecolor='lightgoldenrodyellow', yticks=[])
     tslider = Slider(ax_time, '', tims[0], tims[-1], valinit=tims[inps.epoch_num])
     tslider.ax.bar(tims, np.ones(len(tims)), facecolor='black', width=0.01, ecolor=None)
     tslider.ax.set_xticks(np.round(np.linspace(tims[0], tims[-1], num=5) * 100) / 100)
@@ -702,10 +710,11 @@ def plot_timeseries_scatter(ax, dis_ts, inps, plot_num=1):
         # Plot excluded dates
         ax.scatter(inps.ex_dates, ex_d_ts, s=inps.marker_size ** 2, color='gray')  # color='crimson'
     # Plot kept dates
-    color = 'blue'
+    color = pp.mplColors[0]
     if plot_num == 2:
-        color = 'crimson'
-    print(('Color is ' + color))
+        #color = 'crimson'
+        color = pp.mplColors[1]
+    #print(('Color is ' + color))
     scatter = ax.scatter(dates, d_ts, s=inps.marker_size ** 2, label='1', color=color)
 
     return ax, scatter
@@ -751,7 +760,8 @@ def update_timeseries(y, x, plot_number, data_only=False):
         axis, scatter = plot_timeseries_scatter(axis, d_ts, inps, plot_number)
         scatter.set_label('2')
 
-    axis.set_ylim(inps.ylim_mat[0]*2, inps.ylim_mat[1]*2)
+    if inps.ylim:
+        axis.set_ylim(inps.ylim)
     for tick in axis.yaxis.get_major_ticks():
         tick.label.set_fontsize(inps.font_size)
 
@@ -881,7 +891,7 @@ def show_second_plot(event):
 
     global fig_v, second_plot_axis, second_plot_axis_visible
 
-    second_plot_axis = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
+    second_plot_axis = fig_v.add_axes([0.45, 0.18, 0.52, 0.3])
     second_plot_axis_visible = True
 
     fig_v.canvas.draw()
@@ -923,10 +933,14 @@ def show_figure(plot_number):
     # Set up new plot figure, window, and axes
     plot_figure = plt.figure("PLOT!!", figsize=(10, 5))
     new_axes = plot_figure.add_subplot(111)
-    new_axes.set_ylim(inps.ylim_mat[0]*2, inps.ylim_mat[1]*2)
+    new_axes.set_ylim(inps.ylim_mat[0], inps.ylim_mat[1])
 
     # Set annotations for new acis
-    annot = new_axes.annotate("", xy=(0, 0), xytext=(445, 10), textcoords="axes points", bbox=dict(boxstyle="round", fc="w"))
+    annot = new_axes.annotate("",
+                              xy=(0, 0),
+                              xytext=(445, 10),
+                              textcoords="axes points",
+                              bbox=dict(boxstyle="round", fc="w"))
     annot.set_visible(False)
 
     # Compute timeseries data
@@ -1090,13 +1104,13 @@ def main(iargs=None):
     fig_v = plt.figure('Cumulative Time-series Displacement', figsize=inps.fig_size)
 
     ######### Map Axis - Displacement Map Axis
-    ax_v = fig_v.add_axes([0.035, 0.42, 0.5, 0.5])
+    ax_v = fig_v.add_axes([0.08, 0.25, 0.25, 0.70])
 
     configure_plot()
 
     ########## Plot Axes - Time Series Displacement - Points
-    ax_ts = fig_v.add_axes([0.55, 0.62, 0.42, 0.3])
-    second_plot_axis = fig_v.add_axes([0.55, 0.18, 0.42, 0.3])
+    ax_ts = fig_v.add_axes([0.45, 0.62, 0.53, 0.3])
+    second_plot_axis = fig_v.add_axes([0.45, 0.18, 0.53, 0.3])
     second_plot_axis.remove()
 
     # Read Error List
