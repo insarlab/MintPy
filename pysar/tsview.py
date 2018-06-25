@@ -933,7 +933,7 @@ def show_figure(plot_number):
     # Set up new plot figure, window, and axes
     plot_figure = plt.figure("PLOT!!", figsize=(10, 5))
     new_axes = plot_figure.add_subplot(111)
-    new_axes.set_ylim(inps.ylim_mat[0], inps.ylim_mat[1])
+    #new_axes.set_ylim(inps.ylim)
 
     # Set annotations for new acis
     annot = new_axes.annotate("",

@@ -762,16 +762,16 @@ def read_coherence2weight(stack_obj, box, weight_func='fim'):
     weight = np.array(coh_data, np.float64)
     del coh_data
     L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
-    if weight_func == 'var':
+    if 'var' in weight_func:
         print('convert coherence to weight using inverse of phase variance')
         print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
         weight = 1.0 / coherence2phase_variance_ds(weight, L, print_msg=True)
 
-    elif weight_func == 'coh':
+    elif any(i in weight_func for i in ['coh', 'lin']):
         print('use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)')
         weight[weight < epsilon] = epsilon
 
-    elif weight_func == 'fim':
+    elif any(i in weight_func for i in ['fim', 'fisher']):
         print('convert coherence to weight using Fisher Information Index (Seymour & Cumming, 1994)')
         weight = coherence2fisher_info_index(weight, L)
 
@@ -898,7 +898,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None,
         return ts, temp_coh, ts_std, num_inv_ifgram
 
     # Inversion - SBAS
-    if weight_func == 'no':
+    if weight_func in ['no', 'sbas']:
         # Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
         mask_all_net = np.all(pha_data, axis=0)
         mask_all_net *= mask
