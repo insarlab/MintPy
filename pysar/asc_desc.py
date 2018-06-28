@@ -86,7 +86,7 @@ def main(iargs=None):
     atr1 = readfile.read_attribute(inps.file[0])
     atr2 = readfile.read_attribute(inps.file[1])
     if any('X_FIRST' not in i for i in [atr1, atr2]):
-        sys.exit('ERROR: Not all input files are geocoded.')
+        raise Exception('ERROR: Not all input files are geocoded.')
 
     k1 = atr1['FILE_TYPE']
     print('Input 1st file is '+k1)

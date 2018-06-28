@@ -145,7 +145,6 @@ def estimate_phase_elevation_ratio(dem, ts_data, inps):
         plt.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
         print('save to {}'.format(out_file))
         #plt.show()
-        #sys.exit(0)
 
     print('----------------------------------------------------------')
     print('Empirical tropospheric delay correction based on phase/elevation ratio (Doin et al., 2009)')

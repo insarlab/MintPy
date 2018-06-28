@@ -56,8 +56,7 @@ def diff_file(file1, file2, outFile=None, force=False):
 
     if k1 == 'timeseries':
         if k2 != 'timeseries':
-            print('ERROR: input multiple dataset files are not the same file type!')
-            sys.exit(1)
+            raise Exception('Input multiple dataset files are not the same file type!')
 
         obj1 = timeseries(file1)
         obj1.open()

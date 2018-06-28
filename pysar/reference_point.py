@@ -173,13 +173,10 @@ def reference_file(inps):
     stack = ut.temporal_average(inps.file, updateMode=True)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
-        print('\n'+'*'*40)
-        print('ERROR: no pixel found with valid phase value in all datasets.')
-        print('Seeding failed')
-        print('*'*40+'\n')
-        sys.exit(1)
+        raise ValueError('no pixel found with valid phase value in all datasets.')
+
     if inps.ref_y and inps.ref_x and mask[inps.ref_y, inps.ref_x] == 0.:
-        raise ValueError('ERROR: reference y/x have nan value in some dataset. Please re-select.')
+        raise ValueError('reference y/x have nan value in some dataset. Please re-select.')
 
     # Find reference y/x
     if not inps.ref_y or not inps.ref_x:

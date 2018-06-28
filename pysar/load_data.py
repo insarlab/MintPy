@@ -368,7 +368,6 @@ def read_inps_dict2geometry_dict_object(inpsDict):
     dsName0 = geometryDatasetNames[0]
     if dsName0 not in dsPathDict.keys():
         print('WARNING: No reqired {} data files found!'.format(dsName0))
-        # sys.exit(1)
 
     # metadata
     ifgramRadarMetadata = None

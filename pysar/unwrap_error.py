@@ -71,7 +71,7 @@ def unwrap_error_correction_phase_closure(ifgram_file, mask_file, ifgram_cor_fil
         ref_x = int(atr['REF_X'])
         print('reference pixel in y/x: %d/%d' % (ref_y, ref_x))
     except:
-        sys.exit('ERROR: Can not find ref_y/x value, input file is not referenced in space!')
+        raise ValueError('Can not find ref_y/x value, input file is not referenced in space!')
 
     h5 = h5py.File(ifgram_file, 'r')
     ifgram_list = sorted(h5[k].keys())
@@ -210,9 +210,8 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
     # Check
     for i in range(len(x_list)):
         if mask[y_list[i], x_list[i]] == 0:
-            print('\nERROR: Connecting point (%d,%d) is out of masked area! Select them again!\n' % (y_list[i],
-                                                                                                     x_list[i]))
-            sys.exit(1)
+            raise ValueError(('Connecting point (%d,%d) is out of masked area!'
+                              ' Select them again!\n' % (y_list[i], x_list[i])))
     print('Number of bridges: '+str(len(x_list)/2))
     print('Bonding points coordinates:\nx: '+str(x_list)+'\ny: '+str(y_list))
 
@@ -252,7 +251,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
         ref_x = int(atr['REF_X'])
         print('reference pixel in y/x: %d/%d' % (ref_y, ref_x))
     except:
-        sys.exit('ERROR: Can not find ref_y/x value, input file is not referenced in space!')
+        raise ValueError('Can not find ref_y/x value, input file is not referenced in space!')
 
     # output file name
     if not ifgram_cor_file:
@@ -329,7 +328,7 @@ def unwrap_error_correction_bridging(ifgram_file, mask_file, y_list, x_list, ram
                                                      metadata=atr)
 
     else:
-        sys.exit('Un-supported file type: '+ext)
+        raise Exception('Un-supported file type: '+ext)
 
     return ifgram_cor_file, ifgram_cor_deramp_file
 

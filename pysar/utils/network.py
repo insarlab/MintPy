@@ -84,34 +84,6 @@ def write_pairs_list(pairs, dateList, outName):
     return 1
 
 
-def read_igram_pairs(igramFile):
-    """Read pairs index from hdf5 file"""
-    # Read Igram file
-    h5file = h5py.File(igramFile, 'r')
-    k = list(h5file.keys())
-    if 'interferograms' in k:
-        k[0] = 'interferograms'
-    elif 'coherence' in k:
-        k[0] = 'coherence'
-    if k[0] not in ['interferograms', 'coherence', 'wrapped']:
-        print('Only interferograms / coherence / wrapped are supported.')
-        sys.exit(1)
-
-    dateList = ptime.ifgram_date_list(igramFile)
-    dateList6 = ptime.yymmdd(dateList)
-
-    pairs = []
-    igramList = list(h5file[k[0]].keys())
-    for igram in igramList:
-        date12 = h5file[k[0]][igram].attrs['DATE12'].split('-')
-        pairs.append([dateList6.index(date12[0]), dateList6.index(date12[1])])
-    h5file.close()
-
-    pairs = pair_sort(pairs)
-
-    return pairs
-
-
 def read_baseline_file(baselineFile, exDateList=[]):
     """Read bl_list.txt without dates listed in exDateList
     # Date  Bperp    dop0/PRF  dop1/PRF   dop2/PRF      PRF    slcDir

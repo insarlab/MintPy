@@ -34,7 +34,7 @@ def correct_local_oscilator_drift(fname, rg_dist_file=None, out_file=None):
     print('platform: '+platform)
     if not platform.lower() in ['env', 'envisat']:
         print('No need to correct LOD for '+platform)
-        sys.exit(1)
+        return
 
     # output file name
     if not out_file:

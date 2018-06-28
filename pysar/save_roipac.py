@@ -138,7 +138,8 @@ def read_data(inps):
         if not inps.outfile:
             inps.outfile = '{}{}'.format(os.path.splitext(inps.file)[0], atr['FILE_TYPE'])
 
-    atr['PROCESSOR'] = 'roipac'
+    if not atr['PROCESSOR'] or atr['PROCESSOR'] == 'pysar':
+        atr['PROCESSOR'] = 'roipac'
     return data, atr, inps.outfile
 
 

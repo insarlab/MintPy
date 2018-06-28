@@ -711,17 +711,15 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
 
 def check_input_file_info(inps):
     # File Baic Info
-    if not os.path.isfile(inps.file):
-        raise SystemExit('input file does not exists: {}'.format(inps.file))
-    else:
-        try:
-            atr = readfile.read_attribute(inps.file)
-        except:
-            raise Exception('can not read attribute of input file: {}'.format(inps.file))
+    atr = readfile.read_attribute(inps.file)
     print('\n******************** Display ********************')
-    print('input file is {} {}: {}'.format(atr['PROCESSOR'],
-                                           atr['FILE_TYPE'],
-                                           inps.file))
+    msg = 'input file is '
+    if not inps.file.endswith(('.h5', '.he5')):
+        msg += '{} '.format(atr['PROCESSOR'])
+    msg += '{} file: {}'.format(atr['FILE_TYPE'], inps.file)
+    if 'DATA_TYPE' in atr.keys():
+        msg += ' in {} format'.format(atr['DATA_TYPE'])
+    print(msg)
 
     ## size and name
     inps.length = int(atr['LENGTH'])

@@ -14,6 +14,7 @@ import h5py
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
 from matplotlib.widgets import Slider, Button
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pysar.objects import timeseries
@@ -606,12 +607,18 @@ def make_color_bar():
 def make_time_slider():
     global tslider, fig_v, tims, inps
 
-    #tdivider = make_axes_locatable(ax_v)
-    #ax_time = tdivider.append_axes("bottom", "10%", pad="50%")
     ax_time = fig_v.add_axes([0.03, 0.10, 0.30, 0.07], facecolor='lightgoldenrodyellow', yticks=[])
     tslider = Slider(ax_time, '', tims[0], tims[-1], valinit=tims[inps.epoch_num])
     tslider.ax.bar(tims, np.ones(len(tims)), facecolor='black', width=0.01, ecolor=None)
-    tslider.ax.set_xticks(np.round(np.linspace(tims[0], tims[-1], num=5) * 100) / 100)
+
+    # xaxis tick format
+    if np.floor(tims[-1]) == np.floor(tims[0]):
+        digit = 10.
+    else:
+        digit = 1.
+    tslider.ax.set_xticks(np.round(np.linspace(tims[0], tims[-1], num=5) * digit) / digit)
+    tslider.ax.xaxis.set_minor_locator(MultipleLocator(1./12.))
+
     tslider.on_changed(time_slider_update)
 
 

@@ -7,6 +7,7 @@
 #   from pysar.utils import ptime
 
 
+import os
 import sys
 import re
 import time
@@ -27,8 +28,7 @@ def yyyymmdd2years(dates):
             d = dt(*time.strptime(date, "%Y%m%d")[0:5])
             yy.append(float(d.year)+float(d.timetuple().tm_yday-1)/365.25)
     else:
-        print('Unrecognized date format. Only string and list supported.')
-        sys.exit(1)
+        raise ValueError('Unrecognized date format. Only string and list supported.')
     return yy
 
 
@@ -266,15 +266,17 @@ class progressBar:
         prog_bar.close()
     """
 
-    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=80):
+    def __init__(self, maxValue=100, prefix='', minValue=0):
         self.prog_bar = "[]"  # This holds the progress bar string
         self.min = minValue
         self.max = maxValue
         self.span = maxValue - minValue
-        self.width = totalWidth
         self.suffix = ''
         self.prefix = prefix
         self.reset()
+        # calculate total width based on console width
+        rows, columns = os.popen('stty size', 'r').read().split()
+        self.width = round(columns * 0.8 / 10) * 10
 
     def reset(self):
         self.start_time = time.time()

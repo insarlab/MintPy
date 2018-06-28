@@ -106,13 +106,13 @@ def check_box_within_data_coverage(pixel_box, metadata):
     sub_y = [pixel_box[1], pixel_box[3]]
 
     if sub_y[0] >= length or sub_y[1] <= 0 or sub_x[0] >= width or sub_x[1] <= 0:
-        print('ERROR: input index is out of data range!')
         data_box = (0, 0, width, length)
-        print('\tdata   range in x/y: '+str(data_box))
-        print('\tsubset range in x/y: '+str(pixel_box))
-        print('\tdata   range in lat/lon: '+str(box_pixel2geo(data_box, metadata)))
-        print('\tsubset range in lat/lon: '+str(box_pixel2geo(pixel_box, metadata)))
-        sys.exit(1)
+        msg = 'ERROR: input index is out of data range!\n'
+        msg += '\tdata   range in x/y: {}\n'.format(data_box)
+        msg += '\tsubset range in x/y: {}\n'.format(pixel_box)
+        msg += '\tdata   range in lat/lon: {}\n'.format(box_pixel2geo(data_box, metadata))
+        msg += '\tsubset range in lat/lon: {}\n'.format(box_pixel2geo(pixel_box, metadata))
+        raise ValueError(msg)
 
     # Check Y/Azimuth/Latitude subset range
     if sub_y[0] < 0:
@@ -281,10 +281,10 @@ def get_box_overlap_index(box1, box2):
     x1 = min(box1[2], box2[2])
     y1 = min(box1[3], box2[3])
     if x0 >= x1 or y0 >= y1:
-        print('ERROR: No overlap between two input box range!')
-        print('box 1: '+str(box1))
-        print('box 2: '+str(box2))
-        sys.exit(1)
+        msg = 'No overlap between two input box range!\n'
+        msg += 'box 1: {}\n'.format(box1)
+        msg += 'box 2: {}\n'.format(box2)
+        raise ValueError(msg)
     overlap_box = (x0, y0, x1, y1)
 
     # Overlap index for box1

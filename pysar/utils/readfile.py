@@ -250,7 +250,7 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             elif datasetName.startswith(('az', 'head')):
                 return azAngle, atr
             else:
-                sys.exit('Un-recognized datasetName input: '+datasetName)
+                raise Exception('Un-recognized datasetName input: '+datasetName)
 
         elif atr['DATA_TYPE'].lower() in ['float64', 'double']:
             data, atr = read_real_float64(fname, box=box)
@@ -268,8 +268,8 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             data, atr = read_bool(fname, box=box)
             return data, atr
         else:
-            sys.exit('Un-supported {} file format: {}'.format(processor,
-                                                              os.path.basename(fname)))
+            raise Exception('Un-recognized {} file: {}'.format(processor,
+                                                               os.path.basename(fname)))
 
     # ROI_PAC
     elif processor in ['roipac']:
@@ -306,7 +306,10 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             elif datasetName.startswith(('az', 'azimuth')):
                 return az, atr
             else:
-                sys.exit('Un-recognized datasetName input: '+datasetName)
+                raise Exception('Un-recognized datasetName input: '+datasetName)
+        else:
+            raise Exception('Un-recognized {} file: {}'.format(processor,
+                                                               os.path.basename(fname)))
 
     # Gamma
     elif processor == 'gamma':
@@ -324,7 +327,7 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             elif datasetName.startswith(('az', 'azimuth')):
                 return data.imag, atr
             else:
-                sys.exit('Un-recognized datasetName input: '+datasetName)
+                raise Exception('Un-recognized datasetName input: '+datasetName)
 
         elif ext in ['.int']:
             data, atr = read_complex_float32(fname, box=box, byte_order='ieee-be',
@@ -344,9 +347,10 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             return amp, atr
 
         else:
-            sys.exit('Un-supported '+processor+' for file format: '+ext)
+            raise Exception('Un-recognized {} file: {}'.format(processor,
+                                                               os.path.basename(fname)))
     else:
-        sys.exit('Unrecognized file format: '+ext)
+        raise Exception('Unrecognized file format: '+ext)
 
 
 def get_dataset_list(fname, datasetName=None):
@@ -454,9 +458,9 @@ def read_attribute(fname, datasetName=None, standardize=True):
     """
     ext = os.path.splitext(fname)[1].lower()
     if not os.path.isfile(fname):
-        print('input file not existed: '+fname)
-        print('current directory: '+os.getcwd())
-        sys.exit(1)
+        msg = 'input file not existed: {}\n'.format(fname)
+        msg += 'current directory: '+os.getcwd()
+        raise Exception(msg)
 
     # HDF5 files
     if ext in ['.h5', '.he5']:
@@ -496,6 +500,23 @@ def read_attribute(fname, datasetName=None, standardize=True):
             k = list(f.keys())[0]
         atr['FILE_TYPE'] = str(k)
 
+        # DATA_TYPE
+        k0 = list(f.keys())[0]
+        if isinstance(f[k0], h5py.Dataset):
+            if datasetName and datasetName in f.keys():
+                dset = f[datasetName]
+            else:
+                dset = f[k0]
+        else:
+            # support for old pysar format
+            k1 = list(f[k0].keys())[0]
+            if isinstance(f[k0][k1], h5py.Dataset):
+                if datasetName:
+                    dset = f[k0][datasetName]
+                else:
+                    dset = f[k0][k1]
+        atr['DATA_TYPE'] = str(dset.dtype)
+
         # PROCESSOR
         if 'INSAR_PROCESSOR' in atr.keys():
             atr['PROCESSOR'] = atr['INSAR_PROCESSOR']
@@ -521,7 +542,7 @@ def read_attribute(fname, datasetName=None, standardize=True):
             atr = attribute_envi2roipac(atr)
             atr['FILE_TYPE'] = atr['file type']
         else:
-            sys.exit('Unrecognized file extension: '+ext)
+            raise Exception('Unrecognized file extension: '+ext)
 
         # Get PROCESSOR
         if os.path.isfile(fname+'.xml'):
@@ -917,6 +938,8 @@ def read_float32(fname, box=None, byte_order='l'):
     """
 
     atr = read_attribute(fname)
+    if 'DATA_TYPE' not in atr.keys():
+        atr['DATA_TYPE'] = 'rmg'
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
     if not box:
@@ -941,6 +964,8 @@ def read_real_float64(fname, box=None, byte_order='l'):
     """Read real float64/double data matrix, i.e. isce lat/lon.rdr
     """
     atr = read_attribute(fname)
+    if 'DATA_TYPE' not in atr.keys():
+        atr['DATA_TYPE'] = 'float64'
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
     if not box:
@@ -985,6 +1010,8 @@ def read_complex_float32(fname, box=None, byte_order='l', band='phase'):
     """
 
     atr = read_attribute(fname)
+    if 'DATA_TYPE' not in atr.keys():
+        atr['DATA_TYPE'] = 'complex64'
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
     if not box:
@@ -1024,6 +1051,8 @@ def read_real_float32(fname, box=None, byte_order='l'):
            data, atr = read_real_float32('diff_filt_130118-130129_4rlks.unw')
     """
     atr = read_attribute(fname)
+    if 'DATA_TYPE' not in atr.keys():
+        atr['DATA_TYPE'] = 'float32'
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
     if not box:
@@ -1055,6 +1084,8 @@ def read_complex_int16(fname, box=None, byte_order='l', cpx=False):
     """
 
     atr = read_attribute(fname)
+    if 'DATA_TYPE' not in atr.keys():
+        atr['DATA_TYPE'] = 'complex32'
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
     if not box:
@@ -1086,6 +1117,8 @@ def read_complex_int16(fname, box=None, byte_order='l', cpx=False):
 
 def read_real_int16(fname, box=None, byte_order='l'):
     atr = read_attribute(fname)
+    if 'DATA_TYPE' not in atr.keys():
+        atr['DATA_TYPE'] = 'int16'
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
     if not box:
@@ -1113,6 +1146,8 @@ def read_bool(fname, box=None):
     else:
         rscFile = fname+'.rsc'
     atr = read_attribute(rscFile.split('.rsc')[0])
+    if 'DATA_TYPE' not in atr.keys():
+        atr['DATA_TYPE'] = 'bool'
     width = int(float(atr['WIDTH']))
     length = int(float(atr['LENGTH']))
     if not box:

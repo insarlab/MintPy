@@ -103,7 +103,7 @@ def _check_inps(inps):
 
     inps.lookupFile = ut.get_lookup_file(inps.lookupFile)
     if not inps.lookupFile:
-        sys.exit('ERROR: No lookup table found! Can not geocode without it.')
+        raise FileNotFoundError('No lookup table found! Can not geocode without it.')
 
     if inps.SNWE:
         inps.SNWE = tuple(inps.SNWE)

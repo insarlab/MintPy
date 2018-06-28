@@ -425,9 +425,9 @@ def main(iargs=None):
     if all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax,
                            inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
                            inps.startDate, inps.endDate, inps.reset, inps.manual]):
-        print('No input option found to remove interferogram, exit.')
-        print('To manually modify network, please use --manual option ')
-        sys.exit(1)
+        msg = 'No input option found to remove interferogram, exit.\n'
+        msg += 'To manually modify network, please use --manual option '
+        raise Exception(msg)
 
     if inps.reset:
         print('--------------------------------------------------')

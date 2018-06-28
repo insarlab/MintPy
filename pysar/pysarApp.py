@@ -99,21 +99,23 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 
 ## 2.2 Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
+## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
+## weighting options for least square inversion:
+## 1) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
+## 2) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
+## 3) coh - use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
+## 4) no  - uniform weight
 ## mask options for unwrapPhase of each interferogram before inversion:
 ## 1) coherence        - mask out pixels with spatial coherence < maskThreshold [Recommended]
 ## 2) connectComponent - mask out pixels with False/0 value
 ## 3) no               - no masking.
-## weighting options for least square inversion:
-## 1) fim - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
-## 2) var - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
-## 3) coh - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
-## 4) no  - LS/SVD, uniform weight (Berardino et al., 2002, TGRS)
 ## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
-pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
+## SBAS (Berardino et al., 2002) = minNormVelocity (yes) + weightFunc (no)
 pysar.networkInversion.weightFunc      = auto #[fim / var / coh / no], auto for fim
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
 pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
+pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for no, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min number of pixels in mask above

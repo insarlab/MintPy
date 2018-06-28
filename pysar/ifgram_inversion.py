@@ -34,21 +34,22 @@ EXAMPLE = """example:
 
 TEMPLATE = """
 ## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
+## weighting options for least square inversion:
+## 1) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
+## 2) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
+## 3) coh - use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
+## 4) no  - uniform weight
 ## mask options for unwrapPhase of each interferogram before inversion:
 ## 1) coherence        - mask out pixels with spatial coherence < maskThreshold [Recommended]
 ## 2) connectComponent - mask out pixels with False/0 value
 ## 3) no               - no masking.
-## weighting options for least square inversion:
-## 1) fim - WLS, use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
-## 2) var - WLS, use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
-## 3) coh - WLS, use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
-## 4) no  - LS/SVD, uniform weight (Berardino et al., 2002, TGRS)
 ## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
-pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
+## SBAS (Berardino et al., 2002) = minNormVelocity (yes) + weightFunc (no)
 pysar.networkInversion.weightFunc      = auto #[fim / var / coh / no], auto for fim
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
 pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
+pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for no, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
 pysar.networkInversion.minTempCoh      = auto #[0.0-1.0], auto for 0.7, min temporal coherence for mask
 pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min number of pixels in mask above
@@ -95,9 +96,9 @@ def create_parser():
                         'var - inverse of phase variance due to temporal decorrelation\n' +
                         'coh - spatial coherence\n' +
                         'no  - no/uniform weight')
-    parser.add_argument('--min-norm-phase', dest='minNormVelocity', action='store_false',
-                        help=('Resolving inversion with minimum-norm deformation phase,'
-                              ' instead of minimum-norm deformation velocity'))
+    parser.add_argument('--min-norm-velocity', dest='minNormVelocity', action='store_true',
+                        help=('Enable inversion with minimum-norm deformation velocity,'
+                              ' instead of minimum-norm deformation phase'))
     parser.add_argument('--norm', dest='residualNorm', default='L2', choices=['L1', 'L2'],
                         help='Inverse method used to residual optimization, L1 or L2 norm minimization. Default: L2')
 
@@ -152,7 +153,7 @@ def read_template2inps(template_file, inps):
 
 
 ################################################################################################
-def phase_pdf_ds(l, coherence=None, phi_num=1000):
+def phase_pdf_ds(l, coherence=None, phi_num=1000, epsilon=1e-3):
     """Marginal PDF of interferometric phase for distributed scatterers (DS)
     Eq. 66 (Tough et al., 1995) and Eq. 4.2.23 (Hanssen, 2001)
     Inputs:
@@ -167,7 +168,6 @@ def phase_pdf_ds(l, coherence=None, phi_num=1000):
         coh = np.linspace(0., 1-epsilon, 1000)
         pdf, coh = phase_pdf_ds(1, coherence=coh)
     """
-    epsilon = 1e-4
     if coherence is None:
         coherence = np.linspace(0., 1.-epsilon, 1000)
     coherence = np.array(coherence, np.float64).reshape(1, -1)
@@ -206,7 +206,7 @@ def phase_pdf_ds(l, coherence=None, phi_num=1000):
     return pdf, coherence.flatten()
 
 
-def phase_variance_ds(l,  coherence=None):
+def phase_variance_ds(l,  coherence=None, epsilon=1e-3):
     """Interferometric phase variance for distributed scatterers (DS)
     Eq. 2.1.2 (Box et al., 2015) and Eq. 4.2.27 (Hanssen, 2001)
     Inputs:
@@ -221,7 +221,6 @@ def phase_variance_ds(l,  coherence=None):
         coh = np.linspace(0., 1-epsilon, 1000)
         var, coh = phase_variance_ds(1, coherence=coh)
     """
-    epsilon = 1e-4
     if coherence is None:
         coherence = np.linspace(0., 1.-epsilon, 1000, dtype=np.float64)
     phiNum = len(coherence)
@@ -234,19 +233,18 @@ def phase_variance_ds(l,  coherence=None):
     return var, coherence
 
 
-def phase_variance_ps(L, coherence=None):
+def phase_variance_ps(L, coherence=None, epsilon=1e-3):
     """the Cramer-Rao bound (CRB) of phase variance
     Given by Eq. 25 (Rodriguez and Martin, 1992)and Eq 4.2.32 (Hanssen, 2001)
     Valid when coherence is close to 1.
     """
-    epsilon = 1e-4
     if coherence is None:
         coherence = np.linspace(0.9, 1.-epsilon, 1000, dtype=np.float64)
     var = (1-coherence**2) / (2*L*coherence**2)
     return var, coherence
 
 
-def coherence2phase_variance_ds(coherence, L=32, print_msg=False):
+def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
     """Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)"""
     lineStr = '    number of multilooks L=%d' % L
     if L > 80:
@@ -255,9 +253,8 @@ def coherence2phase_variance_ds(coherence, L=32, print_msg=False):
     if print_msg:
         print(lineStr)
 
-    epsilon = 1e-4
     coh_num = 1000
-    coh_min = 0.0
+    coh_min = 0.0 + epsilon
     coh_max = 1.0 - epsilon
     coh_lut = np.linspace(coh_min, coh_max, coh_num)
     coh_min = np.min(coh_lut)
@@ -274,7 +271,7 @@ def coherence2phase_variance_ds(coherence, L=32, print_msg=False):
     return variance
 
 
-def coherence2fisher_info_index(data, L=32, epsilon=1e-4):
+def coherence2fisher_info_index(data, L=32, epsilon=1e-3):
     """Convert coherence to Fisher information index (Seymour & Cumming, 1994, IGARSS)"""
     if data.dtype != np.float64:
         data = np.array(data, np.float64)
@@ -352,10 +349,16 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight=None,
         try:
             # weighted least square inversion (WLS)
             if weight is not None:
-                inv(np.dot(B.T, B))   # check matrix singularity
+                inv(np.dot(A.T, A))   # check matrix singularity
+
                 W = np.diag(weight.flatten())
                 BTW = np.dot(B.T, W)
                 B_inv = np.dot(inv(np.dot(BTW, B)), BTW)
+
+                # if solution matrix has nan/inf value, return zero
+                if np.isnan(B_inv).any() or np.isinf(B_inv).any():
+                    return ts, temp_coh, num_inv_ifg
+
                 # Note for Generalized SVD (Yunjun, 2018-06-09)
                 # weight can be used as the constain for the left singular vectors (num_ifgram, num_ifgram)
                 # while weight for the right singular vectors is missing (num_date-1, num_date-1)
@@ -385,6 +388,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight=None,
             num_inv_ifg = B.shape[0]
             ifgram_diff = ifgram - np.dot(B, ts_rate)
             temp_coh = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_inv_ifg
+
         except LinAlgError:
             pass
 
@@ -397,6 +401,10 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight=None,
                 W = np.diag(weight.flatten())
                 ATW = np.dot(A.T, W)
                 A_inv = np.dot(inv(np.dot(ATW, A)), ATW)
+
+                # if solution matrix has nan/inf value, return zero
+                if np.isnan(A_inv).any() or np.isinf(A_inv).any():
+                    return ts, temp_coh, num_inv_ifg
 
             # generalized ordinary least square inversion (SVD / LS) [Not recommended]
             else:
@@ -637,25 +645,14 @@ def split_into_boxes(ifgram_file, chunk_size=100e6, print_msg=True):
     return box_list
 
 
-def check_design_matrix(ifgram_file, weight_func='fim', min_norm_velocity=True):
+def check_design_matrix(ifgram_file, weight_func='fim'):
     """Check Rank of Design matrix for weighted inversion"""
     A = ifgramStack(ifgram_file).get_design_matrix(dropIfgram=True)[0]
-    print('-------------------------------------------------------------------------------')
-    if min_norm_velocity:
-        suffix = 'min-norm deformation velocity'
-    else:
-        suffix = 'min-norm deformation phase'
-
     if weight_func == 'no':
-        print('generic least square inversion with '+suffix)
-        print('    based on Berardino et al. (2002, IEEE-TGRS)')
-        print('    OLS for pixels with full rank      network')
-        print('    SVD for pixels with rank deficient network')
         if matrix_rank(A) < A.shape[1]:
             print('WARNING: singular design matrix! Inversion result can be biased!')
             print('continue using its SVD solution on all pixels')
     else:
-        print('weighted least square (WLS) inversion with '+suffix)
         if matrix_rank(A) < A.shape[1]:
             print('ERROR: singular design matrix!')
             print('    Input network of interferograms is not fully connected!')
@@ -665,7 +662,6 @@ def check_design_matrix(ifgram_file, weight_func='fim', min_norm_velocity=True):
             print('       a.k.a., no multiple subsets nor network islands')
             print("    2) Use '-w no' option for non-weighted SVD solution.")
             raise Exception()
-    print('-------------------------------------------------------------------------------')
     return A
 
 
@@ -748,8 +744,7 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
     return pha_data
 
 
-def read_coherence2weight(stack_obj, box, weight_func='fim'):
-    epsilon = 1e-4
+def read_coherence2weight(stack_obj, box, weight_func='fim', epsilon=5e-2):
     num_ifgram = np.sum(stack_obj.dropIfgram)
     print('reading coherence in {} * {} ...'.format(box, num_ifgram))
     coh_data = stack_obj.read(datasetName='coherence',
@@ -757,6 +752,7 @@ def read_coherence2weight(stack_obj, box, weight_func='fim'):
                               dropIfgram=True,
                               print_msg=False).reshape(num_ifgram, -1)
     coh_data[np.isnan(coh_data)] = epsilon
+    coh_data[coh_data < epsilon] = epsilon
 
     # Calculate Weight matrix
     weight = np.array(coh_data, np.float64)
@@ -769,7 +765,6 @@ def read_coherence2weight(stack_obj, box, weight_func='fim'):
 
     elif any(i in weight_func for i in ['coh', 'lin']):
         print('use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)')
-        weight[weight < epsilon] = epsilon
 
     elif any(i in weight_func for i in ['fim', 'fisher']):
         print('convert coherence to weight using Fisher Information Index (Seymour & Cumming, 1994)')
@@ -941,7 +936,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None,
 
     # Inversion - WLS
     else:
-        weight = read_coherence2weight(stack_obj, box=box, weight_func=weight_func)
+        weight = read_coherence2weight(stack_obj,
+                                       box=box,
+                                       weight_func=weight_func,
+                                       epsilon=5e-2)
 
         # Weighted Inversion pixel by pixel
         print('inverting network of interferograms into time series ...')
@@ -1002,8 +1000,30 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     if inps.update_mode and not ut.update_file(inps.timeseriesFile, ifgram_file):
         return inps.timeseriesFile, inps.tempCohFile
 
-    A = check_design_matrix(ifgram_file, weight_func=inps.weightFunc, min_norm_velocity=inps.minNormVelocity)
+    A = check_design_matrix(ifgram_file, weight_func=inps.weightFunc)
     num_date = A.shape[1] + 1
+
+    # print key setup info
+    print('-------------------------------------------------------------------------------')
+    if inps.minNormVelocity:
+        suffix = 'min-norm deformation velocity'
+    else:
+        suffix = 'min-norm deformation phase'
+    if inps.weightFunc == 'no':
+        print('generic least square inversion with '+suffix)
+        print('    based on Berardino et al. (2002, IEEE-TGRS)')
+        print('    OLS for pixels with full rank      network')
+        print('    SVD for pixels with rank deficient network')
+    else:
+        print('weighted least square (WLS) inversion with '+suffix)
+    print('weight function: {}'.format(inps.weightFunc))
+    if inps.maskDataset:
+        msg = 'mask out pixels in each interferogram with'
+        if inps.maskDataset == 'coherence':
+            print('{} {} < {}'.format(msg, inps.maskDataset, inps.maskThreshold))
+        else:
+            print('{} {} == 0'.format(msg, inps.maskDataset))
+    print('-------------------------------------------------------------------------------')
 
     # split ifgram_file into blocks to save memory
     box_list = split_into_boxes(ifgram_file, chunk_size=inps.chunk_size)
@@ -1085,8 +1105,7 @@ def main(iargs=None):
     # Input file info
     atr = readfile.read_attribute(inps.ifgramStackFile)
     if atr['FILE_TYPE'] != 'ifgramStack':
-        print('ERROR: only ifgramStack file supported, input is {} file!'.format(atr['FILE_TYPE']))
-        sys.exit(1)
+        raise ValueError('input is {} file, only support ifgramStack file.'.format(atr['FILE_TYPE']))
 
     # Network Inversion
     if inps.residualNorm == 'L2':

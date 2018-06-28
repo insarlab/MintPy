@@ -133,8 +133,7 @@ def check_inputs(inps):
                                                            inps.trop_model)
         else:
             parser.print_usage()
-            print('ERROR: no input for hour')
-            sys.exit(1)
+            raise Exception('no input for hour')
     print('time of cloest available product: {}:00 UTC'.format(inps.hour))
 
     # date list

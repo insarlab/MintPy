@@ -29,6 +29,19 @@ from pysar.objects import (geometryDatasetNames,
 
 
 ###############################################################################
+def enu2los(e, n, u, heading_angle=-168., inc_angle=34.):
+    """
+    For AlosA: heading_angle = -12.873,  inc_angle = 34
+    For AlosD: heading_angle = -167.157, inc_angle = 34
+    For SenD: heading_angle = -168 # -1 * (360 - los[1] - 90),
+        # because it's defined anti-clockwise as positive
+    """
+    v_los = (-1 * e * np.cos(heading_angle / 180. * np.pi)
+             + n * np.sin(heading_angle / 180. * np.pi)
+             + u * np.cos(inc_angle / 180. * np.pi))
+    return v_los
+
+
 def yes_or_no(question):
     """garrettdreyfus on Github: https://gist.github.com/garrettdreyfus/8153571"""
     reply = str(input(question+' (y/n): ')).lower().strip()
@@ -295,7 +308,7 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
 def get_geometry_file(dset, coordType=None, filePattern=None, abspath=False, print_msg=True):
     """Find geometry file containing input specific dataset"""
     if dset not in geometryDatasetNames:
-        sys.exit('Unrecognized geometry dataset name: %s' % (dset))
+        raise ValueError('Unrecognized geometry dataset name: %s' % (dset))
 
     # Search Existing Files
     if not filePattern:
@@ -1905,11 +1918,8 @@ def timeseries_inversion_L1(h5flat, h5timeseries):
     try:
         from .l1 import l1
         from cvxopt import normal, matrix
-    except:
-        print('-----------------------------------------------------------------------')
-        print('cvxopt should be installed to be able to use the L1 norm minimization.')
-        print('-----------------------------------------------------------------------')
-        sys.exit(1)
+    except ImportError:
+        raise ImportError('cvxopt should be installed to be able to use the L1 norm minimization.')
         # modified from sbas.py written by scott baker, 2012
 
     total = time.time()
