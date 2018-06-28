@@ -1,6 +1,27 @@
 ### Install PySAR
 
-For Mac users, Xcode with command line tools are needed, follow instructions [here](https://github.com/yunjunz/macOS_Setup#macports) for **section "Macports 1-3" only**. 
+For Mac users, Xcode with command line tools are needed. Skip this part if you have already done so.
+
+1. Install XCode from App store
+2. Install command line tools from within XCode and agree to the terms of license.
+
+```tcsh   
+xcode-select --install -s /Applications/Xcode.app/Contents/Developer/ 
+sudo xcodebuild -license 
+```   
+
+3. Install [XQuartz](https://www.xquartz.org), then restart the terminal.
+
+If you want to use Macports to install your Python environment, continue; otherwise (use pip, anaconda, etc.), skip the following and go to the next section: 1. Prepare source file.
+
+4. Install [macports](https://www.macports.org/install.php) and update the port tree with the following command:
+```tcsh
+sudo port selfupdate
+```
+
+Try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball), if your network prevent the use of rsync or svn via http of port tree.
+
+5. Restart terminal
 
 #### 1. Prepare source file    
 
