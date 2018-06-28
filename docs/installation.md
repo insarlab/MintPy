@@ -1,5 +1,7 @@
 ### Install PySAR
 
+#### 0. For Mac users     
+
 For Mac users, Xcode with command line tools are needed. Skip this part if you have already done so.
 
 1. Install XCode from App store
