@@ -273,10 +273,10 @@ class progressBar:
         self.span = maxValue - minValue
         self.suffix = ''
         self.prefix = prefix
-        self.reset()
         # calculate total width based on console width
         rows, columns = os.popen('stty size', 'r').read().split()
-        self.width = round(columns * 0.8 / 10) * 10
+        self.width = round(int(columns) * 0.8 / 10) * 10
+        self.reset()
 
     def reset(self):
         self.start_time = time.time()
