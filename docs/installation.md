@@ -4,7 +4,7 @@
 
 Install Xcode with command line tools, if you have not already done so.
 
-1. Install XCode from App store
+1. Install Xcode from App store
 2. Install command line tools from within XCode and agree to the terms of license.
 
 ```tcsh   
@@ -14,12 +14,12 @@ sudo xcodebuild -license
 
 3. Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
-4. Install [macports](https://www.macports.org/install.php) if you want to use Macports to install Python environment; then update the port tree with the following command:
+4. Install [macports](https://www.macports.org/install.php) if you want to use Macports to install Python environment; then update the port tree with the following command. If your network prevent the use of rsync or svn via http of port tree, try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball).
 ```tcsh
 sudo port selfupdate
 ```
 
-Try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball), if your network prevent the use of rsync or svn via http of port tree.
+    
 
 5. Restart terminal
 
