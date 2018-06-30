@@ -1,7 +1,7 @@
 import sys
 from PyQt5 import QtWidgets as qw
 from PyQt5.QtCore import Qt
-from test import tabdemo
+from test import OptionsTabWidget
 from geoview_widget import GeoViewWidget
 
 
@@ -13,7 +13,7 @@ class MainWindow(qw.QWidget):
 
         self.setFixedWidth(1200)
 
-        self.controls_widget = tabdemo()
+        self.controls_widget = OptionsTabWidget()
         self.plot_widget = GeoViewWidget(iargs=['/Users/joshua/Desktop/pysar/test_data/new_data/velocity.h5'])
 
         self.layout = qw.QHBoxLayout(self)
