@@ -1,7 +1,7 @@
 import sys
 from PyQt5 import QtWidgets as qw
 from PyQt5.QtCore import Qt
-from test import OptionsTabWidget
+from options_tab_widget import OptionsTabWidget
 from geoview_widget import GeoViewWidget
 
 
@@ -29,10 +29,21 @@ class MainWindow(qw.QWidget):
         self.layout.addWidget(self.plot_widget)
 
     def plot_new(self):
-        options = self.controls_widget.get_options()
-        print(options)
+        option_values = list(self.controls_widget.get_options())
+        print(option_values)
+
+        options = [option_values[0], "-m", str(option_values[1]), "-M", str(option_values[2]), "-c", option_values[3], "--projection", option_values[4]]
+        if option_values[5] is True:
+            options.append("--flip-lr")
+        if option_values[6] is True:
+            options.append("--flip-ud")
+        if option_values[7] is True:
+            options.append("--wrap")
+        if option_values[8] is True:
+            options.append("--opposite")
+
         self.plot_widget.deleteLater()
-        self.plot_widget = GeoViewWidget(iargs=[options])
+        self.plot_widget = GeoViewWidget(iargs=options)
         self.layout.addWidget(self.plot_widget)
 
 def main():
