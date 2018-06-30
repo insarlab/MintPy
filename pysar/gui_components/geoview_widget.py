@@ -90,7 +90,7 @@ class GeoViewWidget(qt.QWidget):
             if self.inps.msk is not None:
                 data = mask_matrix(data, self.inps.msk)
 
-            self.fig, ax = Figure(figsize=self.inps.fig_size)
+            ax = self.fig.add_subplot(1, 1, 1)
 
             ax, self.inps = self.plot_2d_matrix(ax, data, atr, self.inps)
 
@@ -850,7 +850,6 @@ class GeoViewWidget(qt.QWidget):
         print(fig_title)
 
         # Open a new figure object
-        #self.fig = Figure(figsize=inps.fig_size)
         self.fig.canvas.set_window_title(fig_title)
 
         # Read all data for the current figure into 3D np.array
