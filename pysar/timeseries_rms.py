@@ -121,15 +121,16 @@ def analyze_rms(date_list, rms_list, inps):
         for i in ex_idx:
             print('{} - {:.4f}'.format(date_list[i], rms_list[i]))
         # save to text file
-        if ut.update_file(ex_date_file, [inps.timeseries_file,
-                                         inps.mask_file,
-                                         inps.template_file], check_readable=False):
-            with open(ex_date_file, 'w') as f:
-                for i in ex_idx:
-                    f.write(date_list[i]+'\n')
-            print('save date(s) to file: '+ex_date_file)
+        with open(ex_date_file, 'w') as f:
+            for i in ex_idx:
+                f.write(date_list[i]+'\n')
+        print('save date(s) to file: '+ex_date_file)
     else:
         print('None.')
+        if os.path.isfile(ex_date_file):
+            rmCmd = 'rm {}'.format(ex_date_file)
+            print(rmCmd)
+            os.system(rmCmd)
 
     # plot bar figure and save
     fig_file = os.path.splitext(inps.rms_file)[0]+'.pdf'
