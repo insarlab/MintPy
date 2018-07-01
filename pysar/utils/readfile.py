@@ -18,8 +18,10 @@ import json
 
 from pysar.objects import (datasetUnitDict,
                            geometry,
+                           geometryDatasetNames,
                            ifgramDatasetNames,
                            ifgramStack,
+                           timeseriesDatasetNames,
                            timeseriesKeyNames,
                            timeseries,
                            HDFEOS)
@@ -66,7 +68,9 @@ GDAL2NUMPY_DATATYPE = {
 #########################################################################
 # obsolete variables
 multi_group_hdf5_file = ['interferograms',
-                         'coherence', 'wrapped', 'snaphu_connect_component']
+                         'coherence',
+                         'wrapped',
+                         'snaphu_connect_component']
 multi_dataset_hdf5_file = ['timeseries', 'geometry']
 single_dataset_hdf5_file = ['dem', 'mask', 'temporal_coherence', 'velocity']
 
@@ -526,13 +530,19 @@ def read_attribute(fname, datasetName=None, standardize=True):
                 atr[key] = value
 
         # get FILE_TYPE
-        if 'unwrapPhase' in f.keys():
+        g1_list = [i for i in f.keys() if isinstance(f[i], h5py.Group)]
+        d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
+        if any(i in d1_list for i in ifgramDatasetNames):
             k = 'ifgramStack'
-        elif 'height' in f.keys():
+        elif any(i in d1_list for i in geometryDatasetNames):
             k = 'geometry'
-        elif any(i in f.keys() for i in ['timeseries', 'HDFEOS',
-                                         'interferograms', 'coherence', 'wrapped']):
-            k = list(f.keys())[0]
+        elif any(i in g1_list+d1_list for i in ['timeseries']+timeseriesDatasetNames):
+            k = 'timeseries'
+        elif 'HDFEOS' in g1_list:
+            k = 'HDFEOS'
+        # old pysar format
+        elif any(i in g1_list for i in multi_group_hdf5_file):
+            k = list(set(g1_list) & set(multi_group_hdf5_file))[0]
         elif 'FILE_TYPE' in atr.keys():
             k = atr['FILE_TYPE']
         else:
