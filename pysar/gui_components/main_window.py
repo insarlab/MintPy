@@ -32,7 +32,9 @@ class MainWindow(qw.QWidget):
         option_values = list(self.controls_widget.get_options())
         print(option_values)
 
-        options = [option_values[0], "-m", str(option_values[1]), "-M", str(option_values[2]), "-c", option_values[3], "--projection", option_values[4]]
+        options = [option_values[0], "-m", str(option_values[1]), "-M", str(option_values[2]), "-c", option_values[3],
+                   "--projection", option_values[4], "-u", option_values[9], "--dem", option_values[10],
+                   "--contour-smooth", option_values[13], "--contour-step", option_values[14]]
         if option_values[5] is True:
             options.append("--flip-lr")
         if option_values[6] is True:
@@ -41,6 +43,10 @@ class MainWindow(qw.QWidget):
             options.append("--wrap")
         if option_values[8] is True:
             options.append("--opposite")
+        if option_values[11] is True:
+            options.append("--dem-noshade")
+        if option_values[12] is True:
+            options.append("--dem-nocontour")
 
         self.plot_widget.deleteLater()
         self.plot_widget = GeoViewWidget(iargs=options)

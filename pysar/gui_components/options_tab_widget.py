@@ -1,6 +1,7 @@
 import sys
 from PyQt5 import QtWidgets as qw
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QRegExp
+from PyQt5 import QtGui as qg
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -15,7 +16,9 @@ class OptionsTabWidget(qw.QTabWidget):
         self.min = None
         self.max = None
         self.alpha = None
+        self.dem_file = None
 
+        self.select_file_button = None
         self.minimum_slider = None
         self.maximum_slider = None
         self.alpha_slider = None
@@ -28,6 +31,12 @@ class OptionsTabWidget(qw.QTabWidget):
         self.ud_flip_check = None
         self.wrap_check = None
         self.oppo_check = None
+        self.unit_drop = None
+        self.dem_file_button = None
+        self.dem_noshade_check = None
+        self.dem_nocontour_check = None
+        self.dem_smoothing_text = None
+        self.dem_contour_text = None
 
         self.input_tab = qw.QWidget()
         self.output_tab = qw.QWidget()
@@ -39,6 +48,7 @@ class OptionsTabWidget(qw.QTabWidget):
 
         self.input_tab.setFixedHeight(300)
         self.display_tab.setFixedHeight(350)
+        self.dem_tab.setFixedHeight(200)
 
         self.setFixedWidth(450)
         self.setFixedHeight(650)
@@ -54,17 +64,19 @@ class OptionsTabWidget(qw.QTabWidget):
         self.input_tabUI()
         self.output_tabUI()
         self.display_tabUI()
+        self.dem_tabUI()
+
         self.setWindowTitle("tab demo")
 
     def input_tabUI(self):
         layout = qw.QVBoxLayout()
 
         select_file_layout = qw.QHBoxLayout()
-        select_file_button = qw.QPushButton("Select File")
-        select_file_button.clicked.connect(lambda: self.select_file(select_file_button, file_name_label))
+        self.select_file_button = qw.QPushButton("Select File")
+        self.select_file_button.clicked.connect(lambda: self.select_file(self.select_file_button, file_name_label))
         file_name_label = qw.QLabel("No File Selected")
 
-        select_file_layout.addWidget(select_file_button)
+        select_file_layout.addWidget(self.select_file_button)
         select_file_layout.addWidget(file_name_label)
 
         dataset_layout = qw.QVBoxLayout()
@@ -116,6 +128,7 @@ class OptionsTabWidget(qw.QTabWidget):
         self.output_tab.setLayout(layout)
 
     def display_tabUI(self):
+
         layout = qw.QVBoxLayout()
 
         minimum_layout = qw.QHBoxLayout()
@@ -130,6 +143,9 @@ class OptionsTabWidget(qw.QTabWidget):
         self.min_value = qw.QLineEdit()
         self.min_value.setFixedWidth(75)
         self.min_value.textChanged.connect(self.min_text_changed)
+
+        numbers_validator = qg.QRegExpValidator(QRegExp("-?[0-9]*\.*[0-9]*"), self.min_value)
+        self.min_value.setValidator(numbers_validator)
 
         minimum_layout.addWidget(qw.QLabel("Minimum"))
         minimum_layout.addWidget(self.minimum_slider)
@@ -149,6 +165,7 @@ class OptionsTabWidget(qw.QTabWidget):
         self.max_value = qw.QLineEdit()
         self.max_value.setFixedWidth(75)
         self.max_value.textChanged.connect(self.max_text_changed)
+        self.max_value.setValidator(numbers_validator)
 
         maximum_layout.addWidget(qw.QLabel("Maximum"))
         maximum_layout.addWidget(self.maximum_slider)
@@ -158,14 +175,14 @@ class OptionsTabWidget(qw.QTabWidget):
         unit_scale_layout = qw.QHBoxLayout()
 
         unit_label = qw.QLabel("Unit:")
-        unit_drop = qw.QComboBox()
-        unit_drop.addItem("M")
-        unit_drop.addItem("CM")
-        unit_drop.addItem("KM")
-        unit_drop.addItem("MM")
+        self.unit_drop = qw.QComboBox()
+        self.unit_drop.addItem("m")
+        self.unit_drop.addItem("cm")
+        self.unit_drop.addItem("mm")
+        self.unit_drop.addItem("km")
 
         unit_scale_layout.addWidget(unit_label)
-        unit_scale_layout.addWidget(unit_drop)
+        unit_scale_layout.addWidget(self.unit_drop)
 
         scale_label = qw.QLabel("Scale:")
         scale_drop = qw.QComboBox()
@@ -176,6 +193,8 @@ class OptionsTabWidget(qw.QTabWidget):
 
         unit_scale_layout.addWidget(scale_label)
         unit_scale_layout.addWidget(scale_drop)
+
+
 
 
 
@@ -206,6 +225,9 @@ class OptionsTabWidget(qw.QTabWidget):
 
         colormap_layout.addWidget(qw.QLabel("Colormap"))
         colormap_layout.addWidget(self.cmap_drop)
+
+
+
 
         projection_layout = qw.QHBoxLayout()
 
@@ -250,6 +272,7 @@ class OptionsTabWidget(qw.QTabWidget):
         self.alpha_value = qw.QLineEdit()
         self.alpha_value.setFixedWidth(75)
         self.alpha_value.textChanged.connect(self.alpha_text_changed)
+        self.alpha_value.setValidator(numbers_validator)
 
         alpha_layout.addWidget(qw.QLabel("Maximum"))
         alpha_layout.addWidget(self.alpha_slider)
@@ -268,10 +291,68 @@ class OptionsTabWidget(qw.QTabWidget):
         self.setTabText(2, "Display")
         self.display_tab.setLayout(layout)
 
+    def dem_tabUI(self):
+
+        layout = qw.QVBoxLayout()
+
+        select_file_layout = qw.QHBoxLayout()
+        self.dem_file_button = qw.QPushButton("Select File")
+        self.dem_file_button.clicked.connect(lambda: self.select_file(self.dem_file_button, dem_file_name_label))
+        dem_file_name_label = qw.QLabel("No File Selected")
+
+        select_file_layout.addWidget(self.dem_file_button)
+        select_file_layout.addWidget(dem_file_name_label)
+
+        dem_options_layout = qw.QHBoxLayout()
+
+        self.dem_noshade_check = qw.QCheckBox("No Shade")
+        self.dem_nocontour_check = qw.QCheckBox("No Contour")
+
+        dem_options_layout.addWidget(self.dem_noshade_check)
+        dem_options_layout.addWidget(self.dem_nocontour_check)
+
+
+        dem_contour_options_layout = qw.QVBoxLayout()
+
+        contour_options_titles_layout = qw.QHBoxLayout()
+        smoothing_label = qw.QLabel("Contour Smoothing")
+        step_label = qw.QLabel("Contour Step")
+
+        contour_options_titles_layout.addWidget(smoothing_label)
+        contour_options_titles_layout.addWidget(step_label)
+
+        contour_options_widget_layout = qw.QHBoxLayout()
+
+        self.dem_smoothing_text = qw.QLineEdit()
+        self.dem_contour_text = qw.QLineEdit()
+
+        self.dem_smoothing_text.setText("3.0")
+        self.dem_contour_text.setText("200")
+
+        contour_options_widget_layout.addWidget(self.dem_smoothing_text)
+        contour_options_widget_layout.addWidget(self.dem_contour_text)
+
+        dem_contour_options_layout.addLayout(contour_options_titles_layout)
+        dem_contour_options_layout.addLayout(contour_options_widget_layout)
+
+        layout.addLayout(select_file_layout)
+        layout.addLayout(dem_options_layout)
+        layout.addLayout(dem_contour_options_layout)
+
+        self.setTabText(3, "DEM")
+        self.dem_tab.setLayout(layout)
+
     def select_file(self, file_button, file_label):
-        self.file = qw.QFileDialog.getOpenFileName(self, 'Open file', '/', "Data files (*.h5 *.he5)")[0]
+        print("select file")
+        if file_button is self.select_file_button:
+            self.file = qw.QFileDialog.getOpenFileName(self, 'Open file', '/', "Data files (*.h5 *.he5)")[0]
+            file_label.setText(self.file.split("/")[-1])
+        elif file_button is self.dem_file_button:
+            self.dem_file = qw.QFileDialog.getOpenFileName(self, 'Open file', '/', "Data files (*.h5 *.he5)")[0]
+            file_label.setText(self.dem_file.split("/")[-1])
+
         file_button.setText("Cancel")
-        file_label.setText(self.file.split("/")[-1])
+
 
     def slider_changed(self, slider):
 
@@ -294,13 +375,15 @@ class OptionsTabWidget(qw.QTabWidget):
         self.minimum_slider.setValue(self.min)
 
     def alpha_text_changed(self, text):
-        self.alpha = float(text)*100
-        self.alpha_slider.setValue(self.alpha)
+        self.alpha = float(text)
+        self.alpha_slider.setValue(self.alpha*100)
 
     def get_options(self):
         return self.file, self.min, self.max, self.cmap_drop.currentText(), self.proj_drop.currentText(), \
                self.lr_flip_check.isChecked(), self.ud_flip_check.isChecked(), self.wrap_check.isChecked(), \
-               self.oppo_check.isChecked()
+               self.oppo_check.isChecked(), self.unit_drop.currentText(), self.dem_file, \
+               self.dem_noshade_check.isChecked(), self.dem_nocontour_check.isChecked(), \
+               self.dem_contour_text.text(), self.dem_smoothing_text.text()
 
 def main():
     app = qw.QApplication(sys.argv)
