@@ -11,6 +11,7 @@ import sys
 import time
 import argparse
 import numpy as np
+from scipy.linalg import pinv2, lstsq
 from scipy.special import gamma
 from pysar.utils import ptime, readfile, writefile, utils as ut
 from pysar.objects import timeseries, geometry
@@ -251,7 +252,9 @@ def estimate_dem_error(ts0, A0, tbase, drop_date=None, min_phase_velocity=False,
     # Inverse using L-2 norm to get unknown parameters X
     # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
     # equivalent to X = np.linalg.inv(A.T.dot(A)).dot(A.T).dot(ts)
-    X = np.linalg.pinv(A).dot(ts)
+    #            or X = np.dot(np.linalg.pinv(A, rcond=1e-8), ts)
+    #            or X = np.dot(pinv2(A, cond=1e-8), ts)
+    X = lstsq(A, ts, cond=1e-8)[0]
 
     # Prepare Outputs
     delta_z = X[0, :]
