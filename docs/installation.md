@@ -1,10 +1,10 @@
 ### Install PySAR
 
-#### 0. For Mac users     
+#### For Mac users     
 
-For Mac users, Xcode with command line tools are needed. Skip this part if you have already done so.
+Install Xcode with command line tools, if you have not already done so.
 
-1. Install XCode from App store
+1. Install Xcode from App store
 2. Install command line tools from within XCode and agree to the terms of license.
 
 ```tcsh   
@@ -14,14 +14,13 @@ sudo xcodebuild -license
 
 3. Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
-If you want to use Macports to install your Python environment, continue; otherwise (use pip, anaconda, etc.), skip the following and go to the next section: 1. Prepare source file.
-
-4. Install [macports](https://www.macports.org/install.php) and update the port tree with the following command:
+4. (If you use Anaconda instead of Macports, skip now to the next section)    
+Install [macports](https://www.macports.org/install.php) if you want to use Macports to install Python environment; then update the port tree with the following command. If your network prevent the use of rsync or svn via http of port tree, try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball).
 ```tcsh
 sudo port selfupdate
 ```
 
-Try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball), if your network prevent the use of rsync or svn via http of port tree.
+    
 
 5. Restart terminal
 
@@ -65,7 +64,7 @@ Source the file for the first time. It will be sourced automatically next time w
    
    
 #### 2. Install Python dependecies
-PySAR relies on the following Python modules. We recommend using [Anaconda](https://www.anaconda.com/download/) for Linux users and [Macports](https://www.macports.org/install.php) for Mac users to install the python environment and the prerequisite packages.
+PySAR relies on the following Python modules. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html).
 - [Python3.6](https://www.anaconda.com/download/)
 - Numpy
 - Scipy

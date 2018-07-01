@@ -7,7 +7,6 @@
 #   from pysar.utils import ptime
 
 
-import os
 import sys
 import re
 import time
@@ -247,10 +246,10 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 ###########################Simple progress bar######################
 class progressBar:
     """Creates a text-based progress bar. Call the object with 
-    the simple `print'command to see the progress bar, which looks 
+    the simple print command to see the progress bar, which looks 
     something like this:
-    [=======> 22% ]
-    You may specify the progress bar's width, min and max values on init.
+    [=======> 22%       ]
+    You may specify the progress bar's min and max values on init.
 
     note:
         modified from PyAPS release 1.0 (http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
@@ -266,16 +265,17 @@ class progressBar:
         prog_bar.close()
     """
 
-    def __init__(self, maxValue=100, prefix='', minValue=0):
+    def __init__(self, maxValue=100, prefix='', minValue=0, totalWidth=70):
         self.prog_bar = "[]"  # This holds the progress bar string
         self.min = minValue
         self.max = maxValue
         self.span = maxValue - minValue
         self.suffix = ''
         self.prefix = prefix
-        # calculate total width based on console width
-        rows, columns = os.popen('stty size', 'r').read().split()
-        self.width = round(int(columns) * 0.8 / 10) * 10
+        ## calculate total width based on console width
+        #rows, columns = os.popen('stty size', 'r').read().split()
+        #self.width = round(int(columns) * 0.7 / 10) * 10
+        self.width = totalWidth
         self.reset()
 
     def reset(self):
