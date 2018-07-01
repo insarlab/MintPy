@@ -378,7 +378,7 @@ def update_inps_with_file_metadata(inps, metadata):
 
     # Min / Max - Display
     if not inps.disp_min and not inps.disp_max:
-        if (inps.key in ['coherence', 'temporal_coherence', '.cor']
+        if (any(i in inps.key.lower() for i in ['coherence', '.cor'])
                 or (inps.key == 'ifgramStack'
                         and inps.dset[0].split('-')[0] in ['coherence', 'connectComponent'])):
             inps.disp_min = 0.0
@@ -954,23 +954,32 @@ def read_data4figure(i_start, i_end, inps, metadata):
     # fast reading for single dataset type
     if len(inps.dsetFamilyList) == 1 and inps.key in ['timeseries', 'ifgramStack', 'HDFEOS', 'geometry']:
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
-        if inps.key == 'timeseries':
-            data = timeseries(inps.file).read(datasetName=dset_list, box=inps.pix_box)
-        elif inps.key == 'ifgramStack':
-            data = ifgramStack(inps.file).read(datasetName=dset_list, box=inps.pix_box)
+        data = readfile.read(inps.file, datasetName=dset_list, box=inps.pix_box)[0]
+        if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase
             if inps.dsetFamilyList[0] == 'unwrapPhase' and inps.file_ref_yx:
                 for i in range(data.shape[0]):
                     mask = data[i, :, :] != 0.
                     data[i, mask] -= data[i, inps.file_ref_yx[0], inps.file_ref_yx[1]]
-        elif inps.key == 'HDFEOS':
-            data = HDFEOS(inps.file).read(datasetName=dset_list, box=inps.pix_box)
-        elif inps.key == 'geometry':
-            data = geometry(inps.file).read(datasetName=dset_list, box=inps.pix_box)
+
+        #if inps.key == 'timeseries':
+        #    data = timeseries(inps.file).read(datasetName=dset_list, box=inps.pix_box)
+        #elif inps.key == 'ifgramStack':
+        #    data = ifgramStack(inps.file).read(datasetName=dset_list, box=inps.pix_box)
+        #    # reference pixel info in unwrapPhase
+        #    if inps.dsetFamilyList[0] == 'unwrapPhase' and inps.file_ref_yx:
+        #        for i in range(data.shape[0]):
+        #            mask = data[i, :, :] != 0.
+        #            data[i, mask] -= data[i, inps.file_ref_yx[0], inps.file_ref_yx[1]]
+        #elif inps.key == 'HDFEOS':
+        #    data = HDFEOS(inps.file).read(datasetName=dset_list, box=inps.pix_box)
+        #elif inps.key == 'geometry':
+        #    data = geometry(inps.file).read(datasetName=dset_list, box=inps.pix_box)
 
     # slow reading with one 2D matrix at a time
     else:
-        prog_bar = ptime.progressBar(maxValue=i_end-i_start, prefix='reading')
+        print('reading data ...')
+        prog_bar = ptime.progressBar(maxValue=i_end-i_start)
         for i in range(i_start, i_end):
             d = readfile.read(inps.file,
                               datasetName=inps.dset[i],
@@ -1075,7 +1084,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
                 subplot_title = dt.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
             except:
                 subplot_title = str(inps.dset[i])
-        elif inps.key in ['ifgramStack']:
+        elif inps.key in ['ifgramStack', 'interferograms', 'coherence', 'wrapped']:
             subplot_title = str(i)
             if inps.fig_row_num * inps.fig_col_num < 50:
                 subplot_title += '\n{}'.format(inps.dset[i])
@@ -1133,7 +1142,8 @@ def plot_figure(j, inps, metadata):
     data = read_data4figure(i_start, i_end, inps, metadata)
 
     # Loop - Subplots
-    prog_bar = ptime.progressBar(maxValue=i_end - i_start, prefix='ploting')
+    print('plotting ...')
+    prog_bar = ptime.progressBar(maxValue=i_end - i_start)
     for i in range(i_start, i_end):
         ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i - i_start + 1)
         im = plot_subplot4figure(i, inps, ax=ax, data=data[i - i_start, :, :], metadata=metadata)

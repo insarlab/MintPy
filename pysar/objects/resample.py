@@ -199,8 +199,7 @@ class resample:
         # geo2radar
         else:
             # src_y/x
-            print('Not implemented yet for GAMMA and ROIPAC products')
-            sys.exit(-1)
+            raise NotImplementedError('Not implemented yet for GAMMA and ROIPAC products')
 
     def resample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=None, radius=None, print_msg=True):
         """

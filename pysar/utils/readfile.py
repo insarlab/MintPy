@@ -139,7 +139,9 @@ def read(fname, box=None, datasetName=None, print_msg=True):
     # Basic Info
     ext = os.path.splitext(fname)[1].lower()
     fbase = os.path.splitext(os.path.basename(fname))[0]
-    if datasetName:
+    if isinstance(datasetName, list):
+        atr = read_attribute(fname, datasetName=datasetName[0].split('-')[0])
+    elif isinstance(datasetName, str):
         atr = read_attribute(fname, datasetName=datasetName.split('-')[0])
     else:
         atr = read_attribute(fname)
@@ -160,8 +162,19 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                                 box=box,
                                 print_msg=print_msg)
             else:
-                date = datasetName.split('-')[1]
-                data = f[k][date][box[1]:box[3], box[0]:box[2]]
+                # support for old pysar format
+                if not datasetName:
+                    datasetName = list(f[k].keys())
+                if isinstance(datasetName, str):
+                    date = datasetName.split('-')[1]
+                    data = f[k][date][box[1]:box[3], box[0]:box[2]]
+                elif isinstance(datasetName, list):
+                    data = np.zeros((len(datasetName), length, width), np.float32)
+                    for i in range(len(datasetName)):
+                        date = datasetName[i].split('-')[1]
+                        data[i, :, :] = f[k][date][box[1]:box[3], box[0]:box[2]]
+                else:
+                    raise ValueError('Unrecognized datasetName input: {}'.format(datasetName))
 
         elif k in ['ifgramStack']:
             obj = ifgramStack(fname)
@@ -195,6 +208,19 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                 dset = f['recons'][dateIndx, :, :]
             data = dset[box[1]:box[3], box[0]:box[2]]
 
+        # old pysar format
+        elif k in ['interferograms', 'coherence', 'wrapped']:
+            if not datasetName:
+                datasetName = list(f[k].keys())
+            if isinstance(datasetName, str):
+                data = f[k][datasetName][datasetName][box[1]:box[3], box[0]:box[2]]
+            elif isinstance(datasetName, list):
+                data = np.zeros((len(datasetName), length, width), np.float32)
+                for i in range(len(datasetName)):
+                    dsName = datasetName[i]
+                    data[i, :, :] = f[k][dsName][dsName][box[1]:box[3], box[0]:box[2]]
+            else:
+                raise ValueError('Unrecognized datasetName input: {}'.format(datasetName))
         else:
             k0 = list(f.keys())[0]
             if isinstance(f[k0], h5py.Dataset):
@@ -439,6 +465,10 @@ def get_2d_dataset_list(fname):
                     if isinstance(f[k0][k1], h5py.Dataset):
                         datasetList = sorted(list(f[k0].keys()))
 
+                    # unwrapIfgram.h5, coherence.h5, etc.
+                    elif isinstance(f[k0][k1], h5py.Group):
+                        datasetList = sorted(list(f[k0].keys()))
+
     # Binary Files
     else:
         if file_ext.lower() in ['.trans', '.utm_to_rdc']:
@@ -476,8 +506,15 @@ def read_attribute(fname, datasetName=None, standardize=True):
                 if key in f[g].attrs.keys():
                     atr = dict(f[g].attrs)
                     break
+        # support for old pysar format
+        if (atr is None 
+                and any(i in f.keys() for i in ['interferograms', 'coherence', 'wrapped'])):
+            k1 = list(f.keys())[0]
+            k2 = list(f[k1].keys())[0]
+            atr = dict(f[k1][k2].attrs)
+
         if atr is None:
-            raise ValueError('No attribute {} found in 1/2 group level!'.format(key))
+            raise ValueError('No attribute {} found in 0/1/2 group level!'.format(key))
 
         for key, value in atr.items():
             try:
@@ -488,12 +525,11 @@ def read_attribute(fname, datasetName=None, standardize=True):
         # get FILE_TYPE
         if 'unwrapPhase' in f.keys():
             k = 'ifgramStack'
-        elif 'timeseries' in f.keys():
-            k = 'timeseries'
         elif 'height' in f.keys():
             k = 'geometry'
-        elif 'HDFEOS' in f.keys():
-            k = 'HDFEOS'
+        elif any(i in f.keys() for i in ['timeseries', 'HDFEOS',
+                                         'interferograms', 'coherence', 'wrapped']):
+            k = list(f.keys())[0]
         elif 'FILE_TYPE' in atr.keys():
             k = atr['FILE_TYPE']
         else:
@@ -511,10 +547,14 @@ def read_attribute(fname, datasetName=None, standardize=True):
             # support for old pysar format
             k1 = list(f[k0].keys())[0]
             if isinstance(f[k0][k1], h5py.Dataset):
-                if datasetName:
+                if datasetName and datasetName in f[k0].keys():
                     dset = f[k0][datasetName]
                 else:
                     dset = f[k0][k1]
+            else:
+                k2 = list(f[k0][k1].keys())[0]
+                if isinstance(f[k0][k1][k2], h5py.Dataset):
+                    dset = f[k0][k1][k2]
         atr['DATA_TYPE'] = str(dset.dtype)
 
         # PROCESSOR

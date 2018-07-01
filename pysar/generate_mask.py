@@ -121,8 +121,9 @@ def main(iargs=None):
 
     # default output filename
     if not inps.outfile:
-        if inps.file.endswith('temporalCoherence.h5'):
-            inps.outfile = 'maskTempCoh.h5'
+        if 'temporalCoherence' in inps.file:
+            suffix = inps.file.split('temporalCoherence')[1]
+            inps.outfile = 'maskTempCoh'+suffix
         else:
             inps.outfile = 'mask.h5'
         if inps.file.startswith('geo_'):

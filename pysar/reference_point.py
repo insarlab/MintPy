@@ -297,6 +297,9 @@ def select_max_coherence_yx(coh_file, mask=None, min_coh=0.85):
     if not mask is None:
         coh[mask == 0] = 0.0
     coh_mask = coh >= min_coh
+    if np.all(coh_mask == 0.):
+        raise RuntimeError('No pixel with average coherence > {} found!'.format(min_coh))
+
     y, x = random_select_reference_yx(coh_mask, print_msg=False)
     #y, x = np.unravel_index(np.argmax(coh), coh.shape)
     print('y/x: {}'.format((y, x)))
