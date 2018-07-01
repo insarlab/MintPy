@@ -64,6 +64,7 @@ GDAL2NUMPY_DATATYPE = {
 }
 
 #########################################################################
+# obsolete variables
 multi_group_hdf5_file = ['interferograms',
                          'coherence', 'wrapped', 'snaphu_connect_component']
 multi_dataset_hdf5_file = ['timeseries', 'geometry']
@@ -209,7 +210,8 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             data = dset[box[1]:box[3], box[0]:box[2]]
 
         # old pysar format
-        elif k in ['interferograms', 'coherence', 'wrapped']:
+        elif (k in ['interferograms', 'coherence', 'wrapped'] 
+                and isinstance(f[k], h5py.Group)):
             if not datasetName:
                 datasetName = list(f[k].keys())
             if isinstance(datasetName, str):
@@ -508,7 +510,8 @@ def read_attribute(fname, datasetName=None, standardize=True):
                     break
         # support for old pysar format
         if (atr is None 
-                and any(i in f.keys() for i in ['interferograms', 'coherence', 'wrapped'])):
+                and any(i in f.keys() and isinstance(f[i], h5py.Group)
+                        for i in ['interferograms', 'coherence', 'wrapped'])):
             k1 = list(f.keys())[0]
             k2 = list(f[k1].keys())[0]
             atr = dict(f[k1][k2].attrs)
