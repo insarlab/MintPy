@@ -15,8 +15,8 @@ from pysar.utils import readfile, ptime, utils as ut
 
 ##################################################################################################
 EXAMPLE = """example:
-  prep_giant_ifg_list.py  filt_*.unw
-  prep_giant_ifg_list.py  INPUTS/ifgramStack.h5  --sensor SEN
+  save_ifg_list4giant.py  filt_*.unw
+  save_ifg_list4giant.py  INPUTS/ifgramStack.h5  --sensor SEN
 """
 
 
