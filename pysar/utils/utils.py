@@ -399,7 +399,9 @@ def check_loaded_dataset(work_dir='./', inps=None, print_msg=True):
     stack_file = is_file_exist(file_list, abspath=True)
     if not stack_file:
         if inps:
-            return inps, None
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
+                                    './INPUTS/ifgramStack.h5')
+            #return inps, None
         else:
             return False
     else:
