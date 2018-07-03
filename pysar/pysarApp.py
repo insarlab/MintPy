@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Project: PySAR                                           #
-# Purpose: Python Module for InSAR Time Series Analysis    #
+# Purpose: InSAR Time Series Analysis in Python            #
 # Author: Zhang Yunjun, Heresh Fattahi                     #
 # Created: July 2013                                       #
 # Copyright (c) 2013-2018, Zhang Yunjun, Heresh Fattahi    #

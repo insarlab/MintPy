@@ -34,9 +34,10 @@ dataTypeDict = {'bool': np.bool_, 'byte': np.bool_, 'flag': np.bool_,
                 }
 
 ##------------------ Variables ---------------------##
-timeseriesKeyNames = ['timeseries', 'HDFEOS', 'GIANT_TS']
+timeseriesKeyNames = ['timeseries', 'HDFEOS', 'giantTimeseries']
 
-timeseriesDatasetNames = ['raw',
+timeseriesDatasetNames = ['timeseries',
+                          'raw',
                           'troposphericDelay',
                           'topographicResidual',
                           'ramp',
@@ -86,6 +87,7 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'bperp'              :'m',
 
                    'timeseries'         :'m',
+                   'giantTimeseries'    :'mm',
                    'raw'                :'m',
                    'troposphericDelay'  :'m',
                    'topographicResidual':'m',
@@ -743,25 +745,26 @@ class ifgramStack:
                     raise Exception(('ALL interferograms are marked as dropped, '
                                      'can not calculate temporal average.'))
 
-            r_step = 100
-            for i in range(int(np.ceil(length / r_step))):
-                r0 = i * r_step
-                r1 = min(r0 + r_step, length)
-                data = dset[drop_ifgram_flag, r0:r1, :]
-                dmean[r0:r1, :] = np.nanmean(data, axis=0)
-                sys.stdout.write('\rreading lines {}/{} ...'.format(r0, length))
-                sys.stdout.flush()
-
-            #num2read = np.sum(drop_ifgram_flag)
-            #idx2read = np.where(drop_ifgram_flag)[0]
-            # for i in range(num2read):
-            #    data = dset[idx2read[i],:,:]
-            #    if datasetName == 'unwrapPhase':
-            #        data *= (phase2range * (1./tbaseIfgram[idx2read[i]]))
-            #    dmean += data
-            #    sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+            #r_step = 100
+            #for i in range(int(np.ceil(length / r_step))):
+            #    r0 = i * r_step
+            #    r1 = min(r0 + r_step, length)
+            #    data = dset[drop_ifgram_flag, r0:r1, :]
+            #    dmean[r0:r1, :] = np.nanmean(data, axis=0)
+            #    sys.stdout.write('\rreading lines {}/{} ...'.format(r0, length))
             #    sys.stdout.flush()
-            #dmean /= np.sum(self.dropIfgram)
+
+            num2read = np.sum(drop_ifgram_flag)
+            idx2read = np.where(drop_ifgram_flag)[0]
+            for i in range(num2read):
+                idx = idx2read[i]
+                data = dset[idx, :, :]
+                if datasetName == 'unwrapPhase':
+                    data *= (phase2range * (1./tbaseIfgram[idx]))
+                dmean += data
+                sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
+                sys.stdout.flush()
+            dmean *= 1./np.sum(self.dropIfgram)
             print('')
         return dmean
 
@@ -1008,5 +1011,115 @@ class HDFEOS:
                         dateFlag[self.dateList.index(e)] = True
                 data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
                 data = np.squeeze(data)
+        return data
+
+
+########################################################################################
+FILE_STRUCTURE_GIANT_TIMESERIES = """
+/                Root level
+/cmask           2D array of float32 in size of (   l, w).
+/dates           1D array of float32 in size of (n,     ) in ordinal date format
+/recons          3D array of float32 in size of (n, l, w) in mm, reconstructed timeseries - filtered
+/rawts           3D array of float32 in size of (n, l, w) in mm, reconstructed timeseries - un-filtered
+"""
+
+class giantTimeseries:
+    """
+    Time-series object for displacement of a set of SAR images from the same platform and track.
+    It contains a "timeseries" group and three datasets: date, bperp and timeseries.
+    """
+
+    def __init__(self, file=None):
+        self.file = file
+        self.name = 'giantTimeseries'
+        self.file_structure = FILE_STRUCTURE_GIANT_TIMESERIES
+
+    def open(self, print_msg=True):
+        if print_msg:
+            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
+        self.get_size()
+        self.get_date_list()
+        self.numPixel = self.length * self.width
+
+        self.refIndex = 0
+        self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
+        self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
+                              dtype=np.float32)
+        # list of float for year, 2014.95
+        self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
+        self.datasetList = ['{}-{}'.format(self.name, i) for i in self.dateList]
+
+    def get_size(self, dsName='recons'):
+        with h5py.File(self.file, 'r') as f:
+            self.numDate, self.length, self.width = f[dsName].shape
+        return self.numDate, self.length, self.width
+
+    def get_date_list(self):
+        with h5py.File(self.file, 'r') as f:
+            self.dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d')
+                             for i in f['dates'][:].tolist()]
+        return self.dateList
+
+    def get_metadata(self):
+        # read existing metadata
+        with h5py.File(self.file, 'r') as f:
+            self.metadata = dict(f.attrs)
+        for key, value in self.metadata.items():
+            try:
+                self.metadata[key] = value.decode('utf8')
+            except:
+                self.metadata[key] = value
+
+        self.open(print_msg=False)
+        if 'LENGTH' not in self.metadata.keys():
+            self.metadata['LENGTH'] = self.length
+            self.metadata['WIDTH'] = self.width
+        if 'REF_DATE' not in self.metadata.keys():
+            self.metadata['REF_DATE'] = self.dateList[self.refIndex]
+        return self.metadata
+
+    def read(self, datasetName=None, box=None, print_msg=True):
+        """Read dataset from timeseries file
+        Parameters: self : timeseries object
+                    datasetName : (list of) string in YYYYMMDD format
+                    box : tuple of 4 int, indicating x0,y0,x1,y1 of range
+        Returns:    data : 2D or 3D dataset
+        Examples:   from pysar.objects import timeseries
+                    tsobj = timeseries('timeseries_ECMWF_demErr.h5')
+                    data = tsobj.read(datasetName='20161020')
+                    data = tsobj.read(datasetName='20161020', box=(100,300,500,800))
+                    data = tsobj.read(datasetName=['20161020','20161026','20161101'])
+                    data = tsobj.read(box=(100,300,500,800))
+        """
+        if print_msg:
+            print('reading {} data from file: {} ...'.format(self.name, self.file))
+        self.open(print_msg=False)
+
+        # convert input datasetName into list of dates
+        if not datasetName or datasetName == 'timeseries':
+            datasetName = []
+        elif isinstance(datasetName, str):
+            datasetName = [datasetName]
+        datasetName = [i.replace('timeseries', '').replace('-', '') for i in datasetName]
+
+        with h5py.File(self.file, 'r') as f:
+            ds = f[self.name]
+            if isinstance(ds, h5py.Group):  # support for old pysar files
+                ds = ds[self.name]
+
+            # Get dateFlag - mark in time/1st dimension
+            dateFlag = np.zeros((self.numDate), dtype=np.bool_)
+            if not datasetName:
+                dateFlag[:] = True
+            else:
+                for e in datasetName:
+                    dateFlag[self.dateList.index(e)] = True
+
+            # Get Index in space/2_3 dimension
+            if box is None:
+                box = [0, 0, self.width, self.length]
+
+            data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
+            data = np.squeeze(data)
         return data
 

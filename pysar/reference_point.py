@@ -43,17 +43,14 @@ NOTE = """note: Reference value cannot be nan, thus, all selected reference poin
 """
 
 EXAMPLE = """example:
-  reference_point.py unwrapIfgram.h5 -t pysarApp_template.txt --lookup geometryRadar.h5
+  reference_point.py  INPUTS/ifgramStack.h5  -t pysarApp_template.txt  -c avgSpatialCoherence.h5
 
-  reference_point.py timeseries.h5     -r Seeded_velocity.h5
-  reference_point.py 091120_100407.unw -y 257    -x 151      -m Mask.h5 --write-data
-  reference_point.py geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
-  reference_point.py unwrapIfgram.h5   -l 34.45  -L -116.23  --lookup geomap_4rlks.trans
+  reference_point.py  timeseries.h5     -r Seeded_velocity.h5
+  reference_point.py  091120_100407.unw -y 257    -x 151      -m Mask.h5 --write-data
+  reference_point.py  geo_velocity.h5   -l 34.45  -L -116.23  -m Mask.h5
   
-  reference_point.py unwrapIfgram.h5 -c average_spatial_coherence.h5
-  reference_point.py unwrapIfgram.h5 --method manual
-  reference_point.py unwrapIfgram.h5 --method random
-  reference_point.py timeseries.h5   --method global-average 
+  reference_point.py  INPUTS/ifgramStack.h5 --method manual
+  reference_point.py  INPUTS/ifgramStack.h5 --method random
 """
 
 
@@ -170,7 +167,7 @@ def reference_file(inps):
         return inps.file
 
     # Get stack and mask
-    stack = ut.temporal_average(inps.file, updateMode=True)[0]
+    stack = ut.temporal_average(inps.file, datasetName='unwrapPhase', updateMode=True)[0]
     mask = np.multiply(~np.isnan(stack), stack != 0.)
     if np.nansum(mask) == 0.0:
         raise ValueError('no pixel found with valid phase value in all datasets.')

@@ -19,6 +19,7 @@ import json
 from pysar.objects import (datasetUnitDict,
                            geometry,
                            geometryDatasetNames,
+                           giantTimeseries,
                            ifgramDatasetNames,
                            ifgramStack,
                            timeseriesDatasetNames,
@@ -48,7 +49,7 @@ standardMetadataKeys = {'width': 'WIDTH', 'Width': 'WIDTH', 'samples': 'WIDTH',
                         'ref_date': 'REF_DATE',
                         'ref_x': 'REF_X', 'ref_y': 'REF_Y', 'ref_lat': 'REF_LAT', 'ref_lon': 'REF_LON',
                         'subset_x0': 'SUBSET_XMIN', 'subset_x1': 'SUBSET_XMAX',
-                        'subset_y0': 'SUBSET_YMIN', 'subset_y1': 'SUBSET_YMAX'
+                        'subset_y0': 'SUBSET_YMIN', 'subset_y1': 'SUBSET_YMAX',
                         }
 
 GDAL2NUMPY_DATATYPE = {
@@ -116,12 +117,11 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                     for los.rdr:
                         incidenceAngle
                         headingAngle
-                    for GIANT_TS:
-                        rawts
-                        recons
-                        rawts-20161020
-                        rawts-20161026
-                        rawts-...
+                    for GIAnT:
+                        giantTimeseries
+                        giantTimeseries-20161020
+                        giantTimeseries-20161026
+                        giantTimeseries-...
                     for the other single dataset file:
                         No need and will be ignored.
 
@@ -171,15 +171,36 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                 if not datasetName:
                     datasetName = list(f[k].keys())
                 if isinstance(datasetName, str):
-                    date = datasetName.split('-')[1]
-                    data = f[k][date][box[1]:box[3], box[0]:box[2]]
-                elif isinstance(datasetName, list):
-                    data = np.zeros((len(datasetName), length, width), np.float32)
-                    for i in range(len(datasetName)):
-                        date = datasetName[i].split('-')[1]
-                        data[i, :, :] = f[k][date][box[1]:box[3], box[0]:box[2]]
-                else:
-                    raise ValueError('Unrecognized datasetName input: {}'.format(datasetName))
+                    datasetName = [datasetName]
+                data = np.zeros((len(datasetName),
+                                 box[3]-box[1],
+                                 box[2]-box[0]), np.float32)
+                for i in range(len(datasetName)):
+                    date = datasetName[i].split('-')[1]
+                    data[i, :, :] = f[k][date][box[1]:box[3],
+                                               box[0]:box[2]]
+                data = np.squeeze(data)
+
+        elif k in ['giantTimeseries']:
+            obj = giantTimeseries(fname)
+            obj.open(print_msg=False)
+            dsName = [i for i in ['recons', 'rawts'] if i in f.keys()][0]
+            if print_msg:
+                print('reading {} from file {}'.format(dsName, fbase+ext))
+            if not datasetName:
+                datasetName = obj.datasetList
+            if isinstance(datasetName, str):
+                datasetName = [datasetName]
+            data = np.zeros((len(datasetName),
+                                 box[3]-box[1],
+                                 box[2]-box[0]), np.float32)
+            for i in range(len(datasetName)):
+                date = datasetName[i].split('-')[1]
+                idx = obj.dateList.index(date)
+                data[i, :, :] = f[dsName][idx,
+                                          box[1]:box[3],
+                                          box[0]:box[2]]
+            data = np.squeeze(data)
 
         elif k in ['ifgramStack']:
             obj = ifgramStack(fname)
@@ -203,30 +224,21 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                             box=box,
                             print_msg=print_msg)
 
-        elif k in ['GIANT_TS']:
-            dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d')
-                        for i in f['dates'][:].tolist()]
-            dateIndx = dateList.index(datasetName)
-            if 'rawts' in list(f.keys()):
-                dset = f['rawts'][dateIndx, :, :]
-            elif 'recons' in list(f.keys()):
-                dset = f['recons'][dateIndx, :, :]
-            data = dset[box[1]:box[3], box[0]:box[2]]
-
         # old pysar format
-        elif (k in ['interferograms', 'coherence', 'wrapped'] 
-                and isinstance(f[k], h5py.Group)):
+        elif k in multi_group_hdf5_file and isinstance(f[k], h5py.Group):
             if not datasetName:
                 datasetName = list(f[k].keys())
             if isinstance(datasetName, str):
-                data = f[k][datasetName][datasetName][box[1]:box[3], box[0]:box[2]]
-            elif isinstance(datasetName, list):
-                data = np.zeros((len(datasetName), length, width), np.float32)
-                for i in range(len(datasetName)):
-                    dsName = datasetName[i]
-                    data[i, :, :] = f[k][dsName][dsName][box[1]:box[3], box[0]:box[2]]
-            else:
-                raise ValueError('Unrecognized datasetName input: {}'.format(datasetName))
+                datasetName = [datasetName]
+            data = np.zeros((len(datasetName),
+                                 box[3]-box[1],
+                                 box[2]-box[0]), np.float32)
+            for i in range(len(datasetName)):
+                dsName = datasetName[i]
+                data[i, :, :] = f[k][dsName][dsName][box[1]:box[3],
+                                                     box[0]:box[2]]
+            data = np.squeeze(data)
+
         else:
             k0 = list(f.keys())[0]
             if isinstance(f[k0], h5py.Dataset):
@@ -385,6 +397,7 @@ def read(fname, box=None, datasetName=None, print_msg=True):
         raise Exception('Unrecognized file format: '+ext)
 
 
+#########################################################################
 def get_dataset_list(fname, datasetName=None):
     """Get list of 2D and 3D dataset to facilitate systematic file reading"""
     if datasetName:
@@ -456,9 +469,10 @@ def get_2d_dataset_list(fname):
                 obj.open(print_msg=False)
                 datasetList = obj.datasetList
 
-            elif file_type in ['GIANT_TS']:
-                datasetList = [dt.fromordinal(int(i)).strftime('%Y%m%d')
-                               for i in f['dates'][:].tolist()]
+            elif file_type in ['giantTimeseries']:
+                obj = giantTimeseries(fname)
+                obj.open(print_msg=False)
+                datasetList = obj.datasetList
 
             else:
                 k0 = list(f.keys())[0]
@@ -501,8 +515,30 @@ def read_attribute(fname, datasetName=None, standardize=True):
     # HDF5 files
     if ext in ['.h5', '.he5']:
         f = h5py.File(fname, 'r')
+        g1_list = [i for i in f.keys() if isinstance(f[i], h5py.Group)]
+        d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
 
-        # search metadata dict
+        # FILE_TYPE - k
+        if 'unwrapPhase' in d1_list:
+            k = 'ifgramStack'
+        elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
+            k = 'geometry'
+        elif any(i in g1_list+d1_list for i in timeseriesDatasetNames):
+            k = 'timeseries'
+        elif 'HDFEOS' in g1_list:
+            k = 'HDFEOS'
+        elif 'recons' in d1_list:
+            k = 'giantTimeseries'
+        elif any(i in g1_list for i in multi_group_hdf5_file):      # old pysar format
+            k = list(set(g1_list) & set(multi_group_hdf5_file))[0]
+        elif len(d1_list) > 0:
+            k = d1_list[0]
+        elif len(g1_list) > 0:
+            k = g1_list[0]
+        else:
+            raise ValueError('unrecognized file type: '+fname)
+
+        # search existing metadata dict
         atr = None
         key = 'WIDTH'
         if key in f.attrs.keys():
@@ -512,13 +548,13 @@ def read_attribute(fname, datasetName=None, standardize=True):
                 if key in f[g].attrs.keys():
                     atr = dict(f[g].attrs)
                     break
-        # support for old pysar format
-        if (atr is None 
-                and any(i in f.keys() and isinstance(f[i], h5py.Group)
-                        for i in ['interferograms', 'coherence', 'wrapped'])):
-            k1 = list(f.keys())[0]
-            k2 = list(f[k1].keys())[0]
-            atr = dict(f[k1][k2].attrs)
+
+        if atr is None:
+            if k in multi_group_hdf5_file:     # old pysar format
+                k2 = list(f[k].keys())[0]
+                atr = dict(f[k][k2].attrs)
+            elif k == 'giantTimeseries':
+                atr = giantTimeseries(fname).get_metadata()
 
         if atr is None:
             raise ValueError('No attribute {} found in 0/1/2 group level!'.format(key))
@@ -529,24 +565,6 @@ def read_attribute(fname, datasetName=None, standardize=True):
             except:
                 atr[key] = value
 
-        # get FILE_TYPE
-        g1_list = [i for i in f.keys() if isinstance(f[i], h5py.Group)]
-        d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
-        if any(i in d1_list for i in ifgramDatasetNames):
-            k = 'ifgramStack'
-        elif any(i in d1_list for i in geometryDatasetNames):
-            k = 'geometry'
-        elif any(i in g1_list+d1_list for i in ['timeseries']+timeseriesDatasetNames):
-            k = 'timeseries'
-        elif 'HDFEOS' in g1_list:
-            k = 'HDFEOS'
-        # old pysar format
-        elif any(i in g1_list for i in multi_group_hdf5_file):
-            k = list(set(g1_list) & set(multi_group_hdf5_file))[0]
-        elif 'FILE_TYPE' in atr.keys():
-            k = atr['FILE_TYPE']
-        else:
-            k = list(f.keys())[0]
         atr['FILE_TYPE'] = str(k)
 
         # DATA_TYPE
@@ -618,8 +636,6 @@ def read_attribute(fname, datasetName=None, standardize=True):
     elif 'UNIT' not in atr.keys():
         if k in datasetUnitDict.keys():
             atr['UNIT'] = datasetUnitDict[k]
-        elif k in ['GIANT_TS']:
-            atr['UNIT'] = 'mm'
         else:
             atr['UNIT'] = '1'
 
@@ -631,16 +647,16 @@ def read_attribute(fname, datasetName=None, standardize=True):
         atr['FILE_TYPE'] = 'dem'
 
     if standardize:
-        atr = standardize_metadata(atr, standardMetadataKeys)
+        atr = standardize_metadata(atr)
     return atr
 
 
-def standardize_metadata(metaDict, standardMetadatKeys):
+def standardize_metadata(metaDict, standardKeys=standardMetadataKeys):
     metaDict_out = {}
     for k in metaDict.keys():
         metaDict_out[k] = metaDict[k]
-        if k in standardMetadataKeys.keys():
-            k2 = standardMetadatKeys[k]
+        if k in standardKeys.keys():
+            k2 = standardKeys[k]
             if k2 in metaDict.keys():
                 metaDict_out[k2] = metaDict[k2]
             else:
@@ -764,7 +780,7 @@ def read_roipac_rsc(fname, standardize=True):
         rscDict[key] = value
 
     if standardize:
-        rscDict = standardize_metadata(rscDict, standardMetadataKeys)
+        rscDict = standardize_metadata(rscDict)
     return rscDict
 
 
@@ -799,7 +815,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True, standa
         parDict = attribute_gamma2roipac(parDict)
 
     if standardize:
-        parDict = standardize_metadata(parDict, standardMetadataKeys)
+        parDict = standardize_metadata(parDict)
 
     return parDict
 
@@ -838,7 +854,7 @@ def read_isce_xml(fname, convert2roipac=True, standardize=True):
     if convert2roipac:
         xmlDict = attribute_isce2roipac(xmlDict)
     if standardize:
-        xmlDict = standardize_metadata(xmlDict, standardMetadataKeys)
+        xmlDict = standardize_metadata(xmlDict)
     return xmlDict
 
 

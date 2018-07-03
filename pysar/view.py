@@ -831,16 +831,18 @@ def read_dataset_input(inps, print_msg=True):
     return inps, atr
 
 
-def read_mask(inps, atr):
-    familyName = inps.dset[0].split('-')[0]
-
+def read_mask(fname, datasetName, inps, atr):
     # Read mask file if inputed
-    inps.msk = None
+    msk = None
     if os.path.isfile(str(inps.mask_file)):
         try:
             atrMsk = readfile.read_attribute(inps.mask_file)
             if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
-                inps.msk = readfile.read(inps.mask_file, datasetName='mask', box=inps.pix_box)[0]
+                try:
+                    box = inps.pix_box
+                except:
+                    box = None
+                msk = readfile.read(inps.mask_file, datasetName='mask', box=box)[0]
                 print('read mask from file: '+os.path.basename(inps.mask_file))
             else:
                 print('WARNING: input file has different size from mask file: {}'.format(inps.mask_file))
@@ -850,18 +852,19 @@ def read_mask(inps, atr):
             print('Can not open mask file: '+inps.mask_file)
             inps.mask_file = None
 
-    elif inps.key in ['HDFEOS'] and familyName in timeseriesDatasetNames:
-        inps.mask_file = inps.file
-        inps.msk = readfile.read(inps.file, datasetName='mask')[0]
-        print('read {} contained mask dataset.'.format(inps.key))
+    elif inps.key in ['HDFEOS']:
+        if datasetName.split('-')[0] in timeseriesDatasetNames:
+            inps.mask_file = fname
+            msk = readfile.read(fname, datasetName='mask')[0]
+            print('read {} contained mask dataset.'.format(inps.key))
 
-    elif inps.file.endswith('PARAMS.h5'):
-        inps.mask_file = inps.file
-        h5msk = h5py.File(inps.file, 'r')
-        inps.msk = h5msk['cmask'][:] == 1.
+    elif fname.endswith('PARAMS.h5'):
+        inps.mask_file = fname
+        h5msk = h5py.File(fname, 'r')
+        msk = h5msk['cmask'][:] == 1.
         h5msk.close()
-        print('read {} contained cmask dataset'.format(os.path.basename(inps.file)))
-    return inps
+        print('read {} contained cmask dataset'.format(os.path.basename(fname)))
+    return msk, inps.mask_file
 
 
 def update_figure_setting(inps):
@@ -952,7 +955,8 @@ def read_data4figure(i_start, i_end, inps, metadata):
                      inps.pix_box[2] - inps.pix_box[0]))
 
     # fast reading for single dataset type
-    if len(inps.dsetFamilyList) == 1 and inps.key in ['timeseries', 'ifgramStack', 'HDFEOS', 'geometry']:
+    if (len(inps.dsetFamilyList) == 1
+            and inps.key in ['timeseries', 'giantTimeseries', 'ifgramStack', 'HDFEOS', 'geometry']):
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
         data = readfile.read(inps.file, datasetName=dset_list, box=inps.pix_box)[0]
         if inps.key == 'ifgramStack':
@@ -1256,7 +1260,10 @@ def main(iargs=None):
 
     inps = update_inps_with_file_metadata(inps, atr)
 
-    inps = read_mask(inps, atr)
+    inps.msk, inps.mask_file = read_mask(inps.file,
+                                         datasetName=inps.dset[0],
+                                         inps=inps,
+                                         atr=atr)
 
     ############################### One Subplot ###############################
     if inps.dsetNum == 1:

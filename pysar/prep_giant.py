@@ -8,9 +8,8 @@
 
 import os
 import argparse
-import h5py
 from lxml import objectify
-from pysar.utils import readfile
+from pysar.utils import readfile, utils as ut
 
 
 key_giant2pysar = {'xmin':'SUBSET_XMIN', 'xmax':'SUBSET_XMAX',
@@ -39,10 +38,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     if not inps.xml_file:
-        file_dir = os.path.dirname(inps.file)
-        file_list = ['data.xml', 'sbas.xml', 'mints.xml']
-        file_list = [os.path.join(file_dir, '../{}'.format(i)) for i in file_list]
-        inps.xml_file = [i for i in file_list if os.path.isfile(i)]
+        inps.xml_file = auto_xml_file4giant(inps.file)
     if not inps.xml_file:
         print('error: no xml file found.')
         parser.print_usage()
@@ -50,9 +46,26 @@ def cmd_line_parse(iargs=None):
 
     return inps
 
-def prepare_metadata4giant(fname, xml_files):
-    xml_dict = {}
 
+def auto_xml_file4giant(fname):
+    file_list = [os.path.join(os.path.dirname(fname), '../{}'.format(i))
+                 for i in ['data.xml',
+                           'sbas.xml',
+                           'mints.xml']]
+    file_list = [i for i in file_list if os.path.isfile(i)]
+    return file_list
+
+
+def prepare_metadata4giant(fname, xml_files=None):
+    """Extract metadata from xml files for GIAnT time-series file."""
+    # check xml files
+    if not xml_files:
+        xml_files = auto_xml_file4giant(fname)
+    if not xml_files:
+        raise FileNotFoundError("no xml file found.")
+
+    # extract metadata from xml files
+    xml_dict = {}
     for xml_file in xml_files:
         print('reading {}'.format(xml_file))
         root = objectify.parse(xml_file).getroot()
@@ -83,14 +96,11 @@ def prepare_metadata4giant(fname, xml_files):
     if not xml_dict:
         raise ValueError('No metadata found in file: '+xml_file)
 
+    # standardize metadata names
     xml_dict = readfile.standardize_metadata(xml_dict)
 
-    print('open {} with +r mode'.format(fname))
-    f = h5py.File(fname, 'r+')
-    for key, value in xml_dict.items():
-        f.attrs[key] = str(value)
-    f.close()
-    print('finished updating {}'.format(fname))
+    # update GIAnT HDF5 file
+    fname = ut.add_attribute(fname, xml_dict)
     return fname
 
 

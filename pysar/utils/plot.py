@@ -346,7 +346,7 @@ def check_colormap_input(metadata, colormap=None, datasetName=None):
     return colormap
 
 
-def auto_adjust_xaxis_date(ax, datevector, fontSize=12, every_year=1):
+def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1):
     """Adjust X axis
     Input:
         ax : matplotlib figure axes object
@@ -375,17 +375,17 @@ def auto_adjust_xaxis_date(ax, datevector, fontSize=12, every_year=1):
     ax.xaxis.set_minor_locator(mdates.MonthLocator())
 
     # Label font size
-    ax.tick_params(labelsize=fontSize)
+    ax.tick_params(labelsize=fontsize)
     # fig2.autofmt_xdate()     #adjust x overlap by rorating, may enble again
     return ax, dss, dee
 
 
-def auto_adjust_yaxis(ax, dataList, fontSize=12, ymin=None, ymax=None):
+def auto_adjust_yaxis(ax, dataList, fontsize=12, ymin=None, ymax=None):
     """Adjust Y axis
     Input:
         ax       : matplot figure axes object
         dataList : list of float, value in y axis
-        fontSize : float, font size
+        fontsize : float, font size
         ymin     : float, lower y axis limit
         ymax     : float, upper y axis limit
     Output:
@@ -401,8 +401,8 @@ def auto_adjust_yaxis(ax, dataList, fontSize=12, ymin=None, ymax=None):
     # Tick/Label setting
     #xticklabels = plt.getp(ax, 'xticklabels')
     #yticklabels = plt.getp(ax, 'yticklabels')
-    #plt.setp(yticklabels, 'color', 'k', fontsize=fontSize)
-    #plt.setp(xticklabels, 'color', 'k', fontsize=fontSize)
+    #plt.setp(yticklabels, 'color', 'k', fontsize=fontsize)
+    #plt.setp(xticklabels, 'color', 'k', fontsize=fontsize)
 
     return ax
 
@@ -436,7 +436,7 @@ def plot_coherence_history(ax, date12List, cohList, plot_dict={}):
     if plot_dict['disp_title']:
         ax.set_title('Coherence History of All Related Interferograms')
 
-    ax = auto_adjust_xaxis_date(ax, datevector, fontSize=plot_dict['fontsize'],
+    ax = auto_adjust_xaxis_date(ax, datevector, fontsize=plot_dict['fontsize'],
                                 every_year=plot_dict['every_year'])[0]
     ax.set_ylim([0.0, 1.0])
 
@@ -636,9 +636,9 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         ax.set_title('Interferogram Network', fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = auto_adjust_xaxis_date(ax, datevector, fontSize=plot_dict['fontsize'],
+    ax = auto_adjust_xaxis_date(ax, datevector, fontsize=plot_dict['fontsize'],
                                 every_year=plot_dict['every_year'])[0]
-    ax = auto_adjust_yaxis(ax, pbaseList, fontSize=plot_dict['fontsize'])
+    ax = auto_adjust_yaxis(ax, pbaseList, fontsize=plot_dict['fontsize'])
     ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perp Baseline [m]', fontsize=plot_dict['fontsize'])
     ax.tick_params(which='both', direction='in', labelsize=plot_dict['fontsize'],
@@ -718,9 +718,9 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
         ax.set_title('Perpendicular Baseline History', fontsize=plot_dict['fontsize'])
 
     # axis format
-    ax = auto_adjust_xaxis_date(ax, datevector, fontSize=plot_dict['fontsize'],
+    ax = auto_adjust_xaxis_date(ax, datevector, fontsize=plot_dict['fontsize'],
                                 every_year=plot_dict['every_year'])[0]
-    ax = auto_adjust_yaxis(ax, pbaseList, fontSize=plot_dict['fontsize'])
+    ax = auto_adjust_yaxis(ax, pbaseList, fontsize=plot_dict['fontsize'])
     ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Perpendicular Baseline [m]', fontsize=plot_dict['fontsize'])
 
@@ -1007,7 +1007,8 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False):
     if not disp_unit:
         k = metadata['FILE_TYPE']
         disp_unit = metadata['UNIT'].lower()
-        if k in ['timeseries', 'velocity'] and disp_unit.split('/')[0].endswith('m'):
+        if (k in ['timeseries', 'giantTimeseries', 'velocity']
+                and disp_unit.split('/')[0].endswith('m')):
             disp_unit = 'cm'
         elif k in ['.mli', '.slc', '.amp']:
             disp_unit = 'dB'
@@ -1140,3 +1141,5 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False):
         print('re-wrapping data to [-pi, pi]')
         data -= np.round(data/(2*np.pi)) * (2*np.pi)
     return data, disp_unit, disp_scale, wrap
+
+
