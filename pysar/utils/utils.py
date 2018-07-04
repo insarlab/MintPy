@@ -869,7 +869,7 @@ def update_attribute_or_not(atr_new, atr_orig):
     return update
 
 
-def add_attribute(File, atr_new=dict()):
+def add_attribute(File, atr_new=dict(), print_msg=False):
     """Add/update input attribute into File
     Parameters: File - string, path/name of file
                 atr_new - dict, attributes to be added/updated
@@ -893,10 +893,14 @@ def add_attribute(File, atr_new=dict()):
         if value == 'None' or value is None:
             try:
                 f.attrs.pop(key)
+                if print_msg:
+                    print('remove {}'.format(key))
             except:
                 pass
         else:
             f.attrs[key] = str(value)
+            if print_msg:
+                print('{} = {}'.format(key, str(value)))
     f.close()
     return File
 

@@ -10,6 +10,7 @@ import os
 import argparse
 from lxml import objectify
 from pysar.utils import readfile, utils as ut
+from pysar.objects import sensor
 
 
 key_giant2pysar = {'xmin':'SUBSET_XMIN', 'xmax':'SUBSET_XMAX',
@@ -99,8 +100,21 @@ def prepare_metadata4giant(fname, xml_files=None):
     # standardize metadata names
     xml_dict = readfile.standardize_metadata(xml_dict)
 
+    # project name
+    sensor_name, project_name = sensor.project_name2sensor_name(os.path.abspath(fname))
+    if sensor_name:
+        xml_dict['PLATFORM'] = sensor_name
+    if project_name:
+        xml_dict['PROJECT_NAME'] = project_name
+        if sensor_name in project_name:
+            tmp = project_name.split(sensor_name)[1][0]
+            if tmp == 'A':
+                xml_dict['ORBIT_DIRECTION'] = 'ASCENDING'
+            else:
+                xml_dict['ORBIT_DIRECTION'] = 'DESCENDING'
+
     # update GIAnT HDF5 file
-    fname = ut.add_attribute(fname, xml_dict)
+    fname = ut.add_attribute(fname, xml_dict, print_msg=True)
     return fname
 
 
