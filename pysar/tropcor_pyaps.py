@@ -218,31 +218,39 @@ def date_list2grib_file(date_list, hour, trop_model, grib_dir):
     return grib_file_list
 
 
-def check_exist_grib_file(grib_file_list, print_msg=True):
+def check_exist_grib_file(gfile_list, print_msg=True):
     """Check input list of grib files, and return the existing ones with right size."""
-    grib_file_existed = ut.get_file_list(grib_file_list)
-    if grib_file_existed:
-        grib_filesize_digit = ut.most_common([len(str(os.path.getsize(i))) for i in grib_file_existed])
-        grib_filesize_max2 = ut.most_common([str(os.path.getsize(i))[0:2] for i in grib_file_existed])
-        grib_file_corrupted = [i for i in grib_file_existed
-                               if (len(str(os.path.getsize(i))) != grib_filesize_digit
-                                   or str(os.path.getsize(i))[0:2] != grib_filesize_max2)]
-        if print_msg:
-            print('file size mode: %se%d bytes' % (grib_filesize_max2, grib_filesize_digit-2))
-            print('number of grib files existed    : %d' % len(grib_file_existed))
-        if grib_file_corrupted:
+    gfile_existed = ut.get_file_list(gfile_list)
+    if gfile_existed:
+        file_sizes = [os.path.getsize(i) for i in gfile_existed
+                      if os.path.getsize(i) > 10e6]
+        if file_sizes:
+            comm_size = ut.most_common([i for i in file_sizes])
+            if print_msg:
+                print('file size mode: {} bytes'.format(comm_size))
+                print('number of grib files existed    : {}'.format(len(gfile_existed)))
+
+            gfile_corrupted = []
+            for gfile in gfile_existed:
+                if os.path.getsize(gfile) < comm_size * 0.9:
+                    gfile_corrupted.append(gfile)
+        else:
+            gfile_corrupted = gfile_existed
+
+        if gfile_corrupted:
             if print_msg:
                 print('------------------------------------------------------------------------------')
                 print('corrupted grib files detected! Delete them and re-download...')
-                print('number of grib files corrupted  : %d' % len(grib_file_corrupted))
-            for i in grib_file_corrupted:
+                print('number of grib files corrupted  : {}'.format(len(gfile_corrupted)))
+            for i in gfile_corrupted:
                 rmCmd = 'rm '+i
                 print(rmCmd)
                 os.system(rmCmd)
-                grib_file_existed.remove(i)
+                gfile_existed.remove(i)
             if print_msg:
                 print('------------------------------------------------------------------------------')
-    return grib_file_existed
+    gfile2dload = sorted(list(set(gfile_list) - set(gfile_existed)))
+    return gfile2dload
 
 
 def dload_grib_pyaps(grib_file_list, trop_model='ECMWF'):
@@ -254,8 +262,7 @@ def dload_grib_pyaps(grib_file_list, trop_model='ECMWF'):
     print('*'*50+'\nDownloading weather model data using PyAPS (Jolivet et al., 2011, GRL) ...')
 
     # Get date list to download (skip already downloaded files)
-    grib_file_existed = check_exist_grib_file(grib_file_list, print_msg=True)
-    grib_file2download = sorted(list(set(grib_file_list) - set(grib_file_existed)))
+    grib_file2download = check_exist_grib_file(grib_file_list, print_msg=True)
     date_list2download = [str(re.findall('\d{8}', i)[0]) for i in grib_file2download]
     print('number of grib files to download: %d' % len(date_list2download))
     print('------------------------------------------------------------------------------\n')
