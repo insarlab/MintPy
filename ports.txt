@@ -55,7 +55,7 @@ h5utils
 netcdf
 netcdf-cxx
 netcdf-fortran
-grib_api +gcc5
+ecCodes +gcc5
 postgresql95
 postgresql95-server
 proj

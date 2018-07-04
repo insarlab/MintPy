@@ -6,7 +6,7 @@
        
 ## InSAR time series analysis in Python
    
-PySAR is a open-source package in Python for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ISCE, Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) linked PySAR product with [time series web viewer](http://insarmaps.miami.edu).      
+PySAR is a open-source package in Python for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ISCE, Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) linked PySAR product with [InSAR Web Viewer](http://insarmaps.miami.edu).      
    
 
 ### 1. [Download](https://github.com/yunjunz/PySAR/blob/master/docs/download.md)    
