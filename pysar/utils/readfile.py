@@ -213,10 +213,15 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                 atr['UNIT'] = '1'
 
         elif k in ['geometry']:
-            obj = geometry(fname)
-            data = obj.read(datasetName=datasetName,
-                            box=box,
-                            print_msg=print_msg)
+            # support for old format
+            if k in f.keys() and datasetName:
+                data = f[k][datasetName][box[1]:box[3],
+                                         box[0]:box[2]]
+            else:
+                obj = geometry(fname)
+                data = obj.read(datasetName=datasetName,
+                                box=box,
+                                print_msg=print_msg)
 
         elif k == 'HDFEOS':
             obj = HDFEOS(fname)

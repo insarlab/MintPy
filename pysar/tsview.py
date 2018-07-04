@@ -34,8 +34,8 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
     parser.add_argument('timeseries_file', help='time series file to display')
-    parser.add_argument('-n', dest='epoch_num', metavar='NUM', type=int, default='-2',
-                        help='Epoch/slice number to display, default: the 2nd last.')
+    parser.add_argument('-n', dest='init_idx', metavar='NUM', type=int,
+                        help='Epoch/slice number to display.')
     parser.add_argument('-m', '--mask', dest='mask_file',
                         help='mask to use. Default: geo_maskTempCoh.h5 for geocoded file and maskTempCoh.h5 for radar file')
     parser.add_argument('--error', dest='error_file',
@@ -48,12 +48,12 @@ def create_parser():
                        help='initial pixel to plot in Y/X coord')
     pixel.add_argument('--lalo', type=float, metavar=('LAT', 'LON'), nargs=2,
                        help='initial pixel to plot in lat/lon coord')
-    pixel.add_argument('--ref-yx', dest='ref_yx', type=int, metavar=('Y', 'X'), nargs=2,
-                       help='change reference pixel to input location')
-    pixel.add_argument('--ref-lalo', dest='ref_lalo', type=float, metavar=('LAT', 'LON'), nargs=2,
-                       help='change reference pixel to input location')
 
     ref = parser.add_argument_group('Reference Pixel')
+    ref.add_argument('--ref-yx', dest='ref_yx', type=int, metavar=('Y', 'X'), nargs=2,
+                     help='change reference pixel to input location')
+    ref.add_argument('--ref-lalo', dest='ref_lalo', type=float, metavar=('LAT', 'LON'), nargs=2,
+                     help='change reference pixel to input location')
     ref.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',
                      help='marker color of reference point')
     ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',
@@ -72,7 +72,8 @@ def create_parser():
                         help='DPI - dot per inch - for display/write')
 
     disp = parser.add_argument_group('Display Setting')
-    disp.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2, default=[10.0, 5.0],
+    disp.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'),
+                      type=float, nargs=2, default=[8.0, 4.5],
                       help='Figure size in inches - width and length. Default: 10.0 5.0\n' +
                            'i.e. 3.5 2 for ppt; ')
     disp.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
@@ -119,18 +120,18 @@ def cmd_line_parse(iargs=None):
 
 
 ###########################################################################################
-def save_ts_plot(fig_v, fig_ts, y, x, ts_data, inps):
+def save_ts_plot(yx, fig_v, fig_ts, ts_data, inps):
     print('save info on pixel ({}, {})'.format(y, x))
     if not inps.fig_base:
         inps.fig_base = 'y%d_x%d' % (y, x)
 
     # read data
-    d_ts = ts_data[:, y, x]
+    d_ts = ts_data[:, yx[0], yx[1]]
 
     # TXT - point time series
     outName = '{}_ts.txt'.format(inps.fig_base)
     header_info = 'timeseries_file={}\n'.format(inps.timeseries_file)
-    header_info += '{}\n'.format(_get_ts_title(y, x, inps))
+    header_info += '{}\n'.format(_get_ts_title(yx[0], yx[1], inps))
     header_info += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1])
     header_info += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx])
     header_info += 'unit={}/yr'.format(inps.disp_unit)
@@ -148,7 +149,7 @@ def save_ts_plot(fig_v, fig_ts, y, x, ts_data, inps):
     print('save time series plot to '+outName)
 
     # Figure - map
-    outName = '{}_{}.png'.format(inps.fig_base, inps.date_list[inps.epoch_num])
+    outName = '{}_{}.png'.format(inps.fig_base, inps.date_list[inps.init_idx])
     fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
     print('save map plot to '+outName)
     return
@@ -189,7 +190,6 @@ def read_init_info(inps):
     else:
         raise ValueError('input file is {}, not timeseries.'.format(k))
     obj.open()
-    inps.ref_idx = obj.refIndex
 
     # default mask file
     if not inps.mask_file and 'masked' not in inps.timeseries_file:
@@ -208,6 +208,14 @@ def read_init_info(inps):
     (inps.ex_date_list,
      inps.ex_dates,
      inps.ex_flag) = read_exclude_date(inps.ex_date_list, inps.date_list)
+
+    # initial display index
+    inps.ref_idx = obj.refIndex
+    if not inps.init_idx:
+        if inps.ref_idx < inps.num_date / 2.:
+            inps.init_idx = -2
+        else:
+            inps.init_idx = 2
 
     # Read Error List
     inps.error_ts = None
@@ -328,7 +336,7 @@ def plot_init_map(ax, ts_data, inps):
                                     inps_dict=vars(inps))
         del dem
 
-    idx = inps.epoch_num
+    idx = inps.init_idx
     d_v = ts_data[idx, :, :]
     im = ax.imshow(d_v,
                    cmap=inps.colormap,
@@ -399,7 +407,7 @@ def plot_init_time_slider(ax, year_list, init_idx=-1, ref_idx=0):
 
     tslider.ax.bar(year_list, np.ones(len(year_list)), facecolor='black', width=0.01, ecolor=None)
     tslider.ax.bar(year_list[init_idx], 1., facecolor='black', width=0.01, ecolor=None)
-    tslider.ax.bar(year_list[ref_idx], 1., facecolor='red', width=0.02, ecolor=None)
+    tslider.ax.bar(year_list[ref_idx], 1., facecolor='crimson', width=0.03, ecolor=None)
 
     # xaxis tick format
     if np.floor(year_list[-1]) == np.floor(year_list[0]):
@@ -457,9 +465,9 @@ def plot_timeseries_scatter(ax, dis_ts, inps):
     return ax
 
 
-def plot_point_timeseries(fig, ax, y, x, ts_data, inps):
+def plot_point_timeseries(yx, fig, ax, ts_data, inps):
     """Plot point time series displacement at pixel [y, x]"""
-    d_ts = ts_data[:, y, x]
+    d_ts = ts_data[:, yx[0], yx[1]]
     if inps.zero_first:
         d_ts -= d_ts[inps.zero_idx]
 
@@ -472,7 +480,7 @@ def plot_point_timeseries(fig, ax, y, x, ts_data, inps):
 
     # format
     ax = _adjust_ts_axis(ax, inps)
-    title_ts = _get_ts_title(y, x, inps)
+    title_ts = _get_ts_title(yx[0], yx[1], inps)
     if inps.disp_title:
         ax.set_title(title_ts)
 
@@ -530,7 +538,6 @@ def estimate_slope(d_ts, inps):
 ###########################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
-
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
@@ -538,7 +545,7 @@ def main(iargs=None):
 
     ts_data, mask, inps = read_timeseries_data(inps)
 
-    # Fig 1 - Cumulative Displacement Map
+    # Figure 1 - Cumulative Displacement Map"""
     fig_v = plt.figure('Cumulative Displacement Map')
     # Axes 1
     ax_v = fig_v.add_axes([0.125, 0.25, 0.75, 0.65])
@@ -547,7 +554,7 @@ def main(iargs=None):
     ax_time = fig_v.add_axes([0.2, 0.1, 0.6, 0.07])
     tslider = plot_init_time_slider(ax=ax_time,
                                     year_list=inps.yearList,
-                                    init_idx=inps.epoch_num,
+                                    init_idx=inps.init_idx,
                                     ref_idx=inps.ref_idx)
 
     def update_time_slider(val):
@@ -559,31 +566,29 @@ def main(iargs=None):
         fig_v.canvas.draw()
     tslider.on_changed(update_time_slider)
 
-    # Fig 2 - Time Series Displacement - Point
+    # Figure 2 - Time Series Displacement - Point
     fig_ts, ax_ts = plt.subplots(num='Point Displacement Time-series', figsize=inps.fig_size)
-    ax_ts, d_ts = plot_point_timeseries(fig_ts, ax_ts, inps.yx[0], inps.yx[1], ts_data, inps)
+    ax_ts, d_ts = plot_point_timeseries(inps.yx, fig_ts, ax_ts, ts_data, inps)
 
     def plot_timeseries_event(event):
         """Event function to get y/x from button press"""
-        if event.inaxes != ax_v:
-            return
-        y = int(event.ydata+0.5)
-        x = int(event.xdata+0.5)
-        if mask[y, x] == 0:
-            print('pixel is in masked out area.')
-            return
-        d_ts = plot_point_timeseries(fig_ts, ax_ts, y, x, ts_data, inps)
-        return
+        if event.inaxes == ax_v:
+            y, x = int(event.ydata+0.5), int(event.xdata+0.5)
+            if mask[y, x] != 0:
+                d_ts = plot_point_timeseries((y, x), fig_ts, ax_ts, ts_data, inps)
+            else:
+                print('pixel is in masked out area.')
 
     # Output
     if inps.save_fig:
-        save_ts_plot(fig_v, fig_ts, inps.yx[0], inps.yx[1], ts_data, inps)
+        save_ts_plot(inps.yx, fig_v, fig_ts, ts_data, inps)
 
     # Final linking of the canvas to the plots.
     cid = fig_v.canvas.mpl_connect('button_press_event', plot_timeseries_event)
 
     if inps.disp_fig:
         plt.show()
+
     fig_v.canvas.mpl_disconnect(cid)
     return
 
