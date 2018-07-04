@@ -44,16 +44,13 @@ def create_parser():
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('timeseries_file',
-                        default='timeseries.h5', help='Timeseries file')
-    parser.add_argument('-t', '--template',
-                        dest='template_file', help='Template file')
+    parser.add_argument('timeseries_file', default='timeseries.h5', help='Timeseries file')
+    parser.add_argument('-t', '--template', dest='template_file', help='Template file')
 
-    parser.add_argument('-c', '--coherence', dest='coherence_file',
+    parser.add_argument('-c', '--coherence', dest='coherence_file', required=True, 
                         help='Coherence/correlation file, i.e. spatial_coherence.h5, temporal_coherence.h5')
-    parser.add_argument('-m', '--mask', dest='mask_file', help='Mask file')
-    parser.add_argument('-g', '--geometry',
-                        dest='geom_file', help='geometry file')
+    parser.add_argument('-m', '--mask', dest='mask_file', required=True, help='Mask file')
+    parser.add_argument('-g', '--geometry', dest='geom_file', required=True, help='geometry file')
 
     parser.add_argument('--update', action='store_true',
                         help='Enable update mode, a.k.a. put XXXXXXXX as endDate in filename if endDate < 1 year')

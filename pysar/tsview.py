@@ -16,7 +16,7 @@ from matplotlib.ticker import MultipleLocator
 from matplotlib.widgets import Slider
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pysar.utils import readfile, ptime, plot as pp
-from pysar.objects import timeseries, giantTimeseries
+from pysar.objects import timeseries, giantTimeseries, HDFEOS
 from pysar.view import read_mask
 from pysar.multilook import multilook_data
 
@@ -187,8 +187,10 @@ def read_init_info(inps):
         obj = timeseries(inps.timeseries_file)
     elif inps.key == 'giantTimeseries':
         obj = giantTimeseries(inps.timeseries_file)
+    elif inps.key == 'HDFEOS':
+        obj = HDFEOS(inps.timeseries_file)
     else:
-        raise ValueError('input file is {}, not timeseries.'.format(k))
+        raise ValueError('input file is {}, not timeseries.'.format(inps.key))
     obj.open()
 
     # default mask file

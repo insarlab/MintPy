@@ -574,6 +574,7 @@ def read_attribute(fname, datasetName=None, standardize=True):
 
         # DATA_TYPE
         k0 = list(f.keys())[0]
+        dset = None
         if isinstance(f[k0], h5py.Dataset):
             if datasetName and datasetName in f.keys():
                 dset = f[datasetName]
@@ -591,7 +592,8 @@ def read_attribute(fname, datasetName=None, standardize=True):
                 k2 = list(f[k0][k1].keys())[0]
                 if isinstance(f[k0][k1][k2], h5py.Dataset):
                     dset = f[k0][k1][k2]
-        atr['DATA_TYPE'] = str(dset.dtype)
+        if dset is not None:
+            atr['DATA_TYPE'] = str(dset.dtype)
 
         # PROCESSOR
         if 'INSAR_PROCESSOR' in atr.keys():

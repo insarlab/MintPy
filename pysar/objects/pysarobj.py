@@ -958,12 +958,19 @@ class HDFEOS:
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
             self.metadata = dict(f.attrs)
+            dates = f['HDFEOS/GRIDS/timeseries/observation/date'][:]
         for key, value in self.metadata.items():
             try:
                 self.metadata[key] = value.decode('utf8')
             except:
                 self.metadata[key] = value
         self.metadata['FILE_TYPE'] = self.name
+
+        # ref_date/index
+        dateList = [i.decode('utf8') for i in dates]
+        if 'REF_DATE' not in self.metadata.keys():
+            self.metadata['REF_DATE'] = dateList[0]
+        self.refIndex = dateList.index(self.metadata['REF_DATE'])
         return self.metadata
 
     def read(self, datasetName=None, box=None, print_msg=True):
@@ -1038,10 +1045,9 @@ class giantTimeseries:
         if print_msg:
             print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
         self.get_size()
-        self.get_date_list()
+        self.get_metadata()
         self.numPixel = self.length * self.width
 
-        self.refIndex = 0
         self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
         self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
                               dtype=np.float32)
@@ -1070,12 +1076,11 @@ class giantTimeseries:
             except:
                 self.metadata[key] = value
 
-        self.open(print_msg=False)
-        if 'LENGTH' not in self.metadata.keys():
-            self.metadata['LENGTH'] = self.length
-            self.metadata['WIDTH'] = self.width
+        # ref_date/index
+        dateList = self.get_date_list()
         if 'REF_DATE' not in self.metadata.keys():
-            self.metadata['REF_DATE'] = self.dateList[self.refIndex]
+            self.metadata['REF_DATE'] = dateList[0]
+        self.refIndex = dateList.index(self.metadata['REF_DATE'])
         return self.metadata
 
     def read(self, datasetName=None, box=None, print_msg=True):

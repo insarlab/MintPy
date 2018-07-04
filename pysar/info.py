@@ -86,13 +86,18 @@ def hdf5_structure_string(file):
                                                t=obj.dtype)
 
     f = h5py.File(file, 'r')
-    if len(f.attrs) > 0:
+    atr = dict(f.attrs)
+    if len(atr) > 0:
+        for key, value in atr.items():
+            try:
+                atr[key] = value.decode('utf8')
+            except:
+                atr[key] = value
         output += 'Attributes in / level:\n'
-        output = attributes_string(f.attrs, output, sorting=True)+"\n"
     else:
         atr = readfile.read_attribute(file)
         output += 'Attributes:\n'
-        output = attributes_string(atr, output, sorting=True)+"\n"
+    output = attributes_string(atr, output, sorting=True)+"\n"
 
     f.visititems(print_hdf5_structure_obj)
     f.close()

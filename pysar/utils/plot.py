@@ -1007,7 +1007,7 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False):
     if not disp_unit:
         k = metadata['FILE_TYPE']
         disp_unit = metadata['UNIT'].lower()
-        if (k in ['timeseries', 'giantTimeseries', 'velocity']
+        if (k in ['timeseries', 'giantTimeseries', 'velocity', 'HDFEOS']
                 and disp_unit.split('/')[0].endswith('m')):
             disp_unit = 'cm'
         elif k in ['.mli', '.slc', '.amp']:
