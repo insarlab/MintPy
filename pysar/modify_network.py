@@ -43,6 +43,7 @@ pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no -
 ## Network modification based on temporal/perpendicular baselines, date etc.
 pysar.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
 pysar.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpendicular spatial baseline in meter
+pysar.network.connNumMax      = auto  #[1-inf, no], auto for no, maximum number of neighbors for each acquisition
 pysar.network.referenceFile   = auto  #[date12_list.txt / Modified_unwrapIfgram.h5 / no], auto for no
 pysar.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
 pysar.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of ifg index (start from 0)
@@ -72,6 +73,8 @@ def create_parser():
                         type=float, help='max temporal baseline in days')
     parser.add_argument('--max-pbase', dest='perpBaseMax',
                         type=float, help='max perpendicular baseline in meters')
+    parser.add_argument('--max-conn-num', dest='connNumMax', type=int,
+                        help='max number of connections/neighbors per acquisition')
     parser.add_argument('-r', '--reference', dest='referenceFile',
                         help='Reference hdf5 / list file with network information.\n'
                              'i.e. Modified_unwrapIfgram.h5, Pairs.list')
@@ -165,6 +168,8 @@ def read_template2inps(template_file, inps=None):
         elif value:
             if key in ['minCoherence', 'tempBaseMax', 'perpBaseMax']:
                 inpsDict[key] = float(value)
+            elif key in ['connNumMax']:
+                inpsDict[key] = int(value)
             elif key in ['maskFile', 'referenceFile']:
                 inpsDict[key] = value
             elif key == 'maskAoi.yx':
@@ -191,7 +196,7 @@ def read_template2inps(template_file, inps=None):
                 inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
 
     # Turn reset on if 1) no input options found to drop ifgram AND 2) there is template input
-    if all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax,
+    if all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
                            inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
                            inps.startDate, inps.endDate, inps.reset, inps.manual]):
         print('No input option found to remove interferogram')
@@ -288,12 +293,13 @@ def get_date12_to_drop(inps):
     obj = ifgramStack(inps.file)
     obj.open()
     date12ListAll = obj.date12List
+    dateList = obj.dateList
     print('number of interferograms: {}'.format(len(date12ListAll)))
 
     # Get date12_to_drop
     date12_to_drop = []
 
-    # 1. Update date12_to_drop from reference file
+    # reference file
     if inps.referenceFile:
         date12_to_keep = ifgramStack(inps.referenceFile).get_date12_list(dropIfgram=True)
         print('--------------------------------------------------')
@@ -303,7 +309,7 @@ def get_date12_to_drop(inps):
         date12_to_drop += tempList
         print('date12 not in reference file: ({})\n{}'.format(len(tempList), tempList))
 
-    # 2.1 Update date12_to_drop from coherence file
+    # coherence file
     if inps.coherenceBased:
         print('--------------------------------------------------')
         print('use coherence-based network modification')
@@ -338,7 +344,7 @@ def get_date12_to_drop(inps):
         date12_to_drop += tempList
         print(msg+'({})\n{}'.format(len(tempList), tempList))
 
-    # 2.2 Update date12_to_drop from temp baseline threshold
+    # temp baseline threshold
     if inps.tempBaseMax:
         tempIndex = np.abs(obj.tbaseIfgram) > inps.tempBaseMax
         tempList = list(np.array(date12ListAll)[tempIndex])
@@ -347,7 +353,7 @@ def get_date12_to_drop(inps):
         print('Drop ifgrams with temporal baseline > {} days: ({})\n{}'.format(
             inps.tempBaseMax, len(tempList), tempList))
 
-    # 2.3 Update date12_to_drop from perp baseline threshold
+    # perp baseline threshold
     if inps.perpBaseMax:
         tempIndex = np.abs(obj.pbaseIfgram) > inps.perpBaseMax
         tempList = list(np.array(date12ListAll)[tempIndex])
@@ -356,7 +362,17 @@ def get_date12_to_drop(inps):
         print('Drop ifgrams with perp baseline > {} meters: ({})\n{}'.format(
             inps.perpBaseMax, len(tempList), tempList))
 
-    # 2.4 Update date12_to_drop from excludeIfgIndex
+    # connection number threshold
+    if inps.connNumMax:
+        seq_date12_list = pnet.select_pairs_sequential(dateList, inps.connNumMax)
+        seq_date12_list = ptime.yyyymmdd_date12(seq_date12_list)
+        tempList = [i for i in date12ListAll if i not in seq_date12_list]
+        date12_to_drop += tempList
+        print('--------------------------------------------------')
+        print('Drop ifgrams with temporal baseline beyond {} neighbors: ({})\n{}'.format(
+            inps.connNumMax, len(tempList), tempList))
+
+    # excludeIfgIndex
     if inps.excludeIfgIndex:
         tempList = [date12ListAll[i] for i in inps.excludeIfgIndex]
         date12_to_drop += tempList
@@ -364,7 +380,7 @@ def get_date12_to_drop(inps):
         print('Drop ifgrams with the following index number: {}\n{}'.format(
             len(tempList), zip(inps.excludeIfgIndex, tempList)))
 
-    # 2.5 Update date12_to_drop from excludeDate
+    # excludeDate
     if inps.excludeDate:
         tempList = [i for i in date12ListAll if any(j in inps.excludeDate for j in i.split('_'))]
         date12_to_drop += tempList
@@ -372,7 +388,7 @@ def get_date12_to_drop(inps):
             len(tempList), inps.excludeDate))
         print('-'*30+'\n{}'.format(tempList))
 
-    # 2.6 Update date12_to_drop from startDate
+    # startDate
     if inps.startDate:
         minDate = int(inps.startDate)
         tempList = [i for i in date12ListAll if any(int(j) < minDate for j in i.split('_'))]
@@ -381,7 +397,7 @@ def get_date12_to_drop(inps):
         print('Drop ifgrams with date earlier than: {} ({})\n{}'.format(
             inps.startDate, len(tempList), tempList))
 
-    # 2.7 Update date12_to_drop from endDate
+    # endDate
     if inps.endDate:
         maxDate = int(inps.endDate)
         tempList = [i for i in date12ListAll if any(int(j) > maxDate for j in i.split('_'))]
@@ -390,7 +406,7 @@ def get_date12_to_drop(inps):
         print('Drop ifgrams with date later than: {} ({})\n{}'.format(
             inps.endDate, len(tempList), tempList))
 
-    # 3. Manually drop pairs
+    # Manually drop pairs
     if inps.manual:
         tempList = manual_select_pairs_to_remove(inps.file)
         if tempList is None:
@@ -399,7 +415,7 @@ def get_date12_to_drop(inps):
         print('date12 selected to remove: ({})\n{}'.format(len(tempList), tempList))
         date12_to_drop += tempList
 
-    # 4. drop duplicate date12 and sort in order
+    # drop duplicate date12 and sort in order
     date12_to_drop = sorted(list(set(date12_to_drop)))
     date12_to_keep = sorted(list(set(date12ListAll) - set(date12_to_drop)))
     print('--------------------------------------------------')
@@ -422,7 +438,7 @@ def main(iargs=None):
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
 
-    if all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax,
+    elif all(not i for i in [inps.referenceFile, inps.tempBaseMax, inps.perpBaseMax, inps.connNumMax,
                            inps.excludeIfgIndex, inps.excludeDate, inps.coherenceBased,
                            inps.startDate, inps.endDate, inps.reset, inps.manual]):
         msg = 'No input option found to remove interferogram, exit.\n'
