@@ -15,9 +15,8 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from matplotlib.widgets import Slider
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from pysar.utils import readfile, ptime, plot as pp
 from pysar.objects import timeseries, giantTimeseries, HDFEOS
-from pysar.view import read_mask
+from pysar.utils import readfile, ptime, plot as pp, utils as ut
 from pysar.multilook import multilook_data
 
 
@@ -120,41 +119,6 @@ def cmd_line_parse(iargs=None):
 
 
 ###########################################################################################
-def save_ts_plot(yx, fig_v, fig_ts, ts_data, inps):
-    print('save info on pixel ({}, {})'.format(y, x))
-    if not inps.fig_base:
-        inps.fig_base = 'y%d_x%d' % (y, x)
-
-    # read data
-    d_ts = ts_data[:, yx[0], yx[1]]
-
-    # TXT - point time series
-    outName = '{}_ts.txt'.format(inps.fig_base)
-    header_info = 'timeseries_file={}\n'.format(inps.timeseries_file)
-    header_info += '{}\n'.format(_get_ts_title(yx[0], yx[1], inps))
-    header_info += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1])
-    header_info += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx])
-    header_info += 'unit={}/yr'.format(inps.disp_unit)
-
-    np.savetxt(outName,
-               list(zip(np.array(inps.date_list), d_ts)),
-               fmt='%s',
-               delimiter='    ',
-               header=header_info)
-    print('save time series displacement in meter to '+outName)
-
-    # Figure - point time series
-    outName = '{}_ts.pdf'.format(inps.fig_base)
-    fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-    print('save time series plot to '+outName)
-
-    # Figure - map
-    outName = '{}_{}.png'.format(inps.fig_base, inps.date_list[inps.init_idx])
-    fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-    print('save map plot to '+outName)
-    return
-
-
 def read_exclude_date(input_ex_date, dateListAll):
     ex_date_list = []
     ex_dates = []
@@ -243,13 +207,21 @@ def read_init_info(inps):
         inps.lat_step = float(atr['Y_STEP'])
         inps.lon1 = inps.lon0 + inps.width *inps.lon_step
         inps.lat1 = inps.lat0 + inps.length*inps.lat_step
+        inps.geocoded = True
         print(('data size in (N, S, W, E): '
                '({%.4f}, {%.4f}, {%.4f}, {%.4f})'.format(inps.lat1,
                                                          inps.lat0,
                                                          inps.lon0,
                                                          inps.lon1)))
     except:
-        pass
+        inps.geocoded = False
+        lookup_file = ut.get_lookup_file('./INPUTS/geometryRadar.h5')
+        if lookup_file is not None:
+            inps.lats = readfile.read(lookup_file, datasetName='latitude')[0]
+            inps.lons = readfile.read(lookup_file, datasetName='longitude')[0]
+        else:
+            inps.lats = None
+            inps.lons = None
 
     # reference pixel
     if inps.ref_lalo and 'Y_FIRST' in atr.keys():
@@ -290,10 +262,9 @@ def read_timeseries_data(inps):
 
     # Mask file: input mask file + non-zero ts pixels
     mask = np.ones((inps.length, inps.width), np.bool_)
-    msk = read_mask(inps.timeseries_file,
-                    datasetName=inps.key,
-                    inps=inps,
-                    atr=atr)[0]
+    msk = pp.read_mask(inps.timeseries_file,
+                       mask_file=inps.mask_file,
+                       datasetName='displacement')[0]
     mask[msk == 0.] = False
     del msk
 
@@ -494,7 +465,9 @@ def plot_point_timeseries(yx, fig, ax, ts_data, inps):
     print(d_ts)
 
     # Slope estimation
-    estimate_slope(d_ts, inps)
+    estimate_slope(d_ts, inps.yearList,
+                   ex_flag=inps.ex_flag,
+                   disp_unit=inps.disp_unit)
 
     return ax, d_ts
 
@@ -511,30 +484,73 @@ def _adjust_ts_axis(ax, inps):
 
 def _get_ts_title(y, x, inps):
     title = 'Y = {}, X = {}'.format(y, x)
-    try:
+    if inps.geocoded:
         lat = inps.lat0 + y*inps.lat_step
         lon = inps.lon0 + x*inps.lon_step
         title += ', lat = {:.4f}, lon = {:.4f}'.format(lat, lon)
-    except:
-        pass
+    elif inps.lats is not None:
+        lat = inps.lats[y, x]
+        lon = inps.lons[y, x]
+        title += ', lat = {:.4f}, lon = {:.4f}'.format(lat, lon)
     return title
 
 
-def estimate_slope(d_ts, inps):
+def estimate_slope(d_ts, year_list, ex_flag=None, disp_unit='cm', print_msg=True):
     """Estimate linear velocity / STD of the crrent displacement time-series"""
     d_ts = np.array(d_ts)
-    years = np.array(inps.yearList)
-    if inps.ex_date_list:
-        years = years[inps.ex_flag == 1]
-        d_ts = d_ts[inps.ex_flag == 1]
+    years = np.array(year_list)
+    if ex_flag is not None:
+        d_ts = d_ts[ex_flag == 1]
+        years = years[ex_flag == 1]
 
     d_fit = stats.linregress(years, d_ts)
     vel = d_fit[0]
     std = d_fit[4]
 
-    print('linear velocity: {v:.2f} +/- {s:.2f} [{u}/yr]'.format(
-        v=vel, s=std, u=inps.disp_unit))
+    if print_msg:
+        print('linear velocity: {v:.2f} +/- {s:.2f} [{u}/yr]'.format(
+            v=vel, s=std, u=disp_unit))
     return vel, std
+
+
+def save_ts_plot(yx, fig_v, fig_ts, ts_data, inps):
+    print('save info on pixel ({}, {})'.format(yx[0], yx[1]))
+    if not inps.fig_base:
+        inps.fig_base = 'y%d_x%d' % (yx[0], yx[1])
+
+    # read data
+    d_ts = ts_data[:, yx[0], yx[1]]
+    vel, std = estimate_slope(d_ts, inps.yearList,
+                              ex_flag=inps.ex_flag,
+                              disp_unit=inps.disp_unit,
+                              print_msg=False)
+
+    # TXT - point time series
+    outName = '{}_ts.txt'.format(inps.fig_base)
+    header_info = 'timeseries_file={}\n'.format(os.path.abspath(inps.timeseries_file))
+    header_info += '{}\n'.format(_get_ts_title(yx[0], yx[1], inps))
+    header_info += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1])
+    header_info += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx])
+    header_info += 'unit: {}\n'.format(inps.disp_unit)
+    header_info += 'slope: {:.2f} +/- {:.2f} [{}/yr]'.format(vel, std, inps.disp_unit)
+
+    np.savetxt(outName,
+               list(zip(np.array(inps.date_list), d_ts)),
+               fmt='%s',
+               delimiter='    ',
+               header=header_info)
+    print('save time series displacement in meter to '+outName)
+
+    # Figure - point time series
+    outName = '{}_ts.pdf'.format(inps.fig_base)
+    fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+    print('save time series plot to '+outName)
+
+    # Figure - map
+    outName = '{}_{}.png'.format(inps.fig_base, inps.date_list[inps.init_idx])
+    fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
+    print('save map plot to '+outName)
+    return
 
 
 ###########################################################################################

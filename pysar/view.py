@@ -320,15 +320,6 @@ def update_inps_with_display_setting_file(inps, disp_set_file):
 
 
 def update_inps_with_file_metadata(inps, metadata):
-    # default mask file:
-    if not inps.mask_file and inps.key in ['velocity', 'timeseries'] and 'masked' not in inps.file:
-        if os.path.basename(metadata['FILE_PATH']).startswith('geo_'):
-            inps.mask_file = os.path.join(os.path.dirname(inps.file), 'geo_maskTempCoh.h5')
-        else:
-            inps.mask_file = os.path.join(os.path.dirname(inps.file), 'maskTempCoh.h5')
-        if not os.path.isfile(inps.mask_file):
-            inps.mask_file = None
-
     # Subset
     # Convert subset input into bounding box in radar / geo coordinate
     # geo_box = None if atr is not geocoded.
@@ -831,42 +822,6 @@ def read_dataset_input(inps, print_msg=True):
     return inps, atr
 
 
-def read_mask(fname, datasetName, inps, atr):
-    # Read mask file if inputed
-    msk = None
-    if os.path.isfile(str(inps.mask_file)):
-        try:
-            atrMsk = readfile.read_attribute(inps.mask_file)
-            if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
-                try:
-                    box = inps.pix_box
-                except:
-                    box = None
-                msk = readfile.read(inps.mask_file, datasetName='mask', box=box)[0]
-                print('read mask from file: '+os.path.basename(inps.mask_file))
-            else:
-                print('WARNING: input file has different size from mask file: {}'.format(inps.mask_file))
-                print('    Continue without mask')
-                inps.mask_file = None
-        except:
-            print('Can not open mask file: '+inps.mask_file)
-            inps.mask_file = None
-
-    elif inps.key in ['HDFEOS']:
-        if datasetName.split('-')[0] in timeseriesDatasetNames:
-            inps.mask_file = fname
-            msk = readfile.read(fname, datasetName='mask')[0]
-            print('read {} contained mask dataset.'.format(inps.key))
-
-    elif fname.endswith('PARAMS.h5'):
-        inps.mask_file = fname
-        h5msk = h5py.File(fname, 'r')
-        msk = h5msk['cmask'][:] == 1.
-        h5msk.close()
-        print('read {} contained cmask dataset'.format(os.path.basename(fname)))
-    return msk, inps.mask_file
-
-
 def update_figure_setting(inps):
     """Update figure setting based on number of subplots/datasets
     1) fig_size and font_size
@@ -1149,9 +1104,12 @@ def plot_figure(j, inps, metadata):
     print('plotting ...')
     prog_bar = ptime.progressBar(maxValue=i_end - i_start)
     for i in range(i_start, i_end):
-        ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, i - i_start + 1)
-        im = plot_subplot4figure(i, inps, ax=ax, data=data[i - i_start, :, :], metadata=metadata)
-        prog_bar.update(i - i_start + 1, suffix=inps.dset[i])
+        idx = i - i_start
+        ax = fig.add_subplot(inps.fig_row_num, inps.fig_col_num, idx + 1)
+        im = plot_subplot4figure(i, inps, ax=ax,
+                                 data=data[idx, :, :],
+                                 metadata=metadata)
+        prog_bar.update(idx+1, suffix=inps.dset[i])
     prog_bar.close()
     del data
     fig.tight_layout()
@@ -1260,10 +1218,10 @@ def main(iargs=None):
 
     inps = update_inps_with_file_metadata(inps, atr)
 
-    inps.msk, inps.mask_file = read_mask(inps.file,
-                                         datasetName=inps.dset[0],
-                                         inps=inps,
-                                         atr=atr)
+    inps.msk, inps.mask_file = pp.read_mask(inps.file,
+                                            mask_file=inps.mask_file,
+                                            datasetName=inps.dset[0],
+                                            box=inps.pix_box)
 
     ############################### One Subplot ###############################
     if inps.dsetNum == 1:

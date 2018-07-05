@@ -10,6 +10,7 @@
 import os
 import warnings
 import datetime
+import h5py
 import numpy as np
 from scipy import ndimage
 
@@ -794,7 +795,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     return ax
 
 
-def prepare_dem_background(dem, inps_dict=dict()):
+def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
     """Prepare to plot DEM on background
     Parameters: dem : 2D np.int16 matrix, dem data
                 inps_dict : dict with the following 4 items:
@@ -808,11 +809,11 @@ def prepare_dem_background(dem, inps_dict=dict()):
     Examples:   dem = readfile.read('INPUTS/geometryRadar.h5')[0]
                 dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(dem=dem)
     """
-    if not inps_dict:
-        inps_dict['disp_dem_shade'] = True
-        inps_dict['disp_dem_contour'] = True
-        inps_dict['dem_contour_step'] = 200.0
-        inps_dict['dem_contour_smooth'] = 3.0
+    key_list = inps_dict.keys()
+    if 'disp_dem_shade'     not in key_list:  inps_dict['disp_dem_shade']     = True
+    if 'disp_dem_contour'   not in key_list:  inps_dict['disp_dem_contour']   = True
+    if 'dem_contour_step'   not in key_list:  inps_dict['dem_contour_step']   = 200.
+    if 'dem_contour_smooth' not in key_list:  inps_dict['dem_contour_smooth'] = 3.0
 
     dem_shade = None
     dem_contour = None
@@ -825,20 +826,23 @@ def prepare_dem_background(dem, inps_dict=dict()):
             dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray,
                                  vmin=-5000, vmax=np.nanmax(dem)+2000)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
-        print('show shaded relief DEM')
+        if print_msg:
+            print('show shaded relief DEM')
 
     if inps_dict['disp_dem_contour']:
         dem_contour = ndimage.gaussian_filter(dem,
                                               sigma=inps_dict['dem_contour_smooth'],
                                               order=0)
         dem_contour_sequence = np.arange(-6000, 9000, inps_dict['dem_contour_step'])
-        print('show contour in step of {} m with smoothing factor of {}'.format(inps_dict['dem_contour_step'],
-                                                                                inps_dict['dem_contour_smooth']))
+        if print_msg:
+            print(('show contour in step of {} m '
+                   'with smoothing factor of {}').format(inps_dict['dem_contour_step'],
+                                                         inps_dict['dem_contour_smooth']))
     return dem_shade, dem_contour, dem_contour_sequence
 
 
 def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_contour_seq=None,
-                        dem=None, inps_dict=dict()):
+                        dem=None, inps_dict=dict(), print_msg=True):
     """Plot DEM as background.
     Parameters: ax : matplotlib.pyplot.Axes or BasemapExt object
                 geo_box : tuple of 4 float in order of (E, N, W, S), geo bounding box
@@ -857,7 +861,11 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
                                             dem_contour=dem_contour, dem_contour_seq=dem_contour_seq)
     """
     if all(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:
-        dem_shade, dem_contour, dem_contour_seq = prepare_dem_background(dem, inps_dict=inps_dict)
+        (dem_shade,
+         dem_contour,
+         dem_contour_seq) = prepare_dem_background(dem,
+                                                   inps_dict=inps_dict,
+                                                   print_msg=print_msg)
 
     if dem_shade is not None:
         # geo coordinates
@@ -1142,4 +1150,54 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False):
         data -= np.round(data/(2*np.pi)) * (2*np.pi)
     return data, disp_unit, disp_scale, wrap
 
+
+def read_mask(fname, mask_file=None, datasetName=None, box=None):
+    """Find and read mask for input data file fname
+    Parameters: fname       : string, data file name/path
+                mask_file   : string, optional, mask file name
+                datasetName : string, optional, dataset name for HDFEOS file type
+                box         : tuple of 4 int, for reading part of data
+    Returns:    msk         : 2D np.array, mask data
+                mask_file   : string, file name of mask data
+    """
+    atr = readfile.read_attribute(fname)
+    k = atr['FILE_TYPE']
+    # default mask file:
+    if not mask_file and k in ['velocity', 'timeseries'] and 'masked' not in fname:
+        if os.path.basename(fname).startswith('geo_'):
+            mask_file = os.path.join(os.path.dirname(fname), 'geo_maskTempCoh.h5')
+        else:
+            mask_file = os.path.join(os.path.dirname(fname), 'maskTempCoh.h5')
+        if not os.path.isfile(mask_file):
+            mask_file = None
+
+    # Read mask file if inputed
+    msk = None
+    if os.path.isfile(str(mask_file)):
+        try:
+            atrMsk = readfile.read_attribute(mask_file)
+            if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
+                msk = readfile.read(mask_file, datasetName='mask', box=box)[0]
+                print('read mask from file: '+os.path.basename(mask_file))
+            else:
+                print('WARNING: input file has different size from mask file: {}'.format(mask_file))
+                print('    Continue without mask')
+                mask_file = None
+        except:
+            print('Can not open mask file: '+mask_file)
+            mask_file = None
+
+    elif k in ['HDFEOS']:
+        if datasetName.split('-')[0] in timeseriesDatasetNames:
+            mask_file = fname
+            msk = readfile.read(fname, datasetName='mask')[0]
+            print('read {} contained mask dataset.'.format(k))
+
+    elif fname.endswith('PARAMS.h5'):
+        mask_file = fname
+        h5msk = h5py.File(fname, 'r')
+        msk = h5msk['cmask'][:] == 1.
+        h5msk.close()
+        print('read {} contained cmask dataset'.format(os.path.basename(fname)))
+    return msk, mask_file
 
