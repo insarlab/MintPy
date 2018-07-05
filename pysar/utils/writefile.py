@@ -50,7 +50,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             obj = timeseries(out_file)
             obj.write2hdf5(datasetDict[k],
                            metadata=metadata,
-                           refFile=ref_file)
+                           refFile=ref_file,
+                           compression=compression)
 
         else:
             if os.path.isfile(out_file):
@@ -63,11 +64,12 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             maxDigit = max([len(i) for i in list(datasetDict.keys())])
             for dsName in datasetDict.keys():
                 data = datasetDict[dsName]
-                print(('create dataset /{d:<{w}} of {t:<10}'
-                       ' in size of {s}').format(d=dsName,
-                                                 w=maxDigit,
-                                                 t=str(data.dtype),
-                                                 s=data.shape))
+                print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
+                       'with compression={c}').format(d=dsName,
+                                                      w=maxDigit,
+                                                      t=str(data.dtype),
+                                                      s=data.shape,
+                                                      c=compression))
                 ds = f.create_dataset(dsName,
                                       data=data,
                                       chunks=True,
@@ -81,11 +83,12 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                                and isinstance(fr[i], h5py.Dataset))]
                 for dsName in dsNames:
                     ds = fr[dsName]
-                    print(('create dataset /{d:<{w}} of {t:<10}'
-                           ' in size of {s}').format(d=dsName,
-                                                     w=maxDigit,
-                                                     t=str(ds.dtype),
-                                                     s=ds.shape))
+                    print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
+                           'with compression={c}').format(d=dsName,
+                                                          w=maxDigit,
+                                                          t=str(ds.dtype),
+                                                          s=ds.shape,
+                                                          c=compression))
                     f.create_dataset(dsName,
                                      data=ds[:],
                                      chunks=True,

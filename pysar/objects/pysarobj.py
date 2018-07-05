@@ -228,7 +228,7 @@ class timeseries:
             data = np.squeeze(data)
         return data
 
-    def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None):
+    def write2hdf5(self, data, outFile=None, dates=None, bperp=None, metadata=None, refFile=None, compression=None):
         """
         Parameters: data  : 3D array of float32
                     dates : 1D array/list of string in YYYYMMDD format
@@ -236,6 +236,7 @@ class timeseries:
                     metadata : dict
                     outFile : string
                     refFile : string
+                    compression : string or None
         Returns: outFile : string
         Examples:
             from pysar.objects import timeseries
@@ -268,8 +269,11 @@ class timeseries:
         # 3D dataset - timeseries
         print('create timeseries HDF5 file: {} with w mode'.format(outFile))
         f = h5py.File(outFile, 'w')
-        print('create dataset /timeseries of {:<10} in size of {}'.format(str(data.dtype), data.shape))
-        dset = f.create_dataset('timeseries', data=data, chunks=True)
+        print(('create dataset /timeseries of {t:<10} in size of {s} '
+               'with compression={c}').format(t=str(data.dtype),
+                                              s=data.shape,
+                                              c=compression))
+        dset = f.create_dataset('timeseries', data=data, chunks=True, compression=compression)
 
         # 1D dataset - date / bperp
         print('create dataset /dates      of {:<10} in size of {}'.format(str(dates.dtype), dates.shape))

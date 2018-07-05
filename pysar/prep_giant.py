@@ -20,7 +20,8 @@ key_giant2pysar = {'xmin':'SUBSET_XMIN', 'xmax':'SUBSET_XMAX',
 
 ##################################################################################################
 EXAMPLE = """example:
-  prep_giant.py  LS-PARAMS.h5 -x ../data.xml
+  prep_giant.py  LS-PARAMS.h5
+  prep_giant.py  LS-PARAMS.h5 -x ../data.xml ../sbas.xml ../mints.xml
 """
 
 

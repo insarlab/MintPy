@@ -7,6 +7,7 @@
 
 import os
 import sys
+import time
 import argparse
 import numpy as np
 from pysar.objects import timeseries
@@ -90,8 +91,7 @@ def diff_file(file1, file2, outFile=None, force=False):
         mask = data == 0.
         data[dateShared] -= data2
         data[mask] = 0.               # Do not change zero phase value
-        objOut = timeseries(outFile)
-        objOut.write2hdf5(data=data, refFile=file1)
+        writefile.write(data, out_file=outFile, ref_file=file1)
 
     # Sing dataset file
     else:
@@ -135,7 +135,12 @@ def cmd_line_parse(iargs=None):
 
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
+    start_time = time.time()
+
     inps.outfile = diff_file(inps.file1, inps.file2, inps.outfile, force=inps.force)
+
+    m, s = divmod(time.time()-start_time, 60)
+    print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
     return inps.outfile
 
 
