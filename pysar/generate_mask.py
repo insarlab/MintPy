@@ -68,29 +68,29 @@ def create_threshold_mask(inps):
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
     if len(data.shape) > 2:
         raise Exception('Only 2D dataset is supported for threshold method, input is 3D')
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    nanmask = ~np.isnan(data)
 
     print('create initial mask with the same size as the input file and all = 1')
     mask = np.ones((length, width), dtype=np.bool_)
 
+    # nan value
+    mask *= nanmask
+    print('all pixels with nan value = 0')
+
     if inps.nonzero:
         print('all pixels with zero value = 0')
-        mask[data == 0] = 0
+        mask[nanmask] *= ~(data[nanmask] == 0.)
 
     # min threshold
     if inps.vmin is not None:
-        mask[data < inps.vmin] = 0
+        mask[nanmask] *= ~(data[nanmask] < inps.vmin)
         print('all pixels with value < %s = 0' % str(inps.vmin))
 
     # max threshold
     if inps.vmax is not None:
-        mask[data > inps.vmax] = 0
+        mask[nanmask] *= ~(data[nanmask] > inps.vmax)
         print('all pixels with value > %s = 0' % str(inps.vmax))
-
-    # nan value
-    mask[np.isnan(data)] = 0
-    print('all pixels with nan value = 0')
 
     # subset in Y
     if inps.subset_y is not None:

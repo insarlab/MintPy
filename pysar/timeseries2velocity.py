@@ -9,7 +9,7 @@
 import os
 import argparse
 import numpy as np
-from pysar.objects import timeseries
+from pysar.objects import timeseries, giantTimeseries, HDFEOS
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
 dataType = np.float32
@@ -21,8 +21,11 @@ EXAMPLE = """example:
   timeseries2velocity.py  timeseries_ECMWF_demCor_plane.h5  --template KyushuT73F2980_2990AlosD.template
   timeseries2velocity.py  timeseries.h5  --start-date 20080201
   timeseries2velocity.py  timeseries.h5  --start-date 20080201  --end-date 20100508
-  timeseries2velocity.py  timeseries.h5  --exclude-date 20040502 20060708 20090103
   timeseries2velocity.py  timeseries.h5  --exclude-date exclude_date.txt
+
+  timeseries2velocity.py  LS-PARAMS.h5
+  timeseries2velocity.py  NSBAS-PARAMS.h5
+  timeseries2velocity.py  TS-PARAMS.h5
 """
 
 TEMPLATE = """
@@ -65,8 +68,9 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-    if 'timeseries' != readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']:
-        raise Exception('input file is not timeseries!')
+    inps.key = readfile.read_attribute(inps.timeseries_file)['FILE_TYPE']
+    if inps.key not in ['timeseries', 'giantTimeseries', 'HDFEOS']:
+        raise Exception('input file is {}, NOT timeseries!'.format(inps.key))
     return inps
 
 
@@ -123,7 +127,12 @@ def read_date_info(inps):
     Output:
         inps.ex_date  - list of string for exclude date in YYYYMMDD format
     """
-    tsobj = timeseries(inps.timeseries_file)
+    if inps.key == 'timeseries':
+        tsobj = timeseries(inps.timeseries_file)
+    elif inps.key == 'giantTimeseries':
+        tsobj = giantTimeseries(inps.timeseries_file)
+    elif inps.key == 'HDFEOS':
+        tsobj = HDFEOS(inps.timeseries_file)
     tsobj.open()
     inps.ex_date = read_exclude_date(inps, tsobj.dateList)
 
@@ -142,7 +151,17 @@ def read_date_info(inps):
     # Date Aux Info
     inps.dropDate = np.array([i not in inps.ex_date for i in tsobj.dateList], dtype=np.bool_)
     inps.years = np.array(tsobj.yearList)[inps.dropDate]
-    tsobj.close()
+
+    # output file name
+    if not inps.outfile:
+        outname = 'velocity'
+        if inps.ex_date:
+            outname += 'Ex'
+        if inps.key == 'giantTimeseries':
+            prefix = os.path.basename(inps.timeseries_file).split('PARAMS')[0]
+            outname = prefix + outname
+        outname += '.h5'
+        inps.outfile = outname
     return inps
 
 
@@ -197,9 +216,11 @@ def estimate_linear_velocity(inps):
     A_inv = np.array(np.linalg.pinv(A), dataType)
     # A_inv = np.array(np.linalg.inv(A.T.dot(A)).dot(A.T), dataType)  #Give wrong and different result, find reason.
 
-    tsobj = timeseries(inps.timeseries_file)
-    tsData = tsobj.read()[inps.dropDate, :, :].reshape(inps.numDate, -1)
-    dsShape = (tsobj.length, tsobj.width)
+    tsData, atr = readfile.read(inps.timeseries_file)
+    tsData = tsData[inps.dropDate, :, :].reshape(inps.numDate, -1)
+    if atr['UNIT'] == 'mm':
+        tsData *= 1./1000.
+    dsShape = (int(atr['LENGTH']), int(atr['WIDTH']))
 
     X = np.dot(A_inv, tsData)
     V = np.reshape(X[0, :], dsShape)
@@ -210,15 +231,9 @@ def estimate_linear_velocity(inps):
     Vstd = Vstd.reshape(dsShape)
 
     # Write h5 file
-    if not inps.outfile:
-        if inps.ex_date:
-            inps.outfile = 'velocityEx.h5'
-        else:
-            inps.outfile = 'velocity.h5'
     # outfileStd = '{}Std{}'.format(os.path.splitext(inps.outfile)[0],
     #                               os.path.splitext(inps.outfile)[1])
 
-    atr = tsobj.metadata.copy()
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
 
