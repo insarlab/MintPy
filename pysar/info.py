@@ -51,14 +51,20 @@ def cmd_line_parse(iargs=None):
 ############################################################
 def attributes_string(atr, string=str(), sorting=True):
     ## Print Dictionary of Attributes
-    digits = max([len(key) for key in list(atr.keys())] + [0])
-    f = '{0:<%d}    {1}' % (digits)
     dictKey = atr.keys()
     if sorting:
         dictKey = sorted(dictKey)
+
+    digits = max([len(key) for key in list(atr.keys())] + [0])
     for key in dictKey:
-        string += '  {k:<{d}}    {v}'.format(d=digits, k=key, v=atr[key])
-        string += "\n"
+        value = atr[key]
+        try:
+            value = value.decode('utf8')
+        except:
+            pass
+        string += '  {k:<{d}}    {v}\n'.format(k=key,
+                                               d=digits,
+                                               v=value)
     return string
 
 
@@ -84,20 +90,15 @@ def hdf5_structure_string(file):
                                                w=maxDigit,
                                                s=str(obj.shape),
                                                t=obj.dtype)
+        atr = dict(obj.attrs)
+        if len(atr) > 0:
+            output = attributes_string(atr, output)+"\n"
 
     f = h5py.File(file, 'r')
     atr = dict(f.attrs)
     if len(atr) > 0:
-        for key, value in atr.items():
-            try:
-                atr[key] = value.decode('utf8')
-            except:
-                atr[key] = value
         output += 'Attributes in / level:\n'
-    else:
-        atr = readfile.read_attribute(file)
-        output += 'Attributes:\n'
-    output = attributes_string(atr, output, sorting=True)+"\n"
+        output = attributes_string(atr, output)+"\n"
 
     f.visititems(print_hdf5_structure_obj)
     f.close()
