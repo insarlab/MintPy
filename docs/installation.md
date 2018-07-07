@@ -87,7 +87,7 @@ Run the following in your terminal (using conda):
     ./Anaconda3-5.1.0-MacOSX-x86_64.sh -b -p $PYTHON3DIR
     
     $PYTHON3DIR/bin/conda config --add channels conda-forge
-    $PYTHON3DIR/bin/conda install basemap joblib lxml pyresample --yes   
+    $PYTHON3DIR/bin/conda install basemap joblib lxml pyresample pykdtree OpenMP --yes   
     
     git clone https://github.com/yunjunz/pykml.git; cd pykml
     $PYTHON3DIR/bin/python setup.py build     
