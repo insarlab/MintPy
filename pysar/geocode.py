@@ -236,7 +236,7 @@ def run_resample(inps):
                        SNWE=inps.SNWE,
                        laloStep=inps.laloStep,
                        processor=inps.processor)
-    res_obj.prepare()
+    res_obj.open()
 
     if not inps.nprocs:
         inps.nprocs = multiprocessing.cpu_count()

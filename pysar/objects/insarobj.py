@@ -194,11 +194,11 @@ class ifgramStackDict:
         ###############################
         # Attributes
         self.get_metadata()
-        self.metadata = ut.subset_attribute(self.metadata, box)
-        self.metadata['FILE_TYPE'] = self.name
         if extra_metadata:
             self.metadata.update(extra_metadata)
             print('add extra metadata: {}'.format(extra_metadata))
+        self.metadata = ut.subset_attribute(self.metadata, box)
+        self.metadata['FILE_TYPE'] = self.name
         for key, value in self.metadata.items():
             f.attrs[key] = value
 
@@ -405,7 +405,7 @@ class geometryDict:
         #self.metadata['PROCESSOR'] = self.processor
         return self.metadata
 
-    def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression=None):
+    def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
         '''
         /                        Root level
         Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
@@ -529,6 +529,9 @@ class geometryDict:
         ###############################
         # Attributes
         self.get_metadata()
+        if extra_metadata:
+            self.metadata.update(extra_metadata)
+            print('add extra metadata: {}'.format(extra_metadata))
         self.metadata = ut.subset_attribute(self.metadata, box)
         self.metadata['FILE_TYPE'] = self.name
         for key, value in self.metadata.items():

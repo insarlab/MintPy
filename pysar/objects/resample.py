@@ -21,13 +21,14 @@ from pysar.utils import readfile, ptime
 
 class resample:
     """
-    Geometry Definition objects for geocoding using pyresample
-    (http://pyresample.readthedocs.org)
+    Geometry Definition objects for geocoding using:
+    1) pyresample (http://pyresample.readthedocs.org)
+    2) scipy.interpolate.RegularGridInterpolator:
+       (https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RegularGridInterpolator.html)
 
     Example:
-        resObj = resample(lookupFile='./INPUTS/geometryRadar.h5')
-        resObj = resample(lookupFile='./INPUTS/geometryGeo.h5',
-                          dataFile='velocity.h5')
+        res_obj = resample(lookupFile='./INPUTS/geometryGeo.h5', dataFile='velocity.h5')
+        res_obj = resample(lookupFile='./INPUTS/geometryRadar.h5', dataFile='temporalCoherence.h5')
     """
 
     def __init__(self, lookupFile, dataFile, SNWE=None, laloStep=None, processor=None):
@@ -37,7 +38,7 @@ class resample:
         self.laloStep = laloStep
         self.processor = processor
 
-    def prepare(self):
+    def open(self):
         """Prepare aux data before interpolation operation"""
         self.lut_metadata = readfile.read_attribute(self.file)
         self.src_metadata = readfile.read_attribute(self.dataFile)
@@ -60,7 +61,14 @@ class resample:
             self.prepare_regular_grid_interpolator()
 
     def resample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=None, print_msg=True):
-        """Run interpolation operation for input 2D/3D data"""
+        """Run interpolation operation for input 2D/3D data
+        Parameters: src_data      : 2D/3D np.array, source data to be geocoded
+                    interp_method : string, nearest | linear
+                    fill_value    : NaN or number
+                    nprocs        : int, number of processes to be used
+                    print_msg     : bool
+        Returns:    geo_data      : 2D/3D np.array
+        """
         # use pyresample
         if self.processor == 'pyresample':
             if len(src_data.shape) == 3:
@@ -82,7 +90,7 @@ class resample:
             if print_msg:
                 print('resampling using scipy.interpolate.RegularGridInterpolator ...')
             if len(src_data.shape) == 3:
-                geo_data = np.empty((src_data.shape[0], self.length, self.width))
+                geo_data = np.empty((src_data.shape[0], self.length, self.width), src_data.dtype)
                 prog_bar = ptime.progressBar(maxValue=src_data.shape[0])
                 for i in range(src_data.shape[0]):
                     geo_data[i, :, :] = self.run_regular_grid_interpolator(src_data=src_data[i, :, :],
@@ -140,7 +148,7 @@ class resample:
                        fill_value=fill_value)
 
         # prepare output matrix
-        geo_data = np.empty((self.length, self.width))
+        geo_data = np.empty((self.length, self.width), src_data.dtype)
         geo_data.fill(fill_value)
 
         # interpolate output matrix

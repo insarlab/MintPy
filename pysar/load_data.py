@@ -98,7 +98,7 @@ def create_parser():
                                      epilog=TEMPLATE+'\n'+NOTE+'\n'+EXAMPLE)
     parser.add_argument('-H', dest='print_example_template', action='store_true',
                         help='Print/Show the example template file for loading.')
-    parser.add_argument('-t', '--template', type=str,
+    parser.add_argument('-t', '--template', type=str, nargs='+', required=True,
                         dest='template_file', help='template file with path info.')
 
     parser.add_argument('--project', type=str, dest='PROJECT_NAME',
@@ -126,12 +126,12 @@ def cmd_line_parse(iargs=None):
     if inps.print_example_template:
         sys.exit(DEFAULT_TEMPLATE)
 
-    if not inps.template_file:
-        parser.print_usage()
-        print(('{}: error: the following arguments are required:'
-               ' -t/--template'.format(os.path.basename(__file__))))
-        print('{} -H to show the example template file'.format(os.path.basename(__file__)))
-        sys.exit(1)
+    #if not inps.template_file:
+    #    parser.print_usage()
+    #    print(('{}: error: the following arguments are required:'
+    #           ' -t/--template'.format(os.path.basename(__file__))))
+    #    print('{} -H to show the example template file'.format(os.path.basename(__file__)))
+    #    sys.exit(1)
 
     inps.outfile = [os.path.abspath(i) for i in inps.outfile]
     inps.outdir = os.path.dirname(inps.outfile[0])
@@ -147,8 +147,13 @@ def read_inps2dict(inps):
     inpsDict['PLATFORM'] = None
 
     # Read template file
-    template = readfile.read_template(inps.template_file)
-    template = ut.check_template_auto_value(template)
+    template = {}
+    for fname in inps.template_file:
+        temp = readfile.read_template(fname)
+        temp = ut.check_template_auto_value(temp)
+        template.update(temp)
+    for key, value in template.items():
+        inpsDict[key] = value
     if 'processor' in template.keys():
         template['pysar.load.processor'] = template['processor']
 
@@ -166,8 +171,8 @@ def read_inps2dict(inps):
 
     # PROJECT_NAME --> PLATFORM
     (inpsDict['PLATFORM'],
-     inpsDict['PROJECT_NAME']) = sensor.project_name2sensor_name([inpsDict['PROJECT_NAME'],
-                                                                  inps.template_file])
+     inpsDict['PROJECT_NAME']) = sensor.project_name2sensor_name([inpsDict['PROJECT_NAME']]+
+                                                                  inps.template_file)
     if inpsDict['PLATFORM']:
         print('platform : {}'.format(inpsDict['PLATFORM']))
     print('processor: {}'.format(inpsDict['processor']))
@@ -191,7 +196,7 @@ def read_subset_box(inpsDict):
     # Read subset info from template
     inpsDict['box'] = None
     inpsDict['box4geo_lut'] = None
-    pix_box, geo_box = subset.read_subset_template2box(inpsDict['template_file'])
+    pix_box, geo_box = subset.read_subset_template2box(inpsDict['template_file'][0])
 
     # Grab required info to read input geo_box into pix_box
     try:
@@ -469,6 +474,9 @@ def get_extra_metadata(inpsDict):
     for key in ['PROJECT_NAME', 'PLATFORM']:
         if inpsDict[key]:
             extraDict[key] = inpsDict[key]
+    for key in ['SUBSET_XMIN', 'SUBSET_YMIN']:
+        if key in inpsDict.keys():
+            extraDict[key] = inpsDict[key]
     return extraDict
 
 
@@ -482,6 +490,7 @@ def main(iargs=None):
     inpsDict = read_inps2dict(inps)
     inpsDict = read_subset_box(inpsDict)
     prepare_metadata(inpsDict)
+    extraDict = get_extra_metadata(inpsDict)
 
     stackObj = read_inps_dict2ifgram_stack_dict_object(inpsDict)
     geomRadarObj, geomGeoObj = read_inps_dict2geometry_dict_object(inpsDict)
@@ -489,7 +498,6 @@ def main(iargs=None):
     updateMode, comp, box, boxGeo = print_write_setting(inpsDict)
     if stackObj and update_object(inps.outfile[0], stackObj, box, updateMode=updateMode):
         print('-'*50)
-        extraDict = get_extra_metadata(inpsDict)
         stackObj.write2hdf5(outputFile=inps.outfile[0],
                             access_mode='w',
                             box=box,
@@ -501,7 +509,8 @@ def main(iargs=None):
         geomRadarObj.write2hdf5(outputFile=inps.outfile[1],
                                 access_mode='w',
                                 box=box,
-                                compression=comp)
+                                compression=comp,
+                                extra_metadata=extraDict)
 
     if geomGeoObj and update_object(inps.outfile[2], geomGeoObj, boxGeo, updateMode=updateMode):
         print('-'*50)

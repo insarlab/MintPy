@@ -417,6 +417,8 @@ def main(iargs=None):
     #########################################
     print('\n**********  Load Data  **********')
     loadCmd = 'load_data.py --template {}'.format(inps.templateFile)
+    if inps.templateFileCustom:
+        loadCmd += ' {}'.format(inps.templateFileCustom)
     if inps.projectName:
         loadCmd += ' --project {}'.format(inps.projectName)
     print(loadCmd)

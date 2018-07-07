@@ -177,6 +177,8 @@ def read_init_info(inps):
 
     # initial display index
     inps.ref_idx = obj.refIndex
+    if inps.ref_date:
+        inps.ref_idx = inps.date_list.index(inps.ref_date)
     if not inps.init_idx:
         if inps.ref_idx < inps.num_date / 2.:
             inps.init_idx = -2
