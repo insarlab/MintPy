@@ -1522,6 +1522,8 @@ def get_lookup_row_col(y, x, lut_y, lut_x, y_factor=10, x_factor=10, geoCoord=Fa
     mask_y = np.multiply(lut_y >= ymin, lut_y <= (y+y_factor))
     mask_x = np.multiply(lut_x >= xmin, lut_x <= (x+x_factor))
     row, col = np.nanmean(np.where(np.multiply(mask_y, mask_x)), axis=1)
+    if any(np.isnan(i) for i in [row, col]):
+        raise RuntimeError('No coresponding coordinate found for y/x: {}/{}'.format(y, x))
     return row, col
 
 
@@ -1544,6 +1546,10 @@ def glob2radar(lat, lon, lookupFile=None, atr_rdr=dict(), print_msg=True):
     atr_lut = readfile.read_attribute(lookupFile[0])
     if print_msg:
         print('reading file: '+lookupFile[0])
+
+    if not isinstance(lat, np.ndarray):
+        lat = np.array(lat)
+        lon = np.array(lon)
 
     # For lookup table in geo-coord, read value directly
     if 'Y_FIRST' in atr_lut.keys():
@@ -1640,6 +1646,10 @@ def radar2glob(az, rg, lookupFile=None, atr_rdr=dict(), print_msg=True):
     atr_lut = readfile.read_attribute(lookupFile[0])
     if print_msg:
         print('reading file: '+lookupFile[0])
+
+    if not isinstance(az, np.ndarray):
+        az = np.array(az)
+        rg = np.array(rg)
 
     # For lookup table in geo-coord, search the buffer and use center pixel
     if 'Y_FIRST' in atr_lut.keys():

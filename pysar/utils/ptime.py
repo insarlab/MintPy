@@ -227,8 +227,6 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
     """
     # Get hour/min of SAR acquisition time
     sar_time = float(sar_acquisition_time)
-    #sar_hh = int(sar_time/3600.0)
-    #sar_mm = int((sar_time-3600.0*sar_hh) / 60.0)
 
     # Find closest time in available weather products
     grib_hr_list = [0, 6, 12, 18]
@@ -236,10 +234,6 @@ def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
 
     # Adjust time output format
     grib_hr = "%02d" % grib_hr
-    # if grib_source == 'NARR':
-    #    grib_hr = "%02d"%grib_hr
-    # else:
-    #    grib_hr = "%02d:00"%grib_hr
     return grib_hr
 
 

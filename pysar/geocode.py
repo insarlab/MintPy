@@ -68,6 +68,11 @@ def create_parser():
     parser.add_argument('--fill', dest='fillValue', type=float, default=np.nan,
                         help='Value used for points outside of the interpolation domain.\n' +
                              'Default: np.nan')
+    parser.add_argument('-n','--nprocs', dest='nprocs', type=int,
+                        help='number of processors to be used for calculation.\n' + 
+                             'Note: Do not use more processes than available processor cores.')
+    parser.add_argument('-p','--processor', dest='processor', type=str, choices={'pyresample', 'scipy'},
+                        help='processor module used for interpolation.')
 
     parser.add_argument('--update', dest='updateMode', action='store_true',
                         help='skip resampling if output file exists and newer than input file')
@@ -111,6 +116,7 @@ def _check_inps(inps):
     inps.laloStep = [inps.latStep, inps.lonStep]
     if None in inps.laloStep:
         inps.laloStep = None
+
     return inps
 
 
@@ -201,20 +207,6 @@ def metadata_geo2radar(atr_in, res_obj, print_msg=True):
     return atr
 
 
-def resample_data(data, inps, res_obj):
-    """resample 2D/3D data"""
-    if len(data.shape) == 3:
-        data = np.moveaxis(data, 0, -1)
-
-    # resample source data into target data
-    geo_data = res_obj.resample(src_data=data, interp_method=inps.interpMethod, fill_value=inps.fillValue,
-                                nprocs=inps.nprocs, print_msg=False)
-
-    if len(geo_data.shape) == 3:
-        geo_data = np.moveaxis(geo_data, -1, 0)
-    return geo_data
-
-
 def auto_output_filename(infile, inps):
     if len(inps.file) == 1 and inps.outfile:
         return inps.outfile
@@ -239,11 +231,15 @@ def run_resample(inps):
     start_time = time.time()
 
     # Prepare geometry for geocoding
-    res_obj = resample(lookupFile=inps.lookupFile, dataFile=inps.file[0],
-                       SNWE=inps.SNWE, laloStep=inps.laloStep)
-    res_obj.get_geometry_definition()
+    res_obj = resample(lookupFile=inps.lookupFile,
+                       dataFile=inps.file[0],
+                       SNWE=inps.SNWE,
+                       laloStep=inps.laloStep,
+                       processor=inps.processor)
+    res_obj.prepare()
 
-    inps.nprocs = multiprocessing.cpu_count()
+    if not inps.nprocs:
+        inps.nprocs = multiprocessing.cpu_count()
 
     # resample input files one by one
     for infile in inps.file:
@@ -258,10 +254,18 @@ def run_resample(inps):
         maxDigit = max([len(i) for i in dsNames])
         dsResDict = dict()
         for dsName in dsNames:
-            print('resampling {d:<{w}} from {f} using {n} processor cores ...'.format(
-                d=dsName, w=maxDigit, f=os.path.basename(infile), n=inps.nprocs))
-            data = readfile.read(infile, datasetName=dsName, print_msg=False)[0]
-            res_data = resample_data(data, inps, res_obj)
+            print('reading {d:<{w}} from {f} ...'.format(d=dsName,
+                                                         w=maxDigit,
+                                                         f=os.path.basename(infile)))
+            data = readfile.read(infile,
+                                 datasetName=dsName,
+                                 print_msg=False)[0]
+
+            res_data = res_obj.resample(src_data=data,
+                                        interp_method=inps.interpMethod,
+                                        fill_value=inps.fillValue,
+                                        nprocs=inps.nprocs,
+                                        print_msg=True)
             dsResDict[dsName] = res_data
 
         # update metadata

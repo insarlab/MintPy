@@ -135,9 +135,11 @@ def write_kmz_file(data, metadata, out_file, inps=None):
 
     # Figure size
     if not inps.fig_size:
-        fig_scale = min(pp.min_figsize_single/min(data.shape),
-                        pp.max_figsize_single/max(data.shape))
-        inps.fig_size = [np.rint(i*fig_scale*2)/2 for i in data.shape]
+        plot_shape = [east-west, north-south]
+        fig_scale = min(pp.min_figsize_single / min(plot_shape),
+                        pp.max_figsize_single / max(plot_shape),
+                        pp.max_figsize_height / plot_shape[1])
+        inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
     print('create figure in size: '+str(inps.fig_size))
     fig = plt.figure(figsize=inps.fig_size, frameon=False)
     ax = fig.add_axes([0., 0., 1., 1.])
@@ -147,8 +149,9 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     inps.colormap = plt.get_cmap(inps.colormap)
 
     # Plot - data matrix
-    ax.imshow(data, aspect='auto', cmap=inps.colormap,
-              vmin=inps.ylim[0], vmax=inps.ylim[1])
+    ax.imshow(data, cmap=inps.colormap,
+              vmin=inps.ylim[0], vmax=inps.ylim[1],
+              aspect='auto', interpolation='nearest')
 
     # Plot - reference pixel
     if inps.disp_seed == 'yes':
@@ -168,7 +171,7 @@ def write_kmz_file(data, metadata, out_file, inps=None):
 
     out_name_base = os.path.splitext(out_file)[0]
     data_png_file = out_name_base + '.png'
-    print('writing '+data_png_file)
+    print('writing {} with dpi={}'.format(data_png_file, inps.fig_dpi))
     plt.savefig(data_png_file, pad_inches=0.0,
                 transparent=True, dpi=inps.fig_dpi)
 

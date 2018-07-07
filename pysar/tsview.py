@@ -228,15 +228,20 @@ def read_init_info(inps):
         y = int((inps.ref_lalo[0] - inps.lat0) / inps.lat_step + 0.5)
         x = int((inps.ref_lalo[1] - inps.lon0) / inps.lon_step + 0.5)
         inps.ref_yx = [y, x]
-
     if not inps.ref_yx:
         inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
 
     # Initial Pixel Coord
-    if inps.lalo and 'Y_FIRST' in atr.keys():
-        y = int((inps.lalo[0] - inps.lat0) / inps.lat_step + 0.5)
-        x = int((inps.lalo[1] - inps.lon0) / inps.lon_step + 0.5)
-        inps.yx = [y, x]
+    if inps.lalo:
+        if 'Y_FIRST' in atr.keys():
+            y = int((inps.lalo[0] - inps.lat0) / inps.lat_step + 0.5)
+            x = int((inps.lalo[1] - inps.lon0) / inps.lon_step + 0.5)
+            inps.yx = [y, x]
+        elif lookup_file is not None:
+            y, x = ut.glob2radar(inps.lalo[0], inps.lalo[1],
+                                 lookup_file, atr, print_msg=False)[0:2]
+            inps.yx = [y, x]
+
     if not inps.yx:
         inps.yx = inps.ref_yx
 

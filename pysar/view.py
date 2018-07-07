@@ -1032,7 +1032,9 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
     # status bar
     def format_coord(x, y):
-        return 'x={:.1f}, y={:.1f}'.format(x, y)
+        row = int(y + 0.5)
+        col = int(x + 0.5)
+        return 'x={:.1f}, y={:.1f}, value={:.4f}'.format(x, y, data[row, col])
     ax.format_coord = format_coord
 
     # Title
@@ -1191,15 +1193,22 @@ def prepare4multi_subplots(inps, metadata):
 
     # Read DEM
     if inps.dem_file:
-        print('reading DEM: {} ... '.format(os.path.basename(inps.dem_file)))
-        dem, dem_metadata = readfile.read(inps.dem_file,
-                                          datasetName='height',
-                                          box=inps.pix_box,
-                                          print_msg=False)
-        if inps.multilook:
-            dem = multilook_data(dem, inps.multilook_num, inps.multilook_num)
-        inps.dem_shade, inps.dem_contour, inps.dem_contour_seq = pp.prepare_dem_background(dem=dem,
-                                                                                           inps_dict=vars(inps))
+        dem_metadata = readfile.read_attribute(inps.dem_file)
+        if all(dem_metadata[i] == metadata[i] for i in ['LENGTH', 'WIDTH']):
+            print('reading DEM: {} ... '.format(os.path.basename(inps.dem_file)))
+            dem = readfile.read(inps.dem_file,
+                                datasetName='height',
+                                box=inps.pix_box,
+                                print_msg=False)[0]
+            if inps.multilook:
+                dem = multilook_data(dem, inps.multilook_num, inps.multilook_num)
+            (inps.dem_shade,
+             inps.dem_contour,
+             inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem, inps_dict=vars(inps))
+        else:
+            inps.dem_file = None
+            inps.transparency = 1.0
+            print('Input DEM file has different size than data file, ignore it.')
     return inps
 
 
