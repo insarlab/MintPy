@@ -117,7 +117,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             data.astype('>c8').tofile(out_file)
         # elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
         #    data.save(out_file)
-        elif ext == '.mli':
+        elif ext in ['.mli', '.flt']:
             write_real_float32(data, out_file)
         elif ext == '.slc':
             write_complex_int16(data, out_file)

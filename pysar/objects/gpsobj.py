@@ -80,6 +80,11 @@ class gps:
         return self.site_lat, self.site_lon
 
     def read_displacement(self, print_msg=True):
+        # download file if it's not exists.
+        if not os.path.isfile(self.file):
+            self.download()
+
+        # read times, dis_e, dis_n, dis_u
         if print_msg:
             print('reading time and displacement in east/north/vertical direction')
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)

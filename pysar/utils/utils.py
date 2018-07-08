@@ -31,10 +31,16 @@ from pysar.objects import (geometryDatasetNames,
 ###############################################################################
 def enu2los(e, n, u, heading_angle=-168., inc_angle=34.):
     """
+    Parameters: e : np.array or float, displacement in east-west direction, east as positive
+                n : np.array or float, displacement in north-south direction, north as positive
+                u : np.array or float, displacement in vertical direction, up as positive
+                heading_angle : np.array or float, satellite heading angle from the north in clock-wise direction
+                inc_angle : np.array or float, local incidence angle from vertical
     For AlosA: heading_angle = -12.873,  inc_angle = 34
     For AlosD: heading_angle = -167.157, inc_angle = 34
-    For SenD: heading_angle = -168 # -1 * (360 - los[1] - 90),
-        # because it's defined anti-clockwise as positive
+    For SenD: heading_angle = -168 # -1 * (180 + los.band2 + 90) from ISCE
+        # because it's defined as the azimuth angle of the LOS vector from the ground target to the satellite 
+        # measured from the north in anti-clockwise as positive
     """
     v_los = (-1 * e * np.cos(heading_angle / 180. * np.pi)
              + n * np.sin(heading_angle / 180. * np.pi)

@@ -18,6 +18,7 @@ from pysar.utils import readfile, writefile, utils as ut
 ################################################################################################
 EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
+  generate_mask.py  maskTempCoh.h5 -m 0.5 -c 230 283 100 -o maskTempCoh_nonDef.h5
   generate_mask.py  081018_090118.unw     -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
   generate_mask.py  srtm1.dem             -m 0.5 -o maskLand.h5
   generate_mask.py  unwrapIfgram.h5 101120-110220 -m 4
@@ -34,8 +35,8 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='input file')
-    parser.add_argument(
-        'dset', nargs='?', help='date of timeseries, or date12 of interferograms to be converted')
+    parser.add_argument('dset', nargs='?',
+                        help='date of timeseries, or date12 of interferograms to be converted')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name.')
 
@@ -47,6 +48,8 @@ def create_parser():
                         help='selection range in x/cross-track/range direction')
     parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
                         help='selection range in y/along-track/azimuth direction')
+    parser.add_argument('-c','--circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
+                        help='exclude area defined by an circle (x, y, radius) in pixel number')
 
     parser.add_argument('--nonzero', dest='nonzero', action='store_true',
                         help='Select all non-zero pixels.\n' +
@@ -105,6 +108,15 @@ def create_threshold_mask(inps):
         mask[:, 0:x0] = 0
         mask[:, x1:width] = 0
         print('all pixels with x OUT of [%d, %d] = 0' % (x0, x1))
+
+    # exclude circular area
+    if inps.circle:
+        cx, cy, cr = inps.circle
+        yy, xx = np.ogrid[-cy:length-cy,
+                          -cx:width-cx]
+        cmask = xx**2 + yy**2 <= cr**2
+        mask[cmask] = 0
+        print('all pixels with distance from ({}, {}) < {} pixels = 0'.format(cy, cx, cr))
 
     # Write mask file
     atr['FILE_TYPE'] = 'mask'

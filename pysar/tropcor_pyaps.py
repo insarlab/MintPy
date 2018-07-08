@@ -30,8 +30,8 @@ standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': '
 EXAMPLE = """example:
   tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF
   tropcor_pyaps.py -d date_list.txt     --hour 12 -m MERRA
-  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF --dem geometryRadar.h5 --ref-yx 30 40 -i geometryRadar.h5
-  tropcor_pyaps.py -m ECMWF --dem geometryRadar.h5 -i geometryRadar.h5 -f timeseries.h5
+  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF -g geometryRadar.h5 --ref-yx 30 40
+  tropcor_pyaps.py -m ECMWF -g geometryRadar.h5 -f timeseries.h5
 """
 
 REFERENCE = """reference:
@@ -78,11 +78,8 @@ def create_parser():
                         help='Enable offline mode: use existing local data and do not download.')
 
     # For delay calculation
-    parser.add_argument('--dem', dest='dem_file',
-                        help='DEM file, i.e. radar_4rlks.hgt, srtm1.dem')
-    parser.add_argument('-i', dest='inc_angle', default='30.0',
-                        help='a file containing all incidence angles, or\n'+
-                             'a number representing for the whole image.')
+    parser.add_argument('-g','--geomtry', dest='geom_file', type=str,
+                        help='geometry file including height, incidenceAngle and/or latitude and longitude')
     parser.add_argument('--ref-yx', dest='ref_yx', type=int,
                         nargs=2, help='reference pixel in y/x')
     parser.add_argument('--delay', dest='delay_type', default='comb', choices={'comb', 'dry', 'wet'},
@@ -101,7 +98,7 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if all(not i for i in [inps.date_list, inps.timeseries_file, inps.dem_file]):
+    if all(not i for i in [inps.date_list, inps.timeseries_file, inps.geom_file]):
         parser.print_help()
         sys.exit(1)
     return inps
@@ -180,27 +177,43 @@ def check_inputs(inps):
         inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
         print('reference pixel: {}'.format(inps.ref_yx))
 
-    # Incidence angle: to map the zenith delay to the slant delay
-    if os.path.isfile(inps.inc_angle):
-        print('incidence angle from file: {}'.format(inps.inc_angle))
-        inps.inc_angle = readfile.read(inps.inc_angle,
-                                       datasetName='incidenceAngle',
-                                       print_msg=False)[0]
-    else:
-        print('incidence angle from input: {}'.format(inps.inc_angle))
-        inps.inc_angle = float(inps.inc_angle)
-    inps.inc_angle = inps.inc_angle*np.pi/180.0
-
     # Coordinate system: geocoded or not
     inps.geocoded = False
     if 'Y_FIRST' in atr.keys():
         inps.geocoded = True
     print('geocoded: {}'.format(inps.geocoded))
 
-    # Prepare DEM file in ROI_PAC format for PyAPS to read
-    if inps.dem_file:
-        inps.dem_file = prepare_roipac_dem(inps.dem_file, inps.geocoded)
+    # Prepare DEM, inc_angle, lat/lon file for PyAPS to read
+    if inps.geom_file:
+        geom_atr = readfile.read_attribute(inps.geom_file)
+        print('converting DEM/incAngle for PyAPS to read')
+        # DEM
+        data = readfile.read(inps.geom_file, datasetName='height', print_msg=False)[0]
+        inps.dem_file = 'pyapsDem.hgt'
+        writefile.write(data, inps.dem_file, metadata=geom_atr)
 
+        # inc_angle
+        inps.inc_angle = readfile.read(inps.geom_file, datasetName='incidenceAngle', print_msg=False)[0]
+        inps.inc_angle_file = 'pyapsIncAngle.flt'
+        writefile.write(inps.inc_angle, inps.inc_angle_file, metadata=geom_atr)
+
+        # latitude
+        try:
+            data = readfile.read(inps.geom_file, datasetName='latitude', print_msg=False)[0]
+            print('converting lat for PyAPS to read')
+            inps.lat_file = 'pyapsLat.flt'
+            writefile.write(data, inps.lat_file, metadata=geom_atr)
+        except:
+            inps.lat_file = None
+
+        # longitude
+        try:
+            data = readfile.read(inps.geom_file, datasetName='longitude', print_msg=False)[0]
+            print('converting lon for PyAPS to read')
+            inps.lon_file = 'pyapsLon.flt'
+            writefile.write(data, inps.lon_file, metadata=geom_atr)
+        except:
+            inps.lon_file = None
     return inps, atr
 
 
@@ -220,37 +233,36 @@ def date_list2grib_file(date_list, hour, trop_model, grib_dir):
 
 def check_exist_grib_file(gfile_list, print_msg=True):
     """Check input list of grib files, and return the existing ones with right size."""
-    gfile_existed = ut.get_file_list(gfile_list)
-    if gfile_existed:
-        file_sizes = [os.path.getsize(i) for i in gfile_existed
+    gfile_exist = ut.get_file_list(gfile_list)
+    if gfile_exist:
+        file_sizes = [os.path.getsize(i) for i in gfile_exist
                       if os.path.getsize(i) > 10e6]
         if file_sizes:
             comm_size = ut.most_common([i for i in file_sizes])
             if print_msg:
                 print('file size mode: {} bytes'.format(comm_size))
-                print('number of grib files existed    : {}'.format(len(gfile_existed)))
+                print('number of grib files existed    : {}'.format(len(gfile_exist)))
 
-            gfile_corrupted = []
-            for gfile in gfile_existed:
+            gfile_corrupt = []
+            for gfile in gfile_exist:
                 if os.path.getsize(gfile) < comm_size * 0.9:
-                    gfile_corrupted.append(gfile)
+                    gfile_corrupt.append(gfile)
         else:
-            gfile_corrupted = gfile_existed
+            gfile_corrupt = gfile_exist
 
-        if gfile_corrupted:
+        if gfile_corrupt:
             if print_msg:
                 print('------------------------------------------------------------------------------')
                 print('corrupted grib files detected! Delete them and re-download...')
-                print('number of grib files corrupted  : {}'.format(len(gfile_corrupted)))
-            for i in gfile_corrupted:
+                print('number of grib files corrupted  : {}'.format(len(gfile_corrupt)))
+            for i in gfile_corrupt:
                 rmCmd = 'rm '+i
                 print(rmCmd)
                 os.system(rmCmd)
-                gfile_existed.remove(i)
+                gfile_exist.remove(i)
             if print_msg:
                 print('------------------------------------------------------------------------------')
-    gfile2dload = sorted(list(set(gfile_list) - set(gfile_existed)))
-    return gfile2dload
+    return gfile_exist
 
 
 def dload_grib_pyaps(grib_file_list, trop_model='ECMWF'):
@@ -259,38 +271,28 @@ def dload_grib_pyaps(grib_file_list, trop_model='ECMWF'):
                 trop_model     : string, 
     Returns:    grib_file_list : list of string
     """
-    print('*'*50+'\nDownloading weather model data using PyAPS (Jolivet et al., 2011, GRL) ...')
+    print('\n------------------------------------------------------------------------------')
+    print('downloading weather model data using PyAPS (Jolivet et al., 2011, GRL) ...')
 
     # Get date list to download (skip already downloaded files)
-    grib_file2download = check_exist_grib_file(grib_file_list, print_msg=True)
-    date_list2download = [str(re.findall('\d{8}', i)[0]) for i in grib_file2download]
-    print('number of grib files to download: %d' % len(date_list2download))
+    grib_file_exist = check_exist_grib_file(grib_file_list, print_msg=True)
+    grib_file2dload = sorted(list(set(grib_file_list) - set(grib_file_exist)))
+    date_list2dload = [str(re.findall('\d{8}', i)[0]) for i in grib_file2dload]
+    print('number of grib files to download: %d' % len(date_list2dload))
     print('------------------------------------------------------------------------------\n')
 
     # Download grib file using PyAPS
-    if len(date_list2download) > 0:
-        hour = re.findall('\d{8}[-_]\d{2}', grib_file2download[0])[0].replace('-', '_').split('_')[1]
-        grib_dir = os.path.dirname(grib_file2download[0])
-        if   trop_model == 'ECMWF' :  pa.ECMWFdload( date_list2download, hour, grib_dir)
-        elif trop_model == 'MERRA' :  pa.MERRAdload( date_list2download, hour, grib_dir)
-        elif trop_model == 'NARR'  :  pa.NARRdload(  date_list2download, hour, grib_dir)
-        elif trop_model == 'ERA'   :  pa.ERAdload(   date_list2download, hour, grib_dir)
-        elif trop_model == 'MERRA1':  pa.MERRA1dload(date_list2download, hour, grib_dir)
+    if len(date_list2dload) > 0:
+        hour = re.findall('\d{8}[-_]\d{2}', grib_file2dload[0])[0].replace('-', '_').split('_')[1]
+        grib_dir = os.path.dirname(grib_file2dload[0])
+        if   trop_model == 'ECMWF' :  pa.ECMWFdload( date_list2dload, hour, grib_dir)
+        elif trop_model == 'MERRA' :  pa.MERRAdload( date_list2dload, hour, grib_dir)
+        elif trop_model == 'NARR'  :  pa.NARRdload(  date_list2dload, hour, grib_dir)
+        elif trop_model == 'ERA'   :  pa.ERAdload(   date_list2dload, hour, grib_dir)
+        elif trop_model == 'MERRA1':  pa.MERRA1dload(date_list2dload, hour, grib_dir)
 
     grib_file_list = check_exist_grib_file(grib_file_list, print_msg=False)
     return grib_file_list
-
-
-def prepare_roipac_dem(demFile, geocoded=False):
-    print('convert input DEM to ROIPAC format')
-    dem, atr = readfile.read(demFile, datasetName='height')
-    if geocoded:
-        ext = '.dem'
-    else:
-        ext = '.hgt'
-    demFileOut = '{}4pyaps{}'.format(os.path.splitext(demFile)[0], ext)
-    demFileOut = writefile.write(dem, out_file=demFileOut, metadata=atr)
-    return demFileOut
 
 
 def get_delay(grib_file, inps):
@@ -306,40 +308,52 @@ def get_delay(grib_file, inps):
     Output:
         phs - 2D np.array, absolute tropospheric phase delay relative to ref_y/x
     """
+    # initiate pyaps object
     if inps.geocoded:
         aps = pa.PyAPS_geo(grib_file, inps.dem_file, grib=inps.trop_model,
-                           verb=True, Del=inps.delay_type)
+                           demtype=np.float32, demfmt='RMG',
+                           verb=False, Del=inps.delay_type)
     else:
         aps = pa.PyAPS_rdr(grib_file, inps.dem_file, grib=inps.trop_model,
-                           verb=True, Del=inps.delay_type)
+                           demtype=np.float32, demfmt='RMG',
+                           verb=False, Del=inps.delay_type)
+
+    # estimate delay
     phs = np.zeros((aps.ny, aps.nx), dtype=np.float32)
-    aps.getdelay(phs, inc=0.0)
+    if not inps.geocoded and inps.lat_file is not None:
+        aps.getgeodelay(phs,
+                        lat=inps.lat_file,
+                        lon=inps.lon_file,
+                        inc=inps.inc_angle_file)
+    else:
+        aps.getdelay(phs,
+                     inc=inps.inc_angle)
 
     # Get relative phase delay in space
     phs -= phs[inps.ref_yx[0], inps.ref_yx[1]]
-    phs /= np.cos(inps.inc_angle)  # Project into LOS direction
     phs *= -1    # reverse the sign for consistency between different phase correction steps/methods
     return phs
 
 
 def get_delay_timeseries(inps, atr):
     """Calculate delay time-series and write it to HDF5 file."""
-    print('*'*50+'\nCalcualting delay for each epoch using PyAPS ...')
-    if any(i is None for i in [inps.dem_file, inps.inc_angle, inps.ref_yx]):
+    if any(i is None for i in [inps.geom_file, inps.ref_yx]):
         print('No DEM / incidenceAngle / ref_yx found, exit.')
         return
 
-    length = int(atr['LENGTH'])
-    width = int(atr['WIDTH'])
+    # calculate phase delay
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+    num_date = len(inps.grib_file_list)
     date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_file_list]
-    num_date = len(date_list)
     trop_data = np.zeros((num_date, length, width), np.float32)
+
+    print('calcualting delay for each date using PyAPS (Jolivet et al., 2011, GRL) ...')
+    prog_bar = ptime.progressBar(maxValue=num_date)
     for i in range(num_date):
         grib_file = inps.grib_file_list[i]
-        date = date_list[i]
-        print('calculate phase delay on %s from file %s' %
-              (date, os.path.basename(grib_file)))
         trop_data[i] = get_delay(grib_file, inps)
+        prog_bar.update(i+1, suffix=os.path.basename(grib_file))
+    prog_bar.close()
 
     # Convert relative phase delay on reference date
     try:
@@ -354,21 +368,29 @@ def get_delay_timeseries(inps, atr):
     trop_file = os.path.join(os.path.dirname(inps.dem_file), inps.trop_model+'.h5')
     ts_obj = timeseries(trop_file)
     ts_obj.write2hdf5(data=trop_data,
-                     dates=date_list,
-                     metadata=atr,
-                     refFile=inps.timeseries_file)
+                      dates=date_list,
+                      metadata=atr,
+                      refFile=inps.timeseries_file)
 
     # Delete temporary DEM file in ROI_PAC format
-    if '4pyaps' in inps.dem_file:
-        rmCmd = 'rm {f} {f}.rsc'.format(f=inps.dem_file)
+    temp_files =[fname for fname in [inps.dem_file,
+                                     inps.inc_angle_file,
+                                     inps.lat_file,
+                                     inps.lon_file] 
+                 if (fname is not None and 'pyaps' in fname)]
+    if temp_files:
+        print('delete temporary geometry files')
+        rmCmd = 'rm '
+        for fname in temp_files:
+            rmCmd += ' {f} {f}.rsc '.format(f=fname)
         print(rmCmd)
         os.system(rmCmd)
-
     return trop_file
 
 
 def correct_timeseries(timeseries_file, trop_file, out_file):
-    print('*'*50+'\nCorrecting delay for input time-series')
+    print('\n------------------------------------------------------------------------------')
+    print('correcting delay for input time-series by calling diff.py')
     #ts_obj = timeseries(timeseries_file)
     #ts_data = ts_obj.read()
     #mask = ts_data == 0.
