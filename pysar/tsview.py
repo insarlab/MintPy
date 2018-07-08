@@ -23,8 +23,9 @@ from pysar.multilook import multilook_data
 ###########################################################################################
 EXAMPLE = """example:
   tsview.py timeseries.h5
-  tsview.py timeseries_demErr_plane.h5 --yx 300 400 --nodisplay --zero-first
-  tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
+  tsview.py timeseries.h5  --wrap
+  tsview.py timeseries.h5  --yx 300 400 --zero-first  --nodisplay
+  tsview.py geo_timeseries.h5  --lalo 33.250 131.665  --nodisplay
 """
 
 
@@ -85,6 +86,8 @@ def create_parser():
                       nargs='*', help='Exclude date shown as gray.')
     disp.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true',
                       help='Set displacement at first acquisition to zero.')
+    disp.add_argument('--wrap', action='store_true',
+                      help='re-wrap data to display data in fringes, for map display only.')
     disp.add_argument('-u', dest='disp_unit', metavar='UNIT', default='cm',
                       help='unit for display. Default: cm')
     disp.add_argument('-c', '--colormap', dest='colormap', default='jet',
@@ -243,7 +246,6 @@ def read_init_info(inps):
             y, x = ut.glob2radar(inps.lalo[0], inps.lalo[1],
                                  lookup_file, atr, print_msg=False)[0:2]
             inps.yx = [y, x]
-
     if not inps.yx:
         inps.yx = inps.ref_yx
 
@@ -251,7 +253,15 @@ def read_init_info(inps):
     if not inps.flip_lr and not inps.flip_ud:
         inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(atr)
 
-    return inps
+    inps.disp_unit_v = inps.disp_unit
+    if inps.wrap:
+        inps.range2phase = -4. * np.pi / float(atr['WAVELENGTH'])
+        if   'cm' in inps.disp_unit:   inps.range2phase /= 100.
+        elif 'mm' in inps.disp_unit:   inps.range2phase /= 1000.
+        inps.disp_unit_v = 'radian'
+        inps.vlim = (-np.pi, np.pi)
+
+    return inps, atr
 
 
 def read_timeseries_data(inps):
@@ -317,7 +327,10 @@ def plot_init_map(ax, ts_data, inps):
         del dem
 
     idx = inps.init_idx
-    d_v = ts_data[idx, :, :]
+    d_v = np.array(ts_data[idx, :, :])
+    if inps.wrap:
+        d_v *= inps.range2phase
+        d_v -= np.round(d_v/(2*np.pi)) * (2*np.pi)
     im = ax.imshow(d_v,
                    cmap=inps.colormap,
                    clim=inps.vlim,
@@ -373,7 +386,10 @@ def plot_init_map(ax, ts_data, inps):
     cax = divider.append_axes("right", "2%", pad="2%")
     cbar = plt.colorbar(im, cax=cax, orientation='vertical')
     cbar.ax.tick_params(labelsize=inps.font_size)
-    cbar.set_label('Displacement ({})'.format(inps.disp_unit))
+    if inps.wrap:
+        cbar.set_ticks([-np.pi, 0, np.pi])
+        cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+    cbar.set_label('Displacement ({})'.format(inps.disp_unit_v))
     return ax, im
 
 
@@ -566,7 +582,7 @@ def main(iargs=None):
     if not inps.disp_fig:
         plt.switch_backend('Agg')
 
-    inps = read_init_info(inps)
+    inps, atr = read_init_info(inps)
 
     ts_data, mask, inps = read_timeseries_data(inps)
 
@@ -587,7 +603,11 @@ def main(iargs=None):
         idx = np.argmin(np.abs(np.array(inps.yearList) - tslider.val))
         disp_date = inps.dates[idx].strftime('%Y-%m-%d')
         ax_v.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date))
-        im.set_data(ts_data[idx, :, :])
+        d_v = np.array(ts_data[idx, :, :])
+        if inps.wrap:
+            d_v *= inps.range2phase
+            d_v -= np.round(d_v/(2*np.pi)) * (2*np.pi)
+        im.set_data(d_v)
         fig_v.canvas.draw()
     tslider.on_changed(update_time_slider)
 

@@ -80,7 +80,7 @@ class resample:
                                            fill_value=fill_value,
                                            nprocs=nprocs,
                                            radius=None,
-                                           print_msg=False)
+                                           print_msg=True)
 
             if len(geo_data.shape) == 3:
                 geo_data = np.moveaxis(geo_data, -1, 0)
@@ -96,14 +96,14 @@ class resample:
                     geo_data[i, :, :] = self.run_regular_grid_interpolator(src_data=src_data[i, :, :],
                                                                            interp_method=interp_method,
                                                                            fill_value=fill_value,
-                                                                           print_msg=False)
+                                                                           print_msg=True)
                     prog_bar.update(i+1)
                 prog_bar.close()
             else:
                 geo_data = self.run_regular_grid_interpolator(src_data=src_data,
                                                               interp_method=interp_method,
                                                               fill_value=fill_value,
-                                                              print_msg=False)
+                                                              print_msg=True)
         return geo_data
 
     def prepare_regular_grid_interpolator(self):
@@ -358,8 +358,7 @@ class resample:
                                                     nprocs=nprocs,
                                                     fill_value=fill_value,
                                                     radius_of_influence=radius,
-                                                    epsilon=0.5,
-                                                    segments=4)
+                                                    epsilon=0.5)
 
         elif interp_method.endswith('linear'):
             if print_msg:
