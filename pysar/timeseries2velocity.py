@@ -17,8 +17,8 @@ dataType = np.float32
 
 ############################################################################
 EXAMPLE = """example:
-  timeseries2velocity.py  timeSeries_ECMWF_demCor.h5
-  timeseries2velocity.py  timeseries_ECMWF_demCor_plane.h5  --template KyushuT73F2980_2990AlosD.template
+  timeseries2velocity.py  timeSeries_ECMWF_demErr.h5
+  timeseries2velocity.py  timeseries_ECMWF_demErr_plane.h5  --template KyushuT73F2980_2990AlosD.template
   timeseries2velocity.py  timeseries.h5  --start-date 20080201
   timeseries2velocity.py  timeseries.h5  --start-date 20080201  --end-date 20100508
   timeseries2velocity.py  timeseries.h5  --exclude-date exclude_date.txt

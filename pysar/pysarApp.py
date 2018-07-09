@@ -635,12 +635,11 @@ def main(iargs=None):
             print(('Atmospheric correction using Weather Re-analysis dataset'
                    ' (PyAPS, Jolivet et al., 2011)'))
             print('Weather Re-analysis dataset: '+inps.tropModel)
-            tropCmd = ('tropcor_pyaps.py -f {t} --model {m} --dem {d}'
-                       ' -i {i} -w {w}').format(t=inps.timeseriesFile,
-                                                m=inps.tropModel,
-                                                d=inps.geomFile,
-                                                i=inps.geomFile,
-                                                w=inps.weatherDir)
+            tropCmd = ('tropcor_pyaps.py -f {t} --model {m} -g {g}'
+                       ' -w {w}').format(t=inps.timeseriesFile,
+                                         m=inps.tropModel,
+                                         g=inps.geomFile,
+                                         w=inps.weatherDir)
             print(tropCmd)
             if ut.update_file(outName, inps.timeseriesFile):
                 if inps.tropFile:

@@ -15,6 +15,34 @@ from pysar.utils import readfile, writefile
 
 
 #####################################################################################
+EXAMPLE = """example:
+  diff.py  velocity.h5    velocity_demErr.h5
+  diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5
+  diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5  --force
+"""
+
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Generates the difference of two input files.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
+
+    parser.add_argument('file1', help='file to be substracted.')
+    parser.add_argument('file2', help='file used to substract')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name, default is file1_diff_file2.h5')
+    parser.add_argument('--force', action='store_true',
+                        help='Enforce the differencing for the shared dates only for time-series files')
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+    return inps
+
+
+#####################################################################################
 def diff_data(data1, data2):
     """data1 - data2"""
     data = data1 - data2
@@ -102,35 +130,6 @@ def diff_file(file1, file2, outFile=None, force=False):
         writefile.write(data, out_file=outFile, metadata=atr1)
 
     return outFile
-
-
-#####################################################################################
-EXAMPLE = """example:
-  diff.py  velocity.h5      velocity_demCor.h5
-  diff.py  timeseries.h5    ECMWF.h5  -o timeseries_ECMWF.h5
-  diff.py  timeseries.h5    ECMWF.h5  -o timeseries_ECMWF.h5  --force
-  diff.py  unwrapIfgram.h5  reconstruct_unwrapIfgram.h5
-"""
-
-
-def create_parser():
-    parser = argparse.ArgumentParser(description='Generates the difference of two input files.',
-                                     formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
-
-    parser.add_argument('file1', help='file to be substracted.')
-    parser.add_argument('file2', help='file used to substract')
-    parser.add_argument('-o', '--output', dest='outfile',
-                        help='output file name, default is file1_diff_file2.h5')
-    parser.add_argument('--force', action='store_true',
-                        help='Enforce the differencing for the shared dates only for time-series files')
-    return parser
-
-
-def cmd_line_parse(iargs=None):
-    parser = create_parser()
-    inps = parser.parse_args(args=iargs)
-    return inps
 
 
 def main(iargs=None):

@@ -51,13 +51,8 @@ def cmd_line_parse(iargs=None):
 ############################################################
 def attributes_string(atr, string=str(), sorting=True):
     ## Print Dictionary of Attributes
-    dictKey = atr.keys()
-    if sorting:
-        dictKey = sorted(dictKey)
-
     digits = max([len(key) for key in list(atr.keys())] + [0])
-    for key in dictKey:
-        value = atr[key]
+    for key, value in sorted(atr.items(), key=lambda x: x[0]):
         try:
             value = value.decode('utf8')
         except:

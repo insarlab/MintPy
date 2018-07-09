@@ -46,8 +46,8 @@ class gps:
     def open(self, print_msg=True):
         if not os.path.isfile(self.file):
             self.download()
-        self.get_stat_lat_lon()
-        self.read_displacement()
+        self.get_stat_lat_lon(print_msg=print_msg)
+        self.read_displacement(print_msg=print_msg)
     
     def download(self, print_msg=True):
         # get url from Nevada Geodetic Lab

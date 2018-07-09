@@ -156,14 +156,14 @@ def write_roipac_rsc(metadata, out_file, sorting=True):
         metadata['Y_FIRST'] = str(float(metadata['Y_FIRST']))
 
     # sorting by key name
-    dictKey = metadata.keys()
+    key_list = metadata.keys()
     if sorting:
-        dictKey = sorted(dictKey)
+        key_list = sorted(key_list)
 
     # writing .rsc file
     maxDigit = max([len(key) for key in metadata.keys()]+[2])
     f = open(out_file, 'w')
-    for key in dictKey:
+    for key in key_list:
         f.write('{k:<{d}}    {v}\n'.format(k=str(key),
                                            d=maxDigit,
                                            v=str(metadata[key])))

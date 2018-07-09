@@ -272,7 +272,7 @@ def dload_grib_pyaps(grib_file_list, trop_model='ECMWF'):
     Returns:    grib_file_list : list of string
     """
     print('\n------------------------------------------------------------------------------')
-    print('downloading weather model data using PyAPS (Jolivet et al., 2011, GRL) ...')
+    print('downloading weather model data using PyAPS ...')
 
     # Get date list to download (skip already downloaded files)
     grib_file_exist = check_exist_grib_file(grib_file_list, print_msg=True)
@@ -347,7 +347,7 @@ def get_delay_timeseries(inps, atr):
     date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_file_list]
     trop_data = np.zeros((num_date, length, width), np.float32)
 
-    print('calcualting delay for each date using PyAPS (Jolivet et al., 2011, GRL) ...')
+    print('calcualting delay for each date using PyAPS ...')
     prog_bar = ptime.progressBar(maxValue=num_date)
     for i in range(num_date):
         grib_file = inps.grib_file_list[i]
