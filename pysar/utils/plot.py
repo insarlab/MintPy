@@ -81,12 +81,15 @@ class BasemapExt(Basemap):
             ax = plt.gca()
         if distance < 1000.0:
             ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d m' % (distance),
-                    verticalalignment='top', horizontalalignment='center', fontsize=font_size, color=color)
+                    verticalalignment='top', horizontalalignment='center',
+                    fontsize=font_size, color=color)
         else:
             ax.text(lon0+0.5*length, lat_c+yoffset*3, '%d km' % (distance/1000.0),
-                    verticalalignment='top', horizontalalignment='center', fontsize=font_size, color=color)
+                    verticalalignment='top', horizontalalignment='center',
+                    fontsize=font_size, color=color)
 
-    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1, 0, 0, 1], font_size=12, color='k'):
+    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1, 0, 0, 1],
+                        font_size=12, color='k', print_msg=True):
         """Auto draw lat/lon label/tick based on coverage from geo_box
         Inputs:
             geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -100,7 +103,7 @@ class BasemapExt(Basemap):
             geo_box = (128.0, 37.0, 138.0, 30.0)
             m.draw_lalo_label(geo_box)
         """
-        lats, lons, step = self.auto_lalo_sequence(geo_box, lalo_step=lalo_step)
+        lats, lons, step = self.auto_lalo_sequence(geo_box, lalo_step=lalo_step, print_msg=print_msg)
 
         digit = np.int(np.floor(np.log10(step)))
         fmt = '%.'+'%d' % (abs(min(digit, 0)))+'f'
@@ -128,7 +131,8 @@ class BasemapExt(Basemap):
         self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05,
                            fontsize=font_size, color=color, textcolor=color)
 
-    def auto_lalo_sequence(self, geo_box, lalo_step=None, max_tick_num=4, step_candidate=[1, 2, 3, 4, 5]):
+    def auto_lalo_sequence(self, geo_box, lalo_step=None, max_tick_num=4, step_candidate=[1, 2, 3, 4, 5],
+                           print_msg=True):
         """Auto calculate lat/lon label sequence based on input geo_box
         Inputs:
             geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -153,7 +157,8 @@ class BasemapExt(Basemap):
             distance = [(i - max_lalo_dist/max_tick_num) ** 2
                         for i in lalo_step_candidate]
             lalo_step = lalo_step_candidate[distance.index(min(distance))]
-        print('label step - '+str(lalo_step)+' degree')
+        if print_msg:
+            print('label step - '+str(lalo_step)+' degree')
 
         # Auto tick sequence
         digit = np.int(np.floor(np.log10(lalo_step)))
@@ -312,7 +317,7 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
     return row_num, col_num
 
 
-def check_colormap_input(metadata, colormap=None, datasetName=None):
+def check_colormap_input(metadata, colormap=None, datasetName=None, print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporal_coherence', 'connectComponent',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not colormap:
@@ -320,7 +325,8 @@ def check_colormap_input(metadata, colormap=None, datasetName=None):
             colormap = 'gray'
         else:
             colormap = 'jet'
-    print('colormap: '+colormap)
+    if print_msg:
+        print('colormap: '+colormap)
 
     # Modified hsv colormap by H. Fattahi
     if colormap == 'hsv':
@@ -1058,6 +1064,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         if   disp_unit[0] == 'mm': scale *= 1000.0
         elif disp_unit[0] == 'cm': scale *= 100.0
         elif disp_unit[0] == 'dm': scale *= 10.0
+        elif disp_unit[0] == 'm' : scale *= 1.0
         elif disp_unit[0] == 'km': scale *= 1/1000.0
         elif disp_unit[0] in ['radians','radian','rad','r']:
             range2phase = -(4*np.pi) / float(metadata['WAVELENGTH'])

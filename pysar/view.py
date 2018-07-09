@@ -249,6 +249,8 @@ def create_parser():
                                 'Useful for final figure output.')
     map_group.add_argument('--lalo-step', dest='lalo_step',
                            type=float, help='Lat/lon step for lalo-label option.')
+    map_group.add_argument('--lalo-loc', dest='lalo_label_loc', type=int, nargs=4, default=[1, 0, 0, 1],
+                           help='Draw lalo label in [left, right, top, bottom], default is [1,0,0,1]')
     map_group.add_argument('--scalebar', nargs=3, metavar=('DISTANCE', 'LAT_C', 'LON_C'), type=float,
                            help='set scale bar with DISTANCE in meters centered at [LAT_C, LON_C]\n' +
                                 'set to 999 to use automatic value, e.g.\n' +
@@ -319,7 +321,7 @@ def update_inps_with_display_setting_file(inps, disp_set_file):
     return inps
 
 
-def update_inps_with_file_metadata(inps, metadata):
+def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     # Subset
     # Convert subset input into bounding box in radar / geo coordinate
     # geo_box = None if atr is not geocoded.
@@ -328,11 +330,12 @@ def update_inps_with_file_metadata(inps, metadata):
     inps.geo_box = subset.box_pixel2geo(inps.pix_box, metadata)
     # Out message
     data_box = (0, 0, inps.width, inps.length)
-    print('data   coverage in y/x: '+str(data_box))
-    print('subset coverage in y/x: '+str(inps.pix_box))
-    print('data   coverage in lat/lon: '+str(subset.box_pixel2geo(data_box, metadata)))
-    print('subset coverage in lat/lon: '+str(inps.geo_box))
-    print('------------------------------------------------------------------------')
+    if print_msg:
+        print('data   coverage in y/x: '+str(data_box))
+        print('subset coverage in y/x: '+str(inps.pix_box))
+        print('data   coverage in lat/lon: '+str(subset.box_pixel2geo(data_box, metadata)))
+        print('subset coverage in lat/lon: '+str(inps.geo_box))
+        print('------------------------------------------------------------------------')
 
     # Multilook, if too many subplots in one figure for less memory and faster speed
     if inps.multilook_num > 1:
@@ -341,7 +344,8 @@ def update_inps_with_file_metadata(inps, metadata):
     # Colormap
     inps.colormap = pp.check_colormap_input(metadata,
                                             inps.colormap,
-                                            datasetName=inps.dset[0])
+                                            datasetName=inps.dset[0],
+                                            print_msg=print_msg)
 
     # Seed Point
     # Convert seed_lalo if existed, to seed_yx, and use seed_yx for the following
@@ -349,8 +353,9 @@ def update_inps_with_file_metadata(inps, metadata):
     if inps.seed_lalo and inps.geo_box:
         inps.seed_yx = [ut.coord_geo2radar(inps.seed_lalo[0], metadata, 'lat'),
                         ut.coord_geo2radar(inps.seed_lalo[1], metadata, 'lon')]
-        print('input reference point in lat/lon: {}'.format(inps.seed_lalo))
-        print('input reference point in y  /x  : {}'.format(inps.seed_yx))
+        if print_msg:
+            print('input reference point in lat/lon: {}'.format(inps.seed_lalo))
+            print('input reference point in y  /x  : {}'.format(inps.seed_yx))
 
     # seed_lalo
     if inps.seed_yx and inps.geo_box:
@@ -395,13 +400,14 @@ def update_inps_with_file_metadata(inps, metadata):
         inps.fig_title = pp.auto_figure_title(metadata['FILE_PATH'],
                                               datasetNames=inps.dset,
                                               inps_dict=vars(inps))
-    print('figure title: '+inps.fig_title)
+    if print_msg:
+        print('figure title: '+inps.fig_title)
 
     # Figure output file name
     if not inps.outfile:
         inps.outfile = inps.fig_title+inps.fig_ext
 
-    inps = update_figure_setting(inps)
+    inps = update_figure_setting(inps, print_msg=print_msg)
     return inps
 
 
@@ -441,7 +447,7 @@ def update_data_with_plot_inps(data, metadata, inps):
 
 
 ##################################################################################################
-def plot_2d_matrix(ax, data, metadata, inps=None):
+def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
     """Plot 2D matrix 
     Parameters: ax : matplot.pyplot axes object
                 data : 2D np.array, 
@@ -454,7 +460,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
                 data, atr = readfile.read('velocity.h5')
                 fig = plt.figure()
                 ax = fig.add_axes([0.1,0.1,0.8,0.8])
-                ax = pv.plot_2d_matrix(ax, data, atr)
+                ax = pv.plot_2d_matrix(ax, data, atr)[0]
                 plt.show()
     """
 
@@ -469,8 +475,9 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
     if inps.multilook and inps.multilook_num > 1:
         data = multilook_data(data, inps.multilook_num, inps.multilook_num)
 
-    print('data    unit: {}'.format(metadata['UNIT']))
-    print('display unit: {}'.format(inps.disp_unit))
+    if print_msg:
+        print('data    unit: {}'.format(metadata['UNIT']))
+        print('display unit: {}'.format(inps.disp_unit))
 
     # 1.6 Min / Max - Data/Display
     inps.data_min = np.nanmin(data)
@@ -479,13 +486,15 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
         inps.disp_min = np.nanmin(data)
     if inps.disp_max is None:
         inps.disp_max = np.nanmax(data)
-    print('data    range: %f - %f' % (inps.data_min, inps.data_max))
-    print('display range: %f - %f' % (inps.disp_min, inps.disp_max))
+    if print_msg:
+        print('data    range: %f - %f' % (inps.data_min, inps.data_max))
+        print('display range: %f - %f' % (inps.disp_min, inps.disp_max))
 
     # 1.7 DEM
     if inps.dem_file:
         dem_metadata = readfile.read_attribute(inps.dem_file)
-        print('reading DEM: {} ...'.format(os.path.basename(inps.dem_file)))
+        if print_msg:
+            print('reading DEM: {} ...'.format(os.path.basename(inps.dem_file)))
         if inps.geo_box:
             # Support DEM with different Resolution and Coverage
             inps.dem_pix_box = subset.box_geo2pixel(inps.geo_box, dem_metadata)
@@ -501,16 +510,19 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
             lon_length = abs(inps.geo_box[2]-inps.geo_box[0])
             if max(lat_length, lon_length) > 1.0:
                 inps.disp_dem_contour = False
-                print('area is too large (lat or lon > 1 deg), turn off the DEM contour display')
-    print('display data in transparency: '+str(inps.transparency))
+                if print_msg:
+                    print('area is too large (lat or lon > 1 deg), turn off the DEM contour display')
+    if print_msg:
+        print('display data in transparency: '+str(inps.transparency))
 
     #-------------------- 2.1 Plot in Geo-coordinate using Basemap --------------------------------#
     num_row, num_col = data.shape
     if inps.geo_box and inps.fig_coord == 'geo':
-        print('plot in Lat/Lon coordinate')
         # Map Setup
-        print('map projection: '+inps.map_projection)
-        print('boundary database resolution: '+inps.resolution)
+        if print_msg:
+            print('plot in Lat/Lon coordinate')
+            print('map projection: '+inps.map_projection)
+            print('boundary database resolution: '+inps.resolution)
         if inps.map_projection in ['cyl', 'merc', 'mill', 'cea', 'gall']:
             m = pp.BasemapExt(llcrnrlon=inps.geo_box[0], llcrnrlat=inps.geo_box[3],
                               urcrnrlon=inps.geo_box[2], urcrnrlat=inps.geo_box[1],
@@ -534,17 +546,21 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
 
         # Draw coastline
         if inps.coastline:
-            print('draw coast line')
+            if print_msg:
+                print('draw coast line')
             m.drawcoastlines()
 
         # Plot DEM
         if inps.dem_file:
-            print('plotting DEM background ...')
+            if print_msg:
+                print('plotting DEM background ...')
             m = pp.plot_dem_background(ax=m, geo_box=inps.geo_box,
-                                       dem=dem, inps_dict=vars(inps))
+                                       dem=dem, inps_dict=vars(inps),
+                                       print_msg=print_msg)
 
         # Plot Data
-        print('plotting Data ...')
+        if print_msg:
+            print('plotting Data ...')
         im = m.imshow(data, cmap=inps.colormap, origin='upper',
                       vmin=inps.disp_min, vmax=inps.disp_max,
                       alpha=inps.transparency, interpolation='nearest',
@@ -552,7 +568,8 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
 
         # Scale Bar
         if inps.disp_scalebar:
-            print('plot scale bar')
+            if print_msg:
+                print('plot scale bar')
             if not inps.scalebar:
                 inps.scalebar = [999, 999, 999]
 
@@ -575,9 +592,10 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
 
         # Lat Lon labels
         if inps.lalo_label:
-            print('plot lat/lon labels')
-            m.draw_lalo_label(inps.geo_box, ax=ax, lalo_step=inps.lalo_step,
-                              font_size=inps.font_size, color=inps.font_color)
+            if print_msg:
+                print('plot lat/lon labels')
+            m.draw_lalo_label(inps.geo_box, ax=ax, lalo_step=inps.lalo_step, labels=inps.lalo_label_loc,
+                              font_size=inps.font_size, color=inps.font_color, print_msg=print_msg)
         else:
             ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
 
@@ -585,7 +603,8 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
         if inps.disp_seed and inps.seed_lalo:
             ax.plot(inps.seed_lalo[1], inps.seed_lalo[0],
                     inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
-            print('plot reference point')
+            if print_msg:
+                print('plot reference point')
 
         # Status bar
         def format_coord(x, y):
@@ -610,15 +629,21 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
 
     #-------------------- 2.2 Plot in Y/X-coordinate ------------------------------------------------#
     else:
-        print('plotting in Y/X coordinate ...')
+        if print_msg:
+            print('plotting in Y/X coordinate ...')
         # Plot DEM
         if inps.dem_file:
-            print('plotting DEM background ...')
-            ax = pp.plot_dem_background(ax=ax, geo_box=None, dem=dem,
-                                        inps_dict=vars(inps))
+            if print_msg:
+                print('plotting DEM background ...')
+            ax = pp.plot_dem_background(ax=ax,
+                                        geo_box=None,
+                                        dem=dem,
+                                        inps_dict=vars(inps),
+                                        print_msg=print_msg)
 
         # Plot Data
-        print('plotting Data ...')
+        if print_msg:
+            print('plotting Data ...')
         im = ax.imshow(data, cmap=inps.colormap,
                        vmin=inps.disp_min, vmax=inps.disp_max,
                        alpha=inps.transparency, interpolation='nearest')
@@ -636,7 +661,8 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
                 ax.plot(ref_x - inps.pix_box[0],
                         ref_y - inps.pix_box[1],
                         inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
-                print('plot reference point')
+                if print_msg:
+                    print('plot reference point')
 
         ax.set_xlim(-0.5, num_col-0.5)
         ax.set_ylim(num_row-0.5, -0.5)
@@ -672,17 +698,20 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
 
     # 3.3 Flip Left-Right / Up-Down
     if inps.flip_lr:
-        print('flip figure left and right')
+        if print_msg:
+            print('flip figure left and right')
         ax.invert_xaxis()
 
     if inps.flip_ud:
-        print('flip figure up and down')
+        if print_msg:
+            print('flip figure up and down')
         ax.invert_yaxis()
 
     # 3.4 Turn off axis
     if not inps.disp_axis:
         ax.axis('off')
-        print('turn off axis display')
+        if print_msg:
+            print('turn off axis display')
 
     # 3.5 Turn off tick label
     if not inps.disp_tick:
@@ -693,24 +722,26 @@ def plot_2d_matrix(ax, data, metadata, inps=None):
 
     # Figure Output
     if inps.save_fig:
-        print('save figure to '+inps.outfile)
+        if print_msg:
+            print('save figure to '+inps.outfile)
         plt.savefig(inps.outfile, bbox_inches='tight',
                     transparent=True, dpi=inps.fig_dpi)
 
-    return ax, inps
+    return ax, inps, im
 
 
-def check_input_file_info(inps):
+def check_input_file_info(inps, print_msg=True):
     # File Baic Info
     atr = readfile.read_attribute(inps.file)
-    print('\n******************** Display ********************')
     msg = 'input file is '
     if not inps.file.endswith(('.h5', '.he5')):
         msg += '{} '.format(atr['PROCESSOR'])
     msg += '{} file: {}'.format(atr['FILE_TYPE'], inps.file)
     if 'DATA_TYPE' in atr.keys():
         msg += ' in {} format'.format(atr['DATA_TYPE'])
-    print(msg)
+    if print_msg:
+        print('\n******************** Display ********************')
+        print(msg)
 
     ## size and name
     inps.length = int(atr['LENGTH'])
@@ -718,13 +749,14 @@ def check_input_file_info(inps):
     inps.key = atr['FILE_TYPE']
     inps.fileBase = os.path.splitext(os.path.basename(inps.file))[0]
     inps.fileExt = os.path.splitext(inps.file)[1]
-    print('file size in y/x: {}'.format((inps.length, inps.width)))
+    if print_msg:
+        print('file size in y/x: {}'.format((inps.length, inps.width)))
 
     # File dataset List
     inps.fileDatasetList = readfile.get_2d_dataset_list(inps.file)
 
     # Read input list of dataset to display
-    inps, atr = read_dataset_input(inps)
+    inps, atr = read_dataset_input(inps, print_msg=print_msg)
 
     return inps, atr
 
@@ -754,7 +786,8 @@ def read_dataset_input(inps, print_msg=True):
     if len(inps.dset) > 0 or len(inps.dsetNumList) > 0:
         if inps.key == 'velocity':
             inps.globSearch = False
-            print('turning glob search OFF for {} file'.format(inps.key))
+            if print_msg:
+                print('turning glob search OFF for {} file'.format(inps.key))
         inps.dsetNumList = check_dataset_input(inps.fileDatasetList,
                                                inps.dset,
                                                inps.dsetNumList,
@@ -822,7 +855,7 @@ def read_dataset_input(inps, print_msg=True):
     return inps, atr
 
 
-def update_figure_setting(inps):
+def update_figure_setting(inps, print_msg=True):
     """Update figure setting based on number of subplots/datasets
     1) fig_size and font_size
     2) for multi: figure/row/column number
@@ -845,13 +878,15 @@ def update_figure_setting(inps):
                             pp.max_figsize_single/max(plot_shape),
                             pp.max_figsize_height/plot_shape[1])
             inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
-            print('create figure in size: '+str(inps.fig_size))
+            if print_msg:
+                print('create figure in size: '+str(inps.fig_size))
 
     # Multiple Plots
     else:
         if not inps.fig_size:
             inps.fig_size = pp.default_figsize_multi
-            print('create figure in size: '+str(inps.fig_size))
+            if print_msg:
+                print('create figure in size: '+str(inps.fig_size))
 
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
@@ -868,15 +903,18 @@ def update_figure_setting(inps):
             else:
                 fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
 
-            inps.fig_row_num, inps.fig_col_num = pp.auto_row_col_num(inps.dsetNum,
-                                                                     data_shape,
-                                                                     fig_size4plot,
-                                                                     inps.fig_num)
-        inps.fig_num = np.ceil(float(inps.dsetNum) / float(inps.fig_row_num*inps.fig_col_num)).astype(int)
-        print('dataset number: '+str(inps.dsetNum))
-        print('row     number: '+str(inps.fig_row_num))
-        print('column  number: '+str(inps.fig_col_num))
-        print('figure  number: '+str(inps.fig_num))
+            (inps.fig_row_num,
+             inps.fig_col_num) = pp.auto_row_col_num(inps.dsetNum,
+                                                     data_shape,
+                                                     fig_size4plot,
+                                                     inps.fig_num)
+        inps.fig_num = np.ceil(float(inps.dsetNum) / float(inps.fig_row_num * 
+                                                           inps.fig_col_num)).astype(int)
+        if print_msg:
+            print('dataset number: '+str(inps.dsetNum))
+            print('row     number: '+str(inps.fig_row_num))
+            print('column  number: '+str(inps.fig_col_num))
+            print('figure  number: '+str(inps.fig_num))
 
         if not inps.font_size:
             inps.font_size = 12
@@ -994,11 +1032,13 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     # Plot DEM
     if inps.dem_file:
         ax = pp.plot_dem_background(ax=ax, geo_box=None, dem_shade=inps.dem_shade,
-                                    dem_contour=inps.dem_contour, dem_contour_seq=inps.dem_contour_seq)
+                                    dem_contour=inps.dem_contour,
+                                    dem_contour_seq=inps.dem_contour_seq)
     # Plot Data
     try:
         im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest',
-                       alpha=inps.transparency, vmin=inps.disp_min, vmax=inps.disp_max)
+                       alpha=inps.transparency,
+                       vmin=inps.disp_min, vmax=inps.disp_max)
     except:
         im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest',
                        alpha=inps.transparency)
@@ -1253,7 +1293,7 @@ def main(iargs=None):
 
         fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
 
-        ax, inps = plot_2d_matrix(ax, data, atr, inps)
+        ax, inps = plot_2d_matrix(ax, data, atr, inps)[0:2]
 
     ############################### Multiple Subplots #########################
     else:
