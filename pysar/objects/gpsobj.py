@@ -48,7 +48,7 @@ class gps:
             self.download()
         self.get_stat_lat_lon(print_msg=print_msg)
         self.read_displacement(print_msg=print_msg)
-    
+
     def download(self, print_msg=True):
         # get url from Nevada Geodetic Lab
         url = 'http://geodesy.unr.edu/gps_timeseries'
@@ -88,13 +88,12 @@ class gps:
         if print_msg:
             print('reading time and displacement in east/north/vertical direction')
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
-        self.times = [dt(*time.strptime(i, "%y%b%d")[0:5]) for i in data[:, 1]]
+        self.times = np.array([dt(*time.strptime(i, "%y%b%d")[0:5])
+                               for i in data[:, 1]])
         (self.dis_e,
          self.dis_n,
          self.dis_u) = data[:, (8,10,12)].astype(np.float32).T
         return self.times, self.dis_e, self.dis_n, self.dis_u
-
-
 
 
 

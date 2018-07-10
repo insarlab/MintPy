@@ -401,9 +401,10 @@ def plot_init_time_slider(ax, year_list, init_idx=-1, ref_idx=0):
                      valinit=year_list[init_idx],
                      valstep=val_step)
 
-    tslider.ax.bar(year_list, np.ones(len(year_list)), facecolor='black', width=0.01, ecolor=None)
-    tslider.ax.bar(year_list[init_idx], 1., facecolor='black', width=0.01, ecolor=None)
-    tslider.ax.bar(year_list[ref_idx], 1., facecolor='crimson', width=0.03, ecolor=None)
+    bar_width = val_step / 4.
+    datex = np.array(year_list) - bar_width / 2.
+    tslider.ax.bar(datex, np.ones(len(datex)), bar_width, facecolor='black', ecolor=None)
+    tslider.ax.bar(datex[ref_idx], 1., bar_width*3, facecolor='crimson', ecolor=None)
 
     # xaxis tick format
     if np.floor(year_list[-1]) == np.floor(year_list[0]):
@@ -622,7 +623,7 @@ def main(iargs=None):
             if mask[y, x] != 0:
                 d_ts = plot_point_timeseries((y, x), fig_ts, ax_ts, ts_data, inps)
             else:
-                print('pixel is in masked out area.')
+                print('pixel ({}, {}) is in masked out area.'.format(y, x))
 
     # Output
     if inps.save_fig:

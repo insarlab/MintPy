@@ -21,7 +21,8 @@ from pysar.utils import (ptime,
                          writefile,
                          network as pnet,
                          deramp)
-from pysar.objects import (geometryDatasetNames,
+from pysar.objects import (gps,
+                           geometryDatasetNames,
                            geometry,
                            ifgramDatasetNames,
                            ifgramStack,
@@ -29,6 +30,84 @@ from pysar.objects import (geometryDatasetNames,
 
 
 ###############################################################################
+def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
+    """Read GPS displacement in LOS direction
+    Parameters: site : string, GPS station ID, e.g. GV05
+                gps_dir : string, local path of GPS files
+                geom_flie : string, path of geometry files, such as geo_geometryRadar.h5
+    Returns:    gps_times : 1D np.array of datetime.datetime object
+                gps_dis   : 1D np.array of displacement in meters
+    """
+    # read GPS object
+    gps_obj = gps(site=site, data_dir=gps_dir)
+    gps_obj.open(print_msg=False)
+
+    # calculate geometry
+    atr = readfile.read_attribute(geom_file)
+    y = coord_geo2radar(gps_obj.site_lat, atr, 'lat')
+    x = coord_geo2radar(gps_obj.site_lon, atr, 'lon')
+    box = (x, y, x+1, y+1)
+    inc_angle = readfile.read(geom_file,
+                              datasetName='incidenceAngle',
+                              box=box,
+                              print_msg=False)[0].flatten()
+    head_angle = readfile.read(geom_file,
+                               datasetName='headingAngle',
+                               box=box,
+                               print_msg=False)[0].flatten()
+    head_angle = -1 * (180 + head_angle + 90)
+
+    # convert ENU to LOS direction
+    gps_obj.dis_los = enu2los(gps_obj.dis_e,
+                              gps_obj.dis_n,
+                              gps_obj.dis_u,
+                              heading_angle=head_angle,
+                              inc_angle=inc_angle)
+    gps_times = gps_obj.times
+    gps_dis_los = gps_obj.dis_los
+    site_lalo = (gps_obj.site_lat,
+                 gps_obj.site_lon)
+
+    # get LOS displacement relative to another GPS site
+    if ref_site:
+        ref_gps_obj = gps(site=ref_site, data_dir=gps_dir)
+        ref_gps_obj.open(print_msg=False)
+
+        y = coord_geo2radar(ref_gps_obj.site_lat, atr, 'lat')
+        x = coord_geo2radar(ref_gps_obj.site_lon, atr, 'lon')
+        box = (x, y, x+1, y+1)
+        inc_angle = readfile.read(geom_file,
+                                  datasetName='incidenceAngle',
+                                  box=box,
+                                  print_msg=False)[0].flatten()
+        head_angle = readfile.read(geom_file,
+                                   datasetName='headingAngle',
+                                   box=box,
+                                   print_msg=False)[0].flatten()
+        head_angle = -1 * (180 + head_angle + 90)
+
+        ref_gps_obj.dis_los = enu2los(ref_gps_obj.dis_e,
+                                      ref_gps_obj.dis_n,
+                                      ref_gps_obj.dis_u,
+                                      heading_angle=head_angle,
+                                      inc_angle=inc_angle)
+
+        # get relative LOS displacement on common dates
+        gps_times = np.array(sorted(list(set(gps_obj.times) & set(ref_gps_obj.times))))
+        gps_dis_los = np.zeros(gps_times.shape, np.float32)
+        for i in range(len(gps_times)):
+            idx1 = np.where(gps_obj.times == gps_times[i])[0][0]
+            idx2 = np.where(ref_gps_obj.times == gps_times[i])[0][0]
+            gps_dis_los[i] = gps_obj.dis_los[idx1] - ref_gps_obj.dis_los[idx2]
+
+        ref_site_lalo = (ref_gps_obj.site_lat,
+                         ref_gps_obj.site_lon)
+    else:
+        ref_site_lalo = None
+
+    return gps_times, gps_dis_los, site_lalo, ref_site_lalo
+
+
 def enu2los(e, n, u, heading_angle=-168., inc_angle=34.):
     """
     Parameters: e : np.array or float, displacement in east-west direction, east as positive
