@@ -13,6 +13,7 @@ import glob
 import time
 import datetime
 import errno
+from argparse import Namespace
 import h5py
 import numpy as np
 import multiprocessing
@@ -63,8 +64,8 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
     gps_obj.dis_los = enu2los(gps_obj.dis_e,
                               gps_obj.dis_n,
                               gps_obj.dis_u,
-                              heading_angle=head_angle,
-                              inc_angle=inc_angle)
+                              inc_angle=inc_angle,
+                              head_angle=head_angle)
     gps_times = gps_obj.times
     gps_dis_los = gps_obj.dis_los
     site_lalo = (gps_obj.site_lat,
@@ -96,8 +97,8 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
         ref_gps_obj.dis_los = enu2los(ref_gps_obj.dis_e,
                                       ref_gps_obj.dis_n,
                                       ref_gps_obj.dis_u,
-                                      heading_angle=head_angle,
-                                      inc_angle=inc_angle)
+                                      inc_angle=inc_angle,
+                                      head_angle=head_angle)
 
         # get relative LOS displacement on common dates
         gps_times = np.array(sorted(list(set(gps_obj.times) & set(ref_gps_obj.times))))
@@ -115,22 +116,25 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
     return gps_times, gps_dis_los, site_lalo, ref_site_lalo
 
 
-def enu2los(e, n, u, heading_angle=-168., inc_angle=34.):
+def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
     """
     Parameters: e : np.array or float, displacement in east-west direction, east as positive
                 n : np.array or float, displacement in north-south direction, north as positive
                 u : np.array or float, displacement in vertical direction, up as positive
-                heading_angle : np.array or float, satellite heading angle from the north in clock-wise direction
-                inc_angle : np.array or float, local incidence angle from vertical
-    For AlosA: heading_angle = -12.873,  inc_angle = 34
-    For AlosD: heading_angle = -167.157, inc_angle = 34
-    For SenD: heading_angle = -168 # -1 * (180 + los.band2 + 90) from ISCE
-        # because it's defined as the azimuth angle of the LOS vector from the ground target to the satellite 
-        # measured from the north in anti-clockwise as positive
+                inc_angle  : np.array or float, local incidence angle from vertical
+                head_angle : np.array or float, satellite orbit from the north in clock-wise direction as positive
+    For AlosA: inc_angle = 34, head_angle = -12.873
+    For AlosD: inc_angle = 34, head_angle = -167.157
+    For SenD: inc_angle = 34, head_angle = -168
+        # head_angle = -1 * (180 + los.band2 + 90) from ISCE
+        # where los.band2 is azimuth angle of LOS vector from ground target to the satellite 
+        # measured from the north in anti-clockwise as positive 
     """
-    v_los = (-1 * e * np.cos(heading_angle / 180. * np.pi)
-             + n * np.sin(heading_angle / 180. * np.pi)
-             + u * np.cos(inc_angle / 180. * np.pi))
+    inc_angle *= np.pi/180.
+    head_angle *= np.pi/180.
+    v_los = (-1 * e * np.cos(head_angle) * np.sin(inc_angle)
+             + n * np.sin(head_angle) * np.sin(inc_angle)
+             + u * np.cos(inc_angle))
     return v_los
 
 
@@ -2056,36 +2060,8 @@ class coordinate:
             self.lon_step = float(self.src_metadata['X_STEP'])
         else:
             self.geocoded = False
-            if self.lookup_file is None:
-                raise FileNotFoundError('No lookup table file found!')
-            else:
+            if self.lookup_file:
                 self.lut_metadata = readfile.read_attribute(self.lookup_file[0])
-
-                # if lookup table is in geo coordinates
-                if 'Y_FIRST' in self.lut_metadata.keys():
-                    self.length = int(self.lut_metadata['LENGTH'])
-                    self.width = int(self.lut_metadata['WIDTH'])
-                    self.lat0 = float(self.lut_metadata['Y_FIRST'])
-                    self.lon0 = float(self.lut_metadata['X_FIRST'])
-                    self.lat_step_deg = float(self.lut_metadata['Y_STEP'])
-                    self.lon_step_deg = float(self.lut_metadata['X_STEP'])
-
-    def read_lookup_table(self, print_msg=True):
-        if 'Y_FIRST' in self.lut_metadata.keys():
-            lut_y = readfile.read(self.lookup_file[0],
-                                  datasetName='azimuthCoord',
-                                  print_msg=print_msg)[0]
-            lut_x = readfile.read(self.lookup_file[1],
-                                  datasetName='rangeCoord',
-                                  print_msg=print_msg)[0]
-        else:
-            lut_y = readfile.read(self.lookup_file[0],
-                                  datasetName='latitude',
-                                  print_msg=print_msg)[0]
-            lut_x = readfile.read(self.lookup_file[1],
-                                  datasetName='longitude',
-                                  print_msg=print_msg)[0]
-        return lut_y, lut_x
 
     def lalo2yx(self, coord_in, coord_type):
         """convert geo coordinates into radar coordinates (round to nearest integer)
@@ -2179,6 +2155,38 @@ class coordinate:
             raise RuntimeError('No coresponding coordinate found for y/x: {}/{}'.format(y, x))
         return row, col
 
+    def _read_lookup_table(self, print_msg=True):
+        if 'Y_FIRST' in self.lut_metadata.keys():
+            lut_y = readfile.read(self.lookup_file[0],
+                                  datasetName='azimuthCoord',
+                                  print_msg=print_msg)[0]
+            lut_x = readfile.read(self.lookup_file[1],
+                                  datasetName='rangeCoord',
+                                  print_msg=print_msg)[0]
+        else:
+            lut_y = readfile.read(self.lookup_file[0],
+                                  datasetName='latitude',
+                                  print_msg=print_msg)[0]
+            lut_x = readfile.read(self.lookup_file[1],
+                                  datasetName='longitude',
+                                  print_msg=print_msg)[0]
+        return lut_y, lut_x
+
+    def _read_geo_lut_metadata(self):
+        """Read lat/lon0, lat/lon_step_deg, lat/lon_step into a Namespace - lut"""
+        lut = Namespace()
+        lut.lat0 = float(self.lut_metadata['Y_FIRST'])
+        lut.lon0 = float(self.lut_metadata['X_FIRST'])
+        lut.lat_step_deg = float(self.lut_metadata['Y_STEP'])
+        lut.lon_step_deg = float(self.lut_metadata['X_STEP'])
+
+        # Get lat/lon resolution/step in meter
+        length = int(self.lut_metadata['LENGTH'])
+        lat_c = lut.lat0 + lut.lat_step_deg * length / 2.
+        lut.lat_step = lut.lat_step_deg * np.pi/180.0 * self.earth_radius
+        lut.lon_step = lut.lon_step_deg * np.pi/180.0 * self.earth_radius * np.cos(lat_c * np.pi/180)
+        return lut
+
     def geo2radar(self, lat, lon, print_msg=True):
         """Convert geo coordinates into radar coordinates.
         Parameters: lat/lon : np.array, float, latitude/longitude
@@ -2196,14 +2204,13 @@ class coordinate:
             lon = np.array(lon)
 
         # read lookup table
-        lut_y, lut_x = self.read_lookup_table(print_msg=print_msg)
+        if self.lookup_file is None:
+            raise FileNotFoundError('No lookup table file found!')
+        lut_y, lut_x = self._read_lookup_table(print_msg=print_msg)
 
         # For lookup table in geo-coord, read value directly
         if 'Y_FIRST' in self.lut_metadata.keys():
-            # Get lat/lon resolution/step in meter
-            lat_c = self.lat0 + self.lat_step_deg * self.length / 2.
-            lat_step = self.lat_step_deg * np.pi/180.0 * self.earth_radius
-            lon_step = self.lon_step_deg * np.pi/180.0 * self.earth_radius * np.cos(lat_c * np.pi/180)
+            lut = self._read_geo_lut_metadata()
 
             # if source data file is subsetted before
             az0 = 0
@@ -2217,15 +2224,15 @@ class coordinate:
             try:
                 az_step = azimuth_ground_resolution(self.src_metadata)
                 rg_step = range_ground_resolution(self.src_metadata, print_msg=False)
-                x_factor = np.ceil(abs(lon_step) / rg_step).astype(int)
-                y_factor = np.ceil(abs(lat_step) / az_step).astype(int)
+                x_factor = np.ceil(abs(lut.lon_step) / rg_step).astype(int)
+                y_factor = np.ceil(abs(lut.lat_step) / az_step).astype(int)
             except:
                 x_factor = 2
                 y_factor = 2
 
             # read y/x value from lookup table
-            row = np.rint((lat - self.lat0) / self.lat_step_deg).astype(int)
-            col = np.rint((lon - self.lon0) / self.lon_step_deg).astype(int)
+            row = np.rint((lat - lut.lat0) / lut.lat_step_deg).astype(int)
+            col = np.rint((lon - lut.lon0) / lut.lon_step_deg).astype(int)
             rg = np.rint(lut_x[row, col]).astype(int) - rg0
             az = np.rint(lut_y[row, col]).astype(int) - az0
 
@@ -2251,11 +2258,11 @@ class coordinate:
                                                   geo_coord=True)
             else:
                 for i in range(rg.size):
-                        az[i], rg[i] = self._get_lookup_row_col(lat[i], lon[i],
-                                                                lut_y, lut_x,
-                                                                y_factor*az_step_deg,
-                                                                x_factor*rg_step_deg,
-                                                                geo_coord=True)
+                    az[i], rg[i] = self._get_lookup_row_col(lat[i], lon[i],
+                                                            lut_y, lut_x,
+                                                            y_factor*az_step_deg,
+                                                            x_factor*rg_step_deg,
+                                                            geo_coord=True)
             az = np.rint(az).astype(int)
             rg = np.rint(rg).astype(int)
 
@@ -2282,21 +2289,20 @@ class coordinate:
             rg = np.array(rg)
 
         # read lookup table file
-        lut_y, lut_x = self.read_lookup_table(print_msg=print_msg)
+        if self.lookup_file is None:
+            raise FileNotFoundError('No lookup table file found!')
+        lut_y, lut_x = self._read_lookup_table(print_msg=print_msg)
 
         # For lookup table in geo-coord, search the buffer and use center pixel
         if 'Y_FIRST' in self.lut_metadata.keys():
-            # Get lat/lon resolution/step in meter
-            lat_c = self.lat0 + self.lat_step_deg * self.length / 2.
-            lat_step = self.lat_step_deg * np.pi/180.0 * self.earth_radius
-            lon_step = self.lon_step_deg * np.pi/180.0 * self.earth_radius * np.cos(lat_c * np.pi/180)
+            lut = self._read_geo_lut_metadata()
 
             # Get buffer ratio from range/azimuth ground resolution/step
             try:
                 az_step = azimuth_ground_resolution(self.src_metadata)
                 rg_step = range_ground_resolution(self.src_metadata, print_msg=False)
-                x_factor = 2 * np.ceil(abs(lon_step) / rg_step)
-                y_factor = 2 * np.ceil(abs(lat_step) / az_step)
+                x_factor = 2 * np.ceil(abs(lut.lon_step) / rg_step)
+                y_factor = 2 * np.ceil(abs(lut.lat_step) / az_step)
             except:
                 x_factor = 10
                 y_factor = 10
@@ -2308,18 +2314,20 @@ class coordinate:
             lut_row = np.zeros(rg.shape)
             lut_col = np.zeros(rg.shape)
             if rg.size == 1:
-                lut_row, lut_col = self._get_lookup_row_col(az, rg,
-                                                            lut_y, lut_x,
-                                                            y_factor, x_factor)
+                (lut_row,
+                 lut_col) = self._get_lookup_row_col(az, rg,
+                                                     lut_y, lut_x,
+                                                     y_factor, x_factor)
             else:
                 for i in range(rg.size):
-                    lut_row[i], lut_col[i] = self._get_lookup_row_col(az[i], rg[i],
-                                                                      lut_y, lut_x,
-                                                                      y_factor, x_factor)
-            lat = lut_row * self.lat_step_deg + self.lat0
-            lon = lut_col * self.lon_step_deg + self.lon0
-            lat_resid = abs(y_factor * self.lat_step_deg)
-            lon_resid = abs(x_factor * self.lon_step_deg)
+                    (lut_row[i],
+                     lut_col[i]) = self._get_lookup_row_col(az[i], rg[i],
+                                                            lut_y, lut_x,
+                                                            y_factor, x_factor)
+            lat = lut_row * lut.lat_step_deg + lut.lat0
+            lon = lut_col * lut.lon_step_deg + lut.lon0
+            lat_resid = abs(y_factor * lut.lat_step_deg)
+            lon_resid = abs(x_factor * lut.lon_step_deg)
 
         # For lookup table in radar-coord, read the value directly.
         else:
@@ -2327,25 +2335,20 @@ class coordinate:
             lon = lut_x[az, rg]
             lat_resid = 0.
             lon_resid = 0.
-
         return lat, lon, lat_resid, lon_resid
 
     def box_pixel2geo(self, pixel_box):
         """Convert pixel_box to geo_box"""
-        self.open()
         try:
-            ul_lon = self.lon0 + pixel_box[0] * self.lon_step
-            ul_lat = self.lat0 + pixel_box[1] * self.lat_step
-            lr_lon = ul_lon + self.lon_step * (pixel_box[2] - pixel_box[0])
-            lr_lat = ul_lat + self.lat_step * (pixel_box[3] - pixel_box[1])
-            geo_box = (ul_lon, ul_lat, lr_lon, lr_lat)
+            lat = self.yx2lalo([pixel_box[1], pixel_box[3]], coord_type='y')
+            lon = self.yx2lalo([pixel_box[0], pixel_box[2]], coord_type='y')
+            geo_box = (lon[0], lat[0], lon[1], lat[1])
         except:
             geo_box = None
         return geo_box
 
     def box_geo2pixel(self, geo_box):
         """Convert geo_box to pixel_box"""
-        self.open()
         try:
             y = self.lalo2yx([geo_box[1], geo_box[3]], coord_type='latitude')
             x = self.lalo2yx([geo_box[0], geo_box[2]], coord_type='longitude')
@@ -2359,7 +2362,6 @@ class coordinate:
         Parameters: pix_box - tuple of 4 int, indicating the UL/LR x/y
         Returns:    geo_box - tuple of 4 float, indicating the UL/LR lon/lat of the bounding box
         """
-        self.open()
         x = np.array([pix_box[0], pix_box[2], pix_box[0], pix_box[2]])
         y = np.array([pix_box[1], pix_box[1], pix_box[3], pix_box[3]])
         lat, lon, lat_res, lon_res = self.radar2geo(y, x, print_msg=print_msg)
@@ -2374,18 +2376,12 @@ class coordinate:
         Returns:    pix_box - tuple of 4 int, indicating the UL/LR x/y of the bounding box in radar coord
                           for the corresponding lat/lon coverage.
         """
-        self.open()
-        if self.geocoded:
-            pix_box = (0, 0, 0, 0)
-            pix_box[0:3:2] = self.lalo2yx(geo_box[0:3:2], coord_type='lon')
-            pix_box[1:4:2] = self.lalo2yx(geo_box[1:4:2], coord_type='lat')
-        else:
-            lat = np.array([geo_box[3], geo_box[3], geo_box[1], geo_box[1]])
-            lon = np.array([geo_box[0], geo_box[2], geo_box[0], geo_box[2]])
-            y, x, y_res, x_res = self.geo2radar(lat, lon, print_msg=print_msg)
-            buf = 2*(np.max(np.abs([x_res, y_res])))
-            pix_box = (np.min(x) - buf, np.min(y) - buf,
-                       np.max(x) + buf, np.max(y) + buf)
+        lat = np.array([geo_box[3], geo_box[3], geo_box[1], geo_box[1]])
+        lon = np.array([geo_box[0], geo_box[2], geo_box[0], geo_box[2]])
+        y, x, y_res, x_res = self.geo2radar(lat, lon, print_msg=print_msg)
+        buf = 2 * np.max(np.abs([x_res, y_res]))
+        pix_box = (np.min(x) - buf, np.min(y) - buf,
+                   np.max(x) + buf, np.max(y) + buf)
         return pix_box
 
     def check_box_within_data_coverage(self, pixel_box):

@@ -361,8 +361,8 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1):
                      i.e. [2007.013698630137, 2007.521917808219, 2007.6463470319634]
     Output:
         ax  - matplotlib figure axes object
-        dss - datetime.date object, xmin
-        dee - datetime.date object, xmax
+        dss - datetime.datetime object, xmin
+        dee - datetime.datetime object, xmax
     """
     # Min/Max
     ts = datevector[0]  - 0.2;  ys=int(ts);  ms=int((ts - ys) * 12.0)
@@ -371,8 +371,8 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1):
     if me > 12:   ye = ye + 1;   me = 1
     if ms < 1:    ys = ys - 1;   ms = 12
     if me < 1:    ye = ye - 1;   me = 12
-    dss = datetime.date(ys, ms, 1)
-    dee = datetime.date(ye, me, 1)
+    dss = datetime.datetime(ys, ms, 1, 0, 0)
+    dee = datetime.datetime(ye, me, 1, 0, 0)
     ax.set_xlim(dss, dee)
 
     # Label/Tick format

@@ -42,6 +42,7 @@ class gps:
         self.data_format = data_format
         self.source = 'Nevada Geodetic Lab'
         self.file = os.path.join(data_dir, '{}.IGS08.t{}'.format(site, data_format))
+        self.img_file = os.path.join(data_dir, 'PIC/{}.png'.format(site))
 
     def open(self, print_msg=True):
         if not os.path.isfile(self.file):
@@ -50,7 +51,7 @@ class gps:
         self.read_displacement(print_msg=print_msg)
 
     def download(self, print_msg=True):
-        # get url from Nevada Geodetic Lab
+        # download time-series data from Nevada Geodetic Lab
         url = 'http://geodesy.unr.edu/gps_timeseries'
         if self.data_format == 'env3':
             url = os.path.join(url, 'tenv3')
@@ -61,6 +62,14 @@ class gps:
         if print_msg:
             print('downloading {} from {}'.format(self.site, url))
         urlretrieve(url, self.file)
+
+        # download PNG file
+        if not os.path.isdir(os.path.dirname(self.img_file)):
+            os.makedirs(os.path.dirname(self.img_file))
+        url = 'http://geodesy.unr.edu/tsplots/IGS08/TimeSeries/{}.png'.format(self.site)
+        if print_msg:
+            print('downloading {}.png from {}'.format(self.site, url))
+        urlretrieve(url, self.img_file)
         return self.file
 
     def get_stat_lat_lon(self, print_msg=True):

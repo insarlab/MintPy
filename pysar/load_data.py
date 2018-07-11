@@ -414,9 +414,14 @@ def update_object(outFile, inObj, box, updateMode=True):
     updateFile = True
     if updateMode and not ut.update_file(outFile, check_readable=True):
         if inObj.name == 'ifgramStack':
+            in_size = inObj.get_size(box=box)[1:]
+            in_date12_list = inObj.get_date12_list()
+
             outObj = ifgramStack(outFile)
-            if (outObj.get_size() == inObj.get_size(box=box) 
-                    and sorted(outObj.get_date12_list(dropIfgram=False)) == sorted(inObj.get_date12_list())):
+            out_size = outObj.get_size()[1:]
+            out_date12_list = outObj.get_date12_list(dropIfgram=False)
+
+            if out_size == in_size and set(in_date12_list).issubset(set(out_date12_list)):
                 print(('All date12   exists in file {} with same size as required,'
                        ' no need to re-load.'.format(outFile)))
                 updateFile = False
