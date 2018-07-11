@@ -3,16 +3,14 @@
 from tkinter import *
 
 import h5py
+import numpy
 import matplotlib
 import argparse
 
 matplotlib.use('TkAgg')
 from tkinter import filedialog
-import pysar.view as view
-import info
-import pysar.utils.readfile as readfile
-import subset
-import numpy
+from pysar.utils import readfile, utils as ut
+from pysar import info, view
 
 canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
 pick_mask_file_button, starting_upper_lim, starting_lower_lim, y_lim_upper, y_lim_upper_slider, y_lim_lower, y_lim_lower_slider, unit, \
@@ -729,7 +727,7 @@ def compute_lalo(x, y, all_data=False):
 
     data_box = (0, 0, x_data, y_data)
     print("Data Box:"+str(data_box))
-    lalo = subset.box_pixel2geo(data_box, attributes)
+    lalo = ut.coordinate(attributes).box_pixel2geo(data_box)
 
     formatted_lalo = [str(round(num, 2)) for num in lalo]
 
@@ -745,7 +743,7 @@ def compute_xy(lat, lon):
 
     data_box = (float(attributes['LON_REF1']), float(attributes['LAT_REF1']), lon_data, lat_data)
 
-    xy = subset.box_geo2pixel(data_box, attributes)
+    xy = ut.coordinate(attributes).box_geo2pixel(data_box)
 
     return str(xy[2]), str(xy[3])
 

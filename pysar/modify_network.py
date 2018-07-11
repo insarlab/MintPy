@@ -18,7 +18,6 @@ from pysar.utils import (ptime,
                          utils as ut,
                          network as pnet,
                          plot as pp)
-from pysar import subset
 
 
 ###############################  Usage  ################################
@@ -313,11 +312,12 @@ def get_date12_to_drop(inps):
     if inps.coherenceBased:
         print('--------------------------------------------------')
         print('use coherence-based network modification')
+        coord = ut.coordinate(obj.metadata, lookup_file=inps.lookupFile)
         if inps.aoi_geo_box and inps.lookupFile:
             print('input AOI in (lon0, lat1, lon1, lat0): {}'.format(inps.aoi_geo_box))
-            inps.aoi_pix_box = subset.bbox_geo2radar(inps.aoi_geo_box, obj.metadata, inps.lookupFile)
+            inps.aoi_pix_box = coord.bbox_geo2radar(inps.aoi_geo_box)
         if inps.aoi_pix_box:
-            inps.aoi_pix_box = subset.check_box_within_data_coverage(inps.aoi_pix_box, obj.metadata)
+            inps.aoi_pix_box = coord.check_box_within_data_coverage(inps.aoi_pix_box)
             print('input AOI in (x0,y0,x1,y1): {}'.format(inps.aoi_pix_box))
 
         # Calculate spatial average coherence

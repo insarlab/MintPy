@@ -230,13 +230,9 @@ def read_subset_box(inpsDict):
         return inpsDict
 
     # geo_box --> pix_box
+    coord = ut.coordinate(atr, lookup_file=lookupFile)
     if geo_box is not None:
-        if geocoded:
-            pix_box = (0, 0, 0, 0)
-            pix_box[0:3:2] = ut.coord_lalo2yx(geo_box[0:3:2], atr, 'lon')
-            pix_box[1:4:2] = ut.coord_lalo2yx(geo_box[1:4:2], atr, 'lat')
-        else:
-            pix_box = subset.bbox_geo2radar(geo_box, atr, lookupFile)
+        pix_box = coord.bbox_geo2radar(geo_box)
         print('input bounding box of interest in lalo: {}'.format(geo_box))
     print('box to read for datasets in y/x: {}'.format(pix_box))
 
@@ -245,8 +241,8 @@ def read_subset_box(inpsDict):
     if lookupFile is not None:
         atrLut = readfile.read_attribute(lookupFile[0])
         if not geocoded and 'Y_FIRST' in atrLut.keys():
-            geo_box = subset.bbox_radar2geo(pix_box, atr, lookupFile)
-            box4geo_lut = subset.bbox_geo2radar(geo_box, atrLut)
+            geo_box = coord.bbox_radar2geo(pix_box)
+            box4geo_lut = ut.coordinate(atrLut).bbox_geo2radar(geo_box)
             print('box to read for geocoded lookup file in y/x: {}'.format(box4geo_lut))
 
     inpsDict['box'] = pix_box

@@ -12,14 +12,14 @@ from pysar.utils import readfile, utils as ut
 
 
 USAGE = """
-usage: coord_glob2radar.py lat lon [trans_file] [hdf5_file_radarCoord]
+usage: coord_geo2radar.py lat lon [trans_file] [hdf5_file_radarCoord]
 
 Generates the sum of two input files.
 
 example:
-  coord_glob2radar.py 33.5 130.8
-  coord_glob2radar.py 33.5 130.8 INPUTS/geometryRadar.h5
-  coord_glob2radar.py 33.5 130.8 geomap_4rlks.trans velocity.h5
+  coord_geo2radar.py 33.5 130.8
+  coord_geo2radar.py 33.5 130.8 INPUTS/geometryRadar.h5
+  coord_geo2radar.py 33.5 130.8 geomap_4rlks.trans velocity.h5
 """
 
 
@@ -51,7 +51,8 @@ def main(argv):
 
     print('input geo coord: lat=%.4f, lon=%.4f' % (lat, lon))
 
-    y, x = ut.glob2radar(np.array(lat), np.array(lon), trans_file, atr_rdr)[0:2]
+    coord = ut.coordinate(atr_rdr, lookup_file=trans_file)
+    y, x = coord.geo2radar(np.array(lat), np.array(lon))[0:2]
     print('corresponding radar coord: y=%d, x=%d' % (y, x))
     return
 

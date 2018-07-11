@@ -93,48 +93,6 @@ def cmd_line_parse(iargs=None):
 
 
 ################################################################
-def check_box_within_data_coverage(pixel_box, metadata):
-    """Check the subset box's conflict with data coverage
-    Inputs:
-        pixel_box : 4-tuple of int, indicating y/x coordinates of subset
-        atr       : dictionary of file attributes
-    """
-
-    width = int(metadata['WIDTH'])
-    length = int(metadata['LENGTH'])
-    sub_x = [pixel_box[0], pixel_box[2]]
-    sub_y = [pixel_box[1], pixel_box[3]]
-
-    if sub_y[0] >= length or sub_y[1] <= 0 or sub_x[0] >= width or sub_x[1] <= 0:
-        data_box = (0, 0, width, length)
-        msg = 'ERROR: input index is out of data range!\n'
-        msg += '\tdata   range in x/y: {}\n'.format(data_box)
-        msg += '\tsubset range in x/y: {}\n'.format(pixel_box)
-        msg += '\tdata   range in lat/lon: {}\n'.format(box_pixel2geo(data_box, metadata))
-        msg += '\tsubset range in lat/lon: {}\n'.format(box_pixel2geo(pixel_box, metadata))
-        raise ValueError(msg)
-
-    # Check Y/Azimuth/Latitude subset range
-    if sub_y[0] < 0:
-        sub_y[0] = 0
-        print('WARNING: input y < min (0)! Set it to min.')
-    if sub_y[1] > length:
-        sub_y[1] = length
-        print('WARNING: input y > max ('+str(length)+')! Set it to max.')
-
-    # Check X/Range/Longitude subset range
-    if sub_x[0] < 0:
-        sub_x[0] = 0
-        print('WARNING: input x < min (0)! Set it to min.')
-    if sub_x[1] > width:
-        sub_x[1] = width
-        print('WARNING: input x > max ('+str(width)+')! Set it to max.')
-
-    out_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
-    return out_box
-
-
-###########################################################
 def get_coverage_box(atr):
     """Get Coverage Box of data in geo and pixel coordinates
     Inputs: atr - dict, meta data dictionary
@@ -190,59 +148,6 @@ def read_subset_template2box(template_file):
     except:
         pix_box = None
     return pix_box, geo_box
-
-
-def bbox_geo2radar(geo_box, atr_rdr=dict(), lookup_file=None, print_msg=False):
-    """Calculate bounding box in x/y for file in radar coord, based on input geo box.
-    Inputs:
-        geo_box    - tuple of 4 float, indicating the UL/LR lon/lat 
-        atr_rdr    - dict, attributes of file in radar coord
-        lookup_file - string / list of string, path of transformation file, i.e. geomap_4rlks.trans
-    Output:
-        pix_box - tuple of 4 int, indicating the UL/LR x/y of the bounding box in radar coord
-                  for the corresponding lat/lon coverage.
-    """
-    lat = np.array([geo_box[3], geo_box[3], geo_box[1], geo_box[1]])
-    lon = np.array([geo_box[0], geo_box[2], geo_box[0], geo_box[2]])
-    if 'Y_FIRST' in atr_rdr.keys():
-        y = ut.coord_lalo2yx(lat, atr_rdr, 'lat')
-        x = ut.coord_lalo2yx(lon, atr_rdr, 'lon')
-        pix_box = (x[0], y[2], x[1], y[0])
-    else:
-        y, x, y_res, x_res = ut.glob2radar(lat, lon,
-                                           lookup_file,
-                                           atr_rdr,
-                                           print_msg=print_msg)
-        buf = 2*(np.max(np.abs([x_res, y_res])))
-        pix_box = (np.min(x)-buf, np.min(y)-buf,
-                   np.max(x)+buf, np.max(y)+buf)
-    return pix_box
-
-
-def bbox_radar2geo(pix_box, atr_rdr=dict(), lookup_file=None, print_msg=False):
-    """Calculate bounding box in lat/lon for file in geo coord, based on input radar/pixel box
-    Inputs:
-        pix_box    - tuple of 4 int, indicating the UL/LR x/y
-        atr_rdr    - dict, attributes of file in radar coord
-        lookup_file - string / list of string, path of transformation file, i.e. geomap_4rlks.trans
-    Output:
-        geo_box - tuple of 4 float, indicating the UL/LR lon/lat of the bounding box
-    """
-    x = np.array([pix_box[0], pix_box[2], pix_box[0], pix_box[2]])
-    y = np.array([pix_box[1], pix_box[1], pix_box[3], pix_box[3]])
-    if 'Y_FIRST' in atr_rdr.keys():
-        lat = ut.coord_yx2lalo(y, atr_rdr, 'y')
-        lon = ut.coord_yx2lalo(x, atr_rdr, 'x')
-        geo_box = (lon[0], lat[0], lon[1], lat[2])
-    else:
-        lat, lon, lat_res, lon_res = ut.radar2glob(y, x,
-                                                   lookup_file,
-                                                   atr_rdr,
-                                                   print_msg=print_msg)
-        buf = 2*(np.max(np.abs([lat_res, lon_res])))
-        geo_box = (np.min(lon)-buf, np.max(lat)+buf,
-                   np.max(lon)+buf, np.min(lat)-buf)
-    return geo_box
 
 
 def subset_box2inps(inps, pix_box, geo_box):
@@ -335,15 +240,16 @@ def subset_input_dict2box(subset_dict, meta_dict):
     length = int(float(meta_dict['LENGTH']))
 
     # Use subset_lat/lon input if existed,  priority: lat/lon > y/x > len/wid
+    coord = ut.coordinate(meta_dict)
     if subset_dict['subset_lat']:
-        sub_y = ut.coord_lalo2yx(subset_dict['subset_lat'], meta_dict, 'latitude')
+        sub_y = coord.lalo2yx(subset_dict['subset_lat'], coord_type='latitude')
     elif subset_dict['subset_y']:
         sub_y = subset_dict['subset_y']
     else:
         sub_y = [0, length]
 
     if subset_dict['subset_lon']:
-        sub_x = ut.coord_lalo2yx(subset_dict['subset_lon'], meta_dict, 'longitude')
+        sub_x = coord.lalo2yx(subset_dict['subset_lon'], coord_type='longitude')
     elif subset_dict['subset_x']:
         sub_x = subset_dict['subset_x']
     else:
@@ -355,35 +261,9 @@ def subset_input_dict2box(subset_dict, meta_dict):
     pixel_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
 
     # Get subset box in lat/lon from subset box in y/x
-    geo_box = box_pixel2geo(pixel_box, meta_dict)
+    geo_box = coord.box_pixel2geo(pixel_box)
 
     return pixel_box, geo_box
-
-
-def box_pixel2geo(pixel_box, meta_dict):
-    """Convert pixel_box to geo_box"""
-    try:
-        lon_step = float(meta_dict['X_STEP'])
-        lat_step = float(meta_dict['Y_STEP'])
-        ul_lon = float(meta_dict['X_FIRST']) + pixel_box[0]*lon_step
-        ul_lat = float(meta_dict['Y_FIRST']) + pixel_box[1]*lat_step
-        lr_lon = ul_lon + lon_step*(pixel_box[2]-pixel_box[0])
-        lr_lat = ul_lat + lat_step*(pixel_box[3]-pixel_box[1])
-        geo_box = (ul_lon, ul_lat, lr_lon, lr_lat)
-    except:
-        geo_box = None
-    return geo_box
-
-
-def box_geo2pixel(geo_box, meta_dict):
-    """Convert geo_box to pixel_box"""
-    try:
-        y = ut.coord_lalo2yx([geo_box[1], geo_box[3]], meta_dict, 'latitude')
-        x = ut.coord_lalo2yx([geo_box[0], geo_box[2]], meta_dict, 'longitude')
-        pixel_box = (x[0], y[0], x[1], y[1])
-    except:
-        pixel_box = None
-    return pixel_box
 
 
 ################################################################
@@ -421,6 +301,7 @@ def subset_file(fname, subset_dict_input, out_file=None):
     # Read Subset Inputs into 4-tuple box in pixel and geo coord
     pix_box, geo_box = subset_input_dict2box(subset_dict, atr)
 
+    coord = ut.coordinate(atr)
     # if fill_value exists and not None, subset data and fill assigned value for area out of its coverage.
     # otherwise, re-check subset to make sure it's within data coverage and initialize the matrix with np.nan
     outfill = False
@@ -429,14 +310,14 @@ def subset_file(fname, subset_dict_input, out_file=None):
     else:
         outfill = False
     if not outfill:
-        pix_box = check_box_within_data_coverage(pix_box, atr)
+        pix_box = coord.check_box_within_data_coverage(pix_box)
         subset_dict['fill_value'] = np.nan
 
-    geo_box = box_pixel2geo(pix_box, atr)
+    geo_box = coord.box_pixel2geo(pix_box)
     data_box = (0, 0, width, length)
     print('data   range in y/x: '+str(data_box))
     print('subset range in y/x: '+str(pix_box))
-    print('data   range in lat/lon: '+str(box_pixel2geo(data_box, atr)))
+    print('data   range in lat/lon: '+str(coord.box_pixel2geo(data_box)))
     print('subset range in lat/lon: '+str(geo_box))
 
     if pix_box == data_box:
@@ -542,13 +423,14 @@ def read_aux_subset2inps(inps):
                 raise Exception('No lookup file found! Can not use --tight option without it.')
 
             atr_lut = readfile.read_attribute(inps.lookup_file)
+            coord = ut.coordinate(atr_lut)
             if 'Y_FIRST' in atr_lut.keys():
                 rg_lut = readfile.read(inps.lookup_file, datasetName='range')[0]
                 rg_unique, rg_pos = np.unique(rg_lut, return_inverse=True)
                 idx_row, idx_col = np.where(rg_lut != rg_unique[np.bincount(rg_pos).argmax()])
-                pix_box = (np.min(idx_col)-10, np.min(idx_row)-10,
-                           np.max(idx_col)+10, np.max(idx_row)+10)
-                geo_box = box_pixel2geo(pix_box, atr_lut)
+                pix_box = (np.min(idx_col) - 10, np.min(idx_row) - 10,
+                           np.max(idx_col) + 10, np.max(idx_row) + 10)
+                geo_box = coord.box_pixel2geo(pix_box)
                 del rg_lut
             else:
                 lat = readfile.read(inps.lookup_file, datasetName='latitude')[0]

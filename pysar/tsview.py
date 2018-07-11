@@ -238,14 +238,8 @@ def read_init_info(inps):
 
     # Initial Pixel Coord
     if inps.lalo:
-        if 'Y_FIRST' in atr.keys():
-            y = int((inps.lalo[0] - inps.lat0) / inps.lat_step + 0.5)
-            x = int((inps.lalo[1] - inps.lon0) / inps.lon_step + 0.5)
-            inps.yx = [y, x]
-        elif lookup_file is not None:
-            y, x = ut.glob2radar(inps.lalo[0], inps.lalo[1],
-                                 lookup_file, atr, print_msg=False)[0:2]
-            inps.yx = [y, x]
+        coord = ut.coordinate(atr, lookup_file)
+        inps.yx = coord.geo2radar(inps.lalo[0], inps.lalo[1], print_msg=False)[0:2]
     if not inps.yx:
         inps.yx = inps.ref_yx
 

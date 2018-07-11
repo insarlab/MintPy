@@ -167,8 +167,10 @@ def metadata_radar2geo(atr_in, res_obj, print_msg=True):
 
     # Reference point from y/x to lat/lon
     if 'REF_Y' in atr.keys():
-        ref_lat, ref_lon = ut.radar2glob(np.array(int(atr['REF_Y'])), np.array(int(atr['REF_X'])),
-                                         res_obj.file, atr_in, print_msg=False)[0:2]
+        coord = ut.coordinate(atr_in, lookup_file=res_obj.file)
+        ref_lat, ref_lon = coord.radar2geo(np.array(int(atr['REF_Y'])),
+                                           np.array(int(atr['REF_X'])),
+                                           print_msg=False)[0:2]
         if ~np.isnan(ref_lat) and ~np.isnan(ref_lon):
             ref_y = int(np.rint((ref_lat - float(atr['Y_FIRST'])) / float(atr['Y_STEP'])))
             ref_x = int(np.rint((ref_lon - float(atr['X_FIRST'])) / float(atr['X_STEP'])))

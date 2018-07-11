@@ -325,15 +325,16 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     # Subset
     # Convert subset input into bounding box in radar / geo coordinate
     # geo_box = None if atr is not geocoded.
+    coord = ut.coordinate(metadata)
     inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), metadata)
-    inps.pix_box = subset.check_box_within_data_coverage(inps.pix_box, metadata)
-    inps.geo_box = subset.box_pixel2geo(inps.pix_box, metadata)
+    inps.pix_box = coord.check_box_within_data_coverage(inps.pix_box)
+    inps.geo_box = coord.box_pixel2geo(inps.pix_box)
     # Out message
     data_box = (0, 0, inps.width, inps.length)
     if print_msg:
         print('data   coverage in y/x: '+str(data_box))
         print('subset coverage in y/x: '+str(inps.pix_box))
-        print('data   coverage in lat/lon: '+str(subset.box_pixel2geo(data_box, metadata)))
+        print('data   coverage in lat/lon: '+str(coord.box_pixel2geo(data_box)))
         print('subset coverage in lat/lon: '+str(inps.geo_box))
         print('------------------------------------------------------------------------')
 
@@ -351,16 +352,16 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     # Convert seed_lalo if existed, to seed_yx, and use seed_yx for the following
     # seed_yx is referenced to input data coverage, not subseted area for display
     if inps.seed_lalo and inps.geo_box:
-        inps.seed_yx = [ut.coord_lalo2yx(inps.seed_lalo[0], metadata, 'lat'),
-                        ut.coord_lalo2yx(inps.seed_lalo[1], metadata, 'lon')]
+        inps.seed_yx = [coord.lalo2yx(inps.seed_lalo[0], coord_type='lat'),
+                        coord.lalo2yx(inps.seed_lalo[1], coord_type='lon')]
         if print_msg:
             print('input reference point in lat/lon: {}'.format(inps.seed_lalo))
             print('input reference point in y  /x  : {}'.format(inps.seed_yx))
 
     # seed_lalo
     if inps.seed_yx and inps.geo_box:
-        inps.seed_lalo = [ut.coord_yx2lalo(inps.seed_yx[0], metadata, 'y'),
-                          ut.coord_yx2lalo(inps.seed_yx[1], metadata, 'x')]
+        inps.seed_lalo = [coord.yx2lalo(inps.seed_yx[0], coord_type='y'),
+                          coord.yx2lalo(inps.seed_yx[1], coord_type='x')]
     elif 'REF_LAT' in metadata.keys():
         inps.seed_lalo = [float(metadata['REF_LAT']),
                           float(metadata['REF_LON'])]
@@ -497,7 +498,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
             print('reading DEM: {} ...'.format(os.path.basename(inps.dem_file)))
         if inps.geo_box:
             # Support DEM with different Resolution and Coverage
-            inps.dem_pix_box = subset.box_geo2pixel(inps.geo_box, dem_metadata)
+            inps.dem_pix_box = ut.coordinate(dem_metadata).box_geo2pixel(inps.geo_box)
         else:
             inps.dem_pix_box = inps.pix_box
         dem, dem_metadata = readfile.read(inps.dem_file,
@@ -607,9 +608,10 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
                 print('plot reference point')
 
         # Status bar
+        coord = ut.coordinate(metadata)
         def format_coord(x, y):
-            col = ut.coord_lalo2yx(x, metadata, 'lon') - inps.pix_box[0]
-            row = ut.coord_lalo2yx(y, metadata, 'lat') - inps.pix_box[1]
+            col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
+            row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
             msg = 'Lon={:.4f}, Lat={:.4f}'.format(x, y)
             if 0 <= col < num_col and 0 <= row < num_row:
                 try:
@@ -618,8 +620,8 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
                 except:
                     msg += ', value=[]'
                 if inps.dem_file:
-                    dem_col = ut.coord_lalo2yx(x, dem_metadata, 'lon') - inps.dem_pix_box[0]
-                    dem_row = ut.coord_lalo2yx(y, dem_metadata, 'lat') - inps.dem_pix_box[1]
+                    dem_col = coord.lalo2yx(x, coord_type='lon') - inps.dem_pix_box[0]
+                    dem_row = coord.lalo2yx(y, coord_type='lat') - inps.dem_pix_box[1]
                     h = dem[dem_row, dem_col]
                     msg += ', elev={:.1f}'.format(h)
                 msg += ', x={:.1f}, y={:.1f}'.format(col+inps.pix_box[0],

@@ -11,8 +11,8 @@ matplotlib.use('TkAgg')
 from tkinter import filedialog
 
 from pysar.objects import timeseries
-from pysar.utils import readfile
-from pysar import tsview as ts_view, view, info, subset
+from pysar.utils import readfile, utils as ut
+from pysar import tsview as ts_view, view, info
 
 
 canvas, frame, h5_file, h5_file_short, pick_h5_file_button, mask_file, mask_short, \
@@ -536,7 +536,7 @@ def compute_lalo(x, y, all_data=False):
 
     data_box = (0, 0, x_data, y_data)
 
-    lalo = subset.box_pixel2geo(data_box, attributes)
+    lalo = ut.coordinate(attributes).box_pixel2geo(data_box)
 
     formatted_lalo = [str(round(num, 2)) for num in lalo]
 
@@ -552,7 +552,7 @@ def compute_xy(lat, lon):
 
     data_box = (float(attributes['X_FIRST']), float(attributes['Y_FIRST']), lon_data, lat_data)
 
-    xy = subset.box_geo2pixel(data_box, attributes)
+    xy = ut.coordinate(attributes).box_geo2pixel(data_box)
 
     return str(xy[2]), str(xy[3])
 

@@ -199,16 +199,18 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
 
     # X - Distance along the line
     earth_radius = 6371.0e3    # in meter
+    coord = ut.coordinate(atr)
     try:
         atr['X_FIRST']
-        [lat0, lat1] = ut.coord_yx2lalo([y0, y1], atr, 'y')
-        x_step = float(atr['X_STEP'])*np.pi/180.0 * earth_radius * np.cos((lat0+lat1)/2*np.pi/180)
-        y_step = float(atr['Y_STEP'])*np.pi/180.0 * earth_radius
+        [lat0, lat1] = coord.yx2lalo([y0, y1], coord_type='y')
+        lat_c = (lat0 + lat1) / 2.
+        x_step = float(atr['X_STEP']) * np.pi/180.0 * earth_radius * np.cos(lat_c * np.pi/180)
+        y_step = float(atr['Y_STEP']) * np.pi/180.0 * earth_radius
     except:
         x_step = ut.range_ground_resolution(atr)
         y_step = ut.azimuth_ground_resolution(atr)
-    dis_x = (x-x0)*x_step
-    dis_y = (y-y0)*y_step
+    dis_x = (x - x0) * x_step
+    dis_y = (y - y0) * y_step
     transect[:, 0] = np.hypot(dis_x, dis_y)
 
     return transect
@@ -216,8 +218,9 @@ def transect_yx(z, atr, start_yx, end_yx, interpolation='nearest'):
 
 def transect_lalo(z, atr, start_lalo, end_lalo, interpolation='nearest'):
     """Extract 2D matrix (z) value along the line [start_lalo, end_lalo]"""
-    [y0, y1] = ut.coord_lalo2yx([start_lalo[0], end_lalo[0]], atr, 'lat')
-    [x0, x1] = ut.coord_lalo2yx([start_lalo[1], end_lalo[1]], atr, 'lon')
+    coord = ut.coordinate(atr)
+    [y0, y1] = coord.lalo2yx([start_lalo[0], end_lalo[0]], coord_type='lat')
+    [x0, x1] = coord.lalo2yx([start_lalo[1], end_lalo[1]], coord_type='lon')
     transect = transect_yx(z, atr, [y0, x0], [y1, x1], interpolation)
     return transect
 
@@ -279,9 +282,10 @@ def plot_transect_location(ax, inps):
     data0, atr0 = readfile.read(inps.file[0])
     ax.imshow(data0)
 
+    coord = ut.coordinate(atr0)
     if inps.start_lalo and inps.end_lalo:
-        [y0, y1] = ut.coord_lalo2yx([inps.start_lalo[0], inps.end_lalo[0]], atr0, 'lat')
-        [x0, x1] = ut.coord_lalo2yx([inps.start_lalo[1], inps.end_lalo[1]], atr0, 'lon')
+        [y0, y1] = coord.lalo2yx([inps.start_lalo[0], inps.end_lalo[0]], coord_type='lat')
+        [x0, x1] = coord.lalo2yx([inps.start_lalo[1], inps.end_lalo[1]], coord_type='lon')
         inps.start_yx = [y0, x0]
         inps.end_yx = [y1, x1]
 
@@ -298,8 +302,8 @@ def plot_transect_location(ax, inps):
         if 0 <= col < data0.shape[1] and 0 <= row < data0.shape[0]:
             z = data0[row, col]
             if 'X_FIRST' in atr0.keys():
-                lat = ut.coord_yx2lalo(row, atr0, 'row')
-                lon = ut.coord_yx2lalo(col, atr0, 'col')
+                lat = coord.yx2lalo(row, coord_type='row')
+                lon = coord.yx2lalo(col, coord_type='col')
                 return 'lon=%.4f, lat=%.4f, x=%.0f,  y=%.0f,  value=%.4f' % (lon, lat, x, y, z)
             else:
                 return 'x=%.0f,  y=%.0f,  value=%.4f' % (x, y, z)

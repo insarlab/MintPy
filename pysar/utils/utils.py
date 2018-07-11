@@ -75,6 +75,7 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
 
         y = coord_lalo2yx(ref_gps_obj.site_lat, atr, 'lat')
         x = coord_lalo2yx(ref_gps_obj.site_lon, atr, 'lon')
+        except:
         if 0 <= x < int(atr['WIDTH']) and 0<= y < int(atr['LENGTH']):
             box = (x, y, x+1, y+1)
             inc_angle = readfile.read(geom_file,

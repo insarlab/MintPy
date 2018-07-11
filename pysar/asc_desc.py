@@ -108,8 +108,9 @@ def main(iargs=None):
         print('reading '+fname)
         atr = readfile.read_attribute(fname)
 
-        [x0, x1] = ut.coord_lalo2yx([west, east], atr, 'lon')
-        [y0, y1] = ut.coord_lalo2yx([north, south], atr, 'lat')
+        coord = ut.coordinate(atr)
+        [x0, x1] = coord.lalo2yx([west, east], coord_type='lon')
+        [y0, y1] = coord.lalo2yx([north, south], coord_type='lat')
         V = readfile.read(fname, box=(x0, y0, x1, y1))[0]
         u_los[i, :] = V.flatten(0)
 
