@@ -49,11 +49,11 @@ def create_parser():
 
     parser.add_argument('timeseries_file',
                         help='Time series file for velocity inversion.')
-    parser.add_argument('--start-date', dest='min_date',
+    parser.add_argument('--start-date', dest='startDate',
                         help='start date for velocity estimation')
-    parser.add_argument('--end-date', dest='max_date',
+    parser.add_argument('--end-date', dest='endDate',
                         help='end date for velocity estimation')
-    parser.add_argument('--exclude', '--ex', dest='ex_date', nargs='+', default=[],
+    parser.add_argument('--exclude', '--ex', dest='excludeDate', nargs='+', default=[],
                         help='date(s) not included in velocity estimation, could be list of string or text file, i.e.:\n' +
                              '--exclude 20040502 20060708 20090103\n' +
                              '--exclude exclude_date.txt\n'+DROP_DATE_TXT)
@@ -74,9 +74,31 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+def read_template2inps(template_file, inps=None):
+    """Read input template file into inps.excludeDate"""
+    if not inps:
+        inps = cmd_line_parse()
+    inpsDict = vars(inps)
+    print('read options from template file: '+os.path.basename(template_file))
+    template = readfile.read_template(inps.template_file)
+    template = ut.check_template_auto_value(template)
+
+    # Read template option
+    prefix = 'pysar.velocity.'
+    keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
+    for key in keyList:
+        value = template[prefix+key]
+        if value:
+            if key in ['startDate', 'endDate']:
+                inpsDict[key] = ptime.yyyymmdd(value)
+            elif key in ['excludeDate']:
+                inpsDict[key] = ptime.yyyymmdd(value.replace(',', ' ').split())
+    return inps
+
+
 ############################################################################
 def read_exclude_date(inps, dateListAll):
-    # Merge ex_date/min_date/max_date into ex_date
+    # Merge ex_date/startDate/endDate into ex_date
     yy_list_all = ptime.yyyymmdd2years(dateListAll)
     exDateList = []
     # 1. template_file
@@ -85,7 +107,7 @@ def read_exclude_date(inps, dateListAll):
         inps = read_template2inps(inps.template_file, inps)
 
     # 2. ex_date
-    input_ex_date = list(inps.ex_date)
+    input_ex_date = list(inps.excludeDate)
     if input_ex_date:
         for ex_date in input_ex_date:
             if os.path.isfile(ex_date):
@@ -97,20 +119,20 @@ def read_exclude_date(inps, dateListAll):
         exDateList = list(set(exDateList).intersection(dateListAll))
         print('exclude date:'+str(exDateList))
 
-    # 3. min_date
-    if inps.min_date:
-        print('start date: '+inps.min_date)
-        yy_min = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.min_date))
+    # 3. startDate
+    if inps.startDate:
+        print('start date: '+inps.startDate)
+        yy_min = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.startDate))
         for i in range(len(dateListAll)):
             date = dateListAll[i]
             if yy_list_all[i] < yy_min and date not in exDateList:
                 print('  remove date: '+date)
                 exDateList.append(date)
 
-    # 4. max_date
-    if inps.max_date:
-        print('end date: '+inps.max_date)
-        yy_max = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.max_date))
+    # 4. endDate
+    if inps.endDate:
+        print('end date: '+inps.endDate)
+        yy_max = ptime.yyyymmdd2years(ptime.yyyymmdd(inps.endDate))
         for i in range(len(dateListAll)):
             date = dateListAll[i]
             if yy_list_all[i] > yy_max and date not in exDateList:
@@ -121,11 +143,11 @@ def read_exclude_date(inps, dateListAll):
 
 
 def read_date_info(inps):
-    """Get inps.ex_date full list
+    """Get inps.excludeDate full list
     Inputs:
         inps          - Namespace, 
     Output:
-        inps.ex_date  - list of string for exclude date in YYYYMMDD format
+        inps.excludeDate  - list of string for exclude date in YYYYMMDD format
     """
     if inps.key == 'timeseries':
         tsobj = timeseries(inps.timeseries_file)
@@ -134,10 +156,10 @@ def read_date_info(inps):
     elif inps.key == 'HDFEOS':
         tsobj = HDFEOS(inps.timeseries_file)
     tsobj.open()
-    inps.ex_date = read_exclude_date(inps, tsobj.dateList)
+    inps.excludeDate = read_exclude_date(inps, tsobj.dateList)
 
     # Date used for estimation inps.dateList
-    inps.dateList = [i for i in tsobj.dateList if i not in inps.ex_date]
+    inps.dateList = [i for i in tsobj.dateList if i not in inps.excludeDate]
     inps.numDate = len(inps.dateList)
     print('-'*50)
     print('dates from input file: {}\n{}'.format(tsobj.numDate, tsobj.dateList))
@@ -149,52 +171,19 @@ def read_date_info(inps):
     print('-'*50)
 
     # Date Aux Info
-    inps.dropDate = np.array([i not in inps.ex_date for i in tsobj.dateList], dtype=np.bool_)
+    inps.dropDate = np.array([i not in inps.excludeDate for i in tsobj.dateList], dtype=np.bool_)
     inps.years = np.array(tsobj.yearList)[inps.dropDate]
 
     # output file name
     if not inps.outfile:
         outname = 'velocity'
-        if inps.ex_date:
+        if inps.excludeDate:
             outname += 'Ex'
         if inps.key == 'giantTimeseries':
             prefix = os.path.basename(inps.timeseries_file).split('PARAMS')[0]
             outname = prefix + outname
         outname += '.h5'
         inps.outfile = outname
-    return inps
-
-
-def read_template2inps(template_file, inps=None):
-    """Read input template file into inps.ex_date"""
-    if not inps:
-        inps = cmd_line_parse()
-    template = readfile.read_template(template_file)
-
-    # Read template option
-    prefix = 'pysar.velocity.'
-    key = prefix+'excludeDate'
-    if key in template.keys():
-        value = template[key]
-        if value == 'auto':
-            inps.ex_date = ['exclude_date.txt']
-        elif value == 'no':
-            inps.ex_date = []
-        else:
-            inps.ex_date = value.replace(',', ' ').split()
-
-    key = prefix+'startDate'
-    if key in template.keys():
-        value = template[key]
-        if value not in ['auto', 'no']:
-            inps.min_date = ptime.yyyymmdd(value)
-
-    key = prefix+'endDate'
-    if key in template.keys():
-        value = template[key]
-        if value not in ['auto', 'no']:
-            inps.max_date = ptime.yyyymmdd(value)
-
     return inps
 
 

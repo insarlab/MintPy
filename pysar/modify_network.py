@@ -88,8 +88,8 @@ def create_parser():
                         help='remove/drop interferograms with date later than end-date in YYMMDD or YYYYMMDD format')
 
     # 2. Coherence-based network
-    cohBased = parser.add_argument_group(
-        'Coherence-based Network', 'Drop/modify network based on spatial coherence')
+    cohBased = parser.add_argument_group('Coherence-based Network',
+                                         'Drop/modify network based on spatial coherence')
     cohBased.add_argument('--coherence-based', dest='coherenceBased', action='store_true',
                           help='Enable coherence-based network modification')
     cohBased.add_argument('--no-mst', dest='keepMinSpanTree', action='store_false',
@@ -190,9 +190,9 @@ def read_template2inps(template_file, inps=None):
             elif key in ['startDate', 'endDate']:
                 inpsDict[key] = ptime.yyyymmdd(value)
             elif key == 'excludeDate':
-                inpsDict[key] = ptime.yyyymmdd([i for i in value.replace(',', ' ').split()])
+                inpsDict[key] = ptime.yyyymmdd(value.replace(',', ' ').split())
             elif key == 'excludeIfgIndex':
-                inpsDict[key] += [i for i in value.replace(',', ' ').split()]
+                inpsDict[key] += value.replace(',', ' ').split()
                 inps.excludeIfgIndex = read_input_index_list(inps.excludeIfgIndex, stackFile=inps.file)
 
     # Turn reset on if 1) no input options found to drop ifgram AND 2) there is template input

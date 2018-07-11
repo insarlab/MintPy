@@ -75,16 +75,17 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
 
         y = coord_geo2radar(ref_gps_obj.site_lat, atr, 'lat')
         x = coord_geo2radar(ref_gps_obj.site_lon, atr, 'lon')
-        box = (x, y, x+1, y+1)
-        inc_angle = readfile.read(geom_file,
-                                  datasetName='incidenceAngle',
-                                  box=box,
-                                  print_msg=False)[0].flatten()
-        head_angle = readfile.read(geom_file,
-                                   datasetName='headingAngle',
-                                   box=box,
-                                   print_msg=False)[0].flatten()
-        head_angle = -1 * (180 + head_angle + 90)
+        if 0 <= x < int(atr['WIDTH']) and 0<= y < int(atr['LENGTH']):
+            box = (x, y, x+1, y+1)
+            inc_angle = readfile.read(geom_file,
+                                      datasetName='incidenceAngle',
+                                      box=box,
+                                      print_msg=False)[0].flatten()
+            head_angle = readfile.read(geom_file,
+                                       datasetName='headingAngle',
+                                       box=box,
+                                       print_msg=False)[0].flatten()
+            head_angle = -1 * (180 + head_angle + 90)
 
         ref_gps_obj.dis_los = enu2los(ref_gps_obj.dis_e,
                                       ref_gps_obj.dis_n,
@@ -162,84 +163,6 @@ def standardize_trop_model(tropModel, standardWeatherModelNames):
     if tropModel in standardWeatherModelNames.keys():
         tropModel = standardWeatherModelNames[tropModel]
     return tropModel
-
-
-def coord_geo2radar(coord_in, metadata, coord_name):
-    """convert geo coordinates into radar coordinates (round to nearest integer)
-        for Geocoded file only
-    Parameters: geoCoord  : coordinate (list / tuple) in latitude/longitude in float
-                metadata : dictionary of file attributes
-                coord_name : coordinate type: latitude, longitude
-    Example:    300 = coord_geo2radar(32.104990,    metadata,'lat')
-                [1000,1500] = coord_geo2radar([130.5,131.4],metadata,'lon')
-    """
-    try:
-        metadata['X_FIRST']
-    except:
-        raise Exception('Support geocoded file only!')
-
-    # input format
-    if isinstance(coord_in, float):
-        coord_in = [coord_in]
-    coord_in = list(coord_in)
-
-    # convert coordinates
-    coord_out = []
-    for i in range(len(coord_in)):
-        if coord_name.lower().startswith('lat'):
-            coord = np.rint((coord_in[i]-float(metadata['Y_FIRST'])) / float(metadata['Y_STEP']))
-        elif coord_name.lower().startswith('lon'):
-            coord = np.rint((coord_in[i]-float(metadata['X_FIRST'])) / float(metadata['X_STEP']))
-        else:
-            print('Unrecognized coordinate type: '+coord_name)
-        coord_out.append(int(coord))
-
-    # output format
-    if len(coord_out) == 1:
-        coord_out = coord_out[0]
-    elif isinstance(coord_in, tuple):
-        coord_out = tuple(coord_out)
-
-    return coord_out
-
-
-################################################################
-def coord_radar2geo(coord_in, metadata, coord_name):
-    """convert radar coordinates into geo coordinates (pixel UL corner)
-        for Geocoded file only
-    Parameters: coord_in : coordinate (list) in row/col in int
-                metadata : dictionary of file attributes
-                coord_name  : coordinate type: row, col, y, x
-    Example:    32.104990 = coord_radar2geo(300, metadata, 'y')
-                [130.5,131.4] = coord_radar2geo([1000,1500], metadata, 'x')
-    """
-    try:
-        metadata['X_FIRST']
-    except:
-        raise Exception('Support geocoded file only!')
-
-    # Convert to List if input is String
-    if isinstance(coord_in, int):
-        coord_in = [coord_in]
-    coord_in = list(coord_in)
-
-    coord_out = []
-    for i in range(len(coord_in)):
-        if coord_name.lower().startswith(('row', 'y')):
-            coord = coord_in[i]*float(metadata['Y_STEP']) + float(metadata['Y_FIRST'])
-        elif coord_name.lower().startswith(('col', 'x')):
-            coord = coord_in[i]*float(metadata['X_STEP']) + float(metadata['X_FIRST'])
-        else:
-            print('Unrecognized coordinate type: '+coord_name)
-        coord_out.append(coord)
-    # coord_out.sort()
-
-    if len(coord_out) == 1:
-        coord_out = coord_out[0]
-    elif isinstance(coord_in, tuple):
-        coord_out = tuple(coord_out)
-
-    return coord_out
 
 
 def subset_attribute(atr_dict, subset_box, print_msg=True):
@@ -1592,6 +1515,83 @@ def azimuth_ground_resolution(atr):
 
 
 #########################################################################
+def coord_geo2radar(coord_in, metadata, coord_name):
+    """convert geo coordinates into radar coordinates (round to nearest integer)
+        for Geocoded file only
+    Parameters: geoCoord  : coordinate (list / tuple) in latitude/longitude in float
+                metadata : dictionary of file attributes
+                coord_name : coordinate type: latitude, longitude
+    Example:    300 = coord_geo2radar(32.104990,    metadata,'lat')
+                [1000,1500] = coord_geo2radar([130.5,131.4],metadata,'lon')
+    """
+    try:
+        metadata['X_FIRST']
+    except:
+        raise Exception('Support geocoded file only!')
+
+    # input format
+    if isinstance(coord_in, float):
+        coord_in = [coord_in]
+    coord_in = list(coord_in)
+
+    # convert coordinates
+    coord_out = []
+    for i in range(len(coord_in)):
+        if coord_name.lower().startswith('lat'):
+            coord = np.rint((coord_in[i]-float(metadata['Y_FIRST'])) / float(metadata['Y_STEP']))
+        elif coord_name.lower().startswith('lon'):
+            coord = np.rint((coord_in[i]-float(metadata['X_FIRST'])) / float(metadata['X_STEP']))
+        else:
+            print('Unrecognized coordinate type: '+coord_name)
+        coord_out.append(int(coord))
+
+    # output format
+    if len(coord_out) == 1:
+        coord_out = coord_out[0]
+    elif isinstance(coord_in, tuple):
+        coord_out = tuple(coord_out)
+
+    return coord_out
+
+
+def coord_radar2geo(coord_in, metadata, coord_name):
+    """convert radar coordinates into geo coordinates (pixel UL corner)
+        for Geocoded file only
+    Parameters: coord_in : coordinate (list) in row/col in int
+                metadata : dictionary of file attributes
+                coord_name  : coordinate type: row, col, y, x
+    Example:    32.104990 = coord_radar2geo(300, metadata, 'y')
+                [130.5,131.4] = coord_radar2geo([1000,1500], metadata, 'x')
+    """
+    try:
+        metadata['X_FIRST']
+    except:
+        raise Exception('Support geocoded file only!')
+
+    # Convert to List if input is String
+    if isinstance(coord_in, int):
+        coord_in = [coord_in]
+    coord_in = list(coord_in)
+
+    coord_out = []
+    for i in range(len(coord_in)):
+        if coord_name.lower().startswith(('row', 'y')):
+            coord = coord_in[i]*float(metadata['Y_STEP']) + float(metadata['Y_FIRST'])
+        elif coord_name.lower().startswith(('col', 'x')):
+            coord = coord_in[i]*float(metadata['X_STEP']) + float(metadata['X_FIRST'])
+        else:
+            print('Unrecognized coordinate type: '+coord_name)
+        coord_out.append(coord)
+    # coord_out.sort()
+
+    if len(coord_out) == 1:
+        coord_out = coord_out[0]
+    elif isinstance(coord_in, tuple):
+        coord_out = tuple(coord_out)
+
+    return coord_out
+
+
 # Use geomap*.trans file for precious (pixel-level) coord conversion
 def get_lookup_row_col(y, x, lut_y, lut_x, y_factor=10, x_factor=10, geoCoord=False):
     """Get row/col number in y/x value matrix from input y/x
