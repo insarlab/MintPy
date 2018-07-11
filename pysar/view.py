@@ -351,16 +351,16 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     # Convert seed_lalo if existed, to seed_yx, and use seed_yx for the following
     # seed_yx is referenced to input data coverage, not subseted area for display
     if inps.seed_lalo and inps.geo_box:
-        inps.seed_yx = [ut.coord_geo2radar(inps.seed_lalo[0], metadata, 'lat'),
-                        ut.coord_geo2radar(inps.seed_lalo[1], metadata, 'lon')]
+        inps.seed_yx = [ut.coord_lalo2yx(inps.seed_lalo[0], metadata, 'lat'),
+                        ut.coord_lalo2yx(inps.seed_lalo[1], metadata, 'lon')]
         if print_msg:
             print('input reference point in lat/lon: {}'.format(inps.seed_lalo))
             print('input reference point in y  /x  : {}'.format(inps.seed_yx))
 
     # seed_lalo
     if inps.seed_yx and inps.geo_box:
-        inps.seed_lalo = [ut.coord_radar2geo(inps.seed_yx[0], metadata, 'y'),
-                          ut.coord_radar2geo(inps.seed_yx[1], metadata, 'x')]
+        inps.seed_lalo = [ut.coord_yx2lalo(inps.seed_yx[0], metadata, 'y'),
+                          ut.coord_yx2lalo(inps.seed_yx[1], metadata, 'x')]
     elif 'REF_LAT' in metadata.keys():
         inps.seed_lalo = [float(metadata['REF_LAT']),
                           float(metadata['REF_LON'])]
@@ -608,8 +608,8 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
 
         # Status bar
         def format_coord(x, y):
-            col = ut.coord_geo2radar(x, metadata, 'lon') - inps.pix_box[0]
-            row = ut.coord_geo2radar(y, metadata, 'lat') - inps.pix_box[1]
+            col = ut.coord_lalo2yx(x, metadata, 'lon') - inps.pix_box[0]
+            row = ut.coord_lalo2yx(y, metadata, 'lat') - inps.pix_box[1]
             msg = 'Lon={:.4f}, Lat={:.4f}'.format(x, y)
             if 0 <= col < num_col and 0 <= row < num_row:
                 try:
@@ -618,8 +618,8 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
                 except:
                     msg += ', value=[]'
                 if inps.dem_file:
-                    dem_col = ut.coord_geo2radar(x, dem_metadata, 'lon') - inps.dem_pix_box[0]
-                    dem_row = ut.coord_geo2radar(y, dem_metadata, 'lat') - inps.dem_pix_box[1]
+                    dem_col = ut.coord_lalo2yx(x, dem_metadata, 'lon') - inps.dem_pix_box[0]
+                    dem_row = ut.coord_lalo2yx(y, dem_metadata, 'lat') - inps.dem_pix_box[1]
                     h = dem[dem_row, dem_col]
                     msg += ', elev={:.1f}'.format(h)
                 msg += ', x={:.1f}, y={:.1f}'.format(col+inps.pix_box[0],

@@ -236,8 +236,8 @@ def reference_point_attribute(atr, y, x):
     atrNew['REF_Y'] = str(y)
     atrNew['REF_X'] = str(x)
     if 'X_FIRST' in atr.keys():
-        atrNew['REF_LAT'] = str(ut.coord_radar2geo(y, atr, 'y'))
-        atrNew['REF_LON'] = str(ut.coord_radar2geo(x, atr, 'x'))
+        atrNew['REF_LAT'] = str(ut.coord_yx2lalo(y, atr, 'y'))
+        atrNew['REF_LON'] = str(ut.coord_yx2lalo(x, atr, 'x'))
     return atrNew
 
 
@@ -366,8 +366,8 @@ def read_reference_input(inps):
     # Convert ref_lat/lon to ref_y/x
     if inps.ref_lat and inps.ref_lon:
         if 'X_FIRST' in atr.keys():
-            inps.ref_y = ut.coord_geo2radar(inps.ref_lat, atr, 'lat')
-            inps.ref_x = ut.coord_geo2radar(inps.ref_lon, atr, 'lon')
+            inps.ref_y = ut.coord_lalo2yx(inps.ref_lat, atr, 'lat')
+            inps.ref_x = ut.coord_lalo2yx(inps.ref_lon, atr, 'lon')
         else:
             # Convert lat/lon to az/rg for radar coord file using geomap*.trans file
             inps.ref_y, inps.ref_x = ut.glob2radar(np.array(inps.ref_lat), np.array(inps.ref_lon),

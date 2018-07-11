@@ -44,8 +44,8 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
 
     # calculate geometry
     atr = readfile.read_attribute(geom_file)
-    y = coord_geo2radar(gps_obj.site_lat, atr, 'lat')
-    x = coord_geo2radar(gps_obj.site_lon, atr, 'lon')
+    y = coord_lalo2yx(gps_obj.site_lat, atr, 'lat')
+    x = coord_lalo2yx(gps_obj.site_lon, atr, 'lon')
     box = (x, y, x+1, y+1)
     inc_angle = readfile.read(geom_file,
                               datasetName='incidenceAngle',
@@ -73,8 +73,8 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
         ref_gps_obj = gps(site=ref_site, data_dir=gps_dir)
         ref_gps_obj.open(print_msg=False)
 
-        y = coord_geo2radar(ref_gps_obj.site_lat, atr, 'lat')
-        x = coord_geo2radar(ref_gps_obj.site_lon, atr, 'lon')
+        y = coord_lalo2yx(ref_gps_obj.site_lat, atr, 'lat')
+        x = coord_lalo2yx(ref_gps_obj.site_lon, atr, 'lon')
         if 0 <= x < int(atr['WIDTH']) and 0<= y < int(atr['LENGTH']):
             box = (x, y, x+1, y+1)
             inc_angle = readfile.read(geom_file,
@@ -1515,14 +1515,14 @@ def azimuth_ground_resolution(atr):
 
 
 #########################################################################
-def coord_geo2radar(coord_in, metadata, coord_name):
+def coord_lalo2yx(coord_in, metadata, coord_name):
     """convert geo coordinates into radar coordinates (round to nearest integer)
         for Geocoded file only
     Parameters: geoCoord  : coordinate (list / tuple) in latitude/longitude in float
                 metadata : dictionary of file attributes
                 coord_name : coordinate type: latitude, longitude
-    Example:    300 = coord_geo2radar(32.104990,    metadata,'lat')
-                [1000,1500] = coord_geo2radar([130.5,131.4],metadata,'lon')
+    Example:    300 = coord_lalo2yx(32.104990,    metadata,'lat')
+                [1000,1500] = coord_lalo2yx([130.5,131.4],metadata,'lon')
     """
     try:
         metadata['X_FIRST']
@@ -1535,12 +1535,16 @@ def coord_geo2radar(coord_in, metadata, coord_name):
     coord_in = list(coord_in)
 
     # convert coordinates
+    lat0 = float(metadata['Y_FIRST'])
+    lon0 = float(metadata['X_FIRST'])
+    lat_step = float(metadata['Y_STEP'])
+    lon_step = float(metadata['X_STEP'])
     coord_out = []
     for i in range(len(coord_in)):
         if coord_name.lower().startswith('lat'):
-            coord = np.rint((coord_in[i]-float(metadata['Y_FIRST'])) / float(metadata['Y_STEP']))
+            coord = np.rint((coord_in[i] - lat0) / lat_step)
         elif coord_name.lower().startswith('lon'):
-            coord = np.rint((coord_in[i]-float(metadata['X_FIRST'])) / float(metadata['X_STEP']))
+            coord = np.rint((coord_in[i] - lon0) / lon_step)
         else:
             print('Unrecognized coordinate type: '+coord_name)
         coord_out.append(int(coord))
@@ -1554,14 +1558,14 @@ def coord_geo2radar(coord_in, metadata, coord_name):
     return coord_out
 
 
-def coord_radar2geo(coord_in, metadata, coord_name):
+def coord_yx2lalo(coord_in, metadata, coord_name):
     """convert radar coordinates into geo coordinates (pixel UL corner)
         for Geocoded file only
     Parameters: coord_in : coordinate (list) in row/col in int
                 metadata : dictionary of file attributes
                 coord_name  : coordinate type: row, col, y, x
-    Example:    32.104990 = coord_radar2geo(300, metadata, 'y')
-                [130.5,131.4] = coord_radar2geo([1000,1500], metadata, 'x')
+    Example:    32.104990 = coord_yx2lalo(300, metadata, 'y')
+                [130.5,131.4] = coord_yx2lalo([1000,1500], metadata, 'x')
     """
     try:
         metadata['X_FIRST']
@@ -1573,12 +1577,16 @@ def coord_radar2geo(coord_in, metadata, coord_name):
         coord_in = [coord_in]
     coord_in = list(coord_in)
 
+    lat0 = float(metadata['Y_FIRST'])
+    lon0 = float(metadata['X_FIRST'])
+    lat_step = float(metadata['Y_STEP'])
+    lon_step = float(metadata['X_STEP'])
     coord_out = []
     for i in range(len(coord_in)):
         if coord_name.lower().startswith(('row', 'y')):
-            coord = coord_in[i]*float(metadata['Y_STEP']) + float(metadata['Y_FIRST'])
+            coord = coord_in[i] * lat_step + lat0
         elif coord_name.lower().startswith(('col', 'x')):
-            coord = coord_in[i]*float(metadata['X_STEP']) + float(metadata['X_FIRST'])
+            coord = coord_in[i] * lon_step + lon0
         else:
             print('Unrecognized coordinate type: '+coord_name)
         coord_out.append(coord)

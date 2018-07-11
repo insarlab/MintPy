@@ -233,8 +233,8 @@ def read_subset_box(inpsDict):
     if geo_box is not None:
         if geocoded:
             pix_box = (0, 0, 0, 0)
-            pix_box[0:3:2] = ut.coord_geo2radar(geo_box[0:3:2], atr, 'lon')
-            pix_box[1:4:2] = ut.coord_geo2radar(geo_box[1:4:2], atr, 'lat')
+            pix_box[0:3:2] = ut.coord_lalo2yx(geo_box[0:3:2], atr, 'lon')
+            pix_box[1:4:2] = ut.coord_lalo2yx(geo_box[1:4:2], atr, 'lat')
         else:
             pix_box = subset.bbox_geo2radar(geo_box, atr, lookupFile)
         print('input bounding box of interest in lalo: {}'.format(geo_box))

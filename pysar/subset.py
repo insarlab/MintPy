@@ -205,8 +205,8 @@ def bbox_geo2radar(geo_box, atr_rdr=dict(), lookup_file=None, print_msg=False):
     lat = np.array([geo_box[3], geo_box[3], geo_box[1], geo_box[1]])
     lon = np.array([geo_box[0], geo_box[2], geo_box[0], geo_box[2]])
     if 'Y_FIRST' in atr_rdr.keys():
-        y = ut.coord_geo2radar(lat, atr_rdr, 'lat')
-        x = ut.coord_geo2radar(lon, atr_rdr, 'lon')
+        y = ut.coord_lalo2yx(lat, atr_rdr, 'lat')
+        x = ut.coord_lalo2yx(lon, atr_rdr, 'lon')
         pix_box = (x[0], y[2], x[1], y[0])
     else:
         y, x, y_res, x_res = ut.glob2radar(lat, lon,
@@ -231,8 +231,8 @@ def bbox_radar2geo(pix_box, atr_rdr=dict(), lookup_file=None, print_msg=False):
     x = np.array([pix_box[0], pix_box[2], pix_box[0], pix_box[2]])
     y = np.array([pix_box[1], pix_box[1], pix_box[3], pix_box[3]])
     if 'Y_FIRST' in atr_rdr.keys():
-        lat = ut.coord_radar2geo(y, atr_rdr, 'y')
-        lon = ut.coord_radar2geo(x, atr_rdr, 'x')
+        lat = ut.coord_yx2lalo(y, atr_rdr, 'y')
+        lon = ut.coord_yx2lalo(x, atr_rdr, 'x')
         geo_box = (lon[0], lat[0], lon[1], lat[2])
     else:
         lat, lon, lat_res, lon_res = ut.radar2glob(y, x,
@@ -336,14 +336,14 @@ def subset_input_dict2box(subset_dict, meta_dict):
 
     # Use subset_lat/lon input if existed,  priority: lat/lon > y/x > len/wid
     if subset_dict['subset_lat']:
-        sub_y = ut.coord_geo2radar(subset_dict['subset_lat'], meta_dict, 'latitude')
+        sub_y = ut.coord_lalo2yx(subset_dict['subset_lat'], meta_dict, 'latitude')
     elif subset_dict['subset_y']:
         sub_y = subset_dict['subset_y']
     else:
         sub_y = [0, length]
 
     if subset_dict['subset_lon']:
-        sub_x = ut.coord_geo2radar(subset_dict['subset_lon'], meta_dict, 'longitude')
+        sub_x = ut.coord_lalo2yx(subset_dict['subset_lon'], meta_dict, 'longitude')
     elif subset_dict['subset_x']:
         sub_x = subset_dict['subset_x']
     else:
@@ -378,8 +378,8 @@ def box_pixel2geo(pixel_box, meta_dict):
 def box_geo2pixel(geo_box, meta_dict):
     """Convert geo_box to pixel_box"""
     try:
-        y = ut.coord_geo2radar([geo_box[1], geo_box[3]], meta_dict, 'latitude')
-        x = ut.coord_geo2radar([geo_box[0], geo_box[2]], meta_dict, 'longitude')
+        y = ut.coord_lalo2yx([geo_box[1], geo_box[3]], meta_dict, 'latitude')
+        x = ut.coord_lalo2yx([geo_box[0], geo_box[2]], meta_dict, 'longitude')
         pixel_box = (x[0], y[0], x[1], y[1])
     except:
         pixel_box = None
