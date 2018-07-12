@@ -38,6 +38,7 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
                 geom_flie : string, path of geometry files, such as geo_geometryRadar.h5
     Returns:    gps_times : 1D np.array of datetime.datetime object
                 gps_dis   : 1D np.array of displacement in meters
+                gps_std   : 1D np.array of displacement uncertainty in meters
     """
     # read GPS object
     gps_obj = gps(site=site, data_dir=gps_dir)
@@ -66,8 +67,14 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
                               gps_obj.dis_u,
                               inc_angle=inc_angle,
                               head_angle=head_angle)
+    gps_obj.std_los = enu2los(gps_obj.std_e,
+                              gps_obj.std_n,
+                              gps_obj.std_u,
+                              inc_angle=inc_angle,
+                              head_angle=head_angle)
     gps_times = gps_obj.times
     gps_dis_los = gps_obj.dis_los
+    gps_std_los = gps_obj.std_los
     site_lalo = (gps_obj.site_lat,
                  gps_obj.site_lon)
 
@@ -99,21 +106,28 @@ def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
                                       ref_gps_obj.dis_u,
                                       inc_angle=inc_angle,
                                       head_angle=head_angle)
+        ref_gps_obj.std_los = enu2los(ref_gps_obj.std_e,
+                                      ref_gps_obj.std_n,
+                                      ref_gps_obj.std_u,
+                                      inc_angle=inc_angle,
+                                      head_angle=head_angle)
 
         # get relative LOS displacement on common dates
         gps_times = np.array(sorted(list(set(gps_obj.times) & set(ref_gps_obj.times))))
         gps_dis_los = np.zeros(gps_times.shape, np.float32)
+        gps_std_los = np.zeros(gps_times.shape, np.float32)
         for i in range(len(gps_times)):
             idx1 = np.where(gps_obj.times == gps_times[i])[0][0]
             idx2 = np.where(ref_gps_obj.times == gps_times[i])[0][0]
             gps_dis_los[i] = gps_obj.dis_los[idx1] - ref_gps_obj.dis_los[idx2]
+            gps_std_los[i] = np.sqrt(gps_obj.std_los[idx1]**2 + ref_gps_obj.std_los[idx2]**2)
 
         ref_site_lalo = (ref_gps_obj.site_lat,
                          ref_gps_obj.site_lon)
     else:
         ref_site_lalo = None
 
-    return gps_times, gps_dis_los, site_lalo, ref_site_lalo
+    return gps_times, gps_dis_los, gps_std_los, site_lalo, ref_site_lalo
 
 
 def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
@@ -2041,7 +2055,7 @@ class coordinate:
         """
         self.src_metadata = metadata
         if lookup_file is None:
-            lookup_file = get_lookup_file(lookup_file)
+            lookup_file = get_lookup_file(lookup_file, print_msg=False)
         if isinstance(lookup_file, str):
             lookup_file = [lookup_file, lookup_file]
         self.lookup_file = lookup_file
@@ -2341,7 +2355,7 @@ class coordinate:
         """Convert pixel_box to geo_box"""
         try:
             lat = self.yx2lalo([pixel_box[1], pixel_box[3]], coord_type='y')
-            lon = self.yx2lalo([pixel_box[0], pixel_box[2]], coord_type='y')
+            lon = self.yx2lalo([pixel_box[0], pixel_box[2]], coord_type='x')
             geo_box = (lon[0], lat[0], lon[1], lat[1])
         except:
             geo_box = None

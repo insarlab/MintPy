@@ -101,8 +101,12 @@ class gps:
                                for i in data[:, 1]])
         (self.dis_e,
          self.dis_n,
-         self.dis_u) = data[:, (8,10,12)].astype(np.float32).T
-        return self.times, self.dis_e, self.dis_n, self.dis_u
+         self.dis_u,
+         self.std_e,
+         self.std_n,
+         self.std_u) = data[:, (8,10,12,14,15,16)].astype(np.float32).T
+
+        return self.times, self.dis_e, self.dis_n, self.dis_u, self.std_e, self.std_n, self.std_u
 
 
 
