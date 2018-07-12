@@ -74,8 +74,6 @@ def create_parser():
     parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir',
                         help='directory to put downloaded weather data, i.e. ./../WEATHER\n' +
                              'use directory of input timeseries_file if not specified.')
-    parser.add_argument('--offline', action='store_true',
-                        help='Enable offline mode: use existing local data and do not download.')
 
     # For delay calculation
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str,
@@ -231,6 +229,15 @@ def date_list2grib_file(date_list, hour, trop_model, grib_dir):
     return grib_file_list
 
 
+def grib_file_name2trop_model_name(grib_file):
+    grib_file = os.path.basename(grib_file)
+    if grib_file.startswith('ERA-Int'):  trop_model = 'ECMWF'
+    elif grib_file.startswith('merra'):  trop_model = 'MERRA'
+    elif grib_file.startswith('narr'):   trop_model = 'NARR'
+    elif grib_file.startswith('ERA_'):   trop_model = 'ERA'
+    return trop_model
+
+
 def check_exist_grib_file(gfile_list, print_msg=True):
     """Check input list of grib files, and return the existing ones with right size."""
     gfile_exist = ut.get_file_list(gfile_list)
@@ -265,10 +272,9 @@ def check_exist_grib_file(gfile_list, print_msg=True):
     return gfile_exist
 
 
-def dload_grib_pyaps(grib_file_list, trop_model='ECMWF'):
+def dload_grib_pyaps(grib_file_list):
     """Download weather re-analysis grib files using PyAPS
-    Parameters: grib_file_list : list of string in YYYYMMDD format
-                trop_model     : string, 
+    Parameters: grib_file_list : list of string of grib files
     Returns:    grib_file_list : list of string
     """
     print('\n------------------------------------------------------------------------------')
@@ -285,11 +291,20 @@ def dload_grib_pyaps(grib_file_list, trop_model='ECMWF'):
     if len(date_list2dload) > 0:
         hour = re.findall('\d{8}[-_]\d{2}', grib_file2dload[0])[0].replace('-', '_').split('_')[1]
         grib_dir = os.path.dirname(grib_file2dload[0])
-        if   trop_model == 'ECMWF' :  pa.ECMWFdload( date_list2dload, hour, grib_dir)
-        elif trop_model == 'MERRA' :  pa.MERRAdload( date_list2dload, hour, grib_dir)
-        elif trop_model == 'NARR'  :  pa.NARRdload(  date_list2dload, hour, grib_dir)
-        elif trop_model == 'ERA'   :  pa.ERAdload(   date_list2dload, hour, grib_dir)
-        elif trop_model == 'MERRA1':  pa.MERRA1dload(date_list2dload, hour, grib_dir)
+
+        # try 3 times to download, then use whatever downloaded to calculate delay
+        trop_model = grib_file_name2trop_model_name(grib_file2dload[0])
+        i = 0
+        while i < 3:
+            i += 1
+            try:
+                if   trop_model == 'ECMWF' :  pa.ECMWFdload( date_list2dload, hour, grib_dir)
+                elif trop_model == 'MERRA' :  pa.MERRAdload( date_list2dload, hour, grib_dir)
+                elif trop_model == 'NARR'  :  pa.NARRdload(  date_list2dload, hour, grib_dir)
+                elif trop_model == 'ERA'   :  pa.ERAdload(   date_list2dload, hour, grib_dir)
+                elif trop_model == 'MERRA1':  pa.MERRA1dload(date_list2dload, hour, grib_dir)
+            except:
+                pass
 
     grib_file_list = check_exist_grib_file(grib_file_list, print_msg=False)
     return grib_file_list
@@ -414,13 +429,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     inps, atr = check_inputs(inps)
 
-    if inps.offline:
-        print('offline mode = True, skip data downloading.')
-        inps.grib_file_list = check_exist_grib_file(inps.grib_file_list,
-                                                    print_msg=True)
-    else:
-        inps.grib_file_list = dload_grib_pyaps(inps.grib_file_list,
-                                               trop_model=inps.trop_model)
+    inps.grib_file_list = dload_grib_pyaps(inps.grib_file_list)
 
     trop_file = get_delay_timeseries(inps, atr)
 
