@@ -37,7 +37,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         metadata = readfile.read_attribute(ref_file)
 
     if type(datasetDict) is np.ndarray:
-        data = np.array(datasetDict)
+        data = np.array(datasetDict, datasetDict.dtype)
         datasetDict = dict()
         datasetDict[metadata['FILE_TYPE']] = data
 
@@ -103,13 +103,18 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
 
     # ISCE / ROI_PAC GAMMA / Image product
     else:
+        key_list = list(datasetDict.keys())
+        data_list = []
+        for key in key_list:
+            data_list.append(datasetDict[key])
+
         # Write Data File
         if ext in ['.unw', '.cor', '.hgt']:
-            write_float32(data, out_file)
+            write_float32(data_list[0], out_file)
         elif ext == '.dem':
-            write_real_int16(data, out_file)
+            write_real_int16(data_list[0], out_file)
         elif ext in ['.trans']:
-            write_float32(rg, az, out_file)
+            write_float32(data_list[0], data_list[1], out_file)
         elif ext in ['.utm_to_rdc', '.UTM_TO_RDC']:
             data = np.zeros(rg.shape, dtype=np.complex64)
             data.real = datasetDict['rangeCoord']
@@ -118,15 +123,15 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         # elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
         #    data.save(out_file)
         elif ext in ['.mli', '.flt']:
-            write_real_float32(data, out_file)
+            write_real_float32(data_list[0], out_file)
         elif ext == '.slc':
-            write_complex_int16(data, out_file)
+            write_complex_int16(data_list[0], out_file)
         elif ext == '.int':
-            write_complex64(data, out_file)
+            write_complex64(data_list[0], out_file)
         elif metadata['DATA_TYPE'].lower() in ['float32', 'float']:
-            write_real_float32(data, out_file)
+            write_real_float32(data_list[0], out_file)
         elif metadata['DATA_TYPE'].lower() in ['int16', 'short']:
-            write_real_int16(data, out_file)
+            write_real_int16(data_list[0], out_file)
         else:
             print('Un-supported file type: '+ext)
             return 0

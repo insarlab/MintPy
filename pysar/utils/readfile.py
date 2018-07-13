@@ -437,7 +437,7 @@ def get_dataset_list(fname, datasetName=None):
     elif fbase.startswith('los'):
         datasetList = ['incidenceAngle', 'headingAngle']
     else:
-        datasetList = [os.path.split(fbase)[0]]
+        datasetList = [os.path.splitext(fbase)[0]]
     return datasetList
 
 

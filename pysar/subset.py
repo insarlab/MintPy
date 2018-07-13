@@ -354,7 +354,7 @@ def subset_file(fname, subset_dict_input, out_file=None):
             data_overlap = data[pix_box4data[1]:pix_box4data[3],
                                 pix_box4data[0]:pix_box4data[2]]
             data = np.ones((pix_box[3] - pix_box[1],
-                            pix_box[2] - pix_box[0])) * subset_dict['fill_value']
+                            pix_box[2] - pix_box[0]), data.dtype) * subset_dict['fill_value']
             data[pix_box4subset[1]:pix_box4subset[3],
                  pix_box4subset[0]:pix_box4subset[2]] = data_overlap
 
@@ -365,7 +365,7 @@ def subset_file(fname, subset_dict_input, out_file=None):
                                 pix_box4data[0]:pix_box4data[2]]
             data = np.ones((data.shape[0],
                             pix_box[3] - pix_box[1],
-                            pix_box[2] - pix_box[0])) * subset_dict['fill_value']
+                            pix_box[2] - pix_box[0]), data.dtype) * subset_dict['fill_value']
             data[:,
                  pix_box4subset[1]:pix_box4subset[3],
                  pix_box4subset[0]:pix_box4subset[2]] = data_overlap
