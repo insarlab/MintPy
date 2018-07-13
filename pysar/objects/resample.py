@@ -163,14 +163,23 @@ class resample:
             """mask pixels with abnormal values (0, etc.)
             This is found on sentinelStack multiple swath lookup table file.
             """
-            mask = np.multiply(lat != 0., lon != 0.)
+            # ignore pixels with zero value
+            zero_mask = np.multiply(lat != 0., lon != 0.)
+
+            # ignore anomaly non-zero values 
+            # by get the most common data range (d_min, d_max) based on histogram
+            mask = np.array(zero_mask, np.bool_)
             for data in [lat, lon]:
-                d_hist = np.histogram(data[mask])
-                if np.max(d_hist[0]) > data[mask].size / 2:
-                    d_comm = d_hist[1][np.argmax(d_hist[0])]
-                    bin_step = d_hist[1][1] - d_hist[1][0]
-                    mask *= np.multiply(data > d_comm - bin_step/2,
-                                        data < d_comm + bin_step/2)
+                hist, bin_edges = np.histogram(data[zero_mask], bins=10)
+
+                # if there is anomaly, histogram won't be evenly distributed
+                if np.max(hist) > np.sum(zero_mask) * 0.7:
+                    idx = np.argmax(hist)
+                    d_mean = (bin_edges[idx] + bin_edges[idx+1]) / 2.
+                    bin_step = bin_edges[1] - bin_edges[0]
+                    d_min = d_mean - bin_step
+                    d_max = d_mean + bin_step
+                    mask *= np.multiply(data > d_min, data < d_max)
             lat[mask == 0] = 90.
             lon[mask == 0] = 0.
             return lat, lon, mask
@@ -325,6 +334,20 @@ class resample:
             # src_y/x
             raise NotImplementedError('Not implemented yet for GAMMA and ROIPAC products')
 
+    def get_radius_of_influence(self, ratio=3):
+        """Get radius of influence based on the lookup table resolution in lat/lon direction"""
+        earth_radius = 6371.0e3
+        # Get lat/lon resolution/step in meter
+        lat_c = np.nanmean(self.dest_def.lats)
+        lat_step = self.laloStep[1] * np.pi/180.0 * earth_radius
+        lon_step = self.laloStep[0] * np.pi/180.0 * earth_radius * np.cos(lat_c * np.pi/180)
+        radius = np.max(np.abs([lat_step, lon_step])) * ratio
+        return radius
+
+    def get_segment_number(self, unit_size=1e6):
+        num_segment = int(self.dest_def.size / unit_size + 0.5)
+        return num_segment
+
     def run_pyresample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=None,
                        radius=None, print_msg=True):
         """
@@ -340,24 +363,29 @@ class resample:
                                                fill_value=np.fillValue, nprocs=4)
         """
         if not radius:
+            # geo2radar
             if 'Y_FIRST' in self.src_metadata.keys():
-                radius = 100e3     # geo2radar
+                radius = 100e3
+            # radar2geo
             else:
-                radius = 200       # radar2geo
+                radius = self.get_radius_of_influence()
 
         if not nprocs:
             nprocs = multiprocessing.cpu_count()
 
+        num_segment = self.get_segment_number()
+
         if interp_method.startswith('near'):
             if print_msg:
-                print(('nearest resampling with kd_tree '
-                       'using {} processor cores ...').format(nprocs))
+                print(('nearest resampling with kd_tree ({} segments) '
+                       'using {} processor cores ...').format(num_segment, nprocs))
             dest_data = pr.kd_tree.resample_nearest(self.src_def,
                                                     src_data,
                                                     self.dest_def,
                                                     nprocs=nprocs,
                                                     fill_value=fill_value,
                                                     radius_of_influence=radius,
+                                                    segments=num_segment,
                                                     epsilon=0.5)
 
         elif interp_method.endswith('linear'):

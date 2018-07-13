@@ -1451,31 +1451,19 @@ def check_file_size(fname_list, mode_width=None, mode_length=None):
     return fname_list_out, mode_width, mode_length
 
 
-def most_common(L):
-    """Return the most common item in the list L. From Alex Martelli on Stack Overflow.
-    If the "most common" items with the same highest count are > 1, return the earliest-occurring one.
-    Link: https://stackoverflow.com/questions/1518522/python-most-common-element-in-a-list
+def most_common(L, k=1):
+    """Return the k most common item in the list L.
     Examples:
-        5 = most_common([4,5,5,5,5,8,9])
+        5, 8 = most_common([4,5,5,5,5,8,8,8,9], k=2)
+        'duck' = most_common(['goose','duck','duck','dog'])
         'goose' = most_common(['goose','duck','duck','goose'])
     """
-    import itertools
-    import operator
-    # get an iterable of (item, iterable) pairs
-    SL = sorted((x, i) for i, x in enumerate(L))
-    groups = itertools.groupby(SL, key=operator.itemgetter(0))
-    # auxiliary function to get "quality" for an item
-
-    def _auxfun(g):
-        item, iterable = g
-        count = 0
-        min_index = len(L)
-        for _, where in iterable:
-            count += 1
-            min_index = min(min_index, where)
-        return count, -min_index
-    # pick the highest-count/earliest item
-    return max(groups, key=_auxfun)[0]
+    from collections import Counter
+    cnt = Counter(L)
+    item_mm = [i[0] for i in cnt.most_common(k)]
+    if k == 1:
+        item_mm = item_mm[0]
+    return item_mm
 
 
 def mode(thelist):
