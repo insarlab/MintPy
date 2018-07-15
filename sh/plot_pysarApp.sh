@@ -35,8 +35,8 @@ opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm '
 #opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm -m -2 -M 2'
 if [ $plot_key_files -eq 1 ]; then
     view.py --nodisplay velocity.h5           $opt               | tee -a $log_file
-    view.py --nodisplay temporalCoherence.h5  -c gray -m 0 -M 1  | tee -a $log_file
-    view.py --nodisplay maskTempCoh.h5        -c gray -m 0 -M 1  | tee -a $log_file
+    view.py --nodisplay temporalCoherence.h5  -c gray --vlim 0 1 | tee -a $log_file
+    view.py --nodisplay maskTempCoh.h5        -c gray --vlim 0 1 | tee -a $log_file
     view.py --nodisplay INPUTS/geometryGeo.h5                    | tee -a $log_file
     view.py --nodisplay INPUTS/geometryRadar.h5                  | tee -a $log_file
 fi
@@ -52,14 +52,14 @@ fi
 ## Auxliary Files from loaded dataset
 if [ $plot_loaded_data_aux -eq 1 ]; then
     file=avgPhaseVelocity.h5; test -f $file && view.py --nodisplay  $file | tee -a $log_file
-    view.py --nodisplay avgSpatialCoherence.h5 -c gray -m 0 -M 1 | tee -a $log_file
-    view.py --nodisplay mask.h5                -c gray -m 0 -M 1 | tee -a $log_file
+    view.py --nodisplay avgSpatialCoherence.h5 -c gray --vlim 0 1 | tee -a $log_file
+    view.py --nodisplay mask.h5                -c gray --vlim 0 1 | tee -a $log_file
 fi
 
 
 ## Time-series files
 view='view.py --nodisplay --mask '$mask_file' --noaxis -u cm '
-#view='view.py --nodisplay --mask '$mask_file' --noaxis -u cm -m -10 -M 10 '
+#view='view.py --nodisplay --mask '$mask_file' --noaxis -u cm --vlim -10 10 '
 if [ $plot_timeseries -eq 1 ]; then
     file=timeseries.h5;                                       test -f $file && $view $file | tee -a $log_file
 
@@ -90,8 +90,8 @@ fi
 
 ## Geo coordinates for UNAVCO Time-series InSAR Archive Product
 if [ $plot_geocoded_data -eq 1 ]; then
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_maskTempCoh.h5          -c gray -m 0 -M 1            | tee -a $log_file
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_temporalCoherence.h5    -c gray -m 0 -M 1            | tee -a $log_file
+    view.py --nodisplay --lalo-label ./GEOCODE/geo_maskTempCoh.h5          -c gray --vlim 0 1           | tee -a $log_file
+    view.py --nodisplay --lalo-label ./GEOCODE/geo_temporalCoherence.h5    -c gray --vlim 0 1           | tee -a $log_file
     view.py --nodisplay --lalo-label ./GEOCODE/geo_velocity.h5              --mask $geo_mask_file -u cm | tee -a $log_file
     view.py --nodisplay --lalo-label ./GEOCODE/geo_timeseries_*.h5 --noaxis --mask $geo_mask_file -u cm | tee -a $log_file
 fi

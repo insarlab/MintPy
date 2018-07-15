@@ -2054,19 +2054,19 @@ class coordinate:
         return coord_out
 
 
-    def _get_lookup_row_col(self, y, x, lut_y, lut_x, y_factor=10, x_factor=10, geo_coord=False):
+    def _get_lookup_row_col(self, y, x, y_factor=10, x_factor=10, geo_coord=False):
         """Get row/col number in y/x value matrix from input y/x
         Use overlap mean value between y and x buffer;
         To support point outside of value pool/matrix, could use np.polyfit to fit a line
         for y and x value buffer and return the intersection point row/col
         """
-        ymin = y - y_factor
-        xmin = x - x_factor
+        ymin = y - y_factor;  ymax = y + y_factor
+        xmin = x - x_factor;  xmax = x + x_factor
         if not geo_coord:
             ymin = max(ymin, 0.5)
             xmin = max(xmin, 0.5)
-        mask_y = np.multiply(lut_y >= ymin, lut_y <= (y+y_factor))
-        mask_x = np.multiply(lut_x >= xmin, lut_x <= (x+x_factor))
+        mask_y = np.multiply(self.lut_y >= ymin, self.lut_y <= ymax)
+        mask_x = np.multiply(self.lut_x >= xmin, self.lut_x <= xmax)
         row, col = np.nanmean(np.where(np.multiply(mask_y, mask_x)), axis=1)
         if any(np.isnan(i) for i in [row, col]):
             raise RuntimeError('No coresponding coordinate found for y/x: {}/{}'.format(y, x))
@@ -2151,8 +2151,8 @@ class coordinate:
             # read y/x value from lookup table
             row = np.rint((lat - lut.lat0) / lut.lat_step_deg).astype(int)
             col = np.rint((lon - lut.lon0) / lut.lon_step_deg).astype(int)
-            rg = np.rint(lut_x[row, col]).astype(int) - rg0
-            az = np.rint(lut_y[row, col]).astype(int) - az0
+            rg = np.rint(self.lut_x[row, col]).astype(int) - rg0
+            az = np.rint(self.lut_y[row, col]).astype(int) - az0
 
         # For lookup table in radar-coord, search the buffer and use center pixel
         else:
@@ -2170,14 +2170,12 @@ class coordinate:
             # search the overlap area of buffer in x/y direction and use the cross center
             if lat.size == 1:
                 az, rg = self._get_lookup_row_col(lat, lon,
-                                                  lut_y, lut_x,
                                                   y_factor*az_step_deg,
                                                   x_factor*rg_step_deg,
                                                   geo_coord=True)
             else:
                 for i in range(rg.size):
                     az[i], rg[i] = self._get_lookup_row_col(lat[i], lon[i],
-                                                            lut_y, lut_x,
                                                             y_factor*az_step_deg,
                                                             x_factor*rg_step_deg,
                                                             geo_coord=True)
@@ -2233,15 +2231,11 @@ class coordinate:
             lut_row = np.zeros(rg.shape)
             lut_col = np.zeros(rg.shape)
             if rg.size == 1:
-                (lut_row,
-                 lut_col) = self._get_lookup_row_col(az, rg,
-                                                     lut_y, lut_x,
-                                                     y_factor, x_factor)
+                lut_row, lut_col = self._get_lookup_row_col(az, rg, y_factor, x_factor)
             else:
                 for i in range(rg.size):
                     (lut_row[i],
                      lut_col[i]) = self._get_lookup_row_col(az[i], rg[i],
-                                                            lut_y, lut_x,
                                                             y_factor, x_factor)
             lat = lut_row * lut.lat_step_deg + lut.lat0
             lon = lut_col * lut.lon_step_deg + lut.lon0
@@ -2250,8 +2244,8 @@ class coordinate:
 
         # For lookup table in radar-coord, read the value directly.
         else:
-            lat = lut_y[az, rg]
-            lon = lut_x[az, rg]
+            lat = self.lut_y[az, rg]
+            lon = self.lut_x[az, rg]
             lat_resid = 0.
             lon_resid = 0.
         return lat, lon, lat_resid, lon_resid

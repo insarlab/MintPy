@@ -177,8 +177,8 @@ def read_date_info(inps):
     # output file name
     if not inps.outfile:
         outname = 'velocity'
-        if inps.excludeDate:
-            outname += 'Ex'
+        #if inps.excludeDate:
+        #    outname += 'Ex'
         if inps.key == 'giantTimeseries':
             prefix = os.path.basename(inps.timeseries_file).split('PARAMS')[0]
             outname = prefix + outname

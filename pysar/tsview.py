@@ -62,7 +62,15 @@ def create_parser():
     parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true',
                         help='Set displacement at first acquisition to zero.')
 
-    parser = pp.add_plot_argument(parser)
+    parser = pp.add_data_disp_argument(parser)
+    parser = pp.add_dem_argument(parser)
+    parser = pp.add_figure_argument(parser)
+    parser = pp.add_gps_argument(parser)
+    parser = pp.add_mask_argument(parser)
+    parser = pp.add_map_argument(parser)
+    parser = pp.add_point_argument(parser)
+    parser = pp.add_reference_argument(parser)
+    parser = pp.add_save_argument(parser)
 
     return parser
 

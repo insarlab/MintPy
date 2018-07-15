@@ -122,6 +122,7 @@ def cmd_line_parse(iargs=None):
         inps.resolution = 'i'
     if inps.lalo_step:
         inps.lalo_label = True
+
     return inps
 
 
@@ -403,30 +404,22 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
                 print('plot scale bar')
             if not inps.scalebar:
                 inps.scalebar = [999, 999, 999]
-
-            # Default Distance - 20% of data width
-            if inps.scalebar[0] == 999.0:
-                gc = pyproj.Geod(a=m.rmajor, b=m.rminor)
-                wid_dist = gc.inv(inps.geo_box[0], inps.geo_box[3],
-                                  inps.geo_box[2], inps.geo_box[3])[2]
-                inps.scalebar[0] = ut.round_to_1(wid_dist * 0.2)
-
-            # Default center - Lower Left Corner
-            if inps.scalebar[1] == 999.0:
-                inps.scalebar[1] = inps.geo_box[3] + 0.1 * (inps.geo_box[1] - inps.geo_box[3])
-            if inps.scalebar[2] == 999.0:
-                inps.scalebar[2] = inps.geo_box[0] + 0.2 * (inps.geo_box[2] - inps.geo_box[0])
-
-            # Draw scale bar
-            m.draw_scale_bar(inps.scalebar[1], inps.scalebar[2], inps.scalebar[0], ax=ax,
-                             font_size=inps.font_size, color=inps.font_color)
+            m.draw_scale_bar(lat_c=inps.scalebar[1],
+                             lon_c=inps.scalebar[2],
+                             distance=inps.scalebar[0],
+                             ax=ax, font_size=inps.font_size,
+                             color=inps.font_color)
 
         # Lat Lon labels
         if inps.lalo_label:
             if print_msg:
                 print('plot lat/lon labels')
-            m.draw_lalo_label(inps.geo_box, ax=ax, lalo_step=inps.lalo_step, labels=inps.lalo_label_loc,
-                              font_size=inps.font_size, color=inps.font_color, print_msg=print_msg)
+            m.draw_lalo_label(inps.geo_box, ax=ax,
+                              lalo_step=inps.lalo_step,
+                              labels=inps.lalo_label_loc,
+                              font_size=inps.font_size,
+                              color=inps.font_color,
+                              print_msg=print_msg)
         else:
             ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
 

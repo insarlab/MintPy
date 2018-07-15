@@ -64,15 +64,27 @@ class BasemapExt(Basemap):
         Example:    m.drawscale(33.06, 131.18, 2000)
         """
         gc = pyproj.Geod(a=self.rmajor, b=self.rminor)
+
+        # scalebar default value defined by 999
+        # length: 20% of scene width
+        if distance == 999.:
+            scene_width = gc.inv(self.lonmin, self.latmin, self.lonmax, self.latmin)[2]
+            distance = ut.round_to_1(scene_width * 0.2)
+        # position: Lower Left Corner
+        if lat_c == 999.:
+            lat_c = self.latmin + 0.1 * (self.latmax - self.latmin)
+        if lon_c == 999.:
+            lon_c = self.lonmin + 0.2 * (self.lonmax - self.lonmin)
+
+        # plot scale bar
         if distance > 1000.0:
             distance = np.rint(distance/1000.0)*1000.0
-        lon_c2, lat_c2, az21 = gc.fwd(lon_c, lat_c, 90, distance)
+        lon_c2, lat_c2 = gc.fwd(lon_c, lat_c, 90, distance)[0:2]
         length = np.abs(lon_c - lon_c2)
         lon0 = lon_c - length/2.0
         lon1 = lon_c + length/2.0
         yoffset = 0.1*length
 
-        # plot scale bar
         self.plot([lon0, lon1], [lat_c, lat_c], color=color)
         self.plot([lon0, lon0], [lat_c, lat_c+yoffset], color=color)
         self.plot([lon1, lon1], [lat_c, lat_c+yoffset], color=color)
@@ -82,12 +94,14 @@ class BasemapExt(Basemap):
         if distance > 1000.0:
             unit = 'km'
             distance *= 0.001
+        label = '{:.0f} {}'.format(distance, unit)
         txt_offset = (self.latmax - self.latmin) * 0.05
         if not ax:
             ax = plt.gca()
-        ax.text(lon0+0.5*length, lat_c+txt_offset, '{:.0f} {}'.format(distance, unit),
+        ax.text(lon0+0.5*length, lat_c+txt_offset, label,
                 verticalalignment='center', horizontalalignment='center',
                 fontsize=font_size, color=color)
+
 
     def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1, 0, 0, 1],
                         font_size=12, color='k', print_msg=True):
@@ -1080,7 +1094,8 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
         dem_contour = ndimage.gaussian_filter(dem,
                                               sigma=inps_dict['dem_contour_smooth'],
                                               order=0)
-        dem_contour_sequence = np.arange(-6000, 9000, inps_dict['dem_contour_step'])
+        dem_contour_sequence = np.arange(inps_dict['dem_contour_step'], 9000,
+                                         step=inps_dict['dem_contour_step'])
         if print_msg:
             print(('show contour in step of {} m '
                    'with smoothing factor of {}').format(inps_dict['dem_contour_step'],
