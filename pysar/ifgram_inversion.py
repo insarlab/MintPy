@@ -959,6 +959,12 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             temp_coh[box[1]:box[3], box[0]:box[2]] = temp_cohi
             num_inv_ifgram[box[1]:box[3], box[0]:box[2]] = ifg_numi
 
+        # reference pixel
+        ref_y = int(stack_obj.metadata['REF_Y'])
+        ref_x = int(stack_obj.metadata['REF_X'])
+        num_inv_ifgram[ref_y, ref_x] = num_ifgram
+        temp_coh[ref_y, ref_x] = 1.
+
         # metadata
         metadata = dict(stack_obj.metadata)
         metadata[key_prefix+'weightFunc'] = inps.weightFunc

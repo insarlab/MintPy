@@ -18,6 +18,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pysar.objects import timeseries, giantTimeseries, HDFEOS
 from pysar.utils import readfile, ptime, plot as pp, utils as ut
 from pysar.multilook import multilook_data
+from pysar import view
 
 
 ###########################################################################################
@@ -34,14 +35,11 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
     parser.add_argument('timeseries_file', help='time series file to display')
-    parser.add_argument('-n', dest='init_idx', metavar='NUM', type=int,
-                        help='Epoch/slice number to display.')
-    parser.add_argument('-m', '--mask', dest='mask_file',
-                        help='mask to use. Default: geo_maskTempCoh.h5 for geocoded file and maskTempCoh.h5 for radar file')
-    parser.add_argument('--error', dest='error_file',
-                        help='txt file with error for each date.')
-    parser.add_argument('--dem', dest='dem_file',
-                        help='DEM file for background shaed relief')
+    parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
+                        help='Y limits for point plotting.')
+
+    parser.add_argument('-l','--lookup', dest='lookup_file', type=str,
+                        help='lookup table file')
 
     pixel = parser.add_argument_group('Pixel Input')
     pixel.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2,
@@ -49,64 +47,23 @@ def create_parser():
     pixel.add_argument('--lalo', type=float, metavar=('LAT', 'LON'), nargs=2,
                        help='initial pixel to plot in lat/lon coord')
 
-    ref = parser.add_argument_group('Reference Pixel')
-    ref.add_argument('--ref-yx', dest='ref_yx', type=int, metavar=('Y', 'X'), nargs=2,
-                     help='change reference pixel to input location')
-    ref.add_argument('--ref-lalo', dest='ref_lalo', type=float, metavar=('LAT', 'LON'), nargs=2,
-                     help='change reference pixel to input location')
-    ref.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',
-                     help='marker color of reference point')
-    ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',
-                     help='marker symbol of reference point')
-    ref.add_argument('--ref-size', dest='seed_size', metavar='SIZE_NUM', type=int, default=6,
-                     help='marker size of reference point, default: 10')
+    pixel.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=8.0,
+                       help='Point marker size. Default: 12.0')
+    pixel.add_argument('--ew', '--edgewidth', dest='edge_width', type=float, default=1.0,
+                       help='Edge width. Default: 1.0')
 
-    output = parser.add_argument_group('Output Setting')
-    output.add_argument('-o', '--output', dest='fig_base',
-                        help='Figure base name for output files')
-    output.add_argument('--save', action='store_true', dest='save_fig',
-                        help='save data and plot to files')
-    output.add_argument('--nodisplay', action='store_false', dest='disp_fig',
-                        help='save data and plot to files and do not display figures\n')
-    output.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,
-                        help='DPI - dot per inch - for display/write')
+    parser.add_argument('-n', dest='init_idx', metavar='NUM', type=int,
+                        help='Epoch/slice number to display.')
+    parser.add_argument('--error', dest='error_file',
+                        help='txt file with error for each date.')
 
-    disp = parser.add_argument_group('Display Setting')
-    disp.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'),
-                      type=float, nargs=2, default=[8.0, 4.5],
-                      help='Figure size in inches - width and length. Default: 10.0 5.0\n' +
-                           'i.e. 3.5 2 for ppt; ')
-    disp.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
-                      help='Y limits for point plotting.')
-    disp.add_argument('--vlim', dest='vlim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
-                      help='Display limits for matrix plotting.')
-    disp.add_argument('--ref-date', dest='ref_date',
-                      help='Change reference date for display')
-    disp.add_argument('--exclude', '--ex', dest='ex_date_list',
-                      nargs='*', help='Exclude date shown as gray.')
-    disp.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true',
-                      help='Set displacement at first acquisition to zero.')
-    disp.add_argument('--wrap', action='store_true',
-                      help='re-wrap data to display data in fringes, for map display only.')
-    disp.add_argument('-u', dest='disp_unit', metavar='UNIT', default='cm',
-                      help='unit for display. Default: cm')
-    disp.add_argument('-c', '--colormap', dest='colormap', default='jet',
-                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
-                           'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
-    disp.add_argument('-s', '--fontsize', dest='font_size',
-                      type=int, default=10, help='Font size for display')
-    disp.add_argument('--notitle', dest='disp_title',
-                      action='store_false', help='Do not display title in TS plot.')
-    disp.add_argument('--flip-lr', dest='flip_lr',
-                      action='store_true', help='flip left-right')
-    disp.add_argument('--flip-ud', dest='flip_ud',
-                      action='store_true', help='flip up-down')
-    disp.add_argument('--ms', '--markersize', dest='marker_size', type=float, default=8.0,
-                      help='Point marker size. Default: 12.0')
-    # disp.add_argument('--mc','--markercolor', dest='marker_color', default='crimson',\
-    #                  help='Point marker color. Default: crimson')
-    disp.add_argument('--ew', '--edgewidth', dest='edge_width', type=float, default=1.0,
-                      help='Edge width. Default: 1.0')
+    parser.add_argument('--exclude', '--ex', dest='ex_date_list', nargs='*',
+                        help='Exclude date shown as gray.')
+    parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true',
+                        help='Set displacement at first acquisition to zero.')
+
+    parser = pp.add_plot_argument(parser)
+
     return parser
 
 
@@ -114,10 +71,19 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if (not inps.disp_fig or inps.fig_base) and not inps.save_fig:
+    if (not inps.disp_fig or inps.outfile) and not inps.save_fig:
         inps.save_fig = True
     if inps.ylim:
         inps.ylim = sorted(inps.ylim)
+
+    # default value
+    if not inps.disp_unit:
+        inps.disp_unit = 'cm'
+    if not inps.colormap:
+        inps.colormap = 'jet'
+    if not inps.fig_size:
+        inps.fig_size = [8.0, 4.5]
+
     return inps
 
 
@@ -170,6 +136,11 @@ def read_init_info(inps):
         if not os.path.isfile(inps.mask_file):
             inps.mask_file = None
 
+    # default lookup table file
+    if not inps.lookup_file:
+        inps.lookup_file = ut.get_lookup_file('./INPUTS/geometryRadar.h5')
+    inps.coord = ut.coordinate(atr, inps.lookup_file)
+
     # date info
     inps.date_list = obj.dateList
     inps.num_date = len(inps.date_list)
@@ -184,9 +155,9 @@ def read_init_info(inps):
         inps.ref_idx = inps.date_list.index(inps.ref_date)
     if not inps.init_idx:
         if inps.ref_idx < inps.num_date / 2.:
-            inps.init_idx = -2
+            inps.init_idx = -3
         else:
-            inps.init_idx = 2
+            inps.init_idx = 3
 
     # Read Error List
     inps.error_ts = None
@@ -203,6 +174,7 @@ def read_init_info(inps):
     if inps.zero_first:
         inps.zero_idx = min(0, np.min(np.where(inps.ex_flag)[0]))
 
+    # size and lalo info
     inps.length, inps.width = obj.length, obj.width
     print('data size in (y0, y1, x0, x1): {}'.format((0, inps.length, 0, inps.width)))
     try:
@@ -220,28 +192,30 @@ def read_init_info(inps):
                                                          inps.lon1)))
     except:
         inps.geocoded = False
-        lookup_file = ut.get_lookup_file('./INPUTS/geometryRadar.h5')
-        if lookup_file is not None:
-            inps.lats = readfile.read(lookup_file, datasetName='latitude')[0]
-            inps.lons = readfile.read(lookup_file, datasetName='longitude')[0]
-        else:
-            inps.lats = None
-            inps.lons = None
+
+    inps.pix_box = (0, 0, inps.width, inps.length)
+    inps.geo_box = inps.coord.box_pixel2geo(inps.pix_box)
 
     # reference pixel
-    if inps.ref_lalo and 'Y_FIRST' in atr.keys():
-        y = int((inps.ref_lalo[0] - inps.lat0) / inps.lat_step + 0.5)
-        x = int((inps.ref_lalo[1] - inps.lon0) / inps.lon_step + 0.5)
-        inps.ref_yx = [y, x]
+    if not inps.ref_lalo and 'REF_LAT' in atr.keys():
+        inps.ref_lalo = (float(atr['REF_LAT']), float(atr['REF_LON']))
+    if inps.ref_lalo:
+        inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0],
+                                           inps.ref_lalo[1],
+                                           print_msg=False)[0:2]
     if not inps.ref_yx:
         inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
 
     # Initial Pixel Coord
     if inps.lalo:
-        coord = ut.coordinate(atr, lookup_file)
-        inps.yx = coord.geo2radar(inps.lalo[0], inps.lalo[1], print_msg=False)[0:2]
+        inps.yx = inps.coord.geo2radar(inps.lalo[0],
+                                       inps.lalo[1],
+                                       print_msg=False)[0:2]
     if not inps.yx:
         inps.yx = inps.ref_yx
+    inps.lalo = inps.coord.radar2geo(inps.yx[0],
+                                     inps.yx[1],
+                                     print_msg=False)[0:2]
 
     # Flip up-down / left-right
     if not inps.flip_lr and not inps.flip_ud:
@@ -253,7 +227,8 @@ def read_init_info(inps):
         if   'cm' in inps.disp_unit:   inps.range2phase /= 100.
         elif 'mm' in inps.disp_unit:   inps.range2phase /= 1000.
         inps.disp_unit_v = 'radian'
-        inps.vlim = (-np.pi, np.pi)
+        inps.vlim = [-np.pi, np.pi]
+    inps.cbar_label = 'Displacement ({})'.format(inps.disp_unit_v)
 
     return inps, atr
 
@@ -291,11 +266,11 @@ def read_timeseries_data(inps):
     del ts_mask
 
     # default vlim
-    data_lim = (np.nanmin(ts_data), np.nanmax(ts_data))
+    inps.dlim = [np.nanmin(ts_data), np.nanmax(ts_data)]
     ts_data_mli = multilook_data(ts_data, 10, 10)
     if not inps.vlim:
-        inps.vlim = (np.nanmin(ts_data_mli), np.nanmax(ts_data_mli))
-    print('data    range: {} {}'.format(data_lim, inps.disp_unit))
+        inps.vlim = [np.nanmin(ts_data_mli), np.nanmax(ts_data_mli)]
+    print('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
     print('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
     # default ylim
@@ -304,86 +279,32 @@ def read_timeseries_data(inps):
             ts_data_mli -= np.tile(ts_data_mli[inps.zero_idx, :, :], (inps.num_date, 1, 1))
         ymin, ymax = np.nanmin(ts_data_mli), np.nanmax(ts_data_mli)
         ybuffer = (ymax - ymin) * 0.05
-        inps.ylim = (ymin - ybuffer, ymax + ybuffer)
+        inps.ylim = [ymin - ybuffer, ymax + ybuffer]
     del ts_data_mli
 
     return ts_data, mask, inps
 
 
-def plot_init_map(ax, ts_data, inps):
-    if inps.dem_file:
-        print('plotting DEM background ...')
-        dem = readfile.read(inps.dem_file, datasetName='height')[0]
-        ax = pp.plot_dem_background(ax=ax,
-                                    geo_box=None,
-                                    dem=dem,
-                                    inps_dict=vars(inps))
-        del dem
+def plot_init_map(ax, d_v, inps, metadata):
 
-    idx = inps.init_idx
-    d_v = np.array(ts_data[idx, :, :])
+    # prepare data
     if inps.wrap:
         d_v *= inps.range2phase
         d_v -= np.round(d_v/(2*np.pi)) * (2*np.pi)
-    im = ax.imshow(d_v,
-                   cmap=inps.colormap,
-                   clim=inps.vlim,
-                   interpolation='nearest')
 
-    # Reference Pixel
-    ax.plot(inps.ref_yx[1],
-            inps.ref_yx[0],
-            inps.seed_color+inps.seed_symbol,
-            ms=inps.seed_size)
+    # Title and Axis Label
+    disp_date = inps.dates[inps.init_idx].strftime('%Y-%m-%d')
+    inps.fig_title = 'N = {}, Time = {}'.format(inps.init_idx, disp_date)
 
     # Initial Pixel
     if inps.yx != inps.ref_yx:
-        ax.plot(inps.yx[1], inps.yx[0], 'ro', markeredgecolor='black')
+        inps.pts_yx = np.array(inps.yx).reshape(-1, 2)
+        inps.pts_lalo = np.array(inps.lalo).reshape(-1, 2)
+        inps.pts_marker = 'ro'
 
-    ax.set_xlim(-0.5, inps.width-0.5)
-    ax.set_ylim(inps.length-0.5, -0.5)
+    # call view.py to plot
+    ax, inps, im, cbar = view.plot_2d_matrix(ax, d_v, metadata, inps)
 
-    # Status Bar
-    def format_coord(x, y):
-        col = int(x+0.5)
-        row = int(y+0.5)
-        msg = 'x={:.1f}, y={:.1f}'.format(x, y)
-        if 0 <= col < inps.width and 0 <= row < inps.length:
-            try:
-                z = d_v[row, col]
-                msg += ', value={:.4f}'.format(z)
-            except:
-                msg += ', value=[]'
-        try:
-            lon = inps.lon0 + x*inps.lon_step
-            lat = inps.lat0 + y*inps.lat_step
-            msg += ', lon={:.4f}, lat={:.4f}'.format(lon, lat)
-        except:
-            pass
-        return msg
-    ax.format_coord = format_coord
-
-    # Title and Axis Label
-    disp_date = inps.dates[idx].strftime('%Y-%m-%d')
-    ax.set_title('N = {}, Time = {}'.format(idx, disp_date))
-
-    # Flip up-down / left-right
-    if inps.flip_lr:
-        ax.invert_xaxis()
-        print('flip map left and right')
-    if inps.flip_ud:
-        ax.invert_yaxis()
-        print('flip map up and down')
-
-    # Colorbar
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", "2%", pad="2%")
-    cbar = plt.colorbar(im, cax=cax, orientation='vertical')
-    cbar.ax.tick_params(labelsize=inps.font_size)
-    if inps.wrap:
-        cbar.set_ticks([-np.pi, 0, np.pi])
-        cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
-    cbar.set_label('Displacement ({})'.format(inps.disp_unit_v))
     return ax, im
 
 
@@ -471,7 +392,7 @@ def plot_point_timeseries(yx, fig, ax, ts_data, inps):
 
     # format
     ax = _adjust_ts_axis(ax, inps)
-    title_ts = _get_ts_title(yx[0], yx[1], inps)
+    title_ts = _get_ts_title(yx[0], yx[1], inps.coord)
     if inps.disp_title:
         ax.set_title(title_ts)
 
@@ -500,16 +421,13 @@ def _adjust_ts_axis(ax, inps):
     return ax
 
 
-def _get_ts_title(y, x, inps):
+def _get_ts_title(y, x, coord):
     title = 'Y = {}, X = {}'.format(y, x)
-    if inps.geocoded:
-        lat = inps.lat0 + y*inps.lat_step
-        lon = inps.lon0 + x*inps.lon_step
+    try:
+        lat, lon = coord.radar2geo(y, x, print_msg=False)[0:2]
         title += ', lat = {:.4f}, lon = {:.4f}'.format(lat, lon)
-    elif inps.lats is not None:
-        lat = inps.lats[y, x]
-        lon = inps.lons[y, x]
-        title += ', lat = {:.4f}, lon = {:.4f}'.format(lat, lon)
+    except:
+        pass
     return title
 
 
@@ -533,8 +451,8 @@ def estimate_slope(d_ts, year_list, ex_flag=None, disp_unit='cm', print_msg=True
 
 def save_ts_plot(yx, fig_v, fig_ts, ts_data, inps):
     print('save info on pixel ({}, {})'.format(yx[0], yx[1]))
-    if not inps.fig_base:
-        inps.fig_base = 'y%d_x%d' % (yx[0], yx[1])
+    if not inps.outfile:
+        inps.outfile = 'y%d_x%d' % (yx[0], yx[1])
 
     # read data
     d_ts = ts_data[:, yx[0], yx[1]]
@@ -544,9 +462,9 @@ def save_ts_plot(yx, fig_v, fig_ts, ts_data, inps):
                               print_msg=False)
 
     # TXT - point time series
-    outName = '{}_ts.txt'.format(inps.fig_base)
+    outName = '{}_ts.txt'.format(inps.outfile)
     header_info = 'timeseries_file={}\n'.format(os.path.abspath(inps.timeseries_file))
-    header_info += '{}\n'.format(_get_ts_title(yx[0], yx[1], inps))
+    header_info += '{}\n'.format(_get_ts_title(yx[0], yx[1], inps.coord))
     header_info += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1])
     header_info += 'reference date: {}\n'.format(inps.date_list[inps.ref_idx])
     header_info += 'unit: {}\n'.format(inps.disp_unit)
@@ -560,12 +478,12 @@ def save_ts_plot(yx, fig_v, fig_ts, ts_data, inps):
     print('save time series displacement in meter to '+outName)
 
     # Figure - point time series
-    outName = '{}_ts.pdf'.format(inps.fig_base)
+    outName = '{}_ts.pdf'.format(inps.outfile)
     fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
     print('save time series plot to '+outName)
 
     # Figure - map
-    outName = '{}_{}.png'.format(inps.fig_base, inps.date_list[inps.init_idx])
+    outName = '{}_{}.png'.format(inps.outfile, inps.date_list[inps.init_idx])
     fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
     print('save map plot to '+outName)
     return
@@ -585,7 +503,9 @@ def main(iargs=None):
     fig_v = plt.figure('Cumulative Displacement Map')
     # Axes 1
     ax_v = fig_v.add_axes([0.125, 0.25, 0.75, 0.65])
-    ax_v, im = plot_init_map(ax_v, ts_data, inps)
+    d_v = np.array(ts_data[inps.init_idx, :, :])
+    ax_v, im = plot_init_map(ax_v, d_v, inps, atr)
+
     # Axes 2 - Time Slider
     ax_time = fig_v.add_axes([0.2, 0.1, 0.6, 0.07])
     tslider = plot_init_time_slider(ax=ax_time,
@@ -613,7 +533,15 @@ def main(iargs=None):
     def plot_timeseries_event(event):
         """Event function to get y/x from button press"""
         if event.inaxes == ax_v:
-            y, x = int(event.ydata+0.5), int(event.xdata+0.5)
+            # get row/col number
+            if inps.fig_coord == 'geo':
+                y, x = inps.coord.geo2radar(event.ydata,
+                                            event.xdata,
+                                            print_msg=False)[0:2]
+            else:
+                y, x = int(event.ydata+0.5), int(event.xdata+0.5)
+
+            # plot time-series displacement if selected pixel is valid
             if mask[y, x] != 0:
                 d_ts = plot_point_timeseries((y, x), fig_ts, ax_ts, ts_data, inps)
             else:

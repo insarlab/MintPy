@@ -42,20 +42,22 @@ fig = None
 ##################################################################################################
 EXAMPLE = """example:
   view.py velocity.h5
-  view.py velocity.h5 velocity -m -2 -M 2 -c bwr
-  view.py velocity.h5 --ref-yx  210 566                #Change reference pixel
-  view.py velocity.h5 -x 100 600 -y 200 800            #plot subset in yx
-  view.py velocity.h5 -l 31.05 31.10 -L 130.05 130.10  #plot subset in lalo
+  view.py velocity.h5  velocity  --vlim -2 2  -c RdBu
+  view.py velocity.h5  --ref-yx  210 566                               #Change reference pixel for display
+  view.py velocity.h5  --sub-x 100 600  --sub-y 200 800                #plot subset in yx
+  view.py velocity.h5  --sub-lat 31.05 31.10  --sub-lon 130.05 130.10  #plot subset in lalo
 
   view.py timeseries.h5 
-  view.py timeseries.h5 --mask no
+  view.py timeseries.h5 -m no                          #Do not use auto mask
   view.py timeseries.h5 --ref-date 20101120            #Change reference date
-  view.py timeseries.h5 -ex drop_date.txt              #Exclude dates to plot
+  view.py timeseries.h5 --ex drop_date.txt             #Exclude dates to plot
 
   view.py INPUTS/ifgramStack.h5 coherence
   view.py INPUTS/ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap
   view.py INPUTS/ifgramStack.h5 -n 6
   view.py INPUTS/ifgramStack.h5 20171010_20171115      #Display all data related with one interferometric pair
+
+  view.py GEOCODE/geo_velocity.h5  --pts-file pts.yx   #Plot points with lat/lon in file
 
   # Save and Output:
   view.py velocity.h5 --save
@@ -81,7 +83,6 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    # Input
     infile = parser.add_argument_group('Input File', 'File/Dataset to display')
     infile.add_argument('file', type=str, help='file for display')
     infile.add_argument('dset', type=str, nargs='*', default=[],
@@ -92,173 +93,20 @@ def create_parser():
                         help='optional - order number of date/dataset(s) to display')
     infile.add_argument('--ex', '--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],
                         help='dates will not be displayed')
-    infile.add_argument('--mask', dest='mask_file', metavar='FILE',
-                        help='mask file for display')
-    infile.add_argument('--zero-mask', dest='zero_mask',
-                        action='store_true', help='mask pixels with zero value.')
+    infile.add_argument('--plot-setting', dest='disp_setting_file',
+                        help='Template file with plot setting.\n'+PLOT_TEMPLATE)
 
-    # Output
-    outfile = parser.add_argument_group('Output', 'Save figure and write to file(s)')
-    outfile.add_argument('--save', dest='save_fig', action='store_true',
-                         help='save the figure')
-    outfile.add_argument('--nodisplay', dest='disp_fig', action='store_false',
-                         help='save and do not display the figure')
-    outfile.add_argument('-o', '--outfile',
-                         help="save the figure with assigned filename.\n"
-                              "By default, it's calculated based on the input file name.")
+    parser = pp.add_data_disp_argument(parser)
+    parser = pp.add_dem_argument(parser)
+    parser = pp.add_figure_argument(parser)
+    parser = pp.add_gps_argument(parser)
+    parser = pp.add_mask_argument(parser)
+    parser = pp.add_map_argument(parser)
+    parser = pp.add_point_argument(parser)
+    parser = pp.add_reference_argument(parser)
+    parser = pp.add_save_argument(parser)
+    parser = pp.add_subset_argument(parser)
 
-    # Data Display Option
-    disp = parser.add_argument_group('Display Options', 'Options to adjust the dataset display')
-    disp.add_argument('-m', dest='disp_min', type=float,
-                      help='minimum value of color scale')
-    disp.add_argument('-M', dest='disp_max', type=float,
-                      help='maximum value of color scale')
-    disp.add_argument('-u', '--unit', dest='disp_unit', metavar='UNIT',
-                      help='unit for display.  Its priority > wrap')
-    # disp.add_argument('--scale', dest='disp_scale', metavar='NUM', type=float, default=1.0,\
-    #                  help='display data in a scaled range. \n'
-    #                       'Equivelant to data*input_scale')
-    disp.add_argument('-c', '--colormap', dest='colormap',
-                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
-                           'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
-    disp.add_argument('--projection', dest='map_projection', default='cyl',
-                      help='map projection when plotting in geo-coordinate. \n'
-                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
-
-    disp.add_argument('--wrap', action='store_true',
-                      help='re-wrap data to display data in fringes.')
-    disp.add_argument('--opposite', action='store_true',
-                      help='display in opposite sign, equivalent to multiply data by -1.')
-    disp.add_argument('--flip-lr', dest='flip_lr',
-                      action='store_true', help='flip left-right')
-    disp.add_argument('--flip-ud', dest='flip_ud',
-                      action='store_true', help='flip up-down')
-    disp.add_argument('--multilook-num', dest='multilook_num', type=int, default=1,
-                      help='multilook data in X and Y direction with a factor for display')
-    disp.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',
-                      help='do not multilook, for high quality display. \n'
-                           'If multilook and multilook_num=1, multilook_num will be estimated automatically.\n'
-                           'Useful when displaying big datasets.')
-    disp.add_argument('--alpha', dest='transparency', type=float,
-                      help='Data transparency. \n'
-                           '0.0 - fully transparent, 1.0 - no transparency.')
-    disp.add_argument('--plot-setting', dest='disp_setting_file',
-                      help='Template file with plot setting.\n'+PLOT_TEMPLATE)
-
-    # DEM
-    dem = parser.add_argument_group('DEM', 'display topography in the background')
-    dem.add_argument('-d', '--dem', dest='dem_file', metavar='DEM_FILE',
-                     help='DEM file to show topography as background')
-    dem.add_argument('--dem-noshade', dest='disp_dem_shade', action='store_false',
-                     help='do not show DEM shaded relief')
-    dem.add_argument('--dem-nocontour', dest='disp_dem_contour', action='store_false',
-                     help='do not show DEM contour lines')
-    dem.add_argument('--contour-smooth', dest='dem_contour_smooth', type=float, default=3.0,
-                     help='Background topography contour smooth factor - sigma of Gaussian filter. \n'
-                          'Default is 3.0; set to 0.0 for no smoothing.')
-    dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,
-                     help='Background topography contour step in meters. \n'
-                          'Default is 200 meters.')
-
-    # Subset
-    sub = parser.add_argument_group('Subset', 'Display dataset in subset range')
-    sub.add_argument('-x', dest='subset_x', type=int, nargs=2, metavar='X',
-                     help='subset display in x/cross-track/range direction')
-    sub.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar='Y',
-                     help='subset display in y/along-track/azimuth direction')
-    sub.add_argument('-l', '--lat', dest='subset_lat', type=float, nargs=2, metavar='LAT',
-                     help='subset display in latitude')
-    sub.add_argument('-L', '--lon', dest='subset_lon', type=float, nargs=2, metavar='LON',
-                        help='subset display in longitude')
-
-    # Reference
-    ref = parser.add_argument_group('Reference', 'Show / Modify reference in time and space for display')
-    ref.add_argument('--ref-date', dest='ref_date', metavar='DATE',
-                     help='Change reference date for display')
-    ref.add_argument('--ref-lalo', dest='seed_lalo', metavar=('LAT', 'LON'), type=float, nargs=2,
-                     help='Change referene point LAT LON for display')
-    ref.add_argument('--ref-yx', dest='seed_yx', metavar=('Y', 'X'), type=int, nargs=2,
-                     help='Change referene point Y X for display')
-    ref.add_argument('--noreference', dest='disp_seed',
-                     action='store_false', help='do not show reference point')
-    ref.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',
-                     help='marker color of reference point')
-    ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',
-                     help='marker symbol of reference point')
-    ref.add_argument('--ref-size', dest='seed_size', metavar='SIZE_NUM', type=int, default=10,
-                     help='marker size of reference point, default: 10')
-
-    # Vectors
-    #vec = parser.add_argument_group('Vectors','Plot vector geometry')
-    #vec.add_argument('--point-yx', dest='point_yx', type=int, nargs='')
-
-    # Figure
-    fig = parser.add_argument_group('Figure', 'Figure settings for display')
-    fig.add_argument('-s', '--fontsize', dest='font_size',
-                     type=int, help='font size')
-    fig.add_argument('--fontcolor', dest='font_color',
-                     default='k', help='font color')
-    fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,
-                     help='DPI - dot per inch - for display/write')
-    fig.add_argument('-r', '--row', dest='fig_row_num',
-                     type=int, default=1, help='subplot number in row')
-    fig.add_argument('-p', '--col', dest='fig_col_num', type=int,
-                     default=1, help='subplot number in column')
-    fig.add_argument('--noaxis', dest='disp_axis',
-                     action='store_false', help='do not display axis')
-    fig.add_argument('--nocbar', '--nocolorbar', dest='disp_cbar',
-                     action='store_false', help='do not display colorbar')
-    fig.add_argument('--cbar-nbins', dest='cbar_nbins',
-                     type=int, help='number of bins for colorbar')
-    fig.add_argument('--cbar-ext', dest='cbar_ext', default=None, choices={'neither', 'min', 'max', 'both', None},
-                     help='Extend setting of colorbar; based on data stat by default.')
-    fig.add_argument('--cbar-label', dest='cbar_label',
-                     default=None, help='colorbar label')
-    fig.add_argument('--notitle', dest='disp_title',
-                     action='store_false', help='do not display title')
-    fig.add_argument('--notick', dest='disp_tick',
-                     action='store_false', help='do not display tick in x/y axis')
-    fig.add_argument('--title-in', dest='fig_title_in',
-                     action='store_true', help='draw title in/out of axes')
-    fig.add_argument('--figtitle', dest='fig_title',
-                     help='Title shown in the figure.')
-    fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
-                     help='figure size in inches - width and length')
-    fig.add_argument('--figext', dest='fig_ext',
-                     default='.png', choices=['.emf', '.eps', '.pdf', '.png', '.ps', '.raw', '.rgba', '.svg', '.svgz'],
-                     help='File extension for figure output file')
-    fig.add_argument('--fignum', dest='fig_num', type=int,
-                     help='number of figure windows')
-    fig.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,
-                     help='width space between subplots in inches')
-    fig.add_argument('--hspace', dest='fig_hei_space', type=float, default=0.05,
-                     help='height space between subplots in inches')
-    fig.add_argument('--coord', dest='fig_coord', choices=['radar', 'geo'], default='geo',
-                     help='Display in radar/geo coordination system, for geocoded file only.')
-    fig.add_argument('--animation', action='store_true',
-                     help='enable animation mode')
-
-    # Map
-    map_group = parser.add_argument_group('Map', 'Map settings for display')
-    map_group.add_argument('--coastline', action='store_true', help='Draw coastline.')
-    map_group.add_argument('--resolution', default='c', choices={'c', 'l', 'i', 'h', 'f', None},
-                           help='Resolution of boundary database to use.\n' +
-                                'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
-    map_group.add_argument('--lalo-label', dest='lalo_label', action='store_true',
-                           help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
-                                'Useful for final figure output.')
-    map_group.add_argument('--lalo-step', dest='lalo_step',
-                           type=float, help='Lat/lon step for lalo-label option.')
-    map_group.add_argument('--lalo-loc', dest='lalo_label_loc', type=int, nargs=4, default=[1, 0, 0, 1],
-                           help='Draw lalo label in [left, right, top, bottom], default is [1,0,0,1]')
-    map_group.add_argument('--scalebar', nargs=3, metavar=('DISTANCE', 'LAT_C', 'LON_C'), type=float,
-                           help='set scale bar with DISTANCE in meters centered at [LAT_C, LON_C]\n' +
-                                'set to 999 to use automatic value, e.g.\n' +
-                                '--scalebar 2000 33.06 131.18\n' +
-                                '--scalebar 500  999   999\n' +
-                                '--scalebar 999  33.06 131.18')
-    map_group.add_argument('--noscalebar', dest='disp_scalebar',
-                           action='store_false', help='do not display scale bar.')
     return parser
 
 
@@ -316,8 +164,8 @@ def update_inps_with_display_setting_file(inps, disp_set_file):
         inps.subset_lat = [float(n) for n in disp_set_dict['plot.subset.lalo'].replace(',', ' ').split()[0:2]]
     if not inps.subset_lon and 'plot.subset.lalo' in disp_set_dict.keys():
         inps.subset_lon = [float(n) for n in disp_set_dict['plot.subset.lalo'].replace(',', ' ').split()[2:4]]
-    if not inps.seed_lalo and 'plot.seed.lalo' in disp_set_dict.keys():
-        inps.seed_lalo = [float(n) for n in disp_set_dict['plot.referenceLalo'].replace(',', ' ').split()]
+    if not inps.ref_lalo and 'plot.seed.lalo' in disp_set_dict.keys():
+        inps.ref_lalo = [float(n) for n in disp_set_dict['plot.referenceLalo'].replace(',', ' ').split()]
     return inps
 
 
@@ -338,6 +186,13 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
         print('subset coverage in lat/lon: '+str(inps.geo_box))
         print('------------------------------------------------------------------------')
 
+    # DEM contour display
+    if max(inps.pix_box[3] - inps.pix_box[1],
+           inps.pix_box[2] - inps.pix_box[0]) > 2e3:
+        inps.disp_dem_contour = False
+        if print_msg:
+            print('area exceed 2000 pixels, turn off default DEM contour display')
+
     # Multilook, if too many subplots in one figure for less memory and faster speed
     if inps.multilook_num > 1:
         inps.multilook = True
@@ -348,25 +203,28 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
                                             datasetName=inps.dset[0],
                                             print_msg=print_msg)
 
-    # Seed Point
-    # Convert seed_lalo if existed, to seed_yx, and use seed_yx for the following
-    # seed_yx is referenced to input data coverage, not subseted area for display
-    if inps.seed_lalo and inps.geo_box:
-        inps.seed_yx = [coord.lalo2yx(inps.seed_lalo[0], coord_type='lat'),
-                        coord.lalo2yx(inps.seed_lalo[1], coord_type='lon')]
+    # Reference Point
+    # Convert ref_lalo if existed, to ref_yx, and use ref_yx for the following
+    # ref_yx is referenced to input data coverage, not subseted area for display
+    if inps.ref_lalo and inps.geo_box:
+        inps.ref_yx = [coord.lalo2yx(inps.ref_lalo[0], coord_type='lat'),
+                       coord.lalo2yx(inps.ref_lalo[1], coord_type='lon')]
         if print_msg:
-            print('input reference point in lat/lon: {}'.format(inps.seed_lalo))
-            print('input reference point in y  /x  : {}'.format(inps.seed_yx))
+            print('input reference point in lat/lon: {}'.format(inps.ref_lalo))
+            print('input reference point in y  /x  : {}'.format(inps.ref_yx))
 
-    # seed_lalo
-    if inps.seed_yx and inps.geo_box:
-        inps.seed_lalo = [coord.yx2lalo(inps.seed_yx[0], coord_type='y'),
-                          coord.yx2lalo(inps.seed_yx[1], coord_type='x')]
+    # ref_lalo
+    if inps.ref_yx and inps.geo_box:
+        inps.ref_lalo = [coord.yx2lalo(inps.ref_yx[0], coord_type='y'),
+                         coord.yx2lalo(inps.ref_yx[1], coord_type='x')]
     elif 'REF_LAT' in metadata.keys():
-        inps.seed_lalo = [float(metadata['REF_LAT']),
-                          float(metadata['REF_LON'])]
+        inps.ref_lalo = [float(metadata['REF_LAT']),
+                         float(metadata['REF_LON'])]
     else:
-        inps.seed_lalo = None
+        inps.ref_lalo = None
+
+    # Points of interest
+    inps = pp.read_point2inps(inps, coord)
 
     # Unit and Wrap
     inps.disp_unit, inps.wrap = pp.check_disp_unit_and_wrap(metadata,
@@ -374,15 +232,13 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
                                                             wrap=inps.wrap)
 
     # Min / Max - Display
-    if not inps.disp_min and not inps.disp_max:
+    if not inps.vlim:
         if (any(i in inps.key.lower() for i in ['coherence', '.cor'])
                 or (inps.key == 'ifgramStack'
                         and inps.dset[0].split('-')[0] in ['coherence', 'connectComponent'])):
-            inps.disp_min = 0.0
-            inps.disp_max = 1.0
+            inps.vlim = [0.0, 1.0]
         elif inps.key in ['.int'] or inps.wrap:
-            inps.disp_min = -np.pi
-            inps.disp_max = np.pi
+            inps.vlim = [-np.pi, np.pi]
 
     # Transparency - Alpha
     if not inps.transparency:
@@ -413,19 +269,23 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
 
 
 ##################################################################################################
-def update_data_with_plot_inps(data, metadata, inps):
+def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
     # Seed Point
-    if inps.seed_yx:   # and inps.seed_yx != [int(metadata['REF_Y']), int(metadata['REF_X'])]:
-        ref_y = inps.seed_yx[0] - inps.pix_box[1]
-        ref_x = inps.seed_yx[1] - inps.pix_box[0]
+    if inps.ref_yx:   # and inps.ref_yx != [int(metadata['REF_Y']), int(metadata['REF_X'])]:
+        try:
+            ref_y = inps.ref_yx[0] - inps.pix_box[1]
+            ref_x = inps.ref_yx[1] - inps.pix_box[0]
+        except:
+            pass
         if len(data.shape) == 2:
             data -= data[ref_y, ref_x]
         elif len(data.shape) == 3:
             data -= np.tile(data[:, ref_y, ref_x].reshape(-1, 1, 1),
                             (1, data.shape[1], data.shape[2]))
-        print('set reference pixel to: {}'.format(inps.seed_yx))
+        if print_msg:
+            print('set reference pixel to: {}'.format(inps.ref_yx))
     else:
-        inps.seed_yx = None
+        inps.ref_yx = None
 
     # Convert data to display unit and wrap
     (data,
@@ -434,15 +294,18 @@ def update_data_with_plot_inps(data, metadata, inps):
      inps.wrap) = pp.scale_data4disp_unit_and_rewrap(data,
                                                      metadata=metadata,
                                                      disp_unit=inps.disp_unit,
-                                                     wrap=inps.wrap)
+                                                     wrap=inps.wrap,
+                                                     print_msg=print_msg)
     if inps.wrap:
-        inps.disp_min = -np.pi
-        inps.disp_max = np.pi
+        inps.vlim = [-np.pi, np.pi]
 
-    # Opposite
-    if inps.opposite:
-        print('show opposite')
-        data *= -1
+    # 1.6 Min / Max - Data/Display
+    inps.dlim = [np.nanmin(data), np.nanmax(data)]
+    if not inps.vlim:
+        inps.vlim = [np.nanmin(data), np.nanmax(data)]
+    if print_msg:
+        print('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
+        print('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
     return data, inps
 
@@ -471,48 +334,15 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
         inps = update_inps_with_file_metadata(inps, metadata)
 
     #----------------------- 1. Update plot inps/data with data matrix -----------------------#
-    data, inps = update_data_with_plot_inps(data, metadata, inps)
-    # Multilook
-    if inps.multilook and inps.multilook_num > 1:
-        data = multilook_data(data, inps.multilook_num, inps.multilook_num)
+    #data, inps = update_data_with_plot_inps(data, metadata, inps)
 
-    if print_msg:
-        print('data    unit: {}'.format(metadata['UNIT']))
-        print('display unit: {}'.format(inps.disp_unit))
-
-    # 1.6 Min / Max - Data/Display
-    inps.data_min = np.nanmin(data)
-    inps.data_max = np.nanmax(data)
-    if inps.disp_min is None:
-        inps.disp_min = np.nanmin(data)
-    if inps.disp_max is None:
-        inps.disp_max = np.nanmax(data)
-    if print_msg:
-        print('data    range: %f - %f' % (inps.data_min, inps.data_max))
-        print('display range: %f - %f' % (inps.disp_min, inps.disp_max))
-
-    # 1.7 DEM
+    # 1.7 DEM 
     if inps.dem_file:
-        dem_metadata = readfile.read_attribute(inps.dem_file)
-        if print_msg:
-            print('reading DEM: {} ...'.format(os.path.basename(inps.dem_file)))
-        if inps.geo_box:
-            # Support DEM with different Resolution and Coverage
-            inps.dem_pix_box = ut.coordinate(dem_metadata).box_geo2pixel(inps.geo_box)
-        else:
-            inps.dem_pix_box = inps.pix_box
-        dem, dem_metadata = readfile.read(inps.dem_file,
-                                          datasetName='height',
-                                          box=inps.dem_pix_box)
+        dem = pp.read_dem(inps.dem_file,
+                          pix_box=inps.pix_box,
+                          geo_box=inps.geo_box,
+                          print_msg=print_msg)
 
-        # If data is too large, do not show DEM contour
-        if inps.geo_box:
-            lat_length = abs(inps.geo_box[1]-inps.geo_box[3])
-            lon_length = abs(inps.geo_box[2]-inps.geo_box[0])
-            if max(lat_length, lon_length) > 1.0:
-                inps.disp_dem_contour = False
-                if print_msg:
-                    print('area is too large (lat or lon > 1 deg), turn off the DEM contour display')
     if print_msg:
         print('display data in transparency: '+str(inps.transparency))
 
@@ -563,7 +393,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
         if print_msg:
             print('plotting Data ...')
         im = m.imshow(data, cmap=inps.colormap, origin='upper',
-                      vmin=inps.disp_min, vmax=inps.disp_max,
+                      vmin=inps.vlim[0], vmax=inps.vlim[1],
                       alpha=inps.transparency, interpolation='nearest',
                       animated=inps.animation)
 
@@ -600,12 +430,31 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
         else:
             ax.tick_params(labelsize=inps.font_size, colors=inps.font_color)
 
-        # Plot Seed Point
-        if inps.disp_seed and inps.seed_lalo:
-            ax.plot(inps.seed_lalo[1], inps.seed_lalo[0],
-                    inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
+        # Plot Reference Point
+        if inps.disp_ref_pixel and inps.ref_lalo:
+            ax.plot(inps.ref_lalo[1], inps.ref_lalo[0],
+                    inps.ref_marker, ms=inps.ref_size)
             if print_msg:
                 print('plot reference point')
+
+        # Plot points of interest
+        if inps.pts_lalo is not None:
+            ax.plot(inps.pts_lalo[:, 1], inps.pts_lalo[:, 0],
+                    inps.pts_marker, ms=inps.ref_size,
+                    markeredgecolor='black')
+            if print_msg:
+                print('plot points of interest')
+
+        # Show UNR GPS stations
+        if inps.disp_gps:
+            from pysar.objects import gps
+            SNWE = (inps.geo_box[3], inps.geo_box[1], inps.geo_box[0], inps.geo_box[2])
+            site_names, site_lats, site_lons = gps.search_gps(SNWE)
+            ax.scatter(site_lons, site_lats, s=7**2, color='w', edgecolors='k')
+            for i in range(len(site_names)):
+                ax.annotate(site_names[i], xy=(site_lons[i], site_lats[i]), fontsize=inps.font_size)
+            if print_msg:
+                print('displaying GPS stations')
 
         # Status bar
         coord = ut.coordinate(metadata)
@@ -631,6 +480,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
 
     #-------------------- 2.2 Plot in Y/X-coordinate ------------------------------------------------#
     else:
+        inps.fig_coord = 'radar'
         if print_msg:
             print('plotting in Y/X coordinate ...')
         # Plot DEM
@@ -647,24 +497,32 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
         if print_msg:
             print('plotting Data ...')
         im = ax.imshow(data, cmap=inps.colormap,
-                       vmin=inps.disp_min, vmax=inps.disp_max,
+                       vmin=inps.vlim[0], vmax=inps.vlim[1],
                        alpha=inps.transparency, interpolation='nearest')
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
-        if inps.disp_seed:
+        if inps.disp_ref_pixel:
             ref_y, ref_x = None, None
-            if inps.seed_yx:
-                ref_y, ref_x = inps.seed_yx[0], inps.seed_yx[1]
+            if inps.ref_yx:
+                ref_y, ref_x = inps.ref_yx[0], inps.ref_yx[1]
             elif 'REF_Y' in metadata.keys():
                 ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
 
             if ref_y and ref_x:            
                 ax.plot(ref_x - inps.pix_box[0],
                         ref_y - inps.pix_box[1],
-                        inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
+                        inps.ref_marker, ms=inps.ref_size)
                 if print_msg:
                     print('plot reference point')
+
+        # Plot points of interest
+        if inps.pts_yx is not None:
+            ax.plot(inps.pts_yx[0, :], inps.pts_yx[1, :],
+                    inps.pts_marker, ms=inps.ref_size,
+                    markeredgecolor='black')
+            if print_msg:
+                print('plot points of interest')
 
         ax.set_xlim(-0.5, num_col-0.5)
         ax.set_ylim(num_row-0.5, -0.5)
@@ -688,10 +546,11 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
 
     #-------------------- 3 Figure Setting --------------------------------------------------------#
     # 3.1 Colorbar
+    cbar = None
     if inps.disp_cbar:
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "2%", pad="2%")
-        inps, cax = pp.plot_colorbar(inps, im, cax)
+        inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     # 3.2 Title
     if inps.disp_title:
@@ -729,7 +588,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
         plt.savefig(inps.outfile, bbox_inches='tight',
                     transparent=True, dpi=inps.fig_dpi)
 
-    return ax, inps, im
+    return ax, inps, im, cbar
 
 
 def check_input_file_info(inps, print_msg=True):
@@ -838,13 +697,17 @@ def read_dataset_input(inps, print_msg=True):
 
     if print_msg:
         if inps.key in ['ifgramStack']:
-            print('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.fileDatasetList)))
+            print('num of datasets in file {}: {}'.format(os.path.basename(inps.file),
+                                                          len(inps.fileDatasetList)))
             print('num of datasets to exclude: {}'.format(len(inps.exDsetList)))
             print('num of datasets to display: {}'.format(len(inps.dset)))
         else:
-            print('num of datasets in file {}: {}'.format(os.path.basename(inps.file), len(inps.fileDatasetList)))
-            print('datasets to exclude ({}):\n{}'.format(len(inps.exDsetList), inps.exDsetList))
-            print('datasets to display ({}):\n{}'.format(len(inps.dset),   inps.dset))
+            print('num of datasets in file {}: {}'.format(os.path.basename(inps.file),
+                                                          len(inps.fileDatasetList)))
+            print('datasets to exclude ({}):\n{}'.format(len(inps.exDsetList),
+                                                         inps.exDsetList))
+            print('datasets to display ({}):\n{}'.format(len(inps.dset),
+                                                         inps.dset))
         if inps.ref_date and inps.key in timeseriesKeyNames:
             print('input reference date: {}'.format(inps.ref_date))
 
@@ -900,11 +763,7 @@ def update_figure_setting(inps, print_msg=True):
         if inps.fig_row_num == 1 and inps.fig_col_num == 1:
             # calculate row and col number based on input info
             data_shape = [length*1.1, width]
-            if not inps.disp_min and not inps.disp_max:
-                fig_size4plot = inps.fig_size
-            else:
-                fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
-
+            fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
             (inps.fig_row_num,
              inps.fig_col_num) = pp.auto_row_col_num(inps.dsetNum,
                                                      data_shape,
@@ -934,8 +793,6 @@ def update_figure_setting(inps, print_msg=True):
                 inps.outfile_base += '_sub'
             if inps.wrap:
                 inps.outfile_base += '_wrap'
-            if inps.opposite:
-                inps.outfile_base += '_oppo'
             if inps.ref_date:
                 inps.outfile_base += '_ref'+inps.ref_date
             if inps.exDsetList:
@@ -954,26 +811,13 @@ def read_data4figure(i_start, i_end, inps, metadata):
             and inps.key in ['timeseries', 'giantTimeseries', 'ifgramStack', 'HDFEOS', 'geometry']):
         dset_list = [inps.dset[i] for i in range(i_start, i_end)]
         data = readfile.read(inps.file, datasetName=dset_list, box=inps.pix_box)[0]
+
         if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase
             if inps.dsetFamilyList[0] == 'unwrapPhase' and inps.file_ref_yx:
                 for i in range(data.shape[0]):
                     mask = data[i, :, :] != 0.
                     data[i, mask] -= data[i, inps.file_ref_yx[0], inps.file_ref_yx[1]]
-
-        #if inps.key == 'timeseries':
-        #    data = timeseries(inps.file).read(datasetName=dset_list, box=inps.pix_box)
-        #elif inps.key == 'ifgramStack':
-        #    data = ifgramStack(inps.file).read(datasetName=dset_list, box=inps.pix_box)
-        #    # reference pixel info in unwrapPhase
-        #    if inps.dsetFamilyList[0] == 'unwrapPhase' and inps.file_ref_yx:
-        #        for i in range(data.shape[0]):
-        #            mask = data[i, :, :] != 0.
-        #            data[i, mask] -= data[i, inps.file_ref_yx[0], inps.file_ref_yx[1]]
-        #elif inps.key == 'HDFEOS':
-        #    data = HDFEOS(inps.file).read(datasetName=dset_list, box=inps.pix_box)
-        #elif inps.key == 'geometry':
-        #    data = geometry(inps.file).read(datasetName=dset_list, box=inps.pix_box)
 
     # slow reading with one 2D matrix at a time
     else:
@@ -997,19 +841,17 @@ def read_data4figure(i_start, i_end, inps, metadata):
                                  print_msg=False)[0]
         data -= ref_data
 
-    # disp/data_min/max, adjust data if all subplots are the same type
+    # v/dlim, adjust data if all subplots are the same type
     #metadata = readfile.read_attribute(inps.file)
     if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity']:
-        data, inps = update_data_with_plot_inps(data, metadata, inps)
-        if (not inps.disp_min and not inps.disp_max 
+        data, inps = update_data_with_plot_inps(data, metadata, inps, print_msg=False)
+        if (not inps.vlim 
                 and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)
                 and inps.dsetFamilyList[0] not in ['bperp']):
             data_mli = multilook_data(data, 10, 10)
-            inps.disp_min = np.nanmin(data_mli)
-            inps.disp_max = np.nanmax(data_mli)
+            inps.vlim = [np.nanmin(data_mli), np.nanmax(data_mli)]
             del data_mli
-    inps.data_min = np.nanmin(data)
-    inps.data_max = np.nanmax(data)
+    inps.dlim = [np.nanmin(data), np.nanmax(data)]
 
     # multilook
     if inps.multilook:
@@ -1040,22 +882,22 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     try:
         im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest',
                        alpha=inps.transparency,
-                       vmin=inps.disp_min, vmax=inps.disp_max)
+                       vmin=inps.vlim[0], vmax=inps.vlim[1])
     except:
         im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest',
                        alpha=inps.transparency)
     # Plot Seed Point
-    if inps.disp_seed:
+    if inps.disp_ref_pixel:
         ref_y, ref_x = None, None
-        if inps.seed_yx:
-            ref_y, ref_x = inps.seed_yx[0], inps.seed_yx[1]
+        if inps.ref_yx:
+            ref_y, ref_x = inps.ref_yx[0], inps.ref_yx[1]
         elif 'REF_Y' in metadata.keys():
             ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
 
-        if ref_y and ref_x:            
+        if ref_y and ref_x:
             ax.plot(ref_x - inps.pix_box[0],
                     ref_y - inps.pix_box[1],
-                    inps.seed_color+inps.seed_symbol, ms=inps.seed_size)
+                    inps.ref_marker, ms=inps.ref_size)
 
     ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
     ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
@@ -1159,16 +1001,14 @@ def plot_figure(j, inps, metadata):
     fig.tight_layout()
 
     # Min and Max for this figure
-    inps.all_data_min = np.nanmin([inps.all_data_min, inps.data_min])
-    inps.all_data_max = np.nanmax([inps.all_data_max, inps.data_max])
-    print('data    range: [%.2f, %.2f] %s' %
-          (inps.data_min, inps.data_max, inps.disp_unit))
-    if inps.disp_min and inps.disp_max:
-        print('display range: [%.2f, %.2f] %s' %
-              (inps.disp_min, inps.disp_max, inps.disp_unit))
+    inps.dlim_all = [np.nanmin([inps.dlim_all[0], inps.dlim[0]]), 
+                     np.nanmax([inps.dlim_all[1], inps.dlim[1]])]
+    print('data    range: {} {}'.format(inps.dlim, inps.disp_unit))
+    if inps.vlim:
+        print('display range: {} {}'.format(inps.vlim, inps.disp_unit))
 
     # Colorbar
-    if not inps.disp_min and not inps.disp_max:
+    if not inps.vlim:
         print('Note: different color scale for EACH subplot!')
     else:
         print('show colorbar')
@@ -1220,7 +1060,7 @@ def prepare4multi_subplots(inps, metadata):
             print('consider reference pixel in y/x: {}'.format(inps.file_ref_yx))
 
     if inps.dsetNum > 10:
-        inps.disp_seed = False
+        inps.disp_ref_pixel = False
         print('turn off reference pixel plot for more than 10 datasets to display')
 
     # Check dropped interferograms
@@ -1293,6 +1133,8 @@ def main(iargs=None):
             print('masking data')
             data = np.ma.masked_where(inps.msk == 0., data)
 
+        data, inps = update_data_with_plot_inps(data, atr, inps)
+
         fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
 
         ax, inps = plot_2d_matrix(ax, data, atr, inps)[0:2]
@@ -1301,15 +1143,15 @@ def main(iargs=None):
     else:
         inps = prepare4multi_subplots(inps, metadata=atr)
 
-        inps.all_data_min = 0
-        inps.all_data_max = 0
+        inps.dlim_all = [0., 0.]
         for j in range(1, inps.fig_num + 1):
             plot_figure(j, inps, metadata=atr)
 
-        print('----------------------------------------')
-        print('all data range: [%f, %f] %s' % (inps.all_data_min, inps.all_data_max, inps.disp_unit))
-        if inps.disp_min and inps.disp_max:
-            print('display  range: [%f, %f] %s' % (inps.disp_min, inps.disp_max, inps.disp_unit))
+        if inps.fig_num > 1:
+            print('----------------------------------------')
+            print('all data range: {} {}'.format(inps.dlim_all, inps.disp_unit))
+            if inps.vlim:
+                print('display  range: {} {}'.format(inps.vlim, inps.disp_unit))
 
     # Display Figure
     if inps.disp_fig:

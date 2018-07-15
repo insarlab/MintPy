@@ -22,8 +22,7 @@ from pysar.utils import (ptime,
                          writefile,
                          network as pnet,
                          deramp)
-from pysar.objects import (gps,
-                           geometryDatasetNames,
+from pysar.objects import (geometryDatasetNames,
                            geometry,
                            ifgramDatasetNames,
                            ifgramStack,
@@ -31,103 +30,17 @@ from pysar.objects import (gps,
 
 
 ###############################################################################
-def read_gps_los_displacement(site, gps_dir, geom_file, ref_site=None):
-    """Read GPS displacement in LOS direction
-    Parameters: site : string, GPS station ID, e.g. GV05
-                gps_dir : string, local path of GPS files
-                geom_flie : string, path of geometry files, such as geo_geometryRadar.h5
-    Returns:    gps_times : 1D np.array of datetime.datetime object
-                gps_dis   : 1D np.array of displacement in meters
-                gps_std   : 1D np.array of displacement uncertainty in meters
-    """
-    # read GPS object
-    gps_obj = gps(site=site, data_dir=gps_dir)
-    gps_obj.open(print_msg=False)
-
-    # calculate geometry
-    atr = readfile.read_attribute(geom_file)
-    coord = coordinate(atr, lookup_file=geom_file)
-    y, x = coord.geo2radar(gps_obj.site_lat,
-                           gps_obj.site_lon,
-                           print_msg=False)[0:2]
-    box = (x, y, x+1, y+1)
-    inc_angle = readfile.read(geom_file,
-                              datasetName='incidenceAngle',
-                              box=box,
-                              print_msg=False)[0].flatten()
-    head_angle = readfile.read(geom_file,
-                               datasetName='headingAngle',
-                               box=box,
-                               print_msg=False)[0].flatten()
-    head_angle = -1 * (180 + head_angle + 90)
-
-    # convert ENU to LOS direction
-    gps_obj.dis_los = enu2los(gps_obj.dis_e,
-                              gps_obj.dis_n,
-                              gps_obj.dis_u,
-                              inc_angle=inc_angle,
-                              head_angle=head_angle)
-    gps_obj.std_los = enu2los(gps_obj.std_e,
-                              gps_obj.std_n,
-                              gps_obj.std_u,
-                              inc_angle=inc_angle,
-                              head_angle=head_angle)
-    gps_times = gps_obj.times
-    gps_dis_los = gps_obj.dis_los
-    gps_std_los = gps_obj.std_los
-    site_lalo = (gps_obj.site_lat,
-                 gps_obj.site_lon)
-
-    # get LOS displacement relative to another GPS site
-    if ref_site:
-        ref_gps_obj = gps(site=ref_site, data_dir=gps_dir)
-        ref_gps_obj.open(print_msg=False)
-
-        try:
-            y, x = coord.lalo2yx(ref_gps_obj.site_lat,
-                                 ref_gps_obj.site_lon,
-                                 print_msg=False)[0:2]
-        except:
-            y, x = -1, -1
-        if 0 <= x < int(atr['WIDTH']) and 0<= y < int(atr['LENGTH']):
-            box = (x, y, x+1, y+1)
-            inc_angle = readfile.read(geom_file,
-                                      datasetName='incidenceAngle',
-                                      box=box,
-                                      print_msg=False)[0].flatten()
-            head_angle = readfile.read(geom_file,
-                                       datasetName='headingAngle',
-                                       box=box,
-                                       print_msg=False)[0].flatten()
-            head_angle = -1 * (180 + head_angle + 90)
-
-        ref_gps_obj.dis_los = enu2los(ref_gps_obj.dis_e,
-                                      ref_gps_obj.dis_n,
-                                      ref_gps_obj.dis_u,
-                                      inc_angle=inc_angle,
-                                      head_angle=head_angle)
-        ref_gps_obj.std_los = enu2los(ref_gps_obj.std_e,
-                                      ref_gps_obj.std_n,
-                                      ref_gps_obj.std_u,
-                                      inc_angle=inc_angle,
-                                      head_angle=head_angle)
-
-        # get relative LOS displacement on common dates
-        gps_times = np.array(sorted(list(set(gps_obj.times) & set(ref_gps_obj.times))))
-        gps_dis_los = np.zeros(gps_times.shape, np.float32)
-        gps_std_los = np.zeros(gps_times.shape, np.float32)
-        for i in range(len(gps_times)):
-            idx1 = np.where(gps_obj.times == gps_times[i])[0][0]
-            idx2 = np.where(ref_gps_obj.times == gps_times[i])[0][0]
-            gps_dis_los[i] = gps_obj.dis_los[idx1] - ref_gps_obj.dis_los[idx2]
-            gps_std_los[i] = np.sqrt(gps_obj.std_los[idx1]**2 + ref_gps_obj.std_los[idx2]**2)
-
-        ref_site_lalo = (ref_gps_obj.site_lat,
-                         ref_gps_obj.site_lon)
-    else:
-        ref_site_lalo = None
-
-    return gps_times, gps_dis_los, gps_std_los, site_lalo, ref_site_lalo
+def get_snwe(metadata):
+    lat0 = float(metadata['Y_FIRST'])
+    lon0 = float(metadata['X_FIRST'])
+    lat_step = float(metadata['Y_STEP'])
+    lon_step = float(metadata['X_STEP'])
+    length = int(metadata['LENGTH'])
+    width = int(metadata['WIDTH'])
+    lat1 = lat0 + lat_step * length
+    lon1 = lon0 + lon_step * width
+    SNWE = (lat1, lat0, lon0, lon1)
+    return SNWE
 
 
 def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
@@ -2025,7 +1938,7 @@ def generate_curls(curlfile, h5file, Triangles, curls):
     return curlfile
 
 
-##########################################################################################
+#####################################  coordinate class begin ##############################################
 class coordinate:
     """
     Coordinates conversion based lookup file in pixel-level accuracy
@@ -2047,6 +1960,8 @@ class coordinate:
         if isinstance(lookup_file, str):
             lookup_file = [lookup_file, lookup_file]
         self.lookup_file = lookup_file
+        self.lut_y = None
+        self.lut_x = None
 
     def open(self):
         try:
@@ -2092,7 +2007,7 @@ class coordinate:
             elif coord_type.startswith('lon'):
                 coord = int(np.rint((coord_in[i] - self.lon0) / self.lon_step))
             else:
-                print('Unrecognized coordinate type: '+coord_type)
+                raise ValueError('Unrecognized coordinate type: '+coord_type)
             coord_out.append(coord)
 
         # output format
@@ -2124,12 +2039,12 @@ class coordinate:
         coord_type = coord_type.lower()
         coord_out = []
         for i in range(len(coord_in)):
-            if coord_type.startswith(('row', 'y')):
+            if coord_type.startswith(('row', 'y', 'az', 'azimuth')):
                 coord = coord_in[i] * self.lat_step + self.lat0
-            elif coord_type.startswith(('col', 'x')):
+            elif coord_type.startswith(('col', 'x', 'rg', 'range')):
                 coord = coord_in[i] * self.lon_step + self.lon0
             else:
-                print('Unrecognized coordinate type: '+coord_type)
+                raise ValueError('Unrecognized coordinate type: '+coord_type)
             coord_out.append(coord)
 
         if len(coord_out) == 1:
@@ -2157,22 +2072,22 @@ class coordinate:
             raise RuntimeError('No coresponding coordinate found for y/x: {}/{}'.format(y, x))
         return row, col
 
-    def _read_lookup_table(self, print_msg=True):
+    def read_lookup_table(self, print_msg=True):
         if 'Y_FIRST' in self.lut_metadata.keys():
-            lut_y = readfile.read(self.lookup_file[0],
-                                  datasetName='azimuthCoord',
-                                  print_msg=print_msg)[0]
-            lut_x = readfile.read(self.lookup_file[1],
-                                  datasetName='rangeCoord',
-                                  print_msg=print_msg)[0]
+            self.lut_y = readfile.read(self.lookup_file[0],
+                                       datasetName='azimuthCoord',
+                                       print_msg=print_msg)[0]
+            self.lut_x = readfile.read(self.lookup_file[1],
+                                       datasetName='rangeCoord',
+                                       print_msg=print_msg)[0]
         else:
-            lut_y = readfile.read(self.lookup_file[0],
-                                  datasetName='latitude',
-                                  print_msg=print_msg)[0]
-            lut_x = readfile.read(self.lookup_file[1],
-                                  datasetName='longitude',
-                                  print_msg=print_msg)[0]
-        return lut_y, lut_x
+            self.lut_y = readfile.read(self.lookup_file[0],
+                                       datasetName='latitude',
+                                       print_msg=print_msg)[0]
+            self.lut_x = readfile.read(self.lookup_file[1],
+                                       datasetName='longitude',
+                                       print_msg=print_msg)[0]
+        return self.lut_y, self.lut_x
 
     def _read_geo_lut_metadata(self):
         """Read lat/lon0, lat/lon_step_deg, lat/lon_step into a Namespace - lut"""
@@ -2208,7 +2123,8 @@ class coordinate:
         # read lookup table
         if self.lookup_file is None:
             raise FileNotFoundError('No lookup table file found!')
-        lut_y, lut_x = self._read_lookup_table(print_msg=print_msg)
+        if self.lut_y is None or self.lut_x is None:
+            self.read_lookup_table(print_msg=print_msg)
 
         # For lookup table in geo-coord, read value directly
         if 'Y_FIRST' in self.lut_metadata.keys():
@@ -2293,7 +2209,8 @@ class coordinate:
         # read lookup table file
         if self.lookup_file is None:
             raise FileNotFoundError('No lookup table file found!')
-        lut_y, lut_x = self._read_lookup_table(print_msg=print_msg)
+        if self.lut_y is None or self.lut_x is None:
+            self.read_lookup_table(print_msg=print_msg)
 
         # For lookup table in geo-coord, search the buffer and use center pixel
         if 'Y_FIRST' in self.lut_metadata.keys():
@@ -2424,6 +2341,4 @@ class coordinate:
         out_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
         return out_box
 
-
-
-
+#####################################  coordinate class end ##############################################
