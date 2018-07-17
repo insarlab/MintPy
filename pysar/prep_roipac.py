@@ -98,12 +98,12 @@ def extract_metadata(fname):
     try:
         atr_orig = readfile.read_roipac_rsc(basic_rsc_file)
     except:
-        atr_orig = None
-    if not atr_orig or any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-                           for i in atr.keys()):
+        atr_orig = dict()
+    if not set(atr.items()).issubset(set(atr_orig.items())):
+        atr_out = {**atr_orig, **atr}
         print('merging {} into {} '.format(os.path.basename(baseline_rsc_file),
                                            os.path.basename(basic_rsc_file)))
-        writefile.write_roipac_rsc(atr, out_file=basic_rsc_file)
+        writefile.write_roipac_rsc(atr_out, out_file=basic_rsc_file)
     return basic_rsc_file
 
 

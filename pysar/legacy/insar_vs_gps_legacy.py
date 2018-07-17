@@ -360,10 +360,12 @@ def main(argv):
     print('unit vector for :' + gps_comp_txt)
     print(unitVec)
     print('-------------------------')
-    gpsLOS_ref = unitVec[0]*Ve[idxRef] + \
-        unitVec[1]*Vn[idxRef]+unitVec[2]*Vu[idxRef]
-    Sr = ((unitVec[0]**2)*Se[idxRef]**2+(unitVec[1]**2) *
-          Sn[idxRef]**2+(unitVec[2]**2)*Su[idxRef]**2)**0.5
+    gpsLOS_ref = (unitVec[0] * Ve[idxRef]
+                  + unitVec[1] * Vn[idxRef]
+                  + unitVec[2] * Vu[idxRef])
+    Sr = ((unitVec[0]**2) * Se[idxRef]**2
+          + (unitVec[1]**2) * Sn[idxRef]**2
+          + (unitVec[2]**2) * Su[idxRef]**2)**0.5
 
     print('######################################################################')
     try:

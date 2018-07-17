@@ -435,7 +435,7 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
 
     # Write Geometry
     # Required: height, incidenceAngle
-    # Optional: rangeCoord, azimuthCoord, headingAngle, slantRangeDistance, waterMask, shadowMask
+    # Optional: rangeCoord, azimuthCoord, azimuthAngle, slantRangeDistance, waterMask, shadowMask
     gName = 'HDFEOS/GRIDS/timeseries/geometry'
     print('create group   /{}'.format(gName))
     group = f.create_group(gName)
@@ -465,7 +465,7 @@ def write2hdf5(out_file, ts_file, coh_file, mask_file, geom_file, metadata):
             dset.attrs['Units'] = 'meters'
 
         elif dsName in ['incidenceAngle',
-                        'headingAngle',
+                        'azimuthAngle',
                         'latitude',
                         'longitude']:
             dset.attrs['MissingValue'] = FLOAT_ZERO

@@ -235,14 +235,14 @@ def extract_metadata4interferogram(fname):
     try:
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
-        atr_orig = None
-    if not atr_orig or any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-                           for i in atr.keys()):
+        atr_orig = dict()
+    if not set(atr.items()).issubset(set(atr_orig.items())):
+        atr_out = {**atr_orig, **atr}
         print('merge %s, %s and %s into %s' % (os.path.basename(m_par_file),
                                                os.path.basename(s_par_file),
                                                os.path.basename(off_file),
                                                os.path.basename(rsc_file)))
-        writefile.write_roipac_rsc(atr, out_file=rsc_file)
+        writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
 
     return rsc_file
 
@@ -275,11 +275,11 @@ def extract_metadata4lookup_table(fname):
     try:
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
-        atr_orig = None
-    if not atr_orig or any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-                           for i in atr.keys()):
+        atr_orig = dict()
+    if not set(atr.items()).issubset(set(atr_orig.items())):
+        atr_out = {**atr_orig, **atr}
         print('writing >>> '+os.path.basename(rsc_file))
-        writefile.write_roipac_rsc(atr, out_file=rsc_file)
+        writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
     return rsc_file
 
 
@@ -304,11 +304,11 @@ def extract_metadata4dem_geo(fname):
     try:
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
-        atr_orig = None
-    if not atr_orig or any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-                           for i in atr.keys()):
+        atr_orig = dict()
+    if not set(atr.items()).issubset(set(atr_orig.items())):
+        atr_out = {**atr_orig, **atr}
         print('writing >>> '+os.path.basename(rsc_file))
-        writefile.write_roipac_rsc(atr, out_file=rsc_file)
+        writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
     return rsc_file
 
 
@@ -341,11 +341,11 @@ def extract_metadata4dem_radar(fname):
     try:
         atr_orig = readfile.read_roipac_rsc(rsc_file)
     except:
-        atr_orig = None
-    if not atr_orig or any((i not in atr_orig.keys() or atr_orig[i] != atr[i])
-                           for i in atr.keys()):
+        atr_orig = dict()
+    if not set(atr.items()).issubset(set(atr_orig.items())):
+        atr_out = {**atr_orig, **atr}
         print('writing >>> '+os.path.basename(rsc_file))
-        writefile.write_roipac_rsc(atr, out_file=rsc_file)
+        writefile.write_roipac_rsc(atr_out, out_file=rsc_file)
     return rsc_file
 
 

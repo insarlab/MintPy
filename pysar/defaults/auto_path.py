@@ -31,7 +31,7 @@ pysar.load.demFile        = $PROJECT_DIR/merged/geom_master/hgt.rdr
 pysar.load.lookupYFile    = $PROJECT_DIR/merged/geom_master/lat.rdr
 pysar.load.lookupXFile    = $PROJECT_DIR/merged/geom_master/lon.rdr
 pysar.load.incAngleFile   = $PROJECT_DIR/merged/geom_master/los.rdr
-pysar.load.headAngleFile  = $PROJECT_DIR/merged/geom_master/los.rdr
+pysar.load.azAngleFile    = $PROJECT_DIR/merged/geom_master/los.rdr
 pysar.load.shadowMaskFile = $PROJECT_DIR/merged/geom_master/shadowMask.rdr
 pysar.load.bperpFile      = $PROJECT_DIR/merged/baselines/*/bperp.rdr
 '''
@@ -47,7 +47,7 @@ pysar.load.demFile        = $PROJECT_DIR/PROCESS/DONE/*${m_date12}*/radar_*rlks.
 pysar.load.lookupYFile    = $PROJECT_DIR/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
 pysar.load.lookupXFile    = $PROJECT_DIR/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
 pysar.load.incAngleFile   = None
-pysar.load.headAngleFile  = None
+pysar.load.azAngleFile    = None
 pysar.load.shadowMaskFile = None
 pysar.load.bperpFile      = None
 '''
@@ -63,7 +63,7 @@ pysar.load.demFile        = $PROJECT_DIR/PROCESS/SIM/sim_${m_date12}/sim*rlks.rd
 pysar.load.lookupYFile    = $PROJECT_DIR/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
 pysar.load.lookupXFile    = $PROJECT_DIR/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
 pysar.load.incAngleFile   = None
-pysar.load.headAngleFile  = None
+pysar.load.azAngleFile    = None
 pysar.load.shadowMaskFile = None
 pysar.load.bperpFile      = $PROJECT_DIR/merged/baselines/*/*.base_perp
 '''
@@ -124,7 +124,7 @@ def get_auto_path4isce(project_name, template=dict()):
 
     # geometry
     for suffix in ['demFile', 'lookupYFile', 'lookupXFile',
-                   'incAngleFile', 'headAngleFile', 'shadowMaskFile']:
+                   'incAngleFile', 'azAngleFile', 'shadowMaskFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             template[key] = os.path.join(geom_dir, auto_dict[key])
@@ -168,7 +168,7 @@ def get_auto_path4roipac(project_name, template=dict()):
         mli_looks = re.findall('_\d{1}rlks', lookup_file)[0]
         auto_dict[prefix+'demFile'] = 'radar{}.hgt'.format(mli_looks)
 
-    for suffix in ['demFile', 'incAngleFile', 'headAngleFile', 'shadowMaskFile']:
+    for suffix in ['demFile', 'incAngleFile', 'azAngleFile', 'shadowMaskFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             if m_date12 and auto_dict[key] != 'None':
@@ -225,7 +225,7 @@ def get_auto_path4gamma(project_name, template=dict()):
             m_date12 = None
 
     for suffix in ['demFile', 'lookupYFile', 'lookupXFile',
-                   'incAngleFile', 'headAngleFile', 'shadowMaskFile']:
+                   'incAngleFile', 'azAngleFile', 'shadowMaskFile']:
         key = prefix+suffix
         if template[key] == 'auto':
             if m_date12 and auto_dict[key] != 'None':

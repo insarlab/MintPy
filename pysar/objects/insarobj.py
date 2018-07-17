@@ -414,7 +414,7 @@ class geometryDict:
         /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
         /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
         /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
-        /headingAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
+        /azimuthAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
         /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
         /waterMask               2D array of bool    in size of (l, w   ).           (optional)
         /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)

@@ -116,7 +116,7 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                         azimuthCoord
                     for los.rdr:
                         incidenceAngle
-                        headingAngle
+                        azimuthAngle
                     for GIAnT:
                         giantTimeseries
                         giantTimeseries-20161020
@@ -435,7 +435,7 @@ def get_dataset_list(fname, datasetName=None):
     elif ext in ['.trans', '.utm_to_rdc']:
         datasetList = ['rangeCoord', 'azimuthCoord']
     elif fbase.startswith('los'):
-        datasetList = ['incidenceAngle', 'headingAngle']
+        datasetList = ['incidenceAngle', 'azimuthAngle']
     else:
         datasetList = [os.path.splitext(fbase)[0]]
     return datasetList
@@ -499,7 +499,7 @@ def get_2d_dataset_list(fname):
         if file_ext.lower() in ['.trans', '.utm_to_rdc']:
             datasetList = ['rangeCoord', 'azimuthCoord']
         elif file_base.startswith('los'):
-            datasetList = ['incidenceAngle', 'headingAngle']
+            datasetList = ['incidenceAngle', 'azimuthAngle']
         else:
             datasetList = ['']
     return datasetList

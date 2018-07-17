@@ -21,7 +21,8 @@ from matplotlib.colors import LightSource
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import cm, pyproj
 
-from pysar.objects import (geometryDatasetNames,
+from pysar.objects import (gps,
+                           geometryDatasetNames,
                            geometry,
                            ifgramDatasetNames,
                            ifgramStack,
@@ -58,6 +59,10 @@ EXAMPLE = """example:
   view.py INPUTS/ifgramStack.h5 20171010_20171115      #Display all data related with one interferometric pair
 
   view.py GEOCODE/geo_velocity.h5  --pts-file pts.yx   #Plot points with lat/lon in file
+
+  # InSAR v.s. GPS
+  view.py geo_velocity_masked.h5 velocity --show-gps
+  view.py geo_velocity_masked.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
 
   # Save and Output:
   view.py velocity.h5 --save
@@ -339,10 +344,10 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
 
     # 1.7 DEM 
     if inps.dem_file:
-        dem = pp.read_dem(inps.dem_file,
-                          pix_box=inps.pix_box,
-                          geo_box=inps.geo_box,
-                          print_msg=print_msg)
+        dem, dem_metadata, dem_pix_box = pp.read_dem(inps.dem_file,
+                                                     pix_box=inps.pix_box,
+                                                     geo_box=inps.geo_box,
+                                                     print_msg=print_msg)
 
     if print_msg:
         print('display data in transparency: '+str(inps.transparency))
@@ -391,8 +396,18 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
                                        print_msg=print_msg)
 
         # Plot Data
+        coord = ut.coordinate(metadata)
         if print_msg:
             print('plotting Data ...')
+        if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
+            ref_site_lalo = gps.gps(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
+            y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
+            y -= inps.pix_box[1]
+            x -= inps.pix_box[0]
+            data -= data[y, x]
+            if print_msg:
+                print('referencing to GPS station: {} at {}'.format(inps.ref_gps_site,
+                                                                    ref_site_lalo))
         im = m.imshow(data, cmap=inps.colormap, origin='upper',
                       vmin=inps.vlim[0], vmax=inps.vlim[1],
                       alpha=inps.transparency, interpolation='nearest',
@@ -402,12 +417,8 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
         if inps.disp_scalebar:
             if print_msg:
                 print('plot scale bar')
-            if not inps.scalebar:
-                inps.scalebar = [999, 999, 999]
-            m.draw_scale_bar(lat_c=inps.scalebar[1],
-                             lon_c=inps.scalebar[2],
-                             distance=inps.scalebar[0],
-                             ax=ax, font_size=inps.font_size,
+            m.draw_scale_bar(loc=inps.scalebar, ax=ax,
+                             font_size=inps.font_size,
                              color=inps.font_color)
 
         # Lat Lon labels
@@ -440,17 +451,15 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
 
         # Show UNR GPS stations
         if inps.disp_gps:
-            from pysar.objects import gps
-            SNWE = (inps.geo_box[3], inps.geo_box[1], inps.geo_box[0], inps.geo_box[2])
-            site_names, site_lats, site_lons = gps.search_gps(SNWE)
-            ax.scatter(site_lons, site_lats, s=7**2, color='w', edgecolors='k')
-            for i in range(len(site_names)):
-                ax.annotate(site_names[i], xy=(site_lons[i], site_lats[i]), fontsize=inps.font_size)
+            SNWE = (inps.geo_box[3], inps.geo_box[1],
+                    inps.geo_box[0], inps.geo_box[2])
+            ax = pp.plot_gps(ax, SNWE, inps, metadata, print_msg=print_msg)
             if print_msg:
                 print('displaying GPS stations')
 
         # Status bar
-        coord = ut.coordinate(metadata)
+        if inps.dem_file:
+            coord_dem = ut.coordinate(dem_metadata)
         def format_coord(x, y):
             col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
             row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
@@ -462,8 +471,8 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
                 except:
                     msg += ', value=[]'
                 if inps.dem_file:
-                    dem_col = coord.lalo2yx(x, coord_type='lon') - inps.dem_pix_box[0]
-                    dem_row = coord.lalo2yx(y, coord_type='lat') - inps.dem_pix_box[1]
+                    dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
+                    dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
                     h = dem[dem_row, dem_col]
                     msg += ', elev={:.1f}'.format(h)
                 msg += ', x={:.1f}, y={:.1f}'.format(col+inps.pix_box[0],

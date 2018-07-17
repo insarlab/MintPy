@@ -167,6 +167,11 @@ def read_init_info(inps):
         else:
             inps.init_idx = 3
 
+    # Display Unit
+    (inps.disp_unit,
+     inps.unit_fac) = pp.scale_data2disp_unit(metadata=atr,
+                                              disp_unit=inps.disp_unit)[1:3]
+
     # Read Error List
     inps.error_ts = None
     inps.ex_error_ts = None
@@ -351,20 +356,18 @@ def plot_timeseries_errorbar(ax, dis_ts, inps):
 
         # Plot excluded dates
         ex_d_ts = dis_ts[inps.ex_flag == 0]
-        (_, caps, _) = ax.errorbar(inps.ex_dates, ex_d_ts, yerr=inps.ex_error_ts,
-                                   fmt='-o', color='gray', ms=inps.marker_size,
-                                   lw=0, alpha=1, mfc='gray', elinewidth=inps.edge_width,
-                                   ecolor='black', capsize=inps.marker_size*0.5)
-        for cap in caps:
-            cap.set_markeredgewidth(inps.edge_width)
+        ax.errorbar(inps.ex_dates, ex_d_ts, yerr=inps.ex_error_ts,
+                    fmt='-o', color='gray', ms=inps.marker_size,
+                    lw=0, alpha=1, mfc='gray',
+                    elinewidth=inps.edge_width, ecolor='black',
+                    capsize=inps.marker_size*0.5, mew=inps.edge_width)
 
     # Plot kept dates
-    (_, caps, _) = ax.errorbar(dates, d_ts, yerr=inps.error_ts,
-                               fmt='-o', ms=inps.marker_size,
-                               lw=0, alpha=1, elinewidth=inps.edge_width,
-                               ecolor='black', capsize=inps.marker_size*0.5)
-    for cap in caps:
-        cap.set_markeredgewidth(inps.edge_width)
+    ax.errorbar(dates, d_ts, yerr=inps.error_ts,
+                fmt='-o', ms=inps.marker_size,
+                lw=0, alpha=1,
+                elinewidth=inps.edge_width, ecolor='black',
+                capsize=inps.marker_size*0.5, mew=inps.edge_width)
     return ax
 
 

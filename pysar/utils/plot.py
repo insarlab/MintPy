@@ -12,16 +12,13 @@ import warnings
 import datetime
 import h5py
 import numpy as np
-from scipy import ndimage
 
 import matplotlib as mpl
 from matplotlib import (dates as mdates,
                         lines as mlines,
                         pyplot as plt,
                         ticker)
-from matplotlib.colors import LinearSegmentedColormap, LightSource
-from matplotlib.offsetbox import AnchoredText
-from matplotlib.patheffects import withStroke
+from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
@@ -56,25 +53,19 @@ class BasemapExt(Basemap):
     Extend Basemap class to add drawscale(), because Basemap.drawmapscale() do not support 'cyl' projection.
     """
 
-    def draw_scale_bar(self, lat_c, lon_c, distance, ax=None, font_size=12, color='k'):
+    def draw_scale_bar(self, loc=[0.2, 0.2, 0.1], ax=None, font_size=12, color='k'):
         """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
         ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
-        Parameters: lat_c/lon_c : float, longitude and latitude of scale bar center, in degree
-                    distance    : float, distance of scale bar, in m
-        Example:    m.drawscale(33.06, 131.18, 2000)
+        Parameters: loc : list of 3 float, distance, lat/lon of scale bar center in ratio of width, relative coord
+        Example:    m.drawscale()
         """
         gc = pyproj.Geod(a=self.rmajor, b=self.rminor)
 
-        # scalebar default value defined by 999
-        # length: 20% of scene width
-        if distance == 999.:
-            scene_width = gc.inv(self.lonmin, self.latmin, self.lonmax, self.latmin)[2]
-            distance = ut.round_to_1(scene_width * 0.2)
-        # position: Lower Left Corner
-        if lat_c == 999.:
-            lat_c = self.latmin + 0.1 * (self.latmax - self.latmin)
-        if lon_c == 999.:
-            lon_c = self.lonmin + 0.2 * (self.lonmax - self.lonmin)
+        # length in meter
+        scene_width = gc.inv(self.lonmin, self.latmin, self.lonmax, self.latmin)[2]
+        distance = ut.round_to_1(scene_width * loc[0])
+        lon_c = self.lonmin + loc[1] * (self.lonmax - self.lonmin)
+        lat_c = self.latmin + loc[2] * (self.latmax - self.latmin)
 
         # plot scale bar
         if distance > 1000.0:
@@ -301,6 +292,11 @@ def add_gps_argument(parser):
     gps = parser.add_argument_group('GPS', 'GPS data to display')
     gps.add_argument('--show-gps', dest='disp_gps', action='store_true',
                      help='Show UNR GPS location within the coverage.')
+    gps.add_argument('--gps-label', dest='disp_gps_label', action='store_true',
+                     help='Show GPS site name')
+    gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'up'},
+                     help='Plot GPS in color indicating deformation velocity direction')
+    gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
     return parser
 
 
@@ -330,14 +326,21 @@ def add_map_argument(parser):
                            type=float, help='Lat/lon step for lalo-label option.')
     map_group.add_argument('--lalo-loc', dest='lalo_label_loc', type=int, nargs=4, default=[1, 0, 0, 1],
                            help='Draw lalo label in [left, right, top, bottom], default is [1,0,0,1]')
-    map_group.add_argument('--scalebar', nargs=3, metavar=('DISTANCE', 'LAT_C', 'LON_C'), type=float,
-                           help='set scale bar with DISTANCE in meters centered at [LAT_C, LON_C]\n' +
-                                'set to 999 to use automatic value, e.g.\n' +
-                                '--scalebar 2000 33.06 131.18\n' +
-                                '--scalebar 500  999   999\n' +
-                                '--scalebar 999  33.06 131.18')
+
+    map_group.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
+                           default=[0.2, 0.2, 0.1],
+                           help='scale bar distance and location in ratio:\n' +
+                                '\tdistance in ratio of total width\n' + 
+                                '\tlocation in X/Y in ratio with respect to the lower left corner\n' + 
+                                '--scalebar 0.2 0.2 0.1  #for lower left  corner\n' + 
+                                '--scalebar 0.2 0.2 0.8  #for upper left  corner\n' + 
+                                '--scalebar 0.2 0.8 0.1  #for lower right corner\n' + 
+                                '--scalebar 0.2 0.8 0.8  #for upper right corner\n')
     map_group.add_argument('--noscalebar', dest='disp_scalebar',
                            action='store_false', help='do not display scale bar.')
+    map_group.add_argument('--scalebar-loc', dest='scalebar_loc', type=str,
+                           choices={'lower left', 'upper left', 'lower right', 'upper right'},
+                           help='location of scalebar to be plotted.')
     return parser
 
 
@@ -430,6 +433,8 @@ def discrete_cmap(N, base_cmap=None):
 
 
 def add_inner_title(ax, title, loc, size=None, **kwargs):
+    from matplotlib.offsetbox import AnchoredText
+    from matplotlib.patheffects import withStroke
     if size is None:
         size = dict(size=plt.rcParams['legend.fontsize'])
     at = AnchoredText(title, loc=loc, prop=size,
@@ -1053,7 +1058,7 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     dem, dem_metadata = readfile.read(dem_file,
                                       datasetName='height',
                                       box=dem_pix_box)
-    return dem
+    return dem, dem_metadata, dem_pix_box
 
 
 def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
@@ -1081,6 +1086,7 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
     dem_contour_sequence = None
 
     if inps_dict['disp_dem_shade']:
+        from matplotlib.colors import LightSource
         ls = LightSource(azdeg=315, altdeg=45)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -1091,6 +1097,7 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
             print('show shaded relief DEM')
 
     if inps_dict['disp_dem_contour']:
+        from scipy import ndimage
         dem_contour = ndimage.gaussian_filter(dem,
                                               sigma=inps_dict['dem_contour_smooth'],
                                               order=0)
@@ -1148,6 +1155,60 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
         elif isinstance(ax, plt.Axes):
             ax.contour(dem_contour, dem_contour_seq,
                        origin='lower', colors='black', alpha=0.5)
+    return ax
+
+
+def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
+    marker_size = 7
+    vmin, vmax = inps.vlim
+    cmap = plt.get_cmap(inps.colormap)
+
+    atr = dict()
+    atr['UNIT'] = 'm'
+    unit_fac = scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[2]
+
+    try:
+        start_date, end_date = metadata['START_DATE'], metadata['END_DATE']
+    except:
+        start_date, end_date = None, None
+
+    from pysar.objects import gps
+    site_names, site_lats, site_lons = gps.search_gps(SNWE,
+                                                      start_date=start_date,
+                                                      end_date=end_date)
+
+    k = metadata['FILE_TYPE']
+    if inps.gps_component and k not in ['velocity']:
+        inps.gps_component = None
+        print('--gps-comp is not implemented for {} file yet, skip it and continue'.format(k))
+
+    if inps.gps_component:
+        if print_msg:
+            print(('calculating GPS velocity with reference to {}'
+                   ' in {} ...').format(inps.ref_gps_site, inps.gps_component))
+            print('start date: {}\nend   date: {}'.format(start_date, end_date))
+        for i in range(len(site_names)):
+            vel = gps.get_gps_los_velocity(site_names[i],
+                                           metadata,
+                                           start_date=start_date,
+                                           end_date=end_date,
+                                           ref_site=inps.ref_gps_site,
+                                           gps_comp=inps.gps_component) * unit_fac
+            if not vel:
+                color = 'none'
+            else:
+                cm_idx = (vel - vmin) / (vmax - vmin)
+                color = cmap(cm_idx)
+            ax.scatter(site_lons[i], site_lats[i], color=color,
+                       s=marker_size**2, edgecolors='k')
+    else:
+        ax.scatter(site_lons, site_lats, s=marker_size**2, color='w', edgecolors='k')
+
+    # plot GPS label
+    if inps.disp_gps_label:
+        for i in range(len(site_names)):
+            ax.annotate(site_names[i], xy=(site_lons[i], site_lats[i]),
+                        fontsize=inps.font_size)
     return ax
 
 
@@ -1306,6 +1367,9 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         disp_unit : str, display unit
     Default data file units in PySAR are:  m, m/yr, radian, 1
     """
+    if not metadata:
+        metadata['UNIT'] = 'm'
+
     # Initial
     scale = 1.0
     data_unit = metadata['UNIT'].lower().split('/')

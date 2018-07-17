@@ -225,6 +225,9 @@ def estimate_linear_velocity(inps):
 
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
+    atr['START_DATE'] = inps.dateList[0]
+    atr['END_DATE'] = inps.dateList[-1]
+    atr['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
 
     dsDict = dict()
     dsDict['velocity'] = V

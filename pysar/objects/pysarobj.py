@@ -49,7 +49,7 @@ geometryDatasetNames = ['height',
                         'rangeCoord',
                         'azimuthCoord',
                         'incidenceAngle',
-                        'headingAngle',
+                        'azimuthAngle',
                         'slantRangeDistance',
                         'shadowMask',
                         'waterMask',
@@ -79,7 +79,7 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'rangeCoord'         :'1',
                    'azimuthCoord'       :'1',
                    'incidenceAngle'     :'degree',
-                   'headingAngle'       :'degree',
+                   'azimuthAngle'       :'degree',
                    'slantRangeDistance' :'m',
                    'shadowMask'         :'1',
                    'waterMask'          :'1',
@@ -171,6 +171,8 @@ class timeseries:
         if 'REF_DATE' not in self.metadata.keys():
             self.metadata['REF_DATE'] = dateList[0]
         self.refIndex = dateList.index(self.metadata['REF_DATE'])
+        self.metadata['START_DATE'] = dateList[0]
+        self.metadata['END_DATE'] = dateList[-1]
         return self.metadata
 
     def get_size(self):
@@ -379,7 +381,7 @@ Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for
 /longitude (rangeCoord)  2D array of float32 in size of (l, w   ) in degree.
 /incidenceAngle          2D array of float32 in size of (l, w   ) in degree.
 /slantRangeDistance      2D array of float32 in size of (l, w   ) in meter.
-/headingAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
+/azimuthAngle            2D array of float32 in size of (l, w   ) in degree. (optional)
 /shadowMask              2D array of bool    in size of (l, w   ).           (optional)
 /waterMask               2D array of bool    in size of (l, w   ).           (optional)
 /bperp                   3D array of float32 in size of (n, l, w) in meter   (optional)
@@ -566,11 +568,15 @@ class ifgramStack:
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
             self.metadata = dict(f.attrs)
+            dates = f['date'][:].flatten()
         for key, value in self.metadata.items():
             try:
                 self.metadata[key] = value.decode('utf8')
             except:
                 self.metadata[key] = value
+        dateList = sorted([i.decode('utf8') for i in dates])
+        self.metadata['START_DATE'] = dateList[0]
+        self.metadata['END_DATE'] = dateList[-1]
         return self.metadata
 
     def get_size(self, dropIfgram=False):
@@ -886,7 +892,7 @@ Attributes                    metadata in dict.
         /height               2D array of float32 in size of (   l, w) in meter.
         /incidenceAngle       2D array of float32 in size of (   l, w) in degree.
         /slantRangeDistance   2D array of float32 in size of (   l, w) in meter.
-        /headingAngle         2D array of float32 in size of (   l, w) in degree. (optional)
+        /azimuthAngle         2D array of float32 in size of (   l, w) in degree. (optional)
         /shadowMask           2D array of bool    in size of (   l, w).           (optional)
         /waterMask            2D array of bool    in size of (   l, w).           (optional)
         /bperp                3D array of float32 in size of (n, l, w) in meter.  (optional)
@@ -917,7 +923,7 @@ class HDFEOS:
                                      'height'             : 'geometry',
                                      'incidenceAngle'     : 'geometry',
                                      'slantRangeDistance' : 'geometry',
-                                     'headingAngle'       : 'geometry',
+                                     'azimuthAngle'       : 'geometry',
                                      'shadowMask'         : 'geometry',
                                      'waterMask'          : 'geometry',
                                      'bperp'              : 'geometry'

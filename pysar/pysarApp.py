@@ -45,7 +45,7 @@ pysar.load.demFile        = auto  #[path2hgt_file]
 pysar.load.lookupYFile    = auto  #[path2lat_file]]
 pysar.load.lookupXFile    = auto  #[path2lon_file]
 pysar.load.incAngleFile   = auto  #[path2los_file]
-pysar.load.headAngleFile  = auto  #[path2los_file]
+pysar.load.azAngleFile    = auto  #[path2los_file]
 pysar.load.shadowMaskFile = auto  #[path2shadow_file]
 pysar.load.bperpFile      = auto  #[path2bperp_file]
 
