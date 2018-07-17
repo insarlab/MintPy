@@ -65,7 +65,7 @@ Source the file for the first time. It will be sourced automatically next time w
    
 #### 2. Install Python dependecies
 PySAR relies on the following Python modules. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html).
-- [Python3.6](https://www.anaconda.com/download/)
+- [Python3.5](https://www.anaconda.com/download/) or newer
 - Numpy
 - Scipy
 - h5py
