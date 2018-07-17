@@ -32,7 +32,7 @@ fi
 
 ## Plot Key files
 opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm '
-#opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm -m -2 -M 2'
+#opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm --vlim -2 2'
 if [ $plot_key_files -eq 1 ]; then
     view.py --nodisplay velocity.h5           $opt               | tee -a $log_file
     view.py --nodisplay temporalCoherence.h5  -c gray --vlim 0 1 | tee -a $log_file
