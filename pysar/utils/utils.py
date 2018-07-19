@@ -114,11 +114,8 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
     sub_x = [subset_box[0], subset_box[2]]
     sub_y = [subset_box[1], subset_box[3]]
 
-    atr = dict()
-    for key, value in iter(atr_dict.items()):
-        atr[key] = str(value)
-
     # Update attribute variable
+    atr = dict(atr_dict)
     atr['LENGTH'] = str(sub_y[1]-sub_y[0])
     atr['WIDTH'] = str(sub_x[1]-sub_x[0])
     atr['YMAX'] = str(sub_y[1]-sub_y[0] - 1)
@@ -129,38 +126,24 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
     # Subset atribute
     if print_msg:
         print('update/add SUBSET_YMIN/YMAX/XMIN/XMAX')
-    try:
-        subset_y0_ori = int(atr['SUBSET_YMIN'])
-        atr['SUBSET_YMIN'] = str(sub_y[0] + subset_y0_ori)
-        atr['SUBSET_YMAX'] = str(sub_y[1] + subset_y0_ori)
-    except:
-        atr['SUBSET_YMIN'] = str(sub_y[0])
-        atr['SUBSET_YMAX'] = str(sub_y[1])
-    try:
-        subset_x0_ori = int(atr['SUBSET_XMIN'])
-        atr['SUBSET_XMIN'] = str(sub_x[0] + subset_x0_ori)
-        atr['SUBSET_XMAX'] = str(sub_x[1] + subset_x0_ori)
-    except:
-        atr['SUBSET_XMIN'] = str(sub_x[0])
-        atr['SUBSET_XMAX'] = str(sub_x[1])
+    atr['SUBSET_YMAX'] = str(sub_y[1] + int(atr_dict.get('SUBSET_YMIN', '0')))
+    atr['SUBSET_YMIN'] = str(sub_y[0] + int(atr_dict.get('SUBSET_YMIN', '0')))
+    atr['SUBSET_XMAX'] = str(sub_x[1] + int(atr_dict.get('SUBSET_XMIN', '0')))
+    atr['SUBSET_XMIN'] = str(sub_x[0] + int(atr_dict.get('SUBSET_XMIN', '0')))
 
     # Geo coord
-    try:
+    if 'Y_FIRST' in atr.keys():
         atr['Y_FIRST'] = str(float(atr['Y_FIRST']) + sub_y[0]*float(atr['Y_STEP']))
         atr['X_FIRST'] = str(float(atr['X_FIRST']) + sub_x[0]*float(atr['X_STEP']))
         if print_msg:
             print('update Y/X_FIRST')
-    except:
-        pass
 
     # Reference in space
-    try:
+    if 'REF_Y' in atr.keys():
         atr['REF_Y'] = str(int(atr['REF_Y']) - sub_y[0])
         atr['REF_X'] = str(int(atr['REF_X']) - sub_x[0])
         if print_msg:
             print('update REF_Y/X')
-    except:
-        pass
 
     # Starting Range for file in radar coord
     if not 'Y_FIRST' in atr_dict.keys():

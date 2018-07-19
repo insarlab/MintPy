@@ -233,6 +233,10 @@ def add_dem_argument(parser):
     dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,
                      help='Background topography contour step in meters. \n'
                           'Default is 200 meters.')
+    dem.add_argument('--shade-az', dest='shade_azdeg', type=float, default=315.,
+                     help='The azimuth (0-360, degrees clockwise from North) of the light source')
+    dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45.,
+                     help='The altitude (0-90, degrees up from horizontal) of the light source.')
     return parser
 
 
@@ -563,35 +567,43 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
     return row_num, col_num
 
 
-def check_colormap_input(metadata, cm_name=None, datasetName=None, print_msg=True):
+def check_colormap_input(metadata, cmap_name=None, datasetName=None, print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporal_coherence', 'connectComponent',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
-    if not cm_name:
+    if not cmap_name:
         if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'], str(datasetName).split('-')[0]]):
-            cm_name = 'gray'
+            cmap_name = 'gray'
         else:
-            cm_name = 'jet'
+            cmap_name = 'jet'
     if print_msg:
-        print('colormap: '+cm_name)
+        print('colormap: '+cmap_name)
 
-    # get colormap object
-    plt_cm_list = sorted(m for m in plt.cm.datad)
-    gmt_cm_list = get_gmt_colormap(colormap_name=None)
+    colormap = get_colormap(cmap_name)
 
-    if cm_name in plt_cm_list+gmt_cm_list:
-        colormap = get_colormap(cm_name)
-
-    elif cm_name[0:-1] in plt_cm_list+gmt_cm_list:
-        num = int(cm_name[-1])
-        cm_name = cm_name[0:-1]
-        colormap = repeat_colormap(cm_name, num)
-    else:
-        raise ValueError('un-recognized input colormap name: '+cm_name)
     return colormap
 
 
-def get_colormap(colormap_name):
-    if colormap_name == 'hsv':
+def get_colormap(cmap_name):
+    # get colormap object
+    plt_cm_list = sorted(m for m in plt.cm.datad)
+    gmt_cm_list = get_gmt_colormap(cmap_name=None)
+
+    if cmap_name in plt_cm_list+gmt_cm_list:
+        colormap = single_colormap(cmap_name)
+
+    elif cmap_name[0:-1] in plt_cm_list+gmt_cm_list:
+        num = int(cmap_name[-1])
+        colormap = repeat_colormap(cmap_name[0:-1], num)
+
+    else:
+        msg = 'un-recognized input colormap name: {}\n'.format(cmap_name)
+        msg += 'supported colormap:\n{}'.format(plt_cm_list+gmt_cm_list)
+        raise ValueError(msg)
+    return colormap
+
+
+def single_colormap(cmap_name):
+    if cmap_name == 'hsv':
         # Modified hsv colormap by H. Fattahi
         cdict1 = {'red':   ((0.0, 0.0, 0.0),
                             (0.5, 0.0, 0.0),
@@ -613,32 +625,32 @@ def get_colormap(colormap_name):
         colormap = LinearSegmentedColormap('hsv', cdict1)
     else:
         try:
-            colormap = plt.get_cmap(colormap_name)
+            colormap = plt.get_cmap(cmap_name)
         except:
-            colormap = get_gmt_colormap(colormap_name)
+            colormap = get_gmt_colormap(cmap_name)
     return colormap
 
 
-def repeat_colormap(cm_name='jet', num:int=3):
+def repeat_colormap(cmap_name='jet', num:int=3):
     """Generate repeated colormap from an supported colormap name
-    Parameters: cm_name : string, colormap name
+    Parameters: cmap_name : string, colormap name
                 num : int, repeat number
     """
-    cmap0 = get_colormap(cm_name)
+    cmap0 = get_colormap(cmap_name)
     colors = np.tile(cmap0(np.linspace(0., 1., 100)), (num,1))
-    cm_name_out = cm_name+str(num)
-    cmap = LinearSegmentedColormap.from_list(cm_name_out, colors)
+    cmap_name_out = cmap_name+str(num)
+    cmap = LinearSegmentedColormap.from_list(cmap_name_out, colors, N=100*num)
     return cmap
 
 
-def get_gmt_colormap(colormap_name=None, cpt_path=None):
+def get_gmt_colormap(cmap_name=None, cpt_path=None):
     """Load GMT .cpt colormap file.
     Modified from Scipy Cookbook originally written by James Boyle.
     Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_Loading_a_colormap_dynamically.html
 
     Download .cpt file from http://soliton.vm.bytemark.co.uk/pub/cpt-city/
 
-    Parameters: colormap_name : string, colormap name, e.g. temperature
+    Parameters: cmap_name : string, colormap name, e.g. temperature
                 cpt_path : directory of .cpt files
                     '/opt/local/share/gmt/cpt/' for macOS user with GMT installed from MacPorts
     Returns:    colormap : matplotlib.colors.LinearSegmentedColormap object
@@ -650,7 +662,7 @@ def get_gmt_colormap(colormap_name=None, cpt_path=None):
     if not cpt_path:
         cpt_path = os.path.join(os.path.dirname(__file__), '../../docs/cpt')
 
-    if not colormap_name:
+    if not cmap_name:
         cm_list = sorted(glob.glob(os.path.join(cpt_path, '*.cpt')))
         cm_list = [os.path.splitext(os.path.basename(i))[0] for i in cm_list]
         cm_list_r = ['{}_r'.format(i) for i in cm_list]
@@ -658,12 +670,12 @@ def get_gmt_colormap(colormap_name=None, cpt_path=None):
 
     # support _r for reversed colormap
     reverse_colormap = False
-    if colormap_name.endswith('_r'):
+    if cmap_name.endswith('_r'):
         reverse_colormap = True
-        colormap_name = colormap_name[0:-2]
+        cmap_name = cmap_name[0:-2]
 
     # open cpt file
-    fpath = os.path.join(cpt_path, "{}.cpt".format(colormap_name))
+    fpath = os.path.join(cpt_path, "{}.cpt".format(cmap_name))
     try:
         f = open(fpath)
     except FileNotFoundError:
@@ -723,7 +735,7 @@ def get_gmt_colormap(colormap_name=None, cpt_path=None):
         blue.append((xNorm[i], b[i], b[i]))
     colorDict = {"red":tuple(red), "green":tuple(green), "blue":tuple(blue)}
 
-    colormap = LinearSegmentedColormap(colormap_name, colorDict, N=256)
+    colormap = LinearSegmentedColormap(cmap_name, colorDict, N=256)
     if reverse_colormap:
         colormap = colormap.reversed()
     return colormap
@@ -869,6 +881,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
     if not 'coh_thres'   in plot_dict.keys():  plot_dict['coh_thres']  = None
     if not 'disp_drop'   in plot_dict.keys():  plot_dict['disp_drop']  = True
     if not 'every_year'  in plot_dict.keys():  plot_dict['every_year'] = 1
+    if not 'split_cmap'  in plot_dict.keys():  plot_dict['split_cmap'] = True
 
     if not 'number'      in plot_dict.keys():  plot_dict['number']     = None
 
@@ -932,8 +945,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             print(('display range: '+str([disp_min, disp_max])))
             print(('data    range: '+str([data_min, data_max])))
 
-        splitColormap = True
-        if splitColormap:
+        if plot_dict['split_cmap']:
             # Use lower/upper part of colormap to emphasis dropped interferograms
             if not coh_thres:
                 # Find proper cut percentage so that all keep pairs are blue and drop pairs are red
@@ -949,14 +961,14 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
                     print('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max))
             c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
             coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
-            cmap = plt.get_cmap(plot_dict['colormap'])
+            cmap = get_colormap(plot_dict['colormap'])
             colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
             colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
             cmap = LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
             if print_msg:
                 print(('color jump at '+str(coh_thres)))
         else:
-            cmap = plt.get_cmap(plot_dict['colormap'])
+            cmap = get_colormap(plot_dict['colormap'])
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
@@ -1228,8 +1240,8 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
         from matplotlib.colors import LightSource
         ls = LightSource(azdeg=inps_dict['shade_azdeg'],
                          altdeg=inps_dict['shade_altdeg'])
-        dem_shade = ls.shade(dem, vert_exag=1.0, cmap=get_colormap('gray'),
-                             vmin=-5000, vmax=np.nanmax(dem)+2000)
+        dem_shade = ls.shade(dem, vert_exag=0.5, cmap=get_colormap('gray'),
+                             vmin=-7000, vmax=np.nanmax(dem)+1000)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
             print('show shaded relief DEM')
@@ -1300,7 +1312,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     from pysar.objects.gps import search_gps, gps
     marker_size = 7
     vmin, vmax = inps.vlim
-    cmap = plt.get_cmap(inps.colormap)
+    cmap = get_colormap(inps.colormap)
 
     atr = dict()
     atr['UNIT'] = 'm'

@@ -106,7 +106,8 @@ def create_parser():
                      help='Do not display figure title.')
     fig.add_argument('--number', dest='number', type=str,
                      help='number mark to be plot at the corner of figure.')
-
+    fig.add_argument('--nosplit-cmap', dest='split_cmap', action='store_false',
+                     help='do not split colormap for coherence color')
 
 
     fig.add_argument('--list', dest='save_list', action='store_true',

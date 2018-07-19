@@ -520,7 +520,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
             elif 'REF_Y' in metadata.keys():
                 ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
 
-            if ref_y and ref_x:            
+            if ref_y and ref_x:
                 ax.plot(ref_x - inps.pix_box[0],
                         ref_y - inps.pix_box[1],
                         inps.ref_marker, ms=inps.ref_size)
@@ -1139,6 +1139,7 @@ def main(iargs=None):
                                   datasetName=inps.ref_date,
                                   box=inps.pix_box,
                                   print_msg=False)[0]
+
         if inps.zero_mask:
             print('masking pixels with zero value')
             data = np.ma.masked_where(data == 0., data)
