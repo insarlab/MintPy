@@ -139,7 +139,7 @@ def main(iargs=None):
     inps.outfile = diff_file(inps.file1, inps.file2, inps.outfile, force=inps.force)
 
     m, s = divmod(time.time()-start_time, 60)
-    print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
+    #print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
     return inps.outfile
 
 

@@ -64,12 +64,6 @@ def multilook_matrix(matrix, lks_y, lks_x):
     matrix_Cmli = np.zeros((rows,    cols_mli))
     matrix_mli = np.zeros((rows_mli, cols_mli))
 
-    #for c in range(lks_x):   matrix_Cmli = matrix_Cmli + matrix[:,range(c,cols_mli*lks_x,lks_x)]
-    #for r in range(lks_y):   matrix_mli  = matrix_mli  + matrix_Cmli[  range(r,rows_mli*lks_y,lks_y),:]
-    #for c in range(int(cols_mli)):  matrix_Cmli[:,c]=np.nansum(matrix[:,(c)*lks_x:(c+1)*lks_x],1)
-    #for r in range(int(rows_mli)):  matrix_mli[r,:] =np.nansum(matrix_Cmli[(r)*lks_y:(r+1)*lks_y,:],0)
-    # matrix_mli=matrix_mli/(lks_y*lks_x)
-
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         for c in range(cols_mli):

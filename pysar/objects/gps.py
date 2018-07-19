@@ -14,6 +14,7 @@ import numpy as np
 from pyproj import Geod
 from urllib.request import urlretrieve
 from pysar.utils import ptime, readfile, utils as ut
+from pysar.timeseries2velocity import design_matrix
 
 
 unr_site_list_file = 'http://geodesy.unr.edu/NGLStationPages/DataHoldings.txt'
@@ -68,82 +69,6 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, print_
         idx *= t_start <= t1
 
     return site_names[idx], site_lats[idx], site_lons[idx]
-
-
-def read_gps_los_displacement(site, metadata, start_date=None, end_date=None,
-                              gps_comp='enu2los', ref_site=None, gps_dir='./GPS'):
-    """Read GPS displacement in LOS direction
-    Parameters: site : string, GPS station ID, e.g. GV05
-                metadata : dict, metadata of InSAR file for LOS geometry
-                start_date : string in YYYYMMDD format
-                end_date   : string in YYYYMMDD format
-                gps_comp   : string, GPS components used to convert to LOS direction
-                ref_site   : string, reference GPS site
-                gps_dir    : string, path of GPS folder
-                geom_flie : string, path of geometry files, such as geo_geometryRadar.h5
-    Returns:    dates : 1D np.array of datetime.datetime object
-                dis   : 1D np.array of displacement in meters
-                std   : 1D np.array of displacement uncertainty in meters
-                site_lalo : tuple of 2 float, lat/lon of GPS site
-                ref_site_lalo : tuple of 2 float, lat/lon of reference GPS site
-    """
-    # get LOS geometry
-    inc_angle = ut.incidence_angle(metadata, dimension=0, print_msg=False)
-    head_angle = float(metadata['HEADING_DEG'])
-    # for old reading of los.rdr band2 data into headingAngle directly
-    if (head_angle + 180.) > 45.:
-        head_angle = -1 * (180 + head_angle + 90)
-        head_angle -= np.round(head_angle / 360.) * 360.
-
-    # read GPS object
-    gps_obj = gps(site=site, data_dir=gps_dir)
-    gps_obj.open(print_msg=False)
-    dates = gps_obj.read_displacement(start_date=start_date, end_date=end_date, print_msg=False)[0]
-    dis, std = gps_obj.displacement_enu2los(inc_angle=inc_angle,
-                                            head_angle=head_angle,
-                                            gps_comp=gps_comp)
-    site_lalo = (gps_obj.site_lat,
-                 gps_obj.site_lon)
-
-    # get LOS displacement relative to another GPS site
-    if ref_site:
-        ref_gps_obj = gps(site=ref_site, data_dir=gps_dir)
-        ref_gps_obj.open(print_msg=False)
-        ref_gps_obj.read_displacement(start_date=start_date, end_date=end_date, print_msg=False)[0]
-        ref_gps_obj.displacement_enu2los(inc_angle=inc_angle, head_angle=head_angle, gps_comp=gps_comp)
-
-        # get relative LOS displacement on common dates
-        dates = np.array(sorted(list(set(gps_obj.dates) & set(ref_gps_obj.dates))))
-        dis = np.zeros(dates.shape, np.float32)
-        std = np.zeros(dates.shape, np.float32)
-        for i in range(len(dates)):
-            idx1 = np.where(gps_obj.dates == dates[i])[0][0]
-            idx2 = np.where(ref_gps_obj.dates == dates[i])[0][0]
-            dis[i] = gps_obj.dis_los[idx1] - ref_gps_obj.dis_los[idx2]
-            std[i] = (gps_obj.std_los[idx1]**2 + ref_gps_obj.std_los[idx2]**2)**0.5
-
-        ref_site_lalo = (ref_gps_obj.site_lat,
-                         ref_gps_obj.site_lon)
-    else:
-        ref_site_lalo = None
-
-    return dates, dis, std, site_lalo, ref_site_lalo
-
-
-def get_gps_los_velocity(site, metadata, start_date, end_date,
-                         gps_dir='./GPS', ref_site=None, gps_comp='enu2los'):
-    from pysar.timeseries2velocity import design_matrix
-    dates, dis = read_gps_los_displacement(site, metadata,
-                                           start_date=start_date,
-                                           end_date=end_date,
-                                           gps_dir=gps_dir,
-                                           ref_site=ref_site,
-                                           gps_comp=gps_comp)[0:2]
-    year_list = [i.year + (i.timetuple().tm_yday - 1)/365.25 for i in dates]
-    A = design_matrix(year_list)
-    A_inv = np.linalg.pinv(A)
-    vel = np.dot(A_inv, dis)[0]
-    return vel
 
 
 class gps:
@@ -268,6 +193,8 @@ class gps:
                 self.dis_e, self.dis_n, self.dis_u,
                 self.std_e, self.std_n, self.std_u)
 
+
+    #####################################  Utility Functions ###################################
     def displacement_enu2los(self, inc_angle, head_angle, gps_comp='enu2los'):
         """Convert displacement in ENU to LOS direction
         Parameters: inc_angle  : float, local incidence angle in degree
@@ -277,6 +204,7 @@ class gps:
         Returns:    dis_los : 1D np.array for displacement in LOS direction
                     std_los : 1D np.array for displacement standard deviation in LOS direction
         """
+        # get LOS unit vector
         inc_angle *= np.pi/180.
         head_angle *= np.pi/180.
         unit_vec = [np.sin(inc_angle) * np.cos(head_angle) * -1,
@@ -304,6 +232,67 @@ class gps:
                          + (self.std_n * unit_vec[1])**2
                          + (self.std_u * unit_vec[2])**2)**0.5
         return self.dis_los, self.std_los
+
+    def read_gps_los_displacement(self, metadata, start_date=None, end_date=None,
+                                  ref_site=None, gps_comp='enu2los', print_msg=False):
+        """Read GPS displacement in LOS direction
+        Parameters: metadata : dict, metadata of InSAR file for LOS geometry
+                    start_date : string in YYYYMMDD format
+                    end_date   : string in YYYYMMDD format
+                    ref_site   : string, reference GPS site
+                    gps_comp   : string, GPS components used to convert to LOS direction
+        Returns:    dates : 1D np.array of datetime.datetime object
+                    dis   : 1D np.array of displacement in meters
+                    std   : 1D np.array of displacement uncertainty in meters
+                    site_lalo : tuple of 2 float, lat/lon of GPS site
+                    ref_site_lalo : tuple of 2 float, lat/lon of reference GPS site
+        """
+        # get LOS geometry
+        inc_angle = ut.incidence_angle(metadata, dimension=0, print_msg=print_msg)
+        head_angle = float(metadata['HEADING_DEG'])
+        # for old reading of los.rdr band2 data into headingAngle directly
+        if (head_angle + 180.) > 45.:
+            head_angle = -1 * (180 + head_angle + 90)
+            head_angle -= np.round(head_angle / 360.) * 360.
+
+        # read GPS object
+        dates = self.read_displacement(start_date, end_date, print_msg=print_msg)[0]
+        dis, std = self.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp)
+        site_lalo = self.get_stat_lat_lon(print_msg=print_msg)
+
+        # get LOS displacement relative to another GPS site
+        if ref_site:
+            ref_obj = gps(site=ref_site, data_dir=self.data_dir)
+            ref_obj.read_displacement(start_date, end_date, print_msg=print_msg)
+            ref_obj.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp)
+            ref_site_lalo = ref_obj.get_stat_lat_lon(print_msg=print_msg)
+
+            # get relative LOS displacement on common dates
+            dates = np.array(sorted(list(set(self.dates) & set(ref_obj.dates))))
+            dis = np.zeros(dates.shape, np.float32)
+            std = np.zeros(dates.shape, np.float32)
+            for i in range(len(dates)):
+                idx1 = np.where(self.dates == dates[i])[0][0]
+                idx2 = np.where(ref_obj.dates == dates[i])[0][0]
+                dis[i] = self.dis_los[idx1] - ref_obj.dis_los[idx2]
+                std[i] = (self.std_los[idx1]**2 + ref_obj.std_los[idx2]**2)**0.5
+        else:
+            ref_site_lalo = None
+
+        return dates, dis, std, site_lalo, ref_site_lalo
+
+
+    def get_gps_los_velocity(self, metadata, start_date=None, end_date=None, ref_site=None, gps_comp='enu2los'):
+        dates, dis = self.read_gps_los_displacement(metadata,
+                                                    start_date=start_date,
+                                                    end_date=end_date,
+                                                    ref_site=ref_site,
+                                                    gps_comp=gps_comp)[0:2]
+        year_list = [i.year + (i.timetuple().tm_yday - 1)/365.25 for i in dates]
+        A = design_matrix(year_list)
+        A_inv = np.linalg.pinv(A)
+        self.velocity = np.dot(A_inv, dis)[0]
+        return self.velocity
 
 
 

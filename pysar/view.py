@@ -64,6 +64,13 @@ EXAMPLE = """example:
   view.py geo_velocity_masked.h5 velocity --show-gps
   view.py geo_velocity_masked.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
 
+  # Custom colormap
+  # Download GMT colormap and saved to $PYSAR_HOME/docs/cpt
+  # Link: http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html
+  view.py geo_velocity.h5 velocity -c temperature
+  view.py geometryRadar.h5 height -c DEM_print
+  view.py geo_velocity.h5 velocity -c temperature_r3     #reverse colormap and repeat 3 times
+
   # Save and Output:
   view.py velocity.h5 --save
   view.py velocity.h5 --nodisplay
@@ -235,7 +242,8 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     # Unit and Wrap
     inps.disp_unit, inps.wrap = pp.check_disp_unit_and_wrap(metadata,
                                                             disp_unit=inps.disp_unit,
-                                                            wrap=inps.wrap)
+                                                            wrap=inps.wrap,
+                                                            wrap_step=inps.wrap_step)
 
     # Min / Max - Display
     if not inps.vlim:
@@ -244,7 +252,7 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
                         and inps.dset[0].split('-')[0] in ['coherence', 'connectComponent'])):
             inps.vlim = [0.0, 1.0]
         elif inps.key in ['.int'] or inps.wrap:
-            inps.vlim = [-np.pi, np.pi]
+            inps.vlim = [-inps.wrap_step/2., inps.wrap_step/2.]
 
     # Transparency - Alpha
     if not inps.transparency:
@@ -301,9 +309,10 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
                                                      metadata=metadata,
                                                      disp_unit=inps.disp_unit,
                                                      wrap=inps.wrap,
+                                                     wrap_step=inps.wrap_step,
                                                      print_msg=print_msg)
     if inps.wrap:
-        inps.vlim = [-np.pi, np.pi]
+        inps.vlim = [-inps.wrap_step/2., inps.wrap_step/2.]
 
     # 1.6 Min / Max - Data/Display
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
@@ -586,7 +595,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
     # Figure Output
     if inps.save_fig:
         if print_msg:
-            print('save figure to '+inps.outfile)
+            print('save figure to {} with dpi={}'.format(inps.outfile, inps.fig_dpi))
         plt.savefig(inps.outfile, bbox_inches='tight',
                     transparent=True, dpi=inps.fig_dpi)
 
@@ -795,6 +804,8 @@ def update_figure_setting(inps, print_msg=True):
                 inps.outfile_base += '_sub'
             if inps.wrap:
                 inps.outfile_base += '_wrap'
+                if inps.wrap_step != 2*np.pi:
+                    inps.outfile_base += str(inps.wrap_step)
             if inps.ref_date:
                 inps.outfile_base += '_ref'+inps.ref_date
             if inps.exDsetList:

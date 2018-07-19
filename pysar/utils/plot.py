@@ -8,6 +8,7 @@
 
 
 import os
+import glob
 import warnings
 import datetime
 import h5py
@@ -198,6 +199,9 @@ def add_data_disp_argument(parser):
 
     data.add_argument('--wrap', action='store_true',
                       help='re-wrap data to display data in fringes.')
+    data.add_argument('--wrap-step', dest='wrap_step', type=float, default=2*np.pi,
+                      help='step of one cycle after wrapping')
+
     data.add_argument('--flip-lr', dest='flip_lr',
                       action='store_true', help='flip left-right')
     data.add_argument('--flip-ud', dest='flip_ud',
@@ -239,7 +243,7 @@ def add_figure_argument(parser):
                      type=int, help='font size')
     fig.add_argument('--fontcolor', dest='font_color',
                      default='k', help='font color')
-    fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=150,
+    fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=300,
                      help='DPI - dot per inch - for display/write')
 
     fig.add_argument('--noaxis', dest='disp_axis',
@@ -504,13 +508,16 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
     else:
         fig_title = os.path.splitext(os.path.basename(fname))[0]
 
-    if 'pix_box' in inps_dict.keys():
+    if inps_dict.get('pix_box', None):
         box = inps_dict['pix_box']
         if (box[2] - box[0]) * (box[3] - box[1]) < num_pixel:
             fig_title += '_sub'
 
-    if 'wrap' in inps_dict.keys() and inps_dict['wrap']:
+    if inps_dict.get('wrap', False):
         fig_title += '_wrap'
+        wrap_step = inps_dict.get('wrap_step', 2*np.pi)
+        if wrap_step != 2*np.pi:
+            fig_title += str(wrap_step)
 
     return fig_title
 
@@ -556,19 +563,36 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
     return row_num, col_num
 
 
-def check_colormap_input(metadata, colormap=None, datasetName=None, print_msg=True):
+def check_colormap_input(metadata, cm_name=None, datasetName=None, print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporal_coherence', 'connectComponent',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
-    if not colormap:
+    if not cm_name:
         if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'], str(datasetName).split('-')[0]]):
-            colormap = 'gray'
+            cm_name = 'gray'
         else:
-            colormap = 'jet'
+            cm_name = 'jet'
     if print_msg:
-        print('colormap: '+colormap)
+        print('colormap: '+cm_name)
 
-    # Modified hsv colormap by H. Fattahi
-    if colormap == 'hsv':
+    # get colormap object
+    plt_cm_list = sorted(m for m in plt.cm.datad)
+    gmt_cm_list = get_gmt_colormap(colormap_name=None)
+
+    if cm_name in plt_cm_list+gmt_cm_list:
+        colormap = get_colormap(cm_name)
+
+    elif cm_name[0:-1] in plt_cm_list+gmt_cm_list:
+        num = int(cm_name[-1])
+        cm_name = cm_name[0:-1]
+        colormap = repeat_colormap(cm_name, num)
+    else:
+        raise ValueError('un-recognized input colormap name: '+cm_name)
+    return colormap
+
+
+def get_colormap(colormap_name):
+    if colormap_name == 'hsv':
+        # Modified hsv colormap by H. Fattahi
         cdict1 = {'red':   ((0.0, 0.0, 0.0),
                             (0.5, 0.0, 0.0),
                             (0.6, 1.0, 1.0),
@@ -586,9 +610,122 @@ def check_colormap_input(metadata, colormap=None, datasetName=None, print_msg=Tr
                             (0.5, 0.0, 0.0),
                             (1.0, 0.0, 0.0),)
                   }
-        colormap = LinearSegmentedColormap('BlueRed1', cdict1)
+        colormap = LinearSegmentedColormap('hsv', cdict1)
     else:
-        colormap = plt.get_cmap(colormap)
+        try:
+            colormap = plt.get_cmap(colormap_name)
+        except:
+            colormap = get_gmt_colormap(colormap_name)
+    return colormap
+
+
+def repeat_colormap(cm_name='jet', num:int=3):
+    """Generate repeated colormap from an supported colormap name
+    Parameters: cm_name : string, colormap name
+                num : int, repeat number
+    """
+    cmap0 = get_colormap(cm_name)
+    colors = np.tile(cmap0(np.linspace(0., 1., 100)), (num,1))
+    cm_name_out = cm_name+str(num)
+    cmap = LinearSegmentedColormap.from_list(cm_name_out, colors)
+    return cmap
+
+
+def get_gmt_colormap(colormap_name=None, cpt_path=None):
+    """Load GMT .cpt colormap file.
+    Modified from Scipy Cookbook originally written by James Boyle.
+    Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_Loading_a_colormap_dynamically.html
+
+    Download .cpt file from http://soliton.vm.bytemark.co.uk/pub/cpt-city/
+
+    Parameters: colormap_name : string, colormap name, e.g. temperature
+                cpt_path : directory of .cpt files
+                    '/opt/local/share/gmt/cpt/' for macOS user with GMT installed from MacPorts
+    Returns:    colormap : matplotlib.colors.LinearSegmentedColormap object
+    Example:    colormap = get_gmt_colormap('temperature')
+                colormap = get_gmt_colormap('temperature_r')
+                gmt_cm_list = get_gmt_colormap(None)
+    """
+    # default file path
+    if not cpt_path:
+        cpt_path = os.path.join(os.path.dirname(__file__), '../../docs/cpt')
+
+    if not colormap_name:
+        cm_list = sorted(glob.glob(os.path.join(cpt_path, '*.cpt')))
+        cm_list = [os.path.splitext(os.path.basename(i))[0] for i in cm_list]
+        cm_list_r = ['{}_r'.format(i) for i in cm_list]
+        return cm_list+cm_list_r
+
+    # support _r for reversed colormap
+    reverse_colormap = False
+    if colormap_name.endswith('_r'):
+        reverse_colormap = True
+        colormap_name = colormap_name[0:-2]
+
+    # open cpt file
+    fpath = os.path.join(cpt_path, "{}.cpt".format(colormap_name))
+    try:
+        f = open(fpath)
+    except FileNotFoundError:
+        raise FileNotFoundError("file {} not found".format(fpath))
+    lines = f.readlines()
+    f.close()
+
+    # read cpt file content
+    x, r, g, b = [], [], [], []
+    colorModel = "RGB"
+    for l in lines:
+        ls = l.split()
+        if l[0] == "#":
+            if ls[-1] == "HSV":
+                colorModel = "HSV"
+                continue
+            else:
+                continue
+
+        if ls[0] in ["B", "F", "N"]:
+            pass
+        else:
+            x.append(float(ls[0]))
+            r.append(float(ls[1]))
+            g.append(float(ls[2]))
+            b.append(float(ls[3]))
+            xtemp = float(ls[4])
+            rtemp = float(ls[5])
+            gtemp = float(ls[6])
+            btemp = float(ls[7])
+
+    x.append(xtemp)
+    r.append(rtemp)
+    g.append(gtemp)
+    b.append(btemp)
+
+    nTable = len(r)
+    x = np.array(x, np.float32)
+    r = np.array(r, np.float32)
+    g = np.array(g, np.float32)
+    b = np.array(b, np.float32)
+    if colorModel == "HSV":
+        from matplotlib.colors import hsv_to_rgb
+        for i in range(r.shape[0]):
+            r[i], g[i], b[i] = hsv_to_rgb(r[i]/360., g[i], b[i])
+    if colorModel == "RGB":
+        r /= 255.
+        g /= 255.
+        b /= 255.
+    xNorm = (x - x[0]) / (x[-1] - x[0])
+
+    # colorDict
+    red, blue, green = [], [], []
+    for i in range(len(x)):
+        red.append((xNorm[i], r[i], r[i]))
+        green.append((xNorm[i], g[i], g[i]))
+        blue.append((xNorm[i], b[i], b[i]))
+    colorDict = {"red":tuple(red), "green":tuple(green), "blue":tuple(blue)}
+
+    colormap = LinearSegmentedColormap(colormap_name, colorDict, N=256)
+    if reverse_colormap:
+        colormap = colormap.reversed()
     return colormap
 
 
@@ -1080,6 +1217,8 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
     if 'disp_dem_contour'   not in key_list:  inps_dict['disp_dem_contour']   = True
     if 'dem_contour_step'   not in key_list:  inps_dict['dem_contour_step']   = 200.
     if 'dem_contour_smooth' not in key_list:  inps_dict['dem_contour_smooth'] = 3.0
+    if 'shade_azdeg'        not in key_list:  inps_dict['shade_azdeg']        = 315.
+    if 'shade_altdeg'       not in key_list:  inps_dict['shade_altdeg']       = 45.
 
     dem_shade = None
     dem_contour = None
@@ -1087,11 +1226,10 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
 
     if inps_dict['disp_dem_shade']:
         from matplotlib.colors import LightSource
-        ls = LightSource(azdeg=315, altdeg=45)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            dem_shade = ls.shade(dem, vert_exag=1.0, cmap=plt.cm.gray,
-                                 vmin=-5000, vmax=np.nanmax(dem)+2000)
+        ls = LightSource(azdeg=inps_dict['shade_azdeg'],
+                         altdeg=inps_dict['shade_altdeg'])
+        dem_shade = ls.shade(dem, vert_exag=1.0, cmap=get_colormap('gray'),
+                             vmin=-5000, vmax=np.nanmax(dem)+2000)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
             print('show shaded relief DEM')
@@ -1159,6 +1297,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
 
 def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
+    from pysar.objects.gps import search_gps, gps
     marker_size = 7
     vmin, vmax = inps.vlim
     cmap = plt.get_cmap(inps.colormap)
@@ -1172,10 +1311,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     except:
         start_date, end_date = None, None
 
-    from pysar.objects import gps
-    site_names, site_lats, site_lons = gps.search_gps(SNWE,
-                                                      start_date=start_date,
-                                                      end_date=end_date)
+    site_names, site_lats, site_lons = search_gps(SNWE, start_date, end_date)
 
     k = metadata['FILE_TYPE']
     if inps.gps_component and k not in ['velocity']:
@@ -1188,12 +1324,11 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                    ' in {} ...').format(inps.ref_gps_site, inps.gps_component))
             print('start date: {}\nend   date: {}'.format(start_date, end_date))
         for i in range(len(site_names)):
-            vel = gps.get_gps_los_velocity(site_names[i],
-                                           metadata,
-                                           start_date=start_date,
-                                           end_date=end_date,
-                                           ref_site=inps.ref_gps_site,
-                                           gps_comp=inps.gps_component) * unit_fac
+            vel = gps(site_names[i]).get_gps_los_velocity(metadata,
+                                                          start_date=start_date,
+                                                          end_date=end_date,
+                                                          ref_site=inps.ref_gps_site,
+                                                          gps_comp=inps.gps_component) * unit_fac
             if not vel:
                 color = 'none'
             else:
@@ -1220,9 +1355,10 @@ def plot_colorbar(inps, im, cax):
         elif inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] <  inps.dlim[1]: inps.cbar_ext='max'
         else:  inps.cbar_ext='both'
 
-    if inps.wrap:  # and 'radian' in inps.disp_unit:
-        cbar = plt.colorbar(im, cax=cax, ticks=[-np.pi, 0, np.pi])
-        cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+    if inps.wrap:
+        cbar = plt.colorbar(im, cax=cax, ticks=[-inps.wrap_step/2., 0, inps.wrap_step/2.])
+        if inps.wrap_step == 2*np.pi:
+            cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
     else:
         cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
 
@@ -1330,12 +1466,13 @@ def set_shared_xlabel(axes_list, label, labelpad = 0.01, font_size=12, position=
     return
 
 
-def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False):
+def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_step=2*np.pi):
     """Get auto disp_unit for input dataset
     Example:
         if not inps.disp_unit:
             inps.disp_unit = pp.auto_disp_unit(atr)
     """
+    # default display unit if not given
     if not disp_unit:
         k = metadata['FILE_TYPE']
         disp_unit = metadata['UNIT'].lower()
@@ -1346,10 +1483,11 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False):
             disp_unit = 'dB'
 
     if wrap:
+        # wrap is supported for displacement file types only
         if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm']:
             wrap = False
             print('WARNING: re-wrap is disabled for disp_unit = {}'.format(disp_unit))
-        elif disp_unit.split('/')[0] != 'radian':
+        elif disp_unit.split('/')[0] != 'radian' and wrap_step == 2*np.pi:
             disp_unit = 'radian'
             print('change disp_unit = radian due to rewrapping')
 
@@ -1445,7 +1583,8 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     return data, disp_unit, scale
 
 
-def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, print_msg=True):
+def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, wrap_step=2*np.pi,
+                                    print_msg=True):
     """Scale 2D matrix value according to display unit and re-wrapping flag
     Inputs:
         data - 2D np.array
@@ -1463,7 +1602,8 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
     if not disp_unit:
         disp_unit, wrap = check_disp_unit_and_wrap(metadata,
                                                    disp_unit=None,
-                                                   wrap=wrap)
+                                                   wrap=wrap,
+                                                   wrap_step=wrap_step)
 
     # Data Operation - Scale to display unit
     disp_scale = 1.0
@@ -1474,9 +1614,9 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
 
     # Data Operation - wrap
     if wrap:
-        data -= np.round(data/(2*np.pi)) * (2*np.pi)
+        data -= np.round(data/(wrap_step)) * (wrap_step)
         if print_msg:
-            print('re-wrapping data to [-pi, pi]')
+            print('re-wrapping data to [-{s}, {s}]'.format(s=wrap_step/2.))
     return data, disp_unit, disp_scale, wrap
 
 

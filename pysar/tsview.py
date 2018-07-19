@@ -226,21 +226,28 @@ def read_init_info(inps):
                                        print_msg=False)[0:2]
     if not inps.yx:
         inps.yx = inps.ref_yx
-    inps.lalo = inps.coord.radar2geo(inps.yx[0],
-                                     inps.yx[1],
-                                     print_msg=False)[0:2]
+    try:
+        inps.lalo = inps.coord.radar2geo(inps.yx[0],
+                                         inps.yx[1],
+                                         print_msg=False)[0:2]
+    except:
+        inps.lalo = None
 
     # Flip up-down / left-right
     if not inps.flip_lr and not inps.flip_ud:
         inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(atr)
 
+    # display unit ans wrap
+    # if wrap_step == 2*np.pi (default value), set disp_unit_v = radian;
+    # otherwise set disp_unit_v = disp_unit
     inps.disp_unit_v = inps.disp_unit
     if inps.wrap:
         inps.range2phase = -4. * np.pi / float(atr['WAVELENGTH'])
         if   'cm' in inps.disp_unit:   inps.range2phase /= 100.
         elif 'mm' in inps.disp_unit:   inps.range2phase /= 1000.
-        inps.disp_unit_v = 'radian'
-        inps.vlim = [-np.pi, np.pi]
+        if inps.wrap_step == 2*np.pi:
+            inps.disp_unit_v = 'radian'
+        inps.vlim = [-inps.wrap_step/2., inps.wrap_step/2.]
     inps.cbar_label = 'Displacement ({})'.format(inps.disp_unit_v)
 
     return inps, atr
@@ -302,8 +309,9 @@ def plot_init_map(ax, d_v, inps, metadata):
 
     # prepare data
     if inps.wrap:
-        d_v *= inps.range2phase
-        d_v -= np.round(d_v/(2*np.pi)) * (2*np.pi)
+        if inps.disp_unit_v == 'radian':
+            d_v *= inps.range2phase
+        d_v -= np.round(d_v / inps.wrap_step) * inps.wrap_step
 
     # Title and Axis Label
     disp_date = inps.dates[inps.init_idx].strftime('%Y-%m-%d')
@@ -324,8 +332,8 @@ def plot_init_map(ax, d_v, inps, metadata):
 def plot_init_time_slider(ax, year_list, init_idx=-1, ref_idx=0):
     val_step = np.min(np.diff(year_list))
     tslider = Slider(ax, label='Years',
-                     valmin=year_list[0]-val_step,
-                     valmax=year_list[-1]+val_step,
+                     valmin=year_list[0],
+                     valmax=year_list[-1],
                      valinit=year_list[init_idx],
                      valstep=val_step)
 
@@ -341,6 +349,7 @@ def plot_init_time_slider(ax, year_list, init_idx=-1, ref_idx=0):
         digit = 1.
     tslider.ax.set_xticks(np.round(np.linspace(year_list[0], year_list[-1], num=5) * digit) / digit)
     tslider.ax.xaxis.set_minor_locator(MultipleLocator(1./12.))
+    tslider.ax.set_xlim([year_list[0], year_list[-1]])
     tslider.ax.set_yticks([])
     tslider.ax.set_facecolor('lightgoldenrodyellow')
     return tslider
@@ -531,8 +540,9 @@ def main(iargs=None):
         ax_v.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date))
         d_v = np.array(ts_data[idx, :, :])
         if inps.wrap:
-            d_v *= inps.range2phase
-            d_v -= np.round(d_v/(2*np.pi)) * (2*np.pi)
+            if inps.disp_unit_v == 'radian':
+                d_v *= inps.range2phase
+            d_v -= np.round(d_v / inps.wrap_step) * inps.wrap_step
         im.set_data(d_v)
         fig_v.canvas.draw()
     tslider.on_changed(update_time_slider)
