@@ -529,7 +529,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
 
         # Plot points of interest
         if inps.pts_yx is not None:
-            ax.plot(inps.pts_yx[0, :], inps.pts_yx[1, :],
+            ax.plot(inps.pts_yx[:, 1], inps.pts_yx[:, 0],
                     inps.pts_marker, ms=inps.ref_size,
                     markeredgecolor='black')
             if print_msg:
@@ -591,13 +591,6 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
         # ax.set_yticklabels([])
         ax.get_xaxis().set_ticks([])
         ax.get_yaxis().set_ticks([])
-
-    # Figure Output
-    if inps.save_fig:
-        if print_msg:
-            print('save figure to {} with dpi={}'.format(inps.outfile, inps.fig_dpi))
-        plt.savefig(inps.outfile, bbox_inches='tight',
-                    transparent=True, dpi=inps.fig_dpi)
 
     return ax, inps, im, cbar
 
@@ -1152,6 +1145,13 @@ def main(iargs=None):
         fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
 
         ax, inps = plot_2d_matrix(ax, data, atr, inps)[0:2]
+
+        # Save figure
+        if inps.save_fig:
+            print('save figure to {} with dpi={}'.format(inps.outfile, inps.fig_dpi))
+            plt.savefig(inps.outfile, bbox_inches='tight',
+                        transparent=True, dpi=inps.fig_dpi)
+
 
     ############################### Multiple Subplots #########################
     else:

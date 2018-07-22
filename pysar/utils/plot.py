@@ -1388,7 +1388,7 @@ def plot_colorbar(inps, im, cax):
     return inps, cbar
 
 
-def set_shared_ylabel(axes_list, label, labelpad = 0.01, font_size=12, position='left'):
+def set_shared_ylabel(axes_list, label, labelpad=0.01, font_size=12, position='left'):
     """Set a y label shared by multiple axes
     Parameters: axes_list : list of axes in left/right most col direction
                 label : string
@@ -1433,13 +1433,14 @@ def set_shared_ylabel(axes_list, label, labelpad = 0.01, font_size=12, position=
     return
 
 
-def set_shared_xlabel(axes_list, label, labelpad = 0.01, font_size=12, position='top'):
+def set_shared_xlabel(axes_list, label, labelpad=0.01, font_size=12, position='top'):
     """Set a y label shared by multiple axes
     Parameters: axes_list : list of axes in top/bottom row direction
                 label : string
                 labelpad : float, Sets the padding between ticklabels and axis label
                 font_size : int
                 position : string, 'top' or 'bottom'
+    Example:    pp.set_shared_xlabel([ax1, ax2, ax3], 'Range (Pix.)')
     """
 
     f = axes_list[0].get_figure()

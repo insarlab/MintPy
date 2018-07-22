@@ -405,7 +405,7 @@ class geometryDict:
         #self.metadata['PROCESSOR'] = self.processor
         return self.metadata
 
-    def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression=None, extra_metadata=None):
+    def write2hdf5(self, outputFile='geometryRadar.h5', access_mode='w', box=None, compression='gzip', extra_metadata=None):
         '''
         /                        Root level
         Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
