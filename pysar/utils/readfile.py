@@ -766,7 +766,7 @@ def read_template(fname, delimiter='=', print_msg=True):
     return template_dict
 
 
-def read_roipac_rsc(fname, standardize=True):
+def read_roipac_rsc(fname, delimiter=' ', standardize=True):
     """Read ROI_PAC style RSC file.
     Parameters: fname : str.
                     File path of .rsc file.
@@ -783,7 +783,9 @@ def read_roipac_rsc(fname, standardize=True):
     f.close()
     rscDict = {}
     for line in lines:
-        key, value = line.strip().split()[0:2]
+        c = [i.strip() for i in line.strip().split(delimiter, 1)]
+        key = c[0]
+        value = c[1].replace('\n', '').strip()
         rscDict[key] = value
 
     if standardize:
@@ -808,8 +810,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, convert2roipac=True, standa
     f = open(fname, 'r')
     lines = f.readlines()[skiprows:]
     for line in lines:
-        line = line.strip()
-        c = [i.strip() for i in line.split(delimiter, 1)]
+        c = [i.strip() for i in line.strip().split(delimiter, 1)]
         if len(c) < 2 or line.startswith(('%', '#')):
             next
         else:

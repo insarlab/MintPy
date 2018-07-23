@@ -25,8 +25,8 @@ key_prefix = 'pysar.networkInversion.'
 
 ################################################################################################
 EXAMPLE = """example:
-  ifgram_inversion.py  INPUTS/ifgramStack.h5
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -t pysarApp_template.txt
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -t pysarApp_template.txt --fast
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w fim
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w coh
@@ -121,6 +121,8 @@ def create_parser():
                         help='Skip inversion on the masked out region, i.e. water.')
     parser.add_argument('--split-file', dest='split_file', action='store_true',
                         help='Split ifgramStack file into small files and invert them separately')
+    parser.add_argument('--fast', action='store_true',
+                        help='Fast network invertion by forcing -w=no.')
     return parser
 
 
@@ -237,7 +239,8 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
 
 def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
     """Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)"""
-    lineStr = '    number of multilooks L=%d' % L
+    if print_msg:
+        lineStr = '    number of multilooks L={}'.format(L)
     if L > 80:
         L = 80
         lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
@@ -335,7 +338,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
 
     # Skip Zero Phase Value
     if skip_zero_phase and not np.all(ifgram):
-        idx = (ifgram != 0.).flatten()
+        idx = (ifgram[:, 0] != 0.).flatten()
         A = A[idx, :]
         B = B[idx, :]
 
@@ -608,7 +611,7 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
     return pha_data
 
 
-def read_coherence2weight(stack_obj, box, weight_func='fim', epsilon=5e-2, print_msg=True):
+def read_coherence(stack_obj, box, print_msg=True):
     num_ifgram = np.sum(stack_obj.dropIfgram)
     if print_msg:
         print('reading coherence in {} * {} ...'.format(box, num_ifgram))
@@ -616,18 +619,21 @@ def read_coherence2weight(stack_obj, box, weight_func='fim', epsilon=5e-2, print
                               box=box,
                               dropIfgram=True,
                               print_msg=False).reshape(num_ifgram, -1)
+    return coh_data
+
+
+def coherence2weight(coh_data, weight_func='fim', L=20, epsilon=5e-2, print_msg=True):
     coh_data[np.isnan(coh_data)] = epsilon
     coh_data[coh_data < epsilon] = epsilon
 
     # Calculate Weight matrix
+    weight_func = weight_func.lower()
     weight = np.array(coh_data, np.float64)
-    del coh_data
-    L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
     if 'var' in weight_func:
         if print_msg:
             print('convert coherence to weight using inverse of phase variance')
             print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
-        weight = 1.0 / coherence2phase_variance_ds(weight, L, print_msg=True)
+        weight = 1.0 / coherence2phase_variance_ds(weight, L, print_msg=print_msg)
 
     elif any(i in weight_func for i in ['coh', 'lin']):
         if print_msg:
@@ -638,10 +644,14 @@ def read_coherence2weight(stack_obj, box, weight_func='fim', epsilon=5e-2, print
             print('convert coherence to weight using Fisher Information Index (Seymour & Cumming, 1994)')
         weight = coherence2fisher_info_index(weight, L)
 
+    elif weight_func in ['no', 'sbas', 'uniform']:
+        weight = None
+
     else:
         raise Exception('Un-recognized weight function: %s' % weight_func)
 
-    weight = np.array(weight, np.float32)
+    if weight is not None:
+        weight = np.array(weight, np.float32)
     return weight
 
 
@@ -800,10 +810,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None,
 
     # Inversion - WLS
     else:
-        weight = read_coherence2weight(stack_obj,
-                                       box=box,
-                                       weight_func=weight_func,
-                                       epsilon=5e-2)
+        L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
+        weight = read_coherence(stack_obj, box=box)
+        weight = coherence2weight(weight, weight_func=weight_func, L=L, epsilon=5e-2)
         weight = np.sqrt(weight)
 
         # Weighted Inversion pixel by pixel
@@ -980,6 +989,10 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     if inps.templateFile:
         inps = read_template2inps(inps.templateFile, inps)
+    if inps.fast and inps.weightFunc != 'no':
+        inps.weightFunc = 'no'
+        print("Enable fast processing by forcing weightFunct = 'no'")
+
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
 
     # Input file info

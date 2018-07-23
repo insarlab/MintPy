@@ -255,6 +255,8 @@ def create_parser():
     parser.add_argument('-H', dest='print_example_template', action='store_true',
                         help='Print/Show the example template file for routine processing.')
     parser.add_argument('--version', action='store_true', help='print version number')
+    parser.add_argument('--fast', action='store_true',
+                        help='Fast processing without using pixel-wised network inversion and DEM error correction')
 
     parser.add_argument('--reset', action='store_true',
                         help='Reset files attributes to re-run pysarApp.py after loading data by:\n' +
@@ -531,8 +533,9 @@ def main(iargs=None):
     # Inversion of Interferograms
     ########################################
     print('\n**********  Invert Network of Interferograms into Time-series  **********')
-    invCmd = 'ifgram_inversion.py {} --template {}'.format(inps.stackFile,
-                                                           inps.templateFile)
+    invCmd = 'ifgram_inversion.py {} --template {}'.format(inps.stackFile, inps.templateFile)
+    if inps.fast:
+        invCmd += ' --fast'
     print(invCmd)
     inps.timeseriesFile = 'timeseries.h5'
     inps.tempCohFile = 'temporalCoherence.h5'
@@ -675,10 +678,11 @@ def main(iargs=None):
     ##############################################
     print('\n**********  Topographic Residual (DEM error) Correction  **********')
     outName = os.path.splitext(inps.timeseriesFile)[0]+'_demErr.h5'
-    topoCmd = 'dem_error.py {} -g {} -t {} -o {}'.format(inps.timeseriesFile,
-                                                         inps.geomFile,
-                                                         inps.templateFile,
-                                                         outName)
+    topoCmd = 'dem_error.py {} -t {} -o {}'.format(inps.timeseriesFile,
+                                                   inps.templateFile,
+                                                   outName)
+    if not inps.fast:
+        topoCmd += ' -g {}'.format(inps.geomFile)
     print(topoCmd)
     inps.timeseriesResFile = None
     if template['pysar.topographicResidual']:

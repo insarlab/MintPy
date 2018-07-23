@@ -288,11 +288,14 @@ def simulate_coherence(date12_list, baseline_file='bl_list.txt', sensor_name='En
 
     date12_list = ptime.yyyymmdd_date12(date12_list)
     ifgram_num = len(date12_list)
+
     if isinstance(decor_time, (int, float)):
         pixel_num = 1
         decor_time = float(decor_time)
     else:
         pixel_num = decor_time.shape[1]
+    if decor_time == 0.:
+        decor_time = 0.01
     cohs = np.zeros((ifgram_num, pixel_num), np.float32)
     for i in range(ifgram_num):
         if display:
