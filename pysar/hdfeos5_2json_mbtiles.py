@@ -51,7 +51,7 @@ needed_attributes = {
     "unwrap_method", "relative_orbit", "beam_mode", "LENGTH", "max_baseline_perp",
     "X_FIRST", "atmos_correct_method", "last_date", "first_frame", "frame", "Y_STEP", "history",
     "scene_footprint", "data_footprint", "downloadUnavcoUrl", "referencePdfUrl", "areaName", "referenceText",
-    "REF_LAT", "REF_LON"
+    "REF_LAT", "REF_LON", "CENTER_LINE_UTC"
 }
 
 def serialize_dictionary(dictionary, fileName):
