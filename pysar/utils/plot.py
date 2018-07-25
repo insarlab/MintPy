@@ -416,8 +416,8 @@ def read_point2inps(inps, coord_obj):
         inps.pts_lalo = np.loadtxt(inps.pts_file, dtype=bytes).astype(float)
     if inps.pts_lalo is not None:
         inps.pts_lalo = np.array(inps.pts_lalo).reshape(-1, 2)
-        inps.pts_yx = coord_obj.geo2radar(inps.pts_lalo[0, :],
-                                          inps.pts_lalo[1, :],
+        inps.pts_yx = coord_obj.geo2radar(inps.pts_lalo[:, 0],
+                                          inps.pts_lalo[:, 1],
                                           print_msg=False)
     if inps.pts_yx is not None:
         inps.pts_yx = np.array(inps.pts_yx).reshape(-1, 2)
@@ -1312,7 +1312,10 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     from pysar.objects.gps import search_gps, gps
     marker_size = 7
     vmin, vmax = inps.vlim
-    cmap = get_colormap(inps.colormap)
+    if isinstance(inps.colormap, str):
+        cmap = get_colormap(cmap_name=inps.colormap)
+    else:
+        cmap = inps.colormap
 
     atr = dict()
     atr['UNIT'] = 'm'
