@@ -508,7 +508,7 @@ def split_into_boxes(ifgram_file, chunk_size=100e6, print_msg=True):
 
 def check_design_matrix(ifgram_file, weight_func='fim'):
     """Check Rank of Design matrix for weighted inversion"""
-    A = ifgramStack(ifgram_file).get_design_matrix(dropIfgram=True)[0]
+    A = ifgramStack(ifgram_file).get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
     if weight_func == 'no':
         if np.linalg.matrix_rank(A) < A.shape[1]:
             print('WARNING: singular design matrix! Inversion result can be biased!')
@@ -706,7 +706,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None,
 
     # Design matrix
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
-    A, B = stack_obj.get_design_matrix(date12_list=date12_list)[0:2]
+    A, B = stack_obj.get_design_matrix4timeseries_estimation(date12_list=date12_list)[0:2]
     num_ifgram = len(date12_list)
     try:
         ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
@@ -715,7 +715,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None,
     ref_idx = date_list.index(ref_date)
     time_idx = [i for i in range(num_date)]
     time_idx.remove(ref_idx)
-    Astd = stack_obj.get_design_matrix(refDate=ref_date, dropIfgram=True)[0]
+    Astd = stack_obj.get_design_matrix4timeseries_estimation(refDate=ref_date, dropIfgram=True)[0]
 
     # Initialization of output matrix
     ts = np.zeros((num_date, num_pixel), np.float32)
@@ -741,6 +741,10 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None,
     if water_mask_file:
         print(('skip pixels on water with mask from'
                ' file: {}').format(os.path.basename(water_mask_file)))
+        atr = readfile.read_attribute(water_mask_file)
+        if int(atr['LENGTH']) != stack_obj.length or int(atr['WIDTH']) != stack_obj.width:
+            raise ValueError('Input water mask file has different size from ifgramStack file.')
+        del atr
         dsNames = readfile.get_dataset_list(water_mask_file)
         dsName = [i for i in dsNames
                   if i in ['waterMask', 'mask']][0]
@@ -873,7 +877,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     #A = check_design_matrix(ifgram_file, weight_func=inps.weightFunc)
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
-    A = stack_obj.get_design_matrix(dropIfgram=True)[0]
+    A = stack_obj.get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
     num_ifgram, num_date = A.shape[0], A.shape[1]+1
 
     # print key setup info

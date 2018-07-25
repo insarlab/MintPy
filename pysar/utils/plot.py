@@ -23,7 +23,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
 
-from pysar.objects import timeseriesKeyNames
+from pysar.objects import timeseriesKeyNames, timeseriesDatasetNames
 from pysar.utils import (ptime,
                          readfile,
                          network as pnet,

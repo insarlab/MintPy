@@ -552,7 +552,9 @@ class ifgramStack:
         with h5py.File(self.file, 'r') as f:
             self.dropIfgram = f['dropIfgram'][:]
             self.pbaseIfgram = f['bperp'][:]
-            self.datasetNames = [i for i in ifgramDatasetNames if i in f.keys()]
+            self.datasetNames = [key for key in list(f.keys())
+                                 if (isinstance(f[key], h5py.Dataset)
+                                     and f[key].shape[-2:] == (self.length, self.width))]
         self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
         self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.float32)
 
@@ -564,6 +566,20 @@ class ifgramStack:
         # Time in timeseries domain
         self.dateList = self.get_date_list(dropIfgram=False)
         self.numDate = len(self.dateList)
+
+        # Reference pixel
+        try:
+            self.refY = int(self.metadata['REF_Y'])
+            self.refX = int(self.metadata['REF_X'])
+        except:
+            self.refY = None
+            self.refX = None
+        try:
+            self.refLat = float(self.metadata['REF_LAT'])
+            self.refLon = float(self.metadata['REF_LON'])
+        except:
+            self.refLat = None
+            self.refLon = None
 
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
@@ -778,17 +794,69 @@ class ifgramStack:
             print('')
         return dmean
 
-    # Functions for Network Inversion
+    # Functions for Unwrap error correction
+    def get_design_matrix4ifgram_triangle(self, date12_list=None):
+        """Generate the design matrix of ifgram triangle for unwrap error correction using phase closure
+        Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
+        Returns:    C : 2D np.array in size of (num_tri, num_ifgram) consisting 0, 1, -1
+                        for 3 SAR acquisition in t1, t2 and t3 in time order,
+                        ifg1 for (t1, t2) with 1
+                        ifg2 for (t1, t3) with -1
+                        ifg3 for (t2, t3) with 1
+        Examples:   stack_obj = ifgramStack('./INPUTS/ifgramStack.h5')
+                    C = stack_obj.get_design_matrix4ifgram_triangle
+        """
+        if not date12_list:
+            date12_list = self.get_date12_list(dropIfgram=None)
 
-    def get_design_matrix(self, refDate=None, dropIfgram=True, date12_list=None):
-        """Return design matrix of the input ifgramStack, ignoring dropped ifgrams
+        # calculate triangle_idx
+        triangle_idx = []
+        for ifgram1 in date12_list:
+            # ifgram1 (date1, date2)
+            date1, date2 = ifgram1.split('_')
+
+            # ifgram2 candidates (date1, date3)
+            date3_list = []
+            for ifgram2 in date12_list:
+                if date1 == ifgram2.split('_')[0] and ifgram2 != ifgram1:
+                    date3_list.append(ifgram2.split('_')[1])
+
+            # ifgram2/3
+            if len(date3_list) > 0:
+                for date3 in date3_list:
+                    ifgram3 = '{}_{}'.format(date2, date3)
+                    if ifgram3 in date12_list:
+                        ifgram1 = '{}_{}'.format(date1, date2)
+                        ifgram2 = '{}_{}'.format(date1, date3)
+                        ifgram3 = '{}_{}'.format(date2, date3)
+                        triangle_idx.append([date12_list.index(ifgram1),
+                                             date12_list.index(ifgram2),
+                                             date12_list.index(ifgram3)])
+
+        triangle_idx = np.array(triangle_idx, np.int16)
+        triangle_idx = np.unique(triangle_idx, axis=0)
+
+        # triangle_idx to C
+        num_triangle = triangle_idx.shape[0]
+        C = np.zeros((num_triangle, len(date12_list)), np.float32)
+        for i in range(num_triangle):
+            C[i, triangle_idx[i, 0]] = 1
+            C[i, triangle_idx[i, 1]] = -1
+            C[i, triangle_idx[i, 2]] = 1
+        return C
+
+
+    # Functions for Network Inversion
+    def get_design_matrix4timeseries_estimation(self, refDate=None, dropIfgram=True, date12_list=None):
+        """Return design matrix of the input ifgramStack for timeseries estimation
+        Ignoring dropped ifgrams by default
         Parameters: refDate : str, date in YYYYMMDD format
                     dropIfgram : bool, use dropped ifgram info or not
         Returns:    A : 2D array of float32 in size of (num_ifgram, num_date-1)
                     B : 2D array of float32 in size of (num_ifgram, num_date-1)
         Examples:   stack_obj = ifgramStack('./INPUTS/ifgramStack.h5')
-                    A, B = stack_obj.get_design_matrix()
-                    A, B = stack_obj.get_design_matrix(date12_list=date12_list)
+                    A, B = stack_obj.get_design_matrix4timeseries_estimation()
+                    A, B = stack_obj.get_design_matrix4timeseries_estimation(date12_list=date12_list)
         """
         # Date info
         if date12_list:
@@ -831,7 +899,7 @@ class ifgramStack:
         tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
         tbase_diff = np.diff(tbase).flatten()
 
-        B = self.get_design_matrix(dropIfgram=dropIfgram)[1]
+        B = self.get_design_matrix4timeseries_estimation(dropIfgram=dropIfgram)[1]
         B_inv = np.linalg.pinv(B)
         with h5py.File(self.file, 'r') as f:
             pbaseIfgram = f['bperp'][:]

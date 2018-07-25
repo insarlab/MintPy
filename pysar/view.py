@@ -12,21 +12,15 @@ import os
 import sys
 import argparse
 from datetime import datetime as dt
-
-import h5py
 import numpy as np
-import scipy.ndimage as ndimage
 import matplotlib.pyplot as plt
-from matplotlib.colors import LightSource
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits.basemap import cm, pyproj
 
 from pysar.objects import (gps,
                            geometryDatasetNames,
                            geometry,
                            ifgramDatasetNames,
                            ifgramStack,
-                           timeseriesDatasetNames,
                            timeseriesKeyNames,
                            timeseries,
                            HDFEOS)

@@ -341,8 +341,8 @@ def get_delay(grib_file, inps):
                         lon=inps.lon_file,
                         inc=inps.inc_angle_file)
     else:
-        aps.getdelay(phs,
-                     inc=inps.inc_angle)
+        aps.getdelay(phs, inc=0.)
+        phs /= np.cos(inps.inc_angle*np.pi/180.)
 
     # Get relative phase delay in space
     phs -= phs[inps.ref_yx[0], inps.ref_yx[1]]
