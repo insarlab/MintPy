@@ -98,7 +98,7 @@ def create_parser():
                                      epilog=TEMPLATE+'\n'+NOTE+'\n'+EXAMPLE)
     parser.add_argument('-H', dest='print_example_template', action='store_true',
                         help='Print/Show the example template file for loading.')
-    parser.add_argument('-t', '--template', type=str, nargs='+', required=True,
+    parser.add_argument('-t', '--template', type=str, nargs='+',
                         dest='template_file', help='template file with path info.')
 
     parser.add_argument('--project', type=str, dest='PROJECT_NAME',
@@ -123,15 +123,16 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if inps.print_example_template:
-        sys.exit(DEFAULT_TEMPLATE)
-
-    #if not inps.template_file:
-    #    parser.print_usage()
-    #    print(('{}: error: the following arguments are required:'
-    #           ' -t/--template'.format(os.path.basename(__file__))))
-    #    print('{} -H to show the example template file'.format(os.path.basename(__file__)))
-    #    sys.exit(1)
+    if inps.template_file:
+        pass
+    elif inps.print_example_template:
+        raise SystemExit(DEFAULT_TEMPLATE)
+    else:
+        parser.print_usage()
+        print(('{}: error: one of the following arguments are required:'
+               ' -t/--template, -H'.format(os.path.basename(__file__))))
+        print('{} -H to show the example template file'.format(os.path.basename(__file__)))
+        sys.exit(1)
 
     inps.outfile = [os.path.abspath(i) for i in inps.outfile]
     inps.outdir = os.path.dirname(inps.outfile[0])
@@ -272,7 +273,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
                                                    path=inpsDict[key]))
 
     # Check required dataset
-    dsName0 = ifgramDatasetNames[0]
+    dsName0 = 'unwrapPhase'
     if dsName0 not in dsPathDict.keys():
         print('WARNING: No reqired {} data files found!'.format(dsName0))
         return None
@@ -372,7 +373,7 @@ def read_inps_dict2geometry_dict_object(inpsDict):
 
     # metadata
     ifgramRadarMetadata = None
-    ifgramKey = datasetName2templateKey[ifgramDatasetNames[0]]
+    ifgramKey = datasetName2templateKey['unwrapPhase']
     if ifgramKey in inpsDict.keys():
         ifgramFiles = glob.glob(str(inpsDict[ifgramKey]))
         if len(ifgramFiles) > 0:
