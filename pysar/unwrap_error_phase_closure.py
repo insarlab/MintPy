@@ -125,7 +125,7 @@ def correct_unwrap_error(ifgram, C, Dconstraint=True, thres=0.1, alpha=0.25, rco
     L = np.zeros((A.shape[0], ifgram.shape[1]), np.float32)
     L[0:num_tri, :] = np.dot(C, ifgram) / (-2.*np.pi)
     try:
-        U = np.round(lstsq(A, L, cond=rcond)[0])
+        U = np.round(lstsq(A, L, cond=rcond)[0])   # Eq 4.4 (Fattahi, 2015)
     except LinAlgError:
         pass
 
@@ -182,7 +182,7 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
     # mask 2. mask of pixels without unwrap error: : zero phase closure on all triangles
     print('calculating phase closure of all possible triangles ...')
     pha_closure = np.dot(C, pha_data)
-    pha_closure = np.abs(pha_closure - ut.wrap(pha_closure))
+    pha_closure = np.abs(pha_closure - ut.wrap(pha_closure))       # Eq 4.2 (Fattahi, 2015)
     num_nonzero_closure = np.sum(pha_closure >= thres, axis=0)
     mask *= (num_nonzero_closure != 0.)
     del pha_closure
@@ -219,9 +219,8 @@ def run_unwrap_error(inps):
     """Run unwrapping error correction in network of interferograms using phase closure."""
     stack_obj = ifgramStack(inps.ifgram_file)
     stack_obj.open()
-
     # get phase on reference point
-    ref_phase = ifginv.get_ifgram_reference_phase(inps.ifgram_file, drop_ifgram=False)
+    ref_phase = stack_obj.get_reference_phase(dropIfgram=False)
 
     # split ifgram_file into blocks to save memory
     box_list = ifginv.split_into_boxes(inps.ifgram_file, chunk_size=100e6)

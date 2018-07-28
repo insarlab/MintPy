@@ -817,9 +817,12 @@ def read_data4figure(i_start, i_end, inps, metadata):
         if inps.key == 'ifgramStack':
             # reference pixel info in unwrapPhase
             if inps.dsetFamilyList[0] == 'unwrapPhase' and inps.file_ref_yx:
+                ref_y, ref_x = inps.file_ref_yx
+                ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
+                ref_data = readfile.read(inps.file, datasetName=dset_list, box=ref_box, print_msg=False)[0]
                 for i in range(data.shape[0]):
                     mask = data[i, :, :] != 0.
-                    data[i, mask] -= data[i, inps.file_ref_yx[0], inps.file_ref_yx[1]]
+                    data[i, mask] -= ref_data[i]
 
     # slow reading with one 2D matrix at a time
     else:
@@ -935,7 +938,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             subplot_title = str(i)
             if inps.fig_row_num * inps.fig_col_num < 10:
                 subplot_title += '\n{}'.format(inps.dset[i])
-            elif inps.fig_row_num * inps.fig_col_num > 150:
+            elif inps.fig_row_num * inps.fig_col_num > 200:
                 subplot_title = ''
         else:
             subplot_title = str(inps.dset[i])

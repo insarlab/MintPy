@@ -725,6 +725,21 @@ class ifgramStack:
         dateList = sorted(list(set(mDates + sDates)))
         return dateList
 
+    def get_reference_phase(self, unwDatasetName='unwrapPhase', skip_reference=False, dropIfgram=False):
+        self.open(print_msg=False)
+        if skip_reference:
+            ref_phase = np.zeros((self.get_size(dropIfgram=dropIfgram)[0],), np.float32)
+            print('skip checking reference pixel info - This is for SIMULATION ONLY.')
+        elif 'REF_Y' not in self.metadata.keys():
+            raise ValueError('No REF_X/Y found!\nrun reference_point.py to select reference pixel.')
+        else:
+            print('reference pixel in y/x: {}'.format(self.refY, self.refX))
+            ref_phase = self.read(datasetName=unwDatasetName,
+                                  box=(self.refX, self.refY, self.refX+1, self.refY+1),
+                                  dropIfgram=dropIfgram,
+                                  print_msg=False)
+        return ref_phase
+
     def nonzero_mask(self, datasetName=None, print_msg=True, dropIfgram=True):
         """Return the common mask of pixels with non-zero value in dataset of all ifgrams.
            Ignoring dropped ifgrams

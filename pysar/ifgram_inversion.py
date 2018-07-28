@@ -242,8 +242,7 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
 
 def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
     """Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)"""
-    if print_msg:
-        lineStr = '    number of multilooks L={}'.format(L)
+    lineStr = '    number of multilooks L={}'.format(L)
     if L > 80:
         L = 80
         lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
@@ -450,7 +449,7 @@ def split_ifgram_file(ifgram_file, chunk_size=100e6):
     metadata = dict(stack_obj.metadata)
 
     # get reference phase
-    ref_phase = get_ifgram_reference_phase(ifgram_file, drop_ifgram=False)
+    ref_phase = stack_obj.get_reference_phase(dropIfgram=False)
 
     # get list of boxes
     box_list = split_into_boxes(ifgram_file,
@@ -462,8 +461,7 @@ def split_ifgram_file(ifgram_file, chunk_size=100e6):
     outfile_list = []
     for i in range(num_box):
         box = box_list[i]
-        outfile = '{}_{:03d}{}'.format(os.path.splitext(ifgram_file)[0],
-                                       i+1,
+        outfile = '{}_{:03d}{}'.format(os.path.splitext(ifgram_file)[0], i+1,
                                        os.path.splitext(ifgram_file)[1])
 
         # datasets
@@ -527,30 +525,6 @@ def check_design_matrix(ifgram_file, weight_func='fim'):
             print("    2) Use '-w no' option for non-weighted SVD solution.")
             raise Exception()
     return A
-
-
-def get_ifgram_reference_phase(ifgram_file, unwDatasetName='unwrapPhase', skip_reference=False, drop_ifgram=True):
-    """Read refPhase"""
-    stack_obj = ifgramStack(ifgram_file)
-    stack_obj.get_size()
-    stack_obj.get_metadata()
-    try:
-        ref_y = int(stack_obj.metadata['REF_Y'])
-        ref_x = int(stack_obj.metadata['REF_X'])
-        ref_phase = np.squeeze(stack_obj.read(datasetName=unwDatasetName,
-                                              box=(ref_x, ref_y, ref_x+1, ref_y+1),
-                                              dropIfgram=drop_ifgram,
-                                              print_msg=False))
-        print('reference pixel in y/x: {}'.format((ref_y, ref_x)))
-    except:
-        if skip_reference:
-            ref_phase = np.zeros((stack_obj.numIfgram,), np.float32)
-            print('skip checking reference pixel info - This is for SIMULATION ONLY.')
-        else:
-            msg = 'ERROR: No REF_X/Y found! Can not invert interferograms without reference in space.'
-            msg += '\nrun reference_point.py {} for a quick referencing.'.format(stack_obj.file)
-            raise Exception(msg)
-    return ref_phase
 
 
 def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', skip_zero_phase=True, print_msg=True):
@@ -628,24 +602,25 @@ def read_coherence(stack_obj, box, print_msg=True):
 def coherence2weight(coh_data, weight_func='fim', L=20, epsilon=5e-2, print_msg=True):
     coh_data[np.isnan(coh_data)] = epsilon
     coh_data[coh_data < epsilon] = epsilon
+    coh_data = np.array(coh_data, np.float64)
 
     # Calculate Weight matrix
     weight_func = weight_func.lower()
-    weight = np.array(coh_data, np.float64)
     if 'var' in weight_func:
         if print_msg:
             print('convert coherence to weight using inverse of phase variance')
             print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
-        weight = 1.0 / coherence2phase_variance_ds(weight, L, print_msg=print_msg)
+        weight = 1.0 / coherence2phase_variance_ds(coh_data, L, print_msg=print_msg)
 
     elif any(i in weight_func for i in ['coh', 'lin']):
         if print_msg:
             print('use coherence as weight directly (Perissin & Wang, 2012; Tong et al., 2016)')
+        weight = coh_data
 
     elif any(i in weight_func for i in ['fim', 'fisher']):
         if print_msg:
             print('convert coherence to weight using Fisher Information Index (Seymour & Cumming, 1994)')
-        weight = coherence2fisher_info_index(weight, L)
+        weight = coherence2fisher_info_index(coh_data, L)
 
     elif weight_func in ['no', 'sbas', 'uniform']:
         weight = None
@@ -655,6 +630,7 @@ def coherence2weight(coh_data, weight_func='fim', L=20, epsilon=5e-2, print_msg=
 
     if weight is not None:
         weight = np.array(weight, np.float32)
+    del coh_data
     return weight
 
 
@@ -745,12 +721,11 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     if water_mask_file:
         print(('skip pixels on water with mask from'
                ' file: {}').format(os.path.basename(water_mask_file)))
-        atr = readfile.read_attribute(water_mask_file)
-        if int(atr['LENGTH']) != stack_obj.length or int(atr['WIDTH']) != stack_obj.width:
+        atr_msk = readfile.read_attribute(water_mask_file)
+        if (int(atr_msk['LENGTH']), int(atr_msk['WIDTH'])) != (stack_obj.length, stack_obj.width):
             raise ValueError('Input water mask file has different size from ifgramStack file.')
-        del atr
-        dsNames = readfile.get_dataset_list(water_mask_file)
-        dsName = [i for i in dsNames
+        del atr_msk
+        dsName = [i for i in readfile.get_dataset_list(water_mask_file)
                   if i in ['waterMask', 'mask']][0]
         waterMask = readfile.read(water_mask_file,
                                   datasetName=dsName,
@@ -944,10 +919,9 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                    skip_zero_phase=inps.skip_zero_phase)
     else:
         # read ifgram_file in small patches and write them together
-        ref_phase = get_ifgram_reference_phase(ifgram_file,
-                                               unwDatasetName=inps.unwDatasetName,
-                                               skip_reference=inps.skip_ref,
-                                               drop_ifgram=True)
+        ref_phase = stack_obj.get_reference_phase(unwDatasetName=inps.unwDatasetName,
+                                                  skip_reference=inps.skip_ref,
+                                                  dropIfgram=True)
 
         # Initialization of output matrix
         stack_obj = ifgramStack(ifgram_file)
@@ -1002,16 +976,22 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     if inps.templateFile:
         inps = read_template2inps(inps.templateFile, inps)
-    if inps.fast and inps.weightFunc != 'no':
-        inps.weightFunc = 'no'
-        print("Enable fast processing by forcing weightFunct = 'no'")
-
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
 
-    # Input file info
-    atr = readfile.read_attribute(inps.ifgramStackFile)
-    if atr['FILE_TYPE'] != 'ifgramStack':
-        raise ValueError('input is {} file, only support ifgramStack file.'.format(atr['FILE_TYPE']))
+    # check input file type
+    k = readfile.read_attribute(inps.ifgramStackFile)['FILE_TYPE']
+    if k != 'ifgramStack':
+        raise ValueError('input is {} file, only support ifgramStack file.'.format(k))
+
+    # fast inverting option
+    if inps.fast:
+        print("Enable fast network inversion.")
+        if inps.weightFunc != 'no':
+            inps.weightFunc = 'no'
+            print("\tforcing weightFunc = 'no'")
+        if inps.maskDataset is not None:
+            inps.maskDataset = None
+            print("\tforcing maskDataset = None")
 
     # Network Inversion
     if inps.residualNorm == 'L2':

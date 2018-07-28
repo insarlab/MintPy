@@ -96,7 +96,7 @@ def calculate_temporal_coherence_patch(ifgram_file, timeseries_file, box=None, i
     A = stack_obj.get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
     print('reading unwrapPhase data from file: {}'.format(ifgram_file))
     ifgram_data = stack_obj.read(datasetName='unwrapPhase', box=box).reshape(A.shape[0], -1)
-    ref_value = ifginv.get_ifgram_reference_phase(stack_obj).reshape((-1, 1))
+    ref_value = stack_obj.get_reference_phase(dropIfgram=True).reshape((-1, 1))
     ifgram_data -= np.tile(ref_value, (1, ifgram_data.shape[1]))
 
     ifgram_diff = ifgram_data - np.dot(A, ts_data)
