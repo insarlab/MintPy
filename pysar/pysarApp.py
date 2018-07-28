@@ -65,14 +65,16 @@ pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum cohere
 pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
 
 
-## 1.4 Unwrapping Error Correction (optional and not recommended)
-## unwrapping error correction based on the following two methods:
-## a. phase closure (Fattahi, 2015, PhD Thesis)
-## b. connecting bridge
+## 1.4 Unwrapping Error Correction (optional)
+## supported methods:
+## a. phase closure (automatic, slow; Fattahi, 2015, Thesis Chap. 4) [fast option available but not best]
+## b. bridging (need manual setup, fast)
 pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
-pysar.unwrapError.maskFile = auto   #[filename / no], auto for no
+pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
 pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
-pysar.unwrapError.yx       = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,...], auto for none
+pysar.unwrapError.bridgeYX = auto   #[y1_start, x1_start, y1_end, x1_end; y2_start, ...], auto for none
+pysar.unwrapError.update   = auto   #[yes / no], auto for yes, enable update mode in pysarApp.py
+                                    # and skip runing if unwraPhase_unwCor already exists
 
 
 ########## 2. Network Inversion
@@ -101,7 +103,7 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 ## 2.2 Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
-## weighting options for least square inversion:
+## weighting options for least square inversion [fast option available but not best]:
 ## 1) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
 ## 2) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
 ## 3) coh - use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
@@ -146,6 +148,7 @@ pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, for height_co
 ## reference: Fattahi and Amelung, 2013, IEEE-TGRS
 ## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
 ## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
+## [fast option available but not best]
 pysar.topographicResidual               = auto  #[yes / no], auto for yes
 pysar.topographicResidual.polyOrder     = auto  #[1-inf], auto for 2, poly order of temporal deformation model
 pysar.topographicResidual.phaseVelocity = auto  #[yes / no], auto for no - phase, use phase velocity for error estimation
@@ -471,19 +474,34 @@ def main(iargs=None):
     #    based on the consistency of triplets
     #    of interferograms
     ############################################
-    if template['pysar.unwrapError.method']:
-        print('\n**********  Unwrapping Error Correction  **********')
-        outName = '{}_unwCor.h5'.format(os.path.splitext(inps.stackFile)[0])
-        unwCmd = 'unwrap_error.py {} --mask {} --template {}'.format(inps.stackFile,
-                                                                     inps.maskFile,
-                                                                     inps.templateFile)
+    unw_cor_method = template['pysar.unwrapError.method']
+    if unw_cor_method:
+        print('\n**********  Unwrapping Error Correction **********')
+        if unw_cor_method == 'phase_closure':
+            unw_cor_mask_file = template['pysar.unwrapError.maskFile']
+            if not unw_cor_mask_file:
+                unw_cor_mask_file = inps.maskFile
+            unwCmd = 'unwrap_error_phase_closure.py {} -t {} -m {}'.format(inps.stackFile,
+                                                                           inps.templateFile,
+                                                                           unw_cor_mask_file)
+            if inps.fast:
+                unwCmd += ' --fast'
+
+        elif unw_cor_method.startswith('bridg'):
+            unwCmd = 'unwrap_error_bridging.py {} -t {}'.format(inps.stackFile,
+                                                                inps.templateFile)
+        else:
+            raise ValueError('un-recognized method: {}'.format(unw_cor_method))
+
+        # update mode
+        if template['pysar.unwrapError.update']:
+            unwCmd += ' --update'
+
         print(unwCmd)
-        if ut.update_file(outName, inps.stackFile):
-            print('This might take a while depending on the size of your data set!')
-            status = subprocess.Popen(unwCmd, shell=True).wait()
-            if status is not 0:
-                raise Exception('Error while correcting phase unwrapping errors.\n')
-        inps.stackFile = outName
+        status = subprocess.Popen(unwCmd, shell=True).wait()
+        if status is not 0:
+            raise Exception('Error while correcting phase unwrapping errors.\n')
+
 
     #########################################
     # Network Modification (Optional)

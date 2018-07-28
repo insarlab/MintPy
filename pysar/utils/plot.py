@@ -48,6 +48,7 @@ default_figsize_multi = [15.0, 8.0]
 max_figsize_height = 8.0       # max figure size in vertical direction in inch
 
 
+
 ######################################### BasemapExt class begein ############################################
 class BasemapExt(Basemap):
     """
@@ -184,6 +185,258 @@ class BasemapExt(Basemap):
 
 
 
+####################################### ColormapExt class begin ###########################################
+class ColormapExt(mpl.cm.ScalarMappable):
+    """Extended colormap class inherited from matplotlib.cm.ScalarMappable class
+    Member variables:
+        cmap_list : list of string for supported colormap names
+        colormap  : colormap object to be used for plotting
+        cmap_lut  : int, number of increment in the lookup table
+        cmap_name : string, number of colormap
+    """
+
+    def __init__(self, cmap_name, cmap_lut=256):
+        self.cmap_name = cmap_name
+        self.cmap_lut = cmap_lut
+        self.get_colormap_list()
+        self.get_colormap()
+
+    def get_colormap_list(self):
+        """list of colormap supported in string for name of colormap, from two sources:
+            1) matlotlib
+            2) local GMT cpt files
+        """
+        plt_cm_list = sorted(m for m in plt.cm.datad)
+        gmt_cm_list = self.get_gmt_colormap(cmap_name=None)
+        self.cmap_list = plt_cm_list + gmt_cm_list
+
+    def get_colormap(self):
+        cmap_base_name = self.cmap_name[0:-1]
+        if self.cmap_name in self.cmap_list:
+            self.colormap = self.get_single_colormap(cmap_name=self.cmap_name,
+                                                     cmap_lut=self.cmap_lut)
+
+        elif cmap_base_name in self.cmap_list:
+            num_repeat = int(self.cmap_name[-1])
+            self.colormap = self.get_repeat_colormap(cmap_name=cmap_base_name,
+                                                     num_repeat=self.cmap_lut,
+                                                     cmap_lut=self.cmap_lut)
+
+        else:
+            msg = 'un-recognized input colormap name: {}\n'.format(self.cmap_name)
+            msg += 'supported colormap:\n{}'.format(self.cmap_list)
+            raise ValueError(msg)
+        return self.colormap
+
+
+    def get_single_colormap(self, cmap_name, cmap_lut=256):
+        if cmap_name == 'hsv':
+            # Modified hsv colormap by H. Fattahi
+            cdict1 = {'red':   ((0.0, 0.0, 0.0),
+                                (0.5, 0.0, 0.0),
+                                (0.6, 1.0, 1.0),
+                                (0.8, 1.0, 1.0),
+                                (1.0, 0.5, 0.5)),
+                      'green': ((0.0, 0.0, 0.0),
+                                (0.2, 0.0, 0.0),
+                                (0.4, 1.0, 1.0),
+                                (0.6, 1.0, 1.0),
+                                (0.8, 0.0, 0.0),
+                                (1.0, 0.0, 0.0)),
+                      'blue':  ((0.0, 0.5, .5),
+                                (0.2, 1.0, 1.0),
+                                (0.4, 1.0, 1.0),
+                                (0.5, 0.0, 0.0),
+                                (1.0, 0.0, 0.0),)
+                      }
+            colormap = LinearSegmentedColormap('hsv', cdict1, N=cmap_lut)
+        else:
+            try:
+                colormap = plt.get_cmap(cmap_name, cmap_lut)
+            except:
+                colormap = self.get_gmt_colormap(cmap_name, cmap_lut=cmap_lut)
+        return colormap
+
+
+    def get_repeat_colormap(self, cmap_name:str, num_repeat:int, cmap_lut=256):
+        """Generate repeated colormap from an supported colormap name
+        Parameters: cmap_name : string, colormap name
+                    num_repeat : int, repeat number
+        """
+        cmap0 = self.get_single_colormap(cmap_name)
+        colors = np.tile(cmap0(np.linspace(0., 1., 100)), (num_repeat,1))
+        cmap = LinearSegmentedColormap.from_list(cmap_name+str(num_repeat),
+                                                 colors,
+                                                 N=cmap_lut*num_repeat)
+        return cmap
+
+
+    def get_gmt_colormap(self, cmap_name=None, cpt_path=None, cmap_lut=256):
+        """Load GMT .cpt colormap file.
+        Modified from Scipy Cookbook originally written by James Boyle.
+        Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_Loading_a_colormap_dynamically.html
+    
+        Download .cpt file from http://soliton.vm.bytemark.co.uk/pub/cpt-city/
+
+        Parameters: cmap_name : string, colormap name, e.g. temperature
+                    cpt_path : directory of .cpt files
+                        '/opt/local/share/gmt/cpt/' for macOS user with GMT installed from MacPorts
+        Returns:    colormap : matplotlib.colors.LinearSegmentedColormap object
+        Example:    colormap = get_gmt_colormap('temperature')
+                    colormap = get_gmt_colormap('temperature_r')
+                    gmt_cm_list = get_gmt_colormap(None)
+        """
+        # default file path
+        if not cpt_path:
+            cpt_path = os.path.join(os.path.dirname(__file__), '../../docs/cpt')
+
+        # if cmap_name is None, return list of existing cmap instead.
+        if not cmap_name:
+            cm_list = sorted(glob.glob(os.path.join(cpt_path, '*.cpt')))
+            cm_list = [os.path.splitext(os.path.basename(i))[0] for i in cm_list]
+            cm_list_r = ['{}_r'.format(i) for i in cm_list]
+            return cm_list+cm_list_r
+
+        # support _r for reversed colormap
+        reverse_colormap = False
+        if cmap_name.endswith('_r'):
+            reverse_colormap = True
+            cmap_name = cmap_name[0:-2]
+
+        # open cpt file
+        fpath = os.path.join(cpt_path, "{}.cpt".format(cmap_name))
+        try:
+            f = open(fpath)
+        except FileNotFoundError:
+            raise FileNotFoundError("file {} not found".format(fpath))
+        lines = f.readlines()
+        f.close()
+
+        # read cpt file content into x/r/g/b
+        x, r, g, b = [], [], [], []
+        colorModel = "RGB"
+        for l in lines:
+            ls = l.split()
+            if l[0] == "#":
+                if ls[-1] == "HSV":
+                    colorModel = "HSV"
+                    continue
+                else:
+                    continue
+            if ls[0] in ["B", "F", "N"]:
+                pass
+            else:
+                x.append(float(ls[0]))
+                r.append(float(ls[1]))
+                g.append(float(ls[2]))
+                b.append(float(ls[3]))
+                xtemp = float(ls[4])
+                rtemp = float(ls[5])
+                gtemp = float(ls[6])
+                btemp = float(ls[7])
+        x.append(xtemp)
+        r.append(rtemp)
+        g.append(gtemp)
+        b.append(btemp)
+        x = np.array(x, np.float32)
+        r = np.array(r, np.float32)
+        g = np.array(g, np.float32)
+        b = np.array(b, np.float32)
+        if colorModel == "HSV":
+            from matplotlib.colors import hsv_to_rgb
+            for i in range(r.shape[0]):
+                r[i], g[i], b[i] = hsv_to_rgb(r[i]/360., g[i], b[i])
+        if colorModel == "RGB":
+            r /= 255.
+            g /= 255.
+            b /= 255.
+        xNorm = (x - x[0]) / (x[-1] - x[0])
+
+        # x/r/g/b --> colorDict
+        red, blue, green = [], [], []
+        for i in range(len(x)):
+            red.append((xNorm[i], r[i], r[i]))
+            green.append((xNorm[i], g[i], g[i]))
+            blue.append((xNorm[i], b[i], b[i]))
+        colorDict = {"red":tuple(red), "green":tuple(green), "blue":tuple(blue)}
+
+        # colorDict --> colormap object
+        colormap = LinearSegmentedColormap(cmap_name, colorDict, N=cmap_lut)
+        if reverse_colormap:
+            colormap = colormap.reversed()
+        return colormap
+####################################### ColormapExt class end #############################################
+
+
+
+################################# SelectFromCollection class begin ########################################
+class SelectFromCollection(object):
+    """Select indices from a matplotlib collection using `PolygonSelector`.
+    
+    Selected pixels within the polygon is marked as True and saved in the 
+    member variable self.mask, in the same size as input AxesImage object
+    with all the other pixels marked as False.
+
+    Parameters
+    ----------
+    ax : :class:`~matplotlib.axes.Axes`
+        Axes to interact with.
+
+    collection : :class:`matplotlib.collections.Collection` subclass
+        Collection you want to select from.
+
+    Examples
+    --------
+    import matplotlib.pyplot as plt
+    from pysar.utils import readfile, plot as pp
+    
+    fig, ax = plt.subplots()
+    data = readfile.read('velocity.h5', datasetName='velocity')[0]
+    im = ax.imshow(data)
+    
+    selector = pp.SelectFromCollection(ax, im)
+    plt.show()
+    selector.disconnect()
+    
+    plt.figure()
+    plt.imshow(selector.mask)
+    plt.show()
+    """
+
+    def __init__(self, ax, collection, alpha_other=0.3):
+        from matplotlib.widgets import PolygonSelector
+        self.canvas = ax.figure.canvas
+        self.collection = collection
+        self.prepare_coordinates()
+
+        self.poly = PolygonSelector(ax, self.onselect)
+
+        msg = "\nSelect points in the figure by enclosing them within a polygon.\n"
+        msg += "Press the 'esc' key to start a new polygon.\n"
+        msg += "Try hold to left key to move a single vertex.\n"
+        msg += "After complete the selection, close the figure/window to continue.\n"
+        print(msg)
+
+    def prepare_coordinates(self):
+        imgExt = self.collection.get_extent()
+        self.length = int(imgExt[2] - imgExt[3])
+        self.width  = int(imgExt[1] - imgExt[0])
+        yy, xx = np.mgrid[:self.length, :self.width]
+        self.coords = np.hstack((xx.reshape(-1, 1),
+                                 yy.reshape(-1, 1)))
+
+    def onselect(self, verts):
+        from matplotlib.path import Path
+        self.poly_path = Path(verts)
+        self.mask = self.poly_path.contains_points(self.coords).reshape(self.length, self.width)
+        self.canvas.draw_idle()
+
+    def disconnect(self):
+        self.poly.disconnect_events()
+        self.canvas.draw_idle()
+################################## SelectFromCollection class end #########################################
+
+
 
 ########################################### Parser utilities ##############################################
 def add_data_disp_argument(parser):
@@ -193,9 +446,6 @@ def add_data_disp_argument(parser):
                       help='Display limits for matrix plotting.')
     data.add_argument('-u', '--unit', dest='disp_unit', metavar='UNIT',
                       help='unit for display.  Its priority > wrap')
-    data.add_argument('-c', '--colormap', dest='colormap',
-                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r etc.\n'
-                           'Support colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html')
 
     data.add_argument('--wrap', action='store_true',
                       help='re-wrap data to display data in fringes.')
@@ -241,7 +491,7 @@ def add_dem_argument(parser):
 
 
 def add_figure_argument(parser):
-    # Figure
+    """Arguments for figure setting"""
     fig = parser.add_argument_group('Figure', 'Figure settings for display')
     fig.add_argument('--fontsize', dest='font_size',
                      type=int, help='font size')
@@ -250,9 +500,21 @@ def add_figure_argument(parser):
     fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=300,
                      help='DPI - dot per inch - for display/write')
 
+    # axis format
     fig.add_argument('--noaxis', dest='disp_axis',
                      action='store_false', help='do not display axis')
+    fig.add_argument('--notick', dest='disp_tick',
+                     action='store_false', help='do not display tick in x/y axis')
 
+    # colormap
+    fig.add_argument('-c', '--colormap', dest='colormap',
+                     help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
+                          'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
+                          'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
+    fig.add_argument('--cm-lut', dest='cmap_lut', type=int, default=256,
+                     help='number of increment of colormap lookup table')
+
+    # colorbar
     fig.add_argument('--nocbar', '--nocolorbar', dest='disp_cbar',
                      action='store_false', help='do not display colorbar')
     fig.add_argument('--cbar-nbins', dest='cbar_nbins',
@@ -262,20 +524,26 @@ def add_figure_argument(parser):
     fig.add_argument('--cbar-label', dest='cbar_label',
                      default=None, help='colorbar label')
 
+    # title
     fig.add_argument('--notitle', dest='disp_title',
                      action='store_false', help='do not display title')
-    fig.add_argument('--notick', dest='disp_tick',
-                     action='store_false', help='do not display tick in x/y axis')
     fig.add_argument('--title-in', dest='fig_title_in',
                      action='store_true', help='draw title in/out of axes')
     fig.add_argument('--figtitle', dest='fig_title',
                      help='Title shown in the figure.')
+
+    # size, subplots number and space
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                      help='figure size in inches - width and length')
     fig.add_argument('--figext', dest='fig_ext',
                      default='.png', choices=['.emf', '.eps', '.pdf', '.png', '.ps', '.raw', '.rgba', '.svg', '.svgz'],
                      help='File extension for figure output file')
-
+    fig.add_argument('--fignum', dest='fig_num', type=int,
+                     help='number of figure windows')
+    fig.add_argument('--nrows', dest='fig_row_num', type=int, default=1,
+                     help='subplot number in row')
+    fig.add_argument('--ncols', dest='fig_col_num', type=int, default=1,
+                     help='subplot number in column')
     fig.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,
                      help='width space between subplots in inches')
     fig.add_argument('--hspace', dest='fig_hei_space', type=float, default=0.05,
@@ -286,12 +554,6 @@ def add_figure_argument(parser):
     fig.add_argument('--animation', action='store_true',
                      help='enable animation mode')
 
-    fig.add_argument('--fignum', dest='fig_num', type=int,
-                     help='number of figure windows')
-    fig.add_argument('--nrows', dest='fig_row_num', type=int, default=1,
-                     help='subplot number in row')
-    fig.add_argument('--ncols', dest='fig_col_num', type=int, default=1,
-                     help='subplot number in column')
 
     return parser
 
@@ -354,9 +616,9 @@ def add_map_argument(parser):
 
 def add_point_argument(parser):
     pts = parser.add_argument_group('Point', 'Plot points defined by y/x or lat/lon')
-    pts.add_argument('--pts-yx', dest='pts_yx', type=int, nargs=2, metavar=('Y', 'X'),
+    pts.add_argument('--pts-yx', dest='pts_yx', type=int, nargs='*', metavar=('Y', 'X'),
                      help='Point in (Y, X)')
-    pts.add_argument('--pts-lalo', dest='pts_lalo', type=float, nargs=2, metavar=('LAT', 'LON'),
+    pts.add_argument('--pts-lalo', dest='pts_lalo', type=float, nargs='*', metavar=('LAT', 'LON'),
                      help='Point in (Lat, Lon)')
     pts.add_argument('--pts-file', dest='pts_file', type=str,
                      help='Point(s) defined in text file in lat/lon column')
@@ -425,21 +687,6 @@ def read_point2inps(inps, coord_obj):
 
 
 ############################################ Plot Utilities #############################################
-def discrete_cmap(N, base_cmap=None):
-    """Create an N-bin discrete colormap from the specified input map
-    Reference: https://gist.github.com/jakevdp/91077b0cae40f8f8244a
-    """
-
-    # Note that if base_cmap is a string or None, you can simply do
-    #    return plt.cm.get_cmap(base_cmap, N)
-    # The following works for string, None, or a colormap instance:
-
-    base = plt.cm.get_cmap(base_cmap)
-    color_list = base(np.linspace(0, 1, N))
-    cmap_name = base.name + str(N)
-    return base.from_list(cmap_name, color_list, N)
-
-
 def add_inner_title(ax, title, loc, size=None, **kwargs):
     from matplotlib.offsetbox import AnchoredText
     from matplotlib.patheffects import withStroke
@@ -526,7 +773,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
     return fig_title
 
 
-def auto_flip_direction(metadata):
+def auto_flip_direction(metadata, print_msg=True):
     """Check flip left-right and up-down based on attribute dict, for radar-coded file only"""
     # default value
     flip_lr = False
@@ -534,7 +781,8 @@ def auto_flip_direction(metadata):
 
     # auto flip for file in radar coordinates
     if 'Y_FIRST' not in metadata.keys() and 'ORBIT_DIRECTION' in metadata.keys():
-        print('{} orbit'.format(metadata['ORBIT_DIRECTION']))
+        if print_msg:
+            print('{} orbit'.format(metadata['ORBIT_DIRECTION']))
         if metadata['ORBIT_DIRECTION'].lower().startswith('a'):
             flip_ud = True
         else:
@@ -567,178 +815,19 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
     return row_num, col_num
 
 
-def check_colormap_input(metadata, cmap_name=None, datasetName=None, print_msg=True):
+def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=256, print_msg=True):
     gray_dataset_key_words = ['coherence', 'temporal_coherence', 'connectComponent',
                               '.cor', '.mli', '.slc', '.amp', '.ramp']
     if not cmap_name:
-        if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'], str(datasetName).split('-')[0]]):
+        if any(i in gray_dataset_key_words for i in [metadata['FILE_TYPE'],
+                                                     str(datasetName).split('-')[0]]):
             cmap_name = 'gray'
         else:
             cmap_name = 'jet'
     if print_msg:
         print('colormap: '+cmap_name)
 
-    colormap = get_colormap(cmap_name)
-
-    return colormap
-
-
-def get_colormap(cmap_name):
-    # get colormap object
-    plt_cm_list = sorted(m for m in plt.cm.datad)
-    gmt_cm_list = get_gmt_colormap(cmap_name=None)
-
-    if cmap_name in plt_cm_list+gmt_cm_list:
-        colormap = single_colormap(cmap_name)
-
-    elif cmap_name[0:-1] in plt_cm_list+gmt_cm_list:
-        num = int(cmap_name[-1])
-        colormap = repeat_colormap(cmap_name[0:-1], num)
-
-    else:
-        msg = 'un-recognized input colormap name: {}\n'.format(cmap_name)
-        msg += 'supported colormap:\n{}'.format(plt_cm_list+gmt_cm_list)
-        raise ValueError(msg)
-    return colormap
-
-
-def single_colormap(cmap_name):
-    if cmap_name == 'hsv':
-        # Modified hsv colormap by H. Fattahi
-        cdict1 = {'red':   ((0.0, 0.0, 0.0),
-                            (0.5, 0.0, 0.0),
-                            (0.6, 1.0, 1.0),
-                            (0.8, 1.0, 1.0),
-                            (1.0, 0.5, 0.5)),
-                  'green': ((0.0, 0.0, 0.0),
-                            (0.2, 0.0, 0.0),
-                            (0.4, 1.0, 1.0),
-                            (0.6, 1.0, 1.0),
-                            (0.8, 0.0, 0.0),
-                            (1.0, 0.0, 0.0)),
-                  'blue':  ((0.0, 0.5, .5),
-                            (0.2, 1.0, 1.0),
-                            (0.4, 1.0, 1.0),
-                            (0.5, 0.0, 0.0),
-                            (1.0, 0.0, 0.0),)
-                  }
-        colormap = LinearSegmentedColormap('hsv', cdict1)
-    else:
-        try:
-            colormap = plt.get_cmap(cmap_name)
-        except:
-            colormap = get_gmt_colormap(cmap_name)
-    return colormap
-
-
-def repeat_colormap(cmap_name='jet', num:int=3):
-    """Generate repeated colormap from an supported colormap name
-    Parameters: cmap_name : string, colormap name
-                num : int, repeat number
-    """
-    cmap0 = get_colormap(cmap_name)
-    colors = np.tile(cmap0(np.linspace(0., 1., 100)), (num,1))
-    cmap_name_out = cmap_name+str(num)
-    cmap = LinearSegmentedColormap.from_list(cmap_name_out, colors, N=100*num)
-    return cmap
-
-
-def get_gmt_colormap(cmap_name=None, cpt_path=None):
-    """Load GMT .cpt colormap file.
-    Modified from Scipy Cookbook originally written by James Boyle.
-    Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_Loading_a_colormap_dynamically.html
-
-    Download .cpt file from http://soliton.vm.bytemark.co.uk/pub/cpt-city/
-
-    Parameters: cmap_name : string, colormap name, e.g. temperature
-                cpt_path : directory of .cpt files
-                    '/opt/local/share/gmt/cpt/' for macOS user with GMT installed from MacPorts
-    Returns:    colormap : matplotlib.colors.LinearSegmentedColormap object
-    Example:    colormap = get_gmt_colormap('temperature')
-                colormap = get_gmt_colormap('temperature_r')
-                gmt_cm_list = get_gmt_colormap(None)
-    """
-    # default file path
-    if not cpt_path:
-        cpt_path = os.path.join(os.path.dirname(__file__), '../../docs/cpt')
-
-    if not cmap_name:
-        cm_list = sorted(glob.glob(os.path.join(cpt_path, '*.cpt')))
-        cm_list = [os.path.splitext(os.path.basename(i))[0] for i in cm_list]
-        cm_list_r = ['{}_r'.format(i) for i in cm_list]
-        return cm_list+cm_list_r
-
-    # support _r for reversed colormap
-    reverse_colormap = False
-    if cmap_name.endswith('_r'):
-        reverse_colormap = True
-        cmap_name = cmap_name[0:-2]
-
-    # open cpt file
-    fpath = os.path.join(cpt_path, "{}.cpt".format(cmap_name))
-    try:
-        f = open(fpath)
-    except FileNotFoundError:
-        raise FileNotFoundError("file {} not found".format(fpath))
-    lines = f.readlines()
-    f.close()
-
-    # read cpt file content
-    x, r, g, b = [], [], [], []
-    colorModel = "RGB"
-    for l in lines:
-        ls = l.split()
-        if l[0] == "#":
-            if ls[-1] == "HSV":
-                colorModel = "HSV"
-                continue
-            else:
-                continue
-
-        if ls[0] in ["B", "F", "N"]:
-            pass
-        else:
-            x.append(float(ls[0]))
-            r.append(float(ls[1]))
-            g.append(float(ls[2]))
-            b.append(float(ls[3]))
-            xtemp = float(ls[4])
-            rtemp = float(ls[5])
-            gtemp = float(ls[6])
-            btemp = float(ls[7])
-
-    x.append(xtemp)
-    r.append(rtemp)
-    g.append(gtemp)
-    b.append(btemp)
-
-    nTable = len(r)
-    x = np.array(x, np.float32)
-    r = np.array(r, np.float32)
-    g = np.array(g, np.float32)
-    b = np.array(b, np.float32)
-    if colorModel == "HSV":
-        from matplotlib.colors import hsv_to_rgb
-        for i in range(r.shape[0]):
-            r[i], g[i], b[i] = hsv_to_rgb(r[i]/360., g[i], b[i])
-    if colorModel == "RGB":
-        r /= 255.
-        g /= 255.
-        b /= 255.
-    xNorm = (x - x[0]) / (x[-1] - x[0])
-
-    # colorDict
-    red, blue, green = [], [], []
-    for i in range(len(x)):
-        red.append((xNorm[i], r[i], r[i]))
-        green.append((xNorm[i], g[i], g[i]))
-        blue.append((xNorm[i], b[i], b[i]))
-    colorDict = {"red":tuple(red), "green":tuple(green), "blue":tuple(blue)}
-
-    colormap = LinearSegmentedColormap(cmap_name, colorDict, N=256)
-    if reverse_colormap:
-        colormap = colormap.reversed()
-    return colormap
+    return ColormapExt(cmap_name, cmap_lut).colormap
 
 
 def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1):
@@ -961,14 +1050,14 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
                     print('data range exceed orginal display range, set new display range to: [0.0, %f]' % (disp_max))
             c1_num = np.ceil(200.0 * (coh_thres - disp_min) / (disp_max - disp_min)).astype('int')
             coh_thres = c1_num / 200.0 * (disp_max-disp_min) + disp_min
-            cmap = get_colormap(plot_dict['colormap'])
+            cmap = ColormapExt(plot_dict['colormap']).colormap
             colors1 = cmap(np.linspace(0.0, 0.3, c1_num))
             colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
             cmap = LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
             if print_msg:
                 print(('color jump at '+str(coh_thres)))
         else:
-            cmap = get_colormap(plot_dict['colormap'])
+            cmap = ColormapExt(plot_dict['colormap']).colormap
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", "3%", pad="3%")
@@ -1240,7 +1329,7 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
         from matplotlib.colors import LightSource
         ls = LightSource(azdeg=inps_dict['shade_azdeg'],
                          altdeg=inps_dict['shade_altdeg'])
-        dem_shade = ls.shade(dem, vert_exag=0.5, cmap=get_colormap('gray'),
+        dem_shade = ls.shade(dem, vert_exag=0.5, cmap=ColormapExt('gray').colormap,
                              vmin=-7000, vmax=np.nanmax(dem)+1000)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
@@ -1313,7 +1402,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     marker_size = 7
     vmin, vmax = inps.vlim
     if isinstance(inps.colormap, str):
-        cmap = get_colormap(cmap_name=inps.colormap)
+        cmap = ColormapExt(cmap_name=inps.colormap).colormap
     else:
         cmap = inps.colormap
 

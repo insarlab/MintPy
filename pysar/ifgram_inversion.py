@@ -81,6 +81,9 @@ def create_parser():
 
     parser.add_argument('ifgramStackFile',
                         help='interferograms stack file to be inverted')
+    parser.add_argument('-d', '--dset', dest='unwDatasetName', type=str,
+                        help='dataset name of unwrap phase in ifgram file to be used for inversion\n'
+                             'e.g.: unwrapPhase, unwrapPhase_unwCor, ...')
     parser.add_argument('--template', '-t', dest='templateFile',
                         help='template text file with the following options:\n'+TEMPLATE)
     parser.add_argument('--ref-date', dest='ref_date',
@@ -526,7 +529,7 @@ def check_design_matrix(ifgram_file, weight_func='fim'):
     return A
 
 
-def get_ifgram_reference_phase(ifgram_file, skip_reference=False, drop_ifgram=True):
+def get_ifgram_reference_phase(ifgram_file, unwDatasetName='unwrapPhase', skip_reference=False, drop_ifgram=True):
     """Read refPhase"""
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.get_size()
@@ -534,7 +537,7 @@ def get_ifgram_reference_phase(ifgram_file, skip_reference=False, drop_ifgram=Tr
     try:
         ref_y = int(stack_obj.metadata['REF_Y'])
         ref_x = int(stack_obj.metadata['REF_X'])
-        ref_phase = np.squeeze(stack_obj.read(datasetName='unwrapPhase',
+        ref_phase = np.squeeze(stack_obj.read(datasetName=unwDatasetName,
                                               box=(ref_x, ref_y, ref_x+1, ref_y+1),
                                               dropIfgram=drop_ifgram,
                                               print_msg=False))
@@ -550,19 +553,19 @@ def get_ifgram_reference_phase(ifgram_file, skip_reference=False, drop_ifgram=Tr
     return ref_phase
 
 
-def read_unwrap_phase(stack_obj, box, ref_phase, skip_zero_phase=True, print_msg=True):
+def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', skip_zero_phase=True, print_msg=True):
     """Read unwrapPhase from ifgramStack file
     Parameters: stack_obj : ifgramStack object
                 box : tuple of 4 int
                 ref_phase : 1D array or None
                 skip_zero_phase : bool
-    Returns:    pha_data : 3D array of unwrapPhase
+    Returns:    pha_data : 2D array of unwrapPhase in size of (num_ifgram, num_pixel)
     """
     # Read unwrapPhase
     num_ifgram = np.sum(stack_obj.dropIfgram)
     if print_msg:
-        print('reading unwrapPhase in {} * {} ...'.format(box, num_ifgram))
-    pha_data = stack_obj.read(datasetName='unwrapPhase',
+        print('reading {} in {} * {} ...'.format(unwDatasetName, box, num_ifgram))
+    pha_data = stack_obj.read(datasetName=unwDatasetName,
                               box=box,
                               dropIfgram=True,
                               print_msg=False).reshape(num_ifgram, -1)
@@ -655,7 +658,7 @@ def coherence2weight(coh_data, weight_func='fim', L=20, epsilon=5e-2, print_msg=
     return weight
 
 
-def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None,
+def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
                            weight_func='fim', min_norm_velocity=True,
                            mask_dataset_name=None, mask_threshold=0.4,
                            water_mask_file=None, skip_zero_phase=True):
@@ -727,6 +730,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None,
     pha_data = read_unwrap_phase(stack_obj,
                                  box,
                                  ref_phase,
+                                 unwDatasetName=unwDatasetName,
                                  skip_zero_phase=skip_zero_phase)
 
     pha_data = mask_unwrap_phase(pha_data,
@@ -874,11 +878,14 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     if inps.update_mode and not ut.update_file(inps.timeseriesFile, ifgram_file):
         return inps.timeseriesFile, inps.tempCohFile
 
-    #A = check_design_matrix(ifgram_file, weight_func=inps.weightFunc)
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
     A = stack_obj.get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
     num_ifgram, num_date = A.shape[0], A.shape[1]+1
+
+    if not inps.unwDatasetName:
+        inps.unwDatasetName = [i for i in ['unwrapPhase_unwCor', 'unwrapPhase']
+                               if i in stack_obj.datasetNames][0]
 
     # print key setup info
     msg = '-------------------------------------------------------------------------------\n'
@@ -915,7 +922,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     # split ifgram_file into blocks to save memory
     box_list = split_into_boxes(ifgram_file, chunk_size=inps.chunk_size)
     num_box = len(box_list)
-
     if inps.split_file:
         # split ifgram_file into small files and write each of them
         print('\n---------------------------- Splitting Input File -----------------------------')
@@ -929,6 +935,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
             ifgram_inversion_patch(fname,
                                    box=None,
                                    ref_phase=None,
+                                   unwDatasetName=inps.unwDatasetName,
                                    weight_func=inps.weightFunc,
                                    min_norm_velocity=inps.minNormVelocity,
                                    mask_dataset_name=inps.maskDataset,
@@ -938,6 +945,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     else:
         # read ifgram_file in small patches and write them together
         ref_phase = get_ifgram_reference_phase(ifgram_file,
+                                               unwDatasetName=inps.unwDatasetName,
                                                skip_reference=inps.skip_ref,
                                                drop_ifgram=True)
 
@@ -960,6 +968,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
              ifg_numi) = ifgram_inversion_patch(ifgram_file,
                                                 box=box,
                                                 ref_phase=ref_phase,
+                                                unwDatasetName=inps.unwDatasetName,
                                                 weight_func=inps.weightFunc,
                                                 min_norm_velocity=inps.minNormVelocity,
                                                 mask_dataset_name=inps.maskDataset,

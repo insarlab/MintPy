@@ -48,6 +48,7 @@ EXAMPLE = """example:
   view.py timeseries.h5 --ex drop_date.txt             #Exclude dates to plot
 
   view.py INPUTS/ifgramStack.h5 coherence
+  view.py INPUTS/ifgramStack.h5 unwrapPhase-           #Display unwrapPhase only in the presence of unwrapPhase_unwCor dset
   view.py INPUTS/ifgramStack.h5 unwrapPhase-20070927_20100217 --zero-mask --wrap
   view.py INPUTS/ifgramStack.h5 -n 6
   view.py INPUTS/ifgramStack.h5 20171010_20171115      #Display all data related with one interferometric pair
@@ -208,6 +209,7 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     inps.colormap = pp.check_colormap_input(metadata,
                                             inps.colormap,
                                             datasetName=inps.dset[0],
+                                            cmap_lut=inps.cmap_lut,
                                             print_msg=print_msg)
 
     # Reference Point
@@ -258,7 +260,7 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
 
     # Flip Left-Right / Up-Down
     if not inps.flip_lr and not inps.flip_ud:
-        inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(metadata)
+        inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(metadata, print_msg=print_msg)
 
     # Figure Title
     if not inps.fig_title:
@@ -931,9 +933,9 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
                 subplot_title = str(inps.dset[i])
         elif inps.key in ['ifgramStack', 'interferograms', 'coherence', 'wrapped']:
             subplot_title = str(i)
-            if inps.fig_row_num * inps.fig_col_num < 50:
+            if inps.fig_row_num * inps.fig_col_num < 10:
                 subplot_title += '\n{}'.format(inps.dset[i])
-            elif inps.fig_row_num * inps.fig_col_num > 200:
+            elif inps.fig_row_num * inps.fig_col_num > 150:
                 subplot_title = ''
         else:
             subplot_title = str(inps.dset[i])

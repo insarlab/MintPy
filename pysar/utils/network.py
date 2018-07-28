@@ -552,7 +552,7 @@ def pair_merge(pairs1, pairs2):
     return pairs
 
 
-def select_pairs_all(date_list):
+def select_pairs_all(date_list, date12_format='YYMMDD-YYMMDD'):
     """Select All Possible Pairs/Interferograms
     Input : date_list   - list of date in YYMMDD/YYYYMMDD format
     Output: date12_list - list date12 in YYMMDD-YYMMDD format
@@ -564,12 +564,14 @@ def select_pairs_all(date_list):
     date6_list = ptime.yymmdd(date8_list)
     date12_list = list(itertools.combinations(date6_list, 2))
     date12_list = [date12[0]+'-'+date12[1] for date12 in date12_list]
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_sequential(date_list, increment_num=2):
+def select_pairs_sequential(date_list, num_connection=2, date12_format='YYMMDD-YYMMDD'):
     """Select Pairs in a Sequential way:
-        For each acquisition, find its increment_num nearest acquisitions in the past time.
+        For each acquisition, find its num_connection nearest acquisitions in the past time.
     Inputs:
         date_list  : list of date in YYMMDD/YYYYMMDD format
     Reference:
@@ -582,7 +584,7 @@ def select_pairs_sequential(date_list, increment_num=2):
     # Get pairs index list
     date12_idx_list = []
     for date_idx in date_idx_list:
-        for i in range(increment_num):
+        for i in range(num_connection):
             if date_idx-i-1 >= 0:
                 date12_idx_list.append([date_idx-i-1, date_idx])
     date12_idx_list = [sorted(idx) for idx in sorted(date12_idx_list)]
@@ -590,10 +592,12 @@ def select_pairs_sequential(date_list, increment_num=2):
     # Convert index into date12
     date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
                    for idx in date12_idx_list]
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
+def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list, date12_format='YYMMDD-YYMMDD'):
     """Select Pairs in a hierarchical way using list of temporal and perpendicular baseline thresholds
         For each temporal/perpendicular combination, select all possible pairs; and then merge all combination results
         together for the final output (Zhao, 2015).
@@ -627,10 +631,12 @@ def select_pairs_hierarchical(date_list, pbase_list, temp_perp_list):
                                                   pbase_max)
         date12_list += date12_list_tmp
     date12_list = sorted(list(set(date12_list)))
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_delaunay(date_list, pbase_list, norm=True):
+def select_pairs_delaunay(date_list, pbase_list, norm=True, date12_format='YYMMDD-YYMMDD'):
     """Select Pairs using Delaunay Triangulation based on temporal/perpendicular baselines
     Inputs:
         date_list  : list of date in YYMMDD/YYYYMMDD format
@@ -662,10 +668,12 @@ def select_pairs_delaunay(date_list, pbase_list, norm=True):
     # Convert index into date12
     date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
                    for idx in date12_idx_list]
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_mst(date_list, pbase_list):
+def select_pairs_mst(date_list, pbase_list, date12_format='YYMMDD-YYMMDD'):
     """Select Pairs using Minimum Spanning Tree technique
         Connection Cost is calculated using the baseline distance in perp and scaled temporal baseline (Pepe and Lanari,
         2006, TGRS) plane.
@@ -706,10 +714,12 @@ def select_pairs_mst(date_list, pbase_list):
         idx = sorted([m_idx_list[i], s_idx_list[i]])
         date12 = date6_list[idx[0]]+'-'+date6_list[idx[1]]
         date12_list.append(date12)
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 
-def select_pairs_star(date_list, m_date=None, pbase_list=[]):
+def select_pairs_star(date_list, m_date=None, pbase_list=[], date12_format='YYMMDD-YYMMDD'):
     """Select Star-like network/interferograms/pairs, it's a single master network, similar to PS approach.
     Usage:
         m_date : master date, choose it based on the following cretiria:
@@ -740,7 +750,8 @@ def select_pairs_star(date_list, m_date=None, pbase_list=[]):
                        if s_idx is not m_idx]
     date12_list = [date6_list[idx[0]]+'-'+date6_list[idx[1]]
                    for idx in date12_idx_list]
-
+    if date12_format == 'YYYYMMDD_YYYYMMDD':
+        date12_list = ptime.yyyymmdd_date12(date12_list)
     return date12_list
 
 

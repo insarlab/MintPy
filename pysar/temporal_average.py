@@ -25,10 +25,10 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', type=str, help='input file with multi-temporal datasets')
-    parser.add_argument('-d', '--ds', '--dataset', dest='datasetName', default=ifgramDatasetNames[1],
+    parser.add_argument('-d', '--ds', '--dataset', dest='datasetName', default='coherence',
                         help='dataset name to be averaged, for file with multiple dataset family,\n'+
                         'e.g. ifgramStack.h5\n' +
-                        'default: {}'.format(ifgramDatasetNames[1]))
+                        'default: coherence')
     parser.add_argument('-o', '--outfile', help='output file name')
     return parser
 

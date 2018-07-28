@@ -1,31 +1,39 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
 
 import os
 import sys
 import argparse
-import h5py
 import numpy as np
-from pysar.objects import ifgramDatasetNames
-from pysar.utils import readfile, writefile, utils as ut
+from pysar.utils import readfile, writefile, utils as ut, plot as pp
 
 
 ################################################################################################
 EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
-  generate_mask.py  maskTempCoh.h5 -m 0.5 -c 230 283 100 -o maskTempCoh_nonDef.h5
-  generate_mask.py  081018_090118.unw     -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
-  generate_mask.py  srtm1.dem             -m 0.5 -o maskLand.h5
-  generate_mask.py  unwrapIfgram.h5 101120-110220 -m 4
-  generate_mask.py  unwrapIfgram.h5 --nonzero
 
-  generate_mask.py ifgramStack.h5 unwrapPhase --nonzero -o maskValidPhase.h5
-  generate_mask.py ifgramStack.h5 connectComponent --nonzero -o maskConnComp.h5
+  # exlcude area by min/max value and/or subset in row/col direction
+  generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
+
+  # exclude / include an circular area
+  generate_mask.py  maskTempCoh.h5 -m 0.5 --ex-circle 230 283 100 -o maskTempCoh_nonDef.h5
+  generate_mask.py  maskTempCoh.h5 -m 0.5 --in-circle 230 283 100 -o maskTempCoh_Def.h5
+
+  # use an specific dataset from multiple dataset file
+  generate_mask.py  geometryRadar.dem height -m 0.5 -o waterMask.h5
+  generate_mask.py  ifgramStack.h5 unwrapPhase-20101120_20110220 -m 4
+
+  # common mask file of pixels without zero unwrapped phase
+  generate_mask.py  ifgramStack.h5 unwrapPhase --nonzero
+
+  # interative polygon selection of region of interest
+  # useful for custom mask generation in unwrap error correction with bridging
+  generate_mask.py  waterMask.h5 -m 0.5 --roipoly
 """
 
 
@@ -48,8 +56,13 @@ def create_parser():
                         help='selection range in x/cross-track/range direction')
     parser.add_argument('-y', dest='subset_y', type=int, nargs=2, metavar=('YMIN', 'YMAX'),
                         help='selection range in y/along-track/azimuth direction')
-    parser.add_argument('-c','--circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
+    parser.add_argument('--ex-circle', dest='ex_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
                         help='exclude area defined by an circle (x, y, radius) in pixel number')
+    parser.add_argument('--in-circle', dest='in_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
+                        help='include area defined by an circle (x, y, radius) in pixel number')
+
+    parser.add_argument('--roipoly', action='store_true',
+                        help='Interactive polygonal region of interest (ROI) selection.')
 
     parser.add_argument('--nonzero', dest='nonzero', action='store_true',
                         help='Select all non-zero pixels.\n' +
@@ -61,6 +74,33 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
+
+
+################################################################################################
+def get_poly_mask(data, print_msg=True):
+    """Get mask of pixels within polygon from interactive selection
+    Parameters: data : 2D np.array in size of (length, width)
+    Returns:    mask : 2D np.arrat in size of (length, width) in np.bool_ format
+    """
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    im = ax.imshow(data)
+
+    selector = pp.SelectFromCollection(ax, im)
+    plt.show()
+    selector.disconnect()
+
+    if print_msg:
+        print('selected polygon: {}'.format(selector.poly_path))
+    return selector.mask
+
+
+def get_circular_mask(x, y, radius, length, width):
+    """Get mask of pixels within circle defined by (x, y, r)"""
+    yy, xx = np.ogrid[-y:length-y,
+                      -x:width-x]
+    cmask = (xx**2 + yy**2 <= radius**2)
+    return cmask
 
 
 def create_threshold_mask(inps):
@@ -82,41 +122,50 @@ def create_threshold_mask(inps):
     print('all pixels with nan value = 0')
 
     if inps.nonzero:
-        print('all pixels with zero value = 0')
+        print('exclude pixels with zero value')
         mask[nanmask] *= ~(data[nanmask] == 0.)
 
     # min threshold
     if inps.vmin is not None:
         mask[nanmask] *= ~(data[nanmask] < inps.vmin)
-        print('all pixels with value < %s = 0' % str(inps.vmin))
+        print('exclude pixels with value < %s' % str(inps.vmin))
 
     # max threshold
     if inps.vmax is not None:
         mask[nanmask] *= ~(data[nanmask] > inps.vmax)
-        print('all pixels with value > %s = 0' % str(inps.vmax))
+        print('exclude pixels with value > %s' % str(inps.vmax))
 
     # subset in Y
     if inps.subset_y is not None:
         y0, y1 = sorted(inps.subset_y)
         mask[0:y0, :] = 0
         mask[y1:length, :] = 0
-        print('all pixels with y OUT of [%d, %d] = 0' % (y0, y1))
+        print('exclude pixels with y OUT of [%d, %d]' % (y0, y1))
 
     # subset in x
     if inps.subset_x is not None:
         x0, x1 = sorted(inps.subset_x)
         mask[:, 0:x0] = 0
         mask[:, x1:width] = 0
-        print('all pixels with x OUT of [%d, %d] = 0' % (x0, x1))
+        print('exclude pixels with x OUT of [%d, %d]' % (x0, x1))
 
     # exclude circular area
-    if inps.circle:
-        cx, cy, cr = inps.circle
-        yy, xx = np.ogrid[-cy:length-cy,
-                          -cx:width-cx]
-        cmask = xx**2 + yy**2 <= cr**2
-        mask[cmask] = 0
-        print('all pixels with distance from ({}, {}) < {} pixels = 0'.format(cy, cx, cr))
+    if inps.ex_circle:
+        x, y, r = inps.ex_circle
+        cmask = get_circular_mask(x, y, r, length, width)
+        mask[cmask == 1] = 0
+        print('exclude pixels inside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
+
+    # include circular area
+    if inps.in_circle:
+        x, y, r = inps.ex_circle
+        cmask = get_circular_mask(x, y, r, length, width)
+        mask[cmask == 0] = 0
+        print('exclude pixels outside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
+
+    # interactively select polygonal region of interest (ROI)
+    if inps.roipoly:
+        mask *= get_poly_mask(data)
 
     # Write mask file
     atr['FILE_TYPE'] = 'mask'
@@ -137,7 +186,10 @@ def main(iargs=None):
             suffix = inps.file.split('temporalCoherence')[1]
             inps.outfile = 'maskTempCoh'+suffix
         else:
-            inps.outfile = 'mask.h5'
+            if inps.roipoly:
+                inps.outfile = 'maskPoly.h5'
+            else:
+                inps.outfile = 'mask.h5'
         if inps.file.startswith('geo_'):
             inps.outfile = 'geo_'+inps.outfile
 

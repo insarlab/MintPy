@@ -138,7 +138,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
 
         # Write .rsc File
         write_roipac_rsc(metadata, out_file+'.rsc')
-        return out_file
+    return out_file
 
 
 def write_roipac_rsc(metadata, out_file, sorting=True):

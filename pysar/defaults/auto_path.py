@@ -25,7 +25,7 @@ pysar.load.processor      = isce
 pysar.load.unwFile        = $PROJECT_DIR/merged/interferograms/*/filt*.unw
 pysar.load.corFile        = $PROJECT_DIR/merged/interferograms/*/filt*.cor
 pysar.load.connCompFile   = $PROJECT_DIR/merged/interferograms/*/filt*.unw.conncomp
-pysar.load.intFile        = $PROJECT_DIR/merged/interferograms/*/filt*.int
+pysar.load.intFile        = None
 
 pysar.load.demFile        = $PROJECT_DIR/merged/geom_master/hgt.rdr
 pysar.load.lookupYFile    = $PROJECT_DIR/merged/geom_master/lat.rdr

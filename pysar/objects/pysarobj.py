@@ -57,6 +57,7 @@ geometryDatasetNames = ['height',
                         'bperp']
 
 ifgramDatasetNames = ['unwrapPhase',
+                      'unwrapPhase_unwCor',
                       'coherence',
                       'connectComponent',
                       'wrapPhase',
@@ -552,9 +553,10 @@ class ifgramStack:
         with h5py.File(self.file, 'r') as f:
             self.dropIfgram = f['dropIfgram'][:]
             self.pbaseIfgram = f['bperp'][:]
-            self.datasetNames = [key for key in list(f.keys())
-                                 if (isinstance(f[key], h5py.Dataset)
-                                     and f[key].shape[-2:] == (self.length, self.width))]
+            self.datasetNames = [i for i in ifgramDatasetNames
+                                 if (i in f.keys()
+                                     and isinstance(f[i], h5py.Dataset)
+                                     and f[i].shape[-2:] == (self.length, self.width))]
         self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
         self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.float32)
 
@@ -595,9 +597,9 @@ class ifgramStack:
         self.metadata['END_DATE'] = dateList[-1]
         return self.metadata
 
-    def get_size(self, dropIfgram=False):
+    def get_size(self, dropIfgram=False, datasetName='unwrapPhase'):
         with h5py.File(self.file, 'r') as f:
-            self.numIfgram, self.length, self.width = f[ifgramDatasetNames[0]].shape
+            self.numIfgram, self.length, self.width = f[datasetName].shape
         return self.numIfgram, self.length, self.width
 
     def read_datetimes(self):
@@ -609,7 +611,7 @@ class ifgramStack:
         self.mTimes = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.mDates])
         self.sTimes = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.sDates])
 
-    def read(self, datasetName=ifgramDatasetNames[0], box=None, print_msg=True, dropIfgram=False):
+    def read(self, datasetName='unwrapPhase', box=None, print_msg=True, dropIfgram=False):
         """Read 3D dataset with bounding box in space
         Parameters: datasetName : string, to point to specific 2D dataset, e.g.:
                         unwrapPhase
@@ -639,7 +641,7 @@ class ifgramStack:
 
         # convert input datasetName into list
         if datasetName is None:
-            datasetName = [ifgramDatasetNames[0]]
+            datasetName = ['unwrapPhase']
         elif isinstance(datasetName, str):
             datasetName = [datasetName]
 
@@ -669,9 +671,9 @@ class ifgramStack:
             data = np.squeeze(data)
         return data
 
-    def spatial_average(self, datasetName=ifgramDatasetNames[1], maskFile=None, box=None):
+    def spatial_average(self, datasetName='coherence', maskFile=None, box=None):
         if datasetName is None:
-            datasetName = ifgramDatasetNames[1]
+            datasetName = 'coherence'
         print('calculating spatial average of {} in file {} ...'.format(datasetName, self.file))
         if maskFile and os.path.isfile(maskFile):
             print('read mask from file: '+maskFile)
@@ -694,7 +696,6 @@ class ifgramStack:
         return dmean, self.date12List
 
     # Functions considering dropIfgram value
-
     def get_date12_list(self, dropIfgram=True):
         with h5py.File(self.file, 'r') as f:
             dates = f['date'][:]
@@ -751,10 +752,10 @@ class ifgramStack:
             print('')
         return mask
 
-    def temporal_average(self, datasetName=ifgramDatasetNames[1], dropIfgram=True):
+    def temporal_average(self, datasetName='coherence', dropIfgram=True):
         self.open(print_msg=False)
         if datasetName is None:
-            datasetName = ifgramDatasetNames[0]
+            datasetName = 'coherence'
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
         if datasetName == 'unwrapPhase':
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
