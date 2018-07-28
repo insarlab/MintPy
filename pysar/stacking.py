@@ -19,12 +19,12 @@ EXAMPLE = """example:
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Stack multiple layers dataset into one.',
+    parser = argparse.ArgumentParser(description='Stack multiple dataset into one.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', help='File to be stacked')
-    parser.add_argument('-d', '--dataset', dest='dataset_name', default=ifgramDatasetNames[0],
+    parser.add_argument('-d', '--dataset', dest='dataset_name', default='unwrapPhase',
                         help='Dataset to be used for stacking, when input file is ifgramStack')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name')
