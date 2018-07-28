@@ -1,5 +1,5 @@
 [![Language](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-v0.4.0-green.svg)](https://github.com/yunjunz/PySAR/releases)
+[![Latest version](https://img.shields.io/badge/latest%20version-v1.0.0--dev-green.svg)](./docs/download.md)
 [![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/yunjunz/PySAR)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/py-sar)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR?ref=badge_shield)
