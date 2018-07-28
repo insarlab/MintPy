@@ -87,7 +87,7 @@ Run the following in your terminal (using conda):
     ./Anaconda3-5.1.0-MacOSX-x86_64.sh -b -p $PYTHON3DIR
     
     $PYTHON3DIR/bin/conda config --add channels conda-forge
-    $PYTHON3DIR/bin/conda install basemap joblib lxml pyresample pykdtree OpenMP --yes   
+    $PYTHON3DIR/bin/conda install basemap joblib lxml pyresample pykdtree OpenMP ecCodes pygrib pyhdf netCDF4 --yes   
     
     git clone https://github.com/yunjunz/pykml.git; cd pykml
     $PYTHON3DIR/bin/python setup.py build     
@@ -95,4 +95,3 @@ Run the following in your terminal (using conda):
    
 Note that pykml through conda supports python2 only, we provide a python2/3 compatible version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
   
-For PyAPS installation, please refer to [PyAPS's Wiki at Caltech](http://earthdef.caltech.edu/projects/pyaps/wiki/Main)
