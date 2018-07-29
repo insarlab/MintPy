@@ -1,0 +1,14 @@
+basemap==1.1.0
+h5py==2.8.0
+lxml==3.7.3
+matplotlib==2.2.2
+numpy==1.14.5
+pyaps
+pygrib==2.0.2
+pyhdf==0.9.0
+pykdtree==1.3.1
+pykml==0.1.4
+pyproj==1.9.5.1
+pyresample==1.10.1
+scikit-image==0.13.1
+scipy==1.1.0
