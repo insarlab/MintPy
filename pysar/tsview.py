@@ -220,6 +220,8 @@ def read_init_info(inps):
     if not inps.ref_lalo and 'REF_LAT' in atr.keys():
         inps.ref_lalo = (float(atr['REF_LAT']), float(atr['REF_LON']))
     if inps.ref_lalo:
+        if inps.ref_lalo[1] > 180.:
+            inps.ref_lalo[1] -= 360.
         inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0],
                                            inps.ref_lalo[1],
                                            print_msg=False)[0:2]

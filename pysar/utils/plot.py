@@ -567,6 +567,10 @@ def add_gps_argument(parser):
     gps.add_argument('--gps-comp', dest='gps_component', choices={'enu2los', 'hz2los', 'up2los', 'up'},
                      help='Plot GPS in color indicating deformation velocity direction')
     gps.add_argument('--ref-gps', dest='ref_gps_site', type=str, help='Reference GPS site')
+    gps.add_argument('--gps-start-date', dest='gps_start_date', type=str, metavar='YYYYMMDD',
+                     help='start date of GPS data, default is date of the 1st SAR acquisiton')
+    gps.add_argument('--gps-end-date', dest='gps_end_date', type=str, metavar='YYYYMMDD',
+                     help='start date of GPS data, default is date of the last SAR acquisiton')
     return parser
 
 
@@ -1410,12 +1414,19 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     atr['UNIT'] = 'm'
     unit_fac = scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[2]
 
-    try:
-        start_date, end_date = metadata['START_DATE'], metadata['END_DATE']
-    except:
-        start_date, end_date = None, None
+    if not inps.gps_start_date:
+        try:
+            inps.gps_start_date = metadata['START_DATE']
+        except:
+            inps.gps_start_date = None
+    if not inps.gps_end_date:
+        try:
+            inps.gps_end_date = metadata['END_DATE']
+        except:
+            inps.gps_end_date = None
 
-    site_names, site_lats, site_lons = search_gps(SNWE, start_date, end_date)
+    site_names, site_lats, site_lons = search_gps(SNWE, inps.gps_start_date, inps.gps_end_date)
+    num_site = len(site_names)
 
     k = metadata['FILE_TYPE']
     if inps.gps_component and k not in ['velocity']:
@@ -1424,15 +1435,22 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
 
     if inps.gps_component:
         if print_msg:
+            print('-'*30)
             print(('calculating GPS velocity with reference to {}'
                    ' in {} ...').format(inps.ref_gps_site, inps.gps_component))
-            print('start date: {}\nend   date: {}'.format(start_date, end_date))
-        for i in range(len(site_names)):
+            print('start date: {}\nend   date: {}'.format(inps.gps_start_date, inps.gps_end_date))
+            prog_bar = ptime.progressBar(maxValue=num_site)
+        for i in range(num_site):
+            # calculate velocity
             vel = gps(site_names[i]).get_gps_los_velocity(metadata,
-                                                          start_date=start_date,
-                                                          end_date=end_date,
+                                                          start_date=inps.gps_start_date,
+                                                          end_date=inps.gps_end_date,
                                                           ref_site=inps.ref_gps_site,
                                                           gps_comp=inps.gps_component) * unit_fac
+            if print_msg:
+                prog_bar.update(i+1, suffix=site_names[i])
+
+            # plot
             if not vel:
                 color = 'none'
             else:
@@ -1440,6 +1458,8 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                 color = cmap(cm_idx)
             ax.scatter(site_lons[i], site_lats[i], color=color,
                        s=marker_size**2, edgecolors='k')
+        if print_msg:
+            prog_bar.close()
     else:
         ax.scatter(site_lons, site_lats, s=marker_size**2, color='w', edgecolors='k')
 

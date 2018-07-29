@@ -48,6 +48,16 @@ def get_snwe(metadata):
     return SNWE
 
 
+def azimuth2heading_angle(az_angle):
+    """Convert azimuth angle from ISCE los.rdr band2 into satellite orbit heading angle
+    ISCE los.band2 is azimuth angle of LOS vector from ground target to the satellite 
+    measured from the north in anti-clockwise as positive
+    """
+    head_angle = -1 * (180 + az_angle + 90)
+    head_angle -= np.round(head_angle / 360.) * 360.
+    return head_angle
+
+
 def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
     """
     Parameters: e : np.array or float, displacement in east-west direction, east as positive
@@ -58,10 +68,11 @@ def enu2los(e, n, u, inc_angle=34., head_angle=-168.):
     For AlosA: inc_angle = 34, head_angle = -12.873
     For AlosD: inc_angle = 34, head_angle = -167.157
     For SenD: inc_angle = 34, head_angle = -168
-        # head_angle = -1 * (180 + los.band2 + 90) from ISCE
-        # where los.band2 is azimuth angle of LOS vector from ground target to the satellite 
-        # measured from the north in anti-clockwise as positive 
     """
+    # if input angle is azimuth angle
+    if (head_angle + 180.) > 45.:
+        head_angle = azimuth2heading_angle(head_angle)
+
     inc_angle *= np.pi/180.
     head_angle *= np.pi/180.
     v_los = (-1 * e * np.cos(head_angle) * np.sin(inc_angle)
@@ -1541,6 +1552,12 @@ def timeseries_inversion_L1(h5flat, h5timeseries):
 class coordinate:
     """
     Coordinates conversion based lookup file in pixel-level accuracy
+
+    Example:
+        atr = readfile.read('velocity.h5')
+        coord = ut.coordinate(atr, lookup_file='INPUTS/geometryRadar.h5')
+        y, x = coord.geo2radar(lat, lon)
+        lat, lon = coord.radar2geo(y, x)
     """
 
     def __init__(self, metadata, lookup_file=None):

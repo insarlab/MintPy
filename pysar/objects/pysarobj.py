@@ -728,7 +728,7 @@ class ifgramStack:
     def get_reference_phase(self, unwDatasetName='unwrapPhase', skip_reference=False, dropIfgram=False):
         self.open(print_msg=False)
         if skip_reference:
-            ref_phase = np.zeros((self.get_size(dropIfgram=dropIfgram)[0],), np.float32)
+            ref_phase = np.zeros(self.get_size(dropIfgram=dropIfgram)[0], np.float32)
             print('skip checking reference pixel info - This is for SIMULATION ONLY.')
         elif 'REF_Y' not in self.metadata.keys():
             raise ValueError('No REF_X/Y found!\nrun reference_point.py to select reference pixel.')
