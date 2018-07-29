@@ -64,19 +64,9 @@ Source the file for the first time. It will be sourced automatically next time w
    
    
 #### 2. Install Python dependecies
-PySAR relies on the following Python modules. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html).
-- [Python3.5](https://www.anaconda.com/download/) or newer
-- Numpy
-- Scipy
-- h5py
-- Matplotlib
-- multiprocessing
-- [scikit-image](http://scikit-image.org)
-- Basemap (optional, for plotting in geo coordinate)
-- [pyresample](http://pyresample.readthedocs.org) (optional, for geocoding)
-- [pykml](https://github.com/yunjunz/pykml) (optional, for Google Earth KMZ file output)
-- joblib (optional, for parallel processing)
-- lxml (optional, for ISCE XML file parsing)
+PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./docs/requirements.txt) file for details. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html).
+
+
 - [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) (optional, for tropospheric correction using weather re-analysis models, i.e. ERA-Interim, NARR, MERRA)
 
 Run the following in your terminal (using conda):   
@@ -95,3 +85,4 @@ Run the following in your terminal (using conda):
    
 Note that pykml through conda supports python2 only, we provide a python2/3 compatible version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
   
+We use [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for tropospheric delay correction using weather re-analysis datadset such as ERA-Interim, MERRA and NARR. Please check [caltech's website](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for the code download and account setup.
