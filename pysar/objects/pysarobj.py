@@ -636,7 +636,7 @@ class ifgramStack:
             obj.read(datasetName=['unwrapPhase-20161020_20161026',
                                   'unwrapPhase-20161020_20161101'])
         """
-        self.get_size()
+        self.get_size(dropIfgram=False)
         date12List = self.get_date12_list(dropIfgram=False)
 
         # convert input datasetName into list
@@ -726,6 +726,12 @@ class ifgramStack:
         return dateList
 
     def get_reference_phase(self, unwDatasetName='unwrapPhase', skip_reference=False, dropIfgram=False):
+        """Get reference value
+        Parameters: unwDatasetName : string, unwrapPhase, or unwrapPhase_unwCor
+                    skip_reference : bool, skip reference value (for simulation only)
+                    dropIfgram : bool, skip ifgrams marked as dropped or not
+        Returns:    ref_phase : 1D np.array in size of (num_ifgram,) in float32
+        """
         self.open(print_msg=False)
         if skip_reference:
             ref_phase = np.zeros(self.get_size(dropIfgram=dropIfgram)[0], np.float32)
@@ -733,7 +739,7 @@ class ifgramStack:
         elif 'REF_Y' not in self.metadata.keys():
             raise ValueError('No REF_X/Y found!\nrun reference_point.py to select reference pixel.')
         else:
-            print('reference pixel in y/x: {}'.format(self.refY, self.refX))
+            print('reference pixel in y/x: ({}, {})'.format(self.refY, self.refX))
             ref_phase = self.read(datasetName=unwDatasetName,
                                   box=(self.refX, self.refY, self.refX+1, self.refY+1),
                                   dropIfgram=dropIfgram,
@@ -811,7 +817,7 @@ class ifgramStack:
         return dmean
 
     # Functions for Unwrap error correction
-    def get_design_matrix4ifgram_triangle(self, date12_list=None):
+    def get_design_matrix4ifgram_triangle(self, dropIfgram=True, date12_list=None):
         """Generate the design matrix of ifgram triangle for unwrap error correction using phase closure
         Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
         Returns:    C : 2D np.array in size of (num_tri, num_ifgram) consisting 0, 1, -1
@@ -822,8 +828,11 @@ class ifgramStack:
         Examples:   stack_obj = ifgramStack('./INPUTS/ifgramStack.h5')
                     C = stack_obj.get_design_matrix4ifgram_triangle
         """
-        if not date12_list:
-            date12_list = self.get_date12_list(dropIfgram=None)
+        # Date info
+        if date12_list:
+            date12List = list(date12_list)
+        else:
+            date12List = self.get_date12_list(dropIfgram=dropIfgram)
 
         # calculate triangle_idx
         triangle_idx = []

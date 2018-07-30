@@ -527,7 +527,8 @@ def check_design_matrix(ifgram_file, weight_func='fim'):
     return A
 
 
-def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', skip_zero_phase=True, print_msg=True):
+def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', dropIfgram=True,
+                      skip_zero_phase=True, print_msg=True):
     """Read unwrapPhase from ifgramStack file
     Parameters: stack_obj : ifgramStack object
                 box : tuple of 4 int
@@ -541,7 +542,7 @@ def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', s
         print('reading {} in {} * {} ...'.format(unwDatasetName, box, num_ifgram))
     pha_data = stack_obj.read(datasetName=unwDatasetName,
                               box=box,
-                              dropIfgram=True,
+                              dropIfgram=dropIfgram,
                               print_msg=False).reshape(num_ifgram, -1)
 
     # read ref_phase
@@ -566,7 +567,8 @@ def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', s
     return pha_data
 
 
-def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshold=0.4, print_msg=True):
+def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshold=0.4, dropIfgram=True,
+                      print_msg=True):
     # Read/Generate Mask
     num_ifgram = np.sum(stack_obj.dropIfgram)
     if mask_ds_name and mask_ds_name in stack_obj.datasetNames:
@@ -574,7 +576,7 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
             print('reading {} in {} * {} ...'.format(mask_ds_name, box, num_ifgram))
         msk_data = stack_obj.read(datasetName=mask_ds_name,
                                   box=box,
-                                  dropIfgram=True,
+                                  dropIfgram=dropIfgram,
                                   print_msg=False).reshape(num_ifgram, -1)
         if mask_ds_name == 'coherence':
             msk_data = msk_data >= mask_threshold
@@ -588,13 +590,13 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
     return pha_data
 
 
-def read_coherence(stack_obj, box, print_msg=True):
+def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
     num_ifgram = np.sum(stack_obj.dropIfgram)
     if print_msg:
         print('reading coherence in {} * {} ...'.format(box, num_ifgram))
     coh_data = stack_obj.read(datasetName='coherence',
                               box=box,
-                              dropIfgram=True,
+                              dropIfgram=dropIfgram,
                               print_msg=False).reshape(num_ifgram, -1)
     return coh_data
 
