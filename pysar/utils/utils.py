@@ -16,6 +16,7 @@ import errno
 from argparse import Namespace
 import h5py
 import numpy as np
+import matplotlib.pyplot as plt
 import multiprocessing
 from pysar.utils import (ptime,
                          readfile,
@@ -30,6 +31,51 @@ from pysar.objects import (geometryDatasetNames,
 
 
 ###############################################################################
+
+def median_abs_deviation_threshold(data, center=None, cutoff=3.):
+    """calculate rms_threshold based on the standardised residual
+    outlier detection with median absolute deviation.
+    With the default input arguments, it's equivalent to:
+        np.median(data) / .6745 * 3.0
+    """
+    from statsmodels.robust import mad
+    if not center:
+        center = np.median(data)
+    rms_mad = mad(data, c=0.67448975019608171, center=center)
+    rms_threshold = center + cutoff * rms_mad
+    return rms_threshold
+
+
+def min_region_distance(mask1, mask2, display=False):
+    """Calculate the min distance between two regions of pixels marked by mask1 and mask2
+    Parameters: mask1/2 : 2D np.array in size of (length, width) in np.bool_ format
+    Returns:    pts1 : tuple of 2 int, bridge point in mask1, in (x, y)
+                pts2 : tuple of 2 int, bridge point in mask2, in (x, y)
+                min_dist : float, min euclidean distance
+    """
+    from scipy.spatial import cKDTree
+    y, x = np.where(mask1 != 0)
+    pts1 = np.hstack((x.reshape(-1, 1), y.reshape(-1, 1)))
+    tree = cKDTree(pts1)
+
+    y, x = np.where(mask2 != 0)
+    pts2 = np.hstack((x.reshape(-1, 1), y.reshape(-1, 1)))
+    dist, idx = tree.query(pts2)
+
+    idx_min = np.argmin(dist)
+    xy2 = pts2[idx_min]
+    xy1 = pts1[idx[idx_min]]
+    min_dist = dist[idx_min]
+
+    if display:
+        plt.figure()
+        plt.imshow(mask1 * 1 + mask2 * 2)
+        plt.plot([xy1[0], xy2[0]], [xy1[1], xy2[1]], '-o')
+        plt.show()
+
+    return xy1, xy2, min_dist
+
+
 def wrap(data_in, wrap_step=2*np.pi):
     data = np.array(data_in)
     data -= np.round(data / wrap_step) * wrap_step
@@ -702,7 +748,7 @@ def normalize_timeseries_old(ts_mat, nanValue=0):
 
 
 ############################################################
-def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
+def update_file(outFile, inFile=None, overwrite=False, check_readable=True, print_msg=True):
     """Check whether to update outFile/outDir or not.
     return True if any of the following meets:
         1. if overwrite option set to True
@@ -733,7 +779,8 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
             atr = readfile.read_attribute(outFile)
             width = atr['WIDTH']
         except:
-            print(outFile+' exists, but can not read, remove it.')
+            if print_msg:
+                print(outFile+' exists, but can not read, remove it.')
             rmCmd = 'rm '+outFile
             print(rmCmd)
             os.system(rmCmd)
@@ -747,7 +794,8 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True):
             if any(os.path.getmtime(outFile) < os.path.getmtime(File) for File in inFile):
                 return True
             else:
-                print('{} exists and is newer than {}, skip updating.'.format(outFile, inFile))
+                if print_msg:
+                    print('{} exists and is newer than {}, skip updating.'.format(outFile, inFile))
                 return False
 
     return False

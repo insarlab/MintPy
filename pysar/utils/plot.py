@@ -777,7 +777,7 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
     return fig_title
 
 
-def auto_flip_direction(metadata, print_msg=True):
+def auto_flip_direction(metadata, ax=None, print_msg=True):
     """Check flip left-right and up-down based on attribute dict, for radar-coded file only"""
     # default value
     flip_lr = False
@@ -791,6 +791,19 @@ def auto_flip_direction(metadata, print_msg=True):
             flip_ud = True
         else:
             flip_lr = True
+
+    if ax is not None:
+        if flip_lr:
+            ax.invert_xaxis()
+            if print_msg:
+                print('flip figure left and right')
+
+        if flip_ud:
+            ax.invert_yaxis()
+            if print_msg:
+                print('flip figure up and down')
+        return ax
+
     return flip_lr, flip_ud
 
 

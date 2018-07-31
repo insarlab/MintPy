@@ -600,6 +600,8 @@ class ifgramStack:
     def get_size(self, dropIfgram=False, datasetName='unwrapPhase'):
         with h5py.File(self.file, 'r') as f:
             self.numIfgram, self.length, self.width = f[datasetName].shape
+            if dropIfgram:
+                self.numIfgram = np.sum(f['dropIfgram'][:])
         return self.numIfgram, self.length, self.width
 
     def read_datetimes(self):
@@ -830,9 +832,9 @@ class ifgramStack:
         """
         # Date info
         if date12_list:
-            date12List = list(date12_list)
+            date12_list = list(date12_list)
         else:
-            date12List = self.get_date12_list(dropIfgram=dropIfgram)
+            date12_list = self.get_date12_list(dropIfgram=dropIfgram)
 
         # calculate triangle_idx
         triangle_idx = []
@@ -885,22 +887,22 @@ class ifgramStack:
         """
         # Date info
         if date12_list:
-            date12List = list(date12_list)
+            date12_list = list(date12_list)
         else:
-            date12List = self.get_date12_list(dropIfgram=dropIfgram)
-        mDates = [i.split('_')[0] for i in date12List]
-        sDates = [i.split('_')[1] for i in date12List]
+            date12_list = self.get_date12_list(dropIfgram=dropIfgram)
+        mDates = [i.split('_')[0] for i in date12_list]
+        sDates = [i.split('_')[1] for i in date12_list]
         dateList = sorted(list(set(mDates + sDates)))
         dates = [dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in dateList]
         tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
-        numIfgram = len(date12List)
+        numIfgram = len(date12_list)
         numDate = len(dateList)
 
         # calculate design matrix
         A = np.zeros((numIfgram, numDate), np.float32)
         B = np.zeros(A.shape, np.float32)
         for i in range(numIfgram):
-            m_idx, s_idx = [dateList.index(j) for j in date12List[i].split('_')]
+            m_idx, s_idx = [dateList.index(j) for j in date12_list[i].split('_')]
             A[i, m_idx] = -1
             A[i, s_idx] = 1
             B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]

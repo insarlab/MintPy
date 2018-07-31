@@ -105,9 +105,9 @@ def analyze_rms(date_list, rms_list, inps):
 
     # exclude date(s) - outliers
     try:
-        rms_threshold = median_abs_deviation_threshold(rms_list,
-                                                       center=0.,
-                                                       kappa=inps.cutoff)
+        rms_threshold = ut.median_abs_deviation_threshold(rms_list,
+                                                          center=0.,
+                                                          cutoff=inps.cutoff)
     except:
         # equivalent calculation using numpy assuming Gaussian distribution
         rms_threshold = np.median(rms_list) / .6745 * inps.cutoff
@@ -142,19 +142,6 @@ def analyze_rms(date_list, rms_list, inps):
         fig.savefig(fig_file, bbox_inches='tight', transparent=True)
         print('save figure to file: '+fig_file)
     return inps
-
-
-def median_abs_deviation_threshold(data, center=0., kappa=3.):
-    """calculate rms_threshold based on the standardised residual
-    outlier detection with median absolute deviation.
-    
-    With the default input arguments, it's equivalent to:
-        np.median(data) / .6745 * 3.0
-    """
-    from statsmodels.robust import mad
-    rms_mad = mad(data, c=0.67448975019608171, center=center)
-    rms_threshold = center + kappa * rms_mad
-    return rms_threshold
 
 
 def plot_rms_bar(ax, date_list, rms_list, rms_threshold,

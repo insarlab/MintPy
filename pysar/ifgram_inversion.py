@@ -537,7 +537,7 @@ def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', d
     Returns:    pha_data : 2D array of unwrapPhase in size of (num_ifgram, num_pixel)
     """
     # Read unwrapPhase
-    num_ifgram = np.sum(stack_obj.dropIfgram)
+    num_ifgram = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if print_msg:
         print('reading {} in {} * {} ...'.format(unwDatasetName, box, num_ifgram))
     pha_data = stack_obj.read(datasetName=unwDatasetName,
@@ -570,7 +570,7 @@ def read_unwrap_phase(stack_obj, box, ref_phase, unwDatasetName='unwrapPhase', d
 def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshold=0.4, dropIfgram=True,
                       print_msg=True):
     # Read/Generate Mask
-    num_ifgram = np.sum(stack_obj.dropIfgram)
+    num_ifgram = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if mask_ds_name and mask_ds_name in stack_obj.datasetNames:
         if print_msg:
             print('reading {} in {} * {} ...'.format(mask_ds_name, box, num_ifgram))
@@ -591,7 +591,7 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
 
 
 def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
-    num_ifgram = np.sum(stack_obj.dropIfgram)
+    num_ifgram = stack_obj.get_size(dropIfgram=dropIfgram)[0]
     if print_msg:
         print('reading coherence in {} * {} ...'.format(box, num_ifgram))
     coh_data = stack_obj.read(datasetName='coherence',
@@ -711,11 +711,13 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                  box,
                                  ref_phase,
                                  unwDatasetName=unwDatasetName,
+                                 dropIfgram=True,
                                  skip_zero_phase=skip_zero_phase)
 
     pha_data = mask_unwrap_phase(pha_data,
                                  stack_obj,
                                  box,
+                                 dropIfgram=True,
                                  mask_ds_name=mask_dataset_name,
                                  mask_threshold=mask_threshold)
 
@@ -797,7 +799,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     # Inversion - WLS
     else:
         L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
-        weight = read_coherence(stack_obj, box=box)
+        weight = read_coherence(stack_obj, box=box, dropIfgram=True)
         weight = coherence2weight(weight, weight_func=weight_func, L=L, epsilon=5e-2)
         weight = np.sqrt(weight)
 
