@@ -81,7 +81,7 @@ def create_parser():
 
     parser.add_argument('ifgramStackFile',
                         help='interferograms stack file to be inverted')
-    parser.add_argument('-d', '--dset', dest='unwDatasetName', type=str,
+    parser.add_argument('-i','-d', '--dset', dest='unwDatasetName', type=str,
                         help='dataset name of unwrap phase in ifgram file to be used for inversion\n'
                              'e.g.: unwrapPhase, unwrapPhase_unwCor, ...')
     parser.add_argument('--template', '-t', dest='templateFile',
@@ -124,8 +124,11 @@ def create_parser():
                         help='Skip inversion on the masked out region, i.e. water.')
     parser.add_argument('--split-file', dest='split_file', action='store_true',
                         help='Split ifgramStack file into small files and invert them separately')
-    parser.add_argument('--fast', action='store_true',
-                        help='Fast network invertion by forcing -w=no.')
+    parser.add_argument('--fast','--sbas', action='store_true',
+                        help='Fast network invertion by forcing the following options:\n'+
+                             '\t--weight-function = no\n'+
+                             '\t--mask-dset = no\n'+
+                             'This is equivalent to SBAS algorithm (Berardino et al., 2002)')
     return parser
 
 

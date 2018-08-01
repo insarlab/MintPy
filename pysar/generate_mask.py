@@ -77,32 +77,6 @@ def cmd_line_parse(iargs=None):
 
 
 ################################################################################################
-def get_poly_mask(data, print_msg=True):
-    """Get mask of pixels within polygon from interactive selection
-    Parameters: data : 2D np.array in size of (length, width)
-    Returns:    mask : 2D np.arrat in size of (length, width) in np.bool_ format
-    """
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    im = ax.imshow(data)
-
-    selector = pp.SelectFromCollection(ax, im)
-    plt.show()
-    selector.disconnect()
-
-    if print_msg:
-        print('selected polygon: {}'.format(selector.poly_path))
-    return selector.mask
-
-
-def get_circular_mask(x, y, radius, length, width):
-    """Get mask of pixels within circle defined by (x, y, r)"""
-    yy, xx = np.ogrid[-y:length-y,
-                      -x:width-x]
-    cmask = (xx**2 + yy**2 <= radius**2)
-    return cmask
-
-
 def create_threshold_mask(inps):
     if inps.dset:
         print('read %s %s' % (inps.file, inps.dset))
@@ -152,20 +126,20 @@ def create_threshold_mask(inps):
     # exclude circular area
     if inps.ex_circle:
         x, y, r = inps.ex_circle
-        cmask = get_circular_mask(x, y, r, length, width)
+        cmask = ut.get_circular_mask(x, y, r, length, width)
         mask[cmask == 1] = 0
         print('exclude pixels inside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
 
     # include circular area
     if inps.in_circle:
         x, y, r = inps.ex_circle
-        cmask = get_circular_mask(x, y, r, length, width)
+        cmask = ut.get_circular_mask(x, y, r, length, width)
         mask[cmask == 0] = 0
         print('exclude pixels outside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
 
     # interactively select polygonal region of interest (ROI)
     if inps.roipoly:
-        mask *= get_poly_mask(data)
+        mask *= pp.get_poly_mask(data)
 
     # Write mask file
     atr['FILE_TYPE'] = 'mask'

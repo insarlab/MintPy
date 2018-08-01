@@ -553,10 +553,14 @@ class ifgramStack:
         with h5py.File(self.file, 'r') as f:
             self.dropIfgram = f['dropIfgram'][:]
             self.pbaseIfgram = f['bperp'][:]
-            self.datasetNames = [i for i in ifgramDatasetNames
-                                 if (i in f.keys()
-                                     and isinstance(f[i], h5py.Dataset)
-                                     and f[i].shape[-2:] == (self.length, self.width))]
+
+            # get existed datasetNames in the order of ifgramDatasetNames
+            dsNames = [i for i in f.keys()
+                       if (isinstance(f[i], h5py.Dataset)
+                           and f[i].shape[-2:] == (self.length, self.width))]
+            self.datasetNames = [i for i in ifgramDatasetNames if i in dsNames]
+            self.datasetNames += [i for i in dsNames if i not in ifgramDatasetNames]
+
         self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
         self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.float32)
 
@@ -741,7 +745,7 @@ class ifgramStack:
         elif 'REF_Y' not in self.metadata.keys():
             raise ValueError('No REF_X/Y found!\nrun reference_point.py to select reference pixel.')
         else:
-            print('reference pixel in y/x: ({}, {})'.format(self.refY, self.refX))
+            print('reference pixel in y/x: ({}, {}) from dataset: {}'.format(self.refY, self.refX, unwDatasetName))
             ref_phase = self.read(datasetName=unwDatasetName,
                                   box=(self.refX, self.refY, self.refX+1, self.refY+1),
                                   dropIfgram=dropIfgram,

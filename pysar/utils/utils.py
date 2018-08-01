@@ -16,6 +16,7 @@ import errno
 from argparse import Namespace
 import h5py
 import numpy as np
+from scipy import ndimage
 import matplotlib.pyplot as plt
 import multiprocessing
 from pysar.utils import (ptime,
@@ -31,6 +32,23 @@ from pysar.objects import (geometryDatasetNames,
 
 
 ###############################################################################
+def get_largest_conn_component(mask_in, display=False):
+    """Extract the largest connected component from an 2D array
+       with zero as background value
+       Parameters: mask_in  : 2D np.array with zero as background and non-zero as foreground
+       Returns:    mask_out : 2D np.array in np.bool_ format
+    """
+    labels, n_features = ndimage.label(mask_in)
+    max_label = np.argmax(np.bincount(labels.flatten())[1:]) + 1
+    mask_out = labels == max_label
+    if display:
+        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=[15, 5])
+        ax[0].imshow(mask_in)
+        ax[1].imshow(mask_out)
+        ax[2].imshow(mask_in ^ mask_out)
+        plt.show()
+    return mask_out
+
 
 def median_abs_deviation_threshold(data, center=None, cutoff=3.):
     """calculate rms_threshold based on the standardised residual
@@ -522,6 +540,15 @@ def four_corners(atr):
     east = west + lon_step*width
 
     return west, east, south, north
+
+
+def get_circular_mask(x, y, radius, shape:tuple):
+    """Get mask of pixels within circle defined by (x, y, r)"""
+    length, width = shape
+    yy, xx = np.ogrid[-y:length-y,
+                      -x:width-x]
+    cmask = (xx**2 + yy**2 <= radius**2)
+    return cmask
 
 
 def circle_index(atr, circle_par):

@@ -434,6 +434,23 @@ class SelectFromCollection(object):
     def disconnect(self):
         self.poly.disconnect_events()
         self.canvas.draw_idle()
+
+## Utility script
+def get_poly_mask(data, print_msg=True):
+    """Get mask of pixels within polygon from interactive selection
+    Parameters: data : 2D np.array in size of (length, width)
+    Returns:    mask : 2D np.arrat in size of (length, width) in np.bool_ format
+    """
+    fig, ax = plt.subplots()
+    im = ax.imshow(data)
+
+    selector = SelectFromCollection(ax, im)
+    plt.show()
+    selector.disconnect()
+
+    if print_msg:
+        print('selected polygon: {}'.format(selector.poly_path))
+    return selector.mask
 ################################## SelectFromCollection class end #########################################
 
 

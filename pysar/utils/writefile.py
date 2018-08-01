@@ -35,6 +35,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
     ext = os.path.splitext(out_file)[1].lower()
     if ref_file and metadata is None:
         metadata = readfile.read_attribute(ref_file)
+    length, width = int(metadata['LENGTH']), int(metadata['WIDTH'])
 
     if type(datasetDict) is np.ndarray:
         data = np.array(datasetDict, datasetDict.dtype)
@@ -80,7 +81,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                 fr = h5py.File(ref_file, 'r')
                 dsNames = [i for i in fr.keys()
                            if (i not in list(datasetDict.keys())
-                               and isinstance(fr[i], h5py.Dataset))]
+                               and isinstance(fr[i], h5py.Dataset) 
+                               and fr[i].shape[-2:] != (length, width))]
                 for dsName in dsNames:
                     ds = fr[dsName]
                     print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
