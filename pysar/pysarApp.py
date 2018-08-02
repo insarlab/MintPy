@@ -71,7 +71,7 @@ pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
 ## b. bridging (need manual setup, fast)
 pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
 pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
-pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
+pysar.unwrapError.ramp     = auto   #[no / plane / quadratic], auto for no
 pysar.unwrapError.bridgeYX = auto   #[y1_start, x1_start, y1_end, x1_end; y2_start, ...], auto for none
 pysar.unwrapError.update   = auto   #[yes / no], auto for yes, enable update mode in pysarApp.py
                                     # and skip runing if unwraPhase_unwCor already exists

@@ -11,7 +11,7 @@ import sys
 import time
 import argparse
 import numpy as np
-from scipy.linalg import pinv2, lstsq
+from scipy import linalg
 from scipy.special import gamma
 from pysar.utils import ptime, readfile, writefile, utils as ut
 from pysar.objects import timeseries, geometry
@@ -145,7 +145,7 @@ def design_matrix4deformation(inps):
 
     # Design matrix - temporal deformation model
     print('-'*80)
-    print('correct topographic phase residual (DEM error) using Fattahi and Amelung (2013, IEEE-TGRS)')
+    print('correct topographic phase residual (DEM error) (Fattahi & Amelung, 2013, IEEE-TGRS)')
     msg = 'ordinal least squares (OLS) inversion with L2-norm minimization on: phase'
     if inps.phaseVelocity:
         msg += ' velocity'
@@ -234,10 +234,10 @@ def estimate_dem_error(ts0, A0, tbase, drop_date=None, phaseVelocity=False, num_
 
     # Inverse using L-2 norm to get unknown parameters X
     # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
-    # equivalent to X = np.linalg.inv(A.T.dot(A)).dot(A.T).dot(ts)
+    # equivalent to X = linalg.inv(A.T.dot(A)).dot(A.T).dot(ts)
     #            or X = np.dot(np.linalg.pinv(A, rcond=1e-8), ts)
-    #            or X = np.dot(pinv2(A, cond=1e-8), ts)
-    X = lstsq(A, ts, cond=1e-8)[0]
+    #            or X = np.dot(linalg.pinv2(A, cond=1e-8), ts)
+    X = linalg.lstsq(A, ts, cond=1e-8)[0]
 
     # Prepare Outputs
     delta_z = X[0, :]

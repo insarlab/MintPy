@@ -15,7 +15,7 @@ import time
 import argparse
 import h5py
 import numpy as np
-from scipy.linalg import lstsq, pinv2, inv, LinAlgError    # more effieint than numpy.linalg
+from scipy import linalg   # more effieint than numpy.linalg
 from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
@@ -353,8 +353,8 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
 
         # check matrix singularity
         try:
-            inv(np.dot(B.T, B))
-        except LinAlgError:
+            linalg.inv(np.dot(B.T, B))
+        except linalg.LinAlgError:
             return ts, temp_coh, num_inv_ifg
 
         ifgram = ifgram[idx, :]
@@ -368,9 +368,9 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
             if weight_sqrt is not None:
                 B_w = np.multiply(B, weight_sqrt)
                 ifgram_w = np.multiply(ifgram, weight_sqrt)
-                X = lstsq(B_w, ifgram_w, cond=rcond)[0]
+                X = linalg.lstsq(B_w, ifgram_w, cond=rcond)[0]
             else:
-                X = lstsq(B, ifgram, cond=rcond)[0]
+                X = linalg.lstsq(B, ifgram, cond=rcond)[0]
 
             ts_diff = X * np.tile(tbase_diff, (1, num_pixel))
             ts[1:, :] = np.cumsum(ts_diff, axis=0)
@@ -381,9 +381,9 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
             if weight_sqrt is not None:
                 A_w = np.multiply(A, weight_sqrt)
                 ifgram_w = np.multiply(ifgram, weight_sqrt)
-                X = lstsq(A_w, ifgram_w, cond=rcond)[0]
+                X = linalg.lstsq(A_w, ifgram_w, cond=rcond)[0]
             else:
-                X = lstsq(A, ifgram, cond=rcond)[0]
+                X = linalg.lstsq(A, ifgram, cond=rcond)[0]
             ts[1: ,:] = X
             ifgram_diff = ifgram - np.dot(A, X)
 
@@ -391,7 +391,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
         num_inv_ifg = A.shape[0]
         temp_coh = np.abs(np.sum(np.exp(1j*ifgram_diff), axis=0)) / num_inv_ifg
 
-    except LinAlgError:
+    except linalg.LinAlgError:
         pass
 
     return ts, temp_coh, num_inv_ifg
