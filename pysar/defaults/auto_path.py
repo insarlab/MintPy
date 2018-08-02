@@ -74,18 +74,6 @@ prefix = 'pysar.load.'
 
 
 ##----------------- Functions from pysar.utils.readfile to be independnt module ---------##
-def check_variable_name(path, print_msg=True):
-    s = path.split("/")[0]
-    if len(s) > 0 and s[0] == "$":
-        try:
-            p0 = os.getenv(s[1:])
-            path = path.replace(path.split("/")[0], p0)
-        except:
-            if print_msg:
-                print('WARNING: Un-recognized environmental variable: '+s)
-    return path
-
-
 def read_str2dict(inString, delimiter='=', print_msg=False):
     '''Read multiple lines of string into dict
     Based on pysar.utils.readfile.read_template()
@@ -99,7 +87,7 @@ def read_str2dict(inString, delimiter='=', print_msg=False):
         else:
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
-            value = check_variable_name(value, print_msg=print_msg)
+            value = os.path.expandvars(value)
             if value != '':
                 strDict[key] = value
     return strDict

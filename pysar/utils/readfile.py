@@ -740,7 +740,8 @@ def read_template(fname, delimiter='=', print_msg=True):
         else:
             atrName = c[0]
             atrValue = str.replace(c[1], '\n', '').split("#")[0].strip()
-            atrValue = check_variable_name(atrValue, print_msg=print_msg)
+            atrValue = os.path.expandvars(atrValue)
+            #atrValue = check_variable_name(atrValue, print_msg=print_msg)
 
             if insidePlotObject:
                 if is_plot_attribute(atrName):

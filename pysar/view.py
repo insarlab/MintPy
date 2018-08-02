@@ -305,7 +305,7 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
             num_row = inps.pix_box[3] - inps.pix_box[1]
             num_col = inps.pix_box[2] - inps.pix_box[0]
             if 0 <= ref_y < num_row and 0 <= ref_x < num_col:
-                data -= data[ref_y, ref_x-]
+                data -= data[ref_y, ref_x]
 
     # Convert data to display unit and wrap
     (data,
