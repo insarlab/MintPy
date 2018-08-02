@@ -296,16 +296,6 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
             print('set reference pixel to: {}'.format(inps.ref_yx))
     else:
         inps.ref_yx = None
-        # reference unwrapPhase
-        if (inps.key in ['ifgramStack']
-                and inps.dset[0].split('-')[0] == 'unwrapPhase'
-                and 'REF_Y' in metadata.keys()):
-            ref_y = int(metadata['REF_Y']) - inps.pix_box[1]
-            ref_x = int(metadata['REF_X']) - inps.pix_box[0]
-            num_row = inps.pix_box[3] - inps.pix_box[1]
-            num_col = inps.pix_box[2] - inps.pix_box[0]
-            if 0 <= ref_y < num_row and 0 <= ref_x < num_col:
-                data -= data[ref_y, ref_x]
 
     # Convert data to display unit and wrap
     (data,
@@ -607,7 +597,7 @@ def check_input_file_info(inps, print_msg=True):
     msg = 'input file is '
     if not inps.file.endswith(('.h5', '.he5')):
         msg += '{} '.format(atr['PROCESSOR'])
-    msg += '{} file: {}'.format(atr['FILE_TYPE'], inps.file)
+    msg += '{} file: {}'.format(atr['FILE_TYPE'], os.path.abspath(inps.file))
     if 'DATA_TYPE' in atr.keys():
         msg += ' in {} format'.format(atr['DATA_TYPE'])
     if print_msg:
@@ -1142,6 +1132,17 @@ def main(iargs=None):
                                   datasetName=inps.ref_date,
                                   box=inps.pix_box,
                                   print_msg=False)[0]
+
+        # reference in space for unwrapPhase
+        if (inps.key in ['ifgramStack']
+                and inps.dset[0].split('-')[0] == 'unwrapPhase'
+                and 'REF_Y' in atr.keys()):
+            ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
+            ref_data = readfile.read(inps.file,
+                                     datasetName=inps.dset[0],
+                                     box=(ref_x, ref_y, ref_x+1, ref_y+1),
+                                     print_msg=False)[0]
+            data[data != 0.] -= ref_data
 
         if inps.zero_mask:
             print('masking pixels with zero value')
