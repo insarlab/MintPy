@@ -12,7 +12,7 @@ import argparse
 import time
 import h5py
 import numpy as np
-from scipy.linalg import lstsq, pinv2, inv, LinAlgError
+from scipy import linalg
 from pysar.utils import ptime, readfile, utils as ut
 from pysar.objects import ifgramStack
 import pysar.ifgram_inversion as ifginv
@@ -31,8 +31,8 @@ TEMPLATE = """Template:
 """
 
 REFERENCE = """Reference:
-  Fattahi, H. (2015), Geodetic Imaging of Tectonic Deformation with InSAR,
-      190 pp, University of Miami, Miami, FL. Chap. 4
+  Fattahi, H. (2015), Geodetic Imaging of Tectonic Deformation with InSAR, 190 pp, 
+  University of Miami, Miami, FL. Chap. 4
 """
 
 NOTE = """
@@ -53,7 +53,12 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('ifgram_file', help='interferograms file to be corrected')
-    parser.add_argument('-m','--mask', dest='mask_file',
+    parser.add_argument('-i','--in-dataset', dest='datasetNameIn', default='unwrapPhase',
+                        help="name of dataset to be corrected, default: unwrapPhase")
+    parser.add_argument('-o','--out-dataset', dest='datasetNameOut',
+                        help='name of dataset to be written after correction, default: {}_closure')
+
+    parser.add_argument('-m','--mask', dest='maskFile',
                         help='mask file to specify those pixels to be corrected for unwrapping errors')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options for setting.')
@@ -81,7 +86,7 @@ def read_template2inps(template_file, inps=None):
     if key in template.keys():
         value = template[key]
         if value not in ['auto', 'no']:
-            inps.mask_file = value
+            inps.maskFile = value
 
     return inps
 
@@ -122,18 +127,22 @@ def correct_unwrap_error(ifgram, C, Dconstraint=True, thres=0.1, alpha=0.25, rco
         D = I[~idx_err_ifgram, :]
         A = np.vstack((A, D))
 
-    L = np.zeros((A.shape[0], ifgram.shape[1]), np.float32)
-    L[0:num_tri, :] = np.dot(C, ifgram) / (-2.*np.pi)
+    # Eq 4.4 (Fattahi, 2015)
     try:
-        U = np.round(lstsq(A, L, cond=rcond)[0])   # Eq 4.4 (Fattahi, 2015)
-    except LinAlgError:
+        A_inv = linalg.pinv2(A, rcond=rcond)
+        L = np.zeros((A.shape[0], ifgram.shape[1]), np.float32)
+        L[0:num_tri, :] = np.dot(C, ifgram) / (-2.*np.pi)
+        U = np.round(np.dot(A_inv, L))
+
+    except linalg.LinAlgError:
         pass
 
     ifgram_cor = ifgram + 2*np.pi*U
     return ifgram_cor, U
 
 
-def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None, fast=False, thres=0.1):
+def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None, fast=False,
+                           thres=0.1, dsNameIn='unwrapPhase'):
     """Estimate/Correct unwrapping error in ifgram stack on area defined by box.
     Parameters: ifgram_file : string, ifgramStack file
                 box : tuple of 4 int, indicating areas to be read and analyzed
@@ -160,12 +169,16 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
         num_col = stack_obj.width
     num_pixel = num_row * num_col
 
-    C = stack_obj.get_design_matrix4ifgram_triangle()
+    C = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=False)
     print('number of interferograms: {}'.format(C.shape[1]))
     print('number of triangles: {}'.format(C.shape[0]))
 
     # read unwrapPhase
-    pha_data = ifginv.read_unwrap_phase(stack_obj, box, ref_phase)
+    pha_data = ifginv.read_unwrap_phase(stack_obj,
+                                        box,
+                                        ref_phase,
+                                        unwDatasetName=dsNameIn,
+                                        dropIfgram=False)
 
     # mask of pixels to analyze
     mask = np.ones((num_pixel), np.bool_)
@@ -197,13 +210,11 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
                                                                            num_pixel2proc/num_pixel*100))
 
         # correcting unwrap error based on phase closure
-        msg = 'correcting unwrapping error'
+        print('correcting unwrapping error ...')
         if fast:
-            print(msg+' without applying zero phase jump constraint on ifgram without unwrap error ...')
             ifgram_cor = correct_unwrap_error(ifgram, C, Dconstraint=False)[0]
 
         else:
-            print(msg+' pixel by pixel ...')
             prog_bar = ptime.progressBar(maxValue=num_pixel2proc)
             for i in range(num_pixel2proc):
                 ifgram_cor[:, i] = correct_unwrap_error(ifgram[:, i], C, Dconstraint=True)[0].flatten()
@@ -215,12 +226,26 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
     return pha_data
 
 
-def run_unwrap_error(inps):
-    """Run unwrapping error correction in network of interferograms using phase closure."""
+def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_closure', fast_mode=False):
+    """Run unwrapping error correction in network of interferograms using phase closure.
+    Parameters: inps : Namespace of input arguments including the following:
+                    ifgram_file : string, path of ifgram stack file
+                    maskFile    : string, path of mask file mark the pixels to be corrected
+                dsNameIn  : string, dataset name to read in
+                dsnameOut : string, dataset name to write out
+                fast_mode : bool, enable fast processing mode or not
+    Returns:    inps.ifgram_file : string, path of corrected ifgram stack file
+    """
+    print('-'*50)
+    print('Unwrapping Error Coorrection based on Phase Closure Consistency (Fattahi, 2015) ...')
+    if fast_mode:
+        print('fast mode: ON, the following asuumption is ignored for fast processing')
+        print('\tzero phase jump constraint on ifgrams without unwrap error')
+    print('-'*50)
+
     stack_obj = ifgramStack(inps.ifgram_file)
     stack_obj.open()
-    # get phase on reference point
-    ref_phase = stack_obj.get_reference_phase(dropIfgram=False)
+    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=False)
 
     # split ifgram_file into blocks to save memory
     box_list = ifginv.split_into_boxes(inps.ifgram_file, chunk_size=100e6)
@@ -231,18 +256,22 @@ def run_unwrap_error(inps):
             print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
 
         # estimate/correct ifgram
-        pha_cor = run_unwrap_error_patch(inps.ifgram_file,
+        unw_cor = run_unwrap_error_patch(inps.ifgram_file,
                                          box=box,
-                                         mask_file=inps.mask_file,
+                                         mask_file=inps.maskFile,
                                          ref_phase=ref_phase,
-                                         fast=inps.fast)
+                                         fast=fast_mode,
+                                         dsNameIn=dsNameIn)
 
         # write ifgram
-        write_hdf5_file_patch(inps.ifgram_file, data=pha_cor, box=box)
+        write_hdf5_file_patch(inps.ifgram_file,
+                              data=unw_cor,
+                              box=box,
+                              dsName=dsNameOut)
     return inps.ifgram_file
 
 
-def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_unwCor'):
+def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_closure'):
     """Write a patch of 3D dataset into an existing h5 file.
     Parameters: ifgram_file : string, name/path of output hdf5 file
                 data : 3D np.array to be written
@@ -250,7 +279,7 @@ def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_unwCo
                 dsName : output dataset name
     Returns:    ifgram_file
     """
-    num_ifgram, length, width = ifgramStack(ifgram_file).get_size()
+    num_ifgram, length, width = ifgramStack(ifgram_file).get_size(dropIfgram=False)
     if not box:
         box = (0, 0, width, length)
     num_row = box[3] - box[1]
@@ -273,7 +302,8 @@ def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_unwCo
                               chunks=True, compression=None)
 
     # resize h5py.Dataset and write data
-    ds.resize((num_ifgram, box[3], box[2]))
+    if ds.shape != (num_ifgram, length, width):
+        ds.resize((num_ifgram, box[3], box[2]))
     ds[:, box[1]:box[3], box[0]:box[2]] = data
 
     f.close()
@@ -286,18 +316,24 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
+    if not inps.datasetNameOut:
+        inps.datasetNameOut = '{}_closure'.format(inps.datasetNameIn)
 
+    # update mode checking
     atr = readfile.read_attribute(inps.ifgram_file)
     if inps.update and atr['FILE_TYPE'] == 'ifgramStack':
         stack_obj = ifgramStack(inps.ifgram_file)
         stack_obj.open(print_msg=False)
-        if 'unwrapPhase_unwCor' in stack_obj.datasetNames:
-            print("update mode is enabled AND 'unwrapPhase_unwCor' exists, skip this step.")
+        if inps.datasetNameOut in stack_obj.datasetNames:
+            print("update mode is enabled AND {} exists, skip this step.".format(inps.datasetNameOut))
             return inps.ifgram_file
 
     start_time = time.time()
 
-    run_unwrap_error(inps)
+    run_unwrap_error_closure(inps,
+                             dsNameIn=inps.datasetNameIn,
+                             dsNameOut=inps.datasetNameOut,
+                             fast_mode=inps.fast)
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))

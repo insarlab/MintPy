@@ -13,25 +13,23 @@ import argparse
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pysar.objects import ifgramStack
 from pysar.utils import (ptime,
                          readfile,
                          writefile,
                          utils as ut,
+                         plot as pp,
                          deramp)
-from pysar import view
 
 
 ####################################################################################################
 EXAMPLE = """Example:
-  # example to prepare maskUnwCor.h5 file using generate_mask.py / image_math.py / add.py
-  generate_mask.py waterMask.h5 -m 0.5 --roipoly -o maskFernandina.h5
-  generate_mask.py waterMask.h5 -m 0.5 -x 0 300 -y 300 700 -o maskSantiago.h5
-  image_math.py maskSantiago.h5 '*' 2 -o maskSantiago2.h5
-  add.py waterMask.h5 maskFernandina.h5 maskSantiago2.h5 -o maskUnwCor.h5
+  # Check the Jupyter Notebook for a complete tutorial of this procedure:
+  https://github.com/yunjunz/pysar/blob/master/examples/run_unwrap_error_bridging.ipynb
 
   unwrap_error_bridging.py  ./INPUTS/ifgramStack.h5  -t GalapagosSenDT128.template --update
-  unwrap_error_bridging.py  20180502_20180619.unw  -m maskUnwCor.h5  -t GalapagosSenDT128.template
+  unwrap_error_bridging.py  20180502_20180619.unw  -m maskConnComp.h5  -t GalapagosSenDT128.template
 """
 
 REFERENCE = """Reference:
@@ -78,6 +76,11 @@ def create_parser():
     parser.add_argument('-t', '--template', dest='template_file', type=str, required=True,
                           help='template file with bonding point info, e.g.\n' +
                                'pysar.unwrapError.yx = 283,1177,305,1247;350,2100,390,2200')
+
+    parser.add_argument('-i','--in-dataset', dest='datasetNameIn', default='unwrapPhase',
+                        help='name of dataset to be corrected, default: unwrapPhase')
+    parser.add_argument('-o','--out-dataset', dest='datasetNameOut',
+                        help='name of dataset to be written after correction, default: {}_bridge')
 
     parser.add_argument('-m','--mask', dest='maskFile', type=str,
                         help='name of mask file to mark different patches that want to be corrected in different value')
@@ -134,39 +137,40 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
-def check_mask(mask_file, bridge_yx, metadata):
-    if not mask_file:
+def plot_bridge_mask(mask_cc_file, bridge_yx, metadata=dict()):
+    if not mask_cc_file:
         raise ValueError('no mask file for bridging found.')
-    mask = readfile.read(mask_file)[0]
+    mask_cc = readfile.read(mask_cc_file)[0]
 
     # check number of bridges
     num_bridge = bridge_yx.shape[0]
-    if np.unique(mask).size < num_bridge + 1:
+    if np.unique(mask_cc).size < num_bridge + 1:
         raise ValueError('number of marked patches != number of briges.')
 
     # check the 1st bridge reference point is in the same patch with reference point
-    ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
-    if mask[ref_y, ref_x] != mask[bridge_yx[0, 0], bridge_yx[0, 1]]:
-        raise ValueError(('1st bridge reference/start point is not in the same patch'
-                          ' as file reference pixel.'))
+    if metadata:
+        ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
+        if mask_cc[ref_y, ref_x] != mask_cc[bridge_yx[0, 0], bridge_yx[0, 1]]:
+            raise ValueError(('1st bridge reference/start point is not in the same patch'
+                              ' as file reference pixel.'))
+
+    # save bridge points into text file
+    out_file_base = 'maskConnCompBridge'
+    txt_file = '{}.txt'.format(out_file_base)
+    header_info = '# bridge bonding points for unwrap error correction\n'
+    header_info += '# y0\tx0\ty1\tx1'
+    np.savetxt(txt_file, bridge_yx, fmt='%s', delimiter='\t', header=header_info)
+    print('save bridge points to file: {}'.format(txt_file))
 
     # plot/save mask and bridge setting into an image
-    out_file = 'mask4unwCorBridge.png'
-    # call view.py module to plot
-    try:
-        # auto settings from view.py
-        cmd = 'view.py {} --nodisplay --cbar-nbins {}'.format(mask_file, num_bridge+1)
-        inps = view.cmd_line_parse(cmd.split()[1:])
-        inps, atr = view.check_input_file_info(inps, print_msg=False)
-        inps = view.update_inps_with_file_metadata(inps, atr, print_msg=False)
-        data, inps = view.update_data_with_plot_inps(mask, atr, inps, print_msg=False)
-        # call view.py to plot
-        fig, ax = plt.subplots(figsize=inps.fig_size)
-        ax, inps = view.plot_2d_matrix(ax, mask, atr, inps, print_msg=False)[0:2]
-    except:
-        fig, ax = plt.subplots()
-        im = ax.imshow(mask)
-        fig.colorbar(im, ax=ax)
+    out_file = '{}.png'.format(out_file_base)
+    fig, ax = plt.subplots(figsize=[6, 8])
+    im = ax.imshow(mask_cc)
+    ax = pp.auto_flip_direction(metadata, ax=ax, print_msg=False)
+    # colorbar
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", "3%", pad="3%")
+    cbar = plt.colorbar(im, cax=cax, ticks=np.arange(num_bridge+2))
 
     # plot bridges
     for i in range(num_bridge):
@@ -174,6 +178,7 @@ def check_mask(mask_file, bridge_yx, metadata):
         ax.plot([x0, x1], [y0, y1], '-o', ms=5)
     plt.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
     print('plot/save bridge setting to file: {}'.format(out_file))
+
     return
 
 
@@ -207,7 +212,8 @@ def bridge_unwrap_error(data, mask, bridge_yx):
     return data
 
 
-def run_unwrap_error_bridge(ifgram_file, mask_file, bridge_yx, ramp_type=None):
+def run_unwrap_error_bridge(ifgram_file, mask_file, bridge_yx, dsNameIn='unwrapPhase',
+                            dsNameOut='unwrapPhase_bridge', ramp_type=None):
     atr = readfile.read_attribute(ifgram_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
     ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
@@ -222,8 +228,6 @@ def run_unwrap_error_bridge(ifgram_file, mask_file, bridge_yx, ramp_type=None):
 
     print('correct unwrapping error in {} with bridging ...'.format(ifgram_file))
     if k == 'ifgramStack':
-        dsName = 'unwrapPhase'
-        dsNameOut = 'unwrapPhase_unwCor'
         date12_list = ifgramStack(ifgram_file).get_date12_list(dropIfgram=False)
         num_ifgram = len(date12_list)
         shape_out = (num_ifgram, length, width)
@@ -233,6 +237,7 @@ def run_unwrap_error_bridge(ifgram_file, mask_file, bridge_yx, ramp_type=None):
         f = h5py.File(ifgram_file, 'r+')
         if dsNameOut in f.keys():
             ds = f[dsNameOut]
+            print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
         else:
             ds = f.create_dataset(dsNameOut, shape_out, maxshape=(None, None, None),
                                   chunks=True, compression=None)
@@ -243,7 +248,7 @@ def run_unwrap_error_bridge(ifgram_file, mask_file, bridge_yx, ramp_type=None):
         for i in range(num_ifgram):
             # read unwrapPhase
             date12 = date12_list[i]
-            unw = np.squeeze(f[dsName][i, :, :])
+            unw = np.squeeze(f[dsNameIn][i, :, :])
             unw -= unw[ref_y, ref_x]
 
             # remove phase ramp before phase jump estimation
@@ -291,6 +296,8 @@ def run_unwrap_error_bridge(ifgram_file, mask_file, bridge_yx, ramp_type=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     inps = read_template2inps(inps.template_file, inps)
+    if not inps.datasetNameOut:
+        inps.datasetNameOut = '{}_bridge'.format(inps.datasetNameIn)
 
     atr = readfile.read_attribute(inps.ifgram_file)
     if inps.update and atr['FILE_TYPE'] == 'ifgramStack':
@@ -301,10 +308,12 @@ def main(iargs=None):
             return inps.ifgram_file
 
     start_time = time.time()
-    check_mask(inps.maskFile, inps.bridgeYX, atr)
+    plot_bridge_mask(inps.maskFile, inps.bridgeYX, atr)
     run_unwrap_error_bridge(inps.ifgram_file,
                             mask_file=inps.maskFile,
                             bridge_yx=inps.bridgeYX,
+                            dsNameIn=inps.datasetNameIn,
+                            dsNameOut=inps.datasetNameOut,
                             ramp_type=inps.ramp)
 
     m, s = divmod(time.time()-start_time, 60)
