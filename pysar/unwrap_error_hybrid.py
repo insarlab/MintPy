@@ -8,7 +8,6 @@
 
 import os
 import time
-from datetime import datetime as dt
 import argparse
 import itertools
 import h5py
@@ -55,6 +54,8 @@ def create_parser():
                           help='type of phase ramp to be removed before correction.')
     parser.add_argument('-r','--radius', dest='bridge_end_radius', type=int, default=150,
                         help='radius of the end point of bridge to search area to get median representative value')
+    parser.add_argument('--cutoff', dest='cutoff', type=float, default=1.,
+                        help='cutoff value to detect histogram spikes for coherent connected components')
     parser.add_argument('--update', action='store_true',
                         help='Enable update mode: if unwrapPhase_unwCor dataset exists, skip the correction.')
     parser.add_argument('--no-closure-fowllow-on', dest='run_closure', action='store_false',
@@ -205,6 +206,7 @@ def detect_unwrap_error(ifgram_file, mask_file, mask_cc_file='maskConnComp.h5', 
                             bbox_inches='tight', transparent=True, dpi=300)
 
     # save to hdf5 file
+    num_bridge = num_cc - 1
     atr = dict(stack_obj.metadata)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 1
@@ -463,7 +465,8 @@ def main(iargs=None):
     mask_cc_file = detect_unwrap_error(ifgram_file=inps.ifgram_file,
                                        mask_file=inps.maskFile,
                                        mask_cc_file='maskConnComp.h5',
-                                       unwDatasetName=inps.datasetNameIn)
+                                       unwDatasetName=inps.datasetNameIn,
+                                       cutoff=inps.cutoff)
 
     bridges = search_bridge(mask_cc_file, radius=inps.bridge_end_radius)
 
