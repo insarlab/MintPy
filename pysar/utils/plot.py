@@ -212,20 +212,20 @@ class ColormapExt(mpl.cm.ScalarMappable):
 
     def get_colormap(self):
         cmap_base_name = self.cmap_name[0:-1]
-        if self.cmap_name in self.cmap_list:
+        try:
             self.colormap = self.get_single_colormap(cmap_name=self.cmap_name,
                                                      cmap_lut=self.cmap_lut)
 
-        elif cmap_base_name in self.cmap_list:
-            num_repeat = int(self.cmap_name[-1])
-            self.colormap = self.get_repeat_colormap(cmap_name=cmap_base_name,
-                                                     num_repeat=self.cmap_lut,
-                                                     cmap_lut=self.cmap_lut)
-
-        else:
-            msg = 'un-recognized input colormap name: {}\n'.format(self.cmap_name)
-            msg += 'supported colormap:\n{}'.format(self.cmap_list)
-            raise ValueError(msg)
+        except:
+            if cmap_base_name in self.cmap_list:
+                num_repeat = int(self.cmap_name[-1])
+                self.colormap = self.get_repeat_colormap(cmap_name=cmap_base_name,
+                                                         num_repeat=self.cmap_lut,
+                                                         cmap_lut=self.cmap_lut)
+            else:
+                msg = 'un-recognized input colormap name: {}\n'.format(self.cmap_name)
+                msg += 'supported colormap:\n{}'.format(self.cmap_list)
+                raise ValueError(msg)
         return self.colormap
 
 
@@ -428,7 +428,8 @@ class SelectFromCollection(object):
     def onselect(self, verts):
         from matplotlib.path import Path
         self.poly_path = Path(verts)
-        self.mask = self.poly_path.contains_points(self.coords).reshape(self.length, self.width)
+        self.mask = self.poly_path.contains_points(self.coords).reshape(self.length,
+                                                                        self.width)
         self.canvas.draw_idle()
 
     def disconnect(self):

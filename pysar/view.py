@@ -296,6 +296,14 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
             print('set reference pixel to: {}'.format(inps.ref_yx))
     else:
         inps.ref_yx = None
+        # reference unwrapPhase
+        if (inps.key in ['ifgramStack']
+                and inps.dset[0].split('-')[0] == 'unwrapPhase'
+                and 'REF_Y' in metadata.keys()):
+            ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
+            length, width = int(metadata['LENGTH']), int(metadata['WIDTH'])
+            if 0 <= ref_y < length and 0 <= ref_x < width:
+                data -= data[ref_y, ref_x]
 
     # Convert data to display unit and wrap
     (data,
@@ -1126,6 +1134,7 @@ def main(iargs=None):
                                   datasetName=inps.dset[0],
                                   box=inps.pix_box,
                                   print_msg=False)
+        # reference in time
         if inps.ref_date:
             data -= readfile.read(inps.file,
                                   datasetName=inps.ref_date,

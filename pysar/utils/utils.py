@@ -32,13 +32,36 @@ from pysar.objects import (geometryDatasetNames,
 
 
 ###############################################################################
-def get_largest_conn_component(mask_in, display=False):
+def get_all_conn_components(mask_in, min_num_pixel=1e4):
+    """Get all connected component with number of pixels larger than threshold
+    Parameters: mask_in  : 2D np.array with zero as background and non-zero as foreground
+                min_num_pixel : int/float, minimum number of pixels to be identified and output
+    Returns:    mask_out : list of 2D np.array in np.bool_ format
+    """
+    mask_in = np.array(mask_in)
+    mask_out = []  # list of 2D np.array in bool
+    mask_cc = get_largest_conn_component(mask_in, min_num_pixel=1e4)
+    while not np.all(~mask_cc):
+        mask_out.append(mask_cc)
+        mask_in ^= mask_cc
+        mask_cc = get_largest_conn_component(mask_in, min_num_pixel=1e4)
+    return mask_out
+
+
+def get_largest_conn_component(mask_in, min_num_pixel=1e4, display=False):
     """Extract the largest connected component from an 2D array
        with zero as background value
-       Parameters: mask_in  : 2D np.array with zero as background and non-zero as foreground
-       Returns:    mask_out : 2D np.array in np.bool_ format
+    Parameters: mask_in  : 2D np.array with zero as background and non-zero as foreground
+                min_num_pixel : int/float, minimum number of pixels to be identified and output
+                display : bool, display the result or not.
+    Returns:    mask_out : 2D np.array in np.bool_ format
     """
+    mask_out = np.zeros(mask_in.shape, np.bool_)
     labels, n_features = ndimage.label(mask_in)
+    num_pixel = np.max(np.bincount(labels.flatten())[1:])
+    if num_pixel < min_num_pixel:
+        return mask_out
+
     max_label = np.argmax(np.bincount(labels.flatten())[1:]) + 1
     mask_out = labels == max_label
     if display:
