@@ -1,6 +1,6 @@
 ### Install PySAR
 
-#### For Mac users     
+#### 0. For Mac users     
 
 Install Xcode with command line tools, if you have not already done so.
 
@@ -64,7 +64,7 @@ Source the file for the first time. It will be sourced automatically next time w
    
    
 #### 2. Install Python dependecies
-PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html).
+PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and pyresample.
 
 
 Run the following in your terminal (using conda):   
@@ -83,4 +83,4 @@ Run the following in your terminal (using conda):
    
 Note that pykml through conda supports python2 only, we provide a python2/3 compatible version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
   
-We use [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for tropospheric delay correction using weather re-analysis datadset such as ERA-Interim, MERRA and NARR. Please check [caltech's website](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for the code download and account setup.
+We use [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for tropospheric delay correction using weather re-analysis datadset such as ERA-Interim, MERRA and NARR. Check [caltech's website](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for the code download and account setup.
