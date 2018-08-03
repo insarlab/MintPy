@@ -60,7 +60,7 @@ class resample:
         elif self.processor == 'scipy' and 'Y_FIRST' in self.lut_metadata.keys():
             self.prepare_regular_grid_interpolator()
 
-    def resample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=None, print_msg=True):
+    def run_resample(self, src_data, interp_method='nearest', fill_value=np.nan, nprocs=None, print_msg=True):
         """Run interpolation operation for input 2D/3D data
         Parameters: src_data      : 2D/3D np.array, source data to be geocoded
                     interp_method : string, nearest | linear
@@ -166,20 +166,20 @@ class resample:
             # ignore pixels with zero value
             zero_mask = np.multiply(lat != 0., lon != 0.)
 
+
             # ignore anomaly non-zero values 
             # by get the most common data range (d_min, d_max) based on histogram
             mask = np.array(zero_mask, np.bool_)
             for data in [lat, lon]:
-                hist, bin_edges = np.histogram(data[zero_mask], bins=10)
-
+                hist, bin_edges = np.histogram(data[mask], bins=10)
                 # if there is anomaly, histogram won't be evenly distributed
-                if np.max(hist) > np.sum(zero_mask) * 0.7:
+                while np.max(hist) > np.sum(zero_mask) * 0.7:
                     idx = np.argmax(hist)
                     d_mean = (bin_edges[idx] + bin_edges[idx+1]) / 2.
                     bin_step = bin_edges[1] - bin_edges[0]
-                    d_min = d_mean - bin_step
-                    d_max = d_mean + bin_step
-                    mask *= np.multiply(data > d_min, data < d_max)
+                    mask *= np.multiply(data >= d_mean - bin_step,
+                                        data <= d_mean + bin_step)
+                    hist, bin_edges = np.histogram(data[mask], bins=10)
             lat[mask == 0] = 90.
             lon[mask == 0] = 0.
             return lat, lon, mask
@@ -358,9 +358,9 @@ class resample:
                     nprocs : int
                     print_msg : bool
         Returns:    dest_data
-        Example:    dest_data = reObj.resample(src_data, src_def, dest_def,
-                                               interp_method=inps.interpMethod,
-                                               fill_value=np.fillValue, nprocs=4)
+        Example:    dest_data = reObj.run_pyresample(src_data, src_def, dest_def,
+                                                     interp_method=inps.interpMethod,
+                                                     fill_value=np.fillValue, nprocs=4)
         """
         if not radius:
             # geo2radar

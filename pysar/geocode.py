@@ -228,8 +228,8 @@ def auto_output_filename(infile, inps):
     return outfile
 
 
-def run_resample(inps):
-    """resample all input files"""
+def run_geocode(inps):
+    """geocode all input files"""
     start_time = time.time()
 
     # Prepare geometry for geocoding
@@ -263,11 +263,11 @@ def run_resample(inps):
                                  datasetName=dsName,
                                  print_msg=False)[0]
 
-            res_data = res_obj.resample(src_data=data,
-                                        interp_method=inps.interpMethod,
-                                        fill_value=inps.fillValue,
-                                        nprocs=inps.nprocs,
-                                        print_msg=True)
+            res_data = res_obj.run_resample(src_data=data,
+                                            interp_method=inps.interpMethod,
+                                            fill_value=inps.fillValue,
+                                            nprocs=inps.nprocs,
+                                            print_msg=True)
             dsResDict[dsName] = res_data
 
         # update metadata
@@ -294,7 +294,7 @@ def main(iargs=None):
         inps = read_template2inps(inps.templateFile, inps)
     inps = _check_inps(inps)
 
-    run_resample(inps)
+    run_geocode(inps)
     return
 
 
