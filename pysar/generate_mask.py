@@ -129,20 +129,22 @@ def create_threshold_mask(inps):
     # exclude circular area
     if inps.ex_circle:
         x, y, r = inps.ex_circle
-        cmask = ut.get_circular_mask(x, y, r, length, width)
+        cmask = ut.get_circular_mask(x, y, r, (length, width))
         mask[cmask == 1] = 0
         print('exclude pixels inside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
 
     # include circular area
     if inps.in_circle:
-        x, y, r = inps.ex_circle
-        cmask = ut.get_circular_mask(x, y, r, length, width)
+        x, y, r = inps.in_circle
+        cmask = ut.get_circular_mask(x, y, r, (length, width))
         mask[cmask == 0] = 0
         print('exclude pixels outside of circle defined as (x={}, y={}, r={})'.format(x, y, r))
 
     # interactively select polygonal region of interest (ROI)
     if inps.roipoly:
-        mask *= pp.get_poly_mask(data)
+        poly_mask = pp.get_poly_mask(data)
+        if poly_mask is not None:
+            mask *= poly_mask
 
     # Write mask file
     atr['FILE_TYPE'] = 'mask'

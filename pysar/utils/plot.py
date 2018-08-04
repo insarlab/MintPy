@@ -449,9 +449,15 @@ def get_poly_mask(data, print_msg=True):
     plt.show()
     selector.disconnect()
 
-    if print_msg:
-        print('selected polygon: {}'.format(selector.poly_path))
-    return selector.mask
+    if hasattr(selector, 'mask'):
+        mask = selector.mask
+        if print_msg:
+            print('selected polygon: {}'.format(selector.poly_path))
+    else:
+        mask = None
+        if print_msg:
+            print('no polygon selected.\n')
+    return mask
 ################################## SelectFromCollection class end #########################################
 
 
