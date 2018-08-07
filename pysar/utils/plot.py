@@ -508,9 +508,19 @@ def add_dem_argument(parser):
                      help='Background topography contour step in meters. \n'
                           'Default is 200 meters.')
     dem.add_argument('--shade-az', dest='shade_azdeg', type=float, default=315.,
-                     help='The azimuth (0-360, degrees clockwise from North) of the light source')
+                     help='The azimuth (0-360, degrees clockwise from North) of the light source\n'
+                          'Default is 315.')
     dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45.,
-                     help='The altitude (0-90, degrees up from horizontal) of the light source.')
+                     help='The altitude (0-90, degrees up from horizontal) of the light source.\n'
+                          'Default is 45.')
+    dem.add_argument('--shade-min', dest='shade_min', type=float,
+                     help='The min height in m of colormap of shaded relief topography\n'
+                          'Default: -7000 m')
+    dem.add_argument('--shade-max', dest='shade_max', type=float,
+                     help='The max height of colormap of shaded relief topography\n'
+                          'Default: max(DEM) + 1000 m')
+    dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,
+                     help='Vertical exaggeration ratio, default: 0.5')
     return parser
 
 
@@ -1361,6 +1371,9 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
     if 'dem_contour_smooth' not in key_list:  inps_dict['dem_contour_smooth'] = 3.0
     if 'shade_azdeg'        not in key_list:  inps_dict['shade_azdeg']        = 315.
     if 'shade_altdeg'       not in key_list:  inps_dict['shade_altdeg']       = 45.
+    if 'shade_min'          not in key_list:  inps_dict['shade_min']          = -7000.
+    if 'shade_max'          not in key_list:  inps_dict['shade_max']          = np.nanmax(dem) + 1000.
+    if 'shade_exag'         not in key_list:  inps_dict['shade_exag']         = 0.5
 
     dem_shade = None
     dem_contour = None
@@ -1370,8 +1383,10 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
         from matplotlib.colors import LightSource
         ls = LightSource(azdeg=inps_dict['shade_azdeg'],
                          altdeg=inps_dict['shade_altdeg'])
-        dem_shade = ls.shade(dem, vert_exag=0.5, cmap=ColormapExt('gray').colormap,
-                             vmin=-7000, vmax=np.nanmax(dem)+1000)
+        dem_shade = ls.shade(dem, vert_exag=inps_dict['shade_exag'],
+                             cmap=ColormapExt('gray').colormap,
+                             vmin=inps_dict['shade_min'],
+                             vmax=inps_dict['shade_max'])
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
             print('show shaded relief DEM')

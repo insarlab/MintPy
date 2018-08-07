@@ -55,7 +55,7 @@ pysar.subset.yx       = auto    #[1800:2000,700:800 / no], auto for no
 pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 
 
-## 1.3 Reference in Space
+## 1.2 Reference in Space
 ## reference all interferograms to one common point in space
 ## auto - randomly select a pixel with coherence > minCoherence
 pysar.reference.yx            = auto   #[257,151 / auto]
@@ -65,7 +65,7 @@ pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum cohere
 pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
 
 
-## 1.4 Unwrapping Error Correction (optional)
+## 1.3 Unwrapping Error Correction (optional)
 ## supported methods:
 ## a. phase closure (automatic, slow; Fattahi, 2015, Thesis Chap. 4) [fast option available but not best]
 ## b. bridging (need manual setup, fast)
@@ -104,8 +104,8 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ## 2.2 Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## weighting options for least square inversion [fast option available but not best]:
-## 1) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
-## 2) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
+## 1) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS) [recommended]
+## 2) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS).
 ## 3) coh - use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
 ## 4) no  - uniform weight
 ## mask options for unwrapPhase of each interferogram before inversion:
@@ -114,7 +114,7 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 ## 3) no               - no masking.
 ## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
 ## SBAS (Berardino et al., 2002) = minNormVelocity (yes) + weightFunc (no)
-pysar.networkInversion.weightFunc      = auto #[fim / var / coh / no], auto for fim
+pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
 pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no

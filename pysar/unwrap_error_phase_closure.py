@@ -13,7 +13,7 @@ import time
 import h5py
 import numpy as np
 from scipy import linalg
-from pysar.utils import ptime, readfile, utils as ut
+from pysar.utils import ptime, readfile, writefile, utils as ut
 from pysar.objects import ifgramStack
 import pysar.ifgram_inversion as ifginv
 
@@ -223,7 +223,8 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
 
         pha_data[:, mask] = ifgram_cor
     pha_data = pha_data.reshape(num_ifgram, num_row, num_col)
-    return pha_data
+    num_nonzero_closure = num_nonzero_closure.reshape(num_row, num_col)
+    return pha_data, num_nonzero_closure
 
 
 def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_closure', fast_mode=False):
@@ -247,6 +248,7 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
     stack_obj.open()
     ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=False)
 
+    num_nonzero_closure = np.zeros((stack_obj.length, stack_obj.width), dtype=np.int16)
     # split ifgram_file into blocks to save memory
     box_list = ifginv.split_into_boxes(inps.ifgram_file, chunk_size=100e6)
     num_box = len(box_list)
@@ -256,18 +258,28 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
             print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
 
         # estimate/correct ifgram
-        unw_cor = run_unwrap_error_patch(inps.ifgram_file,
-                                         box=box,
-                                         mask_file=inps.maskFile,
-                                         ref_phase=ref_phase,
-                                         fast=fast_mode,
-                                         dsNameIn=dsNameIn)
+        unw_cor, num_closure = run_unwrap_error_patch(inps.ifgram_file,
+                                                      box=box,
+                                                      mask_file=inps.maskFile,
+                                                      ref_phase=ref_phase,
+                                                      fast=fast_mode,
+                                                      dsNameIn=dsNameIn)
+        num_nonzero_closure[box[1]:box[3], box[0]:box[2]] = num_closure
 
         # write ifgram
         write_hdf5_file_patch(inps.ifgram_file,
                               data=unw_cor,
                               box=box,
                               dsName=dsNameOut)
+
+    # write number of nonzero phase closure into file
+    num_file = 'numNonzeroClosure_{}.h5'.format(dsNameIn)
+    atr = dict(stack_obj.metadata)
+    atr['FILE_TYPE'] = 'mask'
+    atr['UNIT'] = '1'
+    writefile.write(num_nonzero_closure, out_file=num_file, metadata=atr)
+    print('writing >>> {}'.format(num_file))
+
     return inps.ifgram_file
 
 

@@ -35,17 +35,17 @@ EXAMPLE = """example:
 TEMPLATE = """
 ## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## weighting options for least square inversion:
-## 1) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS). [Recommended]
-## 2) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS)
+## 1) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS) [recommended]
+## 2) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS)
 ## 3) coh - use coherence as weight (Perissin & Wang, 2012, IEEE-TGRS)
 ## 4) no  - uniform weight
 ## mask options for unwrapPhase of each interferogram before inversion:
-## 1) coherence        - mask out pixels with spatial coherence < maskThreshold
+## 1) coherence        - mask out pixels with spatial coherence < maskThreshold [recommended]
 ## 2) connectComponent - mask out pixels with False/0 value
 ## 3) no               - no masking. [Recommended]
 ## Temporal coherence is calculated and used to generate final mask (Pepe & Lanari, 2006, IEEE-TGRS)
 ## SBAS (Berardino et al., 2002) = minNormVelocity (yes) + weightFunc (no)
-pysar.networkInversion.weightFunc      = auto #[fim / var / coh / no], auto for fim
+pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
 pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
@@ -93,10 +93,10 @@ def create_parser():
     parser.add_argument('--mask-threshold', dest='maskThreshold', type=float, default=0.4,
                         help='threshold to generate mask when mask is coherence')
 
-    parser.add_argument('--weight-function', '-w', dest='weightFunc', default='no', choices={'fim', 'var', 'coh', 'no'},
+    parser.add_argument('--weight-function', '-w', dest='weightFunc', default='no', choices={'var', 'fim', 'coh', 'no'},
                         help='function used to convert coherence to weight for inversion:\n' +
-                        'fim - Fisher Information Matrix as weight' +
                         'var - inverse of phase variance due to temporal decorrelation\n' +
+                        'fim - Fisher Information Matrix as weight' +
                         'coh - spatial coherence\n' +
                         'no  - no/uniform weight')
     parser.add_argument('--min-norm-velocity', dest='minNormVelocity', action='store_true',
@@ -161,11 +161,11 @@ def read_template2inps(template_file, inps):
 
 
 ################################################################################################
-def phase_pdf_ds(l, coherence=None, phi_num=1000, epsilon=1e-3):
+def phase_pdf_ds(L, coherence=None, phi_num=1000, epsilon=1e-3):
     """Marginal PDF of interferometric phase for distributed scatterers (DS)
     Eq. 66 (Tough et al., 1995) and Eq. 4.2.23 (Hanssen, 2001)
     Inputs:
-        l         - int, number of independent looks
+        L         - int, number of independent looks
         coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
         phi_num    - int, number of phase sample for the numerical calculation
     Output:
@@ -182,34 +182,34 @@ def phase_pdf_ds(l, coherence=None, phi_num=1000, epsilon=1e-3):
     phi = np.linspace(-np.pi, np.pi, phi_num, dtype=np.float64).reshape(-1, 1)
 
     # Phase PDF - Eq. 4.2.32 (Hanssen, 2001)
-    A = np.power((1-np.square(coherence)), l) / (2*np.pi)
+    A = np.power((1-np.square(coherence)), L) / (2*np.pi)
     A = np.tile(A, (phi_num, 1))
-    B = gamma(2*l - 1) / ((gamma(l))**2 * 2**(2*(l-1)))
+    B = gamma(2*L - 1) / ((gamma(L))**2 * 2**(2*(L-1)))
 
     beta = np.multiply(np.abs(coherence), np.cos(phi))
-    C = np.divide((2*l - 1) * beta, np.power((1 - np.square(beta)), l+0.5))
+    C = np.divide((2*L - 1) * beta, np.power((1 - np.square(beta)), L+0.5))
     C = np.multiply(C, (np.pi/2 + np.arcsin(beta)))
-    C += 1 / np.power((1 - np.square(beta)), l)
+    C += 1 / np.power((1 - np.square(beta)), L)
 
     sumD = 0
-    if l > 1:
-        for r in range(l-1):
-            D = gamma(l-0.5) / gamma(l-0.5-r)
-            D *= gamma(l-1-r) / gamma(l-1)
+    if L > 1:
+        for r in range(int(L)-1):
+            D = gamma(L-0.5) / gamma(L-0.5-r)
+            D *= gamma(L-1-r) / gamma(L-1)
             D *= (1 + (2*r+1)*np.square(beta)) / np.power((1 - np.square(beta)), r+2)
             sumD += D
-        sumD /= (2*(l-1))
+        sumD /= (2*(L-1))
 
     pdf = B*C + sumD
     pdf = np.multiply(A, pdf)
     return pdf, coherence.flatten()
 
 
-def phase_variance_ds(l,  coherence=None, epsilon=1e-3):
+def phase_variance_ds(L,  coherence=None, epsilon=1e-3):
     """Interferometric phase variance for distributed scatterers (DS)
     Eq. 2.1.2 (Box et al., 2015) and Eq. 4.2.27 (Hanssen, 2001)
     Inputs:
-        l         - int, number of independent looks
+        L         - int, number of independent looks
         coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
         phiNum    - int, number of phase sample for the numerical calculation
     Output:
@@ -227,7 +227,7 @@ def phase_variance_ds(l,  coherence=None, epsilon=1e-3):
     phi = np.linspace(-np.pi, np.pi, phiNum, dtype=np.float64).reshape(-1, 1)
     phi_step = 2*np.pi/phiNum
 
-    pdf, coherence = phase_pdf_ds(l, coherence=coherence)
+    pdf, coherence = phase_pdf_ds(L, coherence=coherence)
     var = np.sum(np.multiply(np.square(np.tile(phi, (1, len(coherence)))), pdf)*phi_step, axis=0)
     return var, coherence
 
@@ -239,7 +239,7 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
     """
     if coherence is None:
         coherence = np.linspace(0.9, 1.-epsilon, 1000, dtype=np.float64)
-    var = (1-coherence**2) / (2*L*coherence**2)
+    var = (1 - coherence**2) / (2 * int(L) * coherence**2)
     return var, coherence
 
 
@@ -265,7 +265,7 @@ def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
     coherence[coherence > coh_max] = coh_max
     coherence_idx = np.array((coherence - coh_min) / coh_step, np.int16)
 
-    var_lut = phase_variance_ds(L, coh_lut)[0]
+    var_lut = phase_variance_ds(int(L), coh_lut)[0]
     variance = var_lut[coherence_idx]
     return variance
 
@@ -275,7 +275,7 @@ def coherence2fisher_info_index(data, L=32, epsilon=1e-3):
     if data.dtype != np.float64:
         data = np.array(data, np.float64)
     data[data > 1-epsilon] = 1-epsilon
-    data = 2.0 * L * np.square(data) / (1 - np.square(data))
+    data = 2.0 * int(L) * np.square(data) / (1 - np.square(data))
     return data
 
 
@@ -510,7 +510,7 @@ def split_into_boxes(ifgram_file, chunk_size=100e6, print_msg=True):
     return box_list
 
 
-def check_design_matrix(ifgram_file, weight_func='fim'):
+def check_design_matrix(ifgram_file, weight_func='var'):
     """Check Rank of Design matrix for weighted inversion"""
     A = ifgramStack(ifgram_file).get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
     if weight_func == 'no':
@@ -604,7 +604,7 @@ def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
     return coh_data
 
 
-def coherence2weight(coh_data, weight_func='fim', L=20, epsilon=5e-2, print_msg=True):
+def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=True):
     coh_data[np.isnan(coh_data)] = epsilon
     coh_data[coh_data < epsilon] = epsilon
     coh_data = np.array(coh_data, np.float64)
@@ -640,7 +640,7 @@ def coherence2weight(coh_data, weight_func='fim', L=20, epsilon=5e-2, print_msg=
 
 
 def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
-                           weight_func='fim', min_norm_velocity=True,
+                           weight_func='var', min_norm_velocity=True,
                            mask_dataset_name=None, mask_threshold=0.4,
                            water_mask_file=None, skip_zero_phase=True):
     """Invert one patch of an ifgram stack into timeseries.
@@ -649,7 +649,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                     or None, to process the whole file and write output file
                 ref_phase         : 1D array in size of (num_ifgram) 
                                     or None
-                weight_func       : str, weight function, choose in ['sbas', 'fim', 'var', 'coh']
+                weight_func       : str, weight function, choose in ['no', 'fim', 'var', 'coh']
                 mask_dataset_name : str, dataset name in ifgram_file used to mask unwrapPhase pixelwisely
                 mask_threshold    : float, min coherence of pixels if mask_dataset_name='coherence'
                 water_mask_file   : str, water mask filename if available,
@@ -660,9 +660,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                 ts_std         : 3D array in size of (num_date, num_row, num_col)
                 num_inv_ifg : 2D array in size of (num_row, num_col)
     Example:    ifgram_inversion_patch('ifgramStack.h5', box=(0,200,1316,400), ref_phase=np.array(),
-                                       weight_func='fim', min_norm_velocity=True, mask_dataset_name='coherence')
+                                       weight_func='var', min_norm_velocity=True, mask_dataset_name='coherence')
                 ifgram_inversion_patch('ifgramStack_001.h5', box=None, ref_phase=None,
-                                       weight_func='fim', min_norm_velocity=True, mask_dataset_name='coherence')
+                                       weight_func='var', min_norm_velocity=True, mask_dataset_name='coherence')
     """
 
     stack_obj = ifgramStack(ifgram_file)
