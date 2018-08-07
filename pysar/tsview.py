@@ -89,6 +89,8 @@ def cmd_line_parse(iargs=None):
         inps.save_fig = True
     if inps.ylim:
         inps.ylim = sorted(inps.ylim)
+    if inps.zero_mask:
+        inps.mask_file = 'no'
 
     # default value
     if not inps.disp_unit:

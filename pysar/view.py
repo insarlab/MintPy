@@ -129,6 +129,8 @@ def cmd_line_parse(iargs=None):
         inps.resolution = 'i'
     if inps.lalo_step:
         inps.lalo_label = True
+    if inps.zero_mask:
+        inps.mask_file = 'no'
 
     return inps
 
