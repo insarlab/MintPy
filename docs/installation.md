@@ -60,7 +60,7 @@ For bash user, add to your **_~/.bashrc_** file for example:
     export PYTHONPATH=${PYTHONPATH}:${PYSAR_HOME}   
     export PATH=${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh   
 
-Source the file for the first time. It will be sourced automatically next time when you login.
+Source the file for the first time. It will be sourced automatically next time when you login. An example of .cshrc is [here](https://github.com/yunjunz/macOS_Setup/blob/master/cshrc.md).
    
    
 #### 2. Install Python dependecies
@@ -84,3 +84,5 @@ Run the following in your terminal (using conda):
 Note that pykml through conda supports python2 only, we provide a python2/3 compatible version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
   
 We use [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for tropospheric delay correction using weather re-analysis datadset such as ERA-Interim, MERRA and NARR. Check [caltech's website](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for the code download and account setup.
+
+[Here](https://github.com/yunjunz/macOS_Setup/blob/master/vim.md) is some useful setup for Vim editor
