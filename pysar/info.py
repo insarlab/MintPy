@@ -95,7 +95,7 @@ def hdf5_structure_string(file):
     # max length of dataset name
     maxDigit = max([len(i) for i in f.keys()])
     maxDigit = max(20, maxDigit+1)
-    if atr['FILE_TYPE'] == 'HDFEOS':
+    if atr.get('FILE_TYPE', 'timeseries') == 'HDFEOS':
         maxDigit += 35
 
     f.visititems(print_hdf5_structure_obj)

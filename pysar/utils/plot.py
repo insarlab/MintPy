@@ -664,9 +664,6 @@ def add_map_argument(parser):
                                 '--scalebar 0.2 0.8 0.8  #for upper right corner\n')
     map_group.add_argument('--noscalebar', dest='disp_scalebar',
                            action='store_false', help='do not display scale bar.')
-    map_group.add_argument('--scalebar-loc', dest='scalebar_loc', type=str,
-                           choices={'lower left', 'upper left', 'lower right', 'upper right'},
-                           help='location of scalebar to be plotted.')
     return parser
 
 

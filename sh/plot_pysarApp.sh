@@ -52,7 +52,7 @@ fi
 
 ## Auxliary Files from loaded dataset
 if [ $plot_loaded_data_aux -eq 1 ]; then
-    file=avgPhaseVelocity.h5; test -f $file && view.py --nodisplay  $file | tee -a $log_file
+    file=avgPhaseVelocity.h5; test -f $file && view.py --nodisplay  $file -m maskSptialCoh.h5 | tee -a $log_file
     view.py --nodisplay avgSpatialCoherence.h5 -c gray --vlim 0 1 | tee -a $log_file
     view.py --nodisplay mask.h5                -c gray --vlim 0 1 | tee -a $log_file
 fi

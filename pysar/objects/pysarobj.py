@@ -807,7 +807,8 @@ class ifgramStack:
                 idx = idx2read[i]
                 data = dset[idx, :, :]
                 if 'unwrapPhase' in datasetName:
-                    data -= data[self.refY, self.refX]
+                    if self.refY:
+                        data -= data[self.refY, self.refX]
                     data *= (phase2range * (1./tbaseIfgram[idx]))
                 dmean += data
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))
