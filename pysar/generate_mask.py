@@ -19,6 +19,7 @@ from pysar.utils import (readfile,
 ################################################################################################
 EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
+  generate_mask.py  avgSpatialCoherence.h5 -m 0.7 --base waterMask.h5 -o maskSpatialCoh.h5
 
   # exlcude area by min/max value and/or subset in row/col direction
   generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
@@ -63,6 +64,8 @@ def create_parser():
                         help='exclude area defined by an circle (x, y, radius) in pixel number')
     parser.add_argument('--in-circle', dest='in_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
                         help='include area defined by an circle (x, y, radius) in pixel number')
+
+    parser.add_argument('--base', dest='base_mask_file', type=str, help='Base mask file. output_mask *= base_mask')
 
     parser.add_argument('--roipoly', action='store_true',
                         help='Interactive polygonal region of interest (ROI) selection.')
@@ -145,6 +148,12 @@ def create_threshold_mask(inps):
         poly_mask = pp.get_poly_mask(data)
         if poly_mask is not None:
             mask *= poly_mask
+
+    # base mask
+    if inps.base_mask_file:
+        base_mask = readfile.read(inps.base_mask_file)[0]
+        mask[base_mask == 0] = 0
+        print('exclude pixels in base file {} marked as zero'.format(inps.base_mask_file))
 
     # Write mask file
     atr['FILE_TYPE'] = 'mask'

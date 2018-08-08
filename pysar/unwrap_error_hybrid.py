@@ -448,7 +448,7 @@ def run_unwrap_error_bridge(inps, mask_cc_file, bridges, dsNameIn='unwrapPhase',
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     if not inps.datasetNameOut:
-        inps.datasetNameOut = '{}_hybrid'.format(inps.datasetNameIn)
+        inps.datasetNameOut = '{}_bridge'.format(inps.datasetNameIn)
 
     # update mode checking
     atr = readfile.read_attribute(inps.ifgram_file)

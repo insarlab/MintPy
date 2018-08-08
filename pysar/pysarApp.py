@@ -452,10 +452,19 @@ def main(iargs=None):
     # Average spatial coherence
     inps.avgSpatialCohFile = 'avgSpatialCoherence.h5'
     if ut.update_file(inps.avgSpatialCohFile, inps.stackFile):
-        avgCmd = 'temporal_average.py {} --dataset coherence -o {}'.format(inps.stackFile,
-                                                                           inps.avgSpatialCohFile)
+        avgCmd = 'temporal_average.py {i} --dataset coherence -o {o}'.format(i=inps.stackFile,
+                                                                             o=inps.avgSpatialCohFile)
         print(avgCmd)
         status = subprocess.Popen(avgCmd, shell=True).wait()
+
+    # mask based on average spatial coherence
+    inps.maskSpatialCohFile = 'maskSpatialCoh.h5'
+    if ut.update_file(inps.maskSpatialCohFile, inps.avgSpatialCohFile):
+        maskCmd = 'generate_mask.h5 {i} -m 0.7 -o {o}'.format(i=inps.avgSpatialCohFile,
+                                                              o=inps.maskSpatialCohFile)
+        print(maskCmd)
+        status = subprocess.Popen(maskCmd, shell=True).wait()
+
 
     #########################################
     # Referencing Interferograms in Space

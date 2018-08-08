@@ -69,14 +69,10 @@ def print_attributes(atr, string=str(), sorting=True):
 
 ############################################################
 def hdf5_structure_string(file):
-    global output
+    global output, maxDigit
 
     def print_hdf5_structure_obj(name, obj):
-        global output
-        maxDigit = 25
-        if name.startswith('HDFEOS'):
-            maxDigit += 30
-
+        global output, maxDigit
         if isinstance(obj, h5py.Group):
             output += 'HDF5 group   "/{n}"\n'.format(n=name)
         elif isinstance(obj, h5py.Dataset):
@@ -90,10 +86,17 @@ def hdf5_structure_string(file):
             output = attributes_string(atr, output)+"\n"
 
     f = h5py.File(file, 'r')
+    # metadata in root level
     atr = dict(f.attrs)
     if len(atr) > 0:
         output += 'Attributes in / level:\n'
         output = attributes_string(atr, output)+"\n"
+
+    # max length of dataset name
+    maxDigit = max([len(i) for i in f.keys()])
+    maxDigit = max(20, maxDigit+1)
+    if atr['FILE_TYPE'] == 'HDFEOS':
+        maxDigit += 35
 
     f.visititems(print_hdf5_structure_obj)
     f.close()

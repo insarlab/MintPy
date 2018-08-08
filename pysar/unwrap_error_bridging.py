@@ -101,38 +101,33 @@ def read_template2inps(template_file, inps=None):
     """Read input template options into Namespace inps"""
     if not inps:
         inps = cmd_line_parse()
+    inps.bridgeYX = None
     inpsDict = vars(inps)
     print('read options from template file: '+os.path.basename(template_file))
     template = readfile.read_template(inps.template_file)
     template = ut.check_template_auto_value(template)
 
     prefix = 'pysar.unwrapError.'
-    if not inps.maskFile:
-        key = prefix+'maskFile'
-        try:
-            value = template[key]
-            readfile.read(value)
-            inps.maskFile = value
-        except FileExistsError:
-            raise FileExistsError('can not read input mask file')
+    key_list = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
+    for key in key_list:
+        value = template[prefix+key]
+        if key in ['update', 'bridgeYX']:
+            inpsDict[key] = value
+        elif value:
+            if key in ['maskFile', 'ramp']:
+                inpsDict[key] = value
 
-    key = prefix+'bridgeYX'
-    try:
-        value = template[key]
-        value = value.replace(';', ' ').replace(',', ' ')  #convert ,/; into whitespace
-        inps.bridgeYX = np.array([int(i) for i in value.split()]).reshape(-1, 4)
-    except ValueError:
-        raise ValueError('no {} found in input template file.'.format(key))
+    if not inps.maskFile or not inps.bridgeYX:
+        msg =  'No mask file or bridgeYX found.\n'
+        msg += 'Bridging method is NOT automatic, you need to:\n'
+        msg += '  1) prepare the connected components mask file to mark each area with the same unwrapping error\n'
+        msg += '  2) select bridging points to connect areas one by one, starting from area where the reference pixel is.\n'
+        msg += 'Check the following Jupyter Notebook for an example:\n'
+        msg += '  https://github.com/yunjunz/pysar/blob/master/examples/run_unwrap_error_bridging.ipynb'
+        raise SystemExit(msg)
 
-    key = prefix+'ramp'
-    if key in template.keys():
-        value = template[key]
-        if value:
-            inps.ramp = value
-
-    key = prefix+'update'
-    if key in template.keys():
-        inps.update = template[key]
+    bridge_yx = inps.bridgeYX.replace(';', ' ').replace(',', ' ')  #convert ,/; into whitespace
+    inps.bridgeYX = np.array([int(i) for i in bridge_yx.split()]).reshape(-1, 4)
 
     return inps
 

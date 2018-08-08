@@ -57,7 +57,9 @@ geometryDatasetNames = ['height',
                         'bperp']
 
 ifgramDatasetNames = ['unwrapPhase',
-                      'unwrapPhase_unwCor',
+                      'unwrapPhase_closure',
+                      'unwrapPhase_bridge',
+                      'unwrapPhase_bridge_closure',
                       'coherence',
                       'connectComponent',
                       'wrapPhase',
@@ -784,7 +786,7 @@ class ifgramStack:
         if datasetName is None:
             datasetName = 'coherence'
         print('calculate the temporal average of {} in file {} ...'.format(datasetName, self.file))
-        if datasetName == 'unwrapPhase':
+        if 'unwrapPhase' in datasetName:
             phase2range = -1 * float(self.metadata['WAVELENGTH']) / (4.0 * np.pi)
             tbaseIfgram = self.tbaseIfgram / 365.25
 
@@ -799,21 +801,13 @@ class ifgramStack:
                     raise Exception(('ALL interferograms are marked as dropped, '
                                      'can not calculate temporal average.'))
 
-            #r_step = 100
-            #for i in range(int(np.ceil(length / r_step))):
-            #    r0 = i * r_step
-            #    r1 = min(r0 + r_step, length)
-            #    data = dset[drop_ifgram_flag, r0:r1, :]
-            #    dmean[r0:r1, :] = np.nanmean(data, axis=0)
-            #    sys.stdout.write('\rreading lines {}/{} ...'.format(r0, length))
-            #    sys.stdout.flush()
-
             num2read = np.sum(drop_ifgram_flag)
             idx2read = np.where(drop_ifgram_flag)[0]
             for i in range(num2read):
                 idx = idx2read[i]
                 data = dset[idx, :, :]
-                if datasetName == 'unwrapPhase':
+                if 'unwrapPhase' in datasetName:
+                    data -= data[self.refY, self.refX]
                     data *= (phase2range * (1./tbaseIfgram[idx]))
                 dmean += data
                 sys.stdout.write('\rreading interferogram {}/{} ...'.format(i+1, num2read))

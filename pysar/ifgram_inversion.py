@@ -83,7 +83,7 @@ def create_parser():
                         help='interferograms stack file to be inverted')
     parser.add_argument('-i','-d', '--dset', dest='unwDatasetName', type=str,
                         help='dataset name of unwrap phase in ifgram file to be used for inversion\n'
-                             'e.g.: unwrapPhase, unwrapPhase_unwCor, ...')
+                             'e.g.: unwrapPhase, unwrapPhase_bridge, ...')
     parser.add_argument('--template', '-t', dest='templateFile',
                         help='template text file with the following options:\n'+TEMPLATE)
     parser.add_argument('--ref-date', dest='ref_date',
@@ -868,7 +868,10 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     length, width = stack_obj.length, stack_obj.width
 
     if not inps.unwDatasetName:
-        inps.unwDatasetName = [i for i in ['unwrapPhase_unwCor', 'unwrapPhase']
+        inps.unwDatasetName = [i for i in ['unwrapPhase_bridge_closure',
+                                           'unwrapPhase_bridge',
+                                           'unwrapPhase_closure',
+                                           'unwrapPhase']
                                if i in stack_obj.datasetNames][0]
 
     # print key setup info

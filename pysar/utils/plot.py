@@ -9,6 +9,7 @@
 
 import os
 import glob
+import argparse
 import warnings
 import datetime
 import h5py
@@ -463,6 +464,23 @@ def get_poly_mask(data, print_msg=True):
 
 
 ########################################### Parser utilities ##############################################
+def cmd_line_parse(iargs=['']):
+    parser = argparse.ArgumentParser(description='Ploting Parser')
+    parser = add_data_disp_argument(parser)
+    parser = add_dem_argument(parser)
+    parser = add_figure_argument(parser)
+    parser = add_gps_argument(parser)
+    parser = add_mask_argument(parser)
+    parser = add_map_argument(parser)
+    parser = add_point_argument(parser)
+    parser = add_reference_argument(parser)
+    parser = add_save_argument(parser)
+    parser = add_subset_argument(parser)
+
+    inps = parser.parse_args(args=iargs)
+    return inps
+
+
 def add_data_disp_argument(parser):
     # Data Display Option
     data = parser.add_argument_group('Data Display Options', 'Options to adjust the dataset display')
@@ -513,10 +531,10 @@ def add_dem_argument(parser):
     dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45.,
                      help='The altitude (0-90, degrees up from horizontal) of the light source.\n'
                           'Default is 45.')
-    dem.add_argument('--shade-min', dest='shade_min', type=float,
+    dem.add_argument('--shade-min', dest='shade_min', type=float, default=-7000.,
                      help='The min height in m of colormap of shaded relief topography\n'
                           'Default: -7000 m')
-    dem.add_argument('--shade-max', dest='shade_max', type=float,
+    dem.add_argument('--shade-max', dest='shade_max', type=float, default=999.,
                      help='The max height of colormap of shaded relief topography\n'
                           'Default: max(DEM) + 1000 m')
     dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,
@@ -1350,10 +1368,10 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     return dem, dem_metadata, dem_pix_box
 
 
-def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
+def prepare_dem_background(dem, inps=None, print_msg=True):
     """Prepare to plot DEM on background
     Parameters: dem : 2D np.int16 matrix, dem data
-                inps_dict : dict with the following 4 items:
+                inps : Namespace with the following 4 items:
                     'disp_dem_shade'    : bool,  True/False
                     'disp_dem_contour'  : bool,  True/False
                     'dem_contour_step'  : float, 200.0
@@ -1364,49 +1382,43 @@ def prepare_dem_background(dem, inps_dict=dict(), print_msg=True):
     Examples:   dem = readfile.read('INPUTS/geometryRadar.h5')[0]
                 dem_shade, dem_contour, dem_contour_seq = pp.prepare_dem_background(dem=dem)
     """
-    key_list = inps_dict.keys()
-    if 'disp_dem_shade'     not in key_list:  inps_dict['disp_dem_shade']     = True
-    if 'disp_dem_contour'   not in key_list:  inps_dict['disp_dem_contour']   = True
-    if 'dem_contour_step'   not in key_list:  inps_dict['dem_contour_step']   = 200.
-    if 'dem_contour_smooth' not in key_list:  inps_dict['dem_contour_smooth'] = 3.0
-    if 'shade_azdeg'        not in key_list:  inps_dict['shade_azdeg']        = 315.
-    if 'shade_altdeg'       not in key_list:  inps_dict['shade_altdeg']       = 45.
-    if 'shade_min'          not in key_list:  inps_dict['shade_min']          = -7000.
-    if 'shade_max'          not in key_list:  inps_dict['shade_max']          = np.nanmax(dem) + 1000.
-    if 'shade_exag'         not in key_list:  inps_dict['shade_exag']         = 0.5
-
+    # default returns
     dem_shade = None
     dem_contour = None
     dem_contour_sequence = None
 
-    if inps_dict['disp_dem_shade']:
+    # default inputs
+    if not inps:
+        inps = cmd_line_parse()
+    if inps.shade_max == 999.:
+        inps.shade_max += np.nanmax(dem)
+
+    # prepare shade relief
+    if inps.disp_dem_shade:
         from matplotlib.colors import LightSource
-        ls = LightSource(azdeg=inps_dict['shade_azdeg'],
-                         altdeg=inps_dict['shade_altdeg'])
-        dem_shade = ls.shade(dem, vert_exag=inps_dict['shade_exag'],
+        ls = LightSource(azdeg=inps.shade_azdeg, altdeg=inps.shade_altdeg)
+        dem_shade = ls.shade(dem, vert_exag=inps.shade_exag,
                              cmap=ColormapExt('gray').colormap,
-                             vmin=inps_dict['shade_min'],
-                             vmax=inps_dict['shade_max'])
+                             vmin=inps.shade_min,
+                             vmax=inps.shade_max)
         dem_shade[np.isnan(dem_shade[:, :, 0])] = np.nan
         if print_msg:
             print('show shaded relief DEM')
 
-    if inps_dict['disp_dem_contour']:
+    # prepare contour
+    if inps.disp_dem_contour:
         from scipy import ndimage
-        dem_contour = ndimage.gaussian_filter(dem,
-                                              sigma=inps_dict['dem_contour_smooth'],
-                                              order=0)
-        dem_contour_sequence = np.arange(inps_dict['dem_contour_step'], 9000,
-                                         step=inps_dict['dem_contour_step'])
+        dem_contour = ndimage.gaussian_filter(dem, sigma=inps.dem_contour_smooth, order=0)
+        dem_contour_sequence = np.arange(inps.dem_contour_step, 9000, step=inps.dem_contour_step)
         if print_msg:
             print(('show contour in step of {} m '
-                   'with smoothing factor of {}').format(inps_dict['dem_contour_step'],
-                                                         inps_dict['dem_contour_smooth']))
+                   'with smoothing factor of {}').format(inps.dem_contour_step,
+                                                         inps.dem_contour_smooth))
     return dem_shade, dem_contour, dem_contour_sequence
 
 
 def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_contour_seq=None,
-                        dem=None, inps_dict=dict(), print_msg=True):
+                        dem=None, inps=None, print_msg=True):
     """Plot DEM as background.
     Parameters: ax : matplotlib.pyplot.Axes or BasemapExt object
                 geo_box : tuple of 4 float in order of (E, N, W, S), geo bounding box
@@ -1414,22 +1426,24 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
                 dem_contour : 2D np.array in size of (length, width)
                 dem_contour_sequence : 1D np.array
                 dem : 2D np.array of DEM data
-                inps_dict : dict with the following 4 items:
+                inps : Namespace with the following 4 items:
                     'disp_dem_shade'    : bool,  True/False
                     'disp_dem_contour'  : bool,  True/False
                     'dem_contour_step'  : float, 200.0
                     'dem_contour_smooth': float, 3.0
     Returns:    ax : matplotlib.pyplot.Axes or BasemapExt object
-    Examples:   m = pp.plot_dem_background(m, geo_box=inps.geo_box, dem=dem, inps_dict=vars(inps))
+    Examples:   m = pp.plot_dem_background(m, geo_box=inps.geo_box, dem=dem, inps=inps)
                 ax = pp.plot_dem_background(ax=ax, geo_box=None, dem_shade=dem_shade,
                                             dem_contour=dem_contour, dem_contour_seq=dem_contour_seq)
     """
+    # default inputs
+    if not inps:
+        inps = cmd_line_parse()
+
     if all(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:
         (dem_shade,
          dem_contour,
-         dem_contour_seq) = prepare_dem_background(dem,
-                                                   inps_dict=inps_dict,
-                                                   print_msg=print_msg)
+         dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
 
     if dem_shade is not None:
         # geo coordinates
@@ -1809,11 +1823,17 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     # default mask file:
-    if not mask_file and k in ['velocity', 'timeseries'] and 'masked' not in fname:
+    if (not mask_file 
+            and k in ['velocity', 'timeseries'] 
+            and 'masked' not in fname):
+        mask_file = 'maskTempCoh.h5'
+        if 'PhaseVelocity' in fname:
+            mask_file = 'maskSpatialCoh.h5'            
+        # check coordinate
         if os.path.basename(fname).startswith('geo_'):
-            mask_file = os.path.join(os.path.dirname(fname), 'geo_maskTempCoh.h5')
-        else:
-            mask_file = os.path.join(os.path.dirname(fname), 'maskTempCoh.h5')
+            mask_file = 'geo_{}'.format(mask_file)
+        # absolute path and file existence
+        mask_file = os.path.join(os.path.dirname(fname), mask_file)
         if not os.path.isfile(mask_file):
             mask_file = None
 

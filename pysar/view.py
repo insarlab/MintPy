@@ -399,7 +399,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
             if print_msg:
                 print('plotting DEM background ...')
             m = pp.plot_dem_background(ax=m, geo_box=inps.geo_box,
-                                       dem=dem, inps_dict=vars(inps),
+                                       dem=dem, inps=inps,
                                        print_msg=print_msg)
 
         # Plot Data
@@ -496,11 +496,8 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
         if inps.dem_file:
             if print_msg:
                 print('plotting DEM background ...')
-            ax = pp.plot_dem_background(ax=ax,
-                                        geo_box=None,
-                                        dem=dem,
-                                        inps_dict=vars(inps),
-                                        print_msg=print_msg)
+            ax = pp.plot_dem_background(ax=ax, geo_box=None, dem=dem,
+                                        inps=inps, print_msg=print_msg)
 
         # Plot Data
         if print_msg:
@@ -1093,7 +1090,7 @@ def prepare4multi_subplots(inps, metadata):
                 dem = multilook_data(dem, inps.multilook_num, inps.multilook_num)
             (inps.dem_shade,
              inps.dem_contour,
-             inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem, inps_dict=vars(inps))
+             inps.dem_contour_seq) = pp.prepare_dem_background(dem=dem, inps=inps)
         else:
             inps.dem_file = None
             inps.transparency = 1.0
