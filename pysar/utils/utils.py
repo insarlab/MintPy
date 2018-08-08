@@ -117,10 +117,17 @@ def min_region_distance(mask1, mask2, display=False):
     return xy1, xy2, min_dist
 
 
-def wrap(data_in, wrap_step=2*np.pi):
+def wrap(data_in, wrap_range=[-1.*np.pi, np.pi]):
+    """Wrap data into a range.
+    Parameters: data_in    : np.array, array to be wrapped
+                wrap_range : list of 2 float, range to be wrapped into
+    Returns:    data       : np.array, data after wrapping
+    """
+    w0, w1 = wrap_range
     data = np.array(data_in)
-    data -= np.round(data / wrap_step) * wrap_step
+    data = w0 + np.mod(data - w0, w1 - w0)
     return data
+
 
 def get_snwe(metadata):
     lat0 = float(metadata['Y_FIRST'])

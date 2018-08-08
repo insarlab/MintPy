@@ -98,7 +98,7 @@ class BasemapExt(Basemap):
 
 
     def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1, 0, 0, 1],
-                        font_size=12, color='k', print_msg=True):
+                        font_size=12, color='k', xoffset=None, yoffset=None, print_msg=True):
         """Auto draw lat/lon label/tick based on coverage from geo_box
         Inputs:
             geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
@@ -112,9 +112,11 @@ class BasemapExt(Basemap):
             geo_box = (128.0, 37.0, 138.0, 30.0)
             m.draw_lalo_label(geo_box)
         """
-        lats, lons, step = self.auto_lalo_sequence(geo_box, lalo_step=lalo_step, print_msg=print_msg)
+        if isinstance(lalo_step, float):
+            lalo_step = [lalo_step, lalo_step]
+        lats, lons, lalo_step = self.auto_lalo_sequence(geo_box, lalo_step=lalo_step, print_msg=print_msg)
 
-        digit = np.int(np.floor(np.log10(step)))
+        digit = np.int(np.floor(np.log10(lalo_step[0])))
         fmt = '%.'+'%d' % (abs(min(digit, 0)))+'f'
         # Change the 2 lines below for customized label
         #lats = np.linspace(31.55, 31.60, 2)
@@ -136,9 +138,11 @@ class BasemapExt(Basemap):
         labels_lat = np.multiply(labels, [1, 1, 0, 0])
         labels_lon = np.multiply(labels, [0, 0, 1, 1])
         self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05,
-                           fontsize=font_size, color=color, textcolor=color)
+                           fontsize=font_size, color=color, textcolor=color,
+                           xoffset=xoffset, yoffset=yoffset)
         self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05,
-                           fontsize=font_size, color=color, textcolor=color)
+                           fontsize=font_size, color=color, textcolor=color,
+                           xoffset=xoffset, yoffset=yoffset)
 
     def auto_lalo_sequence(self, geo_box, lalo_step=None, max_tick_num=4, step_candidate=[1, 2, 3, 4, 5],
                            print_msg=True):
@@ -166,19 +170,20 @@ class BasemapExt(Basemap):
             distance = [(i - max_lalo_dist/max_tick_num) ** 2
                         for i in lalo_step_candidate]
             lalo_step = lalo_step_candidate[distance.index(min(distance))]
+            lalo_step = [lalo_step, lalo_step]
         if print_msg:
-            print('label step - '+str(lalo_step)+' degree')
+            print('label step in degree: {}'.format(lalo_step))
 
         # Auto tick sequence
-        digit = np.int(np.floor(np.log10(lalo_step)))
+        digit = np.int(np.floor(np.log10(lalo_step[0])))
         lat_major = np.ceil(geo_box[3]/10**(digit+1))*10**(digit+1)
-        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step),
-                                    np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step))))
+        lats = np.unique(np.hstack((np.arange(lat_major, lat_major-10.*max_lalo_dist, -lalo_step[0]),
+                                    np.arange(lat_major, lat_major+10.*max_lalo_dist, lalo_step[0]))))
         lats = np.sort(lats[np.where(np.logical_and(lats >= geo_box[3], lats <= geo_box[1]))])
 
         lon_major = np.ceil(geo_box[0]/10**(digit+1))*10**(digit+1)
-        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step),
-                                    np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step))))
+        lons = np.unique(np.hstack((np.arange(lon_major, lon_major-10.*max_lalo_dist, -lalo_step[1]),
+                                    np.arange(lon_major, lon_major+10.*max_lalo_dist, lalo_step[1]))))
         lons = np.sort(lons[np.where(np.logical_and(lons >= geo_box[0], lons <= geo_box[2]))])
 
         return lats, lons, lalo_step
@@ -251,6 +256,25 @@ class ColormapExt(mpl.cm.ScalarMappable):
                                 (1.0, 0.0, 0.0),)
                       }
             colormap = LinearSegmentedColormap('hsv', cdict1, N=cmap_lut)
+
+        elif cmap_name == 'dismph':
+            # color list from bakerunavco/pygmtsar:
+            # Link: https://github.com/bakerunavco/pygmtsar/blob/master/showintf.py
+            clist = ['#f579cd', '#f67fc6', '#f686bf', '#f68cb9', '#f692b3', '#f698ad',
+                     '#f69ea7', '#f6a5a1', '#f6ab9a', '#f6b194', '#f6b78e', '#f6bd88',
+                     '#f6c482', '#f6ca7b', '#f6d075', '#f6d66f', '#f6dc69', '#f6e363',
+                     '#efe765', '#e5eb6b', '#dbf071', '#d0f477', '#c8f67d', '#c2f684',
+                     '#bbf68a', '#b5f690', '#aff696', '#a9f69c', '#a3f6a3', '#9cf6a9',
+                     '#96f6af', '#90f6b5', '#8af6bb', '#84f6c2', '#7df6c8', '#77f6ce',
+                     '#71f6d4', '#6bf6da', '#65f6e0', '#5ef6e7', '#58f0ed', '#52e8f3',
+                     '#4cdbf9', '#7bccf6', '#82c4f6', '#88bdf6', '#8eb7f6', '#94b1f6',
+                     '#9aabf6', '#a1a5f6', '#a79ef6', '#ad98f6', '#b392f6', '#b98cf6',
+                     '#bf86f6', '#c67ff6', '#cc79f6', '#d273f6', '#d86df6', '#de67f6',
+                     '#e561f6', '#e967ec', '#ed6de2', '#f173d7']
+            colormap = LinearSegmentedColormap.from_list('dismph', clist)
+            #colormap = self.cmap_map(lambda x: x/2 + 0.5, colormap)  # brighten colormap
+            #colormap = self.cmap_map(lambda x: x*0.75, colormap)     # darken colormap
+            colormap.set_bad('w', 0.0)
         else:
             try:
                 colormap = plt.get_cmap(cmap_name, cmap_lut)
@@ -289,7 +313,7 @@ class ColormapExt(mpl.cm.ScalarMappable):
         """
         # default file path
         if not cpt_path:
-            cpt_path = os.path.join(os.path.dirname(__file__), '../../docs/cpt')
+            cpt_path = os.path.join(os.path.dirname(__file__), '../../docs/colormaps')
 
         # if cmap_name is None, return list of existing cmap instead.
         if not cmap_name:
@@ -366,6 +390,38 @@ class ColormapExt(mpl.cm.ScalarMappable):
         if reverse_colormap:
             colormap = colormap.reversed()
         return colormap
+
+    def cmap_map(self, function, cmap):
+        """ Applies function (which should operate on vectors of shape 3: [r, g, b]), on colormap cmap.
+        This routine will break any discontinuous points in a colormap.
+        Link: http://scipy-cookbook.readthedocs.io/items/Matplotlib_ColormapTransformations.html
+        """
+        cdict = cmap._segmentdata
+        step_dict = {}
+        # Firt get the list of points where the segments start or end
+        for key in ('red', 'green', 'blue'):
+            step_dict[key] = list(map(lambda x: x[0], cdict[key]))
+        step_list = sum(step_dict.values(), [])
+        step_list = np.array(list(set(step_list)))
+        # Then compute the LUT, and apply the function to the LUT
+        reduced_cmap = lambda step : np.array(cmap(step)[0:3])
+        old_LUT = np.array(list(map(reduced_cmap, step_list)))
+        new_LUT = np.array(list(map(function, old_LUT)))
+        # Now try to make a minimal segment definition of the new LUT
+        cdict = {}
+        for i, key in enumerate(['red','green','blue']):
+            this_cdict = {}
+            for j, step in enumerate(step_list):
+                if step in step_dict[key]:
+                    this_cdict[step] = new_LUT[j, i]
+                elif new_LUT[j,i] != old_LUT[j, i]:
+                    this_cdict[step] = new_LUT[j, i]
+            colorvector = list(map(lambda x: x + (x[1], ), this_cdict.items()))
+            colorvector.sort()
+            cdict[key] = colorvector
+    
+        return LinearSegmentedColormap('colormap',cdict,1024)
+
 ####################################### ColormapExt class end #############################################
 
 
@@ -491,8 +547,8 @@ def add_data_disp_argument(parser):
 
     data.add_argument('--wrap', action='store_true',
                       help='re-wrap data to display data in fringes.')
-    data.add_argument('--wrap-step', dest='wrap_step', type=float, default=2*np.pi,
-                      help='step of one cycle after wrapping')
+    data.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2, default=[-1.*np.pi, np.pi],
+                      help='range of one cycle after wrapping, default: [-pi, pi]')
 
     data.add_argument('--flip-lr', dest='flip_lr',
                       action='store_true', help='flip left-right')
@@ -664,6 +720,7 @@ def add_map_argument(parser):
                                 '--scalebar 0.2 0.8 0.8  #for upper right corner\n')
     map_group.add_argument('--noscalebar', dest='disp_scalebar',
                            action='store_false', help='do not display scale bar.')
+
     return parser
 
 
@@ -819,9 +876,9 @@ def auto_figure_title(fname, datasetNames=[], inps_dict=None):
 
     if inps_dict.get('wrap', False):
         fig_title += '_wrap'
-        wrap_step = inps_dict.get('wrap_step', 2*np.pi)
-        if wrap_step != 2*np.pi:
-            fig_title += str(wrap_step)
+        wrap_range = inps_dict.get('wrap_range', [-1.*np.pi, np.pi])
+        if (wrap_range[1] - wrap_range[0]) != 2*np.pi:
+            fig_title += str(wrap_range[1] - wrap_range[0])
 
     return fig_title
 
@@ -1542,10 +1599,9 @@ def plot_colorbar(inps, im, cax):
         elif inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] <  inps.dlim[1]: inps.cbar_ext='max'
         else:  inps.cbar_ext='both'
 
-    if inps.wrap:
-        cbar = plt.colorbar(im, cax=cax, ticks=[-inps.wrap_step/2., 0, inps.wrap_step/2.])
-        if inps.wrap_step == 2*np.pi:
-            cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
+    if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
+        cbar = plt.colorbar(im, cax=cax, ticks=[inps.wrap_range[0], 0, inps.wrap_range[1]])
+        cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
     else:
         cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
 
@@ -1654,7 +1710,8 @@ def set_shared_xlabel(axes_list, label, labelpad=0.01, font_size=12, position='t
     return
 
 
-def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_step=2*np.pi):
+##################### Data Scale based on Unit and Wrap Range ##################
+def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-1.*np.pi, np.pi]):
     """Get auto disp_unit for input dataset
     Example:
         if not inps.disp_unit:
@@ -1675,7 +1732,7 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_step=2*n
         if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm']:
             wrap = False
             print('WARNING: re-wrap is disabled for disp_unit = {}'.format(disp_unit))
-        elif disp_unit.split('/')[0] != 'radian' and wrap_step == 2*np.pi:
+        elif disp_unit.split('/')[0] != 'radian' and (wrap_range[1] - wrap_range[0]) == 2.*np.pi:
             disp_unit = 'radian'
             print('change disp_unit = radian due to rewrapping')
 
@@ -1771,7 +1828,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
     return data, disp_unit, scale
 
 
-def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, wrap_step=2*np.pi,
+def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, wrap_range=[-1.*np.pi, np.pi],
                                     print_msg=True):
     """Scale 2D matrix value according to display unit and re-wrapping flag
     Inputs:
@@ -1791,7 +1848,7 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
         disp_unit, wrap = check_disp_unit_and_wrap(metadata,
                                                    disp_unit=None,
                                                    wrap=wrap,
-                                                   wrap_step=wrap_step)
+                                                   wrap_range=wrap_range)
 
     # Data Operation - Scale to display unit
     disp_scale = 1.0
@@ -1802,9 +1859,9 @@ def scale_data4disp_unit_and_rewrap(data, metadata, disp_unit=None, wrap=False, 
 
     # Data Operation - wrap
     if wrap:
-        data -= np.round(data/(wrap_step)) * (wrap_step)
+        data = wrap_range[0] + np.mod(data - wrap_range[0], wrap_range[1] - wrap_range[0])
         if print_msg:
-            print('re-wrapping data to [-{s}, {s}]'.format(s=wrap_step/2.))
+            print('re-wrapping data to {}'.format(wrap_range))
     return data, disp_unit, disp_scale, wrap
 
 

@@ -38,6 +38,7 @@ fig = None
 EXAMPLE = """example:
   view.py velocity.h5
   view.py velocity.h5  velocity  --vlim -2 2  -c RdBu
+  view.py velocity.h5  velocity  --wrap --wrap-range -3 7              #wrap data into [-3, 7] cm/yr
   view.py velocity.h5  --ref-yx  210 566                               #Change reference pixel for display
   view.py velocity.h5  --sub-x 100 600  --sub-y 200 800                #plot subset in yx
   view.py velocity.h5  --sub-lat 31.05 31.10  --sub-lon 130.05 130.10  #plot subset in lalo
@@ -60,7 +61,7 @@ EXAMPLE = """example:
   view.py geo_velocity_masked.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
 
   # Custom colormap
-  # Download GMT colormap and saved to $PYSAR_HOME/docs/cpt
+  # Download GMT colormap and saved to $PYSAR_HOME/docs/colormaps
   # Link: http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html
   view.py geo_velocity.h5 velocity -c temperature
   view.py geometryRadar.h5 height -c DEM_print
@@ -241,7 +242,7 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     inps.disp_unit, inps.wrap = pp.check_disp_unit_and_wrap(metadata,
                                                             disp_unit=inps.disp_unit,
                                                             wrap=inps.wrap,
-                                                            wrap_step=inps.wrap_step)
+                                                            wrap_range=inps.wrap_range)
 
     # Min / Max - Display
     if not inps.vlim:
@@ -250,7 +251,7 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
                         and inps.dset[0].split('-')[0] in ['coherence', 'connectComponent'])):
             inps.vlim = [0.0, 1.0]
         elif inps.key in ['.int'] or inps.wrap:
-            inps.vlim = [-inps.wrap_step/2., inps.wrap_step/2.]
+            inps.vlim = inps.wrap_range
 
     # Transparency - Alpha
     if not inps.transparency:
@@ -307,10 +308,10 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
                                                      metadata=metadata,
                                                      disp_unit=inps.disp_unit,
                                                      wrap=inps.wrap,
-                                                     wrap_step=inps.wrap_step,
+                                                     wrap_range=inps.wrap_range,
                                                      print_msg=print_msg)
     if inps.wrap:
-        inps.vlim = [-inps.wrap_step/2., inps.wrap_step/2.]
+        inps.vlim = inps.wrap_range
 
     # 1.6 Min / Max - Data/Display
     inps.dlim = [np.nanmin(data), np.nanmax(data)]
@@ -792,8 +793,8 @@ def update_figure_setting(inps, print_msg=True):
                 inps.outfile_base += '_sub'
             if inps.wrap:
                 inps.outfile_base += '_wrap'
-                if inps.wrap_step != 2*np.pi:
-                    inps.outfile_base += str(inps.wrap_step)
+                if (inps.wrap_range[1] - inps.wrap_range[0]) != 2*np.pi:
+                    inps.outfile_base += str(inps.wrap_range[1] - inps.wrap_range[0])
             if inps.ref_date:
                 inps.outfile_base += '_ref'+inps.ref_date
             if inps.exDsetList:
