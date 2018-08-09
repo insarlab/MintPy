@@ -73,6 +73,7 @@ py36-numpy +gcc5 +openblas
 py36-scipy +gcc5 +openblas
 py36-matplotlib +cairo +tkinter
 py36-matplotlib-basemap
+py36-statsmodels
 py36-pandas
 py36-sympy
 py36-yaml
