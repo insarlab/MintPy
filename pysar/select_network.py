@@ -519,7 +519,7 @@ def plot_network_info(inps):
         ax3 = pp.plot_coherence_matrix(ax3,
                                        inps.date12_list,
                                        inps.cohList,
-                                       plot_dict=vars(inps))
+                                       plot_dict=vars(inps))[0]
         plt.savefig(out_fig_name, bbox_inches='tight', dpi=inps.figdpi)
 
     if inps.disp_fig:

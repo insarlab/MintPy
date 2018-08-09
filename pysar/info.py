@@ -24,9 +24,9 @@ EXAMPLE = """example:
   info.py velocity.h5
   info.py ifgramStack.h5
 
-  info.py ifgramStack.h5 --date                  # print master/slave date pairs info of interferograms.
-  info.py timeseries.h5 --date                   # print date list of timeseries.
-  info.py timeseries.h5 --date > date_list.txt   # print date list of timeseries and save it to txt file.
+  info.py ifgramStack.h5 --date                   # print master/slave date pairs info of interferograms.
+  info.py timeseries.h5  --date --num             # print date list of timeseries with its number
+  info.py timeseries.h5  --date > date_list.txt   # print date list of timeseries and save it to txt file.
 """
 
 
@@ -38,6 +38,8 @@ def create_parser():
     parser.add_argument('file', type=str, help='File to check')
     parser.add_argument('--date', dest='disp_date', action='store_true',
                         help='Show date/date12 info of input file')
+    parser.add_argument('--num', dest='disp_num', action='store_true',
+                        help='Show date/date12 number')
     return parser
 
 
@@ -127,7 +129,7 @@ def print_timseries_date_stat(dateList):
     return
 
 
-def get_date_list(fname, print_msg=False):
+def print_date_list(fname, disp_num=False, print_msg=False):
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     dateList = None
@@ -147,8 +149,11 @@ def get_date_list(fname, print_msg=False):
         pass
 
     if print_msg and dateList is not None:
-        for i in dateList:
-            print(i)
+        for i in range(len(dateList)):
+            if disp_num:
+                print('{}\t{}'.format(dateList[i], i))
+            else:
+                print(dateList[i])
     return dateList
 
 
@@ -164,7 +169,7 @@ def print_pysar_info(fname):
         else:
             print('coordinates : RADAR')
         if k in ['timeseries']:
-            dateList = get_date_list(fname)
+            dateList = print_date_list(fname)
             print('\n{} {:*<40}'.format('*'*20, 'Date Stat Info '))
             print_timseries_date_stat(dateList)
     except:
@@ -182,7 +187,7 @@ def main(iargs=None):
 
     # --date option
     if inps.disp_date:
-        get_date_list(inps.file, print_msg=True)
+        print_date_list(inps.file, disp_num=inps.disp_num, print_msg=True)
         return
 
     # Basic info from PySAR reader

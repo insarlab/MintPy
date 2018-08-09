@@ -244,7 +244,7 @@ def main(iargs=None):
         # Fig 2 - Coherence Matrix
         fig, ax = plt.subplots(figsize=inps.fig_size)
         ax = pp.plot_coherence_matrix(ax, inps.date12List, inps.cohList,
-                                      inps.date12List_drop, plot_dict=vars(inps))
+                                      inps.date12List_drop, plot_dict=vars(inps))[0]
         if inps.save_fig:
             fig.savefig(figNames[1], bbox_inches='tight',
                         transparent=True, dpi=inps.fig_dpi)

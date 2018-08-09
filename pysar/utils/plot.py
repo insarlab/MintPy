@@ -520,7 +520,7 @@ def get_poly_mask(data, print_msg=True):
 
 
 ########################################### Parser utilities ##############################################
-def cmd_line_parse(iargs=['']):
+def cmd_line_parse(iargs=''):
     parser = argparse.ArgumentParser(description='Ploting Parser')
     parser = add_data_disp_argument(parser)
     parser = add_dem_argument(parser)
@@ -547,14 +547,15 @@ def add_data_disp_argument(parser):
 
     data.add_argument('--wrap', action='store_true',
                       help='re-wrap data to display data in fringes.')
-    data.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2, default=[-1.*np.pi, np.pi],
+    data.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2,
+                      default=[-1.*np.pi, np.pi], metavar=('MIN', 'MAX'),
                       help='range of one cycle after wrapping, default: [-pi, pi]')
 
     data.add_argument('--flip-lr', dest='flip_lr',
                       action='store_true', help='flip left-right')
     data.add_argument('--flip-ud', dest='flip_ud',
                       action='store_true', help='flip up-down')
-    data.add_argument('--multilook-num', dest='multilook_num', type=int, default=1,
+    data.add_argument('--multilook-num', dest='multilook_num', type=int, default=1, metavar='NUM',
                       help='multilook data in X and Y direction with a factor for display')
     data.add_argument('--nomultilook', '--no-multilook', dest='multilook', action='store_false',
                       help='do not multilook, for high quality display. \n'
@@ -581,16 +582,16 @@ def add_dem_argument(parser):
     dem.add_argument('--contour-step', dest='dem_contour_step', metavar='NUM', type=float, default=200.0,
                      help='Background topography contour step in meters. \n'
                           'Default is 200 meters.')
-    dem.add_argument('--shade-az', dest='shade_azdeg', type=float, default=315.,
+    dem.add_argument('--shade-az', dest='shade_azdeg', type=float, default=315., metavar='DEG',
                      help='The azimuth (0-360, degrees clockwise from North) of the light source\n'
                           'Default is 315.')
-    dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45.,
+    dem.add_argument('--shade-alt', dest='shade_altdeg', type=float, default=45., metavar='DEG',
                      help='The altitude (0-90, degrees up from horizontal) of the light source.\n'
                           'Default is 45.')
-    dem.add_argument('--shade-min', dest='shade_min', type=float, default=-7000.,
+    dem.add_argument('--shade-min', dest='shade_min', type=float, default=-7000., metavar='MIN',
                      help='The min height in m of colormap of shaded relief topography\n'
                           'Default: -7000 m')
-    dem.add_argument('--shade-max', dest='shade_max', type=float, default=999.,
+    dem.add_argument('--shade-max', dest='shade_max', type=float, default=999., metavar='MAX',
                      help='The max height of colormap of shaded relief topography\n'
                           'Default: max(DEM) + 1000 m')
     dem.add_argument('--shade-exag', dest='shade_exag', type=float, default=0.5,
@@ -619,13 +620,13 @@ def add_figure_argument(parser):
                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
                           'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
                           'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
-    fig.add_argument('--cm-lut', dest='cmap_lut', type=int, default=256,
+    fig.add_argument('--cm-lut', dest='cmap_lut', type=int, default=256, metavar='NUM',
                      help='number of increment of colormap lookup table')
 
     # colorbar
     fig.add_argument('--nocbar', '--nocolorbar', dest='disp_cbar',
                      action='store_false', help='do not display colorbar')
-    fig.add_argument('--cbar-nbins', dest='cbar_nbins',
+    fig.add_argument('--cbar-nbins', dest='cbar_nbins', metavar='NUM',
                      type=int, help='number of bins for colorbar')
     fig.add_argument('--cbar-ext', dest='cbar_ext', default=None, choices={'neither', 'min', 'max', 'both', None},
                      help='Extend setting of colorbar; based on data stat by default.')
@@ -646,11 +647,11 @@ def add_figure_argument(parser):
     fig.add_argument('--figext', dest='fig_ext',
                      default='.png', choices=['.emf', '.eps', '.pdf', '.png', '.ps', '.raw', '.rgba', '.svg', '.svgz'],
                      help='File extension for figure output file')
-    fig.add_argument('--fignum', dest='fig_num', type=int,
+    fig.add_argument('--fignum', dest='fig_num', type=int, metavar='NUM',
                      help='number of figure windows')
-    fig.add_argument('--nrows', dest='fig_row_num', type=int, default=1,
+    fig.add_argument('--nrows', dest='fig_row_num', type=int, default=1, metavar='NUM',
                      help='subplot number in row')
-    fig.add_argument('--ncols', dest='fig_col_num', type=int, default=1,
+    fig.add_argument('--ncols', dest='fig_col_num', type=int, default=1, metavar='NUM',
                      help='subplot number in column')
     fig.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,
                      help='width space between subplots in inches')
@@ -694,7 +695,7 @@ def add_mask_argument(parser):
 def add_map_argument(parser):
     # Map
     map_group = parser.add_argument_group('Map', 'Map settings for display')
-    map_group.add_argument('--projection', dest='map_projection', default='cyl',
+    map_group.add_argument('--projection', dest='map_projection', default='cyl', metavar='NAME',
                            help='map projection when plotting in geo-coordinate. \n'
                                 'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
     map_group.add_argument('--coastline', action='store_true', help='Draw coastline.')
@@ -704,9 +705,10 @@ def add_map_argument(parser):
     map_group.add_argument('--lalo-label', dest='lalo_label', action='store_true',
                            help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
                                 'Useful for final figure output.')
-    map_group.add_argument('--lalo-step', dest='lalo_step',
+    map_group.add_argument('--lalo-step', dest='lalo_step', metavar='DEG',
                            type=float, help='Lat/lon step for lalo-label option.')
     map_group.add_argument('--lalo-loc', dest='lalo_label_loc', type=int, nargs=4, default=[1, 0, 0, 1],
+                           metavar='BOOL',
                            help='Draw lalo label in [left, right, top, bottom], default is [1,0,0,1]')
 
     map_group.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
@@ -1336,9 +1338,15 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
 
 def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict={}):
     """Plot Coherence Matrix of input network
-
     if date12List_drop is not empty, plot KEPT pairs in the upper triangle and
                                            ALL  pairs in the lower triangle.
+    Parameters: ax : matplotlib.pyplot.Axes,
+                date12List : list of date12 in YYYYMMDD_YYYYMMDD format
+                cohList    : list of float, coherence value
+                date12List_drop : list of date12 for date12 marked as dropped
+                plot_dict  : dict of plot settting
+    Returns:    ax : matplotlib.pyplot.Axes
+                im : mappable
     """
     # Figure Setting
     if not 'fontsize'    in plot_dict.keys():   plot_dict['fontsize']    = 12
@@ -1348,6 +1356,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
     if not 'cbar_label'  in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
     if not 'ylim'        in plot_dict.keys():   plot_dict['ylim']        = (0., 1.)
+    if not 'disp_cbar'   in plot_dict.keys():   plot_dict['disp_cbar']   = True
 
     date12List = ptime.yyyymmdd_date12(date12List)
     coh_mat = pnet.coherence_matrix(date12List, cohList)
@@ -1372,12 +1381,12 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
                    interpolation='nearest')
 
     date_num = coh_mat.shape[0]
-    if date_num < 30:
-        tick_list = list(range(0, date_num, 5))
-    else:
-        tick_list = list(range(0, date_num, 10))
-    ax.get_xaxis().set_ticks(tick_list)
-    ax.get_yaxis().set_ticks(tick_list)
+    #if date_num < 30:
+    #    tick_list = list(range(0, date_num, 5))
+    #else:
+    #    tick_list = list(range(0, date_num, 10))
+    #ax.get_xaxis().set_ticks(tick_list)
+    #ax.get_yaxis().set_ticks(tick_list)
     ax.set_xlabel('Image Number', fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Image Number', fontsize=plot_dict['fontsize'])
     ax.tick_params(which='both', direction='in', labelsize=plot_dict['fontsize'],
@@ -1387,10 +1396,11 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
         ax.set_title('Coherence Matrix')
 
     # Colorbar
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", "3%", pad="3%")
-    cbar = plt.colorbar(im, cax=cax)
-    cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
+    if plot_dict['disp_cbar']:
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", "3%", pad="3%")
+        cbar = plt.colorbar(im, cax=cax)
+        cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
 
     # Legend
     if date12List_drop:
@@ -1398,7 +1408,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
         ax.plot([], [], label='Lower: all ifgrams')
         ax.legend(handlelength=0)
 
-    return ax
+    return ax, im
 
 
 def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
@@ -1442,7 +1452,7 @@ def prepare_dem_background(dem, inps=None, print_msg=True):
     dem_contour_sequence = None
 
     # default inputs
-    if not inps:
+    if inps is None:
         inps = cmd_line_parse()
     if inps.shade_max == 999.:
         inps.shade_max += np.nanmax(dem)
@@ -1491,7 +1501,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
                                             dem_contour=dem_contour, dem_contour_seq=dem_contour_seq)
     """
     # default inputs
-    if not inps:
+    if inps is None:
         inps = cmd_line_parse()
 
     if all(i is None for i in [dem_shade, dem_contour, dem_contour_seq]) and dem is not None:

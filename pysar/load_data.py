@@ -234,6 +234,7 @@ def read_subset_box(inpsDict):
     coord = ut.coordinate(atr, lookup_file=lookupFile)
     if geo_box is not None:
         pix_box = coord.bbox_geo2radar(geo_box)
+        pix_box = coord.check_box_within_data_coverage(pix_box)
         print('input bounding box of interest in lalo: {}'.format(geo_box))
     print('box to read for datasets in y/x: {}'.format(pix_box))
 
