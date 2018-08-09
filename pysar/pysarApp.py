@@ -73,8 +73,6 @@ pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for n
 pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
 pysar.unwrapError.ramp     = auto   #[no / plane / quadratic], auto for no
 pysar.unwrapError.bridgeYX = auto   #[y1_start, x1_start, y1_end, x1_end; y2_start, ...], auto for none
-pysar.unwrapError.update   = auto   #[yes / no], auto for yes, enable update mode in pysarApp.py
-                                    # and skip runing if unwraPhase_unwCor already exists
 
 
 ########## 2. Network Inversion
@@ -441,6 +439,10 @@ def main(iargs=None):
     # Generating Aux files
     #########################################
     print('\n**********  Generate Auxiliary Files  **********')
+    inps.waterMaskFile = 'waterMask.h5'
+    if not os.path.isfile(inps.waterMaskFile):
+        inps.waterMaskFile = None
+
     # Initial mask (pixels with valid unwrapPhase or connectComponent in ALL interferograms)
     inps.maskFile = 'mask.h5'
     if ut.update_file(inps.maskFile, inps.stackFile):
@@ -462,6 +464,8 @@ def main(iargs=None):
     if ut.update_file(inps.maskSpatialCohFile, inps.avgSpatialCohFile):
         maskCmd = 'generate_mask.py {i} -m 0.7 -o {o}'.format(i=inps.avgSpatialCohFile,
                                                               o=inps.maskSpatialCohFile)
+        if inps.waterMaskFile:
+            maskCmd += ' --base {}'.format(inps.waterMaskFile)
         print(maskCmd)
         status = subprocess.Popen(maskCmd, shell=True).wait()
 
@@ -490,21 +494,17 @@ def main(iargs=None):
             unw_cor_mask_file = template['pysar.unwrapError.maskFile']
             if not unw_cor_mask_file:
                 unw_cor_mask_file = inps.maskFile
-            unwCmd = 'unwrap_error_phase_closure.py {} -t {} -m {}'.format(inps.stackFile,
-                                                                           inps.templateFile,
-                                                                           unw_cor_mask_file)
+            unwCmd = 'unwrap_error_phase_closure.py {} -t {} -m {} --update'.format(inps.stackFile,
+                                                                                    inps.templateFile,
+                                                                                    unw_cor_mask_file)
             if inps.fast:
                 unwCmd += ' --fast'
 
         elif unw_cor_method.startswith('bridg'):
-            unwCmd = 'unwrap_error_bridging.py {} -t {}'.format(inps.stackFile,
-                                                                inps.templateFile)
+            unwCmd = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
+                                                                         inps.templateFile)
         else:
             raise ValueError('un-recognized method: {}'.format(unw_cor_method))
-
-        # update mode
-        if template['pysar.unwrapError.update']:
-            unwCmd += ' --update'
 
         print(unwCmd)
         status = subprocess.Popen(unwCmd, shell=True).wait()
@@ -538,20 +538,23 @@ def main(iargs=None):
     if inps.modify_network:
         raise SystemExit('Exit as planned after network modification.')
 
+
     #########################################
     # Inversion of Interferograms
     ########################################
     print('\n**********  Invert Network of Interferograms into Time-series  **********')
-    invCmd = 'ifgram_inversion.py {} --template {}'.format(inps.stackFile, inps.templateFile)
+    invCmd = 'ifgram_inversion.py {} --template {} --update '.format(inps.stackFile,
+                                                                     inps.templateFile)
     if inps.fast:
         invCmd += ' --fast'
+    if inps.waterMaskFile:
+        invCmd += ' -m {}'.format(inps.waterMaskFile)
     print(invCmd)
     inps.timeseriesFile = 'timeseries.h5'
     inps.tempCohFile = 'temporalCoherence.h5'
-    if ut.update_file(inps.timeseriesFile, inps.stackFile):
-        status = subprocess.Popen(invCmd, shell=True).wait()
-        if status is not 0:
-            raise Exception('Error while inverting network interferograms into timeseries')
+    status = subprocess.Popen(invCmd, shell=True).wait()
+    if status is not 0:
+        raise Exception('Error while inverting network interferograms into timeseries')
 
     print('\n--------------------------------------------')
     print('Update Mask based on Temporal Coherence ...')
@@ -687,18 +690,17 @@ def main(iargs=None):
     ##############################################
     print('\n**********  Topographic Residual (DEM error) Correction  **********')
     outName = os.path.splitext(inps.timeseriesFile)[0]+'_demErr.h5'
-    topoCmd = 'dem_error.py {} -t {} -o {}'.format(inps.timeseriesFile,
-                                                   inps.templateFile,
-                                                   outName)
+    topoCmd = 'dem_error.py {} -t {} -o {} --update '.format(inps.timeseriesFile,
+                                                             inps.templateFile,
+                                                             outName)
     if not inps.fast:
         topoCmd += ' -g {}'.format(inps.geomFile)
     print(topoCmd)
     inps.timeseriesResFile = None
     if template['pysar.topographicResidual']:
-        if ut.update_file(outName, inps.timeseriesFile):
-            status = subprocess.Popen(topoCmd, shell=True).wait()
-            if status is not 0:
-                raise Exception('Error while correcting topographic phase residual.\n')
+        status = subprocess.Popen(topoCmd, shell=True).wait()
+        if status is not 0:
+            raise Exception('Error while correcting topographic phase residual.\n')
         inps.timeseriesFile = outName
         inps.timeseriesResFile = 'timeseriesResidual.h5'
     else:

@@ -108,8 +108,8 @@ def check_inputs(inps):
     atr = dict()
     if inps.timeseries_file:
         atr = readfile.read_attribute(inps.timeseries_file)
-    elif inps.dem_file:
-        atr = readfile.read_attribute(inps.dem_file)
+    elif inps.geom_file:
+        atr = readfile.read_attribute(inps.geom_file)
 
     # Get Grib Source
     inps.trop_model = ut.standardize_trop_model(inps.trop_model,
@@ -152,8 +152,8 @@ def check_inputs(inps):
         if inps.timeseries_file:
             inps.weather_dir = os.path.join(os.path.dirname(os.path.abspath(inps.timeseries_file)),
                                             '../WEATHER')
-        elif inps.dem_file:
-            inps.weather_dir = os.path.join(os.path.dirname(os.path.abspath(inps.dem_file)),
+        elif inps.geom_file:
+            inps.weather_dir = os.path.join(os.path.dirname(os.path.abspath(inps.geom_file)),
                                             '../WEATHER')
         else:
             inps.weather_dir = os.path.abspath(os.getcwd())
@@ -380,7 +380,7 @@ def get_delay_timeseries(inps, atr):
     trop_data -= np.tile(trop_data[inps.ref_idx, :, :], (num_date, 1, 1))
 
     # Write tropospheric delay to HDF5
-    trop_file = os.path.join(os.path.dirname(inps.dem_file), inps.trop_model+'.h5')
+    trop_file = os.path.join(os.path.dirname(inps.geom_file), inps.trop_model+'.h5')
     ts_obj = timeseries(trop_file)
     ts_obj.write2hdf5(data=trop_data,
                       dates=date_list,

@@ -433,7 +433,7 @@ def update_object(outFile, inObj, box, updateMode=True):
             outObj.open(print_msg=False)
             if (outObj.get_size() == inObj.get_size(box=box)
                     and all(i in outObj.datasetNames for i in inObj.get_dataset_list())):
-                print(('All datasets exists in file{} with same size as required,'
+                print(('All datasets exists in file {} with same size as required,'
                        ' no need to re-load.'.format(outFile)))
                 updateFile = False
     return updateFile

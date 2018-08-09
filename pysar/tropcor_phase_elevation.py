@@ -15,7 +15,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from pysar.objects import timeseries
-from pysar.utils import readfile, ptime, utils as ut
+from pysar.utils import readfile, writefile, ptime, utils as ut
 from pysar.multilook import multilook_data
 from pysar.mask import mask_matrix
 
@@ -225,10 +225,11 @@ def main(iargs=None):
     ts_data[mask] = 0.
 
     # write time-series file
+    metadata = dict(obj.metadata)
+    metadata['pysar.troposphericDelay.polyOrder'] = str(inps.poly_order)
     if not inps.outfile:
         inps.outfile = '{}_tropHgt.h5'.format(os.path.splitext(inps.timeseries_file)[0])
-    obj_out = timeseries(inps.outfile)
-    obj_out.write2hdf5(ts_data, refFile=inps.timeseries_file)
+    writefile.write(ts_data, out_file=inps.outfile, metadata=metadata, ref_file=inps.timeseries_file)
     return inps.outfile
 
 

@@ -62,11 +62,11 @@ def create_parser():
                         help='mask file to specify those pixels to be corrected for unwrapping errors')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options for setting.')
-    parser.add_argument('--fast', action='store_true',
+    parser.add_argument('--fast', dest='fast_mode', action='store_true',
                         help='Fast (but not the best) unwrap error correction,'
                              ' by diable the extra constraint on ifgrams with no unwrap error.')
-    parser.add_argument('--update', action='store_true',
-                        help='Enable update mode: if unwrapPhase_unwCor dataset exists, skip the correction.')
+    parser.add_argument('--update', dest='update_mode', action='store_true',
+                        help='Enable update mode: if unwrapPhase_closure dataset exists, skip the correction.')
     return parser
 
 
@@ -242,6 +242,9 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
     if fast_mode:
         print('fast mode: ON, the following asuumption is ignored for fast processing')
         print('\tzero phase jump constraint on ifgrams without unwrap error')
+    else:
+        print(('this step can be very slow'
+               'you could terminate this and try --fast option for quick correction process.'))
     print('-'*50)
 
     stack_obj = ifgramStack(inps.ifgram_file)
@@ -333,11 +336,13 @@ def main(iargs=None):
 
     # update mode checking
     atr = readfile.read_attribute(inps.ifgram_file)
-    if inps.update and atr['FILE_TYPE'] == 'ifgramStack':
+    if inps.update_mode and atr['FILE_TYPE'] == 'ifgramStack':
+        print('update mode: {}'.format(inps.update_mode))
         stack_obj = ifgramStack(inps.ifgram_file)
         stack_obj.open(print_msg=False)
         if inps.datasetNameOut in stack_obj.datasetNames:
-            print("update mode is enabled AND {} exists, skip this step.".format(inps.datasetNameOut))
+            print("output dataset: {} exists".format(inps.datasetNameOut))
+            print("thus, skip this step.")
             return inps.ifgram_file
 
     start_time = time.time()
@@ -345,7 +350,7 @@ def main(iargs=None):
     run_unwrap_error_closure(inps,
                              dsNameIn=inps.datasetNameIn,
                              dsNameOut=inps.datasetNameOut,
-                             fast_mode=inps.fast)
+                             fast_mode=inps.fast_mode)
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))

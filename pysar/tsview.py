@@ -254,11 +254,15 @@ def read_init_info(inps):
     inps.disp_unit_v = inps.disp_unit
     if inps.wrap:
         inps.range2phase = -4. * np.pi / float(atr['WAVELENGTH'])
-        if   'cm' in inps.disp_unit:   inps.range2phase /= 100.
-        elif 'mm' in inps.disp_unit:   inps.range2phase /= 1000.
-        if inps.wrap_step == 2*np.pi:
+        if   'cm' == inps.disp_unit.split('/')[0]:   inps.range2phase /= 100.
+        elif 'mm' == inps.disp_unit.split('/')[0]:   inps.range2phase /= 1000.
+        elif 'm'  == inps.disp_unit.split('/')[0]:   inps.range2phase /= 1.
+        else:
+            raise ValueError('un-recognized display unit: {}'.format(inps.disp_unit))
+
+        if (inps.wrap_range[1] - inps.wrap_range[0]) == 2*np.pi:
             inps.disp_unit_v = 'radian'
-        inps.vlim = [-inps.wrap_step/2., inps.wrap_step/2.]
+        inps.vlim = inps.wrap_range
     inps.cbar_label = 'Displacement ({})'.format(inps.disp_unit_v)
 
     return inps, atr
@@ -339,7 +343,7 @@ def plot_init_map(ax, d_v, inps, metadata):
     if inps.wrap:
         if inps.disp_unit_v == 'radian':
             d_v *= inps.range2phase
-        d_v -= np.round(d_v / inps.wrap_step) * inps.wrap_step
+        d_v = ut.wrap(d_v, wrap_range=inps.wrap_range)
 
     # Title and Axis Label
     disp_date = inps.dates[inps.init_idx].strftime('%Y-%m-%d')
@@ -610,7 +614,7 @@ def main(iargs=None):
         if inps.wrap:
             if inps.disp_unit_v == 'radian':
                 d_v *= inps.range2phase
-            d_v -= np.round(d_v / inps.wrap_step) * inps.wrap_step
+            d_v = ut.wrap(d_v, wrap_range=inps.wrap_range)
         im.set_data(d_v)
         fig_v.canvas.draw()
     tslider.on_changed(update_time_slider)

@@ -21,11 +21,17 @@ from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
 key_prefix = 'pysar.networkInversion.'
+# key configuration parameter name
+config_key_list = ['unwDatasetName',
+                   'weightFunc',
+                   'maskDataset',
+                   'maskThreshold',
+                   'minNormVelocity']
 
 
 ################################################################################################
 EXAMPLE = """example:
-  ifgram_inversion.py  INPUTS/ifgramStack.h5 -t pysarApp_template.txt
+  ifgram_inversion.py  INPUTS/ifgramStack.h5 -t pysarApp_template.txt --update
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -t pysarApp_template.txt --fast
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w var
   ifgram_inversion.py  INPUTS/ifgramStack.h5 -w fim
@@ -115,7 +121,7 @@ def create_parser():
     parser.add_argument('-o', '--output', dest='outfile', nargs=2, default=['timeseries.h5', 'temporalCoherence.h5'],
                         help='Output file name for timeseries and temporal coherence, default:\n' +
                         'timeseries.h5 temporalCoherence.h5')
-    parser.add_argument('--update-mode', dest='update_mode', action='store_true',
+    parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode, and skip inversion if output timeseries file already exists,\n' +
                         'readable and newer than input interferograms file')
     parser.add_argument('--noskip-zero-phase', dest='skip_zero_phase', action='store_false',
@@ -858,9 +864,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     if not inps:
         inps = cmd_line_parse()
 
-    if inps.update_mode and not ut.update_file(inps.timeseriesFile, ifgram_file):
-        return inps.timeseriesFile, inps.tempCohFile
-
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
     A = stack_obj.get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
@@ -873,6 +876,18 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                            'unwrapPhase_closure',
                                            'unwrapPhase']
                                if i in stack_obj.datasetNames][0]
+
+    # update mode
+    print('update model: {}'.format(inps.update_mode))
+    if inps.update_mode and not ut.update_file(outFile=inps.timeseriesFile,
+                                               inFile=ifgram_file,
+                                               print_msg=False):
+        atr_ts = readfile.read_attribute(inps.timeseriesFile)
+        if all([str(vars(inps)[key]) == atr_ts.get(key_prefix+key, 'None') for key in config_key_list]):
+            print('1) {} exists and is newer than {}'.format(inps.timeseriesFile, ifgram_file))
+            print('2) all key configuration parameter are the same: \n\t{}'.format(config_key_list))
+            print('thus, skip this step.')
+            return inps.timeseriesFile, inps.tempCohFile
 
     # print key setup info
     msg = '-------------------------------------------------------------------------------\n'
@@ -975,9 +990,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
         # metadata
         metadata = dict(stack_obj.metadata)
-        for key in ['unwDatasetName', 'weightFunc',
-                    'maskDataset', 'maskThreshold',
-                    'minNormVelocity']:
+        for key in config_key_list:
             metadata[key_prefix+key] = str(vars(inps)[key])
         write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifg, suffix='')
 

@@ -23,6 +23,13 @@ from pysar.utils import (ptime,
                          deramp)
 
 
+key_prefix = 'pysar.unwrapError.'
+# key configuration parameter name
+config_key_list = ['maskFile',
+                   'ramp',
+                   'bridgeYX']
+
+
 ####################################################################################################
 EXAMPLE = """Example:
   # Check the Jupyter Notebook for a complete tutorial of this procedure:
@@ -86,7 +93,7 @@ def create_parser():
                         help='name of mask file to mark different patches that want to be corrected in different value')
     parser.add_argument('--ramp', dest='ramp', choices=['plane', 'quadratic'],
                           help='type of phase ramp to be removed before correction.')
-    parser.add_argument('--update', action='store_true',
+    parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode: if unwrapPhase_unwCor dataset exists, skip the correction.')
     return parser
 
@@ -107,10 +114,9 @@ def read_template2inps(template_file, inps=None):
     template = readfile.read_template(inps.template_file)
     template = ut.check_template_auto_value(template)
 
-    prefix = 'pysar.unwrapError.'
-    key_list = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
+    key_list = [i for i in list(inpsDict.keys()) if key_prefix+i in template.keys()]
     for key in key_list:
-        value = template[prefix+key]
+        value = template[key_prefix+key]
         if key in ['update', 'bridgeYX']:
             inpsDict[key] = value
         elif value:
@@ -260,6 +266,7 @@ def run_unwrap_error_bridge(ifgram_file, mask_file, bridge_yx, dsNameIn='unwrapP
             ds[i, :, :] = unw_cor
             prog_bar.update(i+1, suffix=date12)
         prog_bar.close()
+
         f.close()
         print('close {} file.'.format(ifgram_file))
 
@@ -295,13 +302,22 @@ def main(iargs=None):
         inps.datasetNameOut = '{}_bridge'.format(inps.datasetNameIn)
 
     atr = readfile.read_attribute(inps.ifgram_file)
-    if inps.update and atr['FILE_TYPE'] == 'ifgramStack':
+
+    # update mode
+    if inps.update_mode and atr['FILE_TYPE'] == 'ifgramStack':
+        print('update mode: {}'.format(inps.update_mode))
         stack_obj = ifgramStack(inps.ifgram_file)
         stack_obj.open(print_msg=False)
-        if 'unwrapPhase_unwCor' in stack_obj.datasetNames:
-            print("update mode is enabled AND 'unwrapPhase_unwCor' exists, skip this step.")
+        atr = stack_obj.metadata
+        if (inps.datasetNameOut in stack_obj.datasetNames 
+                and all([str(vars(inps)[key]) == atr.get(key_prefix+key, 'None')
+                         for key in config_key_list])):
+            print("1) output dataset: {} exists".format(inps.datasetNameOut))
+            print("2) all key configuration parameter are the same: \n\t{}".format(config_key_list))
+            print("thus, skip this step.")
             return inps.ifgram_file
 
+    # run bridging
     start_time = time.time()
     plot_bridge_mask(inps.maskFile, inps.bridgeYX, atr)
     run_unwrap_error_bridge(inps.ifgram_file,
@@ -310,6 +326,13 @@ def main(iargs=None):
                             dsNameIn=inps.datasetNameIn,
                             dsNameOut=inps.datasetNameOut,
                             ramp_type=inps.ramp)
+
+    # config parameter
+    print('add/update the following configuration metadata to file:')
+    config_metadata = dict()
+    for key in config_key_list:
+        config_metadata[key_prefix+key] = str(vars(inps)[key])
+    ut.add_attribute(inps.ifgram_file, config_metadata, print_msg=True)
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))

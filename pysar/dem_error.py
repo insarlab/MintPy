@@ -17,6 +17,14 @@ from pysar.utils import ptime, readfile, writefile, utils as ut
 from pysar.objects import timeseries, geometry
 
 
+key_prefix = 'pysar.topographicResidual.'
+# key configuration parameter name
+config_key_list = ['polyOrder',
+                   'phaseVelocity',
+                   'stepFuncDate',
+                   'excludeDate']
+
+
 ############################################################################
 TEMPLATE = """
 ## reference: Fattahi and Amelung, 2013, IEEE-TGRS
@@ -74,6 +82,11 @@ def create_parser():
                         help='Use phase velocity instead of phase for inversion constrain.')
     parser.add_argument('-p', '--poly-order', dest='polyOrder', type=int, default=2,
                         help='polynomial order number of temporal deformation model, default = 2')
+    parser.add_argument('--update', dest='update_mode', action='store_true',
+                        help='Enable update mode, and skip inversion if:\n'+
+                             '1) output timeseries file already exists, readable '+
+                             'and newer than input interferograms file\n' +
+                             '2) all configuration parameters are the same.')
     return parser
 
 
@@ -97,10 +110,9 @@ def read_template2inps(template_file, inps=None):
     template = ut.check_template_auto_value(template)
 
     # Read template option
-    prefix = 'pysar.topographicResidual.'
-    keyList = [i for i in list(inpsDict.keys()) if prefix+i in template.keys()]
+    keyList = [i for i in list(inpsDict.keys()) if key_prefix+i in template.keys()]
     for key in keyList:
-        value = template[prefix+key]
+        value = template[key_prefix+key]
         if key in ['phaseVelocity']:
             inpsDict[key] = value
         elif value:
@@ -111,7 +123,7 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
-def read_exclude_date(ex_date_list, date_list_all):
+def read_exclude_date(ex_date_list, date_list_all, print_msg=True):
     """Read exclude dates info
     Parameters: ex_date_list  : list of string, date in YYMMDD or YYYYMMDD format,
                                 or text file with date in it
@@ -127,15 +139,16 @@ def read_exclude_date(ex_date_list, date_list_all):
             else:
                 tempList.append(d)
         ex_date_list = sorted(ptime.yyyymmdd(tempList))
-        print(('exclude the following dates for DEM error estimation:'
-               ' ({})\n{}').format(len(ex_date_list), ex_date_list))
+        if print_msg:
+            print(('exclude the following dates for DEM error estimation:'
+                   ' ({})\n{}').format(len(ex_date_list), ex_date_list))
     else:
         ex_date_list = []
 
     # convert to mark array
     drop_date = np.array([i not in ex_date_list for i in date_list_all],
                          dtype=np.bool_)
-    return drop_date
+    return drop_date, ex_date_list
 
 
 def design_matrix4deformation(inps):
@@ -275,7 +288,7 @@ def correct_dem_error(inps, A_def):
     tbase = np.array(ts_obj.tbase, np.float32) / 365.25
 
     num_step = len(inps.stepFuncDate)
-    drop_date = read_exclude_date(inps.excludeDate, ts_obj.dateList)
+    drop_date, inps.excludeDate = read_exclude_date(inps.excludeDate, ts_obj.dateList)
     if inps.polyOrder > np.sum(drop_date):
         raise ValueError(("input poly order {} > number of acquisition {}!"
                           " Reduce it!").format(inps.polyOrder, np.sum(drop_date)))
@@ -369,6 +382,11 @@ def correct_dem_error(inps, A_def):
         step_model = step_model.reshape((num_step, ts_obj.length, ts_obj.width))
     atr = dict(ts_obj.metadata)
 
+    # config parameter
+    print('add/update the following configuration metadata to file:')
+    for key in config_key_list:
+        atr[key_prefix+key] = str(vars(inps)[key])
+
     # 1. Estimated DEM error
     outfile = 'demErr.h5'
     atr['FILE_TYPE'] = 'dem'
@@ -376,18 +394,15 @@ def correct_dem_error(inps, A_def):
     writefile.write(delta_z, out_file=outfile, metadata=atr)
 
     # 2. Time-series corrected for DEM error
-    if not inps.outfile:
-        inps.outfile = '{}_demErr.h5'.format(os.path.splitext(inps.timeseries_file)[0])
-    ts_cor_obj = timeseries(inps.outfile)
-    ts_cor_obj.write2hdf5(data=ts_cor, refFile=ts_obj.file)
+    atr['FILE_TYPE'] = 'timeseries'
+    writefile.write(ts_cor, out_file=inps.outfile, metadata=atr, ref_file=ts_obj.file)
 
     # 3. Time-series of inversion residual
-    ts_res_obj = timeseries(os.path.join(os.path.dirname(inps.outfile), 'timeseriesResidual.h5'))
-    ts_res_obj.write2hdf5(data=ts_res, refFile=ts_obj.file)
+    ts_ref_file = os.path.join(os.path.dirname(inps.outfile), 'timeseriesResidual.h5')
+    writefile.write(ts_res, out_file=ts_ref_file, metadata=atr, ref_file=ts_obj.file)
 
     # 4. Time-series of estimated Step Model
     if num_step > 0:
-        atr['FILE_TYPE'] = 'timeseries'
         atr.pop('REF_DATE')
         step_obj = timeseries(os.path.join(os.path.dirname(inps.outfile), 'timeseriesStepModel.h5'))
         step_obj.write2hdf5(data=step_model, metadata=atr, dates=inps.stepFuncDate)
@@ -405,6 +420,22 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
+    if not inps.outfile:
+        inps.outfile = '{}_demErr.h5'.format(os.path.splitext(inps.timeseries_file)[0])
+
+    # update mode
+    print('update model: {}'.format(inps.update_mode))
+    if inps.update_mode and not ut.update_file(outFile=inps.outfile,
+                                               inFile=inps.timeseries_file,
+                                               print_msg=False):
+        date_list_all = timeseries(inps.timeseries_file).get_date_list()
+        inps.excludeDate = read_exclude_date(inps.excludeDate, date_list_all, print_msg=False)[1]
+        atr = readfile.read_attribute(inps.outfile)
+        if all([str(vars(inps)[key]) == atr.get(key_prefix+key, 'None') for key in config_key_list]):
+            print('1) {} exists and is newer than {}'.format(inps.timeseries_file, inps.outfile))
+            print('2) all key configuration parameter are the same: \n\t{}'.format(config_key_list))
+            print('thus, skip this step.')
+            return inps.outfile
 
     start_time = time.time()
     inps = read_geometry(inps)
@@ -415,7 +446,7 @@ def main(iargs=None):
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
-    return
+    return inps.outfile
 
 
 ################################################################################

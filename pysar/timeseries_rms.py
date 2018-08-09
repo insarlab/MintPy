@@ -55,7 +55,8 @@ def create_parser():
     parser.add_argument('--cutoff', dest='cutoff', default='3', type=float,
                         help='M-score used for outlier detection based on standardised residuals\n'+
                              'Recommend range: [3, 4], default is 3.')
-    parser.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
+    parser.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'),
+                        type=float, nargs=2, default=[4., 3.],
                         help='figure size in inches - width and length')
     parser.add_argument('--tick-year-num', dest='tick_year_num',
                         type=int, default=1, help='Year number per major tick')
@@ -98,7 +99,8 @@ def analyze_rms(date_list, rms_list, inps):
     ref_date_file = 'reference_date.txt'
     if ut.update_file(ref_date_file, [inps.timeseries_file,
                                       inps.mask_file,
-                                      inps.template_file], check_readable=False):
+                                      inps.template_file],
+                      check_readable=False):
         with open(ref_date_file, 'w') as f:
             f.write(date_list[ref_idx]+'\n')
         print('save date to file: '+ref_date_file)
@@ -134,13 +136,10 @@ def analyze_rms(date_list, rms_list, inps):
 
     # plot bar figure and save
     fig_file = os.path.splitext(inps.rms_file)[0]+'.pdf'
-    if ut.update_file(fig_file, [ex_date_file,
-                                 ref_date_file,
-                                 inps.template_file], check_readable=False):
-        fig, ax = plt.subplots(figsize=inps.fig_size)
-        ax = plot_rms_bar(ax, date_list, rms_list, rms_threshold, cutoff=inps.cutoff)
-        fig.savefig(fig_file, bbox_inches='tight', transparent=True)
-        print('save figure to file: '+fig_file)
+    fig, ax = plt.subplots(figsize=inps.fig_size)
+    ax = plot_rms_bar(ax, date_list, rms_list, rms_threshold, cutoff=inps.cutoff)
+    fig.savefig(fig_file, bbox_inches='tight', transparent=True)
+    print('save figure to file: '+fig_file)
     return inps
 
 
