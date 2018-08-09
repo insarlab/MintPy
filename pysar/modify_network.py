@@ -36,8 +36,8 @@ pysar.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interfe
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
 pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
-pysar.network.maskAoi.yx      = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
-pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
+pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
+pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
 ## Network modification based on temporal/perpendicular baselines, date etc.
 pysar.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
@@ -55,8 +55,7 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Modify the network of interferograms',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
-    parser.add_argument(
-        'file', help='Files to modify/drop network, e.g. INPUTS/ifgramStack.h5.')
+    parser.add_argument('file', help='Files to modify/drop network, e.g. INPUTS/ifgramStack.h5.')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='Template file with input options:\n'+TEMPLATE+'\n')
     parser.add_argument('--reset', action='store_true',
@@ -96,6 +95,10 @@ def create_parser():
     cohBased.add_argument('--mask', dest='maskFile',
                           help='Mask file used to calculate the spatial coherence\n'
                                'Will use the whole area if not assigned')
+    cohBased.add_argument('--aoi-yx', dest='aoiYX', type=str,
+                          help='AOI in y0:y1,x0:x1 for coherence calculation')
+    cohBased.add_argument('--aoi-lalo', dest='aoiLALO', type=str,
+                          help='AOI in lat0:lat1,lon0:lon1 for coherence calculation')
     cohBased.add_argument('--min-coherence', dest='minCoherence', type=float, default=0.7,
                           help='Minimum coherence value')
     cohBased.add_argument('--lookup', dest='lookupFile',
@@ -103,8 +106,7 @@ def create_parser():
                                'Needed for mask AOI in lalo')
 
     # 3 Manually select network
-    manual = parser.add_argument_group(
-        'Manual Network', 'Manually select/drop/modify network')
+    manual = parser.add_argument_group('Manual Network', 'Manually select/drop/modify network')
     manual.add_argument('--manual', action='store_true',
                         help='display network to manually choose line/interferogram to remove')
     return parser
@@ -171,12 +173,12 @@ def read_template2inps(template_file, inps=None):
                 inpsDict[key] = int(value)
             elif key in ['maskFile', 'referenceFile']:
                 inpsDict[key] = value
-            elif key == 'maskAoi.yx':
+            elif key == 'aoiYX':
                 tmp = [i.strip() for i in value.split(',')]
                 sub_y = sorted([int(i.strip()) for i in tmp[0].split(':')])
                 sub_x = sorted([int(i.strip()) for i in tmp[1].split(':')])
                 inps.aoi_pix_box = (sub_x[0], sub_y[0], sub_x[1], sub_y[1])
-            elif key == 'maskAoi.lalo':
+            elif key == 'aoiLALO':
                 tmp = [i.strip() for i in value.split(',')]
                 sub_lat = sorted([float(i.strip()) for i in tmp[0].split(':')])
                 sub_lon = sorted([float(i.strip()) for i in tmp[1].split(':')])

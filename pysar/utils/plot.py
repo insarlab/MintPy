@@ -1259,8 +1259,8 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
 
     # Legend
     if plot_dict['disp_drop']:
-        solid_line = mlines.Line2D([], [], color='k', ls='solid', label='Interferograms')
-        dash_line = mlines.Line2D([], [], color='k', ls='dashed', label='Interferograms dropped')
+        solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifgrams used')
+        dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifgrams dropped')
         ax.legend(handles=[solid_line, dash_line])
 
     return ax
@@ -1357,6 +1357,8 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     if not 'cbar_label'  in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
     if not 'ylim'        in plot_dict.keys():   plot_dict['ylim']        = (0., 1.)
     if not 'disp_cbar'   in plot_dict.keys():   plot_dict['disp_cbar']   = True
+    if not 'legend_loc'  in plot_dict.keys():   plot_dict['legend_loc']  = 'best'
+    if not 'disp_legend' in plot_dict.keys():   plot_dict['disp_legend'] = True
 
     date12List = ptime.yyyymmdd_date12(date12List)
     coh_mat = pnet.coherence_matrix(date12List, cohList)
@@ -1381,12 +1383,13 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
                    interpolation='nearest')
 
     date_num = coh_mat.shape[0]
-    #if date_num < 30:
-    #    tick_list = list(range(0, date_num, 5))
-    #else:
-    #    tick_list = list(range(0, date_num, 10))
-    #ax.get_xaxis().set_ticks(tick_list)
-    #ax.get_yaxis().set_ticks(tick_list)
+    if date_num < 30:    tick_step = 5
+    elif date_num < 50:  tick_step = 10
+    elif date_num < 100: tick_step = 20
+    else:                tick_step = 30
+    tick_list = list(range(0, date_num, tick_step))
+    ax.get_xaxis().set_ticks(tick_list)
+    ax.get_yaxis().set_ticks(tick_list)
     ax.set_xlabel('Image Number', fontsize=plot_dict['fontsize'])
     ax.set_ylabel('Image Number', fontsize=plot_dict['fontsize'])
     ax.tick_params(which='both', direction='in', labelsize=plot_dict['fontsize'],
@@ -1403,10 +1406,10 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
         cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
 
     # Legend
-    if date12List_drop:
-        ax.plot([], [], label='Upper: used ifgrams')
-        ax.plot([], [], label='Lower: all ifgrams')
-        ax.legend(handlelength=0)
+    if date12List_drop and plot_dict['disp_legend']:
+        ax.plot([], [], label='Upper: Ifgrams used')
+        ax.plot([], [], label='Lower: Ifgrams all')
+        ax.legend(loc=plot_dict['legend_loc'], handlelength=0)
 
     return ax, im
 

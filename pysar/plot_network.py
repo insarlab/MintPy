@@ -44,9 +44,9 @@ EXAMPLE = """example:
 """
 
 TEMPLATE = """
-pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
-pysar.network.maskAoi.yx      = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
-pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
+pysar.network.maskFile  = auto  #[file name, no], auto for mask.h5, no for all pixels
+pysar.network.aoiYX     = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
+pysar.network.aoiLALO   = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 """
 
 

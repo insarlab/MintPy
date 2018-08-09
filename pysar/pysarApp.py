@@ -87,8 +87,8 @@ pysar.network.coherenceBased  = auto  #[yes / no], auto for no, exclude interfer
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
 pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
-pysar.network.maskAoi.yx      = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
-pysar.network.maskAoi.lalo    = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
+pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
+pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
 ## 2.1.2 Network modification based on temporal/perpendicular baselines, date etc.
 pysar.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
@@ -460,7 +460,7 @@ def main(iargs=None):
     # mask based on average spatial coherence
     inps.maskSpatialCohFile = 'maskSpatialCoh.h5'
     if ut.update_file(inps.maskSpatialCohFile, inps.avgSpatialCohFile):
-        maskCmd = 'generate_mask.h5 {i} -m 0.7 -o {o}'.format(i=inps.avgSpatialCohFile,
+        maskCmd = 'generate_mask.py {i} -m 0.7 -o {o}'.format(i=inps.avgSpatialCohFile,
                                                               o=inps.maskSpatialCohFile)
         print(maskCmd)
         status = subprocess.Popen(maskCmd, shell=True).wait()

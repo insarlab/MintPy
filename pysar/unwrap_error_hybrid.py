@@ -147,9 +147,11 @@ def detect_unwrap_error(ifgram_file, mask_file, mask_cc_file='maskConnComp.h5', 
     mask *= num_nonzero_closure != 0.
 
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=[12, 4])
-    num4disp = np.array(num_nonzero_closure)
+    num4disp = np.array(num_nonzero_closure, dtype=np.float32)
     num4disp[mask == 0] = np.nan
     im = ax[0].imshow(num4disp)
+    ax[0].set_xlabel('Range [pix.]')
+    ax[0].set_ylabel('Azimuth [pix.]')
     ax[0] = pp.auto_flip_direction(stack_obj.metadata, ax=ax[0], print_msg=False)
     cbar = fig.colorbar(im, ax=ax[0])
     cbar.set_label('number of non-zero phase closure')
