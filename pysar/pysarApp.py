@@ -415,10 +415,10 @@ def main(iargs=None):
     inps, atr = ut.check_loaded_dataset(inps.workDir, inps)
 
     # Add template options into HDF5 file metadata
-    # if inps.templateFileCustom:
-    #    atrCmd = 'add_attribute.py {} {}'.format(inps.stackFile, inps.templateFileCustom)
-    #    print(atrCmd)
-    #    status = subprocess.Popen(atrCmd, shell=True).wait()
+    if inps.templateFileCustom:
+        metaCmd = 'add_attribute.py {} {}'.format(inps.stackFile, inps.templateFileCustom)
+        print(metaCmd)
+        status = subprocess.Popen(metaCmd, shell=True).wait()
     #ut.add_attribute(inps.stackFile, template)
 
     if inps.load_dataset:
