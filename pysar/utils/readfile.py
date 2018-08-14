@@ -301,7 +301,7 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             else:
                 raise Exception('Un-recognized datasetName input: '+datasetName)
 
-        elif (atr['number_bands'] == '2' 
+        elif (atr['number_bands'] == '2'
                   and atr['scheme'] == 'BIL' 
                   and atr['DATA_TYPE'].lower() in ['float32', 'float']):
             band1, band2, atr = read_float32(fname, box=box)
@@ -506,7 +506,7 @@ def get_2d_dataset_list(fname):
             datasetList = ['rangeCoord', 'azimuthCoord']
         elif file_base.startswith('los'):
             datasetList = ['incidenceAngle', 'azimuthAngle']
-        elif atr.get('number_bands', '1') == '2':
+        elif atr.get('number_bands', '1') == '2' and 'unw' not in file_type:
             datasetList = ['band1', 'band2']
         else:
             datasetList = ['']
@@ -520,6 +520,7 @@ def read_attribute(fname, datasetName=None, standardize=True):
     Output : dictionary, attributes dictionary
     """
     ext = os.path.splitext(fname)[1].lower()
+    fbase = os.path.splitext(fname)[0]
     if not os.path.isfile(fname):
         msg = 'input file not existed: {}\n'.format(fname)
         msg += 'current directory: '+os.getcwd()
@@ -612,15 +613,15 @@ def read_attribute(fname, datasetName=None, standardize=True):
         # Read metadata file
         if os.path.isfile(fname+'.rsc'):
             atr = read_roipac_rsc(fname+'.rsc')
-            atr['FILE_TYPE'] = ext
+            if 'FILE_TYPE' not in atr.keys():
+                while ext in ['.geo', '.rdr']:
+                    fbase, ext = os.path.splitext(fbase)
+                atr['FILE_TYPE'] = ext
 
         elif os.path.isfile(fname+'.xml'):
             atr = read_isce_xml(fname+'.xml')
             if 'FILE_TYPE' not in atr.keys():
-                if 'image_type' in atr.keys():
-                    atr['FILE_TYPE'] = '.{}'.format(atr['image_type'])
-                else:
-                    atr['FILE_TYPE'] = ext
+                atr['FILE_TYPE'] = atr.get('image_type', ext)
 
         elif os.path.isfile(fname+'.par'):
             atr = read_gamma_par(fname+'.par')
@@ -636,6 +637,7 @@ def read_attribute(fname, datasetName=None, standardize=True):
         # Get PROCESSOR
         if os.path.isfile(fname+'.xml'):
             atr['PROCESSOR'] = 'isce'
+            atr.update(read_isce_xml(fname+'.xml'))
         elif os.path.isfile(fname+'.hdr'):
             atr['PROCESSOR'] = 'isce'
         elif os.path.isfile(fname+'.par'):
@@ -851,25 +853,19 @@ def read_isce_xml(fname, convert2roipac=True, standardize=True):
         xmlDict[child.attrib['name']] = str(child.value)
 
     # Read lat/lon info for geocoded file
-    try:
-        comp1 = root.find("./component[@name='coordinate1']")
-        x_step = comp1.find("./property[@name='delta']/value").text
-        if x_step not in ['1', '-1']:
-            xmlDict['X_STEP'] = x_step
-            xmlDict['X_FIRST'] = comp1.find("./property[@name='startingvalue']/value").text
-            xmlDict['X_LAST'] = comp1.find("./property[@name='endingvalue']/value").text
-    except:
-        pass
+    if root.find("./component[@name='coordinate1']") is not None:
+        comp = root.find("./component[@name='coordinate1']")
+        x_step = comp.find("./property[@name='delta']").value
+        if abs(x_step) != 1:
+            xmlDict['X_STEP'] = str(x_step)
+            xmlDict['X_FIRST'] = comp.find("./property[@name='startingvalue']").value.text
 
-    try:
-        comp2 = root.find("./component[@name='coordinate2']")
-        y_step = comp2.find("./property[@name='delta']/value").text
-        if y_step not in ['1', '-1']:
-            xmlDict['Y_STEP'] = y_step
-            xmlDict['Y_FIRST'] = comp2.find("./property[@name='startingvalue']/value").text
-            xmlDict['Y_LAST'] = comp2.find("./property[@name='endingvalue']/value").text
-    except:
-        pass
+    if root.find("./component[@name='coordinate2']") is not None:
+        comp = root.find("./component[@name='coordinate2']")
+        y_step = comp.find("./property[@name='delta']").value
+        if abs(y_step) != 1:
+            xmlDict['Y_STEP'] = str(y_step)
+            xmlDict['Y_FIRST'] = comp.find("./property[@name='startingvalue']").value.text
 
     if convert2roipac:
         xmlDict = attribute_isce2roipac(xmlDict)
@@ -968,7 +964,7 @@ def attribute_isce2roipac(metaDict, dates=[], baselineDict={}):
     rscDict['LENGTH'] = rscDict['length']
 
     rscDict['PROCESSOR'] = 'isce'
-    rscDict['PLATFORM'] = 'Sentinel1'
+    #rscDict['PLATFORM'] = 'Sentinel1'
 
     rscDict['ANTENNA_SIDE'] = '-1'
     if 'passDirection' in rscDict.keys():

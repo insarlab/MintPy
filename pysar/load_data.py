@@ -306,7 +306,7 @@ def read_inps_dict2ifgram_stack_dict_object(inpsDict):
         ifgramPathDict = {}
         for i in range(len(dsNameList)):
             dsName = dsNameList[i]
-            dsPath1 = dsPathDict[dsName][i]
+            dsPath1 = dsPathDict[dsName][0]
             if all(d[2:8] in dsPath1 for d in dates):
                 ifgramPathDict[dsName] = dsPath1
             else:

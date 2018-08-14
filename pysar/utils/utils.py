@@ -321,16 +321,13 @@ def get_lookup_file(filePattern=None, abspath=False, print_msg=True):
     outFile = None
     for fname in existFiles:
         atr = readfile.read_attribute(fname)
-        if 'Y_FIRST' in atr.keys():
-            dsName2check = 'rangeCoord'
-        else:
-            dsName2check = 'latitude'
-        try:
-            dset = readfile.read(fname, datasetName=dsName2check, print_msg=False)[0]
-            outFile = fname
-            break
-        except:
-            pass
+        for dsName in ['rangeCoord', 'longitude']:
+            try:
+                dset = readfile.read(fname, datasetName=dsName, print_msg=False)[0]
+                outFile = fname
+                break
+            except:
+                pass
 
     if not outFile:
         if print_msg:
