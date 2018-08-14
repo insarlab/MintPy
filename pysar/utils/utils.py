@@ -1712,6 +1712,8 @@ class coordinate:
             raise ValueError('Input file is not geocoded.')
 
         # input format
+        if isinstance(coord_in, np.ndarray):
+            coord_in = coord_in.tolist()
         if isinstance(coord_in, float):
             coord_in = [coord_in]
         coord_in = list(coord_in)
@@ -1750,6 +1752,8 @@ class coordinate:
             raise ValueError('Input file is not geocoded.')
 
         # Convert to List if input is String
+        if isinstance(coord_in, np.ndarray):
+            coord_in = coord_in.tolist()
         if isinstance(coord_in, int):
             coord_in = [coord_in]
         coord_in = list(coord_in)

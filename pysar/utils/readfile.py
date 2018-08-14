@@ -753,6 +753,7 @@ def read_template(fname, delimiter='=', print_msg=True):
         else:
             atrName = c[0]
             atrValue = str.replace(c[1], '\n', '').split("#")[0].strip()
+            atrValue = os.path.expanduser(atrValue)
             atrValue = os.path.expandvars(atrValue)
             #atrValue = check_variable_name(atrValue, print_msg=print_msg)
 
