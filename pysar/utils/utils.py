@@ -1972,7 +1972,10 @@ class coordinate:
         return lat, lon, lat_resid, lon_resid
 
     def box_pixel2geo(self, pixel_box):
-        """Convert pixel_box to geo_box"""
+        """Convert pixel_box to geo_box
+        Parameters: pixel_box : list/tuple of 4 int   in (x0, y0, x1, y1)
+        Returns:    geo_box   : tuple      of 4 float in (W, N, E, S)
+        """
         try:
             lat = self.yx2lalo([pixel_box[1], pixel_box[3]], coord_type='y')
             lon = self.yx2lalo([pixel_box[0], pixel_box[2]], coord_type='x')

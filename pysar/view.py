@@ -201,7 +201,7 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     if max(inps.pix_box[3] - inps.pix_box[1],
            inps.pix_box[2] - inps.pix_box[0]) > 2e3:
         inps.disp_dem_contour = False
-        if print_msg:
+        if inps.dem_file and print_msg:
             print('area exceed 2000 pixels, turn off default DEM contour display')
 
     # Multilook, if too many subplots in one figure for less memory and faster speed

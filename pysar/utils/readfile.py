@@ -301,6 +301,12 @@ def read(fname, box=None, datasetName=None, print_msg=True):
             else:
                 raise Exception('Un-recognized datasetName input: '+datasetName)
 
+        elif (atr['number_bands'] == '2' 
+                  and atr['scheme'] == 'BIL' 
+                  and atr['DATA_TYPE'].lower() in ['float32', 'float']):
+            band1, band2, atr = read_float32(fname, box=box)
+            return band1, band2, atr
+
         elif atr['DATA_TYPE'].lower() in ['float64', 'double']:
             data, atr = read_real_float64(fname, box=box)
             return data, atr
@@ -443,9 +449,9 @@ def get_dataset_list(fname, datasetName=None):
 
 def get_2d_dataset_list(fname):
     """Get list of 2D dataset existed in file (for display)"""
-    file_ext = os.path.splitext(fname)[1]
-    file_base = os.path.splitext(os.path.basename(fname))[0]
-    file_type = read_attribute(fname)['FILE_TYPE']
+    atr = read_attribute(fname)
+    file_base, file_ext = os.path.splitext(os.path.basename(fname))
+    file_type = atr['FILE_TYPE']
     datasetList = []
     # HDF5 Files
     if file_ext in ['.h5', '.he5']:
@@ -500,6 +506,8 @@ def get_2d_dataset_list(fname):
             datasetList = ['rangeCoord', 'azimuthCoord']
         elif file_base.startswith('los'):
             datasetList = ['incidenceAngle', 'azimuthAngle']
+        elif atr.get('number_bands', '1') == '2':
+            datasetList = ['band1', 'band2']
         else:
             datasetList = ['']
     return datasetList
