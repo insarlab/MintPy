@@ -896,8 +896,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     else:
         suffix = 'deformation phase'
     msg += 'least-squares solution with L2 min-norm on: {}\n'.format(suffix)
-    msg += '\tLS  for pixels with full rank      network\n'
-    msg += '\tSVD for pixels with rank deficient network\n'
+    #msg += '\tLS  for pixels with full rank      network\n'
+    #msg += '\tSVD for pixels with rank deficient network\n'
     msg += 'weight function: {}\n'.format(inps.weightFunc)
 
     if inps.maskDataset:

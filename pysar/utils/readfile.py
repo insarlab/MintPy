@@ -609,7 +609,10 @@ def read_attribute(fname, datasetName=None, standardize=True):
         elif os.path.isfile(fname+'.xml'):
             atr = read_isce_xml(fname+'.xml')
             if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = ext
+                if 'image_type' in atr.keys():
+                    atr['FILE_TYPE'] = '.{}'.format(atr['image_type'])
+                else:
+                    atr['FILE_TYPE'] = ext
 
         elif os.path.isfile(fname+'.par'):
             atr = read_gamma_par(fname+'.par')
