@@ -582,7 +582,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
             print('turn off axis display')
 
     # 3.5 Turn off tick label
-    if not inps.disp_tick:
+    if not inps.disp_tick or not inps.disp_axis:
         # ax.set_xticklabels([])
         # ax.set_yticklabels([])
         ax.get_xaxis().set_ticks([])
@@ -1016,14 +1016,15 @@ def plot_figure(j, inps, metadata):
     if not inps.vlim:
         print('Note: different color scale for EACH subplot!')
     else:
-        print('show colorbar')
-        fig.subplots_adjust(right=0.93)
-        cax = fig.add_axes([0.94, 0.3, 0.005, 0.4])
-        inps, cax = pp.plot_colorbar(inps, im, cax)
+        if inps.disp_cbar:
+            print('show colorbar')
+            fig.subplots_adjust(right=0.93)
+            cax = fig.add_axes([0.94, 0.3, 0.005, 0.4])
+            inps, cax = pp.plot_colorbar(inps, im, cax)
 
     # Save Figure
     if inps.save_fig:
-        print('save figure to '+inps.outfile)
+        print('save figure to {} with dpi={}'.format(inps.outfile, inps.fig_dpi))
         fig.savefig(inps.outfile, bbox_inches='tight',
                     transparent=True, dpi=inps.fig_dpi)
         if not inps.disp_fig:

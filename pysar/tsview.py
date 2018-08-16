@@ -453,21 +453,21 @@ def plot_point_timeseries(yx, fig, ax, ts_data, inps):
     elif num_file >= 5: ms_step = 1
 
     d_ts = []
-    for i in range(num_file):
+    for i in range(num_file-1, -1, -1):
         # get displacement data
-        d_ts0 = ts_data[i][:, yx[0], yx[1]]
+        d_tsi = ts_data[i][:, yx[0], yx[1]]
         if inps.zero_first:
-            d_ts0 -= d_ts0[inps.zero_idx]
-        d_ts.append(d_ts0)
+            d_tsi -= d_tsi[inps.zero_idx]
+        d_ts.append(d_tsi)
 
         # plot
-        ms = inps.marker_size - ms_step * i
+        ms = inps.marker_size - ms_step * (num_file - 1 - i)
         if inps.offset:
-            d_ts0 += inps.offset * i
+            d_tsi += inps.offset * (num_file - 1 - i)
         if inps.error_file:
-            ax = plot_timeseries_errorbar(ax, d_ts0, inps, ms=ms, label=str(i))
+            ax = plot_timeseries_errorbar(ax, d_tsi, inps, ms=ms, label=str(i))
         else:
-            ax = plot_timeseries_scatter(ax, d_ts0, inps, ms=ms, label=str(i))
+            ax = plot_timeseries_scatter(ax, d_tsi, inps, ms=ms, label=str(i))
 
     # format
     ax = _adjust_ts_axis(ax, inps)
