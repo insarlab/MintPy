@@ -71,7 +71,7 @@ pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
 ## b. bridging (need manual setup, fast)
 pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
 pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
-pysar.unwrapError.ramp     = auto   #[no / plane / quadratic], auto for no
+pysar.unwrapError.ramp     = auto   #[no / linear / quadratic], auto for no
 pysar.unwrapError.bridgeYX = auto   #[y1_start, x1_start, y1_end, x1_end; y2_start, ...], auto for none
 
 
@@ -161,7 +161,7 @@ pysar.topographicResidual.excludeDate   = auto  #[20070321 / txtFile / no], auto
 ## Set optimal reference date to date with min RMS
 ## Set exclude dates (outliers) to dates with RMS > cutoff * median RMS (Median Absolute Deviation)
 pysar.residualRms.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
-pysar.residualRms.ramp     = auto  #[quadratic / plane / no], auto for quadratic
+pysar.residualRms.ramp     = auto  #[quadratic / linear / no], auto for quadratic
 pysar.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
 
 ## 4.2 Select Reference Date
@@ -173,8 +173,8 @@ pysar.reference.date = auto   #[reference_date.txt / 20090214 / minRMS / no], au
 
 ########## 5. Phase Ramp Removal (optional)
 ## remove phase ramp for each epoch, useful to check localized deformation, i.e. volcanic, land subsidence, etc.
-## [plane, quadratic, plane_range, plane_azimuth, quadratic_range, quadratic_azimuth, baseline_cor, base_trop_cor]
-pysar.deramp          = auto  #[no / plane / quadratic], auto for no - no ramp will be removed
+## [linear, quadratic]
+pysar.deramp          = auto  #[no / linear / quadratic], auto for no - no ramp will be removed
 pysar.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask file for ramp estimation
 
 
@@ -754,9 +754,10 @@ def main(iargs=None):
         # Get executable command and output name
         derampCmd = None
         fbase = os.path.splitext(inps.timeseriesFile)[0]
-        if inps.derampMethod in ['plane', 'quadratic', 'plane_range', 'quadratic_range',
-                                 'plane_azimuth', 'quadratic_azimuth']:
-            outName = '{}_{}.h5'.format(fbase, inps.derampMethod)
+        if inps.derampMethod in ['linear', 'quadratic',
+                                 'linear_range', 'quadratic_range',
+                                 'linear_azimuth', 'quadratic_azimuth']:
+            outName = '{}_ramp.h5'.format(fbase)
             derampCmd = 'remove_ramp.py {} -s {} -m {} -o {}'.format(inps.timeseriesFile,
                                                                      inps.derampMethod,
                                                                      inps.derampMaskFile,

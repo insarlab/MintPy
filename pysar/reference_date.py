@@ -19,9 +19,9 @@ TEMPLATE = """
 ## 4.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual from DEM error inversion
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
-## Recommendation: quadratic for whole image, plane for local/small area
+## Recommendation: quadratic for whole image, linear for local/small area
 pysar.residualRms.maskFile        = auto  #[filename / no], auto for maskTempCoh.h5, mask for ramp estimation
-pysar.residualRms.ramp            = auto  #[quadratic / plane / no], auto for quadratic
+pysar.residualRms.ramp            = auto  #[quadratic / linear / no], auto for quadratic
 pysar.residualRms.threshold       = auto  #[0.0-inf], auto for 0.02, minimum RMS in meter for exclude date(s)
 
 ## 4.2 Select Reference Date

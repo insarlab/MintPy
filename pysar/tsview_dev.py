@@ -39,9 +39,9 @@ second_plot_axis_visible = False
 ###########################################################################################
 EXAMPLE='''example:
   tsview.py timeseries.h5 --ylim -10 10
-  tsview.py timeseries_demErr_plane.h5 -n 5 -m maskTempCoh.h5
-  tsview.py timeseries_demErr_plane.h5 --yx 300 400 --nodisplay --zero-first
-  tsview.py geo_timeseries_demErr_plane.h5 --lalo 33.250 131.665 --nodisplay
+  tsview.py timeseries_demErr_ramp.h5 -n 5 -m maskTempCoh.h5
+  tsview.py timeseries_demErr_ramp.h5 --yx 300 400 --nodisplay --zero-first
+  tsview.py geo_timeseries_demErr_ramp.h5 --lalo 33.250 131.665 --nodisplay
 '''
 
 '''

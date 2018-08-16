@@ -67,25 +67,21 @@ if [ $plot_timeseries -eq 1 ]; then
     file=timeseries_LODcor_ECMWF.h5;                          test -f $file && $view $file | tee -a $log_file
     file=timeseries_LODcor_ECMWF_demErr.h5;                   test -f $file && $view $file | tee -a $log_file
     file=timeseries_LODcor_ECMWF_demErr_refDate.h5;           test -f $file && $view $file | tee -a $log_file
-    file=timeseries_LODcor_ECMWF_demErr_refDate_plane.h5;     test -f $file && $view $file | tee -a $log_file
-    file=timeseries_LODcor_ECMWF_demErr_refDate_quadratic.h5; test -f $file && $view $file | tee -a $log_file
+    file=timeseries_LODcor_ECMWF_demErr_refDate_ramp.h5;      test -f $file && $view $file | tee -a $log_file
 
     file=timeseries_ECMWF.h5;                                 test -f $file && $view $file | tee -a $log_file
     file=timeseries_ECMWF_demErr.h5;                          test -f $file && $view $file | tee -a $log_file
     file=timeseries_ECMWF_demErr_refDate.h5;                  test -f $file && $view $file | tee -a $log_file
-    file=timeseries_ECMWF_demErr_refDate_plane.h5;            test -f $file && $view $file | tee -a $log_file
-    file=timeseries_ECMWF_demErr_refDate_quadratic.h5;        test -f $file && $view $file | tee -a $log_file
+    file=timeseries_ECMWF_demErr_refDate_ramp.h5;             test -f $file && $view $file | tee -a $log_file
 
     file=timeseries_demErr.h5;                                test -f $file && $view $file | tee -a $log_file
     file=timeseries_demErr_refDate.h5;                        test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_refDate_plane.h5;                  test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_refDate_quadratic.h5;              test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_refDate_ramp.h5;                   test -f $file && $view $file | tee -a $log_file
 
     file=timeseries_demErr.h5;                                test -f $file && $view $file | tee -a $log_file
     file=timeseries_demErr_tropHgt.h5;                        test -f $file && $view $file | tee -a $log_file
     file=timeseries_demErr_tropHgt_refDate.h5;                test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_tropHgt_refDate_plane.h5;          test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_tropHgt_refDate_quadratic.h5;      test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_tropHgt_refDate_ramp.h5;           test -f $file && $view $file | tee -a $log_file
 fi
 
 

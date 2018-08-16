@@ -16,7 +16,7 @@ from pysar.objects import timeseries, ifgramStack
 
 
 ##################################################################
-def remove_data_surface(data, mask, surf_type='plane'):
+def remove_data_surface(data, mask, surf_type='linear'):
     '''Remove surface from input data matrix based on pixel marked by mask'''
     mask[np.isnan(data)] = 0
     mask = mask.flatten(1)
@@ -29,7 +29,7 @@ def remove_data_surface(data, mask, surf_type='plane'):
     if surf_type == 'quadratic':
         G = np.array([points[:, 0]**2, points[:, 1]**2, points[:, 0], points[:, 1], points[:, 0]*points[:, 1],
                       np.ones(np.shape(points)[0])], np.float32).T
-    elif surf_type == 'plane':
+    elif surf_type == 'linear':
         G = np.array([points[:, 0], points[:, 1],
                       np.ones(np.shape(points)[0])], np.float32).T
     elif surf_type == 'quadratic_range':
@@ -38,10 +38,10 @@ def remove_data_surface(data, mask, surf_type='plane'):
     elif surf_type == 'quadratic_azimuth':
         G = np.array([points[:, 0]**2, points[:, 0],
                       np.ones(np.shape(points)[0])], np.float32).T
-    elif surf_type == 'plane_range':
+    elif surf_type == 'linear_range':
         G = np.array([points[:, 1],
                       np.ones(np.shape(points)[0])], np.float32).T
-    elif surf_type == 'plane_azimuth':
+    elif surf_type == 'linear_azimuth':
         G = np.array([points[:, 0],
                       np.ones(np.shape(points)[0])], np.float32).T
 
@@ -51,16 +51,16 @@ def remove_data_surface(data, mask, surf_type='plane'):
     plane = np.dot(G1, z)
 
     if surf_type == 'quadratic':
-        zplane = plane[0]*y1**2 + plane[1]*x1**2 + plane[2] * y1 + plane[3]*x1 + plane[4]*y1*x1 + plane[5]
-    elif surf_type == 'plane':
+        zplane = plane[0]*y1**2 + plane[1]*x1**2 + plane[2]*y1 + plane[3]*x1 + plane[4]*y1*x1 + plane[5]
+    elif surf_type == 'linear':
         zplane = plane[0]*y1 + plane[1]*x1 + plane[2]
     elif surf_type == 'quadratic_range':
         zplane = plane[0]*x1**2 + plane[1]*x1 + plane[2]
     elif surf_type == 'quadratic_azimuth':
         zplane = plane[0]*y1**2 + plane[1]*y1 + plane[2]
-    elif surf_type == 'plane_range':
+    elif surf_type == 'linear_range':
         zplane = plane[0]*x1 + plane[1]
-    elif surf_type == 'plane_azimuth':
+    elif surf_type == 'linear_azimuth':
         zplane = plane[0]*y1 + plane[1]
 
     data_n = data - zplane
@@ -113,7 +113,7 @@ def remove_surface(fname, surf_type, mask_file=None, out_file=None, ysub=None):
     print('remove {} ramp from file: '.format(surf_type, fname))
 
     if not out_file:
-        out_file = '{base}_{ramp}{ext}'.format(base=os.path.splitext(fname)[0], ramp=surf_type,
+        out_file = '{base}_ramp{ext}'.format(base=os.path.splitext(fname)[0], ramp=surf_type,
                                                ext=os.path.splitext(fname)[1])
 
     if os.path.isfile(mask_file):

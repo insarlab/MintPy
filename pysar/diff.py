@@ -28,7 +28,7 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file1', help='file to be substracted.')
-    parser.add_argument('file2', help='file used to substract')
+    parser.add_argument('file2', nargs='+', help='file used to substract')
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name, default is file1_diff_file2.h5')
     parser.add_argument('--force', action='store_true',
@@ -43,14 +43,7 @@ def cmd_line_parse(iargs=None):
 
 
 #####################################################################################
-def diff_data(data1, data2):
-    """data1 - data2"""
-    data = data1 - data2
-    #data[np.isnan(data2)] = data1[np.isnan(data2)];
-    return data
-
-
-def check_reference(atr1, atr2):
+def _check_reference(atr1, atr2):
     if atr1['REF_DATE'] == atr2['REF_DATE']:
         ref_date = None
     else:
@@ -71,27 +64,30 @@ def diff_file(file1, file2, outFile=None, force=False):
     """Subtraction/difference of two input files"""
     if not outFile:
         fbase, fext = os.path.splitext(file1)
-        outFile = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2))[0], fext)
-    print('{} - {} --> {}'.format(os.path.basename(file1),
-                                  os.path.basename(file2),
-                                  os.path.basename(outFile)))
+        if len(file2) > 1:
+            raise ValueError('Output file name is needed for more than 2 files input.')
+        outFile = '{}_diff_{}{}'.format(fbase, os.path.splitext(os.path.basename(file2[0]))[0], fext)
+    print('{} - {} --> {}'.format(file1, file2, outFile))
 
     # Read basic info
     atr1 = readfile.read_attribute(file1)
     k1 = atr1['FILE_TYPE']
-    atr2 = readfile.read_attribute(file2)
+    atr2 = readfile.read_attribute(file2[0])
     k2 = atr1['FILE_TYPE']
     print('input files are: {} and {}'.format(k1, k2))
 
     if k1 == 'timeseries':
         if k2 != 'timeseries':
             raise Exception('Input multiple dataset files are not the same file type!')
+        if len(file2) > 1:
+            raise Exception(('Only 2 files substraction is supported for time series file,'
+                             ' {} input.'.format(len(file2)+1)))
 
         obj1 = timeseries(file1)
         obj1.open()
-        obj2 = timeseries(file2)
+        obj2 = timeseries(file2[0])
         obj2.open()
-        ref_date, ref_y, ref_x = check_reference(obj1.metadata, obj2.metadata)
+        ref_date, ref_y, ref_x = _check_reference(obj1.metadata, obj2.metadata)
 
         # check dates shared by two timeseries files
         dateListShared = [i for i in obj1.dateList if i in obj2.dateList]
@@ -123,9 +119,12 @@ def diff_file(file1, file2, outFile=None, force=False):
 
     # Sing dataset file
     else:
-        data1, atr1 = readfile.read(file1)
-        data2, atr2 = readfile.read(file2)
-        data = data1 - data2
+        data1 = readfile.read(file1)[0]
+        data = np.array(data1, data1.dtype)
+        for fname in file2:
+            data2 = readfile.read(fname)[0]
+            data = np.array(data, dtype=np.float32) - np.array(data2, dtype=np.float32)
+            data = np.array(data, data1.dtype)
         print('writing >>> '+outFile)
         writefile.write(data, out_file=outFile, metadata=atr1)
 

@@ -50,7 +50,7 @@ def create_parser():
 
     parser.add_argument('-m','--mask', dest='maskFile', type=str, required=True,
                         help='name of mask file for pixels to be corrected, e.g. waterMask.h5')
-    parser.add_argument('--ramp', dest='ramp', choices=['plane', 'quadratic'], 
+    parser.add_argument('--ramp', dest='ramp', choices=['linear', 'quadratic'], 
                           help='type of phase ramp to be removed before correction.')
     parser.add_argument('-r','--radius', dest='bridge_end_radius', type=int, default=150,
                         help='radius of the end point of bridge to search area to get median representative value')

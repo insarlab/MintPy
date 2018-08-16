@@ -29,8 +29,8 @@ EXAMPLE = """example:
   tsview.py geo_timeseries.h5  --lalo 33.250 131.665  --nodisplay
 
   # multiple time-series files
-  tsview.py timeseries_ECMWF_demErr_refDate_plane.h5 timeseries_ECMWF_demErr.h5 timeseries_ECMWF.h5 timeseries.h5 --off 5
-  tsview.py timeseries_ECMWF_demErr_refDate_plane.h5 ../GIANT/Stack/LS-PARAMS.h5
+  tsview.py timeseries_ECMWF_demErr_refDate_ramp.h5 timeseries_ECMWF_demErr.h5 timeseries_ECMWF.h5 timeseries.h5 --off 5
+  tsview.py timeseries_ECMWF_demErr_refDate_ramp.h5 ../GIANT/Stack/LS-PARAMS.h5
 """
 
 

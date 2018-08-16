@@ -22,7 +22,7 @@ TEMPLATE = """
 ## Set optimal reference date to date with min RMS
 ## Set exclude dates (outliers) to dates with RMS > cutoff * median RMS (Median Absolute Deviation)
 pysar.residualRms.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, mask for ramp estimation
-pysar.residualRms.ramp     = auto  #[quadratic / plane / no], auto for quadratic
+pysar.residualRms.ramp     = auto  #[quadratic / ramp / no], auto for quadratic
 pysar.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
 """
 
@@ -166,7 +166,7 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
            rms[ref_idx] * unit_scale,
            bar_width.days,
            color=pp.mplColors[1],
-           label='Reference date')
+           label='Reference Date')
 
     # Plot exclude dates
     ex_idx = rms > rms_threshold
@@ -175,7 +175,7 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
                rms[ex_idx] * unit_scale,
                bar_width.days,
                color='darkgray',
-               label='Exclude date')
+               label='Exclude Date')
 
     # Plot rms_threshold line
     (ax, xmin, xmax) = pp.auto_adjust_xaxis_date(ax, datevector, font_size,
@@ -189,7 +189,7 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
     ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold) * unit_scale,
                               font_size, ymin=0.0)
     ax.set_xlabel('Time [years]', fontsize=font_size)
-    ax.set_ylabel('Phase residual RMS [mm]', fontsize=font_size)
+    ax.set_ylabel('Phase Residual RMS [mm]', fontsize=font_size)
     #ax.yaxis.set_ticks_position('both')
     ax.tick_params(which='both', direction='in', labelsize=font_size,
                    bottom=True, top=True, left=True, right=True)
@@ -223,8 +223,11 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
 
     ax.legend(loc=legend_loc, fontsize=font_size)
     ymin, ymax = ax.get_ylim()
-    ax.annotate('median RMS * {}'.format(cutoff),
-                xy=(xmin + (xmax-xmin)*0.05, rms_threshold * unit_scale - (ymax-ymin)*0.1),
+    yoff = (ymax - ymin) * 0.1
+    if (rms_threshold * unit_scale - ymin) > 0.5 * (ymax - ymin):
+        yoff *= -1.
+    ax.annotate('Median Abs Dev * {}'.format(cutoff),
+                xy=(xmin + (xmax-xmin)*0.05, rms_threshold * unit_scale + yoff ),
                 color='k', xycoords='data', fontsize=font_size)
     return ax
 

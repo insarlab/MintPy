@@ -17,8 +17,8 @@ from pysar.utils import readfile, writefile, utils as ut, deramp
 ######################################
 TEMPLATE = """template:
 ## remove phase ramp for each epoch, useful to check localized deformation, i.e. volcanic, land subsidence, etc.
-## [plane, quadratic, plane_range, plane_azimuth, quadratic_range, quadratic_azimuth, baseline_cor, base_trop_cor]
-pysar.deramp          = auto  #[no / plane / quadratic], auto for no - no ramp will be removed
+## [linear, quadratic]
+pysar.deramp          = auto  #[no / linear / quadratic], auto for no - no ramp will be removed
 pysar.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask file for ramp estimation
 """
 
@@ -38,11 +38,11 @@ def create_parser():
                         help='mask for pixels used in ramp estimation\n' +
                              'default - maskTempCoh.h5\n' +
                              'no - use the whole area')
-    parser.add_argument('-s', dest='surface_type', default='plane',
-                        choices={'plane', 'quadratic',
-                                 'plane_range', 'plane_azimuth',
+    parser.add_argument('-s', dest='surface_type', default='linear',
+                        choices={'linear', 'quadratic',
+                                 'linear_range', 'linear_azimuth',
                                  'quadratic_range', 'quadratic_azimuth'},
-                        help='type of surface/ramp to remove, plane by default')
+                        help='type of surface/ramp to remove, linear by default')
 
     parser.add_argument('-y', dest='ysub', type=int, nargs='*',
                         help='subset in azimuth/row direction\h' +

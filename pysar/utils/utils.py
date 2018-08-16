@@ -692,7 +692,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     Parameters: timeseries_resid_file - string, timeseries HDF5 file,
                     e.g. timeseries_ECMWF_demErrInvResid.h5
                 mask_file - string, mask file, e.g. maskTempCoh.h5
-                ramp_type - string, ramp type, e.g. plane, quadratic, no for do not remove ramp
+                ramp_type - string, ramp type, e.g. linear, quadratic, no for do not remove ramp
     Returns:    std_list  - list of float, standard deviation of deramped input timeseries file
                 date_list - list of string in YYYYMMDD format, corresponding dates
     Example:    import pysar.utils.utils as ut
@@ -704,7 +704,7 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         print('No ramp removal')
         deramp_file = timeseries_resid_file
     else:
-        deramp_file = '{}_{}.h5'.format(os.path.splitext(timeseries_resid_file)[0], ramp_type)
+        deramp_file = '{}_ramp.h5'.format(os.path.splitext(timeseries_resid_file)[0])
     std_file = os.path.splitext(deramp_file)[0]+'_std.txt'
 
     # Get residual std text file
@@ -740,7 +740,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                 mask_file : string,
                     mask file, e.g. maskTempCoh.h5
                 ramp_type : string, 
-                    ramp type, e.g. plane, quadratic, no for do not remove ramp
+                    ramp type, e.g. linear, quadratic, no for do not remove ramp
     Returns:    rms_list : list of float,
                     Root Mean Square of deramped input timeseries file
                 date_list : list of string in YYYYMMDD format,
@@ -755,7 +755,7 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
         print('No ramp removal')
         deramp_file = timeseries_resid_file
     else:
-        deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_'+ramp_type+'.h5'
+        deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_ramp.h5'
     rms_file = os.path.join(os.path.dirname(os.path.abspath(deramp_file)),
                             'rms_{}.txt'.format(os.path.splitext(deramp_file)[0]))
 
@@ -1986,7 +1986,10 @@ class coordinate:
         return geo_box
 
     def box_geo2pixel(self, geo_box):
-        """Convert geo_box to pixel_box"""
+        """Convert geo_box to pixel_box
+        Parameters: geo_box   : tuple      of 4 float in (W, N, E, S)
+        Returns:    pixel_box : list/tuple of 4 int   in (x0, y0, x1, y1)
+        """
         try:
             y = self.lalo2yx([geo_box[1], geo_box[3]], coord_type='latitude')
             x = self.lalo2yx([geo_box[0], geo_box[2]], coord_type='longitude')

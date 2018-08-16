@@ -70,7 +70,7 @@ TEMPLATE = """
 ## unwrapping error correction with bridging:
 pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
 pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
-pysar.unwrapError.ramp     = auto   #[plane / quadratic], auto for plane
+pysar.unwrapError.ramp     = auto   #[linear / quadratic], auto for linear
 pysar.unwrapError.bridgeYX = auto   #[y1_start,x1_start,y1_end,x1_end;y2_start,...], auto for none
 """
 
@@ -91,7 +91,7 @@ def create_parser():
 
     parser.add_argument('-m','--mask', dest='maskFile', type=str,
                         help='name of mask file to mark different patches that want to be corrected in different value')
-    parser.add_argument('--ramp', dest='ramp', choices=['plane', 'quadratic'],
+    parser.add_argument('--ramp', dest='ramp', choices=['linear', 'quadratic'],
                           help='type of phase ramp to be removed before correction.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode: if unwrapPhase_unwCor dataset exists, skip the correction.')
