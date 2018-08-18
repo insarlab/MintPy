@@ -1,6 +1,6 @@
 [![Language](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/)
-[![Latest version](https://img.shields.io/badge/latest%20version-v1.0.0--dev-green.svg)](https://github.com/yunjunz/pysar/blob/master/docs/download.md)
-[![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/yunjunz/pysar/blob/master/LICENSE)
+[![Latest version](https://img.shields.io/badge/latest%20version-v1.0.0--dev-green.svg)](https://github.com/yunjunz/PySAR/blob/master/docs/download.md)
+[![License](https://img.shields.io/badge/license-GPL-yellow.svg)](https://github.com/yunjunz/PySAR/blob/master/LICENSE)
 [![Forum](https://img.shields.io/badge/forum-Google%20Group-orange.svg)](https://groups.google.com/forum/#!forum/py-sar)
        
 ## InSAR time series analysis in Python
@@ -8,10 +8,10 @@
 PySAR is a open-source package in Python for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ISCE, Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) linked PySAR product with [InSAR Web Viewer](http://insarmaps.miami.edu).      
    
 
-### 1. [Download](https://github.com/yunjunz/pysar/blob/master/docs/download.md)    
+### 1. [Download](https://github.com/yunjunz/PySAR/blob/master/docs/download.md)    
 
 
-### 2. [Installation](https://github.com/yunjunz/pysar/blob/master/docs/installation.md)   
+### 2. [Installation](https://github.com/yunjunz/PySAR/blob/master/docs/installation.md)   
     
    
 ### 3. Running PySAR
@@ -22,7 +22,7 @@ Run pysarApp.py -h see the processing options.
 Run pysarApp.py -H see the default template options with explanation.   
 Run pysarApp.py -g to generate a default template file and see the detailed settings.   
 
-#### Example: [Kuju Volcano example with ALOS data](https://github.com/yunjunz/pysar/wiki/Example)   
+#### Example: [Kuju Volcano example with ALOS data](https://github.com/yunjunz/PySAR/wiki/Example)   
 
 Download the test data: [Download Link](https://miami.app.box.com/v/pysar-demo-KujuAlosAT422F650) and unzip it. Run pysarApp.py with setting file as below:   
 
@@ -43,8 +43,8 @@ PySAR is a toolbox with a lot of individual utility scripts, highly modulized in
    
 ### 4. Documentation
    
-- Manual: [PDF](https://github.com/yunjunz/pysar/blob/master/docs/Manual-0.4.0_201803.pdf), [HTML](https://github.com/yunjunz/pysar/blob/master/docs/Manual-0.4.0_201803.html.zip), [Workshop](https://miami.box.com/v/pysar-workshop-2017-miami)     
-- Wiki: Check our [Github Wiki](https://github.com/yunjunz/pysar/wiki) to see the example data, paper references, file naming convention and more.
+- Manual: [PDF](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-0.4.0_201803.pdf), [HTML](https://github.com/yunjunz/PySAR/blob/master/docs/Manual-0.4.0_201803.html.zip), [Workshop](https://miami.box.com/v/pysar-workshop-2017-miami)     
+- Wiki: Check our [Github Wiki](https://github.com/yunjunz/PySAR/wiki) to see the example data, paper references, file naming convention and more.
    
 ### 5. Google Group
 

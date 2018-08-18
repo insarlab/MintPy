@@ -26,7 +26,7 @@ sudo port selfupdate
 
 #### 1. Prepare source file    
 
-To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup pysar, by adding the following to your source file. They are for:   
+To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup PySAR, by adding the following to your source file. They are for:   
 1. To make pysar importable in python, by adding the path to PySAR directory to your _$PYTHONPATH_    
 2. To make utility scripts available in command line, by adding _${PYSAR_HOME}/pysar_ and _${PYSAR_HOME}/sh_ to your _$path_.   
    

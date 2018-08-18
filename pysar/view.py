@@ -325,6 +325,37 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
 
 
 ##################################################################################################
+def prep_2d_matrix(cmd, print_msg=True):
+    """Prepare data from command line as input, for easy call plot_2d_matrix() externally
+    Parameters: cmd : string, command to be run in terminal
+                print_msg : bool
+    Returns:    data : 2D np.ndarray, data to be plotted
+                atr  : dict, metadata 
+                inps : namespace, input argument for plot setup
+    Example:
+        fig, ax = plt.subplots(figsize=[4, 3])
+        geo_box = (-91.670, -0.255, -91.370, -0.515)    # W, N, E, S
+        cmd = 'view.py geo_velocity.h5 velocity --mask geo_maskTempCoh.h5 '
+        cmd += '--sub-lon {w} {e} --sub-lat {s} {n} '.format(w=geo_box[0], n=geo_box[1], e=geo_box[2], s=geo_box[3])
+        cmd += '-c jet -v -3 10 --cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
+        cmd += '--dem srtm1.dem --dem-nocontour '
+        cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle --fontsize 12 '
+        d_v, atr ,inps = view.prep_2d_matrix(cmd, print_msg=print_msg)
+        ax, inps, im, cbar = view.plot_2d_matrix(ax, d_v, atr, inps, print_msg=print_msg)
+        plt.show()
+    """
+    if print_msg:
+        print(cmd)
+    inps = cmd_line_parse(cmd.split()[1:])
+    inps, atr = check_input_file_info(inps, print_msg=print_msg)
+    inps = update_inps_with_file_metadata(inps, atr, print_msg=print_msg)
+    data, atr = readfile.read(inps.file, datasetName=inps.dset[0], box=inps.pix_box, print_msg=print_msg)
+    data, inps = update_data_with_plot_inps(data, atr, inps, print_msg=print_msg)
+    mask = readfile.read(inps.mask_file, box=inps.pix_box)[0]
+    data[mask==0] = np.nan
+    return data, atr, inps
+
+
 def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
     """Plot 2D matrix 
     Parameters: ax : matplot.pyplot axes object
@@ -556,7 +587,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
     cbar = None
     if inps.disp_cbar:
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", "2%", pad="2%")
+        cax = divider.append_axes(inps.cbar_loc, inps.cbar_size, pad=inps.cbar_size)
         inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     # 3.2 Title
@@ -750,8 +781,8 @@ def update_figure_setting(inps, print_msg=True):
     else:
         if not inps.fig_size:
             inps.fig_size = pp.default_figsize_multi
-            if print_msg:
-                print('create figure in size: '+str(inps.fig_size))
+        if print_msg:
+            print('create figure in size: '+str(inps.fig_size))
 
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
@@ -1003,7 +1034,15 @@ def plot_figure(j, inps, metadata):
         prog_bar.update(idx+1, suffix=inps.dset[i])
     prog_bar.close()
     del data
-    fig.tight_layout()
+
+    # Tune the subplot layout
+    fig.subplots_adjust(left=0.02, right=0.98, bottom=0.02, top=0.98,
+                        wspace=0.05, hspace=0.05)
+    if inps.fig_wid_space or inps.fig_hei_space:
+        fig.subplots_adjust(hspace=inps.fig_hei_space,
+                            wspace=inps.fig_wid_space)
+    elif inps.fig_tight_layout:
+        fig.tight_layout()
 
     # Min and Max for this figure
     inps.dlim_all = [np.nanmin([inps.dlim_all[0], inps.dlim[0]]), 

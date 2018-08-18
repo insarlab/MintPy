@@ -628,10 +628,14 @@ def add_figure_argument(parser):
                      action='store_false', help='do not display colorbar')
     fig.add_argument('--cbar-nbins', dest='cbar_nbins', metavar='NUM',
                      type=int, help='number of bins for colorbar')
-    fig.add_argument('--cbar-ext', dest='cbar_ext', default=None, choices={'neither', 'min', 'max', 'both', None},
+    fig.add_argument('--cbar-ext', dest='cbar_ext', default=None,
+                     choices={'neither', 'min', 'max', 'both', None},
                      help='Extend setting of colorbar; based on data stat by default.')
-    fig.add_argument('--cbar-label', dest='cbar_label',
-                     default=None, help='colorbar label')
+    fig.add_argument('--cbar-label', dest='cbar_label', default=None, help='colorbar label')
+    fig.add_argument('--cbar-loc', dest='cbar_loc', type=str, default='right',
+                     help='colorbar location for single plot')
+    fig.add_argument('--cbar-size', dest='cbar_size', type=str, default="2%",
+                     help='colorbar size and pad')
 
     # title
     fig.add_argument('--notitle', dest='disp_title',
@@ -653,16 +657,16 @@ def add_figure_argument(parser):
                      help='subplot number in row')
     fig.add_argument('--ncols', dest='fig_col_num', type=int, default=1, metavar='NUM',
                      help='subplot number in column')
-    fig.add_argument('--wspace', dest='fig_wid_space', type=float, default=0.05,
+    fig.add_argument('--wspace', dest='fig_wid_space', type=float,
                      help='width space between subplots in inches')
-    fig.add_argument('--hspace', dest='fig_hei_space', type=float, default=0.05,
+    fig.add_argument('--hspace', dest='fig_hei_space', type=float,
                      help='height space between subplots in inches')
-
+    fig.add_argument('--no-tight-layout', dest='fig_tight_layout', action='store_false',
+                     help='disable automatic tight layout for multiple subplots')
     fig.add_argument('--coord', dest='fig_coord', choices=['radar', 'geo'], default='geo',
                      help='Display in radar/geo coordination system, for geocoded file only.')
     fig.add_argument('--animation', action='store_true',
                      help='enable animation mode')
-
 
     return parser
 
@@ -1612,11 +1616,17 @@ def plot_colorbar(inps, im, cax):
         elif inps.vlim[0] <= inps.dlim[0] and inps.vlim[1] <  inps.dlim[1]: inps.cbar_ext='max'
         else:  inps.cbar_ext='both'
 
+    if inps.cbar_loc in ['left', 'right']:
+        orientation = 'vertical'
+    else:
+        orientation = 'horizontal'
+
     if inps.wrap and (inps.wrap_range[1] - inps.wrap_range[0]) == 2.*np.pi:
-        cbar = plt.colorbar(im, cax=cax, ticks=[inps.wrap_range[0], 0, inps.wrap_range[1]])
+        cbar = plt.colorbar(im, cax=cax, ticks=[inps.wrap_range[0], 0, inps.wrap_range[1]],
+                            orientation=orientation)
         cbar.ax.set_yticklabels([r'-$\pi$', '0', r'$\pi$'])
     else:
-        cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext)
+        cbar = plt.colorbar(im, cax=cax, extend=inps.cbar_ext, orientation=orientation)
 
     if inps.cbar_nbins:
         cbar.locator = ticker.MaxNLocator(nbins=inps.cbar_nbins)
