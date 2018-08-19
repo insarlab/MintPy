@@ -11,8 +11,17 @@ Edit _userfn.py_ file to setup the path for input unwrapped interferograms and c
 Edit _prepxml.py_ file to setup the path for geometry files, cropped area for processing, reference area, and parameters for SBAS and minTS approach. Use absolute path.    
 Then run prepxml.py to write XML files: data.xml, sbas.xml and mints.xml    
      
-     ./prepxml.py
-     
-Load data into HDF5 files:    
-     
+     ./prepxml.py     
      PrepImageStack.py
+     ProcessStack.py
+     SBASInvert.py
+     NSBASInvert.py
+     TimefnInvert.py
+     
+Then run prep_giant.py to prepare metadata needed for PySAR.     
+     
+     prep_giant.py  LS-PARAMS.h5 -x ../data.xml ../sbas.xml ../mints.xml
+     prep_giant.py  TS-PARAMS.h5 -x ../data.xml ../sbas.xml ../mints.xml
+     prep_giant.py  NSBAS-PARAMS.h5 -x ../data.xml ../sbas.xml ../mints.xml
+
+Use view.py and tsview.py in PySAR for data visualiztion.
