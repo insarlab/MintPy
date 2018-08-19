@@ -1,4 +1,18 @@
+## Notes to run GIAnT and compare it with PySAR
 
-###1 Run save_ifg_list2giant.py to prepare the ifg.list file.    
-     save_ifg_list4giant.py  INPUTS/ifgramStack.h5  --sensor SEN
+GIAnT is developed at Caltech, check their website for download information and more: [link](http://earthdef.caltech.edu/projects/giant/wiki).
 
+     cd ~/insarlab/Galapagos/GalapagosSenDT128
+     mkdir GIANT; cd GIANT
+     save_ifg_list4giant.py  ../PYSAR/INPUTS/ifgramStack.h5  --sensor SEN     
+     cp ../ISCE/merged/interferograms/20150307_20150319/filt_fine.unw.rsc .
+     
+Edit _userfn.py_ file to setup the path for input unwrapped interferograms and coherence.    
+Edit _prepxml.py_ file to setup the path for geometry files, cropped area for processing, reference area, and parameters for SBAS and minTS approach. Use absolute path.    
+Then run prepxml.py to write XML files: data.xml, sbas.xml and mints.xml    
+     
+     ./prepxml.py
+     
+Load data into HDF5 files:    
+     
+     PrepImageStack.py
