@@ -22,6 +22,7 @@ key_giant2pysar = {'xmin':'SUBSET_XMIN', 'xmax':'SUBSET_XMAX',
 EXAMPLE = """example:
   prep_giant.py  LS-PARAMS.h5
   prep_giant.py  LS-PARAMS.h5 -x ../data.xml ../sbas.xml ../mints.xml
+  prep_giant.py  LS-PARAMS.h5 -x ../data.xml ../sbas.xml ../mints.xml ../filt_fine.unw.rsc
 """
 
 
@@ -58,42 +59,59 @@ def auto_xml_file4giant(fname):
     return file_list
 
 
-def prepare_metadata4giant(fname, xml_files=None):
+def read_giant_xml(fname):
+    odict = {}
+    root = objectify.parse(fname).getroot()
+
+    if root.find('master') is not None:
+        comp = root['master']
+        for key in ['wavelength', 'incidence']:
+            odict[key] = comp[key].value
+
+    if root.find('subimage') is not None:
+        comp = root['subimage']
+        for key in ['width', 'length',
+                    'xmin', 'xmax',
+                    'ymin', 'ymax',
+                    'rxmin', 'rxmax',
+                    'rymin', 'rymax']:
+            odict[key] = comp[key].value
+
+        odict = readfile.standardize_metadata(odict, standardKeys=key_giant2pysar)
+        odict['REF_Y'] = int((int(odict['rymin']) +
+                              int(odict['rymax'])) / 2. + 0.5)
+        odict['REF_X'] = int((int(odict['rxmin']) +
+                              int(odict['rxmax'])) / 2. + 0.5)
+
+    if root.find('proc/masterdate') is not None:
+        odict['REF_DATE'] = root['proc']['masterdate'].value
+    return odict
+
+
+def prepare_metadata4giant(fname, meta_files=None):
     """Extract metadata from xml files for GIAnT time-series file."""
     # check xml files
-    if not xml_files:
-        xml_files = auto_xml_file4giant(fname)
-    if not xml_files:
+    if not meta_files:
+        meta_files = auto_xml_file4giant(fname)
+    if not meta_files:
         raise FileNotFoundError("no xml file found.")
 
     # extract metadata from xml files
+    rsc_files = [i for i in meta_files if i.endswith('.rsc')]
+    xml_files = [i for i in meta_files if i.endswith('.xml')]
     xml_dict = {}
+    for rsc_file in rsc_files:
+        print('reading {}'.format(rsc_file))
+        rsc_dict = readfile.read_roipac_rsc(rsc_file)
+        for key in ['length', 'LENGTH', 'FILE_LENGTH', 'width', 'WIDTH']:
+            try:
+                rsc_dict.pop(key)
+            except:
+                pass
+        xml_dict.update(rsc_dict)
     for xml_file in xml_files:
         print('reading {}'.format(xml_file))
-        root = objectify.parse(xml_file).getroot()
-
-        if root.find('master') is not None:
-            comp = root['master']
-            for key in ['wavelength', 'incidence']:
-                xml_dict[key] = comp[key].value
-
-        if root.find('subimage') is not None:
-            comp = root['subimage']
-            for key in ['width', 'length',
-                        'xmin', 'xmax',
-                        'ymin', 'ymax',
-                        'rxmin', 'rxmax',
-                        'rymin', 'rymax']:
-                xml_dict[key] = comp[key].value
-
-            xml_dict = readfile.standardize_metadata(xml_dict, standardKeys=key_giant2pysar)
-            xml_dict['REF_Y'] = int((int(xml_dict['rymin']) +
-                                     int(xml_dict['rymax'])) / 2. + 0.5)
-            xml_dict['REF_X'] = int((int(xml_dict['rxmin']) +
-                                     int(xml_dict['rxmax'])) / 2. + 0.5)
-
-        if root.find('proc/masterdate') is not None:
-            xml_dict['REF_DATE'] = root['proc']['masterdate'].value
+        xml_dict.update(read_giant_xml(xml_file))
 
     if not xml_dict:
         raise ValueError('No metadata found in file: '+xml_file)

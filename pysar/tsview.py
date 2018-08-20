@@ -61,6 +61,8 @@ def create_parser():
     parser.add_argument('--error', dest='error_file',
                         help='txt file with error for each date.')
 
+    parser.add_argument('--start-date', dest='start_date', type=str, help='start date of displacement to display')
+    parser.add_argument('--end-date', dest='end_date', type=str, help='end date of displacement to display')
     parser.add_argument('--exclude', '--ex', dest='ex_date_list', nargs='*', default=['exclude_date.txt'],
                         help='Exclude date shown as gray.')
     parser.add_argument('--zf', '--zero-first', dest='zero_first', action='store_true',
@@ -160,6 +162,10 @@ def read_init_info(inps):
 
     # date info
     inps.date_list = obj.dateList
+    if inps.start_date:
+        inps.date_list = [i for i in inps.date_list if int(i) >= int(inps.start_date)]
+    if inps.end_date:
+        inps.date_list = [i for i in inps.date_list if int(i) <= int(inps.end_date)]
     inps.num_date = len(inps.date_list)
     inps.dates, inps.yearList = ptime.date_list2vector(inps.date_list)
     (inps.ex_date_list,
@@ -167,7 +173,10 @@ def read_init_info(inps):
      inps.ex_flag) = read_exclude_date(inps.ex_date_list, inps.date_list)
 
     # initial display index
-    inps.ref_idx = obj.refIndex
+    if obj.metadata['REF_DATE'] in inps.date_list:
+        inps.ref_idx = inps.date_list.index(obj.metadata['REF_DATE'])
+    else:
+        inps.ref_idx = 0
     if inps.ref_date:
         inps.ref_idx = inps.date_list.index(inps.ref_date)
     if not inps.init_idx:
@@ -278,7 +287,7 @@ def read_timeseries_data(inps):
     # read list of 3D time-series
     ts_data = []
     for fname in inps.timeseries_file:
-        data, atr = readfile.read(fname)
+        data, atr = readfile.read(fname, datasetName=inps.date_list)
         ref_phase = data[:, inps.ref_yx[0], inps.ref_yx[1]]
         data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, inps.length, inps.width))
         data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))

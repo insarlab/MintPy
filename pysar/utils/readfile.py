@@ -195,7 +195,8 @@ def read(fname, box=None, datasetName=None, print_msg=True):
                                  box[3]-box[1],
                                  box[2]-box[0]), np.float32)
             for i in range(len(datasetName)):
-                date = datasetName[i].split('-')[1]
+                date = str(re.findall('\d{8}', datasetName[i])[0])
+                #date = datasetName[i].split('-')[1]
                 idx = obj.dateList.index(date)
                 data[i, :, :] = f[dsName][idx,
                                           box[1]:box[3],
@@ -857,14 +858,14 @@ def read_isce_xml(fname, convert2roipac=True, standardize=True):
     if root.find("./component[@name='coordinate1']") is not None:
         comp = root.find("./component[@name='coordinate1']")
         x_step = comp.find("./property[@name='delta']").value
-        if abs(x_step) != 1:
+        if abs(x_step) < 1.:
             xmlDict['X_STEP'] = str(x_step)
             xmlDict['X_FIRST'] = comp.find("./property[@name='startingvalue']").value.text
 
     if root.find("./component[@name='coordinate2']") is not None:
         comp = root.find("./component[@name='coordinate2']")
         y_step = comp.find("./property[@name='delta']").value
-        if abs(y_step) != 1:
+        if abs(y_step) < 1.:
             xmlDict['Y_STEP'] = str(y_step)
             xmlDict['Y_FIRST'] = comp.find("./property[@name='startingvalue']").value.text
 

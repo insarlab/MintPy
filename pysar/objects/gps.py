@@ -240,7 +240,7 @@ class gps:
         if isinstance(insar_obj, str):
             # geometry file
             atr = readfile.read_attribute(insar_obj)
-            coord = ut.coordinate(atr)
+            coord = ut.coordinate(atr, lookup_file=insar_obj)
             y, x = coord.geo2radar(lat, lon, print_msg=print_msg)[0:2]
             box = (x, y, x+1, y+1)
             inc_angle = readfile.read(insar_obj, datasetName='incidenceAngle', box=box, print_msg=print_msg)[0][0,0]
