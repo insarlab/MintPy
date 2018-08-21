@@ -351,8 +351,12 @@ def prep_2d_matrix(cmd, print_msg=True):
     inps = update_inps_with_file_metadata(inps, atr, print_msg=print_msg)
     data, atr = readfile.read(inps.file, datasetName=inps.dset[0], box=inps.pix_box, print_msg=print_msg)
     data, inps = update_data_with_plot_inps(data, atr, inps, print_msg=print_msg)
-    mask = readfile.read(inps.mask_file, box=inps.pix_box)[0]
-    data[mask==0] = np.nan
+    inps.msk, inps.mask_file = pp.read_mask(inps.file,
+                                            mask_file=inps.mask_file,
+                                            datasetName=inps.dset[0],
+                                            box=inps.pix_box)
+    if inps.msk is not None:
+        data[inps.msk==0] = np.nan
     return data, atr, inps
 
 
@@ -1059,7 +1063,7 @@ def plot_figure(j, inps, metadata):
             print('show colorbar')
             fig.subplots_adjust(right=0.93)
             cax = fig.add_axes([0.94, 0.3, 0.005, 0.4])
-            inps, cax = pp.plot_colorbar(inps, im, cax)
+            inps, cbar = pp.plot_colorbar(inps, im, cax)
 
     # Save Figure
     if inps.save_fig:
