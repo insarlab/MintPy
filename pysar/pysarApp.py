@@ -567,9 +567,10 @@ def main(iargs=None):
     print('Update Mask based on Temporal Coherence ...')
     inps.maskFile = 'maskTempCoh.h5'
     inps.minTempCoh = template['pysar.networkInversion.minTempCoh']
-    maskCmd = 'generate_mask.py {} -m {} -o {}'.format(inps.tempCohFile,
-                                                       inps.minTempCoh,
-                                                       inps.maskFile)
+    maskCmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(inps.tempCohFile,
+                                                                   inps.minTempCoh,
+                                                                   inps.maskFile,
+                                                                   inps.geomFile)
     print(maskCmd)
     if ut.update_file(inps.maskFile, inps.tempCohFile):
         status = subprocess.Popen(maskCmd, shell=True).wait()

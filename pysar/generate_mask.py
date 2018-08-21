@@ -19,6 +19,7 @@ from pysar.utils import (readfile,
 ################################################################################################
 EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
+  generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5 --shadow INPUTS/geometryRadar.h5
   generate_mask.py  avgSpatialCoherence.h5 -m 0.7 --base waterMask.h5 -o maskSpatialCoh.h5
 
   # exlcude area by min/max value and/or subset in row/col direction
@@ -65,7 +66,10 @@ def create_parser():
     parser.add_argument('--in-circle', dest='in_circle', nargs=3, type=int, metavar=('X', 'Y', 'RADIUS'),
                         help='include area defined by an circle (x, y, radius) in pixel number')
 
-    parser.add_argument('--base', dest='base_mask_file', type=str, help='Base mask file. output_mask *= base_mask')
+    parser.add_argument('--base', dest='base_mask_file', type=str,
+                        help='Base mask file. output_mask *= base_mask')
+    parser.add_argument('--shadow', dest='shadow_mask_file', type=str,
+                        help='file with shadow mask to be excluded in the output mask')
 
     parser.add_argument('--roipoly', action='store_true',
                         help='Interactive polygonal region of interest (ROI) selection.')
@@ -154,6 +158,15 @@ def create_threshold_mask(inps):
         base_mask = readfile.read(inps.base_mask_file)[0]
         mask[base_mask == 0] = 0
         print('exclude pixels in base file {} marked as zero'.format(inps.base_mask_file))
+
+    # shadow mask
+    if inps.shadow_mask_file:
+        try:
+            shadow_mask = readfile.read(inps.shadow_mask_file, datasetName='shadowMask')[0]
+            mask[shadow_mask == 1] = 0
+            print('exclude pixels in shadow file {} marked as one'.format(inps.shadow_mask_file))
+        except:
+            pass
 
     # Write mask file
     atr['FILE_TYPE'] = 'mask'

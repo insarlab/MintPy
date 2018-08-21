@@ -54,6 +54,7 @@ fi
 if [ $plot_loaded_data_aux -eq 1 ]; then
     file=avgPhaseVelocity.h5; test -f $file && view.py --nodisplay  $file -m maskSptialCoh.h5 | tee -a $log_file
     view.py --nodisplay avgSpatialCoherence.h5 -c gray --vlim 0 1 | tee -a $log_file
+    view.py --nodisplay maskSpatialCoh.h5      -c gray --vlim 0 1 | tee -a $log_file
     view.py --nodisplay mask.h5                -c gray --vlim 0 1 | tee -a $log_file
 fi
 
@@ -86,16 +87,20 @@ fi
 
 
 ## Geo coordinates for UNAVCO Time-series InSAR Archive Product
+view='view.py --nodisplay --lalo-label'
 if [ $plot_geocoded_data -eq 1 ]; then
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_maskTempCoh.h5          -c gray --vlim 0 1           | tee -a $log_file
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_temporalCoherence.h5    -c gray --vlim 0 1           | tee -a $log_file
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_velocity.h5              --mask $geo_mask_file -u cm | tee -a $log_file
-    view.py --nodisplay --lalo-label ./GEOCODE/geo_timeseries_*.h5 --noaxis --mask $geo_mask_file -u cm | tee -a $log_file
+    $view ./GEOCODE/geo_maskTempCoh.h5          -c gray --vlim 0 1           | tee -a $log_file
+    $view ./GEOCODE/geo_temporalCoherence.h5    -c gray --vlim 0 1           | tee -a $log_file
+    $view ./GEOCODE/geo_velocity.h5             -m $geo_mask_file -u cm | tee -a $log_file
+    $view ./GEOCODE/geo_timeseries_ECMWF_demErr_refDate_ramp.h5 --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    $view ./GEOCODE/geo_timeseries_ECMWF_demErr_refDate.h5      --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    $view ./GEOCODE/geo_timeseries_demErr_refDate.h5            --noaxis -m $geo_mask_file -u cm | tee -a $log_file
 fi
 
 
 if [ $plot_the_rest -eq 1 ]; then
-    file=velocityEcmwf.h5;    test -f $file && $view $file | tee -a $log_file
+    view.py velocityEcmwf.h5 -m no --nodisplay   | tee -a $log_file
+    view.py numInvIfgram.h5  -m no --nodisplay   | tee -a $log_file
 fi
 
 
