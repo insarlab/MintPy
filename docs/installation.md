@@ -24,7 +24,7 @@ sudo port selfupdate
 
 5. Restart terminal
 
-#### 1. Prepare source file    
+#### 1. Setup Paths    
 
 To use the package, you need to setup the environment. Depending on your shell, you may use commands below to setup PySAR, by adding the following to your source file. They are for:   
 1. To make pysar importable in python, by adding the path to PySAR directory to your _$PYTHONPATH_    
@@ -64,10 +64,10 @@ Source the file for the first time. It will be sourced automatically next time w
    
    
 #### 2. Install Python dependecies
-PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and pyresample.
+PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://github.com/pytroll/pyresample).
 
 
-Run the following in your terminal (using conda):   
+For conda user, run the following in your terminal:   
 
     cd ~/python
     wget https://repo.continuum.io/archive/Anaconda3-5.1.0-MacOSX-x86_64.sh
@@ -78,9 +78,18 @@ Run the following in your terminal (using conda):
     $PYTHON3DIR/bin/conda install basemap joblib lxml pyresample pykdtree OpenMP ecCodes pygrib pyhdf netCDF4 --yes   
     
     git clone https://github.com/yunjunz/pykml.git; cd pykml
-    $PYTHON3DIR/bin/python setup.py build     
-    $PYTHON3DIR/bin/python setup.py install    
+    $PYTHON3DIR/bin/python3 setup.py build     
+    $PYTHON3DIR/bin/python3 setup.py install    
    
+For macports user, install modules in the [ports.txt](https://github.com/yunjunz/PySAR/blob/master/docs/ports.txt) file as below in bash:       
+    
+    cd $PYSAR_HOME/docs
+    sudo port install $(cat ports.txt)
+    
+    git clone https://github.com/yunjunz/pykml.git; cd pykml
+    python3 setup.py build     
+    python3 setup.py install   
+
 Note that pykml through conda supports python2 only, we provide a python2/3 compatible version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
   
 We use [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for tropospheric delay correction using weather re-analysis datadset such as ERA-Interim, MERRA and NARR. Check [caltech's website](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for the code download and account setup.
