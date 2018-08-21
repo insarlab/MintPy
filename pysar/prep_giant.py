@@ -54,7 +54,8 @@ def auto_xml_file4giant(fname):
     file_list = [os.path.join(os.path.dirname(fname), '../{}'.format(i))
                  for i in ['data.xml',
                            'sbas.xml',
-                           'mints.xml']]
+                           'mints.xml',
+                           'filt_fine.unw.rsc']]
     file_list = [i for i in file_list if os.path.isfile(i)]
     return file_list
 

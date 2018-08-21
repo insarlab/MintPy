@@ -78,8 +78,12 @@ def cmd_line_parse(iargs=None):
 
 def read_template2inps(template_file, inps=None):
     """Read input template options into Namespace inps"""
+    if not inps:
+        inps = cmd_line_parse()
+    inpsDict = vars(inps)
     print('read options from tempalte file: '+os.path.basename(inps.template_file))
     template = readfile.read_template(template_file)
+    template = ut.check_template_auto_value(template)
 
     prefix = 'pysar.unwrapError.'
     key = prefix+'maskFile'
@@ -337,12 +341,12 @@ def main(iargs=None):
     # update mode checking
     atr = readfile.read_attribute(inps.ifgram_file)
     if inps.update_mode and atr['FILE_TYPE'] == 'ifgramStack':
-        print('update mode: {}'.format(inps.update_mode))
+        print('\nupdate mode: {}'.format(inps.update_mode))
         stack_obj = ifgramStack(inps.ifgram_file)
         stack_obj.open(print_msg=False)
         if inps.datasetNameOut in stack_obj.datasetNames:
             print("output dataset: {} exists".format(inps.datasetNameOut))
-            print("thus, skip this step.")
+            print("thus, skip unwrapping error correction based on phase closure.")
             return inps.ifgram_file
 
     start_time = time.time()

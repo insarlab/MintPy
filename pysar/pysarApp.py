@@ -67,12 +67,17 @@ pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
 
 ## 1.3 Unwrapping Error Correction (optional)
 ## supported methods:
-## a. phase closure (automatic, slow; Fattahi, 2015, Thesis Chap. 4) [fast option available but not best]
-## b. bridging (need manual setup, fast)
-pysar.unwrapError.method   = auto   #[bridging / phase_closure / no], auto for no
-pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
-pysar.unwrapError.ramp     = auto   #[no / linear / quadratic], auto for no
-pysar.unwrapError.bridgeYX = auto   #[y1_start, x1_start, y1_end, x1_end; y2_start, ...], auto for none
+## a. phase_closure (Fattahi, 2015, Thesis Chap. 4)
+##    automatic; slow by default, fast option available but not giving the best result.
+## b. bridging
+##    automatic for islands with waterMaskFile option (unwrapping errors on areas separated by narrow water bodies)
+##    manual    for all the other scenarios
+## c. bridging+phase_closure
+pysar.unwrapError.method          = auto  #[bridging / phase_closure / bridging+phase_closure / no], auto for no
+pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
+pysar.unwrapError.maskFile        = auto  #[maskConnComp.h5 / no], auto for no, mask for connected components areas
+pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
+pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for linear
 
 
 ########## 2. Network Inversion
@@ -491,18 +496,20 @@ def main(iargs=None):
     if unw_cor_method:
         print('\n**********  Unwrapping Error Correction **********')
         if unw_cor_method == 'phase_closure':
-            unw_cor_mask_file = template['pysar.unwrapError.maskFile']
-            if not unw_cor_mask_file:
-                unw_cor_mask_file = inps.maskFile
-            unwCmd = 'unwrap_error_phase_closure.py {} -t {} -m {} --update'.format(inps.stackFile,
-                                                                                    inps.templateFile,
-                                                                                    unw_cor_mask_file)
+            unwCmd = 'unwrap_error_phase_closure.py {} -t {} --update'.format(inps.stackFile,
+                                                                              inps.templateFile)
             if inps.fast:
                 unwCmd += ' --fast'
 
-        elif unw_cor_method.startswith('bridg'):
+        elif unw_cor_method == 'bridging':
             unwCmd = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
                                                                          inps.templateFile)
+        elif unw_cor_method == 'bridging+phase_closure':
+            unwCmd = ('unwrap_error_bridging.py {} -t {} --update'
+                      ' -i unwrapPhase -o unwrapPhase_bridge').format(inps.stackFile,
+                                                                      inps.templateFile)
+            unwCmd += ('\nunwrap_error_phase_closure.py {} --update --fast'
+                      ' -i unwrapPhase_bridge -o unwrapPhase_bridge_closure').format(inps.stackFile)
         else:
             raise ValueError('un-recognized method: {}'.format(unw_cor_method))
 

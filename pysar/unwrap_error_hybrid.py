@@ -24,6 +24,7 @@ from pysar.utils import (ptime,
                          deramp)
 from pysar import ifgram_inversion as ifginv
 from pysar.unwrap_error_phase_closure import run_unwrap_error_closure
+from pysar.unwrap_error_bridging import search_bridge, run_unwrap_error_bridge
 
 
 ####################################################################################################
@@ -52,7 +53,7 @@ def create_parser():
                         help='name of mask file for pixels to be corrected, e.g. waterMask.h5')
     parser.add_argument('--ramp', dest='ramp', choices=['linear', 'quadratic'], 
                           help='type of phase ramp to be removed before correction.')
-    parser.add_argument('-r','--radius', dest='bridge_end_radius', type=int, default=150,
+    parser.add_argument('-r','--radius', dest='bridgePtsRadius', type=int, default=150,
                         help='radius of the end point of bridge to search area to get median representative value')
     parser.add_argument('--cutoff', dest='cutoff', type=float, default=1.,
                         help='cutoff value to detect histogram spikes for coherent connected components')
@@ -228,224 +229,6 @@ def detect_unwrap_error(ifgram_file, mask_file, mask_cc_file='maskConnComp.h5', 
     return mask_cc_file
 
 
-def search_bridge(mask_cc_file, radius=150, display=False):
-    """Search bridges to connect coherent conn comps with min distance
-    Parameters: mask_cc_file : string, path of mask file of coherent conn comps
-                radius : int, radius of influence for median value calculation to represent the value of cc
-    Returns:    bridges : list of dict for bridges connecting pair of conn comps with each dict contains:
-                    'x0' : x coordinate of reference point
-                    'y0' : y coordinate of reference point
-                    'mask0' : 2D np.array in size of (length, width) in np.bool_
-                         represent the circular mask used to calculate the representative value in reference conn comp
-                    'x1' : x coordinate of target point
-                    'y1' : y coordinate of target point
-                    'mask1' : 2D np.array in size of (length, width) in np.bool_
-                         represent the circular mask used to calculate the representative value in target conn comp
-    """
-    print('-'*50)
-    print('searching bridges to connect coherence conn comps ...')
-    mask_cc = readfile.read(mask_cc_file)[0]
-    num_bridge = int(np.max(mask_cc) - 1)
-    shape = mask_cc.shape
-
-    # calculate min distance between each pair of conn comps and its corresponding bonding points
-    print('1. calculating min distance between each pair of coherent conn comps ...')
-    connections = {}
-    dist_mat = np.zeros((num_bridge+1, num_bridge+1), dtype=np.float32)
-    for i, j in itertools.combinations(range(1, num_bridge+2), 2):
-        mask1 = mask_cc == i
-        mask2 = mask_cc == j
-        pts1, pts2, d = ut.min_region_distance(mask1, mask2, display=False)
-        dist_mat[i-1, j-1] = dist_mat[j-1, i-1] = d
-        conn_dict = dict()
-        conn_dict['{}'.format(i)] = pts1
-        conn_dict['{}'.format(j)] = pts2
-        conn_dict['distance'] = d
-        connections['{}{}'.format(i, j)] = conn_dict
-        print('conn comp pair: {} {} to {} {} with distance of {}'.format(i, pts1, j, pts2, d))
-
-    # 1. calculate the min-spanning-tree path to connect all conn comps
-    # 2. find the order using a breadth-first ordering starting with conn comp 1 
-    print('2. search bridging order using breadth-first ordering')
-    dist_mat_mst = sparse.csgraph.minimum_spanning_tree(dist_mat)
-    nodes, predecessors = sparse.csgraph.breadth_first_order(dist_mat_mst,
-                                                             i_start=0,
-                                                             directed=False)
-    nodes += 1
-    predecessors += 1
-
-    # converting bridging order into bridges
-    print('3. find circular area around bridge point')
-    bridges = []
-    for i in range(num_bridge):
-        # get x0/y0/x1/y1
-        n0, n1 = predecessors[i+1], nodes[i+1]
-        conn_dict = connections['{}{}'.format(n0, n1)]
-        x0, y0 = conn_dict[str(n0)]
-        x1, y1 = conn_dict[str(n1)]
-
-        # get mask0/mask1
-        mask0 = (mask_cc == n0) * ut.get_circular_mask(x0, y0, radius, shape)
-        mask1 = (mask_cc == n1) * ut.get_circular_mask(x1, y1, radius, shape)
-
-        # save to list of dict
-        bridge = dict()
-        bridge['x0'] = x0
-        bridge['y0'] = y0
-        bridge['x1'] = x1
-        bridge['y1'] = y1
-        bridge['mask0'] = mask0
-        bridge['mask1'] = mask1
-        bridges.append(bridge)
-
-    plot_bridges(mask_cc_file, bridges, display=display)
-    return bridges
-
-
-def plot_bridges(mask_cc_file, bridges, display=False):
-    """Plot mask of connected components with bridges info
-    Parameters: mask_cc_file : string, path of mask cc file
-                bridges : list of dict
-                display : bool
-    """
-    out_base='maskConnCompBridge'
-    mask_cc, metadata = readfile.read(mask_cc_file)
-
-    # check number of bridges
-    num_bridge = len(bridges)
-
-    # save to text file
-    out_file = '{}.txt'.format(out_base)
-    bridge_yx = np.zeros((num_bridge, 4), dtype=np.int16)
-    for i in range(num_bridge):
-        bridge = bridges[i]
-        bridge_yx[i, :] = [bridge['y0'], bridge['x0'], bridge['y1'], bridge['x1']]
-    header_info = 'bridge bonding points for unwrap error correction\n'
-    header_info += 'y0\tx0\ty1\tx1'
-    np.savetxt(out_file, bridge_yx, fmt='%s', delimiter='\t', header=header_info)
-    print('save bridge points to file: {}'.format(out_file))
-
-    # plot/save to image file
-    out_file = '{}.png'.format(out_base)
-    fig, ax = plt.subplots(figsize=[6, 8])
-
-    # plot mask_cc data
-    im = ax.imshow(mask_cc)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", "3%", pad="3%")
-    cbar = plt.colorbar(im, cax=cax, ticks=np.arange(num_bridge+2))
-
-    # plot bridge data
-    for i in range(num_bridge):
-        bridge = bridges[i]
-        ax.imshow(np.ma.masked_where(~bridge['mask0'], np.zeros(mask_cc.shape)),
-                  cmap='gray', alpha=0.3, vmin=0, vmax=1)
-        ax.imshow(np.ma.masked_where(~bridge['mask1'], np.zeros(mask_cc.shape)),
-                  cmap='gray', alpha=0.3, vmin=0, vmax=1)
-        ax.plot([bridge['x0'], bridge['x1']],
-                [bridge['y0'], bridge['y1']],
-                '-', ms=5, mfc='none')
-
-    ax = pp.auto_flip_direction(metadata, ax=ax, print_msg=False)
-    fig.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
-    print('plot/save bridge setting to file: {}'.format(out_file))
-    if display:
-        print('showing')
-        plt.show()
-    return
-
-
-##########################################################################################
-def bridge_unwrap_error(data, mask_cc, bridges):
-    """Phase Jump Correction, using phase continuity on bridge/bonding points in each pair of conn comps
-    Inputs:
-        data : 2D np.array in size of (length, width), phase matrix need to be corrected
-        mask_cc : 2D np.array in size of (length, width), mask of different connected components
-        bridges : list of dict for bridges connecting pair of conn comps with each dict contains:
-                    'x0' : x coordinate of reference point
-                    'y0' : y coordinate of reference point
-                    'mask0' : 2D np.array in size of (length, width) in np.bool_
-                         represent the circular mask used to calculate the representative value in reference conn comps
-                    'x1' : x coordinate of target point
-                    'y1' : y coordinate of target point
-                    'mask1' : 2D np.array in size of (length, width) in np.bool_
-                         represent the circular mask used to calculate the representative value in target conn comps
-    Output:
-        data : 2D np.array, phase corrected matrix
-    """
-    data = np.array(data, dtype=np.float32)
-    for i in range(len(bridges)):
-        # get phase difference between two ends of the bridge
-        bridge = bridges[i]
-        value0 = np.nanmedian(data[bridge['mask0']])
-        value1 = np.nanmedian(data[bridge['mask1']])
-        diff_value = value1 - value0
-
-        #estimate integer number of phase jump
-        num_jump = (np.abs(diff_value) + np.pi) // (2.*np.pi)
-        if diff_value > 0:
-            num_jump *= -1
-
-        # correct unwrap error to target conn comps
-        mask1 = mask_cc == mask_cc[bridge['y1'], bridge['x1']]
-        data[mask1] += num_jump * 2. * np.pi
-
-    return data
-
-
-def run_unwrap_error_bridge(inps, mask_cc_file, bridges, dsNameIn='unwrapPhase',
-                            dsNameOut='unwrapPhase_hybrid'):
-    print('-'*50)
-    print('correct unwrapping error in {} with bridging ...'.format(inps.ifgram_file))
-    stack_obj = ifgramStack(inps.ifgram_file)
-    stack_obj.open(print_msg=False)
-    date12_list = stack_obj.get_date12_list(dropIfgram=False)
-    num_ifgram = len(date12_list)
-    shape_out = (num_ifgram, stack_obj.length, stack_obj.width)
-
-    print('read mask from file: {}'.format(mask_cc_file))
-    mask_cc = readfile.read(mask_cc_file)[0]
-    if inps.ramp is not None:
-        print('estimate and remove phase ramp of {} during the correction'.format(inps.ramp))
-        ramp_mask = (mask_cc == mask_cc[stack_obj.refY, stack_obj.refX])
-
-    # prepare output data writing
-    print('open {} with r+ mode'.format(inps.ifgram_file))
-    f = h5py.File(inps.ifgram_file, 'r+')
-    if dsNameOut in f.keys():
-        ds = f[dsNameOut]
-        print('write to /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
-    else:
-        ds = f.create_dataset(dsNameOut, shape_out, maxshape=(None, None, None),
-                              chunks=True, compression=None)
-        print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
-
-    # correct unwrap error ifgram by ifgram
-    prog_bar = ptime.progressBar(maxValue=num_ifgram)
-    for i in range(num_ifgram):
-        # read unwrapPhase
-        date12 = date12_list[i]
-        unw = np.squeeze(f[dsNameIn][i, :, :])
-        unw -= unw[stack_obj.refY, stack_obj.refX]
-
-        # remove phase ramp before phase jump estimation
-        if inps.ramp is not None:
-            unw, unw_ramp = deramp.remove_data_surface(unw, ramp_mask, inps.ramp)
-
-        # estimate/correct phase jump
-        unw_cor = bridge_unwrap_error(unw, mask_cc, bridges)
-        if inps.ramp is not None:
-            unw_cor += unw_ramp
-
-        # write to hdf5 file
-        ds[i, :, :] = unw_cor
-        prog_bar.update(i+1, suffix=date12)
-    prog_bar.close()
-    f.close()
-    print('close {} file.'.format(inps.ifgram_file))
-    return inps.ifgram_file
-
-
 ####################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
@@ -463,18 +246,20 @@ def main(iargs=None):
             return inps.ifgram_file
 
     start_time = time.time()
-
+    # get mask_cc from phase closure
     mask_cc_file = detect_unwrap_error(ifgram_file=inps.ifgram_file,
                                        mask_file=inps.maskFile,
                                        mask_cc_file='maskConnComp.h5',
                                        unwDatasetName=inps.datasetNameIn,
                                        cutoff=inps.cutoff)
-
-    bridges = search_bridge(mask_cc_file, radius=inps.bridge_end_radius)
-
-    run_unwrap_error_bridge(inps, mask_cc_file, bridges,
+    # run bridging
+    bridges = search_bridge(mask_cc_file, radius=inps.bridgePtsRadius)
+    run_unwrap_error_bridge(inps.ifgram_file,
+                            mask_cc_file,
+                            bridges,
                             dsNameIn=inps.datasetNameIn,
-                            dsNameOut=inps.datasetNameOut)
+                            dsNameOut=inps.datasetNameOut,
+                            ramp_type=inps.ramp)
 
     if inps.run_closure:
         print('')

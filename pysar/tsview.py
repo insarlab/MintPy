@@ -30,7 +30,7 @@ EXAMPLE = """example:
 
   # multiple time-series files
   tsview.py timeseries_ECMWF_demErr_refDate_ramp.h5 timeseries_ECMWF_demErr.h5 timeseries_ECMWF.h5 timeseries.h5 --off 5
-  tsview.py timeseries_ECMWF_demErr_refDate_ramp.h5 ../GIANT/Stack/LS-PARAMS.h5
+  tsview.py timeseries_ECMWF_demErr_refDate_ramp.h5 ../GIANT/Stack/LS-PARAMS.h5 --off 5 --label pysar giant
 """
 
 
@@ -39,6 +39,7 @@ def create_parser():
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
     parser.add_argument('timeseries_file', nargs='+', help='time series file to display')
+    parser.add_argument('--label', dest='file_label', nargs='*', help='labels to display for multiple input files')
     parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
                         help='Y limits for point plotting.')
 
@@ -86,6 +87,10 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    if inps.file_label:
+        if len(inps.file_label) != len(inps.timeseries_file):
+            raise Exception('input number of labels != number of files.')
 
     if (not inps.disp_fig or inps.outfile) and not inps.save_fig:
         inps.save_fig = True
@@ -144,6 +149,9 @@ def read_init_info(inps):
     else:
         raise ValueError('input file is {}, not timeseries.'.format(inps.key))
     obj.open()
+
+    if not inps.file_label:
+        inps.file_label = [str(i) for i in list(range(len(inps.timeseries_file)))]
 
     # default mask file
     if not inps.mask_file and 'masked' not in ts_file0:
@@ -474,9 +482,9 @@ def plot_point_timeseries(yx, fig, ax, ts_data, inps):
         if inps.offset:
             d_tsi += inps.offset * (num_file - 1 - i)
         if inps.error_file:
-            ax = plot_timeseries_errorbar(ax, d_tsi, inps, ms=ms, label=str(i))
+            ax = plot_timeseries_errorbar(ax, d_tsi, inps, ms=ms, label=inps.file_label[i])
         else:
-            ax = plot_timeseries_scatter(ax, d_tsi, inps, ms=ms, label=str(i))
+            ax = plot_timeseries_scatter(ax, d_tsi, inps, ms=ms, label=inps.file_label[i])
 
     # format
     ax = _adjust_ts_axis(ax, inps)
