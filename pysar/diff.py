@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
 import os
@@ -10,7 +10,7 @@ import sys
 import time
 import argparse
 import numpy as np
-from pysar.objects import timeseries
+from pysar.objects import timeseries, giantTimeseries
 from pysar.utils import readfile, writefile
 
 
@@ -19,6 +19,10 @@ EXAMPLE = """example:
   diff.py  velocity.h5    velocity_demErr.h5
   diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5
   diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5  --force
+  diff.py  timeseries_ECMWF_demErr_refDate_ramp.h5  ../GIANT/Stack/LS-PARAMS.h5 -o pysar_giant.h5
+
+  # multiple files
+  diff.py  waterMask.h5  maskSantiago.h5  maskFernandina.h5  -o maskIsabela.h5
 """
 
 
@@ -73,11 +77,11 @@ def diff_file(file1, file2, outFile=None, force=False):
     atr1 = readfile.read_attribute(file1)
     k1 = atr1['FILE_TYPE']
     atr2 = readfile.read_attribute(file2[0])
-    k2 = atr1['FILE_TYPE']
+    k2 = atr2['FILE_TYPE']
     print('input files are: {} and {}'.format(k1, k2))
 
     if k1 == 'timeseries':
-        if k2 != 'timeseries':
+        if k2 not in ['timeseries', 'giantTimeseries']:
             raise Exception('Input multiple dataset files are not the same file type!')
         if len(file2) > 1:
             raise Exception(('Only 2 files substraction is supported for time series file,'
@@ -85,7 +89,12 @@ def diff_file(file1, file2, outFile=None, force=False):
 
         obj1 = timeseries(file1)
         obj1.open()
-        obj2 = timeseries(file2[0])
+        if k2 == 'timeseries':
+            obj2 = timeseries(file2[0])
+            unit_fac = 1.
+        elif k2 == 'giantTimeseries':
+            obj2 = giantTimeseries(file2[0])
+            unit_fac = 0.001
         obj2.open()
         ref_date, ref_y, ref_x = _check_reference(obj1.metadata, obj2.metadata)
 
@@ -103,7 +112,7 @@ def diff_file(file1, file2, outFile=None, force=False):
                 raise Exception('To enforce the differencing anyway, use --force option.')
 
         # consider different reference_date/pixel
-        data2 = obj2.read(dateListShared)
+        data2 = readfile.read(file2[0], datasetName=dateListShared)[0] * unit_fac
         if ref_date:
             data2 -= np.tile(data2[obj2.dateList.index(ref_date), :, :],
                              (data2.shape[0], 1, 1))
