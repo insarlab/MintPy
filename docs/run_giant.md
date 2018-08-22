@@ -1,6 +1,6 @@
 ## Notes to run GIAnT and compare it with PySAR
 
-GIAnT is developed at Caltech, check their website for download information and more: [link](http://earthdef.caltech.edu/projects/giant/wiki).
+GIAnT is developed at Caltech, check the website for download information and more: [link](http://earthdef.caltech.edu/projects/giant/wiki).
 
      cd ~/insarlab/Galapagos/GalapagosSenDT128
      mkdir GIANT; cd GIANT
