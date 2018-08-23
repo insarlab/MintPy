@@ -122,8 +122,6 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             data.real = datasetDict['rangeCoord']
             data.imag = datasetDict['azimuthCoord']
             data.astype('>c8').tofile(out_file)
-        # elif ext in ['.jpeg','.jpg','.png','.ras','.bmp']:
-        #    data.save(out_file)
         elif ext in ['.mli', '.flt']:
             write_real_float32(data_list[0], out_file)
         elif ext == '.slc':

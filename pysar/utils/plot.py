@@ -1435,7 +1435,8 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
     # read dem data
     dem, dem_metadata = readfile.read(dem_file,
                                       datasetName='height',
-                                      box=dem_pix_box)
+                                      box=dem_pix_box,
+                                      print_msg=print_msg)
     return dem, dem_metadata, dem_pix_box
 
 

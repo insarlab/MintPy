@@ -226,7 +226,9 @@ def search_bridge(mask_cc_file, radius=150, coh_mask_file='maskSpatialCoh.h5', d
     print('searching bridges to connect coherence conn comps ...')
     mask_cc = readfile.read(mask_cc_file)[0]
     num_bridge = int(np.max(mask_cc) - 1)
-    shape = mask_cc.shape
+    if num_bridge < 1:
+        raise RuntimeError('No bridge found. Check the input mask file.')
+    print('number of bridges: {}'.format(num_bridge))
 
     # calculate min distance between each pair of conn comps and its corresponding bonding points
     print('1. calculating min distance between each pair of coherent conn comps ...')
@@ -271,8 +273,8 @@ def search_bridge(mask_cc_file, radius=150, coh_mask_file='maskSpatialCoh.h5', d
         x1, y1 = conn_dict[str(n1)]
 
         # get mask0/mask1
-        mask0 = (mask_cc == n0) * ut.get_circular_mask(x0, y0, radius, shape) * coh_mask
-        mask1 = (mask_cc == n1) * ut.get_circular_mask(x1, y1, radius, shape) * coh_mask
+        mask0 = (mask_cc == n0) * ut.get_circular_mask(x0, y0, radius, mask_cc.shape) * coh_mask
+        mask1 = (mask_cc == n1) * ut.get_circular_mask(x1, y1, radius, mask_cc.shape) * coh_mask
 
         # save to list of dict
         bridge = dict()
