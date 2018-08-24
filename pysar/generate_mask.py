@@ -9,6 +9,7 @@
 import os
 import sys
 import argparse
+import h5py
 import numpy as np
 from pysar.utils import (readfile,
                          writefile,
@@ -34,7 +35,7 @@ EXAMPLE = """example:
   generate_mask.py  ifgramStack.h5 unwrapPhase-20101120_20110220 -m 4
 
   # common mask file of pixels without zero unwrapped phase
-  generate_mask.py  ifgramStack.h5 unwrapPhase --nonzero
+  generate_mask.py  ifgramStack.h5  --nonzero  -o mask.h5  --update
 
   # interative polygon selection of region of interest
   # useful for custom mask generation in unwrap error correction with bridging
@@ -77,6 +78,8 @@ def create_parser():
     parser.add_argument('--nonzero', dest='nonzero', action='store_true',
                         help='Select all non-zero pixels.\n' +
                              'i.e. mask.h5 from unwrapIfgram.h5')
+    parser.add_argument('--update', dest='update_mode', action='store_true',
+                        help='Enable update checking for --nonzero option.')
     return parser
 
 
@@ -84,6 +87,34 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     return inps
+
+
+def run_check(inps):
+    print('-'*50)
+    print('update mode: ON')
+    run = False
+
+    # check output file vs input dataset
+    if not os.path.isfile(inps.outfile):
+        run = True
+        print('  1) output file {} not exist --> run.'.format(inps.outfile))
+    else:
+        print('  1) output file {} already exists.'.format(inps.outfile))
+        with h5py.File(inps.file, 'r') as f:
+            ti = float(f[inps.dset].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
+        to = os.path.getmtime(inps.outfile)
+        if to <= ti:
+            run = True
+            print('  2) output file is NOT newer than input dataset: {} --> run.'.format(inps.dset))
+        else:
+            print('  2) output file is newer than input dataset: {}.'.format(inps.dset))
+
+    # result
+    if run:
+        print('run.')
+    else:
+        print('skip the run.')
+    return run
 
 
 ################################################################################################
@@ -200,6 +231,16 @@ def main(iargs=None):
 
     ##### Mask: Non-zero
     if inps.nonzero and k == 'ifgramStack':
+        # get name of default dataset
+        if not inps.dset:
+            with h5py.File(inps.file, 'r') as f:
+                inps.dset = [i for i in ['connectComponent', 'unwrapPhase'] if i in f.keys()][0]
+
+        # update mode
+        if inps.update_mode and inps.outfile and run_check(inps) is False:
+            return inps.outfile
+
+        # run
         inps.outfile = ut.nonzero_mask(inps.file, out_file=inps.outfile, datasetName=inps.dset)
         return inps.outfile
 

@@ -150,21 +150,30 @@ def run_check(inps):
             print('  1) output dataset: {} not found --> run.'.format(inps.datasetNameOut))
         else:
             print('  1) output dataset: {} exists'.format(inps.datasetNameOut))
-            t_out = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
-            t_in = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
-            if t_out <= t_in:
+            ti = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
+            to = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
+            if to <= ti:
                 run = True
-                print('  2) output dataset is older than input dataset: {} --> run.'.format(inps.datasetNameIn))
+                print('  2) output dataset is NOT newer than input dataset: {} --> run.'.format(inps.datasetNameIn))
             else:
                 print('  2) output dataset is newer than input dataset: {}'.format(inps.datasetNameIn))
 
     # check configuration
-    atr = readfile.read_attribute(inps.ifgram_file)
-    if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
-        run = True
-        print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
-    else:
-        print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+    if not run:
+        # convert inps value to common str format
+        inps_dict = dict(vars(inps))
+        specialValues = {True : 'yes',
+                         False: 'no',
+                         None : 'no'}
+        for key, value in inps_dict.items():
+            if value in specialValues.keys():
+                inps_dict[key] = specialValues[value]
+        atr = readfile.read_attribute(inps.ifgram_file)
+        if any(str(inps_dict[key]) != atr.get(key_prefix+key, 'no') for key in configKeys):
+            run = True
+            print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+        else:
+            print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
 
     # result
     if run:

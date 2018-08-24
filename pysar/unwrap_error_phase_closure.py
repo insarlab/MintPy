@@ -108,9 +108,9 @@ def run_check(inps):
             print('  1) output dataset: {} not found --> run.'.format(inps.datasetNameOut))
         else:
             print('  1) output dataset: {} exists'.format(inps.datasetNameOut))
-            t_out = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
-            t_in = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
-            if t_out <= t_in:
+            to = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
+            ti = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
+            if to <= ti:
                 run = True
                 print('  2) output dataset is NOT newer than input dataset: {} --> run.'.format(inps.datasetNameIn))
             else:

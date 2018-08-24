@@ -884,9 +884,9 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                                print_msg=False):
         atr_ts = readfile.read_attribute(inps.timeseriesFile)
         if all([str(vars(inps)[key]) == atr_ts.get(key_prefix+key, 'None') for key in configKeys]):
-            print('1) {} exists and is newer than {}'.format(inps.timeseriesFile, ifgram_file))
-            print('2) all key configuration parameter are the same: \n\t{}'.format(configKeys))
-            print('thus, skip this step.')
+            print('  1) {} exists and is newer than {}'.format(inps.timeseriesFile, ifgram_file))
+            print('  2) all key configuration parameter are the same: \n\t{}'.format(configKeys))
+            print('skip the run.')
             return inps.timeseriesFile, inps.tempCohFile
 
     # print key setup info

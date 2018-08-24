@@ -405,61 +405,54 @@ def get_slice_list(fname):
     atr = read_attribute(fname)
     k = atr['FILE_TYPE']
 
-    slice_list = []
+    global slice_list
     # HDF5 Files
     if fext in ['.h5', '.he5']:
         with h5py.File(fname, 'r') as f:
-            if k in ['timeseries'] and isinstance(f[k], h5py.Dataset):
-                obj = timeseries(fname)
-                obj.open(print_msg=False)
-                slice_list = obj.sliceList
+            d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset)]
+        if k == 'timeseries' and k in d1_list:
+            obj = timeseries(fname)
+            obj.open(print_msg=False)
+            slice_list = obj.sliceList
 
-            elif k in ['geometry']:
-                obj = geometry(fname)
-                obj.open(print_msg=False)
-                slice_list = obj.sliceList
+        elif k in ['geometry']:
+            obj = geometry(fname)
+            obj.open(print_msg=False)
+            slice_list = obj.sliceList
 
-            elif k in ['ifgramStack']:
-                obj = ifgramStack(fname)
-                obj.open(print_msg=False)
-                slice_list = obj.sliceList
+        elif k in ['ifgramStack']:
+            obj = ifgramStack(fname)
+            obj.open(print_msg=False)
+            slice_list = obj.sliceList
 
-            elif k in ['HDFEOS']:
-                obj = HDFEOS(fname)
-                obj.open(print_msg=False)
-                slice_list = obj.sliceList
+        elif k in ['HDFEOS']:
+            obj = HDFEOS(fname)
+            obj.open(print_msg=False)
+            slice_list = obj.sliceList
 
-            elif k in ['giantTimeseries']:
-                obj = giantTimeseries(fname)
-                obj.open(print_msg=False)
-                slice_list = obj.sliceList
+        elif k in ['giantTimeseries']:
+            obj = giantTimeseries(fname)
+            obj.open(print_msg=False)
+            slice_list = obj.sliceList
 
-            elif k in ['giantIfgramStack']:
-                obj = giantIfgramStack(fname)
-                obj.open(print_msg=False)
-                slice_list = obj.sliceList
+        elif k in ['giantIfgramStack']:
+            obj = giantIfgramStack(fname)
+            obj.open(print_msg=False)
+            slice_list = obj.sliceList
 
-            else:
-                ## Find slice by walking through the file structure
-                # 1. get list of datasets in file
-                global ds_list
-                ds_list = []
-                def get_hdf5_dataset(name, obj):
-                    global ds_list
-                    if isinstance(obj, h5py.Dataset) and obj.ndim >= 2:
-                        ds_list.append(name)
-                f.visititems(get_hdf5_dataset)
-
-                # 2. convert list of 2D datasets into list of slices
-                length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-                for dsName in ds_list:
-                    dsShape = f[dsName].shape
-                    if dsShape[-2:] == (length, width):
-                        if len(dsShape) == 2:
-                            slice_list.append(dsName)
-                        else:
-                            warnings.warn(('file has un-defined {}D dataset:'
-                                           ' {}').format(len(dsShape), dsName))
+        else:
+            ## Find slice by walking through the file structure
+            length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+            def get_hdf5_2d_dataset(name, obj):
+                global slice_list
+                if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
+                    if obj.ndim == 2:
+                        slice_list.append(name)
+                    else:
+                        warnings.warn('file has un-defined {}D dataset: {}'.format(obj.ndim, name))
+            slice_list = []
+            with h5py.File(fname, 'r') as f:
+                f.visititems(get_hdf5_2d_dataset)
 
     # Binary Files
     else:
@@ -482,8 +475,7 @@ def get_dataset_list(fname, datasetName=None):
     fbase, fext = os.path.splitext(os.path.basename(fname))
     fext = fext.lower()
 
-    global ds_list, length, width
-    ds_list = []
+    global ds_list
     if fext in ['.h5', '.he5']:
         atr = read_attribute(fname)
         length, width = int(atr['LENGTH']), int(atr['WIDTH'])
@@ -491,6 +483,7 @@ def get_dataset_list(fname, datasetName=None):
             global ds_list
             if isinstance(obj, h5py.Dataset) and obj.shape[-2:] == (length, width):
                 ds_list.append(name)
+        ds_list = []
         with h5py.File(fname, 'r') as f:
             f.visititems(get_hdf5_dataset)
 
@@ -530,7 +523,7 @@ def read_attribute(fname, datasetName=None, standardize=True):
         d1_list = [i for i in f.keys() if isinstance(f[i], h5py.Dataset) and f[i].ndim >= 2]
 
         # FILE_TYPE - k
-        if any(i in d1_list for i in ['unwrapPhase', 'coherence']):
+        if any(i in d1_list for i in ['unwrapPhase']):
             k = 'ifgramStack'
         elif any(i in d1_list for i in ['height', 'latitude', 'azimuthCoord']):
             k = 'geometry'
@@ -560,22 +553,19 @@ def read_attribute(fname, datasetName=None, standardize=True):
             if len(f.attrs) > 0 and 'WIDTH' in f.attrs.keys():
                 atr = dict(f.attrs)
             else:
-                atr = None
                 # grab the list of attrs in HDF5 file
                 global atr_list
-                atr_list = []
                 def get_hdf5_attrs(name, obj):
                     global atr_list
                     if len(obj.attrs) > 0 and 'WIDTH' in obj.attrs.keys():
                         atr_list.append(dict(obj.attrs))
+                atr_list = []
                 f.visititems(get_hdf5_attrs)
-
                 # use the attrs with most items
                 if atr_list:
                     num_list = [len(i) for i in atr_list]
                     atr = atr_list[np.argmax(num_list)]
-
-                if atr is None:
+                else:
                     raise ValueError('No attribute WIDTH found in file')
 
         # decode string format
@@ -596,23 +586,23 @@ def read_attribute(fname, datasetName=None, standardize=True):
         else:
             # get the 1st dataset
             global ds_list
-            ds_list = []
             def get_hdf5_dataset(name, obj):
                 global ds_list
                 if isinstance(obj, h5py.Dataset) and obj.ndim >= 2:
                     ds_list.append(obj)
+            ds_list = []
             f.visititems(get_hdf5_dataset)
             if ds_list:
                 ds = ds_list[0]
         if ds is not None:
             atr['DATA_TYPE'] = str(ds.dtype)
+        f.close()
 
         # 3. PROCESSOR
         if 'INSAR_PROCESSOR' in atr.keys():
             atr['PROCESSOR'] = atr['INSAR_PROCESSOR']
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'pysar'
-        f.close()
 
     else:
         # Read metadata file and FILE_TYPE

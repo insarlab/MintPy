@@ -432,9 +432,9 @@ def main(iargs=None):
         inps.excludeDate = read_exclude_date(inps.excludeDate, date_list_all, print_msg=False)[1]
         atr = readfile.read_attribute(inps.outfile)
         if all([str(vars(inps)[key]) == atr.get(key_prefix+key, 'None') for key in configKeys]):
-            print('1) {} exists and is newer than {}'.format(inps.timeseries_file, inps.outfile))
-            print('2) all key configuration parameter are the same: \n\t{}'.format(configKeys))
-            print('thus, skip this step.')
+            print('  1) {} exists and is newer than {}'.format(inps.timeseries_file, inps.outfile))
+            print('  2) all key configuration parameter are the same: \n\t{}'.format(configKeys))
+            print('skip the run.')
             return inps.outfile
 
     start_time = time.time()

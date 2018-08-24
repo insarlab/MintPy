@@ -351,7 +351,11 @@ def get_delay(grib_file, inps):
 
 
 def get_delay_timeseries(inps, atr):
-    """Calculate delay time-series and write it to HDF5 file."""
+    """Calculate delay time-series and write it to HDF5 file.
+    Parameters: inps : namespace, all input parameters
+                atr  : dict, metadata to be saved in trop_file
+    Returns:    trop_file : str, file name of ECMWF.h5
+    """
     if any(i is None for i in [inps.geom_file, inps.ref_yx]):
         print('No DEM / incidenceAngle / ref_yx found, exit.')
         return
@@ -406,13 +410,6 @@ def get_delay_timeseries(inps, atr):
 def correct_timeseries(timeseries_file, trop_file, out_file):
     print('\n------------------------------------------------------------------------------')
     print('correcting delay for input time-series by calling diff.py')
-    #ts_obj = timeseries(timeseries_file)
-    #ts_data = ts_obj.read()
-    #mask = ts_data == 0.
-    #ts_data -= trop_data
-    #ts_data[mask] = 0.
-    #ts_obj = timeseries(out_file)
-    #ts_obj.write2hdf5(data=ts_data, refFile=timeseries_file)
     cmd = 'diff.py {} {} -o {} --force'.format(timeseries_file,
                                                trop_file,
                                                out_file)
