@@ -142,6 +142,11 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.parallel = False
+
+    # check input file type
+    atr = readfile.read_attribute(inps.ifgramStackFile)
+    if atr['FILE_TYPE'] != 'ifgramStack':
+        raise ValueError('input is {} file, only support ifgramStack file.'.format(k))
     return inps
 
 
@@ -164,6 +169,43 @@ def read_template2inps(template_file, inps):
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 inpsDict[key] = value
     return inps
+
+
+def run_check(inps):
+    print('-'*50)
+    print('update mode: ON')
+    run = False
+
+    # check output files vs input dataset
+    if not all(os.path.isfile(i) for i in inps.outfile):
+        run = True
+        print('  1) NOT ALL output files found: {}, --> run.'.format(inps.outfile))
+    else:
+        print('  1) output files already exist: {}'.format(inps.outfile))
+        with h5py.File(inps.ifgramStackFile, 'r') as f:
+            ti = float(f[inps.unwDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
+        to = min(os.path.getmtime(i) for i in inps.outfile)
+        if to <= ti:
+            run = True
+            print('  2) output files are NOT newer than input dataset: {} --> run.'.format(inps.unwDatasetName))
+        else:
+            print('  2) output dataset is newer than input dataset: {}'.format(inps.unwDatasetName))
+
+    # check configuration
+    if not run:
+        atr = readfile.read_attribute(inps.timeseriesFile)
+        if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
+            run = True
+            print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+        else:
+            print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+
+    # result
+    if run:
+        print('run.')
+    else:
+        print('skip the run.')
+    return run
 
 
 ################################################################################################
@@ -870,25 +912,6 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     num_ifgram, num_date = A.shape[0], A.shape[1]+1
     length, width = stack_obj.length, stack_obj.width
 
-    if not inps.unwDatasetName:
-        inps.unwDatasetName = [i for i in ['unwrapPhase_bridge_closure',
-                                           'unwrapPhase_bridge',
-                                           'unwrapPhase_closure',
-                                           'unwrapPhase']
-                               if i in stack_obj.datasetNames][0]
-
-    # update mode
-    print('update model: {}'.format(inps.update_mode))
-    if inps.update_mode and not ut.update_file(outFile=inps.timeseriesFile,
-                                               inFile=ifgram_file,
-                                               print_msg=False):
-        atr_ts = readfile.read_attribute(inps.timeseriesFile)
-        if all([str(vars(inps)[key]) == atr_ts.get(key_prefix+key, 'None') for key in configKeys]):
-            print('  1) {} exists and is newer than {}'.format(inps.timeseriesFile, ifgram_file))
-            print('  2) all key configuration parameter are the same: \n\t{}'.format(configKeys))
-            print('skip the run.')
-            return inps.timeseriesFile, inps.tempCohFile
-
     # print key setup info
     msg = '-------------------------------------------------------------------------------\n'
     if inps.minNormVelocity:
@@ -1006,12 +1029,7 @@ def main(iargs=None):
         inps = read_template2inps(inps.templateFile, inps)
     inps.timeseriesFile, inps.tempCohFile = inps.outfile
 
-    # check input file type
-    k = readfile.read_attribute(inps.ifgramStackFile)['FILE_TYPE']
-    if k != 'ifgramStack':
-        raise ValueError('input is {} file, only support ifgramStack file.'.format(k))
-
-    # fast inverting option
+    # --fast option
     if inps.fast:
         print("Enable fast network inversion.")
         if inps.weightFunc != 'no':
@@ -1021,13 +1039,27 @@ def main(iargs=None):
             inps.maskDataset = None
             print("\tforcing maskDataset = None")
 
+    # --dset option
+    if not inps.unwDatasetName:
+        stack_obj = ifgramStack(inps.ifgramStackFile)
+        stack_obj.open(print_msg=False)
+        inps.unwDatasetName = [i for i in ['unwrapPhase_bridge_closure',
+                                           'unwrapPhase_bridge',
+                                           'unwrapPhase_closure',
+                                           'unwrapPhase']
+                               if i in stack_obj.datasetNames][0]
+
+    # --update option
+    if inps.update_mode and run_check(inps) is False:
+        return inps.outfile
+
     # Network Inversion
     if inps.residualNorm == 'L2':
         ifgram_inversion(inps.ifgramStackFile, inps)
     else:
         raise NotImplementedError('L1 norm minimization is not fully tested.')
         #ut.timeseries_inversion_L1(inps.ifgramStackFile, inps.timeseriesFile)
-    return
+    return inps.outfile
 
 
 ################################################################################################

@@ -783,7 +783,7 @@ def main(iargs=None):
                                                           p=inps.tropPolyOrder,
                                                           m=inps.maskFile)
         else:
-            warnings.warn('Unrecognized phase ramp method: {}'.format(template['pysar.deramp']))
+            warnings.warn('Unrecognized phase ramp method: {}'.format(inps.derampMethod))
 
         # Execute command
         if derampCmd:

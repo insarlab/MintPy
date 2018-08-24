@@ -99,6 +99,44 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
+def run_check(inps):
+    print('-'*50)
+    print('update mode: ON')
+    run = False
+
+    # check output file
+    if not os.path.isfile(inps.outfile):
+        run = True
+        print('  1) output file {} not found, --> run'.format(inps.outfile))
+    else:
+        print('  1) output file {} already exists.'.format(inps.outfile))
+        ti = os.path.getmtime(inps.timeseries_file)
+        to = os.path.getmtime(inps.outfile)
+        if to <= ti:
+            run = True
+            print('  2) output file is NOT newer than input file: {} --> run.'.format(inps.timeseries_file))
+        else:
+            print('  2) output file is newer than input file: {}.'.format(inps.timeseries_file))
+
+    # check configuration
+    if not run:
+        date_list_all = timeseries(inps.timeseries_file).get_date_list()
+        inps.excludeDate = read_exclude_date(inps.excludeDate, date_list_all, print_msg=False)[1]
+        atr = readfile.read_attribute(inps.outfile)
+        if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
+            run = True
+            print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+        else:
+            print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+
+    # result
+    if run:
+        print('run.')
+    else:
+        print('skip the run.')
+    return run
+
+
 ############################################################################
 def read_template2inps(template_file, inps=None):
     """Read input template file into inps.excludeDate"""
@@ -423,19 +461,9 @@ def main(iargs=None):
     if not inps.outfile:
         inps.outfile = '{}_demErr.h5'.format(os.path.splitext(inps.timeseries_file)[0])
 
-    # update mode
-    print('update model: {}'.format(inps.update_mode))
-    if inps.update_mode and not ut.update_file(outFile=inps.outfile,
-                                               inFile=inps.timeseries_file,
-                                               print_msg=False):
-        date_list_all = timeseries(inps.timeseries_file).get_date_list()
-        inps.excludeDate = read_exclude_date(inps.excludeDate, date_list_all, print_msg=False)[1]
-        atr = readfile.read_attribute(inps.outfile)
-        if all([str(vars(inps)[key]) == atr.get(key_prefix+key, 'None') for key in configKeys]):
-            print('  1) {} exists and is newer than {}'.format(inps.timeseries_file, inps.outfile))
-            print('  2) all key configuration parameter are the same: \n\t{}'.format(configKeys))
-            print('skip the run.')
-            return inps.outfile
+    # --update option
+    if inps.update_mode and run_check(inps) is False:
+        return inps.outfile
 
     start_time = time.time()
     inps = read_geometry(inps)
