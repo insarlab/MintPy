@@ -57,6 +57,16 @@ MERRA(2) (by NASA Goddard)    Global      00/06/12/18 UTC      0.5*0.625 (~50 km
 To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA GESDISC DATA ARCHIVE" application, following https://disc.gsfc.nasa.gov/earthdata-login.
 """
 
+WEATHER_DIR = """--weather-dir ~/WEATHER
+WEATHER/
+├── ECMWF
+│   ├── ERA-Int_20030329_06.grb
+│   ├── ERA-Int_20030503_06.grb
+└── MERRA
+    ├── merra-20110126-06.nc4
+    ├── merra-20110313-06.nc4
+"""
+
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Tropospheric correction using weather models\n' +
@@ -72,8 +82,8 @@ def create_parser():
                              'in YYYYMMDD or YYMMDD format')
     parser.add_argument('--hour', help='time of data in HH, e.g. 12, 06')
     parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir',
-                        help='directory to put downloaded weather data, i.e. ./../WEATHER\n' +
-                             'use directory of input timeseries_file if not specified.')
+                        help='parent directory of downloaded weather data file. Default: ./../WEATHER\n' +
+                             'e.g.: '+WEATHER_DIR)
 
     # For delay calculation
     parser.add_argument('-g','--geomtry', dest='geom_file', type=str,
