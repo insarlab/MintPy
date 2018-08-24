@@ -247,8 +247,8 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
     # Min / Max - Display
     if not inps.vlim:
         if (any(i in inps.key.lower() for i in ['coherence', '.cor'])
-                or (inps.key == 'ifgramStack'
-                        and inps.dset[0].split('-')[0] in ['coherence', 'connectComponent'])):
+                or (inps.key == 'ifgramStack' and inps.dset[0].split('-')[0] in ['coherence', 'connectComponent'])
+                or inps.dset[0] == 'cmask'):
             inps.vlim = [0.0, 1.0]
         elif inps.key in ['.int'] or inps.wrap:
             inps.vlim = inps.wrap_range
@@ -349,12 +349,16 @@ def prep_2d_matrix(cmd, print_msg=True):
     inps = cmd_line_parse(cmd.split()[1:])
     inps, atr = check_input_file_info(inps, print_msg=print_msg)
     inps = update_inps_with_file_metadata(inps, atr, print_msg=print_msg)
-    data, atr = readfile.read(inps.file, datasetName=inps.dset[0], box=inps.pix_box, print_msg=print_msg)
+    data, atr = readfile.read(inps.file,
+                              datasetName=inps.dset[0],
+                              box=inps.pix_box,
+                              print_msg=print_msg)
     data, inps = update_data_with_plot_inps(data, atr, inps, print_msg=print_msg)
     inps.msk, inps.mask_file = pp.read_mask(inps.file,
                                             mask_file=inps.mask_file,
                                             datasetName=inps.dset[0],
-                                            box=inps.pix_box)
+                                            box=inps.pix_box,
+                                            print_msg=print_msg)
     if inps.msk is not None:
         data[inps.msk==0] = np.nan
     return data, atr, inps
@@ -649,7 +653,7 @@ def check_input_file_info(inps, print_msg=True):
         print('file size in y/x: {}'.format((inps.length, inps.width)))
 
     # File dataset List
-    inps.fileDatasetList = readfile.get_2d_dataset_list(inps.file)
+    inps.sliceList = readfile.get_slice_list(inps.file)
 
     # Read input list of dataset to display
     inps, atr = read_dataset_input(inps, print_msg=print_msg)
@@ -684,11 +688,11 @@ def read_dataset_input(inps, print_msg=True):
             inps.globSearch = False
             if print_msg:
                 print('turning glob search OFF for {} file'.format(inps.key))
-        inps.dsetNumList = check_dataset_input(inps.fileDatasetList,
+        inps.dsetNumList = check_dataset_input(inps.sliceList,
                                                inps.dset,
                                                inps.dsetNumList,
                                                inps.globSearch)[1]
-    elif inps.key in ['geometry', 'ifgramStack', 'HDFEOS']:
+    else:
         # default dataset to display for certain type of files
         if inps.key == 'geometry':
             inps.dset = geometryDatasetNames
@@ -697,28 +701,34 @@ def read_dataset_input(inps, print_msg=True):
             inps.dset = ['unwrapPhase']
         elif inps.key == 'HDFEOS':
             inps.dset = ['displacement']
-        inps.dsetNumList = check_dataset_input(inps.fileDatasetList,
+        elif inps.key == 'giantTimeseries':
+            inps.dset = 'recons'
+        elif inps.key == 'giantIfgramStack':
+            obj = giantIfgramStack(inps.file)
+            obj.open(print_msg=False)
+            inps.dset = [obj.sliceList[0].split('-')[0]]
+        else:
+            inps.dset = inps.sliceList
+        inps.dsetNumList = check_dataset_input(inps.sliceList,
                                                inps.dset,
                                                inps.dsetNumList,
                                                inps.globSearch)[1]
-    else:
-        inps.dsetNumList = range(len(inps.fileDatasetList))
 
     # read inps.exDsetList
-    inps.exDsetList, inps.exDsetNumList = check_dataset_input(inps.fileDatasetList,
+    inps.exDsetList, inps.exDsetNumList = check_dataset_input(inps.sliceList,
                                                               inps.exDsetList,
                                                               [],
                                                               inps.globSearch)
 
     # get inps.dset
     inps.dsetNumList = sorted(list(set(inps.dsetNumList) - set(inps.exDsetNumList)))
-    inps.dset = [inps.fileDatasetList[i] for i in inps.dsetNumList]
+    inps.dset = [inps.sliceList[i] for i in inps.dsetNumList]
     inps.dsetNum = len(inps.dset)
 
     if inps.ref_date:
         if inps.key not in timeseriesKeyNames:
             inps.ref_date = None
-        ref_date = check_dataset_input(inps.fileDatasetList,
+        ref_date = check_dataset_input(inps.sliceList,
                                        [inps.ref_date],
                                        [],
                                        inps.globSearch)[0][0]
@@ -733,12 +743,12 @@ def read_dataset_input(inps, print_msg=True):
     if print_msg:
         if inps.key in ['ifgramStack']:
             print('num of datasets in file {}: {}'.format(os.path.basename(inps.file),
-                                                          len(inps.fileDatasetList)))
+                                                          len(inps.sliceList)))
             print('num of datasets to exclude: {}'.format(len(inps.exDsetList)))
             print('num of datasets to display: {}'.format(len(inps.dset)))
         else:
             print('num of datasets in file {}: {}'.format(os.path.basename(inps.file),
-                                                          len(inps.fileDatasetList)))
+                                                          len(inps.sliceList)))
             print('datasets to exclude ({}):\n{}'.format(len(inps.exDsetList),
                                                          inps.exDsetList))
             print('datasets to display ({}):\n{}'.format(len(inps.dset),
@@ -748,7 +758,7 @@ def read_dataset_input(inps, print_msg=True):
 
     if inps.dsetNum == 0:
         print('ERROR: no input dataset found!')
-        print('available datasets:\n{}'.format(inps.fileDatasetList))
+        print('available datasets:\n{}'.format(inps.sliceList))
         raise Exception()
 
     atr = readfile.read_attribute(inps.file, datasetName=inps.dset[0].split('-')[0])
@@ -883,7 +893,7 @@ def read_data4figure(i_start, i_end, inps, metadata):
 
     # v/dlim, adjust data if all subplots are the same type
     #metadata = readfile.read_attribute(inps.file)
-    if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity']:
+    if len(inps.dsetFamilyList) == 1 or inps.key in ['velocity', 'timeseries']:
         data, inps = update_data_with_plot_inps(data, metadata, inps, print_msg=False)
         if (not inps.vlim 
                 and not (inps.dsetFamilyList[0].startswith('unwrap') and not inps.file_ref_yx)

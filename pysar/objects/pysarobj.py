@@ -57,9 +57,9 @@ geometryDatasetNames = ['height',
                         'bperp']
 
 ifgramDatasetNames = ['unwrapPhase',
-                      'unwrapPhase_closure',
-                      'unwrapPhase_bridge',
                       'unwrapPhase_bridge_closure',
+                      'unwrapPhase_bridge',
+                      'unwrapPhase_closure',
                       'coherence',
                       'connectComponent',
                       'wrapPhase',
@@ -90,7 +90,6 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'bperp'              :'m',
 
                    'timeseries'         :'m',
-                   'giantTimeseries'    :'mm',
                    'raw'                :'m',
                    'troposphericDelay'  :'m',
                    'topographicResidual':'m',
@@ -100,6 +99,16 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'velocity'           :'m/year',
                    'acceleration'       :'m/year^2',
                    'mask'               :'1',
+
+                   'giantTimeseries'    :'mm',
+                   'recons'             :'mm',
+                   'rawts'              :'mm',
+                   'sar_aps'            :'mm',
+                   'igram_aps'          :'mm',
+                   'figram'             :'mm',
+                   'igram'              :'mm',
+                   'cmask'              :'1',
+                   'ifgcnt'             :'1',
 
                    '.unw'               :'radian',
                    '.int'               :'radian',
@@ -111,7 +120,8 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    }
 
 
-########################################################################################
+
+################################ timeseries class begin ################################
 FILE_STRUCTURE_TIMESERIES = """
 /                Root level
 Attributes       Dictionary for metadata
@@ -123,7 +133,7 @@ Attributes       Dictionary for metadata
 class timeseries:
     """
     Time-series object for displacement of a set of SAR images from the same platform and track.
-    It contains a "timeseries" group and three datasets: date, bperp and timeseries.
+    It contains three datasets in root level: date, bperp and timeseries.
     """
 
     def __init__(self, file=None):
@@ -158,7 +168,7 @@ class timeseries:
                               dtype=np.float32)
         # list of float for year, 2014.95
         self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
-        self.datasetList = ['{}-{}'.format(self.name, i) for i in self.dateList]
+        self.sliceList = ['{}-{}'.format(self.name, i) for i in self.dateList]
 
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
@@ -373,9 +383,11 @@ class timeseries:
             for d, pbase in zip(date6_list, pbase_list):
                 f.write('{}\t{}\n'.format(d, pbase))
         return out_file
+################################ timeseries class end ##################################
 
 
-########################################################################################
+
+################################# geometry class begin #################################
 FILE_STRUCTURE_GEOMETRY = """
 /                        Root level
 Attributes               Dictionary for metadata. 'X/Y_FIRST/STEP' attribute for geocoded.
@@ -420,16 +432,16 @@ class geometry:
 
         with h5py.File(self.file, 'r') as f:
             self.datasetNames = [i for i in geometryDatasetNames if i in f.keys()]
-            self.datasetList = list(self.datasetNames)
+            self.sliceList = list(self.datasetNames)
             if 'bperp' in f.keys():
                 self.dateList = [i.decode('utf8') for i in f['date'][:]]
                 self.numDate = len(self.dateList)
                 # Update bperp datasetNames
                 try:
-                    self.datasetList.remove('bperp')
+                    self.sliceList.remove('bperp')
                 except:
                     pass
-                self.datasetList += ['bperp-'+d for d in self.dateList]
+                self.sliceList += ['bperp-'+d for d in self.dateList]
             else:
                 self.dateList = None
 
@@ -506,9 +518,11 @@ class geometry:
                 data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
                 data = np.squeeze(data)
         return data
+################################# geometry class end ###################################
 
 
-########################################################################################
+
+################################# ifgramStack class begin ##############################
 FILE_STRUCTURE_IFGRMA_STACK = """
 /                  Root level group name
 Attributes         Dictionary for metadata
@@ -552,6 +566,10 @@ class ifgramStack:
         self.read_datetimes()
         self.numPixel = self.length * self.width
 
+        # time info
+        self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
+        self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.float32)
+
         with h5py.File(self.file, 'r') as f:
             self.dropIfgram = f['dropIfgram'][:]
             self.pbaseIfgram = f['bperp'][:]
@@ -563,13 +581,10 @@ class ifgramStack:
             self.datasetNames = [i for i in ifgramDatasetNames if i in dsNames]
             self.datasetNames += [i for i in dsNames if i not in ifgramDatasetNames]
 
-        self.date12List = ['{}_{}'.format(i, j) for i, j in zip(self.mDates, self.sDates)]
-        self.tbaseIfgram = np.array([i.days for i in self.sTimes - self.mTimes], dtype=np.float32)
-
-        # Get datasetList for self.read()
-        self.datasetList = []
+        # Get sliceList for self.read()
+        self.sliceList = []
         for dsName in self.datasetNames:
-            self.datasetList += ['{}-{}'.format(dsName, i) for i in self.date12List]
+            self.sliceList += ['{}-{}'.format(dsName, i) for i in self.date12List]
 
         # Time in timeseries domain
         self.dateList = self.get_date_list(dropIfgram=False)
@@ -946,6 +961,8 @@ class ifgramStack:
             print('update HDF5 dataset "/dropIfgram".')
             f['dropIfgram'][:] = np.array([i not in date12List_to_drop for i in date12ListAll],
                                           dtype=np.bool_)
+################################# ifgramStack class end ################################
+
 
 
 ########################################################################################
@@ -970,7 +987,7 @@ class singleDataset:
         return data
 
 
-########################################################################################
+################################# HDF-EOS5 class begin #################################
 FILE_STRUCTURE_HDFEOS = """
 /                             Root level group
 Attributes                    metadata in dict.
@@ -1038,26 +1055,22 @@ class HDFEOS:
         self.length = int(self.metadata['LENGTH'])
         self.width = int(self.metadata['WIDTH'])
 
-        self.datasetList = []
+        self.sliceList = []
         with h5py.File(self.file, 'r') as f:
-            g = f['HDFEOS/GRIDS/timeseries/observation']
+            gname = 'HDFEOS/GRIDS/timeseries/observation'
+            g = f[gname]
             self.dateList = [i.decode('utf8') for i in g['date'][:]]
             self.pbase = g['bperp'][:]
-            self.datasetList += ['displacement-{}'.format(i) for i in self.dateList]
             self.numDate = len(self.dateList)
 
-            g = f['HDFEOS/GRIDS/timeseries/quality']
-            for key in g.keys():
-                self.datasetList.append(key)
-
-            g = f['HDFEOS/GRIDS/timeseries/geometry']
-            for key in g.keys():
-                obj = g[key]
-                if isinstance(obj, h5py.Dataset):
-                    if len(obj.shape) == 2:
-                        self.datasetList.append(key)
-                    # elif len(obj.shape) == 3:
-                    #    self.datesetList += ['{}-{}'.format(key, i) for i in self.dateList]
+            # get slice list
+            self.sliceList += ['{}/displacement-{}'.format(gname, i) for i in self.dateList]
+            for gname in ['HDFEOS/GRIDS/timeseries/quality',
+                          'HDFEOS/GRIDS/timeseries/geometry']:
+                g = f[gname]
+                for key in g.keys():
+                    if isinstance(g[key], h5py.Dataset) and len(g[key].shape) == 2:
+                        self.sliceList.append('{}/{}'.format(gname, key))
 
     def get_metadata(self):
         with h5py.File(self.file, 'r') as f:
@@ -1123,112 +1136,5 @@ class HDFEOS:
                 data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
                 data = np.squeeze(data)
         return data
-
-
-########################################################################################
-FILE_STRUCTURE_GIANT_TIMESERIES = """
-/                Root level
-/cmask           2D array of float32 in size of (   l, w).
-/dates           1D array of float32 in size of (n,     ) in ordinal date format
-/recons          3D array of float32 in size of (n, l, w) in mm, reconstructed timeseries - filtered
-/rawts           3D array of float32 in size of (n, l, w) in mm, reconstructed timeseries - un-filtered
-"""
-
-class giantTimeseries:
-    """
-    Time-series object for displacement of a set of SAR images from the same platform and track.
-    It contains a "timeseries" group and three datasets: date, bperp and timeseries.
-    """
-
-    def __init__(self, file=None):
-        self.file = file
-        self.name = 'giantTimeseries'
-        self.file_structure = FILE_STRUCTURE_GIANT_TIMESERIES
-
-    def open(self, print_msg=True):
-        if print_msg:
-            print('open {} file: {}'.format(self.name, os.path.basename(self.file)))
-        self.get_size()
-        self.get_metadata()
-        self.numPixel = self.length * self.width
-
-        self.times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in self.dateList])
-        self.tbase = np.array([i.days for i in self.times - self.times[self.refIndex]],
-                              dtype=np.float32)
-        # list of float for year, 2014.95
-        self.yearList = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in self.times]
-        self.datasetList = ['{}-{}'.format(self.name, i) for i in self.dateList]
-
-    def get_size(self, dsName='recons'):
-        with h5py.File(self.file, 'r') as f:
-            self.numDate, self.length, self.width = f[dsName].shape
-        return self.numDate, self.length, self.width
-
-    def get_date_list(self):
-        with h5py.File(self.file, 'r') as f:
-            self.dateList = [dt.fromordinal(int(i)).strftime('%Y%m%d')
-                             for i in f['dates'][:].tolist()]
-        return self.dateList
-
-    def get_metadata(self):
-        # read existing metadata
-        with h5py.File(self.file, 'r') as f:
-            self.metadata = dict(f.attrs)
-        for key, value in self.metadata.items():
-            try:
-                self.metadata[key] = value.decode('utf8')
-            except:
-                self.metadata[key] = value
-
-        # ref_date/index
-        dateList = self.get_date_list()
-        if 'REF_DATE' not in self.metadata.keys():
-            self.metadata['REF_DATE'] = dateList[0]
-        self.refIndex = dateList.index(self.metadata['REF_DATE'])
-        return self.metadata
-
-    def read(self, datasetName=None, box=None, print_msg=True):
-        """Read dataset from timeseries file
-        Parameters: self : timeseries object
-                    datasetName : (list of) string in YYYYMMDD format
-                    box : tuple of 4 int, indicating x0,y0,x1,y1 of range
-        Returns:    data : 2D or 3D dataset
-        Examples:   from pysar.objects import timeseries
-                    tsobj = timeseries('timeseries_ECMWF_demErr.h5')
-                    data = tsobj.read(datasetName='20161020')
-                    data = tsobj.read(datasetName='20161020', box=(100,300,500,800))
-                    data = tsobj.read(datasetName=['20161020','20161026','20161101'])
-                    data = tsobj.read(box=(100,300,500,800))
-        """
-        if print_msg:
-            print('reading {} data from file: {} ...'.format(self.name, self.file))
-        self.open(print_msg=False)
-
-        # convert input datasetName into list of dates
-        if not datasetName or datasetName == 'timeseries':
-            datasetName = []
-        elif isinstance(datasetName, str):
-            datasetName = [datasetName]
-        datasetName = [i.replace('timeseries', '').replace('-', '') for i in datasetName]
-
-        with h5py.File(self.file, 'r') as f:
-            ds = f[self.name]
-            if isinstance(ds, h5py.Group):  # support for old pysar files
-                ds = ds[self.name]
-
-            # Get dateFlag - mark in time/1st dimension
-            dateFlag = np.zeros((self.numDate), dtype=np.bool_)
-            if not datasetName:
-                dateFlag[:] = True
-            else:
-                for e in datasetName:
-                    dateFlag[self.dateList.index(e)] = True
-
-            # Get Index in space/2_3 dimension
-            if box is None:
-                box = [0, 0, self.width, self.length]
-
-            data = ds[dateFlag, box[1]:box[3], box[0]:box[2]]
-            data = np.squeeze(data)
-        return data
+################################# HDF-EOS5 class end ###################################
 

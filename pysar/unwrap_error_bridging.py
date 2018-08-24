@@ -26,11 +26,10 @@ from pysar.utils import (ptime,
 
 # key configuration parameter name
 key_prefix = 'pysar.unwrapError.'
-config_key_list = ['maskFile',
-                   'waterMaskFile',
-                   'ramp',
-                   'bridgePtsRadius'
-                  ]
+configKeys = ['maskFile',
+              'waterMaskFile',
+              'ramp',
+              'bridgePtsRadius']
 
 
 ####################################################################################################
@@ -139,20 +138,40 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
-def update_check(inps):
-    print('\nupdate mode: ON')
-    skip_run = False
-    stack_obj = ifgramStack(inps.ifgram_file)
-    stack_obj.open(print_msg=False)
-    atr = stack_obj.metadata
-    if (inps.datasetNameOut in stack_obj.datasetNames 
-            and all([str(vars(inps)[key]) == atr.get(key_prefix+key, 'None')
-                     for key in config_key_list])):
-        print("1) output dataset: {} exists".format(inps.datasetNameOut))
-        print("2) all key configuration parameter are the same: \n\t{}".format(config_key_list))
-        print("thus, skip this step.")
-        skip_run = True
-    return skip_run
+def run_check(inps):
+    print('-'*50)
+    print('update mode: ON')
+    run = False
+
+    # check output dataset
+    with h5py.File(inps.ifgram_file, 'r') as f:
+        if inps.datasetNameOut not in f.keys():
+            run = True
+            print('  1) output dataset: {} not found --> run.'.format(inps.datasetNameOut))
+        else:
+            print('  1) output dataset: {} exists'.format(inps.datasetNameOut))
+            t_out = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
+            t_in = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
+            if t_out <= t_in:
+                run = True
+                print('  2) output dataset is older than input dataset: {} --> run.'.format(inps.datasetNameIn))
+            else:
+                print('  2) output dataset is newer than input dataset: {}'.format(inps.datasetNameIn))
+
+    # check configuration
+    atr = readfile.read_attribute(inps.ifgram_file)
+    if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
+        run = True
+        print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+    else:
+        print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+
+    # result
+    if run:
+        print('run.')
+    else:
+        print('skip the run.')
+    return run
 
 
 ####################################################################################################
@@ -456,6 +475,7 @@ def run_unwrap_error_bridge(ifgram_file, mask_cc_file, bridges, dsNameIn='unwrap
             ds[i, :, :] = unw_cor
             prog_bar.update(i+1, suffix=date12)
         prog_bar.close()
+        ds.attrs['MODIFICATION_TIME'] = str(time.time())
         f.close()
         print('close {} file.'.format(ifgram_file))
 
@@ -490,7 +510,7 @@ def main(iargs=None):
         inps = read_template2inps(inps.template_file, inps)
 
     # update mode
-    if inps.update_mode and update_check(inps):
+    if inps.update_mode and run_check(inps) is False:
         return inps.ifgram_file
 
     # check maskConnComp.h5
@@ -522,7 +542,7 @@ def main(iargs=None):
     # config parameter
     print('add/update the following configuration metadata to file:')
     config_metadata = dict()
-    for key in config_key_list:
+    for key in configKeys:
         config_metadata[key_prefix+key] = str(vars(inps)[key])
     ut.add_attribute(inps.ifgram_file, config_metadata, print_msg=True)
 

@@ -7,14 +7,18 @@
 
 
 import os
-import sys
 import argparse
 import time
 import h5py
 from numpy import std
+from pprint import pprint
 from pysar.utils import readfile, ptime
-from pysar.objects import timeseries, ifgramStack, geometry, HDFEOS
-
+from pysar.objects import (geometry, 
+                           giantIfgramStack, 
+                           giantTimeseries, 
+                           ifgramStack, 
+                           timeseries, 
+                           HDFEOS)
 
 output = ""
 
@@ -24,15 +28,24 @@ EXAMPLE = """example:
   info.py velocity.h5
   info.py ifgramStack.h5
 
+  # Time / Date Info
   info.py ifgramStack.h5 --date                   # print master/slave date pairs info of interferograms.
   info.py timeseries.h5  --date --num             # print date list of timeseries with its number
-  info.py timeseries.h5  --date > date_list.txt   # print date list of timeseries and save it to txt file.
+  info.py LS-PARAMS.h5   --date > date_list.txt   # print date list of timeseries and save it to txt file.
+  info.py S1_IW12_128_0593_0597_20141213_20180619.h5 --date
+
+  # Slice / Dataset Info
+  info.py timeseries.h5                              --slice
+  info.py timeseries.h5                              --slice  --num
+  info.py INPUTS/ifgramStack.h5                      --slice
+  info.py S1_IW12_128_0593_0597_20141213_20180619.h5 --slice
+  info.py LS-PARAMS.h5                               --slice
 """
 
 
 def create_parser():
     """Create command line parser."""
-    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of File',
+    parser = argparse.ArgumentParser(description='Display Metadata / Structure information of ANY File',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
     parser.add_argument('file', type=str, help='File to check')
@@ -40,6 +53,8 @@ def create_parser():
                         help='Show date/date12 info of input file')
     parser.add_argument('--num', dest='disp_num', action='store_true',
                         help='Show date/date12 number')
+    parser.add_argument('--slice', dest='disp_slice', action='store_true',
+                        help='Print slice list of the file')
     return parser
 
 
@@ -130,6 +145,7 @@ def print_timseries_date_stat(dateList):
 
 
 def print_date_list(fname, disp_num=False, print_msg=False):
+    """Print time/date info of file"""
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     dateList = None
@@ -137,16 +153,24 @@ def print_date_list(fname, disp_num=False, print_msg=False):
         obj = timeseries(fname)
         obj.open(print_msg=False)
         dateList = obj.dateList
+    elif k == 'HDFEOS':
+        obj = HDFEOS(fname)
+        obj.open(print_msg=False)
+        dateList = obj.dateList
+    elif k == 'giantTimeseries':
+        obj = giantTimeseries(fname)
+        obj.open(print_msg=False)
+        dateList = obj.dateList
     elif k in ['ifgramStack']:
         obj = ifgramStack(fname)
         obj.open(print_msg=False)
         dateList = obj.date12List
+    elif k in ['giantIfgramStack']:
+        obj = giantIfgramStack(fname)
+        obj.open(print_msg=False)
+        dateList = obj.date12List
     else:
         print('--date option can not be applied to {} file, ignore it.'.format(k))
-    try:
-        obj.close(print_msg=False)
-    except:
-        pass
 
     if print_msg and dateList is not None:
         for i in range(len(dateList)):
@@ -155,6 +179,18 @@ def print_date_list(fname, disp_num=False, print_msg=False):
             else:
                 print(dateList[i])
     return dateList
+
+
+def print_slice_list(fname, disp_num=False, print_msg=False):
+    """Print slice info of file"""
+    slice_list = readfile.get_slice_list(fname)
+    if print_msg:
+        for i in range(len(slice_list)):
+            if disp_num:
+                print('{}\t{}'.format(slice_list[i], i))
+            else:
+                print(slice_list[i])
+    return slice_list
 
 
 def print_pysar_info(fname):
@@ -188,6 +224,11 @@ def main(iargs=None):
     # --date option
     if inps.disp_date:
         print_date_list(inps.file, disp_num=inps.disp_num, print_msg=True)
+        return
+
+    # --slice option
+    if inps.disp_slice:
+        print_slice_list(inps.file, disp_num=inps.disp_num, print_msg=True)
         return
 
     # Basic info from PySAR reader

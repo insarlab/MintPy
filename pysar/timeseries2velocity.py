@@ -205,6 +205,7 @@ def estimate_linear_velocity(inps):
     A_inv = np.array(np.linalg.pinv(A), dataType)
     # A_inv = np.array(np.linalg.inv(A.T.dot(A)).dot(A.T), dataType)  #Give wrong and different result, find reason.
 
+    print('reading data from file {} ...'.format(inps.timeseries_file))
     tsData, atr = readfile.read(inps.timeseries_file)
     tsData = tsData[inps.dropDate, :, :].reshape(inps.numDate, -1)
     if atr['UNIT'] == 'mm':

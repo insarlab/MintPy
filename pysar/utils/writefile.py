@@ -141,6 +141,49 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
     return out_file
 
 
+def remove_hdf5_dataset(fname, datasetName, print_msg=True):
+    """Remove an existing dataset from an HDF5 file.
+    Parameters: fname : str, HDF5 file name/path
+                datasetName : str, dataset name
+    Returns:    fname : str,
+    Example:    remove_hdf5_dataset('./INPUTS/ifgramStack.h5', 'unwrapPhase_closure')
+    """
+    if print_msg:
+        print('delete {} from file {}'.format(datasetName, fname))
+    # 1. rename the file to a temporary file
+    temp_file = 'tmp_{}'.format(fname)
+    cmd = 'mv {} {}'.format(fname, temp_file)
+    print(cmd)
+    os.system(cmd)
+
+    # 2. write a new file with all data except for the one to be deleted
+    if print_msg:
+        print('read   HDF5 file: {} with r mode'.format(temp_file))
+        print('create HDF5 file: {} with w mode'.format(fname))
+    fi = h5py.File(temp_file, 'r')
+    fo = h5py.File(fname, 'w')
+
+    # datasets
+    compression = None
+    maxDigit = max([len(i) for i in list(fi.keys())])
+    for dsName in [i for i in fi.keys() if i != datasetName]:
+        ds = fi[dsName]
+        if print_msg:
+            print('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} with compression={c}'.format(
+                d=dsName, w=maxDigit, t=str(ds.dtype), s=str(ds.shape), c=compression))
+        fo.create_dataset(dsName, data=ds[:], chunks=True, compression=compression)
+
+    # metadata
+    for key, value in fi.attrs.items():
+        fo.attrs[key] = str(value)
+    fi.close()
+    fo.close()
+    if print_msg:
+        print('finished writing to {}'.format(fname))
+        print('old file is now saved as: {}. Use rm command to delete it.'.format(temp_file))
+    return fname
+
+
 def write_roipac_rsc(metadata, out_file, sorting=True):
     """Write attribute dict into ROI_PAC .rsc file
     Inputs:

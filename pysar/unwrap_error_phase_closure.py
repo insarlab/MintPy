@@ -95,6 +95,35 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
+def run_check(inps):
+
+    print('-'*50)
+    print('update mode: ON')
+    run = False
+
+    # check output dataset
+    with h5py.File(inps.ifgram_file, 'r') as f:
+        if inps.datasetNameOut not in f.keys():
+            run = True
+            print('  1) output dataset: {} not found --> run.'.format(inps.datasetNameOut))
+        else:
+            print('  1) output dataset: {} exists'.format(inps.datasetNameOut))
+            t_out = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
+            t_in = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
+            if t_out <= t_in:
+                run = True
+                print('  2) output dataset is NOT newer than input dataset: {} --> run.'.format(inps.datasetNameIn))
+            else:
+                print('  2) output dataset is newer than input dataset: {}'.format(inps.datasetNameIn))
+
+    # result
+    if run:
+        print('run.')
+    else:
+        print('skip the run.')
+    return run
+
+
 ####################################################################################################
 def correct_unwrap_error(ifgram, C, Dconstraint=True, thres=0.1, alpha=0.25, rcond=1e-3):
     """Estimate unwrapping error from a stack of unwrapped interferometric phase
@@ -325,6 +354,7 @@ def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_closu
         ds.resize((num_ifgram, box[3], box[2]))
     ds[:, box[1]:box[3], box[0]:box[2]] = data
 
+    ds.attrs['MODIFICATION_TIME'] = str(time.time())
     f.close()
     print('close {}'.format(ifgram_file))
     return ifgram_file
@@ -338,19 +368,11 @@ def main(iargs=None):
     if not inps.datasetNameOut:
         inps.datasetNameOut = '{}_closure'.format(inps.datasetNameIn)
 
-    # update mode checking
-    atr = readfile.read_attribute(inps.ifgram_file)
-    if inps.update_mode and atr['FILE_TYPE'] == 'ifgramStack':
-        print('\nupdate mode: {}'.format(inps.update_mode))
-        stack_obj = ifgramStack(inps.ifgram_file)
-        stack_obj.open(print_msg=False)
-        if inps.datasetNameOut in stack_obj.datasetNames:
-            print("output dataset: {} exists".format(inps.datasetNameOut))
-            print("thus, skip unwrapping error correction based on phase closure.")
-            return inps.ifgram_file
+    # update mode
+    if inps.update_mode and run_check(inps) is False:
+        return inps.ifgram_file
 
     start_time = time.time()
-
     run_unwrap_error_closure(inps,
                              dsNameIn=inps.datasetNameIn,
                              dsNameOut=inps.datasetNameOut,

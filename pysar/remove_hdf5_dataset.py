@@ -9,12 +9,13 @@
 import os
 import argparse
 import h5py
+from pysar.utils import writefile
 
 
 ###########################################################################################
 EXAMPLE = """Example:
-  remove_hdf5_dataset.py  ./INPUTS/ifgramStack.h5  unwrapPhase_unwCor
-  remove_hdf5_dataset.py  velocity.h5  velocityStd
+  remove_hdf5_dataset.py  ifgramStack.h5  unwrapPhase_closure
+  remove_hdf5_dataset.py  velocity.h5     velocityStd
 """
 
 def create_parser():
@@ -43,9 +44,7 @@ def main(iargs=None):
         raise ValueError(('input dataset do not exists: {}'
                           '\navailable datasets:\n{}').format(inps.dset, dset_list))
 
-    with h5py.File(inps.file, 'a') as f:
-        print('delete {} from file {}'.format(inps.dset, inps.file))
-        del f[inps.dset]
+    inps.file = writefile.remove_hdf5_dataset(inps.file, inps.dset, print_msg=True)
     print('Done.')
     return inps.file
 

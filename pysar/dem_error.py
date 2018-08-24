@@ -17,12 +17,12 @@ from pysar.utils import ptime, readfile, writefile, utils as ut
 from pysar.objects import timeseries, geometry
 
 
-key_prefix = 'pysar.topographicResidual.'
 # key configuration parameter name
-config_key_list = ['polyOrder',
-                   'phaseVelocity',
-                   'stepFuncDate',
-                   'excludeDate']
+key_prefix = 'pysar.topographicResidual.'
+configKeys = ['polyOrder',
+              'phaseVelocity',
+              'stepFuncDate',
+              'excludeDate']
 
 
 ############################################################################
@@ -384,7 +384,7 @@ def correct_dem_error(inps, A_def):
 
     # config parameter
     print('add/update the following configuration metadata to file:')
-    for key in config_key_list:
+    for key in configKeys:
         atr[key_prefix+key] = str(vars(inps)[key])
 
     # 1. Estimated DEM error
@@ -431,9 +431,9 @@ def main(iargs=None):
         date_list_all = timeseries(inps.timeseries_file).get_date_list()
         inps.excludeDate = read_exclude_date(inps.excludeDate, date_list_all, print_msg=False)[1]
         atr = readfile.read_attribute(inps.outfile)
-        if all([str(vars(inps)[key]) == atr.get(key_prefix+key, 'None') for key in config_key_list]):
+        if all([str(vars(inps)[key]) == atr.get(key_prefix+key, 'None') for key in configKeys]):
             print('1) {} exists and is newer than {}'.format(inps.timeseries_file, inps.outfile))
-            print('2) all key configuration parameter are the same: \n\t{}'.format(config_key_list))
+            print('2) all key configuration parameter are the same: \n\t{}'.format(configKeys))
             print('thus, skip this step.')
             return inps.outfile
 

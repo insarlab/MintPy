@@ -20,13 +20,13 @@ from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
-key_prefix = 'pysar.networkInversion.'
 # key configuration parameter name
-config_key_list = ['unwDatasetName',
-                   'weightFunc',
-                   'maskDataset',
-                   'maskThreshold',
-                   'minNormVelocity']
+key_prefix = 'pysar.networkInversion.'
+configKeys = ['unwDatasetName',
+              'weightFunc',
+              'maskDataset',
+              'maskThreshold',
+              'minNormVelocity']
 
 
 ################################################################################################
@@ -883,9 +883,9 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                                inFile=ifgram_file,
                                                print_msg=False):
         atr_ts = readfile.read_attribute(inps.timeseriesFile)
-        if all([str(vars(inps)[key]) == atr_ts.get(key_prefix+key, 'None') for key in config_key_list]):
+        if all([str(vars(inps)[key]) == atr_ts.get(key_prefix+key, 'None') for key in configKeys]):
             print('1) {} exists and is newer than {}'.format(inps.timeseriesFile, ifgram_file))
-            print('2) all key configuration parameter are the same: \n\t{}'.format(config_key_list))
+            print('2) all key configuration parameter are the same: \n\t{}'.format(configKeys))
             print('thus, skip this step.')
             return inps.timeseriesFile, inps.tempCohFile
 
@@ -990,7 +990,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
         # metadata
         metadata = dict(stack_obj.metadata)
-        for key in config_key_list:
+        for key in configKeys:
             metadata[key_prefix+key] = str(vars(inps)[key])
         write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifg, suffix='')
 

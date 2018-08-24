@@ -11,6 +11,7 @@
 
 
 import os
+import time
 import glob
 import warnings
 import h5py
@@ -111,10 +112,6 @@ class ifgramStackDict:
         f = h5py.File(self.outputFile, access_mode)
         print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
 
-        #groupName = self.name
-        #group = f.create_group(groupName)
-        #print('create group   /{}'.format(groupName))
-
         self.pairs = [pair for pair in self.pairsDict.keys()]
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
         maxDigit = max([len(i) for i in self.dsNames])
@@ -141,19 +138,16 @@ class ifgramStackDict:
                                   chunks=True,
                                   compression=compression)
 
-            #dMin = 0
-            #dMax = 0
             prog_bar = ptime.progressBar(maxValue=self.numIfgram)
             for i in range(self.numIfgram):
                 ifgramObj = self.pairsDict[self.pairs[i]]
                 data = ifgramObj.read(dsName, box=box)[0]
-                #dMin = min(dMin, np.nanmin(data))
-                #dMax = max(dMax, np.nanmax(data))
                 ds[i, :, :] = data
                 self.bperp[i] = ifgramObj.get_perp_baseline()
                 prog_bar.update(i+1, suffix='{}_{}'.format(self.pairs[i][0],
                                                            self.pairs[i][1]))
             prog_bar.close()
+            ds.attrs['MODIFICATION_TIME'] = str(time.time())
 
         ###############################
         # 2D dataset containing master and slave dates of all pairs
