@@ -761,6 +761,13 @@ def read_template(fname, delimiter='=', print_msg=True):
     return template_dict
 
 
+def is_plot_attribute(attribute):
+    tokens = attribute.split(".")
+    if tokens is None:
+        return False
+    return tokens[0] == "plot" and len(tokens) > 1
+
+
 def read_roipac_rsc(fname, delimiter=' ', standardize=True):
     """Read ROI_PAC style RSC file.
     Parameters: fname : str.
