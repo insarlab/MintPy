@@ -27,7 +27,7 @@ Run pysarApp.py -g to generate a default template file and see the detailed sett
 Download the test data: [Download Link](https://miami.app.box.com/v/pysar-demo-KujuAlosAT422F650) and unzip it. Run pysarApp.py with setting file as below:   
 
     cd ~/KujuAlosAT422F650/PYSAR
-    pysarApp.py KujuAlosAT422F650_template.txt
+    pysarApp.py KujuAlosAT422F650.txt
 
 Inside pysarApp.py, it reads the unwrapped interferograms, refernces all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscilator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), corrects DEM error, removes phase ramps (if it has been asked for),... and finally estimates the velocity.   
 
