@@ -11,7 +11,6 @@ import argparse
 import time
 import h5py
 from numpy import std
-from pprint import pprint
 from pysar.utils import readfile, ptime
 from pysar.objects import (geometry, 
                            giantIfgramStack, 

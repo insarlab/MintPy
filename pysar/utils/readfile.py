@@ -176,6 +176,11 @@ def read_hdf5_file(fname, datasetName=None, box=None):
     """
     Parameters: fname : str, name of HDF5 file to read
                 datasetName : str or list of str, dataset name in root level with/without date info
+                    'timeseries'
+                    'timeseries-20150215'
+                    'unwrapPhase'
+                    'unwrapPhase-20150215_20150227'
+                    'HDFEOS/GRIDS/timeseries/observation/displacement'
                     'recons'
                     'recons-20150215'
                     ['recons-20150215', 'recons-20150227', ...]

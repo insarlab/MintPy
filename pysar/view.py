@@ -805,7 +805,8 @@ def update_figure_setting(inps, print_msg=True):
                 inps.fig_num += 1
 
         # Row/Column number
-        if inps.fig_row_num == 1 and inps.fig_col_num == 1:
+        if (inps.fig_row_num == 1 and inps.fig_col_num == 1 
+                and all(i not in sys.argv for i in ['--nrows', '--ncols'])):
             # calculate row and col number based on input info
             data_shape = [length*1.1, width]
             fig_size4plot = [inps.fig_size[0]*0.95, inps.fig_size[1]]
