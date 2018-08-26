@@ -7,7 +7,7 @@
 # sensor
 #
 # Dependent utility scripts:
-# network, deramp
+# network
 # utils
 # plot
 #

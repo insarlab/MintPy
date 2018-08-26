@@ -38,7 +38,6 @@ except KeyError:
 # Level 1 dependent modules (depends on Level 0):
 # pysar.utils.readfile
 # pysar.utils.network
-# pysar.utils.deramp
 #
 # Level 2 dependent modules (depends on Level 0,1):
 # pysar.utils.utils

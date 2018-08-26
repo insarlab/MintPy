@@ -137,9 +137,8 @@ pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min numb
 ## correct tropospheric delay using the following methods:
 ## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS)
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
-## c. base_trop_cor - (not recommend) baseline error and stratified tropo simultaneously (Jo et al., 2010, Geo J)
 ## For pyaps method, correction is applied to dates with data available, and skipped for dates (usually recent) without it.
-pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / base_trop_cor / no], auto for pyaps
+pysar.troposphericDelay.method       = auto  #[pyaps / height_correlation / no], auto for pyaps
 pysar.troposphericDelay.weatherModel = auto  #[ERA / MERRA / NARR], auto for ECMWF, for pyaps method
 pysar.troposphericDelay.weatherDir   = auto  #[path2directory], auto for "./../WEATHER"
 pysar.troposphericDelay.polyOrder    = auto  #[1 / 2 / 3], auto for 1, for height_correlation method
@@ -368,6 +367,200 @@ def read_template(inps):
     return inps, template, templateCustom
 
 
+def get_temporal_coherence_mask(inps, template):
+    """Generate mask from temporal coherence"""
+    configKeys = ['pysar.networkInversion.minTempCoh']
+    inps.maskFile = 'maskTempCoh.h5'
+    inps.minTempCoh = template['pysar.networkInversion.minTempCoh']
+    maskCmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(inps.tempCohFile,
+                                                                   inps.minTempCoh,
+                                                                   inps.maskFile,
+                                                                   inps.geomFile)
+    print(maskCmd)
+
+    # update mode checking
+    # run if 1) output file exists; 2) newer than input file and 3) all config keys are the same
+    run = False
+    if ut.update_file(inps.maskFile, inps.tempCohFile, print_msg=False):
+        run = True
+    else:
+        print(('  1) output file: {} already exists and newer than input file: '
+               '{}').format(inps.maskFile, inps.tempCohFile))
+        meta_dict = readfile.read_attribute(inps.maskFile)
+        if any(str(template[i]) != meta_dict.get(i, 'False') for i in configKeys):
+            run = True
+            print('  2) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+        else:
+            print('  2) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+
+    if not run:
+        print('skip the run.')
+    else:
+        print('run.')
+        status = subprocess.Popen(maskCmd, shell=True).wait()
+        if status is not 0:
+            raise Exception('Error while generating mask file from temporal coherence.')
+
+        # update configKeys
+        meta_dict = {}
+        for key in configKeys:
+            meta_dict[key] = template[key]
+        ut.add_attribute(inps.maskFile, meta_dict)
+
+    # check number of pixels selected in mask file for following analysis
+    min_num_pixel = float(template['pysar.networkInversion.minNumPixel'])
+    msk = readfile.read(inps.maskFile)[0]
+    num_pixel = np.sum(msk != 0.)
+    print('number of pixels selected: {}'.format(num_pixel))
+    if num_pixel < min_num_pixel:
+        msg = "Not enought coherent pixels selected (minimum of {}). ".format(int(min_num_pixel))
+        msg += "Try the following:\n"
+        msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
+        msg += "2) Check the network and make sure it's fully connected without subsets"
+        raise RuntimeError(msg)
+    del msk
+    return
+
+
+def correct_unwrap_error(inps, template):
+    unw_cor_method = template['pysar.unwrapError.method']
+    if unw_cor_method:
+        print('\n**********  Unwrapping Error Correction **********')
+        if unw_cor_method == 'phase_closure':
+            unwCmd = 'unwrap_error_phase_closure.py {} -t {} --update'.format(inps.stackFile,
+                                                                              inps.templateFile)
+            if inps.fast:
+                unwCmd += ' --fast'
+
+        elif unw_cor_method == 'bridging':
+            unwCmd = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
+                                                                         inps.templateFile)
+        elif unw_cor_method == 'bridging+phase_closure':
+            unwCmd = ('unwrap_error_bridging.py {} -t {} --update'
+                      ' -i unwrapPhase -o unwrapPhase_bridge').format(inps.stackFile,
+                                                                      inps.templateFile)
+            unwCmd += ('\nunwrap_error_phase_closure.py {} --update --fast'
+                      ' -i unwrapPhase_bridge -o unwrapPhase_bridge_closure').format(inps.stackFile)
+        else:
+            raise ValueError('un-recognized method: {}'.format(unw_cor_method))
+
+        print(unwCmd)
+        status = subprocess.Popen(unwCmd, shell=True).wait()
+        if status is not 0:
+            raise Exception('Error while correcting phase unwrapping errors.\n')
+    return inps
+
+
+def correct_tropospheric_delay(inps, template):
+    """Correct tropospheric delay with options from template"""
+    inps.tropPolyOrder = template['pysar.troposphericDelay.polyOrder']
+    inps.tropModel     = template['pysar.troposphericDelay.weatherModel']
+    inps.tropMethod    = template['pysar.troposphericDelay.method']
+
+    # check existing tropospheric delay file
+    try:
+        fileList = [os.path.join(inps.workDir, 'INPUTS/{}.h5'.format(inps.tropModel))]
+        inps.tropFile = ut.get_file_list(fileList)[0]
+    except:
+        inps.tropFile = None
+
+    # run
+    if inps.tropMethod:
+        fbase = os.path.splitext(inps.timeseriesFile)[0]
+
+        # Phase/Elevation Ratio (Doin et al., 2009)
+        if inps.tropMethod == 'height_correlation':
+            outName = '{}_tropHgt.h5'.format(fbase)
+            print('tropospheric delay correction with height-correlation approach')
+            tropCmd = ('tropcor_phase_elevation.py {t} -g {d} -p {p}'
+                       ' -m {m} -o {o}').format(t=inps.timeseriesFile,
+                                                d=inps.geomFile,
+                                                p=inps.tropPolyOrder,
+                                                m=inps.maskFile,
+                                                o=outName)
+            print(tropCmd)
+            if ut.update_file(outName, inps.timeseriesFile):
+                status = subprocess.Popen(tropCmd, shell=True).wait()
+                if status is not 0:
+                    raise Exception('Error while correcting tropospheric delay.\n')
+            inps.timeseriesFile = outName
+
+        # Weather Re-analysis Data (Jolivet et al., 2011;2014)
+        elif inps.tropMethod == 'pyaps':
+            inps.weatherDir = template['pysar.troposphericDelay.weatherDir']
+            outName = '{}_{}.h5'.format(fbase, inps.tropModel)
+            print(('Atmospheric correction using Weather Re-analysis dataset'
+                   ' (PyAPS, Jolivet et al., 2011)'))
+            print('Weather Re-analysis dataset: '+inps.tropModel)
+            tropCmd = ('tropcor_pyaps.py -f {t} --model {m} -g {g}'
+                       ' -w {w}').format(t=inps.timeseriesFile,
+                                         m=inps.tropModel,
+                                         g=inps.geomFile,
+                                         w=inps.weatherDir)
+            print(tropCmd)
+            if ut.update_file(outName, inps.timeseriesFile):
+                if inps.tropFile:
+                    tropCmd = 'diff.py {} {} -o {} --force'.format(inps.timeseriesFile,
+                                                                   inps.tropFile,
+                                                                   outName)
+                    print('--------------------------------------------')
+                    print('Use existed tropospheric delay file: {}'.format(inps.tropFile))
+                    print(tropCmd)
+                status = subprocess.Popen(tropCmd, shell=True).wait()
+                if status is not 0:
+                    print('\nError while correcting tropospheric delay, try the following:')
+                    print('1) Check the installation of PyAPS')
+                    print('   http://earthdef.caltech.edu/projects/pyaps/wiki/Main')
+                    print('   Try in command line: python -c "import pyaps"')
+                    print('2) Use other tropospheric correction method, height-correlation, for example')
+                    print('3) or turn off the option by setting pysar.troposphericDelay.method = no.\n')
+                    raise RuntimeError()
+            inps.timeseriesFile = outName
+        else:
+            print('Un-recognized atmospheric delay correction method: {}'.format(inps.tropMethod))
+
+    # Grab tropospheric delay file
+    try:
+        fileList = [os.path.join(inps.workDir, 'INPUTS/{}.h5'.format(inps.tropModel))]
+        inps.tropFile = ut.get_file_list(fileList)[0]
+    except:
+        inps.tropFile = None
+    return
+
+
+def save_hdfeos5(inps, templateCustom=None):
+    if not inps.geocoded:
+        warnings.warn('Dataset is in radar coordinates, skip saving to HDF-EOS5 format.')
+    else:
+        # Add attributes from custom template to timeseries file
+        if templateCustom is not None:
+            ut.add_attribute(inps.timeseriesFile, templateCustom)
+
+        # Save to HDF-EOS5 format
+        print('--------------------------------------------')
+        hdfeos5Cmd = ('save_hdfeos5.py {t} -c {c} -m {m} -g {g}'
+                      ' -t {e}').format(t=inps.timeseriesFile,
+                                        c=inps.tempCohFile,
+                                        m=inps.maskFile,
+                                        g=inps.geomFile,
+                                        e=inps.templateFile)
+        print(hdfeos5Cmd)
+        atr = readfile.read_attribute(inps.timeseriesFile)
+        SAT = hdfeos5.get_mission_name(atr)
+        try:
+            inps.hdfeos5File = ut.get_file_list('{}_*.he5'.format(SAT))[0]
+        except:
+            inps.hdfeos5File = None
+        if ut.update_file(inps.hdfeos5File, [inps.timeseriesFile,
+                                             inps.tempCohFile,
+                                             inps.maskFile,
+                                             inps.geomFile]):
+            status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
+            if status is not 0:
+                raise Exception('Error while generating HDF-EOS5 time-series file.\n')
+    return
+
+
 ##########################################################################
 def main(iargs=None):
     start_time = time.time()
@@ -454,6 +647,13 @@ def main(iargs=None):
     print(maskCmd)
     status = subprocess.Popen(maskCmd, shell=True).wait()
 
+    # Average phase velocity - Stacking
+    inps.avgPhaseVelFile = 'avgPhaseVelocity.h5'
+    avgCmd = 'temporal_average.py {i} --dataset unwrapPhase -o {o} --update'.format(i=inps.stackFile,
+                                                                                  o=inps.avgPhaseVelFile)
+    print(avgCmd)
+    status = subprocess.Popen(avgCmd, shell=True).wait()
+
     # Average spatial coherence
     inps.avgSpatialCohFile = 'avgSpatialCoherence.h5'
     avgCmd = 'temporal_average.py {i} --dataset coherence -o {o} --update'.format(i=inps.stackFile,
@@ -489,32 +689,7 @@ def main(iargs=None):
     #    based on the consistency of triplets
     #    of interferograms
     ############################################
-    unw_cor_method = template['pysar.unwrapError.method']
-    if unw_cor_method:
-        print('\n**********  Unwrapping Error Correction **********')
-        if unw_cor_method == 'phase_closure':
-            unwCmd = 'unwrap_error_phase_closure.py {} -t {} --update'.format(inps.stackFile,
-                                                                              inps.templateFile)
-            if inps.fast:
-                unwCmd += ' --fast'
-
-        elif unw_cor_method == 'bridging':
-            unwCmd = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
-                                                                         inps.templateFile)
-        elif unw_cor_method == 'bridging+phase_closure':
-            unwCmd = ('unwrap_error_bridging.py {} -t {} --update'
-                      ' -i unwrapPhase -o unwrapPhase_bridge').format(inps.stackFile,
-                                                                      inps.templateFile)
-            unwCmd += ('\nunwrap_error_phase_closure.py {} --update --fast'
-                      ' -i unwrapPhase_bridge -o unwrapPhase_bridge_closure').format(inps.stackFile)
-        else:
-            raise ValueError('un-recognized method: {}'.format(unw_cor_method))
-
-        print(unwCmd)
-        status = subprocess.Popen(unwCmd, shell=True).wait()
-        if status is not 0:
-            raise Exception('Error while correcting phase unwrapping errors.\n')
-
+    correct_unwrap_error(inps, template)
 
     #########################################
     # Network Modification (Optional)
@@ -542,7 +717,6 @@ def main(iargs=None):
     if inps.modify_network:
         raise SystemExit('Exit as planned after network modification.')
 
-
     #########################################
     # Inversion of Interferograms
     ########################################
@@ -562,34 +736,10 @@ def main(iargs=None):
 
     print('\n--------------------------------------------')
     print('Update Mask based on Temporal Coherence ...')
-    inps.maskFile = 'maskTempCoh.h5'
-    inps.minTempCoh = template['pysar.networkInversion.minTempCoh']
-    maskCmd = 'generate_mask.py {} -m {} -o {} --shadow {}'.format(inps.tempCohFile,
-                                                                   inps.minTempCoh,
-                                                                   inps.maskFile,
-                                                                   inps.geomFile)
-    print(maskCmd)
-    if ut.update_file(inps.maskFile, inps.tempCohFile):
-        status = subprocess.Popen(maskCmd, shell=True).wait()
-        if status is not 0:
-            raise Exception('Error while generating mask file from temporal coherence.')
+    get_temporal_coherence_mask(inps, template)
 
     if inps.invert_network:
         raise SystemExit('Exit as planned after network inversion.')
-
-    # check number of pixels selected in mask file for following analysis
-    min_num_pixel = float(template['pysar.networkInversion.minNumPixel'])
-    msk = readfile.read(inps.maskFile)[0]
-    num_pixel = np.sum(msk != 0.)
-    print('number of pixels selected: {}'.format(num_pixel))
-    if num_pixel < min_num_pixel:
-        msg = "Not enought coherent pixels selected (minimum of {}). ".format(int(min_num_pixel))
-        msg += "Try the following:\n"
-        msg += "1) Check the reference pixel and make sure it's not in areas with unwrapping errors\n"
-        msg += "2) Check the network and make sure it's fully connected without subsets"
-        raise RuntimeError(msg)
-    del msk
-
 
     ##############################################
     # LOD (Local Oscillator Drift) Correction
@@ -612,83 +762,7 @@ def main(iargs=None):
     # Tropospheric Delay Correction (Optional)
     ##############################################
     print('\n**********  Tropospheric Delay Correction  **********')
-    inps.tropPolyOrder = template['pysar.troposphericDelay.polyOrder']
-    inps.tropModel     = template['pysar.troposphericDelay.weatherModel']
-    inps.tropMethod    = template['pysar.troposphericDelay.method']
-    try:
-        fileList = [os.path.join(inps.workDir, 'INPUTS/{}.h5'.format(inps.tropModel))]
-        inps.tropFile = ut.get_file_list(fileList)[0]
-    except:
-        inps.tropFile = None
-
-    if inps.tropMethod:
-        # Check Conflict with base_trop_cor
-        if template['pysar.deramp'] == 'base_trop_cor':
-            msg = """
-            Method Conflict: base_trop_cor is in conflict with {} option!
-            base_trop_cor applies simultaneous ramp removal AND tropospheric correction.
-            IGNORE base_trop_cor input and continue pysarApp.py.
-            """
-            warnings.warn(msg)
-            template['pysar.deramp'] = False
-
-        fbase = os.path.splitext(inps.timeseriesFile)[0]
-        # Call scripts
-        if inps.tropMethod == 'height_correlation':
-            outName = '{}_tropHgt.h5'.format(fbase)
-            print('tropospheric delay correction with height-correlation approach')
-            tropCmd = ('tropcor_phase_elevation.py {t} -g {d} -p {p}'
-                       ' -m {m} -o {o}').format(t=inps.timeseriesFile,
-                                                d=inps.geomFile,
-                                                p=inps.tropPolyOrder,
-                                                m=inps.maskFile,
-                                                o=outName)
-            print(tropCmd)
-            if ut.update_file(outName, inps.timeseriesFile):
-                status = subprocess.Popen(tropCmd, shell=True).wait()
-                if status is not 0:
-                    raise Exception('Error while correcting tropospheric delay.\n')
-            inps.timeseriesFile = outName
-
-        elif inps.tropMethod == 'pyaps':
-            inps.weatherDir = template['pysar.troposphericDelay.weatherDir']
-            outName = '{}_{}.h5'.format(fbase, inps.tropModel)
-            print(('Atmospheric correction using Weather Re-analysis dataset'
-                   ' (PyAPS, Jolivet et al., 2011)'))
-            print('Weather Re-analysis dataset: '+inps.tropModel)
-            tropCmd = ('tropcor_pyaps.py -f {t} --model {m} -g {g}'
-                       ' -w {w}').format(t=inps.timeseriesFile,
-                                         m=inps.tropModel,
-                                         g=inps.geomFile,
-                                         w=inps.weatherDir)
-            print(tropCmd)
-            if ut.update_file(outName, inps.timeseriesFile):
-                if inps.tropFile:
-                    tropCmd = 'diff.py {} {} -o {} --force'.format(inps.timeseriesFile,
-                                                                   inps.tropFile,
-                                                                   outName)
-                    print('--------------------------------------------')
-                    print('Use existed tropospheric delay file: {}'.format(inps.tropFile))
-                    print(tropCmd)
-                status = subprocess.Popen(tropCmd, shell=True).wait()
-                if status is not 0:
-                    print('\nError while correcting tropospheric delay, try the following:')
-                    print('1) Check the installation of PyAPS')
-                    print('   http://earthdef.caltech.edu/projects/pyaps/wiki/Main')
-                    print('   Try in command line: python -c "import pyaps"')
-                    print('2) Use other tropospheric correction method, height-correlation, for example')
-                    print('3) or turn off the option by setting pysar.troposphericDelay.method = no.\n')
-                    raise RuntimeError()
-            inps.timeseriesFile = outName
-        else:
-            print('No atmospheric delay correction.')
-
-    # Grab tropospheric delay file
-    try:
-        fileList = [os.path.join(inps.workDir, 'INPUTS/{}.h5'.format(inps.tropModel))]
-        inps.tropFile = ut.get_file_list(fileList)[0]
-    except:
-        inps.tropFile = None
+    correct_tropospheric_delay(inps, template)
 
     ##############################################
     # Topographic (DEM) Residuals Correction (Optional)
@@ -751,48 +825,22 @@ def main(iargs=None):
     inps.derampMethod = template['pysar.deramp']
     if inps.derampMethod:
         print('Phase Ramp Removal method: {}'.format(inps.derampMethod))
-        if inps.geocoded and inps.derampMethod in ['baseline_cor', 'base_trop_cor']:
-            warnings.warn(('dataset is in geo coordinates,'
-                           ' can not apply {} method').format(inps.derampMethod))
-            print('skip deramping and continue.')
-
-        # Get executable command and output name
-        derampCmd = None
-        fbase = os.path.splitext(inps.timeseriesFile)[0]
         if inps.derampMethod in ['linear', 'quadratic',
                                  'linear_range', 'quadratic_range',
                                  'linear_azimuth', 'quadratic_azimuth']:
-            outName = '{}_ramp.h5'.format(fbase)
+            outName = '{}_ramp.h5'.format(os.path.splitext(inps.timeseriesFile)[0])
             derampCmd = 'remove_ramp.py {} -s {} -m {} -o {}'.format(inps.timeseriesFile,
                                                                      inps.derampMethod,
                                                                      inps.derampMaskFile,
                                                                      outName)
-
-        elif inps.derampMethod == 'baseline_cor':
-            outName = '{}_baselineCor.h5'.format(fbase)
-            derampCmd = 'baseline_error.py {} {}'.format(inps.timeseriesFile,
-                                                         inps.maskFile)
-
-        elif inps.derampMethod in ['base_trop_cor', 'basetropcor', 'baselinetropcor']:
-            print('Joint estimation of Baseline error and tropospheric delay')
-            print('\t[height-correlation approach]')
-            outName = '{}_baseTropCor.h5'.format(fbase)
-            derampCmd = ('baseline_trop.py {t} {d} {p}'
-                         ' range_and_azimuth {m}').format(t=inps.timeseriesFile,
-                                                          d=inps.geomFile,
-                                                          p=inps.tropPolyOrder,
-                                                          m=inps.maskFile)
-        else:
-            warnings.warn('Unrecognized phase ramp method: {}'.format(inps.derampMethod))
-
-        # Execute command
-        if derampCmd:
             print(derampCmd)
             if ut.update_file(outName, inps.timeseriesFile):
                 status = subprocess.Popen(derampCmd, shell=True).wait()
                 if status is not 0:
                     raise Exception('Error while removing phase ramp for time-series.\n')
             inps.timeseriesFile = outName
+        else:
+            warnings.warn('Unrecognized phase ramp method: {}'.format(inps.derampMethod))
     else:
         print('No phase ramp removal.')
 
@@ -899,34 +947,7 @@ def main(iargs=None):
     #############################################
     if template['pysar.save.hdfEos5'] is True:
         print('\n**********  Save Time-series in HDF-EOS5 Format  **********')
-        if not inps.geocoded:
-            warnings.warn('Dataset is in radar coordinates, skip saving to HDF-EOS5 format.')
-        else:
-            # Add attributes from custom template to timeseries file
-            if templateCustom is not None:
-                ut.add_attribute(inps.timeseriesFile, templateCustom)
-
-            # Save to HDF-EOS5 format
-            print('--------------------------------------------')
-            hdfeos5Cmd = ('save_hdfeos5.py {t} -c {c} -m {m} -g {g}'
-                          ' -t {e}').format(t=inps.timeseriesFile,
-                                            c=inps.tempCohFile,
-                                            m=inps.maskFile,
-                                            g=inps.geomFile,
-                                            e=inps.templateFile)
-            print(hdfeos5Cmd)
-            SAT = hdfeos5.get_mission_name(atr)
-            try:
-                inps.hdfeos5File = ut.get_file_list('{}_*.he5'.format(SAT))[0]
-            except:
-                inps.hdfeos5File = None
-            if ut.update_file(inps.hdfeos5File, [inps.timeseriesFile,
-                                                 inps.tempCohFile,
-                                                 inps.maskFile,
-                                                 inps.geomFile]):
-                status = subprocess.Popen(hdfeos5Cmd, shell=True).wait()
-                if status is not 0:
-                    raise Exception('Error while generating HDF-EOS5 time-series file.\n')
+        save_hdfeos5(inps, templateCustom)
 
     #############################################
     # Plot Figures
@@ -952,7 +973,7 @@ def main(iargs=None):
             raise Exception('Error while plotting data files using {}'.format(plotCmd))
 
     #############################################
-    # Time                                      #
+    # Timing                                    #
     #############################################
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs'.format(m, s))

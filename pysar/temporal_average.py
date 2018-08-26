@@ -51,7 +51,7 @@ def check_output_filename(inps):
         if k == 'ifgramStack':
             if inps.datasetName == 'coherence':
                 inps.outfile = 'avgSpatialCoherence.h5'
-            elif inps.datasetName == 'unwrapPhase':
+            elif 'unwrapPhase' in inps.datasetName:
                 inps.outfile = 'avgPhaseVelocity.h5'
             else:
                 inps.outfile = 'avg{}.h5'.format(inps.datasetName)

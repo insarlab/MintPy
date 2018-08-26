@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
 
 import os
-import sys
 import argparse
-import h5py
-import numpy as np
-from pysar.utils import readfile, writefile, utils as ut, deramp
+from pysar.utils import utils as ut
 
 
-######################################
+###########################################################################################
 TEMPLATE = """template:
 ## remove phase ramp for each epoch, useful to check localized deformation, i.e. volcanic, land subsidence, etc.
 ## [linear, quadratic]
@@ -23,9 +20,9 @@ pysar.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask fi
 """
 
 EXAMPLE = """example:
-  remove_ramp.py  timeseries.h5      -m Mask.h5
-  remove_ramp.py  timeseries.h5      -m Mask.h5         -s quadratic
-  remove_ramp.py  090214_101120.unw  -m Mask_tempCoh.h5 -s quadratic  -y 0,2400,2000,6843
+  remove_ramp.py  timeseries.h5      -m maskTempCoh.h5
+  remove_ramp.py  ifgramStack.h5     -m maskTempCoh.h5  -d unwrapPhase_bridge
+  remove_ramp.py  090214_101120.unw  -m maskTempCoh.h5  -s quadratic
 """
 
 def create_parser():
@@ -43,12 +40,10 @@ def create_parser():
                                  'linear_range', 'linear_azimuth',
                                  'quadratic_range', 'quadratic_azimuth'},
                         help='type of surface/ramp to remove, linear by default')
-
-    parser.add_argument('-y', dest='ysub', type=int, nargs='*',
-                        help='subset in azimuth/row direction\h' +
-                        ' for multiple surface removal within one track, i.e.:\n' +
-                        '0,2400,2000,6843')
-
+    parser.add_argument('-d','--dset', dest='dset', 
+                        help='dataset name to be derampped in ifgramStack file\n' + 
+                             'e.g.: unwrapPhase\n' +
+                             '      unwrapPhase_bridge')
     parser.add_argument('-o', '--outfile', help='Output file name. Disabled when more than 1 input files')
     return parser
 
@@ -57,20 +52,17 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
     inps.file = ut.get_file_list(inps.file)
-
-    if inps.ysub and not len(inps.ysub) % 2 == 0:
-        raise Exception('ERROR: -y input has to have even length!')
     return inps
 
 
-######################################
+###########################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     print('input file: ({})\n{}'.format(len(inps.file), inps.file))
 
     for File in inps.file:
         print('------------------------------------------')
-        deramp.remove_surface(File, inps.surface_type, inps.mask_file, ysub=inps.ysub)
+        ut.deramp_file(File, inps.surface_type, inps.mask_file, datasetName=inps.dset)
 
     print('Done.')
     return

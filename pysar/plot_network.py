@@ -233,39 +233,47 @@ def main(iargs=None):
 
     # Fig 1 - Baseline History
     fig, ax = plt.subplots(figsize=inps.fig_size)
-    ax = pp.plot_perp_baseline_hist(ax, inps.dateList, inps.pbaseList,
-                                    vars(inps), inps.dateList_drop)
+    ax = pp.plot_perp_baseline_hist(ax,
+                                    inps.dateList,
+                                    inps.pbaseList,
+                                    vars(inps),
+                                    inps.dateList_drop)
     if inps.save_fig:
-        fig.savefig(figNames[0], bbox_inches='tight',
-                    transparent=True, dpi=inps.fig_dpi)
+        fig.savefig(figNames[0], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
         print('save figure to {}'.format(figNames[0]))
 
     if inps.cohList is not None:
         # Fig 2 - Coherence Matrix
         fig, ax = plt.subplots(figsize=inps.fig_size)
-        ax = pp.plot_coherence_matrix(ax, inps.date12List, inps.cohList,
-                                      inps.date12List_drop, plot_dict=vars(inps))[0]
+        ax = pp.plot_coherence_matrix(ax,
+                                      inps.date12List,
+                                      inps.cohList,
+                                      inps.date12List_drop,
+                                      plot_dict=vars(inps))[0]
         if inps.save_fig:
-            fig.savefig(figNames[1], bbox_inches='tight',
-                        transparent=True, dpi=inps.fig_dpi)
+            fig.savefig(figNames[1], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print('save figure to {}'.format(figNames[1]))
 
         # Fig 3 - Min/Max Coherence History
         fig, ax = plt.subplots(figsize=inps.fig_size)
-        ax = pp.plot_coherence_history(ax, inps.date12List, inps.cohList,
+        ax = pp.plot_coherence_history(ax,
+                                       inps.date12List,
+                                       inps.cohList,
                                        plot_dict=vars(inps))
         if inps.save_fig:
-            fig.savefig(figNames[2], bbox_inches='tight',
-                        transparent=True, dpi=inps.fig_dpi)
+            fig.savefig(figNames[2], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
             print('save figure to {}'.format(figNames[2]))
 
     # Fig 4 - Interferogram Network
     fig, ax = plt.subplots(figsize=inps.fig_size)
-    ax = pp.plot_network(ax, inps.date12List, inps.dateList, inps.pbaseList,
-                         vars(inps), inps.date12List_drop)
+    ax = pp.plot_network(ax,
+                         inps.date12List,
+                         inps.dateList,
+                         inps.pbaseList,
+                         vars(inps),
+                         inps.date12List_drop)
     if inps.save_fig:
-        fig.savefig(figNames[3], bbox_inches='tight',
-                    transparent=True, dpi=inps.fig_dpi)
+        fig.savefig(figNames[3], bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
         print('save figure to {}'.format(figNames[3]))
 
     if inps.disp_fig:
