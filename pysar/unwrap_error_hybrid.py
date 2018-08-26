@@ -20,8 +20,7 @@ from pysar.utils import (ptime,
                          readfile,
                          writefile,
                          utils as ut,
-                         plot as pp,
-                         deramp)
+                         plot as pp)
 from pysar import ifgram_inversion as ifginv
 from pysar.unwrap_error_phase_closure import run_unwrap_error_closure
 from pysar.unwrap_error_bridging import search_bridge, run_unwrap_error_bridge
