@@ -169,9 +169,8 @@ pysar.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
 
 ## 4.2 Select Reference Date
 ## reference all timeseries to one date in time
-## minRMS - choose date with minimum residual RMS using value from step 8.1
 ## no     - do not change the default reference date (1st date)
-pysar.reference.date = auto   #[reference_date.txt / 20090214 / minRMS / no], auto for minRMS
+pysar.reference.date = auto   #[reference_date.txt / 20090214 / no], auto for minRMS
 
 
 ########## 5. Phase Ramp Removal (optional)

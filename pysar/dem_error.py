@@ -110,13 +110,16 @@ def run_check(inps):
         print('  1) output file {} not found, --> run'.format(inps.outfile))
     else:
         print('  1) output file {} already exists.'.format(inps.outfile))
-        ti = os.path.getmtime(inps.timeseries_file)
+        infiles = [inps.timeseries_file]
+        if inps.geom_file:
+            infiles.append(inps.geom_file)
+        ti = min(os.path.getmtime(i) for i in infiles)
         to = os.path.getmtime(inps.outfile)
         if to <= ti:
             run = True
-            print('  2) output file is NOT newer than input file: {} --> run.'.format(inps.timeseries_file))
+            print('  2) output file is NOT newer than input file: {} --> run.'.format(infiles))
         else:
-            print('  2) output file is newer than input file: {}.'.format(inps.timeseries_file))
+            print('  2) output file is newer than input file: {}.'.format(infiles))
 
     # check configuration
     if not run:

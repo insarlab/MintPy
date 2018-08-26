@@ -37,8 +37,8 @@ if [ $plot_key_files -eq 1 ]; then
     view.py --nodisplay velocity.h5           $opt               | tee -a $log_file
     view.py --nodisplay temporalCoherence.h5  -c gray --vlim 0 1 | tee -a $log_file
     view.py --nodisplay maskTempCoh.h5        -c gray --vlim 0 1 | tee -a $log_file
-    view.py --nodisplay INPUTS/geometryGeo.h5                    | tee -a $log_file
-    view.py --nodisplay INPUTS/geometryRadar.h5                  | tee -a $log_file
+    file=INPUTS/geometryRadar.h5;  test -f $file && view.py --nodisplay $file | tee -a $log_file
+    file=INPUTS/geometryGeo.h5;    test -f $file && view.py --nodisplay $file | tee -a $log_file
 fi
 
 
@@ -87,9 +87,10 @@ if [ $plot_geocoded_data -eq 1 ]; then
     $view ./GEOCODE/geo_maskTempCoh.h5          -c gray --vlim 0 1           | tee -a $log_file
     $view ./GEOCODE/geo_temporalCoherence.h5    -c gray --vlim 0 1           | tee -a $log_file
     $view ./GEOCODE/geo_velocity.h5             -m $geo_mask_file -u cm | tee -a $log_file
-    $view ./GEOCODE/geo_timeseries_ECMWF_demErr_ramp.h5 --noaxis -m $geo_mask_file -u cm | tee -a $log_file
-    $view ./GEOCODE/geo_timeseries_ECMWF_demErr.h5      --noaxis -m $geo_mask_file -u cm | tee -a $log_file
-    $view ./GEOCODE/geo_timeseries_demErr.h5            --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    file=./GEOCODE/geo_timeseries_ECMWF_demErr_ramp.h5;  test -f $file && $view --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    file=./GEOCODE/geo_timeseries_ECMWF_demErr.h5;       test -f $file && $view --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    file=./GEOCODE/geo_timeseries_demErr_ramp.h5;        test -f $file && $view --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    file=./GEOCODE/geo_timeseries_demErr.h5;             test -f $file && $view --noaxis -m $geo_mask_file -u cm | tee -a $log_file
 fi
 
 

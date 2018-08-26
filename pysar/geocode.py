@@ -249,7 +249,7 @@ def run_geocode(inps):
         outfile = auto_output_filename(infile, inps)
         if inps.updateMode and not ut.update_file(outfile, [infile, inps.lookupFile]):
             print('update mode is ON, skip geocoding.')
-            return outfile
+            continue
 
         # read source data and resample
         dsNames = readfile.get_dataset_list(infile, datasetName=inps.dset)
