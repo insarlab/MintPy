@@ -701,26 +701,26 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     # Intermediate files name
     if ramp_type == 'no':
         print('No ramp removal')
-        deramp_file = timeseries_resid_file
+        deramped_file = timeseries_resid_file
     else:
-        deramp_file = '{}_ramp.h5'.format(os.path.splitext(timeseries_resid_file)[0])
-    std_file = os.path.splitext(deramp_file)[0]+'_std.txt'
+        deramped_file = '{}_ramp.h5'.format(os.path.splitext(timeseries_resid_file)[0])
+    std_file = os.path.splitext(deramped_file)[0]+'_std.txt'
 
     # Get residual std text file
-    if update_file(std_file, [deramp_file, mask_file], check_readable=False):
-        if update_file(deramp_file, timeseries_resid_file):
+    if update_file(std_file, [deramped_file, mask_file], check_readable=False):
+        if update_file(deramped_file, timeseries_resid_file):
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
                 print('removing a {} ramp from file: '.format(ramp_type, timeseries_resid_file))
-                deramp_file = deramp_file(timeseries_resid_file,
-                                          ramp_type=ramp_type,
-                                          mask_file=mask_file,
-                                          out_file=deramp_file)
-        print('calculating residual standard deviation for each epoch from file: '+deramp_file)
-        std_file = timeseries(deramp_file).timeseries_std(maskFile=mask_file, outFile=std_file)
+                deramped_file = deramp_file(timeseries_resid_file,
+                                            ramp_type=ramp_type,
+                                            mask_file=mask_file,
+                                            out_file=deramped_file)
+        print('calculating residual standard deviation for each epoch from file: '+deramped_file)
+        std_file = timeseries(deramped_file).timeseries_std(maskFile=mask_file, outFile=std_file)
 
     # Read residual std text file
     print('read timeseries RMS from file: '+std_file)
@@ -750,27 +750,27 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     # Intermediate files name
     if ramp_type == 'no':
         print('No ramp removal')
-        deramp_file = timeseries_resid_file
+        deramped_file = timeseries_resid_file
     else:
-        deramp_file = os.path.splitext(timeseries_resid_file)[0]+'_ramp.h5'
-    rms_file = os.path.join(os.path.dirname(os.path.abspath(deramp_file)),
-                            'rms_{}.txt'.format(os.path.splitext(deramp_file)[0]))
+        deramped_file = '{}_ramp.h5'.format(os.path.splitext(timeseries_resid_file)[0])
+    rms_file = os.path.join(os.path.dirname(os.path.abspath(deramped_file)),
+                            'rms_{}.txt'.format(os.path.splitext(deramped_file)[0]))
 
     # Get residual RMS text file
-    if update_file(rms_file, [deramp_file, mask_file], check_readable=False):
-        if update_file(deramp_file, timeseries_resid_file):
+    if update_file(rms_file, [deramped_file, mask_file], check_readable=False):
+        if update_file(deramped_file, timeseries_resid_file):
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
                 msg += '\nRe-run dem_error.py to generate it.'
                 raise Exception(msg)
             else:
                 print('removing a {} ramp from file: {}'.format(ramp_type, timeseries_resid_file))
-                deramp_file = deramp_file(timeseries_resid_file,
-                                          ramp_type=ramp_type,
-                                          mask_file=mask_file,
-                                          out_file=deramp_file)
-        print('Calculating residual RMS for each epoch from file: '+deramp_file)
-        rms_file = timeseries(deramp_file).timeseries_rms(maskFile=mask_file, outFile=rms_file)
+                deramped_file = deramp_file(timeseries_resid_file,
+                                            ramp_type=ramp_type,
+                                            mask_file=mask_file,
+                                            out_file=deramped_file)
+        print('Calculating residual RMS for each epoch from file: '+deramped_file)
+        rms_file = timeseries(deramped_file).timeseries_rms(maskFile=mask_file, outFile=rms_file)
 
     # Read residual RMS text file
     print('read timeseries residual RMS from file: '+rms_file)
@@ -1762,7 +1762,7 @@ def deramp_file(fname, ramp_type, mask_file=None, out_file=None, datasetName=Non
             datasetName = 'unwrapPhase'
         with h5py.File(fname, 'a') as f:
             ds = f[datasetName]
-            dsNameOut = '{}_{}'.format(datasetName, ramp_type)
+            dsNameOut = '{}_ramp'.format(datasetName)
             if dsNameOut in f.keys():
                 dsOut = f[dsNameOut]
                 print('access HDF5 dataset /{}'.format(dsNameOut))

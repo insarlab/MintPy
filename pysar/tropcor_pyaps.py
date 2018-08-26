@@ -38,6 +38,10 @@ REFERENCE = """reference:
   Jolivet, R., R. Grandin, C. Lasserre, M.-P. Doin and G. Peltzer (2011), Systematic InSAR tropospheric
   phase delay corrections from global meteorological reanalysis data, Geophys. Res. Lett., 38, L17311,
   doi:10.1029/2011GL048757
+
+  Jolivet, R., P. S. Agram, N. Y. Lin, M. Simons, M. P. Doin, G. Peltzer, and Z. Li (2014), Improving
+  InSAR geodesy using global atmospheric models, Journal of Geophysical Research: Solid Earth, 119(3),
+  2324-2341.
 """
 
 TEMPLATE = """
@@ -376,7 +380,7 @@ def get_delay_timeseries(inps, atr):
     date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_file_list]
     trop_data = np.zeros((num_date, length, width), np.float32)
 
-    print('calcualting delay for each date using PyAPS (Jolivet et al., 2011) ...')
+    print('calcualting delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
     prog_bar = ptime.progressBar(maxValue=num_date)
     for i in range(num_date):
         grib_file = inps.grib_file_list[i]

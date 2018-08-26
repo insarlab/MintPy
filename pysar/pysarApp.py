@@ -158,7 +158,6 @@ pysar.topographicResidual.stepFuncDate  = auto  #[20080529,20100611 / no], auto 
 pysar.topographicResidual.excludeDate   = auto  #[20070321 / txtFile / no], auto for exclude_date.txt,
                                                 # dates exlcuded for error estimation
 
-
 ## 4.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
@@ -484,6 +483,7 @@ def correct_tropospheric_delay(inps, template):
                 if status is not 0:
                     raise Exception('Error while correcting tropospheric delay.\n')
             inps.timeseriesFile = outName
+            inps.timeseriesFiles.append(outName)
 
         # Weather Re-analysis Data (Jolivet et al., 2011;2014)
         elif inps.tropMethod == 'pyaps':
@@ -516,6 +516,7 @@ def correct_tropospheric_delay(inps, template):
                     print('3) or turn off the option by setting pysar.troposphericDelay.method = no.\n')
                     raise RuntimeError()
             inps.timeseriesFile = outName
+            inps.timeseriesFiles.append(outName)
         else:
             print('Un-recognized atmospheric delay correction method: {}'.format(inps.tropMethod))
 
@@ -730,6 +731,7 @@ def main(iargs=None):
     print(invCmd)
     inps.timeseriesFile = 'timeseries.h5'
     inps.tempCohFile = 'temporalCoherence.h5'
+    inps.timeseriesFiles = ['timeseries.h5']       #all ts files
     status = subprocess.Popen(invCmd, shell=True).wait()
     if status is not 0:
         raise Exception('Error while inverting network interferograms into timeseries')
@@ -757,6 +759,7 @@ def main(iargs=None):
             if status is not 0:
                 raise Exception('Error while correcting Local Oscillator Drift.\n')
         inps.timeseriesFile = outName
+        inps.timeseriesFiles.append(outName)
 
     ##############################################
     # Tropospheric Delay Correction (Optional)
@@ -782,12 +785,11 @@ def main(iargs=None):
             raise Exception('Error while correcting topographic phase residual.\n')
         inps.timeseriesFile = outName
         inps.timeseriesResFile = 'timeseriesResidual.h5'
+        inps.timeseriesFiles.append(outName)
     else:
         print('No correction for topographic residuals.')
 
-    ##############################################
     # Timeseries Residual Standard Deviation
-    ##############################################
     print('\n**********  Timeseries Residual Root Mean Square  **********')
     if inps.timeseriesResFile:
         rmsCmd = 'timeseries_rms.py {} -t {}'.format(inps.timeseriesResFile,
@@ -799,21 +801,16 @@ def main(iargs=None):
     else:
         print('No timeseries residual file found! Skip residual RMS analysis.')
 
-    ##############################################
     # Reference in Time
-    ##############################################
     print('\n**********  Select Reference Date  **********')
     if template['pysar.reference.date']:
-        outName = '{}_refDate.h5'.format(os.path.splitext(inps.timeseriesFile)[0])
-        refCmd = 'reference_date.py {} -t {} -o {}'.format(inps.timeseriesFile,
-                                                           inps.templateFile,
-                                                           outName)
+        refCmd = 'reference_date.py -t {} '.format(inps.templateFile)
+        for fname in inps.timeseriesFiles:
+            refCmd += ' {}'.format(fname)
         print(refCmd)
-        if ut.update_file(outName, inps.timeseriesFile):
-            status = subprocess.Popen(refCmd, shell=True).wait()
-            if status is not 0:
-                raise Exception('Error while changing reference date.\n')
-        inps.timeseriesFile = outName
+        status = subprocess.Popen(refCmd, shell=True).wait()
+        if status is not 0:
+            raise Exception('Error while changing reference date.\n')
     else:
         print('No reference change in time.')
 
@@ -825,9 +822,10 @@ def main(iargs=None):
     inps.derampMethod = template['pysar.deramp']
     if inps.derampMethod:
         print('Phase Ramp Removal method: {}'.format(inps.derampMethod))
-        if inps.derampMethod in ['linear', 'quadratic',
-                                 'linear_range', 'quadratic_range',
-                                 'linear_azimuth', 'quadratic_azimuth']:
+        ramp_list = ['linear', 'quadratic',
+                     'linear_range', 'quadratic_range',
+                     'linear_azimuth', 'quadratic_azimuth']
+        if inps.derampMethod in ramp_list:
             outName = '{}_ramp.h5'.format(os.path.splitext(inps.timeseriesFile)[0])
             derampCmd = 'remove_ramp.py {} -s {} -m {} -o {}'.format(inps.timeseriesFile,
                                                                      inps.derampMethod,
@@ -839,8 +837,11 @@ def main(iargs=None):
                 if status is not 0:
                     raise Exception('Error while removing phase ramp for time-series.\n')
             inps.timeseriesFile = outName
+            inps.timeseriesFiles.append(outName)
         else:
-            warnings.warn('Unrecognized phase ramp method: {}'.format(inps.derampMethod))
+            msg = 'un-recognized phase ramp method: {}'.format(inps.derampMethod)
+            msg += '\navailable ramp types:\n{}'.format(ramp_list)
+            raise ValueError(msg)
     else:
         print('No phase ramp removal.')
 
