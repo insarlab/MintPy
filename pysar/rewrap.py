@@ -21,7 +21,7 @@ Re-wrap unwraped interferograms to wrapped interferograms.
 
 example:
   rewrap.py  interferograms.h5
-  rewrap.py  timeseries_ECMWF_demErr_refDate.h5
+  rewrap.py  timeseries_ECMWF_demErr.h5
 """
 
 def usage():

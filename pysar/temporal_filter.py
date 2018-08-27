@@ -15,8 +15,8 @@ from pysar.utils import ptime
 
 ############################################################
 EXAMPLE = """example:
- temporal_filter.py timeseries_ECMWF_demErr_refDate.h5
- temporal_filter.py timeseries_ECMWF_demErr_refDate.h5 -t 0.3
+ temporal_filter.py timeseries_ECMWF_demErr.h5
+ temporal_filter.py timeseries_ECMWF_demErr.h5 -t 0.3
 """
 
 

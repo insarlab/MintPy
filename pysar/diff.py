@@ -19,7 +19,7 @@ EXAMPLE = """example:
   diff.py  velocity.h5    velocity_demErr.h5
   diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5
   diff.py  timeseries.h5  ECMWF.h5  -o timeseries_ECMWF.h5  --force
-  diff.py  timeseries_ECMWF_demErr_refDate_ramp.h5  ../GIANT/Stack/LS-PARAMS.h5 -o pysar_giant.h5
+  diff.py  timeseries_ECMWF_demErr_ramp.h5  ../GIANT/Stack/LS-PARAMS.h5 -o pysar_giant.h5
 
   # multiple files
   diff.py  waterMask.h5  maskSantiago.h5  maskFernandina.h5  -o maskIsabela.h5

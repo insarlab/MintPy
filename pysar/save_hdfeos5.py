@@ -33,8 +33,7 @@ pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range i
 """
 
 EXAMPLE = """example:
-  save_hdfeos5.py geo_timeseries_ECMWF_demErr_refDate_ramp.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5
-                  -g geo_geometryRadar.h5
+  save_hdfeos5.py geo_timeseries_ECMWF_demErr_ramp.h5 -c geo_temporalCoherence.h5 -m geo_maskTempCoh.h5 -g geo_geometryRadar.h5
 """
 
 
