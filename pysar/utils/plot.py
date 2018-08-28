@@ -1434,8 +1434,12 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
         dem_pix_box = pix_box
 
     # read dem data
+    if dem_metadata['FILE_TYPE'] == 'geometry':
+        dsName = 'height'
+    else:
+        dsName = None
     dem, dem_metadata = readfile.read(dem_file,
-                                      datasetName='height',
+                                      datasetName=dsName,
                                       box=dem_pix_box,
                                       print_msg=print_msg)
     return dem, dem_metadata, dem_pix_box
