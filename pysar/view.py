@@ -325,8 +325,8 @@ def update_data_with_plot_inps(data, metadata, inps, print_msg=True):
 
 
 ##################################################################################################
-def prep_2d_matrix(cmd, print_msg=True):
-    """Prepare data from command line as input, for easy call plot_2d_matrix() externally
+def prep_slice(cmd, print_msg=True):
+    """Prepare data from command line as input, for easy call plot_slice() externally
     Parameters: cmd : string, command to be run in terminal
                 print_msg : bool
     Returns:    data : 2D np.ndarray, data to be plotted
@@ -340,8 +340,8 @@ def prep_2d_matrix(cmd, print_msg=True):
         cmd += '-c jet -v -3 10 --cbar-loc bottom --cbar-nbins 3 --cbar-ext both --cbar-size 5% '
         cmd += '--dem srtm1.dem --dem-nocontour '
         cmd += '--lalo-step 0.2 --lalo-loc 1 0 1 0 --scalebar 0.3 0.80 0.05 --notitle --fontsize 12 '
-        d_v, atr ,inps = view.prep_2d_matrix(cmd, print_msg=print_msg)
-        ax, inps, im, cbar = view.plot_2d_matrix(ax, d_v, atr, inps, print_msg=print_msg)
+        d_v, atr ,inps = view.prep_slice(cmd, print_msg=print_msg)
+        ax, inps, im, cbar = view.plot_slice(ax, d_v, atr, inps, print_msg=print_msg)
         plt.show()
     """
     if print_msg:
@@ -364,8 +364,8 @@ def prep_2d_matrix(cmd, print_msg=True):
     return data, atr, inps
 
 
-def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
-    """Plot 2D matrix 
+def plot_slice(ax, data, metadata, inps=None, print_msg=True):
+    """Plot one slice of matrix 
     Parameters: ax : matplot.pyplot axes object
                 data : 2D np.array, 
                 metadata : dictionary, attributes of data
@@ -377,7 +377,7 @@ def plot_2d_matrix(ax, data, metadata, inps=None, print_msg=True):
                 data, atr = readfile.read('velocity.h5')
                 fig = plt.figure()
                 ax = fig.add_axes([0.1,0.1,0.8,0.8])
-                ax = pv.plot_2d_matrix(ax, data, atr)[0]
+                ax = pv.plot_slice(ax, data, atr)[0]
                 plt.show()
     """
 
@@ -1210,7 +1210,7 @@ def main(iargs=None):
 
         fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
 
-        ax, inps = plot_2d_matrix(ax, data, atr, inps)[0:2]
+        ax, inps = plot_slice(ax, data, atr, inps)[0:2]
 
         # Save figure
         if inps.save_fig:

@@ -9,6 +9,7 @@
 import os
 import sys
 import time
+import warnings
 import argparse
 import numpy as np
 from scipy import linalg
@@ -175,12 +176,15 @@ def read_exclude_date(ex_date_list, date_list_all, print_msg=True):
     if ex_date_list:
         tempList = []
         for d in ex_date_list:
-            if os.path.isfile(d):
+            if d.isdigit():
+                if len(d) in [6, 8]:
+                    tempList.append(d)
+                else:
+                    warnings.warn('input date is not in YYMMDD or YYYYMMDD format.')
+            elif os.path.isfile(d):
                 tempList += ptime.read_date_list(d)
-            else:
-                tempList.append(d)
         ex_date_list = sorted(ptime.yyyymmdd(tempList))
-        if print_msg:
+        if print_msg and len(ex_date_list) > 0:
             print(('exclude the following dates for DEM error estimation:'
                    ' ({})\n{}').format(len(ex_date_list), ex_date_list))
     else:
@@ -242,8 +246,7 @@ def read_geometry(inps):
         if 'bperp' in geom_obj.datasetNames:
             print('read 3D bperp from {} file: {} ...'.format(geom_obj.name, os.path.basename(geom_obj.file)))
             inps.pbase = geom_obj.read(datasetName='bperp', print_msg=False).reshape((geom_obj.numDate, -1))
-            for i in range(ts_obj.numDate):
-                inps.pbase[i, :] -= inps.pbase[ts_obj.refIndex, :]
+            inps.pbase -= np.tile(inps.pbase[ts_obj.refIndex, :].reshape(1, -1), (ts_obj.numDate, 1))
         else:
             print('read mean bperp from {} file'.format(ts_obj.name))
             inps.pbase = ts_obj.pbase.reshape((-1, 1))

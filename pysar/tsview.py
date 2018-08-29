@@ -376,7 +376,7 @@ def plot_init_map(ax, d_v, inps, metadata):
         inps.pts_marker = 'ro'
 
     # call view.py to plot
-    ax, inps, im, cbar = view.plot_2d_matrix(ax, d_v, metadata, inps)
+    ax, inps, im, cbar = view.plot_slice(ax, d_v, metadata, inps)
 
     return ax, im
 

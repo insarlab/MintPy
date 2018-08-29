@@ -87,10 +87,10 @@ if [ $plot_geocoded_data -eq 1 ]; then
     $view ./GEOCODE/geo_maskTempCoh.h5          -c gray --vlim 0 1           | tee -a $log_file
     $view ./GEOCODE/geo_temporalCoherence.h5    -c gray --vlim 0 1           | tee -a $log_file
     $view ./GEOCODE/geo_velocity.h5             -m $geo_mask_file -u cm | tee -a $log_file
-    file=./GEOCODE/geo_timeseries_ECMWF_demErr_ramp.h5;  test -f $file && $view --noaxis -m $geo_mask_file -u cm | tee -a $log_file
-    file=./GEOCODE/geo_timeseries_ECMWF_demErr.h5;       test -f $file && $view --noaxis -m $geo_mask_file -u cm | tee -a $log_file
-    file=./GEOCODE/geo_timeseries_demErr_ramp.h5;        test -f $file && $view --noaxis -m $geo_mask_file -u cm | tee -a $log_file
-    file=./GEOCODE/geo_timeseries_demErr.h5;             test -f $file && $view --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    file=./GEOCODE/geo_timeseries_ECMWF_demErr_ramp.h5;  test -f $file && $view $file --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    file=./GEOCODE/geo_timeseries_ECMWF_demErr.h5;       test -f $file && $view $file --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    file=./GEOCODE/geo_timeseries_demErr_ramp.h5;        test -f $file && $view $file --noaxis -m $geo_mask_file -u cm | tee -a $log_file
+    file=./GEOCODE/geo_timeseries_demErr.h5;             test -f $file && $view $file --noaxis -m $geo_mask_file -u cm | tee -a $log_file
 fi
 
 
