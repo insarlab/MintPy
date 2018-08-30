@@ -803,12 +803,12 @@ def read_point2inps(inps, coord_obj):
 
 
 ############################################ Plot Utilities #############################################
-def add_inner_title(ax, title, loc, size=None, **kwargs):
+def add_inner_title(ax, title, loc, prop=None, **kwargs):
     from matplotlib.offsetbox import AnchoredText
     from matplotlib.patheffects import withStroke
-    if size is None:
-        size = dict(size=plt.rcParams['legend.fontsize'])
-    at = AnchoredText(title, loc=loc, prop=size,
+    if prop is None:
+        prop = dict(size=plt.rcParams['legend.fontsize'])
+    at = AnchoredText(title, loc=loc, prop=prop,
                       pad=0., borderpad=0.5,
                       frameon=False, **kwargs)
     ax.add_artist(at)

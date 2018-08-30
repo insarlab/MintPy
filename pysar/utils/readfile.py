@@ -206,7 +206,7 @@ def read_hdf5_file(fname, datasetName=None, box=None):
         datasetName = [ds_list[0]]
     elif isinstance(datasetName, str):
         datasetName = [datasetName]
-    elif all(i.isdigit() for i in datasetName):
+    if all(i.isdigit() for i in datasetName):
         datasetName = ['{}-{}'.format(ds_3d_list[0], i) for i in datasetName]
     # Input Argument: decompose slice list into dsFamily and inputDateList
     dsFamily = datasetName[0].split('-')[0]

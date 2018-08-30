@@ -14,9 +14,10 @@ except ImportError:
 
 import sys
 import numpy as np
+from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator as RGI
 import multiprocessing
-from pysar.utils import readfile, ptime
+from pysar.utils import readfile, ptime, utils as ut
 
 
 class resample:
@@ -166,20 +167,23 @@ class resample:
             # ignore pixels with zero value
             zero_mask = np.multiply(lat != 0., lon != 0.)
 
-
             # ignore anomaly non-zero values 
             # by get the most common data range (d_min, d_max) based on histogram
             mask = np.array(zero_mask, np.bool_)
             for data in [lat, lon]:
-                hist, bin_edges = np.histogram(data[mask], bins=10)
+                bin_value, bin_edge = np.histogram(data[mask], bins=10)                
                 # if there is anomaly, histogram won't be evenly distributed
-                while np.max(hist) > np.sum(zero_mask) * 0.7:
-                    idx = np.argmax(hist)
-                    d_mean = (bin_edges[idx] + bin_edges[idx+1]) / 2.
-                    bin_step = bin_edges[1] - bin_edges[0]
-                    mask *= np.multiply(data >= d_mean - bin_step,
-                                        data <= d_mean + bin_step)
-                    hist, bin_edges = np.histogram(data[mask], bins=10)
+                while np.max(bin_value) > np.sum(zero_mask) * 0.3:
+                    # find the continous bins where the largest bin is --> normal data range
+                    bin_value_thres = ut.median_abs_deviation_threshold(bin_value, cutoff=3)
+                    bin_label = ndimage.label(bin_value > bin_value_thres)[0]
+                    idx = np.where(bin_label == bin_label[np.argmax(bin_value)])[0]
+                    # convert to min/max data value
+                    bin_step = bin_edge[1] - bin_edge[0]
+                    d_min = bin_edge[idx[0]] - bin_step / 2.
+                    d_max = bin_edge[idx[-1]+1] + bin_step / 2.
+                    mask *= np.multiply(data >= d_min, data <= d_max)
+                    bin_value, bin_edge = np.histogram(data[mask], bins=10)
             lat[mask == 0] = 90.
             lon[mask == 0] = 0.
             return lat, lon, mask

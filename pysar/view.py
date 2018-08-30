@@ -997,7 +997,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             else:
                 ax.set_title(subplot_title, fontsize=inps.font_size)
         else:
-            pp.add_inner_title(ax, subplot_title, loc=1)
+            prop = dict(size=inps.font_size)
+            pp.add_inner_title(ax, subplot_title, loc=1, prop=prop)
 
     # Flip Left-Right / Up-Down
     if inps.flip_lr:
