@@ -179,6 +179,7 @@ class timeseries:
                 self.metadata[key] = value.decode('utf8')
             except:
                 self.metadata[key] = value
+
         # ref_date/index
         dateList = [i.decode('utf8') for i in dates]
         if 'REF_DATE' not in self.metadata.keys():

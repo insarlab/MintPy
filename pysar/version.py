@@ -14,7 +14,6 @@ ____/________(___/_(____/___/____|_/_____|_______
 
  A Python package for InSAR time series analysis.
              PySAR v{v}, {d}
- Geodesy Lab, University of Miami, Maimi FL, USA
 _________________________________________________
 """.format(v=release_version, d=release_date)
 

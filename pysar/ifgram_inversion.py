@@ -26,6 +26,7 @@ configKeys = ['unwDatasetName',
               'weightFunc',
               'maskDataset',
               'maskThreshold',
+              'redundancyRatio',
               'minNormVelocity']
 
 
@@ -54,6 +55,7 @@ TEMPLATE = """
 pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
+pysar.networkInversion.redundancyRatio = auto #[1-inf], auto for 1.0, min num of ifgrams per SAR acquisition
 pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
 pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
@@ -96,8 +98,10 @@ def create_parser():
                         help='Reference date, first date by default.')
     parser.add_argument('--mask-dset', dest='maskDataset',
                         help='dataset used to mask unwrapPhase, e.g. coherence, connectComponent')
-    parser.add_argument('--mask-threshold', dest='maskThreshold', type=float, default=0.4,
+    parser.add_argument('--mask-threshold', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
                         help='threshold to generate mask when mask is coherence')
+    parser.add_argument('--redun-ratio', dest='redundancyRatio', metavar='NUM', type=float, default=1.0, 
+                        help='redundancy ratio, min number of interferograms per SAR acquisition.')
 
     parser.add_argument('--weight-function', '-w', dest='weightFunc', default='no', choices={'var', 'fim', 'coh', 'no'},
                         help='function used to convert coherence to weight for inversion:\n' +
@@ -118,7 +122,8 @@ def create_parser():
                         help='Enable parallel processing for the pixelwise weighted inversion. [not working yet]')
     parser.add_argument('--skip-reference', dest='skip_ref', action='store_true',
                         help='Skip checking reference pixel value, for simulation testing.')
-    parser.add_argument('-o', '--output', dest='outfile', nargs=2, default=['timeseries.h5', 'temporalCoherence.h5'],
+    parser.add_argument('-o', '--output', dest='outfile', nargs=2,
+                        metavar=('TS_FILE', 'TCOH_FILE'), default=['timeseries.h5', 'temporalCoherence.h5'],
                         help='Output file name for timeseries and temporal coherence, default:\n' +
                         'timeseries.h5 temporalCoherence.h5')
     parser.add_argument('--update', dest='update_mode', action='store_true',
@@ -164,7 +169,7 @@ def read_template2inps(template_file, inps):
         if key in ['maskDataset', 'minNormVelocity']:
             inpsDict[key] = value
         elif value:
-            if key in ['maskThreshold']:
+            if key in ['maskThreshold', 'redundancyRatio']:
                 inpsDict[key] = float(value)
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 inpsDict[key] = value
@@ -689,7 +694,7 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
 
 def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
                            weight_func='var', min_norm_velocity=True,
-                           mask_dataset_name=None, mask_threshold=0.4,
+                           mask_dataset_name=None, mask_threshold=0.4, redun_ratio=1.0,
                            water_mask_file=None, skip_zero_phase=True):
     """Invert one patch of an ifgram stack into timeseries.
     Parameters: ifgram_file       : str, interferograms stack HDF5 file, e.g. ./INPUTS/ifgramStack.h5
@@ -823,7 +828,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                                        ifgram=pha_data[:, mask_all_net],
                                                        weight_sqrt=None,
                                                        min_norm_velocity=min_norm_velocity,
-                                                       skip_zero_phase=skip_zero_phase)
+                                                       skip_zero_phase=skip_zero_phase,
+                                                       redun_ratio=redun_ratio)
             ts[:, mask_all_net] = tsi
             temp_coh[mask_all_net] = tcohi
             num_inv_ifg[mask_all_net] = num_ifgi
@@ -840,7 +846,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                                            ifgram=pha_data[:, idx],
                                                            weight_sqrt=None,
                                                            min_norm_velocity=min_norm_velocity,
-                                                           skip_zero_phase=skip_zero_phase)
+                                                           skip_zero_phase=skip_zero_phase,
+                                                           redun_ratio=redun_ratio)
                 ts[:, idx] = tsi.flatten()
                 temp_coh[idx] = tcohi
                 num_inv_ifg[idx] = num_ifgi
@@ -863,7 +870,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                                        ifgram=pha_data[:, idx],
                                                        weight_sqrt=weight[:, idx],
                                                        min_norm_velocity=min_norm_velocity,
-                                                       skip_zero_phase=skip_zero_phase)
+                                                       skip_zero_phase=skip_zero_phase,
+                                                       redun_ratio=redun_ratio)
             ts[:, idx] = tsi.flatten()
             temp_coh[idx] = tcohi
             num_inv_ifg[idx] = num_ifgi
@@ -965,6 +973,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                    min_norm_velocity=inps.minNormVelocity,
                                    mask_dataset_name=inps.maskDataset,
                                    mask_threshold=inps.maskThreshold,
+                                   redun_ratio=inps.redundancyRatio,
                                    water_mask_file=inps.waterMaskFile,
                                    skip_zero_phase=inps.skip_zero_phase)
     else:
@@ -997,6 +1006,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                                 min_norm_velocity=inps.minNormVelocity,
                                                 mask_dataset_name=inps.maskDataset,
                                                 mask_threshold=inps.maskThreshold,
+                                                redun_ratio=inps.redundancyRatio,
                                                 water_mask_file=inps.waterMaskFile,
                                                 skip_zero_phase=inps.skip_zero_phase)
 

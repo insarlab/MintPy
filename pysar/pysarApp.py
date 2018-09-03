@@ -120,6 +120,7 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
+pysar.networkInversion.redundancyRatio = auto #[1-inf], auto for 1.0, min num of ifgrams per SAR acquisition
 pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
 pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
