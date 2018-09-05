@@ -215,12 +215,14 @@ def read_hdf5_file(fname, datasetName=None, box=None):
     # read hdf5
     with h5py.File(fname, 'r') as f:
         # get dataset object
-        dsName = [i for i in [datasetName[0], dsFamily] if i in f.keys()][0]
-        ds = f[dsName]
-        # support for old pysar files
-        dsNameOld = '{d}/{d}'.format(d=dsName)
-        if dsNameOld in f.keys() and isinstance(f[dsNameOld], h5py.Dataset):
-            ds = f[dsNameOld]
+        dsNames = [i for i in [datasetName[0], dsFamily] if i in f.keys()]
+        dsNamesOld = [i for i in slice_list if '/{}'.format(datasetName[0]) in i] # support for old pysar files
+        if len(dsNames) > 0:
+            ds = f[dsNames[0]]
+        elif len(dsNamesOld) > 0:
+            ds = f[dsNamesOld[0]]
+        else:
+            raise ValueError('input dataset {} not found in file {}'.format(datasetName, fname))
 
         # 2D dataset
         if ds.ndim == 2:
@@ -415,7 +417,7 @@ def get_slice_list(fname):
             obj.open(print_msg=False)
             slice_list = obj.sliceList
 
-        elif k in ['geometry']:
+        elif k in ['geometry'] and k not in d1_list:
             obj = geometry(fname)
             obj.open(print_msg=False)
             slice_list = obj.sliceList

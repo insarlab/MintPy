@@ -261,7 +261,7 @@ def check_exist_grib_file(gfile_list, print_msg=True):
         if file_sizes:
             comm_size = ut.most_common([i for i in file_sizes])
             if print_msg:
-                print('file size mode: {} bytes'.format(comm_size))
+                print('common file size: {} bytes'.format(comm_size))
                 print('number of grib files existed    : {}'.format(len(gfile_exist)))
 
             gfile_corrupt = []
