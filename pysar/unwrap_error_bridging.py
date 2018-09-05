@@ -233,7 +233,7 @@ def water_mask2conn_comp_mask(water_mask_file, ref_yx, out_file='maskConnComp.h5
     return out_file
 
 
-def search_bridge(mask_cc_file, radius=150, coh_mask_file='maskSpatialCoh.h5', display=False):
+def search_bridge(mask_cc_file, radius=150, coh_mask_file='maskSpatialCoh.h5', save_plot=True):
     """Search bridges to connect coherent conn comps with min distance
     Parameters: mask_cc_file : str, path of mask file of coherent conn comps
                 radius : int, radius of influence for median value calculation to represent the value of cc
@@ -275,7 +275,7 @@ def search_bridge(mask_cc_file, radius=150, coh_mask_file='maskSpatialCoh.h5', d
 
     # 1. calculate the min-spanning-tree path to connect all conn comps
     # 2. find the order using a breadth-first ordering starting with conn comp 1 
-    print('2. search bridging order using breadth-first ordering')
+    print('2. find MST bridges and determine the briding order using breadth-first ordering')
     dist_mat_mst = sparse.csgraph.minimum_spanning_tree(dist_mat)
     nodes, predecessors = sparse.csgraph.breadth_first_order(dist_mat_mst,
                                                              i_start=0,
@@ -313,24 +313,27 @@ def search_bridge(mask_cc_file, radius=150, coh_mask_file='maskSpatialCoh.h5', d
         bridge['mask1'] = mask1
         bridges.append(bridge)
 
-    plot_bridges(mask_cc_file, bridges, display=display)
+    out_base='maskConnCompBridge'
+    # save bridge points to text file
+    save_bridge_txt(bridges, out_file='{}.txt'.format(out_base))
+
+    # plot bridge
+    if save_plot:
+        fig, ax = plt.subplots(figsize=[6, 8])
+        ax, im = plot_bridge(ax, mask_cc_file, bridges)
+        # colorbar
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", "3%", pad="3%")
+        cbar = plt.colorbar(im, cax=cax, ticks=np.arange(num_bridge+2))
+        out_file='{}.png'.format(out_base)
+        plt.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
+        print('plot bridge setting to file: {}'.format(out_file))
     return bridges
 
 
-def plot_bridges(mask_cc_file, bridges, display=False):
-    """Plot mask of connected components with bridges info
-    Parameters: mask_cc_file : string, path of mask cc file
-                bridges : list of dict
-                display : bool
-    """
-    out_base='maskConnCompBridge'
-    mask_cc, metadata = readfile.read(mask_cc_file)
-
-    # check number of bridges
+def save_bridge_txt(bridges, out_file='maskConnCompBridge.txt'):
+    """save to text file"""
     num_bridge = len(bridges)
-
-    # save to text file
-    out_file = '{}.txt'.format(out_base)
     bridge_yx = np.zeros((num_bridge, 4), dtype=np.int16)
     for i in range(num_bridge):
         bridge = bridges[i]
@@ -339,16 +342,19 @@ def plot_bridges(mask_cc_file, bridges, display=False):
     header_info += 'y0\tx0\ty1\tx1'
     np.savetxt(out_file, bridge_yx, fmt='%s', delimiter='\t', header=header_info)
     print('save bridge points  to file: {}'.format(out_file))
+    return out_file
 
-    # plot/save to image file
-    out_file = '{}.png'.format(out_base)
-    fig, ax = plt.subplots(figsize=[6, 8])
+
+def plot_bridge(ax, mask_cc_file, bridges):
+    """Plot mask of connected components with bridges info
+    Parameters: mask_cc_file : string, path of mask cc file
+                bridges : list of dict
+    """
+    mask_cc, metadata = readfile.read(mask_cc_file)
+    num_bridge = len(bridges)
 
     # plot 1. mask_cc data
     im = ax.imshow(mask_cc)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", "3%", pad="3%")
-    cbar = plt.colorbar(im, cax=cax, ticks=np.arange(num_bridge+2))
 
     # plot 2. bridge data
     for i in range(num_bridge):
@@ -362,12 +368,7 @@ def plot_bridges(mask_cc_file, bridges, display=False):
                 '-', ms=5, mfc='none')
 
     ax = pp.auto_flip_direction(metadata, ax=ax, print_msg=False)
-    fig.savefig(out_file, bbox_inches='tight', transparent=True, dpi=300)
-    print('plot bridge setting to file: {}'.format(out_file))
-    if display:
-        print('showing')
-        plt.show()
-    return
+    return ax, im
 
 
 ##########################################################################################

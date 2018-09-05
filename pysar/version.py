@@ -13,7 +13,7 @@ ____/________(___/_(____/___/____|_/_____|_______
             (_ /                            
 
  A Python package for InSAR time series analysis.
-             PySAR v{v}, {d}
+           PySAR v{v}, {d}
 _________________________________________________
 """.format(v=release_version, d=release_date)
 

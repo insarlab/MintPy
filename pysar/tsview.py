@@ -42,6 +42,8 @@ def create_parser():
     parser.add_argument('--label', dest='file_label', nargs='*', help='labels to display for multiple input files')
     parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
                         help='Y limits for point plotting.')
+    parser.add_argument('--tick-right', dest='tick_right', action='store_true',
+                        help='set tick and tick label to the right')
 
     parser.add_argument('-l','--lookup', dest='lookup_file', type=str,
                         help='lookup table file')
@@ -280,7 +282,7 @@ def read_init_info(inps):
         if (inps.wrap_range[1] - inps.wrap_range[0]) == 2*np.pi:
             inps.disp_unit_v = 'radian'
         inps.vlim = inps.wrap_range
-    inps.cbar_label = 'Displacement ({})'.format(inps.disp_unit_v)
+    inps.cbar_label = 'Displacement [{}]'.format(inps.disp_unit_v)
 
     return inps, atr
 
@@ -295,6 +297,7 @@ def read_timeseries_data(inps):
     # read list of 3D time-series
     ts_data = []
     for fname in inps.timeseries_file:
+        print('reading timeseries from file {} ...'.format(fname))
         data, atr = readfile.read(fname, datasetName=inps.date_list)
         ref_phase = data[:, inps.ref_yx[0], inps.ref_yx[1]]
         data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, inps.length, inps.width))
@@ -403,7 +406,7 @@ def plot_init_time_slider(ax, year_list, init_idx=-1, ref_idx=0):
     tslider.ax.xaxis.set_minor_locator(MultipleLocator(1./12.))
     tslider.ax.set_xlim([year_list[0], year_list[-1]])
     tslider.ax.set_yticks([])
-    tslider.ax.set_facecolor('lightgoldenrodyellow')
+    #tslider.ax.set_facecolor('lightgoldenrodyellow')
     return tslider
 
 
@@ -491,6 +494,9 @@ def plot_point_timeseries(yx, fig, ax, ts_data, inps):
     title_ts = _get_ts_title(yx[0], yx[1], inps.coord)
     if inps.disp_title:
         ax.set_title(title_ts)
+    if inps.tick_right:
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
 
     # legend
     if len(ts_data) > 1:
@@ -515,8 +521,8 @@ def _adjust_ts_axis(ax, inps):
     ax.tick_params(which='both', direction='in', labelsize=inps.font_size,
                    bottom=True, top=True, left=True, right=True)
     ax = pp.auto_adjust_xaxis_date(ax, inps.yearList, fontsize=inps.font_size)[0]
-    ax.set_xlabel('Time', fontsize=inps.font_size)
-    ax.set_ylabel('Displacement ({})'.format(inps.disp_unit), fontsize=inps.font_size)
+    ax.set_xlabel('Time [years]', fontsize=inps.font_size)
+    ax.set_ylabel('Displacement [{}]'.format(inps.disp_unit), fontsize=inps.font_size)
     ax.set_ylim(inps.ylim)
     return ax
 

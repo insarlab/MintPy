@@ -452,13 +452,13 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
 
 ###########################################################################################
 def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std=None, num_inv_ifg=None,
-                    suffix=''):
+                    suffix='', inps=None):
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
     date_list = stack_obj.get_date_list(dropIfgram=True)
 
     # File 1 - timeseries.h5
-    ts_file = 'timeseries{}.h5'.format(suffix)
+    ts_file = '{}{}.h5'.format(suffix, os.path.splitext(inps.outfile[0])[0])
     metadata['REF_DATE'] = date_list[0]
     metadata['FILE_TYPE'] = 'timeseries'
     metadata['UNIT'] = 'm'
@@ -475,7 +475,7 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std=None, num_inv_if
     ts_obj.write2hdf5(data=ts, dates=date_list, bperp=pbase, metadata=metadata)
 
     # File 2 - temporalCoherence.h5
-    out_file = 'temporalCoherence{}.h5'.format(suffix)
+    out_file = '{}{}.h5'.format(suffix, os.path.splitext(inps.outfile[1])[0])
     metadata['FILE_TYPE'] = 'temporalCoherence'
     metadata['UNIT'] = '1'
     print('-'*50)
@@ -889,7 +889,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         metadata = dict(stack_obj.metadata)
         metadata[key_prefix+'weightFunc'] = weight_func
         suffix = re.findall('_\d{3}', ifgram_file)[0]
-        write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifg, suffix)
+        write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifg, suffix, inps=inps)
         return
     else:
         return ts, temp_coh, ts_std, num_inv_ifg
@@ -1025,7 +1025,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         metadata = dict(stack_obj.metadata)
         for key in configKeys:
             metadata[key_prefix+key] = str(vars(inps)[key])
-        write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifg, suffix='')
+        write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifg, suffix='', inps=inps)
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))

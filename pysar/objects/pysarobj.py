@@ -833,6 +833,14 @@ class ifgramStack:
             print('')
         return dmean
 
+    def get_max_connection_number(self):
+        A = self.get_design_matrix4timeseries_estimation(refDate=0)[0]
+        num_conn = np.zeros(A.shape[0], dtype=np.int16)
+        for i in range(A.shape[0]):
+            Ai = A[i, :]
+            num_conn[i] = np.where(Ai == 1)[0] - np.where(Ai == -1)[0]
+        return np.max(num_conn)
+
     # Functions for Unwrap error correction
     def get_design_matrix4ifgram_triangle(self, dropIfgram=True, date12_list=None):
         """Generate the design matrix of ifgram triangle for unwrap error correction using phase closure
@@ -899,6 +907,7 @@ class ifgramStack:
         Examples:   stack_obj = ifgramStack('./INPUTS/ifgramStack.h5')
                     A, B = stack_obj.get_design_matrix4timeseries_estimation()
                     A, B = stack_obj.get_design_matrix4timeseries_estimation(date12_list=date12_list)
+                    A = stack_obj.get_design_matrix4timeseries_estimation(refDate=0)
         """
         # Date info
         if date12_list:
@@ -923,11 +932,12 @@ class ifgramStack:
             B[i, m_idx:s_idx] = tbase[m_idx+1:s_idx+1] - tbase[m_idx:s_idx]
 
         # Remove reference date as it can not be resolved
-        if not refDate:
+        if refDate is None:
             refDate = dateList[0]
-        refIndex = dateList.index(refDate)
-        A = np.hstack((A[:, 0:refIndex], A[:, (refIndex+1):]))
-        B = B[:, :-1]
+        if refDate:
+            refIndex = dateList.index(refDate)
+            A = np.hstack((A[:, 0:refIndex], A[:, (refIndex+1):]))
+            B = B[:, :-1]
         return A, B
 
     def get_perp_baseline_timeseries(self, dropIfgram=True):

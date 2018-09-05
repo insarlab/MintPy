@@ -16,20 +16,22 @@ from pysar.utils import ptime
 ############################################################
 EXAMPLE = """example:
  temporal_filter.py timeseries_ECMWF_demErr.h5
- temporal_filter.py timeseries_ECMWF_demErr.h5 -t 0.3
+ temporal_filter.py timeseries_ECMWF_demErr.h5 -t 0.1
 """
 
+REFERENCE="""reference:
+  Wikipedia: https://en.wikipedia.org/wiki/Gaussian_blur
+"""
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Smoothing timeseries in time using moving Gaussian window\n' +
-                                     '  https://en.wikipedia.org/wiki/Gaussian_blur',
+    parser = argparse.ArgumentParser(description='Smoothing timeseries in time domain with a moving Gaussian window',
                                      formatter_class=argparse.RawTextHelpFormatter,
-                                     epilog=EXAMPLE)
+                                     epilog=REFERENCE+'\n'+EXAMPLE)
 
     parser.add_argument('timeseries_file',
                         help='timeseries file to be smoothed.')
-    parser.add_argument('-t', '--time-win', dest='time_win', type=float, default=0.3,
-                        help='time window in years (Sigma of the assmued Gaussian distribution.)')
+    parser.add_argument('-t', '--time-win', dest='time_win', type=float, default=0.1,
+                        help='time window in years, default: 0.1 (Sigma of the assmued Gaussian distribution.)')
     parser.add_argument('-o', '--outfile', help='Output file name.')
     return parser
 

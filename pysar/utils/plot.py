@@ -19,7 +19,8 @@ import matplotlib as mpl
 from matplotlib import (dates as mdates,
                         lines as mlines,
                         pyplot as plt,
-                        ticker)
+                        ticker,
+                        transforms)
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap, cm, pyproj
@@ -233,7 +234,6 @@ class ColormapExt(mpl.cm.ScalarMappable):
                 msg += 'supported colormap:\n{}'.format(self.cmap_list)
                 raise ValueError(msg)
         return self.colormap
-
 
     def get_single_colormap(self, cmap_name, cmap_lut=256):
         if cmap_name == 'hsv':
@@ -954,7 +954,7 @@ def check_colormap_input(metadata, cmap_name=None, datasetName=None, cmap_lut=25
         else:
             cmap_name = 'jet'
     if print_msg:
-        print('colormap: '+cmap_name)
+        print('colormap:', cmap_name)
 
     return ColormapExt(cmap_name, cmap_lut).colormap
 
@@ -1159,9 +1159,9 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
 
         if print_msg:
             print('showing coherence')
-            print(('colormap: '+plot_dict['colormap']))
-            print(('display range: '+str([disp_min, disp_max])))
-            print(('data    range: '+str([data_min, data_max])))
+            print(('colormap:', plot_dict['colormap']))
+            print(('display range:', str([disp_min, disp_max])))
+            print(('data    range:', str([data_min, data_max])))
 
         if plot_dict['split_cmap']:
             # Use lower/upper part of colormap to emphasis dropped interferograms
@@ -1184,7 +1184,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
             colors2 = cmap(np.linspace(0.6, 1.0, 200 - c1_num))
             cmap = LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
             if print_msg:
-                print(('color jump at '+str(coh_thres)))
+                print(('color jump at', str(coh_thres)))
         else:
             cmap = ColormapExt(plot_dict['colormap']).colormap
 
@@ -1338,6 +1338,56 @@ def plot_perp_baseline_hist(ax, dateList, pbaseList, plot_dict={}, dateList_drop
     ax.set_ylabel('Perpendicular Baseline [m]', fontsize=plot_dict['fontsize'])
 
     return ax
+
+def plot_rotate_diag_coherence_matrix(ax, coh_list, date12_list, date12_list_drop=[],
+                                      rotate_deg=-45., cmap='RdBu', disp_half=False, disp_min=0.2):
+    """Plot Rotated Coherence Matrix, suitable for Sentinel-1 data with sequential network"""
+    #calculate coherence matrix
+    coh_mat = pnet.coherence_matrix(date12_list, coh_list)
+    #for date12_list_drop, set value to nan in upper triangle
+    if date12_list_drop:
+        m_dates = [i.split('_')[0] for i in date12_list]
+        s_dates = [i.split('_')[1] for i in date12_list]
+        date_list = sorted(list(set(m_dates + s_dates)))
+        for date12 in date12_list_drop:
+            idx1, idx2 = [date_list.index(i) for i in date12.split('_')]
+            coh_mat[idx2, idx1] = np.nan
+
+    #aux info
+    num_img = coh_mat.shape[0]
+    idx1, idx2 = np.where(~np.isnan(coh_mat))
+    num_conn = np.max(np.abs(idx1 - idx2))
+
+    #plot diagonal - black
+    diag_mat = np.diag(np.ones(num_img))
+    diag_mat[diag_mat == 0.] = np.nan
+    im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0)
+    im.set_transform(transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
+
+    #plot coherence matrix
+    #if cmap == 'RdBu_cut':
+    #    cnum0 = np.ceil(256 * coh_jump).astype('int')
+    #    cmap = ColormapExt('RdBu').colormap
+    #    colors1 = cmap(np.linspace(0.0, 0.4, cnum0))
+    #    colors2 = cmap(np.linspace(0.6, 1.0, 256 - cnum0))
+    #    cmap = LinearSegmentedColormap.from_list('truncate_RdBu', np.vstack((colors1, colors2)))
+    #else:
+    #    cmap = ColormapExt(cmap).colormap
+
+    im = ax.imshow(coh_mat, vmin=disp_min, vmax=1, cmap=ColormapExt(cmap).colormap)
+    im.set_transform(transforms.Affine2D().rotate_deg(rotate_deg) + ax.transData)
+
+    #axis format
+    ymax = np.sqrt(num_conn**2 / 2.) + 0.9
+    ax.set_xlim(-1, np.sqrt(num_img**2 * 2)-0.7)
+    if disp_half:
+        ax.set_ylim(0, ymax)
+    else:
+        ax.set_ylim(-1.*ymax, ymax)
+    ax.get_xaxis().set_ticks([])
+    ax.get_yaxis().set_ticks([])
+    ax.axis('off')
+    return ax, im
 
 
 def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict={}):
@@ -1803,7 +1853,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
             range2phase = -(4*np.pi) / float(metadata['WAVELENGTH'])
             scale *= range2phase
         else:
-            print('Unrecognized display phase/length unit: '+disp_unit[0])
+            print('Unrecognized display phase/length unit:', disp_unit[0])
             return data, data_unit, scale
 
         if   data_unit[0] == 'mm': scale *= 0.001
@@ -1820,7 +1870,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         elif disp_unit[0] in ['radians','radian','rad','r']:
             pass
         else:
-            print('Unrecognized phase/length unit: '+disp_unit[0])
+            print('Unrecognized phase/length unit:', disp_unit[0])
             return data, data_unit, scale
 
     # amplitude/coherence unit - 1
@@ -1833,9 +1883,9 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
             try:
                 scale /= float(disp_unit[0])
             except:
-                print('Un-scalable display unit: '+disp_unit[0])
+                print('Un-scalable display unit:', disp_unit[0])
     else:
-        print('Un-scalable data unit: '+data_unit)
+        print('Un-scalable data unit:', data_unit)
 
     # Calculate scaling factor  - 2
     if len(data_unit) == 2:
@@ -1844,7 +1894,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
             if   disp_unit[1] in ['y','yr','year'  ]: disp_unit[1] = 'year'
             elif disp_unit[1] in ['m','mon','month']: disp_unit[1] = 'mon'; scale *= 12.0
             elif disp_unit[1] in ['d','day'        ]: disp_unit[1] = 'day'; scale *= 365.25
-            else: print('Unrecognized time unit for display: '+disp_unit[1])
+            else: print('Unrecognized time unit for display:', disp_unit[1])
         except:
             disp_unit.append('year')
         disp_unit = disp_unit[0]+'/'+disp_unit[1]
@@ -1926,9 +1976,9 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
         try:
             atrMsk = readfile.read_attribute(mask_file)
             if atrMsk['LENGTH'] == atr['LENGTH'] and atrMsk['WIDTH'] == atr['WIDTH']:
-                msk = readfile.read(mask_file, datasetName='mask', box=box, print_msg=print_msg)[0]
+                msk = readfile.read(mask_file, box=box, print_msg=print_msg)[0]
                 if print_msg:
-                    print('read mask from file: '+os.path.basename(mask_file))
+                    print('read mask from file:', os.path.basename(mask_file))
             else:
                 mask_file = None
                 if print_msg:
@@ -1937,7 +1987,7 @@ def read_mask(fname, mask_file=None, datasetName=None, box=None, print_msg=True)
         except:
             mask_file = None
             if print_msg:
-                print('Can not open mask file: '+mask_file)
+                print('Can not open mask file:', mask_file)
 
     elif k in ['HDFEOS']:
         if datasetName.split('-')[0] in timeseriesDatasetNames:
