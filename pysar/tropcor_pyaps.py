@@ -31,7 +31,7 @@ EXAMPLE = """example:
   tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF
   tropcor_pyaps.py -d date_list.txt     --hour 12 -m MERRA
   tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF -g geometryRadar.h5 --ref-yx 30 40
-  tropcor_pyaps.py -m ECMWF -g geometryRadar.h5 -f timeseries.h5
+  tropcor_pyaps.py -f timeseries.h5 -g INPUTS/geometryRadar.h5 -m ECMWF
 """
 
 REFERENCE = """reference:
@@ -374,36 +374,39 @@ def get_delay_timeseries(inps, atr):
         print('No DEM / incidenceAngle / ref_yx found, exit.')
         return
 
-    # calculate phase delay
-    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-    num_date = len(inps.grib_file_list)
-    date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_file_list]
-    trop_data = np.zeros((num_date, length, width), np.float32)
-
-    print('calcualting delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
-    prog_bar = ptime.progressBar(maxValue=num_date)
-    for i in range(num_date):
-        grib_file = inps.grib_file_list[i]
-        trop_data[i] = get_delay(grib_file, inps)
-        prog_bar.update(i+1, suffix=os.path.basename(grib_file))
-    prog_bar.close()
-
-    # Convert relative phase delay on reference date
-    try:
-        inps.ref_date = atr['REF_DATE']
-    except:
-        inps.ref_date = date_list[0]
-    print('convert to relative phase delay with reference date: '+inps.ref_date)
-    inps.ref_idx = date_list.index(inps.ref_date)
-    trop_data -= np.tile(trop_data[inps.ref_idx, :, :], (num_date, 1, 1))
-
-    # Write tropospheric delay to HDF5
     trop_file = os.path.join(os.path.dirname(inps.geom_file), inps.trop_model+'.h5')
-    ts_obj = timeseries(trop_file)
-    ts_obj.write2hdf5(data=trop_data,
-                      dates=date_list,
-                      metadata=atr,
-                      refFile=inps.timeseries_file)
+    if ut.update_file(trop_file, inps.grib_file_list, print_msg=False):
+        # calculate phase delay
+        length, width = int(atr['LENGTH']), int(atr['WIDTH'])
+        num_date = len(inps.grib_file_list)
+        date_list = [str(re.findall('\d{8}', i)[0]) for i in inps.grib_file_list]
+        trop_data = np.zeros((num_date, length, width), np.float32)
+
+        print('calcualting delay for each date using PyAPS (Jolivet et al., 2011; 2014) ...')
+        prog_bar = ptime.progressBar(maxValue=num_date)
+        for i in range(num_date):
+            grib_file = inps.grib_file_list[i]
+            trop_data[i] = get_delay(grib_file, inps)
+            prog_bar.update(i+1, suffix=os.path.basename(grib_file))
+        prog_bar.close()
+
+        # Convert relative phase delay on reference date
+        try:
+            inps.ref_date = atr['REF_DATE']
+        except:
+            inps.ref_date = date_list[0]
+        print('convert to relative phase delay with reference date: '+inps.ref_date)
+        inps.ref_idx = date_list.index(inps.ref_date)
+        trop_data -= np.tile(trop_data[inps.ref_idx, :, :], (num_date, 1, 1))
+
+        # Write tropospheric delay to HDF5
+        ts_obj = timeseries(trop_file)
+        ts_obj.write2hdf5(data=trop_data,
+                          dates=date_list,
+                          metadata=atr,
+                          refFile=inps.timeseries_file)
+    else:
+        print('{} file exists and is newer than all GRIB files, skip updating.'.format(trop_file))
 
     # Delete temporary DEM file in ROI_PAC format
     temp_files =[fname for fname in [inps.dem_file,
