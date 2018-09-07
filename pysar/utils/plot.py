@@ -765,13 +765,17 @@ def add_reference_argument(parser):
 
 def add_save_argument(parser):
     save = parser.add_argument_group('Save/Output', 'Save figure and write to file(s)')
-    save.add_argument('-o', '--outfile',
+    save.add_argument('-o', '--outfile', type=str, nargs='*', 
                       help="save the figure with assigned filename.\n"
                            "By default, it's calculated based on the input file name.")
     save.add_argument('--save', dest='save_fig', action='store_true',
                       help='save the figure')
     save.add_argument('--nodisplay', dest='disp_fig', action='store_false',
                       help='save and do not display the figure')
+    save.add_argument('--update', dest='update_mode', action='store_true',
+                      help='enable update mode for save figure: skip running if\n'+
+                           '\t1) output file already exists\n'+
+                           '\t2) output file is newer than input file.')
     return parser
 
 
@@ -1479,7 +1483,9 @@ def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):
         pix_box = (0, 0, int(dem_metadata['WIDTH']), int(dem_metadata['LENGTH']))
     if geo_box:
         # Support DEM with different Resolution and Coverage
-        dem_pix_box = ut.coordinate(dem_metadata).box_geo2pixel(geo_box)
+        coord = ut.coordinate(dem_metadata)
+        dem_pix_box = coord.box_geo2pixel(geo_box)
+        dem_pix_box = coord.check_box_within_data_coverage(dem_pix_box)
     else:
         dem_pix_box = pix_box
 

@@ -70,6 +70,7 @@ EXAMPLE = """example:
   # Save and Output:
   view.py velocity.h5 --save
   view.py velocity.h5 --nodisplay
+  view.py velocity.h5 --nodisplay --update
 """
 
 PLOT_TEMPLATE = """Plot Setting:
@@ -122,7 +123,6 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
-
     # If output flie name assigned or figure shown is turned off, turn on the figure save
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True
@@ -132,8 +132,32 @@ def cmd_line_parse(iargs=None):
         inps.lalo_label = True
     if inps.zero_mask:
         inps.mask_file = 'no'
-
     return inps
+
+
+def run_check(inps):
+    print('update mode: ON')
+    run = False
+
+    # get existed output file names
+    outfiles = []
+    for fname in inps.outfile:
+        fnames = [fname, os.path.join(os.path.dirname(fname), 'PIC', os.path.basename(fname))]
+        fnames = [i for i in fnames if os.path.isfile(i)]
+        if len(fnames) > 0:
+            outfiles.append(fnames[0])
+        else:
+            run = True
+
+    if not run:
+        ti = os.path.getmtime(inps.file)
+        to = min([os.path.getmtime(i) for i in outfiles])
+        if to <= ti:
+            run = True
+        else:
+            print('{} exist and are newer than input file: {}'.format(outfiles, inps.file))
+            print('skip the plotting.')
+    return run
 
 
 ##################################################################################################
@@ -275,7 +299,7 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
 
     # Figure output file name
     if not inps.outfile:
-        inps.outfile = inps.fig_title+inps.fig_ext
+        inps.outfile = ['{}{}'.format(inps.fig_title, inps.fig_ext)]
 
     inps = update_figure_setting(inps, print_msg=print_msg)
     return inps
@@ -789,14 +813,14 @@ def update_figure_setting(inps, print_msg=True):
                             pp.max_figsize_height/plot_shape[1])
             inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
             if print_msg:
-                print('create figure in size: '+str(inps.fig_size))
+                print('figure size : '+str(inps.fig_size))
 
     # Multiple Plots
     else:
         if not inps.fig_size:
             inps.fig_size = pp.default_figsize_multi
         if print_msg:
-            print('create figure in size: '+str(inps.fig_size))
+            print('figure size : '+str(inps.fig_size))
 
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
@@ -830,11 +854,11 @@ def update_figure_setting(inps, print_msg=True):
 
         # Output File Name
         if inps.outfile:
-            inps.fig_ext = os.path.splitext(inps.outfile)[1].lower()
-            inps.outfile_base = os.path.basename(inps.outfile).split(inps.fig_ext)[0]
+            inps.outfile_base, inps.fig_ext = os.path.splitext(os.path.basename(inps.outfile[0]))
+            inps.fig_ext = inps.fig_ext.lower()
         else:
             inps.outfile_base = os.path.splitext(inps.file)[0]
-
+            # suffix
             if (inps.pix_box[2]-inps.pix_box[0])*(inps.pix_box[3]-inps.pix_box[1]) < width*length:
                 inps.outfile_base += '_sub'
             if inps.wrap:
@@ -845,6 +869,12 @@ def update_figure_setting(inps, print_msg=True):
                 inps.outfile_base += '_ref'+inps.ref_date
             if inps.exDsetList:
                 inps.outfile_base += '_ex'
+        # output file name list
+        if inps.fig_num == 1:
+            inps.outfile = ['{}{}'.format(inps.outfile_base, inps.fig_ext)]
+        else:
+            inps.outfile = ['{}_{}{}'.format(inps.outfile_base, str(j), inps.fig_ext) 
+                            for j in range(1, inps.fig_num+1)]
     return inps
 
 
@@ -1020,12 +1050,7 @@ def plot_figure(j, inps, metadata):
     3) loop to plot each subplot using plot_subplot4figure()
     4) common colorbar and save
     """
-    # Output file name for current figure
-    if inps.fig_num > 1:
-        inps.outfile = '{}_{}{}'.format(inps.outfile_base, str(j), inps.fig_ext)
-    else:
-        inps.outfile = '{}{}'.format(inps.outfile_base, inps.fig_ext)
-    fig_title = 'Figure {} - {}'.format(str(j), inps.outfile)
+    fig_title = 'Figure {} - {}'.format(str(j), inps.outfile[j-1])
     print('----------------------------------------')
     print(fig_title)
 
@@ -1079,8 +1104,8 @@ def plot_figure(j, inps, metadata):
 
     # Save Figure
     if inps.save_fig:
-        print('save figure to {} with dpi={}'.format(inps.outfile, inps.fig_dpi))
-        fig.savefig(inps.outfile, bbox_inches='tight',
+        print('save figure to {} with dpi={}'.format(inps.outfile[j-1], inps.fig_dpi))
+        fig.savefig(inps.outfile[j-1], bbox_inches='tight',
                     transparent=True, dpi=inps.fig_dpi)
         if not inps.disp_fig:
             fig.clf()
@@ -1169,6 +1194,9 @@ def main(iargs=None):
         inps = update_inps_with_display_setting_file(inps, inps.disp_setting_file)
 
     inps = update_inps_with_file_metadata(inps, atr)
+    # --update option
+    if inps.update_mode and not inps.disp_fig and run_check(inps) is False:
+        return inps.outfile
 
     inps.msk, inps.mask_file = pp.read_mask(inps.file,
                                             mask_file=inps.mask_file,
@@ -1215,8 +1243,8 @@ def main(iargs=None):
 
         # Save figure
         if inps.save_fig:
-            print('save figure to {} with dpi={}'.format(inps.outfile, inps.fig_dpi))
-            plt.savefig(inps.outfile, bbox_inches='tight',
+            print('save figure to {} with dpi={}'.format(inps.outfile[0], inps.fig_dpi))
+            plt.savefig(inps.outfile[0], bbox_inches='tight',
                         transparent=True, dpi=inps.fig_dpi)
 
 

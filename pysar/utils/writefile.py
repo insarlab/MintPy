@@ -77,7 +77,7 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                                       compression=compression)
 
             # Write extra/auxliary datasets from ref_file
-            if ref_file:
+            if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
                 fr = h5py.File(ref_file, 'r')
                 dsNames = [i for i in fr.keys()
                            if (i not in list(datasetDict.keys())

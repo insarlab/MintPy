@@ -7,16 +7,17 @@
 
 
 import os
-import sys
 import argparse
 import time
 import h5py
 import numpy as np
 from scipy import linalg
-from pysar.utils import ptime, readfile, writefile, utils as ut
 from pysar.objects import ifgramStack
+from pysar.utils import ptime, readfile, writefile, utils as ut
 import pysar.ifgram_inversion as ifginv
 
+
+key_prefix = 'pysar.unwrapError.'
 
 ##########################################################################################
 EXAMPLE = """Example:
@@ -27,12 +28,14 @@ EXAMPLE = """Example:
 
 TEMPLATE = """Template:
   ## Unwrapping Error Correction based on Phase Closure (Fattahi, 2015, PhD Thesis)
-  pysar.unwrapError.maskFile = auto   #[file name / no], auto for no
+  pysar.unwrapError.maskFile = auto  #[file name / no], auto for no
+  pysar.unwrapError.fastMode = auto  #[yes / no], auto for yes, enable fast mode for phase_closure method
 """
 
 REFERENCE = """Reference:
   Fattahi, H. (2015), Geodetic Imaging of Tectonic Deformation with InSAR, 190 pp, 
-  University of Miami, Miami, FL. Chap. 4
+  University of Miami, Miami, FL. (Chap. 4), Open Access Dissertations. 1456. 
+  https://scholarlyrepository.miami.edu/oa_dissertations/1456
 """
 
 NOTE = """
@@ -62,7 +65,7 @@ def create_parser():
                         help='mask file to specify those pixels to be corrected for unwrapping errors')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options for setting.')
-    parser.add_argument('--fast', dest='fast_mode', action='store_true',
+    parser.add_argument('--fast', dest='fastMode', action='store_true',
                         help='Fast (but not the best) unwrap error correction,'
                              ' by diable the extra constraint on ifgrams with no unwrap error.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
@@ -85,13 +88,14 @@ def read_template2inps(template_file, inps=None):
     template = readfile.read_template(template_file)
     template = ut.check_template_auto_value(template)
 
-    prefix = 'pysar.unwrapError.'
-    key = prefix+'maskFile'
-    if key in template.keys():
-        value = template[key]
-        if value not in ['auto', 'no']:
-            inps.maskFile = value
-
+    key_list = [i for i in list(inpsDict.keys()) if key_prefix+i in template.keys()]
+    for key in key_list:
+        value = template[key_prefix+key]
+        if key in ['fastMode']:
+            inpsDict[key] = value
+        elif value:
+            if key in ['maskFile']:
+                inpsDict[key] = value
     return inps
 
 
@@ -174,7 +178,7 @@ def correct_unwrap_error(ifgram, C, Dconstraint=True, thres=0.1, alpha=0.25, rco
     return ifgram_cor, U
 
 
-def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None, fast=False,
+def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None, fast_mode=False,
                            thres=0.1, dsNameIn='unwrapPhase'):
     """Estimate/Correct unwrapping error in ifgram stack on area defined by box.
     Parameters: ifgram_file : string, ifgramStack file
@@ -183,7 +187,7 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
                 ref_pahse : 1D np.array in size of (num_ifgram,) phase value on reference pixel, because:
                     1) phase value stored in pysar is not reference yet
                     2) reference point may be out of box definition
-                fast : bool, apply zero jump constraint on ifgrams without unwrapping error.
+                fast_mode : bool, apply zero jump constraint on ifgrams without unwrapping error.
                 thres : float, threshold of non-zero phase closure to be identified as unwrapping error.
     Returns:    pha_data : 3D np.array in size of (num_ifgram, box[3]-box[2], box[2]-box[0]),
                     unwrapped phase value after error correction
@@ -244,7 +248,7 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
 
         # correcting unwrap error based on phase closure
         print('correcting unwrapping error ...')
-        if fast:
+        if fast_mode:
             ifgram_cor = correct_unwrap_error(ifgram, C, Dconstraint=False)[0]
 
         else:
@@ -298,7 +302,7 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
                                                       box=box,
                                                       mask_file=inps.maskFile,
                                                       ref_phase=ref_phase,
-                                                      fast=fast_mode,
+                                                      fast_mode=fast_mode,
                                                       dsNameIn=dsNameIn)
         num_nonzero_closure[box[1]:box[3], box[0]:box[2]] = num_closure
 
@@ -376,7 +380,7 @@ def main(iargs=None):
     run_unwrap_error_closure(inps,
                              dsNameIn=inps.datasetNameIn,
                              dsNameOut=inps.datasetNameOut,
-                             fast_mode=inps.fast_mode)
+                             fast_mode=inps.fastMode)
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))

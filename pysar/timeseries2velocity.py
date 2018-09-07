@@ -13,12 +13,16 @@ from pysar.objects import timeseries, giantTimeseries, HDFEOS
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
 dataType = np.float32
+# key configuration parameter name
+key_prefix = 'pysar.velocity.'
+configKeys = ['excludeDate']
 
 
 ############################################################################
 EXAMPLE = """example:
   timeseries2velocity.py  timeSeries_ECMWF_demErr.h5
-  timeseries2velocity.py  timeseries_ECMWF_demErr_ramp.h5  --template KyushuT73F2980_2990AlosD.template
+  timeseries2velocity.py  timeseries_ECMWF_demErr_ramp.h5  -t pysarApp_template.txt --update
+  timeseries2velocity.py  timeseries_ECMWF_demErr_ramp.h5  -t KyushuT73F2980_2990AlosD.template
   timeseries2velocity.py  timeseries.h5  --start-date 20080201
   timeseries2velocity.py  timeseries.h5  --start-date 20080201  --end-date 20100508
   timeseries2velocity.py  timeseries.h5  --exclude-date exclude_date.txt
@@ -61,6 +65,11 @@ def create_parser():
                         help='template file with the following items:'+TEMPLATE)
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file name')
+    parser.add_argument('--update', dest='update_mode', action='store_true',
+                        help='Enable update mode, and skip estimation if:\n'+
+                             '1) output velocity file already exists, readable '+
+                             'and newer than input timeseries file\n' +
+                             '2) all configuration parameters are the same.')
     return parser
 
 
@@ -94,6 +103,41 @@ def read_template2inps(template_file, inps=None):
             elif key in ['excludeDate']:
                 inpsDict[key] = ptime.yyyymmdd(value.replace(',', ' ').split())
     return inps
+
+
+def run_check(inps):
+    print('update mode: ON')
+    run = False
+
+    # check output file
+    if not os.path.isfile(inps.outfile):
+        run = True
+        print('  1) output file {} not found, --> run'.format(inps.outfile))
+    else:
+        print('  1) output file {} already exists.'.format(inps.outfile))
+        ti = os.path.getmtime(inps.timeseries_file)
+        to = os.path.getmtime(inps.outfile)
+        if to <= ti:
+            run = True
+            print('  2) output file is NOT newer than input file: {} --> run.'.format(inps.timeseries_file))
+        else:
+            print('  2) output file is newer than input file: {}.'.format(inps.timeseries_file))
+
+    # check configuration
+    if not run:
+        atr = readfile.read_attribute(inps.outfile)
+        if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
+            run = True
+            print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+        else:
+            print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
+
+    # result
+    if run:
+        print('run.')
+    else:
+        print('skip the run.')
+    return run
 
 
 ############################################################################
@@ -177,8 +221,6 @@ def read_date_info(inps):
     # output file name
     if not inps.outfile:
         outname = 'velocity'
-        #if inps.excludeDate:
-        #    outname += 'Ex'
         if inps.key == 'giantTimeseries':
             prefix = os.path.basename(inps.timeseries_file).split('PARAMS')[0]
             outname = prefix + outname
@@ -195,15 +237,14 @@ def design_matrix(years):
     """
     A = np.ones([len(years), 2], dtype=dataType)
     A[:, 0] = years
-    #A_inv = np.dot(np.linalg.inv(np.dot(A.T,A)), A.T)
-    #A_inv = np.array(A_inv, dataType)
     return A
 
 
 def estimate_linear_velocity(inps):
     A = design_matrix(inps.years)
     A_inv = np.array(np.linalg.pinv(A), dataType)
-    # A_inv = np.array(np.linalg.inv(A.T.dot(A)).dot(A.T), dataType)  #Give wrong and different result, find reason.
+    # The following gives wrong and different result, find reason.
+    # A_inv = np.array(np.linalg.inv(A.T.dot(A)).dot(A.T), dataType)
 
     print('reading data from file {} ...'.format(inps.timeseries_file))
     tsData, atr = readfile.read(inps.timeseries_file)
@@ -220,15 +261,15 @@ def estimate_linear_velocity(inps):
     Vstd = np.sqrt(np.sum(tsResidual**2, axis=0) / (inps.numDate-2)) / timeStd
     Vstd = Vstd.reshape(dsShape)
 
-    # Write h5 file
-    # outfileStd = '{}Std{}'.format(os.path.splitext(inps.outfile)[0],
-    #                               os.path.splitext(inps.outfile)[1])
-
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
     atr['START_DATE'] = inps.dateList[0]
     atr['END_DATE'] = inps.dateList[-1]
     atr['DATE12'] = '{}_{}'.format(inps.dateList[0], inps.dateList[-1])
+    # config parameter
+    print('add/update the following configuration metadata:\n{}'.format(configKeys))
+    for key in configKeys:
+        atr[key_prefix+key] = str(vars(inps)[key])
 
     dsDict = dict()
     dsDict['velocity'] = V
@@ -241,6 +282,11 @@ def estimate_linear_velocity(inps):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     inps = read_date_info(inps)
+
+    # --update option
+    if inps.update_mode and run_check(inps) is False:
+        return inps.outfile
+
     inps.outfile = estimate_linear_velocity(inps)
     print('Done.')
     return inps.outfile

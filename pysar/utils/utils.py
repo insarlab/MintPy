@@ -797,19 +797,21 @@ def normalize_timeseries_old(ts_mat, nanValue=0):
 
 
 ############################################################
-def update_file(outFile, inFile=None, overwrite=False, check_readable=True, print_msg=True):
+def update_file(outFile, inFile=None, check_readable=True, print_msg=True):
     """Check whether to update outFile/outDir or not.
     return True if any of the following meets:
-        1. if overwrite option set to True
-        2. outFile is empty, e.g. None, []
-        3. outFile is not existed
-        4. outFile is not readable by readfile.read_attribute() when check_readable=True
-        5. outFile is older than inFile, if inFile is not None
+        1. outFile is empty, e.g. None, []
+        2. outFile is not existed
+        3. outFile is not readable by readfile.read_attribute() when check_readable=True
+        4. outFile is older than inFile, if inFile is not None
     Otherwise, return False.
 
     If inFile=None and outFile exists and readable, return False
 
-    Parameters: inFile : string or list of string, input file(s)/directories
+    Parameters: outFile : string or list of string, output file(s)
+                inFile  : string or list of string, input file(s)
+                check_readable : bool, check if the 1st output file has attribute 'WIDTH'
+                print_msg      : bool, print message
     Returns:    True/False : bool, whether to update output file or not
     Example:    if ut.update_file('timeseries_ECMWF_demErr.h5', 'timeseries_ECMWF.h5'):
                 if ut.update_file('exclude_date.txt', check_readable=False,
@@ -817,36 +819,39 @@ def update_file(outFile, inFile=None, overwrite=False, check_readable=True, prin
                                           'maskTempCoh.h5',
                                           'pysar_template.txt']):
     """
-    if overwrite:
+    # 1 - check existance of output files
+    if not outFile:
         return True
+    else:
+        if isinstance(outFile, str):
+            outFile = [outFile]
+        if not all(os.path.isfile(i) for i in outFile):
+            return True
 
-    if not outFile or (not os.path.isfile(outFile) and not os.path.isdir(outFile)):
-        return True
-
+    # 2 - check readability of output files
     if check_readable:
         try:
-            atr = readfile.read_attribute(outFile)
+            atr = readfile.read_attribute(outFile[0])
             width = atr['WIDTH']
         except:
             if print_msg:
-                print(outFile+' exists, but can not read, remove it.')
-            rmCmd = 'rm '+outFile
+                print('{} exists, but can not read, remove it.'.format(outFile[0]))
+            rmCmd = 'rm {}'.format(outFile[0])
             print(rmCmd)
             os.system(rmCmd)
             return True
 
+    # 3 - check modification time of output and input files
     if inFile:
         inFile = get_file_list(inFile)
-
         # Check modification time
         if inFile:
-            if any(os.path.getmtime(outFile) < os.path.getmtime(File) for File in inFile):
+            t_in  = max([os.path.getmtime(i) for i in inFile])
+            t_out = min([os.path.getmtime(i) for i in outFile])
+            if t_in > t_out:
                 return True
-            else:
-                if print_msg:
-                    print('{} exists and is newer than {}, skip updating.'.format(outFile, inFile))
-                return False
-
+            elif print_msg:
+                print('{} exists and is newer than {}, skip updating.'.format(outFile, inFile))
     return False
 
 

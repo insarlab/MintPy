@@ -929,6 +929,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     msg += 'least-squares solution with L2 min-norm on: {}\n'.format(suffix)
     #msg += '\tLS  for pixels with full rank      network\n'
     #msg += '\tSVD for pixels with rank deficient network\n'
+    msg += 'min redundancy ratio (num_ifgram / num_acquisition): {}\n'.format(inps.redundancyRatio)
     msg += 'weight function: {}\n'.format(inps.weightFunc)
 
     if inps.maskDataset:

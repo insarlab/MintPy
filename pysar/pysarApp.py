@@ -65,7 +65,7 @@ pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum cohere
 pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
 
 
-## 1.3 Unwrapping Error Correction (optional)
+## 2. Unwrapping Error Correction (optional)
 ## supported methods:
 ## a. phase_closure (Fattahi, 2015, Thesis Chap. 4)
 ##    automatic; slow by default, fast option available but not giving the best result.
@@ -78,11 +78,12 @@ pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
 pysar.unwrapError.maskFile        = auto  #[maskConnComp.h5 / no], auto for no, mask for connected components areas
 pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
 pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for linear
+pysar.unwrapError.fastMode        = auto  #[yes / no], auto for yes, enable fast mode for phase_closure method
 
 
-########## 2. Network Inversion
-## 2.1 Modify Network (optional)
-## 2.1.1 Coherence-based network modification = MST + Threshold, by default
+########## 3. Network Inversion
+## 3.1 Modify Network (optional)
+## 3.1.1 Coherence-based network modification = MST + Threshold, by default
 ## 1) calculate a average coherence value for each interferogram using spatial coherence and input mask (with AOI)
 ## 2) find a minimum spanning tree (MST) network with inverse of average coherence as weight (keepMinSpanTree)
 ## 3) for all interferograms except for MST's, exclude those with average coherence < minCoherence.
@@ -93,7 +94,7 @@ pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for
 pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
-## 2.1.2 Network modification based on temporal/perpendicular baselines, date etc.
+## 3.1.2 Network modification based on temporal/perpendicular baselines, date etc.
 pysar.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
 pysar.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpendicular spatial baseline in meter
 pysar.network.connNumMax      = auto  #[1-inf, no], auto for no, maximum number of neighbors for each acquisition
@@ -104,7 +105,7 @@ pysar.network.startDate       = auto  #[20090101 / no], auto for no
 pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 
-## 2.2 Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
+## 3.2 Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
 ## weighting options for least square inversion [fast option available but not best]:
 ## 1) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS) [recommended]
@@ -134,7 +135,7 @@ pysar.networkInversion.minNumPixel     = auto #[int > 0], auto for 100, min numb
 ## skip this step for all the other satellites.
 
 
-########## 3. Tropospheric Delay Correction (optional and recommended)
+########## 4. Tropospheric Delay Correction (optional and recommended)
 ## correct tropospheric delay using the following methods:
 ## a. pyaps - use weather re-analysis data (Jolivet et al., 2011, GRL, need to install PyAPS)
 ## b. height_correlation - correct stratified tropospheric delay (Doin et al., 2009, J Applied Geop)
@@ -147,7 +148,7 @@ pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, for height_co
                                              #interferogram for empirical estimation of topography correlated atmosphere.
 
 
-########## 4. Topographic Residual (DEM Error) Correction (optional and recommended)
+########## 5. Topographic Residual (DEM Error) Correction (optional and recommended)
 ## reference: Fattahi and Amelung, 2013, IEEE-TGRS
 ## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
 ## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
@@ -159,7 +160,7 @@ pysar.topographicResidual.stepFuncDate  = auto  #[20080529,20100611 / no], auto 
 pysar.topographicResidual.excludeDate   = auto  #[20070321 / txtFile / no], auto for exclude_date.txt,
                                                 # dates exlcuded for error estimation
 
-## 4.1 Phase Residual Root Mean Square
+## 5.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Set optimal reference date to date with min RMS
@@ -168,28 +169,28 @@ pysar.residualRms.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, m
 pysar.residualRms.ramp     = auto  #[quadratic / linear / no], auto for quadratic
 pysar.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
 
-## 4.2 Select Reference Date
+## 5.2 Select Reference Date
 ## reference all timeseries to one date in time
 ## no     - do not change the default reference date (1st date)
 pysar.reference.date = auto   #[reference_date.txt / 20090214 / no], auto for minRMS
 
 
-########## 5. Phase Ramp Removal (optional)
+########## 6. Phase Deramping (optional)
 ## remove phase ramp for each epoch, useful to check localized deformation, i.e. volcanic, land subsidence, etc.
 ## [linear, quadratic]
 pysar.deramp          = auto  #[no / linear / quadratic], auto for no - no ramp will be removed
 pysar.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask file for ramp estimation
 
 
-########## 6. Velocity Inversion
+########## 7. Velocity Estimation
 ## estimate linear velocity from timeseries, and from tropospheric delay file if exists.
 pysar.velocity.excludeDate = auto   #[exclude_date.txt / 20080520,20090817 / no], auto for exclude_date.txt
 pysar.velocity.startDate   = auto   #[20070101 / no], auto for no
 pysar.velocity.endDate     = auto   #[20101230 / no], auto for no
 
 
-########## 7. Post-processing (geocode, output to Google Earth, HDF-EOS5, etc.)
-## 7.1 Geocode
+########## 8. Post-processing (geocode, output to Google Earth, HDF-EOS5, etc.)
+## 8.1 Geocode
 pysar.geocode              = auto  #[yes / no], auto for yes
 pysar.geocode.SNWE         = auto  #[-1.2,0.5,-92,-91 / no ], auto for no, output coverage in S N W E in degree 
 pysar.geocode.latStep      = auto  #[0.0-90.0 / None], auto for None, output resolution in degree
@@ -198,14 +199,14 @@ pysar.geocode.interpMethod = auto  #[nearest], auto for nearest, interpolation m
 pysar.geocode.fillValue    = auto  #[np.nan, 0, ...], auto for np.nan, fill value for outliers.
 
 
-## 7.2 Export to other formats
+## 8.2 Export to other formats
 pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
 pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
 pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
 pysar.save.kml     = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 
 
-## 7.3 Plot
+## 8.3 Plot
 pysar.plot = auto   #[yes / no], auto for yes, plot files generated by pysarApp default processing to PIC folder
 """
 
@@ -324,7 +325,8 @@ def read_template(inps):
     if inps.templateFileCustom:
         # Copy custom template file to work directory
         if ut.update_file(os.path.basename(inps.templateFileCustom),
-                          inps.templateFileCustom, check_readable=False):
+                          inps.templateFileCustom,
+                          check_readable=False):
             shutil.copy2(inps.templateFileCustom, inps.workDir)
             print('copy {} to work directory'.format(os.path.basename(inps.templateFileCustom)))
 
@@ -710,9 +712,13 @@ def main(iargs=None):
     print(plotCmd)
     inps.cohSpatialAvgFile = '{}_coherence_spatialAverage.txt'.format(
         os.path.splitext(os.path.basename(inps.stackFile))[0])
-    if ut.update_file('Network.pdf', check_readable=False, inFile=[inps.stackFile,
-                                                                   inps.cohSpatialAvgFile,
-                                                                   inps.templateFile]):
+    try:
+        outFile = [i for i in ['Network.pdf', 'PIC/Network.pdf'] if os.path.isfile(i)][0]
+    except:
+        outFile = None
+    if ut.update_file(outFile=outFile,
+                      inFile=[inps.stackFile, inps.cohSpatialAvgFile, inps.templateFile],
+                      check_readable=False):
         status = subprocess.Popen(plotCmd, shell=True).wait()
 
     if inps.modify_network:
@@ -850,25 +856,23 @@ def main(iargs=None):
     #############################################
     print('\n**********  Estimate Velocity  **********')
     inps.velFile = 'velocity.h5'
-    velCmd = 'timeseries2velocity.py {} -t {} -o {}'.format(inps.timeseriesFile,
-                                                            inps.templateFile,
-                                                            inps.velFile)
+    velCmd = 'timeseries2velocity.py {} -t {} -o {} --update'.format(inps.timeseriesFile,
+                                                                     inps.templateFile,
+                                                                     inps.velFile)
     print(velCmd)
-    if ut.update_file(inps.velFile, [inps.timeseriesFile, inps.templateFile]):
-        status = subprocess.Popen(velCmd, shell=True).wait()
-        if status is not 0:
-            raise Exception('Error while estimating linear velocity from time-series.\n')
+    status = subprocess.Popen(velCmd, shell=True).wait()
+    if status is not 0:
+        raise Exception('Error while estimating linear velocity from time-series.\n')
 
     # Velocity from Tropospheric delay
     if inps.tropFile:
         suffix = os.path.splitext(os.path.basename(inps.tropFile))[0].title()
         inps.tropVelFile = '{}{}.h5'.format(os.path.splitext(inps.velFile)[0], suffix)
-        velCmd = 'timeseries2velocity.py {} -t {} -o {}'.format(inps.tropFile,
-                                                                inps.templateFile,
-                                                                inps.tropVelFile)
+        velCmd = 'timeseries2velocity.py {} -t {} -o {} --update'.format(inps.tropFile,
+                                                                         inps.templateFile,
+                                                                         inps.tropVelFile)
         print(velCmd)
-        if ut.update_file(inps.tropVelFile, [inps.tropFile, inps.templateFile]):
-            status = subprocess.Popen(velCmd, shell=True).wait()
+        status = subprocess.Popen(velCmd, shell=True).wait()
 
     ############################################
     # Post-processing

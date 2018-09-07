@@ -427,7 +427,7 @@ def correct_dem_error(inps, A_def):
     atr = dict(ts_obj.metadata)
 
     # config parameter
-    print('add/update the following configuration metadata to file:')
+    print('add/update the following configuration metadata to file:\n{}'.format(configKeys))
     for key in configKeys:
         atr[key_prefix+key] = str(vars(inps)[key])
 

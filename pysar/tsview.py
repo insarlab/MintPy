@@ -557,13 +557,14 @@ def estimate_slope(d_ts, year_list, ex_flag=None, disp_unit='cm', print_msg=True
 
 def save_ts_plot(yx, fig_v, fig_ts, d_ts, inps):
     print('save info on pixel ({}, {})'.format(yx[0], yx[1]))
-    if not inps.outfile:
-        inps.outfile = 'y%d_x%d' % (yx[0], yx[1])
-    else:
-        ext = os.path.splitext(inps.outfile)[1]
+    # output file name
+    if inps.outfile:
+        inps.outfile_base, ext = os.path.splitext(inps.outfile[0])
         if ext != '.pdf':
             print(('Output file extension is fixed to .pdf,'
                    ' input extension {} is ignored.').format(ext))
+    else:
+        inps.outfile_base = 'y{}_x{}'.format(yx[0], yx[1])
 
     # get aux info
     vel, std = estimate_slope(d_ts[0], inps.yearList,
@@ -572,7 +573,7 @@ def save_ts_plot(yx, fig_v, fig_ts, d_ts, inps):
                               print_msg=False)
 
     # TXT - point time series
-    outName = '{}_ts.txt'.format(inps.outfile)
+    outName = '{}_ts.txt'.format(inps.outfile_base)
     header_info = 'timeseries_file={}\n'.format(inps.timeseries_file)
     header_info += '{}\n'.format(_get_ts_title(yx[0], yx[1], inps.coord))
     header_info += 'reference pixel: y={}, x={}\n'.format(inps.ref_yx[0], inps.ref_yx[1])
@@ -593,12 +594,12 @@ def save_ts_plot(yx, fig_v, fig_ts, d_ts, inps):
     print('save time series displacement in meter to '+outName)
 
     # Figure - point time series
-    outName = '{}_ts.pdf'.format(inps.outfile)
+    outName = '{}_ts.pdf'.format(inps.outfile_base)
     fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
     print('save time series plot to '+outName)
 
     # Figure - map
-    outName = '{}_{}.png'.format(inps.outfile, inps.date_list[inps.init_idx])
+    outName = '{}_{}.png'.format(inps.outfile_base, inps.date_list[inps.init_idx])
     fig_v.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
     print('save map plot to '+outName)
     return
