@@ -24,7 +24,7 @@ from pysar import version
 
 ##########################################################################
 EXAMPLE = """example:
-  pysarApp.py
+  pysarApp.py                                             #Run / Rerun
   pysarApp.py  SanAndreasT356EnvD.template  --fast        #Fast processing
   pysarApp.py  SanAndreasT356EnvD.template  --load-data   #Exit after loading data into HDF5 files
 

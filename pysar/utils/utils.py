@@ -79,6 +79,7 @@ def median_abs_deviation_threshold(data, center=None, cutoff=3.):
         np.median(data) / .6745 * 3.0
     """
     from statsmodels.robust import mad
+    data = np.array(data)
     if center is None:
         center = np.median(data)
     rms_mad = mad(data, c=0.67448975019608171, center=center)

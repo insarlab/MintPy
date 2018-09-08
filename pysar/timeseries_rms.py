@@ -106,9 +106,7 @@ def analyze_rms(date_list, rms_list, inps):
 
     # exclude date(s) - outliers
     try:
-        rms_threshold = ut.median_abs_deviation_threshold(rms_list,
-                                                          center=0.,
-                                                          cutoff=inps.cutoff)
+        rms_threshold = ut.median_abs_deviation_threshold(rms_list, center=0., cutoff=inps.cutoff)
     except:
         # equivalent calculation using numpy assuming Gaussian distribution
         rms_threshold = np.median(rms_list) / .6745 * inps.cutoff
@@ -136,17 +134,23 @@ def analyze_rms(date_list, rms_list, inps):
     # plot bar figure and save
     fig_file = os.path.splitext(inps.rms_file)[0]+'.pdf'
     fig, ax = plt.subplots(figsize=inps.fig_size)
-    ax = plot_rms_bar(ax, date_list, rms_list, rms_threshold, cutoff=inps.cutoff)
+    print('create figure in size:', inps.fig_size)
+    ax = plot_rms_bar(ax, date_list, np.array(rms_list)*1000., cutoff=inps.cutoff)
     fig.savefig(fig_file, bbox_inches='tight', transparent=True)
     print('save figure to file: '+fig_file)
     return inps
 
 
-def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
-                 unit_scale=1000., font_size=12,
-                 tick_year_num=1, legend_loc='best', cutoff=3.):
-    """
-        legend_loc - 'upper right' or (0.5, 0.5)
+def plot_rms_bar(ax, date_list, rms, cutoff=3.,
+                 font_size=12, tick_year_num=1, legend_loc='best'):
+    """ Bar plot Phase Residual RMS
+    Parameters: ax : Axes object
+                date_list : list of string in YYYYMMDD format
+                rms    : 1D np.array of float for RMS value in mm
+                cutoff : cutoff value of MAD outlier detection
+                tick_year_num : int, number of years per major tick
+                legend_loc : 'upper right' or (0.5, 0.5)
+    Returns:    ax : Axes object
     """
     dates, datevector = ptime.date_list2vector(date_list)
     try:
@@ -154,39 +158,27 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
     except:
         bar_width = np.min(np.diff(dates).tolist())*3/4
     datex = np.array(dates) - bar_width / 2
-    rms = np.array(rms_list)
+    rms = np.array(rms)
 
     # Plot all dates
-    ax.bar(datex, rms * unit_scale, bar_width.days, color=pp.mplColors[0])
+    ax.bar(datex, rms, bar_width.days, color=pp.mplColors[0])
 
     # Plot reference date
     ref_idx = np.argmin(rms)
-    ax.bar(datex[ref_idx],
-           rms[ref_idx] * unit_scale,
-           bar_width.days,
-           color=pp.mplColors[1],
-           label='Reference Date')
+    ax.bar(datex[ref_idx], rms[ref_idx], bar_width.days, color=pp.mplColors[1], label='Reference Date')
 
     # Plot exclude dates
+    rms_threshold = ut.median_abs_deviation_threshold(rms, center=0., cutoff=cutoff)
     ex_idx = rms > rms_threshold
     if not np.all(ex_idx==False):
-        ax.bar(datex[ex_idx],
-               rms[ex_idx] * unit_scale,
-               bar_width.days,
-               color='darkgray',
-               label='Exclude Date')
+        ax.bar(datex[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude Date')
 
     # Plot rms_threshold line
-    (ax, xmin, xmax) = pp.auto_adjust_xaxis_date(ax, datevector, font_size,
-                                                 every_year=tick_year_num)
-    ax.plot(np.array([xmin, xmax]),
-            np.array([rms_threshold, rms_threshold]) * unit_scale,
-            '--k',
-            label='RMS Threshold')
+    (ax, xmin, xmax) = pp.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=tick_year_num)
+    ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k', label='RMS Threshold')
 
     # axis format
-    ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold) * unit_scale,
-                              font_size, ymin=0.0)
+    ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)
     ax.set_xlabel('Time [years]', fontsize=font_size)
     ax.set_ylabel('Phase Residual RMS [mm]', fontsize=font_size)
     #ax.yaxis.set_ticks_position('both')
@@ -196,22 +188,11 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
     # 2nd axes for circles
     divider = make_axes_locatable(ax)
     ax2 = divider.append_axes("right", "10%", pad="2%")
-    ax2.plot(np.ones(rms.shape, np.float32) * 0.5,
-             rms * unit_scale,
-             'o', mfc='none',
-             color=pp.mplColors[0])
-    ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5,
-             rms[ref_idx] * unit_scale,
-             'o', mfc='none',
-             color=pp.mplColors[1])
+    ax2.plot(np.ones(rms.shape, np.float32) * 0.5, rms, 'o', mfc='none', color=pp.mplColors[0])
+    ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5, rms[ref_idx], 'o', mfc='none', color=pp.mplColors[1])
     if not np.all(ex_idx==False):
-        ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5,
-                 rms[ex_idx] * unit_scale,
-                 'o', mfc='none',
-                 color='darkgray')
-    ax2.plot(np.array([0, 1]),
-             np.array([rms_threshold, rms_threshold]) * unit_scale,
-             '--k')
+        ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5, rms[ex_idx], 'o', mfc='none', color='darkgray')
+    ax2.plot(np.array([0, 1]), np.array([rms_threshold, rms_threshold]), '--k')
 
     ax2.set_ylim(ax.get_ylim())
     ax2.set_xlim([0, 1])
@@ -221,12 +202,13 @@ def plot_rms_bar(ax, date_list, rms_list, rms_threshold,
     ax2.get_yaxis().set_ticklabels([])
 
     ax.legend(loc=legend_loc, fontsize=font_size)
+    # rms_threshold text
     ymin, ymax = ax.get_ylim()
     yoff = (ymax - ymin) * 0.1
-    if (rms_threshold * unit_scale - ymin) > 0.5 * (ymax - ymin):
+    if (rms_threshold - ymin) > 0.5 * (ymax - ymin):
         yoff *= -1.
     ax.annotate('Median Abs Dev * {}'.format(cutoff),
-                xy=(xmin + (xmax-xmin)*0.05, rms_threshold * unit_scale + yoff ),
+                xy=(xmin + (xmax-xmin)*0.05, rms_threshold + yoff ),
                 color='k', xycoords='data', fontsize=font_size)
     return ax
 
