@@ -26,7 +26,7 @@ configKeys = ['unwDatasetName',
               'weightFunc',
               'maskDataset',
               'maskThreshold',
-              'redundancyRatio',
+              'minRedundancy',
               'minNormVelocity']
 
 
@@ -55,7 +55,7 @@ TEMPLATE = """
 pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
-pysar.networkInversion.redundancyRatio = auto #[1-inf], auto for 1.0, min num of ifgrams per SAR acquisition
+pysar.networkInversion.minRedundancy   = auto #[1-inf], auto for 1.0, min num_ifgram for every SAR acquisition
 pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
 pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
@@ -100,8 +100,8 @@ def create_parser():
                         help='dataset used to mask unwrapPhase, e.g. coherence, connectComponent')
     parser.add_argument('--mask-threshold', dest='maskThreshold', metavar='NUM', type=float, default=0.4,
                         help='threshold to generate mask when mask is coherence')
-    parser.add_argument('--redun-ratio', dest='redundancyRatio', metavar='NUM', type=float, default=1.0, 
-                        help='redundancy ratio, min number of interferograms per SAR acquisition.')
+    parser.add_argument('--min-redundancy', dest='minRedundancy', metavar='NUM', type=float, default=1.0, 
+                        help='minimum redundancy of interferograms for every SAR acquisition.')
 
     parser.add_argument('--weight-function', '-w', dest='weightFunc', default='no', choices={'var', 'fim', 'coh', 'no'},
                         help='function used to convert coherence to weight for inversion:\n' +
@@ -169,7 +169,7 @@ def read_template2inps(template_file, inps):
         if key in ['maskDataset', 'minNormVelocity']:
             inpsDict[key] = value
         elif value:
-            if key in ['maskThreshold', 'redundancyRatio']:
+            if key in ['maskThreshold', 'minRedundancy']:
                 inpsDict[key] = float(value)
             elif key in ['weightFunc', 'residualNorm', 'waterMaskFile']:
                 inpsDict[key] = value
@@ -345,7 +345,7 @@ def ceil_to_1(x):
 
 
 def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_velocity=True,
-                        skip_zero_phase=True, rcond=1e-5, redun_ratio=1):
+                        skip_zero_phase=True, rcond=1e-5, min_redundancy=1.):
     """Estimate time-series from a stack/network of interferograms with
     Least Square minimization on deformation phase / velocity.
 
@@ -377,7 +377,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
                 skip_zero_phase - bool, skip ifgram with zero phase value
                 rcond - cut-off ratio of small singular values of A or B, to maintain robustness.
                     It's recommend to >= 1e-5 by experience, to generate reasonable result.
-                redun_ratio - min number of interferogram per acquisition
+                min_redundancy - min redundancy defined as min num_ifgram for every SAR acquisition
     Returns:    ts - 2D np.array in size of (num_date, num_pixel), phase time series
                 temp_coh - 1D np.array in size of (num_pixel), temporal coherence
                 num_inv_ifg - 1D np.array in size of (num_pixel), number of ifgrams
@@ -400,15 +400,16 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
         A = A[idx, :]
         B = B[idx, :]
 
-        # Return if any date has less than redun_ratio observations/interferograms
-        if (np.sum(A != 0., axis=0) < redun_ratio).any():
+        # Skip the pixel if its redundancy < threshold
+        if np.min(np.sum(A != 0., axis=0)) < min_redundancy:
             return ts, temp_coh, num_inv_ifg
 
-        # check matrix singularity
-        try:
-            linalg.inv(np.dot(B.T, B))
-        except linalg.LinAlgError:
-            return ts, temp_coh, num_inv_ifg
+        # check matrix invertability
+        if weight_sqrt is not None:  #for WLS only because OLS contains it already
+            try:
+                linalg.inv(np.dot(B.T, B))
+            except linalg.LinAlgError:
+                return ts, temp_coh, num_inv_ifg
 
         ifgram = ifgram[idx, :]
         if weight_sqrt is not None:
@@ -694,7 +695,7 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
 
 def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
                            weight_func='var', min_norm_velocity=True,
-                           mask_dataset_name=None, mask_threshold=0.4, redun_ratio=1.0,
+                           mask_dataset_name=None, mask_threshold=0.4, min_redundancy=1.0,
                            water_mask_file=None, skip_zero_phase=True):
     """Invert one patch of an ifgram stack into timeseries.
     Parameters: ifgram_file       : str, interferograms stack HDF5 file, e.g. ./INPUTS/ifgramStack.h5
@@ -829,7 +830,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                                        weight_sqrt=None,
                                                        min_norm_velocity=min_norm_velocity,
                                                        skip_zero_phase=skip_zero_phase,
-                                                       redun_ratio=redun_ratio)
+                                                       min_redundancy=min_redundancy)
             ts[:, mask_all_net] = tsi
             temp_coh[mask_all_net] = tcohi
             num_inv_ifg[mask_all_net] = num_ifgi
@@ -847,7 +848,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                                            weight_sqrt=None,
                                                            min_norm_velocity=min_norm_velocity,
                                                            skip_zero_phase=skip_zero_phase,
-                                                           redun_ratio=redun_ratio)
+                                                           min_redundancy=min_redundancy)
                 ts[:, idx] = tsi.flatten()
                 temp_coh[idx] = tcohi
                 num_inv_ifg[idx] = num_ifgi
@@ -871,7 +872,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                                        weight_sqrt=weight[:, idx],
                                                        min_norm_velocity=min_norm_velocity,
                                                        skip_zero_phase=skip_zero_phase,
-                                                       redun_ratio=redun_ratio)
+                                                       min_redundancy=min_redundancy)
             ts[:, idx] = tsi.flatten()
             temp_coh[idx] = tcohi
             num_inv_ifg[idx] = num_ifgi
@@ -929,7 +930,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     msg += 'least-squares solution with L2 min-norm on: {}\n'.format(suffix)
     #msg += '\tLS  for pixels with full rank      network\n'
     #msg += '\tSVD for pixels with rank deficient network\n'
-    msg += 'min redundancy ratio (num_ifgram / num_acquisition): {}\n'.format(inps.redundancyRatio)
+    msg += 'minimum redundancy: {}\n'.format(inps.minRedundancy)
     msg += 'weight function: {}\n'.format(inps.weightFunc)
 
     if inps.maskDataset:
@@ -974,7 +975,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                    min_norm_velocity=inps.minNormVelocity,
                                    mask_dataset_name=inps.maskDataset,
                                    mask_threshold=inps.maskThreshold,
-                                   redun_ratio=inps.redundancyRatio,
+                                   min_redundancy=inps.minRedundancy,
                                    water_mask_file=inps.waterMaskFile,
                                    skip_zero_phase=inps.skip_zero_phase)
     else:
@@ -1007,7 +1008,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                                 min_norm_velocity=inps.minNormVelocity,
                                                 mask_dataset_name=inps.maskDataset,
                                                 mask_threshold=inps.maskThreshold,
-                                                redun_ratio=inps.redundancyRatio,
+                                                min_redundancy=inps.minRedundancy,
                                                 water_mask_file=inps.waterMaskFile,
                                                 skip_zero_phase=inps.skip_zero_phase)
 

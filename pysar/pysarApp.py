@@ -121,7 +121,7 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
-pysar.networkInversion.redundancyRatio = auto #[1-inf], auto for 1.0, min num of ifgrams per SAR acquisition
+pysar.networkInversion.minRedundancy   = auto #[1-inf], auto for 1.0, min num_ifgram for every SAR acquisition
 pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
 pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
@@ -973,7 +973,7 @@ def main(iargs=None):
         print('\n'+'-'*50)
         print('For better figures:')
         print('  1) Edit parameters in plot_pysarApp.sh and re-run this script.')
-        print('  2) Play with view.py, tsview.py and save_kml.py for more advanced/customized figures.')
+        print('  2) Play with view.py, tsview.py and transect.py for more advanced/customized figures.')
         if status is not 0:
             raise Exception('Error while plotting data files using {}'.format(plotCmd))
 
