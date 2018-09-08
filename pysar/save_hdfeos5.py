@@ -13,7 +13,7 @@ import argparse
 import datetime as dt
 import h5py
 import numpy as np
-from pysar.objects import timeseries, geometry, HDFEOS
+from pysar.objects import timeseries, geometry, HDFEOS, sensor
 from pysar.utils import readfile
 from pysar import info
 
@@ -65,53 +65,6 @@ def cmd_line_parse(iargs=None):
 
 
 ################################################################
-def get_mission_name(meta_dict):
-    """Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
-    Input:  meta_dict : dict, attributes
-    Output: mission   : str, mission name in standard UNAVCO format.
-    """
-    mission = None
-
-    if 'mission' in meta_dict.keys():
-        value = meta_dict['mission'].lower()
-    elif 'PLATFORM' in meta_dict.keys():
-        value = meta_dict['PLATFORM'].lower()
-    else:
-        print('No PLATFORM nor mission attribute found, can not identify mission name.')
-        print('return None')
-        return mission
-
-    # Convert to UNAVCO Mission name
-    ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
-    if value.startswith('ers'):
-        mission = 'ERS'
-    elif value.startswith(('env', 'asar')):
-        mission = 'ENV'
-    elif value.startswith(('s1', 'sen')):
-        mission = 'S1'
-    elif value.startswith(('rs', 'rsat', 'radarsat')):
-        mission = 'RS'
-        if value.endswith('1'):
-            mission += '1'
-        else:
-            mission += '2'
-    elif value.startswith(('csk', 'cos')):
-        mission = 'CSK'
-    elif value.startswith(('tsx', 'tdx', 'terra', 'tandem')):
-        mission = 'TSX'
-    elif value.startswith('jers'):
-        mission = 'JERS'
-    elif value.startswith(('alos', 'palsar')):
-        if value.endswith('2'):
-            mission = 'ALOS2'
-        else:
-            mission = 'ALOS'
-    else:
-        print('Un-recognized PLATFORM attribute: '+value)
-        print('return None')
-    return mission
-
-
 def metadata_pysar2unavco(pysar_meta_dict_in, dateList):
     # Extract UNAVCO format metadata from PySAR attributes dictionary and dateList
     pysar_meta_dict = {}
@@ -130,7 +83,7 @@ def metadata_pysar2unavco(pysar_meta_dict_in, dateList):
     # mission
     # ERS,ENV,S1,RS1,RS2,CSK,TSX,JERS,ALOS,ALOS2
     try:
-        unavco_meta_dict['mission'] = get_mission_name(pysar_meta_dict)
+        unavco_meta_dict['mission'] = sensor.get_unavco_mission_name(pysar_meta_dict)
     except ValueError:
         print('Missing required attribute: mission')
 

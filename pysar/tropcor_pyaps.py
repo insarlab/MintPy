@@ -375,7 +375,7 @@ def get_delay_timeseries(inps, atr):
         return
 
     trop_file = os.path.join(os.path.dirname(inps.geom_file), inps.trop_model+'.h5')
-    if ut.update_file(trop_file, inps.grib_file_list, print_msg=False):
+    if ut.run_or_skip(out_file=trop_file, in_file=inps.grib_file_list, print_msg=False) == 'run':
         # calculate phase delay
         length, width = int(atr['LENGTH']), int(atr['WIDTH'])
         num_date = len(inps.grib_file_list)

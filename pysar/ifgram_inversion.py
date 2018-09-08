@@ -176,14 +176,14 @@ def read_template2inps(template_file, inps):
     return inps
 
 
-def run_check(inps):
+def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
-    run = False
+    flag = 'skip'
 
     # check output files vs input dataset
     if not all(os.path.isfile(i) for i in inps.outfile):
-        run = True
+        flag = 'run'
         print('  1) NOT ALL output files found: {}, --> run.'.format(inps.outfile))
     else:
         print('  1) output files already exist: {}'.format(inps.outfile))
@@ -191,26 +191,23 @@ def run_check(inps):
             ti = float(f[inps.unwDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
         to = min(os.path.getmtime(i) for i in inps.outfile)
         if to <= ti:
-            run = True
+            flag = 'run'
             print('  2) output files are NOT newer than input dataset: {} --> run.'.format(inps.unwDatasetName))
         else:
             print('  2) output dataset is newer than input dataset: {}'.format(inps.unwDatasetName))
 
     # check configuration
-    if not run:
+    if flag == 'skip':
         atr = readfile.read_attribute(inps.timeseriesFile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
-            run = True
+            flag = 'run'
             print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
         else:
             print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
 
     # result
-    if run:
-        print('run.')
-    else:
-        print('skip the run.')
-    return run
+    print('check result:', flag)
+    return flag
 
 
 ################################################################################################
@@ -1062,7 +1059,7 @@ def main(iargs=None):
                                if i in stack_obj.datasetNames][0]
 
     # --update option
-    if inps.update_mode and run_check(inps) is False:
+    if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
     # Network Inversion

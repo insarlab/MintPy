@@ -247,7 +247,7 @@ def run_geocode(inps):
     for infile in inps.file:
         print('-' * 50+'\nresampling file: {}'.format(infile))
         outfile = auto_output_filename(infile, inps)
-        if inps.updateMode and not ut.update_file(outfile, [infile, inps.lookupFile]):
+        if inps.updateMode and ut.run_or_skip(outfile, in_file=[infile, inps.lookupFile]) == 'skip':
             print('update mode is ON, skip geocoding.')
             continue
 

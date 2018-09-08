@@ -105,39 +105,36 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
-def run_check(inps):
+def run_or_skip(inps):
     print('update mode: ON')
-    run = False
+    flag = 'skip'
 
     # check output file
     if not os.path.isfile(inps.outfile):
-        run = True
+        flag = 'run'
         print('  1) output file {} not found, --> run'.format(inps.outfile))
     else:
         print('  1) output file {} already exists.'.format(inps.outfile))
         ti = os.path.getmtime(inps.timeseries_file)
         to = os.path.getmtime(inps.outfile)
         if to <= ti:
-            run = True
+            flag = 'run'
             print('  2) output file is NOT newer than input file: {} --> run.'.format(inps.timeseries_file))
         else:
             print('  2) output file is newer than input file: {}.'.format(inps.timeseries_file))
 
     # check configuration
-    if not run:
+    if flag == 'skip':
         atr = readfile.read_attribute(inps.outfile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
-            run = True
+            flag = 'run'
             print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
         else:
             print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
 
     # result
-    if run:
-        print('run.')
-    else:
-        print('skip the run.')
-    return run
+    print('check result:', flag)
+    return flag
 
 
 ############################################################################
@@ -284,7 +281,7 @@ def main(iargs=None):
     inps = read_date_info(inps)
 
     # --update option
-    if inps.update_mode and run_check(inps) is False:
+    if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
     inps.outfile = estimate_linear_velocity(inps)

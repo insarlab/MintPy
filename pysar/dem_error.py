@@ -100,14 +100,14 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def run_check(inps):
+def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
-    run = False
+    flag = 'skip'
 
     # check output file
     if not os.path.isfile(inps.outfile):
-        run = True
+        flag = 'run'
         print('  1) output file {} not found, --> run'.format(inps.outfile))
     else:
         print('  1) output file {} already exists.'.format(inps.outfile))
@@ -117,28 +117,25 @@ def run_check(inps):
         ti = min(os.path.getmtime(i) for i in infiles)
         to = os.path.getmtime(inps.outfile)
         if to <= ti:
-            run = True
+            flag = 'run'
             print('  2) output file is NOT newer than input file: {} --> run.'.format(infiles))
         else:
             print('  2) output file is newer than input file: {}.'.format(infiles))
 
     # check configuration
-    if not run:
+    if flag == 'skip':
         date_list_all = timeseries(inps.timeseries_file).get_date_list()
         inps.excludeDate = read_exclude_date(inps.excludeDate, date_list_all, print_msg=False)[1]
         atr = readfile.read_attribute(inps.outfile)
         if any(str(vars(inps)[key]) != atr.get(key_prefix+key, 'None') for key in configKeys):
-            run = True
+            flag = 'run'
             print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
         else:
             print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
 
     # result
-    if run:
-        print('run.')
-    else:
-        print('skip the run.')
-    return run
+    print('check result:', flag)
+    return flag
 
 
 ############################################################################
@@ -468,7 +465,7 @@ def main(iargs=None):
         inps.outfile = '{}_demErr.h5'.format(os.path.splitext(inps.timeseries_file)[0])
 
     # --update option
-    if inps.update_mode and run_check(inps) is False:
+    if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
     start_time = time.time()

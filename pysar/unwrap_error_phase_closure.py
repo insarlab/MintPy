@@ -99,33 +99,29 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
-def run_check(inps):
-
+def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
-    run = False
+    flag = 'skip'
 
     # check output dataset
     with h5py.File(inps.ifgram_file, 'r') as f:
         if inps.datasetNameOut not in f.keys():
-            run = True
+            flag = 'run'
             print('  1) output dataset: {} not found --> run.'.format(inps.datasetNameOut))
         else:
             print('  1) output dataset: {} exists'.format(inps.datasetNameOut))
             to = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             ti = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             if to <= ti:
-                run = True
+                flag = 'run'
                 print('  2) output dataset is NOT newer than input dataset: {} --> run.'.format(inps.datasetNameIn))
             else:
                 print('  2) output dataset is newer than input dataset: {}'.format(inps.datasetNameIn))
 
     # result
-    if run:
-        print('run.')
-    else:
-        print('skip the run.')
-    return run
+    print('check result:', flag)
+    return flag
 
 
 ####################################################################################################
@@ -373,7 +369,7 @@ def main(iargs=None):
         inps.datasetNameOut = '{}_closure'.format(inps.datasetNameIn)
 
     # update mode
-    if inps.update_mode and run_check(inps) is False:
+    if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.ifgram_file
 
     start_time = time.time()

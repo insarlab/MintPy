@@ -89,14 +89,14 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def run_check(inps):
+def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
-    run = False
+    flag = 'skip'
 
     # check output file vs input dataset
     if not os.path.isfile(inps.outfile):
-        run = True
+        flag = 'run'
         print('  1) output file {} not exist --> run.'.format(inps.outfile))
     else:
         print('  1) output file {} already exists.'.format(inps.outfile))
@@ -104,17 +104,14 @@ def run_check(inps):
             ti = float(f[inps.dset].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
         if to <= ti:
-            run = True
+            flag = 'run'
             print('  2) output file is NOT newer than input dataset: {} --> run.'.format(inps.dset))
         else:
             print('  2) output file is newer than input dataset: {}.'.format(inps.dset))
 
     # result
-    if run:
-        print('run.')
-    else:
-        print('skip the run.')
-    return run
+    print('check result:', flag)
+    return flag
 
 
 ################################################################################################
@@ -237,7 +234,7 @@ def main(iargs=None):
                 inps.dset = [i for i in ['connectComponent', 'unwrapPhase'] if i in f.keys()][0]
 
         # update mode
-        if inps.update_mode and inps.outfile and run_check(inps) is False:
+        if inps.update_mode and inps.outfile and run_or_skip(inps) == 'skip':
             return inps.outfile
 
         # run

@@ -135,9 +135,9 @@ def cmd_line_parse(iargs=None):
     return inps
 
 
-def run_check(inps):
+def run_or_skip(inps):
     print('update mode: ON')
-    run = False
+    flag = 'skip'
 
     # get existed output file names
     outfiles = []
@@ -147,17 +147,17 @@ def run_check(inps):
         if len(fnames) > 0:
             outfiles.append(fnames[0])
         else:
-            run = True
+            flag = 'run'
 
-    if not run:
+    if flag == 'skip':
         ti = os.path.getmtime(inps.file)
         to = min([os.path.getmtime(i) for i in outfiles])
         if to <= ti:
-            run = True
+            flag = 'run'
         else:
             print('{} exist and are newer than input file: {}'.format(outfiles, inps.file))
             print('skip the plotting.')
-    return run
+    return flag
 
 
 ##################################################################################################
@@ -1195,7 +1195,7 @@ def main(iargs=None):
 
     inps = update_inps_with_file_metadata(inps, atr)
     # --update option
-    if inps.update_mode and not inps.disp_fig and run_check(inps) is False:
+    if inps.update_mode and not inps.disp_fig and run_or_skip(inps) == 'skip':
         return inps.outfile
 
     inps.msk, inps.mask_file = pp.read_mask(inps.file,

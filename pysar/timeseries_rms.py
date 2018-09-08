@@ -97,10 +97,9 @@ def analyze_rms(date_list, rms_list, inps):
     print('-'*50+'\ndate with min RMS: {} - {:.4f}'.format(date_list[ref_idx],
                                                            rms_list[ref_idx]))
     ref_date_file = 'reference_date.txt'
-    if ut.update_file(ref_date_file, [inps.timeseries_file,
-                                      inps.mask_file,
-                                      inps.template_file],
-                      check_readable=False):
+    if ut.run_or_skip(out_file=ref_date_file,
+                      in_file=[inps.timeseries_file, inps.mask_file, inps.template_file],
+                      check_readable=False) == 'run':
         with open(ref_date_file, 'w') as f:
             f.write(date_list[ref_idx]+'\n')
         print('save date to file: '+ref_date_file)

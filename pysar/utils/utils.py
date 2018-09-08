@@ -707,8 +707,8 @@ def get_residual_std(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
     std_file = os.path.splitext(deramped_file)[0]+'_std.txt'
 
     # Get residual std text file
-    if update_file(std_file, [deramped_file, mask_file], check_readable=False):
-        if update_file(deramped_file, timeseries_resid_file):
+    if run_or_skip(out_file=std_file, in_file=[deramped_file, mask_file], check_readable=False) == 'run':
+        if run_or_skip(out_file=deramped_file, in_file=timeseries_resid_file) == 'run':
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
                 msg += '\nRe-run dem_error.py to generate it.'
@@ -757,8 +757,8 @@ def get_residual_rms(timeseries_resid_file, mask_file='maskTempCoh.h5', ramp_typ
                             'rms_{}.txt'.format(os.path.splitext(deramped_file)[0]))
 
     # Get residual RMS text file
-    if update_file(rms_file, [deramped_file, mask_file], check_readable=False):
-        if update_file(deramped_file, timeseries_resid_file):
+    if run_or_skip(out_file=rms_file, in_file=[deramped_file, mask_file], check_readable=False) == 'run':
+        if run_or_skip(out_file=deramped_file, in_file=timeseries_resid_file) == 'run':
             if not os.path.isfile(timeseries_resid_file):
                 msg = 'Can not find input timeseries residual file: '+timeseries_resid_file
                 msg += '\nRe-run dem_error.py to generate it.'
@@ -797,62 +797,63 @@ def normalize_timeseries_old(ts_mat, nanValue=0):
 
 
 ############################################################
-def update_file(outFile, inFile=None, check_readable=True, print_msg=True):
-    """Check whether to update outFile/outDir or not.
-    return True if any of the following meets:
-        1. outFile is empty, e.g. None, []
-        2. outFile is not existed
-        3. outFile is not readable by readfile.read_attribute() when check_readable=True
-        4. outFile is older than inFile, if inFile is not None
-    Otherwise, return False.
+def run_or_skip(out_file, in_file=None, check_readable=True, print_msg=True):
+    """Check whether to update out_file or not.
+    return run if any of the following meets:
+        1. out_file is empty, e.g. None, []
+        2. out_file is not existed
+        3. out_file is not readable by readfile.read_attribute() when check_readable=True
+        4. out_file is older than in_file, if in_file is not None
+    Otherwise, return skip.
 
-    If inFile=None and outFile exists and readable, return False
+    If in_file=None and out_file exists and readable, return skip
 
-    Parameters: outFile : string or list of string, output file(s)
-                inFile  : string or list of string, input file(s)
+    Parameters: out_file : string or list of string, output file(s)
+                in_file  : string or list of string, input file(s)
                 check_readable : bool, check if the 1st output file has attribute 'WIDTH'
                 print_msg      : bool, print message
-    Returns:    True/False : bool, whether to update output file or not
-    Example:    if ut.update_file('timeseries_ECMWF_demErr.h5', 'timeseries_ECMWF.h5'):
-                if ut.update_file('exclude_date.txt', check_readable=False,
-                                  inFile=['timeseries_ECMWF_demErrInvResid.h5',
-                                          'maskTempCoh.h5',
-                                          'pysar_template.txt']):
+    Returns:    run/skip : str, whether to update output file or not
+    Example:    if ut.run_or_skip(out_file='timeseries_ECMWF_demErr.h5', in_file='timeseries_ECMWF.h5'):
+                if ut.run_or_skip(out_file='exclude_date.txt',
+                                  in_file=['timeseries_ECMWF_demErrInvResid.h5',
+                                           'maskTempCoh.h5',
+                                           'pysar_template.txt'],  
+                                  check_readable=False):
     """
     # 1 - check existance of output files
-    if not outFile:
-        return True
+    if not out_file:
+        return 'run'
     else:
-        if isinstance(outFile, str):
-            outFile = [outFile]
-        if not all(os.path.isfile(i) for i in outFile):
-            return True
+        if isinstance(out_file, str):
+            out_file = [out_file]
+        if not all(os.path.isfile(i) for i in out_file):
+            return 'run'
 
     # 2 - check readability of output files
     if check_readable:
         try:
-            atr = readfile.read_attribute(outFile[0])
+            atr = readfile.read_attribute(out_file[0])
             width = atr['WIDTH']
         except:
             if print_msg:
-                print('{} exists, but can not read, remove it.'.format(outFile[0]))
-            rmCmd = 'rm {}'.format(outFile[0])
+                print('{} exists, but can not read, remove it.'.format(out_file[0]))
+            rmCmd = 'rm {}'.format(out_file[0])
             print(rmCmd)
             os.system(rmCmd)
-            return True
+            return 'run'
 
     # 3 - check modification time of output and input files
-    if inFile:
-        inFile = get_file_list(inFile)
+    if in_file:
+        in_file = get_file_list(in_file)
         # Check modification time
-        if inFile:
-            t_in  = max([os.path.getmtime(i) for i in inFile])
-            t_out = min([os.path.getmtime(i) for i in outFile])
+        if in_file:
+            t_in  = max([os.path.getmtime(i) for i in in_file])
+            t_out = min([os.path.getmtime(i) for i in out_file])
             if t_in > t_out:
-                return True
+                return 'run'
             elif print_msg:
-                print('{} exists and is newer than {}, skip updating.'.format(outFile, inFile))
-    return False
+                print('{} exists and is newer than {}, skip updating.'.format(out_file, in_file))
+    return 'skip'
 
 
 def update_attribute_or_not(atr_new, atr_orig):
@@ -1216,8 +1217,11 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
             mask_line_orig = [i for i in lines if '# Mask file:' in i][0]
         except:
             mask_line_orig = ''
-        if (aoi_line_orig == aoi_line and mask_line_orig == mask_line
-                and not update_file(txtFile, [File, maskFile], check_readable=False)):
+        if (aoi_line_orig == aoi_line 
+                and mask_line_orig == mask_line
+                and run_or_skip(out_file=txtFile,
+                                in_file=[File, maskFile],
+                                check_readable=False) == 'skip'):
             print(txtFile+' already exists, read it directly')
             meanList, dateList = read_text_file(txtFile)
             return meanList, dateList

@@ -166,6 +166,52 @@ def project_name2sensor_name(project_names):
 
 
 
+def get_unavco_mission_name(meta_dict):
+    """Get mission name in UNAVCO InSAR Archive format from attribute mission/PLATFORM
+    Parameters: meta_dict : dict, attributes
+    Returns:    mission   : str, mission name in standard UNAVCO format.
+    """
+    mission_name = None
+
+    if 'mission' in meta_dict.keys():
+        value = meta_dict['mission'].lower()
+    elif 'PLATFORM' in meta_dict.keys():
+        value = meta_dict['PLATFORM'].lower()
+    else:
+        print('No PLATFORM nor mission attribute found, can not identify mission name.')
+        print('return None')
+        return mission_name
+
+    # Convert to UNAVCO Mission name
+    ## ERS, ENV, S1, RS1, RS2, CSK, TSX, JERS, ALOS, ALOS2
+    if value.startswith('ers'):
+        mission_name = 'ERS'
+    elif value.startswith(('env', 'asar')):
+        mission_name = 'ENV'
+    elif value.startswith(('s1', 'sen')):
+        mission_name = 'S1'
+    elif value.startswith(('rs', 'rsat', 'radarsat')):
+        mission_name = 'RS'
+        if value.endswith('1'):
+            mission_name += '1'
+        else:
+            mission_name += '2'
+    elif value.startswith(('csk', 'cos')):
+        mission_name = 'CSK'
+    elif value.startswith(('tsx', 'tdx', 'terra', 'tandem')):
+        mission_name = 'TSX'
+    elif value.startswith('jers'):
+        mission_name = 'JERS'
+    elif value.startswith(('alos', 'palsar')):
+        if value.endswith('2'):
+            mission_name = 'ALOS2'
+        else:
+            mission_name = 'ALOS'
+    else:
+        print('Un-recognized PLATFORM attribute:', value)
+        print('return None')
+    return mission_name
+
 
 
 

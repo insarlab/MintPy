@@ -92,7 +92,7 @@ pysar.network.endDate         = auto  #[20110101 / no], auto for no
 pysar.networkInversion.weightFunc      = auto #[var / fim / coh / no], auto for var
 pysar.networkInversion.maskDataset     = auto #[coherence / connectComponent / no], auto for no
 pysar.networkInversion.maskThreshold   = auto #[0-1], auto for 0.4
-pysar.networkInversion.redundancyRatio = auto #[1-inf], auto for 1.0, min num of ifgrams per SAR acquisition
+pysar.networkInversion.minRedundancy   = auto #[1-inf], auto for 1.0, min num_ifgram for every SAR acquisition
 pysar.networkInversion.waterMaskFile   = auto #[filename / no], auto for no
 pysar.networkInversion.minNormVelocity = auto #[yes / no], auto for yes, min-norm deformation velocity or phase
 pysar.networkInversion.residualNorm    = auto #[L2 ], auto for L2, norm minimization solution
@@ -143,7 +143,7 @@ pysar.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
 ## 5.2 Select Reference Date
 ## reference all timeseries to one date in time
 ## no     - do not change the default reference date (1st date)
-pysar.reference.date = auto   #[reference_date.txt / 20090214 / no], auto for minRMS
+pysar.reference.date  = auto   #[reference_date.txt / 20090214 / no], auto for minRMS
 
 
 ########## 6. Phase Deramping (optional)
@@ -174,7 +174,7 @@ pysar.geocode.fillValue    = auto  #[np.nan, 0, ...], auto for np.nan, fill valu
 pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
 pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
 pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
-pysar.save.kml     = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
+pysar.save.kml             = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file
 
 
 ## 8.3 Plot

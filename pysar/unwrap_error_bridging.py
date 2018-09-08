@@ -137,28 +137,28 @@ def read_template2inps(template_file, inps=None):
     return inps
 
 
-def run_check(inps):
+def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
-    run = False
+    flag = 'skip'
 
     # check output dataset
     with h5py.File(inps.ifgram_file, 'r') as f:
         if inps.datasetNameOut not in f.keys():
-            run = True
+            flag = 'run'
             print('  1) output dataset: {} not found --> run.'.format(inps.datasetNameOut))
         else:
             print('  1) output dataset: {} exists'.format(inps.datasetNameOut))
             ti = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             to = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             if to <= ti:
-                run = True
+                flag = 'run'
                 print('  2) output dataset is NOT newer than input dataset: {} --> run.'.format(inps.datasetNameIn))
             else:
                 print('  2) output dataset is newer than input dataset: {}'.format(inps.datasetNameIn))
 
     # check configuration
-    if not run:
+    if flag == 'skip':
         # convert inps value to common str format
         inps_dict = dict(vars(inps))
         specialValues = {True : 'yes',
@@ -169,17 +169,14 @@ def run_check(inps):
                 inps_dict[key] = specialValues[value]
         atr = readfile.read_attribute(inps.ifgram_file)
         if any(str(inps_dict[key]) != atr.get(key_prefix+key, 'no') for key in configKeys):
-            run = True
+            flag = 'run'
             print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
         else:
             print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
 
     # result
-    if run:
-        print('run.')
-    else:
-        print('skip the run.')
-    return run
+    print('check result:', flag)
+    return flag
 
 
 ####################################################################################################
@@ -519,7 +516,7 @@ def main(iargs=None):
         inps = read_template2inps(inps.template_file, inps)
 
     # update mode
-    if inps.update_mode and run_check(inps) is False:
+    if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.ifgram_file
 
     # check maskConnComp.h5

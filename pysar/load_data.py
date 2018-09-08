@@ -413,8 +413,8 @@ def update_object(outFile, inObj, box, updateMode=True):
     """Do not write h5 file if: 1) h5 exists and readable,
                                 2) it contains all date12 from ifgramStackDict,
                                             or all datasets from geometryDict"""
-    updateFile = True
-    if updateMode and not ut.update_file(outFile, check_readable=True):
+    write_flag = True
+    if updateMode and ut.run_or_skip(outFile, check_readable=True) == 'skip':
         if inObj.name == 'ifgramStack':
             in_size = inObj.get_size(box=box)[1:]
             in_date12_list = inObj.get_date12_list()
@@ -426,7 +426,7 @@ def update_object(outFile, inObj, box, updateMode=True):
             if out_size == in_size and set(in_date12_list).issubset(set(out_date12_list)):
                 print(('All date12   exists in file {} with same size as required,'
                        ' no need to re-load.'.format(outFile)))
-                updateFile = False
+                write_flag = False
 
         elif inObj.name == 'geometry':
             outObj = geometry(outFile)
@@ -435,8 +435,8 @@ def update_object(outFile, inObj, box, updateMode=True):
                     and all(i in outObj.datasetNames for i in inObj.get_dataset_list())):
                 print(('All datasets exists in file {} with same size as required,'
                        ' no need to re-load.'.format(outFile)))
-                updateFile = False
-    return updateFile
+                write_flag = False
+    return write_flag
 
 
 def prepare_metadata(inpsDict):

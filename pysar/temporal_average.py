@@ -64,14 +64,14 @@ def check_output_filename(inps):
     return inps.outfile
 
 
-def run_check(inps):
+def run_or_skip(inps):
     print('-'*50)
     print('update mode: ON')
-    run = False
+    flag = 'skip'
 
     # check output file vs input dataset
     if not os.path.isfile(inps.outfile):
-        run = True
+        flag = 'run'
         print('  1) output file {} not exist --> run.'.format(inps.outfile))
     else:
         print('  1) output file {} already exists.'.format(inps.outfile))
@@ -79,17 +79,15 @@ def run_check(inps):
             ti = float(f[inps.datasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
         if to <= ti:
-            run = True
+            flag = 'run'
             print('  2) output file is NOT newer than input dataset: {} --> run.'.format(inps.datasetName))
         else:
             print('  2) output file is newer than input dataset: {}.'.format(inps.datasetName))
 
     # result
-    if run:
-        print('run.')
-    else:
-        print('skip the run.')
-    return run
+    print('check result:', flag)
+    return flag
+
 
 #############################  Main Function  ################################
 def main(iargs=None):
@@ -98,7 +96,7 @@ def main(iargs=None):
 
     inps.outfile = check_output_filename(inps)
 
-    if inps.update_mode and run_check(inps) is False:
+    if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 
     inps.outfile = ut.temporal_average(inps.file, datasetName=inps.datasetName, outFile=inps.outfile)
