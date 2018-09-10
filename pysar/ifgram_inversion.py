@@ -329,18 +329,6 @@ def coherence2fisher_info_index(data, L=32, epsilon=1e-3):
     return data
 
 
-def round_to_1(x):
-    """Return the most significant digit of input number"""
-    digit = int(np.floor(np.log10(abs(x))))
-    return round(x, -digit)
-
-
-def ceil_to_1(x):
-    """Return the most significant digit of input number and ceiling it"""
-    digit = int(np.floor(np.log10(abs(x))))
-    return round(x, -digit)+10**digit
-
-
 def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_velocity=True,
                         skip_zero_phase=True, rcond=1e-5, min_redundancy=1.):
     """Estimate time-series from a stack/network of interferograms with
@@ -543,7 +531,7 @@ def split_into_boxes(ifgram_file, chunk_size=100e6, print_msg=True):
     shape = ifgramStack(ifgram_file).get_size()
     # Get r_step / chunk_num
     r_step = chunk_size / (shape[0] * shape[2])         # split in lines
-    r_step = int(ceil_to_1(r_step))
+    r_step = int(ut.ceil_to_1(r_step))
     chunk_num = int((shape[1]-1)/r_step) + 1
 
     if print_msg and chunk_num > 1:

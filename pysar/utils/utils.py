@@ -268,9 +268,16 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
     return atr
 
 
+def ceil_to_1(x):
+    """Return the most significant digit of input number and ceiling it"""
+    digit = int(np.floor(np.log10(abs(x))))
+    return round(x, -digit)+10**digit
+
+
 def round_to_1(x):
     """Return the most significant digit of input number"""
-    return round(x, -int(np.floor(np.log10(abs(x)))))
+    digit = int(np.floor(np.log10(abs(x))))
+    return round(x, -1*digit)
 
 
 def touch(fname_list, times=None):
