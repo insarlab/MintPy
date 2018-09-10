@@ -462,7 +462,7 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     return date12_list_out
 
 
-def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
+def coherence_matrix(date12_list, coh_list, diag_value=np.nan):
     """Return coherence matrix based on input date12 list and its coherence
     Inputs:
         date12_list - list of string in YYMMDD-YYMMDD format
@@ -489,9 +489,9 @@ def coherence_matrix(date12_list, coh_list, diagValue=np.nan):
         coh_mat[idx1, idx2] = coh  # symmetric
         coh_mat[idx2, idx1] = coh
 
-    if diagValue is not np.nan:
+    if diag_value is not np.nan:
         for i in range(date_num):    # diagonal value
-            coh_mat[i, i] = diagValue
+            coh_mat[i, i] = diag_value
     return coh_mat
 
 

@@ -178,10 +178,10 @@ def simulate_network(ts_sim, date12_list, decor_day, coh_resid, L=75, num_sample
     m_dates = [i.split('_')[0] for i in date12_list]
     s_dates = [i.split('_')[1] for i in date12_list]
     date_list = sorted(list(set(m_dates + s_dates)))
-    ifgram0 = timeseries2ifgram(ts_sim, date_list, date12_list, display=False)
-    ifgram = decor_noise + np.tile(ifgram0.reshape(-1,1), (1, num_sample))
-    coh_est = estimate_coherence(ifgram, L=L, win_size=25)
-    return ifgram, coh_est, coh_sim
+    ifgram_sim = timeseries2ifgram(ts_sim, date_list, date12_list, display=False)
+    ifgram_est = decor_noise + np.tile(ifgram_sim.reshape(-1,1), (1, num_sample))
+    coh_est = estimate_coherence(ifgram_est, L=L, win_size=25)
+    return ifgram_est, coh_est, ifgram_sim, coh_sim
 
 
 def estimate_coherence(ifgram, L=20, win_size=25):
