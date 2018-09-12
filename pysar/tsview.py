@@ -254,8 +254,8 @@ def read_init_info(inps):
         inps.yx = inps.coord.geo2radar(inps.lalo[0],
                                        inps.lalo[1],
                                        print_msg=False)[0:2]
-    if not inps.yx:
-        inps.yx = inps.ref_yx
+    #if not inps.yx:
+    #    inps.yx = inps.ref_yx
     try:
         inps.lalo = inps.coord.radar2geo(inps.yx[0],
                                          inps.yx[1],
@@ -299,8 +299,11 @@ def read_timeseries_data(inps):
     for fname in inps.timeseries_file:
         print('reading timeseries from file {} ...'.format(fname))
         data, atr = readfile.read(fname, datasetName=inps.date_list)
-        ref_phase = data[:, inps.ref_yx[0], inps.ref_yx[1]]
-        data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, inps.length, inps.width))
+        try:
+            ref_phase = data[:, inps.ref_yx[0], inps.ref_yx[1]]
+            data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, inps.length, inps.width))
+        except:
+            pass
         data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
 
         # Display Unit
@@ -328,7 +331,10 @@ def read_timeseries_data(inps):
     ts_mask = np.tile(mask, (inps.num_date, 1, 1))
     for i in range(len(ts_data)):
         ts_data[i][ts_mask == 0] = np.nan
-        ts_data[i][:, inps.ref_yx[0], inps.ref_yx[1]] = 0.   # keep value on reference pixel
+        try:
+            ts_data[i][:, inps.ref_yx[0], inps.ref_yx[1]] = 0.   # keep value on reference pixel
+        except:
+            pass
     del ts_mask
 
     # default vlim
@@ -370,7 +376,7 @@ def plot_init_map(ax, d_v, inps, metadata):
     inps.fig_title = 'N = {}, Time = {}'.format(inps.init_idx, disp_date)
 
     # Initial Pixel
-    if inps.yx != inps.ref_yx:
+    if inps.yx and inps.yx != inps.ref_yx:
         inps.pts_yx = np.array(inps.yx).reshape(-1, 2)
         if inps.lalo:
             inps.pts_lalo = np.array(inps.lalo).reshape(-1, 2)
@@ -645,7 +651,8 @@ def main(iargs=None):
 
     # Figure 2 - Time Series Displacement - Point
     fig_ts, ax_ts = plt.subplots(num='Point Displacement Time-series', figsize=inps.fig_size)
-    ax_ts, d_ts = plot_point_timeseries(inps.yx, fig_ts, ax_ts, ts_data, inps)
+    if inps.yx:
+        ax_ts, d_ts = plot_point_timeseries(inps.yx, fig_ts, ax_ts, ts_data, inps)
 
     def plot_timeseries_event(event):
         """Event function to get y/x from button press"""
