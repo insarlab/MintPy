@@ -132,7 +132,7 @@ def run_or_skip(inps):
             print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
         else:
             print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
-
+ 
     # result
     print('check result:', flag)
     return flag
@@ -288,10 +288,9 @@ def estimate_dem_error(ts0, A0, tbase, drop_date=None, phaseVelocity=False, num_
 
     # Inverse using L-2 norm to get unknown parameters X
     # X = [delta_z, constC, vel, acc, deltaAcc, ..., step1, step2, ...]
-    # equivalent to X = linalg.inv(A.T.dot(A)).dot(A.T).dot(ts)
-    #            or X = np.dot(np.linalg.pinv(A, rcond=1e-8), ts)
-    #            or X = np.dot(linalg.pinv2(A, cond=1e-8), ts)
-    X = linalg.lstsq(A, ts, cond=1e-8)[0]
+    # equivalent to X = np.dot(np.dot(np.linalg.inv(np.dot(A.T, A)), A.T), ts)
+    #               X = np.dot(np.linalg.pinv(A), ts)
+    X = linalg.lstsq(A, ts, cond=1e-15)[0]
 
     # Prepare Outputs
     delta_z = X[0, :]

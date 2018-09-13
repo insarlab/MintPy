@@ -334,14 +334,22 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
     """Estimate time-series from a stack/network of interferograms with
     Least Square minimization on deformation phase / velocity.
 
-    scipy.linalg.lstsq is used to solve the least square problem with/without weight.
+    opt 1: X = np.dot(np.dot(numpy.linalg.inv(np.dot(B.T, B)), B.T), ifgram)
+    opt 2: X = np.dot(numpy.linalg.pinv(B), ifgram)
+    opt 3: X = np.dot(scipy.linalg.pinv2(B), ifgram)
+    opt 4: X = scipy.linalg.lstsq(B, ifgram)[0] [recommend and used]
+
+    opt 4 supports weight.
     scipy.linalg provides more advanced and slighted faster performance than numpy.linalg.
     This function relies on the LAPACK routine gelsd. It computes the minimum-norm 
     solution to a linear least squares problem using the singular value decomposition
     of A and a divide and conquer method.
 
-    It's equivalent to pseudo-inverse (scipy.linalg.pinv2), but faster because we estimate
-    X directly without calculating the A_inv matrix.
+    opt 4 is faster than opt 1/2/3 because it estimates X directly without calculating
+    the A_inv matrix.
+
+    opt 2/3 is better than opt 1 because numpy.linalg.inv() can not handle rank defiency of
+    design matrix B
 
     Traditional Small BAseline Subsets (SBAS) algorithm (Berardino et al., 2002, IEEE-TGRS)
     is equivalent to the setting of:

@@ -951,13 +951,15 @@ class ifgramStack:
         tbase = np.array([(i - dates[0]).days for i in dates], np.float32) / 365.25
         tbase_diff = np.diff(tbase).flatten()
 
-        B = self.get_design_matrix4timeseries_estimation(dropIfgram=dropIfgram)[1]
-        B_inv = np.linalg.pinv(B)
+        # read pbase of interferograms
         with h5py.File(self.file, 'r') as f:
             pbaseIfgram = f['bperp'][:]
             if dropIfgram:
                 pbaseIfgram = pbaseIfgram[f['dropIfgram'][:]]
-        pbaseRate = np.dot(B_inv, pbaseIfgram)
+
+        # estimate pbase of time-series
+        B = self.get_design_matrix4timeseries_estimation(dropIfgram=dropIfgram)[1]
+        pbaseRate = np.dot(np.linalg.pinv(B), pbaseIfgram)
         pbaseTimeseries = np.concatenate((np.array([0.], dtype=np.float32),
                                           np.cumsum([pbaseRate * tbase_diff])))
         return pbaseTimeseries

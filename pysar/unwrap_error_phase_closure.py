@@ -125,7 +125,7 @@ def run_or_skip(inps):
 
 
 ####################################################################################################
-def correct_unwrap_error(ifgram, C, Dconstraint=True, thres=0.1, alpha=0.25, rcond=1e-3):
+def correct_unwrap_error(ifgram, C, Dconstraint=True, thres=0.1, alpha=0.25, rcond=1e-5):
     """Estimate unwrapping error from a stack of unwrapped interferometric phase
     Parameters: ifgram : 2D np.array in size of (num_ifgram, num_pixel) of unwrap phase
                 C      : 2D np.array in size of (num_triangle, num_ifgram) triangle design matrix

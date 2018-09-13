@@ -791,10 +791,10 @@ def main(iargs=None):
     if inps.plot and os.path.isfile(plotCmd):
         print(plotCmd)
         status = subprocess.Popen(plotCmd, shell=True).wait()
-        print('\n'+'-'*50)
-        print('For better figures:')
-        print('  1) Edit parameters in plot_pysarApp.sh and re-run this script.')
-        print('  2) Play with view.py, tsview.py and transect.py for more advanced/customized figures.')
+        msg = '\n'+'-'*50
+        msg += '\nPlay with the following scripts for more plotting options:'
+        msg += '\nview.py, tsview.py, transect.py, plot_network.py'
+        print(msg)
         if status is not 0:
             raise Exception('Error while plotting data files using {}'.format(plotCmd))
 
@@ -802,10 +802,10 @@ def main(iargs=None):
     # Timing                                    #
     #############################################
     m, s = divmod(time.time()-start_time, 60)
-    print('\ntime used: {:02.0f} mins {:02.1f} secs'.format(m, s))
     print('\n###############################################')
     print('End of PySAR processing!')
     print('################################################\n')
+    print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
 
 
 ###########################################################################################

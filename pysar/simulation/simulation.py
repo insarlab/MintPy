@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 from pysar.simulation.forward_model import mogi
 from pysar.simulation.plot import *
 from pysar.utils import ptime, network as pnet, utils as ut
-from pysar import ifgram_inversion as ifginv
+from pysar import (ifgram_inversion as ifginv,
+                   timeseries2velocity as ts2vel)
 
 
 def velocity2timeseries(date_list, vel=0.03, display=False):
@@ -204,16 +205,15 @@ def estimate_coherence(ifgram, L=20, win_size=25):
 
 
 def timeseries2velocity(date_list, defo_list):
-    # date_list --> design_matrix 
-    times = np.array([dt(*time.strptime(i, "%Y%m%d")[0:5]) for i in date_list])
-    years = np.array([i.year + (i.timetuple().tm_yday-1)/365.25 for i in times])
-    A = np.ones((len(years), 2), dtype=np.float32)
-    A[:, 0] = years
+    # date_list --> design_matrix
+    A = ts2vel.design_matrix(date_list)
     A_inv = np.linalg.pinv(A)
 
-    X = np.dot(A_inv, np.array(defo_list, np.float32).reshape(-1,1))
-    velocity = X[0, :]
-    return velocity
+    # least square inversion
+    defo = np.array(defo_list, np.float32).reshape(-1,1)
+    vel = np.dot(A_inv, defo)[0, :]
+    return vel
+
 
 def check_board(water_mask, grid_step=100, scale=1., display=True):
     length, width = water_mask.shape

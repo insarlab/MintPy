@@ -1496,8 +1496,7 @@ def timeseries_inversion_FGLS(h5flat, h5timeseries):
     A, B = design_matrix(h5flat)
     tbase, dateList, dateDict, dateDict2 = date_list(h5flat)
     dt = np.diff(tbase)
-    B1 = np.linalg.pinv(B)
-    B1 = np.array(B1, np.float32)
+    B1 = np.array(np.linalg.pinv(B), dtype=np.float32)
     ifgram_list = list(h5flat['interferograms'].keys())
     ifgram_num = len(ifgram_list)
     #dset = h5flat[ifgram_list[0]].get(h5flat[ifgram_list[0]].keys()[0])
@@ -1576,8 +1575,7 @@ def timeseries_inversion_L1(h5flat, h5timeseries):
     tbase, dateList, dateDict, dateDict2 = date_list(h5flat)
     dt = np.diff(tbase)
     BL1 = matrix(B)
-    B1 = np.linalg.pinv(B)
-    B1 = np.array(B1, np.float32)
+    B1 = np.array(np.linalg.pinv(B), dtype=np.float32)
     ifgram_list = list(h5flat['interferograms'].keys())
     ifgram_num = len(ifgram_list)
     #dset = h5flat[ifgram_list[0]].get(h5flat[ifgram_list[0]].keys()[0])
@@ -1716,7 +1714,7 @@ def deramp_data(data, mask_in, ramp_type='linear', metadata=None):
     mask[dmean == 0] = 0
 
     # estimate ramp
-    X = linalg.lstsq(G[mask, :], data[mask, :], cond=1e-8)[0]
+    X = linalg.lstsq(G[mask, :], data[mask, :], cond=1e-15)[0]
     ramp = np.dot(G, X)
 
     # reference in space if metadata

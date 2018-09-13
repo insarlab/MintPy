@@ -14,9 +14,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
-from scipy.linalg import pinv as pinv
-
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile
 
 
 ####################################################################################
@@ -158,7 +156,6 @@ def main(argv):
         B = np.vstack((dem**3, dem**2, dem, np.ones(len(dem)))).T
     print(np.shape(A))
 
-    Ainv = np.linalg.pinv(A)
     ###################################################
 
     Bh = []

@@ -8,6 +8,7 @@
 
 import os
 import argparse
+from datetime import datetime as dt
 import numpy as np
 from pysar.objects import timeseries, giantTimeseries, HDFEOS
 from pysar.utils import readfile, writefile, ptime, utils as ut
@@ -211,9 +212,8 @@ def read_date_info(inps):
         print('dates used to estimate the velocity: {}\n{}'.format(inps.numDate, inps.dateList))
     print('-'*50)
 
-    # Date Aux Info
+    # flag array for ts data reading
     inps.dropDate = np.array([i not in inps.excludeDate for i in tsobj.dateList], dtype=np.bool_)
-    inps.years = np.array(tsobj.yearList)[inps.dropDate]
 
     # output file name
     if not inps.outfile:
@@ -226,23 +226,24 @@ def read_date_info(inps):
     return inps
 
 
-def design_matrix(years):
+def design_matrix(date_list):
     """design matrix/function model of linear velocity estimation
-    Parameters: years : 1D array of float in size of (numDate,),
-                    date in years, e.g. 2015.1830937713896
+    Parameters: date_list : list of string in YYYYMMDD format
     Returns:    A : 2D array of int in size of (numDate, 2)
     """
-    A = np.ones([len(years), 2], dtype=dataType)
-    A[:, 0] = years
+    # convert list of YYYYMMDD into array of diff year in float
+    dt_list = [dt.strptime(i, '%Y%m%d') for i in date_list]
+    yr_list = [i.year + (i.timetuple().tm_yday - 1) / 365.25 for i in dt_list]
+    yr_diff = np.array(yr_list)
+    yr_diff -= yr_diff[0]
+
+    #float64 is required due to precision issue
+    A = np.ones([len(date_list), 2], dtype=np.float32)
+    A[:, 0] = yr_diff
     return A
 
 
 def estimate_linear_velocity(inps):
-    A = design_matrix(inps.years)
-    A_inv = np.array(np.linalg.pinv(A), dataType)
-    # The following gives wrong and different result, find reason.
-    # A_inv = np.array(np.linalg.inv(A.T.dot(A)).dot(A.T), dataType)
-
     print('reading data from file {} ...'.format(inps.timeseries_file))
     tsData, atr = readfile.read(inps.timeseries_file)
     tsData = tsData[inps.dropDate, :, :].reshape(inps.numDate, -1)
@@ -250,13 +251,17 @@ def estimate_linear_velocity(inps):
         tsData *= 1./1000.
     dsShape = (int(atr['LENGTH']), int(atr['WIDTH']))
 
-    X = np.dot(A_inv, tsData)
-    V = np.reshape(X[0, :], dsShape)
+    # The following is equivalent
+    # X = scipy.linalg.lstsq(A, tsData, cond=1e-15)[0]
+    # It is not used because it can not handle NaN value in tsData
+    A = design_matrix(inps.dateList)
+    X = np.dot(np.linalg.pinv(A), tsData)
+    V = np.array(np.reshape(X[0, :], dsShape), dtype=dataType)
 
     tsResidual = tsData - np.dot(A, X)
-    timeStd = np.sqrt(np.sum((inps.years - np.mean(inps.years))**2))
+    timeStd = np.sqrt(np.sum((A[:, 0] - np.mean(A[:, 0]))**2))
     Vstd = np.sqrt(np.sum(tsResidual**2, axis=0) / (inps.numDate-2)) / timeStd
-    Vstd = Vstd.reshape(dsShape)
+    Vstd = np.array(Vstd.reshape(dsShape), dtype=dataType)
 
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'

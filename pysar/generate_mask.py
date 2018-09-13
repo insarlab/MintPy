@@ -184,15 +184,17 @@ def create_threshold_mask(inps):
     # base mask
     if inps.base_mask_file:
         base_mask = readfile.read(inps.base_mask_file)[0]
-        mask[base_mask == 0] = 0
-        print('exclude pixels in base file {} marked as zero'.format(inps.base_mask_file))
+        if len(base_mask.shape):
+            base_mask = np.sum(base_mask, axis=0)
+        mask[base_mask == 0.] = 0
+        print('exclude pixels in base file {} with value == 0'.format(inps.base_mask_file))
 
     # shadow mask
     if inps.shadow_mask_file:
         try:
             shadow_mask = readfile.read(inps.shadow_mask_file, datasetName='shadowMask')[0]
             mask[shadow_mask == 1] = 0
-            print('exclude pixels in shadow file {} marked as one'.format(inps.shadow_mask_file))
+            print('exclude pixels in shadow file {} with value == 1'.format(inps.shadow_mask_file))
         except:
             pass
 

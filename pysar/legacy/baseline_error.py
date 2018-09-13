@@ -8,15 +8,11 @@
 
 import sys
 import os
-
 import h5py
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
-from scipy.linalg import pinv as pinv
-
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile
 
 
 ############################################################
@@ -169,11 +165,6 @@ def main(argv):
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     print('bv error of each epoch:')
     print(Bv)
-    # plt.hist(Bh,bins=8,normed=True)
-    # formatter = FuncFormatter(to_percent)
-    # Set the formatter
-    # plt.gca().yaxis.set_major_formatter(formatter)
-    # plt.show()
     print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     print('Estimating Baseline error from each differences ...')
 
