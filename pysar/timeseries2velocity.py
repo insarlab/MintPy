@@ -244,25 +244,28 @@ def design_matrix(date_list):
 
 
 def estimate_linear_velocity(inps):
+    # read time-series data
     print('reading data from file {} ...'.format(inps.timeseries_file))
-    tsData, atr = readfile.read(inps.timeseries_file)
-    tsData = tsData[inps.dropDate, :, :].reshape(inps.numDate, -1)
+    ts_data, atr = readfile.read(inps.timeseries_file)
+    ts_data = ts_data[inps.dropDate, :, :].reshape(inps.numDate, -1)
     if atr['UNIT'] == 'mm':
-        tsData *= 1./1000.
-    dsShape = (int(atr['LENGTH']), int(atr['WIDTH']))
+        ts_data *= 1./1000.
+    length, width = int(atr['LENGTH']), int(atr['WIDTH'])
 
     # The following is equivalent
-    # X = scipy.linalg.lstsq(A, tsData, cond=1e-15)[0]
-    # It is not used because it can not handle NaN value in tsData
+    # X = scipy.linalg.lstsq(A, ts_data, cond=1e-15)[0]
+    # It is not used because it can not handle NaN value in ts_data
     A = design_matrix(inps.dateList)
-    X = np.dot(np.linalg.pinv(A), tsData)
-    V = np.array(np.reshape(X[0, :], dsShape), dtype=dataType)
+    X = np.dot(np.linalg.pinv(A), ts_data)
+    vel = np.array(X[0, :].reshape(length, width), dtype=dataType)
 
-    tsResidual = tsData - np.dot(A, X)
-    timeStd = np.sqrt(np.sum((A[:, 0] - np.mean(A[:, 0]))**2))
-    Vstd = np.sqrt(np.sum(tsResidual**2, axis=0) / (inps.numDate-2)) / timeStd
-    Vstd = np.array(Vstd.reshape(dsShape), dtype=dataType)
+    # velocity STD (Eq. (10), Fattahi and Amelung, 2016)
+    ts_diff = ts_data - np.dot(A, X)
+    t_diff = A[:, 0] - np.mean(A[:, 0])
+    vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (inps.numDate - 2))
+    vel_std = np.array(vel_std.reshape(length, width), dtype=dataType)
 
+    # prepare attributes
     atr['FILE_TYPE'] = 'velocity'
     atr['UNIT'] = 'm/year'
     atr['START_DATE'] = inps.dateList[0]
@@ -273,9 +276,10 @@ def estimate_linear_velocity(inps):
     for key in configKeys:
         atr[key_prefix+key] = str(vars(inps)[key])
 
+    # write to HDF5 file
     dsDict = dict()
-    dsDict['velocity'] = V
-    dsDict['velocityStd'] = Vstd
+    dsDict['velocity'] = vel
+    dsDict['velocityStd'] = vel_std
     writefile.write(dsDict, out_file=inps.outfile, metadata=atr)
     return inps.outfile
 
