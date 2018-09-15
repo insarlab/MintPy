@@ -184,7 +184,7 @@ def create_threshold_mask(inps):
     # base mask
     if inps.base_mask_file:
         base_mask = readfile.read(inps.base_mask_file)[0]
-        if len(base_mask.shape):
+        if len(base_mask.shape) == 3:
             base_mask = np.sum(base_mask, axis=0)
         mask[base_mask == 0.] = 0
         print('exclude pixels in base file {} with value == 0'.format(inps.base_mask_file))
