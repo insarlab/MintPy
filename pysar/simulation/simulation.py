@@ -192,8 +192,9 @@ def estimate_coherence(ifgram, L=20, win_size=25):
     Reference:
       Rodriguez and Martin, 1992;
       Agram and Simons, 2015.
-    Parameters: phase : 2D np.array in size of (num_ifgram, num_sample)
-                win_size : int, number of sample used for coherence estimation
+    Parameters: phase    : 2D np.array in size of (num_ifgram, num_sample)
+                L        : int, number of looks used to determine the phase PDF
+                win_size : int, number of samples used to estimate phase variance
     Returns:    coh_est : 1D np.array in size of (num_ifgram,)
     """
     idx = np.random.choice(ifgram.shape[1], size=win_size)
