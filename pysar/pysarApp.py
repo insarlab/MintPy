@@ -9,8 +9,10 @@
 
 
 import os
+import re
 import glob
 import time
+from datetime import datetime as dt
 import argparse
 import warnings
 import shutil
@@ -377,6 +379,49 @@ def save_hdfeos5(inps, customTemplate=None):
             if status is not 0:
                 raise Exception('Error while generating HDF-EOS5 time-series file.\n')
     return
+
+
+def plot_pysarApp(inps):
+    def grab_latest_update_date(fname, prefix='# Latest update:'):
+        with open(fname, 'r') as f:
+            lines = f.readlines()
+        try:
+            line = [i for i in lines if prefix in i][0]
+            t_update = re.findall('\d{4}-\d{2}-\d{2}', line)[0]
+            t_update = dt.strptime(t_update, '%Y-%m-%d')
+        except:
+            t_update = None
+        return t_update
+        
+    inps.plotShellFile = os.path.join(os.path.dirname(__file__), '../sh/plot_pysarApp.sh')
+    plotCmd = './'+os.path.basename(inps.plotShellFile)
+    print('\n**********  Plot Results / Save to PIC  **********')
+    # copy to workding directory if not existed yet.
+    if not os.path.isfile(plotCmd):
+        print('copy {} to work directory: {}'.format(inps.plotShellFile, inps.workDir))
+        shutil.copy2(inps.plotShellFile, inps.workDir)
+    # rename and copy if obsolete file detected
+    else:
+        t_exist = grab_latest_update_date(plotCmd)
+        t_src = grab_latest_update_date(inps.plotShellFile)
+        if not t_exist or t_exist < t_src:
+            print('obsolete shell file detected.')
+            cmd = 'mv {f} {f}_obsolete'.format(f=os.path.basename(plotCmd))
+            print('rename existing file: {}'.format(cmd))
+            os.system(cmd)
+            print('copy {} to work directory: {}'.format(inps.plotShellFile, inps.workDir))
+            shutil.copy2(inps.plotShellFile, inps.workDir)
+
+    if os.path.isfile(plotCmd):
+        print(plotCmd)
+        status = subprocess.Popen(plotCmd, shell=True).wait()
+        msg = '\n'+'-'*50
+        msg += '\nPlay with the following scripts for more plotting options:'
+        msg += '\nview.py, tsview.py, transect.py, plot_network.py'
+        print(msg)
+        if status is not 0:
+            raise Exception('Error while plotting data files using {}'.format(plotCmd))
+    return inps
 
 
 ##########################################################################
@@ -778,25 +823,8 @@ def main(iargs=None):
     #############################################
     # Plot Figures
     #############################################
-    inps.plotShellFile = os.path.join(os.path.dirname(__file__), '../sh/plot_pysarApp.sh')
-    plotCmd = './'+os.path.basename(inps.plotShellFile)
-    inps.plot = template['pysar.plot']
-    if inps.plot is True:
-        print('\n**********  Plot Results / Save to PIC  **********')
-        # Copy to workding directory if not existed yet.
-        if not os.path.isfile(plotCmd):
-            print('copy {} to work directory: {}'.format(inps.plotShellFile, inps.workDir))
-            shutil.copy2(inps.plotShellFile, inps.workDir)
-
-    if inps.plot and os.path.isfile(plotCmd):
-        print(plotCmd)
-        status = subprocess.Popen(plotCmd, shell=True).wait()
-        msg = '\n'+'-'*50
-        msg += '\nPlay with the following scripts for more plotting options:'
-        msg += '\nview.py, tsview.py, transect.py, plot_network.py'
-        print(msg)
-        if status is not 0:
-            raise Exception('Error while plotting data files using {}'.format(plotCmd))
+    if template['pysar.plot']:
+        plot_pysarApp(inps)
 
     #############################################
     # Timing                                    #
