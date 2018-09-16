@@ -168,9 +168,22 @@ def run_or_skip(inps):
             if value in specialValues.keys():
                 inps_dict[key] = specialValues[value]
         atr = readfile.read_attribute(inps.ifgram_file)
-        if any(str(inps_dict[key]) != atr.get(key_prefix+key, 'no') for key in configKeys):
+        # if maskConnComp.h5 is generated from waterMask.h5 previously
+        key = 'maskFile'
+        if (atr[key_prefix+key] == 'maskConnComp.h5' 
+                and inps_dict[key] == 'no' 
+                and inps_dict['waterMaskFile'] != 'no' 
+                and os.path.getmtime(atr[key_prefix+key]) > os.path.getmtime(inps_dict['waterMaskFile'])):
+            inps_dict[key] = atr[key_prefix+key]
+
+        # check all keys
+        changed_keys = [key for key in configKeys 
+                        if str(inps_dict[key]) != atr.get(key_prefix+key, 'no')]
+        if len(changed_keys) > 0:
             flag = 'run'
             print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
+            for key in changed_keys:
+                print('\t{}\t: {} --> {}'.format(key, atr.get(key_prefix+key, 'no'), str(inps_dict[key])))
         else:
             print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
 
