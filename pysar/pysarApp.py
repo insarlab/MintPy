@@ -165,6 +165,9 @@ def read_template(inps):
                 customTemplate[key] = customTemplate[key].lower().replace('-', '_')
         if 'processor' in customTemplate.keys():
             customTemplate['pysar.load.processor'] = customTemplate['processor']
+        for key in ['SUBSET_XMIN', 'SUBSET_YMIN']:
+            if key in customTemplate.keys():
+                customTemplate.pop(key)
 
         # Update default template with custom input template
         print('update default template based on input custom template')
@@ -477,10 +480,11 @@ def main(iargs=None):
 
     # Add template options into HDF5 file metadata
     if inps.customTemplateFile:
-        metaCmd = 'add_attribute.py {} {}'.format(inps.stackFile, inps.customTemplateFile)
-        print(metaCmd)
-        status = subprocess.Popen(metaCmd, shell=True).wait()
-    #ut.add_attribute(inps.stackFile, template)
+        #metaCmd = 'add_attribute.py {} {}'.format(inps.stackFile, inps.customTemplateFile)
+        #print(metaCmd)
+        #status = subprocess.Popen(metaCmd, shell=True).wait()
+        # better control of special metadata, such as SUBSET_X/YMIN
+        ut.add_attribute(inps.stackFile, template)
 
     if inps.load_dataset:
         raise SystemExit('Exit as planned after loading/checking the dataset.')

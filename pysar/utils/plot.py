@@ -1095,7 +1095,9 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
 
     # For colorful display of coherence
     if not 'cohList'     in plot_dict.keys():  plot_dict['cohList']    = None
+    if not 'ylabel'      in plot_dict.keys():  plot_dict['ylabel']     = 'Perp Baseline [m]'
     if not 'cbar_label'  in plot_dict.keys():  plot_dict['cbar_label'] = 'Average Spatial Coherence'
+    if not 'disp_cbar'   in plot_dict.keys():  plot_dict['disp_cbar']   = True
     if not 'disp_min'    in plot_dict.keys():  plot_dict['disp_min']   = 0.2
     if not 'disp_max'    in plot_dict.keys():  plot_dict['disp_max']   = 1.0
     if not 'colormap'    in plot_dict.keys():  plot_dict['colormap']   = 'RdBu'
@@ -1192,12 +1194,13 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
         else:
             cmap = ColormapExt(plot_dict['colormap']).colormap
 
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", "3%", pad="3%")
-        norm = mpl.colors.Normalize(vmin=disp_min, vmax=disp_max)
-        cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
-        cbar.ax.tick_params(labelsize=plot_dict['fontsize'])
-        cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
+        if plot_dict['disp_cbar']:
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", "3%", pad="3%")
+            norm = mpl.colors.Normalize(vmin=disp_min, vmax=disp_max)
+            cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
+            cbar.ax.tick_params(labelsize=plot_dict['fontsize'])
+            cbar.set_label(plot_dict['cbar_label'], fontsize=plot_dict['fontsize'])
 
         # plot low coherent ifgram first and high coherence ifgram later
         cohList_keep = [cohList[date12List.index(i)] for i in date12List_keep]
@@ -1257,7 +1260,7 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
                                 every_year=plot_dict['every_year'])[0]
     ax = auto_adjust_yaxis(ax, pbaseList, fontsize=plot_dict['fontsize'])
     ax.set_xlabel('Time [years]', fontsize=plot_dict['fontsize'])
-    ax.set_ylabel('Perp Baseline [m]', fontsize=plot_dict['fontsize'])
+    ax.set_ylabel(plot_dict['ylabel'], fontsize=plot_dict['fontsize'])
     ax.tick_params(which='both', direction='in', labelsize=plot_dict['fontsize'],
                    bottom=True, top=True, left=True, right=True)
 
@@ -1267,8 +1270,8 @@ def plot_network(ax, date12List, dateList, pbaseList, plot_dict={}, date12List_d
 
     # Legend
     if plot_dict['disp_drop']:
-        solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifgrams used')
-        dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifgrams dropped')
+        solid_line = mlines.Line2D([], [], color='k', ls='solid',  label='Ifg used')
+        dash_line  = mlines.Line2D([], [], color='k', ls='dashed', label='Ifg dropped')
         ax.legend(handles=[solid_line, dash_line])
 
     return ax

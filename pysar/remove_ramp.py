@@ -60,9 +60,13 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     print('input file: ({})\n{}'.format(len(inps.file), inps.file))
 
-    for File in inps.file:
+    for fname in inps.file:
         print('------------------------------------------')
-        ut.deramp_file(File, inps.surface_type, inps.mask_file, datasetName=inps.dset)
+        ut.deramp_file(fname,
+                       ramp_type=inps.surface_type,
+                       mask_file=inps.mask_file,
+                       out_file=inps.outfile,
+                       datasetName=inps.dset)
 
     print('Done.')
     return

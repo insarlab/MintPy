@@ -462,11 +462,13 @@ def threshold_temporal_baseline(date12_list, btemp_max, keep_seasonal=True, btem
     return date12_list_out
 
 
-def coherence_matrix(date12_list, coh_list, diag_value=np.nan):
+def coherence_matrix(date12_list, coh_list, diag_value=np.nan, fill_triangle='both', date_list=None):
     """Return coherence matrix based on input date12 list and its coherence
     Inputs:
         date12_list - list of string in YYMMDD-YYMMDD format
         coh_list    - list of float, average coherence for each interferograms
+        diag_value  - number, value to be filled in the diagonal
+        fill_triangle - str, 'both', 'upper', 'lower'
     Output:
         coh_matrix  - 2D np.array with dimension length = date num
                       np.nan value for interferograms non-existed.
@@ -474,9 +476,11 @@ def coherence_matrix(date12_list, coh_list, diag_value=np.nan):
     """
     # Get date list
     date12_list = ptime.yymmdd_date12(date12_list)
-    m_dates = [date12.split('-')[0] for date12 in date12_list]
-    s_dates = [date12.split('-')[1] for date12 in date12_list]
-    date_list = sorted(ptime.yymmdd(list(set(m_dates + s_dates))))
+    if not date_list:
+        m_dates = [date12.split('-')[0] for date12 in date12_list]
+        s_dates = [date12.split('-')[1] for date12 in date12_list]
+        date_list = sorted(list(set(m_dates + s_dates)))
+    date_list = ptime.yymmdd(date_list)
     date_num = len(date_list)
 
     coh_mat = np.zeros([date_num, date_num])
@@ -486,8 +490,10 @@ def coherence_matrix(date12_list, coh_list, diag_value=np.nan):
         idx1 = date_list.index(date1)
         idx2 = date_list.index(date2)
         coh = coh_list[date12_list.index(date12)]
-        coh_mat[idx1, idx2] = coh  # symmetric
-        coh_mat[idx2, idx1] = coh
+        if fill_triangle in ['upper', 'both']:
+            coh_mat[idx1, idx2] = coh  # symmetric
+        if fill_triangle in ['lower', 'both']:
+            coh_mat[idx2, idx1] = coh
 
     if diag_value is not np.nan:
         for i in range(date_num):    # diagonal value

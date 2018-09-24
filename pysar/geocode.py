@@ -246,6 +246,7 @@ def run_geocode(inps):
     # resample input files one by one
     for infile in inps.file:
         print('-' * 50+'\nresampling file: {}'.format(infile))
+        atr = readfile.read_attribute(infile, datasetName=inps.dset)
         outfile = auto_output_filename(infile, inps)
         if inps.updateMode and ut.run_or_skip(outfile, in_file=[infile, inps.lookupFile]) == 'skip':
             print('update mode is ON, skip geocoding.')
@@ -263,6 +264,8 @@ def run_geocode(inps):
                                  datasetName=dsName,
                                  print_msg=False)[0]
 
+            if atr['FILE_TYPE'] == 'timeseries' and len(data.shape) == 2:
+                data = np.reshape(data, (1, data.shape[0], data.shape[1]))
             res_data = res_obj.run_resample(src_data=data,
                                             interp_method=inps.interpMethod,
                                             fill_value=inps.fillValue,
@@ -271,7 +274,6 @@ def run_geocode(inps):
             dsResDict[dsName] = res_data
 
         # update metadata
-        atr = readfile.read_attribute(infile, datasetName=inps.dset)
         if inps.radar2geo:
             atr = metadata_radar2geo(atr, res_obj)
         else:

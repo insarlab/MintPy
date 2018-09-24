@@ -568,7 +568,7 @@ def read_attribute(fname, datasetName=None, standardize=True):
                     num_list = [len(i) for i in atr_list]
                     atr = atr_list[np.argmax(num_list)]
                 else:
-                    raise ValueError('No attribute WIDTH found in file')
+                    raise ValueError('No attribute WIDTH found in file:', fname)
 
         # decode string format
         for key, value in atr.items():

@@ -234,12 +234,16 @@ def subset_attribute(atr_dict, subset_box, print_msg=True):
         print('update LENGTH, WIDTH, Y/XMAX')
 
     # Subset atribute
-    if print_msg:
-        print('update/add SUBSET_YMIN/YMAX/XMIN/XMAX')
     atr['SUBSET_YMAX'] = str(sub_y[1] + int(atr_dict.get('SUBSET_YMIN', '0')))
     atr['SUBSET_YMIN'] = str(sub_y[0] + int(atr_dict.get('SUBSET_YMIN', '0')))
     atr['SUBSET_XMAX'] = str(sub_x[1] + int(atr_dict.get('SUBSET_XMIN', '0')))
     atr['SUBSET_XMIN'] = str(sub_x[0] + int(atr_dict.get('SUBSET_XMIN', '0')))
+    if print_msg:
+        print(('update/add SUBSET_XMIN/YMIN/XMAX/YMAX: '
+               '{x0}/{y0}/{x1}/{y1}').format(x0=atr['SUBSET_XMIN'],
+                                             y0=atr['SUBSET_YMIN'],
+                                             x1=atr['SUBSET_XMAX'],
+                                             y1=atr['SUBSET_YMAX']))
 
     # Geo coord
     if 'Y_FIRST' in atr.keys():
