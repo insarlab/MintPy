@@ -835,7 +835,7 @@ def main(iargs=None):
     #############################################
     m, s = divmod(time.time()-start_time, 60)
     print('\n###############################################')
-    print('End of PySAR processing!')
+    print('End of PySAR Routine Processing!')
     print('################################################\n')
     print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
 

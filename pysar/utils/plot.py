@@ -712,7 +712,7 @@ def add_map_argument(parser):
     map_group.add_argument('--lalo-step', dest='lalo_step', metavar='DEG',
                            type=float, help='Lat/lon step for lalo-label option.')
     map_group.add_argument('--lalo-loc', dest='lalo_label_loc', type=int, nargs=4, default=[1, 0, 0, 1],
-                           metavar='BOOL',
+                           metavar=('left', 'right', 'top', 'bottom'),
                            help='Draw lalo label in [left, right, top, bottom], default is [1,0,0,1]')
 
     map_group.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
