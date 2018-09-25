@@ -1631,32 +1631,47 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     num_site = len(site_names)
 
     k = metadata['FILE_TYPE']
-    if inps.gps_component and k not in ['velocity']:
+    if inps.gps_component and k not in ['velocity', 'timeseries']:
         inps.gps_component = None
-        print('--gps-comp is not implemented for {} file yet, skip it and continue'.format(k))
+        print('--gps-comp is not implemented for {} file yet, set --gps-comp = None and continue'.format(k))
 
     if inps.gps_component:
         if print_msg:
             print('-'*30)
-            print(('calculating GPS velocity with reference to {}'
-                   ' in {} ...').format(inps.ref_gps_site, inps.gps_component))
-            print('start date: {}\nend   date: {}'.format(inps.gps_start_date, inps.gps_end_date))
+            msg = 'calculating GPS '
+            if k == 'velocity':
+                msg += 'velocity'
+            elif k == 'timeseries':
+                msg += 'displacement'
+            msg += ' with respect to {} in {} direction ...'.format(inps.ref_gps_site, inps.gps_component)
+            print(msg)
+            print('start date: {}'.format(inps.gps_start_date))
+            print('end   date: {}'.format(inps.gps_end_date))
             prog_bar = ptime.progressBar(maxValue=num_site)
         for i in range(num_site):
-            # calculate velocity
-            vel = gps(site_names[i]).get_gps_los_velocity(metadata,
-                                                          start_date=inps.gps_start_date,
-                                                          end_date=inps.gps_end_date,
-                                                          ref_site=inps.ref_gps_site,
-                                                          gps_comp=inps.gps_component) * unit_fac
+            obj = gps(site_names[i])
+            # calculate gps data value
+            if k == 'velocity':
+                gps_data = obj.get_gps_los_velocity(metadata,
+                                                    start_date=inps.gps_start_date,
+                                                    end_date=inps.gps_end_date,
+                                                    ref_site=inps.ref_gps_site,
+                                                    gps_comp=inps.gps_component) * unit_fac
+            elif k == 'timeseries':
+                dis = obj.read_gps_los_displacement(metadata,
+                                                    start_date=inps.gps_start_date,
+                                                    end_date=inps.gps_end_date,
+                                                    ref_site=inps.ref_gps_site,
+                                                    gps_comp=inps.gps_component)[1] * unit_fac
+                gps_data = dis[-1] - dis[0]
             if print_msg:
                 prog_bar.update(i+1, suffix=site_names[i])
 
             # plot
-            if not vel:
+            if not gps_data:
                 color = 'none'
             else:
-                cm_idx = (vel - vmin) / (vmax - vmin)
+                cm_idx = (gps_data - vmin) / (vmax - vmin)
                 color = cmap(cm_idx)
             ax.scatter(site_lons[i], site_lats[i], color=color,
                        s=marker_size**2, edgecolors='k')

@@ -59,6 +59,7 @@ EXAMPLE = """example:
   # InSAR v.s. GPS
   view.py geo_velocity_masked.h5 velocity --show-gps
   view.py geo_velocity_masked.h5 velocity --show-gps --gps-comp enu2los --ref-gps GV01
+  view.py geo_timeseries_ECMWF_demErr_ramp.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
 
   # Custom colormap
   # Download GMT colormap and saved to $PYSAR_HOME/docs/colormaps

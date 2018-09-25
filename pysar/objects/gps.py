@@ -312,5 +312,3 @@ class gps:
         self.velocity = np.dot(np.linalg.pinv(A), dis)[0]
         return self.velocity
 
-
-
