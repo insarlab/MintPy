@@ -14,7 +14,8 @@ from pysar.utils import writefile
 
 ###########################################################################################
 EXAMPLE = """Example:
-  remove_hdf5_dataset.py  ifgramStack.h5  unwrapPhase_closure
+  remove_hdf5_dataset.py  ifgramStack.h5  unwrapPhase_phaseClosure
+  remove_hdf5_dataset.py  ifgramStack.h5  unwrapPhase_phaseClosure  unwrapPhase_bridging
   remove_hdf5_dataset.py  velocity.h5     velocityStd
 """
 
@@ -24,7 +25,7 @@ def create_parser():
                                      epilog=EXAMPLE)
 
     parser.add_argument('file', type=str, help='HDF5 file of interest')
-    parser.add_argument('dset', type=str, help='dataset to be removed.')
+    parser.add_argument('dset', type=str, nargs='+', help='dataset to be removed.')
     return parser
 
 def cmd_line_parse(iargs=None):
@@ -40,7 +41,7 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
     with h5py.File(inps.file, 'r') as f:
         dset_list = list(f.keys())
-    if inps.dset not in dset_list:
+    if any(i not in dset_list for i in inps.dset):
         raise ValueError(('input dataset do not exists: {}'
                           '\navailable datasets:\n{}').format(inps.dset, dset_list))
 

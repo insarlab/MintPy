@@ -185,7 +185,7 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
                     2) reference point may be out of box definition
                 fast_mode : bool, apply zero jump constraint on ifgrams without unwrapping error.
                 thres : float, threshold of non-zero phase closure to be identified as unwrapping error.
-    Returns:    pha_data : 3D np.array in size of (num_ifgram, box[3]-box[2], box[2]-box[0]),
+    Returns:    pha_data : 3D np.array in size of (num_ifgram_all, box[3]-box[2], box[2]-box[0]),
                     unwrapped phase value after error correction
     """
     # Basic info
@@ -202,16 +202,15 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
         num_col = stack_obj.width
     num_pixel = num_row * num_col
 
-    C = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=False)
+    C = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=True)
     print('number of interferograms: {}'.format(C.shape[1]))
     print('number of triangles: {}'.format(C.shape[0]))
 
     # read unwrapPhase
-    pha_data = ifginv.read_unwrap_phase(stack_obj,
-                                        box,
-                                        ref_phase,
-                                        unwDatasetName=dsNameIn,
-                                        dropIfgram=False)
+    pha_data_all = ifginv.read_unwrap_phase(stack_obj, box, ref_phase,
+                                            unwDatasetName=dsNameIn,
+                                            dropIfgram=False)
+    pha_data = np.array(pha_data_all[stack_obj.dropIfgram, :])
 
     # mask of pixels to analyze
     mask = np.ones((num_pixel), np.bool_)
@@ -255,9 +254,11 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
             prog_bar.close()
 
         pha_data[:, mask] = ifgram_cor
-    pha_data = pha_data.reshape(num_ifgram, num_row, num_col)
+        pha_data_all[stack_obj.dropIfgram, :] = pha_data
+
+    pha_data_all = pha_data_all.reshape(num_ifgram, num_row, num_col)
     num_nonzero_closure = num_nonzero_closure.reshape(num_row, num_col)
-    return pha_data, num_nonzero_closure
+    return pha_data_all, num_nonzero_closure
 
 
 def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_phaseClosure', fast_mode=False):
@@ -286,7 +287,7 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
 
     num_nonzero_closure = np.zeros((stack_obj.length, stack_obj.width), dtype=np.int16)
     # split ifgram_file into blocks to save memory
-    num_tri = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=False).shape[0]
+    num_tri = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=True).shape[0]
     length, width = stack_obj.get_size()[1:3]
     box_list = ifginv.split_into_boxes(dataset_shape=(num_tri, length, width), chunk_size=200e6)
     num_box = len(box_list)
@@ -351,9 +352,11 @@ def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_phase
                               maxshape=(None, None, None),
                               chunks=True, compression=None)
 
-    # resize h5py.Dataset and write data
+    # resize h5py.Dataset if current size is not enough
     if ds.shape != (num_ifgram, length, width):
         ds.resize((num_ifgram, box[3], box[2]))
+
+    # write data to file
     ds[:, box[1]:box[3], box[0]:box[2]] = data
 
     ds.attrs['MODIFICATION_TIME'] = str(time.time())

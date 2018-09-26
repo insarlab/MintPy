@@ -44,10 +44,10 @@ EXAMPLE = """example:
   dem_error.py  timeseries_ECMWF.h5 -g INPUTS/geometryRadar.h5 -t pysarApp_template.txt
 
   # correct DEM error with mean geometry parameters
-  dem_error.py  timeseries_ECMWF.h5
+  dem_error.py  timeseries_ECMWF_ramp.h5
 
   # get time-series of estimated deformation model
-  diff.py timeseries_ECMWF_demErr.h5 timeseriesResidual.h5 -o timeseriesDefModel.h5
+  diff.py timeseries_ECMWF_ramp_demErr.h5 timeseriesResidual.h5 -o timeseriesDefModel.h5
 """
 
 REFERENCE = """reference:

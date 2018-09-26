@@ -972,8 +972,14 @@ class ifgramStack:
         with h5py.File(self.file, 'r+') as f:
             print('open file {} with r+ mode'.format(self.file))
             print('update HDF5 dataset "/dropIfgram".')
-            f['dropIfgram'][:] = np.array([i not in date12List_to_drop for i in date12ListAll],
-                                          dtype=np.bool_)
+            f['dropIfgram'][:] = np.array([i not in date12List_to_drop 
+                                           for i in date12ListAll], dtype=np.bool_)
+            # update MODIFICATION_TIME for unwrapPhase datasets
+            f['unwrapPhase'].attrs['MODIFICATION_TIME'] = str(time.time())
+            dsName = 'unwrapPhase_bridging'
+            if dsName in f.keys():
+                time.sleep(1)   #to distinguish the modification time of input files
+                f[dsName].attrs['MODIFICATION_TIME'] = str(time.time())
 ################################# ifgramStack class end ################################
 
 

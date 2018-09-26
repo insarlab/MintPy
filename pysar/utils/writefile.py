@@ -141,15 +141,19 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
     return out_file
 
 
-def remove_hdf5_dataset(fname, datasetName, print_msg=True):
+def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
     """Remove an existing dataset from an HDF5 file.
     Parameters: fname : str, HDF5 file name/path
-                datasetName : str, dataset name
+                datasetName : (list of) str, dataset name(s)
     Returns:    fname : str,
     Example:    remove_hdf5_dataset('./INPUTS/ifgramStack.h5', 'unwrapPhase_phaseClosure')
+                remove_hdf5_dataset('./INPUTS/ifgramStack.h5', ['unwrapPhase_phaseClosure',
+                                                                'unwrapPhase_bridging'])
     """
+    if isinstance(datasetNames, str):
+        datasetNames = list(datasetNames)
     if print_msg:
-        print('delete {} from file {}'.format(datasetName, fname))
+        print('delete {} from file {}'.format(datasetNames, fname))
     # 1. rename the file to a temporary file
     temp_file = 'tmp_{}'.format(fname)
     cmd = 'mv {} {}'.format(fname, temp_file)
@@ -166,7 +170,7 @@ def remove_hdf5_dataset(fname, datasetName, print_msg=True):
     # datasets
     compression = None
     maxDigit = max([len(i) for i in list(fi.keys())])
-    for dsName in [i for i in fi.keys() if i != datasetName]:
+    for dsName in [i for i in fi.keys() if i not in datasetNames]:
         ds = fi[dsName]
         if print_msg:
             print('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} with compression={c}'.format(
