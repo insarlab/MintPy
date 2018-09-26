@@ -94,7 +94,7 @@ def create_parser():
     parser.add_argument('-i','--in-dataset', dest='datasetNameIn', default='unwrapPhase',
                         help='name of dataset to be corrected, default: unwrapPhase')
     parser.add_argument('-o','--out-dataset', dest='datasetNameOut',
-                        help='name of dataset to be written after correction, default: {}_bridge')
+                        help='name of dataset to be written after correction, default: {}_bridging')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode: if unwrapPhase_unwCor dataset exists, skip the correction.')
     return parser
@@ -111,7 +111,7 @@ def cmd_line_parse(iargs=None):
 
     # default output dataset name
     if not inps.datasetNameOut:
-        inps.datasetNameOut = '{}_bridge'.format(inps.datasetNameIn)
+        inps.datasetNameOut = '{}_bridging'.format(inps.datasetNameIn)
     return inps
 
 
@@ -429,7 +429,7 @@ def bridge_unwrap_error(data, mask_cc, bridges):
 
 
 def run_unwrap_error_bridge(ifgram_file, mask_cc_file, bridges, dsNameIn='unwrapPhase',
-                            dsNameOut='unwrapPhase_bridge', ramp_type=None):
+                            dsNameOut='unwrapPhase_bridging', ramp_type=None):
     """Run unwrapping error correction with bridging
     Parameters: ifgram_file  : str, path of ifgram stack file
                 mask_cc_file : str, path of conn comp mask file
@@ -551,6 +551,7 @@ def main(iargs=None):
     bridges = search_bridge(inps.maskFile,
                             radius=inps.bridgePtsRadius,
                             coh_mask_file=inps.cohMaskFile)
+
     run_unwrap_error_bridge(inps.ifgram_file,
                             inps.maskFile,
                             bridges,

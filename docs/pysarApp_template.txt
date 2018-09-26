@@ -48,7 +48,7 @@ pysar.unwrapError.method          = auto  #[bridging / phase_closure / bridging+
 pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
 pysar.unwrapError.maskFile        = auto  #[maskConnComp.h5 / no], auto for no, mask for connected components areas
 pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
-pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for linear
+pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for no; recommend linear for L-band data
 pysar.unwrapError.fastMode        = auto  #[yes / no], auto for yes, enable fast mode for phase_closure method
 
 
@@ -119,7 +119,14 @@ pysar.troposphericDelay.looks        = auto  #[1-inf], auto for 8, for height_co
                                              #interferogram for empirical estimation of topography correlated atmosphere.
 
 
-########## 5. Topographic Residual (DEM Error) Correction (optional and recommended)
+########## 5. Phase Deramping (optional)
+## remove phase ramp for each epoch, useful to check localized deformation, i.e. volcanic, land subsidence, etc.
+## [linear, quadratic]
+pysar.deramp          = auto  #[no / linear / quadratic], auto for no - no ramp will be removed
+pysar.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask file for ramp estimation
+
+
+########## 6. Topographic Residual (DEM Error) Correction (optional and recommended)
 ## reference: Fattahi and Amelung, 2013, IEEE-TGRS
 ## Specify stepFuncDate option if you know there are sudden displacement jump in your area,
 ## i.e. volcanic eruption, or earthquake, and check timeseriesStepModel.h5 afterward for their estimation.
@@ -131,7 +138,7 @@ pysar.topographicResidual.stepFuncDate  = auto  #[20080529,20100611 / no], auto 
 pysar.topographicResidual.excludeDate   = auto  #[20070321 / txtFile / no], auto for exclude_date.txt,
                                                 # dates exlcuded for error estimation
 
-## 5.1 Phase Residual Root Mean Square
+## 6.1 Phase Residual Root Mean Square
 ## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Set optimal reference date to date with min RMS
@@ -140,17 +147,10 @@ pysar.residualRms.maskFile = auto  #[file name / no], auto for maskTempCoh.h5, m
 pysar.residualRms.ramp     = auto  #[quadratic / linear / no], auto for quadratic
 pysar.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
 
-## 5.2 Select Reference Date
+## 6.2 Select Reference Date
 ## reference all timeseries to one date in time
 ## no     - do not change the default reference date (1st date)
 pysar.reference.date  = auto   #[reference_date.txt / 20090214 / no], auto for minRMS
-
-
-########## 6. Phase Deramping (optional)
-## remove phase ramp for each epoch, useful to check localized deformation, i.e. volcanic, land subsidence, etc.
-## [linear, quadratic]
-pysar.deramp          = auto  #[no / linear / quadratic], auto for no - no ramp will be removed
-pysar.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask file for ramp estimation
 
 
 ########## 7. Velocity Estimation

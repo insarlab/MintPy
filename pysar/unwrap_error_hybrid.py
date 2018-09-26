@@ -75,7 +75,7 @@ def get_nonzero_phase_closure(ifgram_file, out_file=None, thres=0.1, unwDatasetN
     Returns:    num_nonzero_closure : 2D np.array in size of (length, width)
     """
     if not out_file:
-        out_file = 'numNonzeroClosure_{}.h5'.format(unwDatasetName)
+        out_file = 'numNonzeroPhaseClosure_{}.h5'.format(unwDatasetName)
     if os.path.isfile(out_file) and readfile.read_attribute(out_file):
         print('1. read number of nonzero phase closure from file: {}'.format(out_file))
         num_nonzero_closure = readfile.read(out_file)[0]
@@ -230,7 +230,7 @@ def detect_unwrap_error(ifgram_file, mask_file, mask_cc_file='maskConnComp.h5', 
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     if not inps.datasetNameOut:
-        inps.datasetNameOut = '{}_bridge'.format(inps.datasetNameIn)
+        inps.datasetNameOut = '{}_bridging'.format(inps.datasetNameIn)
 
     # update mode checking
     atr = readfile.read_attribute(inps.ifgram_file)
@@ -261,7 +261,7 @@ def main(iargs=None):
     if inps.run_closure:
         print('')
         inps.datasetNameIn = inps.datasetNameOut
-        inps.datasetNameOut = '{}_closure'.format(inps.datasetNameIn)
+        inps.datasetNameOut = '{}_phaseClosure'.format(inps.datasetNameIn)
         run_unwrap_error_closure(inps,
                                  dsNameIn=inps.datasetNameIn, 
                                  dsNameOut=inps.datasetNameOut,

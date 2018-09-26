@@ -59,7 +59,7 @@ def create_parser():
     parser.add_argument('-i','--in-dataset', dest='datasetNameIn', default='unwrapPhase',
                         help="name of dataset to be corrected, default: unwrapPhase")
     parser.add_argument('-o','--out-dataset', dest='datasetNameOut',
-                        help='name of dataset to be written after correction, default: {}_closure')
+                        help='name of dataset to be written after correction, default: {}_phaseClosure')
 
     parser.add_argument('-m','--mask', dest='maskFile',
                         help='mask file to specify those pixels to be corrected for unwrapping errors')
@@ -69,7 +69,7 @@ def create_parser():
                         help='Fast (but not the best) unwrap error correction,'
                              ' by diable the extra constraint on ifgrams with no unwrap error.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
-                        help='Enable update mode: if unwrapPhase_closure dataset exists, skip the correction.')
+                        help='Enable update mode: if unwrapPhase_phaseClosure dataset exists, skip the correction.')
     return parser
 
 
@@ -260,7 +260,7 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
     return pha_data, num_nonzero_closure
 
 
-def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_closure', fast_mode=False):
+def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_phaseClosure', fast_mode=False):
     """Run unwrapping error correction in network of interferograms using phase closure.
     Parameters: inps : Namespace of input arguments including the following:
                     ifgram_file : string, path of ifgram stack file
@@ -286,7 +286,9 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
 
     num_nonzero_closure = np.zeros((stack_obj.length, stack_obj.width), dtype=np.int16)
     # split ifgram_file into blocks to save memory
-    box_list = ifginv.split_into_boxes(inps.ifgram_file, chunk_size=100e6)
+    num_tri = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=False).shape[0]
+    length, width = stack_obj.get_size()[1:3]
+    box_list = ifginv.split_into_boxes(dataset_shape=(num_tri, length, width), chunk_size=200e6)
     num_box = len(box_list)
     for i in range(num_box):
         box = box_list[i]
@@ -309,7 +311,7 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
                               dsName=dsNameOut)
 
     # write number of nonzero phase closure into file
-    num_file = 'numNonzeroClosure_{}.h5'.format(dsNameIn)
+    num_file = 'numNonzeroPhaseClosure.h5'
     atr = dict(stack_obj.metadata)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = '1'
@@ -319,7 +321,7 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
     return inps.ifgram_file
 
 
-def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_closure'):
+def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_phaseClosure'):
     """Write a patch of 3D dataset into an existing h5 file.
     Parameters: ifgram_file : string, name/path of output hdf5 file
                 data : 3D np.array to be written
@@ -366,7 +368,7 @@ def main(iargs=None):
     if inps.template_file:
         inps = read_template2inps(inps.template_file, inps)
     if not inps.datasetNameOut:
-        inps.datasetNameOut = '{}_closure'.format(inps.datasetNameIn)
+        inps.datasetNameOut = '{}_phaseClosure'.format(inps.datasetNameIn)
 
     # update mode
     if inps.update_mode and run_or_skip(inps) == 'skip':

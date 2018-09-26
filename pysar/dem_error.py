@@ -116,7 +116,7 @@ def run_or_skip(inps):
             infiles.append(inps.geom_file)
         ti = min(os.path.getmtime(i) for i in infiles)
         to = os.path.getmtime(inps.outfile)
-        if to <= ti:
+        if to < ti:
             flag = 'run'
             print('  2) output file is NOT newer than input file: {} --> run.'.format(infiles))
         else:

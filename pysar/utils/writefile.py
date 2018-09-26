@@ -146,7 +146,7 @@ def remove_hdf5_dataset(fname, datasetName, print_msg=True):
     Parameters: fname : str, HDF5 file name/path
                 datasetName : str, dataset name
     Returns:    fname : str,
-    Example:    remove_hdf5_dataset('./INPUTS/ifgramStack.h5', 'unwrapPhase_closure')
+    Example:    remove_hdf5_dataset('./INPUTS/ifgramStack.h5', 'unwrapPhase_phaseClosure')
     """
     if print_msg:
         print('delete {} from file {}'.format(datasetName, fname))

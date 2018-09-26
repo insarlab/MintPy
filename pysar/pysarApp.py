@@ -258,10 +258,10 @@ def correct_unwrap_error(inps, template):
                                                                          inps.templateFile)
         elif unw_cor_method == 'bridging+phase_closure':
             unwCmd = ('unwrap_error_bridging.py {} -t {} --update'
-                      ' -i unwrapPhase -o unwrapPhase_bridge').format(inps.stackFile,
-                                                                      inps.templateFile)
-            unwCmd += ('\nunwrap_error_phase_closure.py {} --update --fast'
-                      ' -i unwrapPhase_bridge -o unwrapPhase_bridge_closure').format(inps.stackFile)
+                      ' -i unwrapPhase -o unwrapPhase_bridging').format(inps.stackFile,
+                                                                        inps.templateFile)
+            unwCmd += '\nunwrap_error_phase_closure.py {} --update --fast '.format(inps.stackFile)
+            unwCmd += '-i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
         else:
             raise ValueError('un-recognized method: {}'.format(unw_cor_method))
 
@@ -484,7 +484,9 @@ def main(iargs=None):
         #print(metaCmd)
         #status = subprocess.Popen(metaCmd, shell=True).wait()
         # better control of special metadata, such as SUBSET_X/YMIN
-        ut.add_attribute(inps.stackFile, template)
+        print('updating {} metadata based on custom template file: {}'.format(
+            os.path.basename(inps.stackFile), inps.customTemplateFile))
+        ut.add_attribute(inps.stackFile, customTemplate)
 
     if inps.load_dataset:
         raise SystemExit('Exit as planned after loading/checking the dataset.')
@@ -517,7 +519,7 @@ def main(iargs=None):
     # Average phase velocity - Stacking
     inps.avgPhaseVelFile = 'avgPhaseVelocity.h5'
     avgCmd = 'temporal_average.py {i} --dataset unwrapPhase -o {o} --update'.format(i=inps.stackFile,
-                                                                                  o=inps.avgPhaseVelFile)
+                                                                                    o=inps.avgPhaseVelFile)
     print(avgCmd)
     status = subprocess.Popen(avgCmd, shell=True).wait()
 
@@ -640,13 +642,44 @@ def main(iargs=None):
     correct_tropospheric_delay(inps, template)
 
     ##############################################
+    # Phase Ramp Correction (Optional)
+    ##############################################
+    print('\n**********  Remove Phase Ramp  **********')
+    inps.derampMaskFile = template['pysar.deramp.maskFile']
+    inps.derampMethod = template['pysar.deramp']
+    if inps.derampMethod:
+        print('Phase Ramp Removal method: {}'.format(inps.derampMethod))
+        ramp_list = ['linear', 'quadratic',
+                     'linear_range', 'quadratic_range',
+                     'linear_azimuth', 'quadratic_azimuth']
+        if inps.derampMethod in ramp_list:
+            outName = '{}_ramp.h5'.format(os.path.splitext(inps.timeseriesFile)[0])
+            derampCmd = 'remove_ramp.py {} -s {} -m {} -o {}'.format(inps.timeseriesFile,
+                                                                     inps.derampMethod,
+                                                                     inps.derampMaskFile,
+                                                                     outName)
+            print(derampCmd)
+            if ut.run_or_skip(out_file=outName, in_file=inps.timeseriesFile) == 'run':
+                status = subprocess.Popen(derampCmd, shell=True).wait()
+                if status is not 0:
+                    raise Exception('Error while removing phase ramp for time-series.\n')
+            inps.timeseriesFile = outName
+            inps.timeseriesFiles.append(outName)
+        else:
+            msg = 'un-recognized phase ramp method: {}'.format(inps.derampMethod)
+            msg += '\navailable ramp types:\n{}'.format(ramp_list)
+            raise ValueError(msg)
+    else:
+        print('No phase ramp removal.')
+
+    ##############################################
     # Topographic (DEM) Residuals Correction (Optional)
     ##############################################
     print('\n**********  Topographic Residual (DEM error) Correction  **********')
     outName = os.path.splitext(inps.timeseriesFile)[0]+'_demErr.h5'
-    topoCmd = 'dem_error.py {} -t {} -o {} --update '.format(inps.timeseriesFile,
-                                                             inps.templateFile,
-                                                             outName)
+    topoCmd = 'dem_error.py {i} -t {t} -o {o} --update '.format(i=inps.timeseriesFile,
+                                                                t=inps.templateFile,
+                                                                o=outName)
     if not inps.fast:
         topoCmd += ' -g {}'.format(inps.geomFile)
     print(topoCmd)
@@ -685,37 +718,6 @@ def main(iargs=None):
             raise Exception('Error while changing reference date.\n')
     else:
         print('No reference change in time.')
-
-    ##############################################
-    # Phase Ramp Correction (Optional)
-    ##############################################
-    print('\n**********  Remove Phase Ramp  **********')
-    inps.derampMaskFile = template['pysar.deramp.maskFile']
-    inps.derampMethod = template['pysar.deramp']
-    if inps.derampMethod:
-        print('Phase Ramp Removal method: {}'.format(inps.derampMethod))
-        ramp_list = ['linear', 'quadratic',
-                     'linear_range', 'quadratic_range',
-                     'linear_azimuth', 'quadratic_azimuth']
-        if inps.derampMethod in ramp_list:
-            outName = '{}_ramp.h5'.format(os.path.splitext(inps.timeseriesFile)[0])
-            derampCmd = 'remove_ramp.py {} -s {} -m {} -o {}'.format(inps.timeseriesFile,
-                                                                     inps.derampMethod,
-                                                                     inps.derampMaskFile,
-                                                                     outName)
-            print(derampCmd)
-            if ut.run_or_skip(out_file=outName, in_file=inps.timeseriesFile) == 'run':
-                status = subprocess.Popen(derampCmd, shell=True).wait()
-                if status is not 0:
-                    raise Exception('Error while removing phase ramp for time-series.\n')
-            inps.timeseriesFile = outName
-            inps.timeseriesFiles.append(outName)
-        else:
-            msg = 'un-recognized phase ramp method: {}'.format(inps.derampMethod)
-            msg += '\navailable ramp types:\n{}'.format(ramp_list)
-            raise ValueError(msg)
-    else:
-        print('No phase ramp removal.')
 
     #############################################
     # Velocity and rmse maps
@@ -835,8 +837,8 @@ def main(iargs=None):
     #############################################
     m, s = divmod(time.time()-start_time, 60)
     print('\n###############################################')
-    print('End of PySAR Routine Processing!')
-    print('################################################\n')
+    print('End of PySAR Routine Processing Workflow!')
+    print('###############################################\n')
     print('time used: {:02.0f} mins {:02.1f} secs'.format(m, s))
 
 

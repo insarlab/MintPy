@@ -1,8 +1,8 @@
 #! /bin/sh
 ###############################################################
-# Plot Results from Routine Processing with pysarApp.py
+# Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2018-09-07
+# Latest update: 2018-09-25
 ###############################################################
 
 
@@ -63,22 +63,26 @@ fi
 view='view.py --nodisplay --update --mask '$mask_file' --noaxis -u cm '
 #view='view.py --nodisplay --update --mask '$mask_file' --noaxis -u cm --vlim -10 10 '
 if [ $plot_timeseries -eq 1 ]; then
-    file=timeseries.h5;                               test -f $file && $view $file | tee -a $log_file
+    file=timeseries.h5;                             test -f $file && $view $file | tee -a $log_file
 
-    file=timeseries_LODcor_ECMWF.h5;                  test -f $file && $view $file | tee -a $log_file
-    file=timeseries_LODcor_ECMWF_demErr.h5;           test -f $file && $view $file | tee -a $log_file
-    file=timeseries_LODcor_ECMWF_demErr_ramp.h5;      test -f $file && $view $file | tee -a $log_file
+    #LOD for Envisat
+    file=timeseries_LODcor_ECMWF.h5;                test -f $file && $view $file | tee -a $log_file
+    file=timeseries_LODcor_ECMWF_demErr.h5;         test -f $file && $view $file | tee -a $log_file
+    file=timeseries_LODcor_ECMWF_ramp.h5;           test -f $file && $view $file | tee -a $log_file
+    file=timeseries_LODcor_ECMWF_ramp_demErr.h5;    test -f $file && $view $file | tee -a $log_file
 
-    file=timeseries_ECMWF.h5;                         test -f $file && $view $file | tee -a $log_file
-    file=timeseries_ECMWF_demErr.h5;                  test -f $file && $view $file | tee -a $log_file
-    file=timeseries_ECMWF_demErr_ramp.h5;             test -f $file && $view $file | tee -a $log_file
+    #w trop delay corrections
+    for trop in '_ECMWF' '_MERRA' '_NARR' '_tropHgt'
+    do
+        file=timeseries${trop}.h5;                  test -f $file && $view $file | tee -a $log_file
+        file=timeseries${trop}_demErr.h5;           test -f $file && $view $file | tee -a $log_file
+        file=timeseries${trop}_ramp.h5;             test -f $file && $view $file | tee -a $log_file
+        file=timeseries${trop}_ramp_demErr.h5;      test -f $file && $view $file | tee -a $log_file
+    done
 
-    file=timeseries_demErr.h5;                        test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_ramp.h5;                   test -f $file && $view $file | tee -a $log_file
-
-    file=timeseries_demErr.h5;                        test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_tropHgt.h5;                test -f $file && $view $file | tee -a $log_file
-    file=timeseries_demErr_tropHgt_ramp.h5;           test -f $file && $view $file | tee -a $log_file
+    #w/o trop delay correction
+    file=timeseries_ramp.h5;                        test -f $file && $view $file | tee -a $log_file
+    file=timeseries_demErr_ramp.h5;                 test -f $file && $view $file | tee -a $log_file
 fi
 
 

@@ -23,6 +23,7 @@ from pysar.utils import readfile, writefile, ptime, utils as ut
 # key configuration parameter name
 key_prefix = 'pysar.networkInversion.'
 configKeys = ['unwDatasetName',
+              'numIfgram',
               'weightFunc',
               'maskDataset',
               'maskThreshold',
@@ -91,7 +92,7 @@ def create_parser():
                         help='interferograms stack file to be inverted')
     parser.add_argument('-i','-d', '--dset', dest='unwDatasetName', type=str,
                         help='dataset name of unwrap phase in ifgram file to be used for inversion\n'
-                             'e.g.: unwrapPhase, unwrapPhase_bridge, ...')
+                             'e.g.: unwrapPhase, unwrapPhase_bridging, ...')
     parser.add_argument('--template', '-t', dest='templateFile',
                         help='template text file with the following options:\n'+TEMPLATE)
     parser.add_argument('--ref-date', dest='ref_date',
@@ -502,7 +503,7 @@ def split_ifgram_file(ifgram_file, chunk_size=100e6):
     ref_phase = stack_obj.get_reference_phase(dropIfgram=False)
 
     # get list of boxes
-    box_list = split_into_boxes(ifgram_file,
+    box_list = split_into_boxes(dataset_shape=stack_obj.get_size(),
                                 chunk_size=chunk_size,
                                 print_msg=True)
     num_box = len(box_list)
@@ -532,27 +533,26 @@ def split_ifgram_file(ifgram_file, chunk_size=100e6):
     return outfile_list
 
 
-def split_into_boxes(ifgram_file, chunk_size=100e6, print_msg=True):
+def split_into_boxes(dataset_shape, chunk_size=100e6, print_msg=True):
     """Split into chunks in rows to reduce memory usage
     Parameters:
     """
-    shape = ifgramStack(ifgram_file).get_size()
     # Get r_step / chunk_num
-    r_step = chunk_size / (shape[0] * shape[2])         # split in lines
-    r_step = int(ut.ceil_to_1(r_step))
-    chunk_num = int((shape[1]-1)/r_step) + 1
+    r_step = chunk_size / (dataset_shape[0] * dataset_shape[2])         # split in lines
+    r_step = int(ut.round_to_1(r_step))
+    chunk_num = int((dataset_shape[1]-1)/r_step) + 1
 
     if print_msg and chunk_num > 1:
         print('maximum chunk size: %.1E' % chunk_size)
-        print('split %d lines into %d patches for processing' % (shape[1], chunk_num))
+        print('split %d lines into %d patches for processing' % (dataset_shape[1], chunk_num))
         print('    with each patch up to %d lines' % r_step)
 
     # Computing the inversion
     box_list = []
     for i in range(chunk_num):
         r0 = i * r_step
-        r1 = min([shape[1], r0+r_step])
-        box = (0, r0, shape[2], r1)
+        r1 = min([dataset_shape[1], r0+r_step])
+        box = (0, r0, dataset_shape[2], r1)
         box_list.append(box)
     return box_list
 
@@ -913,6 +913,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     A = stack_obj.get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
     num_ifgram, num_date = A.shape[0], A.shape[1]+1
     length, width = stack_obj.length, stack_obj.width
+    inps.numIfgram = num_ifgram
 
     # print key setup info
     msg = '-------------------------------------------------------------------------------\n'
@@ -948,7 +949,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
     print('number of columns : {}'.format(width))
 
     # split ifgram_file into blocks to save memory
-    box_list = split_into_boxes(ifgram_file, chunk_size=inps.chunk_size)
+    box_list = split_into_boxes(dataset_shape=stack_obj.get_size(), chunk_size=inps.chunk_size)
     num_box = len(box_list)
     if inps.split_file:
         # split ifgram_file into small files and write each of them
@@ -1048,13 +1049,14 @@ def main(iargs=None):
     if not inps.unwDatasetName:
         stack_obj = ifgramStack(inps.ifgramStackFile)
         stack_obj.open(print_msg=False)
-        inps.unwDatasetName = [i for i in ['unwrapPhase_bridge_closure',
-                                           'unwrapPhase_bridge',
-                                           'unwrapPhase_closure',
+        inps.unwDatasetName = [i for i in ['unwrapPhase_bridging_phaseClosure',
+                                           'unwrapPhase_bridging',
+                                           'unwrapPhase_phaseClosure',
                                            'unwrapPhase']
                                if i in stack_obj.datasetNames][0]
 
     # --update option
+    inps.numIfgram = len(ifgramStack(inps.ifgramStackFile).get_date12_list(dropIfgram=True))
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.outfile
 

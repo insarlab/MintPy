@@ -57,9 +57,9 @@ geometryDatasetNames = ['height',
                         'bperp']
 
 ifgramDatasetNames = ['unwrapPhase',
-                      'unwrapPhase_bridge_closure',
-                      'unwrapPhase_bridge',
-                      'unwrapPhase_closure',
+                      'unwrapPhase_bridging_phaseClosure',
+                      'unwrapPhase_bridging',
+                      'unwrapPhase_phaseClosure',
                       'coherence',
                       'connectComponent',
                       'wrapPhase',

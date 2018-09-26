@@ -164,13 +164,15 @@ def run_or_skip(inps):
 ##################################################################################################
 def check_multilook_input(pixel_box, row_num, col_num):
     # Estimate multilook_num
-    box_size = (pixel_box[2] - pixel_box[0]) * (pixel_box[3] - pixel_box[1])
-    pixel_num_per_figure = box_size * row_num * col_num
-    if   pixel_num_per_figure > (8e6*160):   multilook_num=16;      ## 2k * 2k image with 120 subplots
-    elif pixel_num_per_figure > (4e6*80) :   multilook_num=8;       ## 2k * 2k image with 80  subplots
-    elif pixel_num_per_figure > (4e6*20) :   multilook_num=4;       ## 2k * 2k image with 40  subplots
-    elif pixel_num_per_figure > (1e6*20) :   multilook_num=2;       ## 2k * 2k image with 40  subplots
-    else: multilook_num=1
+    multilook_num=1
+    if row_num * col_num > 10:
+        box_size = (pixel_box[2] - pixel_box[0]) * (pixel_box[3] - pixel_box[1])
+        pixel_num_per_figure = box_size * row_num * col_num
+        if   pixel_num_per_figure > (8e6*160):   multilook_num=16;      ## 2k * 2k image with 120 subplots
+        elif pixel_num_per_figure > (4e6*80) :   multilook_num=8;       ## 2k * 2k image with 80  subplots
+        elif pixel_num_per_figure > (4e6*20) :   multilook_num=4;       ## 2k * 2k image with 40  subplots
+        elif pixel_num_per_figure > (1e6*20) :   multilook_num=2;       ## 2k * 2k image with 40  subplots
+
     # Update multilook based on multilook_num
     if multilook_num > 1:
         multilook = True

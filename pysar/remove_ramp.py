@@ -21,7 +21,7 @@ pysar.deramp.maskFile = auto  #[filename / no], auto for maskTempCoh.h5, mask fi
 
 EXAMPLE = """example:
   remove_ramp.py  timeseries.h5      -m maskTempCoh.h5
-  remove_ramp.py  ifgramStack.h5     -m maskTempCoh.h5  -d unwrapPhase_bridge
+  remove_ramp.py  ifgramStack.h5     -m maskTempCoh.h5  -d unwrapPhase_bridging
   remove_ramp.py  090214_101120.unw  -m maskTempCoh.h5  -s quadratic
 """
 
@@ -43,7 +43,7 @@ def create_parser():
     parser.add_argument('-d','--dset', dest='dset', 
                         help='dataset name to be derampped in ifgramStack file\n' + 
                              'e.g.: unwrapPhase\n' +
-                             '      unwrapPhase_bridge')
+                             '      unwrapPhase_bridging')
     parser.add_argument('-o', '--outfile', help='Output file name. Disabled when more than 1 input files')
     return parser
 
