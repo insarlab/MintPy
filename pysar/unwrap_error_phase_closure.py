@@ -113,7 +113,7 @@ def run_or_skip(inps):
             print('  1) output dataset: {} exists'.format(inps.datasetNameOut))
             to = float(f[inps.datasetNameOut].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
             ti = float(f[inps.datasetNameIn].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgram_file)))
-            if to <= ti:
+            if ti > to:
                 flag = 'run'
                 print('  2) output dataset is NOT newer than input dataset: {} --> run.'.format(inps.datasetNameIn))
             else:

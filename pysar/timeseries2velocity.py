@@ -118,7 +118,7 @@ def run_or_skip(inps):
         print('  1) output file {} already exists.'.format(inps.outfile))
         ti = os.path.getmtime(inps.timeseries_file)
         to = os.path.getmtime(inps.outfile)
-        if to <= ti:
+        if ti > to:
             flag = 'run'
             print('  2) output file is NOT newer than input file: {} --> run.'.format(inps.timeseries_file))
         else:

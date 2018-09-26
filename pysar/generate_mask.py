@@ -103,7 +103,7 @@ def run_or_skip(inps):
         with h5py.File(inps.file, 'r') as f:
             ti = float(f[inps.dset].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.file)))
         to = os.path.getmtime(inps.outfile)
-        if to <= ti:
+        if ti > to:
             flag = 'run'
             print('  2) output file is NOT newer than input dataset: {} --> run.'.format(inps.dset))
         else:

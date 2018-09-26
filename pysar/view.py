@@ -153,7 +153,7 @@ def run_or_skip(inps):
     if flag == 'skip':
         ti = os.path.getmtime(inps.file)
         to = min([os.path.getmtime(i) for i in outfiles])
-        if to <= ti:
+        if ti > to:
             flag = 'run'
         else:
             print('{} exist and are newer than input file: {}'.format(outfiles, inps.file))

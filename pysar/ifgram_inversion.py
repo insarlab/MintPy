@@ -191,7 +191,7 @@ def run_or_skip(inps):
         with h5py.File(inps.ifgramStackFile, 'r') as f:
             ti = float(f[inps.unwDatasetName].attrs.get('MODIFICATION_TIME', os.path.getmtime(inps.ifgramStackFile)))
         to = min(os.path.getmtime(i) for i in inps.outfile)
-        if to <= ti:
+        if ti > to:
             flag = 'run'
             print('  2) output files are NOT newer than input dataset: {} --> run.'.format(inps.unwDatasetName))
         else:
