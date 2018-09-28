@@ -35,7 +35,6 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
     ext = os.path.splitext(out_file)[1].lower()
     if ref_file and metadata is None:
         metadata = readfile.read_attribute(ref_file)
-    length, width = int(metadata['LENGTH']), int(metadata['WIDTH'])
 
     if type(datasetDict) is np.ndarray:
         data = np.array(datasetDict, datasetDict.dtype)
@@ -58,50 +57,51 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             if os.path.isfile(out_file):
                 print('delete exsited file: {}'.format(out_file))
                 os.remove(out_file)
+
             print('create HDF5 file: {} with w mode'.format(out_file))
-            f = h5py.File(out_file, 'w')
-
-            # Write input datasets
-            maxDigit = max([len(i) for i in list(datasetDict.keys())])
-            for dsName in datasetDict.keys():
-                data = datasetDict[dsName]
-                print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
-                       'with compression={c}').format(d=dsName,
-                                                      w=maxDigit,
-                                                      t=str(data.dtype),
-                                                      s=data.shape,
-                                                      c=compression))
-                ds = f.create_dataset(dsName,
-                                      data=data,
-                                      chunks=True,
-                                      compression=compression)
-
-            # Write extra/auxliary datasets from ref_file
-            if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
-                fr = h5py.File(ref_file, 'r')
-                dsNames = [i for i in fr.keys()
-                           if (i not in list(datasetDict.keys())
-                               and isinstance(fr[i], h5py.Dataset) 
-                               and fr[i].shape[-2:] != (length, width))]
-                for dsName in dsNames:
-                    ds = fr[dsName]
+            with h5py.File(out_file, 'w') as f:
+                # 1. Write input datasets
+                maxDigit = max([len(i) for i in list(datasetDict.keys())])
+                for dsName in datasetDict.keys():
+                    data = datasetDict[dsName]
                     print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
                            'with compression={c}').format(d=dsName,
                                                           w=maxDigit,
-                                                          t=str(ds.dtype),
-                                                          s=ds.shape,
+                                                          t=str(data.dtype),
+                                                          s=data.shape,
                                                           c=compression))
-                    f.create_dataset(dsName,
-                                     data=ds[:],
-                                     chunks=True,
-                                     compression=compression)
-                fr.close()
+                    ds = f.create_dataset(dsName,
+                                          data=data,
+                                          chunks=True,
+                                          compression=compression)
 
-            # metadata
-            for key, value in metadata.items():
-                f.attrs[key] = str(value)
-            f.close()
-            print('finished writing to {}'.format(out_file))
+                # 2. Write extra/auxliary datasets from ref_file
+                if ref_file and os.path.splitext(ref_file)[1] in ['.h5', '.he5']:
+                    atr_ref = readfile.read_attribute(ref_file)
+                    shape_ref = (int(atr_ref['LENGTH']), int(atr_ref['WIDTH']))
+                    with h5py.File(ref_file, 'r') as fr:
+                        dsNames = [i for i in fr.keys()
+                                   if (i not in list(datasetDict.keys())
+                                       and isinstance(fr[i], h5py.Dataset) 
+                                       and fr[i].shape[-2:] != shape_ref)]
+                        maxDigit = max([len(i) for i in dsNames]+[maxDigit])
+                        for dsName in dsNames:
+                            ds = fr[dsName]
+                            print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
+                                   'with compression={c}').format(d=dsName,
+                                                                  w=maxDigit,
+                                                                  t=str(ds.dtype),
+                                                                  s=ds.shape,
+                                                                  c=compression))
+                            f.create_dataset(dsName,
+                                             data=ds[:],
+                                             chunks=True,
+                                             compression=compression)
+
+                # 3. metadata
+                for key, value in metadata.items():
+                    f.attrs[key] = str(value)
+                print('finished writing to {}'.format(out_file))
 
     # ISCE / ROI_PAC GAMMA / Image product
     else:

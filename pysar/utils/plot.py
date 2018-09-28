@@ -57,7 +57,7 @@ class BasemapExt(Basemap):
     Extend Basemap class to add drawscale(), because Basemap.drawmapscale() do not support 'cyl' projection.
     """
 
-    def draw_scale_bar(self, loc=[0.2, 0.2, 0.1], ax=None, font_size=12, color='k'):
+    def draw_scale_bar(self, loc=[0.2, 0.2, 0.1], ax=None, labelpad=0.05, font_size=12, color='k'):
         """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
         ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
         Parameters: loc : list of 3 float, distance, lat/lon of scale bar center in ratio of width, relative coord
@@ -78,11 +78,10 @@ class BasemapExt(Basemap):
         length = np.abs(lon_c - lon_c2)
         lon0 = lon_c - length/2.0
         lon1 = lon_c + length/2.0
-        yoffset = 0.1*length
 
         self.plot([lon0, lon1], [lat_c, lat_c], color=color)
-        self.plot([lon0, lon0], [lat_c, lat_c+yoffset], color=color)
-        self.plot([lon1, lon1], [lat_c, lat_c+yoffset], color=color)
+        self.plot([lon0, lon0], [lat_c, lat_c + 0.1*length], color=color)
+        self.plot([lon1, lon1], [lat_c, lat_c + 0.1*length], color=color)
 
         # plot scale bar label
         unit = 'm'
@@ -90,7 +89,7 @@ class BasemapExt(Basemap):
             unit = 'km'
             distance *= 0.001
         label = '{:.0f} {}'.format(distance, unit)
-        txt_offset = (self.latmax - self.latmin) * 0.05
+        txt_offset = (self.latmax - self.latmin) * labelpad
         if not ax:
             ax = plt.gca()
         ax.text(lon0+0.5*length, lat_c+txt_offset, label,
@@ -724,8 +723,10 @@ def add_map_argument(parser):
                                 '--scalebar 0.2 0.2 0.8  #for upper left  corner\n' + 
                                 '--scalebar 0.2 0.8 0.1  #for lower right corner\n' + 
                                 '--scalebar 0.2 0.8 0.8  #for upper right corner\n')
-    map_group.add_argument('--noscalebar', dest='disp_scalebar',
+    map_group.add_argument('--noscalebar', '--nosbar', dest='disp_scalebar',
                            action='store_false', help='do not display scale bar.')
+    map_group.add_argument('--scalebar-pad','--sbar-pad', dest='scalebar_pad', type=float,
+                            default=0.05, help='scale bar label pad in ratio of scalebar width')
 
     return parser
 

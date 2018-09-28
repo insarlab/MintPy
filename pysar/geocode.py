@@ -278,9 +278,9 @@ def run_geocode(inps):
             atr = metadata_radar2geo(atr, res_obj)
         else:
             atr = metadata_geo2radar(atr, res_obj)
-        if len(dsNames) == 1 and dsName not in ['timeseries']:
-            atr['FILE_TYPE'] = dsNames[0]
-            infile = None
+        #if len(dsNames) == 1 and dsName not in ['timeseries']:
+        #    atr['FILE_TYPE'] = dsNames[0]
+        #    infile = None
 
         writefile.write(dsResDict, out_file=outfile, metadata=atr, ref_file=infile)
 

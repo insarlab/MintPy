@@ -91,6 +91,7 @@ def read_data(inps):
             atr['DATE'] = atr['REF_DATE']
             atr['DATE12'] = '{}-{}'.format(atr['REF_DATE'][2:8], inps.dset[2:8])
 
+        print('converting range to phase')
         data *= range2phase
         if inps.ref_yx:
             data -= data[inps.ref_yx[0], inps.ref_yx[1]]

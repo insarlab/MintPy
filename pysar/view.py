@@ -376,18 +376,40 @@ def prep_slice(cmd, print_msg=True):
     inps = cmd_line_parse(cmd.split()[1:])
     inps, atr = check_input_file_info(inps, print_msg=print_msg)
     inps = update_inps_with_file_metadata(inps, atr, print_msg=print_msg)
+
+    # read data
     data, atr = readfile.read(inps.file,
                               datasetName=inps.dset[0],
                               box=inps.pix_box,
                               print_msg=print_msg)
+    # reference in time
+    if inps.ref_date:
+        data -= readfile.read(inps.file,
+                              datasetName=inps.ref_date,
+                              box=inps.pix_box,
+                              print_msg=False)[0]
+    # reference in space for unwrapPhase
+    if (inps.key in ['ifgramStack']
+            and inps.dset[0].split('-')[0] == 'unwrapPhase'
+            and 'REF_Y' in atr.keys()):
+        ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
+        ref_data = readfile.read(inps.file,
+                                 datasetName=inps.dset[0],
+                                 box=(ref_x, ref_y, ref_x+1, ref_y+1),
+                                 print_msg=False)[0]
+        data[data != 0.] -= ref_data
+
     data, inps = update_data_with_plot_inps(data, atr, inps, print_msg=print_msg)
     inps.msk, inps.mask_file = pp.read_mask(inps.file,
                                             mask_file=inps.mask_file,
                                             datasetName=inps.dset[0],
                                             box=inps.pix_box,
                                             print_msg=print_msg)
+    # mask
+    if inps.zero_mask:
+        data = np.ma.masked_where(data == 0., data)
     if inps.msk is not None:
-        data[inps.msk==0] = np.nan
+        data = np.ma.masked_where(inps.msk == 0., data)
     return data, atr, inps
 
 
@@ -492,6 +514,7 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
             if print_msg:
                 print('plot scale bar')
             m.draw_scale_bar(loc=inps.scalebar, ax=ax,
+                             labelpad=inps.scalebar_pad,
                              font_size=inps.font_size,
                              color=inps.font_color)
 

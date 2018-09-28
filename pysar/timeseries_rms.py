@@ -180,7 +180,7 @@ def plot_rms_bar(ax, date_list, rms, cutoff=3.,
     # axis format
     ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)
     ax.set_xlabel('Time [years]', fontsize=font_size)
-    ax.set_ylabel('Phase Residual RMS [mm]', fontsize=font_size)
+    ax.set_ylabel(r'Phase Residual $\hat \phi_\epsilon$ RMS [mm]', fontsize=font_size)
     #ax.yaxis.set_ticks_position('both')
     ax.tick_params(which='both', direction='in', labelsize=font_size,
                    bottom=True, top=True, left=True, right=True)
