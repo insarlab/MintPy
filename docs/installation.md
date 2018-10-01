@@ -67,7 +67,7 @@ Source the file for the first time. It will be sourced automatically next time w
 PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://github.com/pytroll/pyresample).
 
 
-For conda user, run the following in your terminal:   
+For conda user, run the following in your terminal in bash/tcsh:   
 
     cd ~/python
     wget https://repo.continuum.io/archive/Anaconda3-5.1.0-MacOSX-x86_64.sh
