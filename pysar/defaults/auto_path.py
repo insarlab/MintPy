@@ -105,7 +105,6 @@ def get_auto_path4isce(project_name, template=dict()):
     auto_dict = read_str2dict(isceAutoPath, print_msg=False)
     for key, value in auto_dict.items():
         if value and template[key] == 'auto':
-            value = value.replace
             template[key] = value.replace('${PROJECT_DIR}', project_dir)
     return template
 
