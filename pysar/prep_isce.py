@@ -197,7 +197,7 @@ def prepare_geometry(geometryDir, metadata=dict()):
             r0, r1 = row_idx[0] + buffer, row_idx[-1] - buffer
         return r0, r1
 
-    #print('prepare .rsc file for geometry files')
+    print('prepare .rsc file for geometry files')
     isceFiles = [os.path.join(os.path.abspath(geometryDir), '{}.rdr'.format(i)) 
                  for i in ['hgt','lat','lon','los','shadowMask']]
     isceFiles = [i for i in isceFiles if os.path.isfile(i)]
@@ -253,8 +253,8 @@ def prepare_geometry(geometryDir, metadata=dict()):
 
 
 def prepare_stack(inputDir, filePattern, metadata, baselineDict):
-    #print('prepare .rsc file for ', filePattern)
-    isceFiles = glob.glob(os.path.join(os.path.abspath(inputDir), '*', filePattern))
+    print('prepare .rsc file for ', filePattern)
+    isceFiles = sorted(glob.glob(os.path.join(os.path.abspath(inputDir), '*', filePattern)))
     if len(isceFiles) == 0:
         raise FileNotFoundError('no file found in pattern: {}'.format(filePattern))
 

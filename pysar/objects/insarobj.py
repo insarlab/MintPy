@@ -112,8 +112,9 @@ class ifgramStackDict:
         f = h5py.File(self.outputFile, access_mode)
         print('create HDF5 file {} with {} mode'.format(self.outputFile, access_mode))
 
-        self.pairs = [pair for pair in self.pairsDict.keys()]
+        self.pairs = sorted([pair for pair in self.pairsDict.keys()])
         self.dsNames = list(self.pairsDict[self.pairs[0]].datasetDict.keys())
+        self.dsNames = [i for i in ifgramDatasetNames if i in self.dsNames]
         maxDigit = max([len(i) for i in self.dsNames])
         self.get_size(box)
 
