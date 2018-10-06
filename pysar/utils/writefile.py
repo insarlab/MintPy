@@ -188,7 +188,7 @@ def remove_hdf5_dataset(fname, datasetNames, print_msg=True):
     return fname
 
 
-def write_roipac_rsc(metadata, out_file, sorting=True):
+def write_roipac_rsc(metadata, out_file):
     """Write attribute dict into ROI_PAC .rsc file
     Inputs:
         metadata     - dict, attributes dictionary
@@ -198,7 +198,8 @@ def write_roipac_rsc(metadata, out_file, sorting=True):
         out_file
     """
     # Convert PYSAR attributes to ROI_PAC attributes
-    metadata['FILE_LENGTH'] = metadata['LENGTH']
+    if 'LENGTH' in metadata.keys():
+        metadata['FILE_LENGTH'] = metadata['LENGTH']
 
     # Convert 3.333e-4 to 0.0003333
     if 'X_STEP' in metadata.keys():
@@ -207,19 +208,13 @@ def write_roipac_rsc(metadata, out_file, sorting=True):
         metadata['X_FIRST'] = str(float(metadata['X_FIRST']))
         metadata['Y_FIRST'] = str(float(metadata['Y_FIRST']))
 
-    # sorting by key name
-    key_list = metadata.keys()
-    if sorting:
-        key_list = sorted(key_list)
-
     # writing .rsc file
     maxDigit = max([len(key) for key in metadata.keys()]+[2])
-    f = open(out_file, 'w')
-    for key in key_list:
-        f.write('{k:<{d}}    {v}\n'.format(k=str(key),
-                                           d=maxDigit,
-                                           v=str(metadata[key])))
-    f.close()
+    with open(out_file, 'w') as f:
+        for key in sorted(metadata.keys()):
+            f.write('{k:<{d}}    {v}\n'.format(k=str(key),
+                                               d=maxDigit,
+                                               v=str(metadata[key])))
     return out_file
 
 

@@ -110,13 +110,13 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'cmask'              :'1',
                    'ifgcnt'             :'1',
 
-                   '.unw'               :'radian',
-                   '.int'               :'radian',
-                   '.flat'              :'radian',
-                   '.cor'               :'1',
-                   '.dem'               :'m',
-                   '.hgt'               :'m',
-                   '.hgt_sim'           :'m',
+                   'unw'               :'radian',
+                   'int'               :'radian',
+                   'flat'              :'radian',
+                   'cor'               :'1',
+                   'dem'               :'m',
+                   'hgt'               :'m',
+                   'hgt_sim'           :'m',
                    }
 
 

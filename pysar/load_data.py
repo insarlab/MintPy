@@ -57,6 +57,10 @@ TEMPLATE = """template:
 ## load_data.py -H to check more details and example inputs.
 pysar.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
 pysar.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
+pysar.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
+##---------for ISCE only:
+pysar.load.metaFile       = auto  #[path2metadata_file]
+pysar.load.baselineDir    = auto  #[path2baseline_dir]
 ##---------interferogram datasets:
 pysar.load.unwFile        = auto  #[path2unw_file]
 pysar.load.corFile        = auto  #[path2cor_file]
@@ -440,22 +444,31 @@ def update_object(outFile, inObj, box, updateMode=True):
 
 
 def prepare_metadata(inpsDict):
-    prepCmd0 = None
-    if inpsDict['processor'] == 'gamma':
-        prepCmd0 = 'prep_gamma.py'
-    elif inpsDict['processor'] == 'roipac':
-        prepCmd0 = 'prep_roipac.py'
+    processor = inpsDict['processor']
+    script_name = 'prep_{}.py'.format(processor)
+    print('-'*50)
+    print('prepare metadata files for {} products for PySAR'.format(processor))
 
-    if prepCmd0:
-        print('-'*50)
-        print(('prepare metadata files for {} products before loading'
-               ' into PySAR'.format(inpsDict['processor'])))
+    if processor in ['gamma', 'roipac']:
         for key in inpsDict.keys():
             if (key.startswith('pysar.load.') and key.endswith('File')
                     and len(glob.glob(str(inpsDict[key]))) > 0):
-                prepCmd = '{} {}'.format(prepCmd0, inpsDict[key])
-                print(prepCmd)
-                os.system(prepCmd)
+                cmd = '{} {}'.format(script_name, inpsDict[key])
+                print(cmd)
+                os.system(cmd)
+
+    elif processor == 'isce':
+        ifgram_dir = os.path.dirname(os.path.dirname(inpsDict['pysar.load.unwFile']))
+        meta_file = sorted(glob.glob(inpsDict['pysar.load.metaFile']))[0]
+        baseline_dir = inpsDict['pysar.load.baselineDir']
+        geom_dir = os.path.dirname(inpsDict['pysar.load.demFile'])
+        cmd = '{s} -i {i} -x {m} -b {b} -g {g}'.format(s=script_name,
+                                                       i=ifgram_dir,
+                                                       m=meta_file,
+                                                       b=baseline_dir,
+                                                       g=geom_dir)
+        print(cmd)
+        os.system(cmd)
     return
 
 

@@ -6,6 +6,9 @@
 pysar.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
 pysar.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
 pysar.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
+##---------for ISCE only:
+pysar.load.metaFile       = auto  #[path2metadata_file]
+pysar.load.baselineDir    = auto  #[path2baseline_dir]
 ##---------interferogram datasets:
 pysar.load.unwFile        = auto  #[path2unw_file]
 pysar.load.corFile        = auto  #[path2cor_file]

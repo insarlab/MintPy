@@ -20,32 +20,35 @@ autoPath = True
 
 
 # Default path of data files from different InSAR processors to be loaded into PySAR
-isceAutoPath = '''##----------Default file path of ISCE/SentinelStack products
+isceAutoPath = '''##----------Default file path of ISCE-topsStack products
 pysar.load.processor      = isce
-pysar.load.unwFile        = $PROJECT_DIR/merged/interferograms/*/filt*.unw
-pysar.load.corFile        = $PROJECT_DIR/merged/interferograms/*/filt*.cor
-pysar.load.connCompFile   = $PROJECT_DIR/merged/interferograms/*/filt*.unw.conncomp
+pysar.load.metaFile       = ${PROJECT_DIR}/master/IW*.xml
+pysar.load.baselineDir    = ${PROJECT_DIR}/baselines
+
+pysar.load.unwFile        = ${PROJECT_DIR}/merged/interferograms/*/filt*.unw
+pysar.load.corFile        = ${PROJECT_DIR}/merged/interferograms/*/filt*.cor
+pysar.load.connCompFile   = ${PROJECT_DIR}/merged/interferograms/*/filt*.unw.conncomp
 pysar.load.intFile        = None
 
-pysar.load.demFile        = $PROJECT_DIR/merged/geom_master/hgt.rdr
-pysar.load.lookupYFile    = $PROJECT_DIR/merged/geom_master/lat.rdr
-pysar.load.lookupXFile    = $PROJECT_DIR/merged/geom_master/lon.rdr
-pysar.load.incAngleFile   = $PROJECT_DIR/merged/geom_master/los.rdr
-pysar.load.azAngleFile    = $PROJECT_DIR/merged/geom_master/los.rdr
-pysar.load.shadowMaskFile = $PROJECT_DIR/merged/geom_master/shadowMask.rdr
-pysar.load.bperpFile      = $PROJECT_DIR/merged/baseline_grid/*/bperp.rdr
+pysar.load.demFile        = ${PROJECT_DIR}/merged/geom_master/hgt.rdr
+pysar.load.lookupYFile    = ${PROJECT_DIR}/merged/geom_master/lat.rdr
+pysar.load.lookupXFile    = ${PROJECT_DIR}/merged/geom_master/lon.rdr
+pysar.load.incAngleFile   = ${PROJECT_DIR}/merged/geom_master/los.rdr
+pysar.load.azAngleFile    = ${PROJECT_DIR}/merged/geom_master/los.rdr
+pysar.load.shadowMaskFile = ${PROJECT_DIR}/merged/geom_master/shadowMask.rdr
+pysar.load.bperpFile      = ${PROJECT_DIR}/merged/baseline_grid/*/bperp.rdr
 '''
 
 roipacAutoPath = '''##----------Default file path of ROI_PAC products
 pysar.load.processor      = roipac
-pysar.load.unwFile        = $PROJECT_DIR/PROCESS/DONE/IFG*/filt*.unw
-pysar.load.corFile        = $PROJECT_DIR/PROCESS/DONE/IFG*/filt*.cor
-pysar.load.connCompFile   = $PROJECT_DIR/PROCESS/DONE/IFG*/filt*snap_connect.byt
-pysar.load.intFile        = $PROJECT_DIR/PROCESS/DONE/IFG*/filt*rlks.int
+pysar.load.unwFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*.unw
+pysar.load.corFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*.cor
+pysar.load.connCompFile   = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*snap_connect.byt
+pysar.load.intFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*rlks.int
 
-pysar.load.demFile        = $PROJECT_DIR/PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
-pysar.load.lookupYFile    = $PROJECT_DIR/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
-pysar.load.lookupXFile    = $PROJECT_DIR/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
+pysar.load.demFile        = ${PROJECT_DIR}/PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
+pysar.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
+pysar.load.lookupXFile    = ${PROJECT_DIR}/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
 pysar.load.incAngleFile   = None
 pysar.load.azAngleFile    = None
 pysar.load.shadowMaskFile = None
@@ -54,18 +57,18 @@ pysar.load.bperpFile      = None
 
 gammaAutoPath = '''##----------Default file path of GAMMA products
 pysar.load.processor      = gamma
-pysar.load.unwFile        = $PROJECT_DIR/PROCESS/DONE/IFG*/diff*rlks.unw
-pysar.load.corFile        = $PROJECT_DIR/PROCESS/DONE/IFG*/*filt*rlks.cor
+pysar.load.unwFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/diff*rlks.unw
+pysar.load.corFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/*filt*rlks.cor
 pysar.load.connCompFile   = None
-pysar.load.intFile        = $PROJECT_DIR/PROCESS/DONE/IFG*/diff*rlks.int
+pysar.load.intFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/diff*rlks.int
 
-pysar.load.demFile        = $PROJECT_DIR/PROCESS/SIM/sim_${m_date12}/sim*rlks.rdc.dem
-pysar.load.lookupYFile    = $PROJECT_DIR/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
-pysar.load.lookupXFile    = $PROJECT_DIR/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
+pysar.load.demFile        = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.rdc.dem
+pysar.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
+pysar.load.lookupXFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
 pysar.load.incAngleFile   = None
 pysar.load.azAngleFile    = None
 pysar.load.shadowMaskFile = None
-pysar.load.bperpFile      = $PROJECT_DIR/merged/baselines/*/*.base_perp
+pysar.load.bperpFile      = ${PROJECT_DIR}/merged/baselines/*/*.base_perp
 '''
 
 prefix = 'pysar.load.'
@@ -87,36 +90,23 @@ def read_str2dict(inString, delimiter='=', print_msg=False):
         else:
             key = c[0]
             value = str.replace(c[1], '\n', '').split("#")[0].strip()
-            value = os.path.expandvars(value)
             if value != '':
                 strDict[key] = value
+
+    for key, value in strDict.items():
+        if value.lower() == 'none':
+            strDict[key] = None
     return strDict
 
 
 ##----------------------------------------------------------------------------------------##
 def get_auto_path4isce(project_name, template=dict()):
-    # default file pattern
+    project_dir = os.path.join(os.getenv('SCRATCHDIR'), project_name)
     auto_dict = read_str2dict(isceAutoPath, print_msg=False)
     for key, value in auto_dict.items():
-        auto_dict[key] = os.path.basename(value)
-
-    project_dir = os.path.join(os.getenv('SCRATCHDIR'), project_name)
-    ifgram_dir = os.path.join(project_dir, 'merged', 'interferograms', '*')
-    geom_dir = os.path.join(project_dir, 'merged', 'geom_master')
-
-    # ifgramStack
-    for suffix in ['unwFile', 'corFile', 'connCompFile', 'intFile']:
-        key = prefix+suffix
-        if template[key] == 'auto':
-            template[key] = os.path.join(ifgram_dir, auto_dict[key])
-
-    # geometry
-    for suffix in ['demFile', 'lookupYFile', 'lookupXFile',
-                   'incAngleFile', 'azAngleFile', 'shadowMaskFile']:
-        key = prefix+suffix
-        if template[key] == 'auto':
-            template[key] = os.path.join(geom_dir, auto_dict[key])
-
+        if value and template[key] == 'auto':
+            value = value.replace
+            template[key] = value.replace('${PROJECT_DIR}', project_dir)
     return template
 
 

@@ -199,6 +199,7 @@ class ColormapExt(mpl.cm.ScalarMappable):
         colormap  : colormap object to be used for plotting
         cmap_lut  : int, number of increment in the lookup table
         cmap_name : string, number of colormap
+                    default colormap name for matplotlib 2.0 - viridis
     """
 
     def __init__(self, cmap_name, cmap_lut=256):
