@@ -143,11 +143,15 @@ def read_template(inps):
     customTemplate = None
     if inps.customTemplateFile:
         # Copy custom template file to work directory
-        if ut.run_or_skip(out_file=os.path.basename(inps.customTemplateFile),
+        inputs_dir = os.path.join(inps.workDir, 'INPUTS')
+        if ut.run_or_skip(out_file=os.path.join(inputs_dir, os.path.basename(inps.customTemplateFile)),
                           in_file=inps.customTemplateFile,
                           check_readable=False) == 'run':
-            shutil.copy2(inps.customTemplateFile, inps.workDir)
-            print('copy {} to work directory'.format(os.path.basename(inps.customTemplateFile)))
+            if not os.path.isdir(inputs_dir):
+                os.makedirs(inputs_dir)
+                print('create directory:', inputs_dir)
+            shutil.copy2(inps.customTemplateFile, inputs_dir)
+            print('copy {} to INPUTS directory'.format(os.path.basename(inps.customTemplateFile)))
 
         # Read custom template
         print('read custom template file:', inps.customTemplateFile)

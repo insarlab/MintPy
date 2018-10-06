@@ -184,16 +184,13 @@ def read_inps2dict(inps):
 
     # Here to insert code to check default file path for miami user
     if (auto_path.autoPath
-        and 'SCRATCHDIR' in os.environ
-        and inpsDict['PROJECT_NAME'] is not None):
+            and 'SCRATCHDIR' in os.environ
+            and inpsDict['PROJECT_NAME'] is not None):
         print(('check auto path setting for Univ of Miami users'
                ' for processor: {}'.format(inpsDict['processor'])))
-        if inpsDict['processor'] == 'isce':
-            inpsDict = auto_path.get_auto_path4isce(inpsDict['PROJECT_NAME'], inpsDict)
-        elif inpsDict['processor'] == 'roipac':
-            inpsDict = auto_path.get_auto_path4roipac(inpsDict['PROJECT_NAME'], inpsDict)
-        elif inpsDict['processor'] == 'gamma':
-            inpsDict = auto_path.get_auto_path4gamma(inpsDict['PROJECT_NAME'], inpsDict)
+        inpsDict = auto_path.get_auto_path(processor=inpsDict['processor'],
+                                           project_name=inpsDict['PROJECT_NAME'],
+                                           template=inpsDict)
     return inpsDict
 
 
