@@ -172,15 +172,15 @@ def baseline_timeseries(baselineDir):
 def extract_multilook_number(metadata=dict(), geom_dir=None):
     for fbase in ['hgt','lat','lon','los']:
         fbase = os.path.join(geom_dir, fbase)
-        fname = glob.glob('{}*.rdr'.format(fbase)) + glob.glob('{}*.geo'.format(fbase))
-        fname = fname[0]
-        fullXmlFile = '{}.full.xml'.format(fname)
-        if os.path.isfile(fullXmlFile):
-            fullXmlDict = readfile.read_isce_xml(fullXmlFile)
-            xmlDict = readfile.read_attribute(fname)
-            metadata['ALOOKS'] = str(int(int(fullXmlDict['LENGTH']) / int(xmlDict['LENGTH'])))
-            metadata['RLOOKS'] = str(int(int(fullXmlDict['WIDTH']) / int(xmlDict['WIDTH'])))
-            break
+        fnames = glob.glob('{}*.rdr'.format(fbase)) + glob.glob('{}*.geo'.format(fbase))
+        if len(fnames) > 0:
+            fullXmlFile = '{}.full.xml'.format(fnames[0])
+            if os.path.isfile(fullXmlFile):
+                fullXmlDict = readfile.read_isce_xml(fullXmlFile)
+                xmlDict = readfile.read_attribute(fnames[0])
+                metadata['ALOOKS'] = str(int(int(fullXmlDict['LENGTH']) / int(xmlDict['LENGTH'])))
+                metadata['RLOOKS'] = str(int(int(fullXmlDict['WIDTH']) / int(xmlDict['WIDTH'])))
+                break
     return metadata
 
 
