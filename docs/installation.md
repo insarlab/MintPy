@@ -75,7 +75,7 @@ For conda user, run the following in your terminal in _bash/tcsh_:
     ./Miniconda3-latest-MacOSX-x86_64.sh -b -p $PYTHON3DIR
     
     $PYTHON3DIR/bin/conda config --add channels conda-forge
-    $PYTHON3DIR/bin/conda install basemap joblib lxml pyresample pykdtree OpenMP ecCodes pygrib pyhdf netCDF4 --yes   
+    $PYTHON3DIR/bin/conda install --yes --file $PYSAR_HOME/docs/conda.txt
     
     git clone https://github.com/yunjunz/pykml.git; cd pykml
     $PYTHON3DIR/bin/python3 setup.py build     
@@ -83,8 +83,7 @@ For conda user, run the following in your terminal in _bash/tcsh_:
    
 For macports user, install modules in the [ports.txt](https://github.com/yunjunz/PySAR/blob/master/docs/ports.txt) file as below in _bash_:       
     
-    cd $PYSAR_HOME/docs
-    sudo port install $(cat ports.txt)
+    sudo port install $(cat $PYSAR_HOME/docs/ports.txt)
     
     git clone https://github.com/yunjunz/pykml.git; cd pykml
     python3 setup.py build     
