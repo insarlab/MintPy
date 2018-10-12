@@ -64,15 +64,15 @@ Source the file for the first time. It will be sourced automatically next time w
    
    
 #### 2. Install Python dependecies
-PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [Anaconda](https://www.anaconda.com/download/) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://github.com/pytroll/pyresample).
+PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://github.com/pytroll/pyresample).
 
 
-For conda user, run the following in your terminal in bash/tcsh:   
+For conda user, run the following in your terminal in _bash/tcsh_:   
 
     cd ~/python
-    wget https://repo.continuum.io/archive/Anaconda3-5.1.0-MacOSX-x86_64.sh
-    chmod +x Anaconda3-5.1.0-MacOSX-x86_64.sh
-    ./Anaconda3-5.1.0-MacOSX-x86_64.sh -b -p $PYTHON3DIR
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+    chmod +x Miniconda3-latest-MacOSX-x86_64.sh
+    ./Miniconda3-latest-MacOSX-x86_64.sh -b -p $PYTHON3DIR
     
     $PYTHON3DIR/bin/conda config --add channels conda-forge
     $PYTHON3DIR/bin/conda install basemap joblib lxml pyresample pykdtree OpenMP ecCodes pygrib pyhdf netCDF4 --yes   
@@ -81,7 +81,7 @@ For conda user, run the following in your terminal in bash/tcsh:
     $PYTHON3DIR/bin/python3 setup.py build     
     $PYTHON3DIR/bin/python3 setup.py install    
    
-For macports user, install modules in the [ports.txt](https://github.com/yunjunz/PySAR/blob/master/docs/ports.txt) file as below in bash:       
+For macports user, install modules in the [ports.txt](https://github.com/yunjunz/PySAR/blob/master/docs/ports.txt) file as below in _bash_:       
     
     cd $PYSAR_HOME/docs
     sudo port install $(cat ports.txt)
