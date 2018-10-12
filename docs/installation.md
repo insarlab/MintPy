@@ -37,8 +37,8 @@ For csh/tcsh user, add to your **_~/.cshrc_** file for example:
         setenv PYTHONPATH ""
     endif
     
-    ##--------- Anaconda ---------------## 
-    setenv PYTHON3DIR    ~/python/anaconda3
+    ##--------- Python -----------------## 
+    setenv PYTHON3DIR    ~/python/miniconda3
     setenv PATH          ${PATH}:${PYTHON3DIR}/bin
     
     ##--------- PySAR ------------------## 
@@ -51,8 +51,8 @@ For bash user, add to your **_~/.bashrc_** file for example:
     ############################  Python  ###############################
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
     
-    ##--------- Anaconda ---------------## 
-    export PYTHON3DIR=~/python/anaconda3
+    ##--------- Python ---------------## 
+    export PYTHON3DIR=~/python/miniconda3
     export PATH=${PATH}:${PYTHON3DIR}/bin
     
     ##--------- PySAR ------------------## 
