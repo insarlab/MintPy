@@ -610,6 +610,8 @@ def add_figure_argument(parser):
                      help='DPI - dot per inch - for display/write')
 
     # axis format
+    fig.add_argument('--nowhitespace', dest='disp_whitespace',
+                     action='store_false', help='do not display white space')
     fig.add_argument('--noaxis', dest='disp_axis',
                      action='store_false', help='do not display axis')
     fig.add_argument('--notick', dest='disp_tick',
@@ -1606,7 +1608,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
 
 
 def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
-    from pysar.objects.gps import search_gps, gps
+    from pysar.objects.gps import search_gps, GPS
     marker_size = 7
     vmin, vmax = inps.vlim
     if isinstance(inps.colormap, str):
@@ -1614,7 +1616,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
     else:
         cmap = inps.colormap
 
-    atr = dict()
+    atr = dict(metadata)
     atr['UNIT'] = 'm'
     unit_fac = scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[2]
 
@@ -1651,7 +1653,7 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
             print('end   date: {}'.format(inps.gps_end_date))
             prog_bar = ptime.progressBar(maxValue=num_site)
         for i in range(num_site):
-            obj = gps(site_names[i])
+            obj = GPS(site_names[i])
             # calculate gps data value
             if k == 'velocity':
                 gps_data = obj.get_gps_los_velocity(metadata,

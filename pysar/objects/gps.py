@@ -5,7 +5,7 @@
 ############################################################
 # Utility scripts for GPS handling
 # Recommend import:
-#     from pysar.objects import gps
+#     from pysar.objects.gps import GPS
 
 import os
 import time
@@ -71,14 +71,14 @@ def search_gps(SNWE, start_date=None, end_date=None, site_list_file=None, print_
     return site_names[idx], site_lats[idx], site_lons[idx]
 
 
-class gps:
+class GPS:
     """GPS class for GPS time-series of daily solution
 
     Example:
       import matplotlib.pyplot as plt
-      from pysar.objects import gps
+      from pysar.objects.gps import GPS
       from pysar.utils import utils as ut
-      gps_obj = gps(site='GV05', data_dir='~/insarlab/GPS')
+      gps_obj = GPS(site='GV05', data_dir='~/insarlab/GPS')
       gps_obj.open()
       dis_los = ut.enu2los(gps_obj.dis_e,
                            gps_obj.dis_n,
@@ -280,7 +280,7 @@ class gps:
 
         # get LOS displacement relative to another GPS site
         if ref_site:
-            ref_obj = gps(site=ref_site, data_dir=self.data_dir)
+            ref_obj = GPS(site=ref_site, data_dir=self.data_dir)
             ref_obj.read_displacement(start_date, end_date, print_msg=print_msg)
             inc_angle, head_angle = ref_obj.get_los_geometry(insar_obj)
             ref_obj.displacement_enu2los(inc_angle, head_angle, gps_comp=gps_comp)

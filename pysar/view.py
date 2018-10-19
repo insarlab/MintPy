@@ -16,14 +16,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from pysar.objects import (gps,
-                           geometryDatasetNames,
+from pysar.objects import (geometryDatasetNames,
                            geometry,
                            ifgramDatasetNames,
                            ifgramStack,
                            timeseriesKeyNames,
                            timeseries,
                            HDFEOS)
+from pysar.objects.gps import GPS
 from pysar.utils import (ptime,
                          readfile,
                          utils as ut,
@@ -66,12 +66,13 @@ EXAMPLE = """example:
   # Link: http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html
   view.py geo_velocity.h5 velocity -c temperature
   view.py geometryRadar.h5 height -c DEM_print
-  view.py geo_velocity.h5 velocity -c temperature_r3     #reverse colormap and repeat 3 times
+  view.py geo_velocity.h5 velocity -c temperature_r3      #reverse colormap and repeat 3 times
 
   # Save and Output:
   view.py velocity.h5 --save
   view.py velocity.h5 --nodisplay
   view.py velocity.h5 --nodisplay --update
+  view.py geo_velocity.h5 velocity --nowhitespace --save  #save figure without whitespace
 """
 
 PLOT_TEMPLATE = """Plot Setting:
@@ -133,6 +134,14 @@ def cmd_line_parse(iargs=None):
         inps.lalo_label = True
     if inps.zero_mask:
         inps.mask_file = 'no'
+
+    if not inps.disp_whitespace:
+        inps.disp_axis = False
+        inps.disp_title = False
+        inps.disp_cbar = False
+    if not inps.disp_axis:
+        inps.disp_tick = False
+
     return inps
 
 
@@ -496,7 +505,7 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
         if print_msg:
             print('plotting Data ...')
         if inps.disp_gps and inps.gps_component and inps.ref_gps_site:
-            ref_site_lalo = gps.gps(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
+            ref_site_lalo = GPS(site=inps.ref_gps_site).get_stat_lat_lon(print_msg=False)
             y, x = coord.geo2radar(ref_site_lalo[0], ref_site_lalo[1])[0:2]
             y -= inps.pix_box[1]
             x -= inps.pix_box[0]
@@ -671,7 +680,7 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
             print('turn off axis display')
 
     # 3.5 Turn off tick label
-    if not inps.disp_tick or not inps.disp_axis:
+    if not inps.disp_tick:
         # ax.set_xticklabels([])
         # ax.set_yticklabels([])
         ax.get_xaxis().set_ticks([])
@@ -834,10 +843,13 @@ def update_figure_setting(inps, print_msg=True):
                 width = abs(inps.geo_box[2] - inps.geo_box[0])
                 plot_shape = []
             plot_shape = [width*1.25, length]
+            if not inps.disp_cbar:
+                plot_shape = [width, length]                
             fig_scale = min(pp.min_figsize_single/min(plot_shape),
                             pp.max_figsize_single/max(plot_shape),
                             pp.max_figsize_height/plot_shape[1])
-            inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
+            inps.fig_size = [i*fig_scale for i in plot_shape]
+            #inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
             if print_msg:
                 print('figure size : '+str(inps.fig_size))
 
@@ -1264,14 +1276,18 @@ def main(iargs=None):
         data, inps = update_data_with_plot_inps(data, atr, inps)
 
         fig, ax = plt.subplots(figsize=inps.fig_size, num='Figure')
+        if not inps.disp_whitespace:
+            fig.subplots_adjust(left=0,right=1,bottom=0,top=1)
 
         ax, inps = plot_slice(ax, data, atr, inps)[0:2]
 
         # Save figure
         if inps.save_fig:
             print('save figure to {} with dpi={}'.format(inps.outfile[0], inps.fig_dpi))
-            plt.savefig(inps.outfile[0], bbox_inches='tight',
-                        transparent=True, dpi=inps.fig_dpi)
+            if not inps.disp_whitespace:
+                plt.savefig(inps.outfile[0], transparent=True, dpi=inps.fig_dpi, pad_inches=0.0)
+            else:
+                plt.savefig(inps.outfile[0], transparent=True, dpi=inps.fig_dpi, bbox_inches='tight')
 
 
     ############################### Multiple Subplots #########################
