@@ -456,16 +456,19 @@ def prepare_metadata(inpsDict):
 
     elif processor == 'isce':
         ifgram_dir = os.path.dirname(os.path.dirname(inpsDict['pysar.load.unwFile']))
-        meta_file = sorted(glob.glob(inpsDict['pysar.load.metaFile']))[0]
-        baseline_dir = inpsDict['pysar.load.baselineDir']
-        geom_dir = os.path.dirname(inpsDict['pysar.load.demFile'])
-        cmd = '{s} -i {i} -x {m} -b {b} -g {g}'.format(s=script_name,
-                                                       i=ifgram_dir,
-                                                       m=meta_file,
-                                                       b=baseline_dir,
-                                                       g=geom_dir)
-        print(cmd)
-        os.system(cmd)
+        try:
+            meta_file = sorted(glob.glob(inpsDict['pysar.load.metaFile']))[0]
+            baseline_dir = inpsDict['pysar.load.baselineDir']
+            geom_dir = os.path.dirname(inpsDict['pysar.load.demFile'])
+            cmd = '{s} -i {i} -x {m} -b {b} -g {g}'.format(s=script_name,
+                                                           i=ifgram_dir,
+                                                           m=meta_file,
+                                                           b=baseline_dir,
+                                                           g=geom_dir)
+            print(cmd)
+            os.system(cmd)
+        except:
+            pass
     return
 
 
