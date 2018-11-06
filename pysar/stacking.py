@@ -13,8 +13,8 @@ from pysar.utils import utils as ut
 
 #################################  Usage  ####################################
 EXAMPLE = """example:
-  stacking.py ifgramStack.h5 unwrapPhase -o averagePhaseVelocity.h5
-  stacking.py ifgramStack.h5 coherence   -o averageSpatialCoherence.h5
+  stacking.py ifgramStack.h5  -d unwrapPhase  -o averagePhaseVelocity.h5
+  stacking.py ifgramStack.h5  -d coherence    -o averageSpatialCoherence.h5
 """
 
 

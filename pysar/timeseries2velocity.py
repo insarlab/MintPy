@@ -237,7 +237,7 @@ def design_matrix(date_list):
     yr_diff = np.array(yr_list)
     yr_diff -= yr_diff[0]
 
-    #float64 is required due to precision issue
+    #for precision, use float32 in 0.1 yr, or float64 in 2015.1 yr format
     A = np.ones([len(date_list), 2], dtype=np.float32)
     A[:, 0] = yr_diff
     return A

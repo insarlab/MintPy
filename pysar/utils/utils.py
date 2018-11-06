@@ -2010,7 +2010,7 @@ class coordinate:
         if self.lut_y is None or self.lut_x is None:
             self.read_lookup_table(print_msg=print_msg)
 
-        # For lookup table in geo-coord, read value directly
+        # For lookup table in geo-coord, read value directly (GAMMA and ROI_PAC)
         if 'Y_FIRST' in self.lut_metadata.keys():
             lut = self._read_geo_lut_metadata()
 
@@ -2038,7 +2038,7 @@ class coordinate:
             rg = np.rint(self.lut_x[row, col]).astype(int) - rg0
             az = np.rint(self.lut_y[row, col]).astype(int) - az0
 
-        # For lookup table in radar-coord, search the buffer and use center pixel
+        # For lookup table in radar-coord, search the buffer and use center pixel (ISCE)
         else:
             # get resolution in degree in range/azimuth direction
             az_step = azimuth_ground_resolution(self.src_metadata)
