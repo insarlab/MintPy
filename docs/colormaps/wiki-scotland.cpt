@@ -1,0 +1,32 @@
+# scotland.cpt
+#
+# extracted from Scotland_topographic_map-fr.svg 
+# Author Eric Gaba (Wikimedia Commons user: Sting)
+# Licence: Creative Commons Attribution-ShareAlike 3.0 Unported
+# (see http://creativecommons.org/licenses/by-sa/3.0/deed.en)
+#
+# Translated by J.J. Green 2012, translation under same licence
+#
+# $Id: wiki-scotland.cpt.body,v 1.1 2009/05/04 19:29:16 jjg Exp $
+# COLOR_MODEL = RGB
+-1750 121 178 222 -1500 121 178 222
+-1500 132 185 227 -1250 132 185 227
+-1250 141 193 234 -1000 141 193 234
+-1000 150 201 240 -750  150 201 240
+-750  161 210 247 -500  161 210 247
+-500  172 219 251 -200  172 219 251
+-200  185 227 255 -100  185 227 255
+-100  200 235 255 -50   200 235 255
+-50   216 242 254 0     216 242 254
+0     172 208 165 50    172 208 165 
+50    148 191 139 100   148 191 139
+100   168 198 143 200   168 198 143
+200   189 204 150 400   189 204 150
+400   209 215 171 600   209 215 171
+600   239 235 192 800   239 235 192
+800   222 214 163 1000  222 214 163
+1000  202 185 130 1200  202 185 130
+1200  192 154  83 1400  192 154  83
+B   0   0   0
+F 255 255 255
+N 255   0   0

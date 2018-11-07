@@ -1,46 +1,50 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 ############################################################
-# Program is part of PySAR v1.2                            #
-# Copyright(c) 2017, Zhang Yunjun                          #
+# Program is part of PySAR                                 #
+# Copyright(c) 2017-2018, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
-# 
 
-import sys
+
 import argparse
-
-import h5py
-
-import pysar._pysar_utilities as ut
+from pysar.objects import ifgramDatasetNames
+from pysar.utils import utils as ut
 
 
 #################################  Usage  ####################################
-EXAMPLE='''example:
-  stacking.py unwrapIfgram.h5
-  stacking.py coherence.h5 -m mask.h5
-'''
+EXAMPLE = """example:
+  stacking.py ifgramStack.h5  -d unwrapPhase  -o averagePhaseVelocity.h5
+  stacking.py ifgramStack.h5  -d coherence    -o averageSpatialCoherence.h5
+"""
 
-def cmdLineParse():
-    parser = argparse.ArgumentParser(description='Stack multiple layers dataset into one.',\
-                                     formatter_class=argparse.RawTextHelpFormatter,\
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Stack multiple dataset into one.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
-    parser.add_argument('file', nargs='+', help='File(s) to be stacked')
-    parser.add_argument('-m','--mask', dest='mask_file', help='Mask file for the calculation')
+    parser.add_argument('file', help='File to be stacked')
+    parser.add_argument('-d', '--dataset', dest='dataset_name', default='unwrapPhase',
+                        help='Dataset to be used for stacking, when input file is ifgramStack')
+    parser.add_argument('-o', '--output', dest='outfile',
+                        help='output file name')
+    return parser
 
-    inps = parser.parse_args()
+
+def cmd_line_parse(iargs=None):
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
     return inps
 
 
 #############################  Main Function  ################################
-def main(argv):
-    inps = cmdLineParse()
-    print '\n*************** Stacking ******************'
-    for File in inps.file:
-        ut.get_file_stack(File, inps.mask_file)
+def main(iargs=None):
+    inps = cmd_line_parse(iargs)
+    print('\n*************** Stacking ******************')
+    ut.temporal_average(inps.file, datasetName=inps.dataset_name, outFile=inps.outfile)
     return
 
 
 ##############################################################################
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

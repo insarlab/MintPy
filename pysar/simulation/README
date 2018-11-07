@@ -1,0 +1,20 @@
+Simulation Toolbox for InSAR Time Series Analysis
+
+Author: Zhang Yunjun, 2018-Mar
+
+Inputs:
+    configFile - a configure file with satellite parameters, e.g. configSenDesc.txt
+    DEM file   - A DEM file for dimension setup and tropospheric delay simulation
+    DEM error file
+    coherence.h5 - for decorrelation simulation, network info.
+
+Prepare
+0. Generate displacement/velocity map from Mogi source. Or use a existing velocity map.
+
+1. Generate stack of unwrapped interferograms from velocity map.
+
+2. Add decorrelation noise based on the lookup table and coherence.h5 from an existing dataset
+
+3. Generate tropospheric delay map from tropcor_pyaps.py + Ramon's code for stochastic part.
+
+4. Add DEM error to interferograms from an existing DEM error file.

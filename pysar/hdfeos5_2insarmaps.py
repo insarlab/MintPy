@@ -1,8 +1,6 @@
-#! /usr/bin/env python2
+#!/usr/bin/env python3
 
-import sys
 import os
-import getopt
 import argparse
 import glob
 
@@ -36,7 +34,6 @@ def main():
     bjobScriptFilename = "run_pysar2insarmaps.py"
 
     path = parseArgs.file
-    path_absolute = os.path.abspath(path)
 
     h5FileFullName = parseArgs.file
 
@@ -47,10 +44,10 @@ def main():
 
 # create working directory in scratch and copy relevant files over
     scratch_dir = os.environ["SCRATCHDIR"] + "/" + curProjName
-    print "making directory " + scratch_dir
+    print("making directory " + scratch_dir)
     os.system("mkdir " + scratch_dir)
     command = "cp " + h5FileFullName + " " + scratch_dir + "/"
-    print "copying files to scratch with command " + command
+    print("copying files to scratch with command " + command)
     os.system(command)
 
 # go to scratch dir, and run the bjob command
@@ -64,7 +61,7 @@ def main():
     os.system(command)
 
     os.system("createBatch.pl " + bjobScriptFilename)
-    print "bjob finished"
+    print("bjob finished")
 
 if __name__ == '__main__':
     main()

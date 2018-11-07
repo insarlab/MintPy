@@ -1,5 +1,5 @@
 title: PySAR
-description: A Python package for InSAR (Interferometric Synthetic Aperture Radar) time series analysis
+description: InSAR (Interferometric Synthetic Aperture Radar) time series analysis in Python
 show_downloads: true
 google_analytics: UA-104225904-1
 theme: jekyll-theme-cayman
