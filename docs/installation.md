@@ -14,8 +14,7 @@ sudo xcodebuild -license
 
 3. Install [XQuartz](https://www.xquartz.org), then restart the terminal.
 
-4. (If you use Anaconda instead of Macports, skip now to the next section)    
-Install [macports](https://www.macports.org/install.php) if you want to use Macports to install Python environment; then update the port tree with the following command. If your network prevent the use of rsync or svn via http of port tree, try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball).
+4. Install [macports](https://www.macports.org/install.php) if you want to use Macports to install Python environment (if you use Anaconda instead of Macports, skip now to the next section "Setup Paths"); then update the port tree with the following command. If your network prevent the use of rsync or svn via http of port tree, try [Portfile Sync via a Snapshot Tarball](https://trac.macports.org/wiki/howto/PortTreeTarball).
 ```tcsh
 sudo port selfupdate
 ```
@@ -51,7 +50,7 @@ For bash user, add to your **_~/.bashrc_** file for example:
     ############################  Python  ###############################
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
     
-    ##--------- Python ---------------## 
+    ##--------- Python -----------------## 
     export PYTHON3DIR=~/python/miniconda3
     export PATH=${PATH}:${PYTHON3DIR}/bin
     
@@ -64,7 +63,7 @@ Source the file for the first time. It will be sourced automatically next time w
    
    
 #### 2. Install Python dependecies
-PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, for its convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://github.com/pytroll/pyresample).
+PySAR is written in Python3 (3.5+) and it relies on several Python modules, check the [requirements.txt](./requirements.txt) file for details. We recommend using [conda](https://conda.io/miniconda.html) or [macports](https://www.macports.org/install.php) to install the python environment and the prerequisite packages, because of the convenient managenment and default [performance setting with numpy/scipy](http://markus-beuckelmann.de/blog/boosting-numpy-blas.html) and [pyresample](https://github.com/pytroll/pyresample).
 
 
 For conda user, run the following in your terminal in _bash/tcsh_:   
@@ -91,6 +90,6 @@ For macports user, install modules in the [ports.txt](https://github.com/yunjunz
 
 Note that pykml through conda supports python2 only, we provide a python2/3 compatible version [here](https://github.com/yunjunz/pykml.git) and installed throught the command line above by default.
   
-We use [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for tropospheric delay correction using weather re-analysis datadset such as ERA-Interim, MERRA and NARR. Check [caltech's website](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for the code download and account setup.
+We use [PyAPS](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for tropospheric delay correction calculated from weather re-analysis datadset such as ERA-Interim, MERRA and NARR. Check [caltech's website](http://earthdef.caltech.edu/projects/pyaps/wiki/Main) for the code download and account setup.
 
 [Here](https://github.com/yunjunz/macOS_Setup/blob/master/vim.md) is some useful setup of Vim editor for general use and Python.
