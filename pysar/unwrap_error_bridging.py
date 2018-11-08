@@ -261,8 +261,12 @@ def search_bridge(mask_cc_file, radius=150, coh_mask_file='maskSpatialCoh.h5', s
     """
     print('-'*50)
     print('searching bridges to connect coherence conn comps ...')
-    mask_cc = readfile.read(mask_cc_file)[0]
-    num_bridge = int(np.max(mask_cc) - 1)
+    if isinstance(mask_cc_file, str):
+        mask_cc = readfile.read(mask_cc_file)[0]
+    elif isinstance(mask_cc_file, np.ndarray):
+        mask_cc = mask_cc_file
+    labels = np.delete(np.unique(mask_cc), 0)
+    num_bridge = len(labels) - 1
     if num_bridge < 1:
         raise RuntimeError('No bridge found. Check the input mask file.')
     print('number of bridges: {}'.format(num_bridge))
@@ -271,7 +275,7 @@ def search_bridge(mask_cc_file, radius=150, coh_mask_file='maskSpatialCoh.h5', s
     print('1. calculating min distance between each pair of coherent conn comps ...')
     connections = {}
     dist_mat = np.zeros((num_bridge+1, num_bridge+1), dtype=np.float32)
-    for i, j in itertools.combinations(range(1, num_bridge+2), 2):
+    for i, j in itertools.combinations(labels, 2):
         mask1 = mask_cc == i
         mask2 = mask_cc == j
         pts1, pts2, d = ut.min_region_distance(mask1, mask2, display=False)

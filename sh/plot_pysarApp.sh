@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2018-09-25
+# Latest update: 2018-11-08
 ###############################################################
 
 
@@ -99,9 +99,13 @@ if [ $plot_geocoded_data -eq 1 ]; then
 fi
 
 
+view='view.py -m no --nodisplay --update'
 if [ $plot_the_rest -eq 1 ]; then
-    view.py velocityEcmwf.h5 -m no --nodisplay --update  | tee -a $log_file
-    view.py numInvIfgram.h5  -m no --nodisplay --update  | tee -a $log_file
+    for trop in 'Ecmwf' 'Merra' 'Narr'
+    do
+        file=velocity${trop}.h5;    test -f $file && $view $file | tee -a $log_file
+    done
+    file=numInvIfgram.h5;           test -f $file && $view $file | tee -a $log_file
 fi
 
 

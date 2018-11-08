@@ -344,7 +344,10 @@ def get_date12_to_drop(inps):
 
         tempList = sorted(list(set(date12ListAll) - set(coh_date12_list + mst_date12_list)))
         date12_to_drop += tempList
-        print(msg+'({})\n{}'.format(len(tempList), tempList))
+        msg += '({})'.format(len(tempList))
+        if len(tempList) <= 200:
+            msg += '\n{}'.format(tempList)
+        print(msg)
 
     # temp baseline threshold
     if inps.tempBaseMax:
@@ -371,8 +374,11 @@ def get_date12_to_drop(inps):
         tempList = [i for i in date12ListAll if i not in seq_date12_list]
         date12_to_drop += tempList
         print('--------------------------------------------------')
-        print('Drop ifgrams with temporal baseline beyond {} neighbors: ({})\n{}'.format(
-            inps.connNumMax, len(tempList), tempList))
+        msg = 'Drop ifgrams with temporal baseline beyond {} neighbors: ({})'.format(
+            inps.connNumMax, len(tempList))
+        if len(tempList) <= 200:
+            msg += '\n{}'.format(tempList)
+        print(msg)
 
     # excludeIfgIndex
     if inps.excludeIfgIndex:
