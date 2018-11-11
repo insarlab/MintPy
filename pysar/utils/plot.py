@@ -202,9 +202,10 @@ class ColormapExt(mpl.cm.ScalarMappable):
                     default colormap name for matplotlib 2.0 - viridis
     """
 
-    def __init__(self, cmap_name, cmap_lut=256):
+    def __init__(self, cmap_name, cmap_lut=256, vlist=[0.0, 0.7, 1.0]):
         self.cmap_name = cmap_name
         self.cmap_lut = cmap_lut
+        self.vlist = vlist
         self.get_colormap_list()
         self.get_colormap()
 
@@ -215,7 +216,7 @@ class ColormapExt(mpl.cm.ScalarMappable):
         """
         plt_cm_list = sorted(m for m in plt.cm.datad)
         gmt_cm_list = self.get_gmt_colormap(cmap_name=None)
-        self.cmap_list = plt_cm_list + gmt_cm_list
+        self.cmap_list = plt_cm_list + gmt_cm_list + ['truncate_RdBu']
 
     def get_colormap(self):
         try:
@@ -223,12 +224,21 @@ class ColormapExt(mpl.cm.ScalarMappable):
                                                      cmap_lut=self.cmap_lut)
 
         except:
+            # repeated colormap
             cmap_base_name = self.cmap_name[0:-1]
             if cmap_base_name in self.cmap_list:
                 num_repeat = int(self.cmap_name[-1])
                 self.colormap = self.get_repeat_colormap(cmap_name=cmap_base_name,
                                                          num_repeat=num_repeat,
                                                          cmap_lut=self.cmap_lut)
+            # truncated colormap
+            elif self.cmap_name.startswith('truncate_'):
+                v0, v_jump, v1 = self.vlist
+                n1 = np.ceil(200.0 * (v_jump - v0) / (v1 - v0)).astype('int')
+                cmap = self.get_single_colormap(self.cmap_name.replace('truncate_', ''))
+                colors1 = cmap(np.linspace(0.0, 0.3, n1))
+                colors2 = cmap(np.linspace(0.6, 1.0, 200 - n1))
+                self.colormap = LinearSegmentedColormap.from_list(self.cmap_name, np.vstack((colors1, colors2)))
             else:
                 msg = 'un-recognized input colormap name: {}\n'.format(self.cmap_name)
                 msg += 'supported colormap:\n{}'.format(self.cmap_list)
