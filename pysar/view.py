@@ -603,6 +603,8 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
             print('plotting Data ...')
         im = ax.imshow(data, cmap=inps.colormap,
                        vmin=inps.vlim[0], vmax=inps.vlim[1],
+                       extent=(inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+                               inps.pix_box[3]-0.5, inps.pix_box[1]-0.5),
                        alpha=inps.transparency, interpolation='nearest')
         ax.tick_params(labelsize=inps.font_size)
 
@@ -615,9 +617,7 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
                 ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
 
             if ref_y and ref_x:
-                ax.plot(ref_x - inps.pix_box[0],
-                        ref_y - inps.pix_box[1],
-                        inps.ref_marker, ms=inps.ref_size)
+                ax.plot(ref_x, ref_y, inps.ref_marker, ms=inps.ref_size)
                 if print_msg:
                     print('plot reference point')
 
@@ -629,13 +629,13 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
             if print_msg:
                 print('plot points of interest')
 
-        ax.set_xlim(-0.5, num_col-0.5)
-        ax.set_ylim(num_row-0.5, -0.5)
+        ax.set_xlim(inps.pix_box[0]-0.5, inps.pix_box[2]-0.5)   #ax.set_xlim(-0.5, num_col-0.5)
+        ax.set_ylim(inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)   #ax.set_ylim(num_row-0.5, -0.5)
 
         # Status bar
         def format_coord(x, y):
-            col = int(x+0.5)
-            row = int(y+0.5)
+            col = int(x+0.5) - inps.pix_box[0]
+            row = int(y+0.5) - inps.pix_box[1]
             msg = 'x={:.1f}, y={:.1f}'.format(x, y)
             if 0 <= col < num_col and 0 <= row < num_row:
                 try:

@@ -1429,12 +1429,14 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     if not 'markercolor' in plot_dict.keys():   plot_dict['markercolor'] = 'orange'
     if not 'markersize'  in plot_dict.keys():   plot_dict['markersize']  = 16
     if not 'disp_title'  in plot_dict.keys():   plot_dict['disp_title']  = True
+    if not 'fig_title'   in plot_dict.keys():   plot_dict['fig_title']   = 'Coherence Matrix'
     if not 'colormap'    in plot_dict.keys():   plot_dict['colormap']    = 'jet'
-    #if not 'cbar_label'  in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
+    if not 'cbar_label'  in plot_dict.keys():   plot_dict['cbar_label']  = 'Coherence'
     if not 'ylim'        in plot_dict.keys():   plot_dict['ylim']        = (0., 1.)
     if not 'disp_cbar'   in plot_dict.keys():   plot_dict['disp_cbar']   = True
     if not 'legend_loc'  in plot_dict.keys():   plot_dict['legend_loc']  = 'best'
     if not 'disp_legend' in plot_dict.keys():   plot_dict['disp_legend'] = True
+    cmap = ColormapExt(plot_dict['colormap']).colormap
 
     date12List = ptime.yyyymmdd_date12(date12List)
     coh_mat = pnet.coherence_matrix(date12List, cohList)
@@ -1453,7 +1455,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
     diag_mat = np.diag(np.ones(coh_mat.shape[0]))
     diag_mat[diag_mat == 0.] = np.nan
     im = ax.imshow(diag_mat, cmap='gray_r', vmin=0.0, vmax=1.0, interpolation='nearest')
-    im = ax.imshow(coh_mat, cmap='jet',
+    im = ax.imshow(coh_mat, cmap=cmap,
                    vmin=plot_dict['ylim'][0],
                    vmax=plot_dict['ylim'][1],
                    interpolation='nearest')
@@ -1472,7 +1474,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
                    bottom=True, top=True, left=True, right=True)
 
     if plot_dict['disp_title']:
-        ax.set_title('Coherence Matrix')
+        ax.set_title(plot_dict['fig_title'])
 
     # Colorbar
     if plot_dict['disp_cbar']:

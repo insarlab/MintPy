@@ -18,7 +18,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pysar.objects import timeseries, giantTimeseries, HDFEOS
 from pysar.utils import readfile, ptime, plot as pp, utils as ut
 from pysar.multilook import multilook_data
-from pysar import view
+from pysar import subset, view
 
 
 ###########################################################################################
@@ -27,10 +27,11 @@ EXAMPLE = """example:
   tsview.py timeseries.h5  --wrap
   tsview.py timeseries.h5  --yx 300 400 --zero-first  --nodisplay
   tsview.py geo_timeseries.h5  --lalo 33.250 131.665  --nodisplay
+  tsview.py timeseries_ECMWF_ramp_demErr.h5  --sub-x 900 1400 --sub-y 0 500
 
   # multiple time-series files
-  tsview.py timeseries_ECMWF_demErr_ramp.h5 timeseries_ECMWF_demErr.h5 timeseries_ECMWF.h5 timeseries.h5 --off 5
-  tsview.py timeseries_ECMWF_demErr_ramp.h5 ../GIANT/Stack/LS-PARAMS.h5 --off 5 --label pysar giant
+  tsview.py timeseries_ECMWF_ramp_demErr.h5 timeseries_ECMWF_ramp.h5 timeseries_ECMWF.h5 timeseries.h5 --off 5
+  tsview.py timeseries_ECMWF_ramp_demErr.h5 ../GIANT/Stack/LS-PARAMS.h5 --off 5 --label pysar giant
 """
 
 
@@ -82,6 +83,7 @@ def create_parser():
     parser = pp.add_point_argument(parser)
     parser = pp.add_reference_argument(parser)
     parser = pp.add_save_argument(parser)
+    parser = pp.add_subset_argument(parser)
 
     return parser
 
@@ -165,11 +167,6 @@ def read_init_info(inps):
         if not os.path.isfile(inps.mask_file):
             inps.mask_file = None
 
-    # default lookup table file
-    if not inps.lookup_file:
-        inps.lookup_file = ut.get_lookup_file('./INPUTS/geometryRadar.h5')
-    inps.coord = ut.coordinate(atr, inps.lookup_file)
-
     # date info
     inps.date_list = obj.dateList
     if inps.start_date:
@@ -197,8 +194,7 @@ def read_init_info(inps):
 
     # Display Unit
     (inps.disp_unit,
-     inps.unit_fac) = pp.scale_data2disp_unit(metadata=atr,
-                                              disp_unit=inps.disp_unit)[1:3]
+     inps.unit_fac) = pp.scale_data2disp_unit(metadata=atr, disp_unit=inps.disp_unit)[1:3]
 
     # Read Error List
     inps.error_ts = None
@@ -215,27 +211,22 @@ def read_init_info(inps):
     if inps.zero_first:
         inps.zero_idx = min(0, np.min(np.where(inps.ex_flag)[0]))
 
-    # size and lalo info
-    inps.length, inps.width = obj.length, obj.width
-    print('data size in (y0, y1, x0, x1): {}'.format((0, inps.length, 0, inps.width)))
-    try:
-        inps.lon0 = float(atr['X_FIRST'])
-        inps.lat0 = float(atr['Y_FIRST'])
-        inps.lon_step = float(atr['X_STEP'])
-        inps.lat_step = float(atr['Y_STEP'])
-        inps.lon1 = inps.lon0 + inps.width *inps.lon_step
-        inps.lat1 = inps.lat0 + inps.length*inps.lat_step
-        inps.geocoded = True
-        print(('data size in (N, S, W, E): '
-               '({%.4f}, {%.4f}, {%.4f}, {%.4f})'.format(inps.lat1,
-                                                         inps.lat0,
-                                                         inps.lon0,
-                                                         inps.lon1)))
-    except:
-        inps.geocoded = False
+    # default lookup table file
+    if not inps.lookup_file:
+        inps.lookup_file = ut.get_lookup_file('./INPUTS/geometryRadar.h5')
+    inps.coord = ut.coordinate(atr, inps.lookup_file)
 
-    inps.pix_box = (0, 0, inps.width, inps.length)
+    # size and lalo info
+    inps.pix_box, inps.geo_box = subset.subset_input_dict2box(vars(inps), atr)
+    inps.pix_box = inps.coord.check_box_within_data_coverage(inps.pix_box)
     inps.geo_box = inps.coord.box_pixel2geo(inps.pix_box)
+    # Out message
+    data_box = (0, 0, obj.width, obj.length)
+    print('data   coverage in y/x: '+str(data_box))
+    print('subset coverage in y/x: '+str(inps.pix_box))
+    print('data   coverage in lat/lon: '+str(inps.coord.box_pixel2geo(data_box)))
+    print('subset coverage in lat/lon: '+str(inps.geo_box))
+    print('------------------------------------------------------------------------')
 
     # reference pixel
     if not inps.ref_lalo and 'REF_LAT' in atr.keys():
@@ -243,23 +234,15 @@ def read_init_info(inps):
     if inps.ref_lalo:
         if inps.ref_lalo[1] > 180.:
             inps.ref_lalo[1] -= 360.
-        inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0],
-                                           inps.ref_lalo[1],
-                                           print_msg=False)[0:2]
+        inps.ref_yx = inps.coord.geo2radar(inps.ref_lalo[0], inps.ref_lalo[1], print_msg=False)[0:2]
     if not inps.ref_yx:
         inps.ref_yx = [int(atr['REF_Y']), int(atr['REF_X'])]
 
     # Initial Pixel Coord
     if inps.lalo:
-        inps.yx = inps.coord.geo2radar(inps.lalo[0],
-                                       inps.lalo[1],
-                                       print_msg=False)[0:2]
-    #if not inps.yx:
-    #    inps.yx = inps.ref_yx
+        inps.yx = inps.coord.geo2radar(inps.lalo[0], inps.lalo[1], print_msg=False)[0:2]
     try:
-        inps.lalo = inps.coord.radar2geo(inps.yx[0],
-                                         inps.yx[1],
-                                         print_msg=False)[0:2]
+        inps.lalo = inps.coord.radar2geo(inps.yx[0], inps.yx[1], print_msg=False)[0:2]
     except:
         inps.lalo = None
 
@@ -298,10 +281,11 @@ def read_timeseries_data(inps):
     ts_data = []
     for fname in inps.timeseries_file:
         print('reading timeseries from file {} ...'.format(fname))
-        data, atr = readfile.read(fname, datasetName=inps.date_list)
+        data, atr = readfile.read(fname, datasetName=inps.date_list, box=inps.pix_box)
         try:
-            ref_phase = data[:, inps.ref_yx[0], inps.ref_yx[1]]
-            data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, inps.length, inps.width))
+            ref_phase = data[:, inps.ref_yx[0]-inps.pix_box[1], inps.ref_yx[1]-inps.pix_box[0]]
+            data -= np.tile(ref_phase.reshape(-1, 1, 1), (1, data.shape[-2], data.shape[-1]))
+            print('reference to pixel {}'.format(inps.ref_yx))
         except:
             pass
         data -= np.tile(data[inps.ref_idx, :, :], (inps.num_date, 1, 1))
@@ -315,10 +299,11 @@ def read_timeseries_data(inps):
         ts_data.append(data)
 
     # Mask file: input mask file + non-zero ts pixels
-    mask = np.ones((inps.length, inps.width), np.bool_)
+    mask = np.ones(ts_data[0].shape[-2:], np.bool_)
     msk = pp.read_mask(inps.timeseries_file[0],
                        mask_file=inps.mask_file,
-                       datasetName='displacement')[0]
+                       datasetName='displacement',
+                       box=inps.pix_box)[0]
     mask[msk == 0.] = False
     del msk
 
@@ -327,15 +312,15 @@ def read_timeseries_data(inps):
     mask[np.isnan(ts_stack)] = False
     del ts_stack
 
-    print('masking data')
-    ts_mask = np.tile(mask, (inps.num_date, 1, 1))
-    for i in range(len(ts_data)):
-        ts_data[i][ts_mask == 0] = np.nan
-        try:
-            ts_data[i][:, inps.ref_yx[0], inps.ref_yx[1]] = 0.   # keep value on reference pixel
-        except:
-            pass
-    del ts_mask
+    #print('masking data')
+    #ts_mask = np.tile(mask, (inps.num_date, 1, 1))
+    #for i in range(len(ts_data)):
+    #    ts_data[i][ts_mask == 0] = np.nan
+    #    try:
+    #        ts_data[i][:, inps.ref_yx[0], inps.ref_yx[1]] = 0.   # keep value on reference pixel
+    #    except:
+    #        pass
+    #del ts_mask
 
     # default vlim
     inps.dlim = [np.nanmin(ts_data[0]), np.nanmax(ts_data[0])]
@@ -416,7 +401,7 @@ def plot_init_time_slider(ax, year_list, init_idx=-1, ref_idx=0):
     return tslider
 
 
-def plot_timeseries_errorbar(ax, dis_ts, inps, ms=8.0, label=None):
+def plot_ts_errorbar(ax, dis_ts, inps, ppar):
     dates = np.array(inps.dates)
     d_ts = dis_ts[:]
     if inps.ex_date_list:
@@ -427,22 +412,22 @@ def plot_timeseries_errorbar(ax, dis_ts, inps, ms=8.0, label=None):
         # Plot excluded dates
         ex_d_ts = dis_ts[inps.ex_flag == 0]
         ax.errorbar(inps.ex_dates, ex_d_ts, yerr=inps.ex_error_ts,
-                    fmt='-o', color='gray', ms=ms,
+                    fmt='-o', ms=ppar.ms, color='gray',
                     lw=0, alpha=1, mfc='gray',
                     elinewidth=inps.edge_width, ecolor='black',
-                    capsize=ms*0.5, mew=inps.edge_width)
+                    capsize=ppar.ms*0.5, mew=inps.edge_width)
 
     # Plot kept dates
     ax.errorbar(dates, d_ts, yerr=inps.error_ts,
-                fmt='-o', ms=ms,
+                fmt='-o', ms=ppar.ms, color=ppar.mfc,
                 lw=0, alpha=1,
                 elinewidth=inps.edge_width, ecolor='black',
-                capsize=ms*0.5, mew=inps.edge_width,
-                label=label)
+                capsize=ppar.ms*0.5, mew=inps.edge_width,
+                label=ppar.label)
     return ax
 
 
-def plot_timeseries_scatter(ax, dis_ts, inps, ms=8.0, label=None):
+def plot_ts_scatter(ax, dis_ts, inps, ppar):
     dates = np.array(inps.dates)
     d_ts = dis_ts[:]
     if inps.ex_date_list:
@@ -452,19 +437,20 @@ def plot_timeseries_scatter(ax, dis_ts, inps, ms=8.0, label=None):
 
         # Plot excluded dates
         ex_d_ts = dis_ts[inps.ex_flag == 0]
-        ax.scatter(inps.ex_dates, ex_d_ts, s=ms**2, color='gray')
+        ax.scatter(inps.ex_dates, ex_d_ts, s=ppar.ms**2, color='gray')
 
     # Plot kept dates
-    ax.scatter(dates, d_ts, s=ms**2, label=label)
+    ax.scatter(dates, d_ts, s=ppar.ms**2, label=ppar.label, color=ppar.mfc)
     return ax
 
 
-def plot_point_timeseries(yx, fig, ax, ts_data, inps):
+def plot_point_timeseries(yx, fig, ax, ts_data, mask, inps):
     """Plot point time series displacement at pixel [y, x]
     Parameters: yx : list of 2 int
                 fig : Figure object
                 ax : Axes object
                 ts_data : list of 3D np.array in size of (num_date, length, width)
+                mask : 2D np.array in size of (length, width) in bool format
                 inps : namespace objects of input arguments
     Returns:    ax : Axes object
                 d_ts : 2D np.array in size of (num_date, num_file)
@@ -479,25 +465,36 @@ def plot_point_timeseries(yx, fig, ax, ts_data, inps):
     elif num_file >= 5: ms_step = 1
 
     d_ts = []
+    y = yx[0]-inps.pix_box[1]
+    x = yx[1]-inps.pix_box[0]
     for i in range(num_file-1, -1, -1):
         # get displacement data
-        d_tsi = ts_data[i][:, yx[0], yx[1]]
+        d_tsi = ts_data[i][:, y, x]
         if inps.zero_first:
             d_tsi -= d_tsi[inps.zero_idx]
         d_ts.append(d_tsi)
 
-        # plot
-        ms = inps.marker_size - ms_step * (num_file - 1 - i)
+        # get plot parameter - namespace ppar
+        ppar = argparse.Namespace()
+        ppar.label = inps.file_label[i]
+        ppar.ms = inps.marker_size - ms_step * (num_file - 1 - i)
+        ppar.mfc = pp.mplColors[num_file - 1 - i]
+        if mask[y, x] == 0:
+            ppar.mfc = 'gray'
         if inps.offset:
             d_tsi += inps.offset * (num_file - 1 - i)
+
+        # plot
         if inps.error_file:
-            ax = plot_timeseries_errorbar(ax, d_tsi, inps, ms=ms, label=inps.file_label[i])
+            ax = plot_ts_errorbar(ax, d_tsi, inps, ppar)
         else:
-            ax = plot_timeseries_scatter(ax, d_tsi, inps, ms=ms, label=inps.file_label[i])
+            ax = plot_ts_scatter(ax, d_tsi, inps, ppar)
 
     # format
     ax = _adjust_ts_axis(ax, inps)
     title_ts = _get_ts_title(yx[0], yx[1], inps.coord)
+    if mask[y, x] == 0:
+        title_ts += ' (masked out)'
     if inps.disp_title:
         ax.set_title(title_ts)
     if inps.tick_right:
@@ -626,6 +623,7 @@ def main(iargs=None):
     # Axes 1
     ax_v = fig_v.add_axes([0.125, 0.25, 0.75, 0.65])
     d_v = np.array(ts_data[0][inps.init_idx, :, :])
+    d_v[mask == 0] = np.nan
     ax_v, im = plot_init_map(ax_v, d_v, inps, atr)
 
     # Axes 2 - Time Slider
@@ -641,6 +639,7 @@ def main(iargs=None):
         disp_date = inps.dates[idx].strftime('%Y-%m-%d')
         ax_v.set_title('N = {n}, Time = {t}'.format(n=idx, t=disp_date))
         d_v = np.array(ts_data[0][idx, :, :])
+        d_v[mask == 0] = np.nan
         if inps.wrap:
             if inps.disp_unit_v == 'radian':
                 d_v *= inps.range2phase
@@ -652,7 +651,7 @@ def main(iargs=None):
     # Figure 2 - Time Series Displacement - Point
     fig_ts, ax_ts = plt.subplots(num='Point Displacement Time-series', figsize=inps.fig_size)
     if inps.yx:
-        ax_ts, d_ts = plot_point_timeseries(inps.yx, fig_ts, ax_ts, ts_data, inps)
+        ax_ts, d_ts = plot_point_timeseries(inps.yx, fig_ts, ax_ts, ts_data, mask, inps)
 
     def plot_timeseries_event(event):
         """Event function to get y/x from button press"""
@@ -664,12 +663,8 @@ def main(iargs=None):
                                             print_msg=False)[0:2]
             else:
                 y, x = int(event.ydata+0.5), int(event.xdata+0.5)
-
-            # plot time-series displacement if selected pixel is valid
-            if mask[y, x] != 0:
-                d_ts = plot_point_timeseries((y, x), fig_ts, ax_ts, ts_data, inps)
-            else:
-                print('pixel ({}, {}) is in masked out area.'.format(y, x))
+            # plot time-series displacement
+            d_ts = plot_point_timeseries((y, x), fig_ts, ax_ts, ts_data, mask, inps)
 
     # Output
     if inps.save_fig:
