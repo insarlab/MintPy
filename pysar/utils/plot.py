@@ -616,8 +616,6 @@ def add_figure_argument(parser):
                      type=int, help='font size')
     fig.add_argument('--fontcolor', dest='font_color',
                      default='k', help='font color')
-    fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=300,
-                     help='DPI - dot per inch - for display/write')
 
     # axis format
     fig.add_argument('--nowhitespace', dest='disp_whitespace',
@@ -660,6 +658,8 @@ def add_figure_argument(parser):
     # size, subplots number and space
     fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
                      help='figure size in inches - width and length')
+    fig.add_argument('--dpi', dest='fig_dpi', metavar='DPI', type=int, default=300,
+                     help='DPI - dot per inch - for display/write')
     fig.add_argument('--figext', dest='fig_ext',
                      default='.png', choices=['.emf', '.eps', '.pdf', '.png', '.ps', '.raw', '.rgba', '.svg', '.svgz'],
                      help='File extension for figure output file')
@@ -772,7 +772,7 @@ def add_reference_argument(parser):
                      action='store_false', help='do not show reference point')
     ref.add_argument('--ref-marker', dest='ref_marker', default='ks',
                      help='marker of reference pixel')
-    ref.add_argument('--ref-size', dest='ref_size', metavar='SIZE_NUM', type=int, default=6,
+    ref.add_argument('--ref-size', dest='ref_marker_size', metavar='NUM', type=int, default=6,
                      help='marker size of reference point, default: 10')
     return parser
 

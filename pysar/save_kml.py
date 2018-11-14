@@ -29,9 +29,8 @@ EXAMPLE = """example:
   save_kml.py geo_timeseries_masked.h5  20101120
   save_kml.py geo_unwrapIfgram.h5       101120-110220
 
-  save_kml.py geo_velocity_masked.h5 -u cm --ylim -2 2
-  save_kml.py geo_velocity_masked.h5 -u cm --ylim -2.5 0.5 -c jet_r
-  save_kml.py geo_velocity_masked.h5 -u cm --ylim -2 2 --ref-size 3 --fig-size 5 8
+  save_kml.py geo_velocity_masked.h5 -u cm -v -2 2
+  save_kml.py geo_velocity_masked.h5 -u cm --wrap --wrap-range -3 7
   save_kml.py demGeo.h5 --cbar-label Elevation
 """
 
@@ -47,7 +46,8 @@ def create_parser():
     parser.add_argument('-o', '--output', dest='outfile',
                         help='output file base name. Extension is fixed with .kmz')
 
-    parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('MIN', 'MAX'), type=float,
+    # Data
+    parser.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('MIN', 'MAX'), type=float,
                         help='Y/value limits for plotting.')
     parser.add_argument('-u', dest='disp_unit', metavar='UNIT',
                         help='unit for display.')
@@ -55,31 +55,34 @@ def create_parser():
                         help='Colormap for plotting. Default: jet')
     parser.add_argument('--wrap', action='store_true',
                         help='re-wrap data to display data in fringes.')
+    parser.add_argument('--wrap-range', dest='wrap_range', type=float, nargs=2,
+                        default=[-1.*np.pi, np.pi], metavar=('MIN', 'MAX'),
+                        help='range of one cycle after wrapping, default: [-pi, pi]')
 
     # Figure
     fig = parser.add_argument_group('Figure')
-    fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int, default=9,
-                     help='Colorbar bin number. Default: 9')
+    fig.add_argument('--dpi', dest='fig_dpi', metavar='NUM', type=int, default=600,
+                     help='Figure DPI (dots per inch). Default: 600')
+    fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
+                     help='Figure size in inches - width and length')
     fig.add_argument('--cbar-label', dest='cbar_label', metavar='LABEL', default='Mean LOS velocity',
                      help='Colorbar label. Default: Mean LOS velocity')
+    fig.add_argument('--cbar-bin-num', dest='cbar_bin_num', metavar='NUM', type=int, default=9,
+                     help='Colorbar bin number. Default: 9')
     fig.add_argument('--cbar-height', dest='cbar_height',
                      help='Colorbar height/elevation/altitude in meters;\n' +
                           'if not specified and DEM exists in current directory, use mean DEM height + 1000m;\n' +
                           'if not specified nor DEM exists, clampToGround.')
-    fig.add_argument('--dpi', dest='fig_dpi', metavar='NUM', type=int, default=300,
-                     help='Figure DPI (dots per inch). Default: 300')
-    fig.add_argument('--figsize', dest='fig_size', metavar=('WID', 'LEN'), type=float, nargs=2,
-                     help='Figure size in inches - width and length')
 
     # Reference Pixel
     ref = parser.add_argument_group('Reference Pixel')
-    ref.add_argument('--noreference', dest='disp_seed',
+    ref.add_argument('--noreference', dest='disp_ref_pixel',
                      action='store_false', help='do not show reference point')
-    ref.add_argument('--ref-color', dest='seed_color', metavar='COLOR', default='k',
+    ref.add_argument('--ref-color', dest='ref_marker_color', metavar='COLOR', default='k',
                      help='marker color of reference point')
-    ref.add_argument('--ref-size', dest='seed_size', metavar='NUM', type=int, default=5,
+    ref.add_argument('--ref-size', dest='ref_marker_size', metavar='NUM', type=int, default=5,
                      help='marker size of reference point, default: 10')
-    ref.add_argument('--ref-symbol', dest='seed_symbol', metavar='SYMBOL', default='s',
+    ref.add_argument('--ref-marker', dest='ref_marker', metavar='SYMBOL', default='s',
                      help='marker symbol of reference point')
     return parser
 
@@ -89,11 +92,11 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     atr = readfile.read_attribute(inps.file)
-    # Check: file in geo coord
+    # Check 1: file in geo coord
     if 'X_FIRST' not in atr.keys():
         raise Exception('ERROR: Input file is not geocoded.')
 
-    # Check: dset is required for multi_dataset/group files
+    # Check 2: dset is required for multi_dataset/group files
     if not inps.dset and atr['FILE_TYPE'] in ['ifgramStack']+timeseriesKeyNames:
         raise Exception("No date/date12 input.\nIt's required for "+k+" file")
 
@@ -125,8 +128,8 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     if not inps:
         inps = cmd_line_parse()
 
-    if not inps.ylim:
-        inps.ylim = [np.nanmin(data), np.nanmax(data)]
+    if not inps.vlim:
+        inps.vlim = [np.nanmin(data), np.nanmax(data)]
 
     west, east, south, north = ut.four_corners(metadata)
 
@@ -139,29 +142,30 @@ def write_kmz_file(data, metadata, out_file, inps=None):
         fig_scale = min(pp.min_figsize_single / min(plot_shape),
                         pp.max_figsize_single / max(plot_shape),
                         pp.max_figsize_height / plot_shape[1])
-        inps.fig_size = [np.floor(i*fig_scale*2)/2 for i in plot_shape]
+        inps.fig_size = [2.*i*fig_scale for i in plot_shape]
     print('create figure in size: '+str(inps.fig_size))
     fig = plt.figure(figsize=inps.fig_size, frameon=False)
     ax = fig.add_axes([0., 0., 1., 1.])
     ax.set_axis_off()
 
-    print('colormap: '+inps.colormap)
-    inps.colormap = plt.get_cmap(inps.colormap)
-
+    inps.colormap = pp.check_colormap_input(metadata, inps.colormap)
     # Plot - data matrix
     ax.imshow(data, cmap=inps.colormap,
-              vmin=inps.ylim[0], vmax=inps.ylim[1],
+              vmin=inps.vlim[0], vmax=inps.vlim[1],
               aspect='auto', interpolation='nearest')
 
     # Plot - reference pixel
-    if inps.disp_seed == 'yes':
+    if inps.disp_ref_pixel:
+        #import pdb; pdb.set_trace()
         try:
             xref = int(metadata['REF_X'])
             yref = int(metadata['REF_Y'])
-            ax.plot(xref, yref, 'ks', ms=inps.seed_size)
+            ax.plot(xref, yref, inps.ref_marker,
+                    color=inps.ref_marker_color,
+                    ms=inps.ref_marker_size)
             print('show reference point')
         except:
-            inps.disp_seed = False
+            inps.disp_ref_pixel = False
             print('Cannot find reference point info!')
 
     width = int(metadata['WIDTH'])
@@ -178,7 +182,7 @@ def write_kmz_file(data, metadata, out_file, inps=None):
     # 2.2 Making PNG file - colorbar
     pc = plt.figure(figsize=(1, 8))
     cax = pc.add_subplot(111)
-    norm = mpl.colors.Normalize(vmin=inps.ylim[0], vmax=inps.ylim[1])
+    norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=inps.colormap,
                                      norm=norm, orientation='vertical')
 
@@ -276,7 +280,6 @@ def write_kmz_file(data, metadata, out_file, inps=None):
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
     plt.switch_backend('Agg')  # Backend setting
-    #print("The Python version is %s.%s.%s" % sys.version_info[:3])
 
     # Read data
     data, atr = readfile.read(inps.file, datasetName=inps.dset)
@@ -285,18 +288,20 @@ def main(iargs=None):
     (data,
      inps.disp_unit,
      inps.disp_scale,
-     inps.wrap) = pp.scale_data4disp_unit_and_rewrap(data=data,
+     inps.wrap) = pp.scale_data4disp_unit_and_rewrap(data,
                                                      metadata=atr,
                                                      disp_unit=inps.disp_unit,
-                                                     wrap=inps.wrap)
+                                                     wrap=inps.wrap,
+                                                     wrap_range=inps.wrap_range)
     if inps.wrap:
-        inps.ylim = [-np.pi, np.pi]
+        inps.vlim = inps.wrap_range
 
     # Output filename
+    inps.fig_title = pp.auto_figure_title(inps.file,
+                                          datasetNames=inps.dset,
+                                          inps_dict=vars(inps))
     if not inps.outfile:
-        inps.outfile = '{}.kmz'.format(pp.auto_figure_title(inps.file,
-                                                            datasetNames=inps.dset,
-                                                            inps_dict=vars(inps)))
+        inps.outfile = '{}.kmz'.format(inps.fig_title)
 
     # 2. Generate Google Earth KMZ
     kmz_file = write_kmz_file(data,

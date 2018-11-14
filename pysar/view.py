@@ -543,14 +543,14 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
         # Plot Reference Point
         if inps.disp_ref_pixel and inps.ref_lalo:
             ax.plot(inps.ref_lalo[1], inps.ref_lalo[0],
-                    inps.ref_marker, ms=inps.ref_size)
+                    inps.ref_marker, ms=inps.ref_marker_size)
             if print_msg:
                 print('plot reference point')
 
         # Plot points of interest
         if inps.pts_lalo is not None:
             ax.plot(inps.pts_lalo[:, 1], inps.pts_lalo[:, 0],
-                    inps.pts_marker, ms=inps.ref_size,
+                    inps.pts_marker, ms=inps.ref_marker_size,
                     markeredgecolor='black')
             if print_msg:
                 print('plot points of interest')
@@ -617,14 +617,14 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
                 ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
 
             if ref_y and ref_x:
-                ax.plot(ref_x, ref_y, inps.ref_marker, ms=inps.ref_size)
+                ax.plot(ref_x, ref_y, inps.ref_marker, ms=inps.ref_marker_size)
                 if print_msg:
                     print('plot reference point')
 
         # Plot points of interest
         if inps.pts_yx is not None:
             ax.plot(inps.pts_yx[:, 1], inps.pts_yx[:, 0],
-                    inps.pts_marker, ms=inps.ref_size,
+                    inps.pts_marker, ms=inps.ref_marker_size,
                     markeredgecolor='black')
             if print_msg:
                 print('plot points of interest')
@@ -863,7 +863,7 @@ def update_figure_setting(inps, print_msg=True):
         # Figure number (<= 200 subplots per figure)
         if not inps.fig_num:
             inps.fig_num = 1
-            while inps.dsetNum/float(inps.fig_num) > 200.0:
+            while inps.dsetNum/float(inps.fig_num) > 160.0:
                 inps.fig_num += 1
 
         # Row/Column number
@@ -1016,7 +1016,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
         if ref_y and ref_x:
             ax.plot(ref_x - inps.pix_box[0],
                     ref_y - inps.pix_box[1],
-                    inps.ref_marker, ms=inps.ref_size)
+                    inps.ref_marker, ms=inps.ref_marker_size)
 
     ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
     ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
