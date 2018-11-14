@@ -107,7 +107,7 @@ def sample_decorrelation_phase(L, coherence, size=1, display=False, scale=1.0, f
     '''
     phiNum = 100
     phiMax = np.pi * float(scale)
-    pdf = ifginv.phase_pdf_ds(int(L), coherence, phi_num=phiNum)[0].flatten()
+    pdf = ifginv.phase_pdf_ds(int(L), coherence, phi_num=phiNum)[0].flatten()   #for PS: ifginv.phase_variance_ps()
     phi = np.linspace(-phiMax, phiMax, phiNum+1, endpoint=True)
     phi_dist = stats.rv_histogram((pdf, phi))
     #sample = np.nan

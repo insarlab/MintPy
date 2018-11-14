@@ -37,15 +37,15 @@ DESCRIPTION = """
   5) corner files, e.g. 130118_4rlks.amp.corner_full and 130118_4rlks.amp.corner
       It can be generated from file 1 with Gamma command SLC_corners)
 
-  This script will read all these files (generate them if not existed), merge them into one, convert their name from
+  This script will read all these files (generate 4 and 5 if not existed), merge them into one, convert their name from
   Gamma style to ROI_PAC style, and write to an metadata file, same name as input binary data file with suffix .rsc,
   e.g. diff_filt_HDR_130118-130129_4rlks.unw.rsc
 
 
   For DEM file in radar/geo coordinates (.utm.dem/.hgt_sim) and lookup table file for geocoding (.UTM_TO_RDC), 2 metadata
   files are required:
-  1) .par file, contains geo coordinates info, for DEM in geo coordinates and lookup table, e.g. sim_150911-150922.utm.dem.par
-  2) .diff_par file, contains radar coordinates info, for DEM in radar coordinates, e.g. sim_150911-150922.diff_par
+  1) .par      file, for DEM in geo   coordinates and lookup table, e.g.: sim_150911-150922.utm.dem.par
+  2) .diff_par file, for DEM in radar coordinates, e.g. sim_150911-150922.diff_par
 
 
   Here is an example of how your Gamma files should look like, after all interferograms/SLCs are coregistered:
@@ -64,7 +64,7 @@ DESCRIPTION = """
 
   Notes: both - and _ are supported; 
          both YYMMDD and YYYYMMDD naming are also supported;
-         if no multilooking applied, do not "_4rlks" in your file names.
+         if no multilooking applied, do not add "_4rlks" in your file names.
 """
 
 

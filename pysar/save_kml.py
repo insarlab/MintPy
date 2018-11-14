@@ -156,7 +156,6 @@ def write_kmz_file(data, metadata, out_file, inps=None):
 
     # Plot - reference pixel
     if inps.disp_ref_pixel:
-        #import pdb; pdb.set_trace()
         try:
             xref = int(metadata['REF_X'])
             yref = int(metadata['REF_Y'])
