@@ -75,16 +75,16 @@ def get_largest_conn_component(mask_in, min_num_pixel=1e4, display=False):
 def median_abs_deviation_threshold(data, center=None, cutoff=3.):
     """calculate rms_threshold based on the standardised residual
     outlier detection with median absolute deviation.
-    With the default input arguments, it's equivalent to:
-        np.median(data) / .6745 * 3.0
+    https://www.statsmodels.org/dev/generated/statsmodels.robust.scale.mad.html
     """
-    from statsmodels.robust import mad
     data = np.array(data)
     if center is None:
         center = np.median(data)
-    rms_mad = mad(data, c=0.67448975019608171, center=center)
-    rms_threshold = center + cutoff * rms_mad
-    return rms_threshold
+    #from statsmodels.robust import mad
+    #data_mad = mad(data, center=center)
+    data_mad = np.median(np.abs(data - center)) / 0.67448975019608171
+    threshold = center + cutoff * data_mad
+    return threshold
 
 
 def min_region_distance(mask1, mask2, display=False):

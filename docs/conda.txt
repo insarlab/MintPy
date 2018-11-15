@@ -15,4 +15,3 @@ pyproj
 pyresample
 scikit-image
 scipy
-statsmodels
