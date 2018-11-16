@@ -1583,6 +1583,7 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
                     'disp_dem_contour'  : bool,  True/False
                     'dem_contour_step'  : float, 200.0
                     'dem_contour_smooth': float, 3.0
+                    'pix_box'           : 4-tuple of int, (x0, y0, x1, y1)
     Returns:    ax : matplotlib.pyplot.Axes or BasemapExt object
     Examples:   m = pp.plot_dem_background(m, geo_box=inps.geo_box, dem=dem, inps=inps)
                 ax = pp.plot_dem_background(ax=ax, geo_box=None, dem_shade=dem_shade,
@@ -1597,13 +1598,18 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
          dem_contour,
          dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
 
+    if not hasattr(inps, 'pix_box'):
+        inps.pix_box = (0, 0, dem.shape[1], dem.shape[0])
+
     if dem_shade is not None:
         # geo coordinates
         if isinstance(ax, BasemapExt) and geo_box is not None:
             ax.imshow(dem_shade, interpolation='spline16', origin='upper')
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.imshow(dem_shade, interpolation='spline16')
+            ax.imshow(dem_shade, interpolation='spline16',
+                      extent=(inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+                              inps.pix_box[3]-0.5, inps.pix_box[1]-0.5))
 
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
@@ -1615,7 +1621,9 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
         # radar coordinates
         elif isinstance(ax, plt.Axes):
             ax.contour(dem_contour, dem_contour_seq,
-                       origin='lower', colors='black', alpha=0.5)
+                       origin='lower', colors='black', alpha=0.5,
+                       extent=(inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+                               inps.pix_box[3]-0.5, inps.pix_box[1]-0.5))
     return ax
 
 
