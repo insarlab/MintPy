@@ -64,11 +64,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                 maxDigit = max([len(i) for i in list(datasetDict.keys())])
                 for dsName in datasetDict.keys():
                     data = datasetDict[dsName]
-                    print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
+                    print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<20} '
                            'with compression={c}').format(d=dsName,
                                                           w=maxDigit,
                                                           t=str(data.dtype),
-                                                          s=data.shape,
+                                                          s=str(data.shape),
                                                           c=compression))
                     ds = f.create_dataset(dsName,
                                           data=data,
@@ -87,11 +87,11 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
                         maxDigit = max([len(i) for i in dsNames]+[maxDigit])
                         for dsName in dsNames:
                             ds = fr[dsName]
-                            print(('create dataset /{d:<{w}} of {t:<10} in size of {s} '
+                            print(('create dataset /{d:<{w}} of {t:<10} in size of {s:<10} '
                                    'with compression={c}').format(d=dsName,
                                                                   w=maxDigit,
                                                                   t=str(ds.dtype),
-                                                                  s=ds.shape,
+                                                                  s=str(ds.shape),
                                                                   c=compression))
                             f.create_dataset(dsName,
                                              data=ds[:],

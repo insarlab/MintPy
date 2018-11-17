@@ -1043,30 +1043,34 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     # Title
     if inps.disp_title:
         # get title
+        subplot_title = None
         if inps.key in timeseriesKeyNames or inps.dset[0].startswith('bperp'):
             try:
                 subplot_title = dt.strptime(inps.dset[i].split('-')[1], '%Y%m%d').isoformat()[0:10]
             except:
                 subplot_title = str(inps.dset[i])
         elif inps.key in ['ifgramStack', 'interferograms', 'coherence', 'wrapped']:
-            subplot_title = str(i)
-            if inps.fig_row_num * inps.fig_col_num < 10:
-                subplot_title += '\n{}'.format(inps.dset[i])
-            elif inps.fig_row_num * inps.fig_col_num > 200:
-                subplot_title = ''
+            num_subplot = inps.fig_row_num * inps.fig_col_num
+            if num_subplot <= 10:
+                subplot_title = '{}\n{}'.format(i, inps.dset[i])
+            elif num_subplot <= 30:
+                subplot_title = '{}'.format(inps.dset[i].split('-')[1])
+            elif num_subplot <= 200:
+                subplot_title = '{}'.format(i)
         else:
             subplot_title = str(inps.dset[i])
 
         # plot title
-        if not inps.fig_title_in:
-            if inps.dset[i] in inps.dropDatasetList:
-                ax.set_title(subplot_title, fontsize=inps.font_size,
-                             color='crimson', fontweight='bold')
+        if subplot_title:
+            if not inps.fig_title_in:
+                if inps.dset[i] in inps.dropDatasetList:
+                    ax.set_title(subplot_title, fontsize=inps.font_size,
+                                 color='crimson', fontweight='bold')
+                else:
+                    ax.set_title(subplot_title, fontsize=inps.font_size)
             else:
-                ax.set_title(subplot_title, fontsize=inps.font_size)
-        else:
-            prop = dict(size=inps.font_size)
-            pp.add_inner_title(ax, subplot_title, loc=1, prop=prop)
+                prop = dict(size=inps.font_size)
+                pp.add_inner_title(ax, subplot_title, loc=1, prop=prop)
 
     # Flip Left-Right / Up-Down
     if inps.flip_lr:
