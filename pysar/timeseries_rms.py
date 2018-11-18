@@ -141,8 +141,9 @@ def analyze_rms(date_list, rms_list, inps):
     return inps
 
 
-def plot_rms_bar(ax, date_list, rms, cutoff=3.,
-                 font_size=12, tick_year_num=1, legend_loc='best'):
+def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12, 
+                 tick_year_num=1, legend_loc='best', disp_side_plot=True, disp_thres_text=True,
+                 ylabel=r'RMS of Phase Residual $\hat \phi_\epsilon$ [mm]'):
     """ Bar plot Phase Residual RMS
     Parameters: ax : Axes object
                 date_list : list of string in YYYYMMDD format
@@ -180,36 +181,38 @@ def plot_rms_bar(ax, date_list, rms, cutoff=3.,
     # axis format
     ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)
     ax.set_xlabel('Time [years]', fontsize=font_size)
-    ax.set_ylabel(r'RMS of Phase Residual $\hat \phi_\epsilon$ [mm]', fontsize=font_size)
-    #ax.yaxis.set_ticks_position('both')
+    ax.set_ylabel(ylabel, fontsize=font_size)
     ax.tick_params(which='both', direction='in', labelsize=font_size,
                    bottom=True, top=True, left=True, right=True)
 
     # 2nd axes for circles
-    divider = make_axes_locatable(ax)
-    ax2 = divider.append_axes("right", "10%", pad="2%")
-    ax2.plot(np.ones(rms.shape, np.float32) * 0.5, rms, 'o', mfc='none', color=pp.mplColors[0])
-    ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5, rms[ref_idx], 'o', mfc='none', color=pp.mplColors[1])
-    if not np.all(ex_idx==False):
-        ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5, rms[ex_idx], 'o', mfc='none', color='darkgray')
-    ax2.plot(np.array([0, 1]), np.array([rms_threshold, rms_threshold]), '--k')
+    if disp_side_plot:
+        divider = make_axes_locatable(ax)
+        ax2 = divider.append_axes("right", "10%", pad="2%")
+        ax2.plot(np.ones(rms.shape, np.float32) * 0.5, rms, 'o', mfc='none', color=pp.mplColors[0])
+        ax2.plot(np.ones(rms.shape, np.float32)[ref_idx] * 0.5, rms[ref_idx], 'o', mfc='none', color=pp.mplColors[1])
+        if not np.all(ex_idx==False):
+            ax2.plot(np.ones(rms.shape, np.float32)[ex_idx] * 0.5, rms[ex_idx], 'o', mfc='none', color='darkgray')
+        ax2.plot(np.array([0, 1]), np.array([rms_threshold, rms_threshold]), '--k')
 
-    ax2.set_ylim(ax.get_ylim())
-    ax2.set_xlim([0, 1])
-    ax2.tick_params(which='both', direction='in', labelsize=font_size,
-                    bottom=True, top=True, left=True, right=True)
-    ax2.get_xaxis().set_ticks([])
-    ax2.get_yaxis().set_ticklabels([])
+        ax2.set_ylim(ax.get_ylim())
+        ax2.set_xlim([0, 1])
+        ax2.tick_params(which='both', direction='in', labelsize=font_size,
+                        bottom=True, top=True, left=True, right=True)
+        ax2.get_xaxis().set_ticks([])
+        ax2.get_yaxis().set_ticklabels([])
 
-    ax.legend(loc=legend_loc, fontsize=font_size)
+    ax.legend(loc=legend_loc, frameon=False, fontsize=font_size)
+
     # rms_threshold text
-    ymin, ymax = ax.get_ylim()
-    yoff = (ymax - ymin) * 0.1
-    if (rms_threshold - ymin) > 0.5 * (ymax - ymin):
-        yoff *= -1.
-    ax.annotate('Median Abs Dev * {}'.format(cutoff),
-                xy=(xmin + (xmax-xmin)*0.05, rms_threshold + yoff ),
-                color='k', xycoords='data', fontsize=font_size)
+    if disp_thres_text:
+        ymin, ymax = ax.get_ylim()
+        yoff = (ymax - ymin) * 0.1
+        if (rms_threshold - ymin) > 0.5 * (ymax - ymin):
+            yoff *= -1.
+        ax.annotate('Median Abs Dev * {}'.format(cutoff),
+                    xy=(xmin + (xmax-xmin)*0.05, rms_threshold + yoff ),
+                    color='k', xycoords='data', fontsize=font_size)
     return ax
 
 
