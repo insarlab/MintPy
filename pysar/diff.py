@@ -85,7 +85,7 @@ def diff_file(file1, file2, outFile=None, force=False):
         if k2 not in ['timeseries', 'giantTimeseries']:
             raise Exception('Input multiple dataset files are not the same file type!')
         if len(file2) > 1:
-            raise Exception(('Only 2 files substraction is supported for time series file,'
+            raise Exception(('Only 2 files substraction is supported for time-series file,'
                              ' {} input.'.format(len(file2)+1)))
 
         obj1 = timeseries(file1)

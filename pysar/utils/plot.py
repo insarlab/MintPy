@@ -1598,8 +1598,14 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
          dem_contour,
          dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
 
-    if not hasattr(inps, 'pix_box'):
-        inps.pix_box = (0, 0, dem.shape[1], dem.shape[0])
+    if hasattr(inps, 'pix_box'):
+        box = tuple(inps.pix_box)
+    else:
+        try:
+            data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
+            box = (0, 0, data.shape[1], data.shape[0])
+        except:
+            raise ValueError('no extent info found!')
 
     if dem_shade is not None:
         # geo coordinates
@@ -1608,8 +1614,8 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
         # radar coordinates
         elif isinstance(ax, plt.Axes):
             ax.imshow(dem_shade, interpolation='spline16',
-                      extent=(inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-                              inps.pix_box[3]-0.5, inps.pix_box[1]-0.5))
+                      extent=(box[0]-0.5, box[2]-0.5,
+                              box[3]-0.5, box[1]-0.5))
 
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
@@ -1622,8 +1628,8 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
         elif isinstance(ax, plt.Axes):
             ax.contour(dem_contour, dem_contour_seq,
                        origin='lower', colors='black', alpha=0.5,
-                       extent=(inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-                               inps.pix_box[3]-0.5, inps.pix_box[1]-0.5))
+                       extent=(box[0]-0.5, box[2]-0.5,
+                               box[3]-0.5, box[1]-0.5))
     return ax
 
 

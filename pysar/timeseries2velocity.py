@@ -48,7 +48,7 @@ DROP_DATE_TXT = """exclude_date.txt:
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Inverse velocity from time series.',
+    parser = argparse.ArgumentParser(description='Inverse velocity from time-series.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=TEMPLATE+'\n'+EXAMPLE)
 

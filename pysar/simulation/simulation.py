@@ -21,13 +21,13 @@ from pysar import (ifgram_inversion as ifginv,
 
 
 def velocity2timeseries(date_list, vel=0.03, display=False):
-    '''Simulate displacement time series from linear velocity
+    '''Simulate displacement time-series from linear velocity
     Inputs:
         date_list - list of string in YYYYMMDD or YYMMDD format
         vel        - float, velocity in meter per year
         display    - bool, display simulation or not
     Output:
-        ts         - 2D np.array in size of (date_num,1), displacement time series in m
+        ts         - 2D np.array in size of (date_num,1), displacement time-series in m
     Example:
         date_list = pnet.read_baseline_file('bl_list.txt')[0]
         ts0 = simulate_timeseries(date_list, vel=0.03, display=True)
@@ -44,7 +44,7 @@ def velocity2timeseries(date_list, vel=0.03, display=False):
         plt.scatter(dates, ts*100.0, s=marker_size**2)
         plt.xlabel('Time (years)')
         plt.ylabel('LOS Displacement (cm)')
-        plt.title('Displacement time series with velocity = '+str(vel)+' m/yr')
+        plt.title('Displacement time-series with velocity = '+str(vel)+' m/yr')
         plt.show()
     return ts
 
@@ -247,8 +247,14 @@ def check_board(water_mask, grid_step=100, scale=1., display=True):
     return mask
 
 
-def mogi_deformation(water_mask, source_geom, resolution=60., scale=1., display=True):
-    length, width = water_mask.shape
+def mogi_deformation(shape, source_geom, resolution=60., scale=1., display=True):
+    """Simulate 2D deformation caused by the overpress of a Mogi source underneath
+    
+    Parameters: shape: 2-tuple of int, in (length, width)
+                source_geom : 4-tuple of float, Mogi source geometry: East, North, Depth, Volomn change in SI unit.
+    
+    """
+    length, width = shape
     yy, xx = np.mgrid[0:length:length*1j, 0:width:width*1j]
     yy *= resolution
     xx *= resolution
@@ -260,17 +266,18 @@ def mogi_deformation(water_mask, source_geom, resolution=60., scale=1., display=
     dis_u = dis_map[2, :].reshape(length, width)
     dis_los = ut.enu2los(dis_e, dis_n, dis_u)
 
-    dis_los[water_mask == 0.] = np.nan
+    #dis_los[water_mask == 0.] = np.nan
     dis_los *= scale
 
-    display = True
     if display:
         fig, ax = plt.subplots(1, 4, figsize=[10, 3])
         dmin = np.nanmin(dis_los)
         dmax = np.nanmax(dis_los)
-        for i in range(3):
+        for i, fig_title in enumerate(['east','north','vertical']):
             ax[i].imshow(dis_map[i, :].reshape(length, width), vmin=dmin, vmax=dmax)
+            ax[i].set_title(fig_title)
         im = ax[3].imshow(dis_los, vmin=dmin, vmax=dmax)
+        ax[3].set_title('los - SenD')
         fig.subplots_adjust(right=0.90)
         cax = fig.add_axes([0.92, 0.25, 0.01, 0.5])
         cbar = fig.colorbar(im, cax=cax)

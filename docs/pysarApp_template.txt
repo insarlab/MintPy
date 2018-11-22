@@ -79,8 +79,8 @@ pysar.network.startDate       = auto  #[20090101 / no], auto for no
 pysar.network.endDate         = auto  #[20110101 / no], auto for no
 
 
-## 3.2 Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
-## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
+## 3.2 Invert network of interferograms into time-series using weighted least sqaure (WLS) estimator.
+## Invert network of interferograms into time-series using weighted least sqaure (WLS) estimator.
 ## weighting options for least square inversion [fast option available but not best]:
 ## 1) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS) [recommended]
 ## 2) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS).
@@ -142,8 +142,8 @@ pysar.topographicResidual.excludeDate   = auto  #[20070321 / txtFile / no], auto
                                                 # dates exlcuded for error estimation
 
 ########## 7. Phase Residual for Noise Evaluation
-## 7.1 Phase Residual Root Mean Square
-## calculate the deramped Root Mean Square (RMS) for each epoch of timeseries residual
+## 7.1 Residual Phase Root Mean Square
+## calculate the Root Mean Square (RMS) of residual phase time-series for each acquisition
 ## To get rid of long wavelength component in space, a ramp is removed for each epoch.
 ## Set optimal reference date to date with min RMS
 ## Set exclude dates (outliers) to dates with RMS > cutoff * median RMS (Median Absolute Deviation)
@@ -152,13 +152,13 @@ pysar.residualRms.ramp     = auto  #[quadratic / linear / no], auto for quadrati
 pysar.residualRms.cutoff   = auto  #[0.0-inf], auto for 3
 
 ## 7.2 Select Reference Date
-## reference all timeseries to one date in time
+## reference all time-series to one date in time
 ## no     - do not change the default reference date (1st date)
 pysar.reference.date  = auto   #[reference_date.txt / 20090214 / no], auto for minRMS
 
 
 ########## 8. Velocity Estimation
-## estimate linear velocity from timeseries, and from tropospheric delay file if exists.
+## estimate linear velocity from time-series, and from tropospheric delay file if exists.
 pysar.velocity.excludeDate = auto   #[exclude_date.txt / 20080520,20090817 / no], auto for exclude_date.txt
 pysar.velocity.startDate   = auto   #[20070101 / no], auto for no
 pysar.velocity.endDate     = auto   #[20101230 / no], auto for no
@@ -175,7 +175,7 @@ pysar.geocode.fillValue    = auto  #[np.nan, 0, ...], auto for np.nan, fill valu
 
 
 ## 9.2 Export to other formats
-pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save timeseries to HDF-EOS5 format
+pysar.save.hdfEos5         = auto   #[yes / no], auto for no, save time-series to HDF-EOS5 format
 pysar.save.hdfEos5.update  = auto   #[yes / no], auto for no, put XXXXXXXX as endDate in output filename
 pysar.save.hdfEos5.subset  = auto   #[yes / no], auto for no, put subset range info   in output filename
 pysar.save.kml             = auto   #[yes / no], auto for yes, save geocoded velocity to Google Earth KMZ file

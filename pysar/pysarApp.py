@@ -709,7 +709,7 @@ def main(iargs=None):
         print(rmsCmd)
         status = subprocess.Popen(rmsCmd, shell=True).wait()
         if status is not 0:
-            raise Exception('Error while calculating RMS of time series phase residual.\n')
+            raise Exception('Error while calculating RMS of residual phase time-series.\n')
     else:
         print('No timeseries residual file found! Skip residual RMS analysis.')
 

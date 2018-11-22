@@ -40,7 +40,7 @@ Rousseeuw, P. J., and M. Hubert (2011), Robust statistics for outlier detection,
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped time series.',
+    parser = argparse.ArgumentParser(description='Calculate Root Mean Square (RMS) of deramped residual phase time-series.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 

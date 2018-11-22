@@ -36,10 +36,10 @@ EXAMPLE = """example:
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Interactive Time-series Viewer',
+    parser = argparse.ArgumentParser(description='Interactive time-series viewer',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
-    parser.add_argument('timeseries_file', nargs='+', help='time series file to display')
+    parser.add_argument('timeseries_file', nargs='+', help='time-series file to display')
     parser.add_argument('--label', dest='file_label', nargs='*', help='labels to display for multiple input files')
     parser.add_argument('--ylim', dest='ylim', nargs=2, metavar=('YMIN', 'YMAX'), type=float,
                         help='Y limits for point plotting.')
@@ -445,7 +445,7 @@ def plot_ts_scatter(ax, dis_ts, inps, ppar):
 
 
 def plot_point_timeseries(yx, fig, ax, ts_data, mask, inps):
-    """Plot point time series displacement at pixel [y, x]
+    """Plot point displacement time-series at pixel [y, x]
     Parameters: yx : list of 2 int
                 fig : Figure object
                 ax : Axes object
@@ -575,7 +575,7 @@ def save_ts_plot(yx, fig_v, fig_ts, d_ts, inps):
                               disp_unit=inps.disp_unit,
                               print_msg=False)
 
-    # TXT - point time series
+    # TXT - point time-series
     outName = '{}_ts.txt'.format(inps.outfile_base)
     header_info = 'timeseries_file={}\n'.format(inps.timeseries_file)
     header_info += '{}\n'.format(_get_ts_title(yx[0], yx[1], inps.coord))
@@ -594,12 +594,12 @@ def save_ts_plot(yx, fig_v, fig_ts, d_ts, inps):
                fmt='%s',
                delimiter='\t',
                header=header_info)
-    print('save time series displacement in meter to '+outName)
+    print('save displacement time-series in meter to '+outName)
 
-    # Figure - point time series
+    # Figure - point time-series
     outName = '{}_ts.pdf'.format(inps.outfile_base)
     fig_ts.savefig(outName, bbox_inches='tight', transparent=True, dpi=inps.fig_dpi)
-    print('save time series plot to '+outName)
+    print('save time-series plot to '+outName)
 
     # Figure - map
     outName = '{}_{}.png'.format(inps.outfile_base, inps.date_list[inps.init_idx])

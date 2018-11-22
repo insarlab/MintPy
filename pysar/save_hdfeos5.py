@@ -215,7 +215,7 @@ def prep_metadata(ts_file, print_msg=True):
 
 
 def get_output_filename(metadata, update_mode=False, subset_mode=False):
-    """Get output file name of HDF-EOS5 time series file"""
+    """Get output file name of HDF-EOS5 time-series file"""
     SAT = metadata['mission']
     SW = metadata['beam_mode']
     if metadata['beam_swath']:

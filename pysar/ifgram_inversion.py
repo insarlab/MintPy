@@ -41,7 +41,7 @@ EXAMPLE = """example:
 """
 
 TEMPLATE = """
-## Invert network of interferograms into time series using weighted least sqaure (WLS) estimator.
+## Invert network of interferograms into time-series using weighted least sqaure (WLS) estimator.
 ## weighting options for least square inversion:
 ## 1) var - use inverse of covariance as weight (Guarnieri & Tebaldini, 2008, TGRS) [recommended]
 ## 2) fim - use Fisher Information Matrix as weight (Seymour & Cumming, 1994, IGARSS)
@@ -372,7 +372,7 @@ def estimate_timeseries(A, B, tbase_diff, ifgram, weight_sqrt=None, min_norm_vel
                 rcond - cut-off ratio of small singular values of A or B, to maintain robustness.
                     It's recommend to >= 1e-5 by experience, to generate reasonable result.
                 min_redundancy - min redundancy defined as min num_ifgram for every SAR acquisition
-    Returns:    ts - 2D np.array in size of (num_date, num_pixel), phase time series
+    Returns:    ts - 2D np.array in size of (num_date, num_pixel), phase time-series
                 temp_coh - 1D np.array in size of (num_pixel), temporal coherence
                 num_inv_ifg - 1D np.array in size of (num_pixel), number of ifgrams
                     used during the inversion
@@ -856,7 +856,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         weight = np.sqrt(weight)
 
         # Weighted Inversion pixel by pixel
-        print('inverting network of interferograms into time series ...')
+        print('inverting network of interferograms into time-series ...')
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
         for i in range(num_pixel2inv):
             idx = idx_pixel2inv[i]

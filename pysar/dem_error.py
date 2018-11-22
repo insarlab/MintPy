@@ -69,7 +69,7 @@ def create_parser():
                              'slant range distance\n' +
                              'and/or 3D perpendicular baseline')
     parser.add_argument('-o', '--outfile',
-                        help='Output file name for corrected time series')
+                        help='Output file name for corrected time-series')
 
     parser.add_argument('--ex', '--exclude', dest='excludeDate', nargs='*', default=[],
                         help='Exclude date(s) for DEM error estimation.\n' +
@@ -261,7 +261,7 @@ def read_geometry(inps):
 
 def estimate_dem_error(ts0, A0, tbase, drop_date=None, phaseVelocity=False, num_step=0):
     """Estimate DEM error with least square optimization.
-    Parameters: ts0 : 2D np.array in size of (numDate, numPixel), original time series displacement
+    Parameters: ts0 : 2D np.array in size of (numDate, numPixel), original displacement time-series
                 A0  : 2D np.array in size of (numDate, model_num), design matrix in [A_geom, A_def]
                 tbase : 2D np.array in size of (numDate, 1), temporal baseline
                 drop_date : 1D np.array in bool data type, mark the date used in the estimation
