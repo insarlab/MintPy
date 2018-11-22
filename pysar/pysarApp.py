@@ -698,7 +698,10 @@ def main(iargs=None):
     else:
         print('No correction for topographic residuals.')
 
-    # Timeseries Residual Standard Deviation
+    ##############################################
+    # Phase Residual for Noise Evaluation
+    ##############################################
+    # Timeseries Residual RMS
     print('\n**********  Timeseries Residual Root Mean Square  **********')
     if inps.timeseriesResFile:
         rmsCmd = 'timeseries_rms.py {} -t {}'.format(inps.timeseriesResFile,

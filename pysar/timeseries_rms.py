@@ -142,7 +142,8 @@ def analyze_rms(date_list, rms_list, inps):
 
 
 def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12, 
-                 tick_year_num=1, legend_loc='best', disp_side_plot=True, disp_thres_text=True,
+                 tick_year_num=1, legend_loc='best',
+                 disp_legend=True, disp_side_plot=True, disp_thres_text=True,
                  ylabel=r'RMS of Phase Residual $\hat \phi_\epsilon$ [mm]'):
     """ Bar plot Phase Residual RMS
     Parameters: ax : Axes object
@@ -166,17 +167,17 @@ def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12,
 
     # Plot reference date
     ref_idx = np.argmin(rms)
-    ax.bar(datex[ref_idx], rms[ref_idx], bar_width.days, color=pp.mplColors[1], label='Reference Date')
+    ax.bar(datex[ref_idx], rms[ref_idx], bar_width.days, color=pp.mplColors[1], label='Reference date')
 
     # Plot exclude dates
     rms_threshold = ut.median_abs_deviation_threshold(rms, center=0., cutoff=cutoff)
     ex_idx = rms > rms_threshold
     if not np.all(ex_idx==False):
-        ax.bar(datex[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude Date')
+        ax.bar(datex[ex_idx], rms[ex_idx], bar_width.days, color='darkgray', label='Exclude date')
 
     # Plot rms_threshold line
     (ax, xmin, xmax) = pp.auto_adjust_xaxis_date(ax, datevector, font_size, every_year=tick_year_num)
-    ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k', label='RMS Threshold')
+    ax.plot(np.array([xmin, xmax]), np.array([rms_threshold, rms_threshold]), '--k', label='RMS threshold')
 
     # axis format
     ax = pp.auto_adjust_yaxis(ax, np.append(rms, rms_threshold), font_size, ymin=0.0)
@@ -202,7 +203,8 @@ def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12,
         ax2.get_xaxis().set_ticks([])
         ax2.get_yaxis().set_ticklabels([])
 
-    ax.legend(loc=legend_loc, frameon=False, fontsize=font_size)
+    if disp_legend:
+        ax.legend(loc=legend_loc, frameon=False, fontsize=font_size)
 
     # rms_threshold text
     if disp_thres_text:
