@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
 # Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
