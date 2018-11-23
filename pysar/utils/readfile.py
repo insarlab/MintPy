@@ -634,35 +634,13 @@ def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
         if len(metafile_exts) == 0:
             raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
-        # Read metadata file and FILE_TYPE
-        while fext in ['.geo', '.rdr']:
-            fbase, fext = os.path.splitext(fbase)
-        if not fext:
-            fext = fbase
-        metafile0 = fname + metafile_exts[0]
-        if metafile0.endswith('.rsc'):
-            atr = read_roipac_rsc(metafile0)
-            if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = fext
-
-        elif metafile0.endswith('.xml'):
-            atr = read_isce_xml(metafile0)
-            if 'FILE_TYPE' not in atr.keys():
-                atr['FILE_TYPE'] = atr.get('image_type', fext)
-
-        elif metafile0.endswith('.par'):
-            atr = read_gamma_par(metafile0)
-            atr['FILE_TYPE'] = fext
-
-        elif metafile0.endswith('.hdr'):
-            atr = read_template(metafile0)
-            atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[xmlDict.get('data type', '4')]
-            atr['FILE_TYPE'] = atr['file type']
-
+        atr = {}
         # PROCESSOR
         if any(i.endswith(('.xml', '.hdr')) for i in metafile_exts):
             atr['PROCESSOR'] = 'isce'
-            #atr.update(read_isce_xml(fname+'.xml'))
+            xml_exts = [i for i in metafile_exts if i.endswith('.xml')]
+            if len(xml_exts) > 0:
+                atr.update(read_isce_xml(fname+xml_exts[0]))
         elif any(i.endswith('.par') for i in metafile_exts):
             atr['PROCESSOR'] = 'gamma'
         elif any(i.endswith('.rsc') for i in metafile_exts):
@@ -670,6 +648,31 @@ def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
                 atr['PROCESSOR'] = 'roipac'
         if 'PROCESSOR' not in atr.keys():
             atr['PROCESSOR'] = 'pysar'
+
+        # Read metadata file and FILE_TYPE
+        while fext in ['.geo', '.rdr']:
+            fbase, fext = os.path.splitext(fbase)
+        if not fext:
+            fext = fbase
+        metafile0 = fname + metafile_exts[0]
+        if metafile0.endswith('.rsc'):
+            atr.update(read_roipac_rsc(metafile0))
+            if 'FILE_TYPE' not in atr.keys():
+                atr['FILE_TYPE'] = fext
+
+        elif metafile0.endswith('.xml'):
+            atr.update(read_isce_xml(metafile0))
+            if 'FILE_TYPE' not in atr.keys():
+                atr['FILE_TYPE'] = atr.get('image_type', fext)
+
+        elif metafile0.endswith('.par'):
+            atr.update(read_gamma_par(metafile0))
+            atr['FILE_TYPE'] = fext
+
+        elif metafile0.endswith('.hdr'):
+            atr.update(read_template(metafile0))
+            atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[xmlDict.get('data type', '4')]
+            atr['FILE_TYPE'] = atr['file type']
 
     # UNIT
     k = atr['FILE_TYPE'].replace('.', '')

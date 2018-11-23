@@ -1598,14 +1598,14 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
          dem_contour,
          dem_contour_seq) = prepare_dem_background(dem, inps=inps, print_msg=print_msg)
 
+    # get extent
     if hasattr(inps, 'pix_box'):
-        box = tuple(inps.pix_box)
+        pix_box = tuple(inps.pix_box)
     else:
-        try:
-            data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
-            box = (0, 0, data.shape[1], data.shape[0])
-        except:
-            raise ValueError('no extent info found!')
+        data = [i for i in [dem, dem_shade, dem_contour] if i is not None][0]
+        pix_box = (0, 0, data.shape[1], data.shape[0])
+    extent = (pix_box[0]-0.5, pix_box[2]-0.5,
+              pix_box[3]-0.5, pix_box[1]-0.5) #(left, right, bottom, top) in data coordinates
 
     if dem_shade is not None:
         # geo coordinates
@@ -1613,23 +1613,19 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
             ax.imshow(dem_shade, interpolation='spline16', origin='upper')
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.imshow(dem_shade, interpolation='spline16',
-                      extent=(box[0]-0.5, box[2]-0.5,
-                              box[3]-0.5, box[1]-0.5))
+            ax.imshow(dem_shade, interpolation='spline16', extent=extent)
 
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
         if isinstance(ax, BasemapExt) and geo_box is not None:
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
-            ax.contour(xx, yy, dem_contour, dem_contour_seq,
-                       origin='upper', colors='black', alpha=0.5, latlon='FALSE')
+            ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
+                       colors='black', alpha=0.5, latlon='FALSE')
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.contour(dem_contour, dem_contour_seq,
-                       origin='lower', colors='black', alpha=0.5,
-                       extent=(box[0]-0.5, box[2]-0.5,
-                               box[3]-0.5, box[1]-0.5))
+            ax.contour(dem_contour, dem_contour_seq, origin='upper',
+                       colors='black', alpha=0.5, extent=extent)
     return ax
 
 

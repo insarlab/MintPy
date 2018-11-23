@@ -296,7 +296,7 @@ def phase_variance_ps(L, coherence=None, epsilon=1e-3):
 
 def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
     """Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)"""
-    lineStr = '    number of multilooks L={}'.format(L)
+    lineStr = '    number of looks L={}'.format(L)
     if L > 80:
         L = 80
         lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'

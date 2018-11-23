@@ -144,7 +144,7 @@ def analyze_rms(date_list, rms_list, inps):
 def plot_rms_bar(ax, date_list, rms, cutoff=3., font_size=12, 
                  tick_year_num=1, legend_loc='best',
                  disp_legend=True, disp_side_plot=True, disp_thres_text=True,
-                 ylabel=r'RMS of Phase Residual $\hat \phi_\epsilon$ [mm]'):
+                 ylabel=r'Residual Phase $\hat \phi_{resid}$ RMS [mm]'):
     """ Bar plot Phase Residual RMS
     Parameters: ax : Axes object
                 date_list : list of string in YYYYMMDD format

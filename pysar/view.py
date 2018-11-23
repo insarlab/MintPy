@@ -601,11 +601,10 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
         # Plot Data
         if print_msg:
             print('plotting Data ...')
-        im = ax.imshow(data, cmap=inps.colormap,
-                       vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=(inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
-                               inps.pix_box[3]-0.5, inps.pix_box[1]-0.5),
-                       alpha=inps.transparency, interpolation='nearest')
+        extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+                  inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)   #(left, right, bottom, top) in data coordinates
+        im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
+                       extent=extent, alpha=inps.transparency, interpolation='nearest')
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
@@ -629,8 +628,8 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
             if print_msg:
                 print('plot points of interest')
 
-        ax.set_xlim(inps.pix_box[0]-0.5, inps.pix_box[2]-0.5)   #ax.set_xlim(-0.5, num_col-0.5)
-        ax.set_ylim(inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)   #ax.set_ylim(num_row-0.5, -0.5)
+        ax.set_xlim(extent[0:2])
+        ax.set_ylim(extent[2:4])
 
         # Status bar
         def format_coord(x, y):
@@ -994,17 +993,20 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     """
     # Plot DEM
     if inps.dem_file:
-        ax = pp.plot_dem_background(ax=ax, geo_box=None, dem_shade=inps.dem_shade,
+        ax = pp.plot_dem_background(ax=ax, geo_box=None,
+                                    dem_shade=inps.dem_shade,
                                     dem_contour=inps.dem_contour,
-                                    dem_contour_seq=inps.dem_contour_seq)
+                                    dem_contour_seq=inps.dem_contour_seq,
+                                    inps=inps)
     # Plot Data
-    try:
-        im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest',
-                       alpha=inps.transparency,
-                       vmin=inps.vlim[0], vmax=inps.vlim[1])
-    except:
-        im = ax.imshow(data, cmap=inps.colormap, interpolation='nearest',
-                       alpha=inps.transparency)
+    vlim = inps.vlim
+    if vlim is None:
+        vlim = [np.nanmin(data), np.nanmax(data)]
+    extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
+              inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
+    im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
+                   interpolation='nearest', alpha=inps.transparency, extent=extent)
+
     # Plot Seed Point
     if inps.disp_ref_pixel:
         ref_y, ref_x = None, None
@@ -1014,12 +1016,10 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
             ref_y, ref_x = int(metadata['REF_Y']), int(metadata['REF_X'])
 
         if ref_y and ref_x:
-            ax.plot(ref_x - inps.pix_box[0],
-                    ref_y - inps.pix_box[1],
-                    inps.ref_marker, ms=inps.ref_marker_size)
+            ax.plot(ref_x, ref_y, inps.ref_marker, ms=inps.ref_marker_size)
 
-    ax.set_xlim(-0.5, np.shape(data)[1]-0.5)
-    ax.set_ylim(np.shape(data)[0]-0.5, -0.5)
+    ax.set_xlim(extent[0:2])
+    ax.set_ylim(extent[2:4])
 
     # Subplot Setting
     ## Tick and Label
@@ -1035,8 +1035,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
     # status bar
     def format_coord(x, y):
-        row = int(y + 0.5)
-        col = int(x + 0.5)
+        row = int(y + 0.5) - inps.pix_box[1]
+        col = int(x + 0.5) - inps.pix_box[0]
         return 'x={:.1f}, y={:.1f}, value={:.4f}'.format(x, y, data[row, col])
     ax.format_coord = format_coord
 
