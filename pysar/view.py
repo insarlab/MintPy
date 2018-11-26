@@ -516,7 +516,7 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
         im = m.imshow(data, cmap=inps.colormap, origin='upper',
                       vmin=inps.vlim[0], vmax=inps.vlim[1],
                       alpha=inps.transparency, interpolation='nearest',
-                      animated=inps.animation)
+                      animated=inps.animation, zorder=1)
 
         # Scale Bar
         if inps.disp_scalebar:
@@ -567,20 +567,20 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
         if inps.dem_file:
             coord_dem = ut.coordinate(dem_metadata)
         def format_coord(x, y):
+            msg = 'lon={:.4f}, lat={:.4f}'.format(x, y)
             col = coord.lalo2yx(x, coord_type='lon') - inps.pix_box[0]
             row = coord.lalo2yx(y, coord_type='lat') - inps.pix_box[1]
-            msg = 'Lon={:.4f}, Lat={:.4f}'.format(x, y)
             if 0 <= col < num_col and 0 <= row < num_row:
-                try:
-                    z = data[row, col]
-                    msg += ', value={:.4f}'.format(z)
-                except:
-                    msg += ', value=[]'
+                v = data[row, col]
+                if np.isnan(v) or np.ma.is_masked(v):
+                    msg += ', v=[]'
+                else:
+                    msg += ', v={:.4f}'.format(v)
                 if inps.dem_file:
                     dem_col = coord_dem.lalo2yx(x, coord_type='lon') - dem_pix_box[0]
                     dem_row = coord_dem.lalo2yx(y, coord_type='lat') - dem_pix_box[1]
                     h = dem[dem_row, dem_col]
-                    msg += ', elev={:.1f}'.format(h)
+                    msg += ', h={:.1f}'.format(h)
                 msg += ', x={:.1f}, y={:.1f}'.format(col+inps.pix_box[0],
                                                      row+inps.pix_box[1])
             return msg
@@ -604,7 +604,7 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
         extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
                   inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)   #(left, right, bottom, top) in data coordinates
         im = ax.imshow(data, cmap=inps.colormap, vmin=inps.vlim[0], vmax=inps.vlim[1],
-                       extent=extent, alpha=inps.transparency, interpolation='nearest')
+                       extent=extent, alpha=inps.transparency, interpolation='nearest', zorder=1)
         ax.tick_params(labelsize=inps.font_size)
 
         # Plot Seed Point
@@ -633,18 +633,13 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
 
         # Status bar
         def format_coord(x, y):
+            msg = 'x={:.1f}, y={:.1f}'.format(x, y)
             col = int(x+0.5) - inps.pix_box[0]
             row = int(y+0.5) - inps.pix_box[1]
-            msg = 'x={:.1f}, y={:.1f}'.format(x, y)
-            if 0 <= col < num_col and 0 <= row < num_row:
-                try:
-                    z = data[row, col]
-                    msg += ', value={:.4f}'.format(z)
-                except:
-                    msg += ', value=[]'
-                if inps.dem_file:
-                    h = dem[row, col]
-                    msg += ', elev={:.1f} m'.format(h)
+            if inps.dem_file and 0 <= col < num_col and 0 <= row < num_row:
+                h = dem[row, col]
+                msg += ', h={:.1f} m'.format(h)
+            msg += ', v ='
             return msg
         ax.format_coord = format_coord
 
@@ -1005,7 +1000,8 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
     extent = (inps.pix_box[0]-0.5, inps.pix_box[2]-0.5,
               inps.pix_box[3]-0.5, inps.pix_box[1]-0.5)
     im = ax.imshow(data, cmap=inps.colormap, vmin=vlim[0], vmax=vlim[1],
-                   interpolation='nearest', alpha=inps.transparency, extent=extent)
+                   interpolation='nearest', alpha=inps.transparency,
+                   extent=extent, zorder=1)
 
     # Plot Seed Point
     if inps.disp_ref_pixel:
@@ -1035,9 +1031,7 @@ def plot_subplot4figure(i, inps, ax, data, metadata):
 
     # status bar
     def format_coord(x, y):
-        row = int(y + 0.5) - inps.pix_box[1]
-        col = int(x + 0.5) - inps.pix_box[0]
-        return 'x={:.1f}, y={:.1f}, value={:.4f}'.format(x, y, data[row, col])
+        return 'x={:.1f}, y={:.1f}, v ='.format(x, y)
     ax.format_coord = format_coord
 
     # Title

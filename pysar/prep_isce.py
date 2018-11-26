@@ -8,14 +8,10 @@
 #
 
 
-import argparse
 import os
 import glob
-#import gdal
-#from gdalconst import GA_ReadOnly
+import argparse
 import numpy as np
-#import isce
-#from isceobj.Planet.Planet import Planet
 from pysar.utils import readfile, writefile, utils as ut
 
 

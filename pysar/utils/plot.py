@@ -50,7 +50,6 @@ default_figsize_multi = [15.0, 8.0]
 max_figsize_height = 8.0       # max figure size in vertical direction in inch
 
 
-
 ######################################### BasemapExt class begein ############################################
 class BasemapExt(Basemap):
     """
@@ -1613,10 +1612,10 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
     if dem_shade is not None:
         # geo coordinates
         if isinstance(ax, BasemapExt) and geo_box is not None:
-            ax.imshow(dem_shade, interpolation='spline16', origin='upper')
+            ax.imshow(dem_shade, interpolation='spline16', origin='upper', zorder=0)
         # radar coordinates
         elif isinstance(ax, plt.Axes):
-            ax.imshow(dem_shade, interpolation='spline16', extent=extent)
+            ax.imshow(dem_shade, interpolation='spline16', extent=extent, zorder=0)
 
     if dem_contour is not None and dem_contour_seq is not None:
         # geo coordinates
@@ -1624,11 +1623,11 @@ def plot_dem_background(ax, geo_box=None, dem_shade=None, dem_contour=None, dem_
             yy, xx = np.mgrid[geo_box[1]:geo_box[3]:dem_contour.shape[0]*1j,
                               geo_box[0]:geo_box[2]:dem_contour.shape[1]*1j]
             ax.contour(xx, yy, dem_contour, dem_contour_seq, origin='upper',
-                       colors='black', alpha=0.5, latlon='FALSE')
+                       colors='black', alpha=0.5, latlon='FALSE', zorder=1)
         # radar coordinates
         elif isinstance(ax, plt.Axes):
             ax.contour(dem_contour, dem_contour_seq, origin='upper',
-                       colors='black', alpha=0.5, extent=extent)
+                       colors='black', alpha=0.5, extent=extent, zorder=1)
     return ax
 
 

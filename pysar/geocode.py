@@ -158,10 +158,14 @@ def metadata_radar2geo(atr_in, res_obj, print_msg=True):
     atr = dict(atr_in)
     atr['LENGTH'] = res_obj.length
     atr['WIDTH'] = res_obj.width
-    atr['Y_FIRST'] = res_obj.SNWE[1]
-    atr['X_FIRST'] = res_obj.SNWE[2]
     atr['Y_STEP'] = res_obj.laloStep[0]
     atr['X_STEP'] = res_obj.laloStep[1]
+    if 'Y_FIRST' in atr_in.keys():  #roipac, gamma
+        atr['Y_FIRST'] = res_obj.SNWE[1]
+        atr['X_FIRST'] = res_obj.SNWE[2]
+    else:                           #isce, doris
+        atr['Y_FIRST'] = res_obj.SNWE[1] - res_obj.laloStep[0] / 2.
+        atr['X_FIRST'] = res_obj.SNWE[2] - res_obj.laloStep[1] / 2.
     atr['Y_UNIT'] = 'degrees'
     atr['X_UNIT'] = 'degrees'
 

@@ -870,11 +870,11 @@ def read_isce_xml(fname, standardize=True):
         for coord_name, prefix in zip(['coordinate1', 'coordinate2'], ['X', 'Y']):
             child = root.find("./component[@name='{}']".format(coord_name))
             if ET.iselement(child):
-                v_step  = child.find("./property[@name='delta']").find('value').text
-                v_first = child.find("./property[@name='startingvalue']").find('value').text
-                if abs(float(v_step)) < 1.:
+                v_step  = float(child.find("./property[@name='delta']").find('value').text)
+                v_first = float(child.find("./property[@name='startingvalue']").find('value').text)
+                if abs(v_step) < 1.:
                     xmlDict['{}_STEP'.format(prefix)] = v_step
-                    xmlDict['{}_FIRST'.format(prefix)] = v_first
+                    xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
 
     # PAMDataset, e.g. hgt.rdr.aux.xml
     elif root.tag == 'PAMDataset':
