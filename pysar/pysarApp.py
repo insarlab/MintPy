@@ -766,8 +766,10 @@ def main(iargs=None):
             if not os.path.isdir(geo_dir):
                 os.makedirs(geo_dir)
                 print('create directory: {}'.format(geo_dir))
-            geoCmd = ('geocode.py {v} {c} {t} {g} -l {l} -t {e}'
-                      ' --outdir {d} --update').format(v=inps.velFile,
+            geocode_script = os.path.join(os.path.dirname(__file__), 'geocode.py')
+            geoCmd = ('{scp} {v} {c} {t} {g} -l {l} -t {e}'
+                      ' --outdir {d} --update').format(scp=geocode_script,
+                                                       v=inps.velFile,
                                                        c=inps.tempCohFile,
                                                        t=inps.timeseriesFile,
                                                        g=inps.geomFile,
