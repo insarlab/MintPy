@@ -35,10 +35,12 @@ Check **./PIC** folder for auto generated figures. Use view.py to plot 2D image 
 
 ![velocity on Kuju](https://yunjunzhang.files.wordpress.com/2018/06/vel_kujualosat422f650.jpg)
      
-             
+Another template example for Sentinel-1 data with ISCE/topsStack processor: [FernandinaSenDT128.txt](https://github.com/yunjunz/PySAR/blob/master/docs/FernandinaSenDT128.txt)     
+     
+     
 #### Build your own processing recipe   
 
-PySAR is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentaion or simple run it with -h to see its usage, you could build your own customized processing recipe!
+PySAR is a toolbox with a lot of individual utility scripts, highly modulized in python. Check its documentaion or simple run it with -h to see its usage, you could build your own customized processing recipe! Here is an example to compare the velocities estimated from displacement time-series with different troposphric delay corrections: [link](https://github.com/yunjunz/PySAR/blob/master/sh/compare_velocity_with_diff_tropcor.sh)
 
    
 ### 4. Documentation
