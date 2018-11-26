@@ -3,7 +3,7 @@
 ## Created by Zhang Yunjun, Sep 6th, 2018
 
 ## Run Control: change to 0 to skip the part
-run_proc=0
+run_proc=1
 run_plot=1
 
 ## Run Customized Processing
