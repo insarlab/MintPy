@@ -298,7 +298,7 @@ def update_inps_with_file_metadata(inps, metadata, print_msg=True):
             inps.transparency = 1.0
 
     # Flip Left-Right / Up-Down
-    if not inps.flip_lr and not inps.flip_ud:
+    if inps.auto_flip:
         inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(metadata, print_msg=print_msg)
 
     # Figure Title

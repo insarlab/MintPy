@@ -247,7 +247,7 @@ def read_init_info(inps):
         inps.lalo = None
 
     # Flip up-down / left-right
-    if not inps.flip_lr and not inps.flip_ud:
+    if inps.auto_flip:
         inps.flip_lr, inps.flip_ud = pp.auto_flip_direction(atr)
 
     # display unit ans wrap

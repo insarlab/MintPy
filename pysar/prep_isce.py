@@ -35,7 +35,7 @@ def create_parser():
                         help='The directory which contains all pairs\n'+
                              'e.g.: $PROJECT_DIR/merged/interferograms')
     parser.add_argument('-f', '--file-pattern', nargs = '+', dest='ifgramFiles', type=str,
-                        default=['filt_*.unw','filt_*.cor','filt_*.int'],
+                        default=['filt_*.unw','filt_*.cor'],
                         help='A list of files that will be used in pysar e.g.: filt_fine.unw filt_fine.cor')
     parser.add_argument('-x', '--xml-file', dest='xmlFile', type=str, default=None,
                         help='An xml file to extract common metada for the stack: e.g.: master/IW3.xml')
