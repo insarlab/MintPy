@@ -36,9 +36,10 @@ For csh/tcsh user, add to your **_~/.cshrc_** file for example:
         setenv PYTHONPATH ""
     endif
     
-    ##--------- Python -----------------## 
+    ##--------- conda ------------------## 
     setenv PYTHON3DIR    ~/python/miniconda3
     setenv PATH          ${PATH}:${PYTHON3DIR}/bin
+    setenv PROJ_LIB      ${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
     
     ##--------- PySAR ------------------## 
     setenv PYSAR_HOME    ~/python/PySAR       #for released version, "~/python/PySAR-0.4.0"
@@ -50,9 +51,10 @@ For bash user, add to your **_~/.bashrc_** file for example:
     ############################  Python  ###############################
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
     
-    ##--------- Python -----------------## 
+    ##--------- conda ------------------## 
     export PYTHON3DIR=~/python/miniconda3
     export PATH=${PATH}:${PYTHON3DIR}/bin
+    export PROJ_LIB=${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
     
     ##--------- PySAR ------------------## 
     export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-0.4.0"
