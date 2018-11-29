@@ -145,7 +145,7 @@ def read_input_index_list(idxList, stackFile=None):
     if stackFile:
         obj = ifgramStack(stackFile)
         obj.open(print_msg=False)
-        idxListOut = [i for i in idxListOut if i < obj.numIfgramOrig]
+        idxListOut = [i for i in idxListOut if i < obj.numIfgram]
         obj.close(print_msg=False)
     return idxListOut
 
@@ -385,8 +385,10 @@ def get_date12_to_drop(inps):
         tempList = [date12ListAll[i] for i in inps.excludeIfgIndex]
         date12_to_drop += tempList
         print('--------------------------------------------------')
-        print('Drop ifgrams with the following index number: {}\n{}'.format(
-            len(tempList), zip(inps.excludeIfgIndex, tempList)))
+        print('Drop ifgrams with the following index number: {}'.format(len(tempList)))
+        for i in range(len(tempList)):
+            print('{} : {}'.format(i, tempList[i]))
+            #len(tempList), zip(inps.excludeIfgIndex, tempList)))
 
     # excludeDate
     if inps.excludeDate:

@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2018-11-08
+# Latest update: 2018-11-28
 ###############################################################
 
 
@@ -45,10 +45,10 @@ fi
 
 ## Loaded Dataset
 if [ $plot_loaded_data -eq 1 ]; then
-    view='view.py --nodisplay --update INPUTS/ifgramStack.h5 '
-    $view unwrapPhase-  --zero-mask --wrap | tee -a $log_file
-    $view unwrapPhase-  --zero-mask        | tee -a $log_file
-    $view coherence-    --mask no          | tee -a $log_file
+    view='view.py --nodisplay --update '
+    $view INPUTS/ifgramStack.h5 unwrapPhase-  --zero-mask --wrap | tee -a $log_file
+    $view INPUTS/ifgramStack.h5 unwrapPhase-  --zero-mask        | tee -a $log_file
+    $view INPUTS/ifgramStack.h5 coherence-    --mask no          | tee -a $log_file
 fi
 
 

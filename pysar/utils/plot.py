@@ -1702,11 +1702,11 @@ def plot_gps(ax, SNWE, inps, metadata=dict(), print_msg=True):
                 cm_idx = (gps_data - vmin) / (vmax - vmin)
                 color = cmap(cm_idx)
             ax.scatter(site_lons[i], site_lats[i], color=color,
-                       s=marker_size**2, edgecolors='k')
+                       s=marker_size**2, edgecolors='k', zorder=10)
         if print_msg:
             prog_bar.close()
     else:
-        ax.scatter(site_lons, site_lats, s=marker_size**2, color='w', edgecolors='k')
+        ax.scatter(site_lons, site_lats, s=marker_size**2, color='w', edgecolors='k', zorder=10)
 
     # plot GPS label
     if inps.disp_gps_label:
@@ -1860,7 +1860,7 @@ def check_disp_unit_and_wrap(metadata, disp_unit=None, wrap=False, wrap_range=[-
 
     if wrap:
         # wrap is supported for displacement file types only
-        if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm']:
+        if disp_unit.split('/')[0] not in ['radian', 'm', 'cm', 'mm', '1']:
             wrap = False
             print('WARNING: re-wrap is disabled for disp_unit = {}'.format(disp_unit))
         elif disp_unit.split('/')[0] != 'radian' and (wrap_range[1] - wrap_range[0]) == 2.*np.pi:
