@@ -954,8 +954,8 @@ def auto_row_col_num(subplot_num, data_shape, fig_size, fig_num=1):
 
     data_shape_ratio = float(data_shape[0]) / float(data_shape[1])
     num_ratio = fig_size[1] / fig_size[0] / data_shape_ratio
-    row_num = np.sqrt(subplot_num_per_fig * num_ratio)
-    col_num = np.sqrt(subplot_num_per_fig / num_ratio)
+    row_num = max(np.sqrt(subplot_num_per_fig * num_ratio), 1.)
+    col_num = max(np.sqrt(subplot_num_per_fig / num_ratio), 1.)
     while np.rint(row_num) * np.rint(col_num) < subplot_num_per_fig:
         if row_num % 1 > col_num % 1:
             row_num += 0.5
