@@ -756,6 +756,8 @@ def add_point_argument(parser):
                      help='Point(s) defined in text file in lat/lon column')
     pts.add_argument('--pts-marker', dest='pts_marker', type=str, default='ko',
                      help='Marker of points of interest.')
+    pts.add_argument('--pts-ms', dest='pts_marker_size', type=float, default=6.,
+                     help='Marker size for points of interest')
     return parser
 
 
@@ -990,6 +992,10 @@ def auto_adjust_xaxis_date(ax, datevector, fontsize=12, every_year=1):
         dss - datetime.datetime object, xmin
         dee - datetime.datetime object, xmax
     """
+    # convert datetime.datetime format into date in years
+    if isinstance(datevector[0], datetime.datetime):
+        datevector = [i.year + (i.timetuple().tm_yday-1)/365.25 for i in datevector]
+
     # Min/Max
     ts = datevector[0]  - 0.2;  ys=int(ts);  ms=int((ts - ys) * 12.0)
     te = datevector[-1] + 0.3;  ye=int(te);  me=int((te - ye) * 12.0)

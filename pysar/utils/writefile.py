@@ -132,6 +132,8 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
             write_real_float32(data_list[0], out_file)
         elif metadata['DATA_TYPE'].lower() in ['int16', 'short']:
             write_real_int16(data_list[0], out_file)
+        elif metadata['DATA_TYPE'].lower() in ['byte','bool']:
+            write_byte(data_list[0], out_file)
         else:
             print('Un-supported file type: '+ext)
             return 0
@@ -289,3 +291,10 @@ def write_complex_int16(data, out_file):
     F[id2] = np.reshape(np.array(data.imag, np.int16), (num_pixel, 1))
     F.tofile(out_file)
     return out_file
+
+
+def write_byte(data, out_file):
+    data = np.array(data, dtype=np.bool_)
+    data.tofile(out_file)
+    return out_file
+

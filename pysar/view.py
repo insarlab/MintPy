@@ -550,8 +550,8 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
         # Plot points of interest
         if inps.pts_lalo is not None:
             ax.plot(inps.pts_lalo[:, 1], inps.pts_lalo[:, 0],
-                    inps.pts_marker, ms=inps.ref_marker_size,
-                    markeredgecolor='black')
+                    inps.pts_marker, ms=inps.pts_marker_size,
+                    markeredgecolor='k', markerfacecolor='none')
             if print_msg:
                 print('plot points of interest')
 
@@ -636,10 +636,13 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
             msg = 'x={:.1f}, y={:.1f}'.format(x, y)
             col = int(x+0.5) - inps.pix_box[0]
             row = int(y+0.5) - inps.pix_box[1]
-            if inps.dem_file and 0 <= col < num_col and 0 <= row < num_row:
-                h = dem[row, col]
-                msg += ', h={:.1f} m'.format(h)
-            msg += ', v ='
+            if 0 <= col < num_col and 0 <= row < num_row:
+                v = data[row, col]
+                msg += ', v={:.4f}'.format(v)
+                if inps.dem_file:
+                    h = dem[row, col]
+                    msg += ', h={:.1f} m'.format(h)
+            #msg += ', v ='
             return msg
         ax.format_coord = format_coord
 

@@ -511,6 +511,9 @@ def plot_point_timeseries(yx, fig, ax, ts_data, mask, inps):
     print('\n---------------------------------------')
     print(title_ts)
     print(d_ts[0])
+    print('displacement range: [{:.2f}, {:.2f}] {}'.format(np.nanmin(d_ts[0]),
+                                                           np.nanmax(d_ts[0]),
+                                                           inps.disp_unit))
 
     # Slope estimation
     estimate_slope(d_ts[0], inps.yearList,
