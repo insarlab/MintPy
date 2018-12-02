@@ -330,16 +330,6 @@ def random_select_reference_yx(data_mat, print_msg=True):
 
 
 ###############################################################
-def print_warning(next_method):
-    print('-'*50)
-    print('WARNING:')
-    print('Input file is not referenced to the same pixel yet!')
-    print('-'*50)
-    print('Continue with default automatic seeding method: '+next_method+'\n')
-    return
-
-
-###############################################################
 def read_reference_file2inps(reference_file, inps=None):
     """Read reference info from reference file and update input namespace"""
     if not inps:
@@ -392,8 +382,7 @@ def read_reference_input(inps):
             not (0 <= inps.ref_y <= length and 0 <= inps.ref_x <= width)):
         inps.ref_y = None
         inps.ref_x = None
-        print('WARNING: input reference point is OUT of data coverage!')
-        print('Continue with other method to select reference point.')
+        raise ValueError('input reference point is OUT of data coverage!')
 
     # Do not use ref_y/x in masked out area
     if inps.ref_y and inps.ref_x and inps.maskFile:
@@ -402,8 +391,8 @@ def read_reference_input(inps):
         if mask[inps.ref_y, inps.ref_x] == 0:
             inps.ref_y = None
             inps.ref_x = None
-            print('WARNING: input reference point is in masked OUT area!')
-            print('Continue with other method to select reference point.')
+            msg = 'input reference point is in masked OUT area defined by {}!'.format(inps.maskFile)
+            raise ValueError(msg)
 
     # Select method
     if not inps.ref_y or not inps.ref_x:

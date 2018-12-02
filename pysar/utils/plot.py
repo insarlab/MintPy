@@ -741,7 +741,7 @@ def add_map_argument(parser):
     map_group.add_argument('--noscalebar', '--nosbar', dest='disp_scalebar',
                            action='store_false', help='do not display scale bar.')
     map_group.add_argument('--scalebar-pad','--sbar-pad', dest='scalebar_pad', type=float,
-                            default=0.05, help='scale bar label pad in ratio of scalebar width')
+                            default=0.05, help='scale bar label pad in ratio of scalebar width, default: 0.05')
 
     return parser
 
