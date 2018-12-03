@@ -1,4 +1,5 @@
 #! /usr/bin/env python3
+# Created by Joshua Zahner, April 2018
 
 
 from tkinter import *
@@ -8,7 +9,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import h5py
 import pysar.view as view
-import pysar.utils.readfile as readfile
+from pysar.utils import readfile
 
 index = 2
 root = None
@@ -40,7 +41,7 @@ def plot_data():
     atr = readfile.read_attribute(file.get())
     file_type = atr['FILE_TYPE']
 
-    datasets = view.get_file_dataset_list(file.get(), file_type)
+    datasets = readfile.get_dataset_list(file.get(), file_type)
 
     item = tree.focus()
     the_item = tree.item(item)
@@ -54,7 +55,9 @@ def pick_file():
 
     if file.get() == "":
         filename = filedialog.askopenfilename(initialdir="/", title="Select file",
-                                              filetypes=(("jpeg files", "*.h5"), ("all files", "*.*"), ("more files", "*.he5")))
+                                              filetypes=(("HDF5 files", "*.h5"),
+                                                         ("all files", "*.*"),
+                                                         ("more files", "*.he5")))
         if tree is not None:
             tree.destroy()
 
@@ -84,8 +87,7 @@ def main():
     h5_file_short = StringVar()
     h5_file_short.set("No File Selected")
 
-    pick_h5_file_button = Button(reset_settings_file_frame, text='Select .h5 File', width=15,
-                                 command=pick_file)
+    pick_h5_file_button = Button(reset_settings_file_frame, text='Select .h5 File', width=15, command=pick_file)
 
     pick_h5_file_button.pack(side=LEFT, pady=(10, 5))
 

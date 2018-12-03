@@ -132,7 +132,7 @@ def run_or_skip(inps):
             print('  3) NOT all key configration parameters are the same --> run.\n\t{}'.format(configKeys))
         else:
             print('  3) all key configuration parameters are the same:\n\t{}'.format(configKeys))
- 
+
     # result
     print('check result:', flag)
     return flag
@@ -339,34 +339,39 @@ def correct_dem_error(inps, A_def):
 
     ##-------------------------------- Loop for L2-norm inversion  --------------------------------##
     print('inverting DEM error ...')
+    delta_z = np.zeros(num_pixel, dtype=np.float32)
+    ts_cor = np.zeros((num_date, num_pixel), dtype=np.float32)
+    ts_res = np.zeros((num_date, num_pixel), dtype=np.float32)
+    if num_step > 0:
+        step_model = np.zeros((num_step, num_pixel), dtype=np.float32)
+
+    print('skip pixels with zero/NaN value in all acquisitions')
+    ts_mean = np.nanmean(ts_data, axis=0)
+    mask = np.multiply(~np.isnan(ts_mean), ts_mean != 0.)
+    del ts_mean
+
     if inps.rangeDist.size == 1:
         A_geom = inps.pbase / (inps.rangeDist * inps.sinIncAngle)
         A = np.hstack((A_geom, A_def))
-        (delta_z,
-         ts_cor,
-         ts_res,
-         step_model) = estimate_dem_error(ts_data,
-                                          A,
-                                          tbase=tbase,
-                                          drop_date=drop_date,
-                                          phaseVelocity=inps.phaseVelocity,
-                                          num_step=num_step)
 
-    else:
-        ts_cor = np.zeros((num_date, num_pixel), dtype=np.float32)
-        ts_res = np.zeros((num_date, num_pixel), dtype=np.float32)
-        delta_z = np.zeros(num_pixel, dtype=np.float32)
-        #constC = np.zeros(num_pixel, dtype=np.float32)
+        ts_data = ts_data[:, mask]
+        (delta_z_i,
+         ts_cor_i,
+         ts_res_i,
+         step_model_i) = estimate_dem_error(ts_data, A,
+                                            tbase=tbase,
+                                            drop_date=drop_date,
+                                            phaseVelocity=inps.phaseVelocity,
+                                            num_step=num_step)
+        delta_z[mask] = delta_z_i
+        ts_cor[:, mask] = ts_cor_i
+        ts_res[:, mask] = ts_res_i
         if num_step > 0:
-            step_model = np.zeros((num_step, num_pixel), dtype=np.float32)
-
+            step_model[:, mask] = step_model_i
+    else:
         # mask
         print('skip pixels with zero/nan value in geometry: incidence angle or range distance')
-        mask = np.multiply(inps.sinIncAngle != 0., inps.rangeDist != 0.)
-        print('skip pixels with zero value in all acquisitions')
-        ts_mean = np.nanmean(ts_data, axis=0)
-        mask *= ts_mean != 0.
-        del ts_mean
+        mask *= np.multiply(inps.sinIncAngle != 0., inps.rangeDist != 0.)
 
         num_pixel2inv = np.sum(mask)
         idx_pixel2inv = np.where(mask)[0]
@@ -399,8 +404,7 @@ def correct_dem_error(inps, A_def):
             (delta_z_i,
              ts_cor_i,
              ts_res_i,
-             step_model_i) = estimate_dem_error(ts_data[:, i],
-                                                A,
+             step_model_i) = estimate_dem_error(ts_data[:, i], A,
                                                 tbase=tbase,
                                                 drop_date=drop_date,
                                                 phaseVelocity=inps.phaseVelocity,
