@@ -113,8 +113,10 @@ def write(datasetDict, out_file, metadata=None, ref_file=None, compression=None)
         # Write Data File
         if ext in ['.unw', '.cor', '.hgt']:
             write_float32(data_list[0], out_file)
+            metadata['DATA_TYPE'] = 'float32'
         elif ext == '.dem':
             write_real_int16(data_list[0], out_file)
+            metadata['DATA_TYPE'] = 'int16'
         elif ext in ['.trans']:
             write_float32(data_list[0], data_list[1], out_file)
         elif ext in ['.utm_to_rdc', '.UTM_TO_RDC']:
