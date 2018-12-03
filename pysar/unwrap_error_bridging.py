@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import sparse, ndimage
-from pysar.objects import ifgramStack
+from pysar.objects import ifgramStack, deramp
 from pysar.utils import (ptime,
                          readfile,
                          writefile,
@@ -487,7 +487,7 @@ def run_unwrap_error_bridge(ifgram_file, mask_cc_file, bridges, dsNameIn='unwrap
 
             # remove phase ramp before phase jump estimation
             if ramp_type is not None:
-                unw, unw_ramp = ut.deramp_data(unw, mask4ramp, ramp_type, metadata=atr)
+                unw, unw_ramp = deramp(unw, mask4ramp, ramp_type, metadata=atr)
 
             # estimate/correct phase jump
             unw_cor = bridge_unwrap_error(unw, mask_cc, bridges)
@@ -509,7 +509,7 @@ def run_unwrap_error_bridge(ifgram_file, mask_cc_file, bridges, dsNameIn='unwrap
 
         # remove phase ramp before phase jump estimation
         if ramp_type is not None:
-            unw, unw_ramp = ut.deramp_data(unw, mask4ramp, ramp_type, metadata=atr)
+            unw, unw_ramp = deramp(unw, mask4ramp, ramp_type, metadata=atr)
 
         # estimate/correct phase jump
         unw_cor = bridge_unwrap_error(unw, mask_cc, bridges)
