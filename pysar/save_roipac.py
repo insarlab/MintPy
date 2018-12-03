@@ -128,11 +128,14 @@ def read_data(inps):
             atr['FILE_TYPE'] = '.cor'
         elif k in ['mask']:
             atr['FILE_TYPE'] = '.msk'
+            atr['DATA_TYPE'] = 'byte'
         elif k in ['geometry'] and inps.dset == 'height':
             if 'Y_FIRST' in atr.keys():
                 atr['FILE_TYPE'] = '.dem'
+                atr['DATA_TYPE'] = 'int16'
             else:
                 atr['FILE_TYPE'] = '.hgt'
+            atr['UNIT'] = 'm'
         else:
             atr['FILE_TYPE'] = '.unw'
 

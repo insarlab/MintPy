@@ -31,6 +31,7 @@ datasetName2templateKey = {'unwrapPhase'     : 'pysar.load.unwFile',
                            'coherence'       : 'pysar.load.corFile',
                            'connectComponent': 'pysar.load.connCompFile',
                            'wrapPhase'       : 'pysar.load.intFile',
+                           'iono'            : 'pysar.load.ionoFile',
                            'height'          : 'pysar.load.demFile',
                            'latitude'        : 'pysar.load.lookupYFile',
                            'longitude'       : 'pysar.load.lookupXFile',
@@ -66,6 +67,7 @@ pysar.load.unwFile        = auto  #[path2unw_file]
 pysar.load.corFile        = auto  #[path2cor_file]
 pysar.load.connCompFile   = auto  #[path2conn_file]
 pysar.load.intFile        = auto  #[path2int_file]
+pysar.load.ionoFile       = auto  #[path2iono_file]
 ##---------geometry datasets:
 pysar.load.demFile        = auto  #[path2hgt_file]
 pysar.load.lookupYFile    = auto  #[path2lat_file]]

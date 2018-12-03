@@ -28,6 +28,7 @@ pysar.load.baselineDir    = ${PROJECT_DIR}/baselines
 pysar.load.unwFile        = ${PROJECT_DIR}/merged/interferograms/*/filt*.unw
 pysar.load.corFile        = ${PROJECT_DIR}/merged/interferograms/*/filt*.cor
 pysar.load.connCompFile   = ${PROJECT_DIR}/merged/interferograms/*/filt*.unw.conncomp
+pysar.load.ionoFile       = None
 pysar.load.intFile        = None
 
 pysar.load.demFile        = ${PROJECT_DIR}/merged/geom_master/hgt.rdr

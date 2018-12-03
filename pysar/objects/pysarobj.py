@@ -72,7 +72,7 @@ datasetUnitDict = {'unwrapPhase'        :'radian',
                    'coherence'          :'1',
                    'connectComponent'   :'1',
                    'wrapPhase'          :'radian',
-                   'iono'               :'radian',  #not sure
+                   'iono'               :'radian',
                    'rangeOffset'        :'1',
                    'azimuthOffset'      :'1',
 
