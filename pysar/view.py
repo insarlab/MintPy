@@ -533,7 +533,8 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
                 print('plot lat/lon labels')
             m.draw_lalo_label(inps.geo_box, ax=ax,
                               lalo_step=inps.lalo_step,
-                              labels=inps.lalo_label_loc,
+                              lalo_loc=inps.lalo_loc,
+                              lalo_max_num=inps.lalo_max_num,
                               font_size=inps.font_size,
                               color=inps.font_color,
                               print_msg=print_msg)

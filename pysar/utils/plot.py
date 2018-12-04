@@ -60,6 +60,8 @@ class BasemapExt(Basemap):
         """draw a simple map scale from x1,y to x2,y in map projection coordinates, label it with actual distance
         ref_link: http://matplotlib.1069221.n5.nabble.com/basemap-scalebar-td14133.html
         Parameters: loc : list of 3 float, distance, lat/lon of scale bar center in ratio of width, relative coord
+                    ax  : matplotlib.pyplot.axes object
+                    labelpad : float
         Example:    m.drawscale()
         """
         gc = pyproj.Geod(a=self.rmajor, b=self.rminor)
@@ -96,24 +98,24 @@ class BasemapExt(Basemap):
                 fontsize=font_size, color=color)
 
 
-    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, labels=[1, 0, 0, 1],
+    def draw_lalo_label(self, geo_box, ax=None, lalo_step=None, lalo_loc=[1, 0, 0, 1], lalo_max_num=4,
                         font_size=12, color='k', xoffset=None, yoffset=None, print_msg=True):
         """Auto draw lat/lon label/tick based on coverage from geo_box
-        Inputs:
-            geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
-            labels  : list of 4 int, positions where the labels are drawn as in [left, right, top, bottom]
-                      default: [1,0,0,1]
-            ax      : axes object the labels are drawn
-            draw    : bool, do not draw if False
-        Outputs:
-
-        Example:
-            geo_box = (128.0, 37.0, 138.0, 30.0)
-            m.draw_lalo_label(geo_box)
+        Parameters: geo_box : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+                    ax      : axes object the labels are drawn
+                    lalo_loc  : list of 4 bool, positions where the labels are drawn as in [left, right, top, bottom]
+                                default: [1,0,0,1]
+                    lalo_step : float
+                    lalo_max_num : int
+        Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
+                    m.draw_lalo_label(geo_box)
         """
         if isinstance(lalo_step, float):
             lalo_step = [lalo_step, lalo_step]
-        lats, lons, lalo_step = self.auto_lalo_sequence(geo_box, lalo_step=lalo_step, print_msg=print_msg)
+        lats, lons, lalo_step = self.auto_lalo_sequence(geo_box,
+                                                        lalo_step=lalo_step,
+                                                        lalo_max_num=lalo_max_num,
+                                                        print_msg=print_msg)
 
         digit = np.int(np.floor(np.log10(lalo_step[0])))
         fmt = '%.'+'%d' % (abs(min(digit, 0)))+'f'
@@ -134,39 +136,38 @@ class BasemapExt(Basemap):
         # ax.xaxis.tick_top()
 
         # Plot x/y label
-        labels_lat = np.multiply(labels, [1, 1, 0, 0])
-        labels_lon = np.multiply(labels, [0, 0, 1, 1])
+        labels_lat = np.multiply(lalo_loc, [1, 1, 0, 0])
+        labels_lon = np.multiply(lalo_loc, [0, 0, 1, 1])
         self.drawparallels(lats, fmt=fmt, labels=labels_lat, linewidth=0.05,
                            fontsize=font_size, color=color, textcolor=color,
                            xoffset=xoffset, yoffset=yoffset)
         self.drawmeridians(lons, fmt=fmt, labels=labels_lon, linewidth=0.05,
                            fontsize=font_size, color=color, textcolor=color,
                            xoffset=xoffset, yoffset=yoffset)
+        return
 
-    def auto_lalo_sequence(self, geo_box, lalo_step=None, max_tick_num=4, step_candidate=[1, 2, 3, 4, 5],
+    def auto_lalo_sequence(self, geo_box, lalo_step=None, lalo_max_num=4, step_candidate=[1, 2, 3, 4, 5],
                            print_msg=True):
         """Auto calculate lat/lon label sequence based on input geo_box
-        Inputs:
-            geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
-            max_tick_num   : int, rough major tick number along the longer axis
-            step_candidate : list of int, candidate list for the significant number of step
-        Outputs:
-            lats/lons : np.array of float, sequence of lat/lon auto calculated from input geo_box
-            lalo_step : float, lat/lon label step
-        Example:
-            geo_box = (128.0, 37.0, 138.0, 30.0)
-            lats, lons, step = m.auto_lalo_sequence(geo_box)
+        Parameters: geo_box        : 4-tuple of float, defining UL_lon, UL_lat, LR_lon, LR_lat coordinate
+                    lalo_step      : float
+                    lalo_max_num   : int, rough major tick number along the longer axis
+                    step_candidate : list of int, candidate list for the significant number of step
+        Returns:    lats/lons : np.array of float, sequence of lat/lon auto calculated from input geo_box
+                    lalo_step : float, lat/lon label step
+        Example:    geo_box = (128.0, 37.0, 138.0, 30.0)
+                    lats, lons, step = m.auto_lalo_sequence(geo_box)
         """
         max_lalo_dist = max([geo_box[1]-geo_box[3], geo_box[2]-geo_box[0]])
 
         if not lalo_step:
             # Initial tick step
-            lalo_step = ut.round_to_1(max_lalo_dist/max_tick_num)
+            lalo_step = ut.round_to_1(max_lalo_dist/lalo_max_num)
 
             # Final tick step - choose from candidate list
             digit = np.int(np.floor(np.log10(lalo_step)))
             lalo_step_candidate = [i*10**digit for i in step_candidate]
-            distance = [(i - max_lalo_dist/max_tick_num) ** 2
+            distance = [(i - max_lalo_dist/lalo_max_num) ** 2
                         for i in lalo_step_candidate]
             lalo_step = lalo_step_candidate[distance.index(min(distance))]
             lalo_step = [lalo_step, lalo_step]
@@ -712,36 +713,38 @@ def add_mask_argument(parser):
 
 def add_map_argument(parser):
     # Map
-    map_group = parser.add_argument_group('Map', 'Map settings for display')
-    map_group.add_argument('--projection', dest='map_projection', default='cyl', metavar='NAME',
-                           help='map projection when plotting in geo-coordinate. \n'
-                                'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
-    map_group.add_argument('--coastline', action='store_true', help='Draw coastline.')
-    map_group.add_argument('--resolution', default='c', choices={'c', 'l', 'i', 'h', 'f', None},
-                           help='Resolution of boundary database to use.\n' +
-                                'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
-    map_group.add_argument('--lalo-label', dest='lalo_label', action='store_true',
-                           help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
-                                'Useful for final figure output.')
-    map_group.add_argument('--lalo-step', dest='lalo_step', metavar='DEG',
-                           type=float, help='Lat/lon step for lalo-label option.')
-    map_group.add_argument('--lalo-loc', dest='lalo_label_loc', type=int, nargs=4, default=[1, 0, 0, 1],
-                           metavar=('left', 'right', 'top', 'bottom'),
-                           help='Draw lalo label in [left, right, top, bottom], default is [1,0,0,1]')
+    mapg = parser.add_argument_group('Map', 'Map settings for display')
+    mapg.add_argument('--projection', dest='map_projection', default='cyl', metavar='NAME',
+                      help='map projection when plotting in geo-coordinate. \n'
+                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
+    mapg.add_argument('--coastline', action='store_true', help='Draw coastline.')
+    mapg.add_argument('--resolution', default='c', choices={'c', 'l', 'i', 'h', 'f', None},
+                      help='Resolution of boundary database to use.\n' +
+                           'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
+    mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',
+                      help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
+                           'Useful for final figure output.')
+    mapg.add_argument('--lalo-step', dest='lalo_step', metavar='DEG',
+                      type=float, help='Lat/lon step for lalo-label option.')
+    mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
+                      metavar=('left', 'right', 'top', 'bottom'),
+                      help='Draw lalo label in [left, right, top, bottom], default is [1,0,0,1]')
+    mapg.add_argument('--lalo-max-num', dest='lalo_max_num', type=int, default=4, metavar='NUM',
+                      help='Maximum number of lalo tick label, 4 by default.')
 
-    map_group.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
-                           default=[0.2, 0.2, 0.1],
-                           help='scale bar distance and location in ratio:\n' +
-                                '\tdistance in ratio of total width\n' + 
-                                '\tlocation in X/Y in ratio with respect to the lower left corner\n' + 
-                                '--scalebar 0.2 0.2 0.1  #for lower left  corner\n' + 
-                                '--scalebar 0.2 0.2 0.8  #for upper left  corner\n' + 
-                                '--scalebar 0.2 0.8 0.1  #for lower right corner\n' + 
-                                '--scalebar 0.2 0.8 0.8  #for upper right corner\n')
-    map_group.add_argument('--noscalebar', '--nosbar', dest='disp_scalebar',
-                           action='store_false', help='do not display scale bar.')
-    map_group.add_argument('--scalebar-pad','--sbar-pad', dest='scalebar_pad', type=float,
-                            default=0.05, help='scale bar label pad in ratio of scalebar width, default: 0.05')
+    mapg.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
+                      default=[0.2, 0.2, 0.1],
+                      help='scale bar distance and location in ratio:\n' +
+                           '\tdistance in ratio of total width\n' + 
+                           '\tlocation in X/Y in ratio with respect to the lower left corner\n' + 
+                           '--scalebar 0.2 0.2 0.1  #for lower left  corner\n' + 
+                           '--scalebar 0.2 0.2 0.8  #for upper left  corner\n' + 
+                           '--scalebar 0.2 0.8 0.1  #for lower right corner\n' + 
+                           '--scalebar 0.2 0.8 0.8  #for upper right corner\n')
+    mapg.add_argument('--noscalebar', '--nosbar', dest='disp_scalebar',
+                      action='store_false', help='do not display scale bar.')
+    mapg.add_argument('--scalebar-pad','--sbar-pad', dest='scalebar_pad', type=float,
+                      default=0.05, help='scale bar label pad in ratio of scalebar width, default: 0.05')
 
     return parser
 
