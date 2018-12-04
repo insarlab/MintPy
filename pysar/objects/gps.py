@@ -249,7 +249,7 @@ class GPS:
         elif isinstance(insar_obj, dict):
             # use mean inc/head_angle from metadata
             inc_angle = ut.incidence_angle(insar_obj, dimension=0, print_msg=print_msg)
-            head_angle = float(insar_obj['HEADING_DEG'])
+            head_angle = float(insar_obj['HEADING'])
             # for old reading of los.rdr band2 data into headingAngle directly
             if (head_angle + 180.) > 45.:
                 head_angle = ut.azimuth2heading_angle(head_angle)

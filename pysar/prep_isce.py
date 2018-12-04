@@ -201,7 +201,7 @@ def prepare_geometry(geometryDir, metadata=dict()):
     # get A/RLOOKS
     metadata = extract_multilook_number(metadata, geometryDir)
 
-    # get LAT/LON_REF1/2/3/4 and HEADING_DEG into metadata
+    # get LAT/LON_REF1/2/3/4 and HEADING into metadata
     for isceFile in isceFiles:
         if 'lat' in os.path.basename(isceFile):
             data = readfile.read(isceFile)[0]
@@ -226,7 +226,7 @@ def prepare_geometry(geometryDir, metadata=dict()):
             # convert isce azimuth angle to roipac orbit heading angle
             head_angle = -1 * (270 + az_angle)
             head_angle -= np.round(head_angle / 360.) * 360.
-            metadata['HEADING_DEG'] = str(head_angle)
+            metadata['HEADING'] = str(head_angle)
 
     # write rsc file for each geometry file
     for isceFile in isceFiles:

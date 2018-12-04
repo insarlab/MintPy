@@ -563,6 +563,9 @@ def plot_slice(ax, data, metadata, inps=None, print_msg=True):
             if print_msg:
                 print('displaying GPS stations')
 
+        # save basemapExt object
+        inps.map = m
+
         # Status bar
         if inps.dem_file:
             coord_dem = ut.coordinate(dem_metadata)
