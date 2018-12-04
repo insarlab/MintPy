@@ -669,8 +669,7 @@ def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
             atr['FILE_TYPE'] = fext
 
         elif metafile0.endswith('.hdr'):
-            atr.update(read_template(metafile0))
-            atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[xmlDict.get('data type', '4')]
+            atr.update(read_envi_hdr(metafile0))
             atr['FILE_TYPE'] = atr['file type']
 
     # UNIT
@@ -853,7 +852,7 @@ def read_gamma_par(fname, delimiter=':', skiprows=3, standardize=True):
 
 
 def read_isce_xml(fname, standardize=True):
-    """Read ISCE .xml file input a python dictionary structure."""
+    """Read ISCE .xml file into a python dict structure."""
     root = ET.parse(fname).getroot()
     xmlDict = {}
 
@@ -887,6 +886,21 @@ def read_isce_xml(fname, standardize=True):
     if standardize:
         xmlDict = standardize_metadata(xmlDict)
     return xmlDict
+
+
+def read_envi_hdr(fname, standardize=True):
+    """Read ENVI .hdr file into a python dict strcture"""
+    atr = read_template(fname)
+    atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
+    if 'map info' in atr.keys():
+        map_info = [i.strip() for i in atr['map info'].split(',')]
+        atr['X_FIRST'] = map_info[3]
+        atr['Y_FIRST'] = map_info[4]
+        atr['X_STEP'] = str(abs(float(map_info[5])))
+        atr['Y_STEP'] = str(abs(float(map_info[6])) * -1.)
+    if standardize:
+        atr = standardize_metadata(atr)
+    return atr
 
 
 def attribute_gamma2roipac(par_dict_in):
