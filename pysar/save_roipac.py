@@ -148,11 +148,27 @@ def read_data(inps):
     return data, atr, inps.outfile
 
 
+def clean_metadata4roipac(atr_in):
+    atr = {}
+    for key, value in atr_in.items():
+        atr[key] = str(value)
+
+    key_list = ['width', 'Width', 'samples', 'length', 'lines']
+    for key in key_list:
+        if key in atr.keys():
+            atr.pop(key)
+
+    atr['FILE_LENGTH'] = atr['LENGTH']
+    return atr
+
+
 ##############################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     data, atr, out_file = read_data(inps)
+
+    atr = clean_metadata4roipac(atr)
 
     print('writing >>> {}'.format(out_file))
     writefile.write(data, out_file=out_file, metadata=atr)
