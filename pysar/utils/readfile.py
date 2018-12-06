@@ -894,10 +894,12 @@ def read_envi_hdr(fname, standardize=True):
     atr['DATA_TYPE'] = ENVI2NUMPY_DATATYPE[atr.get('data type', '4')]
     if 'map info' in atr.keys():
         map_info = [i.strip() for i in atr['map info'].split(',')]
-        atr['X_FIRST'] = map_info[3]
-        atr['Y_FIRST'] = map_info[4]
-        atr['X_STEP'] = str(abs(float(map_info[5])))
-        atr['Y_STEP'] = str(abs(float(map_info[6])) * -1.)
+        x_step = abs(float(map_info[5]))
+        y_step = abs(float(map_info[6])) * -1.
+        atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
+        atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
+        atr['X_STEP'] = str(x_step)
+        atr['Y_STEP'] = str(y_step)
     if standardize:
         atr = standardize_metadata(atr)
     return atr
