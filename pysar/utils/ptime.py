@@ -17,6 +17,15 @@ import numpy as np
 
 
 ################################################################
+def decimal_year2datetime(x):
+    """read date in 2002.40657084 to datetime format"""
+    x = float(x)
+    year = np.floor(x)
+    yday = round((x - year) * 365.25)
+    x2 = '{:.0f}-{:.0f}'.format(year, yday)
+    return dt(*time.strptime(x2, "%Y-%j")[0:5])
+
+
 def yyyymmdd2years(dates):
     if isinstance(dates, str):
         d = dt(*time.strptime(dates, "%Y%m%d")[0:5])
