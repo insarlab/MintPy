@@ -21,9 +21,13 @@ def decimal_year2datetime(x):
     """read date in 2002.40657084 to datetime format"""
     x = float(x)
     year = np.floor(x)
-    yday = round((x - year) * 365.25)
+    yday = np.round((x - year) * 365.25) + 1
     x2 = '{:.0f}-{:.0f}'.format(year, yday)
-    return dt(*time.strptime(x2, "%Y-%j")[0:5])
+    try:
+        xt = dt(*time.strptime(x2, "%Y-%j")[0:5])
+    except:
+        raise ValueError('wrong format: ',x2)
+    return xt
 
 
 def yyyymmdd2years(dates):
