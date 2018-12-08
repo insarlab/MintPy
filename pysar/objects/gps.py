@@ -158,6 +158,7 @@ class GPS:
         data = np.loadtxt(self.file, dtype=bytes, skiprows=1).astype(str)
         self.dates = np.array([dt(*time.strptime(i, "%y%b%d")[0:5])
                                for i in data[:, 1]])
+        #self.dates = np.array([ptime.decimal_year2datetime(i) for i in data[:, 2]])
         (self.dis_e,
          self.dis_n,
          self.dis_u,
