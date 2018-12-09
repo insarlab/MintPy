@@ -149,16 +149,8 @@ def read_exclude_date(inps, dateListAll):
         inps = read_template2inps(inps.template_file, inps)
 
     # 2. ex_date
-    input_ex_date = list(inps.excludeDate)
-    if input_ex_date:
-        for ex_date in input_ex_date:
-            if os.path.isfile(ex_date):
-                ex_date = ptime.read_date_list(ex_date)
-            else:
-                ex_date = [ptime.yyyymmdd(ex_date)]
-            exDateList += list(set(ex_date) - set(exDateList))
-        # delete dates not existed in input file
-        exDateList = list(set(exDateList).intersection(dateListAll))
+    exDateList += ptime.read_date_list(list(inps.excludeDate), date_list_all=dateListAll)
+    if exDateList:
         print('exclude date:'+str(exDateList))
 
     # 3. startDate

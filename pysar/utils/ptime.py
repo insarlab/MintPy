@@ -6,7 +6,7 @@
 # Recommend import:
 #   from pysar.utils import ptime
 
-
+import os
 import sys
 import re
 import time
@@ -145,16 +145,43 @@ def ifgram_date_list(ifgramFile, fmt='YYYYMMDD'):
 
 
 #################################################################
-def read_date_list(date_list_file):
+def read_date_txt(date_file):
     """Read Date List from txt file"""
-    fl = open(date_list_file, 'r')
+    # read text file
+    fl = open(date_file, 'r')
     dateList = fl.read().splitlines()
     fl.close()
-
-    dateList = yyyymmdd(dateList)
-    dateList.sort()
-
+    # format
+    dateList = sorted(yyyymmdd(dateList))
     return dateList
+
+
+def read_date_list(date_list_in, date_list_all=None):
+    """Read Date List
+    Parameters: date_list_in  : list of str / text file
+                date_list_all : list of str in YYYYMMDD format
+    Returns:    date_list_out : list of str in YYYYMMDD format
+    """
+    if not date_list_in:
+        return []
+    elif isinstance(date_list_in, str):
+        date_list_in = [date_list_in]
+
+    # read date_list_in
+    date_list_out = []
+    for d in date_list_in:
+        if os.path.isfile(d):
+            ds = read_date_txt(d)
+        else:
+            ds = [d]
+        date_list_out += ds
+    date_list_out = sorted(yyyymmdd(list(set(date_list_out))))
+
+    # exclude date not in date_list_ref
+    if date_list_all:
+        date_list_out = list(set(date_list_out).intersection(date_list_all))
+
+    return date_list_out
 
 
 ################################################################

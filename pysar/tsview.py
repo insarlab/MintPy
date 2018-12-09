@@ -116,26 +116,17 @@ def cmd_line_parse(iargs=None):
 
 ###########################################################################################
 def read_exclude_date(input_ex_date, dateListAll):
+    # default value
     ex_date_list = []
     ex_dates = []
     ex_flag = np.ones((len(dateListAll)), np.bool_)
 
-    if input_ex_date:
-        input_ex_date = list(input_ex_date)
-        if input_ex_date:
-            for ex_date in input_ex_date:
-                if os.path.isfile(ex_date):
-                    ex_date = ptime.read_date_list(ex_date)
-                else:
-                    ex_date = [ptime.yyyymmdd(ex_date)]
-                ex_date_list += list(set(ex_date) - set(ex_date_list))
-
-            # delete dates not existed in input file
-            ex_date_list = sorted(list(set(ex_date_list).intersection(dateListAll)))
-            ex_dates = ptime.date_list2vector(ex_date_list)[0]
-            for i in ex_date_list:
-                ex_flag[dateListAll.index(i)] = False
-            print('exclude date:'+str(ex_date_list))
+    ex_date_list = ptime.read_date_list(input_ex_date, date_list_all=dateListAll)
+    if ex_date_list:
+        ex_dates = ptime.date_list2vector(ex_date_list)[0]
+        for i in ex_date_list:
+            ex_flag[dateListAll.index(i)] = False
+        print('exclude date:'+str(ex_date_list))
     return ex_date_list, ex_dates, ex_flag
 
 

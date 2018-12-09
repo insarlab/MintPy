@@ -125,6 +125,11 @@ def cmd_line_parse(iargs=None):
     """Command line parser."""
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # --exclude
+    if inps.exDsetList:
+        inps.exDsetList = ptime.read_date_list(inps.exDsetList)
+
     # If output flie name assigned or figure shown is turned off, turn on the figure save
     if inps.outfile or not inps.disp_fig:
         inps.save_fig = True

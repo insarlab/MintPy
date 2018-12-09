@@ -170,22 +170,10 @@ def read_exclude_date(ex_date_list, date_list_all, print_msg=True):
     Returns:    drop_date     : 1D array of bool in size of (num_date,)
     """
     # Read exclude date input
-    if ex_date_list:
-        tempList = []
-        for d in ex_date_list:
-            if d.isdigit():
-                if len(d) in [6, 8]:
-                    tempList.append(d)
-                else:
-                    warnings.warn('input date is not in YYMMDD or YYYYMMDD format.')
-            elif os.path.isfile(d):
-                tempList += ptime.read_date_list(d)
-        ex_date_list = sorted(ptime.yyyymmdd(tempList))
-        if print_msg and len(ex_date_list) > 0:
-            print(('exclude the following dates for DEM error estimation:'
-                   ' ({})\n{}').format(len(ex_date_list), ex_date_list))
-    else:
-        ex_date_list = []
+    ex_date_list = ptime.read_date_list(ex_date_list)
+    if ex_date_list and print_msg:
+        print(('exclude the following dates for DEM error estimation:'
+               ' ({})\n{}').format(len(ex_date_list), ex_date_list))
 
     # convert to mark array
     drop_date = np.array([i not in ex_date_list for i in date_list_all],
