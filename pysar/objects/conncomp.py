@@ -14,7 +14,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.sparse import csgraph as csg
 from scipy.spatial import cKDTree
-from skimage import measure, segmentation as seg, morphology as morph
+try:
+    from skimage import measure, segmentation as seg, morphology as morph
+except ImportError:
+    raise ImportError('Could not import skimage!')
 from .ramp import deramp
 
 

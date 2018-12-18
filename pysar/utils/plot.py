@@ -1927,6 +1927,7 @@ def scale_data2disp_unit(data=None, metadata=dict(), disp_unit=None):
         if   disp_unit[0] == 'mm': scale *= phase2range * 1000.0
         elif disp_unit[0] == 'cm': scale *= phase2range * 100.0
         elif disp_unit[0] == 'dm': scale *= phase2range * 10.0
+        elif disp_unit[0] == 'm' : scale *= phase2range * 1.0
         elif disp_unit[0] == 'km': scale *= phase2range * 1/1000.0
         elif disp_unit[0] in ['radians','radian','rad','r']:
             pass

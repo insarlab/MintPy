@@ -11,6 +11,7 @@ import os
 import time
 from datetime import datetime as dt
 import numpy as np
+import random
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 from pysar.simulation.forward_model import mogi
@@ -60,6 +61,7 @@ def sim_variable_timeseries(tbase, scale=3., display=False):
     ts_sim[idx3:] = 0.
     ts_sim += tbase * -0.005 / 365.25
     ts_sim *= 3.
+    ts_sim -= ts_sim[0]
 
     if display:
         fig, ax = plt.subplots(figsize=[12, 3])
@@ -287,4 +289,22 @@ def mogi_deformation(shape, source_geom, resolution=60., scale=1., display=True)
     return dis_los
 
 
+def add_unw_err2ifgram(ifgram, percentage=0.1, Nmax=2, print_msg=True):
+    """Add unwrapping error to interferometric phase
+    Parameters: ifgram     : 1D / 2D np.array in size of (num_ifgram, num_pixel) in float32
+                percentage : float in [0, 1], percentage of interferograms with unwrapping errors
+                Nmax       : int, maximum integer numbers of cycles of the added unwrapping errors
+    Returns:    ifgram_err : 1D / 2D np.array in size of (num_ifgram, num_pixel) in float32
+                idx_ifg_err : list of index, indicating interferograms with unwrapping errors
+    """
+    Nlist = np.hstack((np.arange(Nmax)+1, -1*np.arange(Nmax)-1))
+    num_ifg_err = int(len(ifgram) * percentage)
+    idx_ifg_err = random.sample(list(range(len(ifgram))), num_ifg_err)
+    if print_msg:
+        print('ifgram with unwrap error: {}'.format(percentage))
+        print('unwrap error jump in 2*pi*(-{n}, {n}): '.format(n=Nmax))
+        print('number of ifgrams with unwrap error: {}'.format(num_ifg_err))
+    ifgram_err = np.array(ifgram, dtype=np.float32)
+    ifgram_err[idx_ifg_err] += 2.*np.pi*np.random.choice(Nlist, size=num_ifg_err)
+    return ifgram_err, idx_ifg_err
 
