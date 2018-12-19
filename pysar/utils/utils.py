@@ -1862,7 +1862,7 @@ class coordinate:
         return coord_out
 
 
-    def _get_lookup_row_col(self, y, x, y_factor=10, x_factor=10, geo_coord=False):
+    def _get_lookup_row_col(self, y, x, y_factor=10, x_factor=10, geo_coord=False, debug_mode=False):
         """Get row/col number in y/x value matrix from input y/x
         Use overlap mean value between y and x buffer;
         To support point outside of value pool/matrix, could use np.polyfit to fit a line
@@ -1875,10 +1875,31 @@ class coordinate:
             xmin = max(xmin, 0.5)
         mask_y = np.multiply(self.lut_y >= ymin, self.lut_y <= ymax)
         mask_x = np.multiply(self.lut_x >= xmin, self.lut_x <= xmax)
-        row, col = np.nanmean(np.where(np.multiply(mask_y, mask_x)), axis=1)
+        mask_yx = np.multiply(mask_y, mask_x)
+        row, col = np.nanmean(np.where(mask_yx), axis=1)
+
+        # for debugging only
+        if debug_mode:
+            print('Debug mode is ON.\nShow the row/col number searching result.')
+            import matplotlib.pyplot as plt
+            fig, axs = plt.subplots(nrows=1, ncols=3, figsize=[12, 5])
+            axs[0].imshow(mask_y);  axs[0].set_title('Buffer in Y direction')
+            axs[1].imshow(mask_x);  axs[1].set_title('Buffer in X direction')
+            axs[2].imshow(mask_yx); axs[2].set_title('Y & X overlap (zoom in)')
+
+            idx = np.where(np.sum(mask_yx, axis=0))[0]
+            idy = np.where(np.sum(mask_yx, axis=1))[0]
+            axs[2].set_xlim(idx[0], idx[-1])
+            axs[2].set_ylim(idy[0], idy[-1])
+            axs[1].set_yticklabels([])
+            plt.show()
+
+        # Error message
         if any(np.isnan(i) for i in [row, col]):
             raise RuntimeError('No coresponding coordinate found for y/x: {}/{}'.format(y, x))
+
         return row, col
+
 
     def read_lookup_table(self, print_msg=True):
         if 'Y_FIRST' in self.lut_metadata.keys():
@@ -1912,7 +1933,7 @@ class coordinate:
         lut.lon_step = lut.lon_step_deg * np.pi/180.0 * self.earth_radius * np.cos(lat_c * np.pi/180)
         return lut
 
-    def geo2radar(self, lat, lon, print_msg=True):
+    def geo2radar(self, lat, lon, print_msg=True, debug_mode=False):
         """Convert geo coordinates into radar coordinates.
         Parameters: lat/lon : np.array, float, latitude/longitude
         Returns:    az/rg : np.array, float, range/azimuth pixel number
@@ -1980,13 +2001,15 @@ class coordinate:
                 az, rg = self._get_lookup_row_col(lat, lon,
                                                   y_factor*az_step_deg,
                                                   x_factor*rg_step_deg,
-                                                  geo_coord=True)
+                                                  geo_coord=True,
+                                                  debug_mode=debug_mode)
             else:
                 for i in range(rg.size):
                     az[i], rg[i] = self._get_lookup_row_col(lat[i], lon[i],
                                                             y_factor*az_step_deg,
                                                             x_factor*rg_step_deg,
-                                                            geo_coord=True)
+                                                            geo_coord=True,
+                                                            debug_mode=debug_mode)
             az = np.rint(az).astype(int)
             rg = np.rint(rg).astype(int)
 
@@ -1995,7 +2018,7 @@ class coordinate:
         return az, rg, az_resid, rg_resid
 
 
-    def radar2geo(self, az, rg, print_msg=True):
+    def radar2geo(self, az, rg, print_msg=True, debug_mode=False):
         """Convert radar coordinates into geo coordinates
         Parameters: rg/az : np.array, int, range/azimuth pixel number
         Returns:    lon/lat : np.array, float, longitude/latitude of input point (rg,az);
@@ -2039,12 +2062,14 @@ class coordinate:
             lut_row = np.zeros(rg.shape)
             lut_col = np.zeros(rg.shape)
             if rg.size == 1:
-                lut_row, lut_col = self._get_lookup_row_col(az, rg, y_factor, x_factor)
+                lut_row, lut_col = self._get_lookup_row_col(az, rg, y_factor, x_factor,
+                                                            debug_mode=debug_mode)
             else:
                 for i in range(rg.size):
                     (lut_row[i],
                      lut_col[i]) = self._get_lookup_row_col(az[i], rg[i],
-                                                            y_factor, x_factor)
+                                                            y_factor, x_factor,
+                                                            debug_mode=debug_mode)
             lat = lut_row * lut.lat_step_deg + lut.lat0
             lon = lut_col * lut.lon_step_deg + lut.lon0
             lat_resid = abs(y_factor * lut.lat_step_deg)
