@@ -53,7 +53,7 @@ def timeseries2ifgram(ts_file, ifgram_file, out_file='reconUnwrapIfgram.h5'):
     print('reconstructing the interferograms from timeseries')
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
-    A1 = stack_obj.get_design_matrix4timeseries_estimation(dropIfgram=False)[0]
+    A1 = stack_obj.get_design_matrix4timeseries(stack_obj.get_date12_list(dropIfgram=False))[0]
     num_ifgram = A1.shape[0]
     A0 = -1.*np.ones((num_ifgram, 1))
     A = np.hstack((A0, A1))

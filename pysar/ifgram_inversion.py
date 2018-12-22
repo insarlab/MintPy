@@ -559,7 +559,8 @@ def split_into_boxes(dataset_shape, chunk_size=100e6, print_msg=True):
 
 def check_design_matrix(ifgram_file, weight_func='var'):
     """Check Rank of Design matrix for weighted inversion"""
-    A = ifgramStack(ifgram_file).get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
+    date12_list = ifgramStack(ifgram_file).get_date12_list(dropIfgram=True)
+    A = ifgramStack.get_design_matrix4timeseries(date12_list)[0]
     if weight_func == 'no':
         if np.linalg.matrix_rank(A) < A.shape[1]:
             print('WARNING: singular design matrix! Inversion result can be biased!')
@@ -737,7 +738,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
 
     # Design matrix
     date12_list = stack_obj.get_date12_list(dropIfgram=True)
-    A, B = stack_obj.get_design_matrix4timeseries_estimation(date12_list=date12_list)[0:2]
+    A, B = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)[0:2]
     num_ifgram = len(date12_list)
 
     # prep for decor std time-series
@@ -745,7 +746,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
     except:
         ref_date = date_list[0]
-    Astd = stack_obj.get_design_matrix4timeseries_estimation(refDate=ref_date, dropIfgram=True)[0]
+    Astd = stack_obj.get_design_matrix4timeseries(date12_list=date12_list, refDate=ref_date)[0]
     #ref_idx = date_list.index(ref_date)
     #time_idx = [i for i in range(num_date)]
     #time_idx.remove(ref_idx)
@@ -910,7 +911,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
-    A = stack_obj.get_design_matrix4timeseries_estimation(dropIfgram=True)[0]
+    A = stack_obj.get_design_matrix4timeseries(stack_obj.get_date12_list(dropIfgram=True))[0]
     num_ifgram, num_date = A.shape[0], A.shape[1]+1
     length, width = stack_obj.length, stack_obj.width
     inps.numIfgram = num_ifgram

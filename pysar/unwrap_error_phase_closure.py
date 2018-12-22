@@ -189,28 +189,28 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
                     unwrapped phase value after error correction
     """
     # Basic info
-    stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open(print_msg=False)
-    num_ifgram = stack_obj.numIfgram
+    obj = ifgramStack(ifgram_file)
+    obj.open(print_msg=False)
+    num_ifgram = obj.numIfgram
 
     # Size Info - Patch
     if box:
         num_row = box[3] - box[1]
         num_col = box[2] - box[0]
     else:
-        num_row = stack_obj.length
-        num_col = stack_obj.width
+        num_row = obj.length
+        num_col = obj.width
     num_pixel = num_row * num_col
 
-    C = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=True)
+    C = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=True))
     print('number of interferograms: {}'.format(C.shape[1]))
     print('number of triangles: {}'.format(C.shape[0]))
 
     # read unwrapPhase
-    pha_data_all = ifginv.read_unwrap_phase(stack_obj, box, ref_phase,
+    pha_data_all = ifginv.read_unwrap_phase(obj, box, ref_phase,
                                             unwDatasetName=dsNameIn,
                                             dropIfgram=False)
-    pha_data = np.array(pha_data_all[stack_obj.dropIfgram, :])
+    pha_data = np.array(pha_data_all[obj.dropIfgram, :])
 
     # mask of pixels to analyze
     mask = np.ones((num_pixel), np.bool_)
@@ -254,7 +254,7 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
             prog_bar.close()
 
         pha_data[:, mask] = ifgram_cor
-        pha_data_all[stack_obj.dropIfgram, :] = pha_data
+        pha_data_all[obj.dropIfgram, :] = pha_data
 
     pha_data_all = pha_data_all.reshape(num_ifgram, num_row, num_col)
     num_nonzero_closure = num_nonzero_closure.reshape(num_row, num_col)
@@ -281,14 +281,14 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
                'you could terminate this and try --fast option for quick correction process.'))
     print('-'*50)
 
-    stack_obj = ifgramStack(inps.ifgram_file)
-    stack_obj.open()
-    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=False)
+    obj = ifgramStack(inps.ifgram_file)
+    obj.open()
+    ref_phase = obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=False)
 
-    num_nonzero_closure = np.zeros((stack_obj.length, stack_obj.width), dtype=np.int16)
+    num_nonzero_closure = np.zeros((obj.length, obj.width), dtype=np.int16)
     # split ifgram_file into blocks to save memory
-    num_tri = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=True).shape[0]
-    length, width = stack_obj.get_size()[1:3]
+    num_tri = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=True)).shape[0]
+    length, width = obj.get_size()[1:3]
     box_list = ifginv.split_into_boxes(dataset_shape=(num_tri, length, width), chunk_size=200e6)
     num_box = len(box_list)
     for i in range(num_box):
@@ -313,7 +313,7 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
 
     # write number of nonzero phase closure into file
     num_file = 'numNonzeroPhaseClosure.h5'
-    atr = dict(stack_obj.metadata)
+    atr = dict(obj.metadata)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = '1'
     writefile.write(num_nonzero_closure, out_file=num_file, metadata=atr)

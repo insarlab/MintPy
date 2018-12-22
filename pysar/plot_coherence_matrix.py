@@ -24,7 +24,7 @@ EXAMPLE = """example:
 """
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Display Network of Interferograms',
+    parser = argparse.ArgumentParser(description='Plot the coherence matrix of one pixel (interactive)',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 

@@ -80,12 +80,12 @@ def get_nonzero_phase_closure(ifgram_file, out_file=None, thres=0.1, unwDatasetN
         print('1. read number of nonzero phase closure from file: {}'.format(out_file))
         num_nonzero_closure = readfile.read(out_file)[0]
     else:
-        stack_obj = ifgramStack(ifgram_file)
-        stack_obj.open(print_msg=False)
-        length, width = stack_obj.length, stack_obj.width
+        obj = ifgramStack(ifgram_file)
+        obj.open(print_msg=False)
+        length, width = obj.length, obj.width
 
-        ref_phase = stack_obj.get_reference_phase(unwDatasetName=unwDatasetName, dropIfgram=False)
-        C = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=False)
+        ref_phase = obj.get_reference_phase(unwDatasetName=unwDatasetName, dropIfgram=False)
+        C = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=False))
 
         # calculate phase closure line by line to save memory usage
         num_nonzero_closure = np.zeros((length, width), np.float32)
@@ -97,7 +97,7 @@ def get_nonzero_phase_closure(ifgram_file, out_file=None, thres=0.1, unwDatasetN
             # read phase
             i0, i1 = i*line_step, min(length, (i+1)*line_step)
             box = (0, i0, width, i1)
-            pha_data = ifginv.read_unwrap_phase(stack_obj,
+            pha_data = ifginv.read_unwrap_phase(obj,
                                                 box,
                                                 ref_phase,
                                                 unwDatasetName=unwDatasetName,
@@ -112,7 +112,7 @@ def get_nonzero_phase_closure(ifgram_file, out_file=None, thres=0.1, unwDatasetN
             prog_bar.update(i+1, every=1, suffix='{}/{} lines'.format((i+1)*line_step, length))
         prog_bar.close()
 
-        atr = dict(stack_obj.metadata)
+        atr = dict(obj.metadata)
         atr['FILE_TYPE'] = 'mask'
         atr['UNIT'] = 1
         writefile.write(num_nonzero_closure, out_file=out_file, metadata=atr)
@@ -123,6 +123,11 @@ def detect_unwrap_error(ifgram_file, mask_file, mask_cc_file='maskConnComp.h5', 
                         cutoff=1., min_num_pixel=1e4):
     """Detect unwrapping error based on phase closure and extract coherent conn comps
     based on its histogram distribution
+
+    Check:
+    https://en.wikipedia.org/wiki/Otsu%27s_method
+    from skimage.filters import threshold_otsu
+    
     Parameters: ifgram_file : string, path of ifgram stack file
                 mask_file   : string, path of mask file, e.g. waterMask.h5, mask.h5
                 mask_cc_file: string, path of mask file for coherent conn comps
@@ -134,9 +139,9 @@ def detect_unwrap_error(ifgram_file, mask_file, mask_cc_file='maskConnComp.h5', 
     """
     print('-'*50)
     print('detect unwraping error based on phase closure')
-    stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open(print_msg=False)
-    C = stack_obj.get_design_matrix4ifgram_triangle(dropIfgram=False)
+    obj = ifgramStack(ifgram_file)
+    obj.open(print_msg=False)
+    C = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=False))
 
     num_nonzero_closure = get_nonzero_phase_closure(ifgram_file, unwDatasetName=unwDatasetName)
 
@@ -150,7 +155,7 @@ def detect_unwrap_error(ifgram_file, mask_file, mask_cc_file='maskConnComp.h5', 
     im = ax[0].imshow(num4disp)
     ax[0].set_xlabel('Range [pix.]')
     ax[0].set_ylabel('Azimuth [pix.]')
-    ax[0] = pp.auto_flip_direction(stack_obj.metadata, ax=ax[0], print_msg=False)
+    ax[0] = pp.auto_flip_direction(obj.metadata, ax=ax[0], print_msg=False)
     cbar = fig.colorbar(im, ax=ax[0])
     cbar.set_label('number of non-zero phase closure')
 
@@ -207,7 +212,7 @@ def detect_unwrap_error(ifgram_file, mask_file, mask_cc_file='maskConnComp.h5', 
 
     # save to hdf5 file
     num_bridge = num_cc - 1
-    atr = dict(stack_obj.metadata)
+    atr = dict(obj.metadata)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = 1
     writefile.write(mask_cc, out_file=mask_cc_file, metadata=atr)
@@ -235,9 +240,9 @@ def main(iargs=None):
     # update mode checking
     atr = readfile.read_attribute(inps.ifgram_file)
     if inps.update and atr['FILE_TYPE'] == 'ifgramStack':
-        stack_obj = ifgramStack(inps.ifgram_file)
-        stack_obj.open(print_msg=False)
-        if inps.datasetNameOut in stack_obj.datasetNames:
+        obj = ifgramStack(inps.ifgram_file)
+        obj.open(print_msg=False)
+        if inps.datasetNameOut in obj.datasetNames:
             print(("update mode is enabled AND {} already exists"
                    " skip this step.").format(inps.datasetNameOut))
             return inps.ifgram_file

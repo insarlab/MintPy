@@ -423,8 +423,12 @@ def plot_pysarApp(inps):
         print(plotCmd)
         status = subprocess.Popen(plotCmd, shell=True).wait()
         msg = '\n'+'-'*50
-        msg += '\nPlay with the following scripts for more plotting options:'
-        msg += '\nview.py, tsview.py, transect.py, plot_network.py'
+        msg += '\nCheck more visualization options from scripts below:'
+        msg += '\n    view.py                  - 2D map(s) view'
+        msg += '\n    tsview.py                - 1D point time-series (interactive)'
+        msg += '\n    transect.py              - 1D profile/transection (interactive)'
+        msg += '\n    plot_coherence_matrix.py - plot coherence matrix of one pixel (interactive)'
+        msg += '\n    plot_network.py          - plot network configuration of the whole dataset'
         print(msg)
         if status is not 0:
             raise Exception('Error while plotting data files using {}'.format(plotCmd))

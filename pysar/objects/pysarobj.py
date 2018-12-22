@@ -837,7 +837,8 @@ class ifgramStack:
         return dmean
 
     def get_max_connection_number(self):
-        A = self.get_design_matrix4timeseries_estimation(refDate=0)[0]
+        date12_list = self.get_date12_list()
+        A = self.get_design_matrix4timeseries(date12_list, refDate=0)[0]
         num_conn = np.zeros(A.shape[0], dtype=np.int16)
         for i in range(A.shape[0]):
             Ai = A[i, :]
@@ -845,7 +846,8 @@ class ifgramStack:
         return np.max(num_conn)
 
     # Functions for Unwrap error correction
-    def get_design_matrix4ifgram_triangle(self, dropIfgram=True, date12_list=None):
+    @staticmethod
+    def get_design_matrix4triplet(date12_list):
         """Generate the design matrix of ifgram triangle for unwrap error correction using phase closure
         Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
         Returns:    C : 2D np.array in size of (num_tri, num_ifgram) consisting 0, 1, -1
@@ -853,14 +855,12 @@ class ifgramStack:
                         ifg1 for (t1, t2) with 1
                         ifg2 for (t1, t3) with -1
                         ifg3 for (t2, t3) with 1
-        Examples:   stack_obj = ifgramStack('./INPUTS/ifgramStack.h5')
-                    C = stack_obj.get_design_matrix4ifgram_triangle
+        Examples:   obj = ifgramStack('./INPUTS/ifgramStack.h5')
+                    date12_list = obj.get_date12_list(dropIfgram=True)
+                    C = ifgramStack.get_design_matrix4triplet(date12_list)
         """
         # Date info
-        if date12_list:
-            date12_list = list(date12_list)
-        else:
-            date12_list = self.get_date12_list(dropIfgram=dropIfgram)
+        date12_list = list(date12_list)
 
         # calculate triangle_idx
         triangle_idx = []
@@ -900,23 +900,20 @@ class ifgramStack:
 
 
     # Functions for Network Inversion
-    def get_design_matrix4timeseries_estimation(self, refDate=None, dropIfgram=True, date12_list=None):
+    @staticmethod
+    def get_design_matrix4timeseries(date12_list, refDate=None):
         """Return design matrix of the input ifgramStack for timeseries estimation
-        Ignoring dropped ifgrams by default
-        Parameters: refDate : str, date in YYYYMMDD format
-                    dropIfgram : bool, use dropped ifgram info or not
+        Parameters: date12_list : list of string in YYYYMMDD_YYYYMMDD format
+                    refDate : str, date in YYYYMMDD format
         Returns:    A : 2D array of float32 in size of (num_ifgram, num_date-1)
                     B : 2D array of float32 in size of (num_ifgram, num_date-1)
-        Examples:   stack_obj = ifgramStack('./INPUTS/ifgramStack.h5')
-                    A, B = stack_obj.get_design_matrix4timeseries_estimation()
-                    A, B = stack_obj.get_design_matrix4timeseries_estimation(date12_list=date12_list)
-                    A = stack_obj.get_design_matrix4timeseries_estimation(refDate=0)
+        Examples:   obj = ifgramStack('./INPUTS/ifgramStack.h5')
+                    A, B = obj.get_design_matrix4timeseries(obj.get_date12_list(dropIfgram=True))
+                    A = ifgramStack.get_design_matrix4timeseries(date12_list, refDate='20101022')[0]
+                    A = ifgramStack.get_design_matrix4timeseries(date12_list, refDate=0)[0] #do not omit the 1st column
         """
         # Date info
-        if date12_list:
-            date12_list = list(date12_list)
-        else:
-            date12_list = self.get_date12_list(dropIfgram=dropIfgram)
+        date12_list = list(date12_list)
         mDates = [i.split('_')[0] for i in date12_list]
         sDates = [i.split('_')[1] for i in date12_list]
         dateList = sorted(list(set(mDates + sDates)))
@@ -961,7 +958,7 @@ class ifgramStack:
                 pbaseIfgram = pbaseIfgram[f['dropIfgram'][:]]
 
         # estimate pbase of time-series
-        B = self.get_design_matrix4timeseries_estimation(dropIfgram=dropIfgram)[1]
+        B = self.get_design_matrix4timeseries(date12List)[1]
         pbaseRate = np.dot(np.linalg.pinv(B), pbaseIfgram)
         pbaseTimeseries = np.concatenate((np.array([0.], dtype=np.float32),
                                           np.cumsum([pbaseRate * tbase_diff])))
