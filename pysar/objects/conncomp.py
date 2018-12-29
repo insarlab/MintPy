@@ -4,7 +4,7 @@
 # Author:  Zhang Yunjun                                    #
 ############################################################
 # Recommend import:
-#   from pysar.objects import connectComponent
+#   from pysar.objects.conncomp import connectComponent
 
 
 import os

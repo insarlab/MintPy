@@ -423,7 +423,8 @@ def plot_pysarApp(inps):
         print(plotCmd)
         status = subprocess.Popen(plotCmd, shell=True).wait()
         msg = '\n'+'-'*50
-        msg += '\nCheck more visualization options from scripts below:'
+        msg += '\nUse info.py to check the HDF5 file structure and metadata.'
+        msg += '\nUse the following scripts for more visualization options:'
         msg += '\n    view.py                  - 2D map(s) view'
         msg += '\n    tsview.py                - 1D point time-series (interactive)'
         msg += '\n    transect.py              - 1D profile/transection (interactive)'

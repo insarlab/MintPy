@@ -1432,6 +1432,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
                 date12List_drop : list of date12 for date12 marked as dropped
                 plot_dict  : dict of plot settting
     Returns:    ax : matplotlib.pyplot.Axes
+                coh_mat : 2D np.array in size of [num_date, num_date]
                 im : mappable
     """
     # Figure Setting
@@ -1500,7 +1501,7 @@ def plot_coherence_matrix(ax, date12List, cohList, date12List_drop=[], plot_dict
         ax.plot([], [], label='Lower: Ifgrams all')
         ax.legend(loc=plot_dict['legend_loc'], handlelength=0)
 
-    return ax, im
+    return ax, coh_mat, im
 
 
 def read_dem(dem_file, pix_box=None, geo_box=None, print_msg=True):

@@ -13,7 +13,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from pysar.objects import ifgramStack
-from pysar.utils import readfile, plot as pp
+from pysar.utils import readfile, plot as pp, utils as ut
 from pysar import view
 
 
@@ -21,6 +21,7 @@ from pysar import view
 EXAMPLE = """example:
   plot_coherence_matrix.py  INPUTS/ifgramStack.h5  --yx 277 1069
   plot_coherence_matrix.py  INPUTS/ifgramStack.h5  --yx 277 1069  --map-file velocity.h5 --map-plot-cmd 'view.py {} --wrap --wrap-range -3 3 --sub-x 900 1400 --sub-y 0 500'
+  plot_coherence_matrix.py  INPUTS/ifgramStack.h5  --lalo -0.8493 -91.1510 -c RdBu
 """
 
 def create_parser():
@@ -30,9 +31,13 @@ def create_parser():
 
     parser.add_argument('ifgram_file', help='interferogram stack file')
     parser.add_argument('--yx', type=int, metavar=('Y', 'X'), nargs=2, 
-                        help='Point of interest X coordinate')
+                        help='Point of interest in y(row)/x(col)')
+    parser.add_argument('--lalo', type=float, metavar=('LAT','LON'), nargs=2,
+                        help='Point of interest in lat/lon')
+    parser.add_argument('--lookup','--lut', dest='lookup_file',
+                        help='Lookup file to convert lat/lon into y/x')
     parser.add_argument('-c','--cmap', dest='colormap', default='truncate_RdBu',
-                        help='Colormap for coherence matrix')
+                        help='Colormap for coherence matrix. Default: truncate_RdBu')
 
     parser.add_argument('--map-file', dest='map_file', default='velocity.h5',
                         help='dataset to show in map to facilitate point selection')
@@ -70,6 +75,13 @@ def read_network_info(inps):
     print('number of kept    interferograms: {}'.format(len(inps.date12_list) - len(inps.ex_date12_list)))
     print('number of acquisitions: {}'.format(len(inps.date_list)))
 
+    if inps.lalo:
+        if not inps.lookup_file:            
+            lookup_file = os.path.join(os.path.dirname(inps.ifgram_file), 'geometry*.h5')
+            inps.lookup_file = ut.get_lookup_file(filePattern=lookup_file)
+        coord = ut.coordinate(obj.metadata, lookup_file=inps.lookup_file)
+        inps.yx = coord.geo2radar(inps.lalo[0], inps.lalo[1])[0:2]
+
     if not inps.yx:
         inps.yx = (obj.refY, obj.refX)
         print('plot initial coherence matrix at reference pixel: {}'.format(inps.yx))
@@ -79,14 +91,26 @@ def read_network_info(inps):
 def plot_coherence_matrix4one_pixel(yx, fig, ax, inps):
     # read coherence
     box = (yx[1], yx[0], yx[1]+1, yx[0]+1)
-    coh = readfile.read(inps.ifgram_file, datasetName='coherence', box=box)[0].tolist()
+    coh = readfile.read(inps.ifgram_file, datasetName='coherence', box=box)[0]
     # prep metadata
     plotDict = {}
     plotDict['fig_title'] = 'Y = {}, X = {}'.format(yx[0], yx[1])
     plotDict['colormap'] = inps.colormap
     # plot
-    ax = pp.plot_coherence_matrix(ax, inps.date12_list, coh, inps.ex_date12_list, plotDict)[0]
+    ax, coh_mat = pp.plot_coherence_matrix(ax,
+                                           date12List=inps.date12_list,
+                                           cohList=coh.tolist(),
+                                           date12List_drop=inps.ex_date12_list,
+                                           plot_dict=plotDict)[0:2]
     fig.canvas.draw()
+
+    # status bar
+    def format_coord(x, y):
+        row = int(y+0.5)
+        col = int(x+0.5)
+        m_date, s_date = sorted([inps.date_list[row], inps.date_list[col]])
+        return 'x={}, y={}, v={:.2f}'.format(m_date, s_date, coh_mat[row, col])
+    ax.format_coord = format_coord
     # info
     print('-'*30)
     print('pixel: yx = {}'.format(yx))
@@ -108,6 +132,9 @@ def main(iargs=None):
     fig1, ax1 = plt.subplots(num=inps.map_file)
     cmd = inps.map_plot_cmd.format(inps.map_file)
     data1, atr, inps1 = view.prep_slice(cmd)
+    if inps.yx:
+        inps1.pts_yx = np.array(inps.yx).reshape(-1, 2)
+        inps1.pts_marker = 'ro'
     ax1 = view.plot_slice(ax1, data1, atr, inps1)[0]
 
     # Figure 2 - coherence matrix
