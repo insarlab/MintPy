@@ -137,7 +137,7 @@ class ifgramStackDict:
                                   shape=dsShape,
                                   maxshape=(None, dsShape[1], dsShape[2]),
                                   dtype=dsDataType,
-                                  chunks=(5, 100, 300),  #True
+                                  chunks=True,
                                   compression=compression)
 
             prog_bar = ptime.progressBar(maxValue=self.numIfgram)
@@ -493,7 +493,7 @@ class geometryDict:
                 data = np.array(self.read(family=dsName, box=box)[0], dtype=dsDataType)
                 ds = f.create_dataset(dsName,
                                       data=data,
-                                      chunks=(100, 300),
+                                      chunks=True,
                                       compression=compression)
 
         ###############################
@@ -520,7 +520,7 @@ class geometryDict:
                 ds = f.create_dataset(dsName,
                                       data=data,
                                       dtype=dataType,
-                                      chunks=(100, 300),
+                                      chunks=True,
                                       compression=compression)
 
         ###############################
