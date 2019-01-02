@@ -32,6 +32,64 @@ from pysar.objects import (geometryDatasetNames,
 
 
 ###############################################################################
+def read_timeseries_lalo(lat, lon, ts_file, lookup_file=None, ref_lat=None, ref_lon=None):
+    """ Read time-series of one pixel with input lat/lon
+    Parameters: lat/lon     : float, latitude/longitude
+                ts_file     : string, filename of time-series HDF5 file
+                lookup_file : string, filename of lookup table file
+                ref_lat/lon : float, latitude/longitude of reference pixel
+    Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+                dis   : 1D np.array of float in meter
+    """
+    # read date
+    obj = timeseries(ts_file)
+    obj.open(print_msg=False)
+    dates = ptime.date_list2vector(obj.dateList)[0]
+    dates = np.array(dates)
+
+    # read displacement
+    coord = coordinate(obj.metadata, lookup_file=lookup_file)
+    y, x = coord.geo2radar(lat, lon)[0:2]
+    box = (x, y, x+1, y+1)
+    dis = readfile.read(ts_file, box=box)[0]
+    # reference pixel
+    if ref_lat is not None:
+        ref_y, ref_x = coord.geo2radar(ref_lat, ref_lon)[0:2]
+        ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
+        dis -= readfile.read(ts_file, box=ref_box)[0]
+    #start at zero
+    dis -= dis[0]
+    return dates, dis
+
+
+def read_timeseries_yx(y, x, ts_file, lookup_file=None, ref_y=None, ref_x=None):
+    """ Read time-series of one pixel with input y/x
+    Parameters: y/x         : int, row/column number of interest
+                ts_file     : string, filename of time-series HDF5 file
+                lookup_file : string, filename of lookup table file
+                ref_y/x     : int, row/column number of reference pixel
+    Returns:    dates : 1D np.array of datetime.datetime objects, i.e. datetime.datetime(2010, 10, 20, 0, 0)
+                dis   : 1D np.array of float in meter
+    """
+    # read date
+    obj = timeseries(ts_file)
+    obj.open(print_msg=False)
+    dates = ptime.date_list2vector(obj.dateList)[0]
+    dates = np.array(dates)
+
+    # read displacement
+    box = (x, y, x+1, y+1)
+    dis = readfile.read(ts_file, box=box)[0]
+    # reference pixel
+    if ref_y is not None:
+        ref_box = (ref_x, ref_y, ref_x+1, ref_y+1)
+        dis -= readfile.read(ts_file, box=ref_box)[0]
+    #start at zero
+    dis -= dis[0]
+    return dates, dis
+
+
+###############################################################################
 def get_all_conn_components(mask_in, min_num_pixel=1e4):
     """Get all connected component with number of pixels larger than threshold
     Parameters: mask_in  : 2D np.array with zero as background and non-zero as foreground
