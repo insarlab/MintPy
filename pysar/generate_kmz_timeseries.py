@@ -1,11 +1,35 @@
 #!/usr/bin/env python3
 
-import os
+import sys
+import argparse
 import numpy as np
 from lxml import etree
 from pykml.factory import KML_ElementMaker as KML
 from pysar.objects import timeseries
 from pysar.utils import readfile
+
+def create_parser():
+
+    parser = argparse.ArgumentParser(description='Generare Google Earth Compatible KML for offline timeseries analysis',
+                                     formatter_class=argparse.RawTextHelpFormatter)
+
+    args = parser.add_argument_group('Input File', 'File/Dataset to display')
+
+    args.add_argument('--ts', dest='ts_file', metavar='FILE', help='Timeseries file to generate KML for')
+    args.add_argument('--vel', dest='vel_file', metavar='FILE', help='Velocity file')
+    args.add_argument('--v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
+                      help='Display limits for matrix plotting.')
+
+    return parser
+
+
+def cmd_line_parse(iargs=None):
+
+    parser = create_parser()
+    inps = parser.parse_args(args=iargs)
+
+    return inps
+
 
 def get_lat_lon(meta, mask=None):
     """extract lat/lon info of all grids into 2D matrix
@@ -29,8 +53,12 @@ def get_lat_lon(meta, mask=None):
 
 if __name__ == "__main__":
 
-    ts_file = "/Users/joshua/Desktop/pysar/test_data/FernandinaSenDT128/geo_timeseries_ECMWF_ramp_demErr_masked.h5"
-    vel_file = "/Users/joshua/Desktop/pysar/test_data/FernandinaSenDT128/geo_velocity_masked.h5"
+    inps = cmd_line_parse(sys.argv[1:])
+
+    print(inps.vlim)
+
+    ts_file = inps.ts_file
+    vel_file = inps.vel_file
 
     ts_obj = timeseries(ts_file)
     ts_obj.open()
@@ -43,12 +71,19 @@ if __name__ == "__main__":
 
     # Velocity / time-series
     vel = readfile.read(vel_file)[0]*100
-    mask = ~np.isnan(vel)  # matrix indicating valid pixels (True for valid, False for invalid)
+    mask = ~np.isnan(vel)                   # matrix indicating valid pixels (True for valid, False for invalid)
     vel = readfile.read(vel_file)[0][mask]  # 1D np.array of velocity   in np.float32 in size of [num_pixel,] in meter/year
-    ts = readfile.read(ts_file)[0][:, mask]  # 2D np.array of time-sries in np.float32 in size of [num_date, num_pixel] in meter
+    ts = readfile.read(ts_file)[0][:, mask] # 2D np.array of time-sries in np.float32 in size of [num_date, num_pixel] in meter
 
-    min_vel = min(vel)
-    max_vel = max(vel)
+    if inps.vlim is None:
+        min_vel = min(vel)
+        max_vel = max(vel)
+    else:
+        min_vel = inps.vlim[0]
+        max_vel = inps.vlim[1]
+
+    print("({}, {})".format(min_vel, max_vel))
+
     vel_range = max_vel - min_vel
     vel_step = vel_range / 51
 
