@@ -4,6 +4,8 @@ import sys
 import argparse
 import numpy as np
 from lxml import etree
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 from pykml.factory import KML_ElementMaker as KML
 from pysar.objects import timeseries
 from pysar.utils import readfile
@@ -17,8 +19,12 @@ def create_parser():
 
     args.add_argument('--ts', dest='ts_file', metavar='FILE', help='Timeseries file to generate KML for')
     args.add_argument('--vel', dest='vel_file', metavar='FILE', help='Velocity file')
-    args.add_argument('--v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
+    args.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='Display limits for matrix plotting.')
+    args.add_argument('-c', '--colormap', dest='colormap',
+                     help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
+                          'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
+                          'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
 
     return parser
 
@@ -75,6 +81,8 @@ if __name__ == "__main__":
     vel = readfile.read(vel_file)[0][mask]  # 1D np.array of velocity   in np.float32 in size of [num_pixel,] in meter/year
     ts = readfile.read(ts_file)[0][:, mask] # 2D np.array of time-sries in np.float32 in size of [num_date, num_pixel] in meter
 
+
+    # Set min/max velocity for colormap
     if inps.vlim is None:
         min_vel = min(vel)
         max_vel = max(vel)
@@ -82,25 +90,12 @@ if __name__ == "__main__":
         min_vel = inps.vlim[0]
         max_vel = inps.vlim[1]
 
-    print("({}, {})".format(min_vel, max_vel))
+    norm = mpl.colors.Normalize(vmin=min_vel, vmax=max_vel)  # normalize velocity colors between 0.0 and 1.0
 
-    vel_range = max_vel - min_vel
-    vel_step = vel_range / 51
-
-    vel_color_map = {}
-
-    colors = ["ff00009f", "ff0000cf", "ff0000df", "ff0000ef", "ff0000ff", "ff000fff", "ff001fff", "ff002fff", "ff003fff",
-              "ff004fff", "ff005fff", "ff006fff", "ff007fff", "ff008fff", "ff009fff", "ff00afff", "ff00bfff", "ff00cfff",
-              "ff00dfff", "ff00efff", "ff00ffff", "ff0fffef", "ff1fffdf", "ff2fffcf", "ff3fffbf", "ff4fffaf", "ff5fff9f",
-              "ff6fff8f", "ff7fff7f", "ff8fff6f", "ff9fff5f", "ffafff4f", "ffbfff3f", "ffcfff2f", "ffdfff1f", "ffefff0f",
-              "ffffff00", "ffffef00", "ffffdf00", "ffffcf00", "ffffbf00", "ffffaf00", "ffff9f00", "ffff8f00", "ffff7f00",
-              "ffff6f00", "ffff5f00", "ffff4f00", "ffff3f00", "ffff0000", "ffef0000"]
-
-    for i in range(51):
-        v_range = (min_vel+(vel_step*i), min_vel+(vel_step * (i+1)))
-        color = colors[i]
-
-        vel_color_map[v_range] = color
+    if inps.colormap is None:
+        cmap = "jet"
+    else:
+        cmap = inps.colormap
 
     # Spatial coordinates
     lats = get_lat_lon(ts_obj.metadata)[0][mask]  # 1D np.array of latitude  in np.float32 in size of [num_pixel,] in degree
@@ -117,16 +112,15 @@ if __name__ == "__main__":
         lon = coords[i][1]
         v = vel[i]
 
-        color = None
-
-        for key in vel_color_map:
-            if key[0] <= v <= key[1]:
-                color = vel_color_map[key]
-                break
+        cmap = mpl.cm.get_cmap(cmap)                    # set colormap
+        rgba = cmap(norm(v))                            # get rgba color components for point velocity
+        hex = mpl.colors.to_hex([rgba[3], rgba[2],
+                                 rgba[1], rgba[0]],
+                                keep_alpha=True)[1:]    # convert rgba to hex components reversed for kml color specification
 
         style = KML.Style(
                     KML.IconStyle(
-                        KML.color(color),
+                        KML.color(hex),
                         KML.scale(0.5),
                         KML.Icon(
                             KML.href("http://maps.google.com/mapfiles/kml/shapes/shaded_dot.png")
