@@ -19,8 +19,8 @@ def create_parser():
 
     args = parser.add_argument_group('Input File', 'File/Dataset to display')
 
-    args.add_argument('--ts', dest='ts_file', metavar='FILE', help='Timeseries file to generate KML for')
-    args.add_argument('--vel', dest='vel_file', metavar='FILE', help='Velocity file')
+    args.add_argument('ts_file', metavar='timeseries_file', help='Timeseries file to generate KML for')
+    args.add_argument('--vel', dest='vel_file', metavar='velocity_file', help='Velocity file')
     args.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='Display limits for matrix plotting.')
     args.add_argument('-c', '--colormap', dest='colormap',
@@ -58,9 +58,9 @@ def get_lat_lon(meta, mask=None):
     return lats, lons
 
 
-if __name__ == "__main__":
+def main(iargs=None):
 
-    inps = cmd_line_parse(sys.argv[1:])
+    inps = cmd_line_parse(iargs)
 
     out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
 
@@ -238,3 +238,7 @@ if __name__ == "__main__":
     print(cmdClean)
     os.system(cmdClean)
 
+
+######################################################################################
+if __name__ == '__main__':
+    main()
