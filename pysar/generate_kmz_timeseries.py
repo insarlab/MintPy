@@ -106,7 +106,7 @@ if __name__ == "__main__":
     # Create and save colorbar image
     pc = plt.figure(figsize=(8, 1))
     cax = pc.add_subplot(111)
-    cbar = mpl.colorbar.ColorbarBase(cax, cmap=inps.colormap, norm=norm, orientation='horizontal')
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='horizontal')
     cbar.set_label('{} [{}]'.format("Velocity", "cm"))
     cbar.update_ticks()
 
@@ -120,6 +120,21 @@ if __name__ == "__main__":
     # Create KML Document
     kml = KML.kml()
     kml_document = KML.Document()
+
+    legend_overlay = KML.ScreenOverlay(
+        KML.Icon(
+            KML.href(cbar_png_file),
+            KML.viewBoundScale(0.75)
+        ),
+        KML.overlayXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
+        KML.screenXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
+        KML.size(x="350", y="0", xunits="pixel", yunits="pixel"),
+        KML.rotation(0),
+        KML.visibility(1),
+        KML.open(0)
+    )
+
+    kml_document.append(legend_overlay)
 
     for i in range(0, len(coords), 10):
         lat = coords[i][0]
@@ -150,7 +165,7 @@ if __name__ == "__main__":
 
         # Javascript to embed inside the description
         js_data_string = "< ![CDATA[\n" \
-                            "<script type='text/javascript' src='Velocity__mm_year__time_series_dir/dygraph-combined.js'></script>\n" \
+                            "<script type='text/javascript' src='dygraph-combined.js'></script>\n" \
                             "<div id='graphdiv'> </div>\n" \
                             "<script type='text/javascript'>\n" \
                                 "g = new Dygraph( document.getElementById('graphdiv'),\n" \
@@ -181,6 +196,11 @@ if __name__ == "__main__":
 
     kml.append(kml_document)
 
+    dygraph_path = os.path.dirname(__file__) + "/utils/dygraph-combined.js"
+    cmdDygraph = "cp {} {}".format(dygraph_path, 'dygraph-combined.js')
+    print("copying dygraph-combined.js for reference\n")
+    os.system(cmdDygraph)
+
     # Write KML file
     kml_file = '{}.kml'.format(out_name_base)
     print('writing ' + kml_file)
@@ -189,17 +209,13 @@ if __name__ == "__main__":
 
     # 2.4 Generate KMZ file
     kmz_file = '{}.kmz'.format(out_name_base)
-    cmdKMZ = 'zip {} {} {}'.format(kmz_file, kml_file, cbar_png_file)
+    cmdKMZ = 'zip {} {} {} {}'.format(kmz_file, kml_file, cbar_png_file, 'dygraph-combined.js')
     print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)
 
-    cmdClean = 'rm {} {}'.format(kml_file, cbar_png_file)
+    cmdClean = 'rm {} {}'.format(kml_file, cbar_png_file, 'dygraph-combined.js')
     print(cmdClean)
     os.system(cmdClean)
 
-    # # Write KML structure to .kml file
-    # with open("/Users/joshua/Desktop/test.kml", 'w+') as kml_file:
-    #     kml_file.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
-    #
     # print("Done")
 
