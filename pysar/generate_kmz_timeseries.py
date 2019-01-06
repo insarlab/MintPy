@@ -64,17 +64,25 @@ if __name__ == "__main__":
 
     out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
 
+    cbar_png_file = '{}_cbar.png'.format(out_name_base)
+    dygraph_file = "dygraph-combined.js"
+    dot_file = "shaded_dot.png"
+    kml_file = '{}.kml'.format(out_name_base)
+    kmz_file = '{}.kmz'.format(out_name_base)
+
     ts_file = inps.ts_file
     vel_file = inps.vel_file
 
     ts_obj = timeseries(ts_file)
     ts_obj.open()
 
+
     ## read data
 
     # Date
     dates = np.array(ts_obj.times)  # 1D np.array of dates in datetime.datetime object in size of [num_date,]
     dates = list(map(lambda d: d.strftime("%Y-%m-%d"), dates))
+
 
     # Velocity / time-series
     vel = readfile.read(vel_file)[0]
@@ -84,6 +92,7 @@ if __name__ == "__main__":
 
     ts_min = np.min(ts)
     ts_max = np.max(ts)
+
 
     # Set min/max velocity for colormap
     if inps.vlim is None:
@@ -98,10 +107,12 @@ if __name__ == "__main__":
     else:
         cmap = inps.colormap
 
+
     # Spatial coordinates
     lats = get_lat_lon(ts_obj.metadata)[0][mask]  # 1D np.array of latitude  in np.float32 in size of [num_pixel,] in degree
     lons = get_lat_lon(ts_obj.metadata)[1][mask]  # 1D np.array of longitude in np.float32 in size of [num_pixel,] in degree
     coords = list(zip(lats, lons))
+
 
     # Create and save colorbar image
     pc = plt.figure(figsize=(8, 1))
@@ -110,18 +121,17 @@ if __name__ == "__main__":
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='horizontal')
     cbar.set_label('{} [{}]'.format("Velocity", "cm"))
     cbar.update_ticks()
-
     pc.patch.set_facecolor('white')
     pc.patch.set_alpha(0.7)
-
-    cbar_png_file = '{}_cbar.png'.format(out_name_base)
     print('writing ' + cbar_png_file)
     pc.savefig(cbar_png_file, bbox_inches='tight', facecolor=pc.get_facecolor(), dpi=300)
+
 
     # Create KML Document
     kml = KML.kml()
     kml_document = KML.Document()
 
+    # Create Screen Overlay element for colorbar
     legend_overlay = KML.ScreenOverlay(
         KML.Icon(
             KML.href(cbar_png_file),
@@ -136,6 +146,7 @@ if __name__ == "__main__":
     )
 
     kml_document.append(legend_overlay)
+
 
     print("Creating KML file. This may take some time.")
     for i in range(0, len(coords), 10):
@@ -155,7 +166,7 @@ if __name__ == "__main__":
                         KML.color(hex),
                         KML.scale(0.5),
                         KML.Icon(
-                            KML.href("http://maps.google.com/mapfiles/kml/shapes/shaded_dot.png")
+                            KML.href(dot_file)
                         )
                     )
                 )
@@ -167,7 +178,7 @@ if __name__ == "__main__":
 
         # Javascript to embed inside the description
         js_data_string = "< ![CDATA[\n" \
-                            "<script type='text/javascript' src='dygraph-combined.js'></script>\n" \
+                            "<script type='text/javascript' src='"+dygraph_file+"'></script>\n" \
                             "<div id='graphdiv'> </div>\n" \
                             "<script type='text/javascript'>\n" \
                                 "g = new Dygraph( document.getElementById('graphdiv'),\n" \
@@ -195,30 +206,35 @@ if __name__ == "__main__":
         # Crate KML Placemark element to hold style, description, and point elements
         placemark = KML.Placemark(style, description, point)
 
+        # Append each placemark element to the KML document object
         kml_document.append(placemark)
 
     kml.append(kml_document)
 
-    dygraph_path = os.path.dirname(__file__) + "/utils/dygraph-combined.js"
-    cmdDygraph = "cp {} {}".format(dygraph_path, 'dygraph-combined.js')
-    print("copying dygraph-combined.js for reference\n")
+
+    # Copy shaded_dot file
+    dot_path = os.path.dirname(__file__) + "/utils/"+dot_file
+    cmdDot = "cp {} {}".format(dot_path, dot_file)
+    print("copying {} for reference.\n".format(dot_file))
+    os.system(cmdDot)
+
+    # Copt dygraph-combined.js file
+    dygraph_path = os.path.dirname(__file__) + "/utils/" + dygraph_file
+    cmdDygraph = "cp {} {}".format(dygraph_path, dygraph_file)
+    print("copying {} for reference\n".format(dygraph_file))
     os.system(cmdDygraph)
 
     # Write KML file
-    kml_file = '{}.kml'.format(out_name_base)
     print('writing ' + kml_file)
     with open(kml_file, 'w') as f:
         f.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
 
-    # 2.4 Generate KMZ file
-    kmz_file = '{}.kmz'.format(out_name_base)
-    cmdKMZ = 'zip {} {} {} {}'.format(kmz_file, kml_file, cbar_png_file, 'dygraph-combined.js')
+    # Generate KMZ file
+    cmdKMZ = 'zip {} {} {} {} {}'.format(kmz_file, kml_file, cbar_png_file, dygraph_file, dot_file)
     print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)
 
-    cmdClean = 'rm {} {}'.format(kml_file, cbar_png_file, 'dygraph-combined.js')
+    cmdClean = 'rm {} {} {} {}'.format(kml_file, cbar_png_file, dygraph_file, dot_file)
     print(cmdClean)
     os.system(cmdClean)
-
-    # print("Done")
 
