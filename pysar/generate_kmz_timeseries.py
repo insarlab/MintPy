@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import argparse
 import numpy as np
@@ -8,7 +9,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from pykml.factory import KML_ElementMaker as KML
 from pysar.objects import timeseries
-from pysar.utils import readfile
+from pysar.utils import readfile, plot
+
 
 def create_parser():
 
@@ -25,7 +27,6 @@ def create_parser():
                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
                           'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
                           'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
-
     return parser
 
 
@@ -61,7 +62,7 @@ if __name__ == "__main__":
 
     inps = cmd_line_parse(sys.argv[1:])
 
-    print(inps.vlim)
+    out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
 
     ts_file = inps.ts_file
     vel_file = inps.vel_file
@@ -102,6 +103,19 @@ if __name__ == "__main__":
     lons = get_lat_lon(ts_obj.metadata)[1][mask]  # 1D np.array of longitude in np.float32 in size of [num_pixel,] in degree
     coords = list(zip(lats, lons))
 
+    # Create and save colorbar image
+    pc = plt.figure(figsize=(8, 1))
+    cax = pc.add_subplot(111)
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=inps.colormap, norm=norm, orientation='horizontal')
+    cbar.set_label('{} [{}]'.format("Velocity", "cm"))
+    cbar.update_ticks()
+
+    pc.patch.set_facecolor('white')
+    pc.patch.set_alpha(0.7)
+
+    cbar_png_file = '{}_cbar.png'.format(out_name_base)
+    print('writing ' + cbar_png_file)
+    pc.savefig(cbar_png_file, bbox_inches='tight', facecolor=pc.get_facecolor(), dpi=300)
 
     # Create KML Document
     kml = KML.kml()
@@ -112,12 +126,13 @@ if __name__ == "__main__":
         lon = coords[i][1]
         v = vel[i]
 
-        cmap = mpl.cm.get_cmap(cmap)                    # set colormap
-        rgba = cmap(norm(v))                            # get rgba color components for point velocity
+        colormap = mpl.cm.get_cmap(cmap)                    # set colormap
+        rgba = colormap(norm(v))                            # get rgba color components for point velocity
         hex = mpl.colors.to_hex([rgba[3], rgba[2],
                                  rgba[1], rgba[0]],
                                 keep_alpha=True)[1:]    # convert rgba to hex components reversed for kml color specification
 
+        # Create KML icon style element
         style = KML.Style(
                     KML.IconStyle(
                         KML.color(hex),
@@ -128,40 +143,63 @@ if __name__ == "__main__":
                     )
                 )
 
+        # Create KML point element
         point = KML.Point(
                     KML.coordinates("{},{}".format(lon, lat))
                 )
 
+        # Javascript to embed inside the description
         js_data_string = "< ![CDATA[\n" \
                             "<script type='text/javascript' src='Velocity__mm_year__time_series_dir/dygraph-combined.js'></script>\n" \
                             "<div id='graphdiv'> </div>\n" \
                             "<script type='text/javascript'>\n" \
                                 "g = new Dygraph( document.getElementById('graphdiv'),\n" \
                                 "\"Date, Displacement\\n\" + \n"
+
         for j in range(len(dates)):
             date = dates[j]
             displacement = ts[j][i]*100
 
-            date_displacement_string = "\"{}, {}\\n\" + \n".format(date, displacement)
+            date_displacement_string = "\"{}, {}\\n\" + \n".format(date, displacement)  # append the date/displacement data
 
             js_data_string += date_displacement_string
 
-        js_data_string +=   "{" \
-                                "valueRange: [-100,100]," \
-                                "ylabel: '[mm]'," \
-                            "});" \
-                          "</script>" \
+        js_data_string +=       "{" \
+                                    "valueRange: [-100,100]," \
+                                    "ylabel: '[mm]'," \
+                                "});" \
+                              "</script>" \
                           "]]>"
 
+        # Create KML description element
         description = KML.description(js_data_string)
 
+        # Crate KML Placemark element to hold style, description, and point elements
         placemark = KML.Placemark(style, description, point)
 
         kml_document.append(placemark)
+
     kml.append(kml_document)
 
-    with open("/Users/joshua/Desktop/test.kml", 'w+') as kml_file:
-        kml_file.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
+    # Write KML file
+    kml_file = '{}.kml'.format(out_name_base)
+    print('writing ' + kml_file)
+    with open(kml_file, 'w') as f:
+        f.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
 
-    print("Done")
+    # 2.4 Generate KMZ file
+    kmz_file = '{}.kmz'.format(out_name_base)
+    cmdKMZ = 'zip {} {} {}'.format(kmz_file, kml_file, cbar_png_file)
+    print('writing {}\n{}'.format(kmz_file, cmdKMZ))
+    os.system(cmdKMZ)
+
+    cmdClean = 'rm {} {}'.format(kml_file, cbar_png_file)
+    print(cmdClean)
+    os.system(cmdClean)
+
+    # # Write KML structure to .kml file
+    # with open("/Users/joshua/Desktop/test.kml", 'w+') as kml_file:
+    #     kml_file.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
+    #
+    # print("Done")
 
