@@ -77,11 +77,13 @@ if __name__ == "__main__":
     dates = list(map(lambda d: d.strftime("%Y-%m-%d"), dates))
 
     # Velocity / time-series
-    vel = readfile.read(vel_file)[0]*100
+    vel = readfile.read(vel_file)[0]
     mask = ~np.isnan(vel)                   # matrix indicating valid pixels (True for valid, False for invalid)
-    vel = readfile.read(vel_file)[0][mask]  # 1D np.array of velocity   in np.float32 in size of [num_pixel,] in meter/year
-    ts = readfile.read(ts_file)[0][:, mask] # 2D np.array of time-sries in np.float32 in size of [num_date, num_pixel] in meter
+    vel = readfile.read(vel_file)[0][mask]*100  # 1D np.array of velocity   in np.float32 in size of [num_pixel,] in meter/year
+    ts = readfile.read(ts_file)[0][:, mask]*100     # 2D np.array of time-sries in np.float32 in size of [num_date, num_pixel] in meter
 
+    ts_min = np.min(ts)
+    ts_max = np.max(ts)
 
     # Set min/max velocity for colormap
     if inps.vlim is None:
@@ -90,8 +92,6 @@ if __name__ == "__main__":
     else:
         min_vel = inps.vlim[0]
         max_vel = inps.vlim[1]
-
-    norm = mpl.colors.Normalize(vmin=min_vel, vmax=max_vel)  # normalize velocity colors between 0.0 and 1.0
 
     if inps.colormap is None:
         cmap = "jet"
@@ -106,6 +106,7 @@ if __name__ == "__main__":
     # Create and save colorbar image
     pc = plt.figure(figsize=(8, 1))
     cax = pc.add_subplot(111)
+    norm = mpl.colors.Normalize(vmin=min_vel, vmax=max_vel)  # normalize velocity colors between 0.0 and 1.0
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='horizontal')
     cbar.set_label('{} [{}]'.format("Velocity", "cm"))
     cbar.update_ticks()
@@ -136,6 +137,7 @@ if __name__ == "__main__":
 
     kml_document.append(legend_overlay)
 
+    print("Creating KML file. This may take some time.")
     for i in range(0, len(coords), 10):
         lat = coords[i][0]
         lon = coords[i][1]
@@ -173,15 +175,16 @@ if __name__ == "__main__":
 
         for j in range(len(dates)):
             date = dates[j]
-            displacement = ts[j][i]*100
+            displacement = ts[j][i]
 
             date_displacement_string = "\"{}, {}\\n\" + \n".format(date, displacement)  # append the date/displacement data
 
             js_data_string += date_displacement_string
 
-        js_data_string +=       "{" \
-                                    "valueRange: [-100,100]," \
-                                    "ylabel: '[mm]'," \
+        js_data_string +=       "\"\",\n" \
+                                "{" \
+                                    "valueRange: ["+str(ts_min)+","+str(ts_max)+"]," \
+                                    "ylabel: '[cm]'," \
                                 "});" \
                               "</script>" \
                           "]]>"
