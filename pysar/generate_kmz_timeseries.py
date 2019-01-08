@@ -59,6 +59,20 @@ def get_lat_lon(meta, mask=None):
     return lats, lons
 
 
+def generate_description_string(coords, yx, v, vstd, disp, tcoh):
+
+    return  "Latitude: " + str(coords[0]) + "˚ <br /> \n " \
+            "Longitude: " + str(coords[1]) + "˚ <br /> \n" \
+            "Row: " + str(yx[0]) + " <br /> \n" \
+            "Column: " + str(yx[1]) + " <br /> \n" \
+            "Mean LOS velocity: " + str(v) + " cm/year <br /> \n" \
+            "Mean LOS velocity St Dev: " + str(vstd) + " cm/year <br /> \n" \
+            "Cumulative displacement: " + str(disp) + " cm <br /> \n" \
+            "Temporal coherence: " + str(tcoh) + "<br /> \n" \
+            " <br />  <br /> " \
+            "\n\n"
+
+
 def main(iargs=None):
 
     inps = cmd_line_parse(iargs)
@@ -122,9 +136,6 @@ def main(iargs=None):
     rows, cols = np.mgrid[0:length-1:length*1j, 0:width-1:width*1j]
     rows = rows[mask]
     cols = cols[mask]
-    ref_coords = (float(ts_obj.metadata['REF_LAT']), float(ts_obj.metadata['REF_LON']))
-
-    print(ref_coords)
 
     # Create and save colorbar image
     pc = plt.figure(figsize=(8, 1))
@@ -142,6 +153,29 @@ def main(iargs=None):
     # Create KML Document
     kml = KML.kml()
     kml_document = KML.Document()
+
+    ref_coords = (float(ts_obj.metadata['REF_LAT']), float(ts_obj.metadata['REF_LON']))
+    ref_yx = (int(ts_obj.metadata['REF_Y']), int(ts_obj.metadata['REF_X']))
+
+    # Generate the placemark for the Reference Pixel
+    reference_point =   KML.Placemark(
+                            KML.Style(
+                                KML.IconStyle(
+                                    KML.scale(1.5),
+                                    KML.Icon(
+                                        KML.href(star_file)
+                                    )
+                                )
+                            ),
+                            KML.description(
+                                generate_description_string(ref_coords, ref_yx, 0.00, 0.00, 0.00, 1.00)
+                            ),
+                            KML.Point(
+                                KML.coordinates("{}, {}".format(ref_coords[1], ref_coords[0]))
+                            )
+                        )
+
+    kml_document.append(reference_point)
 
     # Create Screen Overlay element for colorbar
     legend_overlay = KML.ScreenOverlay(
@@ -189,18 +223,8 @@ def main(iargs=None):
                     KML.coordinates("{},{}".format(lon, lat))
                 )
 
-        cumulative_displacement = ts[-1][i]
-        description_info = ""
-        description_info += "Latitude: " + str(lat) + "˚ <br /> \n " \
-                            "Longitude: " + str(lon) + "˚ <br /> \n" \
-                            "Row: " + str(rows[i]) + " <br /> \n" \
-                            "Column: " + str(cols[i]) + " <br /> \n" \
-                            "Mean LOS velocity: " + str(v) + " cm/year <br /> \n" \
-                            "Mean LOS velocity St Dev:" + str(vstd) + " cm/year <br /> \n" \
-                            "Cumulative displacement: " + str(cumulative_displacement) + " cm <br /> \n" \
-                            "Temporal coherence:" + str(tcoh[i]) + "<br /> \n" \
-                            " <br />  <br /> " \
-                            "\n\n"
+        disp = ts[-1][i]
+        description_info = generate_description_string((lat, lon), (rows[i], cols[i]), v, vstd, disp, tcoh[i])
 
         # Javascript to embed inside the description
         js_data_string = "< ![CDATA[\n" \
