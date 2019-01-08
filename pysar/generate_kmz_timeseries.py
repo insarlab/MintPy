@@ -220,13 +220,13 @@ def main(iargs=None):
 
 
     # Copy shaded_dot file
-    dot_path = os.path.dirname(__file__) + "/utils/"+dot_file
+    dot_path = os.path.dirname(__file__) + "/utils/resources/"+dot_file
     cmdDot = "cp {} {}".format(dot_path, dot_file)
     print("copying {} for reference.\n".format(dot_file))
     os.system(cmdDot)
 
     # Copt dygraph-combined.js file
-    dygraph_path = os.path.dirname(__file__) + "/utils/" + dygraph_file
+    dygraph_path = os.path.dirname(__file__) + "/utils/resources/" + dygraph_file
     cmdDygraph = "cp {} {}".format(dygraph_path, dygraph_file)
     print("copying {} for reference\n".format(dygraph_file))
     os.system(cmdDygraph)
