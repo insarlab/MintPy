@@ -94,6 +94,7 @@ def main(iargs=None):
     vel_std = readfile.read(vel_file, datasetName='velocityStd')[0][mask]*100.
     ts = readfile.read(ts_file)[0][:, mask]*100.
     ts -= np.tile(ts[0,:], (ts.shape[0],1))     #enforce displacement starts from zero
+    tcoh = readfile.read('geo_temporalCoherence.h5')[0][mask]
 
     ts_min = np.min(ts)
     ts_max = np.max(ts)
@@ -164,6 +165,7 @@ def main(iargs=None):
         lat = coords[i][0]
         lon = coords[i][1]
         v = vel[i]
+        vstd = vel_std[i]
 
         colormap = mpl.cm.get_cmap(cmap)                    # set colormap
         rgba = colormap(norm(v))                            # get rgba color components for point velocity
@@ -191,12 +193,12 @@ def main(iargs=None):
         description_info = ""
         description_info += "Latitude: " + str(lat) + "˚ <br /> \n " \
                             "Longitude: " + str(lon) + "˚ <br /> \n" \
-                            "Row: ___ <br /> \n" \
-                            "Column: ___ <br /> \n" \
-                            "Mean LOS velocity: " + str(v) + "cm/year <br /> \n" \
-                            "Mean LOS velocity St Dev: ___ cm/year <br /> \n" \
-                            "Cumulative displacement: " + str(cumulative_displacement) + "cm <br /> \n" \
-                            "Temporal coherence: ___ <br /> \n" \
+                            "Row: " + str(rows[i]) + " <br /> \n" \
+                            "Column: " + str(cols[i]) + " <br /> \n" \
+                            "Mean LOS velocity: " + str(v) + " cm/year <br /> \n" \
+                            "Mean LOS velocity St Dev:" + str(vstd) + " cm/year <br /> \n" \
+                            "Cumulative displacement: " + str(cumulative_displacement) + " cm <br /> \n" \
+                            "Temporal coherence:" + str(tcoh[i]) + "<br /> \n" \
                             " <br />  <br /> " \
                             "\n\n"
 
@@ -243,7 +245,7 @@ def main(iargs=None):
     os.system(cmdDot)
 
     # Copy wht_stars file
-    star_path = os.path.dirname(__file__) + "/utils/" + star_file
+    star_path = os.path.dirname(__file__) + "/utils/resources/" + star_file
     cmdStar = "cp {} {}".format(star_path, star_file)
     print("copying {} for reference.\n".format(star_file))
     os.system(cmdStar)
