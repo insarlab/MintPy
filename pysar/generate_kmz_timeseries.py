@@ -157,6 +157,10 @@ def main(iargs=None):
     ref_coords = (float(ts_obj.metadata['REF_LAT']), float(ts_obj.metadata['REF_LON']))
     ref_yx = (int(ts_obj.metadata['REF_Y']), int(ts_obj.metadata['REF_X']))
 
+    reference_folder =  KML.Folder(
+                            KML.name("ReferencePoint")
+                        )
+
     # Generate the placemark for the Reference Pixel
     reference_point =   KML.Placemark(
                             KML.Style(
@@ -175,7 +179,11 @@ def main(iargs=None):
                             )
                         )
 
-    kml_document.append(reference_point)
+    reference_folder.append(reference_point)
+
+    legend_folder = KML.Folder(
+                        KML.name("Legend")
+                    )
 
     # Create Screen Overlay element for colorbar
     legend_overlay = KML.ScreenOverlay(
@@ -191,8 +199,14 @@ def main(iargs=None):
         KML.open(0)
     )
 
-    kml_document.append(legend_overlay)
+    legend_folder.append(legend_overlay)
+    kml_document.append(legend_folder)
 
+    data_folder =   KML.Folder(
+                        KML.name("Data")
+                    )
+
+    data_folder.append(reference_folder)
 
     print("Creating KML file. This may take some time.")
     for i in range(0, len(coords), 10):
@@ -257,7 +271,9 @@ def main(iargs=None):
         placemark = KML.Placemark(style, description, point)
 
         # Append each placemark element to the KML document object
-        kml_document.append(placemark)
+        data_folder.append(placemark)
+
+    kml_document.append(data_folder)
 
     kml.append(kml_document)
 
