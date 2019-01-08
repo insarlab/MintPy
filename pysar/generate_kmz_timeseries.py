@@ -67,6 +67,7 @@ def main(iargs=None):
     cbar_png_file = '{}_cbar.png'.format(out_name_base)
     dygraph_file = "dygraph-combined.js"
     dot_file = "shaded_dot.png"
+    star_file = "wht_stars.png"
     kml_file = '{}.kml'.format(out_name_base)
     kmz_file = '{}.kmz'.format(out_name_base)
 
@@ -112,7 +113,9 @@ def main(iargs=None):
     lats = get_lat_lon(ts_obj.metadata)[0][mask]  # 1D np.array of latitude  in np.float32 in size of [num_pixel,] in degree
     lons = get_lat_lon(ts_obj.metadata)[1][mask]  # 1D np.array of longitude in np.float32 in size of [num_pixel,] in degree
     coords = list(zip(lats, lons))
+    ref_coords = (float(ts_obj.metadata['REF_LAT']), float(ts_obj.metadata['REF_LON']))
 
+    print(ref_coords)
 
     # Create and save colorbar image
     pc = plt.figure(figsize=(8, 1))
@@ -176,6 +179,19 @@ def main(iargs=None):
                     KML.coordinates("{},{}".format(lon, lat))
                 )
 
+        cumulative_displacement = ts[-1][i]
+        description_info = ""
+        description_info += "Latitude: " + str(lat) + "˚ <br /> \n " \
+                            "Longitude: " + str(lon) + "˚ <br /> \n" \
+                            "Row: ___ <br /> \n" \
+                            "Column: ___ <br /> \n" \
+                            "Mean LOS velocity: " + str(v) + "cm/year <br /> \n" \
+                            "Mean LOS velocity St Dev: ___ cm/year <br /> \n" \
+                            "Cumulative displacement: " + str(cumulative_displacement) + "cm <br /> \n" \
+                            "Temporal coherence: ___ <br /> \n" \
+                            " <br />  <br /> " \
+                            "\n\n"
+
         # Javascript to embed inside the description
         js_data_string = "< ![CDATA[\n" \
                             "<script type='text/javascript' src='"+dygraph_file+"'></script>\n" \
@@ -201,7 +217,7 @@ def main(iargs=None):
                           "]]>"
 
         # Create KML description element
-        description = KML.description(js_data_string)
+        description = KML.description(description_info, js_data_string)
 
         # Crate KML Placemark element to hold style, description, and point elements
         placemark = KML.Placemark(style, description, point)
@@ -218,6 +234,12 @@ def main(iargs=None):
     print("copying {} for reference.\n".format(dot_file))
     os.system(cmdDot)
 
+    # Copy wht_stars file
+    star_path = os.path.dirname(__file__) + "/utils/" + star_file
+    cmdStar = "cp {} {}".format(star_path, star_file)
+    print("copying {} for reference.\n".format(star_file))
+    os.system(cmdStar)
+
     # Copt dygraph-combined.js file
     dygraph_path = os.path.dirname(__file__) + "/utils/" + dygraph_file
     cmdDygraph = "cp {} {}".format(dygraph_path, dygraph_file)
@@ -230,11 +252,11 @@ def main(iargs=None):
         f.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
 
     # Generate KMZ file
-    cmdKMZ = 'zip {} {} {} {} {}'.format(kmz_file, kml_file, cbar_png_file, dygraph_file, dot_file)
+    cmdKMZ = 'zip {} {} {} {} {} {}'.format(kmz_file, kml_file, cbar_png_file, dygraph_file, dot_file, star_file)
     print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)
 
-    cmdClean = 'rm {} {} {} {}'.format(kml_file, cbar_png_file, dygraph_file, dot_file)
+    cmdClean = 'rm {} {} {} {} {}'.format(kml_file, cbar_png_file, dygraph_file, dot_file, star_file)
     print(cmdClean)
     os.system(cmdClean)
 
