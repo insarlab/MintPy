@@ -60,17 +60,28 @@ def get_lat_lon(meta, mask=None):
 
 
 def generate_description_string(coords, yx, v, vstd, disp, tcoh):
+    des_str  = "Latitude: {:.6f}˚ <br /> \n ".format(coords[0])
+    des_str += "Longitude: {:.6f}˚ <br /> \n".format(coords[1])
+    des_str += "Row: {:.0f} <br /> \n".format(yx[0])
+    des_str += "Column: {:.0f} <br /> \n".format(yx[1])
+    des_str += "Mean LOS velocity: {:.2f} +/- {:.2f} cm/year <br /> \n".format(v, vstd)
+    #des_str += "Mean LOS velocity st. dev.: {:.2f} cm/year <br /> \n".format(vstd)
+    des_str += "Cumulative displacement: {:.2f} cm <br /> \n".format(disp)
+    des_str += "Temporal coherence: {:.2f} <br /> \n".format(tcoh)
+    des_str += " <br />  <br /> "
+    des_str += "\n\n"
+    #return  "Latitude: " + str(coords[0]) + "˚ <br /> \n " \
+    #        "Longitude: " + str(coords[1]) + "˚ <br /> \n" \
+    #        "Row: " + str(yx[0]) + " <br /> \n" \
+    #        "Column: " + str(yx[1]) + " <br /> \n" \
+    #        "Mean LOS velocity: " + str(v) + " cm/year <br /> \n" \
+    #        "Mean LOS velocity St Dev: " + str(vstd) + " cm/year <br /> \n" \
+    #        "Cumulative displacement: " + str(disp) + " cm <br /> \n" \
+    #        "Temporal coherence: " + str(tcoh) + "<br /> \n" \
+    #        " <br />  <br /> " \
+    #        "\n\n"
+    return des_str
 
-    return  "Latitude: " + str(coords[0]) + "˚ <br /> \n " \
-            "Longitude: " + str(coords[1]) + "˚ <br /> \n" \
-            "Row: " + str(yx[0]) + " <br /> \n" \
-            "Column: " + str(yx[1]) + " <br /> \n" \
-            "Mean LOS velocity: " + str(v) + " cm/year <br /> \n" \
-            "Mean LOS velocity St Dev: " + str(vstd) + " cm/year <br /> \n" \
-            "Cumulative displacement: " + str(disp) + " cm <br /> \n" \
-            "Temporal coherence: " + str(tcoh) + "<br /> \n" \
-            " <br />  <br /> " \
-            "\n\n"
 
 def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(8, 1)):
     pc = plt.figure(figsize=figsize)
