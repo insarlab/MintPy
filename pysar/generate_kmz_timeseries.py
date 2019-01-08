@@ -20,13 +20,14 @@ def create_parser():
     args = parser.add_argument_group('Input File', 'File/Dataset to display')
 
     args.add_argument('ts_file', metavar='timeseries_file', help='Timeseries file to generate KML for')
-    args.add_argument('--vel', dest='vel_file', metavar='velocity_file', help='Velocity file')
+    args.add_argument('--vel', dest='vel_file', metavar='velocity_file', default='geo_velocity_masked.h5',
+                      help='Velocity file')
     args.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='Display limits for matrix plotting.')
     args.add_argument('-c', '--colormap', dest='colormap',
-                     help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
-                          'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
-                          'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
+                      help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
+                           'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
+                           'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
     return parser
 
 
@@ -75,6 +76,7 @@ def main(iargs=None):
 
     ts_obj = timeseries(ts_file)
     ts_obj.open()
+    length, width = ts_obj.length, ts_obj.width
 
 
     ## read data
@@ -86,9 +88,11 @@ def main(iargs=None):
 
     # Velocity / time-series
     vel = readfile.read(vel_file)[0]
-    mask = ~np.isnan(vel)                   # matrix indicating valid pixels (True for valid, False for invalid)
-    vel = readfile.read(vel_file)[0][mask]*100  # 1D np.array of velocity   in np.float32 in size of [num_pixel,] in meter/year
-    ts = readfile.read(ts_file)[0][:, mask]*100     # 2D np.array of time-sries in np.float32 in size of [num_date, num_pixel] in meter
+    mask = ~np.isnan(vel)
+    vel = readfile.read(vel_file, datasetName='velocity')[0][mask]*100.
+    vel_std = readfile.read(vel_file, datasetName='velocityStd')[0][mask]*100.
+    ts = readfile.read(ts_file)[0][:, mask]*100.
+    ts -= np.tile(ts[0,:], (ts.shape[0],1))     #enforce displacement starts from zero
 
     ts_min = np.min(ts)
     ts_max = np.max(ts)
@@ -109,10 +113,13 @@ def main(iargs=None):
 
 
     # Spatial coordinates
-    lats = get_lat_lon(ts_obj.metadata)[0][mask]  # 1D np.array of latitude  in np.float32 in size of [num_pixel,] in degree
-    lons = get_lat_lon(ts_obj.metadata)[1][mask]  # 1D np.array of longitude in np.float32 in size of [num_pixel,] in degree
+    lats, lons = get_lat_lon(ts_obj.metadata)
+    lats = lats[mask]                   # 1D np.array of latitude  in np.float32 in size of [num_pixel,] in degree
+    lons = lons[mask]                   # 1D np.array of longitude in np.float32 in size of [num_pixel,] in degree
     coords = list(zip(lats, lons))
-
+    rows, cols = np.mgrid[0:length-1:length*1j, 0:width-1:width*1j]
+    rows = rows[mask]
+    cols = cols[mask]
 
     # Create and save colorbar image
     pc = plt.figure(figsize=(8, 1))
