@@ -72,6 +72,19 @@ def generate_description_string(coords, yx, v, vstd, disp, tcoh):
             " <br />  <br /> " \
             "\n\n"
 
+def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(8, 1)):
+    pc = plt.figure(figsize=figsize)
+    cax = pc.add_subplot(111)
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='horizontal')
+    cbar.set_label('{} [{}]'.format("Velocity", "cm"))
+    cbar.update_ticks()
+    pc.patch.set_facecolor('white')
+    pc.patch.set_alpha(0.7)
+    print('writing ' + out_file)
+    pc.savefig(out_file, bbox_inches='tight', facecolor=pc.get_facecolor(), dpi=300)
+    return out_file
+
 
 def main(iargs=None):
 
@@ -82,7 +95,7 @@ def main(iargs=None):
     cbar_png_file = '{}_cbar.png'.format(out_name_base)
     dygraph_file = "dygraph-combined.js"
     dot_file = "shaded_dot.png"
-    star_file = "wht_stars.png"
+    star_file = "star.png"
     kml_file = '{}.kml'.format(out_name_base)
     kmz_file = '{}.kmz'.format(out_name_base)
 
@@ -137,31 +150,43 @@ def main(iargs=None):
     rows = rows[mask]
     cols = cols[mask]
 
-    # Create and save colorbar image
-    pc = plt.figure(figsize=(8, 1))
-    cax = pc.add_subplot(111)
-    norm = mpl.colors.Normalize(vmin=min_vel, vmax=max_vel)  # normalize velocity colors between 0.0 and 1.0
-    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='horizontal')
-    cbar.set_label('{} [{}]'.format("Velocity", "cm"))
-    cbar.update_ticks()
-    pc.patch.set_facecolor('white')
-    pc.patch.set_alpha(0.7)
-    print('writing ' + cbar_png_file)
-    pc.savefig(cbar_png_file, bbox_inches='tight', facecolor=pc.get_facecolor(), dpi=300)
-
 
     # Create KML Document
-    kml = KML.kml()
     kml_document = KML.Document()
 
+    # 1. Create Screen Overlay element for colorbar
+    cbar_png_file = plot_colorbar(out_file=cbar_png_file, 
+                                  vmin=min_vel,
+                                  vmax=max_vel,
+                                  cmap=cmap,
+                                  figsize=(8, 1))
+    colormap = mpl.cm.get_cmap(cmap)                    # set colormap
+    norm = mpl.colors.Normalize(vmin=min_vel, vmax=max_vel)
+
+    legend_overlay = KML.ScreenOverlay(
+        KML.name('Legend'),
+        KML.Icon(
+            KML.href(cbar_png_file),
+            KML.viewBoundScale(0.75)
+        ),
+        KML.overlayXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
+        KML.screenXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
+        KML.size(x="350", y="0", xunits="pixel", yunits="pixel"),
+        KML.rotation(0),
+        KML.visibility(1),
+        KML.open(0)
+    )
+    #legend_folder = KML.Folder(
+    #                    KML.name("Legend")
+    #                )
+    #legend_folder.append(legend_overlay)
+    kml_document.append(legend_overlay)
+
+
+    # 2. Generate the placemark for the Reference Pixel
     ref_coords = (float(ts_obj.metadata['REF_LAT']), float(ts_obj.metadata['REF_LON']))
     ref_yx = (int(ts_obj.metadata['REF_Y']), int(ts_obj.metadata['REF_X']))
 
-    reference_folder =  KML.Folder(
-                            KML.name("ReferencePoint")
-                        )
-
-    # Generate the placemark for the Reference Pixel
     reference_point =   KML.Placemark(
                             KML.Style(
                                 KML.IconStyle(
@@ -179,43 +204,24 @@ def main(iargs=None):
                             )
                         )
 
+    reference_folder =  KML.Folder(
+                            KML.name("ReferencePoint")
+                        )
     reference_folder.append(reference_point)
+    kml_document.append(reference_folder)
 
-    legend_folder = KML.Folder(
-                        KML.name("Legend")
-                    )
 
-    # Create Screen Overlay element for colorbar
-    legend_overlay = KML.ScreenOverlay(
-        KML.Icon(
-            KML.href(cbar_png_file),
-            KML.viewBoundScale(0.75)
-        ),
-        KML.overlayXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
-        KML.screenXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
-        KML.size(x="350", y="0", xunits="pixel", yunits="pixel"),
-        KML.rotation(0),
-        KML.visibility(1),
-        KML.open(0)
-    )
-
-    legend_folder.append(legend_overlay)
-    kml_document.append(legend_folder)
-
+    # 3. Data folder for all points
+    print("Creating KML file. This may take some time.")
     data_folder =   KML.Folder(
                         KML.name("Data")
                     )
-
-    data_folder.append(reference_folder)
-
-    print("Creating KML file. This may take some time.")
     for i in range(0, len(coords), 10):
         lat = coords[i][0]
         lon = coords[i][1]
         v = vel[i]
         vstd = vel_std[i]
 
-        colormap = mpl.cm.get_cmap(cmap)                    # set colormap
         rgba = colormap(norm(v))                            # get rgba color components for point velocity
         hex = mpl.colors.to_hex([rgba[3], rgba[2],
                                  rgba[1], rgba[0]],
@@ -275,8 +281,8 @@ def main(iargs=None):
 
     kml_document.append(data_folder)
 
+    kml = KML.kml()
     kml.append(kml_document)
-
 
     # Copy shaded_dot file
     dot_path = os.path.dirname(__file__) + "/utils/resources/"+dot_file
