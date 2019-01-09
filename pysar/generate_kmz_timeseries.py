@@ -60,26 +60,16 @@ def get_lat_lon(meta, mask=None):
 
 
 def generate_description_string(coords, yx, v, vstd, disp, tcoh):
-    des_str  = "Latitude: {:.6f}˚ <br /> \n ".format(coords[0])
+    des_str =  "Latitude: {:.6f}˚ <br /> \n ".format(coords[0])
     des_str += "Longitude: {:.6f}˚ <br /> \n".format(coords[1])
     des_str += "Row: {:.0f} <br /> \n".format(yx[0])
     des_str += "Column: {:.0f} <br /> \n".format(yx[1])
     des_str += "Mean LOS velocity: {:.2f} +/- {:.2f} cm/year <br /> \n".format(v, vstd)
-    #des_str += "Mean LOS velocity st. dev.: {:.2f} cm/year <br /> \n".format(vstd)
     des_str += "Cumulative displacement: {:.2f} cm <br /> \n".format(disp)
     des_str += "Temporal coherence: {:.2f} <br /> \n".format(tcoh)
     des_str += " <br />  <br /> "
     des_str += "\n\n"
-    #return  "Latitude: " + str(coords[0]) + "˚ <br /> \n " \
-    #        "Longitude: " + str(coords[1]) + "˚ <br /> \n" \
-    #        "Row: " + str(yx[0]) + " <br /> \n" \
-    #        "Column: " + str(yx[1]) + " <br /> \n" \
-    #        "Mean LOS velocity: " + str(v) + " cm/year <br /> \n" \
-    #        "Mean LOS velocity St Dev: " + str(vstd) + " cm/year <br /> \n" \
-    #        "Cumulative displacement: " + str(disp) + " cm <br /> \n" \
-    #        "Temporal coherence: " + str(tcoh) + "<br /> \n" \
-    #        " <br />  <br /> " \
-    #        "\n\n"
+
     return des_str
 
 
@@ -187,10 +177,11 @@ def main(iargs=None):
         KML.visibility(1),
         KML.open(0)
     )
-    #legend_folder = KML.Folder(
-    #                    KML.name("Legend")
-    #                )
-    #legend_folder.append(legend_overlay)
+
+    legend_folder = KML.Folder(
+                       KML.name("Legend")
+                   )
+    legend_folder.append(legend_overlay)
     kml_document.append(legend_overlay)
 
 
@@ -227,6 +218,7 @@ def main(iargs=None):
     data_folder =   KML.Folder(
                         KML.name("Data")
                     )
+
     for i in range(0, len(coords), 10):
         lat = coords[i][0]
         lon = coords[i][1]
@@ -258,8 +250,7 @@ def main(iargs=None):
         description_info = generate_description_string((lat, lon), (rows[i], cols[i]), v, vstd, disp, tcoh[i])
 
         # Javascript to embed inside the description
-        js_data_string = "< ![CDATA[\n" \
-                            "<script type='text/javascript' src='"+dygraph_file+"'></script>\n" \
+        js_data_string = "<script type='text/javascript' src='"+dygraph_file+"'></script>\n" \
                             "<div id='graphdiv'> </div>\n" \
                             "<script type='text/javascript'>\n" \
                                 "g = new Dygraph( document.getElementById('graphdiv'),\n" \
@@ -275,11 +266,15 @@ def main(iargs=None):
 
         js_data_string +=       "\"\",\n" \
                                 "{" \
-                                    "valueRange: ["+str(ts_min)+","+str(ts_max)+"]," \
-                                    "ylabel: '[cm]'," \
+                                    "valueRange: ["+str(ts_min-10)+","+str(ts_max+10)+"]," \
+                                    "ylabel: 'LOS Displacement [cm]'," \
+                                    "xlabel: 'Time'," \
+                                    "drawPoints: true," \
+                                    "strokeWidth: 0," \
+                                    "pointSize: 3," \
+                                    "highlightCircleSize: 6" \
                                 "});" \
-                              "</script>" \
-                          "]]>"
+                              "</script>"
 
         # Create KML description element
         description = KML.description(description_info, js_data_string)
