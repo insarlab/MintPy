@@ -60,10 +60,11 @@ def get_lat_lon(meta, mask=None):
 
 
 def generate_description_string(coords, yx, v, vstd, disp, tcoh):
-    des_str =  "Latitude: {:.6f}˚ <br /> \n ".format(coords[0])
+    des_str =  "Latitude: {:.6f}˚ <br /> \n".format(coords[0])
     des_str += "Longitude: {:.6f}˚ <br /> \n".format(coords[1])
     des_str += "Row: {:.0f} <br /> \n".format(yx[0])
     des_str += "Column: {:.0f} <br /> \n".format(yx[1])
+    des_str += " <br /> \n"
     des_str += "Mean LOS velocity: {:.2f} +/- {:.2f} cm/year <br /> \n".format(v, vstd)
     des_str += "Cumulative displacement: {:.2f} cm <br /> \n".format(disp)
     des_str += "Temporal coherence: {:.2f} <br /> \n".format(tcoh)
@@ -73,17 +74,19 @@ def generate_description_string(coords, yx, v, vstd, disp, tcoh):
     return des_str
 
 
-def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(8, 1)):
-    pc = plt.figure(figsize=figsize)
-    cax = pc.add_subplot(111)
+def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(5, 0.2)):
+    fig, cax = plt.subplots(figsize=figsize)
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='horizontal')
-    cbar.set_label('{} [{}]'.format("Velocity", "cm"))
+    cbar.set_label('{} [{}]'.format("Mean LOS velocity", "cm/year"), fontsize=12)
+    cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
     cbar.update_ticks()
-    pc.patch.set_facecolor('white')
-    pc.patch.set_alpha(0.7)
+    cbar.ax.tick_params(which='both', labelsize=12)
+    fig.patch.set_facecolor('white')
+    fig.patch.set_alpha(0.7)
+
     print('writing ' + out_file)
-    pc.savefig(out_file, bbox_inches='tight', facecolor=pc.get_facecolor(), dpi=300)
+    fig.savefig(out_file, bbox_inches='tight', facecolor=fig.get_facecolor(), dpi=300)
     return out_file
 
 
@@ -168,8 +171,7 @@ def main(iargs=None):
     cbar_png_file = plot_colorbar(out_file=cbar_png_file, 
                                   vmin=min_vel,
                                   vmax=max_vel,
-                                  cmap=cmap,
-                                  figsize=(8, 1))
+                                  cmap=cmap)
     colormap = mpl.cm.get_cmap(cmap)                    # set colormap
     norm = mpl.colors.Normalize(vmin=min_vel, vmax=max_vel)
 
@@ -181,7 +183,7 @@ def main(iargs=None):
         ),
         KML.overlayXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
         KML.screenXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
-        KML.size(x="350", y="0", xunits="pixel", yunits="pixel"),
+        KML.size(x="300", y="0", xunits="pixel", yunits="pixel"),
         KML.rotation(0),
         KML.visibility(1),
         KML.open(0)
@@ -202,13 +204,13 @@ def main(iargs=None):
                             KML.Style(
                                 KML.IconStyle(
                                     KML.color(get_color_for_velocity(0.0, colormap, norm)),
-                                    KML.scale(1.5),
+                                    KML.scale(1.),
                                     KML.Icon(
                                         KML.href(star_file)
                                     )
                                 )
                             ),
-                            KML.description(
+                            KML.description("Reference point <br /> \n <br /> \n"+\
                                 generate_description_string(ref_coords, ref_yx, 0.00, 0.00, 0.00, 1.00)
                             ),
                             KML.Point(
@@ -306,7 +308,7 @@ def main(iargs=None):
     print("copying {} for reference.\n".format(dot_file))
     os.system(cmdDot)
 
-    # Copy wht_stars file
+    # Copy star file
     star_path = os.path.dirname(__file__) + "/utils/resources/" + star_file
     cmdStar = "cp {} {}".format(star_path, star_file)
     print("copying {} for reference.\n".format(star_file))
