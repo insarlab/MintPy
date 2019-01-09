@@ -87,6 +87,15 @@ def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(8, 1)):
     return out_file
 
 
+def get_color_for_velocity(v, colormap, norm):
+    rgba = colormap(norm(v))  # get rgba color components for point velocity
+    hex = mpl.colors.to_hex([rgba[3], rgba[2],
+                             rgba[1], rgba[0]],
+                            keep_alpha=True)[1:]
+
+    return hex
+
+
 def main(iargs=None):
 
     inps = cmd_line_parse(iargs)
@@ -192,6 +201,7 @@ def main(iargs=None):
     reference_point =   KML.Placemark(
                             KML.Style(
                                 KML.IconStyle(
+                                    KML.color(get_color_for_velocity(0.0, colormap, norm)),
                                     KML.scale(1.5),
                                     KML.Icon(
                                         KML.href(star_file)
@@ -225,15 +235,15 @@ def main(iargs=None):
         v = vel[i]
         vstd = vel_std[i]
 
-        rgba = colormap(norm(v))                            # get rgba color components for point velocity
-        hex = mpl.colors.to_hex([rgba[3], rgba[2],
-                                 rgba[1], rgba[0]],
-                                keep_alpha=True)[1:]    # convert rgba to hex components reversed for kml color specification
+        # rgba = colormap(norm(v))                            # get rgba color components for point velocity
+        # hex = mpl.colors.to_hex([rgba[3], rgba[2],
+        #                          rgba[1], rgba[0]],
+        #                         keep_alpha=True)[1:]    # convert rgba to hex components reversed for kml color specification
 
         # Create KML icon style element
         style = KML.Style(
                     KML.IconStyle(
-                        KML.color(hex),
+                        KML.color(get_color_for_velocity(v, colormap, norm)),
                         KML.scale(0.5),
                         KML.Icon(
                             KML.href(dot_file)
