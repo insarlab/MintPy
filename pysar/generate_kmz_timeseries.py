@@ -133,7 +133,7 @@ def main(iargs=None):
     vel = readfile.read(vel_file, datasetName='velocity')[0][mask]*100.
     vel_std = readfile.read(vel_file, datasetName='velocityStd')[0][mask]*100.
     ts = readfile.read(ts_file)[0][:, mask]*100.
-    ts -= np.tile(ts[0,:], (ts.shape[0],1))     #enforce displacement starts from zero
+    ts -= np.tile(ts[0, :], (ts.shape[0], 1))     #enforce displacement starts from zero
     tcoh = readfile.read('geo_temporalCoherence.h5')[0][mask]
 
     ts_min = np.min(ts)
@@ -263,6 +263,7 @@ def main(iargs=None):
 
         # Javascript to embed inside the description
         js_data_string = "<script type='text/javascript' src='"+dygraph_file+"'></script>\n" \
+                            "<div id='graphLegend' style='padding-left: 200px; margin-bottom: 10px; font-size: 16px'></div>\n" \
                             "<div id='graphdiv'> </div>\n" \
                             "<script type='text/javascript'>\n" \
                                 "g = new Dygraph( document.getElementById('graphdiv'),\n" \
@@ -276,16 +277,46 @@ def main(iargs=None):
 
             js_data_string += date_displacement_string
 
+        # TODO: Fix xRangePad and yRangePad issues
         js_data_string +=       "\"\",\n" \
                                 "{" \
-                                    "valueRange: ["+str(ts_min-10)+","+str(ts_max+10)+"]," \
-                                    "ylabel: 'LOS Displacement [cm]'," \
-                                    "xlabel: 'Time'," \
-                                    "drawPoints: true," \
-                                    "strokeWidth: 0," \
-                                    "pointSize: 3," \
-                                    "highlightCircleSize: 6" \
-                                "});" \
+                                    "width: 700,\n" \
+                                    "height: 300,\n" \
+                                    "axes: {\n" \
+                                        "x: {\n" \
+                                            "axisLabelFormatter: function (d, gran) {\n" \
+                                                "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
+                                                "var date = new Date(d)\n" \
+                                                "var dateString = months[date.getMonth()] + ' ' + date.getFullYear()\n" \
+                                                "return dateString;\n" \
+                                            "},\n" \
+                                            "valueFormatter: function (d) {\n" \
+                                                "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
+                                                "var date = new Date(d)\n" \
+                                                "var dateString = 'Date: ' + date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear()\n" \
+                                                "return dateString;\n" \
+                                            "},\n" \
+                                            "pixelsPerLabel: 90\n" \
+                                        "},\n" \
+                                        "y: {\n" \
+                                            "valueFormatter: function(v) {\n" \
+                                                "return v.toFixed(5)\n" \
+                                            "}\n" \
+                                        "}\n" \
+                                    "},\n" \
+                                    "valueRange: ["+str(ts_min-10)+","+str(ts_max+10)+"],\n" \
+                                    "ylabel: 'LOS Displacement [cm]',\n" \
+                                    "yLabelWidth: 18,\n" \
+                                    "drawPoints: true,\n" \
+                                    "strokeWidth: 0,\n" \
+                                    "pointSize: 3,\n" \
+                                    "highlightCircleSize: 6,\n" \
+                                    "axisLabelFontSize: 12,\n" \
+                                    "xRangePad: 30,\n" \
+                                    "yRangePad: 30,\n" \
+                                    "labelsDiv: 'graphLegend',\n" \
+                                    "hideOverlayOnMouseOut: false\n" \
+                                "});\n" \
                               "</script>"
 
         # Create KML description element
