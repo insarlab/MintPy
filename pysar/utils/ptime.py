@@ -192,8 +192,6 @@ def date_index(dateList):
     return dateIndex
 
 ################################################################
-
-
 def date_list2tbase(dateList):
     """Get temporal Baseline in days with respect to the 1st date
     Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
