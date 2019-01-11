@@ -16,6 +16,7 @@ from cvxopt import matrix, spdiag, mul, div, sqrt, normal, setseed
 from cvxopt import blas, lapack, solvers 
 import math
 
+
 solvers.options['show_progress'] = 0
 
 def l1reg_lstsq(A, y, lambd=1.0):
@@ -25,8 +26,14 @@ def l1reg_lstsq(A, y, lambd=1.0):
   
         minimize || A*x - y ||_2^2  + lambd * || x ||_1.
 
+    Parameters: A : 2D cvxopt.matrix for the design matrix in (m, n)
+                y : 2D cvxopt.matrix for the observation in (m, 1)
+                lambd : float for the degree of shrinkage
+    Returns:    x : 2D cvxopt.matrix in (m, 1)
+    Example:    A = matrix(np.array(-C, dtype=float))
+                b = matrix(np.array(closure_int, dtype=float).reshape(C.shape[0], -1))
+                x = np.round(l1reg_lstsq(A, b, lambd=1e-2))
     """
-
     m, n = A.size
     q = matrix(lambd, (2*n,1))
     q[:n] = -2.0 * A.T * y
