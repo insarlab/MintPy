@@ -27,10 +27,10 @@ tiff
 openmotif
 subversion
 python27
-python35
+python36
 fftw +gcc5
 fftw-single +gcc5
-fftw-3 +gcc5 
+fftw-3 +gcc5
 fftw-3-long +gcc5
 fftw-3-single +gcc5
 aria2
@@ -84,6 +84,7 @@ py36-fiona
 py36-networkx
 py36-ipython +notebook +parallel
 py36-mpi4py +gcc5 +openmpi
+py36-cvxopt +accelerate+dsdp+fftw+glpk+gsl
 gmt5
 kealib
 pandoc
