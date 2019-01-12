@@ -24,6 +24,7 @@ def create_parser():
                       help='Velocity file')
     args.add_argument('--tcoh', dest='tcoh_file', metavar='temporal_coh_file', default='geo_temporalCoherence.h5',
                       help='temporal coherence file')
+    args.add_argument('--step', type=int, metavar='NUM', default=3, help='output pixel step number, default: 3')
     args.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='Display limits for matrix plotting.')
     args.add_argument('-c', '--colormap', dest='colormap', default='jet',
@@ -198,7 +199,7 @@ def main(iargs=None):
 
 
     # 2.3 Data folder for all points
-    step = 3
+    step = inps.step
     num_pixel = int(length/step) * int(width/step)
     msg = "add point time-series data "
     msg += "(select 1 out of every {} by {} pixels; select {} pixels in total) ...".format(step, step, num_pixel)
