@@ -127,10 +127,13 @@ def main(iargs=None):
                           0:width-1:width*1j]
 
     # 1.3 Velocity / time-series
+    print('read velocity data')
     vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
     vel_std = readfile.read(inps.vel_file, datasetName='velocityStd')[0] * 100.
+    print('read time-series data')
     ts_data = readfile.read(inps.ts_file)[0] * 100.
     ts_data -= np.tile(ts_data[0, :, :], (ts_data.shape[0], 1, 1))     #enforce displacement starts from zero
+    print('read temporal coherence data')
     temp_coh = readfile.read(inps.tcoh_file)[0]
     mask = ~np.isnan(vel)
 
@@ -195,10 +198,13 @@ def main(iargs=None):
 
 
     # 2.3 Data folder for all points
-    print("adding point time-series data (this may take some time) ...")
-    data_folder =   KML.Folder(KML.name("Data"))
+    step = 3
+    num_pixel = int(length/step) * int(width/step)
+    msg = "add point time-series data "
+    msg += "(select 1 out of every {} by {} pixels; select {} pixels in total) ...".format(step, step, num_pixel)
+    print(msg)
 
-    step = 4
+    data_folder =   KML.Folder(KML.name("Data"))
     for i in range(0, length, step):
         for j in range(0, width, step):
             if mask[i,j]:          # add point if it's not marked as masked out
