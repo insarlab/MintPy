@@ -98,19 +98,7 @@ def get_color_for_velocity(v, colormap, norm):
     return hex
 
 
-def main(iargs=None):
-
-    inps = cmd_line_parse(iargs)
-
-    out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
-    cbar_png_file = '{}_cbar.png'.format(out_name_base)
-    kml_file = '{}.kml'.format(out_name_base)
-    kmz_file = '{}.kmz'.format(out_name_base)
-
-    dygraph_file = "dygraph-combined.js"
-    dot_file = "shaded_dot.png"
-    star_file = "star.png"
-
+def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_file):
 
     ## 1. read data
     ts_obj = timeseries(inps.ts_file)
@@ -124,8 +112,8 @@ def main(iargs=None):
 
     # 1.2 Spatial coordinates
     lats, lons = get_lat_lon(ts_obj.metadata)
-    rows, cols = np.mgrid[0:length-1:length*1j,
-                          0:width-1:width*1j]
+    rows, cols = np.mgrid[0:length - 1:length * 1j,
+                 0:width - 1:width * 1j]
 
     # 1.3 Velocity / time-series
     print('read velocity data')
@@ -133,7 +121,7 @@ def main(iargs=None):
     vel_std = readfile.read(inps.vel_file, datasetName='velocityStd')[0] * 100.
     print('read time-series data')
     ts_data = readfile.read(inps.ts_file)[0] * 100.
-    ts_data -= np.tile(ts_data[0, :, :], (ts_data.shape[0], 1, 1))     #enforce displacement starts from zero
+    ts_data -= np.tile(ts_data[0, :, :], (ts_data.shape[0], 1, 1))  # enforce displacement starts from zero
     print('read temporal coherence data')
     temp_coh = readfile.read(inps.tcoh_file)[0]
     mask = ~np.isnan(vel)
@@ -141,10 +129,10 @@ def main(iargs=None):
     # data stats
     ts_min = np.nanmin(ts_data)
     ts_max = np.nanmax(ts_data)
+
     # Set min/max velocity for colormap
     if inps.vlim is None:
         inps.vlim = [np.nanmin(vel), np.nanmax(vel)]
-
 
     ## 2. Create KML Document
     print('create KML file.')
@@ -169,134 +157,149 @@ def main(iargs=None):
     print('add legend.')
     kml_document.append(legend_overlay)
 
-    colormap = mpl.cm.get_cmap(inps.colormap)                    # set colormap
+    colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
     norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
-
 
     # 2.2 Generate the placemark for the Reference Pixel
     ref_yx = (int(ts_obj.metadata['REF_Y']), int(ts_obj.metadata['REF_X']))
     ref_lalo = (lats[ref_yx[0], ref_yx[1]], lons[ref_yx[0], ref_yx[1]])
 
-    reference_point =   KML.Placemark(
-                            KML.Style(
-                                KML.IconStyle(
-                                    KML.color(get_color_for_velocity(0.0, colormap, norm)),
-                                    KML.scale(1.),
-                                    KML.Icon(KML.href(star_file))
-                                )
-                            ),
-                            KML.description("Reference point <br /> \n <br /> \n"+\
-                                generate_description_string(ref_lalo, ref_yx, 0.00, 0.00, 0.00, 1.00)
-                            ),
-                            KML.Point(
-                                KML.coordinates("{}, {}".format(ref_lalo[1], ref_lalo[0]))
-                            )
-                        )
+    reference_point = KML.Placemark(
+        KML.Style(
+            KML.IconStyle(
+                KML.color(get_color_for_velocity(0.0, colormap, norm)),
+                KML.scale(1.),
+                KML.Icon(KML.href(star_file))
+            )
+        ),
+        KML.description("Reference point <br /> \n <br /> \n" + \
+                        generate_description_string(ref_lalo, ref_yx, 0.00, 0.00, 0.00, 1.00)
+                        ),
+        KML.Point(
+            KML.coordinates("{}, {}".format(ref_lalo[1], ref_lalo[0]))
+        )
+    )
     print('add reference point.')
-    reference_folder =  KML.Folder(KML.name("ReferencePoint"))
+    reference_folder = KML.Folder(KML.name("ReferencePoint"))
     reference_folder.append(reference_point)
     kml_document.append(reference_folder)
 
-
     # 2.3 Data folder for all points
-    step = inps.step
-    num_pixel = int(length/step) * int(width/step)
+
+    num_pixel = int(length / step) * int(width / step)
     msg = "add point time-series data "
     msg += "(select 1 out of every {} by {} pixels; select {} pixels in total) ...".format(step, step, num_pixel)
     print(msg)
 
-    data_folder =   KML.Folder(KML.name("Data"))
+    data_folder = KML.Folder(KML.name("Data"))
     for i in range(0, length, step):
         for j in range(0, width, step):
-            if mask[i,j]:          # add point if it's not marked as masked out
-                lat = lats[i,j]
-                lon = lons[i,j]
-                row = rows[i,j]
-                col = cols[i,j]
+            if mask[i, j]:  # add point if it's not marked as masked out
+                lat = lats[i, j]
+                lon = lons[i, j]
+                row = rows[i, j]
+                col = cols[i, j]
                 ts = ts_data[:, i, j]
-                v = vel[i,j]
-                vstd = vel_std[i,j]
-                tcoh = temp_coh[i,j]
+                v = vel[i, j]
+                vstd = vel_std[i, j]
+                tcoh = temp_coh[i, j]
 
-                # Create KML icon style element                
+                # Create KML icon style element
                 style = KML.Style(
-                            KML.IconStyle(
-                                KML.color(get_color_for_velocity(v, colormap, norm)),
-                                KML.scale(0.5),
-                                KML.Icon(KML.href(dot_file))
-                            )
-                        )
+                    KML.IconStyle(
+                        KML.color(get_color_for_velocity(v, colormap, norm)),
+                        KML.scale(0.5),
+                        KML.Icon(KML.href(dot_file))
+                    )
+                )
 
                 # Create KML point element
                 point = KML.Point(KML.coordinates("{},{}".format(lon, lat)))
 
                 # Javascript to embed inside the description
-                js_data_string = "<script type='text/javascript' src='"+dygraph_file+"'></script>\n" \
-                                    "<div id='graphLegend' style='padding-left: 200px; margin-bottom: 10px; font-size: 16px'></div>\n" \
-                                    "<div id='graphdiv'> </div>\n" \
-                                    "<script type='text/javascript'>\n" \
-                                        "g = new Dygraph( document.getElementById('graphdiv'),\n" \
-                                        "\"Date, Displacement\\n\" + \n"
+                js_data_string = "<script type='text/javascript' src='" + dygraph_file + "'></script>\n" \
+                                 "<div id='graphLegend' style='padding-left: 200px; margin-bottom: 10px; font-size: 16px'></div>\n" \
+                                 "<div id='graphdiv'> </div>\n" \
+                                 "<script type='text/javascript'>\n" \
+                                     "g = new Dygraph( document.getElementById('graphdiv'),\n" \
+                                     "\"Date, Displacement\\n\" + \n"
 
                 # append the date/displacement data
                 for k in range(num_date):
                     date = dates[k]
                     dis = ts[k]
-                    date_displacement_string = "\"{}, {}\\n\" + \n".format(date, dis)  
+                    date_displacement_string = "\"{}, {}\\n\" + \n".format(date, dis)
                     js_data_string += date_displacement_string
 
-                # TODO: Fix xRangePad and yRangePad issues
-                js_data_string +=   "\"\",\n" \
-                                    "{" \
-                                        "width: 700,\n" \
-                                        "height: 300,\n" \
-                                        "axes: {\n" \
-                                            "x: {\n" \
-                                                "axisLabelFormatter: function (d, gran) {\n" \
-                                                    "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
-                                                    "var date = new Date(d)\n" \
-                                                    "var dateString = months[date.getMonth()] + ' ' + date.getFullYear()\n" \
-                                                    "return dateString;\n" \
-                                                "},\n" \
-                                                "valueFormatter: function (d) {\n" \
-                                                    "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
-                                                    "var date = new Date(d)\n" \
-                                                    "var dateString = 'Date: ' + date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear()\n" \
-                                                    "return dateString;\n" \
-                                                "},\n" \
-                                                "pixelsPerLabel: 90\n" \
-                                            "},\n" \
-                                            "y: {\n" \
-                                                "valueFormatter: function(v) {\n" \
-                                                    "return v.toFixed(5)\n" \
-                                                "}\n" \
-                                            "}\n" \
-                                        "},\n" \
-                                        "valueRange: ["+str(ts_min-2)+","+str(ts_max+2)+"],\n" \
-                                        "ylabel: 'LOS displacement [cm]',\n" \
-                                        "yLabelWidth: 18,\n" \
-                                        "drawPoints: true,\n" \
-                                        "strokeWidth: 0,\n" \
-                                        "pointSize: 3,\n" \
-                                        "highlightCircleSize: 6,\n" \
-                                        "axisLabelFontSize: 12,\n" \
-                                        "xRangePad: 30,\n" \
-                                        "yRangePad: 30,\n" \
-                                        "labelsDiv: 'graphLegend',\n" \
-                                        "hideOverlayOnMouseOut: false\n" \
-                                    "});\n" \
+                js_data_string += "\"\",\n" \
+                                  "{" \
+                                      "width: 700,\n" \
+                                      "height: 300,\n" \
+                                      "axes: {\n" \
+                                          "x: {\n" \
+                                              "axisLabelFormatter: function (d, gran) {\n" \
+                                                  "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
+                                                  "var date = new Date(d)\n" \
+                                                  "var dateString = months[date.getMonth()] + ' ' + date.getFullYear()\n" \
+                                                  "return dateString;\n" \
+                                              "},\n" \
+                                              "valueFormatter: function (d) {\n" \
+                                                  "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
+                                                  "var date = new Date(d)\n" \
+                                                  "var dateString = 'Date: ' + date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear()\n" \
+                                                  "return dateString;\n" \
+                                              "},\n" \
+                                              "pixelsPerLabel: 90\n" \
+                                          "},\n" \
+                                          "y: {\n" \
+                                              "valueFormatter: function(v) {\n" \
+                                                  "return v.toFixed(5)\n" \
+                                              "}\n" \
+                                          "}\n" \
+                                      "},\n" \
+                                      "valueRange: [" + str(ts_min - 2) + "," + str(ts_max + 2) + "],\n" \
+                                      "ylabel: 'LOS displacement [cm]',\n" \
+                                      "yLabelWidth: 18,\n" \
+                                      "drawPoints: true,\n" \
+                                      "strokeWidth: 0,\n" \
+                                      "pointSize: 3,\n" \
+                                      "highlightCircleSize: 6,\n" \
+                                      "axisLabelFontSize: 12,\n" \
+                                      "xRangePad: 30,\n" \
+                                      "yRangePad: 30,\n" \
+                                      "labelsDiv: 'graphLegend',\n" \
+                                      "hideOverlayOnMouseOut: false\n" \
+                                  "});\n" \
                                   "</script>"
 
                 # Create KML description element
                 stats_info = generate_description_string((lat, lon), (row, col), v, vstd, ts[-1], tcoh=tcoh)
                 description = KML.description(stats_info, js_data_string)
-        
+
                 # Crate KML Placemark element to hold style, description, and point elements
                 placemark = KML.Placemark(style, description, point)
                 # Append each placemark element to the KML document object
                 data_folder.append(placemark)
 
     kml_document.append(data_folder)
+
+    return cbar_png_file, kml_document
+
+
+def main(iargs=None):
+
+    inps = cmd_line_parse(iargs)
+
+    out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
+    cbar_png_file = '{}_cbar.png'.format(out_name_base)
+    kml_file = '{}.kml'.format(out_name_base)
+    kmz_file = '{}.kmz'.format(out_name_base)
+
+    dygraph_file = "dygraph-combined.js"
+    dot_file = "shaded_dot.png"
+    star_file = "star.png"
+
+    cbar_png_file, kml_document = create_kml_document(inps, inps.step, cbar_png_file, dot_file, star_file, dygraph_file)
 
     # 2.4 Write KML file
     kml = KML.kml()
@@ -305,7 +308,7 @@ def main(iargs=None):
     with open(kml_file, 'w') as f:
         f.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
 
-    # 2.5 Copy auxliary files
+    # 2.5 Copy auxiliary files
     # 2.5.1 shaded_dot file
     dot_path = os.path.join(os.path.dirname(__file__), "utils/resources", dot_file)
     cmdDot = "cp {} {}".format(dot_path, dot_file)
@@ -330,7 +333,6 @@ def main(iargs=None):
     os.system(cmdKMZ)
 
     cmdClean = 'rm {} {} {} {} {}'.format(kml_file, cbar_png_file, dygraph_file, dot_file, star_file)
-    print(cmdClean)
     os.system(cmdClean)
 
     print('Done.')
