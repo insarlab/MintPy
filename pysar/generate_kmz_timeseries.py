@@ -291,33 +291,40 @@ def main(iargs=None):
     inps = cmd_line_parse(iargs)
 
     out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
-    cbar_png_file = '{}_cbar.png'.format(out_name_base)
-    kml_file_ms = '{}_master.kml'.format(out_name_base)
+
+    kml_data_files_directory = "kml_data_files"
+    kml_file_master = '{}_master.kml'.format(out_name_base)
     kml_file_sm = '{}_sm.kml'.format(out_name_base)
     kml_file_lg = '{}_lg.kml'.format(out_name_base)
     kmz_file = '{}.kmz'.format(out_name_base)
 
+    cbar_png_file = '{}_cbar.png'.format(out_name_base)
     dygraph_file = "dygraph-combined.js"
     dot_file = "shaded_dot.png"
     star_file = "star.png"
 
-    _, kml_document_sm = create_kml_document(inps, 20, cbar_png_file, dot_file, star_file, dygraph_file)
-    cbar_png_file, kml_document_lg = create_kml_document(inps, 3, cbar_png_file, dot_file, star_file, dygraph_file)
+    small_dset_step = 20    # Increase this for coarser resolution in small dset
+    large_dset_step = 3     # Decrease this for finer resolution in large dset
 
     ## 1. read data
     ts_obj = timeseries(inps.ts_file)
     ts_obj.open()
 
     lats, lons = get_lat_lon(ts_obj.metadata)
-    print(lats)
     lats = sorted(lats.flatten())
     lons = sorted(lons.flatten())
 
 
+    ## 2. Generate large and small KML files for different view heights
+    _, kml_document_sm = create_kml_document(inps, small_dset_step, cbar_png_file, dot_file, star_file, dygraph_file)
+    cbar_png_file, kml_document_lg = create_kml_document(inps, large_dset_step, cbar_png_file, dot_file, star_file, dygraph_file)
+
+    ## 3. Create master KML file with network links to data KML files
     kml_master = KML.kml()
 
     kml_master_document = KML.Document()
 
+    # 3.1 Create network link to small KML file
     network_link_sm = KML.NetworkLink(
                             KML.name('Small'),
                             KML.visibility(1),
@@ -334,11 +341,12 @@ def main(iargs=None):
                                 )
                             ),
                             KML.Link(
-                                KML.href("kml_data_files/{}".format(kml_file_sm)),
+                                KML.href("{}/{}".format(kml_data_files_directory, kml_file_sm)),
                                 KML.viewRefreshMode('onRegion')
                             )
                       )
 
+    # 3.2 Create network link to large KML file
     network_link_lg = KML.NetworkLink(
                             KML.name('Large'),
                             KML.visibility(1),
@@ -355,7 +363,7 @@ def main(iargs=None):
                                 )
                             ),
                             KML.Link(
-                                KML.href("kml_data_files/{}".format(kml_file_lg)),
+                                KML.href("{}/{}".format(kml_data_files_directory, kml_file_lg)),
                                 KML.viewRefreshMode('onRegion')
                             )
                         )
@@ -365,30 +373,27 @@ def main(iargs=None):
 
     kml_master.append(kml_master_document)
 
-    # 2.4 Write KML file
+
+    # 2.4 Write KML files
+    # 2.4.1 write large KML file
     kml_1 = KML.kml()
     kml_1.append(kml_document_lg)
     print('writing ' + kml_file_lg)
     with open(kml_file_lg, 'w') as f:
         f.write(etree.tostring(kml_1, pretty_print=True).decode('utf-8'))
 
+    # 2.4.2 write small KML file
     kml_2 = KML.kml()
     kml_2.append(kml_document_sm)
     print('writing ' + kml_file_sm)
     with open(kml_file_sm, 'w') as f:
         f.write(etree.tostring(kml_2, pretty_print=True).decode('utf-8'))
 
-    print('writing ' + kml_file_sm)
-    with open(kml_file_ms, 'w') as f:
+    # 2.4.3 write master KML file
+    print('writing ' + kml_file_master)
+    with open(kml_file_master, 'w') as f:
         f.write(etree.tostring(kml_master, pretty_print=True).decode('utf-8'))
 
-    cmdDirectory = "mkdir kml_data_files/"
-    print("Creating KML Data File directory")
-    os.system(cmdDirectory)
-
-    cmdMove = "mv {} kml_data_files/{}; mv {} kml_data_files/{};".format(kml_file_sm, kml_file_sm, kml_file_lg, kml_file_lg)
-    print("Moving KML Data Files to directory")
-    os.system(cmdMove)
 
     # 2.5 Copy auxiliary files
     # 2.5.1 shaded_dot file
@@ -409,12 +414,22 @@ def main(iargs=None):
     print("copying {} for interactive plotting.".format(dygraph_file))
     os.system(cmdDygraph)
 
+    # 2.5.4 create directory to store data KML files
+    cmdDirectory = "mkdir {}/".format(kml_data_files_directory)
+    print("Creating KML Data File directory")
+    os.system(cmdDirectory)
+
+    # 2.5.5 move data KML files into new directory
+    cmdMove = "mv {sm} {dir}/{sm}; mv {lg} {dir}/{lg};".format(sm=kml_file_sm, dir=kml_data_files_directory, lg=kml_file_lg)
+    print("Moving KML Data Files to directory")
+    os.system(cmdMove)
+
     # 2.6 Generate KMZ file
-    cmdKMZ = 'zip -r {} {} {} {} {} {} {}'.format(kmz_file, "kml_data_files/", kml_file_ms, cbar_png_file, dygraph_file, dot_file, star_file)
+    cmdKMZ = 'zip -r {} {} {} {} {} {} {}'.format(kmz_file, kml_data_files_directory, kml_file_master, cbar_png_file, dygraph_file, dot_file, star_file)
     print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)
 
-    cmdClean = 'rm -r {} {} {} {} {} {}'.format("kml_data_files/", kml_file_ms, cbar_png_file, dygraph_file, dot_file, star_file)
+    cmdClean = 'rm -r {} {} {} {} {} {}'.format(kml_data_files_directory, kml_file_master, cbar_png_file, dygraph_file, dot_file, star_file)
     os.system(cmdClean)
 
     print('Done.')
