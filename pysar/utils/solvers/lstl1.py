@@ -10,6 +10,8 @@
 # 
 # Reference: 
 # Boyd, S., and L. Vandenberghe (2004), Convex optimization, Cambridge university press. Chap 6.2, page 304.
+# StackExchange: https://math.stackexchange.com/questions/1639716/how-can-l-1-norm-minimization-with-linear-equality-constraints-basis-pu
+#
 
 
 from cvxopt import matrix, sparse, spmatrix
