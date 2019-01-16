@@ -144,7 +144,7 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
     legend_overlay = KML.ScreenOverlay(
         KML.name('Legend'),
         KML.Icon(
-            KML.href(cbar_png_file),
+            KML.href("../{}".format(cbar_png_file)),
             KML.viewBoundScale(0.75)
         ),
         KML.overlayXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
@@ -169,7 +169,7 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
             KML.IconStyle(
                 KML.color(get_color_for_velocity(0.0, colormap, norm)),
                 KML.scale(1.),
-                KML.Icon(KML.href(star_file))
+                KML.Icon(KML.href("../{}".format(star_file)))
             )
         ),
         KML.description("Reference point <br /> \n <br /> \n" + \
@@ -209,7 +209,7 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
                     KML.IconStyle(
                         KML.color(get_color_for_velocity(v, colormap, norm)),
                         KML.scale(0.5),
-                        KML.Icon(KML.href(dot_file))
+                        KML.Icon(KML.href("../{}".format(dot_file)))
                     )
                 )
 
@@ -217,7 +217,7 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
                 point = KML.Point(KML.coordinates("{},{}".format(lon, lat)))
 
                 # Javascript to embed inside the description
-                js_data_string = "<script type='text/javascript' src='" + dygraph_file + "'></script>\n" \
+                js_data_string = "<script type='text/javascript' src='../" + dygraph_file + "'></script>\n" \
                                  "<div id='graphLegend' style='padding-left: 200px; margin-bottom: 10px; font-size: 16px'></div>\n" \
                                  "<div id='graphdiv'> </div>\n" \
                                  "<script type='text/javascript'>\n" \
@@ -292,21 +292,103 @@ def main(iargs=None):
 
     out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
     cbar_png_file = '{}_cbar.png'.format(out_name_base)
-    kml_file = '{}.kml'.format(out_name_base)
+    kml_file_ms = '{}_master.kml'.format(out_name_base)
+    kml_file_sm = '{}_sm.kml'.format(out_name_base)
+    kml_file_lg = '{}_lg.kml'.format(out_name_base)
     kmz_file = '{}.kmz'.format(out_name_base)
 
     dygraph_file = "dygraph-combined.js"
     dot_file = "shaded_dot.png"
     star_file = "star.png"
 
-    cbar_png_file, kml_document = create_kml_document(inps, inps.step, cbar_png_file, dot_file, star_file, dygraph_file)
+    _, kml_document_sm = create_kml_document(inps, 20, cbar_png_file, dot_file, star_file, dygraph_file)
+    cbar_png_file, kml_document_lg = create_kml_document(inps, 3, cbar_png_file, dot_file, star_file, dygraph_file)
+
+    ## 1. read data
+    ts_obj = timeseries(inps.ts_file)
+    ts_obj.open()
+
+    lats, lons = get_lat_lon(ts_obj.metadata)
+    print(lats)
+    lats = sorted(lats.flatten())
+    lons = sorted(lons.flatten())
+
+
+    kml_master = KML.kml()
+
+    kml_master_document = KML.Document()
+
+    network_link_sm = KML.NetworkLink(
+                            KML.name('Small'),
+                            KML.visibility(1),
+                            KML.Region(
+                                KML.Lod(
+                                    KML.minLodPixels(0),
+                                    KML.maxLodPixels(-1)
+                                ),
+                                KML.LatLonAltBox(
+                                    KML.north(lats[0]+0.5),
+                                    KML.south(lats[-1]-0.5),
+                                    KML.east(lons[0]+0.5),
+                                    KML.west(lons[-1]-0.5)
+                                )
+                            ),
+                            KML.Link(
+                                KML.href("kml_data_files/{}".format(kml_file_sm)),
+                                KML.viewRefreshMode('onRegion')
+                            )
+                      )
+
+    network_link_lg = KML.NetworkLink(
+                            KML.name('Large'),
+                            KML.visibility(1),
+                            KML.Region(
+                                KML.Lod(
+                                    KML.minLodPixels(512),
+                                    KML.maxLodPixels(-1)
+                                ),
+                                KML.LatLonAltBox(
+                                    KML.north(lats[0] + 0.5),
+                                    KML.south(lats[-1] - 0.5),
+                                    KML.east(lons[0] + 0.5),
+                                    KML.west(lons[-1] - 0.5)
+                                )
+                            ),
+                            KML.Link(
+                                KML.href("kml_data_files/{}".format(kml_file_lg)),
+                                KML.viewRefreshMode('onRegion')
+                            )
+                        )
+
+    kml_master_document.append(network_link_sm)
+    kml_master_document.append(network_link_lg)
+
+    kml_master.append(kml_master_document)
 
     # 2.4 Write KML file
-    kml = KML.kml()
-    kml.append(kml_document)
-    print('writing ' + kml_file)
-    with open(kml_file, 'w') as f:
-        f.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
+    kml_1 = KML.kml()
+    kml_1.append(kml_document_lg)
+    print('writing ' + kml_file_lg)
+    with open(kml_file_lg, 'w') as f:
+        f.write(etree.tostring(kml_1, pretty_print=True).decode('utf-8'))
+
+    kml_2 = KML.kml()
+    kml_2.append(kml_document_sm)
+    print('writing ' + kml_file_sm)
+    with open(kml_file_sm, 'w') as f:
+        f.write(etree.tostring(kml_2, pretty_print=True).decode('utf-8'))
+
+    print('writing ' + kml_file_sm)
+    with open(kml_file_ms, 'w') as f:
+        f.write(etree.tostring(kml_master, pretty_print=True).decode('utf-8'))
+
+    cmdDirectory = "mkdir kml_data_files/"
+    print("Creating KML Data File directory")
+    os.system(cmdDirectory)
+
+    cmdMove = "mv {} kml_data_files/{}; mv {} kml_data_files/{};".format(kml_file_sm, kml_file_sm, kml_file_lg, kml_file_lg)
+    print("Moving KML Data Files to directory")
+    os.system(cmdMove)
 
     # 2.5 Copy auxiliary files
     # 2.5.1 shaded_dot file
@@ -328,11 +410,11 @@ def main(iargs=None):
     os.system(cmdDygraph)
 
     # 2.6 Generate KMZ file
-    cmdKMZ = 'zip {} {} {} {} {} {}'.format(kmz_file, kml_file, cbar_png_file, dygraph_file, dot_file, star_file)
+    cmdKMZ = 'zip -r {} {} {} {} {} {} {}'.format(kmz_file, "kml_data_files/", kml_file_ms, cbar_png_file, dygraph_file, dot_file, star_file)
     print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)
 
-    cmdClean = 'rm {} {} {} {} {}'.format(kml_file, cbar_png_file, dygraph_file, dot_file, star_file)
+    cmdClean = 'rm -r {} {} {} {} {} {}'.format("kml_data_files/", kml_file_ms, cbar_png_file, dygraph_file, dot_file, star_file)
     os.system(cmdClean)
 
     print('Done.')
