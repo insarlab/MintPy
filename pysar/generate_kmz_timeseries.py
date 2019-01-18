@@ -218,11 +218,10 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
 
                 # Javascript to embed inside the description
                 js_data_string = "<script type='text/javascript' src='../" + dygraph_file + "'></script>\n" \
-                                 "<div id='graphLegend' style='padding-left: 200px; margin-bottom: 10px; font-size: 16px'></div>\n" \
                                  "<div id='graphdiv'> </div>\n" \
                                  "<script type='text/javascript'>\n" \
                                      "g = new Dygraph( document.getElementById('graphdiv'),\n" \
-                                     "\"Date, Displacement\\n\" + \n"
+                                     "\"Date, displacement\\n\" + \n"
 
                 # append the date/displacement data
                 for k in range(num_date):
@@ -244,20 +243,19 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
                                                   "return dateString;\n" \
                                               "},\n" \
                                               "valueFormatter: function (d) {\n" \
-                                                  "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
                                                   "var date = new Date(d)\n" \
-                                                  "var dateString = 'Date: ' + date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear()\n" \
+                                                  "var dateString = 'Date: ' + date.getDate() + '/' + date.getMonth() + '/' + date.getFullYear()\n" \
                                                   "return dateString;\n" \
                                               "},\n" \
                                               "pixelsPerLabel: 90\n" \
                                           "},\n" \
                                           "y: {\n" \
                                               "valueFormatter: function(v) {\n" \
-                                                  "return v.toFixed(5)\n" \
+                                                  "return v.toFixed(2)\n" \
                                               "}\n" \
                                           "}\n" \
                                       "},\n" \
-                                      "valueRange: [" + str(ts_min - 2) + "," + str(ts_max + 2) + "],\n" \
+                                      "valueRange: [" + str(ts_min) + "," + str(ts_max) + "],\n" \
                                       "ylabel: 'LOS displacement [cm]',\n" \
                                       "yLabelWidth: 18,\n" \
                                       "drawPoints: true,\n" \
@@ -267,8 +265,8 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
                                       "axisLabelFontSize: 12,\n" \
                                       "xRangePad: 30,\n" \
                                       "yRangePad: 30,\n" \
-                                      "labelsDiv: 'graphLegend',\n" \
-                                      "hideOverlayOnMouseOut: false\n" \
+                                      "hideOverlayOnMouseOut: false,\n" \
+                                      "panEdgeFraction: 0.0\n" \
                                   "});\n" \
                                   "</script>"
 
