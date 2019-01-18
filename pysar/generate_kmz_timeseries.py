@@ -329,7 +329,7 @@ def main(iargs=None):
                             KML.Region(
                                 KML.Lod(
                                     KML.minLodPixels(0),
-                                    KML.maxLodPixels(-1)
+                                    KML.maxLodPixels(1500)
                                 ),
                                 KML.LatLonAltBox(
                                     KML.north(lats[0]+0.5),
@@ -350,7 +350,7 @@ def main(iargs=None):
                             KML.visibility(1),
                             KML.Region(
                                 KML.Lod(
-                                    KML.minLodPixels(512),
+                                    KML.minLodPixels(1500),
                                     KML.maxLodPixels(-1)
                                 ),
                                 KML.LatLonAltBox(
