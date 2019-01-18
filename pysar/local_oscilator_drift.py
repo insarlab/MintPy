@@ -4,6 +4,10 @@
 # Copyright(c) 2013-2018, Heresh Fattahi                   #
 # Author:  Heresh Fattahi                                  #
 ############################################################
+# Based on the empirical model of Marinkovic and Larsen (2013),
+# the LOD correction for each pixel is given in meters as:
+#     C = 3.87e-7 * x * range_pixel_size_in_meter * time_difference_in_year
+# where x is the pixel count in range direction
 
 
 import os
