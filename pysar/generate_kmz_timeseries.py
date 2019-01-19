@@ -98,7 +98,7 @@ def get_color_for_velocity(v, colormap, norm):
     return hex
 
 
-def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_file):
+def create_kml_document(inps, step, dot_file, dygraph_file):
 
     ## 1. read data
     ts_obj = timeseries(inps.ts_file)
@@ -112,8 +112,7 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
 
     # 1.2 Spatial coordinates
     lats, lons = get_lat_lon(ts_obj.metadata)
-    rows, cols = np.mgrid[0:length - 1:length * 1j,
-                 0:width - 1:width * 1j]
+    rows, cols = np.mgrid[0:length - 1:length * 1j, 0:width - 1:width * 1j]
 
     # 1.3 Velocity / time-series
     print('read velocity data')
@@ -138,51 +137,8 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
     print('create KML file.')
     kml_document = KML.Document()
 
-    # 2.1 Create Screen Overlay element for colorbar
-    cbar_png_file = plot_colorbar(out_file=cbar_png_file, vmin=inps.vlim[0], vmax=inps.vlim[1], cmap=inps.colormap)
-
-    legend_overlay = KML.ScreenOverlay(
-        KML.name('Legend'),
-        KML.Icon(
-            KML.href("../{}".format(cbar_png_file)),
-            KML.viewBoundScale(0.75)
-        ),
-        KML.overlayXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
-        KML.screenXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
-        KML.size(x="300", y="0", xunits="pixel", yunits="pixel"),
-        KML.rotation(0),
-        KML.visibility(1),
-        KML.open(0)
-    )
-    print('add legend.')
-    kml_document.append(legend_overlay)
-
     colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
     norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
-
-    # 2.2 Generate the placemark for the Reference Pixel
-    ref_yx = (int(ts_obj.metadata['REF_Y']), int(ts_obj.metadata['REF_X']))
-    ref_lalo = (lats[ref_yx[0], ref_yx[1]], lons[ref_yx[0], ref_yx[1]])
-
-    reference_point = KML.Placemark(
-        KML.Style(
-            KML.IconStyle(
-                KML.color(get_color_for_velocity(0.0, colormap, norm)),
-                KML.scale(1.),
-                KML.Icon(KML.href("../{}".format(star_file)))
-            )
-        ),
-        KML.description("Reference point <br /> \n <br /> \n" + \
-                        generate_description_string(ref_lalo, ref_yx, 0.00, 0.00, 0.00, 1.00)
-                        ),
-        KML.Point(
-            KML.coordinates("{}, {}".format(ref_lalo[1], ref_lalo[0]))
-        )
-    )
-    print('add reference point.')
-    reference_folder = KML.Folder(KML.name("ReferencePoint"))
-    reference_folder.append(reference_point)
-    kml_document.append(reference_folder)
 
     # 2.3 Data folder for all points
 
@@ -281,7 +237,7 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
 
     kml_document.append(data_folder)
 
-    return cbar_png_file, kml_document
+    return kml_document
 
 
 def main(iargs=None):
@@ -309,22 +265,70 @@ def main(iargs=None):
     ts_obj.open()
 
     lats, lons = get_lat_lon(ts_obj.metadata)
-    lats = sorted(lats.flatten())
-    lons = sorted(lons.flatten())
-
 
     ## 2. Generate large and small KML files for different view heights
-    _, kml_document_sm = create_kml_document(inps, small_dset_step, cbar_png_file, dot_file, star_file, dygraph_file)
-    cbar_png_file, kml_document_lg = create_kml_document(inps, large_dset_step, cbar_png_file, dot_file, star_file, dygraph_file)
+    kml_document_sm = create_kml_document(inps, small_dset_step, dot_file, dygraph_file)
+    kml_document_lg = create_kml_document(inps, large_dset_step, dot_file, dygraph_file)
 
     ## 3. Create master KML file with network links to data KML files
     kml_master = KML.kml()
 
     kml_master_document = KML.Document()
 
+    # 2.1 Create Screen Overlay element for colorbar
+    cbar_png_file = plot_colorbar(out_file=cbar_png_file, vmin=inps.vlim[0], vmax=inps.vlim[1], cmap=inps.colormap)
+
+    legend_overlay = KML.ScreenOverlay(
+        KML.name('Legend'),
+        KML.Icon(
+            KML.href("{}".format(cbar_png_file)),
+            KML.viewBoundScale(0.75)
+        ),
+        KML.overlayXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
+        KML.screenXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
+        KML.size(x="300", y="0", xunits="pixel", yunits="pixel"),
+        KML.rotation(0),
+        KML.visibility(1),
+        KML.open(0)
+    )
+    print('add legend.')
+    kml_master_document.append(legend_overlay)
+
+    # 2.2 Generate the placemark for the Reference Pixel
+    colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
+    norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
+
+    ref_yx = (int(ts_obj.metadata['REF_Y']), int(ts_obj.metadata['REF_X']))
+    ref_lalo = (lats[ref_yx[0], ref_yx[1]], lons[ref_yx[0], ref_yx[1]])
+
+    reference_point = KML.Placemark(
+        KML.Style(
+            KML.IconStyle(
+                KML.color(get_color_for_velocity(0.0, colormap, norm)),
+                KML.scale(1.),
+                KML.Icon(KML.href("{}".format(star_file)))
+            )
+        ),
+        KML.description("Reference point <br /> \n <br /> \n" +
+                        generate_description_string(ref_lalo, ref_yx, 0.00, 0.00, 0.00, 1.00)
+                        ),
+        KML.Point(
+            KML.coordinates("{}, {}".format(ref_lalo[1], ref_lalo[0]))
+        )
+    )
+    print('add reference point.')
+    reference_folder = KML.Folder(KML.name("ReferencePoint"))
+    reference_folder.append(reference_point)
+    kml_master_document.append(reference_folder)
+
+    lats = sorted(lats.flatten())
+    lons = sorted(lons.flatten())
+
+    data_folder = KML.Folder(KML.name("Data"))
+
     # 3.1 Create network link to small KML file
     network_link_sm = KML.NetworkLink(
-                            KML.name('Small'),
+                            KML.name('20 by 20'),
                             KML.visibility(1),
                             KML.Region(
                                 KML.Lod(
@@ -346,7 +350,7 @@ def main(iargs=None):
 
     # 3.2 Create network link to large KML file
     network_link_lg = KML.NetworkLink(
-                            KML.name('Large'),
+                            KML.name('3 by 3'),
                             KML.visibility(1),
                             KML.Region(
                                 KML.Lod(
@@ -366,8 +370,10 @@ def main(iargs=None):
                             )
                         )
 
-    kml_master_document.append(network_link_sm)
-    kml_master_document.append(network_link_lg)
+    data_folder.append(network_link_sm)
+    data_folder.append(network_link_lg)
+
+    kml_master_document.append(data_folder)
 
     kml_master.append(kml_master_document)
 
