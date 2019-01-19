@@ -217,7 +217,7 @@ def create_kml_document(inps, step, cbar_png_file, dot_file, star_file, dygraph_
                 point = KML.Point(KML.coordinates("{},{}".format(lon, lat)))
 
                 # Javascript to embed inside the description
-                js_data_string = "<script type='text/javascript' src='../" + dygraph_file + "'></script>\n" \
+                js_data_string = "<script type='text/javascript' src='../../" + dygraph_file + "'></script>\n" \
                                  "<div id='graphdiv'> </div>\n" \
                                  "<script type='text/javascript'>\n" \
                                      "g = new Dygraph( document.getElementById('graphdiv'),\n" \
