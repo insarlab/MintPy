@@ -8,6 +8,9 @@
 # written by Ramon Hanssen, May 2000, available through the 
 # following website:
 #     http://doris.tudelft.nl/software/insarfractal.tar.gz
+# Reference:
+#   Hanssen, R. F. (2001), Radar interferometry: data interpretation 
+# and error analysis, Kluwer Academic Pub, Dordrecht, Netherlands. Chap. 4.7.
 
 
 import numpy as np

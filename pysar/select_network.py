@@ -35,7 +35,7 @@ REFERENCE = """References:
     of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
   Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
   Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
-  Zhao, W., (2015), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
+  Zhao, W., (2017), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
     dissertation, Univ. of Miami, Section 6.3.
 """
 
@@ -58,7 +58,7 @@ TEMPLATE = """Template:
 ##                    ratio (Pepe and Lanari, 2006, TGRS), use 'delaunay-noweight' to disable normalization. 
 ##     hierarchical - Select pairs in a hierarchical way using a list of temp/perp thresholds
 ##                    select.network.tempPerpList
-##                    (Zhao, 2015, PhD Thesis)
+##                    (Zhao, 2017, PhD Thesis)
 ##                    i.e. 16 days, 1600 m
 ##                         32 days, 800  m
 ##                         48 days, 600  m
