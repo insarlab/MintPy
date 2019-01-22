@@ -877,7 +877,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                skip_zero_phase,
                                min_redundancy),
                        broadcast=True)
-        for i in range(16):
+        for i in range(4):
             start = i * (num_pixel2inv // 16)
             end = min( (i + 1) * (num_pixel2inv // 16), num_pixel2inv)
             future = client.submit(parallel_f, start, end,
