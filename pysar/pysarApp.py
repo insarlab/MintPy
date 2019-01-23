@@ -1281,25 +1281,21 @@ def main(argv):
     #############################################
     if template['pysar.plot'] in ['yes','auto']:
         print '\n*********  Plot and Save pysarApp runing results to PIC  ***********'
-        inps.plot_sh_file = 'plot_pysarApp.sh'
-
+        inps.plot_sh_file = os.path.join(os.path.dirname(__file__), '../sh/plot_pysarApp.sh')
+        plotCmd = './'+os.path.basename(inps.plot_sh_file)
         # Copy to workding directory if not existed yet.
-        if not os.path.isfile('./'+inps.plot_sh_file):
-            print 'copy $PYSAR_HOME/shellscripts/'+inps.plot_sh_file+' to working directory'
-            try:
-                shutil.copy2(ut.which(inps.plot_sh_file), './')
-            except:
-                print 'WARNING: no '+inps.plot_sh_file+' found in the environment variable path, skip plotting.'
+        if not os.path.isfile(plotCmd):
+            print 'copy {} to work directory: {}'.format(inps.plot_sh_file, inps.work_dir )
+            shutil.copy2(inps.plot_sh_file, inps.work_dir)
         print 'for better performance, edit the input parameters in '+inps.plot_sh_file+' and re-run this script.'
 
         #if ut.update_file('PIC', [inps.plot_sh_file, inps.template_file], check_readable=False):
-        plotCmd = './'+inps.plot_sh_file
         print plotCmd
         status = subprocess.Popen(plotCmd, shell=True).wait()
 
 
     #############################################
-    #                PySAR v1.2                 #
+    #                  Timing                   #
     #############################################
     s = time.time()-start;  m, s = divmod(s, 60);  h, m = divmod(m, 60)
     print '\nTime used: %02d hours %02d mins %02d secs' % (h, m, s)
