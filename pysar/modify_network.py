@@ -35,7 +35,7 @@ TEMPLATE = """
 pysar.network.coherenceBased  = auto  #[yes / no], auto for yes, exclude interferograms with coherence < minCoherence
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
+pysar.network.maskFile        = auto  #[file name, no], auto for maskConnComp.h5, no for all pixels
 pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
@@ -43,7 +43,7 @@ pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no -
 pysar.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
 pysar.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpendicular spatial baseline in meter
 pysar.network.connNumMax      = auto  #[1-inf, no], auto for no, maximum number of neighbors for each acquisition
-pysar.network.referenceFile   = auto  #[date12_list.txt / Modified_unwrapIfgram.h5 / no], auto for no
+pysar.network.referenceFile   = auto  #[date12_list.txt / ifgramStack.h5 / no], auto for no
 pysar.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
 pysar.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of ifg index (start from 0)
 pysar.network.startDate       = auto  #[20090101 / no], auto for no
@@ -64,7 +64,7 @@ def create_parser():
                         help='plot and save the result to image files.')
     parser.add_argument('--noaux', dest='update_aux', action='store_false',
                         help='Do not update auxilary files, e.g.\n' +
-                             'mask.h5 from unwrapIfgram.h5 or averageSpatialCoherence.h5 from coherence.h5')
+                             'maskConnComp.h5 from ifgramStack.h5 or avgSpatialCoherence.h5 from coherence.h5')
 
     # 1
     parser.add_argument('--max-tbase', dest='tempBaseMax',
@@ -75,7 +75,7 @@ def create_parser():
                         help='max number of connections/neighbors per acquisition')
     parser.add_argument('-r', '--reference', dest='referenceFile',
                         help='Reference hdf5 / list file with network information.\n'
-                             'i.e. Modified_unwrapIfgram.h5, Pairs.list')
+                             'i.e. ifgramStack.h5, date12_list.txt')
     parser.add_argument('--exclude-ifg-index', dest='excludeIfgIndex', nargs='*',
                         help='index of interferograms to remove/drop.\n1 as the first')
     parser.add_argument('--exclude-date', dest='excludeDate', nargs='*',

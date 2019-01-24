@@ -446,7 +446,7 @@ def set_mask():
         if os.path.basename(inps.timeseries_file).startswith('geo_'):
             file_list = ['geo_maskTempCoh.h5']
         else:
-            file_list = ['maskTempCoh.h5', 'mask.h5']
+            file_list = ['maskTempCoh.h5', 'maskConnComp.h5']
 
         try:
             inps.mask_file = ut.get_file_list(file_list)[0]

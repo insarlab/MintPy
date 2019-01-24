@@ -192,7 +192,7 @@ def main(argv):
             date_list=sorted(h5[k].keys())
         elif k in ['interferograms','coherence','wrapped']:
             ifgram_list = sorted(h5[k].keys())
-            date12_list = ptime.list_ifgram2date12(ifgram_list)
+            date12_list = pnet.get_date12_list(inps.timeseries_file)
             m_dates = [i.split('-')[0] for i in date12_list]
             s_dates = [i.split('-')[1] for i in date12_list]
             date_list = ptime.yyyymmdd(sorted(list(set(m_dates + s_dates))))

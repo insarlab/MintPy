@@ -37,7 +37,7 @@ pysar.reference.yx            = auto   #[257,151 / auto]
 pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
 pysar.reference.coherenceFile = auto   #[filename], auto for avgSpatialCoherence.h5
 pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
-pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
+pysar.reference.maskFile      = auto   #[filename / no], auto for maskConnComp.h5
 
 
 ## 2. Unwrapping Error Correction (optional)
@@ -65,7 +65,7 @@ pysar.unwrapError.fastMode        = auto  #[yes / no], auto for yes, enable fast
 pysar.network.coherenceBased  = auto  #[yes / no], auto for no, exclude interferograms with coherence < minCoherence
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
+pysar.network.maskFile        = auto  #[file name, no], auto for maskConnComp.h5, no for all pixels
 pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
@@ -73,7 +73,7 @@ pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no -
 pysar.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
 pysar.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpendicular spatial baseline in meter
 pysar.network.connNumMax      = auto  #[1-inf, no], auto for no, maximum number of neighbors for each acquisition
-pysar.network.referenceFile   = auto  #[date12_list.txt / Modified_unwrapIfgram.h5 / no], auto for no
+pysar.network.referenceFile   = auto  #[date12_list.txt / ifgramStack.h5 / no], auto for no
 pysar.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
 pysar.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of ifg index (start from 0)
 pysar.network.startDate       = auto  #[20090101 / no], auto for no

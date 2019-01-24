@@ -62,8 +62,8 @@ def create_parser():
 
     parser.add_argument('--reset', action='store_true',
                         help='Reset files attributes to re-run pysarApp.py after loading data by:\n' +
-                             '    1) removing ref_y/x/lat/lon for unwrapIfgram.h5 and coherence.h5\n' +
-                             '    2) set DROP_IFGRAM=no for unwrapIfgram.h5 and coherence.h5')
+                             '    1) removing ref_y/x/lat/lon for ifgramStack.h5\n' +
+                             '    2) set "dropIfgram" dataset to all true for ifgramStack.h5')
     parser.add_argument('--load-data', dest='load_dataset', action='store_true',
                         help='Step 1. Load/check dataset, then exit')
     parser.add_argument('--modify-network', dest='modify_network', action='store_true',
@@ -520,7 +520,7 @@ def main(iargs=None):
         inps.waterMaskFile = None
 
     # Initial mask (pixels with valid unwrapPhase or connectComponent in ALL interferograms)
-    inps.maskFile = 'mask.h5'
+    inps.maskFile = 'maskConnComp.h5'
     maskCmd = 'generate_mask.py {} --nonzero -o {} --update'.format(inps.stackFile, inps.maskFile)
     print(maskCmd)
     status = subprocess.Popen(maskCmd, shell=True).wait()

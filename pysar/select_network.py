@@ -127,10 +127,10 @@ def create_parser():
                         help='network type with info on temp/perp baseline and doppler centroid frequency.')
     method.add_argument('-r', dest='referenceFile', default=None,
                         help='Reference hdf5 / list file with network information. e.g.\n' +
-                             'unwrapIfgram.h5\n' +
+                             'ifgramStack.h5\n' +
                              'ifgram_list.txt with content as below:'+pnet.IFGRAM_LIST_FILE +
                              '\nIt could also be generated using plot_network.py --list option, e.g.\n' +
-                             'plot_network.py unwrapIfgram.h5 --list\n\n')
+                             'info.py ifgramStack.h5 --date --nodrop > date12_list.txt\n\n')
     method.add_argument('--exclude', '--ex', dest='excludeDate', nargs='*', default=[],
                         help='date(s) excluded for network selection, e.g. -ex 060713 070831')
     method.add_argument('--start-date', dest='startDate',
