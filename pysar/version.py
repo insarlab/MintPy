@@ -1,5 +1,5 @@
 release_version = '1.0.0-dev'
-release_date = '2018-10-05'
+release_date = '2019-01-24'
 
 # generate_from: http://patorjk.com/software/taag/
 logo = """
@@ -20,7 +20,7 @@ _________________________________________________
 website = 'https://yunjunz.github.io/PySAR/'
 
 version_description="""PySAR  version {v}  release date {d}
-Copyright (C) 2013-2018 by Zhang Yunjun, Heresh Fattahi and others
+Copyright (C) 2013-2019 by Zhang Yunjun, Heresh Fattahi
 Website: {w}
 
 PySAR comes with ABSOLUTELY NO WARRANTY. This is free software, and

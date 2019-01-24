@@ -4,7 +4,7 @@
 # Purpose: InSAR Time Series Analysis in Python            #
 # Author: Zhang Yunjun, Heresh Fattahi                     #
 # Created: July 2013                                       #
-# Copyright (c) 2013-2018, Zhang Yunjun, Heresh Fattahi    #
+# Copyright (c) 2013-2019, Zhang Yunjun, Heresh Fattahi    #
 ############################################################
 
 
@@ -793,10 +793,7 @@ def main(iargs=None):
     if not inps.geocoded:
         if template['pysar.geocode'] is True:
             print('\n--------------------------------------------')
-            geo_dir = os.path.abspath('./GEOCODE')
-            if not os.path.isdir(geo_dir):
-                os.makedirs(geo_dir)
-                print('create directory: {}'.format(geo_dir))
+            geo_dir = os.path.join(inps.workDir, 'GEOCODE')
             geocode_script = os.path.join(os.path.dirname(__file__), 'geocode.py')
             geoCmd = ('{scp} {v} {c} {t} {g} -l {l} -t {e}'
                       ' --outdir {d} --update').format(scp=geocode_script,
