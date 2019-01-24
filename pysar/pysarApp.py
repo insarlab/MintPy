@@ -191,6 +191,8 @@ def read_template(inps):
         inps.unavcoMetadataFile = None
         print('No UNAVCO attributes file found.')
 
+    inps.plot = template['pysar.plot']
+
     return inps, template, customTemplate
 
 
@@ -498,6 +500,8 @@ def main(iargs=None):
         ut.add_attribute(inps.stackFile, customTemplate)
 
     if inps.load_dataset:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise SystemExit('Exit as planned after loading/checking the dataset.')
 
     if inps.reset:
@@ -560,6 +564,8 @@ def main(iargs=None):
     print(refPointCmd)
     status = subprocess.Popen(refPointCmd, shell=True).wait()
     if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise Exception('Error while finding reference pixel in space.\n')
 
     ############################################
@@ -578,6 +584,8 @@ def main(iargs=None):
     print(networkCmd)
     status = subprocess.Popen(networkCmd, shell=True).wait()
     if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise Exception('Error while modifying the network of interferograms.\n')
 
     # Plot network colored in spatial coherence
@@ -599,6 +607,8 @@ def main(iargs=None):
         status = subprocess.Popen(plotCmd, shell=True).wait()
 
     if inps.modify_network:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise SystemExit('Exit as planned after network modification.')
 
     #########################################
@@ -617,6 +627,8 @@ def main(iargs=None):
     inps.timeseriesFiles = ['timeseries.h5']       #all ts files
     status = subprocess.Popen(invCmd, shell=True).wait()
     if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise Exception('Error while inverting network interferograms into timeseries')
 
     print('\n--------------------------------------------')
@@ -624,6 +636,8 @@ def main(iargs=None):
     get_temporal_coherence_mask(inps, template)
 
     if inps.invert_network:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise SystemExit('Exit as planned after network inversion.')
 
     ##############################################
@@ -640,6 +654,8 @@ def main(iargs=None):
         if ut.run_or_skip(out_file=outName, in_file=[inps.timeseriesFile, inps.geomFile]) == 'run':
             status = subprocess.Popen(lodCmd, shell=True).wait()
             if status is not 0:
+                if inps.plot:
+                    plot_pysarApp(inps)
                 raise Exception('Error while correcting Local Oscillator Drift.\n')
         inps.timeseriesFile = outName
         inps.timeseriesFiles.append(outName)
@@ -671,6 +687,8 @@ def main(iargs=None):
             if ut.run_or_skip(out_file=outName, in_file=inps.timeseriesFile) == 'run':
                 status = subprocess.Popen(derampCmd, shell=True).wait()
                 if status is not 0:
+                    if inps.plot:
+                        plot_pysarApp(inps)
                     raise Exception('Error while removing phase ramp for time-series.\n')
             inps.timeseriesFile = outName
             inps.timeseriesFiles.append(outName)
@@ -696,6 +714,8 @@ def main(iargs=None):
     if template['pysar.topographicResidual']:
         status = subprocess.Popen(topoCmd, shell=True).wait()
         if status is not 0:
+            if inps.plot:
+                plot_pysarApp(inps)
             raise Exception('Error while correcting topographic phase residual.\n')
         inps.timeseriesFile = outName
         inps.timeseriesResFile = 'timeseriesResidual.h5'
@@ -714,6 +734,8 @@ def main(iargs=None):
         print(rmsCmd)
         status = subprocess.Popen(rmsCmd, shell=True).wait()
         if status is not 0:
+            if inps.plot:
+                plot_pysarApp(inps)
             raise Exception('Error while calculating RMS of residual phase time-series.\n')
     else:
         print('No timeseries residual file found! Skip residual RMS analysis.')
@@ -727,6 +749,8 @@ def main(iargs=None):
         print(refCmd)
         status = subprocess.Popen(refCmd, shell=True).wait()
         if status is not 0:
+            if inps.plot:
+                plot_pysarApp(inps)
             raise Exception('Error while changing reference date.\n')
     else:
         print('No reference change in time.')
@@ -742,6 +766,8 @@ def main(iargs=None):
     print(velCmd)
     status = subprocess.Popen(velCmd, shell=True).wait()
     if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise Exception('Error while estimating linear velocity from time-series.\n')
 
     # Velocity from Tropospheric delay
@@ -784,6 +810,8 @@ def main(iargs=None):
             print(geoCmd)
             status = subprocess.Popen(geoCmd, shell=True).wait()
             if status is not 0:
+                if inps.plot:
+                    plot_pysarApp(inps)
                 raise Exception('Error while geocoding.\n')
             else:
                 inps.velFile        = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.velFile))
@@ -831,6 +859,8 @@ def main(iargs=None):
         if ut.run_or_skip(out_file=outFile, in_file=inps.velFile, check_readable=False) == 'run':
             status = subprocess.Popen(kmlCmd, shell=True).wait()
             if status is not 0:
+                if inps.plot:
+                    plot_pysarApp(inps)
                 raise Exception('Error while generating Google Earth KMZ file.')
 
     #############################################
@@ -843,7 +873,7 @@ def main(iargs=None):
     #############################################
     # Plot Figures
     #############################################
-    if template['pysar.plot']:
+    if inps.plot:
         plot_pysarApp(inps)
 
     #############################################
