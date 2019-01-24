@@ -64,7 +64,7 @@ def sim_variable_timeseries(tbase, scale=3., display=False):
     ts_sim -= ts_sim[0]
 
     if display:
-        fig, ax = plt.subplots(figsize=[12, 3])
+        fig, ax = plt.subplots(figsize=[6, 3])
         ax.plot(tbase, ts_sim * 100., '--')
         ax.set_xlabel('Time (days)', fontsize=font_size)
         ax.set_ylabel('Displacement (cm)', fontsize=font_size)
@@ -252,10 +252,16 @@ def check_board(water_mask, grid_step=100, scale=1., display=True):
 def mogi_deformation(shape, source_geom, resolution=60., scale=1., display=True):
     """Simulate 2D deformation caused by the overpress of a Mogi source underneath
     
-    Parameters: shape: 2-tuple of int, in (length, width)
+    Parameters: shape: 2-tuple of int in (length, width) or 2D np.ndarray in size of (length, width) in np.bool_
                 source_geom : 4-tuple of float, Mogi source geometry: East, North, Depth, Volomn change in SI unit.
     
     """
+    if isinstance(shape, np.ndarray):
+        mask = np.multiply(np.array(shape != 0), ~np.isnan(shape))
+        shape = mask.shape
+    else:
+        mask = np.ones(shape, np.bool_)
+
     length, width = shape
     yy, xx = np.mgrid[0:length:length*1j, 0:width:width*1j]
     yy *= resolution
@@ -268,7 +274,7 @@ def mogi_deformation(shape, source_geom, resolution=60., scale=1., display=True)
     dis_u = dis_map[2, :].reshape(length, width)
     dis_los = ut.enu2los(dis_e, dis_n, dis_u)
 
-    #dis_los[water_mask == 0.] = np.nan
+    dis_los[mask == 0.] = np.nan
     dis_los *= scale
 
     if display:
