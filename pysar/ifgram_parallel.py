@@ -16,11 +16,17 @@ import argparse
 import h5py
 import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
+from dask_jobqueue import LSFCluster
 
-import dask.array as da
-from dask.distributed import Client, as_completed
-client = Client(processes=False)
-import dask
+from dask.distributed import Client, as_completed, LocalCluster
+
+if __name__ == "__main__":
+    cluster = LSFCluster(project='insarlab',
+                     queue='general', memory='2 GB',
+                     cores=3, walltime='00:10',
+                     python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
+    cluster.scale(10)
+    client = Client(cluster)
 
 from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
@@ -877,9 +883,11 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                skip_zero_phase,
                                min_redundancy),
                        broadcast=True)
-        for i in range(4):
-            start = i * (num_pixel2inv // 16)
-            end = min( (i + 1) * (num_pixel2inv // 16), num_pixel2inv)
+
+        num_workers = 2
+        for i in range(num_workers):
+            start = i * (num_pixel2inv // num_workers)
+            end = min( (i + 1) * (num_pixel2inv // num_workers), num_pixel2inv)
             future = client.submit(parallel_f, start, end,
                data_future)
             futures.append(future)
