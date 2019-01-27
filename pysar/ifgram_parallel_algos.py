@@ -9,6 +9,7 @@ from scipy import linalg   # more effieint than numpy.linalg
 
 from dask.distributed import Client, as_completed, LocalCluster
 
+
 if __name__ == "__main__":
     client = Client(processes=False)
 
@@ -552,8 +553,8 @@ def init_parallel_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, 
     cluster = LocalCluster(n_workers=10)
     client = Client(cluster)
 
-    return ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
-                                  weight_func='var', min_norm_velocity=True,
-                                  mask_dataset_name=None, mask_threshold=0.4, min_redundancy=1.0,
-                                  water_mask_file=None, skip_zero_phase=True,
-                                  outfile=['timeseries.h5', 'temporalCoherence.h5'])
+    return ifgram_inversion_patch(ifgram_file, box=box, ref_phase=ref_phase, unwDatasetName=unwDatasetName,
+                                  weight_func=weight_func, min_norm_velocity=min_norm_velocity,
+                                  mask_dataset_name=mask_dataset_name, mask_threshold=mask_threshold, min_redundancy=min_redundancy,
+                                  water_mask_file=water_mask_file, skip_zero_phase=skip_zero_phase,
+                                  outfile=outfile)
