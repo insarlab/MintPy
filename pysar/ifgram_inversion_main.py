@@ -766,6 +766,25 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         return ts, temp_coh, ts_std, num_inv_ifg
 
 
+def parallel_f(start, end, data):
+    idx_pixel2inv, A, B, tbase_diff, pha_data, weight, min_norm_velocity, skip_zero_phase, min_redundancy = data
+    ts = {}
+    temp_coh = {}
+    num_inv_ifg = {}
+    for i in range(start, end):
+        idx = idx_pixel2inv[i]
+        tsi, tcohi, num_ifgi = estimate_timeseries(A, B, tbase_diff,
+                                                       ifgram=pha_data[:, idx],
+                                                       weight_sqrt=weight[:, idx],
+                                                       min_norm_velocity=min_norm_velocity,
+                                                       skip_zero_phase=skip_zero_phase,
+                                                       min_redundancy=min_redundancy)
+        ts[idx] = tsi.flatten()
+        temp_coh[idx] = tcohi
+        num_inv_ifg[idx] = num_ifgi
+    return ts, temp_coh, num_inv_ifg
+
+
 def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
     """Implementation of the SBAS algorithm.
     Parameters: ifgram_file : string,
