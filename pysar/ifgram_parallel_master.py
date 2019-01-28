@@ -21,13 +21,7 @@ import pysar.ifgram_parallel_algos as ifgram_algos
 from dask.distributed import Client, as_completed
 from dask_jobqueue import LSFCluster
 
-if __name__ == "__main__":
-    cluster = LSFCluster(project='insarlab',
-                     queue='general', memory='2 GB',
-                     cores=3, walltime='00:10',
-                     python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
-    cluster.scale(10)
-    client = Client(cluster)
+
 
 from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
@@ -800,8 +794,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                    mask_threshold=inps.maskThreshold,
                                    min_redundancy=inps.minRedundancy,
                                    water_mask_file=inps.waterMaskFile,
-                                   skip_zero_phase=inps.skip_zero_phase,
-                                   client = client)
+                                   skip_zero_phase=inps.skip_zero_phase)
     else:
         # read ifgram_file in small patches and write them together
         ref_phase = stack_obj.get_reference_phase(unwDatasetName=inps.unwDatasetName,
@@ -834,8 +827,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                                 mask_threshold=inps.maskThreshold,
                                                 min_redundancy=inps.minRedundancy,
                                                 water_mask_file=inps.waterMaskFile,
-                                                skip_zero_phase=inps.skip_zero_phase,
-                                                                           client = client)
+                                                skip_zero_phase=inps.skip_zero_phase)
 
             ts[:, box[1]:box[3], box[0]:box[2]] = tsi
             ts_std[:, box[1]:box[3], box[0]:box[2]] = ts_stdi
