@@ -8,16 +8,12 @@ import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
 
 from dask.distributed import Client, as_completed, LocalCluster
-
-
-if __name__ == "__main__":
-    client = Client(processes=False)
+from dask_jobqueue import LSFCluster
 
 from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
 from pysar.utils import readfile, writefile, ptime, utils as ut
 
-cluster = client = None
 
 # key configuration parameter name
 key_prefix = 'pysar.networkInversion.'
@@ -411,12 +407,11 @@ def mask_unwrap_phase(pha_data, stack_obj, box, mask_ds_name=None, mask_threshol
     return pha_data
 
 
-def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
+def ifgram_inversion_patch(ifgram_file, client, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
                            weight_func='var', min_norm_velocity=True,
                            mask_dataset_name=None, mask_threshold=0.4, min_redundancy=1.0,
                            water_mask_file=None, skip_zero_phase=True,
-                           outfile=['timeseries.h5', 'temporalCoherence.h5'],
-                           client = client):
+                           outfile=['timeseries.h5', 'temporalCoherence.h5']):
     """Invert one patch of an ifgram stack into timeseries.
     Parameters: ifgram_file       : str, interferograms stack HDF5 file, e.g. ./INPUTS/ifgramStack.h5
                 box               : tuple of 4 int, indicating (x0, y0, x1, y1) pixel coordinate of area of interest
@@ -655,13 +650,18 @@ def init_parallel_ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, 
                                          weight_func='var', min_norm_velocity=True,
                                          mask_dataset_name=None, mask_threshold=0.4, min_redundancy=1.0,
                                          water_mask_file=None, skip_zero_phase=True,
-                                         outfile=['timeseries.h5', 'temporalCoherence.h5'],
-                                         client = client):
+                                         outfile=['timeseries.h5', 'temporalCoherence.h5']):
+
+    cluster = LSFCluster(project='insarlab',
+                     queue='general', memory='2 GB',
+                     cores=3, walltime='00:10',
+                     python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
+    cluster.scale(10)
+    client = Client(cluster)
 
 
-    return ifgram_inversion_patch(ifgram_file, box=box, ref_phase=ref_phase, unwDatasetName=unwDatasetName,
+    return ifgram_inversion_patch(ifgram_file, client= client, box=box, ref_phase=ref_phase, unwDatasetName=unwDatasetName,
                                   weight_func=weight_func, min_norm_velocity=min_norm_velocity,
                                   mask_dataset_name=mask_dataset_name, mask_threshold=mask_threshold, min_redundancy=min_redundancy,
                                   water_mask_file=water_mask_file, skip_zero_phase=skip_zero_phase,
-                                  outfile=outfile,
-                                  client = client)
+                                  outfile=outfile)
