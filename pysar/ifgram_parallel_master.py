@@ -19,9 +19,15 @@ from scipy import linalg   # more effieint than numpy.linalg
 import pysar.ifgram_parallel_algos as ifgram_algos
 
 from dask.distributed import Client, as_completed, LocalCluster
+from dask_jobqueue import LSFCluster
 
 if __name__ == "__main__":
-    client = Client(processes=False)
+    cluster = LSFCluster(project='insarlab',
+                     queue='general', memory='2 GB',
+                     cores=3, walltime='00:10',
+                     python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
+    cluster.scale(10)
+    client = Client(cluster)
 
 from scipy.special import gamma
 from pysar.objects import ifgramStack, timeseries
