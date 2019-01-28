@@ -38,7 +38,7 @@ def write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std=None, num_inv_if
     date_list = stack_obj.get_date_list(dropIfgram=True)
 
     # File 1 - timeseries.h5
-    ts_file = '{}{}.h5'.format(suffix, os.path.splitext(inps.outfile[0])[0])
+    ts_file = '{}{}.h5'.format(suffix, os.path.splitext(outfile[0])[0])
     metadata['REF_DATE'] = date_list[0]
     metadata['FILE_TYPE'] = 'timeseries'
     metadata['UNIT'] = 'm'
@@ -89,6 +89,112 @@ def read_coherence(stack_obj, box, dropIfgram=True, print_msg=True):
                               print_msg=False).reshape(num_ifgram, -1)
     return coh_data
 
+def phase_pdf_ds(L, coherence=None, phi_num=1000, epsilon=1e-3):
+    """Marginal PDF of interferometric phase for distributed scatterers (DS)
+    Eq. 66 (Tough et al., 1995) and Eq. 4.2.23 (Hanssen, 2001)
+    Inputs:
+        L         - int, number of independent looks
+        coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
+        phi_num    - int, number of phase sample for the numerical calculation
+    Output:
+        pdf       - 2D np.array, phase pdf in size of (phi_num, len(coherence))
+        coherence - 1D np.array for the range of coherence
+    Example:
+        epsilon = 1e-4
+        coh = np.linspace(0., 1-epsilon, 1000)
+        pdf, coh = phase_pdf_ds(1, coherence=coh)
+    """
+    if coherence is None:
+        coherence = np.linspace(0., 1.-epsilon, 1000)
+    coherence = np.array(coherence, np.float64).reshape(1, -1)
+    phi = np.linspace(-np.pi, np.pi, phi_num, dtype=np.float64).reshape(-1, 1)
+
+    # Phase PDF - Eq. 4.2.32 (Hanssen, 2001)
+    A = np.power((1-np.square(coherence)), L) / (2*np.pi)
+    A = np.tile(A, (phi_num, 1))
+    B = gamma(2*L - 1) / ((gamma(L))**2 * 2**(2*(L-1)))
+
+    beta = np.multiply(np.abs(coherence), np.cos(phi))
+    C = np.divide((2*L - 1) * beta, np.power((1 - np.square(beta)), L+0.5))
+    C = np.multiply(C, (np.pi/2 + np.arcsin(beta)))
+    C += 1 / np.power((1 - np.square(beta)), L)
+
+    sumD = 0
+    if L > 1:
+        for r in range(int(L)-1):
+            D = gamma(L-0.5) / gamma(L-0.5-r)
+            D *= gamma(L-1-r) / gamma(L-1)
+            D *= (1 + (2*r+1)*np.square(beta)) / np.power((1 - np.square(beta)), r+2)
+            sumD += D
+        sumD /= (2*(L-1))
+
+    pdf = B*C + sumD
+    pdf = np.multiply(A, pdf)
+    return pdf, coherence.flatten()
+
+
+
+def phase_variance_ds(L,  coherence=None, epsilon=1e-3):
+    """Interferometric phase variance for distributed scatterers (DS)
+    Eq. 2.1.2 (Box et al., 2015) and Eq. 4.2.27 (Hanssen, 2001)
+    Inputs:
+        L         - int, number of independent looks
+        coherence - 1D np.array for the range of coherence, with value < 1.0 for valid operation
+        phiNum    - int, number of phase sample for the numerical calculation
+    Output:
+        var       - 1D np.array, phase variance in size of (len(coherence))
+        coherence - 1D np.array for the range of coherence
+    Example:
+        epsilon = 1e-4
+        coh = np.linspace(0., 1-epsilon, 1000)
+        var, coh = phase_variance_ds(1, coherence=coh)
+    """
+    if coherence is None:
+        coherence = np.linspace(0., 1.-epsilon, 1000, dtype=np.float64)
+    phiNum = len(coherence)
+
+    phi = np.linspace(-np.pi, np.pi, phiNum, dtype=np.float64).reshape(-1, 1)
+    phi_step = 2*np.pi/phiNum
+
+    pdf, coherence = phase_pdf_ds(L, coherence=coherence)
+    var = np.sum(np.multiply(np.square(np.tile(phi, (1, len(coherence)))), pdf)*phi_step, axis=0)
+    return var, coherence
+
+
+def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
+    """Convert coherence to phase variance based on DS phase PDF (Tough et al., 1995)"""
+    lineStr = '    number of looks L={}'.format(L)
+    if L > 80:
+        L = 80
+        lineStr += ', use L=80 to avoid dividing by 0 in calculation with Negligible effect'
+    if print_msg:
+        print(lineStr)
+
+    coh_num = 1000
+    coh_min = 0.0 + epsilon
+    coh_max = 1.0 - epsilon
+    coh_lut = np.linspace(coh_min, coh_max, coh_num)
+    coh_min = np.min(coh_lut)
+    coh_max = np.max(coh_lut)
+    coh_step = (coh_max - coh_min) / (coh_num - 1)
+
+    coherence = np.array(coherence)
+    coherence[coherence < coh_min] = coh_min
+    coherence[coherence > coh_max] = coh_max
+    coherence_idx = np.array((coherence - coh_min) / coh_step, np.int16)
+
+    var_lut = phase_variance_ds(int(L), coh_lut)[0]
+    variance = var_lut[coherence_idx]
+    return variance
+
+
+def coherence2fisher_info_index(data, L=32, epsilon=1e-3):
+    """Convert coherence to Fisher information index (Seymour & Cumming, 1994, IGARSS)"""
+    if data.dtype != np.float64:
+        data = np.array(data, np.float64)
+    data[data > 1-epsilon] = 1-epsilon
+    data = 2.0 * int(L) * np.square(data) / (1 - np.square(data))
+    return data
 
 def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=True):
     coh_data[np.isnan(coh_data)] = epsilon
