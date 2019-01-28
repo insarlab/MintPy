@@ -18,7 +18,7 @@ import numpy as np
 from scipy import linalg   # more effieint than numpy.linalg
 import pysar.ifgram_parallel_algos as ifgram_algos
 
-from dask.distributed import Client, as_completed, LocalCluster
+from dask.distributed import Client, as_completed
 from dask_jobqueue import LSFCluster
 
 if __name__ == "__main__":
@@ -700,225 +700,6 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
     return weight
 
 
-def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
-                           weight_func='var', min_norm_velocity=True,
-                           mask_dataset_name=None, mask_threshold=0.4, min_redundancy=1.0,
-                           water_mask_file=None, skip_zero_phase=True):
-    """Invert one patch of an ifgram stack into timeseries.
-    Parameters: ifgram_file       : str, interferograms stack HDF5 file, e.g. ./INPUTS/ifgramStack.h5
-                box               : tuple of 4 int, indicating (x0, y0, x1, y1) pixel coordinate of area of interest
-                                    or None, to process the whole file and write output file
-                ref_phase         : 1D array in size of (num_ifgram)
-                                    or None
-                weight_func       : str, weight function, choose in ['no', 'fim', 'var', 'coh']
-                mask_dataset_name : str, dataset name in ifgram_file used to mask unwrapPhase pixelwisely
-                mask_threshold    : float, min coherence of pixels if mask_dataset_name='coherence'
-                water_mask_file   : str, water mask filename if available,
-                                    skip inversion on water to speed up the process
-                skip_zero_phase   : bool, skip zero value of unwrapped phase or not, default yes, for comparison
-    Returns:    ts             : 3D array in size of (num_date, num_row, num_col)
-                temp_coh       : 2D array in size of (num_row, num_col)
-                ts_std         : 3D array in size of (num_date, num_row, num_col)
-                num_inv_ifg : 2D array in size of (num_row, num_col)
-    Example:    ifgram_inversion_patch('ifgramStack.h5', box=(0,200,1316,400), ref_phase=np.array(),
-                                       weight_func='var', min_norm_velocity=True, mask_dataset_name='coherence')
-                ifgram_inversion_patch('ifgramStack_001.h5', box=None, ref_phase=None,
-                                       weight_func='var', min_norm_velocity=True, mask_dataset_name='coherence')
-    """
-
-    stack_obj = ifgramStack(ifgram_file)
-    stack_obj.open(print_msg=False)
-
-    ## debug
-    #y, x = 258, 454
-    #box = (x, y, x+1, y+1)
-
-    # Size Info - Patch
-    if box:
-        #print('processing \t %d-%d / %d lines ...' % (box[1], box[3], stack_obj.length))
-        num_row = box[3] - box[1]
-        num_col = box[2] - box[0]
-    else:
-        num_row = stack_obj.length
-        num_col = stack_obj.width
-    num_pixel = num_row * num_col
-
-    # get tbase_diff
-    date_list = stack_obj.get_date_list(dropIfgram=True)
-    num_date = len(date_list)
-    tbase = np.array(ptime.date_list2tbase(date_list)[0], np.float32) / 365.25
-    tbase_diff = np.diff(tbase).reshape(-1, 1)
-
-    # Design matrix
-    date12_list = stack_obj.get_date12_list(dropIfgram=True)
-    A, B = stack_obj.get_design_matrix4timeseries(date12_list=date12_list)[0:2]
-    num_ifgram = len(date12_list)
-
-    # prep for decor std time-series
-    try:
-        ref_date = str(np.loadtxt('reference_date.txt', dtype=bytes).astype(str))
-    except:
-        ref_date = date_list[0]
-    Astd = stack_obj.get_design_matrix4timeseries(date12_list=date12_list, refDate=ref_date)[0]
-    #ref_idx = date_list.index(ref_date)
-    #time_idx = [i for i in range(num_date)]
-    #time_idx.remove(ref_idx)
-
-    # Initialization of output matrix
-    ts     = np.zeros((num_date, num_pixel), np.float32)
-    ts_std = np.zeros((num_date, num_pixel), np.float32)
-    temp_coh    = np.zeros(num_pixel, np.float32)
-    num_inv_ifg = np.zeros(num_pixel, np.int16)
-
-    # Read/Mask unwrapPhase
-    pha_data = read_unwrap_phase(stack_obj,
-                                 box,
-                                 ref_phase,
-                                 unwDatasetName=unwDatasetName,
-                                 dropIfgram=True,
-                                 skip_zero_phase=skip_zero_phase)
-
-    pha_data = mask_unwrap_phase(pha_data,
-                                 stack_obj,
-                                 box,
-                                 dropIfgram=True,
-                                 mask_ds_name=mask_dataset_name,
-                                 mask_threshold=mask_threshold)
-
-    # Mask for pixels to invert
-    mask = np.ones(num_pixel, np.bool_)
-    # 1 - Water Mask
-    if water_mask_file:
-        print(('skip pixels on water with mask from'
-               ' file: {}').format(os.path.basename(water_mask_file)))
-        atr_msk = readfile.read_attribute(water_mask_file)
-        if (int(atr_msk['LENGTH']), int(atr_msk['WIDTH'])) != (stack_obj.length, stack_obj.width):
-            raise ValueError('Input water mask file has different size from ifgramStack file.')
-        del atr_msk
-        dsName = [i for i in readfile.get_dataset_list(water_mask_file)
-                  if i in ['waterMask', 'mask']][0]
-        waterMask = readfile.read(water_mask_file,
-                                  datasetName=dsName,
-                                  box=box)[0].flatten()
-        mask *= np.array(waterMask, np.bool_)
-        del waterMask
-
-    # 2 - Mask for Zero Phase in ALL ifgrams
-    print('skip pixels with zero/nan value in all interferograms')
-    phase_stack = np.nanmean(pha_data, axis=0)
-    mask *= np.multiply(~np.isnan(phase_stack), phase_stack != 0.)
-    del phase_stack
-
-    # Invert pixels on mask 1+2
-    num_pixel2inv = int(np.sum(mask))
-    idx_pixel2inv = np.where(mask)[0]
-    print(('number of pixels to invert: {} out of {}'
-           ' ({:.1f}%)').format(num_pixel2inv, num_pixel,
-                                num_pixel2inv/num_pixel*100))
-    if num_pixel2inv < 1:
-        ts = ts.reshape(num_date, num_row, num_col)
-        ts_std = ts_std.reshape(num_date, num_row, num_col)
-        temp_coh = temp_coh.reshape(num_row, num_col)
-        num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
-        return ts, temp_coh, ts_std, num_inv_ifg
-
-    # Inversion - SBAS
-    if weight_func in ['no', 'sbas']:
-        # Mask for Non-Zero Phase in ALL ifgrams (share one B in sbas inversion)
-        mask_all_net = np.all(pha_data, axis=0)
-        mask_all_net *= mask
-        mask_part_net = mask ^ mask_all_net
-
-        if np.sum(mask_all_net) > 0:
-            print(('inverting pixels with valid phase in all  ifgrams'
-                   ' ({:.0f} pixels) ...').format(np.sum(mask_all_net)))
-            tsi, tcohi, num_ifgi = estimate_timeseries(A, B, tbase_diff,
-                                                       ifgram=pha_data[:, mask_all_net],
-                                                       weight_sqrt=None,
-                                                       min_norm_velocity=min_norm_velocity,
-                                                       skip_zero_phase=skip_zero_phase,
-                                                       min_redundancy=min_redundancy)
-            ts[:, mask_all_net] = tsi
-            temp_coh[mask_all_net] = tcohi
-            num_inv_ifg[mask_all_net] = num_ifgi
-
-        if np.sum(mask_part_net) > 0:
-            print(('inverting pixels with valid phase in some ifgrams'
-                   ' ({:.0f} pixels) ...').format(np.sum(mask_part_net)))
-            num_pixel2inv = int(np.sum(mask_part_net))
-            idx_pixel2inv = np.where(mask_part_net)[0]
-            prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
-            for i in range(num_pixel2inv):
-                idx = idx_pixel2inv[i]
-                tsi, tcohi, num_ifgi = estimate_timeseries(A, B, tbase_diff,
-                                                           ifgram=pha_data[:, idx],
-                                                           weight_sqrt=None,
-                                                           min_norm_velocity=min_norm_velocity,
-                                                           skip_zero_phase=skip_zero_phase,
-                                                           min_redundancy=min_redundancy)
-                ts[:, idx] = tsi.flatten()
-                temp_coh[idx] = tcohi
-                num_inv_ifg[idx] = num_ifgi
-                prog_bar.update(i+1, every=1000, suffix='{}/{} pixels'.format(i+1, num_pixel2inv))
-            prog_bar.close()
-
-    # Inversion - WLS
-    else:
-        L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
-        weight = read_coherence(stack_obj, box=box, dropIfgram=True)
-        weight = coherence2weight(weight, weight_func=weight_func, L=L, epsilon=5e-2)
-        weight = np.sqrt(weight)
-
-        # Weighted Inversion pixel by pixel
-        print('inverting network of interferograms into time-series ...')
-        prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
-
-        start_time = time.time()
-        futures = []
-        data_future = client.scatter(data= (idx_pixel2inv,
-                               A, B,
-                               tbase_diff,
-                               pha_data,
-                               weight,
-                               min_norm_velocity,
-                               skip_zero_phase,
-                               min_redundancy),
-                       broadcast=True)
-
-        num_workers = 2
-        for i in range(num_workers):
-            start = i * (num_pixel2inv // num_workers)
-            end = min( (i + 1) * (num_pixel2inv // num_workers), num_pixel2inv)
-            future = client.submit(parallel_f, start, end,
-               data_future)
-            futures.append(future)
-
-        for future in as_completed(futures):
-            tsi, tcohi, num_ifgi = future.result()
-            for idx, tsi_val in tsi.items():
-                ts[:, idx] = tsi_val.flatten()
-                temp_coh[idx] = tcohi[idx]
-                num_inv_ifg[idx] = num_ifgi[idx]
-
-    end_time = time.time()
-    print("TIME IT TOOK: ", end_time - start_time)
-
-    ts = ts.reshape(num_date, num_row, num_col)
-    ts_std = ts_std.reshape(num_date, num_row, num_col)
-    temp_coh = temp_coh.reshape(num_row, num_col)
-    num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
-
-    # write output files if input file is splitted (box == None)
-    if box is None:
-        # metadata
-        metadata = dict(stack_obj.metadata)
-        metadata[key_prefix+'weightFunc'] = weight_func
-        suffix = re.findall('_\d{3}', ifgram_file)[0]
-        write2hdf5_file(ifgram_file, metadata, ts, temp_coh, ts_std, num_inv_ifg, suffix, inps=inps)
-        return
-    else:
-        return ts, temp_coh, ts_std, num_inv_ifg
-
 def parallel_f(start, end, data):
     idx_pixel2inv, A, B, tbase_diff, pha_data, weight, min_norm_velocity, skip_zero_phase, min_redundancy = data
     ts = {}
@@ -1019,7 +800,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                    mask_threshold=inps.maskThreshold,
                                    min_redundancy=inps.minRedundancy,
                                    water_mask_file=inps.waterMaskFile,
-                                   skip_zero_phase=inps.skip_zero_phase)
+                                   skip_zero_phase=inps.skip_zero_phase,
+                                   client = client)
     else:
         # read ifgram_file in small patches and write them together
         ref_phase = stack_obj.get_reference_phase(unwDatasetName=inps.unwDatasetName,
@@ -1052,7 +834,8 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                                                 mask_threshold=inps.maskThreshold,
                                                 min_redundancy=inps.minRedundancy,
                                                 water_mask_file=inps.waterMaskFile,
-                                                skip_zero_phase=inps.skip_zero_phase)
+                                                skip_zero_phase=inps.skip_zero_phase,
+                                                                           client = client)
 
             ts[:, box[1]:box[3], box[0]:box[2]] = tsi
             ts_std[:, box[1]:box[3], box[0]:box[2]] = ts_stdi
