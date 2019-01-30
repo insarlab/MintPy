@@ -256,8 +256,6 @@ def correct_unwrap_error(inps, template):
         if unw_cor_method == 'phase_closure':
             unwCmd = 'unwrap_error_phase_closure.py {} -t {} --update'.format(inps.stackFile,
                                                                               inps.templateFile)
-            if inps.fast:
-                unwCmd += ' --fast'
 
         elif unw_cor_method == 'bridging':
             unwCmd = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
@@ -266,7 +264,7 @@ def correct_unwrap_error(inps, template):
             unwCmd = ('unwrap_error_bridging.py {} -t {} --update'
                       ' -i unwrapPhase -o unwrapPhase_bridging').format(inps.stackFile,
                                                                         inps.templateFile)
-            unwCmd += '\nunwrap_error_phase_closure.py {} --update --fast '.format(inps.stackFile)
+            unwCmd += '\nunwrap_error_phase_closure.py {} --update '.format(inps.stackFile)
             unwCmd += '-i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
         else:
             raise ValueError('un-recognized method: {}'.format(unw_cor_method))

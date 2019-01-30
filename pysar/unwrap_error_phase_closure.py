@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
-# Author:  Heresh Fattahi, Zhang Yunjun                    #
+# Copyright(c) 2013-2019, Zhang Yunjun, Heresh Fattahi     #
+# Author:  Zhang Yunjun, Heresh Fattahi                    #
 ############################################################
 
 
@@ -11,35 +11,36 @@ import argparse
 import time
 import h5py
 import numpy as np
-from scipy import linalg
+try:
+    from cvxopt import matrix, sparse
+except ImportError:
+    raise ImportError('Cannot import cvxopt')
 from pysar.objects import ifgramStack
 from pysar.utils import ptime, readfile, writefile, utils as ut
-import pysar.ifgram_inversion as ifginv
+from pysar.utils.solvers import l1reg_lstsq
+from pysar import ifgram_inversion as ifginv
 
 
 key_prefix = 'pysar.unwrapError.'
 
 ##########################################################################################
 EXAMPLE = """Example:
-  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  -m mask.h5
+  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  -m maskConnComp.h5
   unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  -m waterMask.h5 --update
-  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  -m waterMask.h5 --fast
 """
 
 TEMPLATE = """Template:
   ## Unwrapping Error Correction based on Phase Closure (Fattahi, 2015, PhD Thesis)
   pysar.unwrapError.maskFile = auto  #[file name / no], auto for no
-  pysar.unwrapError.fastMode = auto  #[yes / no], auto for yes, enable fast mode for phase_closure method
 """
 
 REFERENCE = """Reference:
-  Fattahi, H. (2015), Geodetic Imaging of Tectonic Deformation with InSAR, 190 pp, 
-  University of Miami, Miami, FL. (Chap. 4), Open Access Dissertations. 1456. 
-  https://scholarlyrepository.miami.edu/oa_dissertations/1456
+  Yunjun, Z., H. Fattahi, F. Amelung, (2019) InSAR time series analysis: error correction
+  and noise reduction (submitted).
 """
 
 NOTE = """
-  correct unwrapping errors based on phase closure of pairs circle (ab + bc + ca == 0).
+  by exploiting the conservertiveness of the integer ambiguity of interferograms triplets.
   This method assumes:
   a. abundance of network: for interferogram with unwrapping error, there is
      at least of one triangular connection to form a closed circle; with more
@@ -65,9 +66,6 @@ def create_parser():
                         help='mask file to specify those pixels to be corrected for unwrapping errors')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options for setting.')
-    parser.add_argument('--fast', dest='fastMode', action='store_true',
-                        help='Fast (but not the best) unwrap error correction,'
-                             ' by diable the extra constraint on ifgrams with no unwrap error.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update mode: if unwrapPhase_phaseClosure dataset exists, skip the correction.')
     return parser
@@ -124,58 +122,8 @@ def run_or_skip(inps):
     return flag
 
 
-####################################################################################################
-def correct_unwrap_error(ifgram, C, Dconstraint=True, thres=0.1, alpha=0.25, rcond=1e-5):
-    """Estimate unwrapping error from a stack of unwrapped interferometric phase
-    Parameters: ifgram : 2D np.array in size of (num_ifgram, num_pixel) of unwrap phase
-                C      : 2D np.array in size of (num_triangle, num_ifgram) triangle design matrix
-                Dconstraint : bool, apply zero phase jump constraint on ifgrams without unwrapping error.
-                    This is disabled in fast option
-                thres  : float, threshold of non-zero phase closure beyond which indicates unwrap error
-                alpha  : float, Tikhonov factor, regularization parameter
-                rcond  : float, cut-off value for least square estimation
-    Returns:    ifgram_cor : 2D np.array in size of (num_ifgram, num_pixel) of unwrap phase after correction
-                U          : 2D np.array in size of (num_ifgram, num_pixel) of phase jump integer
-    Example:    ifgram_cor, U = estimate_unwrap_error(ifgram, C)
-    """
-    num_tri, num_ifgram = C.shape
-    ifgram = ifgram.reshape(num_ifgram, -1)
-    U = np.zeros(ifgram.shape, np.float32)
-
-    I = np.eye(num_ifgram, dtype=np.float32)
-    A = np.vstack((C, alpha*I))
-    # Use Tikhonov regularization (alpha*D0) to solve equation in ill-posed scenario:
-    # e.g.: network is not dense enough AND a lot of unwrapping error exist,
-    # then A.shape[0] < A.shape[1]: number of unknown > number of observations
-
-    if Dconstraint:
-        # get D
-        # 1. calculate phase closure for all ifgram triangles --> identy those with unwrap error
-        # 2. identy ifgrams involved in at least 1 triangle with unwrap error
-        # 3. get D for ifgram 'without any unwrap error' or 'correctly unwrapped'
-        pha_closure = np.dot(C, ifgram)
-        pha_closure = np.abs(pha_closure - ut.wrap(pha_closure))
-        idx_nonzero_closure = (pha_closure >= thres).flatten()
-        idx_err_ifgram = np.sum(C[idx_nonzero_closure, :] != 0., axis=0) >= 1.
-        D = I[~idx_err_ifgram, :]
-        A = np.vstack((A, D))
-
-    # Eq 4.4 (Fattahi, 2015)
-    try:
-        A_inv = linalg.pinv2(A, rcond=rcond)
-        L = np.zeros((A.shape[0], ifgram.shape[1]), np.float32)
-        L[0:num_tri, :] = np.dot(C, ifgram) / (-2.*np.pi)
-        U = np.round(np.dot(A_inv, L))
-
-    except linalg.LinAlgError:
-        pass
-
-    ifgram_cor = ifgram + 2*np.pi*U
-    return ifgram_cor, U
-
-
-def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None, fast_mode=False,
-                           thres=0.1, dsNameIn='unwrapPhase'):
+def run_unwrap_error_closure_patch(ifgram_file, box=None, mask_file=None, ref_phase=None, alpha=1e-2,
+                                   dsNameIn='unwrapPhase'):
     """Estimate/Correct unwrapping error in ifgram stack on area defined by box.
     Parameters: ifgram_file : string, ifgramStack file
                 box : tuple of 4 int, indicating areas to be read and analyzed
@@ -183,8 +131,7 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
                 ref_pahse : 1D np.array in size of (num_ifgram,) phase value on reference pixel, because:
                     1) phase value stored in pysar is not reference yet
                     2) reference point may be out of box definition
-                fast_mode : bool, apply zero jump constraint on ifgrams without unwrapping error.
-                thres : float, threshold of non-zero phase closure to be identified as unwrapping error.
+                alpha : nonnegative float, tradeoff between L1- and L2-norm terms.
     Returns:    pha_data : 3D np.array in size of (num_ifgram_all, box[3]-box[2], box[2]-box[0]),
                     unwrapped phase value after error correction
     """
@@ -202,15 +149,19 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
         num_col = obj.width
     num_pixel = num_row * num_col
 
-    C = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=True))
+    C = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=True)).astype(float)
     print('number of interferograms: {}'.format(C.shape[1]))
     print('number of triangles: {}'.format(C.shape[0]))
 
     # read unwrapPhase
-    pha_data_all = ifginv.read_unwrap_phase(obj, box, ref_phase,
-                                            unwDatasetName=dsNameIn,
-                                            dropIfgram=False)
-    pha_data = np.array(pha_data_all[obj.dropIfgram, :])
+    pha_data = ifginv.read_unwrap_phase(obj, box, ref_phase,
+                                        unwDatasetName=dsNameIn,
+                                        dropIfgram=False)
+    print('calculating the integer ambiguity of the closure phase of all possible triplets ...')
+    closure_pha = np.dot(C, np.array(pha_data[obj.dropIfgram, :]))
+    closure_int = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
+    num_closure_int = np.sum(closure_int != 0., axis=0)
+    del closure_pha
 
     # mask of pixels to analyze
     mask = np.ones((num_pixel), np.bool_)
@@ -223,42 +174,36 @@ def run_unwrap_error_patch(ifgram_file, box=None, mask_file=None, ref_phase=None
         mask *= np.array(waterMask, np.bool_)
         del waterMask
         print('number of pixels left after mask: {}'.format(np.sum(mask)))
-
     # mask 2. mask of pixels without unwrap error: : zero phase closure on all triangles
-    print('calculating phase closure of all possible triangles ...')
-    pha_closure = np.dot(C, pha_data)
-    pha_closure = np.abs(pha_closure - ut.wrap(pha_closure))       # Eq 4.2 (Fattahi, 2015)
-    num_nonzero_closure = np.sum(pha_closure >= thres, axis=0)
-    mask *= (num_nonzero_closure != 0.)
-    del pha_closure
-    print('number of pixels left after checking phase closure: {}'.format(np.sum(mask)))
-
+    mask *= (num_closure_int != 0.)
     # mask summary
     num_pixel2proc = int(np.sum(mask))
+    print('number of pixels left after checking phase closure: {}'.format(num_pixel2proc))
+
     if num_pixel2proc > 0:
-        ifgram = pha_data[:, mask]
-        ifgram_cor = np.array(ifgram, np.float32)
-        print('number of pixels to process: {} out of {} ({:.2f}%)'.format(num_pixel2proc, num_pixel,
+        print('number of pixels to process: {} out of {} ({:.2f}%)'.format(num_pixel2proc,
+                                                                           num_pixel,
                                                                            num_pixel2proc/num_pixel*100))
+        # prepare matrix in cvxopt format
+        C = matrix(C)
+        closure_int = matrix(closure_int[:, mask])
 
         # correcting unwrap error based on phase closure
-        print('correcting unwrapping error ...')
-        if fast_mode:
-            ifgram_cor = correct_unwrap_error(ifgram, C, Dconstraint=False)[0]
+        print('solving the phase-unwrapping integer ambiguity using LASSO ...')
+        pha_offset = np.zeros((np.sum(obj.dropIfgram), num_pixel2proc), np.float32)
+        prog_bar = ptime.progressBar(maxValue=num_pixel2proc)
+        for i in range(num_pixel2proc):
+            U = np.round(l1reg_lstsq(-C, closure_int[:, i], lambd=alpha))
+            pha_offset[:, i] = 2.*np.pi*U.flatten()
+            prog_bar.update(i+1, every=10, suffix='{}/{}'.format(i+1, num_pixel2proc))
+        prog_bar.close()
 
-        else:
-            prog_bar = ptime.progressBar(maxValue=num_pixel2proc)
-            for i in range(num_pixel2proc):
-                ifgram_cor[:, i] = correct_unwrap_error(ifgram[:, i], C, Dconstraint=True)[0].flatten()
-                prog_bar.update(i+1, every=10, suffix='{}/{}'.format(i+1, num_pixel2proc))
-            prog_bar.close()
+        # update phase value on selected interferograms and pixels
+        pha_data[obj.dropIfgram, :][:, mask] += pha_offset
 
-        pha_data[:, mask] = ifgram_cor
-        pha_data_all[obj.dropIfgram, :] = pha_data
-
-    pha_data_all = pha_data_all.reshape(num_ifgram, num_row, num_col)
-    num_nonzero_closure = num_nonzero_closure.reshape(num_row, num_col)
-    return pha_data_all, num_nonzero_closure
+    pha_data = pha_data.reshape(num_ifgram, num_row, num_col)
+    num_closure_int = num_closure_int.reshape(num_row, num_col)
+    return pha_data, num_closure_int
 
 
 def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_phaseClosure', fast_mode=False):
@@ -268,28 +213,19 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
                     maskFile    : string, path of mask file mark the pixels to be corrected
                 dsNameIn  : string, dataset name to read in
                 dsnameOut : string, dataset name to write out
-                fast_mode : bool, enable fast processing mode or not
     Returns:    inps.ifgram_file : string, path of corrected ifgram stack file
     """
     print('-'*50)
     print('Unwrapping Error Coorrection based on Phase Closure Consistency (Fattahi, 2015) ...')
-    if fast_mode:
-        print('fast mode: ON, the following asuumption is ignored for fast processing')
-        print('\tzero phase jump constraint on ifgrams without unwrap error')
-    else:
-        print(('this step can be very slow'
-               'you could terminate this and try --fast option for quick correction process.'))
-    print('-'*50)
-
     obj = ifgramStack(inps.ifgram_file)
     obj.open()
     ref_phase = obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=False)
 
-    num_nonzero_closure = np.zeros((obj.length, obj.width), dtype=np.int16)
+    num_closure_int = np.zeros((obj.length, obj.width), dtype=np.int16)
     # split ifgram_file into blocks to save memory
     num_tri = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=True)).shape[0]
     length, width = obj.get_size()[1:3]
-    box_list = ifginv.split_into_boxes(dataset_shape=(num_tri, length, width), chunk_size=200e6)
+    box_list = ifginv.split_into_boxes(dataset_shape=(num_tri, length, width), chunk_size=2e6)
     num_box = len(box_list)
     for i in range(num_box):
         box = box_list[i]
@@ -297,13 +233,12 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
             print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
 
         # estimate/correct ifgram
-        unw_cor, num_closure = run_unwrap_error_patch(inps.ifgram_file,
-                                                      box=box,
-                                                      mask_file=inps.maskFile,
-                                                      ref_phase=ref_phase,
-                                                      fast_mode=fast_mode,
-                                                      dsNameIn=dsNameIn)
-        num_nonzero_closure[box[1]:box[3], box[0]:box[2]] = num_closure
+        unw_cor, num_int = run_unwrap_error_closure_patch(inps.ifgram_file,
+                                                          box=box,
+                                                          mask_file=inps.maskFile,
+                                                          ref_phase=ref_phase,
+                                                          dsNameIn=dsNameIn)
+        num_closure_int[box[1]:box[3], box[0]:box[2]] = num_int
 
         # write ifgram
         write_hdf5_file_patch(inps.ifgram_file,
@@ -312,11 +247,11 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
                               dsName=dsNameOut)
 
     # write number of nonzero phase closure into file
-    num_file = 'numNonzeroPhaseClosure.h5'
+    num_file = 'numNonzeroClosureInt.h5'
     atr = dict(obj.metadata)
     atr['FILE_TYPE'] = 'mask'
     atr['UNIT'] = '1'
-    writefile.write(num_nonzero_closure, out_file=num_file, metadata=atr)
+    writefile.write(num_closure_int, out_file=num_file, metadata=atr)
     print('writing >>> {}'.format(num_file))
 
     return inps.ifgram_file
@@ -378,10 +313,7 @@ def main(iargs=None):
         return inps.ifgram_file
 
     start_time = time.time()
-    run_unwrap_error_closure(inps,
-                             dsNameIn=inps.datasetNameIn,
-                             dsNameOut=inps.datasetNameOut,
-                             fast_mode=inps.fastMode)
+    run_unwrap_error_closure(inps, dsNameIn=inps.datasetNameIn, dsNameOut=inps.datasetNameOut)
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))

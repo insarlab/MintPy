@@ -3,9 +3,13 @@
 ########## 1. Load Data (--load to exit after this step)
 ## auto - automatic path pattern for Univ of Miami file structure
 ## load_data.py -H to check more details and example inputs.
+## compression to save disk usage for ifgramStack.h5 file:
+## no   - save   0% disk usage, fast [default]
+## lzf  - save ~57% disk usage, relative slow
+## gzip - save ~62% disk usage, very slow [not recommend]
 pysar.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
 pysar.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
-pysar.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
+pysar.load.compression    = auto  #[gzip / lzf / no], auto for no.
 ##---------for ISCE only:
 pysar.load.metaFile       = auto  #[path2metadata_file]
 pysar.load.baselineDir    = auto  #[path2baseline_dir]
@@ -41,9 +45,9 @@ pysar.reference.maskFile      = auto   #[filename / no], auto for maskConnComp.h
 
 
 ## 2. Unwrapping Error Correction (optional)
+## reference: Yunjun et al, 2019
 ## supported methods:
-## a. phase_closure (Fattahi, 2015, Thesis Chap. 4)
-##    automatic; slow by default, fast option available but not giving the best result.
+## a. phase_closure  - slow
 ## b. bridging
 ##    automatic for islands with waterMaskFile option (unwrapping errors on areas separated by narrow water bodies)
 ##    manual    for all the other scenarios
@@ -53,7 +57,6 @@ pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
 pysar.unwrapError.maskFile        = auto  #[maskConnComp.h5 / no], auto for no, mask for connected components areas
 pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
 pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for no; recommend linear for L-band data
-pysar.unwrapError.fastMode        = auto  #[yes / no], auto for yes, enable fast mode for phase_closure method
 
 
 ########## 3. Network Inversion
