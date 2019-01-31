@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2016-2018, Zhang Yunjun                     #
+# Copyright(c) 2016-2019, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 
@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import sparse, ndimage
 from pysar.objects import ifgramStack, deramp
+from pysar.objects.conncomp import connectComponent
 from pysar.utils import (ptime,
                          readfile,
                          writefile,
@@ -25,9 +26,8 @@ from pysar.utils import (ptime,
 
 # key configuration parameter name
 key_prefix = 'pysar.unwrapError.'
-configKeys = ['maskFile',
+configKeys = ['ramp',
               'waterMaskFile',
-              'ramp',
               'bridgePtsRadius']
 
 
@@ -64,7 +64,6 @@ TEMPLATE = """
 ## manual    for all the other scenarios
 pysar.unwrapError.method          = auto  #[bridging / phase_closure / no], auto for no
 pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
-pysar.unwrapError.maskFile        = auto  #[maskConnComp.h5 / no], auto for no, mask for connected components areas
 pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
 pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for linear
 """
@@ -81,8 +80,7 @@ def create_parser():
                         help='radius of the end point of bridge to search area to get median representative value')
     parser.add_argument('--ramp', dest='ramp', choices=['linear', 'quadratic'],
                           help='type of phase ramp to be removed before correction.')
-    parser.add_argument('--water-mask', dest='waterMaskFile', type=str,
-                        help='path of water mask file for study area with unwrapping errors due to water separation.')
+    parser.add_argument('--water-mask', dest='waterMaskFile', type=str, help='path of water mask file.')
     parser.add_argument('--coh-mask', dest='cohMaskFile', type=str, default='maskSpatialCoh.h5',
                         help='path of mask file from average spatial coherence' + 
                              ' to mask out low coherent pixels for bridge point circular area selection')
@@ -106,7 +104,7 @@ def cmd_line_parse(iargs=None):
 
     # check input file type
     atr = readfile.read_attribute(inps.ifgram_file)
-    if atr['FILE_TYPE'] != 'ifgramStack':
+    if atr['FILE_TYPE'] not in ['ifgramStack', '.unw']:
         raise ValueError('input file is not ifgramStack: {}'.format(atr['FILE_TYPE']))
 
     # default output dataset name
@@ -130,7 +128,7 @@ def read_template2inps(template_file, inps=None):
         if key in ['update']:
             inpsDict[key] = value
         elif value:
-            if key in ['maskFile', 'waterMaskFile', 'ramp']:
+            if key in ['waterMaskFile', 'ramp']:
                 inpsDict[key] = value
             elif key in ['bridgePtsRadius']:
                 inpsDict[key] = int(value)
@@ -168,13 +166,6 @@ def run_or_skip(inps):
             if value in specialValues.keys():
                 inps_dict[key] = specialValues[value]
         atr = readfile.read_attribute(inps.ifgram_file)
-        # if maskConnComp.h5 is generated from waterMask.h5 previously
-        key = 'maskFile'
-        if (atr[key_prefix+key] == 'maskConnComp.h5' 
-                and inps_dict[key] == 'no' 
-                and inps_dict['waterMaskFile'] != 'no' 
-                and os.path.getmtime(atr[key_prefix+key]) > os.path.getmtime(inps_dict['waterMaskFile'])):
-            inps_dict[key] = atr[key_prefix+key]
 
         # check all keys
         changed_keys = [key for key in configKeys 
@@ -432,8 +423,8 @@ def bridge_unwrap_error(data, mask_cc, bridges):
     return data
 
 
-def run_unwrap_error_bridge(ifgram_file, mask_cc_file, bridges, dsNameIn='unwrapPhase',
-                            dsNameOut='unwrapPhase_bridging', ramp_type=None):
+def run_unwrap_error_bridge(ifgram_file, water_mask_file, ramp_type=None, ccName='connectComponent',
+                            dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_bridging'):
     """Run unwrapping error correction with bridging
     Parameters: ifgram_file  : str, path of ifgram stack file
                 mask_cc_file : str, path of conn comp mask file
@@ -445,18 +436,20 @@ def run_unwrap_error_bridge(ifgram_file, mask_cc_file, bridges, dsNameIn='unwrap
     """
     print('-'*50)
     print('correct unwrapping error in {} with bridging ...'.format(ifgram_file))
+    if ramp_type is not None:
+        print('estimate and remove a {} ramp while calculating phase offset'.format(ramp_type))
+
+    # read water mask
+    if water_mask_file and os.path.isfile(water_mask_file):
+        print('read water mask from file:', water_mask_file)
+        water_mask = readfile.read(water_mask_file)[0]
+    else:
+        water_mask = None
+
     # file info
     atr = readfile.read_attribute(ifgram_file)
     length, width = int(atr['LENGTH']), int(atr['WIDTH'])
-    ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
     k = atr['FILE_TYPE']
-
-    # read mask
-    print('read mask from file: {}'.format(mask_cc_file))
-    mask_cc = readfile.read(mask_cc_file, datasetName='mask')[0]
-    if ramp_type is not None:
-        print('estimate and remove phase ramp of {} during the correction'.format(ramp_type))
-        mask4ramp = (mask_cc == mask_cc[ref_y, ref_x])
 
     # correct unwrap error ifgram by ifgram
     if k == 'ifgramStack':
@@ -473,26 +466,28 @@ def run_unwrap_error_bridge(ifgram_file, mask_cc_file, bridges, dsNameIn='unwrap
             ds = f[dsNameOut]
             print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
         else:
-            ds = f.create_dataset(dsNameOut, shape_out, maxshape=(None, None, None),
-                                  chunks=True, compression=None)
+            ds = f.create_dataset(dsNameOut,
+                                  shape_out,
+                                  maxshape=(None, None, None),
+                                  chunks=True,
+                                  compression=None)
             print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
 
         # correct unwrap error ifgram by ifgram
         prog_bar = ptime.progressBar(maxValue=num_ifgram)
         for i in range(num_ifgram):
-            # read unwrapPhase
+            # read unwrapPhase and connectComponent
             date12 = date12_list[i]
             unw = np.squeeze(f[dsNameIn][i, :, :])
-            unw[unw != 0.] -= unw[ref_y, ref_x]
+            cc = np.squeeze(f[ccName][i, :, :])
+            if water_mask is not None:
+                cc[water_mask == 0] = 0
 
-            # remove phase ramp before phase jump estimation
-            if ramp_type is not None:
-                unw, unw_ramp = deramp(unw, mask4ramp, ramp_type, metadata=atr)
-
-            # estimate/correct phase jump
-            unw_cor = bridge_unwrap_error(unw, mask_cc, bridges)
-            if ramp_type is not None:
-                unw_cor += unw_ramp
+            # bridging
+            cc_obj = connectComponent(conncomp=cc, metadata=atr)
+            cc_obj.label()
+            cc_obj.find_mst_bridge()
+            unw_cor = cc_obj.unwrap_conn_comp(unw, ramp_type=ramp_type, print_msg=False)
 
             # write to hdf5 file
             ds[i, :, :] = unw_cor
@@ -503,18 +498,23 @@ def run_unwrap_error_bridge(ifgram_file, mask_cc_file, bridges, dsNameIn='unwrap
         print('close {} file.'.format(ifgram_file))
 
     if k == '.unw':
-        # read data
+        # read unwrap phase
         unw = readfile.read(ifgram_file)[0]
-        unw[unw != 0.] -= unw[ref_y, ref_x]
 
-        # remove phase ramp before phase jump estimation
-        if ramp_type is not None:
-            unw, unw_ramp = deramp(unw, mask4ramp, ramp_type, metadata=atr)
+        # read connected components
+        cc_files0 = [ifgram_file+'.conncomp', os.path.splitext(ifgram_file)[0]+'_snap_connect.byt']
+        cc_files = [i for i in cc_files0 if os.path.isfile(i)]
+        if len(cc_files) == 0:
+            raise FileNotFoundError(cc_files0)
+        cc = readfile.read(cc_files[0])[0]
+        if water_mask is not None:
+            cc[water_mask == 0] = 0
 
-        # estimate/correct phase jump
-        unw_cor = bridge_unwrap_error(unw, mask_cc, bridges)
-        if ramp_type is not None:
-            unw_cor += unw_ramp
+        # bridging
+        cc_obj = connectComponent(conncomp=cc, metadata=atr)
+        cc_obj.label()
+        cc_obj.find_mst_bridge()
+        unw_cor = cc_obj.unwrap_conn_comp(unw, ramp_type=ramp_type, print_msg=False)
 
         # write to hdf5 file
         out_file = '{}_unwCor{}'.format(os.path.splitext(ifgram_file)[0],
@@ -536,39 +536,21 @@ def main(iargs=None):
     if inps.update_mode and run_or_skip(inps) == 'skip':
         return inps.ifgram_file
 
-    # check maskConnComp.h5
-    if os.path.isfile(str(inps.waterMaskFile)) and not inps.maskFile:
-        atr = readfile.read_attribute(inps.ifgram_file)
-        ref_yx = (int(atr['REF_Y']), int(atr['REF_X']))
-        inps.maskFile = water_mask2conn_comp_mask(inps.waterMaskFile,
-                                                  ref_yx=ref_yx,
-                                                  min_num_pixel=1e4)
-    if not inps.maskFile:
-        msg =  'No mask of connected components file found. Bridging method is NOT automatic, you need to:\n'
-        msg += '  Prepare the connected components mask file to mark each area with the same unwrapping error\n'
-        msg += 'Check the following Jupyter Notebook for an example:\n'
-        msg += '  https://github.com/yunjunz/pysar/blob/master/examples/run_unwrap_error_bridging.ipynb'
-        raise SystemExit(msg)
-
-    # run bridging
     start_time = time.time()
-    bridges = search_bridge(inps.maskFile,
-                            radius=inps.bridgePtsRadius,
-                            coh_mask_file=inps.cohMaskFile)
-
+    # run bridging
     run_unwrap_error_bridge(inps.ifgram_file,
-                            inps.maskFile,
-                            bridges,
+                            water_mask_file=inps.waterMaskFile,
                             dsNameIn=inps.datasetNameIn,
                             dsNameOut=inps.datasetNameOut,
                             ramp_type=inps.ramp)
 
     # config parameter
-    print('add/update the following configuration metadata to file:')
-    config_metadata = dict()
-    for key in configKeys:
-        config_metadata[key_prefix+key] = str(vars(inps)[key])
-    ut.add_attribute(inps.ifgram_file, config_metadata, print_msg=True)
+    if os.path.splitext(inps.ifgram_file)[1] in ['.h5', '.he5']:
+        print('add/update the following configuration metadata to file:')
+        config_metadata = dict()
+        for key in configKeys:
+            config_metadata[key_prefix+key] = str(vars(inps)[key])
+        ut.add_attribute(inps.ifgram_file, config_metadata, print_msg=True)
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))

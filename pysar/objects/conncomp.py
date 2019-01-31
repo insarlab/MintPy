@@ -1,6 +1,6 @@
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2018, Zhang Yunjun                          #
+# Copyright(c) 2018-2019, Zhang Yunjun                     #
 # Author:  Zhang Yunjun                                    #
 ############################################################
 # Recommend import:
@@ -42,40 +42,72 @@ class connectComponent:
             raise ValueError('Input conncomp is not np.ndarray: {}'.format(type(conncomp).__module__))
         self.conncomp = conncomp
         self.metadata = metadata
-        self.refY = int(self.metadata['REF_Y'])
-        self.refX = int(self.metadata['REF_X'])
+        if 'REF_Y' in metadata.keys():
+            self.refY = int(self.metadata['REF_Y'])
+            self.refX = int(self.metadata['REF_X'])
+        else:
+            self.refY = None
+            self.refX = None
         self.length, self.width = self.conncomp.shape
 
-    def label(self, min_area=1e4, erosion_size=5):
-        label_image = measure.label(self.conncomp, connectivity=1)
-        # take regions with large enough areas
+    def label(self, min_area=1e4, erosion_size=5, print_msg=False):
+        """ Label the connected components
+        Returns: self.labelImg   - 2D np.ndarray in int64 to mask areas to be corrected
+                 self.labelBound - 2D np.ndarray in uint8 for label boundaries to find bridges
+        """
+        erosion_structure = np.ones((erosion_size, erosion_size))
+        # 1. labelImg
+        label_image, num_label = measure.label(self.conncomp, connectivity=1, return_num=True)
+        # 1.1 remove regions with small area
         min_area = min(min_area, label_image.size * 3e-3)
         flag_slabel = np.bincount(label_image.flatten()) < min_area
         flag_slabel[0] = False
         label_small = np.where(flag_slabel)[0]
         for i in label_small:
             label_image[label_image == i] = 0
-        # re-label
+            num_label -= 1
+        # 1.2 remove regions that would disappear after erosion operation
+        label_erosion_image = morph.erosion(label_image, erosion_structure).astype(np.uint8)
+        label_erosion = [region.label for region in measure.regionprops(label_erosion_image)]
+        if len(label_erosion) < num_label:
+            if print_msg:
+                print('Some regions are lost during morphological erosion operation')
+            label_eroded = [region.label for region in measure.regionprops(label_image) 
+                            if region.label not in label_erosion]
+            for i in label_eroded:
+                label_image[label_image == i] = 0
+        # 1.3 re-label (to ensure continous labeling)
         self.labelImg, self.numLabel = measure.label(label_image, connectivity=1, return_num=True)
-        # reference label, where reference pixel is located
-        self.labelRef = self.labelImg[self.refY, self.refX]
-        # find label boundaries to facilitate bridge finding
-        self.find_boundary(erosion_size=erosion_size)
-        return
 
-    def find_boundary(self, erosion_size=5):
-        self.labelErosion = morph.erosion(self.labelImg, morph.disk(erosion_size)).astype(np.uint8)
-        self.labelBound = seg.find_boundaries(self.labelErosion, mode='thick').astype(np.uint8)
-        self.labelBound *= self.labelErosion
+        # 2. reference label (ref_y/x or the largest one)
+        if self.refY is not None:
+            self.labelRef = self.labelImg[self.refY, self.refX]
+        else:
+            regions = measure.regionprops(self.labelImg)
+            idx = np.argmax([region.area for region in regions])
+            self.labelRef = regions[idx].label
+
+        # 2. find label boundaries to facilitate bridge finding
+        self.labelBound = seg.find_boundaries(label_erosion_image, mode='thick').astype(np.uint8)
+        self.labelBound *= label_erosion_image
         return
 
     def get_all_connections(self):
         regions = measure.regionprops(self.labelBound)
-        if len(regions) < self.numLabel:
-            msg = 'Some regions are too small --> lost during erosion.'
-            msg += '\n1) decrease erosion_size value, or'
-            msg += '\n2) increase min_area value.'
-            raise ValueError(msg)
+        #if len(regions) < self.numLabel:
+        #    # plot figure for checking
+        #    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[8, 3], sharey=True)
+        #    axs[0].imshow(self.labelImg);     axs[0].set_title('label')
+        #    axs[1].imshow(self.labelErosion); axs[1].set_title('label (eroded)')
+        #    out_img = os.path.join(os.getcwd(), 'conn_comp_label_error.png')
+        #    fig.savefig(out_img, bbox_inches='tight', transparent=True)
+        #    # print out error message
+        #    msg = 'Some regions are too small --> lost during erosion.'
+        #    msg += '\n1) decrease erosion_size value, or'
+        #    msg += '\n2) increase min_area value.'
+        #    msg += '\ncheck plotted figure in {}'.format(out_img)
+        #    import pdb; pdb.set_trace()
+        #    raise ValueError(msg)
 
         trees = []
         for i in range(self.numLabel):
@@ -130,19 +162,19 @@ class connectComponent:
         self.num_bridge = len(self.bridges)
         return
 
-    def unwrap_conn_comp(self, unw, atr, radius=50, ramp_type=None, print_msg=False):
+    def unwrap_conn_comp(self, unw, radius=50, ramp_type=None, print_msg=False):
         start_time = time.time()
         radius = int(min(radius, min(self.conncomp.shape)*0.05))
 
-        ref_y, ref_x = int(atr['REF_Y']), int(atr['REF_X'])
-        unw -= unw[ref_y, ref_x]
         unw = np.array(unw, dtype=np.float32)
+        if self.refY is not None:
+            unw[unw != 0.] -= unw[self.refY, self.refX]
 
         if ramp_type is not None:
             if print_msg:
                 print('estimate a {} ramp'.format(ramp_type))
-            ramp_mask = (self.labelImg == self.labelImg[ref_y, ref_x])
-            unw, ramp = deramp(unw, ramp_mask, ramp_type, metadata=atr)
+            ramp_mask = (self.labelImg == self.labelRef)
+            unw, ramp = deramp(unw, ramp_mask, ramp_type, metadata=self.metadata)
 
         for bridge in self.bridges:
             # get mask of AOI

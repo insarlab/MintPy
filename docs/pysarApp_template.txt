@@ -53,10 +53,9 @@ pysar.reference.maskFile      = auto   #[filename / no], auto for maskConnComp.h
 ##    manual    for all the other scenarios
 ## c. bridging+phase_closure
 pysar.unwrapError.method          = auto  #[bridging / phase_closure / bridging+phase_closure / no], auto for no
-pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
-pysar.unwrapError.maskFile        = auto  #[maskConnComp.h5 / no], auto for no, mask for connected components areas
-pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
 pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for no; recommend linear for L-band data
+pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
+pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
 
 
 ########## 3. Network Inversion

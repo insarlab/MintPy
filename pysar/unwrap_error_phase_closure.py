@@ -29,9 +29,9 @@ EXAMPLE = """Example:
   unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  -m waterMask.h5 --update
 """
 
-TEMPLATE = """Template:
-  ## Unwrapping Error Correction based on Phase Closure (Fattahi, 2015, PhD Thesis)
-  pysar.unwrapError.maskFile = auto  #[file name / no], auto for no
+TEMPLATE = """
+## Unwrapping Error Correction based on Phase Closure (Yunjun et al., 2019)
+pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
 """
 
 REFERENCE = """Reference:
@@ -62,8 +62,7 @@ def create_parser():
     parser.add_argument('-o','--out-dataset', dest='datasetNameOut',
                         help='name of dataset to be written after correction, default: {}_phaseClosure')
 
-    parser.add_argument('-m','--mask', dest='maskFile',
-                        help='mask file to specify those pixels to be corrected for unwrapping errors')
+    parser.add_argument('--water-mask', dest='waterMaskFile', type=str, help='path of water mask file.')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options for setting.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
@@ -89,10 +88,8 @@ def read_template2inps(template_file, inps=None):
     key_list = [i for i in list(inpsDict.keys()) if key_prefix+i in template.keys()]
     for key in key_list:
         value = template[key_prefix+key]
-        if key in ['fastMode']:
-            inpsDict[key] = value
-        elif value:
-            if key in ['maskFile']:
+        if value:
+            if key in ['waterMaskFile']:
                 inpsDict[key] = value
     return inps
 
@@ -169,7 +166,7 @@ def run_unwrap_error_closure_patch(ifgram_file, box=None, mask_file=None, ref_ph
     # mask 1. mask of water or area of interest
     if mask_file:
         dsNames = readfile.get_dataset_list(mask_file)
-        dsName = [i for i in dsNames if i in ['waterMask', 'mask']][0]
+        dsName = [i for i in dsNames if i in ['waterMask', 'mask', 'landMask']][0]
         waterMask = readfile.read(mask_file, datasetName=dsName, box=box)[0].flatten()
         mask *= np.array(waterMask, np.bool_)
         del waterMask
@@ -206,7 +203,7 @@ def run_unwrap_error_closure_patch(ifgram_file, box=None, mask_file=None, ref_ph
     return pha_data, num_closure_int
 
 
-def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_phaseClosure', fast_mode=False):
+def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_phaseClosure'):
     """Run unwrapping error correction in network of interferograms using phase closure.
     Parameters: inps : Namespace of input arguments including the following:
                     ifgram_file : string, path of ifgram stack file
@@ -225,7 +222,7 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
     # split ifgram_file into blocks to save memory
     num_tri = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=True)).shape[0]
     length, width = obj.get_size()[1:3]
-    box_list = ifginv.split_into_boxes(dataset_shape=(num_tri, length, width), chunk_size=2e6)
+    box_list = ifginv.split_into_boxes(dataset_shape=(num_tri, length, width), chunk_size=20e6)
     num_box = len(box_list)
     for i in range(num_box):
         box = box_list[i]
@@ -235,7 +232,7 @@ def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhas
         # estimate/correct ifgram
         unw_cor, num_int = run_unwrap_error_closure_patch(inps.ifgram_file,
                                                           box=box,
-                                                          mask_file=inps.maskFile,
+                                                          mask_file=inps.waterMaskFile,
                                                           ref_phase=ref_phase,
                                                           dsNameIn=dsNameIn)
         num_closure_int[box[1]:box[3], box[0]:box[2]] = num_int
