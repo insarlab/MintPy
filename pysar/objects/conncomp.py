@@ -92,22 +92,8 @@ class connectComponent:
         self.labelBound *= label_erosion_image
         return
 
-    def get_all_connections(self):
+    def get_all_bridge(self):
         regions = measure.regionprops(self.labelBound)
-        #if len(regions) < self.numLabel:
-        #    # plot figure for checking
-        #    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[8, 3], sharey=True)
-        #    axs[0].imshow(self.labelImg);     axs[0].set_title('label')
-        #    axs[1].imshow(self.labelErosion); axs[1].set_title('label (eroded)')
-        #    out_img = os.path.join(os.getcwd(), 'conn_comp_label_error.png')
-        #    fig.savefig(out_img, bbox_inches='tight', transparent=True)
-        #    # print out error message
-        #    msg = 'Some regions are too small --> lost during erosion.'
-        #    msg += '\n1) decrease erosion_size value, or'
-        #    msg += '\n2) increase min_area value.'
-        #    msg += '\ncheck plotted figure in {}'.format(out_img)
-        #    import pdb; pdb.set_trace()
-        #    raise ValueError(msg)
 
         trees = []
         for i in range(self.numLabel):
@@ -134,7 +120,7 @@ class connectComponent:
 
     def find_mst_bridge(self):
         if not hasattr(self, 'distMat'):
-            self.get_all_connections()
+            self.get_all_bridge()
 
         # MST bridges with breadth_first_order
         distMatMst = csg.minimum_spanning_tree(self.distMat)
@@ -162,6 +148,20 @@ class connectComponent:
         self.num_bridge = len(self.bridges)
         return
 
+    def get_bridge_endpoint_aoi_mask(self, bridge, radius=50):
+        # get AOI mask
+        x0, y0 = bridge['x0'], bridge['y0']
+        x1, y1 = bridge['x1'], bridge['y1']
+        x00 = max(0, x0 - radius); x01 = min(self.width,  x0 + radius)
+        y00 = max(0, y0 - radius); y01 = min(self.length, y0 + radius)
+        x10 = max(0, x1 - radius); x11 = min(self.width,  x1 + radius)
+        y10 = max(0, y1 - radius); y11 = min(self.length, y1 + radius)
+        aoi_mask0 = np.zeros(self.labelImg.shape, dtype=np.bool_)
+        aoi_mask1 = np.zeros(self.labelImg.shape, dtype=np.bool_)
+        aoi_mask0[y00:y01, x00:x01] = True
+        aoi_mask1[y10:y11, x10:x11] = True
+        return aoi_mask0, aoi_mask1
+
     def unwrap_conn_comp(self, unw, radius=50, ramp_type=None, print_msg=False):
         start_time = time.time()
         radius = int(min(radius, min(self.conncomp.shape)*0.05))
@@ -177,18 +177,8 @@ class connectComponent:
             unw, ramp = deramp(unw, ramp_mask, ramp_type, metadata=self.metadata)
 
         for bridge in self.bridges:
-            # get mask of AOI
-            x0, y0 = bridge['x0'], bridge['y0']
-            x1, y1 = bridge['x1'], bridge['y1']
-            x00 = max(0, x0 - radius); x01 = min(self.width,  x0 + radius)
-            y00 = max(0, y0 - radius); y01 = min(self.length, y0 + radius)
-            x10 = max(0, x1 - radius); x11 = min(self.width,  x1 + radius)
-            y10 = max(0, y1 - radius); y11 = min(self.length, y1 + radius)
-            aoi_mask0 = np.zeros(self.labelImg.shape, dtype=np.bool_)
-            aoi_mask1 = np.zeros(self.labelImg.shape, dtype=np.bool_)
-            aoi_mask0[y00:y01, x00:x01] = True
-            aoi_mask1[y10:y11, x10:x11] = True
-
+            # prepare masks
+            aoi_mask0, aoi_mask1 = self.get_bridge_endpoint_aoi_mask(bridge, radius=radius)
             label_mask0 = self.labelImg == bridge['label0']
             label_mask1 = self.labelImg == bridge['label1']
 
@@ -202,15 +192,16 @@ class connectComponent:
             if diff_value > 0:
                 num_jump *= -1
 
-            if print_msg:
-                print('phase diff {}-{}: {:04.1f} rad --> num of jump: {}'.format(bridge['label1'],
-                                                                                  bridge['label0'],
-                                                                                  diff_value,
-                                                                                  num_jump))
-
             # add phase jump
             unw[label_mask1] += 2.* np.pi * num_jump
-        
+
+            if print_msg:
+                print(('phase diff {}-{}: {:04.1f} rad --> '
+                       'num of jump: {}').format(bridge['label1'],
+                                                 bridge['label0'],
+                                                 diff_value,
+                                                 num_jump))
+
         # add ramp back
         if ramp_type is not None:
             unw += ramp
@@ -218,15 +209,24 @@ class connectComponent:
             print('time used: {:.2f} secs.'.format(time.time()-start_time))
         return unw
 
-    def plot_bridge(self):
-        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[8, 3], sharey=True)
-        im = axs[0].imshow(self.conncomp)
-        im = axs[1].imshow(self.labelImg)
+    def plot_bridge(self, ax, cmap='jet', radius=50):
+        # label background
+        im = ax.imshow(self.labelImg, cmap=cmap)
+        # bridges
         for bridge in self.bridges:
-            axs[1].plot([bridge['x0'], bridge['x1']], [bridge['y0'], bridge['y1']], '-', lw=2)
-        axs[1].plot(self.refX, self.refY, 'ks')
-        plt.colorbar(im)
-        plt.show()
-        return
+            ax.plot([bridge['x0'], bridge['x1']],
+                    [bridge['y0'], bridge['y1']], 'w-', lw=1)
+            # endpoint window
+            if radius > 0:
+                aoi_mask0, aoi_mask1 = self.get_bridge_endpoint_aoi_mask(bridge, radius=radius)
+                label_mask0 = self.labelImg == bridge['label0']
+                label_mask1 = self.labelImg == bridge['label1']
+                mask0 = np.ma.masked_where(~(aoi_mask0*label_mask0), np.zeros(self.labelImg.shape))
+                mask1 = np.ma.masked_where(~(aoi_mask1*label_mask1), np.zeros(self.labelImg.shape))
+                ax.imshow(mask0, cmap='gray', alpha=0.3, vmin=0, vmax=1)
+                ax.imshow(mask1, cmap='gray', alpha=0.3, vmin=0, vmax=1)
+        # reference pixel
+        ax.plot(self.refX, self.refY, 'ks', ms=2)        
+        return ax
 
 

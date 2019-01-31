@@ -25,8 +25,8 @@ key_prefix = 'pysar.unwrapError.'
 
 ##########################################################################################
 EXAMPLE = """Example:
-  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  -m maskConnComp.h5
-  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  -m waterMask.h5 --update
+  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  -t pysarApp_template.txt  --update
+  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  --water-mask waterMask.h5 --update
 """
 
 TEMPLATE = """
@@ -62,7 +62,7 @@ def create_parser():
     parser.add_argument('-o','--out-dataset', dest='datasetNameOut',
                         help='name of dataset to be written after correction, default: {}_phaseClosure')
 
-    parser.add_argument('--water-mask', dest='waterMaskFile', type=str, help='path of water mask file.')
+    parser.add_argument('--water-mask','--wm', dest='waterMaskFile', type=str, help='path of water mask file.')
     parser.add_argument('-t', '--template', dest='template_file',
                         help='template file with options for setting.')
     parser.add_argument('--update', dest='update_mode', action='store_true',
@@ -119,6 +119,7 @@ def run_or_skip(inps):
     return flag
 
 
+##########################################################################################
 def run_unwrap_error_closure_patch(ifgram_file, box=None, mask_file=None, ref_phase=None, alpha=1e-2,
                                    dsNameIn='unwrapPhase'):
     """Estimate/Correct unwrapping error in ifgram stack on area defined by box.
@@ -186,7 +187,8 @@ def run_unwrap_error_closure_patch(ifgram_file, box=None, mask_file=None, ref_ph
         closure_int = matrix(closure_int[:, mask])
 
         # correcting unwrap error based on phase closure
-        print('solving the phase-unwrapping integer ambiguity using LASSO ...')
+        print('solving the phase-unwrapping integer ambiguity')
+        print('\tusing L1-norm regularized least squares approximation (LASSO) ...')
         pha_offset = np.zeros((np.sum(obj.dropIfgram), num_pixel2proc), np.float32)
         prog_bar = ptime.progressBar(maxValue=num_pixel2proc)
         for i in range(num_pixel2proc):
