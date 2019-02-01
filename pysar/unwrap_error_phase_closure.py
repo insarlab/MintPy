@@ -11,22 +11,28 @@ import argparse
 import time
 import h5py
 import numpy as np
+import matplotlib.pyplot as plt
 try:
-    from cvxopt import matrix, sparse
+    from cvxopt import matrix
 except ImportError:
     raise ImportError('Cannot import cvxopt')
+try:
+    from skimage import measure
+except ImportError:
+    raise ImportError('Could not import skimage!')
+
 from pysar.objects import ifgramStack
-from pysar.utils import ptime, readfile, writefile, utils as ut
+from pysar.objects.conncomp import connectComponent
+from pysar.utils import ptime, readfile, writefile, utils as ut, plot as pp
 from pysar.utils.solvers import l1reg_lstsq
-from pysar import ifgram_inversion as ifginv
 
 
 key_prefix = 'pysar.unwrapError.'
 
 ##########################################################################################
 EXAMPLE = """Example:
-  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  -t pysarApp_template.txt  --update
-  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  --water-mask waterMask.h5 --update
+  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  maskConnComp.h5  -t pysarApp_template.txt  --update
+  unwrap_error_phase_closure.py  ./INPUTS/ifgramStack.h5  maskConnComp.h5  --water-mask waterMask.h5 --update
 """
 
 TEMPLATE = """
@@ -57,6 +63,7 @@ def create_parser():
                                      epilog=REFERENCE+'\n'+TEMPLATE+'\n'+EXAMPLE)
 
     parser.add_argument('ifgram_file', help='interferograms file to be corrected')
+    parser.add_argument('cc_mask_file', default='maskConnComp.h5', help='common connected components file')
     parser.add_argument('-i','--in-dataset', dest='datasetNameIn', default='unwrapPhase',
                         help="name of dataset to be corrected, default: unwrapPhase")
     parser.add_argument('-o','--out-dataset', dest='datasetNameOut',
@@ -73,6 +80,14 @@ def create_parser():
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
+
+    # check 1 input file type
+    k = readfile.read_attribute(inps.ifgram_file)['FILE_TYPE']
+    if k not in ['ifgramStack']:
+        raise ValueError('input file is not ifgramStack: {}'.format(k))
+    # check 2 cc_mask_file
+    if not os.path.isfile(inps.cc_mask_file):
+        raise FileNotFoundError(inps.cc_mask_file)
     return inps
 
 
@@ -120,142 +135,6 @@ def run_or_skip(inps):
 
 
 ##########################################################################################
-def run_unwrap_error_closure_patch(ifgram_file, box=None, mask_file=None, ref_phase=None, alpha=1e-2,
-                                   dsNameIn='unwrapPhase'):
-    """Estimate/Correct unwrapping error in ifgram stack on area defined by box.
-    Parameters: ifgram_file : string, ifgramStack file
-                box : tuple of 4 int, indicating areas to be read and analyzed
-                mask_file : string, file name of mask file for pixels to be analyzed
-                ref_pahse : 1D np.array in size of (num_ifgram,) phase value on reference pixel, because:
-                    1) phase value stored in pysar is not reference yet
-                    2) reference point may be out of box definition
-                alpha : nonnegative float, tradeoff between L1- and L2-norm terms.
-    Returns:    pha_data : 3D np.array in size of (num_ifgram_all, box[3]-box[2], box[2]-box[0]),
-                    unwrapped phase value after error correction
-    """
-    # Basic info
-    obj = ifgramStack(ifgram_file)
-    obj.open(print_msg=False)
-    num_ifgram = obj.numIfgram
-
-    # Size Info - Patch
-    if box:
-        num_row = box[3] - box[1]
-        num_col = box[2] - box[0]
-    else:
-        num_row = obj.length
-        num_col = obj.width
-    num_pixel = num_row * num_col
-
-    C = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=True)).astype(float)
-    print('number of interferograms: {}'.format(C.shape[1]))
-    print('number of triangles: {}'.format(C.shape[0]))
-
-    # read unwrapPhase
-    pha_data = ifginv.read_unwrap_phase(obj, box, ref_phase,
-                                        unwDatasetName=dsNameIn,
-                                        dropIfgram=False)
-    print('calculating the integer ambiguity of the closure phase of all possible triplets ...')
-    closure_pha = np.dot(C, np.array(pha_data[obj.dropIfgram, :]))
-    closure_int = np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi))
-    num_closure_int = np.sum(closure_int != 0., axis=0)
-    del closure_pha
-
-    # mask of pixels to analyze
-    mask = np.ones((num_pixel), np.bool_)
-    print('number of pixels read: {}'.format(num_pixel))
-    # mask 1. mask of water or area of interest
-    if mask_file:
-        dsNames = readfile.get_dataset_list(mask_file)
-        dsName = [i for i in dsNames if i in ['waterMask', 'mask', 'landMask']][0]
-        waterMask = readfile.read(mask_file, datasetName=dsName, box=box)[0].flatten()
-        mask *= np.array(waterMask, np.bool_)
-        del waterMask
-        print('number of pixels left after mask: {}'.format(np.sum(mask)))
-    # mask 2. mask of pixels without unwrap error: : zero phase closure on all triangles
-    mask *= (num_closure_int != 0.)
-    # mask summary
-    num_pixel2proc = int(np.sum(mask))
-    print('number of pixels left after checking phase closure: {}'.format(num_pixel2proc))
-
-    if num_pixel2proc > 0:
-        print('number of pixels to process: {} out of {} ({:.2f}%)'.format(num_pixel2proc,
-                                                                           num_pixel,
-                                                                           num_pixel2proc/num_pixel*100))
-        # prepare matrix in cvxopt format
-        C = matrix(C)
-        closure_int = matrix(closure_int[:, mask])
-
-        # correcting unwrap error based on phase closure
-        print('solving the phase-unwrapping integer ambiguity')
-        print('\tusing L1-norm regularized least squares approximation (LASSO) ...')
-        pha_offset = np.zeros((np.sum(obj.dropIfgram), num_pixel2proc), np.float32)
-        prog_bar = ptime.progressBar(maxValue=num_pixel2proc)
-        for i in range(num_pixel2proc):
-            U = np.round(l1reg_lstsq(-C, closure_int[:, i], lambd=alpha))
-            pha_offset[:, i] = 2.*np.pi*U.flatten()
-            prog_bar.update(i+1, every=10, suffix='{}/{}'.format(i+1, num_pixel2proc))
-        prog_bar.close()
-
-        # update phase value on selected interferograms and pixels
-        pha_data[obj.dropIfgram, :][:, mask] += pha_offset
-
-    pha_data = pha_data.reshape(num_ifgram, num_row, num_col)
-    num_closure_int = num_closure_int.reshape(num_row, num_col)
-    return pha_data, num_closure_int
-
-
-def run_unwrap_error_closure(inps, dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_phaseClosure'):
-    """Run unwrapping error correction in network of interferograms using phase closure.
-    Parameters: inps : Namespace of input arguments including the following:
-                    ifgram_file : string, path of ifgram stack file
-                    maskFile    : string, path of mask file mark the pixels to be corrected
-                dsNameIn  : string, dataset name to read in
-                dsnameOut : string, dataset name to write out
-    Returns:    inps.ifgram_file : string, path of corrected ifgram stack file
-    """
-    print('-'*50)
-    print('Unwrapping Error Coorrection based on Phase Closure Consistency (Fattahi, 2015) ...')
-    obj = ifgramStack(inps.ifgram_file)
-    obj.open()
-    ref_phase = obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=False)
-
-    num_closure_int = np.zeros((obj.length, obj.width), dtype=np.int16)
-    # split ifgram_file into blocks to save memory
-    num_tri = obj.get_design_matrix4triplet(obj.get_date12_list(dropIfgram=True)).shape[0]
-    length, width = obj.get_size()[1:3]
-    box_list = ifginv.split_into_boxes(dataset_shape=(num_tri, length, width), chunk_size=20e6)
-    num_box = len(box_list)
-    for i in range(num_box):
-        box = box_list[i]
-        if num_box > 1:
-            print('\n------- Processing Patch {} out of {} --------------'.format(i+1, num_box))
-
-        # estimate/correct ifgram
-        unw_cor, num_int = run_unwrap_error_closure_patch(inps.ifgram_file,
-                                                          box=box,
-                                                          mask_file=inps.waterMaskFile,
-                                                          ref_phase=ref_phase,
-                                                          dsNameIn=dsNameIn)
-        num_closure_int[box[1]:box[3], box[0]:box[2]] = num_int
-
-        # write ifgram
-        write_hdf5_file_patch(inps.ifgram_file,
-                              data=unw_cor,
-                              box=box,
-                              dsName=dsNameOut)
-
-    # write number of nonzero phase closure into file
-    num_file = 'numNonzeroClosureInt.h5'
-    atr = dict(obj.metadata)
-    atr['FILE_TYPE'] = 'mask'
-    atr['UNIT'] = '1'
-    writefile.write(num_closure_int, out_file=num_file, metadata=atr)
-    print('writing >>> {}'.format(num_file))
-
-    return inps.ifgram_file
-
-
 def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_phaseClosure'):
     """Write a patch of 3D dataset into an existing h5 file.
     Parameters: ifgram_file : string, name/path of output hdf5 file
@@ -299,6 +178,173 @@ def write_hdf5_file_patch(ifgram_file, data, box=None, dsName='unwrapPhase_phase
     return ifgram_file
 
 
+def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=None, num_sample=100,
+                                    dsNameIn='unwrapPhase'):
+    """Solve the phase unwrapping integer ambiguity for the common regions among all interferograms
+    Parameters: ifgram_file     : str, path of interferogram stack file
+                cc_mask_file    : str, path of common connected components file
+                water_mask_file : str, path of water mask file
+                num_sample      : int, number of pixel sampled for each region
+                dsNameIn        : str, dataset name of the unwrap phase to be corrected
+    Returns:    common_regions  : list of skimage.measure._regionprops._RegionProperties object
+                    modified by adding two more variables:
+                    sample_coords : 2D np.ndarray in size of (num_sample, 2) in int64 format
+                    int_ambiguity : 1D np.ndarray in size of (num_ifgram,) in int format
+    """
+    print('-'*50)
+    print('calculating the integer ambiguity for the common regions defined in', cc_mask_file)
+    # stack info
+    stack_obj = ifgramStack(ifgram_file)
+    stack_obj.open()
+    date12_list = stack_obj.get_date12_list(dropIfgram=True)
+    num_ifgram = len(date12_list)
+    C = matrix(ifgramStack.get_design_matrix4triplet(date12_list).astype(float))
+    ref_phase = stack_obj.get_reference_phase(unwDatasetName=dsNameIn, dropIfgram=True).reshape(num_ifgram, -1)
+
+    # prepare common label
+    print('read common mask from', cc_mask_file)
+    cc_mask = readfile.read(cc_mask_file)[0]
+    if water_mask_file is not None and os.path.isfile(water_mask_file):
+        water_mask = readfile.read(water_mask_file)[0]
+        print('refine common mask based on water mask file', water_mask_file)
+        cc_mask[water_mask == 0] = 0
+
+    label_img, num_label = connectComponent.get_large_label(cc_mask, min_area=2.5e3, print_msg=True)
+    common_regions = measure.regionprops(label_img)
+    print('number of common regions:', num_label)
+
+    # add sample_coords / int_ambiguity
+    print('number of samples per region:', num_sample)
+    print('solving the phase-unwrapping integer ambiguity for {}'.format(dsNameIn))
+    print('\tbased on the closure phase of interferograms triplets (Yunjun et al., 2019)')
+    print('\tusing the L1-norm regularzed least squares approximation (LASSO) ...')
+    for i in range(num_label):
+        common_reg = common_regions[i]
+        # sample_coords
+        idx = sorted(np.random.choice(common_reg.area, num_sample, replace=False))
+        common_reg.sample_coords = common_reg.coords[idx, :].astype(int)
+
+        # solve for int_ambiguity
+        U = np.zeros((num_ifgram, num_sample))
+        if common_reg.label == label_img[stack_obj.refY, stack_obj.refX]:
+            print('{}/{} skip calculation for the reference region'.format(i+1, num_label))
+        else:
+            prog_bar = ptime.progressBar(maxValue=num_sample, prefix='{}/{}'.format(i+1, num_label))
+            for j in range(num_sample):
+                # read unwrap phase
+                y, x = common_reg.sample_coords[j, :]
+                box = (x, y, x+1, y+1)
+                unw = readfile.read(ifgram_file, datasetName=dsNameIn, box=box)[0].reshape(num_ifgram, -1)
+                unw -= ref_phase
+
+                # calculate closure_int
+                closure_pha = np.dot(C, unw)
+                closure_int = matrix(np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi)))
+
+                # solve for U
+                U[:,j] = np.round(l1reg_lstsq(-C, closure_int, lambd=1e-2)).flatten()
+                prog_bar.update(j+1, every=5)
+            prog_bar.close()
+        # add int_ambiguity
+        common_reg.int_ambiguity = np.median(U, axis=1)
+        common_reg.date12_list = date12_list
+
+    #sort regions by size to facilitate the region matching later
+    common_regions.sort(key=lambda x: x.area, reverse=True)
+
+    # plot sample result
+    fig_size = pp.auto_figure_size(label_img.shape, disp_cbar=False)
+    fig, ax = plt.subplots(figsize=fig_size)
+    ax.imshow(label_img, cmap='jet')
+    for common_reg in common_regions:
+        ax.plot(common_reg.sample_coords[:,1],
+                common_reg.sample_coords[:,0], 'k.', ms=2)
+    pp.auto_flip_direction(stack_obj.metadata, ax, print_msg=False)
+    out_img = 'common_region_sample.png'
+    fig.savefig(out_img, bbox_inches='tight', transparent=True, dpi=300)
+    print('saved common regions and sample pixels to file', out_img)
+
+    return common_regions
+
+
+def run_unwrap_error_phase_closure(ifgram_file, common_regions, water_mask_file=None, ccName='connectComponent',
+                                   dsNameIn='unwrapPhase', dsNameOut='unwrapPhase_phaseClosure'):
+    print('-'*50)
+    print('correct unwrapping error in {} with phase closure ...'.format(ifgram_file))
+    stack_obj = ifgramStack(ifgram_file)
+    stack_obj.open()
+    length, width = stack_obj.length, stack_obj.width
+    ref_y, ref_x = stack_obj.refY, stack_obj.refX
+    date12_list = stack_obj.get_date12_list(dropIfgram=False)
+    num_ifgram = len(date12_list)
+    shape_out = (num_ifgram, length, width)
+
+    # read water mask
+    if water_mask_file and os.path.isfile(water_mask_file):
+        print('read water mask from file:', water_mask_file)
+        water_mask = readfile.read(water_mask_file)[0]
+    else:
+        water_mask = None
+
+    # prepare output data writing
+    print('open {} with r+ mode'.format(ifgram_file))
+    f = h5py.File(ifgram_file, 'r+')
+    print('input  dataset:', dsNameIn)
+    print('output dataset:', dsNameOut)
+    if dsNameOut in f.keys():
+        ds = f[dsNameOut]
+        print('access /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
+    else:
+        ds = f.create_dataset(dsNameOut,
+                              shape_out,
+                              maxshape=(None, None, None),
+                              chunks=True,
+                              compression=None)
+        print('create /{d} of np.float32 in size of {s}'.format(d=dsNameOut, s=shape_out))
+
+    # correct unwrap error ifgram by ifgram
+    prog_bar = ptime.progressBar(maxValue=num_ifgram)
+    for i in range(num_ifgram):
+        # skip excluded interferograms
+        if not stack_obj.dropIfgram[i]:
+            next
+
+        date12 = date12_list[i]
+        idx_common = common_regions[0].date12_list.index(date12)
+        # read unwrap phase to be updated
+        unw_cor = np.squeeze(f[dsNameIn][i, :, :]).astype(np.float32)
+        unw_cor -= unw_cor[ref_y, ref_x]
+
+        # get local region info from connectComponent
+        cc = np.squeeze(f[ccName][i, :, :])
+        if water_mask is not None:
+            cc[water_mask == 0] = 0
+        cc_obj = connectComponent(conncomp=cc, metadata=stack_obj.metadata)
+        cc_obj.label()
+        local_regions = measure.regionprops(cc_obj.labelImg)
+
+        # matching regions and correct unwrap error
+        for local_reg in local_regions:
+            local_mask = cc_obj.labelImg == local_reg.label
+            U = 0
+            for common_reg in common_regions:
+                y = common_reg.sample_coords[:,0]
+                x = common_reg.sample_coords[:,1]
+                if all(local_mask[y, x]):
+                    U = common_reg.int_ambiguity[idx_common]
+                    break
+            unw_cor[local_mask] += 2. * np.pi * U
+
+        # write to hdf5 file
+        ds[i, :, :] = unw_cor
+        prog_bar.update(i+1, suffix=date12)
+    prog_bar.close()
+    ds.attrs['MODIFICATION_TIME'] = str(time.time())
+    f.close()
+    print('close {} file.'.format(ifgram_file))
+    return ifgram_file
+
+
 ####################################################################################################
 def main(iargs=None):
     inps = cmd_line_parse(iargs)
@@ -312,7 +358,16 @@ def main(iargs=None):
         return inps.ifgram_file
 
     start_time = time.time()
-    run_unwrap_error_closure(inps, dsNameIn=inps.datasetNameIn, dsNameOut=inps.datasetNameOut)
+    common_regions = get_common_region_int_ambiguity(ifgram_file=inps.ifgram_file,
+                                                     cc_mask_file=inps.cc_mask_file,
+                                                     water_mask_file=inps.waterMaskFile,
+                                                     num_sample=100,
+                                                     dsNameIn=inps.datasetNameIn)
+
+    run_unwrap_error_phase_closure(inps.ifgram_file, common_regions,
+                                   water_mask_file=inps.waterMaskFile,
+                                   dsNameIn=inps.datasetNameIn,
+                                   dsNameOut=inps.datasetNameOut)
 
     m, s = divmod(time.time()-start_time, 60)
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))

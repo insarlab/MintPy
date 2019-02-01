@@ -83,9 +83,9 @@ def cmd_line_parse(iargs=None):
     inps = parser.parse_args(args=iargs)
 
     # check input file type
-    atr = readfile.read_attribute(inps.ifgram_file)
-    if atr['FILE_TYPE'] not in ['ifgramStack', '.unw']:
-        raise ValueError('input file is not ifgramStack: {}'.format(atr['FILE_TYPE']))
+    k = readfile.read_attribute(inps.ifgram_file)['FILE_TYPE']
+    if k not in ['ifgramStack', '.unw']:
+        raise ValueError('input file is not ifgramStack: {}'.format(k))
 
     # default output dataset name
     if not inps.datasetNameOut:
