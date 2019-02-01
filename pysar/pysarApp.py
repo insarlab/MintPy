@@ -26,14 +26,14 @@ from pysar import version
 
 ##########################################################################
 EXAMPLE = """example:
-  pysarApp.py                                             #Run / Rerun
-  pysarApp.py  SanAndreasT356EnvD.template  --fast        #Fast processing
-  pysarApp.py  SanAndreasT356EnvD.template  --load-data   #Exit after loading data into HDF5 files
+  pysarApp.py                                            #Run / Rerun
+  pysarApp.py  GalapagosSenDT128.template  --fast        #Fast processing
+  pysarApp.py  GalapagosSenDT128.template  --load-data   #Exit after loading data into HDF5 files
 
   # Template options
-  pysarApp.py -H                               #Print    default template
-  pysarApp.py -g                               #Generate default template
-  pysarApp.py -g SanAndreasT356EnvD.template   #Generate default template considering input custom template
+  pysarApp.py -H                              #Print    default template
+  pysarApp.py -g                              #Generate default template
+  pysarApp.py -g GalapagosSenDT128.template   #Generate default template considering input custom template
 """
 
 
@@ -253,19 +253,19 @@ def correct_unwrap_error(inps, template):
     unw_cor_method = template['pysar.unwrapError.method']
     if unw_cor_method:
         print('\n**********  Unwrapping Error Correction **********')
-        if unw_cor_method == 'phase_closure':
-            unwCmd = 'unwrap_error_phase_closure.py {} -t {} --update'.format(inps.stackFile,
-                                                                              inps.templateFile)
+        cmd_bridging = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
+                                                                           inps.templateFile)
 
-        elif unw_cor_method == 'bridging':
-            unwCmd = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
-                                                                         inps.templateFile)
+        cmd_closure = 'unwrap_error_phase_closure.py {} {} -t {} --update'.format(inps.stackFile,
+                                                                                  inps.maskFile,
+                                                                                  inps.templateFile)
+        if unw_cor_method == 'bridging':
+            unwCmd = cmd_bridging
+        elif unw_cor_method == 'phase_closure':
+            unwCmd = cmd_closure
         elif unw_cor_method == 'bridging+phase_closure':
-            unwCmd = ('unwrap_error_bridging.py {} -t {} --update'
-                      ' -i unwrapPhase -o unwrapPhase_bridging').format(inps.stackFile,
-                                                                        inps.templateFile)
-            unwCmd += '\nunwrap_error_phase_closure.py {} --update '.format(inps.stackFile)
-            unwCmd += '-i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
+            unwCmd = cmd_bridging + ' -i unwrapPhase -o unwrapPhase_bridging\n'
+            unwCmd += cmd_closure + ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
         else:
             raise ValueError('un-recognized method: {}'.format(unw_cor_method))
 
