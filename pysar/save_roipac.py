@@ -103,6 +103,8 @@ def read_data(inps):
         atr['UNIT'] = 'radian'
         if not inps.outfile:
             inps.outfile = '{}{}'.format(atr['DATE12'], atr['FILE_TYPE'])
+            if inps.file.startswith('geo_'):
+                inps.outfile = 'geo_'+inps.outfile
 
     elif k == 'ifgramStack':
         dsetFamily, atr['DATE12'] = inps.dset.split('-')
@@ -126,6 +128,8 @@ def read_data(inps):
 
         if not inps.outfile:
             inps.outfile = '{}{}'.format(atr['DATE12'], atr['FILE_TYPE'])
+            if inps.file.startswith('geo_'):
+                inps.outfile = 'geo_'+inps.outfile
 
     else:
         if 'coherence' in k.lower():
@@ -148,6 +152,7 @@ def read_data(inps):
 
     if not atr['PROCESSOR'] or atr['PROCESSOR'] == 'pysar':
         atr['PROCESSOR'] = 'roipac'
+    #atr['PROCESSOR'] = 'roipac'
     return data, atr, inps.outfile
 
 

@@ -34,8 +34,8 @@ EXAMPLE = """example:
   generate_mask.py  geometryRadar.dem height -m 0.5 -o waterMask.h5
   generate_mask.py  ifgramStack.h5 unwrapPhase-20101120_20110220 -m 4
 
-  # common mask file of pixels without zero unwrapped phase
-  generate_mask.py  ifgramStack.h5  --nonzero  -o mask.h5  --update
+  # common mask file of pixels in all connected components / with non-zero unwrapped phase
+  generate_mask.py  ifgramStack.h5  --nonzero  -o maskConnComp.h5  --update
 
   # interative polygon selection of region of interest
   # useful for custom mask generation in unwrap error correction with bridging
@@ -77,7 +77,7 @@ def create_parser():
 
     parser.add_argument('--nonzero', dest='nonzero', action='store_true',
                         help='Select all non-zero pixels.\n' +
-                             'i.e. mask.h5 from unwrapIfgram.h5')
+                             'i.e. maskConnComp.h5 from ifgramStack.h5')
     parser.add_argument('--update', dest='update_mode', action='store_true',
                         help='Enable update checking for --nonzero option.')
     return parser
@@ -230,7 +230,7 @@ def main(iargs=None):
 
     ##### Mask: Non-zero
     if inps.nonzero and k == 'ifgramStack':
-        # get name of default dataset
+        # get dataset name
         if not inps.dset:
             with h5py.File(inps.file, 'r') as f:
                 inps.dset = [i for i in ['connectComponent', 'unwrapPhase'] if i in f.keys()][0]

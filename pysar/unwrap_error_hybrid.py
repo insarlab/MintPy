@@ -129,7 +129,7 @@ def detect_unwrap_error(ifgram_file, mask_file, mask_cc_file='maskConnComp.h5', 
     from skimage.filters import threshold_otsu
     
     Parameters: ifgram_file : string, path of ifgram stack file
-                mask_file   : string, path of mask file, e.g. waterMask.h5, mask.h5
+                mask_file   : string, path of mask file, e.g. waterMask.h5, maskConnComp.h5
                 mask_cc_file: string, path of mask file for coherent conn comps
                 cutoff : float, cutoff value for the mean number of nonzero phase closure
                     to be selected as coherent conn comps candidate

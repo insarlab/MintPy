@@ -4,7 +4,7 @@
 # Purpose: InSAR Time Series Analysis in Python            #
 # Author: Zhang Yunjun, Heresh Fattahi                     #
 # Created: July 2013                                       #
-# Copyright (c) 2013-2018, Zhang Yunjun, Heresh Fattahi    #
+# Copyright (c) 2013-2019, Zhang Yunjun, Heresh Fattahi    #
 ############################################################
 
 
@@ -26,14 +26,14 @@ from pysar import version
 
 ##########################################################################
 EXAMPLE = """example:
-  pysarApp.py                                             #Run / Rerun
-  pysarApp.py  SanAndreasT356EnvD.template  --fast        #Fast processing
-  pysarApp.py  SanAndreasT356EnvD.template  --load-data   #Exit after loading data into HDF5 files
+  pysarApp.py                                            #Run / Rerun
+  pysarApp.py  GalapagosSenDT128.template  --fast        #Fast processing
+  pysarApp.py  GalapagosSenDT128.template  --load-data   #Exit after loading data into HDF5 files
 
   # Template options
-  pysarApp.py -H                               #Print    default template
-  pysarApp.py -g                               #Generate default template
-  pysarApp.py -g SanAndreasT356EnvD.template   #Generate default template considering input custom template
+  pysarApp.py -H                              #Print    default template
+  pysarApp.py -g                              #Generate default template
+  pysarApp.py -g GalapagosSenDT128.template   #Generate default template considering input custom template
 """
 
 
@@ -62,8 +62,8 @@ def create_parser():
 
     parser.add_argument('--reset', action='store_true',
                         help='Reset files attributes to re-run pysarApp.py after loading data by:\n' +
-                             '    1) removing ref_y/x/lat/lon for unwrapIfgram.h5 and coherence.h5\n' +
-                             '    2) set DROP_IFGRAM=no for unwrapIfgram.h5 and coherence.h5')
+                             '    1) removing ref_y/x/lat/lon for ifgramStack.h5\n' +
+                             '    2) set "dropIfgram" dataset to all true for ifgramStack.h5')
     parser.add_argument('--load-data', dest='load_dataset', action='store_true',
                         help='Step 1. Load/check dataset, then exit')
     parser.add_argument('--modify-network', dest='modify_network', action='store_true',
@@ -191,6 +191,8 @@ def read_template(inps):
         inps.unavcoMetadataFile = None
         print('No UNAVCO attributes file found.')
 
+    inps.plot = template['pysar.plot']
+
     return inps, template, customTemplate
 
 
@@ -251,21 +253,19 @@ def correct_unwrap_error(inps, template):
     unw_cor_method = template['pysar.unwrapError.method']
     if unw_cor_method:
         print('\n**********  Unwrapping Error Correction **********')
-        if unw_cor_method == 'phase_closure':
-            unwCmd = 'unwrap_error_phase_closure.py {} -t {} --update'.format(inps.stackFile,
-                                                                              inps.templateFile)
-            if inps.fast:
-                unwCmd += ' --fast'
+        cmd_bridging = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
+                                                                           inps.templateFile)
 
-        elif unw_cor_method == 'bridging':
-            unwCmd = 'unwrap_error_bridging.py {} -t {} --update'.format(inps.stackFile,
-                                                                         inps.templateFile)
+        cmd_closure = 'unwrap_error_phase_closure.py {} {} -t {} --update'.format(inps.stackFile,
+                                                                                  inps.maskFile,
+                                                                                  inps.templateFile)
+        if unw_cor_method == 'bridging':
+            unwCmd = cmd_bridging
+        elif unw_cor_method == 'phase_closure':
+            unwCmd = cmd_closure
         elif unw_cor_method == 'bridging+phase_closure':
-            unwCmd = ('unwrap_error_bridging.py {} -t {} --update'
-                      ' -i unwrapPhase -o unwrapPhase_bridging').format(inps.stackFile,
-                                                                        inps.templateFile)
-            unwCmd += '\nunwrap_error_phase_closure.py {} --update --fast '.format(inps.stackFile)
-            unwCmd += '-i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
+            unwCmd = cmd_bridging + ' -i unwrapPhase -o unwrapPhase_bridging\n'
+            unwCmd += cmd_closure + ' -i unwrapPhase_bridging -o unwrapPhase_bridging_phaseClosure'
         else:
             raise ValueError('un-recognized method: {}'.format(unw_cor_method))
 
@@ -498,6 +498,8 @@ def main(iargs=None):
         ut.add_attribute(inps.stackFile, customTemplate)
 
     if inps.load_dataset:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise SystemExit('Exit as planned after loading/checking the dataset.')
 
     if inps.reset:
@@ -520,7 +522,7 @@ def main(iargs=None):
         inps.waterMaskFile = None
 
     # Initial mask (pixels with valid unwrapPhase or connectComponent in ALL interferograms)
-    inps.maskFile = 'mask.h5'
+    inps.maskFile = 'maskConnComp.h5'
     maskCmd = 'generate_mask.py {} --nonzero -o {} --update'.format(inps.stackFile, inps.maskFile)
     print(maskCmd)
     status = subprocess.Popen(maskCmd, shell=True).wait()
@@ -560,6 +562,8 @@ def main(iargs=None):
     print(refPointCmd)
     status = subprocess.Popen(refPointCmd, shell=True).wait()
     if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise Exception('Error while finding reference pixel in space.\n')
 
     ############################################
@@ -578,6 +582,8 @@ def main(iargs=None):
     print(networkCmd)
     status = subprocess.Popen(networkCmd, shell=True).wait()
     if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise Exception('Error while modifying the network of interferograms.\n')
 
     # Plot network colored in spatial coherence
@@ -599,6 +605,8 @@ def main(iargs=None):
         status = subprocess.Popen(plotCmd, shell=True).wait()
 
     if inps.modify_network:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise SystemExit('Exit as planned after network modification.')
 
     #########################################
@@ -617,6 +625,8 @@ def main(iargs=None):
     inps.timeseriesFiles = ['timeseries.h5']       #all ts files
     status = subprocess.Popen(invCmd, shell=True).wait()
     if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise Exception('Error while inverting network interferograms into timeseries')
 
     print('\n--------------------------------------------')
@@ -624,6 +634,8 @@ def main(iargs=None):
     get_temporal_coherence_mask(inps, template)
 
     if inps.invert_network:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise SystemExit('Exit as planned after network inversion.')
 
     ##############################################
@@ -640,6 +652,8 @@ def main(iargs=None):
         if ut.run_or_skip(out_file=outName, in_file=[inps.timeseriesFile, inps.geomFile]) == 'run':
             status = subprocess.Popen(lodCmd, shell=True).wait()
             if status is not 0:
+                if inps.plot:
+                    plot_pysarApp(inps)
                 raise Exception('Error while correcting Local Oscillator Drift.\n')
         inps.timeseriesFile = outName
         inps.timeseriesFiles.append(outName)
@@ -671,6 +685,8 @@ def main(iargs=None):
             if ut.run_or_skip(out_file=outName, in_file=inps.timeseriesFile) == 'run':
                 status = subprocess.Popen(derampCmd, shell=True).wait()
                 if status is not 0:
+                    if inps.plot:
+                        plot_pysarApp(inps)
                     raise Exception('Error while removing phase ramp for time-series.\n')
             inps.timeseriesFile = outName
             inps.timeseriesFiles.append(outName)
@@ -696,6 +712,8 @@ def main(iargs=None):
     if template['pysar.topographicResidual']:
         status = subprocess.Popen(topoCmd, shell=True).wait()
         if status is not 0:
+            if inps.plot:
+                plot_pysarApp(inps)
             raise Exception('Error while correcting topographic phase residual.\n')
         inps.timeseriesFile = outName
         inps.timeseriesResFile = 'timeseriesResidual.h5'
@@ -714,6 +732,8 @@ def main(iargs=None):
         print(rmsCmd)
         status = subprocess.Popen(rmsCmd, shell=True).wait()
         if status is not 0:
+            if inps.plot:
+                plot_pysarApp(inps)
             raise Exception('Error while calculating RMS of residual phase time-series.\n')
     else:
         print('No timeseries residual file found! Skip residual RMS analysis.')
@@ -727,6 +747,8 @@ def main(iargs=None):
         print(refCmd)
         status = subprocess.Popen(refCmd, shell=True).wait()
         if status is not 0:
+            if inps.plot:
+                plot_pysarApp(inps)
             raise Exception('Error while changing reference date.\n')
     else:
         print('No reference change in time.')
@@ -742,6 +764,8 @@ def main(iargs=None):
     print(velCmd)
     status = subprocess.Popen(velCmd, shell=True).wait()
     if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
         raise Exception('Error while estimating linear velocity from time-series.\n')
 
     # Velocity from Tropospheric delay
@@ -767,10 +791,7 @@ def main(iargs=None):
     if not inps.geocoded:
         if template['pysar.geocode'] is True:
             print('\n--------------------------------------------')
-            geo_dir = os.path.abspath('./GEOCODE')
-            if not os.path.isdir(geo_dir):
-                os.makedirs(geo_dir)
-                print('create directory: {}'.format(geo_dir))
+            geo_dir = os.path.join(inps.workDir, 'GEOCODE')
             geocode_script = os.path.join(os.path.dirname(__file__), 'geocode.py')
             geoCmd = ('{scp} {v} {c} {t} {g} -l {l} -t {e}'
                       ' --outdir {d} --update').format(scp=geocode_script,
@@ -784,6 +805,8 @@ def main(iargs=None):
             print(geoCmd)
             status = subprocess.Popen(geoCmd, shell=True).wait()
             if status is not 0:
+                if inps.plot:
+                    plot_pysarApp(inps)
                 raise Exception('Error while geocoding.\n')
             else:
                 inps.velFile        = os.path.join(geo_dir, 'geo_'+os.path.basename(inps.velFile))
@@ -831,6 +854,8 @@ def main(iargs=None):
         if ut.run_or_skip(out_file=outFile, in_file=inps.velFile, check_readable=False) == 'run':
             status = subprocess.Popen(kmlCmd, shell=True).wait()
             if status is not 0:
+                if inps.plot:
+                    plot_pysarApp(inps)
                 raise Exception('Error while generating Google Earth KMZ file.')
 
     #############################################
@@ -843,7 +868,7 @@ def main(iargs=None):
     #############################################
     # Plot Figures
     #############################################
-    if template['pysar.plot']:
+    if inps.plot:
         plot_pysarApp(inps)
 
     #############################################

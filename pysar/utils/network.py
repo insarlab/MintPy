@@ -155,28 +155,28 @@ def date12_list2index(date12_list, date_list=[]):
     return pairs_idx
 
 
-def get_date12_list(File, dropIfgram=False):
+def get_date12_list(fname, dropIfgram=False):
     """Read Date12 info from input file: Pairs.list or multi-group hdf5 file
     Inputs:
-        File - string, path/name of input multi-group hdf5 file or text file
-        check_drop_ifgram - bool, check the "DROP_IFGRAM" attribute or not for multi-group hdf5 file
+        fname       - string, path/name of input multi-group hdf5 file or text file
+        dropIfgram  - bool, check the "DROP_IFGRAM" attribute or not for multi-group hdf5 file
     Output:
         date12_list - list of string in YYMMDD-YYMMDD format
     Example:
-        date12List = get_date12_list('unwrapIfgram.h5')
-        date12List = get_date12_list('unwrapIfgram.h5', check_drop_ifgram=True)
+        date12List = get_date12_list('ifgramStack.h5')
+        date12List = get_date12_list('ifgramStack.h5', dropIfgram=True)
         date12List = get_date12_list('Pairs.list')
     """
     date12_list = []
-    ext = os.path.splitext(File)[1].lower()
+    ext = os.path.splitext(fname)[1].lower()
     if ext == '.h5':
-        k = readfile.read_attribute(File)['FILE_TYPE']
+        k = readfile.read_attribute(fname)['FILE_TYPE']
         if k == 'ifgramStack':
-            date12_list = ifgramStack(File).get_date12_list(dropIfgram=dropIfgram)
+            date12_list = ifgramStack(fname).get_date12_list(dropIfgram=dropIfgram)
         else:
             return None
     else:
-        txtContent = np.loadtxt(File, dtype=bytes).astype(str)
+        txtContent = np.loadtxt(fname, dtype=bytes).astype(str)
         if len(txtContent.shape) == 1:
             txtContent = txtContent.reshape(-1, 1)
         date12_list = [i for i in txtContent[:, 0]]
@@ -184,11 +184,11 @@ def get_date12_list(File, dropIfgram=False):
     return date12_list
 
 
-def igram_perp_baseline_list(File):
+def igram_perp_baseline_list(fname):
     """Get perpendicular baseline list from input multi_group hdf5 file"""
-    print(('read perp baseline info from '+File))
-    k = readfile.read_attribute(File)['FILE_TYPE']
-    h5 = h5py.File(File, 'r')
+    print(('read perp baseline info from '+fname))
+    k = readfile.read_attribute(fname)['FILE_TYPE']
+    h5 = h5py.File(fname, 'r')
     epochList = sorted(h5[k].keys())
     p_baseline_list = []
     for epoch in epochList:

@@ -2,7 +2,7 @@
 ###############################################################
 # Plot Results from Routine Workflow with pysarApp.py
 # Author: Zhang Yunjun, 2017-07-23
-# Latest update: 2018-11-28
+# Latest update: 2019-01-24
 ###############################################################
 
 
@@ -35,29 +35,32 @@ fi
 opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm '
 #opt=' --dem INPUTS/geometryRadar.h5 --mask '$mask_file' -u cm --vlim -2 2'
 if [ $plot_key_files -eq 1 ]; then
-    view.py --nodisplay --update velocity.h5           $opt               | tee -a $log_file
-    view.py --nodisplay --update temporalCoherence.h5  -c gray --vlim 0 1 | tee -a $log_file
-    view.py --nodisplay --update maskTempCoh.h5        -c gray --vlim 0 1 | tee -a $log_file
-    file=INPUTS/geometryRadar.h5;  test -f $file && view.py --nodisplay --update $file | tee -a $log_file
-    file=INPUTS/geometryGeo.h5;    test -f $file && view.py --nodisplay --update $file | tee -a $log_file
+    view='view.py --nodisplay --update'
+    file=velocity.h5;              test -f $file && $view $file $opt               | tee -a $log_file
+    file=temporalCoherence.h5;     test -f $file && $view $file -c gray --vlim 0 1 | tee -a $log_file
+    file=maskTempCoh.h5;           test -f $file && $view $file -c gray --vlim 0 1 | tee -a $log_file
+    file=INPUTS/geometryRadar.h5;  test -f $file && $view $file                    | tee -a $log_file
+    file=INPUTS/geometryGeo.h5;    test -f $file && $view $file                    | tee -a $log_file
 fi
 
 
 ## Loaded Dataset
 if [ $plot_loaded_data -eq 1 ]; then
     view='view.py --nodisplay --update '
-    $view INPUTS/ifgramStack.h5 unwrapPhase-  --zero-mask --wrap | tee -a $log_file
-    $view INPUTS/ifgramStack.h5 unwrapPhase-  --zero-mask        | tee -a $log_file
-    $view INPUTS/ifgramStack.h5 coherence-    --mask no          | tee -a $log_file
+    file=INPUTS/ifgramStack.h5
+    test -f $file && $view $file unwrapPhase-  --zero-mask --wrap | tee -a $log_file
+    test -f $file && $view $file unwrapPhase-  --zero-mask        | tee -a $log_file
+    test -f $file && $view $file coherence-    --mask no          | tee -a $log_file
 fi
 
 
 ## Auxliary Files from loaded dataset
 if [ $plot_loaded_data_aux -eq 1 ]; then
-    file=avgPhaseVelocity.h5; test -f $file && view.py --nodisplay --update $file -m maskSptialCoh.h5 | tee -a $log_file
-    view.py --nodisplay --update avgSpatialCoherence.h5 -c gray --vlim 0 1 | tee -a $log_file
-    view.py --nodisplay --update maskSpatialCoh.h5      -c gray --vlim 0 1 | tee -a $log_file
-    view.py --nodisplay --update mask.h5                -c gray --vlim 0 1 | tee -a $log_file
+    view='view.py --nodisplay --update '
+    file=avgPhaseVelocity.h5;      test -f $file && $view $file -m maskSptialCoh.h5 | tee -a $log_file
+    file=avgSpatialCoherence.h5;   test -f $file && $view $file -c gray --vlim 0 1  | tee -a $log_file
+    file=maskSpatialCoherence.h5;  test -f $file && $view $file -c gray --vlim 0 1  | tee -a $log_file
+    file=maskConnComp.h5;          test -f $file && $view $file -c gray --vlim 0 1  | tee -a $log_file
 fi
 
 
@@ -91,9 +94,9 @@ fi
 ## Geo coordinates for UNAVCO Time-series InSAR Archive Product
 view='view.py --nodisplay --update --lalo-label'
 if [ $plot_geocoded_data -eq 1 ]; then
-    $view ./GEOCODE/geo_maskTempCoh.h5          -c gray  | tee -a $log_file
-    $view ./GEOCODE/geo_temporalCoherence.h5    -c gray  | tee -a $log_file
-    $view ./GEOCODE/geo_velocity.h5                      | tee -a $log_file
+    file=./GEOCODE/geo_maskTempCoh.h5;                   test -f $file && $view $file -c gray  | tee -a $log_file
+    file=./GEOCODE/geo_temporalCoherence.h5;             test -f $file && $view $file -c gray  | tee -a $log_file
+    file=./GEOCODE/geo_velocity.h5;                      test -f $file && $view $file          | tee -a $log_file
     file=./GEOCODE/geo_timeseries_ECMWF_demErr_ramp.h5;  test -f $file && $view $file --noaxis | tee -a $log_file
     file=./GEOCODE/geo_timeseries_ECMWF_demErr.h5;       test -f $file && $view $file --noaxis | tee -a $log_file
     file=./GEOCODE/geo_timeseries_demErr_ramp.h5;        test -f $file && $view $file --noaxis | tee -a $log_file

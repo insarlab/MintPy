@@ -42,11 +42,11 @@ For csh/tcsh user, add to your **_~/.cshrc_** file for example:
     setenv PROJ_LIB      ${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
     
     ##--------- PySAR ------------------## 
-    setenv PYSAR_HOME    ~/python/PySAR       #for released version, "~/python/PySAR-0.4.0"
+    setenv PYSAR_HOME    ~/python/PySAR             #for released version, "~/python/PySAR-0.4.0"
     setenv PYTHONPATH    ${PYTHONPATH}:${PYSAR_HOME}
     setenv PATH          ${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh
    
-For bash user, add to your **_~/.bashrc_** file for example:   
+For bash user, add to your **_~/.bash_profile_** file for example:   
 
     ############################  Python  ###############################
     if [ -z ${PYTHONPATH+x} ]; then export PYTHONPATH=""; fi
@@ -57,7 +57,7 @@ For bash user, add to your **_~/.bashrc_** file for example:
     export PROJ_LIB=${PYTHON3DIR}/share/proj   #Temporary fix for basemap import error
     
     ##--------- PySAR ------------------## 
-    export PYSAR_HOME=~/python/PySAR        #for released version, "~/python/PySAR-0.4.0"
+    export PYSAR_HOME=~/python/PySAR           #for released version, "~/python/PySAR-0.4.0"
     export PYTHONPATH=${PYTHONPATH}:${PYSAR_HOME}   
     export PATH=${PATH}:${PYSAR_HOME}/pysar:${PYSAR_HOME}/sh   
 

@@ -25,7 +25,7 @@ pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
 
 pysar.reference.coherenceFile = auto   #[file name], auto for averageSpatialCoherence.h5
 pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
-pysar.reference.maskFile      = auto   #[file name / no], auto for mask.h5
+pysar.reference.maskFile      = auto   #[file name / no], auto for maskConnComp.h5
 """
 
 NOTE = """note: Reference value cannot be nan, thus, all selected reference point must be:

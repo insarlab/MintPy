@@ -714,24 +714,28 @@ def add_mask_argument(parser):
 def add_map_argument(parser):
     # Map
     mapg = parser.add_argument_group('Map', 'Map settings for display')
-    mapg.add_argument('--projection', dest='map_projection', default='cyl', metavar='NAME',
-                      help='map projection when plotting in geo-coordinate. \n'
-                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
     mapg.add_argument('--coastline', action='store_true', help='Draw coastline.')
-    mapg.add_argument('--resolution', default='c', choices={'c', 'l', 'i', 'h', 'f', None},
-                      help='Resolution of boundary database to use.\n' +
-                           'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
-    mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',
-                      help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
-                           'Useful for final figure output.')
-    mapg.add_argument('--lalo-step', dest='lalo_step', metavar='DEG',
-                      type=float, help='Lat/lon step for lalo-label option.')
+    
+    # lalo label
     mapg.add_argument('--lalo-loc', dest='lalo_loc', type=int, nargs=4, default=[1, 0, 0, 1],
                       metavar=('left', 'right', 'top', 'bottom'),
                       help='Draw lalo label in [left, right, top, bottom], default is [1,0,0,1]')
+    mapg.add_argument('--lalo-label', dest='lalo_label', action='store_true',
+                      help='Show N, S, E, W tick label for plot in geo-coordinate.\n'
+                           'Useful for final figure output.')
     mapg.add_argument('--lalo-max-num', dest='lalo_max_num', type=int, default=4, metavar='NUM',
                       help='Maximum number of lalo tick label, 4 by default.')
+    mapg.add_argument('--lalo-step', dest='lalo_step', metavar='DEG',
+                      type=float, help='Lat/lon step for lalo-label option.')
 
+    mapg.add_argument('--projection', dest='map_projection', default='cyl', metavar='NAME',
+                      help='map projection when plotting in geo-coordinate. \n'
+                           'Reference - http://matplotlib.org/basemap/users/mapsetup.html\n\n')
+    mapg.add_argument('--resolution', default='c', choices={'c', 'l', 'i', 'h', 'f', None},
+                      help='Resolution of boundary database to use.\n' +
+                           'c (crude, default), l (low), i (intermediate), h (high), f (full) or None.')
+
+    # scale bar
     mapg.add_argument('--scalebar', nargs=3, metavar=('LEN', 'X', 'Y'), type=float,
                       default=[0.2, 0.2, 0.1],
                       help='scale bar distance and location in ratio:\n' +
@@ -839,6 +843,19 @@ def add_inner_title(ax, title, loc, prop=None, **kwargs):
     ax.add_artist(at)
     at.txt._text.set_path_effects([withStroke(foreground="w", linewidth=3)])
     return at
+
+
+def auto_figure_size(shape, disp_cbar=False):
+    """Get auto figure size based on input data shape"""
+    length, width = shape
+    plot_shape = [width*1.25, length]
+    if not disp_cbar:
+        plot_shape = [width, length]
+    fig_scale = min(min_figsize_single/min(plot_shape),
+                    max_figsize_single/max(plot_shape),
+                    max_figsize_height/plot_shape[1])
+    fig_size = [i*fig_scale for i in plot_shape]
+    return fig_size
 
 
 def auto_figure_title(fname, datasetNames=[], inps_dict=None):

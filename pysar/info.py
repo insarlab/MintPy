@@ -28,9 +28,10 @@ EXAMPLE = """example:
   info.py ifgramStack.h5
 
   # Time / Date Info
-  info.py ifgramStack.h5 --date                   # print master/slave date pairs info of interferograms.
-  info.py timeseries.h5  --date --num             # print date list of timeseries with its number
-  info.py LS-PARAMS.h5   --date > date_list.txt   # print date list of timeseries and save it to txt file.
+  info.py ifgramStack.h5 --date                             # print master/slave date pairs info of interferograms.
+  info.py ifgramStack.h5 --date --nodrop > date12_list.txt  # save master/slave date pairs info of interferograms.
+  info.py timeseries.h5  --date --num                       # print date list of timeseries with its number
+  info.py LS-PARAMS.h5   --date > date_list.txt             # print date list of timeseries and save it to txt file.
   info.py S1_IW12_128_0593_0597_20141213_20180619.h5 --date
 
   # Slice / Dataset Info
@@ -52,6 +53,8 @@ def create_parser():
                         help='Show date/date12 info of input file')
     parser.add_argument('--num', dest='disp_num', action='store_true',
                         help='Show date/date12 number')
+    parser.add_argument('--nodrop', dest='drop_ifgram', action='store_true',
+                        help='Do not display dropped interferograms info.')
     parser.add_argument('--slice', dest='disp_slice', action='store_true',
                         help='Print slice list of the file')
     return parser
@@ -143,15 +146,13 @@ def print_timseries_date_stat(dateList):
     return
 
 
-def print_date_list(fname, disp_num=False, print_msg=False):
+def print_date_list(fname, disp_num=False, drop_ifgram=False, print_msg=False):
     """Print time/date info of file"""
     atr = readfile.read_attribute(fname)
     k = atr['FILE_TYPE']
     dateList = None
     if k in ['timeseries']:
-        obj = timeseries(fname)
-        obj.open(print_msg=False)
-        dateList = obj.dateList
+        dateList = timeseries(fname).get_date_list()
     elif k == 'HDFEOS':
         obj = HDFEOS(fname)
         obj.open(print_msg=False)
@@ -161,9 +162,7 @@ def print_date_list(fname, disp_num=False, print_msg=False):
         obj.open(print_msg=False)
         dateList = obj.dateList
     elif k in ['ifgramStack']:
-        obj = ifgramStack(fname)
-        obj.open(print_msg=False)
-        dateList = obj.date12List
+        dateList = ifgramStack(fname).get_date12_list(dropIfgram=drop_ifgram)
     elif k in ['giantIfgramStack']:
         obj = giantIfgramStack(fname)
         obj.open(print_msg=False)
@@ -222,7 +221,7 @@ def main(iargs=None):
 
     # --date option
     if inps.disp_date:
-        print_date_list(inps.file, disp_num=inps.disp_num, print_msg=True)
+        print_date_list(inps.file, disp_num=inps.disp_num, drop_ifgram=inps.drop_ifgram, print_msg=True)
         return
 
     # --slice option

@@ -13,6 +13,7 @@ import sys
 import argparse
 from datetime import datetime as dt
 import numpy as np
+#import matplotlib; matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -98,10 +99,10 @@ def create_parser():
     infile.add_argument('file', type=str, help='file for display')
     infile.add_argument('dset', type=str, nargs='*', default=[],
                         help='optional - dataset(s) to display')
-    infile.add_argument('--exact', '--no-glob', dest='globSearch', action='store_false',
-                        help='Disable glob search for input dset')
     infile.add_argument('-n', '--dset-num', dest='dsetNumList', metavar='NUM', type=int, nargs='*', default=[],
                         help='optional - order number of date/dataset(s) to display')
+    infile.add_argument('--exact', '--no-glob', dest='globSearch', action='store_false',
+                        help='Disable glob search for input dset')
     infile.add_argument('--ex', '--exclude', dest='exDsetList', metavar='Dset', nargs='*', default=[],
                         help='dates will not be displayed')
     infile.add_argument('--plot-setting', dest='disp_setting_file',

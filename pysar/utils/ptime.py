@@ -192,8 +192,6 @@ def date_index(dateList):
     return dateIndex
 
 ################################################################
-
-
 def date_list2tbase(dateList):
     """Get temporal Baseline in days with respect to the 1st date
     Input: dateList - list of string, date in YYYYMMDD or YYMMDD format
@@ -230,30 +228,6 @@ def date_list2vector(dateList):
 
 
 ################################################################
-def list_ifgram2date12(ifgram_list):
-    """Convert ifgram list into date12 list
-    Input:
-        ifgram_list  - list of string in *YYMMDD-YYMMDD* or *YYMMDD_YYMMDD* format
-    Output:
-        date12_list  - list of string in YYMMDD-YYMMDD format
-    Example:
-        h5 = h5py.File('unwrapIfgram.h5','r')
-        ifgram_list = sorted(h5['interferograms'].keys())
-        date12_list = ptime.list_ifgram2date12(ifgram_list)
-    """
-    try:
-        date12_list = [str(re.findall('\d{8}[-_]\d{8}', i)[0]).replace('_', '-') for i in ifgram_list]
-    except:
-        date12_list = [str(re.findall('\d{6}[-_]\d{6}', i)[0]).replace('_', '-') for i in ifgram_list]
-
-    date12_list_out = []
-    for date12 in date12_list:
-        m_date, s_date = yymmdd(date12.split('_'))
-        date12_list_out.append(m_date+'-'+s_date)
-
-    return date12_list_out
-
-
 def closest_weather_product_time(sar_acquisition_time, grib_source='ECMWF'):
     """Find closest available time of weather product from SAR acquisition time
     Inputs:

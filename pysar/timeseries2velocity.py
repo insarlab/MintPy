@@ -251,7 +251,7 @@ def estimate_linear_velocity(inps):
     X = np.dot(np.linalg.pinv(A), ts_data)
     vel = np.array(X[0, :].reshape(length, width), dtype=dataType)
 
-    # velocity STD (Eq. (10), Fattahi and Amelung, 2016)
+    # velocity STD (Eq. (10), Fattahi and Amelung, 2015)
     ts_diff = ts_data - np.dot(A, X)
     t_diff = A[:, 0] - np.mean(A[:, 0])
     vel_std = np.sqrt(np.sum(ts_diff ** 2, axis=0) / np.sum(t_diff ** 2)  / (inps.numDate - 2))

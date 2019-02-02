@@ -35,7 +35,7 @@ REFERENCE = """References:
     of multitemporal differential SAR interferograms, IEEE TGRS, 44(9), 2374-2383.
   Perissin D., Wang T. (2012), Repeat-pass SAR interferometry with partially coherent targets. IEEE TGRS. 271-280
   Zebker, H. A., and J. Villasenor (1992), Decorrelation in interferometric radar echoes, IEEE TGRS, 30(5), 950-959.
-  Zhao, W., (2015), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
+  Zhao, W., (2017), Small deformation detected from InSAR time-series and their applications in geophysics, Doctoral
     dissertation, Univ. of Miami, Section 6.3.
 """
 
@@ -58,7 +58,7 @@ TEMPLATE = """Template:
 ##                    ratio (Pepe and Lanari, 2006, TGRS), use 'delaunay-noweight' to disable normalization. 
 ##     hierarchical - Select pairs in a hierarchical way using a list of temp/perp thresholds
 ##                    select.network.tempPerpList
-##                    (Zhao, 2015, PhD Thesis)
+##                    (Zhao, 2017, PhD Thesis)
 ##                    i.e. 16 days, 1600 m
 ##                         32 days, 800  m
 ##                         48 days, 600  m
@@ -127,10 +127,10 @@ def create_parser():
                         help='network type with info on temp/perp baseline and doppler centroid frequency.')
     method.add_argument('-r', dest='referenceFile', default=None,
                         help='Reference hdf5 / list file with network information. e.g.\n' +
-                             'unwrapIfgram.h5\n' +
+                             'ifgramStack.h5\n' +
                              'ifgram_list.txt with content as below:'+pnet.IFGRAM_LIST_FILE +
                              '\nIt could also be generated using plot_network.py --list option, e.g.\n' +
-                             'plot_network.py unwrapIfgram.h5 --list\n\n')
+                             'info.py ifgramStack.h5 --date --nodrop > date12_list.txt\n\n')
     method.add_argument('--exclude', '--ex', dest='excludeDate', nargs='*', default=[],
                         help='date(s) excluded for network selection, e.g. -ex 060713 070831')
     method.add_argument('--start-date', dest='startDate',

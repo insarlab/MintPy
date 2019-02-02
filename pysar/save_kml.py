@@ -27,7 +27,7 @@ from pysar.utils import readfile, ptime, utils as ut, plot as pp
 EXAMPLE = """example:
   save_kml.py geo_velocity_masked.h5 
   save_kml.py geo_timeseries_masked.h5  20101120
-  save_kml.py geo_unwrapIfgram.h5       101120-110220
+  save_kml.py geo_ifgramStack.h5        20101120_20110220
 
   save_kml.py geo_velocity_masked.h5 -u cm -v -2 2
   save_kml.py geo_velocity_masked.h5 -u cm --wrap --wrap-range -3 7

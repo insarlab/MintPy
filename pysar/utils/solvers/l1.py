@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# The 1-norm approximation example of section 8.7 (Exploiting structure).  
 
 from cvxopt import blas, lapack, solvers
 from cvxopt import matrix, spdiag, mul, div, sparse
@@ -324,3 +324,10 @@ def l1blas(P, q):
     sol = solvers.conelp(c, Fi, h, dims, kktsolver=Fkkt,
                          primalstart={'x': x0, 's': s0}, dualstart={'z': z0})
     return sol['x'][:n]
+
+
+# Test example
+#setseed()
+#m, n = 1000, 100
+#P, q = normal(m,n), normal(m,1)
+#x, y = l1(P,q)

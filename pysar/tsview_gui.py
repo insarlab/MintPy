@@ -698,7 +698,7 @@ def main():
                                  command=lambda: pick_file(), padx=15)
     selected_ts_file_label = Label(pick_h5_file_frame, textvariable=h5_file_short)
 
-    '''     Frames, Text Variables, and Widgets for selection of the mask.h5 file to add a mask to the data.     '''
+    '''     Frames, Text Variables, and Widgets for selection of the maskConnComp.h5 file to add a mask to the data.     '''
     pick_mask_file_frame = Frame(frame)
 
     mask_file = StringVar()

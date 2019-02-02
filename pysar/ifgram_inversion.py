@@ -938,7 +938,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
         msg += 'mask: no\n'
 
     if np.linalg.matrix_rank(A) < A.shape[1]:
-        msg += '***WARNING: the network if NOT fully connected.\n'
+        msg += '***WARNING: the network is NOT fully connected.\n'
         msg += '\tInversion result can be biased!\n'
         msg += '\tContinue to use SVD to resolve the offset between different subsets.\n'
     msg += '-------------------------------------------------------------------------------'

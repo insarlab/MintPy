@@ -3,9 +3,13 @@
 ########## 1. Load Data (--load to exit after this step)
 ## auto - automatic path pattern for Univ of Miami file structure
 ## load_data.py -H to check more details and example inputs.
+## compression to save disk usage for ifgramStack.h5 file:
+## no   - save   0% disk usage, fast [default]
+## lzf  - save ~57% disk usage, relative slow
+## gzip - save ~62% disk usage, very slow [not recommend]
 pysar.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
 pysar.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
-pysar.load.compression    = auto  #[gzip / lzf / no], auto for no [recommended].
+pysar.load.compression    = auto  #[gzip / lzf / no], auto for no.
 ##---------for ISCE only:
 pysar.load.metaFile       = auto  #[path2metadata_file]
 pysar.load.baselineDir    = auto  #[path2baseline_dir]
@@ -37,23 +41,21 @@ pysar.reference.yx            = auto   #[257,151 / auto]
 pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
 pysar.reference.coherenceFile = auto   #[filename], auto for avgSpatialCoherence.h5
 pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
-pysar.reference.maskFile      = auto   #[filename / no], auto for mask.h5
+pysar.reference.maskFile      = auto   #[filename / no], auto for maskConnComp.h5
 
 
 ## 2. Unwrapping Error Correction (optional)
+## reference: Yunjun et al, 2019
 ## supported methods:
-## a. phase_closure (Fattahi, 2015, Thesis Chap. 4)
-##    automatic; slow by default, fast option available but not giving the best result.
+## a. phase_closure  - slow
 ## b. bridging
 ##    automatic for islands with waterMaskFile option (unwrapping errors on areas separated by narrow water bodies)
 ##    manual    for all the other scenarios
 ## c. bridging+phase_closure
 pysar.unwrapError.method          = auto  #[bridging / phase_closure / bridging+phase_closure / no], auto for no
-pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
-pysar.unwrapError.maskFile        = auto  #[maskConnComp.h5 / no], auto for no, mask for connected components areas
-pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
 pysar.unwrapError.ramp            = auto  #[linear / quadratic], auto for no; recommend linear for L-band data
-pysar.unwrapError.fastMode        = auto  #[yes / no], auto for yes, enable fast mode for phase_closure method
+pysar.unwrapError.waterMaskFile   = auto  #[waterMask.h5 / no], auto for no
+pysar.unwrapError.bridgePtsRadius = auto  #[1-inf], auto for 150, radius in pixel of circular area around bridge ends
 
 
 ########## 3. Network Inversion
@@ -65,7 +67,7 @@ pysar.unwrapError.fastMode        = auto  #[yes / no], auto for yes, enable fast
 pysar.network.coherenceBased  = auto  #[yes / no], auto for no, exclude interferograms with coherence < minCoherence
 pysar.network.keepMinSpanTree = auto  #[yes / no], auto for yes, keep interferograms in Min Span Tree network
 pysar.network.minCoherence    = auto  #[0.0-1.0], auto for 0.7
-pysar.network.maskFile        = auto  #[file name, no], auto for mask.h5, no for all pixels
+pysar.network.maskFile        = auto  #[file name, no], auto for maskConnComp.h5, no for all pixels
 pysar.network.aoiYX           = auto  #[y0:y1,x0:x1 / no], auto for no, area of interest for coherence calculation
 pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no - use the whole area
 
@@ -73,7 +75,7 @@ pysar.network.aoiLALO         = auto  #[lat0:lat1,lon0:lon1 / no], auto for no -
 pysar.network.tempBaseMax     = auto  #[1-inf, no], auto for no, maximum temporal baseline in days
 pysar.network.perpBaseMax     = auto  #[1-inf, no], auto for no, maximum perpendicular spatial baseline in meter
 pysar.network.connNumMax      = auto  #[1-inf, no], auto for no, maximum number of neighbors for each acquisition
-pysar.network.referenceFile   = auto  #[date12_list.txt / Modified_unwrapIfgram.h5 / no], auto for no
+pysar.network.referenceFile   = auto  #[date12_list.txt / ifgramStack.h5 / no], auto for no
 pysar.network.excludeDate     = auto  #[20080520,20090817 / no], auto for no
 pysar.network.excludeIfgIndex = auto  #[1:5,25 / no], auto for no, list of ifg index (start from 0)
 pysar.network.startDate       = auto  #[20090101 / no], auto for no

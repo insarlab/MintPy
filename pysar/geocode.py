@@ -228,6 +228,9 @@ def auto_output_filename(infile, inps):
         outfile = '{}{}'.format(prefix, os.path.basename(infile))
 
     if inps.out_dir:
+        if not os.path.isdir(inps.out_dir):
+            os.makedirs(inps.out_dir)
+            print('create directory: {}'.format(inps.out_dir))
         outfile = os.path.join(inps.out_dir, outfile)
     return outfile
 

@@ -92,9 +92,7 @@ def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(5, 0.2)):
 
 def get_color_for_velocity(v, colormap, norm):
     rgba = colormap(norm(v))  # get rgba color components for point velocity
-    hex = mpl.colors.to_hex([rgba[3], rgba[2],
-                             rgba[1], rgba[0]],
-                            keep_alpha=True)[1:]
+    hex = mpl.colors.to_hex([rgba[3], rgba[2], rgba[1], rgba[0]], keep_alpha=True)[1:]
     return hex
 
 
@@ -275,7 +273,7 @@ def main(iargs=None):
 
     kml_master_document = KML.Document()
 
-    # 2.1 Create Screen Overlay element for colorbar
+    # 3.1 Create Screen Overlay element for colorbar
     cbar_png_file = plot_colorbar(out_file=cbar_png_file, vmin=inps.vlim[0], vmax=inps.vlim[1], cmap=inps.colormap)
 
     legend_overlay = KML.ScreenOverlay(
@@ -294,7 +292,7 @@ def main(iargs=None):
     print('add legend.')
     kml_master_document.append(legend_overlay)
 
-    # 2.2 Generate the placemark for the Reference Pixel
+    # 3.2 Generate the placemark for the Reference Pixel
     colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
     norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
 
@@ -326,7 +324,7 @@ def main(iargs=None):
 
     data_folder = KML.Folder(KML.name("Data"))
 
-    # 3.1 Create network link to small KML file
+    # 3.4 Create network link to small KML file
     network_link_sm = KML.NetworkLink(
                             KML.name('20 by 20'),
                             KML.visibility(1),
@@ -348,7 +346,7 @@ def main(iargs=None):
                             )
                       )
 
-    # 3.2 Create network link to large KML file
+    # 3.4 Create network link to large KML file
     network_link_lg = KML.NetworkLink(
                             KML.name('3 by 3'),
                             KML.visibility(1),
@@ -378,57 +376,57 @@ def main(iargs=None):
     kml_master.append(kml_master_document)
 
 
-    # 2.4 Write KML files
-    # 2.4.1 write large KML file
+    ## 4 Write KML files
+    # 4.1 write large KML file
     kml_1 = KML.kml()
     kml_1.append(kml_document_lg)
     print('writing ' + kml_file_lg)
     with open(kml_file_lg, 'w') as f:
         f.write(etree.tostring(kml_1, pretty_print=True).decode('utf-8'))
 
-    # 2.4.2 write small KML file
+    # 4.2 write small KML file
     kml_2 = KML.kml()
     kml_2.append(kml_document_sm)
     print('writing ' + kml_file_sm)
     with open(kml_file_sm, 'w') as f:
         f.write(etree.tostring(kml_2, pretty_print=True).decode('utf-8'))
 
-    # 2.4.3 write master KML file
+    # 4.3 write master KML file
     print('writing ' + kml_file_master)
     with open(kml_file_master, 'w') as f:
         f.write(etree.tostring(kml_master, pretty_print=True).decode('utf-8'))
 
 
-    # 2.5 Copy auxiliary files
-    # 2.5.1 shaded_dot file
+    ## 5 Copy auxiliary files
+    # 5.1 shaded_dot file
     dot_path = os.path.join(os.path.dirname(__file__), "utils/resources", dot_file)
     cmdDot = "cp {} {}".format(dot_path, dot_file)
     print("copying {} for point.".format(dot_file))
     os.system(cmdDot)
 
-    # 2.5.2 star file
+    # 5.2 star file
     star_path = os.path.join(os.path.dirname(__file__), "utils/resources", star_file)
     cmdStar = "cp {} {}".format(star_path, star_file)
     print("copying {} for reference point.".format(star_file))
     os.system(cmdStar)
 
-    # 2.5.3 dygraph-combined.js file
+    # 5.3 dygraph-combined.js file
     dygraph_path = os.path.join(os.path.dirname(__file__), "utils/resources", dygraph_file)
     cmdDygraph = "cp {} {}".format(dygraph_path, dygraph_file)
     print("copying {} for interactive plotting.".format(dygraph_file))
     os.system(cmdDygraph)
 
-    # 2.5.4 create directory to store data KML files
+    # 5.4 create directory to store data KML files
     cmdDirectory = "mkdir {}/".format(kml_data_files_directory)
     print("Creating KML Data File directory")
     os.system(cmdDirectory)
 
-    # 2.5.5 move data KML files into new directory
+    # 5.5 move data KML files into new directory
     cmdMove = "mv {sm} {dir}/{sm}; mv {lg} {dir}/{lg};".format(sm=kml_file_sm, dir=kml_data_files_directory, lg=kml_file_lg)
     print("Moving KML Data Files to directory")
     os.system(cmdMove)
 
-    # 2.6 Generate KMZ file
+    ## 6 Generate KMZ file
     cmdKMZ = 'zip -r {} {} {} {} {} {} {}'.format(kmz_file, kml_data_files_directory, kml_file_master, cbar_png_file, dygraph_file, dot_file, star_file)
     print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)

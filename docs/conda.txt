@@ -1,4 +1,5 @@
 basemap
+cvxopt
 ecCodes
 h5py
 joblib

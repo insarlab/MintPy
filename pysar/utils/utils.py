@@ -639,7 +639,7 @@ def four_corners(atr):
     return west, east, south, north
 
 
-def get_circular_mask(x, y, radius, shape:tuple):
+def get_circular_mask(x, y, radius, shape):
     """Get mask of pixels within circle defined by (x, y, r)"""
     length, width = shape
     yy, xx = np.ogrid[-y:length-y,
@@ -1180,32 +1180,7 @@ def which(program):
     return None
 
 
-def check_drop_ifgram(h5, print_msg=True):
-    """Update ifgram_list based on 'DROP_IFGRAM' attribute
-    Parameters: h5 : HDF5 file object
-    Returns:    dsListOut : list of string, group name with DROP_IFGRAM = 'yes'
-    Example:    h5 = h5py.File('unwrapIfgram.h5','r')
-                ifgram_list = ut.check_drop_ifgram(h5)
-    """
-    # Return all interferogram list if 'DROP_IFGRAM' do not exist
-    k = list(h5.keys())[0]
-    dsList = sorted(h5[k].keys())
-    atr = h5[k][dsList[0]].attrs
-    if 'DROP_IFGRAM' not in atr.keys():
-        return dsList
-
-    dsListOut = list(dsList)
-    for ds in dsList:
-        if ('DROP_IFGRAM' in h5[k][ds].attrs.keys()
-                and h5[k][ds].attrs['DROP_IFGRAM'] == 'yes'):
-            dsListOut.remove(ds)
-
-    if len(dsList) > len(dsListOut) and print_msg:
-        print("remove interferograms with 'DROP_IFGRAM'='yes'")
-    return dsListOut
-
-
-def nonzero_mask(File, out_file='mask.h5', datasetName=None):
+def nonzero_mask(File, out_file='maskConnComp.h5', datasetName=None):
     """Generate mask file for non-zero value of input multi-group hdf5 file"""
     atr = readfile.read_attribute(File)
     k = atr['FILE_TYPE']

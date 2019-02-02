@@ -41,8 +41,8 @@ REFERENCE = """reference:
 """
 
 EXAMPLE = """example:
-  asc_desc.py  vel_AlosAT424_masked.h5  vel_AlosDT73_masked.h5
-  asc_desc.py  vel_EnvAT134_masked.h5   vel_EnvAT256_masked.h5  16
+  asc_desc2horz_vert.py  vel_AlosAT424_masked.h5  vel_AlosDT73_masked.h5
+  asc_desc2horz_vert.py  vel_EnvAT134_masked.h5   vel_EnvAT256_masked.h5  16
 """
 
 
