@@ -126,7 +126,7 @@ def get_auto_path(processor, project_name, template=dict()):
             lookup_file = os.path.join(project_dir, 'PROCESS/GEO/geo_{}/geomap*.trans'.format(m_date12))
             lookup_file = glob.glob(lookup_file)[0]
             lks = re.findall('_\d+rlks', lookup_file)[0]
-            auto_path_dict[prefix+'demFile'] = 'radar{}.hgt'.format(nlooks)
+            auto_path_dict[prefix+'demFile'] = 'radar{}.hgt'.format(lks)
 
     var_dict = {}
     var_dict['${PROJECT_DIR}'] = project_dir
