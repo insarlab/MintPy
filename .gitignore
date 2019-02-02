@@ -1,6 +1,8 @@
 *.DS_Store
 *.pyc
 *checkpoint.ipynb
+.ipynb_checkpoints/*
+pysar/.ipynb_checkpoints/*
 examples/*
 docs/workshop2017Miami.pptx
 docs/resources/logo_red.png
@@ -17,7 +19,6 @@ modis
 
 docs/logo2.ai
 docs/Yunjun_logo.ai
-pysar/tsview_dev_yunjun.py
 docs/resources/visit_location.png
 _includes/test 2.html
 _includes/test.html

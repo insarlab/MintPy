@@ -122,11 +122,11 @@ def get_auto_path(processor, project_name, template=dict()):
     if processor in ['roipac', 'gamma']:
         m_date12 = get_master_date12(project_dir, processor=processor)
         if m_date12 and processor == 'roipac':
-            # nlooks in case both radar_2rlks.hgt and radar_8rlks.hgt exist.
+            # determine nlooks in case both radar_2rlks.hgt and radar_8rlks.hgt exist.
             lookup_file = os.path.join(project_dir, 'PROCESS/GEO/geo_{}/geomap*.trans'.format(m_date12))
-            lookup_file = glob.glob(lookup_file)[0]
-            lks = re.findall('_\d+rlks', lookup_file)[0]
-            auto_path_dict[prefix+'demFile'] = 'radar{}.hgt'.format(lks)
+            lks = re.findall('_\d+rlks', glob.glob(lookup_file)[0])[0]
+            dem_file = os.path.join('${PROJECT_DIR}/PROCESS/DONE/*${m_date12}*', 'radar{}.hgt'.format(lks))
+            auto_path_dict[prefix+'demFile'] = dem_file
 
     var_dict = {}
     var_dict['${PROJECT_DIR}'] = project_dir
