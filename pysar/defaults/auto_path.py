@@ -45,7 +45,7 @@ pysar.load.processor      = roipac
 pysar.load.unwFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*.unw
 pysar.load.corFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*.cor
 pysar.load.connCompFile   = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*snap_connect.byt
-pysar.load.intFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/filt*rlks.int
+pysar.load.intFile        = None
 
 pysar.load.demFile        = ${PROJECT_DIR}/PROCESS/DONE/*${m_date12}*/radar_*rlks.hgt
 pysar.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/GEO/geo_${m_date12}/geomap_*rlks.trans
@@ -61,7 +61,7 @@ pysar.load.processor      = gamma
 pysar.load.unwFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/diff*rlks.unw
 pysar.load.corFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/*filt*rlks.cor
 pysar.load.connCompFile   = None
-pysar.load.intFile        = ${PROJECT_DIR}/PROCESS/DONE/IFG*/diff*rlks.int
+pysar.load.intFile        = None
 
 pysar.load.demFile        = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.rdc.dem
 pysar.load.lookupYFile    = ${PROJECT_DIR}/PROCESS/SIM/sim_${m_date12}/sim*rlks.UTM_TO_RDC
