@@ -58,8 +58,8 @@ def get_lat_lon(meta, box=None):
     lon_step = float(meta['X_STEP'])
     lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
     lon0 = float(meta['X_FIRST']) + lon_step * box[0]
-    lat1 = lat0 + lat_step * lat_num
-    lon1 = lon0 + lon_step * lon_num
+    lat1 = lat0 + lat_step * (lat_num - 1)
+    lon1 = lon0 + lon_step * (lon_num - 1)
     lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
                           lon0:lon1:lon_num*1j]
     return lats, lons
@@ -106,16 +106,16 @@ def generate_description_string(coords, yx, v, vstd, disp, tcoh=None):
     return des_str
 
 
-def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(5, 0.2)):
+def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(0.18, 3.6), font_size=12):
     fig, cax = plt.subplots(figsize=figsize)
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
-    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='horizontal')
-    cbar.set_label('{} [{}]'.format("Mean LOS velocity", "cm/year"), fontsize=12)
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='vertical')
+    cbar.set_label('{} [{}]'.format("Mean LOS velocity", "cm/year"), fontsize=font_size)
     cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
     cbar.update_ticks()
-    cbar.ax.tick_params(which='both', labelsize=12)
+    cbar.ax.tick_params(which='both', labelsize=font_size)
     fig.patch.set_facecolor('white')
-    fig.patch.set_alpha(0.7)
+    fig.patch.set_alpha(0.5)
     print('writing', out_file)
     fig.savefig(out_file, bbox_inches='tight', facecolor=fig.get_facecolor(), dpi=300)
     return out_file
@@ -409,21 +409,21 @@ def main(iargs=None):
     # 3.1 Create Screen Overlay element for colorbar
     cbar_png_file = plot_colorbar(out_file=cbar_png_file, vmin=inps.vlim[0], vmax=inps.vlim[1], cmap=inps.colormap)
 
-    legend_overlay = KML.ScreenOverlay(
-        KML.name('Legend'),
+    cbar_overlay = KML.ScreenOverlay(
+        KML.name('Colorbar'),
         KML.Icon(
             KML.href("{}".format(cbar_png_file)),
             KML.viewBoundScale(0.75)
         ),
-        KML.overlayXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
-        KML.screenXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
-        KML.size(x="300", y="0", xunits="pixel", yunits="pixel"),
+        KML.overlayXY(x="0", y="0", xunits="fraction", yunits="fraction"),
+        KML.screenXY(x="0", y="0", xunits="fraction", yunits="fraction"),
+        KML.size(x="0", y="250", xunits="pixel", yunits="pixel"),
         KML.rotation(0),
         KML.visibility(1),
         KML.open(0)
     )
-    print('add legend.')
-    kml_master_document.append(legend_overlay)
+    print('add colorbar.')
+    kml_master_document.append(cbar_overlay)
 
     # 3.2 Generate the placemark for the Reference Pixel
     colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
