@@ -91,16 +91,18 @@ def split_into_sub_boxes(ds_shape, win_size=300, print_msg=True):
     return box_list
 
 
-def generate_description_string(coords, yx, v, vstd, disp, tcoh=None):
-    des_str =  "Latitude: {:.6f}˚ <br /> \n".format(coords[0])
+def generate_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=4):
+    des_str = "<font size={}>".format(font_size)
+    des_str += "Latitude: {:.6f}˚ <br /> \n".format(coords[0])
     des_str += "Longitude: {:.6f}˚ <br /> \n".format(coords[1])
     des_str += "Row: {:.0f} <br /> \n".format(yx[0])
     des_str += "Column: {:.0f} <br /> \n".format(yx[1])
     des_str += " <br /> \n"
-    des_str += "Mean LOS velocity: {:.2f} +/- {:.2f} cm/year <br /> \n".format(v, vstd)
-    des_str += "Cumulative displacement: {:.2f} cm <br /> \n".format(disp)
+    des_str += "Mean LOS velocity [cm/year]: {:.2f} +/- {:.2f} <br /> \n".format(v, vstd)
+    des_str += "Cumulative displacement [cm]: {:.2f} <br /> \n".format(disp)
     if tcoh is not None:
         des_str += "Temporal coherence: {:.2f} <br /> \n".format(tcoh)
+    des_str += "</font>"
     des_str += " <br />  <br /> "
     des_str += "\n\n"
     return des_str
@@ -226,7 +228,7 @@ def create_kml_document(inps, step, dot_file, dygraph_file):
 
                     js_data_string += "\"\",\n" \
                                       "{" \
-                                          "width: 700,\n" \
+                                          "width: 500,\n" \
                                           "height: 300,\n" \
                                           "axes: {\n" \
                                               "x: {\n" \
@@ -251,12 +253,12 @@ def create_kml_document(inps, step, dot_file, dygraph_file):
                                           "},\n" \
                                           "valueRange: [" + str(ts_min) + "," + str(ts_max) + "],\n" \
                                           "ylabel: 'LOS displacement [cm]',\n" \
-                                          "yLabelWidth: 18,\n" \
+                                          "yLabelWidth: 16,\n" \
                                           "drawPoints: true,\n" \
                                           "strokeWidth: 0,\n" \
                                           "pointSize: 3,\n" \
                                           "highlightCircleSize: 6,\n" \
-                                          "axisLabelFontSize: 12,\n" \
+                                          "axisLabelFontSize: 13,\n" \
                                           "xRangePad: 30,\n" \
                                           "yRangePad: 30,\n" \
                                           "hideOverlayOnMouseOut: false,\n" \
