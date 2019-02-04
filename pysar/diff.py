@@ -125,6 +125,7 @@ def diff_file(file1, file2, outFile=None, force=False):
         mask = data == 0.
         data[dateShared] -= data2
         data[mask] = 0.               # Do not change zero phase value
+        del data2
         writefile.write(data, out_file=outFile, ref_file=file1)
 
     elif all(i == 'ifgramStack' for i in [k1, k2]):
