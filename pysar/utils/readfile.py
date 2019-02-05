@@ -969,34 +969,6 @@ def attribute_gamma2roipac(par_dict_in):
     return par_dict
 
 
-def standardize_metadata_isce(metadata_in, dates=[], baselineDict={}):
-    """Grab metadata value in roipac and unavco-insar-archive key names"""
-    # convert metadata key names based on isce2roipacMetadataKeys
-    metadata = standardize_metadata(metadata_in)
-
-    metadata['beam_mode'] = 'IW'
-    metadata['PROCESSOR'] = 'isce'
-    metadata['ANTENNA_SIDE'] = '-1'
-
-    # get pixel_size for multilooked data
-    if all(i in metadata.keys() for i in ['rangePixelSize', 'RLOOKS']):
-        metadata['RANGE_PIXEL_SIZE'] = str(float(metadata['rangePixelSize']) * int(metadata['RLOOKS']))
-    if all(i in metadata.keys() for i in ['azimuthPixelSize', 'ALOOKS']):
-        metadata['AZIMUTH_PIXEL_SIZE'] = str(float(metadata['azimuthPixelSize']) * int(metadata['ALOOKS']))
-
-    if dates:
-        metadata['DATE12'] = '{}-{}'.format(dates[0][2:], dates[1][2:])
-        if baselineDict:
-            bperp = baselineDict['bperp'][dates[1]] - baselineDict['bperp'][dates[0]]
-            bpar  = baselineDict['bpar'][dates[1]]  - baselineDict['bpar'][dates[0]]
-            metadata['P_BASELINE_TOP_HDR']    = str(bperp)
-            metadata['P_BASELINE_BOTTOM_HDR'] = str(bperp)
-            metadata['H_BASELINE_TOP_HDR']    = str(bpar)
-            metadata['H_BASELINE_BOTTOM_HDR'] = str(bpar)
-
-    return metadata
-
-
 #########################################################################
 def read_binary(fname, box=None, data_type='float32', byte_order='l',
                 num_band=1, band_interleave='BIL', band=1, cpx_band='phase'):
