@@ -108,10 +108,10 @@ def generate_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=
     return des_str
 
 
-def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(5, 0.2)):
+def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(0.18, 3.6)):
     fig, cax = plt.subplots(figsize=figsize)
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
-    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='horizontal')
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='vertical')
     cbar.set_label('{} [{}]'.format("Mean LOS velocity", "cm/year"), fontsize=12)
     cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
     cbar.update_ticks()
