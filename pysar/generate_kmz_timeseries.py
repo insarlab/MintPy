@@ -58,8 +58,8 @@ def get_lat_lon(meta, box=None):
     lon_step = float(meta['X_STEP'])
     lat0 = float(meta['Y_FIRST']) + lat_step * box[1]
     lon0 = float(meta['X_FIRST']) + lon_step * box[0]
-    lat1 = lat0 + lat_step * lat_num
-    lon1 = lon0 + lon_step * lon_num
+    lat1 = lat0 + lat_step * (lat_num - 1)
+    lon1 = lon0 + lon_step * (lon_num - 1)
     lats, lons = np.mgrid[lat0:lat1:lat_num*1j,
                           lon0:lon1:lon_num*1j]
     return lats, lons
@@ -91,16 +91,18 @@ def split_into_sub_boxes(ds_shape, win_size=300, print_msg=True):
     return box_list
 
 
-def generate_description_string(coords, yx, v, vstd, disp, tcoh=None):
-    des_str =  "Latitude: {:.6f}˚ <br /> \n".format(coords[0])
+def generate_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=4):
+    des_str = "<font size={}>".format(font_size)
+    des_str += "Latitude: {:.6f}˚ <br /> \n".format(coords[0])
     des_str += "Longitude: {:.6f}˚ <br /> \n".format(coords[1])
     des_str += "Row: {:.0f} <br /> \n".format(yx[0])
     des_str += "Column: {:.0f} <br /> \n".format(yx[1])
     des_str += " <br /> \n"
-    des_str += "Mean LOS velocity: {:.2f} +/- {:.2f} cm/year <br /> \n".format(v, vstd)
-    des_str += "Cumulative displacement: {:.2f} cm <br /> \n".format(disp)
+    des_str += "Mean LOS velocity [cm/year]: {:.2f} +/- {:.2f} <br /> \n".format(v, vstd)
+    des_str += "Cumulative displacement [cm]: {:.2f} <br /> \n".format(disp)
     if tcoh is not None:
         des_str += "Temporal coherence: {:.2f} <br /> \n".format(tcoh)
+    des_str += "</font>"
     des_str += " <br />  <br /> "
     des_str += "\n\n"
     return des_str
@@ -414,21 +416,21 @@ def main(iargs=None):
     # 3.1 Create Screen Overlay element for colorbar
     cbar_png_file = plot_colorbar(out_file=cbar_png_file, vmin=inps.vlim[0], vmax=inps.vlim[1], cmap=inps.colormap)
 
-    legend_overlay = KML.ScreenOverlay(
-        KML.name('Legend'),
+    cbar_overlay = KML.ScreenOverlay(
+        KML.name('Colorbar'),
         KML.Icon(
             KML.href("{}".format(cbar_png_file)),
             KML.viewBoundScale(0.75)
         ),
-        KML.overlayXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
-        KML.screenXY(x="0", y="0", xunits="pixels", yunits="insetPixels"),
-        KML.size(x="300", y="0", xunits="pixel", yunits="pixel"),
+        KML.overlayXY(x="0", y="0", xunits="fraction", yunits="fraction"),
+        KML.screenXY(x="0", y="0", xunits="fraction", yunits="fraction"),
+        KML.size(x="0", y="250", xunits="pixel", yunits="pixel"),
         KML.rotation(0),
         KML.visibility(1),
         KML.open(0)
     )
-    print('add legend.')
-    kml_master_document.append(legend_overlay)
+    print('add colorbar.')
+    kml_master_document.append(cbar_overlay)
 
     # 3.2 Generate the placemark for the Reference Pixel
     colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
