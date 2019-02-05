@@ -5,7 +5,7 @@
        
 ## InSAR time series analysis in Python
    
-PySAR is a open-source package in Python for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ISCE, Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs. PySAR is built on the initial work done by [Scott Baker](https://github.com/bakerunavco). [Alfredo Terrero](https://github.com/stackTom) linked PySAR product with [InSAR Web Viewer](http://insarmaps.miami.edu).      
+PySAR is a open-source package in Python for InSAR (Interferometric Synthetic Aperture Radar) time series analysis. It reads stack of interferograms (coregistered and unwrapped) in ISCE, Gamma or ROI_PAC format, and produces three dimensional (2D in space and 1D in time) ground displacement. It includes a routine time series analysis (pysarApp.py) and some independent toolboxs.      
    
 
 ### 1. [Download](https://github.com/yunjunz/PySAR/blob/master/docs/download.md)    
@@ -22,14 +22,14 @@ Run pysarApp.py -h see the processing options.
 Run pysarApp.py -H see the default template options with explanation.   
 Run pysarApp.py -g to generate a default template file and see the detailed settings.   
 
-#### Example: [Kuju Volcano example with ALOS data](https://github.com/yunjunz/PySAR/wiki/Example)   
+#### Example: [Kuju Volcano with ALOS data](https://github.com/yunjunz/PySAR/wiki/Example)   
 
-Download the test data: [Download Link](https://miami.app.box.com/v/pysar-demo-KujuAlosAT422F650) and unzip it. Run pysarApp.py with setting file as below:   
-
+    wget https://zenodo.org/record/2557863/files/KujuAlosAT422F650.tar.xz
+    tar -xJf KujuAlosAT422F650.tar.xz
     cd ~/KujuAlosAT422F650/PYSAR
     pysarApp.py KujuAlosAT422F650.txt
 
-Inside pysarApp.py, it reads the unwrapped interferograms, refernces all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscilator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), corrects DEM error, removes phase ramps (if it has been asked for),... and finally estimates the velocity.   
+Inside pysarApp.py, it reads the unwrapped interferograms, refernces all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscilator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity.   
 
 Check **./PIC** folder for auto generated figures. Use view.py to plot 2D image and tsview.py to plot the time-series for each point. More details about this test data is in [here](https://github.com/yunjunz/PySAR/wiki/Example).    
 
@@ -52,6 +52,15 @@ PySAR is a toolbox with a lot of individual utility scripts, highly modulized in
 
 Join our google group [https://groups.google.com/forum/#!forum/py-sar](https://groups.google.com/forum/#!forum/py-sar) to ask questions, get notice of latest features pushed to you!
 
+### Contributors    
+
+* Zhang Yunjun
+* Heresh Fattahi
+* Scott Baker
+* Joshua Zahner
+* Alfredo Terreco
+* David Grossman
+* Yunmeng Cao
 
 ### License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fyunjunz%2FPySAR?ref=badge_large)
