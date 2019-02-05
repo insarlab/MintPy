@@ -418,13 +418,13 @@ def split_into_boxes(dataset_shape, chunk_size=100e6, print_msg=True):
 
 def subsplit_boxes(box, num_subboxes=10):
     x0, y0, x1, y1 = box
-    x_diff = x1 - x0
-    step = x_diff // num_subboxes
+    y_diff = y1 - y0
+    step = y_diff // num_subboxes
     subboxes = []
     for i in range(num_subboxes):
         start = i * step
-        end = (i + 1) * step if i != (num_subboxes - 1) else x_diff
-        subboxes.append([start, y0, end, y1])
+        end = (i + 1) * step if i != (num_subboxes - 1) else y_diff
+        subboxes.append([x0, start, x1, end])
     return subboxes
 
 
