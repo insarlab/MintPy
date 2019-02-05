@@ -729,7 +729,11 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         # Weighted Inversion pixel by pixel
         print('inverting network of interferograms into time-series ...')
         start_time = time.time()
+        mid_start = time.time()
         for i in range(num_pixel2inv):
+            if i % 100 == 0:
+                print(i, time.time() - mid_start)
+                mid_start = time.time()
             idx = idx_pixel2inv[i]
             tsi, tcohi, num_ifgi = estimate_timeseries(A, B, tbase_diff,
                                                        ifgram=pha_data[:, idx],
