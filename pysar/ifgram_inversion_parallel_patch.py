@@ -879,8 +879,8 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
                 future = client.submit(parallel_ifgram_inversion_patch, data)
                 futures.append(future)
 
-            for future in as_completed(futures):
-                tsi, temp_cohi, ts_stdi, ifg_numi, subbox = future.result()
+            for future, result in as_completed(futures, with_results=True):
+                tsi, temp_cohi, ts_stdi, ifg_numi, subbox = result
 
                 ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
                 ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
@@ -960,14 +960,16 @@ def main(inps):
 
 if __name__ == "__main__":
     NUM_WORKERS = 10
-    cluster = LSFCluster(project='insarlab',
-                     queue='general', memory='2 GB',
-                     cores=3, walltime='00:10',
+    cluster = LSFCluster(project='insarlab', name='pysar_worker_bee',
+                     queue='general', job_extra=['-R "rusage[mem=6400]"', "-o WORKER-%J.out"],
+                     local_directory= '/scratch/projects/insarlab/dwg11/',
+                     cores=1, walltime='00:30', memory='4GB',
                      python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
     cluster.scale(NUM_WORKERS)
     client = Client(cluster)
 
-    inps = Namespace(chunk_size=100000000.0, fast=False, ifgramStackFile='ifgramStackAlcedo.h5', maskDataset=None,
+    inps = Namespace(chunk_size=100000000.0, fast=False,
+              ifgramStackFile='/scratch/projects/insarlab/dwg11/parallel_data/ifgramStackAlcedo.h5', maskDataset=None,
               maskThreshold=0.4, minNormVelocity=False, minRedundancy=1.0,
               outfile=['timeseries.h5', 'temporalCoherence.h5'], parallel=False, ref_date=None, residualNorm='L2',
               skip_ref=False, skip_zero_phase=True, split_file=False, tempCohFile='temporalCoherence.h5',
