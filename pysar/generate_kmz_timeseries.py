@@ -33,7 +33,6 @@ def create_parser():
                            'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
     return parser
 
-
 def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
@@ -64,6 +63,14 @@ def get_lat_lon(meta, box=None):
                           lon0:lon1:lon_num*1j]
     return lats, lons
 
+def flatten_lalos(box, ts_obj, coords=None):
+    if coords is None:
+        lats, lons = get_lat_lon(ts_obj.metadata, box=box)
+
+    lats = sorted(lats.flatten())
+    lons = sorted(lons.flatten())
+    return lats, lons
+
 def split_into_sub_boxes(ds_shape, win_size=300, print_msg=True):
     """split input shape into multiple sub boxes
     Parameters: ds_shape : 2-tuple of int for the shape of whole dataset in (length, width)
@@ -91,6 +98,26 @@ def split_into_sub_boxes(ds_shape, win_size=300, print_msg=True):
     return box_list
 
 
+def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(0.18, 3.6)):
+    fig, cax = plt.subplots(figsize=figsize)
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='vertical')
+    cbar.set_label('{} [{}]'.format("Mean LOS velocity", "cm/year"), fontsize=12)
+    cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
+    cbar.update_ticks()
+    cbar.ax.tick_params(which='both', labelsize=12)
+    fig.patch.set_facecolor('white')
+    fig.patch.set_alpha(0.7)
+    print('writing', out_file)
+    fig.savefig(out_file, bbox_inches='tight', facecolor=fig.get_facecolor(), dpi=300)
+    return out_file
+
+def get_color_for_velocity(v, colormap, norm):
+    rgba = colormap(norm(v))  # get rgba color components for point velocity
+    hex = mpl.colors.to_hex([rgba[3], rgba[2], rgba[1], rgba[0]], keep_alpha=True)[1:]
+    return hex
+
+
 def generate_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=4):
     des_str = "<font size={}>".format(font_size)
     des_str += "Latitude: {:.6f}˚ <br /> \n".format(coords[0])
@@ -106,129 +133,6 @@ def generate_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=
     des_str += " <br />  <br /> "
     des_str += "\n\n"
     return des_str
-
-
-def plot_colorbar(out_file, vmin, vmax, cmap='jet', figsize=(0.18, 3.6)):
-    fig, cax = plt.subplots(figsize=figsize)
-    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)  # normalize velocity colors between 0.0 and 1.0
-    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation='vertical')
-    cbar.set_label('{} [{}]'.format("Mean LOS velocity", "cm/year"), fontsize=12)
-    cbar.locator = mpl.ticker.MaxNLocator(nbins=7)
-    cbar.update_ticks()
-    cbar.ax.tick_params(which='both', labelsize=12)
-    fig.patch.set_facecolor('white')
-    fig.patch.set_alpha(0.7)
-    print('writing', out_file)
-    fig.savefig(out_file, bbox_inches='tight', facecolor=fig.get_facecolor(), dpi=300)
-    return out_file
-
-
-def get_color_for_velocity(v, colormap, norm):
-    rgba = colormap(norm(v))  # get rgba color components for point velocity
-    hex = mpl.colors.to_hex([rgba[3], rgba[2], rgba[1], rgba[0]], keep_alpha=True)[1:]
-    return hex
-
-
-def create_kml_document(inps, step, dot_file, dygraph_file):
-
-    ## 1. read data
-    ts_obj = timeseries(inps.ts_file)
-    ts_obj.open()
-    length, width = ts_obj.length, ts_obj.width
-
-    box_list = split_into_sub_boxes((length, width))
-    kml_region_documents = []
-
-    for i in range(len(box_list)):
-        print(i)
-        box = box_list[i]
-
-        if box is None:
-            box = (0, 0, width, length)
-
-        length = box[3] - box[1]
-        width = box[2] - box[0]
-
-        # 1.1 Date
-        dates = np.array(ts_obj.times)  # 1D np.array of dates in datetime.datetime object in size of [num_date,]
-        dates = list(map(lambda d: d.strftime("%Y-%m-%d"), dates))
-        num_date = len(dates)
-
-        # 1.2 Spatial coordinates
-        lats, lons = get_lat_lon(ts_obj.metadata, box=box)
-        rows, cols = np.mgrid[box[1]:box[3] - 1:length * 1j, box[0]:box[2] - 1:width * 1j]
-
-        # 1.3 Velocity / time-series
-        print('read velocity data')
-        vel = readfile.read(inps.vel_file, datasetName='velocity', box=box)[0] * 100.
-        vel_std = readfile.read(inps.vel_file, datasetName='velocityStd', box=box)[0] * 100.
-        print('read time-series data')
-        ts_data = readfile.read(inps.ts_file, box=box)[0] * 100.
-        ts_data -= np.tile(ts_data[0, :, :], (ts_data.shape[0], 1, 1))  # enforce displacement starts from zero
-        print('read temporal coherence data')
-        temp_coh = readfile.read(inps.tcoh_file, box=box)[0]
-        mask = ~np.isnan(vel)
-
-        # data stats
-        ts_min = np.nanmin(ts_data)
-        ts_max = np.nanmax(ts_data)
-
-        ## 2. Create KML Document
-        print('create KML file.')
-        kml_document = KML.Document()
-
-        colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
-        norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
-
-        # 2.3 Data folder for all points
-
-        num_pixel = int(length / step) * int(width / step)
-        msg = "add point time-series data "
-        msg += "(select 1 out of every {} by {} pixels; select {} pixels in total) ...".format(step, step, num_pixel)
-        print(msg)
-
-        data_folder = KML.Folder(KML.name("Data"))
-        for i in range(0, length, step):
-            for j in range(0, width, step):
-                if mask[i, j]:  # add point if it's not marked as masked out
-                    lat = lats[i, j]
-                    lon = lons[i, j]
-                    row = rows[i, j]
-                    col = cols[i, j]
-                    ts = ts_data[:, i, j]
-                    v = vel[i, j]
-                    vstd = vel_std[i, j]
-                    tcoh = temp_coh[i, j]
-
-                    # Create KML icon style element
-                    style = KML.Style(
-                        KML.IconStyle(
-                            KML.color(get_color_for_velocity(v, colormap, norm)),
-                            KML.scale(0.5),
-                            KML.Icon(KML.href("../../{}".format(dot_file)))
-                        )
-                    )
-
-                    # Create KML point element
-                    point = KML.Point(KML.coordinates("{},{}".format(lon, lat)))
-
-                    js_data_string = generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min)
-
-                    # Create KML description element
-                    stats_info = generate_description_string((lat, lon), (row, col), v, vstd, ts[-1], tcoh=tcoh)
-                    description = KML.description(stats_info, js_data_string)
-
-                    # Crate KML Placemark element to hold style, description, and point elements
-                    placemark = KML.Placemark(style, description, point)
-                    # Append each placemark element to the KML document object
-                    data_folder.append(placemark)
-
-        kml_document.append(data_folder)
-
-        kml_region_documents.append(kml_document)
-
-    return kml_region_documents
-
 
 def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
     # Javascript to embed inside the description
@@ -287,36 +191,143 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
     return js_data_string
 
 
+def create_kml_document(inps, step, dot_file, dygraph_file):
+
+    ## 1. read data file into timeseries object
+    ts_obj = timeseries(inps.ts_file)
+    ts_obj.open()
+    length, width = ts_obj.length, ts_obj.width
+
+    box_list = split_into_sub_boxes((length, width))  # Create list of unique regions
+    kml_region_documents = []
+
+    for i in range(len(box_list)):
+        print(i)
+        box = box_list[i]
+
+        if box is None:
+            box = (0, 0, width, length)
+
+        length = box[3] - box[1]
+        width = box[2] - box[0]
+
+        # 1.1 Parse Date
+        dates = np.array(ts_obj.times)  # 1D np.array of dates in datetime.datetime object in size of [num_date,]
+        dates = list(map(lambda d: d.strftime("%Y-%m-%d"), dates))
+        num_date = len(dates)
+
+        # 1.2 Parse Spatial coordinates
+        lats, lons = get_lat_lon(ts_obj.metadata, box=box)
+        rows, cols = np.mgrid[box[1]:box[3] - 1:length * 1j, box[0]:box[2] - 1:width * 1j]
+
+        # 1.3 Read Velocity / time-series / temporal coherence data
+        print('read velocity data')
+        vel = readfile.read(inps.vel_file, datasetName='velocity', box=box)[0] * 100.
+        vel_std = readfile.read(inps.vel_file, datasetName='velocityStd', box=box)[0] * 100.
+        print('read time-series data')
+        ts_data = readfile.read(inps.ts_file, box=box)[0] * 100.
+        ts_data -= np.tile(ts_data[0, :, :], (ts_data.shape[0], 1, 1))  # enforce displacement starts from zero
+        print('read temporal coherence data')
+        temp_coh = readfile.read(inps.tcoh_file, box=box)[0]
+        mask = ~np.isnan(vel)
+
+        # 1.4 Get timeseries min and max values
+        ts_min = np.nanmin(ts_data)
+        ts_max = np.nanmax(ts_data)
+
+        ## 2. Create KML Document
+        print('create KML file.')
+        kml_document = KML.Document()
+
+        # 2.1 Set and normalize colormap to defined vlim
+        colormap = mpl.cm.get_cmap(inps.colormap)
+        norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
+
+        # 2.2 Set number of pixels to use
+        num_pixel = int(length / step) * int(width / step)
+        msg = "add point time-series data "
+        msg += "(select 1 out of every {} by {} pixels; select {} pixels in total) ...".format(step, step, num_pixel)
+        print(msg)
+
+        # 2.3 Create data folder for all points
+        data_folder = KML.Folder(KML.name("Data"))
+        for i in range(0, length, step):
+            for j in range(0, width, step):
+                if mask[i, j]:  # add point if it's not marked as masked out
+                    lat = lats[i, j]
+                    lon = lons[i, j]
+                    row = rows[i, j]
+                    col = cols[i, j]
+                    ts = ts_data[:, i, j]
+                    v = vel[i, j]
+                    vstd = vel_std[i, j]
+                    tcoh = temp_coh[i, j]
+
+                    # 2.3.1 Create KML icon style element
+                    style = KML.Style(
+                        KML.IconStyle(
+                            KML.color(get_color_for_velocity(v, colormap, norm)),
+                            KML.scale(0.5),
+                            KML.Icon(KML.href("../../{}".format(dot_file)))
+                        )
+                    )
+
+                    # 2.3.2 Create KML point element
+                    point = KML.Point(KML.coordinates("{},{}".format(lon, lat)))
+
+                    js_data_string = generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min)
+
+                    # 2.3.3 Create KML description element
+                    stats_info = generate_description_string((lat, lon), (row, col), v, vstd, ts[-1], tcoh=tcoh)
+                    description = KML.description(stats_info, js_data_string)
+
+                    # 2.3.4 Crate KML Placemark element to hold style, description, and point elements
+                    placemark = KML.Placemark(style, description, point)
+
+                    # 2.3.5 Append each placemark element to the KML document object
+                    data_folder.append(placemark)
+
+        # 2.4 Append data folder to KML document
+        kml_document.append(data_folder)
+
+        # 2.5 Append KML document to list of regionalized documents
+        kml_region_documents.append(kml_document)
+
+    return kml_region_documents
+
 def create_regionalized_networklinks_file(regions, ts_obj, kml_data_files_directory, links_directory, output_file):
 
-    # 5.4 create directory to store data KML files
+    ## 1. Create directory to store regioalized KML data files
     cmdDirectory = "cd {}; mkdir {}/".format(kml_data_files_directory, links_directory)
     print("Creating KML links directory")
     os.system(cmdDirectory)
 
+    ## 2. Create master KML element and KML Document element
     kml = KML.kml()
-
     kml_document = KML.Document()
 
-    box_list = split_into_sub_boxes((ts_obj.length, ts_obj.width))
+    ## 3. Define min and max levels of detail for large vs small data
+    if "large" in links_directory:
+        min_lod = 1500
+        max_lod = -1
+    else:
+        min_lod = 0
+        max_lod = 1500
 
+    ## 4. Define list of regionalized boxes and list of number of regions
+    box_list = split_into_sub_boxes((ts_obj.length, ts_obj.width))
     region_nums = list(range(0, len(regions)))
 
-    if "large" in links_directory:
-        minLod = 1500
-        maxLod = -1
-    else:
-        minLod = 0
-        maxLod = 1500
-
+    ## 5. Generate a new network link element for each region
     for ele in zip(regions, box_list, region_nums):
 
-        box = ele[1]
         region_document = ele[0]
+        box = ele[1]
         num = ele[2]
 
         kml_file = "region_{}.kml".format(num)
 
+        ## 5.1 Write the first region_document to a file and move it to the proper subdircetory
         kml_1 = KML.kml()
         kml_1.append(region_document)
         print('writing ' + kml_file)
@@ -327,17 +338,17 @@ def create_regionalized_networklinks_file(regions, ts_obj, kml_data_files_direct
         print("Moving KML Data Files to directory")
         os.system(cmdMove)
 
-        lats, lons = get_lat_lon(ts_obj.metadata, box=box)
-        lats = sorted(lats.flatten())
-        lons = sorted(lons.flatten())
+        ## 5.2 Flatten lats and lons data
+        lats, lons = flatten_lalos(box, ts_obj)
 
+        ## 5.3 Define new NetworkLink element
         network_link = KML.NetworkLink(
             KML.name('Region {}'.format(num)),
             KML.visibility(1),
             KML.Region(
                 KML.Lod(
-                    KML.minLodPixels(minLod),
-                    KML.maxLodPixels(maxLod)
+                    KML.minLodPixels(min_lod),
+                    KML.maxLodPixels(max_lod)
                 ),
                 KML.LatLonAltBox(
                     KML.north(lats[0] + 0.5),
@@ -352,10 +363,11 @@ def create_regionalized_networklinks_file(regions, ts_obj, kml_data_files_direct
             )
         )
 
+        ## 5.4 Append new NetworkLink to KML document
         kml_document.append(network_link)
 
+    ## 6. Write the full KML document to the output file and move it to the proper directory
     kml.append(kml_document)
-    #print('writing ' + kml_file)
     with open(output_file, 'w') as f:
         f.write(etree.tostring(kml, pretty_print=True).decode('utf-8'))
 
@@ -365,74 +377,34 @@ def create_regionalized_networklinks_file(regions, ts_obj, kml_data_files_direct
 
     return output_file
 
+def generate_network_link(name, kml_data_files_directory, kml_file_sm, ts_obj):
 
+    lats, lons = flatten_lalos(None, ts_obj)
 
-
-def main(iargs=None):
-
-    inps = cmd_line_parse(iargs)
-
-    out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
-
-    kml_data_files_directory = "kml_data_files"
-    kml_file_master = '{}_master.kml'.format(out_name_base)
-    kml_file_sm = '{}_sm.kml'.format(out_name_base)
-    kml_file_lg = '{}_lg.kml'.format(out_name_base)
-    kmz_file = '{}.kmz'.format(out_name_base)
-
-    cbar_png_file = '{}_cbar.png'.format(out_name_base)
-    dygraph_file = "dygraph-combined.js"
-    dot_file = "shaded_dot.png"
-    star_file = "star.png"
-
-    # 5.4 create directory to store data KML files
-    cmdDirectory = "mkdir {}/".format(kml_data_files_directory)
-    print("Creating KML Data File directory")
-    os.system(cmdDirectory)
-
-    small_dset_step = 20    # Increase this for coarser resolution in small dset
-    large_dset_step = 3     # Decrease this for finer resolution in large dset
-
-    ## 1. read data
-    ts_obj = timeseries(inps.ts_file)
-    ts_obj.open()
-
-    lats, lons = get_lat_lon(ts_obj.metadata)
-
-    vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
-    # Set min/max velocity for colormap
-    if inps.vlim is None:
-        inps.vlim = [np.nanmin(vel), np.nanmax(vel)]
-
-    ## 2. Generate large and small KML files for different view heights
-    kml_documents_sm = create_kml_document(inps, small_dset_step, dot_file, dygraph_file)
-    kml_documents_lg = create_kml_document(inps, large_dset_step, dot_file, dygraph_file)
-
-    ## 3. Create master KML file with network links to data KML files
-    kml_master = KML.kml()
-
-    kml_master_document = KML.Document()
-
-    # 3.1 Create Screen Overlay element for colorbar
-    cbar_png_file = plot_colorbar(out_file=cbar_png_file, vmin=inps.vlim[0], vmax=inps.vlim[1], cmap=inps.colormap)
-
-    cbar_overlay = KML.ScreenOverlay(
-        KML.name('Colorbar'),
-        KML.Icon(
-            KML.href("{}".format(cbar_png_file)),
-            KML.viewBoundScale(0.75)
-        ),
-        KML.overlayXY(x="0", y="0", xunits="fraction", yunits="fraction"),
-        KML.screenXY(x="0", y="0", xunits="fraction", yunits="fraction"),
-        KML.size(x="0", y="250", xunits="pixel", yunits="pixel"),
-        KML.rotation(0),
+    network_link = KML.NetworkLink(
+        KML.name(name),
         KML.visibility(1),
-        KML.open(0)
+        KML.Region(
+            KML.Lod(
+                KML.minLodPixels(0),
+                KML.maxLodPixels(1800)
+            ),
+            KML.LatLonAltBox(
+                KML.north(lats[-1] + 0.5),
+                KML.south(lats[0] - 0.5),
+                KML.east(lons[-1] + 0.5),
+                KML.west(lons[0] - 0.5)
+            )
+        ),
+        KML.Link(
+            KML.href("{}/{}".format(kml_data_files_directory, kml_file_sm)),
+            KML.viewRefreshMode('onRegion')
+        )
     )
-    print('add colorbar.')
-    kml_master_document.append(cbar_overlay)
+    return network_link
 
-    # 3.2 Generate the placemark for the Reference Pixel
+def create_reference_point_element(inps, lats, lons, star_file, ts_obj):
+
     colormap = mpl.cm.get_cmap(inps.colormap)  # set colormap
     norm = mpl.colors.Normalize(vmin=inps.vlim[0], vmax=inps.vlim[1])
 
@@ -454,63 +426,93 @@ def main(iargs=None):
             KML.coordinates("{}, {}".format(ref_lalo[1], ref_lalo[0]))
         )
     )
+
+    return reference_point
+
+def generate_cbar_element(cbar_png_file, inps):
+    cbar_png_file = plot_colorbar(out_file=cbar_png_file, vmin=inps.vlim[0], vmax=inps.vlim[1], cmap=inps.colormap)
+    cbar_overlay = KML.ScreenOverlay(
+        KML.name('Colorbar'),
+        KML.Icon(
+            KML.href("{}".format(cbar_png_file)),
+            KML.viewBoundScale(0.75)
+        ),
+        KML.overlayXY(x="0", y="0", xunits="fraction", yunits="fraction"),
+        KML.screenXY(x="0", y="0", xunits="fraction", yunits="fraction"),
+        KML.size(x="0", y="250", xunits="pixel", yunits="pixel"),
+        KML.rotation(0),
+        KML.visibility(1),
+        KML.open(0)
+    )
+    print('add colorbar.')
+    return cbar_overlay, cbar_png_file
+
+
+def main(iargs=None):
+
+    ## 1. Read command line variables
+    inps = cmd_line_parse(iargs)
+
+    ## 2. Define file names
+    out_name_base = plot.auto_figure_title(inps.ts_file, inps_dict=vars(inps))
+    kml_data_files_directory = "kml_data_files"
+    kml_file_master = '{}_master.kml'.format(out_name_base)
+    kml_file_sm = '{}_sm.kml'.format(out_name_base)
+    kml_file_lg = '{}_lg.kml'.format(out_name_base)
+    kmz_file = '{}.kmz'.format(out_name_base)
+    cbar_png_file = '{}_cbar.png'.format(out_name_base)
+    dygraph_file = "dygraph-combined.js"
+    dot_file = "shaded_dot.png"
+    star_file = "star.png"
+
+    # 3. Create subdirectory to store data KML files
+    cmdDirectory = "mkdir {}/".format(kml_data_files_directory)
+    print("Creating KML Data File directory")
+    os.system(cmdDirectory)
+
+    ## 4. read data
+    ts_obj = timeseries(inps.ts_file)
+    ts_obj.open()
+    lats, lons = get_lat_lon(ts_obj.metadata)
+
+    vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
+    # Set min/max velocity for colormap
+    if inps.vlim is None:
+        inps.vlim = [np.nanmin(vel), np.nanmax(vel)]
+
+    ## 5. Generate large and small KML files for different view heights
+    small_dset_step = 20  # Increase this for coarser resolution in small dset
+    large_dset_step = 3  # Decrease this for finer resolution in large dset
+    kml_documents_sm = create_kml_document(inps, small_dset_step, dot_file, dygraph_file)
+    kml_documents_lg = create_kml_document(inps, large_dset_step, dot_file, dygraph_file)
+
+    ## 6. Create master KML file with network links to data KML files
+    kml_master = KML.kml()
+    kml_master_document = KML.Document()
+
+    # 6.1 Create Overlay element for colorbar
+    cbar_overlay, cbar_png_file = generate_cbar_element(cbar_png_file, inps)
+    kml_master_document.append(cbar_overlay)
+
+    # 6.2 Generate the placemark for the Reference Pixel
+    reference_point = create_reference_point_element(inps, lats, lons, star_file, ts_obj)
     print('add reference point.')
     reference_folder = KML.Folder(KML.name("ReferencePoint"))
     reference_folder.append(reference_point)
     kml_master_document.append(reference_folder)
 
-    lats = sorted(lats.flatten())
-    lons = sorted(lons.flatten())
-
+    # 6.3 Create data folder to contain actual data elements
     data_folder = KML.Folder(KML.name("Data"))
 
+    # 6.3.1 Generate regionalized network links files for small and large data
     create_regionalized_networklinks_file(kml_documents_sm, ts_obj, kml_data_files_directory, "small_links_dir", kml_file_sm)
     create_regionalized_networklinks_file(kml_documents_lg, ts_obj, kml_data_files_directory, "large_links_dir", kml_file_lg)
 
-    # 3.4 Create network link to small KML file
-    network_link_sm = KML.NetworkLink(
-                            KML.name('20 by 20'),
-                            KML.visibility(1),
-                            KML.Region(
-                                KML.Lod(
-                                    KML.minLodPixels(0),
-                                    KML.maxLodPixels(1800)
-                                ),
-                                KML.LatLonAltBox(
-                                    KML.north(lats[-1]+0.5),
-                                    KML.south(lats[0]-0.5),
-                                    KML.east(lons[-1]+0.5),
-                                    KML.west(lons[0]-0.5)
-                                )
-                            ),
-                            KML.Link(
-                                KML.href("{}/{}".format(kml_data_files_directory, kml_file_sm)),
-                                KML.viewRefreshMode('onRegion')
-                            )
-                      )
+    # 6.3.2 Create network links for small and large file
+    network_link_sm = generate_network_link("20 by 20", kml_data_files_directory, kml_file_sm, ts_obj)
+    network_link_lg = generate_network_link("3 by 3", kml_data_files_directory, kml_file_lg, ts_obj)
 
-    # 3.4 Create network link to large KML file
-    network_link_lg = KML.NetworkLink(
-                            KML.name('3 by 3'),
-                            KML.visibility(1),
-                            KML.Region(
-                                KML.Lod(
-                                    KML.minLodPixels(1800),
-                                    KML.maxLodPixels(-1)
-                                ),
-                                KML.LatLonAltBox(
-                                    KML.north(lats[-1] + 0.5),
-                                    KML.south(lats[0] - 0.5),
-                                    KML.east(lons[-1] + 0.5),
-                                    KML.west(lons[0] - 0.5)
-                                )
-                            ),
-                            KML.Link(
-                                KML.href("{}/{}".format(kml_data_files_directory, kml_file_lg)),
-                                KML.viewRefreshMode('onRegion')
-                            )
-                        )
-
+    # 6.3.3 Append network links to data folder
     data_folder.append(network_link_sm)
     data_folder.append(network_link_lg)
 
@@ -519,43 +521,43 @@ def main(iargs=None):
     kml_master.append(kml_master_document)
 
 
-    ## 4 Write KML files
-
-    # 4.3 write master KML file
+    ## 7 Write master KML file
     print('writing ' + kml_file_master)
     with open(kml_file_master, 'w') as f:
         f.write(etree.tostring(kml_master, pretty_print=True).decode('utf-8'))
 
 
-    ## 5 Copy auxiliary files
-    # 5.1 shaded_dot file
+    ## 8 Copy auxiliary files
+
+    # 8.1 shaded_dot file
     dot_path = os.path.join(os.path.dirname(__file__), "utils/resources", dot_file)
     cmdDot = "cp {} {}".format(dot_path, dot_file)
     print("copying {} for point.".format(dot_file))
     os.system(cmdDot)
 
-    # 5.2 star file
+    # 8.2 star file
     star_path = os.path.join(os.path.dirname(__file__), "utils/resources", star_file)
     cmdStar = "cp {} {}".format(star_path, star_file)
     print("copying {} for reference point.".format(star_file))
     os.system(cmdStar)
 
-    # 5.3 dygraph-combined.js file
+    # 8.3 dygraph-combined.js file
     dygraph_path = os.path.join(os.path.dirname(__file__), "utils/resources", dygraph_file)
     cmdDygraph = "cp {} {}".format(dygraph_path, dygraph_file)
     print("copying {} for interactive plotting.".format(dygraph_file))
     os.system(cmdDygraph)
 
-    # 5.5 move data KML files into new directory
+    # 8.4 move data KML files into new directory
     cmdMove = "mv {sm} {dir}/{sm}; mv {lg} {dir}/{lg};".format(sm=kml_file_sm, dir=kml_data_files_directory, lg=kml_file_lg)
     print("Moving KML Data Files to directory")
     os.system(cmdMove)
 
-    ## 6 Generate KMZ file
+    ## 9. Generate KMZ file
     cmdKMZ = 'zip -r {} {} {} {} {} {} {}'.format(kmz_file, kml_data_files_directory, kml_file_master, cbar_png_file, dygraph_file, dot_file, star_file)
     print('writing {}\n{}'.format(kmz_file, cmdKMZ))
     os.system(cmdKMZ)
 
+    # 9.1 Remove extra files from file tree after KMZ generation
     cmdClean = 'rm -r {} {} {} {} {} {}'.format(kml_data_files_directory, kml_file_master, cbar_png_file, dygraph_file, dot_file, star_file)
     os.system(cmdClean)
 
