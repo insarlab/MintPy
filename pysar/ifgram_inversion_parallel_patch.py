@@ -819,7 +819,7 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
     print('number of columns : {}'.format(width))
 
     # split ifgram_file into blocks to save memory
-    box_list = split_into_boxes(dataset_shape=stack_obj.get_size(), chunk_size=10e6)
+    box_list = split_into_boxes(dataset_shape=stack_obj.get_size(), chunk_size=inps.chunk_size)
     num_box = len(box_list)
     if inps.split_file:
         # split ifgram_file into small files and write each of them
