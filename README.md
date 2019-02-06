@@ -22,7 +22,7 @@ Run pysarApp.py -h see the processing options.
 Run pysarApp.py -H see the default template options with explanation.   
 Run pysarApp.py -g to generate a default template file and see the detailed settings.   
 
-#### Example: [Kuju Volcano with ALOS data](https://github.com/yunjunz/PySAR/wiki/Example)   
+#### Example: [Kuju Volcano with ALOS data](https://github.com/yunjunz/PySAR/wiki/Example) (~240M in size)
 
     wget https://zenodo.org/record/2557863/files/KujuAlosAT422F650.tar.xz
     tar -xvJf KujuAlosAT422F650.tar.xz
@@ -60,7 +60,7 @@ Join our google group [https://groups.google.com/forum/#!forum/py-sar](https://g
 * Joshua Aaron Zahner
 * Alfredo Terreco
 * David W Grossman
-* _other commmunity members_
+* [_other commmunity members_](https://github.com/yunjunz/PySAR/graphs/contributors)
 
 
 ### License
