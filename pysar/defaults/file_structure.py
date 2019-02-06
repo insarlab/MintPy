@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # File Structure used by Geodesy Lab, University of Miami, Miami, FL
-# Author:  Zhang Yunjun, 2018 May
+# Author:  Zhang Yunjun, May 2018
+
 
 project_structure_roipac = """#/sratch/projects/insarlab/$USER - high speed disk for data processing
 /$PROJECT_NAME   #basename of template file, e.g. GalapagosT133F7160_7180AlosA
