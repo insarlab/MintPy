@@ -416,7 +416,20 @@ def split_into_boxes(dataset_shape, chunk_size=100e6, print_msg=True):
         box_list.append(box)
     return box_list
 
-def subsplit_boxes(box, num_subboxes=10):
+def subsplit_boxes(box, num_subboxes=10, dimension='y'):
+    """
+
+    :param box:
+    :param num_subboxes:
+    :param dimension: 'x' or 'y'
+    :return:
+    """
+
+    # Flip x and y coordinates if splitting along 'x' dimension
+    if dimension == 'x':
+        x0, y0, x1, y1 = box
+        box = y0, x0, y1, x1
+
     x0, y0, x1, y1 = box
     y_diff = y1 - y0
     subboxes = []
@@ -866,7 +879,7 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
             if num_box > 1:
                 print('\n------- Processing Patch {} out of {} --------------'.format(i + 1, num_box))
 
-            subboxes = subsplit_boxes(box_list[i], num_subboxes= NUM_WORKERS)
+            subboxes = subsplit_boxes(box_list[i], num_subboxes= NUM_WORKERS, dimension='x')
             futures = []
             for subbox in subboxes:
                 data = (ifgram_file,
