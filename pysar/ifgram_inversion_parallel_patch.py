@@ -426,17 +426,22 @@ def subsplit_boxes(box, num_subboxes=10, dimension='y'):
     """
 
     # Flip x and y coordinates if splitting along 'x' dimension
-    if dimension == 'x':
-        x0, y0, x1, y1 = box
-        box = y0, x0, y1, x1
-
     x0, y0, x1, y1 = box
-    y_diff = y1 - y0
     subboxes = []
-    for i in range(num_subboxes):
-        start = (i * y_diff) // num_subboxes
-        end = ((i + 1) * y_diff) // num_subboxes if i != (num_subboxes - 1) else y_diff
-        subboxes.append([x0, start, x1, end])
+
+    if dimension == 'y':
+        y_diff = y1 - y0
+        for i in range(num_subboxes):
+            start = (i * y_diff) // num_subboxes
+            end = ((i + 1) * y_diff) // num_subboxes if i != (num_subboxes - 1) else y_diff
+            subboxes.append([x0, start, x1, end])
+    else:
+        x_diff = x1 - x0
+        for i in range(num_subboxes):
+            start = (i * x_diff) // num_subboxes
+            end = ((i + 1) * x_diff) // num_subboxes if i != (num_subboxes - 1) else x_diff
+            subboxes.append([start, y0, end, y1])
+
     return subboxes
 
 
