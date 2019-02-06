@@ -187,9 +187,9 @@ def read_template(inps):
     # Get existing files name: unavco_attributes.txt
     try:
         inps.unavcoMetadataFile = ut.get_file_list('unavco_attribute*txt', abspath=True)[0]
+        print('UNAVCO metadata file:', inps.unavcoMetadataFile)
     except:
         inps.unavcoMetadataFile = None
-        warnings.warn('No UNAVCO attributes file found.')
 
     inps.plot = template['pysar.plot']
 
