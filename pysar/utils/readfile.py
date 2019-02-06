@@ -517,7 +517,7 @@ def get_dataset_list(fname, datasetName=None):
 
 
 #########################################################################
-def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
+def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None):
     """Read attributes of input file into a dictionary
     Parameters: fname : str, path/name of data file
                 datasetName : str, name of dataset of interest, for file with multiple datasets
@@ -625,11 +625,11 @@ def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
             atr['PROCESSOR'] = 'pysar'
 
     else:
-        # get existing metadata files
+        # get existing metadata file extensions
         metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr']
-        if meta_ext:
-            metafile_exts = [i for i in metafile_exts if i.endswith(meta_ext)]
-        metafile_exts = [i for i in metafile_exts if os.path.isfile(fname+i)]
+        if metafile_ext:
+            metafile_exts = [i for i in metafile_exts if i.endswith(metafile_ext)]
+        metafile_exts = [i for i in metafile_exts if os.path.isfile(fname+i)]     
         if len(metafile_exts) == 0:
             raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
@@ -649,11 +649,11 @@ def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
             atr['PROCESSOR'] = 'pysar'
 
         # Read metadata file and FILE_TYPE
+        metafile0 = fname + metafile_exts[0]
         while fext in ['.geo', '.rdr']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
-        metafile0 = fname + metafile_exts[0]
         if metafile0.endswith('.rsc'):
             atr.update(read_roipac_rsc(metafile0))
             if 'FILE_TYPE' not in atr.keys():
@@ -870,7 +870,7 @@ def read_isce_xml(fname, standardize=True):
             if ET.iselement(child):
                 v_step  = float(child.find("./property[@name='delta']").find('value').text)
                 v_first = float(child.find("./property[@name='startingvalue']").find('value').text)
-                if abs(v_step) < 1.:
+                if abs(v_step) < 1. and abs(v_step) > 1e-7:
                     xmlDict['{}_STEP'.format(prefix)] = v_step
                     xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
 
@@ -896,10 +896,11 @@ def read_envi_hdr(fname, standardize=True):
         map_info = [i.strip() for i in atr['map info'].split(',')]
         x_step = abs(float(map_info[5]))
         y_step = abs(float(map_info[6])) * -1.
-        atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
-        atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
-        atr['X_STEP'] = str(x_step)
-        atr['Y_STEP'] = str(y_step)
+        if abs(x_step) < 1. and abs(x_step) > 1e-7:
+            atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
+            atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
+            atr['X_STEP'] = str(x_step)
+            atr['Y_STEP'] = str(y_step)
     if standardize:
         atr = standardize_metadata(atr)
     return atr

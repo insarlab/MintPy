@@ -373,7 +373,7 @@ def prepare_geometry(geom_dir, metadata=dict(), update_mode=True):
     # write rsc file for each file
     for isce_file in isce_files:
         # prepare metadata for current file
-        geom_metadata = readfile.read_attribute(isce_file, meta_ext='.xml')
+        geom_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
         geom_metadata.update(metadata)
 
         # write .rsc file
@@ -393,7 +393,7 @@ def prepare_stack(inputDir, filePattern, metadata=dict(), baseline_dict=dict(), 
     # write .rsc file for each interferogram file
     for isce_file in isce_files:
         # prepare metadata for current file
-        ifg_metadata = readfile.read_attribute(isce_file, meta_ext='.xml')
+        ifg_metadata = readfile.read_attribute(isce_file, metafile_ext='.xml')
         ifg_metadata.update(metadata)
         dates = os.path.basename(os.path.dirname(isce_file)).split('_')
         ifg_metadata = add_ifgram_metadata(ifg_metadata, dates, baseline_dict)
