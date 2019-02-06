@@ -712,6 +712,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                 ifgram_inversion_patch('ifgramStack_001.h5', box=None, ref_phase=None,
                                        weight_func='var', min_norm_velocity=True, mask_dataset_name='coherence')
     """
+    pre_estimate_timeseries_time = time.time()
 
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
@@ -855,11 +856,16 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         weight = read_coherence(stack_obj, box=box, dropIfgram=True)
         weight = coherence2weight(weight, weight_func=weight_func, L=L, epsilon=5e-2)
         weight = np.sqrt(weight)
-
         # Weighted Inversion pixel by pixel
+        print("Time before estimate_timeseries:", time.time() - pre_estimate_timeseries_time)
         print('inverting network of interferograms into time-series ...')
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
+        start_time = time.time()
+        mid_start = time.time()
         for i in range(num_pixel2inv):
+            if i % 100 == 0:
+                print(i, time.time() - mid_start)
+                mid_start = time.time()
             idx = idx_pixel2inv[i]
             tsi, tcohi, num_ifgi = estimate_timeseries(A, B, tbase_diff,
                                                        ifgram=pha_data[:, idx],
@@ -877,6 +883,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     ts_std = ts_std.reshape(num_date, num_row, num_col)
     temp_coh = temp_coh.reshape(num_row, num_col)
     num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
+
+    end_time = time.time()
+    print("TIME IT TOOK: ", end_time - start_time)
 
     # write output files if input file is splitted (box == None)
     if box is None:
