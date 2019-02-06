@@ -20,4 +20,4 @@ docs/Yunjun_logo.ai
 docs/resources/visit_location.png
 modis
 .idea
-pysar/isce/*
+isce/*

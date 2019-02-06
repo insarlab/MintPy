@@ -182,7 +182,7 @@ def extract_multilook_number(geom_dir, metadata=dict()):
                 break
     # default
     for key in ['ALOOKS', 'RLOOKS']:
-        if not hasattr(metadata, key):
+        if key not in metadata:
             metadata[key] = 1
     return metadata
 

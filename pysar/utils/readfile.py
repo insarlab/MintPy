@@ -95,6 +95,12 @@ ENVI2NUMPY_DATATYPE = {
     '15': 'uint64',
 }
 
+ENVI_BAND_INTERLEAVE = {
+    'BAND': 'BSQ',
+    'LINE': 'BIL',
+    'PIXEL': 'BIP',
+}
+
 
 ###########################################################################
 # obsolete variables
