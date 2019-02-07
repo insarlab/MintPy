@@ -885,29 +885,6 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
             if num_box > 1:
                 print('\n------- Processing Patch {} out of {} --------------'.format(i + 1, num_box))
 
-            subboxes = subsplit_boxes(box_list[i], num_subboxes= NUM_WORKERS, dimension='x')
-            futures = []
-            for subbox in subboxes:
-                data = (ifgram_file,
-                            subbox,
-                            ref_phase,
-                            inps.unwDatasetName,
-                            inps.weightFunc,
-                            inps.minNormVelocity,
-                            inps.maskDataset,
-                            inps.maskThreshold,
-                            inps.minRedundancy,
-                            inps.waterMaskFile,
-                            inps.skip_zero_phase)
-                future = client.submit(parallel_ifgram_inversion_patch, data)
-                futures.append(future)
-
-            for future, result in as_completed(futures, with_results=True):
-                tsi, temp_cohi, ts_stdi, ifg_numi, subbox = result
-
-                ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
-                ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
-                temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
             all_boxes += subsplit_boxes(box_list[i], num_subboxes= 5*NUM_WORKERS, dimension='x')
 
         futures = []
