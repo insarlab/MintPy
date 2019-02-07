@@ -914,7 +914,7 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
 
             subbox = result
             read_time  = time.time()
-            tsi, temp_cohi, ts_stdi, ifg_numi, box = np.load(os.path.join(inps.dir, "-".join(subbox))).files
+            tsi, temp_cohi, ts_stdi, ifg_numi, box = np.load(os.path.join(inps.dir, "-".join(str(x) for x in subbox))).files
             print("TIME TO READ", str(box) + ":", time.time() - read_time)
 
             ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
@@ -957,7 +957,7 @@ def parallel_ifgram_inversion_patch(data, dir):
                                            water_mask_file=water_mask_file,
                                            skip_zero_phase=skip_zero_phase)
     save_time = time.time()
-    np.savez(os.path.join(dir, "-".join(box)), tsi, temp_cohi, ts_stdi, ifg_numi, box)
+    np.savez(os.path.join(dir, "-".join(str(x) for x in box)), tsi, temp_cohi, ts_stdi, ifg_numi, box)
     print("Time for save", str(box) + ":", time.time() - save_time)
     return box
 
