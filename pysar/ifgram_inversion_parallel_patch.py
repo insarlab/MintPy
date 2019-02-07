@@ -880,6 +880,7 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
         num_inv_ifg = np.zeros((length, width), np.int16)
 
         # Loop
+        all_boxes = []
         for i in range(num_box):
             if num_box > 1:
                 print('\n------- Processing Patch {} out of {} --------------'.format(i + 1, num_box))
@@ -898,7 +899,6 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
                             inps.minRedundancy,
                             inps.waterMaskFile,
                             inps.skip_zero_phase)
-
                 future = client.submit(parallel_ifgram_inversion_patch, data)
                 futures.append(future)
 
@@ -908,7 +908,42 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
                 ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
                 ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
                 temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
-                num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
+            all_boxes += subsplit_boxes(box_list[i], num_subboxes= 5*NUM_WORKERS, dimension='x')
+
+        futures = []
+        start_time_subboxes = time.time()
+        for i, subbox in enumerate(all_boxes):
+            print(i, subbox)
+            data = (ifgram_file,
+                    subbox,
+                    ref_phase,
+                    inps.unwDatasetName,
+                    inps.weightFunc,
+                    inps.minNormVelocity,
+                    inps.maskDataset,
+                    inps.maskThreshold,
+                    inps.minRedundancy,
+                    inps.waterMaskFile,
+                    inps.skip_zero_phase)
+
+            future = client.submit(parallel_ifgram_inversion_patch, data, inps.dir)
+            futures.append(future)
+
+        i_future = 0
+        for future, result in as_completed(futures, with_results=True):
+            print("FUTURE #" + str(i_future + 1), "complete in", time.time() - start_time_subboxes,
+                  "seconds. Box:", subbox, "Time:", time.time())
+            i_future += 1
+
+            subbox = result
+            read_time  = time.time()
+            tsi, temp_cohi, ts_stdi, ifg_numi, box = np.load(os.path.join(inps.dir, "-".join(subbox))).files
+            print("TIME TO READ", str(box) + ":", time.time() - read_time)
+
+            ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
+            ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
+            temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
+            num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
 
         # reference pixel
         ref_y = int(stack_obj.metadata['REF_Y'])
@@ -926,7 +961,7 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
     print('\ntime used: {:02.0f} mins {:02.1f} secs\nDone.'.format(m, s))
     return
 
-def parallel_ifgram_inversion_patch(data):
+def parallel_ifgram_inversion_patch(data, dir):
     (ifgram_file, box, ref_phase, unwDatasetName,
      weight_func, min_norm_velocity,
      mask_dataset_name, mask_threshold,
@@ -944,7 +979,10 @@ def parallel_ifgram_inversion_patch(data):
                                            min_redundancy=min_redundancy,
                                            water_mask_file=water_mask_file,
                                            skip_zero_phase=skip_zero_phase)
-    return tsi, temp_cohi, ts_stdi, ifg_numi, box
+    save_time = time.time()
+    np.savez(os.path.join(dir, "-".join(box)), tsi, temp_cohi, ts_stdi, ifg_numi, box)
+    print("Time for save", str(box) + ":", time.time() - save_time)
+    return box
 
 ################################################################################################
 def main(inps):
@@ -997,6 +1035,6 @@ if __name__ == "__main__":
               outfile=['timeseries.h5', 'temporalCoherence.h5'], parallel=False, ref_date=None, residualNorm='L2',
               skip_ref=False, skip_zero_phase=True, split_file=False, tempCohFile='temporalCoherence.h5',
               templateFile=None, timeseriesFile='timeseries.h5', unwDatasetName=None, update_mode=False,
-              waterMaskFile=None, weightFunc='var')
+              waterMaskFile=None, weightFunc='var', dir='/scratch/projects/insarlab/dwg11/intermediate_files/')
 
     main(inps)
