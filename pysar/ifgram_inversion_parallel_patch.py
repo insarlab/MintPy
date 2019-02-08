@@ -885,8 +885,8 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
             if num_box > 1:
                 print('\n------- Processing Patch {} out of {} --------------'.format(i + 1, num_box))
 
-            all_boxes += subsplit_boxes(box_list[i], num_subboxes= 5*NUM_WORKERS, dimension='x')
-
+            all_boxes += subsplit_boxes(box_list[i], num_subboxes= NUM_WORKERS, dimension='x')
+        
         futures = []
         start_time_subboxes = time.time()
         for i, subbox in enumerate(all_boxes):
@@ -903,7 +903,7 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
                     inps.waterMaskFile,
                     inps.skip_zero_phase)
 
-            future = client.submit(parallel_ifgram_inversion_patch, data, inps.dir)
+            future = client.submit(parallel_ifgram_inversion_patch, data, inps.dir, retries= 3)
             futures.append(future)
 
         i_future = 0
@@ -914,7 +914,9 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
 
             subbox = result
             read_time  = time.time()
-            tsi, temp_cohi, ts_stdi, ifg_numi, box = np.load(os.path.join(inps.dir, "-".join(str(x) for x in subbox))).files
+            np_obj = np.load(os.path.join(inps.dir, "-".join(str(x) for x in subbox) + '.npz'))
+            np_files = np_obj.files
+            tsi, temp_cohi, ts_stdi, ifg_numi, box = np_obj['tsi'], np_obj['temp_cohi'], np_obj['ts_stdi'], np_obj['ifg_numi'], np_obj['box']
             print("TIME TO READ", str(box) + ":", time.time() - read_time)
 
             ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
@@ -945,6 +947,8 @@ def parallel_ifgram_inversion_patch(data, dir):
      min_redundancy, water_mask_file,
      skip_zero_phase)                     = data
 
+    print("BOX DIMS:", box)
+
     (tsi, temp_cohi, ts_stdi, ifg_numi) = ifgram_inversion_patch(ifgram_file,
                                            box= box,
                                            ref_phase= ref_phase,
@@ -957,9 +961,16 @@ def parallel_ifgram_inversion_patch(data, dir):
                                            water_mask_file=water_mask_file,
                                            skip_zero_phase=skip_zero_phase)
     save_time = time.time()
-    np.savez(os.path.join(dir, "-".join(str(x) for x in box)), tsi, temp_cohi, ts_stdi, ifg_numi, box)
+    np.savez(os.path.join(dir, "-".join(str(x) for x in box)), 
+                tsi=tsi, 
+                temp_cohi=temp_cohi, 
+                ts_stdi=ts_stdi, 
+                ifg_numi=ifg_numi, 
+                box=box)
     print("Time for save", str(box) + ":", time.time() - save_time)
     return box
+    print("DONE:", time.time())
+    return tsi, temp_cohi, ts_stdi, ifg_numi, box
 
 ################################################################################################
 def main(inps):
@@ -997,13 +1008,16 @@ def main(inps):
     return inps.outfile
 
 if __name__ == "__main__":
-    NUM_WORKERS = 10
-    cluster = LSFCluster(project='insarlab', name='pysar_worker_bee',
-                     queue='general', job_extra=['-R "rusage[mem=6400]"', "-o WORKER-%J.out"],
+    NUM_WORKERS = 40
+    cluster = LSFCluster(project='insarlab', name='pysar_worker_bee2',
+                     #queue='parallel',
+                     queue='general', 
+                     job_extra=['-R "rusage[mem=6400]"', "-o WORKER-%J.out"],
                      local_directory= '/scratch/projects/insarlab/dwg11/',
-                     cores=1, walltime='00:30', memory='4GB',
+                     cores=2, walltime='00:30', memory='2GB',
                      python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
     cluster.scale(NUM_WORKERS)
+    print("JOB FILE:", cluster.job_script())
     client = Client(cluster)
 
     inps = Namespace(chunk_size=100000000.0, fast=False,
