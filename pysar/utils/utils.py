@@ -639,7 +639,7 @@ def four_corners(atr):
     return west, east, south, north
 
 
-def get_circular_mask(x, y, radius, shape:tuple):
+def get_circular_mask(x, y, radius, shape):
     """Get mask of pixels within circle defined by (x, y, r)"""
     length, width = shape
     yy, xx = np.ogrid[-y:length-y,
