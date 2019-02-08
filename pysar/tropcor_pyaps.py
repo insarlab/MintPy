@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2015-2018, Heresh Fattahi, Zhang Yunjun     #
+# Copyright(c) 2015-2019, Heresh Fattahi, Zhang Yunjun     #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
@@ -63,12 +63,12 @@ To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA G
 
 WEATHER_DIR = """--weather-dir ~/WEATHER
 WEATHER/
-├── ECMWF
-│   ├── ERA-Int_20030329_06.grb
-│   ├── ERA-Int_20030503_06.grb
-└── MERRA
-    ├── merra-20110126-06.nc4
-    ├── merra-20110313-06.nc4
+    /ECMWF
+        ERA-Int_20030329_06.grb
+        ERA-Int_20030503_06.grb
+    /MERRA
+        merra-20110126-06.nc4
+        merra-20110313-06.nc4
 """
 
 
