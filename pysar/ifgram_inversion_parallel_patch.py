@@ -915,8 +915,12 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
             subbox = result
             read_time  = time.time()
             np_obj = np.load(os.path.join(inps.dir, "-".join(str(x) for x in subbox) + '.npz'))
-            np_files = np_obj.files
-            tsi, temp_cohi, ts_stdi, ifg_numi, box = np_obj['tsi'], np_obj['temp_cohi'], np_obj['ts_stdi'], np_obj['ifg_numi'], np_obj['box']
+            tsi, temp_cohi, ts_stdi, ifg_numi, box = np_obj['tsi'], \
+                                                     np_obj['temp_cohi'], \
+                                                     np_obj['ts_stdi'], \
+                                                     np_obj['ifg_numi'], \
+                                                     np_obj['box']
+
             print("TIME TO READ", str(box) + ":", time.time() - read_time)
 
             ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
