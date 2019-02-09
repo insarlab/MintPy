@@ -24,6 +24,7 @@ from argparse import Namespace
 from dask.distributed import Client, as_completed
 # David: dask_jobqueue is needed for HPC.
 # PBSCluster (similar to LSFCluster) should also work out of the box
+
 from dask_jobqueue import LSFCluster
 
 # key configuration parameter name
@@ -424,11 +425,9 @@ def subsplit_boxes(box, num_subboxes=10, dimension='y'):
     Note that `split_into_boxes` only splits based on chunk_size (memory-based).
 
     :param box: [x0, y0, x1, y1]: list[int] of size 4,
-    :param num_subboxes:
-    :param dimension: 'x' or 'y'
-    :return:
     """
 
+    # Flip x and y coordinates if splitting along 'x' dimension
     x0, y0, x1, y1 = box
     subboxes = []
 
@@ -896,7 +895,7 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
             # David: You can change the factor of `num_subboxes` to have smaller jobs per worker.
             # This could be helpful with large jobs
             all_boxes += subsplit_boxes(box_list[i], num_subboxes= 1*NUM_WORKERS, dimension='x')
-        
+
         futures = []
         start_time_subboxes = time.time()
         for i, subbox in enumerate(all_boxes):
@@ -1008,7 +1007,7 @@ def parallel_ifgram_inversion_patch(data, dir):
     save_time = time.time()
 
     # David: Saving to disk
-    np.savez(os.path.join(dir, "-".join(str(x) for x in box)), 
+    np.savez(os.path.join(dir, "-".join(str(x) for x in box)),
                 tsi=tsi, 
                 temp_cohi=temp_cohi, 
                 ts_stdi=ts_stdi, 
@@ -1056,7 +1055,6 @@ def main(inps):
 
 if __name__ == "__main__":
     NUM_WORKERS = 40
-    # David:
     cluster = LSFCluster(project='insarlab',
                          name='pysar_worker_bee2',
                          queue='general',
@@ -1096,5 +1094,4 @@ if __name__ == "__main__":
                      # David: I added this parameter to save output from workers
                      # so that the master could read them later
                      dir='/scratch/projects/insarlab/dwg11/intermediate_files/')
-
     main(inps)
