@@ -22,6 +22,8 @@ from pysar.utils import readfile, writefile, ptime, utils as ut
 from argparse import Namespace
 
 from dask.distributed import Client, as_completed
+# David: dask_jobqueue is needed for HPC.
+# PBSCluster (similar to LSFCluster) should also work out of the box
 from dask_jobqueue import LSFCluster
 
 # key configuration parameter name
@@ -417,15 +419,16 @@ def split_into_boxes(dataset_shape, chunk_size=100e6, print_msg=True):
     return box_list
 
 def subsplit_boxes(box, num_subboxes=10, dimension='y'):
-    """
+    """ David: This is a bit hacky, but after creating the patches,
+    I wanted to further divide the box size into `num_subboxes` different subboxes.
+    Note that `split_into_boxes` only splits based on chunk_size (memory-based).
 
-    :param box:
+    :param box: [x0, y0, x1, y1]: list[int] of size 4,
     :param num_subboxes:
     :param dimension: 'x' or 'y'
     :return:
     """
 
-    # Flip x and y coordinates if splitting along 'x' dimension
     x0, y0, x1, y1 = box
     subboxes = []
 
@@ -435,12 +438,14 @@ def subsplit_boxes(box, num_subboxes=10, dimension='y'):
             start = (i * y_diff) // num_subboxes
             end = ((i + 1) * y_diff) // num_subboxes if i != (num_subboxes - 1) else y_diff
             subboxes.append([x0, start, x1, end])
-    else:
+    elif dimension == 'x':
         x_diff = x1 - x0
         for i in range(num_subboxes):
             start = (i * x_diff) // num_subboxes
             end = ((i + 1) * x_diff) // num_subboxes if i != (num_subboxes - 1) else x_diff
             subboxes.append([start, y0, end, y1])
+    else:
+        raise Exception("Unknown value for dimension parameter:", dimension)
 
     return subboxes
 
@@ -879,18 +884,26 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
         temp_coh    = np.zeros((length, width), np.float32)
         num_inv_ifg = np.zeros((length, width), np.int16)
 
+        # David: START OF MODIFIED CODE
+
         # Loop
         all_boxes = []
         for i in range(num_box):
             if num_box > 1:
                 print('\n------- Processing Patch {} out of {} --------------'.format(i + 1, num_box))
 
-            all_boxes += subsplit_boxes(box_list[i], num_subboxes= NUM_WORKERS, dimension='x')
+            # David: All "patches" are processed at once
+            # David: You can change the factor of `num_subboxes` to have smaller jobs per worker.
+            # This could be helpful with large jobs
+            all_boxes += subsplit_boxes(box_list[i], num_subboxes= 1*NUM_WORKERS, dimension='x')
         
         futures = []
         start_time_subboxes = time.time()
         for i, subbox in enumerate(all_boxes):
             print(i, subbox)
+
+            # David: Creating this `data` tuple is unnecessary, but intuitive. This is
+            # everything that `ifgram_inversion_patch` needs
             data = (ifgram_file,
                     subbox,
                     ref_phase,
@@ -903,17 +916,35 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
                     inps.waterMaskFile,
                     inps.skip_zero_phase)
 
+            # David: I would recommend reading up on futures. My understanding is that a future
+            # is a computation that will complete (or fail) in the future.
+            # David: I haven't played with fussing with `retries`, however sometimes a future fails
+            # on a worker for an unknown reason. retrying will save the whole process from failing.
+            # David: TODO:  I don't know what to do if a future fails > 3 times. I don't think an error is
+            # thrown in that case, therefore I don't know how to recognize when this happens.
             future = client.submit(parallel_ifgram_inversion_patch, data, inps.dir, retries= 3)
             futures.append(future)
 
         i_future = 0
+        # David: Take a look at `as_completed`. `with_results=True` prefetches results which is nice.
+        # Also, take a look at .batches() - http://docs.dask.org/en/latest/futures.html#waiting-on-futures
+        # David: Some workers are slower than others. When #(futures to complete) < #workers, we should
+        # investigate whether `Client.replicate(future)` will speed up work on the final futures.
+        # It's a slight speedup, but depending how computationally complex each future is, this could be a
+        # decent speedup
         for future, result in as_completed(futures, with_results=True):
             print("FUTURE #" + str(i_future + 1), "complete in", time.time() - start_time_subboxes,
                   "seconds. Box:", subbox, "Time:", time.time())
             i_future += 1
 
             subbox = result
-            read_time  = time.time()
+            read_time = time.time()
+
+            # David: Kind of hacky, but workers are currently writing results to file and the master is
+            # reading them from file. This is faster than over the network (at least the default network).
+            # We should talk to CCS and/or see what other configs could allow us to keep this going over the
+            # network. But it is fast as is. Without this, 10 minutes of overhead was added to processing
+            # ifgramAlcedo.h5
             np_obj = np.load(os.path.join(inps.dir, "-".join(str(x) for x in subbox) + '.npz'))
             tsi, temp_cohi, ts_stdi, ifg_numi, box = np_obj['tsi'], \
                                                      np_obj['temp_cohi'], \
@@ -927,6 +958,8 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
             ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
             temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
             num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
+
+        # David: END OF MODIFIED CODE
 
         # reference pixel
         ref_y = int(stack_obj.metadata['REF_Y'])
@@ -945,6 +978,12 @@ def ifgram_inversion(inps, ifgram_file='ifgramStack.h5' ):
     return
 
 def parallel_ifgram_inversion_patch(data, dir):
+    """
+    David: This is the starting point for futures. Futures start executing code here.
+    :param data:
+    :param dir: The directory in which to save the intermediate files
+    :return: The box
+    """
     (ifgram_file, box, ref_phase, unwDatasetName,
      weight_func, min_norm_velocity,
      mask_dataset_name, mask_threshold,
@@ -953,6 +992,8 @@ def parallel_ifgram_inversion_patch(data, dir):
 
     print("BOX DIMS:", box)
 
+    # David: This is the main call. This code was copied from the old
+    # `ifgram_inversion` function
     (tsi, temp_cohi, ts_stdi, ifg_numi) = ifgram_inversion_patch(ifgram_file,
                                            box= box,
                                            ref_phase= ref_phase,
@@ -965,6 +1006,8 @@ def parallel_ifgram_inversion_patch(data, dir):
                                            water_mask_file=water_mask_file,
                                            skip_zero_phase=skip_zero_phase)
     save_time = time.time()
+
+    # David: Saving to disk
     np.savez(os.path.join(dir, "-".join(str(x) for x in box)), 
                 tsi=tsi, 
                 temp_cohi=temp_cohi, 
@@ -972,9 +1015,9 @@ def parallel_ifgram_inversion_patch(data, dir):
                 ifg_numi=ifg_numi, 
                 box=box)
     print("Time for save", str(box) + ":", time.time() - save_time)
-    return box
     print("DONE:", time.time())
-    return tsi, temp_cohi, ts_stdi, ifg_numi, box
+
+    return box
 
 ################################################################################################
 def main(inps):
@@ -1013,15 +1056,34 @@ def main(inps):
 
 if __name__ == "__main__":
     NUM_WORKERS = 40
-    cluster = LSFCluster(project='insarlab', name='pysar_worker_bee2',
-                     #queue='parallel',
-                     queue='general', 
-                     job_extra=['-R "rusage[mem=6400]"', "-o WORKER-%J.out"],
-                     local_directory= '/scratch/projects/insarlab/dwg11/',
-                     cores=2, walltime='00:30', memory='2GB',
-                     python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
+    # David:
+    cluster = LSFCluster(project='insarlab',
+                         name='pysar_worker_bee2',
+                         queue='general',
+                         # David: The first parameter is required by Pegasus. This actually changes memory usage.
+                         job_extra=['-R "rusage[mem=6400]"',
+                         # David: This second line will allow you to read your worker's output
+                                    "-o WORKER-%J.out"],
+                         # David: This allows workers to write overflow memory to file. Unsure if necessary
+                         local_directory= '/scratch/projects/insarlab/dwg11/',
+                         # David: Somehow, cores=2 is essential. When cores=1 it was super slow and
+                         # when cores=3 it took forever for workers to go from PENDING to RUNNING
+                         cores=2,
+                         walltime='00:30',
+                         # David: This line is required by dask_jobqueue
+                         # but ignored by Pegasus as far as I can tell
+                         memory='2GB',
+                         # David: This line prevents the cluster from defaulting to the system Python.
+                         # You need to point it to your dask environment's Python
+                         python='/nethome/dwg11/anaconda2/envs/pysar_parallel/bin/python')
+    # David:  This line submits NUM_WORKERS number of jobs to Pegasus to start a bunch of workers
     cluster.scale(NUM_WORKERS)
     print("JOB FILE:", cluster.job_script())
+
+    # David: This line needs to be in an `if __name__ == "__main__":` block I believe. It should not
+    # be floating around or in code that workers might execute (note that if it is in no function,
+    # workers will execute it when loading the module)
+    #
     client = Client(cluster)
 
     inps = Namespace(chunk_size=100000000.0, fast=False,
@@ -1030,6 +1092,9 @@ if __name__ == "__main__":
               outfile=['timeseries.h5', 'temporalCoherence.h5'], parallel=False, ref_date=None, residualNorm='L2',
               skip_ref=False, skip_zero_phase=True, split_file=False, tempCohFile='temporalCoherence.h5',
               templateFile=None, timeseriesFile='timeseries.h5', unwDatasetName=None, update_mode=False,
-              waterMaskFile=None, weightFunc='var', dir='/scratch/projects/insarlab/dwg11/intermediate_files/')
+              waterMaskFile=None, weightFunc='var',
+                     # David: I added this parameter to save output from workers
+                     # so that the master could read them later
+                     dir='/scratch/projects/insarlab/dwg11/intermediate_files/')
 
     main(inps)
