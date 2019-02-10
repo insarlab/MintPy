@@ -65,10 +65,12 @@ Join our google group [https://groups.google.com/forum/#!forum/py-sar](https://g
 
 * Zhang Yunjun
 * Heresh Fattahi
+* Falk Amelung
 * Scott Baker
 * Joshua Zahner
 * Alfredo Terreco
 * David W Grossman
+* Yunmeng Cao
 * [_other community members_](https://github.com/yunjunz/PySAR/graphs/contributors)
 
 
