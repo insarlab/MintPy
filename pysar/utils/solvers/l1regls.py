@@ -17,9 +17,7 @@ from cvxopt import blas, lapack, solvers
 import math
 
 
-solvers.options['show_progress'] = 0
-
-def l1reg_lstsq(A, y, lambd=1.0):
+def l1reg_lstsq(A, y, lambd=1.0, show_progress=1):
     """
     
     Returns the solution of l1-norm regularized least-squares problem
@@ -29,11 +27,14 @@ def l1reg_lstsq(A, y, lambd=1.0):
     Parameters: A : 2D cvxopt.matrix for the design matrix in (m, n)
                 y : 2D cvxopt.matrix for the observation in (m, 1)
                 lambd : float for the degree of shrinkage
+                show_progress : bool, show solving progress
     Returns:    x : 2D cvxopt.matrix in (m, 1)
     Example:    A = matrix(np.array(-C, dtype=float))
                 b = matrix(np.array(closure_int, dtype=float).reshape(C.shape[0], -1))
                 x = np.round(l1reg_lstsq(A, b, lambd=1e-2))
     """
+    solvers.options['show_progress'] = show_progress
+
     m, n = A.size
     q = matrix(lambd, (2*n,1))
     q[:n] = -2.0 * A.T * y
@@ -156,10 +157,8 @@ def l1reg_lstsq(A, y, lambd=1.0):
 
     return solvers.coneqp(P, q, G, h, kktsolver = Fkkt)['x'][:n]
 
-
-# Test example
-#m, n = 100, 1000
-#setseed()
-#A = normal(m,n)
-#b = normal(m)
-#x = l1regls(A, b)
+m, n = 100, 1000
+setseed()
+A = normal(m,n)
+b = normal(m)
+x = l1regls(A, b)
