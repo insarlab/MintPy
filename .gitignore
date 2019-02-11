@@ -1,3 +1,4 @@
+examples/*
 *.DS_Store
 *.pyc
 *checkpoint.ipynb
@@ -5,7 +6,6 @@
 pysar/.ipynb_checkpoints/*
 _includes/test 2.html
 _includes/test.html
-examples/*
 docs/workshop2017Miami.pptx
 docs/resources/logo_red.png
 docs/resources/Github_mark.png
