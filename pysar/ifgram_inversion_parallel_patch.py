@@ -555,7 +555,12 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
         if print_msg:
             print('convert coherence to weight using inverse of phase variance')
             print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
-        weight = 1.0 / coherence2phase_variance_ds(coh_data, L, print_msg=print_msg)
+        s_time = time.time()
+        x = coherence2phase_variance_ds(coh_data, L, print_msg=print_msg)
+        print("coherence2phase_variance_ds time:", time.time() - s_time)
+        s_time = time.time()
+        weight = 1.0 / x
+        print("weight calculation time 1/x:", time.time() - s_time)
 
     elif any(i in weight_func for i in ['coh', 'lin']):
         if print_msg:
@@ -577,6 +582,7 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
         weight = np.array(weight, np.float32)
     del coh_data
     return weight
+
 
 def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName='unwrapPhase',
                            weight_func='var', min_norm_velocity=True,
@@ -604,6 +610,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                        weight_func='var', min_norm_velocity=True, mask_dataset_name='coherence')
     """
     pre_estimate_timeseries_time = time.time()
+    s_time = time.time()
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
 
@@ -665,6 +672,9 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
 
     # Mask for pixels to invert
     mask = np.ones(num_pixel, np.bool_)
+
+    print("Pre step 1:", time.time() - s_time)
+    s_time = time.time()
     # 1 - Water Mask
     if water_mask_file:
         print(('skip pixels on water with mask from'
@@ -680,6 +690,8 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                   box=box)[0].flatten()
         mask *= np.array(waterMask, np.bool_)
         del waterMask
+    print("Step 1:", time.time() - s_time)
+    s_time = time.time()
 
     # 2 - Mask for Zero Phase in ALL ifgrams
     print('skip pixels with zero/nan value in all interferograms')
@@ -699,6 +711,7 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         temp_coh = temp_coh.reshape(num_row, num_col)
         num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
         return ts, temp_coh, ts_std, num_inv_ifg
+    print("Step 2:", time.time() - s_time)
 
     # Inversion - SBAS
     if weight_func in ['no', 'sbas']:
@@ -742,10 +755,21 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
 
     # Inversion - WLS
     else:
+        s_time = time.time()
         L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
+        print("weight creation L (1):", time.time() - s_time)
+        s_time = time.time()
+
         weight = read_coherence(stack_obj, box=box, dropIfgram=True)
+        print("weight creation read_coherence (2):", time.time() - s_time)
+        s_time = time.time()
+
         weight = coherence2weight(weight, weight_func=weight_func, L=L, epsilon=5e-2)
+        print("weight creation coherence2weight (3):", time.time() - s_time)
+        s_time = time.time()
+
         weight = np.sqrt(weight)
+        print("weight creation sqrt (4):", time.time() - s_time)
 
         # Weighted Inversion pixel by pixel
         print("Time before estimate_timeseries:", time.time() - pre_estimate_timeseries_time)
