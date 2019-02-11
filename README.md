@@ -24,13 +24,13 @@ PySAR reads a stack of interferograms (unwrapped interferograms, coherence, wrap
 
 #### [Example](https://github.com/yunjunz/PySAR/wiki/Example): Fernandina volcano, Galápagos with Sentinel-1 data    
 
-    wget https://zenodo.org/record/2558549/files/FernandinaSenDT128.tar.xz
+    wget https://zenodo.org/record/2562349/files/FernandinaSenDT128.tar.xz
     tar -xvJf FernandinaSenDT128.tar.xz
     cd FernandinaSenDT128/PYSAR
     pysarApp.py FernandinaSenDT128.txt   
 
 <p align="left">
-  <img width="600" src="https://yunjunzhang.files.wordpress.com/2019/02/fernandinasendt128_poi-2.jpg">
+  <img width="600" src="https://yunjunzhang.files.wordpress.com/2019/02/fernandinasendt128_poi-3.jpg">
 </p>    
 
 Inside pysarApp.py, it reads the unwrapped interferograms, references all of them to the same coherent pixel (reference point), calculates the phase closure and estimates the unwrapping errors (if it has been asked for), inverts the network of interferograms into time-series, calculates a parameter called "temporal coherence" which can be used to evaluate the quality of inversion, corrects local oscillator drift (for Envisat only), corrects stratified tropospheric delay (using pyaps or phase-elevation-ratio approach), removes phase ramps (if it has been asked for), corrects DEM error,... and finally estimates the velocity.   
