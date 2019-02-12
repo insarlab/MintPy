@@ -29,14 +29,14 @@ standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': '
 ###############################################################
 EXAMPLE = """example:
   # download reanalysys dataset, calculate tropospheric delays and correct time-series file.
-  tropcor_pyaps.py -f timeseries.h5 -m ECMWF -g INPUTS/geometryRadar.h5
+  tropcor_pyaps.py -f timeseries.h5 -m ECMWF -g INPUTS/geometryRadar.h5 -w ~/WEATHER
 
   # download reanalysys dataset, calculate tropospheric delays
-  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -g INPUTS/geometryRadar.h5 --ref-yx 30 40
-  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m MERRA -g INPUTS/geometryRadar.h5 --ref-yx 30 40
+  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
+  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m MERRA -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
 
   # download reanalysys dataset
-  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF
+  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -w ~/WEATHER
 """
 
 REFERENCE = """reference:
@@ -91,7 +91,7 @@ def create_parser():
                              'in YYYYMMDD or YYMMDD format')
     parser.add_argument('--hour', help='time of data in HH, e.g. 12, 06')
     parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir',
-                        help='parent directory of downloaded weather data file. Default: ./../WEATHER\n' +
+                        help='parent directory of downloaded weather data file. Default: ./\n' +
                              'e.g.: '+WEATHER_DIR)
 
     # For delay calculation
@@ -154,12 +154,16 @@ def check_inputs(inps):
         pysar_dir = os.path.join(os.path.dirname(inps.geom_file), '..')
     else:
         pysar_dir = os.path.abspath(os.getcwd())
+
     # trop_file
     inps.trop_file = os.path.join(pysar_dir, 'INPUTS/{}.h5'.format(inps.trop_model))
     print('output tropospheric delay file: {}'.format(inps.trop_file))
+
     # weather_dir
     if not inps.weather_dir:
-        inps.weather_dir = os.path.join(pysar_dir, '../WEATHER')
+        inps.weather_dir = pysar_dir
+    inps.weather_dir = os.path.expanduser(inps.weather_dir)
+    inps.weather_dir = os.path.expandvars(inps.weather_dir)
     print('weather data directory: '+inps.weather_dir)
 
     # hour
