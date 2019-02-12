@@ -47,11 +47,11 @@ def create_parser():
                              "It's equivalent to None if default pysarApp_template.txt is input.")
     parser.add_argument('--dir', dest='workDir',
                         help='PySAR working directory, default is:\n' +
-                             'a) current directory, or\n' +
-                             'b) $SCRATCHDIR/projectName/PYSAR, if meets the following 3 requirements:\n' +
-                             '    1) autoPath = True in pysar/defaults/auto_path.py\n' +
-                             '    2) environmental variable $SCRATCHDIR exists\n' +
-                             '    3) input custom template with basename same as projectName\n')
+                             'a) current directory, OR\n' +
+                             'b) $SCRATCHDIR/projectName/PYSAR, if:\n' +
+                             '    1) autoPath = True in pysar/defaults/auto_path.py AND\n' +
+                             '    2) environment variable $SCRATCHDIR exists AND\n' +
+                             '    3) input custom template named as: projectName.*\n')
     parser.add_argument('-g', dest='generate_template', action='store_true',
                         help='Generate default template (and merge with custom template), then exit.')
     parser.add_argument('-H', dest='print_auto_template', action='store_true',
