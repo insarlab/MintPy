@@ -1,33 +1,54 @@
 #!/usr/bin/env python3
+############################################################
+# Program is part of PySAR                                 #
+# Copyright(c) 2018-2019, Joshua Zahner, Zhang Yunjun     #
+# Author:  Joshua Zahner, Zhang Yunjun                    #
+############################################################
 
 import os
 import sys
 import argparse
-import numpy as np
+
+try:
+    from pykml.factory import KML_ElementMaker as KML
+except ImportError:
+    raise ImportError('Can not import pykml!')
+
 from lxml import etree
+import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from pykml.factory import KML_ElementMaker as KML
+
 from pysar.objects import timeseries
 from pysar.utils import readfile, plot
 
 
+############################################################
+EXAMPLE = """example:
+  cd $PROJECT_NAME/PYSAR/GEOCODE
+  save_kmz_timeseries.py geo_timeseries_ECMWF_ramp_demErr.h5
+  save_kmz_timeseries.py geo_timeseries_ECMWF_ramp_demErr.h5 --vel geo_velocity_masked.h5 --tcoh geo_temporalCoherence.h5
+"""
+
 def create_parser():
 
-    parser = argparse.ArgumentParser(description='Generare Google Earth KML for timeseries HDF5 file.',
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description='Generare Google Earth KMZ file for time-series file.',
+                                     formatter_class=argparse.RawTextHelpFormatter,
+                                     epilog=EXAMPLE)
 
-    args = parser.add_argument_group('Input File', 'File/Dataset to display')
+    args = parser.add_argument_group('Input files', 'File/Dataset to display')
 
     args.add_argument('ts_file', metavar='timeseries_file', help='Timeseries file to generate KML for')
     args.add_argument('--vel', dest='vel_file', metavar='velocity_file', default='geo_velocity_masked.h5',
                       help='Velocity file')
     args.add_argument('--tcoh', dest='tcoh_file', metavar='temporal_coh_file', default='geo_temporalCoherence.h5',
                       help='temporal coherence file')
-    args.add_argument('--step', type=int, metavar='NUM', default=3, help='output pixel step number, default: 3')
-    args.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
+
+    opts = parser.add_argument_group('Display options', 'configurations for the display')
+    opts.add_argument('--step', type=int, metavar='NUM', default=3, help='output pixel step number, default: 3')
+    opts.add_argument('-v','--vlim', dest='vlim', nargs=2, metavar=('VMIN', 'VMAX'), type=float,
                       help='Display limits for matrix plotting.')
-    args.add_argument('-c', '--colormap', dest='colormap', default='jet',
+    opts.add_argument('-c', '--colormap', dest='colormap', default='jet',
                       help='colormap used for display, i.e. jet, RdBu, hsv, jet_r, temperature, viridis,  etc.\n'
                            'colormaps in Matplotlib - http://matplotlib.org/users/colormaps.html\n'
                            'colormaps in GMT - http://soliton.vm.bytemark.co.uk/pub/cpt-city/')
@@ -530,19 +551,19 @@ def main(iargs=None):
     ## 8 Copy auxiliary files
 
     # 8.1 shaded_dot file
-    dot_path = os.path.join(os.path.dirname(__file__), "utils/resources", dot_file)
+    dot_path = os.path.join(os.path.dirname(__file__), "../docs/resources", dot_file)
     cmdDot = "cp {} {}".format(dot_path, dot_file)
     print("copying {} for point.".format(dot_file))
     os.system(cmdDot)
 
     # 8.2 star file
-    star_path = os.path.join(os.path.dirname(__file__), "utils/resources", star_file)
+    star_path = os.path.join(os.path.dirname(__file__), "../docs/resources", star_file)
     cmdStar = "cp {} {}".format(star_path, star_file)
     print("copying {} for reference point.".format(star_file))
     os.system(cmdStar)
 
     # 8.3 dygraph-combined.js file
-    dygraph_path = os.path.join(os.path.dirname(__file__), "utils/resources", dygraph_file)
+    dygraph_path = os.path.join(os.path.dirname(__file__), "../docs/resources", dygraph_file)
     cmdDygraph = "cp {} {}".format(dygraph_path, dygraph_file)
     print("copying {} for interactive plotting.".format(dygraph_file))
     os.system(cmdDygraph)

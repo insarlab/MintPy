@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Heresh Fattahi, Zhang Yunjun     #
+# Copyright(c) 2013-2019, Heresh Fattahi, Zhang Yunjun     #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
@@ -25,18 +25,18 @@ from pysar.utils import readfile, ptime, utils as ut, plot as pp
 
 ############################################################
 EXAMPLE = """example:
-  save_kml.py geo_velocity_masked.h5 
-  save_kml.py geo_timeseries_masked.h5  20101120
-  save_kml.py geo_ifgramStack.h5        20101120_20110220
+  save_kmz.py geo_velocity_masked.h5 
+  save_kmz.py geo_timeseries_masked.h5  20101120
+  save_kmz.py geo_ifgramStack.h5        20101120_20110220
 
-  save_kml.py geo_velocity_masked.h5 -u cm -v -2 2
-  save_kml.py geo_velocity_masked.h5 -u cm --wrap --wrap-range -3 7
-  save_kml.py demGeo.h5 --cbar-label Elevation
+  save_kmz.py geo_velocity_masked.h5 -u cm -v -2 2
+  save_kmz.py geo_velocity_masked.h5 -u cm --wrap --wrap-range -3 7
+  save_kmz.py demGeo.h5 --cbar-label Elevation
 """
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file.',
+    parser = argparse.ArgumentParser(description='Generate Google Earth KMZ file with raster image.',
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=EXAMPLE)
 
