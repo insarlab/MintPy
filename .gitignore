@@ -1,9 +1,10 @@
 examples/*
 *.DS_Store
 *.pyc
-*checkpoint.ipynb
 .ipynb_checkpoints/*
-pysar/.ipynb_checkpoints/*
+*/.ipynb_checkpoints/*
+*/*/.ipynb_checkpoints/*
+*/*/*/.ipynb_checkpoints/*
 _includes/test 2.html
 _includes/test.html
 docs/workshop2017Miami.pptx
