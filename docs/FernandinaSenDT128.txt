@@ -1,43 +1,40 @@
 # vim: set filetype=cfg:
-##----------------------------- ISCE/topsStack ---------------------##
-cleanopt = 0    # [ 0 / 1 / 2 / 3 4]   0: no cleaning, 1: largest files, 2: merged/etc, PROCESS dirs, 3: SLC,RAW, 4: everything
-ssaraopt = --platform=SENTINEL-1A,SENTINEL-1B -r 128 -f 589,590,591,592,593  -e 2017-07-01
-processor                      = isce
-sentinelStack.demDir           = /nethome/famelung/Sentinel/GalapagosT128SenVVD/DEM
-sentinelStack.boundingBox      = '-1 0.15 -91.6 -90.9'
-sentinelStack.subswath         = 1 2  # comment 
-sentinelStack.numConnections   = 5   # comment
-sentinelStack.azimuthLooks     = 5   # comment
-sentinelStack.rangeLooks       = 15  # comment
-sentinelStack.filtStrength     = 0.2  # comment
-sentinelStack.unwMethod        = snaphu  # comment
-sentinelStack.coregistration   = auto  # comment
+##------------------------------- ISCE/topsStack ----------------------##
+#ssaraopt = --platform=SENTINEL-1A,SENTINEL-1B -r 128 -f 589,590,591,592,593  -e 2017-07-01
+#sentinelStack.boundingBox      = '-1 0.15 -91.6 -90.9'
+#sentinelStack.subswath         = 1 2  # comment 
+#sentinelStack.numConnections   = 5   # comment
+#sentinelStack.azimuthLooks     = 5   # comment
+#sentinelStack.rangeLooks       = 15  # comment
+#sentinelStack.filtStrength     = 0.2  # comment
+#sentinelStack.unwMethod        = snaphu  # comment
+#sentinelStack.coregistration   = auto  # comment
+#subset.y0:y1,x0:x1 = 1150:1600,1070:1670
+
 
 
 ##-------------------------------- PYSAR -------------------------------##
 ########## 1. Load Data (--load to exit after this step)
-## auto - automatic path pattern for Univ of Miami file structure
 ## load_data.py -H to check more details and example inputs.
 pysar.load.processor        = isce
 ##---------for ISCE only:
-pysar.load.metaFile         = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/master/IW*.xml
-pysar.load.baselineDir      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/baselines
+pysar.load.metaFile         = ../ISCE/master/IW*.xml
+pysar.load.baselineDir      = ../ISCE/baselines
 ##---------interferogram datasets:
-pysar.load.unwFile          = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/interferograms/*/filt_*.unw
-pysar.load.corFile          = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/interferograms/*/filt_*.cor
-pysar.load.connCompFile     = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/interferograms/*/filt_*.unw.conncomp
+pysar.load.unwFile          = ../ISCE/merged/interferograms/*/filt_*.unw
+pysar.load.corFile          = ../ISCE/merged/interferograms/*/filt_*.cor
+pysar.load.connCompFile     = ../ISCE/merged/interferograms/*/filt_*.unw.conncomp
 ##---------geometry datasets:
-pysar.load.demFile          = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/hgt.rdr
-pysar.load.lookupYFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/lat.rdr
-pysar.load.lookupXFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/lon.rdr
-pysar.load.incAngleFile     = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/los.rdr
-pysar.load.azAngleFile      = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/los.rdr
-pysar.load.shadowMaskFile   = $GALAPAGOS_DIR/GalapagosSenDT128/ISCE/merged/geom_master/shadowMask.rdr
-pysar.load.bperpFile        = None
+pysar.load.demFile          = ../ISCE/merged/geom_master/hgt.rdr
+pysar.load.lookupYFile      = ../ISCE/merged/geom_master/lat.rdr
+pysar.load.lookupXFile      = ../ISCE/merged/geom_master/lon.rdr
+pysar.load.incAngleFile     = ../ISCE/merged/geom_master/los.rdr
+pysar.load.azAngleFile      = ../ISCE/merged/geom_master/los.rdr
+pysar.load.shadowMaskFile   = ../ISCE/merged/geom_master/shadowMask.rdr
 
-########## Processing Parameters (check more options in pysarApp_template.txt)
-pysar.subset.yx         = 1150:1600,1070:1670
 pysar.reference.lalo    = -0.30,-91.43
+pysar.networkInversion.waterMaskFile    = waterMask.h5
 pysar.troposphericDelay.weatherDir      = ~/insarlab/WEATHER
-pysar.topographicResidual.stepFuncDate  = 20170910,20180613  #Fernandina,Fernandina
+pysar.topographicResidual.stepFuncDate  = 20170910,20180613  #eruption dates
 pysar.deramp            = linear
+
