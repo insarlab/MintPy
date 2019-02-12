@@ -51,7 +51,7 @@ NOTE = """note: Reference value cannot be nan, thus, all selected reference poin
 """
 
 EXAMPLE = """example:
-  reference_point.py  INPUTS/ifgramStack.h5  -t pysarApp_template.txt  -c avgSpatialCoherence.h5
+  reference_point.py  INPUTS/ifgramStack.h5  -t pysarApp_template.txt  -c avgSpatialCoh.h5
 
   reference_point.py  timeseries.h5     -r Seeded_velocity.h5
   reference_point.py  091120_100407.unw -y 257    -x 151      -m Mask.h5 --write-data

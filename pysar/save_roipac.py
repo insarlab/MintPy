@@ -21,7 +21,7 @@ EXAMPLE = """example:
   save_roipac.py  INPUTS/ifgramStack.h5  unwrapPhase-20091225_20100723
   save_roipac.py  INPUTS/ifgramStack.h5  unwrapPhase-20091225_20100723  --ref-yx 640 810
   save_roipac.py  INPUTS/ifgramStack.h5    coherence-20091225_20100723
-  save_roipac.py  temporal_coherence.h5
+  save_roipac.py  temporalCoherence.h5
   save_roipac.py  GEOCODE/geo_geometryRadar.h5  height  -o height.dem
 """
 

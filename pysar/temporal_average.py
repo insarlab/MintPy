@@ -17,7 +17,7 @@ from pysar.utils import utils as ut, readfile
 
 #################################  Usage  ####################################
 EXAMPLE = """example:
-  temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoherence.h5 --update
+  temporal_average.py ifgramStack.h5 -d coherence -o avgSpatialCoh.h5 --update
 """
 
 def create_parser():
@@ -50,7 +50,7 @@ def check_output_filename(inps):
     if not inps.outfile:
         if k == 'ifgramStack':
             if inps.datasetName == 'coherence':
-                inps.outfile = 'avgSpatialCoherence.h5'
+                inps.outfile = 'avgSpatialCoh.h5'
             elif 'unwrapPhase' in inps.datasetName:
                 inps.outfile = 'avgPhaseVelocity.h5'
             else:
