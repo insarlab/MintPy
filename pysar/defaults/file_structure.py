@@ -3,9 +3,9 @@
 # Author:  Zhang Yunjun, May 2018
 
 
-project_structure_roipac = """#/sratch/projects/insarlab/$USER - high speed disk for data processing
-/$PROJECT_NAME   #basename of template file, e.g. GalapagosT133F7160_7180AlosA
-    GalapagosSenDT128VV.template
+roipac = """
+/$PROJECT_NAME          #basename of template file, e.g. GalapagosT133F7160_7180AlosA
+    GalapagosAlosAT133.template
     /DEM
         srtm1.dem
         srtm1.dem.rsc
@@ -74,9 +74,9 @@ project_structure_roipac = """#/sratch/projects/insarlab/$USER - high speed disk
     /PYSAR
 """
 
-project_structure_isce_tops = """#/sratch/projects/insarlab/$USER - high speed disk for data processing
-/$PROJECT_NAME     #basename of template file, e.g. GalapagosSenDT128
-    GalapagosSenDT128VV.template
+isce_topsStack = """
+/$PROJECT_NAME          #basename of template file, e.g. GalapagosSenDT128
+    GalapagosSenDT128.template
     /DEM
         demLat_S02_N01_Lon_W092_W090.dem.wgs84
         demLat_S02_N01_Lon_W092_W090.dem.wgs84.vrt
@@ -145,9 +145,9 @@ project_structure_isce_tops = """#/sratch/projects/insarlab/$USER - high speed d
     ...
 """
 
-project_structure_isce_stripmap = """#/sratch/projects/insarlab/$USER - high speed disk for data processing
-/$PROJECT_NAME     #basename of template file, e.g. GalapagosSenDT128
-    GalapagosSenDT128VV.template
+isce_stripmapStack = """
+/$PROJECT_NAME          #basename of template file, e.g. GalapagosSenDT128
+    KyushuAlosDT073.template
     /DEM
         demLat_S02_N01_Lon_W092_W090.dem.wgs84
         demLat_S02_N01_Lon_W092_W090.dem.wgs84.vrt
