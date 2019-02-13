@@ -1,4 +1,4 @@
-examples/*
+examples/dev/*
 *.DS_Store
 *.pyc
 .ipynb_checkpoints/*
