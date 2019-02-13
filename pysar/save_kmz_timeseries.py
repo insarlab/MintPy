@@ -160,6 +160,12 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
     js_data_string = "<script type='text/javascript' src='../../../" + dygraph_file + "'></script>"
     js_data_string += """
         <div id='graphdiv'> </div>
+        <style>
+            .dygraph-legend{
+                left: 435px !important;
+                width: 265px !important;
+            }
+        </style>
         <script type='text/javascript'>
             g = new Dygraph( document.getElementById('graphdiv'),
             "Date, displacement\\n" +
@@ -195,7 +201,12 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
              },
              y: {
                  valueFormatter: function(v) {
-                     return (' ' + v.toFixed(2)).slice(-5)
+                    if(v >= 0){
+                        return (' 000' + v.toFixed(2)).slice(-8)
+                    }else{
+                        return (' -000' + Math.abs(v).toFixed(2)).slice(-8)
+                    }
+                     
                  }
              }
          },
