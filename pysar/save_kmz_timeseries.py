@@ -152,6 +152,7 @@ def generate_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=
         des_str += "Temporal coherence: {:.2f} <br /> \n".format(tcoh)
     des_str += "</font>"
     des_str += " <br />  <br /> "
+    des_str += "* Double click to reset plot <br /> <br />\n"
     des_str += "\n\n"
     return des_str
 
