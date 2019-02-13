@@ -64,7 +64,7 @@ def create_parser():
                         help='plot and save the result to image files.')
     parser.add_argument('--noaux', dest='update_aux', action='store_false',
                         help='Do not update auxilary files, e.g.\n' +
-                             'maskConnComp.h5 from ifgramStack.h5 or avgSpatialCoherence.h5 from coherence.h5')
+                             'maskConnComp.h5 or avgSpatialCoh.h5 from ifgramStack.h5')
 
     # 1
     parser.add_argument('--max-tbase', dest='tempBaseMax',

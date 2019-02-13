@@ -514,30 +514,45 @@ def main(iargs=None):
         status = subprocess.Popen(networkCmd, shell=True).wait()
 
     #########################################
-    # Generating Aux files
+    # Referencing Interferograms in Space
     #########################################
-    print('\n**********  Generate Auxiliary Files  **********')
-    inps.waterMaskFile = 'waterMask.h5'
-    if not os.path.isfile(inps.waterMaskFile):
-        inps.waterMaskFile = None
-
+    print('\n**********  Select Reference Point  **********')
     # Initial mask (pixels with valid unwrapPhase or connectComponent in ALL interferograms)
     inps.maskFile = 'maskConnComp.h5'
     maskCmd = 'generate_mask.py {} --nonzero -o {} --update'.format(inps.stackFile, inps.maskFile)
     print(maskCmd)
     status = subprocess.Popen(maskCmd, shell=True).wait()
 
+    # Average spatial coherence
+    inps.avgSpatialCohFile = 'avgSpatialCoh.h5'
+    avgCmd = 'temporal_average.py {i} --dataset coherence -o {o} --update'.format(i=inps.stackFile,
+                                                                                  o=inps.avgSpatialCohFile)
+    print(avgCmd)
+    status = subprocess.Popen(avgCmd, shell=True).wait()
+
+    # Select reference point
+    refPointCmd = 'reference_point.py {} -t {} -c {}'.format(inps.stackFile,
+                                                             inps.templateFile,
+                                                             inps.avgSpatialCohFile)
+    print(refPointCmd)
+    status = subprocess.Popen(refPointCmd, shell=True).wait()
+    if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
+        raise Exception('Error while finding reference pixel in space.\n')
+
+    ###############################################
+    # Average velocity from interferogram stacking
+    ###############################################
+    print('\n**********  Quick assessment with interferogram stacking  **********')
+    inps.waterMaskFile = 'waterMask.h5'
+    if not os.path.isfile(inps.waterMaskFile):
+        inps.waterMaskFile = None
+
     # Average phase velocity - Stacking
     inps.avgPhaseVelFile = 'avgPhaseVelocity.h5'
     avgCmd = 'temporal_average.py {i} --dataset unwrapPhase -o {o} --update'.format(i=inps.stackFile,
                                                                                     o=inps.avgPhaseVelFile)
-    print(avgCmd)
-    status = subprocess.Popen(avgCmd, shell=True).wait()
-
-    # Average spatial coherence
-    inps.avgSpatialCohFile = 'avgSpatialCoherence.h5'
-    avgCmd = 'temporal_average.py {i} --dataset coherence -o {o} --update'.format(i=inps.stackFile,
-                                                                                  o=inps.avgSpatialCohFile)
     print(avgCmd)
     status = subprocess.Popen(avgCmd, shell=True).wait()
 
@@ -551,20 +566,6 @@ def main(iargs=None):
         print(maskCmd)
         status = subprocess.Popen(maskCmd, shell=True).wait()
 
-
-    #########################################
-    # Referencing Interferograms in Space
-    #########################################
-    print('\n**********  Select Reference Point  **********')
-    refPointCmd = 'reference_point.py {} -t {} -c {}'.format(inps.stackFile,
-                                                             inps.templateFile,
-                                                             inps.avgSpatialCohFile)
-    print(refPointCmd)
-    status = subprocess.Popen(refPointCmd, shell=True).wait()
-    if status is not 0:
-        if inps.plot:
-            plot_pysarApp(inps)
-        raise Exception('Error while finding reference pixel in space.\n')
 
     ############################################
     # Unwrapping Error Correction (Optional)

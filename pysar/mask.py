@@ -16,8 +16,8 @@ from pysar.utils import readfile, writefile, utils as ut
 ############################################################
 EXAMPLE = """example:
   mask.py  velocity.h5     -m Mask.h5
-  mask.py  timeseries.h5   -m temporal_coherence.h5  -t 0.7
-  mask.py  ifgramStack.h5  -m 100102_101120.cor      -t 0.9  -y  200 300  -x 300 400
+  mask.py  timeseries.h5   -m temporalCoherence.h5  -t 0.7
+  mask.py  ifgramStack.h5  -m 100102_101120.cor     -t 0.9  -y  200 300  -x 300 400
 """
 
 

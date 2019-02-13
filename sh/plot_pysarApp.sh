@@ -56,10 +56,10 @@ fi
 
 ## Auxliary Files from loaded dataset
 if [ $plot_loaded_data_aux -eq 1 ]; then
-    file=avgPhaseVelocity.h5;      test -f $file && $view $file -m maskSptialCoh.h5 | tee -a $log_file
-    file=avgSpatialCoherence.h5;   test -f $file && $view $file -c gray --vlim 0 1  | tee -a $log_file
-    file=maskSpatialCoherence.h5;  test -f $file && $view $file -c gray --vlim 0 1  | tee -a $log_file
-    file=maskConnComp.h5;          test -f $file && $view $file -c gray --vlim 0 1  | tee -a $log_file
+    file=avgPhaseVelocity.h5;   test -f $file && $view $file -m maskSptialCoh.h5 | tee -a $log_file
+    file=avgSpatialCoh.h5;      test -f $file && $view $file -c gray --vlim 0 1  | tee -a $log_file
+    file=maskSpatialCoh.h5;     test -f $file && $view $file -c gray --vlim 0 1  | tee -a $log_file
+    file=maskConnComp.h5;       test -f $file && $view $file -c gray --vlim 0 1  | tee -a $log_file
 fi
 
 
