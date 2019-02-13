@@ -136,11 +136,19 @@ def generate_description_string(coords, yx, v, vstd, disp, tcoh=None, font_size=
 
 def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
     # Javascript to embed inside the description
-    js_data_string = "<script type='text/javascript' src='../../../" + dygraph_file + "'></script>\n" \
-                      "<div id='graphdiv'> </div>\n" \
-                      "<script type='text/javascript'>\n" \
-                      "g = new Dygraph( document.getElementById('graphdiv'),\n" \
-                      "\"Date, displacement\\n\" + \n"
+    # js_data_string = "<script type='text/javascript' src='../../../" + dygraph_file + "'></script>\n" \
+    #                   "<div id='graphdiv'> </div>\n" \
+    #                   "<script type='text/javascript'>\n" \
+    #                   "g = new Dygraph( document.getElementById('graphdiv'),\n" \
+    #                   "\"Date, displacement\\n\" + \n"
+
+    js_data_string = """
+        <script type='text/javascript' src='../../../" + dygraph_file + "'></script>\n
+        <div id='graphdiv'> </div>\n
+        <script type='text/javascript'>\n
+            g = new Dygraph( document.getElementById('graphdiv'),\n
+            "Date, displacement\n" + \n
+    """
 
     # append the date/displacement data
     for k in range(num_date):
@@ -149,45 +157,89 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
         date_displacement_string = "\"{}, {}\\n\" + \n".format(date, dis)
         js_data_string += date_displacement_string
 
-    js_data_string += "\"\",\n" \
-                      "{" \
-                        "width: 700,\n" \
-                        "height: 300,\n" \
-                        "axes: {\n" \
-                            "x: {\n" \
-                                "axisLabelFormatter: function (d, gran) {\n" \
-                                    "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
-                                    "var date = new Date(d)\n" \
-                                    "var dateString = months[date.getMonth()] + ' ' + date.getFullYear()\n" \
-                                    "return dateString;\n" \
-                                "},\n" \
-                                "valueFormatter: function (d) {\n" \
-                                    "var date = new Date(d)\n" \
-                                    "var dateString = 'Date: ' + ('0' + date.getDate()).slice(-2) + '/' + ('0' + (date.getMonth() + 1)).slice(-2) + '/' + date.getFullYear()\n" \
-                                    "return dateString;\n" \
-                                "},\n" \
-                                "pixelsPerLabel: 90\n" \
-                            "},\n" \
-                            "y: {\n" \
-                                "valueFormatter: function(v) {\n" \
-                                    "return (' ' + v.toFixed(2)).slice(-5)\n" \
-                                "}\n" \
-                            "}\n" \
-                        "},\n" \
-                        "valueRange: [" + str(ts_min) + "," + str(ts_max) + "],\n" \
-                        "ylabel: 'LOS displacement [cm]',\n" \
-                        "yLabelWidth: 18,\n" \
-                        "drawPoints: true,\n" \
-                        "strokeWidth: 0,\n" \
-                        "pointSize: 3,\n" \
-                        "highlightCircleSize: 6,\n" \
-                        "axisLabelFontSize: 12,\n" \
-                        "xRangePad: 30,\n" \
-                        "yRangePad: 30,\n" \
-                        "hideOverlayOnMouseOut: false,\n" \
-                        "panEdgeFraction: 0.0\n" \
-                      "});\n" \
-                      "</script>"
+    js_data_string += """
+    
+    "",\n
+       {
+         width: 700,\n
+         height: 300,\n
+         axes: {\n
+             x: {\n
+                 axisLabelFormatter: function (d, gran) {\n
+                     var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n
+                     var date = new Date(d)\n
+                     var dateString = months[date.getMonth()] + ' ' + date.getFullYear()\n
+                     return dateString;\n
+                 },\n
+                 valueFormatter: function (d) {\n
+                     var date = new Date(d)\n
+                     var dateString = 'Date: ' + ('0' + date.getDate()).slice(-2) + '/' + ('0' + (date.getMonth() + 1)).slice(-2) + '/' + date.getFullYear()\n
+                     return dateString;\n
+                 },\n
+                 pixelsPerLabel: 90\n
+             },\n
+             y: {\n
+                 valueFormatter: function(v) {\n
+                     return (' ' + v.toFixed(2)).slice(-5)\n
+                 }\n
+             }\n
+         },\n
+         valueRange: [" + str(ts_min) + "," + str(ts_max) + "],\n
+         ylabel: 'LOS displacement [cm]',\n
+         yLabelWidth: 18,\n
+         drawPoints: true,\n
+         strokeWidth: 0,\n
+         pointSize: 3,\n
+         highlightCircleSize: 6,\n
+         axisLabelFontSize: 12,\n
+         xRangePad: 30,\n
+         yRangePad: 30,\n
+         hideOverlayOnMouseOut: false,\n
+         panEdgeFraction: 0.0\n
+       });\n
+       </script>
+    
+    """
+
+    # js_data_string += "\"\",\n" \
+    #                   "{" \
+    #                     "width: 700,\n" \
+    #                     "height: 300,\n" \
+    #                     "axes: {\n" \
+    #                         "x: {\n" \
+    #                             "axisLabelFormatter: function (d, gran) {\n" \
+    #                                 "var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']\n" \
+    #                                 "var date = new Date(d)\n" \
+    #                                 "var dateString = months[date.getMonth()] + ' ' + date.getFullYear()\n" \
+    #                                 "return dateString;\n" \
+    #                             "},\n" \
+    #                             "valueFormatter: function (d) {\n" \
+    #                                 "var date = new Date(d)\n" \
+    #                                 "var dateString = 'Date: ' + ('0' + date.getDate()).slice(-2) + '/' + ('0' + (date.getMonth() + 1)).slice(-2) + '/' + date.getFullYear()\n" \
+    #                                 "return dateString;\n" \
+    #                             "},\n" \
+    #                             "pixelsPerLabel: 90\n" \
+    #                         "},\n" \
+    #                         "y: {\n" \
+    #                             "valueFormatter: function(v) {\n" \
+    #                                 "return (' ' + v.toFixed(2)).slice(-5)\n" \
+    #                             "}\n" \
+    #                         "}\n" \
+    #                     "},\n" \
+    #                     "valueRange: [" + str(ts_min) + "," + str(ts_max) + "],\n" \
+    #                     "ylabel: 'LOS displacement [cm]',\n" \
+    #                     "yLabelWidth: 18,\n" \
+    #                     "drawPoints: true,\n" \
+    #                     "strokeWidth: 0,\n" \
+    #                     "pointSize: 3,\n" \
+    #                     "highlightCircleSize: 6,\n" \
+    #                     "axisLabelFontSize: 12,\n" \
+    #                     "xRangePad: 30,\n" \
+    #                     "yRangePad: 30,\n" \
+    #                     "hideOverlayOnMouseOut: false,\n" \
+    #                     "panEdgeFraction: 0.0\n" \
+    #                   "});\n" \
+    #                   "</script>"
     return js_data_string
 
 
