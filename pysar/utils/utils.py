@@ -166,7 +166,7 @@ def median_abs_deviation_threshold(data, center=None, cutoff=3.):
     outlier detection with median absolute deviation.
     https://www.statsmodels.org/dev/generated/statsmodels.robust.scale.mad.html
     """
-    data = np.array(data)
+    data = np.array(data[~np.isnan(data)])   #ignore NaN value
     if center is None:
         center = np.median(data)
     #from statsmodels.robust import mad
