@@ -63,7 +63,7 @@ EXAMPLE = """example:
   view.py geo_timeseries_ECMWF_demErr_ramp.h5 20180619 --ref-date 20141213 --show-gps --gps-comp enu2los --ref-gps GV01
 
   # Custom colormap
-  # Download GMT colormap and saved to $PYSAR_HOME/docs/colormaps
+  # Download GMT colormap and saved to $PYSAR_HOME/docs/resources/colormaps
   # Link: http://soliton.vm.bytemark.co.uk/pub/cpt-city/views/totp-cpt.html
   view.py geo_velocity.h5 velocity -c temperature
   view.py geometryRadar.h5 height -c DEM_print

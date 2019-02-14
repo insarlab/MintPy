@@ -47,11 +47,11 @@ def create_parser():
                              "It's equivalent to None if default pysarApp_template.txt is input.")
     parser.add_argument('--dir', dest='workDir',
                         help='PySAR working directory, default is:\n' +
-                             'a) current directory, or\n' +
-                             'b) $SCRATCHDIR/projectName/PYSAR, if meets the following 3 requirements:\n' +
-                             '    1) autoPath = True in pysar/defaults/auto_path.py\n' +
-                             '    2) environmental variable $SCRATCHDIR exists\n' +
-                             '    3) input custom template with basename same as projectName\n')
+                             'a) current directory, OR\n' +
+                             'b) $SCRATCHDIR/projectName/PYSAR, if:\n' +
+                             '    1) autoPath = True in pysar/defaults/auto_path.py AND\n' +
+                             '    2) environment variable $SCRATCHDIR exists AND\n' +
+                             '    3) input custom template named as: projectName.*\n')
     parser.add_argument('-g', dest='generate_template', action='store_true',
                         help='Generate default template (and merge with custom template), then exit.')
     parser.add_argument('-H', dest='print_auto_template', action='store_true',
@@ -187,9 +187,9 @@ def read_template(inps):
     # Get existing files name: unavco_attributes.txt
     try:
         inps.unavcoMetadataFile = ut.get_file_list('unavco_attribute*txt', abspath=True)[0]
+        print('UNAVCO metadata file:', inps.unavcoMetadataFile)
     except:
         inps.unavcoMetadataFile = None
-        print('No UNAVCO attributes file found.')
 
     inps.plot = template['pysar.plot']
 
@@ -514,30 +514,45 @@ def main(iargs=None):
         status = subprocess.Popen(networkCmd, shell=True).wait()
 
     #########################################
-    # Generating Aux files
+    # Referencing Interferograms in Space
     #########################################
-    print('\n**********  Generate Auxiliary Files  **********')
-    inps.waterMaskFile = 'waterMask.h5'
-    if not os.path.isfile(inps.waterMaskFile):
-        inps.waterMaskFile = None
-
+    print('\n**********  Select Reference Point  **********')
     # Initial mask (pixels with valid unwrapPhase or connectComponent in ALL interferograms)
     inps.maskFile = 'maskConnComp.h5'
     maskCmd = 'generate_mask.py {} --nonzero -o {} --update'.format(inps.stackFile, inps.maskFile)
     print(maskCmd)
     status = subprocess.Popen(maskCmd, shell=True).wait()
 
+    # Average spatial coherence
+    inps.avgSpatialCohFile = 'avgSpatialCoh.h5'
+    avgCmd = 'temporal_average.py {i} --dataset coherence -o {o} --update'.format(i=inps.stackFile,
+                                                                                  o=inps.avgSpatialCohFile)
+    print(avgCmd)
+    status = subprocess.Popen(avgCmd, shell=True).wait()
+
+    # Select reference point
+    refPointCmd = 'reference_point.py {} -t {} -c {}'.format(inps.stackFile,
+                                                             inps.templateFile,
+                                                             inps.avgSpatialCohFile)
+    print(refPointCmd)
+    status = subprocess.Popen(refPointCmd, shell=True).wait()
+    if status is not 0:
+        if inps.plot:
+            plot_pysarApp(inps)
+        raise Exception('Error while finding reference pixel in space.\n')
+
+    ###############################################
+    # Average velocity from interferogram stacking
+    ###############################################
+    print('\n**********  Quick assessment with interferogram stacking  **********')
+    inps.waterMaskFile = 'waterMask.h5'
+    if not os.path.isfile(inps.waterMaskFile):
+        inps.waterMaskFile = None
+
     # Average phase velocity - Stacking
     inps.avgPhaseVelFile = 'avgPhaseVelocity.h5'
     avgCmd = 'temporal_average.py {i} --dataset unwrapPhase -o {o} --update'.format(i=inps.stackFile,
                                                                                     o=inps.avgPhaseVelFile)
-    print(avgCmd)
-    status = subprocess.Popen(avgCmd, shell=True).wait()
-
-    # Average spatial coherence
-    inps.avgSpatialCohFile = 'avgSpatialCoherence.h5'
-    avgCmd = 'temporal_average.py {i} --dataset coherence -o {o} --update'.format(i=inps.stackFile,
-                                                                                  o=inps.avgSpatialCohFile)
     print(avgCmd)
     status = subprocess.Popen(avgCmd, shell=True).wait()
 
@@ -551,20 +566,6 @@ def main(iargs=None):
         print(maskCmd)
         status = subprocess.Popen(maskCmd, shell=True).wait()
 
-
-    #########################################
-    # Referencing Interferograms in Space
-    #########################################
-    print('\n**********  Select Reference Point  **********')
-    refPointCmd = 'reference_point.py {} -t {} -c {}'.format(inps.stackFile,
-                                                             inps.templateFile,
-                                                             inps.avgSpatialCohFile)
-    print(refPointCmd)
-    status = subprocess.Popen(refPointCmd, shell=True).wait()
-    if status is not 0:
-        if inps.plot:
-            plot_pysarApp(inps)
-        raise Exception('Error while finding reference pixel in space.\n')
 
     ############################################
     # Unwrapping Error Correction (Optional)

@@ -11,8 +11,8 @@ pysar.load.processor      = auto  #[isce,roipac,gamma,], auto for isce
 pysar.load.updateMode     = auto  #[yes / no], auto for yes, skip re-loading if HDF5 files are complete
 pysar.load.compression    = auto  #[gzip / lzf / no], auto for no.
 ##---------for ISCE only:
-pysar.load.metaFile       = auto  #[path2metadata_file]
-pysar.load.baselineDir    = auto  #[path2baseline_dir]
+pysar.load.metaFile       = auto  #[path2metadata_file], i.e.: ./master/IW1.xml, ./masterShelve/data.dat
+pysar.load.baselineDir    = auto  #[path2baseline_dir], i.e.: ./baselines
 ##---------interferogram datasets:
 pysar.load.unwFile        = auto  #[path2unw_file]
 pysar.load.corFile        = auto  #[path2cor_file]
@@ -39,7 +39,7 @@ pysar.subset.lalo     = auto    #[31.5:32.5,130.5:131.0 / no], auto for no
 ## auto - randomly select a pixel with coherence > minCoherence
 pysar.reference.yx            = auto   #[257,151 / auto]
 pysar.reference.lalo          = auto   #[31.8,130.8 / auto]
-pysar.reference.coherenceFile = auto   #[filename], auto for avgSpatialCoherence.h5
+pysar.reference.coherenceFile = auto   #[filename], auto for avgSpatialCoh.h5
 pysar.reference.minCoherence  = auto   #[0.0-1.0], auto for 0.85, minimum coherence for auto method
 pysar.reference.maskFile      = auto   #[filename / no], auto for maskConnComp.h5
 

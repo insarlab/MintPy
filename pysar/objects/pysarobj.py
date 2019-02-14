@@ -280,6 +280,7 @@ class timeseries:
         data = np.array(data, dtype=np.float32)
         dates = np.array(dates, dtype=np.string_)
         bperp = np.array(bperp, dtype=np.float32)
+        metadata = dict(metadata)
         metadata['FILE_TYPE'] = self.name
 
         # 3D dataset - timeseries

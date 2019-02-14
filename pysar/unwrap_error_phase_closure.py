@@ -24,7 +24,7 @@ except ImportError:
 from pysar.objects import ifgramStack
 from pysar.objects.conncomp import connectComponent
 from pysar.utils import ptime, readfile, writefile, utils as ut, plot as pp
-from pysar.utils.solvers import l1reg_lstsq
+from pysar.utils.solvers import l1regls
 
 
 key_prefix = 'pysar.unwrapError.'
@@ -242,7 +242,7 @@ def get_common_region_int_ambiguity(ifgram_file, cc_mask_file, water_mask_file=N
                 closure_int = matrix(np.round((closure_pha - ut.wrap(closure_pha)) / (2.*np.pi)))
 
                 # solve for U
-                U[:,j] = np.round(l1reg_lstsq(-C, closure_int, lambd=1e-2)).flatten()
+                U[:,j] = np.round(l1regls(-C, closure_int, alpha=1e-2, show_progress=0)).flatten()
                 prog_bar.update(j+1, every=5)
             prog_bar.close()
         # add int_ambiguity

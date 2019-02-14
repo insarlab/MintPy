@@ -1215,9 +1215,9 @@ def spatial_average(File, datasetName='coherence', maskFile=None, box=None,
                     date12_list, e.g. 101120-110220, for interferograms/coherence
                     date8_list, e.g. 20101120, for timeseries
                     file name, e.g. velocity.h5, for all the other file types
-    Example:    meanList = spatial_average('coherence.h5')[0]
-                meanList, date12_list = spatial_average('coherence.h5',
-                                                        'maskTempCoh.h5',
+    Example:    meanList = spatial_average('INPUTS/ifgramStack.h5')[0]
+                meanList, date12_list = spatial_average('INPUTS/ifgramStack.h5',
+                                                        maskFile='maskTempCoh.h5',
                                                         saveList=True)
     """
     def read_text_file(fname):
@@ -1335,7 +1335,7 @@ def temporal_average(File, datasetName='coherence', updateMode=False, outFile=No
                 outFile : string, output file name
     Examples:   avgPhaseVel = ut.temporal_average('ifgramStack.h5', datasetName='unwrapPhase')[0]
                 ut.temporal_average('ifgramStack.h5', datasetName='coherence',
-                                    outFile='avgSpatialCoherence.h5', updateMode=True)
+                                    outFile='avgSpatialCoh.h5', updateMode=True)
     """
     atr = readfile.read_attribute(File, datasetName=datasetName)
     k = atr['FILE_TYPE']
@@ -1350,7 +1350,7 @@ def temporal_average(File, datasetName='coherence', updateMode=False, outFile=No
         if not outFile:
             if k == 'ifgramStack':
                 if datasetName == 'coherence':
-                    outFile = 'avgSpatialCoherence.h5'
+                    outFile = 'avgSpatialCoh.h5'
                 elif 'unwrapPhase' in datasetName:
                     outFile = 'avgPhaseVelocity.h5'
                 else:
