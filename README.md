@@ -37,6 +37,8 @@ Inside pysarApp.py, it reads the unwrapped interferograms, references all of the
 
 Check **./PIC** folder for auto-generated figures. More details about this test data are in [here](https://github.com/yunjunz/PySAR/wiki/Example).     
 
+Check **/exmaple/input_files** folder for example template file for different InSAR processors.
+
 #### Some useful scripts for information and visualization:   
 
     info.py                    #check HDF5 file structure and metadata
@@ -45,7 +47,8 @@ Check **./PIC** folder for auto-generated figures. More details about this test 
     transect.py                #1D profile (interactive)
     plot_coherence_matrix.py   #plot coherence matrix for one pixel (interactive)
     plot_network.py            #plot network configuration of the dataset    
-    save_kml.py                #generate Google Earth KMZ file in raster image
+    save_kmz.py                #generate Google Earth KMZ file in raster image
+    save_kmz_timeseries.py     #generate Goodle Earth KMZ file in points for time-series (interactive)
      
 #### Build your own processing recipe   
 
