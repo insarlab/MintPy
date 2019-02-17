@@ -308,7 +308,6 @@ def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
     if print_msg:
         print(lineStr)
 
-    s_time = time.time()
     coh_num = 1000
     coh_min = 0.0 + epsilon
     coh_max = 1.0 - epsilon
@@ -316,17 +315,12 @@ def coherence2phase_variance_ds(coherence, L=32, epsilon=1e-3, print_msg=False):
     coh_min = np.min(coh_lut)
     coh_max = np.max(coh_lut)
     coh_step = (coh_max - coh_min) / (coh_num - 1)
-    print("part 1:", time.time() - s_time)
-    s_time = time.time()
     coherence = np.array(coherence)
     coherence[coherence < coh_min] = coh_min
     coherence[coherence > coh_max] = coh_max
     coherence_idx = np.array((coherence - coh_min) / coh_step, np.int16)
-    print("part 2:", time.time() - s_time)
-    s_time = time.time()
     var_lut = phase_variance_ds(int(L), coh_lut)[0]
     variance = var_lut[coherence_idx]
-    print("part 3:", time.time() - s_time)
     return variance
 
 
@@ -701,12 +695,8 @@ def coherence2weight(coh_data, weight_func='var', L=20, epsilon=5e-2, print_msg=
         if print_msg:
             print('convert coherence to weight using inverse of phase variance')
             print('    with phase PDF for distributed scatterers from Tough et al. (1995)')
-        s_time = time.time()
         x = coherence2phase_variance_ds(coh_data, L, print_msg=print_msg)
-        print("coherence2phase_variance_ds time:", time.time() - s_time)
-        s_time = time.time()
         weight = 1.0 / x
-        print("weight calculation time 1/x:", time.time() - s_time)
 
     elif any(i in weight_func for i in ['coh', 'lin']):
         if print_msg:
@@ -755,8 +745,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                 ifgram_inversion_patch('ifgramStack_001.h5', box=None, ref_phase=None,
                                        weight_func='var', min_norm_velocity=True, mask_dataset_name='coherence')
     """
-    pre_estimate_timeseries_time = time.time()
-    s_time = time.time()
     stack_obj = ifgramStack(ifgram_file)
     stack_obj.open(print_msg=False)
 
@@ -819,8 +807,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     # Mask for pixels to invert
     mask = np.ones(num_pixel, np.bool_)
 
-    print("Pre step 1:", time.time() - s_time)
-    s_time = time.time()
     # 1 - Water Mask
     if water_mask_file:
         print(('skip pixels on water with mask from'
@@ -836,8 +822,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
                                   box=box)[0].flatten()
         mask *= np.array(waterMask, np.bool_)
         del waterMask
-    print("Step 1:", time.time() - s_time)
-    s_time = time.time()
 
     # 2 - Mask for Zero Phase in ALL ifgrams
     print('skip pixels with zero/nan value in all interferograms')
@@ -857,7 +841,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
         temp_coh = temp_coh.reshape(num_row, num_col)
         num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
         return ts, temp_coh, ts_std, num_inv_ifg
-    print("Step 2:", time.time() - s_time)
 
     # Inversion - SBAS
     if weight_func in ['no', 'sbas']:
@@ -901,31 +884,17 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
 
     # Inversion - WLS
     else:
-        s_time = time.time()
         L = int(stack_obj.metadata['ALOOKS']) * int(stack_obj.metadata['RLOOKS'])
-        print("weight creation L (1):", time.time() - s_time)
-        s_time = time.time()
 
         weight = read_coherence(stack_obj, box=box, dropIfgram=True)
-        print("weight creation read_coherence (2):", time.time() - s_time)
-        s_time = time.time()
 
         weight = coherence2weight(weight, weight_func=weight_func, L=L, epsilon=5e-2)
-        print("weight creation coherence2weight (3):", time.time() - s_time)
-        s_time = time.time()
 
         weight = np.sqrt(weight)
-        print("weight creation sqrt (4):", time.time() - s_time)
         # Weighted Inversion pixel by pixel
-        print("Time before estimate_timeseries:", time.time() - pre_estimate_timeseries_time)
         print('inverting network of interferograms into time-series ...')
         prog_bar = ptime.progressBar(maxValue=num_pixel2inv)
-        start_time = time.time()
-        mid_start = time.time()
         for i in range(num_pixel2inv):
-            if i % 100 == 0:
-                print(i, time.time() - mid_start)
-                mid_start = time.time()
             idx = idx_pixel2inv[i]
             tsi, tcohi, num_ifgi = estimate_timeseries(A, B, tbase_diff,
                                                        ifgram=pha_data[:, idx],
@@ -943,9 +912,6 @@ def ifgram_inversion_patch(ifgram_file, box=None, ref_phase=None, unwDatasetName
     ts_std = ts_std.reshape(num_date, num_row, num_col)
     temp_coh = temp_coh.reshape(num_row, num_col)
     num_inv_ifg = num_inv_ifg.reshape(num_row, num_col)
-
-    end_time = time.time()
-    print("TIME IT TOOK: ", end_time - start_time)
 
     # write output files if input file is splitted (box == None)
     if box is None:
@@ -1058,6 +1024,10 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
 
         # Loop
         if inps.parallel:
+
+            # Initialize Dask Workers.
+            # TODO: Should these params be moved into a config file?
+            # We could use our own config setup or Dask's config setup
             NUM_WORKERS = 40
             cluster = LSFCluster(project='insarlab',
                                  name='pysar_worker_bee2',
@@ -1135,6 +1105,10 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                 ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
                 temp_coh[subbox[1]:subbox[3], subbox[0]:subbox[2]] = temp_cohi
                 num_inv_ifg[subbox[1]:subbox[3], subbox[0]:subbox[2]] = ifg_numi
+
+            # Shut down Dask workers gracefully
+            client.close()
+            cluster.close()
         else:
             for i in range(num_box):
                 box = box_list[i]
@@ -1203,7 +1177,6 @@ def parallel_ifgram_inversion_patch(data):
                                            min_redundancy=min_redundancy,
                                            water_mask_file=water_mask_file,
                                            skip_zero_phase=skip_zero_phase)
-    print("DONE:", time.time())
 
     return tsi, temp_cohi, ts_stdi, ifg_numi, box
 
