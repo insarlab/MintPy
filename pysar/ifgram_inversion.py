@@ -1129,9 +1129,7 @@ def ifgram_inversion(ifgram_file='ifgramStack.h5', inps=None):
                 i_future += 1
                 print("FUTURE #" + str(i_future), "complete in", time.time() - start_time_subboxes,
                       "seconds. Box:", subbox, "Time:", time.time())
-                tsi, temp_cohi, ts_stdi, ifg_numi, box = result
-
-                subbox = result
+                tsi, temp_cohi, ts_stdi, ifg_numi, subbox = result
 
                 ts[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = tsi
                 ts_std[:, subbox[1]:subbox[3], subbox[0]:subbox[2]] = ts_stdi
