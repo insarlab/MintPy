@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 ############################################################
 # Program is part of PySAR                                 #
-# Copyright(c) 2015-2018, Heresh Fattahi, Zhang Yunjun     #
+# Copyright(c) 2015-2019, Heresh Fattahi, Zhang Yunjun     #
 # Author:  Heresh Fattahi, Zhang Yunjun                    #
 ############################################################
 
@@ -28,10 +28,15 @@ standardWeatherModelNames = {'ERAI': 'ECMWF', 'ERAINT': 'ECMWF', 'ERAINTERIM': '
 
 ###############################################################
 EXAMPLE = """example:
-  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF
-  tropcor_pyaps.py -d date_list.txt     --hour 12 -m MERRA
-  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m ECMWF -g geometryRadar.h5 --ref-yx 30 40
-  tropcor_pyaps.py -f timeseries.h5 -g INPUTS/geometryRadar.h5 -m ECMWF
+  # download reanalysys dataset, calculate tropospheric delays and correct time-series file.
+  tropcor_pyaps.py -f timeseries.h5 -m ECMWF -g INPUTS/geometryRadar.h5 -w ~/WEATHER
+
+  # download reanalysys dataset, calculate tropospheric delays
+  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
+  tropcor_pyaps.py -d 20151002 20151003 --hour 12 -m MERRA -g INPUTS/geometryRadar.h5 --ref-yx 30 40 -w ~/WEATHER
+
+  # download reanalysys dataset
+  tropcor_pyaps.py -d date_list.txt     --hour 12 -m ECMWF -w ~/WEATHER
 """
 
 REFERENCE = """reference:
@@ -63,12 +68,12 @@ To download MERRA2, you need an Earthdata account, and pre-authorize the "NASA G
 
 WEATHER_DIR = """--weather-dir ~/WEATHER
 WEATHER/
-├── ECMWF
-│   ├── ERA-Int_20030329_06.grb
-│   ├── ERA-Int_20030503_06.grb
-└── MERRA
-    ├── merra-20110126-06.nc4
-    ├── merra-20110313-06.nc4
+    /ECMWF
+        ERA-Int_20030329_06.grb
+        ERA-Int_20030503_06.grb
+    /MERRA
+        merra-20110126-06.nc4
+        merra-20110313-06.nc4
 """
 
 
@@ -86,7 +91,7 @@ def create_parser():
                              'in YYYYMMDD or YYMMDD format')
     parser.add_argument('--hour', help='time of data in HH, e.g. 12, 06')
     parser.add_argument('-w', '--dir', '--weather-dir', dest='weather_dir',
-                        help='parent directory of downloaded weather data file. Default: ./../WEATHER\n' +
+                        help='parent directory of downloaded weather data file. Default: ./\n' +
                              'e.g.: '+WEATHER_DIR)
 
     # For delay calculation
@@ -110,36 +115,61 @@ def cmd_line_parse(iargs=None):
     parser = create_parser()
     inps = parser.parse_args(args=iargs)
 
-    if all(not i for i in [inps.date_list, inps.timeseries_file, inps.geom_file]):
-        parser.print_help()
-        sys.exit(1)
+    # check the input requirements
+    key_list = ['date_list', 'hour']
+    # with timeseries file
+    if inps.timeseries_file:
+        for key in key_list+['ref_yx']:
+            if vars(inps)[key]:
+                print(('input "{:<10}" is ignored because it will be extracted from '
+                       'timeseries file {}').format(key, inps.timeseries_file))
+
+    # without timeseries file
+    elif any(not vars(inps)[key] for key in key_list):
+        msg = 'No input timeseries file, all the following options are required: \n{}'.format(key_list)
+        msg += '\n\n'+EXAMPLE
+        raise ValueError(msg)
+
     return inps
 
 
 ###############################################################
 def check_inputs(inps):
     parser = create_parser()
-    atr = dict()
-    if inps.timeseries_file:
-        atr = readfile.read_attribute(inps.timeseries_file)
-    elif inps.geom_file:
-        atr = readfile.read_attribute(inps.geom_file)
-
     # Get Grib Source
-    inps.trop_model = ut.standardize_trop_model(inps.trop_model,
-                                                standardWeatherModelNames)
+    inps.trop_model = ut.standardize_trop_model(inps.trop_model, standardWeatherModelNames)
     print('weather model: '+inps.trop_model)
 
-    # output file name
-    if not inps.outfile:
-        fbase = os.path.splitext(inps.timeseries_file)[0]
-        inps.outfile = '{}_{}.h5'.format(fbase, inps.trop_model)
+    # output directories/files
+    atr = dict()
+    pysar_dir = None
+    if inps.timeseries_file:
+        atr = readfile.read_attribute(inps.timeseries_file)
+        pysar_dir = os.path.dirname(inps.timeseries_file)
+        if not inps.outfile:
+            fbase = os.path.splitext(inps.timeseries_file)[0]
+            inps.outfile = '{}_{}.h5'.format(fbase, inps.trop_model)
+    elif inps.geom_file:
+        atr = readfile.read_attribute(inps.geom_file)
+        pysar_dir = os.path.join(os.path.dirname(inps.geom_file), '..')
+    else:
+        pysar_dir = os.path.abspath(os.getcwd())
+
+    # trop_file
+    inps.trop_file = os.path.join(pysar_dir, 'INPUTS/{}.h5'.format(inps.trop_model))
+    print('output tropospheric delay file: {}'.format(inps.trop_file))
+
+    # weather_dir
+    if not inps.weather_dir:
+        inps.weather_dir = pysar_dir
+    inps.weather_dir = os.path.expanduser(inps.weather_dir)
+    inps.weather_dir = os.path.expandvars(inps.weather_dir)
+    print('weather data directory: '+inps.weather_dir)
 
     # hour
     if not inps.hour:
         if 'CENTER_LINE_UTC' in atr.keys():
-            inps.hour = ptime.closest_weather_product_time(atr['CENTER_LINE_UTC'],
-                                                           inps.trop_model)
+            inps.hour = ptime.closest_weather_product_time(atr['CENTER_LINE_UTC'], inps.trop_model)
         else:
             parser.print_usage()
             raise Exception('no input for hour')
@@ -160,18 +190,6 @@ def check_inputs(inps):
         else:
             parser.print_usage()
             raise Exception('ERROR: input date list < 2')
-
-    # weather directory
-    if not inps.weather_dir:
-        if inps.timeseries_file:
-            inps.weather_dir = os.path.join(os.path.dirname(os.path.abspath(inps.timeseries_file)),
-                                            '../WEATHER')
-        elif inps.geom_file:
-            inps.weather_dir = os.path.join(os.path.dirname(os.path.abspath(inps.geom_file)),
-                                            '../WEATHER')
-        else:
-            inps.weather_dir = os.path.abspath(os.getcwd())
-    print('weather data directory: '+inps.weather_dir)
 
     # Grib data directory
     inps.grib_dir = os.path.join(inps.weather_dir, inps.trop_model)
@@ -370,12 +388,13 @@ def get_delay_timeseries(inps, atr):
                 atr  : dict, metadata to be saved in trop_file
     Returns:    trop_file : str, file name of ECMWF.h5
     """
-    if any(i is None for i in [inps.geom_file, inps.ref_yx]):
-        print('No DEM / incidenceAngle / ref_yx found, exit.')
-        return
+    if ut.run_or_skip(out_file=inps.trop_file, in_file=inps.grib_file_list, print_msg=False) == 'run':
+        if any(i is None for i in [inps.geom_file, inps.ref_yx]):
+            print('No DEM / incidenceAngle / ref_yx found, skip calculating tropospheric delays.')
+            if not os.path.isfile(inps.trop_file):
+                inps.trop_file = None
+            return
 
-    trop_file = os.path.join(os.path.dirname(inps.geom_file), inps.trop_model+'.h5')
-    if ut.run_or_skip(out_file=trop_file, in_file=inps.grib_file_list, print_msg=False) == 'run':
         # calculate phase delay
         length, width = int(atr['LENGTH']), int(atr['WIDTH'])
         num_date = len(inps.grib_file_list)
@@ -400,28 +419,31 @@ def get_delay_timeseries(inps, atr):
         trop_data -= np.tile(trop_data[inps.ref_idx, :, :], (num_date, 1, 1))
 
         # Write tropospheric delay to HDF5
-        ts_obj = timeseries(trop_file)
+        atr['REF_Y'] = inps.ref_yx[0]
+        atr['REF_X'] = inps.ref_yx[1]
+        ts_obj = timeseries(inps.trop_file)
         ts_obj.write2hdf5(data=trop_data,
                           dates=date_list,
                           metadata=atr,
                           refFile=inps.timeseries_file)
     else:
-        print('{} file exists and is newer than all GRIB files, skip updating.'.format(trop_file))
+        print('{} file exists and is newer than all GRIB files, skip updating.'.format(inps.trop_file))
 
     # Delete temporary DEM file in ROI_PAC format
-    temp_files =[fname for fname in [inps.dem_file,
-                                     inps.inc_angle_file,
-                                     inps.lat_file,
-                                     inps.lon_file] 
-                 if (fname is not None and 'pyaps' in fname)]
-    if temp_files:
-        print('delete temporary geometry files')
-        rmCmd = 'rm '
-        for fname in temp_files:
-            rmCmd += ' {f} {f}.rsc '.format(f=fname)
-        print(rmCmd)
-        os.system(rmCmd)
-    return trop_file
+    if inps.geom_file:
+        temp_files =[fname for fname in [inps.dem_file,
+                                         inps.inc_angle_file,
+                                         inps.lat_file,
+                                         inps.lon_file] 
+                     if (fname is not None and 'pyaps' in fname)]
+        if temp_files:
+            print('delete temporary geometry files')
+            rmCmd = 'rm '
+            for fname in temp_files:
+                rmCmd += ' {f} {f}.rsc '.format(f=fname)
+            print(rmCmd)
+            os.system(rmCmd)
+    return
 
 
 def correct_timeseries(timeseries_file, trop_file, out_file):
@@ -445,12 +467,15 @@ def main(iargs=None):
 
     inps.grib_file_list = dload_grib_pyaps(inps.grib_file_list)
 
-    trop_file = get_delay_timeseries(inps, atr)
+    if inps.trop_file:
+        get_delay_timeseries(inps, atr)
 
-    if atr['FILE_TYPE'] == 'timeseries':
+    if atr and atr['FILE_TYPE'] == 'timeseries':
         inps.outfile = correct_timeseries(inps.timeseries_file,
-                                          trop_file,
+                                          inps.trop_file,
                                           out_file=inps.outfile)
+    else:
+        print('No input timeseries file, skip correcting tropospheric delays.')
 
     return inps.outfile
 

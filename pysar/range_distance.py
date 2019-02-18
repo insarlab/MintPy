@@ -19,14 +19,13 @@ Generates range distance (in Radar Coordinate) for each pixel
   with required attributes read from the h5 file
 
 input arguments:
-  file    : string, input file name/path
+  file    : string, input  file name/path
   outfile : string, output file name/path for 2D incidence angle 
             calculated from file in radar coord
 
 example:
   range_distance.py  velocity.h5
   range_distance.py  timeseries.h5
-  range_distance.py  temporal_coherence.h5
     """)
     return
 

@@ -462,7 +462,7 @@ def prepare_metadata(inpsDict):
             meta_file = sorted(glob.glob(inpsDict['pysar.load.metaFile']))[0]
             baseline_dir = inpsDict['pysar.load.baselineDir']
             geom_dir = os.path.dirname(inpsDict['pysar.load.demFile'])
-            cmd = '{s} -i {i} -x {m} -b {b} -g {g}'.format(s=script_name,
+            cmd = '{s} -i {i} -m {m} -b {b} -g {g}'.format(s=script_name,
                                                            i=ifgram_dir,
                                                            m=meta_file,
                                                            b=baseline_dir,

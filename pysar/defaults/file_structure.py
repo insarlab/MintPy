@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # File Structure used by Geodesy Lab, University of Miami, Miami, FL
-# Author:  Zhang Yunjun, 2018 May
+# Author:  Zhang Yunjun, May 2018
 
-project_structure_roipac = """#/sratch/projects/insarlab/$USER - high speed disk for data processing
-/$PROJECT_NAME   #basename of template file, e.g. GalapagosT133F7160_7180AlosA
-    GalapagosSenDT128VV.template
+
+roipac = """
+/$PROJECT_NAME          #basename of template file, e.g. GalapagosT133F7160_7180AlosA
+    GalapagosAlosAT133.template
     /DEM
         srtm1.dem
         srtm1.dem.rsc
@@ -73,45 +74,51 @@ project_structure_roipac = """#/sratch/projects/insarlab/$USER - high speed disk
     /PYSAR
 """
 
-project_structure_isce = """#/sratch/projects/insarlab/$USER - high speed disk for data processing
-/$PROJECT_NAME     #basename of template file, e.g. GalapagosSenDT128
-    GalapagosSenDT128VV.template
+isce_topsStack = """
+/$PROJECT_NAME          #basename of template file, e.g. GalapagosSenDT128
+    GalapagosSenDT128.template
     /DEM
         demLat_S02_N01_Lon_W092_W090.dem.wgs84
         demLat_S02_N01_Lon_W092_W090.dem.wgs84.vrt
         demLat_S02_N01_Lon_W092_W090.dem.wgs84.xml
+    /PYSAR
+        ...
+    /SLC
+        S1A_IW_SLC__1SDV_*.zip
+        ...
+    /baselines
+        /20141213_20141225/20141213_20141225.txt
+        /20141213_20150307/20141213_20150307.txt
+        ...
     /master
         IW1.xml
         /IW1
-        /overlap
+        IW2.xml
+        /IW2
+        ...
     /merged
         /geom_master
             hgt.rdr
-            hgt.rdr.rsc
             hgt.rdr.vrt
             hgt.rdr.xml
             hgt.rdr.full.vrt
             hgt.rdr.full.xml
             lat.rdr
-            lat.rdr.rsc
             lat.rdr.vrt
             lat.rdr.xml
             lat.rdr.full.vrt
             lat.rdr.full.xml
             lon.rdr
-            lon.rdr.rsc
             lon.rdr.vrt
             lon.rdr.xml
             lon.rdr.full.vrt
             lon.rdr.full.xml
             los.rdr
-            los.rdr.rsc
             los.rdr.vrt
             los.rdr.xml
             los.rdr.full.vrt
             los.rdr.full.xml
             shadowMask.rdr
-            shadowMask.rdr.rsc
             shadowMask.rdr.vrt
             shadowMask.rdr.xml
             shadowMask.rdr.full.vrt
@@ -119,51 +126,100 @@ project_structure_isce = """#/sratch/projects/insarlab/$USER - high speed disk f
         /interferograms
             /20170612_20170624
                 filt_fine.cor
-                filt_fine.cor.rsc
                 filt_fine.cor.vrt
                 filt_fine.cor.xml
-                filt_fine.int
-                filt_fine.int.rsc
-                filt_fine.int.vrt
-                filt_fine.int.xml
                 filt_fine.unw
                 filt_fine.unw.conncomp
                 filt_fine.unw.conncomp.vrt
                 filt_fine.unw.conncomp.xml
-                filt_fine.unw.rsc
                 filt_fine.unw.vrt
                 filt_fine.unw.xml
-                fine.int
-                fine.int.full.vrt
-                fine.int.full.xml
-                fine.int.vrt
-                fine.int.xml
+                ...
             ...
-        /SLC
-            /20170612
-                20170612.slc.full.vrt
-                20170612.slc.full.xml
-            ...
+        ...
     /run_files
         run_1
         run_1_1.job
         run_1_2.job
         ...
-        run_2
-        run_2_1.job
-        ...
-    /slaves
-        /20170612
-            IW1.xml
-            /IW1
-                burst_01.slc.vrt
-                burst_01.slc.xml
-                burst_02.slc.vrt
-                burst_02.slc.xml
-                ...
-    /SLC
-        S1A_IW_SLC__1SDV_*.zip
-        ...
+    ...
+"""
+
+isce_stripmapStack = """
+/$PROJECT_NAME          #basename of template file, e.g. GalapagosSenDT128
+    KyushuAlosDT073.template
+    /DEM
+        demLat_S02_N01_Lon_W092_W090.dem.wgs84
+        demLat_S02_N01_Lon_W092_W090.dem.wgs84.vrt
+        demLat_S02_N01_Lon_W092_W090.dem.wgs84.xml
     /PYSAR
+        ...
+    /baselines
+        20070107_20071125.txt
+        20070107_20080110.txt
+        ...
+    /master
+        IW1.xml
+        /IW1
+        /overlap
+    /geom_master
+        hgt.rdr
+        hgt.rdr.full.xml
+        hgt.rdr.vrt
+        hgt.rdr.xml
+        ...
+        lat.rdr
+        lat.rdr.vrt
+        lat.rdr.xml
+        lon.rdr
+        lon.rdr.vrt
+        lon.rdr.xml
+        los.rdr
+        los.rdr.vrt
+        los.rdr.xml
+        shadowMask.rdr
+        shadowMask.rdr.vrt
+        shadowMask.rdr.xml
+        ...
+    /interferograms
+        /20070107_20071125
+            filt_20070107_20071125.cor
+            filt_20070107_20071125.cor.vrt
+            filt_20070107_20071125.cor.xml
+            filt_20070107_20071125_snaphu.unw
+            filt_20070107_20071125_snaphu.unw.conncomp
+            filt_20070107_20071125_snaphu.unw.conncomp.vrt
+            filt_20070107_20071125_snaphu.unw.conncomp.xml
+            filt_20070107_20071125_snaphu.unw.vrt
+            filt_20070107_20071125_snaphu.unw.xml
+            ...
+        ...
+    /ionosphere
+        /20070107_20071125
+            iono.bil.unwCor.filt
+            iono.bil.unwCor.filt.vrt
+            iono.bil.unwCor.filt.xml
+            mask.bil
+            mask.bil.vrt
+            mask.bil.xml
+            ...
+    /masterShelve
+        data.bak
+        data.dat
+        data.dir
+    /run_files
+        run_1
+        run_1_1.job
+        run_1_2.job
+        ...
+    /stripmapApp
+        /interferogram
+        /ionosphere
+        master.xml
+        slave.xml
+        stripmapApp.xml
+        stripmapProc.xml
+        ...
+    ...
 """
 

@@ -137,7 +137,8 @@ def get_auto_path(processor, project_name, template=dict()):
     for key, value in auto_path_dict.items():
         if value:
             for var1, var2 in var_dict.items():
-                auto_path_dict[key] = value.replace(var1, var2)
+                value = value.replace(var1, var2)    
+            auto_path_dict[key] = value
 
     # update template option with auto value
     for key, value in auto_path_dict.items():

@@ -323,7 +323,7 @@ class ColormapExt(mpl.cm.ScalarMappable):
         """
         # default file path
         if not cpt_path:
-            cpt_path = os.path.join(os.path.dirname(__file__), '../../docs/colormaps')
+            cpt_path = os.path.join(os.path.dirname(__file__), '../../docs/resources/colormaps')
 
         # if cmap_name is None, return list of existing cmap instead.
         if not cmap_name:

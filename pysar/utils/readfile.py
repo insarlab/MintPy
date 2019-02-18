@@ -95,6 +95,12 @@ ENVI2NUMPY_DATATYPE = {
     '15': 'uint64',
 }
 
+ENVI_BAND_INTERLEAVE = {
+    'BAND': 'BSQ',
+    'LINE': 'BIL',
+    'PIXEL': 'BIP',
+}
+
 
 ###########################################################################
 # obsolete variables
@@ -517,7 +523,7 @@ def get_dataset_list(fname, datasetName=None):
 
 
 #########################################################################
-def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
+def read_attribute(fname, datasetName=None, standardize=True, metafile_ext=None):
     """Read attributes of input file into a dictionary
     Parameters: fname : str, path/name of data file
                 datasetName : str, name of dataset of interest, for file with multiple datasets
@@ -625,11 +631,11 @@ def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
             atr['PROCESSOR'] = 'pysar'
 
     else:
-        # get existing metadata files
+        # get existing metadata file extensions
         metafile_exts = ['.rsc', '.xml', '.aux.xml', '.par', '.hdr']
-        if meta_ext:
-            metafile_exts = [i for i in metafile_exts if i.endswith(meta_ext)]
-        metafile_exts = [i for i in metafile_exts if os.path.isfile(fname+i)]
+        if metafile_ext:
+            metafile_exts = [i for i in metafile_exts if i.endswith(metafile_ext)]
+        metafile_exts = [i for i in metafile_exts if os.path.isfile(fname+i)]     
         if len(metafile_exts) == 0:
             raise FileNotFoundError('No metadata file found for data file: {}'.format(fname))
 
@@ -649,11 +655,11 @@ def read_attribute(fname, datasetName=None, standardize=True, meta_ext=None):
             atr['PROCESSOR'] = 'pysar'
 
         # Read metadata file and FILE_TYPE
+        metafile0 = fname + metafile_exts[0]
         while fext in ['.geo', '.rdr']:
             fbase, fext = os.path.splitext(fbase)
         if not fext:
             fext = fbase
-        metafile0 = fname + metafile_exts[0]
         if metafile0.endswith('.rsc'):
             atr.update(read_roipac_rsc(metafile0))
             if 'FILE_TYPE' not in atr.keys():
@@ -870,7 +876,7 @@ def read_isce_xml(fname, standardize=True):
             if ET.iselement(child):
                 v_step  = float(child.find("./property[@name='delta']").find('value').text)
                 v_first = float(child.find("./property[@name='startingvalue']").find('value').text)
-                if abs(v_step) < 1.:
+                if abs(v_step) < 1. and abs(v_step) > 1e-7:
                     xmlDict['{}_STEP'.format(prefix)] = v_step
                     xmlDict['{}_FIRST'.format(prefix)] = v_first - v_step / 2.
 
@@ -896,10 +902,11 @@ def read_envi_hdr(fname, standardize=True):
         map_info = [i.strip() for i in atr['map info'].split(',')]
         x_step = abs(float(map_info[5]))
         y_step = abs(float(map_info[6])) * -1.
-        atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
-        atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
-        atr['X_STEP'] = str(x_step)
-        atr['Y_STEP'] = str(y_step)
+        if abs(x_step) < 1. and abs(x_step) > 1e-7:
+            atr['X_FIRST'] = str(float(map_info[3]) - x_step / 2.)
+            atr['Y_FIRST'] = str(float(map_info[4]) - y_step / 2.)
+            atr['X_STEP'] = str(x_step)
+            atr['Y_STEP'] = str(y_step)
     if standardize:
         atr = standardize_metadata(atr)
     return atr
@@ -967,34 +974,6 @@ def attribute_gamma2roipac(par_dict_in):
             par_dict['ANTENNA_SIDE'] = '1'
 
     return par_dict
-
-
-def standardize_metadata_isce(metadata_in, dates=[], baselineDict={}):
-    """Grab metadata value in roipac and unavco-insar-archive key names"""
-    # convert metadata key names based on isce2roipacMetadataKeys
-    metadata = standardize_metadata(metadata_in)
-
-    metadata['beam_mode'] = 'IW'
-    metadata['PROCESSOR'] = 'isce'
-    metadata['ANTENNA_SIDE'] = '-1'
-
-    # get pixel_size for multilooked data
-    if all(i in metadata.keys() for i in ['rangePixelSize', 'RLOOKS']):
-        metadata['RANGE_PIXEL_SIZE'] = str(float(metadata['rangePixelSize']) * int(metadata['RLOOKS']))
-    if all(i in metadata.keys() for i in ['azimuthPixelSize', 'ALOOKS']):
-        metadata['AZIMUTH_PIXEL_SIZE'] = str(float(metadata['azimuthPixelSize']) * int(metadata['ALOOKS']))
-
-    if dates:
-        metadata['DATE12'] = '{}-{}'.format(dates[0][2:], dates[1][2:])
-        if baselineDict:
-            bperp = baselineDict['bperp'][dates[1]] - baselineDict['bperp'][dates[0]]
-            bpar  = baselineDict['bpar'][dates[1]]  - baselineDict['bpar'][dates[0]]
-            metadata['P_BASELINE_TOP_HDR']    = str(bperp)
-            metadata['P_BASELINE_BOTTOM_HDR'] = str(bperp)
-            metadata['H_BASELINE_TOP_HDR']    = str(bpar)
-            metadata['H_BASELINE_BOTTOM_HDR'] = str(bpar)
-
-    return metadata
 
 
 #########################################################################

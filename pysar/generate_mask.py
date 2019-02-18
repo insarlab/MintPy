@@ -21,7 +21,7 @@ from pysar.utils import (readfile,
 EXAMPLE = """example:
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5
   generate_mask.py  temporalCoherence.h5 -m 0.7 -o maskTempCoh.h5 --shadow INPUTS/geometryRadar.h5
-  generate_mask.py  avgSpatialCoherence.h5 -m 0.7 --base waterMask.h5 -o maskSpatialCoh.h5
+  generate_mask.py  avgSpatialCoh.h5     -m 0.7 --base waterMask.h5 -o maskSpatialCoh.h5
 
   # exlcude area by min/max value and/or subset in row/col direction
   generate_mask.py  081018_090118.unw -m 3 -M 8 -y 100 700 -x 200 800 -o mask_1.h5
