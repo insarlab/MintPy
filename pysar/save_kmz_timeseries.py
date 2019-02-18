@@ -17,10 +17,11 @@ except ImportError:
 from lxml import etree
 import numpy as np
 import matplotlib as mpl
+from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 
-from pysar.objects import timeseries
-from pysar.utils import readfile, plot
+from pysar.objects import timeseries, deramp
+from pysar.utils import readfile, plot, utils as ut
 
 
 ############################################################
@@ -43,6 +44,7 @@ def create_parser():
                       help='Velocity file')
     args.add_argument('--tcoh', dest='tcoh_file', metavar='temporal_coh_file', default='geo_temporalCoherence.h5',
                       help='temporal coherence file')
+    args.add_argument('--mask', dest='mask_file', metavar='mask_file', default='geo_maskTempCoh.h5', help='Mask file')
 
     opts = parser.add_argument_group('Display options', 'configurations for the display')
     opts.add_argument('--step', type=int, metavar='NUM', default=3, help='output pixel step number, default: 3')
@@ -116,6 +118,60 @@ def split_into_sub_boxes(ds_shape, win_size=300, print_msg=True):
             c1 = min([width, c0 + win_size])
             box = (c0, r0, c1, r1)
             box_list.append(box)
+    return box_list
+
+def get_boxes4deforming_area(vel_file, mask_file, win_size=30, min_percentage=0.2, ramp_type='quadratic', display=False):
+    """Get list of boxes to cover the deforming areas.
+    A pixel is identified as deforming if its velocity exceeds the MAD of the whole image.
+    Parameters: vel_file : str, path of velocity file
+                mask_file : str, path of mask file
+                win_size  : int, length and width of the output box
+                min_percentage : float between 0 and 1, minimum percentage of deforming points in the box
+                ramp_type : str, type of phase ramps to be removed while evaluating the deformation
+                display   : bool, plot the identification result or not
+    Returns:    box_list  : list of t-tuple of int, each indicating (col0, row0, col1, row1)
+    """
+    print('-'*30)
+    print('get boxes on deforming areas')
+    mask = readfile.read(mask_file)[0]
+    vel, atr = readfile.read(vel_file)
+    print('removing a {} phase ramp from input velocity before the evaluation'.format(ramp_type))
+    vel = deramp(vel, mask, ramp_type=ramp_type, metadata=atr)[0]               #remove ramp before the evaluation
+
+    # get deforming pixels
+    mad = ut.median_abs_deviation_threshold(vel[mask], center=0., cutoff=3)     #deformation threshold
+    print('velocity threshold / median abs dev: {:.3f} cm/yr'.format(mad))
+    vel[mask == 0] = 0
+    mask_aoi = (vel >= mad) + (vel <= -1. * mad)
+    print('number of points: {}'.format(np.sum(mask_aoi)))
+
+    # get deforming boxes
+    box_list = []
+    min_num = min_percentage * (win_size ** 2)
+    length, width = vel.shape
+    num_row = np.ceil(length / win_size).astype(int)
+    num_col = np.ceil(width / win_size).astype(int)
+    for i in range(num_row):
+        r0 = i * win_size
+        r1 = min([length, r0 + win_size])
+        for j in range(num_col):
+            c0 = j * win_size
+            c1 = min([width, c0 + win_size])
+            box = (c0, r0, c1, r1)
+            if np.sum(mask_aoi[r0:r1, c0:c1]) >= min_num:
+                box_list.append(box)
+    print('number of boxes : {}'.format(len(box_list)))
+
+    if display:
+        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=[12, 8], sharey=True)
+        vel[mask == 0] = np.nan
+        axs[0].imshow(vel, cmap='jet')
+        axs[1].imshow(mask_aoi, cmap='gray')
+        for box in box_list:
+            for ax in axs:
+                rect = Rectangle((box[0],box[1]), (box[2]-box[0]), (box[3]-box[1]), linewidth=2, edgecolor='r', fill=False)
+                ax.add_patch(rect)
+        plt.show()
     return box_list
 
 
@@ -231,14 +287,10 @@ def generate_js_datastring(dates, dygraph_file, num_date, ts, ts_max, ts_min):
     return js_data_string
 
 
-def create_kml_document(inps, step, dot_file, dygraph_file):
+def create_kml_document(inps, box_list, ts_obj, step, dot_file, dygraph_file):
 
     ## 1. read data file into timeseries object
-    ts_obj = timeseries(inps.ts_file)
-    ts_obj.open()
-    length, width = ts_obj.length, ts_obj.width
 
-    box_list = split_into_sub_boxes((length, width))  # Create list of unique regions
     kml_region_documents = []
 
     for i in range(len(box_list)):
@@ -335,7 +387,7 @@ def create_kml_document(inps, step, dot_file, dygraph_file):
 
     return kml_region_documents
 
-def create_regionalized_networklinks_file(regions, ts_obj, kml_data_files_directory, links_directory, output_file):
+def create_regionalized_networklinks_file(regions, ts_obj, box_list, lod, kml_data_files_directory, links_directory, output_file):
 
     ## 1. Create directory to store regioalized KML data files
     cmdDirectory = "cd {}; mkdir {}/".format(kml_data_files_directory, links_directory)
@@ -347,15 +399,10 @@ def create_regionalized_networklinks_file(regions, ts_obj, kml_data_files_direct
     kml_document = KML.Document()
 
     ## 3. Define min and max levels of detail for large vs small data
-    if "large" in links_directory:
-        min_lod = 1500
-        max_lod = -1
-    else:
-        min_lod = 0
-        max_lod = 1500
+    min_lod = lod[0]
+    max_lod = lod[1]
 
     ## 4. Define list of regionalized boxes and list of number of regions
-    box_list = split_into_sub_boxes((ts_obj.length, ts_obj.width))
     region_nums = list(range(0, len(regions)))
 
     ## 5. Generate a new network link element for each region
@@ -499,6 +546,7 @@ def main(iargs=None):
     kml_file_master = '{}_master.kml'.format(out_name_base)
     kml_file_sm = '{}_sm.kml'.format(out_name_base)
     kml_file_lg = '{}_lg.kml'.format(out_name_base)
+    kml_file_fu = '{}_fu.kml'.format(out_name_base)
     kmz_file = '{}.kmz'.format(out_name_base)
     cbar_png_file = '{}_cbar.png'.format(out_name_base)
     dygraph_file = "dygraph-combined.js"
@@ -513,6 +561,7 @@ def main(iargs=None):
     ## 4. read data
     ts_obj = timeseries(inps.ts_file)
     ts_obj.open()
+    length, width = ts_obj.length, ts_obj.width
     lats, lons = get_lat_lon(ts_obj.metadata)
 
     vel = readfile.read(inps.vel_file, datasetName='velocity')[0] * 100.
@@ -522,9 +571,15 @@ def main(iargs=None):
 
     ## 5. Generate large and small KML files for different view heights
     small_dset_step = 20  # Increase this for coarser resolution in small dset
-    large_dset_step = 3  # Decrease this for finer resolution in large dset
-    kml_documents_sm = create_kml_document(inps, small_dset_step, dot_file, dygraph_file)
-    kml_documents_lg = create_kml_document(inps, large_dset_step, dot_file, dygraph_file)
+    large_dset_step = 3   # Decrease this for finer resolution in large dset
+    full_dset_step = 1    # Full resolution for deforming regions
+
+    box_list = split_into_sub_boxes((length, width))  # Create list of unique regions
+    deforming_box_list = get_boxes4deforming_area(inps.vel_file, inps.mask_file)
+
+    kml_documents_sm = create_kml_document(inps, box_list, ts_obj, small_dset_step, dot_file, dygraph_file)
+    kml_documents_lg = create_kml_document(inps, box_list, ts_obj, large_dset_step, dot_file, dygraph_file)
+    kml_documents_fu = create_kml_document(inps, deforming_box_list, ts_obj, full_dset_step, dot_file, dygraph_file)
 
     ## 6. Create master KML file with network links to data KML files
     kml_master = KML.kml()
@@ -545,16 +600,19 @@ def main(iargs=None):
     data_folder = KML.Folder(KML.name("Data"))
 
     # 6.3.1 Generate regionalized network links files for small and large data
-    create_regionalized_networklinks_file(kml_documents_sm, ts_obj, kml_data_files_directory, "small_links_dir", kml_file_sm)
-    create_regionalized_networklinks_file(kml_documents_lg, ts_obj, kml_data_files_directory, "large_links_dir", kml_file_lg)
+    create_regionalized_networklinks_file(kml_documents_sm, ts_obj, box_list, (0, 1500), kml_data_files_directory, "small_links_dir", kml_file_sm)
+    create_regionalized_networklinks_file(kml_documents_lg, ts_obj, box_list, (1500, 4000), kml_data_files_directory, "large_links_dir", kml_file_lg)
+    create_regionalized_networklinks_file(kml_documents_fu, ts_obj, deforming_box_list, (4000, -1), kml_data_files_directory, "full_links_dir", kml_file_fu)
 
     # 6.3.2 Create network links for small and large file
     network_link_sm = generate_network_link("20 by 20", kml_data_files_directory, kml_file_sm, ts_obj)
     network_link_lg = generate_network_link("3 by 3", kml_data_files_directory, kml_file_lg, ts_obj)
+    network_link_fu = generate_network_link("1 by 1", kml_data_files_directory, kml_file_fu, ts_obj)
 
     # 6.3.3 Append network links to data folder
     data_folder.append(network_link_sm)
     data_folder.append(network_link_lg)
+    data_folder.append(network_link_fu)
 
     kml_master_document.append(data_folder)
 
