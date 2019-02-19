@@ -156,11 +156,11 @@ def write_kmz_file(data, metadata, out_file, inps=None):
         kmz_file - string, output KMZ filename
     Example:
         from pysar.utils import readfile, plot as pp
-        from pysar import save_kml
+        from pysar import save_kmz
         fname = 'geo_velocity_masked.h5'
         data, atr = readfile.read(fname)
         out_file = pp.auto_figure_title(fname, None)+'.kmz'
-        save_kml.write_kmz_file(data, atr, out_file)
+        save_kmz.write_kmz_file(data, atr, out_file)
     """
     if not inps:
         inps = cmd_line_parse()
