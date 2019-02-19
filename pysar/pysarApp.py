@@ -76,7 +76,7 @@ def create_parser():
                         help='Generate default template (and merge with custom template), then exit.')
     parser.add_argument('-H', dest='print_auto_template', action='store_true',
                         help='Print/Show the example template file for routine processing.')
-    parser.add_argument('--version', action='store_true', help='print version number')
+    parser.add_argument('-v','--version', action='store_true', help='print version number')
     parser.add_argument('--fast', action='store_true',
                         help='Fast processing without using pixel-wised network inversion and DEM error correction')
 
@@ -119,7 +119,7 @@ def main(iargs=None):
     start_time = time.time()
     inps = cmd_line_parse(iargs)
     if inps.version:
-        raise SystemExit(version.version_description)
+        raise SystemExit(version.description)
 
     #########################################
     # Initiation

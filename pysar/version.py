@@ -19,12 +19,5 @@ _________________________________________________
 
 website = 'https://yunjunz.github.io/PySAR/'
 
-version_description="""PySAR  version {v}  release date {d}
-Copyright (C) 2013-2019 by Zhang Yunjun, Heresh Fattahi
-Website: {w}
-
-PySAR comes with ABSOLUTELY NO WARRANTY. This is free software, and
-you are welcome to redistribute it under certain conditions. See the
-GNU General Public License v3.0 for details.""".format(v=release_version,
-                                                       d=release_date,
-                                                       w=website)
+description = """PySAR version {v}, release date {d}""".format(v=release_version,
+                                                               d=release_date)
