@@ -16,14 +16,16 @@ import glob
 import warnings
 import h5py
 import numpy as np
+
 try:
     from skimage.transform import resize
 except ImportError:
     raise ImportError('Could not import skimage!')
-from pysar.utils import readfile, ptime, utils as ut
+
 from pysar.objects import (dataTypeDict,
                            geometryDatasetNames,
                            ifgramDatasetNames)
+from pysar.utils import readfile, ptime, utils as ut
 
 
 BOOL_ZERO = np.bool_(0)

@@ -1,15 +1,8 @@
-############################################################
-# Program is part of PySAR                                 #
-# Copyright(c) 2013-2018, Zhang Yunjun, Heresh Fattahi     #
-# Author:  Zhang Yunjun, Heresh Fattahi, 2018 Mar          #
-############################################################
-
-
 from __future__ import print_function
-
-
 import sys
 import os
+
+
 pysar_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(1, pysar_path)
 sys.path.insert(1, os.path.join(pysar_path, 'defaults'))
@@ -27,22 +20,43 @@ except KeyError:
     os.environ['PYSAR_HOME'] = pysar_path
 
 
-# PySAR modules listed by relative dependecies:
-# 0. Independent modules:
-# pysar.objects.pysarobj
-# pysar.objects.sensor
-# pysar.defaults.auto_path
-# pysar.utils.writefile
-# pysar.utils.datetime
+## Modules dependency graph
+#/pysar
+#    # Level 0
+#    /objects
+#        giantobj
+#        pysarobj
+#        ramp
+#        sensor
+#    /utils
+#        /solvers
+#            l1
+#            l1regls
+#            lstl1
+#        ptime
+#        utils0
 #
-# Level 1 dependent modules (depends on Level 0):
-# pysar.utils.readfile
-# pysar.utils.network
+#    # Level 1 (depend on level 0)
+#    /objects
+#        conncomp  (objects/ramp)
+#    /utils
+#        variance  (utils/ptime)
+#        readfile  (objects/*)
+#        writefile (objects/*, utils/readfile)
+#        network   (objects/*, utils/readfile)
+#        utils1    (objects/*, utils/writefile)
 #
-# Level 2 dependent modules (depends on Level 0,1):
-# pysar.utils.utils
+#    # Level 2 (depends on level 0 + 1)
+#    /objects
+#        resample     (utils/readfile)
+#        coord        (utils/utils1)
+#    /utils
+#        utils        (objects/*, utils/coord)
+#        gps          (objects/*, utils/utils)
+#        plot         (objects/*, utils/utils)
+#        insarobj     (objects/*, utils/utils)
 #
-# Level 3 dependent modules (depends on Level 0,1,2):
-# pysar.objects.insarobj
-# pysar.utils.plot
+#    # Level 3 (depends on level 0 + 1 + 2)
+#    /objects
+#        insar_vs_gps (objects/*, utils/{gps, plot}, simulation/*)
 #

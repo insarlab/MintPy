@@ -137,7 +137,7 @@ def cmd_line_parse(iargs=None):
 def check_inputs(inps):
     parser = create_parser()
     # Get Grib Source
-    inps.trop_model = ut.standardize_trop_model(inps.trop_model, standardWeatherModelNames)
+    inps.trop_model = standardize_trop_model(inps.trop_model, standardWeatherModelNames)
     print('weather model: '+inps.trop_model)
 
     # output directories/files
@@ -248,6 +248,13 @@ def check_inputs(inps):
 
 
 ###############################################################
+def standardize_trop_model(tropModel, standardWeatherModelNames):
+    tropModel = tropModel.replace('-', '').upper()
+    if tropModel in standardWeatherModelNames.keys():
+        tropModel = standardWeatherModelNames[tropModel]
+    return tropModel
+
+
 def date_list2grib_file(date_list, hour, trop_model, grib_dir):
     grib_file_list = []
     for d in date_list:

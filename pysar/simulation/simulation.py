@@ -14,11 +14,11 @@ import numpy as np
 import random
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+from pysar.objects import timeseries
+from pysar.utils import ptime, network as pnet, utils as ut
 from pysar.simulation.forward_model import mogi
 from pysar.simulation.plot import *
-from pysar.utils import ptime, network as pnet, utils as ut
-from pysar import (ifgram_inversion as ifginv,
-                   timeseries2velocity as ts2vel)
+from pysar import ifgram_inversion as ifginv
 
 
 def velocity2timeseries(date_list, vel=0.03, display=False):
@@ -209,7 +209,7 @@ def estimate_coherence(ifgram, L=20, win_size=25):
 
 def timeseries2velocity(date_list, defo_list):
     # date_list --> design_matrix
-    A = ts2vel.design_matrix(date_list)
+    A = timeseries.get_design_matrix4average_velocity(date_list)
     A_inv = np.linalg.pinv(A)
 
     # least square inversion
